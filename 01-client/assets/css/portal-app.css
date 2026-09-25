@@ -1,0 +1,458 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Membership — member app (mobile-app style dashboard).
+   Brand-driven via --accent (set inline by the shell). Light, premium.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root{
+    --m-bg:#F4F5F7; --m-surface:#FFFFFF; --m-line:#ECEEF1;
+    --m-ink:#15181E; --m-ink-2:#3C4250; --m-muted:#737886;
+    --m-radius:18px; --m-radius-sm:12px;
+    --m-shadow:0 1px 2px rgba(16,19,26,.04), 0 8px 24px rgba(16,19,26,.05);
+    --m-green:#16A34A; --m-green-soft:#E7F7EE;
+    --m-amber:#D97706; --m-amber-soft:#FEF1DC;
+    --m-blue:#2563EB;  --m-blue-soft:#E8F0FE;
+    --bar-h:66px;
+}
+*{box-sizing:border-box;}
+body.mapp{margin:0;background:var(--m-bg);color:var(--m-ink);font-family:var(--font-sans);-webkit-font-smoothing:antialiased;}
+.mapp img{max-width:100%;display:block;}
+.mapp a{text-decoration:none;color:inherit;}
+
+/* ── Top bar ───────────────────────────────────────────────── */
+.mapp-bar{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--m-surface) 88%,transparent);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid var(--m-line);}
+.mapp-bar-in{max-width:1120px;margin:0 auto;height:62px;display:flex;align-items:center;gap:14px;padding:0 clamp(14px,4vw,24px);}
+.mapp-brand{display:flex;align-items:center;}
+.mapp-brand img{height:34px;width:auto;object-fit:contain;}
+.mapp-brand-mark{width:34px;height:34px;border-radius:10px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-weight:800;}
+.mapp-toptabs{display:flex;gap:4px;margin:0 auto;}
+.mapp-toptabs a{display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;font-size:14px;font-weight:600;color:var(--m-muted);transition:.15s;}
+.mapp-toptabs a svg{width:18px;height:18px;}
+.mapp-toptabs a:hover{background:var(--m-bg);color:var(--m-ink);}
+.mapp-toptabs a.on{background:var(--accent-soft);color:var(--accent-ink);}
+.mapp-bar-end{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.mapp-lang{display:flex;gap:1px;border:1px solid var(--m-line);border-radius:999px;padding:2px;background:#fff;}
+.mapp-lang a{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;color:var(--m-muted);}
+.mapp-lang a.on{background:var(--m-ink);color:var(--m-surface);}
+/* The photo overlays the initials — it must be absolutely positioned. As a
+   plain second child of a grid it became its own row, so the image rendered
+   half out of the circle underneath the letter. */
+.mapp-avatar{position:relative;width:34px;height:34px;border-radius:50%;background:var(--accent-soft);
+    color:var(--accent-ink);font-weight:700;font-size:13px;display:grid;place-items:center;overflow:hidden;flex:none;}
+.mapp-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;}
+.mapp-signout{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--m-muted);border:1px solid var(--m-line);background:#fff;}
+.mapp-signout:hover{color:var(--accent-ink);border-color:var(--accent-ring);}
+.mapp-signout svg{width:17px;height:17px;}
+
+/* ── Main / flash ──────────────────────────────────────────── */
+.mapp-main{max-width:1120px;margin:0 auto;padding:clamp(16px,4vw,28px) clamp(14px,4vw,24px) 40px;}
+.mapp-flash{border-radius:var(--m-radius-sm);padding:13px 16px;margin-bottom:18px;font-size:14.5px;font-weight:500;}
+.mapp-flash--success{background:var(--m-green-soft);color:#0f7a39;}
+.mapp-flash--error{background:#FDECEC;color:#c0392b;}
+.mapp-flash--warning{background:var(--m-amber-soft);color:#9a5b06;}
+.mapp-flash--info{background:var(--m-blue-soft);color:#1b4fc4;}
+
+/* ── Bottom tab bar (mobile app) ───────────────────────────── */
+.mapp-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:none;background:color-mix(in srgb,var(--m-surface) 94%,transparent);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);border-top:1px solid var(--m-line);padding:6px 6px calc(6px + env(safe-area-inset-bottom));}
+.mapp-tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;border-radius:12px;color:var(--m-muted);font-size:10.5px;font-weight:600;}
+.mapp-tabbar a svg{width:23px;height:23px;}
+.mapp-tabbar a.on{color:var(--accent-ink);}
+.mapp-tabbar a.on svg{transform:translateY(-1px);}
+
+/* ── Icons ─────────────────────────────────────────────────────
+   slate_icon() emits a bare <svg> and leaves sizing to CSS. portal.css sizes
+   it under `.portal svg.icon`, but this kit renders under `.mapp`, so an icon
+   outside a nav context (which has its own svg rule) had nothing constraining
+   it and rendered at its intrinsic size — a chevron the height of the card.
+   Size it here, and never size a bare `svg`: the QR code is one. */
+.mapp svg.icon{width:20px;height:20px;flex:none;}
+.mapp svg.icon-sm{width:16px;height:16px;flex:none;}
+.mapp svg.icon-lg{width:24px;height:24px;flex:none;}
+.prog-ic svg,.howto-ic svg{width:20px;height:20px;}
+
+/* ── Dashboard grid ────────────────────────────────────────── */
+.dash{display:grid;grid-template-columns:1.45fr 1fr;gap:18px;align-items:start;}
+.dash-col{display:flex;flex-direction:column;gap:18px;min-width:0;}
+.dash-full{grid-column:1 / -1;}
+
+/* ── Welcome hero + KPI cards ──────────────────────────────────
+   Ported from the admin dashboard (admin/index.php) so a customer gets the
+   same welcome as an operator. Admin builds these on the glassmorphism tokens
+   (--glass-bg / backdrop-filter); the portal is flat, so the same design is
+   rebuilt on --m-surface / --m-line with the accent gradients kept. */
+.phero{
+    position:relative;overflow:hidden;
+    border:1px solid var(--m-line);border-radius:20px;
+    background:
+        radial-gradient(120% 150% at 95% -20%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 52%),
+        radial-gradient(90% 130% at -5% 120%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 50%),
+        var(--m-surface);
+    box-shadow:var(--m-shadow);
+    padding:30px 32px;
+    display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;
+    /* The kit owns the vertical rhythm. Pages were setting margin-top:18px on
+       whatever followed, which silently did nothing where the next element was
+       display:contents (membership's .dash rows inside the bento wall) — so the
+       hero butted straight up against the first card on exactly one page. */
+    margin:0 0 18px;
+}
+/* fine dot-grid texture, fading out toward the greeting */
+.phero::before{
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background-image:radial-gradient(color-mix(in srgb, var(--accent) 26%, transparent) 1px, transparent 1.5px);
+    background-size:20px 20px;
+    -webkit-mask-image:linear-gradient(120deg, transparent 38%, #000);
+            mask-image:linear-gradient(120deg, transparent 38%, #000);
+}
+/* soft accent glow, top-right */
+.phero::after{
+    content:"";position:absolute;top:-70px;right:-40px;width:240px;height:240px;
+    border-radius:999px;pointer-events:none;filter:blur(8px);
+    background:radial-gradient(circle, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%);
+}
+.phero-main{position:relative;z-index:1;flex:1 1 340px;min-width:0;}
+.phero-eyebrow{
+    display:inline-flex;align-items:center;gap:7px;
+    font-family:var(--font-mono);font-size:10.5px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--m-muted);margin-bottom:12px;
+}
+.phero-eyebrow::before{content:"";width:16px;height:1px;background:var(--accent);opacity:.7;}
+.phero-title{
+    margin:0;font-family:var(--font-display);
+    font-size:30px;font-weight:700;letter-spacing:-.03em;line-height:1.08;color:var(--m-ink);
+}
+/* Gradient from the AA-safe ink, not the raw accent: this is TEXT on white, and
+   a light brand (#F89DC1 here) clipped straight into it reads at about 1.9:1 —
+   the name in the greeting was the palest thing on the page. */
+.phero-title .name{
+    background:linear-gradient(100deg, var(--accent-ink), color-mix(in srgb, var(--accent-ink) 55%, #6D28D9));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.phero-sub{margin:8px 0 0;color:var(--m-muted);font-size:13.5px;}
+.phero-side{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-end;gap:10px;}
+.phero-status{
+    display:inline-flex;align-items:center;gap:7px;
+    font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;
+    color:var(--m-green);background:var(--m-green-soft);
+}
+.phero-status .dot{
+    width:7px;height:7px;border-radius:999px;background:currentColor;
+    animation:phero-pulse 2.4s ease-out infinite;
+}
+.phero-status.is-amber{color:var(--m-amber);background:var(--m-amber-soft);}
+@keyframes phero-pulse{
+    0%{box-shadow:0 0 0 0 color-mix(in srgb, currentColor 55%, transparent);}
+    70%{box-shadow:0 0 0 7px transparent;}
+    100%{box-shadow:0 0 0 0 transparent;}
+}
+@media(prefers-reduced-motion:reduce){.phero-status .dot{animation:none;}}
+.phero-clock{
+    font-family:var(--font-mono);font-size:12px;color:var(--m-muted);
+    letter-spacing:.02em;font-variant-numeric:tabular-nums;
+}
+.phero-clock .t{color:var(--m-ink);font-weight:600;}
+
+/* KPI cards — auto-fit so 2, 3 or 4 all read as a full row. */
+.pstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin:0 0 18px;}
+.pstat{
+    position:relative;overflow:hidden;
+    border:1px solid var(--m-line);border-radius:16px;background:var(--m-surface);
+    box-shadow:var(--m-shadow);padding:20px 22px;
+    transition:transform .18s cubic-bezier(.22,1,.36,1), box-shadow .18s ease, border-color .18s ease;
+}
+a.pstat{display:block;color:inherit;text-decoration:none;}
+.pstat:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(16,19,26,.09);
+    border-color:color-mix(in srgb, var(--accent) 30%, var(--m-line));}
+.pstat-top{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.pstat-badge{
+    flex:none;width:44px;height:44px;border-radius:13px;display:grid;place-items:center;
+    background:var(--accent-soft);border:1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+    color:var(--accent-ink);
+}
+.pstat-badge svg{width:20px;height:20px;color:var(--accent-ink);}
+.pstat-num{
+    font-family:var(--font-display);font-size:40px;font-weight:700;
+    letter-spacing:-.045em;line-height:1;color:var(--m-ink);font-variant-numeric:tabular-nums;
+    min-width:0;overflow-wrap:anywhere;text-align:right;
+}
+.pstat-num.is-money{font-size:30px;}
+.pstat-k{
+    position:relative;z-index:1;margin-top:18px;display:flex;align-items:center;gap:8px;
+    font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--m-muted);font-weight:600;
+}
+.pstat-k::before{content:"";flex:none;width:14px;height:2px;border-radius:2px;background:var(--accent);opacity:.9;}
+.pstat-s{position:relative;z-index:1;font-size:12px;color:var(--m-muted);margin-top:4px;padding-left:22px;}
+.pstat-wm{position:absolute;right:-14px;bottom:-24px;opacity:.04;pointer-events:none;color:var(--m-ink);}
+.pstat-wm svg{width:104px;height:104px;color:var(--m-ink);}
+
+@media(max-width:640px){
+    .phero{padding:24px 22px;}
+    .phero-side{align-items:flex-start;width:100%;}
+    .phero-title{font-size:24px;}
+    .pstat-num{font-size:32px;}
+}
+
+/* ── Bento ─────────────────────────────────────────────────────
+   A page of independent cards of unequal height. Grid can't do this: its rows
+   are as tall as their tallest cell, so a short card leaves a hole beside a
+   tall neighbour, and stacking several .dash rows compounds it — a short left
+   column strands whitespace until the next row begins.
+
+   Multi-column flow packs continuously instead, so cards butt up against each
+   other and the columns end level. The trade is reading order: cards fill the
+   first column before the second, which is what you want for a wall of
+   independent cards and NOT what you want when two cards are a pair. Use .dash
+   for a deliberate pairing, .bento for a wall. */
+.bento{columns:2;column-gap:18px;}
+.bento > *{break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;
+    display:inline-block;width:100%;margin:0 0 18px;vertical-align:top;}
+.bento-wide{columns:1;}
+@media(max-width:860px){.bento{columns:1;}}
+
+/* Same packing, for a page already written as stacked .dash rows. The wrappers
+   collapse to display:contents so their cards become direct items of one
+   column flow — no need to restructure the markup around the PHP. */
+.bento-wall{columns:2;column-gap:18px;}
+.bento-wall .dash,.bento-wall .dash-col{display:contents;}
+.bento-wall .pcard,.bento-wall > .pcard{break-inside:avoid;-webkit-column-break-inside:avoid;
+    page-break-inside:avoid;display:inline-block;width:100%;margin:0 0 18px;vertical-align:top;}
+@media(max-width:860px){.bento-wall{columns:1;}}
+
+/* ── Premium card ──────────────────────────────────────────── */
+.pcard{background:var(--m-surface);border:1px solid var(--m-line);border-radius:var(--m-radius);padding:clamp(18px,3vw,24px);box-shadow:var(--m-shadow);}
+.pcard-eyebrow{font-size:11.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--m-muted);margin:0 0 16px;display:flex;align-items:center;gap:10px;}
+.pcard-eyebrow::after{content:"";flex:1;height:1px;background:var(--m-line);}
+.pcard-title{font-size:18px;font-weight:700;letter-spacing:-.01em;margin:0 0 4px;}
+
+/* hero greeting */
+.dash-hero{background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;border-radius:var(--m-radius);padding:22px 24px;display:flex;align-items:center;gap:16px;box-shadow:0 10px 30px var(--accent-ring);}
+.dash-hero-av{width:54px;height:54px;border-radius:16px;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:22px;font-weight:800;overflow:hidden;flex:none;}
+.dash-hero-av img{width:100%;height:100%;object-fit:cover;}
+.dash-hero h1{font-size:clamp(19px,3vw,23px);margin:0 0 3px;letter-spacing:-.02em;font-weight:800;color:#fff;}
+.dash-hero p{margin:0;opacity:.92;font-size:14px;color:#fff;}
+.dash-hero .hero-badge{margin-left:auto;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:700;white-space:nowrap;}
+
+/* stats row */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;}
+.stat{background:var(--m-surface);border:1px solid var(--m-line);border-radius:var(--m-radius-sm);padding:18px 12px;text-align:center;box-shadow:var(--m-shadow);min-width:0;}
+.stat b{display:block;font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1;}
+.stat span{display:block;margin-top:7px;font-size:12.5px;color:var(--m-muted);font-weight:500;}
+.stat--accent b{color:var(--accent);}
+
+/* key-value (member details) */
+.kvr{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid var(--m-line);}
+.kvr:last-child{border-bottom:none;padding-bottom:0;}
+.kvr:first-of-type{padding-top:0;}
+.kvr-k{font-size:14px;color:var(--m-muted);}
+.kvr-v{font-size:15px;font-weight:700;text-align:right;}
+.kvr-v.mono{font-family:var(--font-mono);letter-spacing:.02em;color:var(--accent-ink);}
+
+/* pills / badges */
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:999px;white-space:nowrap;}
+.pill-green{background:var(--m-green-soft);color:var(--m-green);}
+.pill-amber{background:var(--m-amber-soft);color:var(--m-amber);}
+.pill-blue{background:var(--m-blue-soft);color:var(--m-blue);}
+.pill-accent{background:var(--accent-soft);color:var(--accent-ink);}
+.pill-muted{background:var(--m-bg);color:var(--m-muted);}
+
+/* attendance list */
+.att{display:flex;flex-direction:column;}
+.att-row{display:flex;align-items:center;gap:13px;padding:14px 0;border-bottom:1px solid var(--m-line);}
+.att-row:last-child{border-bottom:none;}
+.att-dot{width:10px;height:10px;border-radius:50%;flex:none;}
+.att-main{flex:1;min-width:0;}
+.att-main b{display:block;font-size:14.5px;font-weight:700;}
+.att-main span{display:block;font-size:13px;color:var(--m-muted);margin-top:1px;}
+.att-time{font-size:14px;font-weight:600;color:var(--m-ink-2);font-variant-numeric:tabular-nums;}
+
+/* progress bar */
+.bar{height:9px;border-radius:999px;background:var(--m-line);overflow:hidden;}
+.bar > i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent-deep));}
+.bar-lg{height:12px;}
+
+/* sessions-remaining block */
+.remain-num{font-size:46px;font-weight:800;line-height:1;color:var(--accent-ink);letter-spacing:-.03em;}
+
+/* QR / member card */
+.qr-card{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;}
+.qr-box{background:#fff;border:1px solid var(--m-line);border-radius:16px;padding:14px;display:grid;place-items:center;min-height:190px;width:100%;max-width:230px;}
+.qr-box img,.qr-box svg{width:200px;height:200px;image-rendering:pixelated;}
+.qr-meta{font-size:13px;color:var(--m-muted);}
+.qr-id{font-family:var(--font-mono);font-size:18px;font-weight:800;letter-spacing:.08em;color:var(--m-ink);}
+.qr-actions{display:flex;gap:10px;width:100%;}
+
+/* My membership plans — responsive grid (collapses on mobile) */
+.dash-plans{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.dash-plans > *{min-width:0;}
+@media(max-width:560px){.dash-plans{grid-template-columns:1fr;}}
+
+/* membership plan cards (My membership plans) */
+.pplan{border:1.5px solid var(--m-line);border-radius:var(--m-radius-sm);padding:18px;min-width:0;}
+.pplan .pplan-price{overflow-wrap:anywhere;}
+.pplan.is-active{border-color:var(--accent-ring);background:var(--accent-soft);}
+.pplan.is-off{background:var(--m-bg);}
+.pplan-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px;}
+.pplan-top b{font-size:16px;font-weight:700;}
+.pplan-price{font-size:22px;font-weight:800;letter-spacing:-.02em;margin:2px 0 4px;}
+.pplan-price small{font-size:13px;font-weight:500;color:var(--m-muted);}
+.pplan-sub{font-size:13px;color:var(--m-muted);margin:0 0 12px;}
+.pplan-tags{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;}
+
+/* navigation rows (a list of destinations inside a card) — distinct from
+   .prog-row, which reserves vertical room for a progress bar and reads as a
+   very tall row when all it holds is a label. */
+.pnav{display:flex;flex-direction:column;}
+.pnav-row{display:flex;align-items:center;gap:13px;padding:12px 0;border-bottom:1px solid var(--m-line);
+    color:var(--m-ink);text-decoration:none;}
+.pnav-row:last-child{border-bottom:none;padding-bottom:0;}
+.pnav-row:first-child{padding-top:0;}
+.pnav-ic{width:38px;height:38px;border-radius:11px;background:var(--accent-soft);color:var(--accent-ink);
+    display:grid;place-items:center;flex:none;}
+.pnav-ic svg{width:19px;height:19px;}
+.pnav-label{flex:1;min-width:0;font-size:14.5px;font-weight:700;}
+.pnav-row .pnav-go{color:var(--m-muted);flex:none;}
+.pnav-row:hover .pnav-label{color:var(--accent-ink);}
+.pnav-row:hover .pnav-go{color:var(--accent-ink);}
+
+/* course progress rows */
+.prog-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--m-line);}
+.prog-row:last-child{border-bottom:none;}
+.prog-ic{width:42px;height:42px;border-radius:12px;background:var(--accent-soft);display:grid;place-items:center;font-size:20px;flex:none;}
+.prog-ic.lock{background:var(--m-bg);filter:grayscale(.4);opacity:.8;}
+.prog-main{flex:1;min-width:0;}
+.prog-main b{font-size:14.5px;font-weight:700;display:block;margin-bottom:6px;}
+.prog-main .bar{margin-bottom:4px;}
+.prog-foot{display:flex;justify-content:space-between;font-size:12.5px;color:var(--m-muted);}
+
+/* donut (conic) + legend */
+.donut-wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap;justify-content:center;}
+.donut{position:relative;width:150px;height:150px;border-radius:50%;flex:none;}
+.donut::after{content:"";position:absolute;inset:26px;background:var(--m-surface);border-radius:50%;}
+.donut-center{position:absolute;inset:0;display:grid;place-content:center;text-align:center;z-index:2;}
+.donut-center b{font-size:26px;font-weight:800;color:var(--accent-ink);line-height:1;}
+.donut-center span{font-size:11px;color:var(--m-muted);}
+.legend{display:flex;flex-direction:column;gap:11px;}
+.legend-row{display:flex;align-items:center;gap:9px;font-size:14px;}
+.legend-row i{width:11px;height:11px;border-radius:3px;flex:none;}
+.legend-row b{margin-left:auto;font-weight:800;font-variant-numeric:tabular-nums;}
+
+/* weekly bars */
+.weeks{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;align-items:end;height:130px;}
+.week{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;height:100%;}
+.week-bar{width:100%;max-width:46px;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,var(--accent),var(--accent-deep));min-height:6px;}
+.week-bar.alt{background:linear-gradient(180deg,var(--m-blue),#1d4ed8);}
+.week-n{font-size:15px;font-weight:800;}
+.week-l{font-size:11.5px;color:var(--m-muted);}
+.weeks-foot{display:flex;justify-content:space-between;font-size:12px;color:var(--m-muted);margin-top:10px;}
+
+/* buttons (app) */
+.mbtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:14.5px;padding:11px 18px;border-radius:12px;border:1.5px solid transparent;cursor:pointer;transition:.14s;min-height:44px;}
+.mbtn-primary{background:var(--accent);color:var(--on-accent);box-shadow:0 6px 16px var(--accent-ring);}
+.mbtn-primary:hover{background:var(--accent-deep);}
+.mbtn-ghost{background:#fff;color:var(--m-ink);border-color:var(--m-line);}
+.mbtn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.mbtn-block{width:100%;}
+.mbtn svg{width:18px;height:18px;}
+
+/* how-to-check-in mini */
+.howto{display:flex;gap:14px;align-items:flex-start;}
+.howto-ic{width:44px;height:44px;border-radius:12px;background:var(--accent-soft);color:var(--accent-ink);display:grid;place-items:center;flex:none;}
+.howto b{display:block;font-size:15px;margin-bottom:3px;}
+.howto p{margin:0;font-size:13.5px;color:var(--m-muted);line-height:1.55;}
+
+/* generic helpers used by restyled views */
+.mapp .card{background:var(--m-surface);border:1px solid var(--m-line);border-radius:var(--m-radius);box-shadow:var(--m-shadow);}
+
+/* ── View headers (plans / schedule / profile) ─────────────── */
+.mview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 20px;flex-wrap:wrap;}
+.mview-head h1{font-size:clamp(20px,3vw,26px);font-weight:800;letter-spacing:-.02em;margin:0;}
+.mview-head p{margin:4px 0 0;color:var(--m-muted);font-size:14px;}
+
+/* assurance upsell banner */
+.upsell{display:flex;align-items:center;gap:18px;justify-content:space-between;flex-wrap:wrap;background:linear-gradient(135deg,var(--accent-soft),#fff);border:1.5px solid var(--accent-ring);border-radius:var(--m-radius);padding:20px 22px;margin-bottom:20px;box-shadow:var(--m-shadow);}
+.upsell-txt{min-width:240px;flex:1;}
+.upsell-txt b{display:block;font-size:16px;color:var(--accent-ink);margin-bottom:4px;}
+.upsell-txt p{margin:0;font-size:14px;color:var(--m-ink-2);line-height:1.5;}
+.upsell form{margin:0;}
+
+/* member plans grid */
+.mpg{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;}
+.mplan-card{background:var(--m-surface);border:1.5px solid var(--m-line);border-radius:var(--m-radius);padding:24px;display:flex;flex-direction:column;box-shadow:var(--m-shadow);}
+.mplan-card.feat{border-color:var(--accent);box-shadow:0 16px 40px var(--accent-ring);}
+.mplan-card .ptype{font-size:11.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:10px;}
+.mplan-card h3{font-size:19px;margin:0 0 6px;letter-spacing:-.01em;}
+.mplan-card .pdesc{color:var(--m-muted);font-size:13.5px;line-height:1.5;margin:0 0 14px;}
+.mplan-card .pprice{display:flex;align-items:baseline;gap:6px;margin-bottom:18px;}
+.mplan-card .pprice b{font-size:30px;font-weight:800;letter-spacing:-.03em;}
+.mplan-card .pprice span{color:var(--m-muted);font-size:13px;}
+.mplan-card ul{list-style:none;padding:0;margin:0 0 18px;display:flex;flex-direction:column;gap:10px;}
+.mplan-card li{display:flex;gap:9px;align-items:flex-start;font-size:14px;color:var(--m-ink-2);}
+.mplan-card li svg{color:var(--accent);flex:none;margin-top:1px;width:17px;height:17px;}
+.mplan-foot{margin-top:auto;}
+
+/* schedule rows */
+.sched-row{display:flex;align-items:center;gap:14px;padding:15px 0;border-bottom:1px solid var(--m-line);}
+.sched-row:last-child{border-bottom:none;}
+.sched-main{flex:1;min-width:0;}
+.sched-main b{display:block;font-size:15px;font-weight:700;}
+.sched-main span{font-size:12.5px;color:var(--m-muted);}
+.sched-main code{font-family:var(--font-mono);background:var(--m-bg);padding:1px 7px;border-radius:6px;font-size:12px;}
+.sched-when{text-align:right;font-size:13.5px;}
+.sched-when b{display:block;font-weight:700;}
+
+/* profile form inside pcard */
+/* ── Form fields ───────────────────────────────────────────────
+   The old customer shell (customer/partials/header.php) carried the fix that
+   makes inputs read as real fields — core's default hairline is translucent
+   and all but invisible on a solid surface. Pages on this shell never load
+   that file, so the fix has to live with the kit or every field on the
+   account page renders as unbordered text. */
+.mapp .field{margin-bottom:16px;}
+.mapp .field-label{display:block;font-size:13px;font-weight:600;color:var(--m-ink-2);margin-bottom:6px;}
+.mapp .field-hint{margin-top:6px;font-size:12.5px;color:var(--m-muted);}
+.mapp input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]),
+.mapp select,.mapp textarea{
+    width:100%;box-sizing:border-box;min-height:44px;
+    padding:11px 13px;font:inherit;font-size:14.5px;line-height:1.35;
+    color:var(--m-ink);background:var(--m-surface);
+    border:1px solid var(--m-line);border-radius:11px;
+    transition:border-color .15s ease, box-shadow .15s ease;
+}
+.mapp textarea{min-height:110px;resize:vertical;}
+.mapp input:not([type=hidden]):hover,.mapp select:hover,.mapp textarea:hover{
+    border-color:color-mix(in srgb, var(--m-ink) 18%, var(--m-line));
+}
+.mapp input:not([type=hidden]):focus,.mapp select:focus,.mapp textarea:focus{
+    outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring);
+}
+.mapp input:disabled,.mapp select:disabled,.mapp textarea:disabled{
+    background:var(--m-bg);color:var(--m-muted);cursor:not-allowed;
+}
+.mapp select{appearance:none;-webkit-appearance:none;padding-right:38px;
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737886' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;background-size:16px;}
+.mform .field-label{font-size:13px;font-weight:600;color:var(--m-ink-2);}
+.mform .field{margin-bottom:16px;}
+.mform .field-hint{color:var(--m-muted);}
+
+/* ── Responsive ── */
+@media(max-width:860px){
+    .dash{grid-template-columns:1fr;}
+}
+@media(max-width:768px){
+    .mapp-toptabs{display:none;}
+    .mapp-tabbar{display:flex;}
+    .mapp-main{padding-bottom:calc(78px + env(safe-area-inset-bottom));}
+}
+@media(max-width:560px){
+    .stat-grid{gap:8px;}
+    .stat{padding:13px 6px;border-radius:14px;}
+    .stat b{font-size:22px;}
+    .stat span{font-size:11px;margin-top:5px;line-height:1.2;}
+    .mapp-brand img{height:30px;}
+    .qr-actions{flex-direction:column;}
+    .donut-wrap{gap:16px;}
+}
+@media(max-width:380px){
+    .mapp-lang{display:none;}
+}

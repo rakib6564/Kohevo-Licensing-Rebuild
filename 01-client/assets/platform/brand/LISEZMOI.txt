@@ -1,0 +1,14 @@
+KOHEVO — fichiers du monogramme
+--------------------------------
+Fond transparent, noir pur ou blanc pur, aucun degrade ni contour.
+Chaque piece existe en .svg (vectoriel) et en .png (transparent, 1200 px de haut,
+2400 px de large pour le verrouillage horizontal).
+
+kohevo-signe-3-bandes-*.svg   Signe complet, trois bandes. Usage a partir de 32 px de haut.
+kohevo-compact-*.svg          Variante une bande. Favicon, icone d'application, gravure. Des 16 px.
+kohevo-lockup-horizontal-*.svg  Signe + "ohevo" a droite, alignes sur la ligne de base.
+kohevo-lockup-vertical-*.svg    Signe + KOHEVO sous le signe, cale sur sa largeur.
+
+Le signe est en trace pur (un seul contour ferme par bande) : pret pour un depot.
+Les deux verrouillages contiennent du texte vivant en Archivo Medium : vectoriser
+le texte (texte > courbes) avant tout depot ou toute impression.

@@ -1,0 +1,1084 @@
+/* Slate Forms — public + embed surface (premium design).
+ *
+ * Self-contained: styles every control inside .forms-public-card so the
+ * live form looks polished regardless of the host design system. In embed
+ * mode (?embed=1) the canvas + chrome are dropped to sit inside an iframe.
+ */
+
+.forms-public {
+    --f-accent:   var(--accent, #2563EB);
+    --f-accent-d: var(--accent-deep, #1D4ED8);
+    --f-ink:      #0F172A;
+    --f-muted:    #64748B;
+    --f-line:     #E4E7EC;
+    --f-line-2:   #EEF1F5;
+    --f-surface:  #FFFFFF;
+    --f-soft:     #F7F8FA;
+    --f-radius:   14px;
+    --f-radius-s: 11px;
+    --f-ring:     rgba(37, 99, 235, 0.16);
+    margin: 0; padding: 0;
+    min-height: 100vh; min-height: 100dvh;
+    background:
+        radial-gradient(1200px 480px at 50% -10%, rgba(37,99,235,0.06), transparent 60%),
+        var(--bg, #F4F5F7);
+    font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+    color: var(--f-ink);
+    -webkit-font-smoothing: antialiased;
+}
+body.forms-public-embed { background: transparent; min-height: 0; }
+
+/* Make the hidden attribute authoritative (host .btn sets display:inline-flex). */
+.forms-public [hidden] { display: none !important; }
+
+.forms-public-shell { display: flex; justify-content: center; align-items: flex-start; padding: 56px 18px; }
+body.forms-public-embed .forms-public-shell { padding: 22px; }
+
+.forms-public-card {
+    width: 100%; max-width: 600px;
+    background: var(--f-surface);
+    border: 1px solid var(--f-line);
+    border-radius: 22px;
+    padding: var(--f-pad, 34px 38px 12px);
+    box-shadow: 0 1px 1px rgba(16,24,40,0.04), 0 18px 50px -18px rgba(16,24,40,0.22);
+}
+/* Embed renders the form exactly like the standalone preview (natural flow,
+   branding, 2-column). Only the chrome differs: a rounded card with a little
+   breathing room, and the host iframe auto-sizes to the content. */
+body.forms-public-embed .forms-public-card {
+    border-radius: 18px; max-width: 640px; margin: 0 auto; padding: var(--f-pad, 28px 26px 12px);
+    border: 1px solid var(--f-line);
+    box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 12px 36px -16px rgba(16,24,40,.18);
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+.forms-public-header { margin-bottom: 26px; }
+.forms-public-header h1 {
+    font-family: var(--font-display, "Syne", -apple-system, sans-serif);
+    margin: 0 0 7px; font-size: 25px; line-height: 1.18; letter-spacing: -0.022em; font-weight: 700;
+}
+.forms-public-desc { color: var(--f-muted); margin: 0; font-size: 15px; line-height: 1.55; }
+
+/* ── Fields + labels ────────────────────────────────────────── */
+.forms-public-card .field { margin-bottom: var(--f-field-gap, 18px); }
+.forms-public-card .field:last-of-type { margin-bottom: 24px; }
+.forms-public-card .field-label,
+.forms-public-card label.field-label {
+    display: block; margin: 0 0 7px;
+    font-size: 13.5px; font-weight: 600; letter-spacing: -0.005em; color: #344054;
+}
+.forms-public-card .field-required { color: var(--f-accent); }
+.forms-public-card .field-hint { margin-top: 7px; font-size: 12.5px; line-height: 1.5; color: var(--f-muted); }
+.forms-public-card .field-error { margin-top: 7px; font-size: 12.5px; font-weight: 500; color: #DC2626; }
+
+/* ── Inputs / selects / textareas (premium) ─────────────────── */
+.forms-public-card input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not(.sig-type-input),
+.forms-public-card select,
+.forms-public-card textarea {
+    width: 100%; box-sizing: border-box;
+    appearance: none; -webkit-appearance: none;
+    background: var(--f-surface);
+    border: 1.5px solid var(--f-line);
+    border-radius: var(--f-radius);
+    padding: 13px 15px;
+    font-size: 15px; line-height: 1.4; color: var(--f-ink); font-family: inherit;
+    transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+.forms-public-card input::placeholder,
+.forms-public-card textarea::placeholder { color: #98A2B3; }
+.forms-public-card input:hover:not(:focus),
+.forms-public-card select:hover:not(:focus),
+.forms-public-card textarea:hover:not(:focus) { border-color: #D0D5DD; }
+.forms-public-card input:focus,
+.forms-public-card select:focus,
+.forms-public-card textarea:focus {
+    outline: none; border-color: var(--f-accent);
+    box-shadow: 0 0 0 4px var(--f-ring);
+}
+/* International phone — one unified input shell with a flag + dial-code chip
+   as the clickable prefix. The native <select> is layered invisibly over the
+   chip so the OS picker still opens; the chip's display text is kept in sync
+   by the live-format JS in FormsAPI::renderField(). */
+.forms-intl {
+    position: relative; display: flex; align-items: stretch;
+    background: #fff; border: 1px solid var(--f-border, #d6dbe2); border-radius: 12px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+    overflow: hidden;
+}
+.forms-intl:focus-within {
+    border-color: var(--f-accent, #2563eb);
+    box-shadow: 0 0 0 4px var(--f-ring, rgba(37,99,235,0.18));
+}
+.forms-intl-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 0 12px 0 14px; flex: 0 0 auto;
+    font: 600 14px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #0f172a; background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+    border-right: 1px solid var(--f-border, #d6dbe2);
+    cursor: pointer; user-select: none; white-space: nowrap;
+}
+.forms-intl-chip .forms-intl-flag { font-size: 18px; line-height: 1; }
+.forms-intl-chip .forms-intl-code { letter-spacing: -0.01em; }
+.forms-intl-chip .forms-intl-caret {
+    width: 12px; height: 12px; margin-left: 2px; color: #64748b;
+    transition: transform .15s ease;
+}
+.forms-intl:focus-within .forms-intl-chip .forms-intl-caret { color: var(--f-accent, #2563eb); }
+/* Invisible native select layered over the chip — keeps the OS picker UX. */
+.forms-intl .forms-intl-cc {
+    position: absolute; inset: 0 auto 0 0; width: auto; min-width: 0;
+    opacity: 0; cursor: pointer; padding: 0; margin: 0; border: 0;
+    background: transparent; appearance: none;
+    /* Match the chip width so the click target is exactly the chip. */
+}
+.forms-intl > input[type="tel"] {
+    flex: 1 1 auto; min-width: 0; width: 100%;
+    border: 0 !important; outline: none !important; box-shadow: none !important;
+    border-radius: 0 !important; background: transparent;
+    padding: 12px 14px; font: 500 15px/1.2 inherit; color: #0f172a;
+    font-variant-numeric: tabular-nums; letter-spacing: 0.01em;
+}
+.forms-intl > input[type="tel"]::placeholder { color: #94a3b8; font-weight: 400; }
+@media (max-width: 400px) {
+    .forms-intl-chip { padding: 0 10px 0 12px; font-size: 13px; }
+    .forms-intl-chip .forms-intl-flag { font-size: 16px; }
+}
+/* Address autocomplete (OpenStreetMap / Nominatim) — same input shell as the
+   icon inputs, with a floating suggestions panel anchored below. */
+.forms-addr { position: relative; }
+.forms-addr .forms-inp-ico {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: #64748b; pointer-events: none; z-index: 1;
+}
+.forms-addr .forms-addr-input { padding-left: 46px !important; }
+.forms-addr-list {
+    position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30;
+    background: #fff; border: 1px solid var(--f-border, #d6dbe2); border-radius: 12px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.06);
+    overflow: hidden; max-height: 320px; overflow-y: auto;
+}
+.forms-addr-row {
+    padding: 10px 14px; font-size: 14px; line-height: 1.45; color: #0f172a;
+    cursor: pointer; border-bottom: 1px solid #f1f5f9;
+}
+.forms-addr-row:last-child { border-bottom: 0; }
+.forms-addr-row.is-on,
+.forms-addr-row:hover { background: #f1f5ff; color: #1e3a8a; }
+.forms-public-card textarea { min-height: 120px; resize: vertical; }
+
+/* ── Customizer: full-width + non-scrolling fields (settings toggles) ── */
+.forms-public-card.forms-fullwidth,
+body.forms-public-embed .forms-public-card.forms-fullwidth { max-width: none; }
+.forms-public-card.forms-noscroll .forms-step-fields {
+    max-height: none; overflow: visible;
+    -webkit-mask-image: none; mask-image: none;
+}
+.forms-public-card select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center; padding-right: 42px; cursor: pointer;
+}
+
+/* ── Checkbox / radio (custom) ──────────────────────────────── */
+.forms-public-card input[type="checkbox"],
+.forms-public-card input[type="radio"] {
+    appearance: none; -webkit-appearance: none;
+    width: 20px; height: 20px; flex: none; margin: 0;
+    border: 1.5px solid #CBD2DC; background: #fff; cursor: pointer;
+    transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+.forms-public-card input[type="checkbox"] { border-radius: 6px; }
+.forms-public-card input[type="radio"]  { border-radius: 999px; }
+.forms-public-card input[type="checkbox"]:hover,
+.forms-public-card input[type="radio"]:hover { border-color: var(--f-accent); }
+.forms-public-card input[type="checkbox"]:checked,
+.forms-public-card input[type="radio"]:checked { border-color: var(--f-accent); background: var(--f-accent); }
+.forms-public-card input[type="checkbox"]:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+    background-position: center; background-repeat: no-repeat;
+}
+.forms-public-card input[type="radio"]:checked { box-shadow: inset 0 0 0 4px #fff; }
+.forms-public-card input[type="checkbox"]:focus-visible,
+.forms-public-card input[type="radio"]:focus-visible { box-shadow: 0 0 0 4px var(--f-ring); }
+
+/* ── Selectable check / radio rows (reference card style) ───────
+   Single checkboxes and plain radio options render as a bordered,
+   clickable card: the native control is hidden, the label fills the
+   row, and an animated check badge slides in on the right when
+   selected. Same visual language as the choice cards. */
+.forms-check-group { display: flex; flex-direction: column; gap: 10px; }
+.forms-public-card .forms-check {
+    position: relative;
+    display: flex; align-items: center; gap: 12px;
+    margin: 0; padding: 16px 18px; cursor: pointer; user-select: none;
+    background: var(--f-surface);
+    border: 1.5px solid var(--f-line); border-radius: var(--f-radius);
+    transition: border-color .15s ease, background .15s ease, box-shadow .15s ease, transform .12s ease;
+}
+.forms-public-card .forms-check:hover {
+    border-color: #C7D2E0; transform: translateY(-1px);
+    box-shadow: 0 10px 24px -14px rgba(16,24,40,.30);
+}
+/* Native control is visually hidden — the whole card is the toggle. */
+.forms-public-card .forms-check input {
+    position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none;
+}
+.forms-check-label { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; color: var(--f-ink); line-height: 1.35; }
+.forms-check-badge {
+    flex: none; margin-left: auto; width: 24px; height: 24px; border-radius: 999px;
+    display: grid; place-items: center; color: #fff; background: var(--f-accent);
+    opacity: 0; transform: scale(.6);
+    transition: opacity .16s ease, transform .16s cubic-bezier(.34,1.56,.64,1);
+}
+.forms-check-badge svg { width: 14px; height: 14px; }
+/* Selected state (:has — modern browsers). */
+.forms-public-card .forms-check:has(input:checked) {
+    border-color: var(--f-accent);
+    background: rgba(37,99,235,.045);
+    box-shadow: inset 0 0 0 1px var(--f-accent);
+}
+.forms-public-card .forms-check:has(input:checked) .forms-check-label { color: var(--f-accent-d); }
+.forms-public-card .forms-check:has(input:checked) .forms-check-badge { opacity: 1; transform: scale(1); }
+.forms-public-card .forms-check:has(input:focus-visible) {
+    border-color: var(--f-accent); box-shadow: 0 0 0 4px var(--f-ring);
+}
+.forms-public-card .forms-check:active { transform: translateY(0); }
+/* Fallback for engines without :has — show the badge via the hidden input's
+   checked state using the general sibling selector. */
+.forms-public-card .forms-check input:checked ~ .forms-check-badge { opacity: 1; transform: scale(1); }
+
+/* ── Buttons (premium) ──────────────────────────────────────── */
+.forms-public-card .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: inherit; font-size: 14.5px; font-weight: 600; line-height: 1;
+    padding: 13px 20px; border-radius: 12px; border: 1.5px solid transparent;
+    cursor: pointer; transition: transform .12s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.forms-public-card .btn:active { transform: translateY(1px); }
+.forms-public-card .btn-primary,
+.forms-public-card button[type="submit"] {
+    color: #fff;
+    background: var(--f-accent);
+    box-shadow: 0 1px 2px rgba(16,24,40,.10);
+}
+.forms-public-card .btn-primary:hover,
+.forms-public-card button[type="submit"]:hover { background: var(--f-accent-d); box-shadow: 0 2px 8px -2px rgba(16,24,40,.20); }
+.forms-public-card .btn-block { width: 100%; }
+.forms-public-card .btn-lg { padding: 15px 22px; font-size: 15.5px; border-radius: 13px; }
+.forms-public-card .btn:not(.btn-primary):not([type="submit"]) {
+    background: #fff; color: #344054; border-color: var(--f-line);
+}
+.forms-public-card .btn:not(.btn-primary):not([type="submit"]):hover { background: var(--f-soft); border-color: #D0D5DD; }
+
+/* ── Multi-step wizard ──────────────────────────────────────── */
+.forms-steps-head { margin-bottom: 24px; }
+.forms-steps-meta { font-size: 12.5px; font-weight: 600; color: var(--f-muted); margin-bottom: 10px; letter-spacing: .01em; }
+.forms-steps-title { color: var(--f-ink); }
+.forms-steps-title:not(:empty)::before { content: " · "; color: var(--f-muted); }
+.forms-steps-bar { height: 7px; border-radius: 999px; background: var(--f-line-2); overflow: hidden; }
+.forms-steps-bar-fill {
+    height: 100%; width: 0; border-radius: 999px;
+    background: linear-gradient(90deg, var(--f-accent), #60A5FA);
+    transition: width .35s cubic-bezier(.4,0,.2,1);
+}
+.forms-step { border: 0; padding: 0; margin: 0; min-inline-size: 0; }
+/* Directional slide + staggered entrance — children animate, delay set by JS. */
+@keyframes forms-in-next { from { opacity: 0; transform: translate3d(26px, 0, 0); } to { opacity: 1; transform: none; } }
+@keyframes forms-in-prev { from { opacity: 0; transform: translate3d(-26px, 0, 0); } to { opacity: 1; transform: none; } }
+.forms-step.anim-next > * { animation: forms-in-next .5s both cubic-bezier(.16, 1, .3, 1); }
+.forms-step.anim-prev > * { animation: forms-in-prev .5s both cubic-bezier(.16, 1, .3, 1); }
+@media (prefers-reduced-motion: reduce) {
+    .forms-step.anim-next > *, .forms-step.anim-prev > * { animation: none !important; }
+}
+/* Interactive wizard nav — flow line (left) · step count (centre) · next
+   (right). Back no longer lives here; it's a top-left affordance. The count is
+   absolutely centred so the layout holds regardless of the left element. */
+.forms-steps-nav {
+    position: relative; display: flex; align-items: center; gap: 12px;
+    margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--f-line-2);
+}
+.forms-steps-nav [data-forms-next],
+.forms-steps-nav [data-forms-submit]  { margin-left: auto; }
+/* Compact footer buttons (override the global .btn / .btn-lg sizing here). */
+.forms-steps-nav .fbtn { min-width: 108px; padding: 10px 17px; font-size: 14px; border-radius: 11px; }
+.forms-steps-nav .fbtn .fbtn-ico { width: 16px; height: 16px; }
+.forms-steps-count {
+    position: absolute; left: 50%; top: calc(50% + 8px); transform: translate(-50%, -50%);
+    font-size: 12.5px; font-weight: 500; color: var(--f-muted); white-space: nowrap; pointer-events: none;
+}
+.forms-steps-count b { color: var(--f-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Button shell: label + icon, arrow slides on hover */
+.forms-public-card .fbtn { gap: 9px; position: relative; overflow: hidden; }
+.fbtn .fbtn-ico { flex: none; transition: transform .22s cubic-bezier(.4,0,.2,1); }
+.fbtn-go:hover  .fbtn-ico { transform: translateX(4px); }
+.fbtn-back:hover .fbtn-ico { transform: translateX(-4px); }
+.forms-public-card .fbtn-go {
+    box-shadow: 0 6px 18px -6px var(--f-ring), 0 1px 2px rgba(16,24,40,.12);
+}
+.forms-public-card .fbtn-go:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 26px -8px var(--f-ring), 0 2px 5px rgba(16,24,40,.16);
+}
+.forms-public-card .fbtn-go:active { transform: translateY(0); }
+/* light sweep across the primary button on hover */
+.fbtn-go::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(110deg, transparent 32%, rgba(255,255,255,.30) 50%, transparent 68%);
+    transform: translateX(-130%); transition: transform .65s ease;
+}
+.fbtn-go:hover::after { transform: translateX(130%); }
+.fbtn:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--f-ring); }
+@media (prefers-reduced-motion: reduce) {
+    .fbtn .fbtn-ico, .forms-public-card .fbtn-go, .fbtn-go::after { transition: none !important; }
+    .forms-public-card .fbtn-go:hover { transform: none; }
+}
+
+/* ── Top wizard row: Back (left) + current step title (right) ── */
+.forms-wiztop { display: flex; align-items: center; gap: 12px; min-height: 0; margin-bottom: 12px; }
+/* Title fills the left on ONE compact line (ellipsis if long); Back at right. */
+.forms-steptitle-top {
+    flex: 1 1 auto; min-width: 0; text-align: left; line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-family: var(--font-display, "Syne", -apple-system, sans-serif);
+    font-size: 15.5px; font-weight: 700; letter-spacing: -0.01em; color: var(--f-ink);
+}
+.forms-steptitle-top:empty { display: none; }
+.forms-wiztop .forms-back-top { flex: none; margin-left: auto; }
+
+/* ── Back as a top affordance (slides in from step 2) ───── */
+.forms-back-top {
+    display: inline-flex; align-items: center; gap: 6px; flex: none;
+    margin: 0; padding: 0;
+    font: 600 13px/1 var(--font-sans, -apple-system, sans-serif); color: var(--f-muted);
+    background: transparent; border: 0; cursor: pointer;
+    transition: color .15s ease;
+}
+.forms-back-top:hover { color: var(--f-ink); }
+.forms-back-top .fbtn-ico { transition: transform .2s cubic-bezier(.4,0,.2,1); }
+.forms-back-top:hover .fbtn-ico { transform: translateX(-3px); }
+.forms-back-top:focus-visible { outline: none; color: var(--f-ink); text-decoration: underline; text-underline-offset: 3px; }
+.forms-back-top:not([hidden]) { animation: forms-back-in .4s cubic-bezier(.16,1,.3,1) both; }
+@keyframes forms-back-in { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+
+/* ── Step progress — a circular progress ring with the step number inside.
+   The accent arc fills proportionally (--p, 0–100, set by JS); a white inner
+   disc makes the donut. Distinct from dots / bars / sliders. */
+@property --p { syntax: "<number>"; inherits: false; initial-value: 0; }
+.forms-flowline { display: none; }   /* legacy segment container — unused now */
+.forms-ring {
+    --p: 33;
+    position: relative; flex: 0 0 auto; margin-right: auto;
+    width: 34px; height: 34px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: conic-gradient(var(--f-accent) calc(var(--p) * 1%), var(--f-line-2) 0);
+    transition: --p .5s cubic-bezier(.4,0,.2,1);
+}
+.forms-ring::before {
+    content: ""; position: absolute; inset: 4px; border-radius: 50%; background: var(--f-surface);
+}
+.forms-ring-num {
+    position: relative; font-variant-numeric: tabular-nums; line-height: 1;
+    font-size: 13px; font-weight: 800; color: var(--f-accent);
+}
+@media (prefers-reduced-motion: reduce) {
+    .forms-back-top:not([hidden]) { animation: none; }
+    .forms-ring { transition: none; }
+}
+
+/* ── Wizard top header: form title (left) + step rail (right) on one row ── */
+.forms-wizhead {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 20px;
+}
+/* Title takes the remaining space; rail sits at the far right (row-reverse).
+   Stays on ONE line and truncates with an ellipsis when long — left-aligned so
+   the "…" lands at the correct (right) end. */
+.forms-wizhead .forms-public-kicker {
+    margin: 0; flex: 1 1 auto; min-width: 0; text-align: left; line-height: 1.2;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Brand mark in the header (logo or company name), pushed left; rail stays right. */
+.forms-wizhead .forms-brand-logo { flex: 0 1 auto; max-height: 38px; max-width: 60%; width: auto; object-fit: contain; margin-right: auto; }
+.forms-wizhead .forms-brand-name {
+    flex: 1 1 auto; min-width: 0; margin-right: auto; text-align: left;
+    font-family: var(--font-display, "Syne", -apple-system, sans-serif);
+    font-size: 18px; font-weight: 700; letter-spacing: -0.01em; color: var(--f-ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* High specificity so compact/mobile `.forms-rail` margins can't leak back in
+   and throw off the vertical centring against the title. */
+.forms-public-card .forms-wizhead .forms-rail { margin: 0; flex: none; align-self: center; }
+.forms-public-card .forms-wizhead .forms-public-kicker { margin: 0; align-self: center; }
+@media (max-width: 460px) {
+    .forms-wizhead { gap: 10px; }
+}
+
+/* ── Section heading ────────────────────────────────────────── */
+.forms-heading { margin: 26px 0 6px; padding-top: 8px; border-top: 1px solid var(--f-line-2); }
+.forms-heading:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.forms-heading h3 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.forms-heading p { margin: 5px 0 0; font-size: 13.5px; color: var(--f-muted); line-height: 1.5; }
+
+/* ── Range / slider (custom track + thumb) ──────────────────── */
+.forms-range { display: flex; align-items: center; gap: 16px; }
+.forms-range input[type="range"] {
+    flex: 1; min-width: 0; height: 26px; background: transparent; cursor: pointer; appearance: none; -webkit-appearance: none;
+}
+.forms-range input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; background: var(--f-line-2); }
+.forms-range input[type="range"]::-moz-range-track { height: 6px; border-radius: 999px; background: var(--f-line-2); }
+.forms-range input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; margin-top: -7px; width: 20px; height: 20px; border-radius: 999px;
+    background: #fff; border: 2px solid var(--f-accent); box-shadow: 0 2px 6px rgba(16,24,40,.18); transition: transform .1s ease;
+}
+.forms-range input[type="range"]::-moz-range-thumb {
+    width: 20px; height: 20px; border-radius: 999px; background: #fff; border: 2px solid var(--f-accent); box-shadow: 0 2px 6px rgba(16,24,40,.18);
+}
+.forms-range input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.12); }
+.forms-range output {
+    min-width: 3em; text-align: center; font-weight: 700; font-size: 14px; color: var(--f-accent);
+    font-variant-numeric: tabular-nums; background: var(--f-soft); border: 1px solid var(--f-line); border-radius: 9px; padding: 6px 10px;
+}
+
+/* ── Rating (stars) ─────────────────────────────────────────── */
+.forms-rating { display: inline-flex; flex-direction: row-reverse; gap: 4px; font-size: 34px; line-height: 1; }
+.forms-rating input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.forms-rating label { color: #D9DEE6; cursor: pointer; transition: color .12s ease, transform .12s ease; }
+.forms-rating label:hover { transform: scale(1.12); }
+.forms-rating input:checked ~ label,
+.forms-rating label:hover,
+.forms-rating label:hover ~ label { color: #FBBF24; }
+.forms-rating input:focus-visible + label { outline: 2px solid var(--f-accent); outline-offset: 3px; border-radius: 4px; }
+
+/* ── Calculated field ───────────────────────────────────────── */
+.forms-calc-out {
+    display: inline-flex; align-items: center; min-width: 96px; min-height: 30px;
+    font-size: 19px; font-weight: 700; color: var(--f-ink); font-variant-numeric: tabular-nums;
+    padding: 8px 14px; background: linear-gradient(180deg, var(--f-soft), #fff);
+    border: 1.5px solid var(--f-line); border-radius: 12px;
+}
+
+/* ── Signature pad ──────────────────────────────────────────── */
+/* The pad itself is just a transparent layout container with no border, no
+   background, no border-radius, no overflow-clipping. Each child (toolbar
+   and stage) draws its OWN border and its OWN corner radius, joining at
+   the middle seam. This avoids the overflow:hidden + border-radius
+   sub-pixel clipping that was leaving white frames around the toolbar. */
+.sig-pad {
+    display: block; width: 100%; box-sizing: border-box;
+    background: transparent; border: 0; border-radius: 0; box-shadow: none;
+    margin: 0; padding: 0;
+}
+/* No `:focus-within` ring on the pad itself. When Type mode auto-focuses
+   the inner text input, that input has its own focus ring — we don't also
+   want the entire pad to glow, because the glow visually wraps around the
+   toolbar's seg and makes Type mode look like the toolbar layout changed.
+   The pad border stays static across Draw/Type mode swaps. */
+
+/* Signature toolbar — iOS-style segmented toggle with a SLIDING white
+   indicator. The indicator is a single absolute-positioned pseudo-element
+   that translates between two equal-width grid cells via a data attribute
+   on .sig-seg. The tabs themselves never have backgrounds — they're just
+   text — so per-tab alignment is impossible to break. The white pill is
+   one element with one fixed width; it can only ever be in one of two
+   positions, both of which are mathematically correct. */
+.sig-tabs {
+    display: flex; align-items: center; gap: 14px;
+    width: 100%; box-sizing: border-box;
+    padding: 8px 14px;
+    /* The toolbar IS the rounded top of the widget — its own border, its
+       own top corner radius. No parent clipping involved, so no sliver
+       artefacts. Bottom border is shared with the stage below. */
+    border: 1.5px solid var(--f-line);
+    border-top-left-radius: var(--f-radius);
+    border-top-right-radius: var(--f-radius);
+    background: var(--f-soft);
+}
+
+/* The segmented control track. `data-sig-active` attribute drives the
+   indicator position — JS toggles it between "draw" and "type". */
+.sig-seg {
+    position: relative;
+    display: grid; grid-template-columns: 1fr 1fr;
+    width: 210px; flex: 0 0 210px;
+    padding: 3px; box-sizing: border-box;
+    background: rgba(15, 23, 42, 0.06);
+    border-radius: 10px;
+    margin-right: auto;
+}
+/* The sliding indicator — a single white pill that translates 100% of
+   its own width to switch cells. Same element, same dimensions, always.
+   Inset by 3px on all sides to sit inside the track's padding. */
+.sig-seg::before {
+    content: '';
+    position: absolute;
+    top: 3px; bottom: 3px; left: 3px;
+    width: calc(50% - 3px);                       /* exactly one cell */
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1), 0 0 0 1px rgba(15, 23, 42, 0.05);
+    transition: transform .25s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 0;
+    pointer-events: none;
+}
+.sig-seg[data-sig-active="type"]::before { transform: translateX(100%); }
+
+/* Tabs sit ABOVE the indicator (z-index: 1). No backgrounds, no borders —
+   only text colour + weight change between active and inactive. Layout
+   cannot shift because nothing structural depends on the active state. */
+.sig-tab {
+    position: relative; z-index: 1;
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    min-height: 30px; padding: 0 10px;
+    box-sizing: border-box;
+    border: 0; background: transparent; cursor: pointer; outline: none;
+    -webkit-tap-highlight-color: transparent;
+    font: inherit; font-size: 13px; font-weight: 600; line-height: 1;
+    color: var(--f-muted);
+    transition: color .18s ease;
+}
+.sig-tab svg { display: block; width: 14px; height: 14px; flex: 0 0 auto; opacity: .85; }
+.sig-tab:not(.is-active):hover { color: var(--f-ink); }
+/* Active state changes ONLY colour — font-weight stays at 600 so the
+   text glyphs render at identical widths in both states. This is what
+   guarantees the icon + label sit at the same X position when you
+   toggle modes. The white pill background under the tab does the visual
+   "selected" work; we don't also need bolder text on top of it. */
+.sig-tab.is-active { color: var(--f-ink); }
+.sig-tab.is-active svg { opacity: 1; color: var(--f-accent); }
+.sig-tab:focus-visible { box-shadow: 0 0 0 2px var(--f-ring, rgba(37, 99, 235, 0.4)); border-radius: 8px; }
+
+/* Clear: subtle ghost button on the far right of the toolbar. */
+.sig-clear {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 0; background: transparent; cursor: pointer; outline: none;
+    -webkit-tap-highlight-color: transparent;
+    padding: 6px 10px; border-radius: 8px;
+    font: inherit; font-size: 12.5px; font-weight: 600; line-height: 1;
+    color: var(--f-muted);
+    transition: color .15s ease, background .15s ease;
+}
+.sig-clear svg { display: block; width: 14px; height: 14px; flex: 0 0 auto; }
+.sig-clear:hover { color: #DC2626; background: rgba(220, 38, 38, 0.06); }
+.sig-clear:focus-visible { box-shadow: 0 0 0 3px rgba(220, 38, 38, .18); }
+
+.sig-stage {
+    position: relative; min-height: 172px;
+    width: 100%; box-sizing: border-box;
+    /* Stage IS the rounded bottom of the widget — its own border + radius,
+       sharing the bottom edge of the toolbar via border-top: 0 so the seam
+       is a single 1px line, not a double border. */
+    border: 1.5px solid var(--f-line);
+    border-top: 0;
+    border-bottom-left-radius: var(--f-radius);
+    border-bottom-right-radius: var(--f-radius);
+    overflow: hidden; background: #fff;
+}
+.sig-canvas { display: block; width: 100%; height: 172px; touch-action: none; cursor: crosshair; background: #fff; }
+/* Draw mode: a single baseline with an ✕ marker + "Sign here" guide. */
+.sig-pad.mode-draw .sig-canvas {
+    background: linear-gradient(var(--f-line), var(--f-line)) no-repeat 0 calc(100% - 40px) / 100% 1.5px, #fff;
+}
+.sig-stage::after {
+    content: "\2715"; position: absolute; left: 20px; bottom: 32px;
+    font-size: 13px; font-weight: 700; color: var(--f-line); pointer-events: none; display: none;
+}
+.sig-pad.mode-draw .sig-stage::after { display: block; }
+.sig-stage::before {
+    content: "Sign here"; position: absolute; inset: 0 0 46px 0; display: none;
+    align-items: flex-end; justify-content: center;
+    font-size: 14px; font-style: italic; color: var(--f-muted); opacity: .5; pointer-events: none;
+}
+.sig-pad.mode-draw.is-empty .sig-stage::before { display: flex; }
+
+/* Type mode: a clean text input pinned to the TOP, with the cursive preview
+   rendered on the canvas BELOW it — no more overlap. */
+.sig-pad.mode-type .sig-canvas { background: #fff; }
+.sig-type-input {
+    position: absolute; left: 14px; right: 14px; top: 14px; height: 46px; z-index: 2;
+    box-sizing: border-box; border: 1.5px solid var(--f-line); border-radius: 10px; padding: 0 16px;
+    font-family: var(--font-sans, -apple-system, sans-serif); font-size: 15px; font-weight: 500;
+    text-align: left; background: #fff; color: var(--f-ink); outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.sig-type-input::placeholder { color: #98A2B3; font-weight: 400; }
+.sig-type-input:focus { border-color: var(--f-accent); box-shadow: 0 0 0 3px var(--f-ring); }
+/* faint "Your signature" caption under the input while typing, behind the cursive */
+.sig-pad.mode-type .sig-stage::before {
+    content: "Your signature appears below"; position: absolute; inset: 70px 0 auto 0; display: flex;
+    justify-content: center; font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--f-muted); opacity: .55; pointer-events: none;
+}
+.sig-pad.mode-type:not(.is-empty) .sig-stage::before { display: none; }
+
+.sig-pad.sig-invalid { border-color: #DC2626; box-shadow: 0 0 0 3px rgba(220,38,38,.14); }
+
+/* ── Acceptance / legal disclaimer box ──────────────────────── */
+.forms-disclaimer { border: 1.5px solid #FECDD3; border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
+.forms-disc-head { display: flex; align-items: flex-start; gap: 13px; padding: 16px 18px; background: #FEF2F3; border-bottom: 1px solid #FBE0E3; }
+.forms-disc-ico { flex: none; width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center; background: #FDE3E6; color: #E11D48; }
+.forms-disc-heads { min-width: 0; padding-top: 1px; }
+.forms-disc-title { font-size: 16px; font-weight: 700; color: #9F1239; line-height: 1.25; letter-spacing: -0.01em; }
+.forms-disc-sub { margin-top: 3px; font-size: 13px; font-weight: 500; color: #E11D48; }
+.forms-disc-body {
+    max-height: 280px; overflow-y: auto; padding: 18px;
+    font-size: 14px; line-height: 1.7; color: #51607A; background: #fff;
+    scrollbar-width: thin; scrollbar-color: #FDA4AF transparent;
+}
+.forms-disc-body::-webkit-scrollbar { width: 10px; }
+.forms-disc-body::-webkit-scrollbar-thumb { background: #FDA4AF; border-radius: 999px; border: 3px solid #fff; background-clip: padding-box; }
+.forms-disc-body::-webkit-scrollbar-thumb:hover { background: #FB7185; background-clip: padding-box; }
+.forms-disc-agree {
+    display: flex; align-items: flex-start; gap: 12px; padding: 15px 18px; cursor: pointer;
+    background: #FEF2F3; border-top: 1px solid #FBE0E3;
+    font-size: 14.5px; line-height: 1.45; font-weight: 500; color: #51607A;
+}
+.forms-disc-agree .field-required { color: #E11D48; }
+.forms-disc-agree input[type="checkbox"] {
+    flex: none; margin: 1px 0 0; width: 22px; height: 22px; border-radius: 6px;
+    appearance: none; -webkit-appearance: none; cursor: pointer;
+    border: 1.5px solid #FDA4AF; background: #fff;
+    transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.forms-disc-agree input[type="checkbox"]:hover { border-color: #FB7185; }
+.forms-disc-agree input[type="checkbox"]:checked {
+    border-color: #E11D48;
+    background: #E11D48 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/14px no-repeat;
+}
+.forms-disc-agree input[type="checkbox"]:focus-visible { outline: none; box-shadow: 0 0 0 4px rgba(225,29,72,.18); }
+.field.is-invalid .forms-disclaimer { border-color: #F43F5E; }
+
+/* ── Success state ──────────────────────────────────────────── */
+.forms-public-success { text-align: center; padding-top: 30px; }
+.forms-public-success h1 { margin: 18px 0 8px; font-size: 24px; }
+.forms-public-success p { color: var(--f-muted); font-size: 15px; }
+.forms-public-success-icon {
+    width: 64px; height: 64px; margin: 0 auto; border-radius: 999px;
+    background: var(--success-soft, #ECFDF5); color: var(--success, #16A34A); display: grid; place-items: center;
+    box-shadow: 0 0 0 8px rgba(22,163,74,.06);
+}
+.forms-public-success-icon svg { width: 30px; height: 30px; }
+.forms-success-pdf { display: inline-flex; align-items: center; gap: 8px; margin-top: 22px; text-decoration: none; }
+
+/* In-card confirmation receipt: a printed-receipt recap of the answers —
+   centred header, dashed row separators, monospace right-aligned values, and a
+   torn/perforated bottom edge. */
+.forms-receipt {
+    position: relative; text-align: left; margin: 24px auto 14px; max-width: 460px;
+    border: 1px solid var(--f-line); border-radius: 14px 14px 0 0; background: var(--f-surface, #fff);
+    box-shadow: 0 2px 14px rgba(16, 24, 40, .06);
+}
+/* Perforated / torn bottom edge (the classic receipt tear). */
+.forms-receipt::after {
+    content: ""; position: absolute; left: -1px; right: -1px; bottom: -10px; height: 10px;
+    background:
+        linear-gradient(135deg, transparent 50%, var(--f-surface, #fff) 50%) 0 0 / 11px 11px repeat-x,
+        linear-gradient(-135deg, transparent 50%, var(--f-surface, #fff) 50%) 0 0 / 11px 11px repeat-x;
+    filter: drop-shadow(0 1px 0 var(--f-line));
+}
+.forms-receipt-head {
+    text-align: center; padding: 15px 16px 12px; border-bottom: 1px dashed var(--f-line);
+    font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--f-muted);
+}
+.forms-receipt-ref {
+    display: block; margin-top: 5px; font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 13px; letter-spacing: .04em; font-weight: 600; text-transform: none; color: var(--f-accent);
+}
+.forms-receipt-list { margin: 0; padding: 8px 18px 16px; max-height: 340px; overflow-y: auto; }
+.forms-receipt-row {
+    display: flex; align-items: baseline; gap: 12px; padding: 9px 0;
+    border-bottom: 1px dashed var(--f-line-2);
+}
+.forms-receipt-row:last-child { border-bottom: 0; }
+.forms-receipt-row dt { margin: 0; font-size: 12px; font-weight: 600; color: var(--f-muted); flex: 0 1 auto; }
+.forms-receipt-row dd {
+    margin: 0 0 0 auto; flex: 0 1 62%; text-align: right; word-break: break-word;
+    font-family: var(--font-mono, ui-monospace, monospace); font-size: 12.5px; color: var(--f-ink);
+}
+@media (max-width: 460px) {
+    .forms-receipt-row { flex-direction: column; gap: 1px; }
+    .forms-receipt-row dd { margin-left: 0; text-align: left; flex: none; }
+}
+
+/* ── Footer ─────────────────────────────────────────────────── */
+.forms-public-footer { text-align: center; padding: 26px 16px 34px; font-size: 12.5px; color: #98A2B3; }
+
+/* ── Alerts ─────────────────────────────────────────────────── */
+.forms-public-card .alert { border-radius: 12px; padding: 12px 14px; font-size: 13.5px; margin-bottom: 18px; }
+
+/* ── Mobile ─────────────────────────────────────────────────── */
+@media (max-width: 560px) {
+    .forms-public-shell { padding: 22px 12px; }
+    .forms-public-card { padding: 26px 20px 22px; border-radius: 18px; }
+    .forms-public-header h1 { font-size: 22px; }
+    /* On phones the embed/popup card fills the (narrow) modal width with a
+       rounded edge and reduced padding. The form keeps its normal block layout
+       so fields stay full-width (collapsed to one column via the rule above). */
+    body.forms-public-embed .forms-public-shell { padding: 0; }
+    body.forms-public-embed .forms-public-card { max-width: 100%; margin: 0; padding: 22px 16px 14px; border-radius: 16px; }
+    .forms-steps-nav { flex-wrap: wrap; }
+    .forms-steps-nav .btn { flex: 1; min-width: 0; }
+    .forms-steps-nav [data-forms-next],
+    .forms-steps-nav [data-forms-submit] { margin-left: 0; }
+    /* Flow line + centred count would overlap the wrapped buttons — the count
+       goes inline on its own row, and the decorative line is dropped. */
+    .forms-flowline { display: none; }
+    .forms-steps-count { position: static; transform: none; order: -1; flex-basis: 100%; text-align: center; margin-bottom: 4px; }
+    /* Nested/internal scroll is a poor pattern on phones — let fields flow and
+       the page scroll naturally instead of capping the field region height. */
+    .forms-step-fields { max-height: none; overflow: visible; margin: 0; padding: 0; scrollbar-gutter: auto; }
+    .forms-step.is-scroll::before, .forms-step.is-scroll::after { display: none; }
+}
+
+/* ─── Choice cards (select/radio "Display as cards") ────────── */
+.forms-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 10px; }
+.forms-card-wrap { position: relative; }
+.forms-card-wrap input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.forms-card {
+    display: flex; align-items: center; gap: 12px; height: 100%; min-height: 50px; box-sizing: border-box;
+    padding: 12px 14px; cursor: pointer;
+    background: var(--f-surface); border: 1.5px solid var(--f-line); border-radius: var(--f-radius-s);
+    transition: border-color .15s ease, background .15s ease, box-shadow .15s ease, transform .12s ease;
+}
+.forms-card:hover { border-color: #C7D2E0; transform: translateY(-1px); box-shadow: 0 8px 20px -14px rgba(16,24,40,.32); }
+.forms-card-ico {
+    flex: none; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center;
+    background: var(--f-soft); color: var(--f-muted); transition: background .15s ease, color .15s ease;
+}
+.forms-card-ico svg { width: 20px; height: 20px; }
+.forms-card-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.forms-card-title { font-size: 14px; font-weight: 600; color: var(--f-ink); line-height: 1.3; }
+.forms-card-desc { font-size: 12px; color: var(--f-muted); line-height: 1.4; }
+/* Always-visible selection indicator: an outline ring that fills with an
+   animated check when chosen — so an icon-less card still reads as selectable
+   instead of an empty box. */
+.forms-card-check {
+    margin-left: auto; flex: none; width: 21px; height: 21px; border-radius: 999px; display: grid; place-items: center;
+    color: #fff; background: transparent; border: 2px solid var(--f-line);
+    transition: background .16s ease, border-color .16s ease, transform .16s cubic-bezier(.34,1.56,.64,1);
+}
+.forms-card-check svg { width: 12px; height: 12px; opacity: 0; transform: scale(.5); transition: opacity .16s ease, transform .16s cubic-bezier(.34,1.56,.64,1); }
+.forms-card:hover .forms-card-check { border-color: #C0CAD8; }
+.forms-card-wrap input:checked + .forms-card {
+    border-color: var(--f-accent); background: rgba(37,99,235,.05); box-shadow: inset 0 0 0 1px var(--f-accent);
+}
+.forms-card-wrap input:checked + .forms-card .forms-card-title { color: var(--f-accent-d); }
+.forms-card-wrap input:checked + .forms-card .forms-card-ico { background: rgba(37,99,235,.12); color: var(--f-accent); }
+.forms-card-wrap input:checked + .forms-card .forms-card-check { background: var(--f-accent); border-color: var(--f-accent); transform: scale(1.04); }
+.forms-card-wrap input:checked + .forms-card .forms-card-check svg { opacity: 1; transform: scale(1); }
+.forms-card-wrap input:focus-visible + .forms-card { box-shadow: 0 0 0 4px var(--f-ring); border-color: var(--f-accent); }
+
+/* ─── Column layout — 12-track grid, per-field width in twelfths ─
+   Fields default to full width (span 12) and greedy-pack into rows:
+   the browser wraps a field to the next row when it no longer fits the
+   remaining tracks. Widths come from .f-w-N (N = 2..11) set by the
+   builder; .field--half is the legacy 2-up alias (= span 6). */
+.forms-public-card form, .forms-step-fields { display: grid; grid-template-columns: repeat(12, 1fr); gap: 0 var(--f-col-gap, 20px); align-items: start; }
+.forms-public-card form > *, .forms-step-fields > * { grid-column: 1 / -1; }
+.forms-public-card .f-w-2  { grid-column: span 2; }
+.forms-public-card .f-w-3  { grid-column: span 3; }
+.forms-public-card .f-w-4  { grid-column: span 4; }
+.forms-public-card .f-w-5  { grid-column: span 5; }
+.forms-public-card .f-w-6  { grid-column: span 6; }
+.forms-public-card .f-w-7  { grid-column: span 7; }
+.forms-public-card .f-w-8  { grid-column: span 8; }
+.forms-public-card .f-w-9  { grid-column: span 9; }
+.forms-public-card .f-w-10 { grid-column: span 10; }
+.forms-public-card .f-w-11 { grid-column: span 11; }
+.forms-public-card .field--half { grid-column: span 6; }
+@media (max-width: 560px) {
+    .forms-public-card [class*="f-w-"], .forms-public-card .field--half { grid-column: 1 / -1; }
+}
+/* Viewport-based responsive collapse. (Container queries were removed — inside
+   the app-shell iframe they misfired and forced single-column. An iframe's own
+   width IS its viewport, so @media collapses embeds correctly too.) The two-up
+   grid + choice cards already collapse in the max-width:560 block above; this
+   just tidies the header on narrow widths. */
+@media (max-width: 560px) {
+    .forms-public-card .forms-cards { grid-template-columns: 1fr; }
+    .forms-public-card .forms-wizhead { gap: 10px; margin-bottom: 16px; }
+    .forms-public-card .forms-steptitle-top { font-size: 15px; }
+}
+
+/* Row alignment — give every field a consistent internal stack so that two
+   fields sharing a row line up: equal label band, controls start at the same
+   y, and inputs/selects/cards stretch to fill the cell width. */
+.forms-public-card .field { display: flex; flex-direction: column; }
+.forms-public-card .field-label { min-height: 18px; }
+.forms-public-card .field > input,
+.forms-public-card .field > select,
+.forms-public-card .field > textarea,
+.forms-public-card .field > .forms-inp,
+.forms-public-card .field > .sig-pad,
+.forms-public-card .field > .forms-intl,
+.forms-public-card .field > .forms-addr { width: 100%; }
+
+/* ─── Section heading → uppercase eyebrow + divider rule ─────── */
+.forms-heading { margin: 28px 0 10px; padding-top: 0; border-top: 0; }
+.forms-heading:first-child { margin-top: 0; }
+.forms-heading h3 {
+    display: flex; align-items: center; gap: 14px;
+    font-size: 11.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--f-muted);
+}
+.forms-heading h3::after { content: ""; flex: 1; height: 1px; background: var(--f-line); }
+.forms-heading p { margin: 6px 0 0; }
+
+/* ─── Acceptance / disclaimer field ─────────────────────────── */
+.forms-public-card .forms-disclaimer {
+    border: 1.5px solid #F6C9C5; border-radius: var(--f-radius); background: #fff; overflow: hidden;
+}
+.forms-disclaimer-head { display: flex; align-items: center; gap: 13px; padding: 15px 18px; background: #FEF3F2; border-bottom: 1px solid #FADAD6; }
+.forms-disclaimer-ico { flex: none; width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; background: #FBE0DD; color: #DC2626; }
+.forms-disclaimer-headtext { min-width: 0; }
+.forms-disclaimer-title { font-size: 16px; font-weight: 700; color: #B42318; letter-spacing: -0.01em; line-height: 1.2; }
+.forms-disclaimer-sub { font-size: 12.5px; color: #D6766B; margin-top: 2px; }
+.forms-disclaimer-body {
+    max-height: 240px; overflow-y: auto; padding: 18px;
+    font-size: 13.5px; line-height: 1.65; color: var(--f-muted); white-space: pre-line;
+    scrollbar-width: thin; scrollbar-color: #F0A9A0 transparent;
+}
+.forms-disclaimer-body:focus-visible { outline: 2px solid var(--f-accent); outline-offset: -2px; }
+.forms-disclaimer-body::-webkit-scrollbar { width: 8px; }
+.forms-disclaimer-body::-webkit-scrollbar-thumb { background: #F0A9A0; border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+.forms-disclaimer-agree {
+    display: flex; align-items: flex-start; gap: 12px; cursor: pointer;
+    padding: 16px 18px; background: #FEF7F6; border-top: 1px solid #FADAD6;
+}
+.forms-public-card .forms-disclaimer-agree input[type="checkbox"] { margin-top: 1px; border-color: #E8A39B; }
+.forms-public-card .forms-disclaimer-agree input[type="checkbox"]:checked { border-color: var(--f-accent); }
+.forms-disclaimer-agree > span { font-size: 13.5px; line-height: 1.5; color: #344054; font-weight: 600; }
+.forms-disclaimer-agree .field-required { color: #DC2626; }
+.field.is-invalid .forms-disclaimer { border-color: #EF4444; }
+
+/* ─── Step header (per-step title, reference style) ─────────── */
+.forms-steps-bar { margin-bottom: 26px; }
+.forms-step-head { margin-bottom: 14px; }
+.forms-step-title {
+    font-family: var(--font-display, "Syne", -apple-system, sans-serif);
+    margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.018em; line-height: 1.15; color: var(--f-ink);
+}
+.forms-step-sub { margin: 6px 0 0; font-size: 14px; color: var(--f-muted); line-height: 1.5; }
+@media (max-width: 560px) { .forms-step-title { font-size: 18px; } }
+
+/* ─── Form-title kicker (small brand line on multi-step forms) ─ */
+.forms-public-kicker {
+    font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--f-muted); margin-bottom: 22px;
+}
+
+/* ─── Input leading icons (email→✉, phone→☎, etc.) ──────────── */
+.forms-inp { position: relative; }
+.forms-inp-ico {
+    position: absolute; left: 15px; top: 0; bottom: 0;
+    display: flex; align-items: center; color: #98A2B3; pointer-events: none;
+    transition: color .16s ease;
+}
+.forms-inp-ico svg { width: 18px; height: 18px; }
+.forms-public-card .forms-inp input.has-ico { padding-left: 46px !important; }
+.forms-inp:focus-within .forms-inp-ico { color: var(--f-accent); }
+
+/* Tidy the gap before the step nav (was last-field margin + nav margin). */
+.forms-step-fields > .field:last-of-type { margin-bottom: 4px; }
+
+/* Flat (single-step) forms reuse the capped scroll region; the submit sits in
+   its own footer below the scrolling fields. */
+.forms-flat-foot { margin-top: 18px; }
+
+/* ── Review / summary step (admin-toggled final step) ───────── */
+.forms-summary { display: flex; flex-direction: column; }
+.forms-summary-row {
+    display: flex; gap: 14px; align-items: baseline;
+    padding: 5px 2px; border-bottom: 1px solid var(--f-line-2);
+}
+.forms-summary-row:last-child { border-bottom: 0; }
+.forms-summary-k {
+    flex: 0 0 36%; min-width: 0; font-size: 12px; font-weight: 600; color: var(--f-muted);
+    overflow-wrap: anywhere;
+}
+.forms-summary-v {
+    flex: 1 1 auto; min-width: 0; font-size: 13px; font-weight: 500; color: var(--f-ink); line-height: 1.35;
+    overflow-wrap: anywhere; white-space: pre-wrap;
+}
+.forms-summary-empty { color: var(--f-muted); font-size: 13.5px; margin: 4px 0; }
+@media (max-width: 560px) {
+    .forms-public-card .forms-summary-row { flex-direction: column; gap: 2px; }
+    .forms-public-card .forms-summary-k { flex-basis: auto; }
+}
+
+/* ── Capped step height — long steps scroll inside the card, keeping the
+   step header and footer nav in view. Short steps don't reach the cap, so
+   they never show a scrollbar. The negative inline margin + padding give
+   focus rings room to breathe instead of being clipped by overflow. */
+.forms-step-fields {
+    max-height: clamp(320px, 60vh, 660px);
+    overflow-y: auto; overscroll-behavior: contain;
+    margin: 0 -6px; padding: 4px 6px;
+    /* Scrollbar hidden — the region still scrolls, just without a visible bar
+       or reserved gutter (which also removes the edge-mark artifact). */
+    scrollbar-width: none; -ms-overflow-style: none;
+}
+.forms-step-fields::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.forms-step { position: relative; }
+/* Scroll hint — since the scrollbar is hidden, fade the edge(s) that have more
+   content (classes toggled by JS). The mask is fixed to the box, so it stays at
+   the visible edge and disappears once you reach the end. */
+.forms-step-fields.sf-bottom:not(.sf-top) {
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 38px), transparent);
+            mask-image: linear-gradient(to bottom, #000 calc(100% - 38px), transparent);
+}
+.forms-step-fields.sf-top:not(.sf-bottom) {
+    -webkit-mask-image: linear-gradient(to top, #000 calc(100% - 38px), transparent);
+            mask-image: linear-gradient(to top, #000 calc(100% - 38px), transparent);
+}
+.forms-step-fields.sf-top.sf-bottom {
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 38px, #000 calc(100% - 38px), transparent);
+            mask-image: linear-gradient(to bottom, transparent, #000 38px, #000 calc(100% - 38px), transparent);
+}
+
+/* ─── Inline validation (live green-check / red state) ──────── */
+.forms-inp-status {
+    position: absolute; right: 13px; top: 0; bottom: 0; width: 20px;
+    display: none; pointer-events: none;
+}
+.field.is-valid .forms-inp .forms-inp-status {
+    display: block;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2310B981' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/18px no-repeat;
+}
+.field.is-valid .forms-inp:not(.forms-inp-native) input { padding-right: 40px; }
+.forms-public-card .field.is-valid input:not(:focus),
+.forms-public-card .field.is-valid select:not(:focus),
+.forms-public-card .field.is-valid textarea:not(:focus) { border-color: #10B981 !important; }
+.forms-public-card .field.is-invalid input:not(:focus),
+.forms-public-card .field.is-invalid select:not(:focus),
+.forms-public-card .field.is-invalid textarea:not(:focus) { border-color: #EF4444 !important; background: #FEF6F6 !important; }
+.field.is-invalid .field-label { color: #B42318; }
+.field .js-err { animation: forms-in-next .25s ease; }
+
+/* ─── Numbered step rail (①②③) ──────────────────────────────── */
+/* Compact, grouped cluster — ①②③ sit together (no connector lines),
+   not spread across the full width. */
+.forms-rail { display: inline-flex; align-items: center; gap: 10px; list-style: none; margin: 0 0 20px; padding: 0; }
+.forms-rail-item { display: flex; align-items: center; }
+.forms-rail-dot {
+    flex: none; width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center;
+    font-size: 11px; font-weight: 700; background: var(--f-line-2); color: var(--f-muted);
+    transition: background .25s ease, color .25s ease, box-shadow .25s ease;
+}
+.forms-rail-item.is-active .forms-rail-dot { background: var(--f-accent); color: #fff; box-shadow: 0 0 0 3px var(--f-ring); }
+.forms-rail-item.is-done  .forms-rail-dot {
+    color: transparent; cursor: pointer;
+    background: var(--f-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/12px no-repeat;
+}
+@media (max-width: 480px) { .forms-rail-dot { width: 20px; height: 20px; font-size: 10px; } }
+
+/* ─── Compact density (per-form Appearance setting) ─────────── */
+.forms-density-compact.forms-public-card { padding: var(--f-pad, 28px 26px 12px); border-radius: 18px; }
+.forms-density-compact .field { margin-bottom: 13px; }
+.forms-density-compact .field:last-of-type { margin-bottom: 18px; }
+.forms-density-compact .field-label { font-size: 12.5px; margin-bottom: 5px; }
+.forms-density-compact input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]),
+.forms-density-compact select,
+.forms-density-compact textarea { padding: 10px 13px; font-size: 14px; border-radius: 11px; }
+.forms-density-compact .forms-inp input.has-ico { padding-left: 42px !important; }
+.forms-density-compact textarea { min-height: 92px; }
+.forms-density-compact .btn { padding: 11px 18px; font-size: 14px; }
+.forms-density-compact .btn-lg { padding: 12px 18px; font-size: 14.5px; }
+.forms-density-compact .forms-public-header h1 { font-size: 22px; }
+.forms-density-compact .forms-step-title { font-size: 19px; }
+.forms-density-compact .forms-step-head { margin-bottom: 16px; }
+.forms-density-compact .forms-step-sub { font-size: 14px; }
+.forms-density-compact .forms-card { padding: 13px 15px; }
+.forms-density-compact .forms-card-ico { width: 40px; height: 40px; }
+.forms-density-compact .forms-cards { gap: 10px; }
+.forms-density-compact .forms-check { padding: 11px 13px; }
+.forms-density-compact .forms-check-group { gap: 8px; }
+.forms-density-compact .forms-rail { margin-bottom: 18px; }
+.forms-density-compact .forms-steps-nav { margin-top: 10px; }
+.forms-density-compact .forms-rating { font-size: 28px; }
+
+/* ─── Responsive — phones & small tablets ───────────────────── */
+@media (max-width: 600px) {
+    .forms-public-shell { padding: 14px 10px; }
+    .forms-public-card { padding: 24px 18px 20px; border-radius: 16px; }
+    .forms-public-header h1 { font-size: 21px; }
+    .forms-step-title { font-size: 20px; }
+    .forms-step-head { margin-bottom: 16px; }
+    /* iOS zooms inputs under 16px on focus — force 16px on phones. */
+    .forms-public-card input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]),
+    .forms-public-card select,
+    .forms-public-card textarea { font-size: 16px !important; }
+    .forms-cards { grid-template-columns: 1fr; gap: 10px; }
+    .forms-card { padding: 14px 15px; }
+    .forms-card-ico { width: 42px; height: 42px; }
+    .forms-range { gap: 10px; }
+    .forms-rating { font-size: 30px; }
+    .forms-density-compact.forms-public-card { padding: 22px 16px 18px; }
+}
+@media (max-width: 400px) {
+    .forms-public-card { padding: 20px 14px 16px; }
+    .forms-public-kicker { margin-bottom: 16px; }
+    .forms-rail { margin-bottom: 16px; gap: 8px; }
+    .forms-rail-dot { width: 19px; height: 19px; font-size: 10px; }
+    .forms-step-title { font-size: 20px; }
+    .forms-public-header h1 { font-size: 20px; }
+    .forms-card-desc { font-size: 12px; }
+}
+
+/* ─── Small-device responsiveness ───────────────────────────── */
+@media (max-width: 600px) {
+    .forms-public-shell { padding: 14px 10px; }
+    .forms-public-card { padding: 22px 16px 18px; border-radius: 16px; }
+    .forms-public-header h1 { font-size: 21px; }
+    .forms-step-title { font-size: 20px; }
+    .forms-step-head { margin-bottom: 16px; }
+    /* iOS zoom guard — inputs must be >= 16px so Safari doesn't zoom on focus */
+    .forms-public-card input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]),
+    .forms-public-card select,
+    .forms-public-card textarea { font-size: 16px !important; }
+    .forms-cards { grid-template-columns: 1fr; gap: 10px; }   /* one choice card per row */
+    .forms-card { padding: 13px 14px; }
+    .forms-card-ico { width: 42px; height: 42px; }
+    .forms-rating { font-size: 30px; }
+    .forms-public-kicker { margin-bottom: 18px; }
+}
+@media (max-width: 400px) {
+    .forms-public-card { padding: 18px 13px 14px; }
+    .forms-rail { gap: 8px; }
+    .forms-rail-dot { width: 19px; height: 19px; font-size: 10px; }
+    .forms-step-title { font-size: 19px; }
+    .forms-card-ico { width: 38px; height: 38px; }
+}
+
+/* ─── Appearance: filled field style ────────────────────────── */
+.forms-fields-filled input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]),
+.forms-fields-filled select,
+.forms-fields-filled textarea { background: var(--f-soft); border-color: transparent; }
+.forms-fields-filled input:hover:not(:focus),
+.forms-fields-filled select:hover:not(:focus),
+.forms-fields-filled textarea:hover:not(:focus) { background: #EEF1F5; border-color: transparent; }
+.forms-fields-filled input:focus,
+.forms-fields-filled select:focus,
+.forms-fields-filled textarea:focus { background: #fff; border-color: var(--f-accent); }
+
+/* ─── Appearance: corner shapes ─────────────────────────────── */
+.forms-shape-pill .btn { border-radius: 999px; }
+.forms-shape-square .btn,
+.forms-shape-square input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]),
+.forms-shape-square select,
+.forms-shape-square textarea,
+.forms-shape-square .forms-card,
+.forms-shape-square .forms-check,
+.forms-shape-square .forms-calc-out { border-radius: 6px; }
+
+/* ─── Appearance: hidden labels (visually hidden, kept for AT) ─ */
+.forms-hide-labels .field > label.field-label {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ─── Anti-spam: CAPTCHA widget ─────────────────────────────── */
+.forms-captcha { margin: 0 0 16px; }
+.forms-captcha-note {
+    margin: 0 0 16px; font-size: 12px; line-height: 1.5; color: var(--f-muted, #64748b);
+}
+.forms-captcha-note a { color: inherit; text-decoration: underline; }

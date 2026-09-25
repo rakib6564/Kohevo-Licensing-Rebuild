@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "type": "page",
+  "template": "",
+  "sections": [
+    {
+      "id": "s1",
+      "layout": {
+        "kind": "default"
+      },
+      "blocks": [
+        {
+          "type": "cta",
+          "props": {
+            "pad": "spacious",
+            "eyebrow": "Ready when you are",
+            "heading": "Start your first class",
+            "text": "No card needed to book a trial.",
+            "btnText": "Book a trial",
+            "btnHref": "/book"
+          }
+        },
+        {
+          "type": "testimonial",
+          "props": {
+            "pad": "compact",
+            "quote": "They made the whole thing painless.",
+            "author": "Dana R.",
+            "role": "Parent",
+            "avatar": "/uploads/people/dana.jpg"
+          }
+        },
+        {
+          "type": "columns",
+          "props": {
+            "cols": [
+              {
+                "blocks": [
+                  {
+                    "type": "heading",
+                    "props": {
+                      "text": "Left column",
+                      "level": 3
+                    }
+                  },
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "Nested content renders through the same block path."
+                    }
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "type": "button",
+                    "props": {
+                      "text": "Nested link",
+                      "href": "/nested",
+                      "style": "secondary"
+                    }
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "type": "button",
+                    "props": {
+                      "text": "Unknown style",
+                      "href": "/x",
+                      "style": "not-a-style"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "seo": {}
+}

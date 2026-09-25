@@ -1,0 +1,87 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Slate — migration CLI.
+ *
+ * Usage:
+ *   php bin/migrate            # status (default) — what's applied / pending
+ *   php bin/migrate status
+ *   php bin/migrate migrate    # apply all pending migrations
+ *   php bin/migrate baseline   # stamp all pending as applied WITHOUT running
+ *                              #   (existing installs whose schema already exists)
+ *   php bin/migrate rollback   # roll back the most recent batch (dev/staging)
+ *
+ * Governs CORE schema (db/migrations/). Plugin ensureSchema() is untouched.
+ * Off the request path — run at deploy/upgrade, never per request.
+ */
+
+declare(strict_types=1);
+
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit;
+}
+
+require __DIR__ . '/../config.php';
+
+use Slate\Data\MigrationRunner;
+
+$command = $argv[1] ?? 'status';
+$dir     = SLATE_ROOT . '/db/migrations';
+$runner  = new MigrationRunner(Database::get(), $dir);
+
+switch ($command) {
+    case 'status':
+        $status = $runner->status();
+        if ($status === []) {
+            echo "No migrations found in {$dir}\n";
+            break;
+        }
+        echo "Migration status:\n";
+        foreach ($status as $name => $applied) {
+            echo '  [' . ($applied ? 'x' : ' ') . "] {$name}\n";
+        }
+        $pending = $runner->pending();
+        echo "\n" . count($pending) . " pending, " . (count($status) - count($pending)) . " applied.\n";
+        break;
+
+    case 'migrate':
+        $applied = $runner->migrate();
+        if ($applied === []) {
+            echo "Nothing to migrate — already up to date.\n";
+        } else {
+            echo "Applied " . count($applied) . " migration(s):\n";
+            foreach ($applied as $name) {
+                echo "  + {$name}\n";
+            }
+        }
+        break;
+
+    case 'baseline':
+        $stamped = $runner->baseline();
+        if ($stamped === []) {
+            echo "Nothing to baseline — ledger already covers all migrations.\n";
+        } else {
+            echo "Baseline-stamped " . count($stamped) . " migration(s) as applied (not run):\n";
+            foreach ($stamped as $name) {
+                echo "  = {$name}\n";
+            }
+        }
+        break;
+
+    case 'rollback':
+        $rolled = $runner->rollbackLast();
+        if ($rolled === []) {
+            echo "Nothing to roll back.\n";
+        } else {
+            echo "Rolled back " . count($rolled) . " migration(s):\n";
+            foreach ($rolled as $name) {
+                echo "  - {$name}\n";
+            }
+        }
+        break;
+
+    default:
+        fwrite(STDERR, "Unknown command '{$command}'. Use: status | migrate | baseline | rollback\n");
+        exit(1);
+}

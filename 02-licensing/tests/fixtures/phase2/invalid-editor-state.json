@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "type": "page",
+  "template": "",
+  "sections": [
+    {
+      "id": "s1",
+      "layout": {
+        "cols": 1,
+        "bg": "",
+        "pad": "normal",
+        "width": "normal"
+      },
+      "blocks": [
+        {
+          "type": "global_ref",
+          "nodeId": "craft-node-1",
+          "props": {
+            "$ref": "../footer"
+          }
+        }
+      ]
+    }
+  ],
+  "seo": {}
+}

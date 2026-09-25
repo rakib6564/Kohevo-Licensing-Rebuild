@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "type": "page",
+  "template": "",
+  "sections": [
+    {
+      "id": "s1",
+      "layout": { "kind": "default" },
+      "blocks": [
+        {
+          "type": "image",
+          "props": {
+            "media": { "key": "hero.primary", "alt": "Studio floor at golden hour", "focal": [0.5, 0.35] }
+          }
+        },
+        {
+          "type": "image",
+          "props": { "src": "/uploads/legacy/old-hero.jpg", "alt": "Deprecated raw-URL form" }
+        }
+      ]
+    }
+  ],
+  "seo": {}
+}

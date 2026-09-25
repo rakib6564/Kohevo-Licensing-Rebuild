@@ -1,0 +1,109 @@
+# Slate anti-drift baseline (CORE-1) — pre-existing violations, one per line.
+# Regenerate: php bin/anti-drift.php --update-baseline
+#
+# This is a DEBT REGISTER, not a config file. It should only ever shrink.
+# A new entry means someone reached around a helper and recorded it instead
+# of fixing it — that needs a reason in review, not a rubber stamp.
+#
+# Generated 2026-09-06 — 94 entries.
+#
+# The line below is a RATCHET, not a comment. TENANT is the multi-tenant
+# migration backlog: every entry is a query that must be scoped before
+# one install can serve more than one tenant. The count may fall and
+# never rise — bin/anti-drift.php refuses to re-record a higher one.
+# ratchet TENANT=70
+
+CLOCK:plugins/booking-plus/admin/index.php:8d71d4f17583
+CLOCK:plugins/booking/admin/coupons.php:1af9b8fe6a49
+CLOCK:plugins/booking/admin/coupons.php:90f9a2487563
+CLOCK:plugins/booking/public/router.php:f5449f57f5d7
+CLOCK:plugins/forms/FormsAPI.php:77c46aa2ea35
+CLOCK:plugins/forms/lib/FormsPdf.php:4a0545efd26a
+CLOCK:plugins/shop/admin/coupons.php:e1454f4f9f84
+CLOCK:plugins/stripe-payment/admin/settings.php:e971e59b85d3
+CLOCK:plugins/timeclock/TimeclockAPI.php:60a1cb1e93cc
+CUSTOMERS:customer/profile.php:404314c683da
+CUSTOMERS:plugins/membership/public/router.php:9b6108494f6b
+CUSTOMERS:src/Services/Auth/Auth.php:5dfb3ba41ead
+CUSTOMERS:src/Services/Auth/Auth.php:881e18342afd
+CUSTOMERS:src/Services/Auth/Auth.php:c69ff1ba7649
+ENTRY:plugins/clientdesk/public/landing.php:6d1ce2381ff0
+ENTRY:plugins/restaurant/storefront/api.php:a9160d0e5011
+ENTRY:plugins/restaurant/storefront/cart.php:b7924b6e6b0e
+ENTRY:plugins/restaurant/storefront/checkout.php:b44757eda23f
+ENTRY:plugins/restaurant/storefront/confirm.php:ddf9dba717eb
+ENTRY:plugins/restaurant/storefront/index.php:b973c8a37f9c
+ENTRY:plugins/restaurant/storefront/item.php:372339748532
+ENTRY:plugins/restaurant/storefront/router.php:330d68faaceb
+ENTRY:plugins/shop/storefront/router.php:c1073633ff83
+ENTRY:plugins/studio/public/_pubui.php:670224d88c09
+TENANT:admin/contact_forms.php:3e8315195b4a
+TENANT:plugins/booking-plus/BookingPlus.php:7d510e523b8a
+TENANT:plugins/booking-plus/BookingPlus.php:9b6e32b43487
+TENANT:plugins/booking-plus/admin/services.php:19b8c78df280
+TENANT:plugins/booking/Booking.php:5072ddb8cf10
+TENANT:plugins/booking/Booking.php:7d8ff17ec0ba
+TENANT:plugins/booking/Booking.php:a4e1e5be2b0a
+TENANT:plugins/booking/Booking.php:a8cee554e866
+TENANT:plugins/booking/Booking.php:c574c5e91446
+TENANT:plugins/booking/BookingAPI.php:4e36170ededb
+TENANT:plugins/booking/BookingAPI.php:60886a0bdb7a
+TENANT:plugins/booking/BookingAPI.php:c631b8376a0d
+TENANT:plugins/booking/GoogleCalendarSync.php:1f4d2c0efffb
+TENANT:plugins/booking/admin/appointment.php:fb2359083bd8
+TENANT:plugins/booking/admin/providers.php:d72c23724693
+TENANT:plugins/booking/public/router.php:0f18ab2edd47
+TENANT:plugins/booking/public/router.php:6f8d95c646fd
+TENANT:plugins/booking/public/router.php:7c813a1bd558
+TENANT:plugins/coaching/CoachingAPI.php:005cee483df1
+TENANT:plugins/coaching/CoachingAPI.php:11d833dbb686
+TENANT:plugins/coaching/CoachingAPI.php:282145210d64
+TENANT:plugins/coaching/CoachingAPI.php:3b682ebf2027
+TENANT:plugins/coaching/CoachingAPI.php:56a9c2885995
+TENANT:plugins/coaching/CoachingAPI.php:57bb8a9b39db
+TENANT:plugins/coaching/CoachingAPI.php:8cbd01e21ac3
+TENANT:plugins/coaching/CoachingAPI.php:8dbebb6b38de
+TENANT:plugins/coaching/CoachingAPI.php:ab95e9c83fcc
+TENANT:plugins/coaching/CoachingAPI.php:e3da612286ab
+TENANT:plugins/coaching/CoachingAPI.php:f37283a9a595
+TENANT:plugins/coaching/CoachingAPI.php:fb1825797211
+TENANT:plugins/coaching/admin/index.php:903e1b67bc1d
+TENANT:plugins/coaching/admin/library.php:814912447015
+TENANT:plugins/coaching/customer/router.php:dfde1289a9c0
+TENANT:plugins/coaching/customer/router.php:ffc37bfe6901
+TENANT:plugins/content-builder/ContentBuilderAPI.php:bbe35aed1094
+TENANT:plugins/content-builder/ContentBuilderAPI.php:c18f30e5342f
+TENANT:plugins/flat-rate-shipping/FlatRateShipping.php:ce7a263ddbf1
+TENANT:plugins/forms/FormsAPI.php:069d45335466
+TENANT:plugins/forms/admin/edit.php:a2a93000c568
+TENANT:plugins/membership/MembershipAPI.php:770e7e827b36
+TENANT:plugins/multilang-translate/includes/StringRepo.php:e40c4c04dd1d
+TENANT:plugins/react-site-bridge/ReactSiteBridgeAPI.php:c717cfd8ede1
+TENANT:plugins/restaurant/RestaurantAPI.php:6746d691f356
+TENANT:plugins/restaurant/RestaurantAPI.php:78b0966fd44a
+TENANT:plugins/restaurant/RestaurantAPI.php:87bfd42cf56f
+TENANT:plugins/restaurant/RestaurantAPI.php:ae5df9bdc48a
+TENANT:plugins/restaurant/RestaurantAPI.php:b8cb7f2913de
+TENANT:plugins/restaurant/RestaurantAPI.php:c31bda8815f0
+TENANT:plugins/restaurant/RestaurantAPI.php:f70b0f830ea1
+TENANT:plugins/restaurant/storefront/includes/sf.php:50b323d946b4
+TENANT:plugins/restaurant/storefront/includes/sf.php:ece17ce94aa7
+TENANT:plugins/shop/Shop.php:0278d7a5a053
+TENANT:plugins/shop/Shop.php:7465319d0e4b
+TENANT:plugins/shop/Shop.php:d6d219e30cfd
+TENANT:plugins/shop/ShopAPI.php:3d08e45de19f
+TENANT:plugins/shop/admin/categories.php:d2895f241b4c
+TENANT:plugins/shop/admin/products.php:33ac92e678a3
+TENANT:plugins/shop/admin/products.php:c31bcaf366a9
+TENANT:plugins/sitehub/Sitehub.php:430f24cc402e
+TENANT:plugins/slate-mcp/SlateMcpAPI.php:6d40335dcbcf
+TENANT:src/Services/Auth/Auth.php:374d8620aa21
+TENANT:src/Services/Auth/Auth.php:398ae594da39
+TENANT:src/Services/Auth/Auth.php:6a41d9c9300e
+TENANT:src/Services/Auth/Auth.php:a05379a90b82
+TENANT:src/Services/Identity/ContactSeeder.php:4191c01e5184
+TENANT:src/Services/Identity/ContactSeeder.php:a9ed152e423a
+TENANT:src/Services/Identity/ContactSeeder.php:afcfc8fe49bd
+TENANT:src/Services/Identity/ContactSeeder.php:b7d5e8850da7
+TENANT:src/Services/Identity/ContactSeeder.php:c23b8d1a3639
+TENANT:src/Services/Identity/ContactSeeder.php:cf82a4a925fe

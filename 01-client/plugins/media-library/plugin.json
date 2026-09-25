@@ -1,0 +1,10 @@
+{
+    "slug": "media-library",
+    "name": "Media library (compatibility shim)",
+    "version": "1.1.0",
+    "description": "The media library is now a built-in Kohevo feature (Content → Media). This shim is retained so existing integrations keep working: it serves the picker assets and delegates the MediaLibrary API to the core Media service. Keep it active.",
+    "author": "Kohevo",
+    "author_url": "https://example.com",
+    "requires_core": ">=1.0.0",
+    "system": true
+}

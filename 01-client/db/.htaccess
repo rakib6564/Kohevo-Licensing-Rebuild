@@ -1,0 +1,3 @@
+# Schema/migration SQL — never web-served. (Subdirectory-safe block; the
+# root RedirectMatch rules don't fire under a /subdir/ deployment.)
+Require all denied

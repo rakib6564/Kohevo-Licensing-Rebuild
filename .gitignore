@@ -1,0 +1,42 @@
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+
+# Runtime logs & local data
+*.log
+01-client/data/*
+!01-client/data/.gitkeep
+02-licensing/data/*
+!02-licensing/data/.gitkeep
+
+# Local database backups
+01-client/db_backups/*
+!01-client/db_backups/.gitkeep
+02-licensing/db_backups/*
+!02-licensing/db_backups/.gitkeep
+*.sqlite
+*.sqlite3
+*.db
+
+# OS & editor artifacts
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temporary & cache files
+tmp/
+temp/
+.phpunit.result.cache

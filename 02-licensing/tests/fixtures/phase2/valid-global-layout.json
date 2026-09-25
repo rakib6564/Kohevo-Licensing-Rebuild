@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "type": "page",
+  "template": "document",
+  "sections": [
+    {
+      "id": "s1",
+      "layout": {
+        "cols": 1,
+        "bg": "",
+        "pad": "normal",
+        "width": "full"
+      },
+      "savedAs": "global-header",
+      "blocks": [
+        {
+          "type": "global_ref",
+          "props": {
+            "$ref": "global-header"
+          }
+        },
+        {
+          "type": "hero",
+          "props": {
+            "heading": "Nutrition made practical",
+            "align": {
+              "base": "start",
+              "md": "center"
+            },
+            "media": {
+              "key": "hero.primary",
+              "alt": "A bowl of fresh food",
+              "focal": [0.5, 0.4]
+            }
+          },
+          "style": {
+            "visible": {
+              "base": true,
+              "md": true
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "seo": {}
+}

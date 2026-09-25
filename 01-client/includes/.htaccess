@@ -1,0 +1,2 @@
+# Core PHP classes — never directly web-served. (Subdirectory-safe block.)
+Require all denied

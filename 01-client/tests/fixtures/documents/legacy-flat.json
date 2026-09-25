@@ -1,0 +1,5 @@
+[
+  { "type": "heading",   "props": { "text": "Legacy flat layout", "level": 1 } },
+  { "type": "paragraph", "props": { "text": "Every contentbuilder_posts.layout row looks like this today." } },
+  { "type": "button",    "props": { "text": "Read more", "href": "/about" } }
+]

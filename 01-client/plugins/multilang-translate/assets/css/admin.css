@@ -1,0 +1,110 @@
+/*
+ * Multilang Translate — admin page chrome.
+ *
+ * Session 10 rebuild: buttons, stat cards, the expandable row list
+ * (.data-list/.data-row), tabs (.segmented) and pagination (.slate-pager)
+ * are all core Slate design-system classes now (includes/ui_components.php)
+ * — this file only holds what's actually specific to this page: toolbar
+ * layout, the per-language stat card's extra toggle/remove row, the
+ * translation textareas, and the modals/scan-progress/toast widgets.
+ * No colors are hardcoded here anymore; everything rides the shared
+ * --accent/--border/--surface/etc. tokens so a brand-color or dark-mode
+ * change applies here exactly like it does on every other admin page.
+ */
+.mlt-wrap{padding:20px 0;max-width:100%;box-sizing:border-box;width:100%;min-width:0}
+.mlt-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:var(--space-4,16px)}
+.mlt-spacer{flex:1}
+
+.mlt-stats{margin-bottom:var(--space-4,16px)}
+/* Flag glyphs come from the OS emoji font, not an SVG sprite, so the
+   .dash-stat-badge svg{width:20px;height:20px} rule in ui_components.php
+   never applies to them — font-size alone doesn't pin an emoji's
+   rendered size consistently across platforms. Box it to match every
+   other .dash-stat-badge icon instead of trusting font metrics. */
+.mlt-flag-badge{display:inline-flex;align-items:center;justify-content:center;
+    width:20px;height:20px;font-size:20px;line-height:1;overflow:hidden}
+.mlt-lang-stat{position:relative}
+.mlt-lang-stat.is-off{opacity:.65}
+.mlt-badge-off{font-size:9.5px;font-weight:700;color:var(--muted);border:1px solid var(--border);border-radius:999px;
+    padding:1px 6px;margin-left:6px;text-transform:uppercase;letter-spacing:.03em;vertical-align:1px}
+.mlt-lang-stat-actions{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;
+    gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.mlt-th-toggle{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:var(--text-2)}
+.mlt-lang-remove{border:none;background:none;color:var(--subtle);font-size:16px;cursor:pointer;line-height:1;padding:0}
+.mlt-lang-remove:hover{color:var(--danger)}
+.mlt-lang-stat-empty{display:flex;align-items:center;color:var(--muted);font-style:italic;font-size:13px}
+
+.mlt-listbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-3,12px);
+    margin-bottom:var(--space-3,12px)}
+.mlt-search{flex:1 1 220px;max-width:320px;min-width:0;border:1px solid var(--border);border-radius:10px;
+    background:var(--surface);color:var(--text);font:inherit;font-size:12.5px;padding:8px 12px;min-height:36px}
+.mlt-search:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+.mlt-search::placeholder{color:var(--subtle)}
+
+.mlt-flag{font-size:15px;line-height:1}
+.mlt-empty{text-align:center;color:var(--muted);padding:32px 20px}
+
+/* Per-language edit cells, shown inside each row's expanded .data-row-detail. */
+.mlt-cell{width:100%;min-width:0;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font:inherit;
+    font-size:13px;resize:vertical;min-height:38px;background:var(--surface);color:var(--text)}
+.mlt-cell:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--ring)}
+.mlt-status-blank{background:var(--danger-soft)}
+.mlt-status-draft{background:var(--warning-soft)}
+.mlt-status-published{background:var(--success-soft)}
+
+.mlt-modal{position:fixed;inset:0;background:rgba(17,24,39,.5);display:flex;align-items:center;justify-content:center;z-index:10000}
+.mlt-modal[hidden]{display:none}
+.mlt-modal-box{background:var(--surface);color:var(--text);border-radius:var(--radius-lg,12px);padding:24px;
+    width:420px;max-width:92vw;max-height:88vh;overflow:auto;border:1px solid var(--border)}
+.mlt-modal-box h3{margin-top:0}
+.mlt-modal-box label{display:block;margin-bottom:12px;font-size:13px;color:var(--text-2)}
+.mlt-modal-box input[type=text],.mlt-modal-box select,.mlt-modal-box input[type=file]{width:100%;padding:8px;
+    border:1px solid var(--border);border-radius:6px;margin-top:4px;font-size:14px;background:var(--surface);color:var(--text)}
+.mlt-modal-box input[type=color]{width:100%;height:36px;margin-top:4px}
+.mlt-inline-check{display:flex;align-items:center;gap:6px}
+.mlt-inline-check input{width:auto!important}
+.mlt-modal-hint{font-size:12px;color:var(--muted);margin:8px 0}
+.mlt-export-extra-label{display:block;font-size:13px;font-weight:600;margin-top:14px}
+.mlt-export-extra-label input{display:block;width:100%;margin-top:4px;padding:7px 9px;border:1px solid var(--border);
+    border-radius:6px;font-weight:400;font-size:13px}
+#mlt-scanurls-text{width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;resize:vertical;margin:6px 0;
+    background:var(--surface);color:var(--text)}
+.mlt-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+
+.mlt-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--surface);
+    padding:10px 18px;border-radius:8px;z-index:10001;font-size:14px}
+.mlt-toast[hidden]{display:none}
+
+/* Scan progress */
+.mlt-scan-progress{margin:0 0 16px;padding:16px 18px;background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius-lg,12px)}
+.mlt-scan-progress[hidden]{display:none}
+.mlt-scan-progress-head{display:flex;justify-content:space-between;align-items:center;gap:12px;color:var(--text)}
+.mlt-scan-status{display:inline-block;margin-left:8px;color:var(--muted);font-size:13px;font-weight:400}
+.mlt-progress-track{height:12px;margin:12px 0 10px;overflow:hidden;background:var(--surface-2);border-radius:999px}
+.mlt-progress-fill{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-deep));
+    border-radius:inherit;transition:width .25s ease}
+.mlt-scan-progress-meta{display:flex;flex-wrap:wrap;gap:8px 22px;color:var(--text-2);font-size:13px}
+.mlt-scan-errors{margin-top:12px;padding:9px 11px;max-height:120px;overflow:auto;background:var(--warning-soft);
+    border:1px solid var(--border);border-radius:7px;color:#9a3412;font-size:12px;white-space:pre-wrap;word-break:break-word}
+.mlt-scan-errors[hidden]{display:none}
+.mlt-toolbar .btn:disabled{cursor:wait;opacity:.65}
+
+@media (max-width:700px){
+ .mlt-toolbar{align-items:stretch}
+ .mlt-toolbar .btn{box-sizing:border-box;flex:1 1 calc(50% - 8px);min-height:40px;max-width:100%}
+ .mlt-toolbar .mlt-spacer{display:none}
+ .mlt-listbar{flex-direction:column;align-items:stretch}
+ .mlt-search{max-width:none}
+ .mlt-scan-progress{padding:14px}
+ .mlt-scan-progress-head{align-items:flex-start}
+ .mlt-scan-progress-meta{display:grid;grid-template-columns:1fr;gap:5px}
+ .mlt-modal{padding:12px;box-sizing:border-box}
+ .mlt-modal-box{width:100%;max-width:none;box-sizing:border-box;padding:18px}
+ .mlt-modal-actions{flex-wrap:wrap}
+ .mlt-modal-actions .btn{flex:1 1 120px;text-align:center}
+}
+@media (max-width:420px){
+ .mlt-scan-status{display:block;margin:4px 0 0}
+}

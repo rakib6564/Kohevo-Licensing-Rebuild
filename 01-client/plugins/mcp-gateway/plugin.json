@@ -1,0 +1,11 @@
+{
+    "slug": "mcp-gateway",
+    "name": "MCP Gateway",
+    "version": "0.1.0",
+    "description": "Scoped, revocable, audited MCP access for approved AI agents to manage Kohevo admin tasks. Never exposes password changes, role deletion, user deletion, live payment/email secret keys, or its own deactivation — those boundaries are enforced in code, not just by omission. Requires MCP_GATEWAY_ENABLED=1 in the environment in addition to being active.",
+    "author": "Kohevo",
+    "requires_core": ">=1.0.0",
+    "permissions": [
+        {"key": "mcp-gateway.manage", "label": "Manage MCP gateway access tokens"}
+    ]
+}

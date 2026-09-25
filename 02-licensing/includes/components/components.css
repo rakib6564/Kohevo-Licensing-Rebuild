@@ -1,0 +1,63 @@
+/*
+ * Slate Components — the one component stylesheet (Phase 3B B4).
+ *
+ * Consumes ONLY --slate-* semantic tokens (design-tokens.md §3): restyle the Theme
+ * and every component restyles. No hardcoded palette values. Serves admin and
+ * public alike (component-library.md). Additive/opt-in: nothing loads this yet.
+ */
+
+/* ── Button ─────────────────────────────────────────────── */
+.slate-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--slate-space-2);
+  font-family: var(--slate-font-sans);
+  font-size: var(--slate-font-size-md);
+  font-weight: var(--slate-font-weight-medium);
+  line-height: var(--slate-line-height-tight);
+  padding: var(--slate-space-3) var(--slate-space-5);
+  border: 1px solid transparent;
+  border-radius: var(--slate-radius-control);
+  text-decoration: none; cursor: pointer;
+  transition: background var(--slate-motion-fast) var(--slate-motion-ease),
+              box-shadow var(--slate-motion-fast) var(--slate-motion-ease);
+}
+.slate-btn--accent  { background: var(--slate-color-accent); color: var(--slate-color-on-accent); }
+.slate-btn--neutral { background: var(--slate-color-surface-sunken); color: var(--slate-color-text);
+                      border-color: var(--slate-color-border); }
+.slate-btn--sm { padding: var(--slate-space-2) var(--slate-space-4); font-size: var(--slate-font-size-sm); }
+.slate-btn--lg { padding: var(--slate-space-4) var(--slate-space-7); font-size: var(--slate-font-size-lg); }
+.slate-btn:focus-visible { outline: none; box-shadow: var(--slate-shadow-focus); }
+.slate-btn[aria-disabled="true"], .slate-btn:disabled { opacity: .55; pointer-events: none; }
+
+/* ── Card ───────────────────────────────────────────────── */
+.slate-card {
+  background: var(--slate-color-surface);
+  color: var(--slate-color-text);
+  border: 1px solid var(--slate-color-border);
+  border-radius: var(--slate-radius-lg);
+  padding: var(--slate-space-6);
+  box-shadow: var(--slate-shadow-1);
+}
+.slate-card--sunken { background: var(--slate-color-surface-sunken); }
+.slate-card__title {
+  margin: 0 0 var(--slate-space-3);
+  font-size: var(--slate-font-size-xl);
+  font-weight: var(--slate-font-weight-bold);
+  line-height: var(--slate-line-height-tight);
+}
+
+/* ── Grid ───────────────────────────────────────────────── */
+.slate-grid { display: grid; gap: var(--slate-space-6); }
+.slate-grid--cols-1 { grid-template-columns: 1fr; }
+.slate-grid--cols-2 { grid-template-columns: repeat(2, 1fr); }
+.slate-grid--cols-3 { grid-template-columns: repeat(3, 1fr); }
+.slate-grid--cols-4 { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 640px) {
+  .slate-grid--cols-2, .slate-grid--cols-3, .slate-grid--cols-4 { grid-template-columns: 1fr; }
+}
+
+/* ── Media ──────────────────────────────────────────────── */
+.slate-media { display: block; max-width: 100%; height: auto; border-radius: var(--slate-radius-md); }
+.slate-media--1-1  { width: 100%; aspect-ratio: 1 / 1;  object-fit: cover; }
+.slate-media--4-3  { width: 100%; aspect-ratio: 4 / 3;  object-fit: cover; }
+.slate-media--16-9 { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }

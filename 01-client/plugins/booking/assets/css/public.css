@@ -1,0 +1,613 @@
+/* Booking — public + embed surface.
+   .book-public/.book-public-embed used to be body-only selectors -- fine
+   for the standalone page and the classic <iframe> embed, both of which
+   put these classes on <body>. Native/fragment mode (the member portal
+   including this widget directly, see bookpub_layout_start()'s $fragment
+   branch) instead wraps the widget in a plain <div> carrying the same
+   two classes, since the surrounding page already owns <body>. Each rule
+   below now matches either. */
+body.book-public, .book-public {
+    margin: 0; padding: 0;
+    background: #FFFFFF;
+    min-height: 100vh; min-height: 100dvh;
+    font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+    color: var(--text, #111217);
+}
+body.book-public-embed, .book-public-embed { background: transparent; min-height: 0; }
+
+.book-shell {
+    display: flex; justify-content: center;
+    padding: 40px 16px;
+}
+body.book-public-embed .book-shell, .book-public-embed .book-shell { padding: 0; }
+
+.book-card {
+    width: 100%; max-width: 640px;
+    background: var(--surface, #FFFFFF);
+    border: 1px solid var(--border, rgba(0,0,0,0.08));
+    border-radius: var(--radius-lg, 12px);
+    padding: 28px 28px 24px;
+    /* Slightly stronger elevation so the white card reads as a panel
+       on the white page background. */
+    box-shadow: 0 4px 20px rgba(15,17,23,0.07);
+}
+body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: none; border-radius: 0; padding: 22px 18px 18px; max-width: 100%; }
+
+.book-card h1 {
+    font-family: var(--font-display, "Plus Jakarta Sans", -apple-system, sans-serif);
+    margin: 6px 0 14px; font-size: 24px; font-weight: 600;
+    line-height: 1.2; letter-spacing: -0.01em;
+}
+.book-sub { color: var(--muted, #6B7280); margin: 0 0 16px; font-size: 14px; }
+.book-back {
+    display: inline-block;
+    font-size: 13px;
+    color: var(--muted, #6B7280);
+    margin-bottom: 4px;
+}
+.book-back:hover { color: var(--text, #111217); }
+
+/* Stepper */
+.book-stepper {
+    list-style: none; padding: 0; margin: 0 0 18px;
+    display: flex; gap: 6px; flex-wrap: wrap;
+}
+.book-step {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 4px 10px 4px 4px;
+    border: 1px solid var(--border, rgba(0,0,0,0.08));
+    border-radius: 999px;
+    background: var(--surface-2, #FAFAF7);
+    font-size: 12px; color: var(--muted, #6B7280);
+}
+.book-step-num {
+    width: 20px; height: 20px; border-radius: 999px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border-strong, rgba(0,0,0,0.13));
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+}
+.book-step.is-done { background: var(--accent-soft, #EFF6FF); color: var(--accent-deep, #1D4ED8); border-color: transparent; }
+.book-step.is-done .book-step-num { background: var(--accent, #2563EB); color: #fff; border-color: var(--accent, #2563EB); }
+.book-step.is-current { background: var(--accent, #2563EB); color: #fff; border-color: var(--accent, #2563EB); }
+.book-step.is-current .book-step-num { background: #fff; color: var(--accent-deep, #1D4ED8); border-color: transparent; }
+
+/* Cards grid (service + provider lists) */
+.book-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+}
+.book-card-link {
+    display: block;
+    padding: 14px 16px;
+    border: 1px solid var(--border, rgba(0,0,0,0.08));
+    border-radius: var(--radius-lg, 12px);
+    background: var(--surface, #FFFFFF);
+    text-decoration: none;
+    color: var(--text, #111217);
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.book-card-link:hover {
+    border-color: var(--accent, #2563EB);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+    color: var(--text, #111217);
+}
+.book-card-title { font-weight: 600; font-size: 14px; }
+.book-card-meta  { font-size: 12px; color: var(--muted, #6B7280); margin-top: 2px; }
+.book-card-desc  { font-size: 12.5px; color: var(--text-2, #1F2937); margin-top: 8px; line-height: 1.4; }
+.book-card-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.book-badge {
+    display: inline-flex; align-items: center;
+    padding: 2px 8px; border-radius: 999px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: .01em;
+    line-height: 1.6;
+}
+.book-badge-accent { background: var(--accent, #2563EB); color: #fff; }
+
+/* Date + slots — calendar on the left, time slots fill the space on the right;
+   wraps to a stacked layout on narrow screens. */
+.book-when {
+    display: flex; flex-direction: column; align-items: stretch;
+    gap: 20px; margin: 8px 0 16px;
+}
+.book-date-form { width: 100%; max-width: 100%; margin: 0; flex: none; }
+.book-when-slots { width: 100%; flex: none; min-width: 0; }
+.book-slots {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 8px;
+}
+.book-slot {
+    display: block; text-align: center; padding: 10px 8px;
+    border: 1px solid var(--border, rgba(0,0,0,0.08));
+    border-radius: var(--radius, 8px);
+    background: var(--surface, #fff);
+    color: var(--text, #111217);
+    text-decoration: none;
+    font-weight: 500; font-variant-numeric: tabular-nums;
+    transition: all 120ms ease;
+}
+.book-slot:hover {
+    background: var(--accent, #2563EB);
+    color: #fff;
+    border-color: var(--accent, #2563EB);
+}
+.book-slot-time { display: block; }
+.book-slot-cap {
+    display: block; font-size: 11px; font-weight: 400;
+    opacity: .7; margin-top: 2px;
+}
+
+/* Multi-slot booking: slot buttons picked into the running list, the
+   selected-times bar under the picker, and the confirm-step summary. */
+.book-slot.is-selected {
+    background: var(--accent, #2563EB);
+    color: #fff;
+    border-color: var(--accent, #2563EB);
+}
+.book-slot.is-full:not(.is-selected) {
+    opacity: .4; pointer-events: none;
+}
+.book-sr-only {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0; padding: 0; margin: -1px;
+}
+
+/* Plain in-flow selection summary under the slot grid — no sticky/floating
+   behavior, just a simple bordered card matching the other summary panels
+   on this page (.book-summary / .book-multiselect-summary). */
+.book-multiselect-bar {
+    display: flex; flex-direction: column; gap: 10px;
+    background: var(--surface-2, #FAFAF7);
+    border: 1px solid var(--border, rgba(0,0,0,0.08));
+    border-radius: var(--radius-lg, 12px);
+    padding: 12px 14px;
+    margin-top: 14px;
+}
+.book-multiselect-chips {
+    display: flex; flex-wrap: nowrap; gap: 6px;
+    overflow-x: auto; overflow-y: hidden;
+    padding-bottom: 3px; margin-bottom: -3px;
+    -webkit-overflow-scrolling: touch; scrollbar-width: thin;
+}
+.book-multiselect-chips::-webkit-scrollbar { height: 4px; }
+.book-multiselect-chips::-webkit-scrollbar-thumb { background: var(--border-strong, rgba(0,0,0,.15)); border-radius: 4px; }
+.book-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface-2, #FAFAF7);
+    border: 1px solid var(--border, rgba(0,0,0,0.08));
+    border-radius: 999px;
+    padding: 4px 6px 4px 10px;
+    font-size: 12.5px; font-weight: 500;
+    flex: none; white-space: nowrap;
+}
+.book-chip-remove {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    border: none; background: rgba(0,0,0,0.08);
+    color: inherit; font-size: 14px; line-height: 1; cursor: pointer;
+    padding: 0; flex: none;
+}
+.book-chip-remove:hover { background: var(--accent, #2563EB); color: #fff; }
+.book-multiselect-actions {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+/* Compact "N of M" indicator — a small ring (filled proportionally to
+   selections/max) with the fraction set inside it, instead of a plain
+   "4 of 4 selected" text line competing with the Continue button. */
+.book-multiselect-progress { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.book-multiselect-ring {
+    --pct: 0%;
+    position: relative; width: 36px; height: 36px; flex: none;
+    border-radius: 50%;
+    background: conic-gradient(var(--accent, #2563EB) var(--pct), var(--border, rgba(0,0,0,.1)) 0deg);
+    transition: background 160ms ease;
+}
+.book-multiselect-ring::before {
+    content: ''; position: absolute; inset: 3px; border-radius: 50%;
+    background: var(--surface, #fff);
+}
+.book-multiselect-ring-label {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 10.5px; font-weight: 700; letter-spacing: -.2px;
+    font-variant-numeric: tabular-nums; color: var(--text, #111217);
+}
+.book-multiselect-progress-label { font-size: 12.5px; color: var(--muted, #6B7280); }
+.book-multiselect-summary {
+    background: var(--surface-2, #FAFAF7);
+    border: 1px solid var(--border, rgba(0,0,0,0.08));
+    border-radius: var(--radius-lg, 12px);
+    padding: 6px 16px;
+    margin: 0 0 16px;
+}
+.book-multiselect-summary-title {
+    font-weight: 600; font-size: 13px;
+    padding: 10px 0 8px;
+    border-bottom: 1px solid var(--border, rgba(0,0,0,0.08));
+}
+.book-multiselect-summary-list {
+    margin: 0; padding: 0; list-style: none;
+    display: flex; flex-direction: column;
+    font-size: 13px; color: var(--muted, #6B7280);
+}
+/* Balanced per-time "ticket" row: a compact date badge on the left,
+   time (primary) + month/year (secondary) on the right — used only on
+   step 4's multi-select confirm summary. */
+.book-multiselect-summary-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0;
+}
+.book-multiselect-summary-item + .book-multiselect-summary-item {
+    border-top: 1px solid var(--border, rgba(0,0,0,0.06));
+}
+.book-multiselect-summary-date {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 42px; height: 42px; flex: none;
+    border-radius: 10px;
+    background: var(--accent-soft, #EFF6FF);
+    color: var(--accent-deep, #1D4ED8);
+}
+.book-multiselect-summary-dow {
+    font-size: 9.5px; font-weight: 700; letter-spacing: .04em;
+    text-transform: uppercase; line-height: 1.3; opacity: .85;
+}
+.book-multiselect-summary-dom {
+    font-size: 15px; font-weight: 700; line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+.book-multiselect-summary-detail {
+    display: flex; flex-direction: column; gap: 1px; min-width: 0;
+}
+.book-multiselect-summary-time {
+    font-size: 13.5px; font-weight: 600; color: var(--text, #111217);
+    font-variant-numeric: tabular-nums;
+}
+.book-multiselect-summary-month { font-size: 12px; color: var(--muted, #6B7280); }
+
+/* Summary on step 4 */
+.book-summary {
+    background: var(--surface-2, #FAFAF7);
+    border: 1px solid var(--border, rgba(0,0,0,0.08));
+    border-radius: var(--radius-lg, 12px);
+    padding: 14px 16px;
+    margin: 10px 0 16px;
+    display: flex; flex-direction: column; gap: 6px;
+}
+.book-summary > div { display: flex; justify-content: space-between; gap: var(--space-4, 16px); }
+.book-summary .kv-label { color: var(--muted, #6B7280); font-size: 12.5px; }
+.book-summary .kv-value { font-weight: 500; font-size: 13px; text-align: right; }
+
+/* Success */
+.book-success { text-align: center; padding: 32px 8px 8px; }
+.book-success-icon {
+    width: 56px; height: 56px; margin: 0 auto 12px;
+    border-radius: 999px;
+    background: var(--success-soft, #ECFDF5);
+    color: var(--success, #16A34A);
+    display: grid; place-items: center;
+}
+.book-success-icon svg { width: 28px; height: 28px; }
+
+.book-footer { text-align: center; padding: 24px 16px 32px; }
+.book-platform-signature {
+    margin: 0; display: flex; align-items: center; justify-content: center;
+    gap: 6px; font-size: 11px; font-weight: 600; color: var(--muted, #6b7280);
+}
+.book-platform-signature img { display: block; height: 14px; width: auto; }
+
+@media (max-width: 480px) {
+    .book-shell { padding: 16px 10px; }
+    .book-card { padding: 20px 16px 16px; border-radius: var(--radius-lg, 12px); }
+    .book-card h1 { font-size: 19px; line-height: 1.22; }
+    .book-sub { font-size: 13px; }
+    .book-stepper .book-step-label { display: none; }
+    .book-step { padding: 4px; }
+    .book-summary { padding: 12px 13px; }
+    .book-summary > div { flex-direction: column; gap: 2px; }
+    .book-summary .kv-value { text-align: left; }
+    /* Stack the two-up field rows (promo / gift, etc.) on phones. */
+    .field-row-2 { grid-template-columns: 1fr !important; display: grid; gap: 12px; }
+}
+
+/* Category headings on the service grid */
+.book-cat-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted, #6B7280);
+    margin: 18px 0 8px;
+}
+.book-cat-title:first-of-type { margin-top: 4px; }
+
+/* Grouped sections on the confirm step (add-ons, repeat) */
+.book-fieldset {
+    border: 1px solid var(--border, rgba(0,0,0,0.08));
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 14px 0;
+}
+.book-fieldset > legend {
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 0 6px;
+    color: var(--text, #111217);
+}
+
+/* ── Confirm-step section cards (promo + repeat) ─────────────── */
+.book-section {
+    border: 1px solid var(--border, rgba(0,0,0,0.08));
+    border-radius: 12px;
+    padding: 16px;
+    margin: 16px 0;
+    background: var(--card, #fff);
+}
+.book-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted, #6B7280);
+    margin: 0 0 12px;
+}
+.book-section-title svg {
+    width: 15px; height: 15px;
+    color: var(--accent, #2563EB);
+    flex: none;
+}
+
+/* ── Form fields & inputs ────────────────────────────────────── */
+.book-public .field {
+    margin-bottom: 16px;
+}
+
+.book-public .field-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text, #111217);
+}
+
+.book-public .field-required {
+    color: var(--danger, #DC2626);
+    margin-left: 2px;
+}
+
+.book-public .field input[type="text"],
+.book-public .field input[type="email"],
+.book-public .field input[type="tel"],
+.book-public .field input[type="number"],
+.book-public .field input[type="date"],
+.book-public .field input[type="datetime-local"],
+.book-public .field input[type="time"],
+.book-public .field select,
+.book-public .field textarea,
+.book-public input.book-weeks-input {
+    display: block;
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 14px;
+    font: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--text, #111217);
+    background: #FFFFFF !important;
+    border: 1px solid #D1D5DB !important;
+    border-radius: var(--radius, 8px);
+    outline: none;
+    box-sizing: border-box;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.book-public .field textarea {
+    min-height: 96px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.book-public .field input::placeholder,
+.book-public .field textarea::placeholder,
+.book-public .book-input-icon input::placeholder {
+    color: #9CA3AF;
+    opacity: 1;
+}
+
+.book-public .field input:hover,
+.book-public .field select:hover,
+.book-public .field textarea:hover {
+    border-color: #9CA3AF !important;
+}
+
+.book-public .field input:focus,
+.book-public .field select:focus,
+.book-public .field textarea:focus {
+    border-color: var(--accent, #2563EB) !important;
+    outline: none;
+    background: #FFFFFF !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #2563EB) 18%, transparent), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.book-public .field select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%236B7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 38px;
+}
+
+.book-public .field-row {
+    display: grid;
+    gap: 14px;
+    margin-bottom: 0;
+}
+
+.book-public .field-row-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 580px) {
+    .book-public .field-row-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Promo / gift inputs with a leading icon */
+.book-input-icon { position: relative; width: 100%; }
+.book-input-icon > svg {
+    position: absolute; left: 13px; top: 50%;
+    transform: translateY(-50%);
+    width: 16px; height: 16px;
+    color: #9CA3AF;
+    pointer-events: none;
+    z-index: 2;
+}
+.book-public .field .book-input-icon input[type="text"] {
+    padding-left: 40px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.book-input-icon input::placeholder {
+    text-transform: none;
+    letter-spacing: normal;
+    color: #9CA3AF;
+}
+
+/* Repeat — selectable option rows */
+.book-options { display: grid; gap: 8px; }
+.book-option {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--border, rgba(0,0,0,0.08));
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+.book-option:hover { border-color: var(--accent, #2563EB); }
+.book-option > input[type="radio"] {
+    accent-color: var(--accent, #2563EB);
+    width: 18px; height: 18px; margin: 0; flex: none;
+}
+.book-option-body { display: flex; flex-direction: column; gap: 2px; }
+.book-option-title {
+    font-weight: 600; font-size: 13.5px;
+    color: var(--text, #111217);
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.book-option-sub { font-size: 12px; color: var(--muted, #6B7280); }
+.book-option:has(input:checked) {
+    border-color: var(--accent, #2563EB);
+    background: var(--accent-soft, #EFF6FF);
+    box-shadow: inset 0 0 0 1px var(--accent, #2563EB);
+}
+.book-weeks-input {
+    max-width: 60px; text-align: center;
+    padding: 4px 6px;
+}
+
+/* ── Inline date-picker calendar (When step) ─────────────────── */
+.book-cal {
+    border: 1px solid var(--border, rgba(0,0,0,0.08));
+    border-radius: 12px;
+    padding: 12px;
+    width: 100%;
+    max-width: 100%;
+    background: var(--card, #fff);
+    margin: 4px 0 10px;
+}
+.book-cal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px; gap: 8px;
+}
+.book-cal-title {
+    font-weight: 600; font-size: 14px;
+    color: var(--text, #111217);
+}
+.book-cal-nav {
+    width: 32px; height: 32px; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border, rgba(0,0,0,0.08));
+    border-radius: 8px;
+    background: var(--card, #fff);
+    color: var(--text-2, #374151);
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.book-cal-nav:hover:not(:disabled) {
+    border-color: var(--accent, #2563EB);
+    color: var(--accent, #2563EB);
+    background: var(--accent-soft, #EFF6FF);
+}
+.book-cal-nav:disabled { opacity: .35; cursor: not-allowed; }
+.book-cal-nav:focus-visible {
+    outline: 2px solid var(--accent, #2563EB);
+    outline-offset: 2px;
+}
+.book-cal-nav svg { width: 16px; height: 16px; }
+
+.book-cal-dow, .book-cal-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+.book-cal-dow { margin-bottom: 4px; }
+.book-cal-dow span {
+    text-align: center;
+    font-size: 11px; font-weight: 600;
+    color: var(--muted, #6B7280);
+    padding: 2px 0;
+}
+.book-cal-day {
+    position: relative;
+    min-height: 42px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text, #111217);
+    font-size: 13px; font-family: inherit;
+    cursor: pointer; padding: 0;
+    transition: background .12s ease, border-color .12s ease,
+                color .12s ease, box-shadow .12s ease;
+}
+.book-cal-day.is-empty { visibility: hidden; cursor: default; }
+.book-cal-day:hover:not(:disabled):not(.is-selected) {
+    background: var(--accent-soft, #EFF6FF);
+    border-color: var(--accent, #2563EB);
+}
+.book-cal-day:focus-visible {
+    outline: 2px solid var(--accent, #2563EB);
+    outline-offset: 2px;
+    z-index: 1;
+}
+.book-cal-day.is-today {
+    color: var(--accent-deep, #1D4ED8);
+    font-weight: 700;
+}
+.book-cal-day.is-today::after {
+    content: "";
+    position: absolute; bottom: 5px; left: 50%;
+    transform: translateX(-50%);
+    width: 4px; height: 4px; border-radius: 50%;
+    background: var(--accent, #2563EB);
+}
+.book-cal-day.is-selected {
+    background: var(--accent, #2563EB);
+    color: var(--on-accent, #fff);
+    font-weight: 600;
+    border-color: var(--accent, #2563EB);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.18);                                  /* fallback */
+    box-shadow: 0 3px 8px color-mix(in srgb, var(--accent, #2563EB) 45%, transparent);
+}
+.book-cal-day.is-selected.is-today::after { background: var(--on-accent, #fff); }
+.book-cal-day:disabled {
+    color: var(--muted, #9CA3AF);
+    opacity: .4;
+    cursor: not-allowed;
+}

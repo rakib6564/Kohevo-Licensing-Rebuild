@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "type": "page",
+  "template": "",
+  "sections": [
+    {
+      "id": "s1",
+      "layout": { "kind": "default" },
+      "blocks": [
+        { "type": "hero", "props": { "heading": "One document", "pad": "normal", "btnText": "Start", "btnHref": "/start" } },
+        { "type": "paragraph", "props": { "text": "Rendered to HTML or React from the same bytes." } }
+      ]
+    }
+  ],
+  "seo": { "title": "One document", "description": "Frozen contract fixture." }
+}

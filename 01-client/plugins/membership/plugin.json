@@ -1,0 +1,14 @@
+{
+    "slug": "membership",
+    "name": "Membership",
+    "version": "0.7.1",
+    "description": "Membership plans, lifecycle and the member layer on top of core customers — fixed-term plans (annual membership, insurance, course-specific) with FR/EN names + descriptions, pricing, duration and grace period; member profiles (gender, DOB, skill level, medical/allergies, emergency contact, consent) with a QR member card; a per-member wallet + transaction ledger; Stripe checkout via the stripe-payment plugin; admin manual/offline activation; and an active-membership gate that integrates with the Booking plugin.",
+    "author": "Kohevo",
+    "requires_core": ">=1.0.0",
+    "permissions": [
+        {"key": "membership.view",            "label": "View members + memberships"},
+        {"key": "membership.manage_plans",    "label": "Create / edit / delete membership plans"},
+        {"key": "membership.manage_members",  "label": "Manage members — activate, suspend, cancel, wallet"},
+        {"key": "membership.manage_settings", "label": "Configure membership settings"}
+    ]
+}

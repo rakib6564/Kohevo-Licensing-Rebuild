@@ -1,0 +1,63 @@
+{
+  "schema": 1, "type": "page", "template": "",
+  "sections": [{
+    "id": "s1", "layout": { "kind": "default" },
+    "blocks": [
+      { "type": "rx-hero", "props": {
+        "tone": "light", "image": "/uploads/rx/hero.jpg",
+        "eyebrow": "Since 1998", "heading": "Slow food,", "accentLine": "fast welcome",
+        "headingEnd": "every night", "lead": "Two lines here.\nSecond line tests nl2br.",
+        "btnText": "Book", "btnHref": "/book", "btn2Text": "Menu", "btn2Href": "/menu",
+        "rating": "4.9 from 320 diners",
+        "cardBadge": "Tonight", "cardTitle": "Chef's table", "cardNote": "6 seats", "cardPrice": "£65"
+      }},
+      { "type": "rx-marquee", "props": { "tone": "dark", "items": [
+        { "text": "Wood-fired" }, { "text": "  " }, { "text": "Local produce" }
+      ]}},
+      { "type": "rx-story", "props": {
+        "tone": "dark", "statBig": "27", "statLabel": "years",
+        "eyebrow": "Our story", "heading": "A small room",
+        "body": "First paragraph.\nSecond paragraph.",
+        "items": [
+          { "icon": "🔥", "title": "Fire", "text": "Everything over embers." },
+          { "title": "No icon here" }
+        ]
+      }},
+      { "type": "rx-menu", "props": {
+        "tone": "dark", "cols": "2", "eyebrow": "Eat", "heading": "The menu", "intro": "Changes weekly.",
+        "items": [
+          { "image": "/uploads/rx/dish.jpg", "tag": "New", "name": "Charred leeks", "price": "£12", "text": "With hazelnut." },
+          { "name": "No picture, no price" }
+        ]
+      }},
+      { "type": "rx-gallery", "props": {
+        "tone": "dark", "eyebrow": "Room", "heading": "The space",
+        "items": [
+          { "image": "/uploads/rx/a.jpg", "label": "Bar", "size": "wide" },
+          { "image": "/uploads/rx/b.jpg", "size": "tall" },
+          { "label": "No image tile", "size": "normal" }
+        ]
+      }},
+      { "type": "rx-reviews", "props": {
+        "tone": "dark", "eyebrow": "Guests", "heading": "What they say",
+        "items": [
+          { "rating": 5, "quote": "Faultless.", "name": "Ólafur", "meta": "Regular", "avatar": "/uploads/rx/o.jpg" },
+          { "rating": 99, "quote": "Rating clamps to five.", "name": "zoe" },
+          { "rating": 0, "quote": "And up to one.", "meta": "Anonymous" }
+        ]
+      }},
+      { "type": "rx-visit", "props": {
+        "tone": "dark", "eyebrow": "Find us", "heading": "Come in",
+        "text": "Corner of the square.\nRing the bell.",
+        "btnText": "Directions", "btnHref": "/map", "btn2Text": "Call", "btn2Href": "tel:+441234567890",
+        "address": "12 Market St", "phone": "01234 567890",
+        "items": [
+          { "label": "Mon-Thu", "value": "6pm-11pm", "highlight": true },
+          { "label": "Fri-Sat", "value": "6pm-1am", "highlight": "false" },
+          { "label": "Sun", "value": "Closed" }
+        ]
+      }}
+    ]
+  }],
+  "seo": {}
+}

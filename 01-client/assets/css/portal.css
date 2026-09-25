@@ -1,0 +1,792 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Slate — customer portal design system
+   ───────────────────────────────────────────────────────────────────────
+   Namespace: .portal (root scope) + .pt-* tokens. Everything below is
+   scoped under .portal so it can never collide with the admin theme or a
+   plugin's own stylesheet.
+
+   COLOUR CONTRACT
+   The accent is NOT hardcoded. --pt-blue resolves to var(--accent), which
+   Slate emits from the tenant's brand_accent_color (includes/ui_components
+   .php → slate_brand_accent_emit). #2F6FED is a FALLBACK only — it is what
+   renders for a tenant who has never set a brand colour, which is exactly
+   the reference palette. Set a brand colour and the hero gradient, dials,
+   selected states, focus rings and icon boxes all move with it.
+
+   THE EXCEPTIONS, and why:
+   --pt-green / --pt-amber are fixed. "Green means compliant, amber means
+   pending" is meaning, not branding; deriving them from the accent would
+   make a green-branded tenant's warning indistinguishable from its success
+   state. Semantic colour is not brand colour.
+   --pt-plum is fixed for the same reason — it marks a distinct interaction
+   class (mood/wellbeing input) that must stay visually separable from the
+   primary accent even when a tenant brands the portal purple.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.portal {
+    /* ── Brand ladder — all derived from the tenant accent ──────────── */
+    --pt-blue:        var(--accent, #2F6FED);
+    --pt-on-blue:     var(--on-accent, #FFFFFF);
+    --pt-blue-soft:   color-mix(in srgb, var(--pt-blue) 11%, #FFFFFF);
+    --pt-blue-tint:   color-mix(in srgb, var(--pt-blue) 16%, transparent);
+    --pt-blue-deep:   color-mix(in srgb, var(--pt-blue) 82%, #0B1020);
+    --pt-focus:       color-mix(in srgb, var(--pt-blue) 42%, transparent);
+
+    /* ── Fixed semantics (see note above) ───────────────────────────── */
+    --pt-green:       #1F9D55;
+    --pt-amber:       #C77D12;
+    --pt-plum:        #7D4FC7;
+    --pt-green-soft:  color-mix(in srgb, #1F9D55 12%, #FFFFFF);
+    --pt-amber-soft:  color-mix(in srgb, #C77D12 13%, #FFFFFF);
+    --pt-plum-soft:   color-mix(in srgb, #7D4FC7 11%, #FFFFFF);
+
+    /* ── Canvas + surfaces ──────────────────────────────────────────── */
+    --pt-bg:          #F6F7FA;
+    --pt-surface:     #FFFFFF;
+    --pt-surface-2:   #F1F3F7;
+    --pt-surface-3:   #E9ECF3;   /* watermark ghosts */
+    --pt-border:      #E6E8EE;
+
+    /* ── Ink ladder ─────────────────────────────────────────────────── */
+    --pt-ink:         #11131A;
+    --pt-ink-2:       #5C6270;
+
+    /* ── Spacing — strict 8px system ────────────────────────────────── */
+    --sp-1: 4px;   --sp-2: 8px;   --sp-3: 12px;  --sp-4: 16px;  --sp-5: 20px;
+    --sp-6: 24px;  --sp-7: 32px;  --sp-8: 40px;  --sp-9: 48px;  --sp-10: 64px;
+
+    /* ── Radii ──────────────────────────────────────────────────────── */
+    --r-sm: 10px;  --r-md: 14px;  --r-lg: 20px;
+
+    /* ── Elevation ──────────────────────────────────────────────────── */
+    --pt-shadow:      0 1px 2px rgba(15, 23, 42, 0.04);
+    --pt-shadow-hover:0 16px 32px -20px rgba(15, 23, 42, 0.22);
+
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--pt-bg);
+    color: var(--pt-ink);
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+/* ── Unified inline SVG icon engine ─────────────────────────────────────
+   All icons are inline SVG — no external icon CDN to fail. */
+.portal svg.icon {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex: none;
+}
+.portal svg.icon-sm { width: 16px; height: 16px; }
+.portal svg.icon-lg { width: 24px; height: 24px; }
+
+/* ═══ Layout ═══════════════════════════════════════════════════════════ */
+
+.portal .wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: var(--sp-6) var(--sp-5) var(--sp-10);
+}
+
+.portal .grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--sp-5);
+}
+
+.portal .col-3  { grid-column: span 3; }
+.portal .col-4  { grid-column: span 4; }
+.portal .col-5  { grid-column: span 5; }
+.portal .col-6  { grid-column: span 6; }
+.portal .col-7  { grid-column: span 7; }
+.portal .col-8  { grid-column: span 8; }
+.portal .col-12 { grid-column: span 12; }
+
+/* ═══ Topbar ═══════════════════════════════════════════════════════════ */
+
+.portal .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: var(--pt-surface);
+    border-bottom: 1px solid var(--pt-border);
+}
+.portal .topbar-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: var(--sp-3) var(--sp-5);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+}
+.portal .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-3);
+    text-decoration: none;
+    color: var(--pt-ink);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+}
+.portal .brand:hover { color: var(--pt-ink); text-decoration: none; }
+.portal .brand img { max-height: 34px; max-width: 170px; width: auto; display: block; }
+.portal .brand-mark {
+    width: 34px; height: 34px;
+    border-radius: var(--r-sm);
+    background: var(--pt-blue);
+    color: var(--pt-on-blue);
+    display: grid;
+    place-items: center;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.portal .search {
+    flex: 1;
+    max-width: 380px;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 9px var(--sp-3);
+    background: var(--pt-surface-2);
+    border: 1px solid transparent;
+    border-radius: var(--r-sm);
+    color: var(--pt-ink-2);
+}
+.portal .search:focus-within {
+    border-color: var(--pt-blue);
+    box-shadow: 0 0 0 3px var(--pt-focus);
+}
+.portal .search input {
+    flex: 1;
+    border: 0;
+    background: none;
+    outline: none;
+    font: inherit;
+    font-size: 14px;
+    color: var(--pt-ink);
+    min-width: 0;
+}
+.portal .topbar-spacer { flex: 1; }
+
+/* Page identity rendered inside the bar (app-style surfaces). */
+.portal .topbar-page {
+    flex: 1;
+    min-width: 0;
+    padding-left: var(--sp-4);
+    margin-left: var(--sp-2);
+    border-left: 1px solid var(--pt-border);
+    line-height: 1.25;
+}
+.portal .topbar-page .eyebrow { margin-bottom: 0; }
+.portal .topbar-title {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* An app shell (coaching) sets its own body width; keep the bar full-bleed
+   but let its inner column follow the app's container instead of 1280px. */
+.portal.ck-body .topbar-inner { max-width: none; }
+
+.portal .topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+.portal .icon-btn {
+    width: 38px; height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--pt-border);
+    background: var(--pt-surface);
+    color: var(--pt-ink-2);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.portal .icon-btn:hover { background: var(--pt-surface-2); color: var(--pt-ink); }
+
+.portal .avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--pt-surface-2);
+    color: var(--pt-ink);
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    font-weight: 700;
+    flex: none;
+}
+.portal .user-chip {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding-left: var(--sp-3);
+    border-left: 1px solid var(--pt-border);
+}
+.portal .user-name { font-size: 14px; font-weight: 600; line-height: 1.2; }
+.portal .user-sub  { font-size: 12px; color: var(--pt-ink-2); }
+
+/* ═══ Welcome hero ═════════════════════════════════════════════════════ */
+
+.portal .hero {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--pt-border);
+    border-radius: var(--r-lg);
+    padding: var(--sp-8) var(--sp-7);
+    background: linear-gradient(115deg, #FFFFFF 32%, var(--pt-blue-soft) 100%);
+}
+/* Semi-transparent dot-matrix blueprint mask */
+.portal .hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(var(--pt-blue-tint) 1px, transparent 1px);
+    background-size: 18px 18px;
+    opacity: 0.5;
+    mask-image: linear-gradient(115deg, transparent 40%, #000 100%);
+    -webkit-mask-image: linear-gradient(115deg, transparent 40%, #000 100%);
+}
+.portal .hero > * { position: relative; z-index: 1; }
+.portal .hero h1 {
+    margin: 0 0 var(--sp-3);
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+}
+.portal .hero h1 .name { color: var(--pt-blue); }
+.portal .hero p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--pt-ink-2);
+    max-width: 60ch;
+}
+.portal .hero-eyebrow {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--pt-ink-2);
+    margin-bottom: var(--sp-2);
+}
+
+/* ═══ Cards ════════════════════════════════════════════════════════════ */
+
+.portal .card {
+    position: relative;
+    overflow: hidden;
+    background: var(--pt-surface);
+    border: 1px solid var(--pt-border);
+    border-radius: var(--r-lg);
+    padding: var(--sp-6);
+    box-shadow: var(--pt-shadow);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.portal .card:hover {
+    box-shadow: var(--pt-shadow-hover);
+    transform: translateY(-2px);
+}
+.portal .card-static:hover { box-shadow: var(--pt-shadow); transform: none; }
+
+.portal .card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-4);
+}
+.portal .eyebrow {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--pt-ink-2);
+    margin-bottom: var(--sp-1);
+}
+.portal .card-title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+.portal .card-action {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--pt-blue);
+    text-decoration: none;
+    white-space: nowrap;
+}
+.portal .card-action:hover { text-decoration: underline; }
+
+/* Icon box — tinted square that leads a card or list row */
+.portal .icon-box {
+    width: 40px; height: 40px;
+    border-radius: var(--r-md);
+    display: grid;
+    place-items: center;
+    background: var(--pt-blue-soft);
+    color: var(--pt-blue);
+    flex: none;
+}
+.portal .icon-box-green { background: var(--pt-green-soft); color: var(--pt-green); }
+.portal .icon-box-amber { background: var(--pt-amber-soft); color: var(--pt-amber); }
+.portal .icon-box-plum  { background: var(--pt-plum-soft);  color: var(--pt-plum); }
+
+/* ═══ Stat matrix ══════════════════════════════════════════════════════ */
+
+.portal .stat-value {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+.portal .stat-label {
+    font-size: 13px;
+    color: var(--pt-ink-2);
+    margin-top: var(--sp-1);
+}
+.portal .stat-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: var(--sp-3);
+    font-size: 12px;
+    font-weight: 600;
+}
+.portal .stat-delta-up   { color: var(--pt-green); }
+.portal .stat-delta-down { color: var(--pt-amber); }
+
+/* Large structural ghost vector, bottom-right */
+.portal .watermark {
+    position: absolute;
+    right: -8px;
+    bottom: -12px;
+    width: 104px;
+    height: 104px;
+    color: var(--pt-surface-3);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.7;
+}
+/* fill/stroke MUST be restated here: the watermark svg is intentionally
+   rendered without the .icon class (it is not 20px chrome), so it would
+   otherwise inherit the UA default fill:black and render as a solid blob. */
+.portal .watermark svg {
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.1;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.portal .card > *:not(.watermark) { position: relative; z-index: 1; }
+
+/* ═══ Radial progress dials ════════════════════════════════════════════ */
+
+.portal .dial {
+    position: relative;
+    width: 104px;
+    height: 104px;
+    flex: none;
+}
+.portal .dial svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.portal .dial-track {
+    fill: none;
+    stroke: var(--pt-surface-2);
+    stroke-width: 7;
+}
+.portal .dial-fill {
+    fill: none;
+    stroke: var(--pt-blue);
+    stroke-width: 7;
+    stroke-linecap: round;
+    stroke-dasharray: 264;
+    transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.portal .dial-fill-green { stroke: var(--pt-green); }
+.portal .dial-fill-amber { stroke: var(--pt-amber); }
+.portal .dial-fill-plum  { stroke: var(--pt-plum); }
+
+/* Absolute centre stack — icon + value layered on the stroke circle */
+.portal .dial-centre {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    text-align: center;
+}
+.portal .dial-value { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+.portal .dial-icon  { color: var(--pt-ink-2); }
+
+.portal .dial-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: var(--sp-4);
+    flex-wrap: wrap;
+}
+.portal .dial-item { text-align: center; }
+.portal .dial-caption {
+    margin-top: var(--sp-2);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--pt-ink-2);
+}
+
+/* ═══ Selector grids — mood stamps, feature tiles ══════════════════════ */
+
+.portal .selector-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+    gap: var(--sp-3);
+}
+.portal .stamp {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    padding: var(--sp-4) var(--sp-2);
+    border-radius: var(--r-md);
+    border: 1px solid var(--pt-border);
+    background: var(--pt-surface);
+    color: var(--pt-ink-2);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.portal .stamp:hover { border-color: var(--pt-plum); transform: translateY(-1px); }
+.portal .stamp-glyph { font-size: 24px; line-height: 1; }
+.portal .stamp[aria-pressed="true"],
+.portal .stamp.is-active {
+    border-color: var(--pt-plum);
+    background: var(--pt-plum-soft);
+    color: var(--pt-plum);
+}
+.portal .stamp:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--pt-focus);
+}
+
+/* Meal icon squares */
+.portal .meal-tile {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3);
+    border-radius: var(--r-md);
+    border: 1px solid var(--pt-border);
+    background: var(--pt-surface);
+    text-decoration: none;
+    color: var(--pt-ink);
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+.portal .meal-tile:hover { border-color: var(--pt-blue); background: var(--pt-blue-soft); }
+.portal .meal-name { font-size: 14px; font-weight: 600; text-transform: capitalize; }
+.portal .meal-state { font-size: 12px; color: var(--pt-ink-2); }
+
+/* ═══ Chips, pills, badges ═════════════════════════════════════════════ */
+
+.portal .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px var(--sp-3);
+    border-radius: 999px;
+    border: 1px solid var(--pt-border);
+    background: var(--pt-surface);
+    color: var(--pt-ink-2);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+.portal .chip:hover { border-color: var(--pt-blue); color: var(--pt-blue); }
+.portal .chip[aria-pressed="true"], .portal .chip.is-active {
+    border-color: var(--pt-blue);
+    background: var(--pt-blue-soft);
+    color: var(--pt-blue);
+}
+.portal .chip-row { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+.portal .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    background: var(--pt-surface-2);
+    color: var(--pt-ink-2);
+}
+.portal .badge-green { background: var(--pt-green-soft); color: var(--pt-green); }
+.portal .badge-amber { background: var(--pt-amber-soft); color: var(--pt-amber); }
+.portal .badge-blue  { background: var(--pt-blue-soft);  color: var(--pt-blue); }
+
+/* ═══ Buttons ══════════════════════════════════════════════════════════ */
+
+.portal .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    padding: 10px var(--sp-5);
+    border-radius: var(--r-sm);
+    border: 1px solid var(--pt-border);
+    background: var(--pt-surface);
+    color: var(--pt-ink);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.portal .btn:hover { background: var(--pt-surface-2); }
+.portal .btn-primary {
+    background: var(--pt-blue);
+    border-color: var(--pt-blue);
+    color: var(--pt-on-blue);
+}
+.portal .btn-primary:hover { background: var(--pt-blue-deep); border-color: var(--pt-blue-deep); }
+.portal .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--pt-focus); }
+
+/* ═══ Lists + empty states ═════════════════════════════════════════════ */
+
+.portal .list { display: flex; flex-direction: column; gap: var(--sp-3); }
+.portal .list-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) 0;
+    border-bottom: 1px solid var(--pt-border);
+}
+.portal .list-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.portal .list-main { flex: 1; min-width: 0; }
+.portal .list-title { font-size: 14px; font-weight: 600; }
+.portal .list-sub   { font-size: 12px; color: var(--pt-ink-2); margin-top: 2px; }
+
+.portal .empty {
+    text-align: center;
+    padding: var(--sp-7) var(--sp-4);
+    color: var(--pt-ink-2);
+}
+.portal .empty .icon-box { margin: 0 auto var(--sp-3); }
+.portal .empty-title { font-size: 15px; font-weight: 700; color: var(--pt-ink); margin-bottom: 4px; }
+.portal .empty-sub   { font-size: 13px; }
+
+/* ═══ Forms ════════════════════════════════════════════════════════════ */
+
+.portal .field { display: block; margin-bottom: var(--sp-4); }
+.portal .field-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+.portal .field-hint { font-size: 12px; color: var(--pt-ink-2); margin-top: 5px; }
+.portal input[type="text"], .portal input[type="email"], .portal input[type="password"],
+.portal input[type="number"], .portal input[type="date"], .portal input[type="tel"],
+.portal select, .portal textarea {
+    width: 100%;
+    padding: 10px var(--sp-3);
+    border: 1px solid var(--pt-border);
+    border-radius: var(--r-sm);
+    background: var(--pt-surface);
+    font: inherit;
+    font-size: 14px;
+    color: var(--pt-ink);
+}
+.portal input:focus, .portal select:focus, .portal textarea:focus {
+    outline: none;
+    border-color: var(--pt-blue);
+    box-shadow: 0 0 0 3px var(--pt-focus);
+}
+
+/* ═══ Alerts ═══════════════════════════════════════════════════════════ */
+
+.portal .alert {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-3);
+    padding: var(--sp-4);
+    border-radius: var(--r-md);
+    border: 1px solid var(--pt-border);
+    background: var(--pt-surface-2);
+    font-size: 14px;
+    margin-bottom: var(--sp-5);
+}
+.portal .alert-success { background: var(--pt-green-soft); border-color: transparent; color: var(--pt-green); }
+.portal .alert-error   { background: color-mix(in srgb, #D92D20 10%, #FFFFFF); border-color: transparent; color: #B42318; }
+
+/* ═══ Utility ══════════════════════════════════════════════════════════ */
+
+.portal .stack   { display: flex; flex-direction: column; gap: var(--sp-4); }
+.portal .row     { display: flex; align-items: center; gap: var(--sp-3); }
+.portal .between { justify-content: space-between; }
+.portal .muted   { color: var(--pt-ink-2); }
+.portal .skip-link:focus { outline: 3px solid var(--pt-blue); }
+
+/* ═══ KPI cards ════════════════════════════════════════════════════════
+   The dashboard headline row. A KPI leads with a NUMBER — the label sits
+   above it as an eyebrow and any qualifier trails as a unit, so the eye
+   lands on the figure first. No watermark here: at KPI density the ghost
+   vector sat directly behind the icon box and read as clutter.           */
+
+.portal .kpi {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    min-height: 100%;
+}
+.portal .kpi-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--sp-3);
+}
+.portal .kpi-figure {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--pt-ink);
+}
+.portal .kpi-unit {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--pt-ink-2);
+}
+.portal .kpi-meta {
+    font-size: 13px;
+    color: var(--pt-ink-2);
+    margin-top: auto;
+    padding-top: var(--sp-2);
+}
+.portal .kpi-meta strong { color: var(--pt-ink); font-weight: 600; }
+.portal a.card { text-decoration: none; color: inherit; display: block; }
+
+/* Tone applies to the figure, not just the icon — a KPI at zero or in
+   warning territory should read differently at a glance. */
+.portal .kpi-green .kpi-figure { color: var(--pt-green); }
+.portal .kpi-amber .kpi-figure { color: var(--pt-amber); }
+.portal .kpi-blue  .kpi-figure { color: var(--pt-blue); }
+
+@media (max-width: 640px) {
+    .portal .kpi-figure { font-size: 30px; }
+}
+
+/* ═══ Legacy widget bridge ═════════════════════════════════════════════
+   Plugin dashboard widgets (customer_dashboard_widgets) ship their own
+   markup using the core .card / .card-header / .kv-list vocabulary. Rather
+   than rewrite four plugins, map that vocabulary onto the kit here so any
+   widget inherits portal typography and spacing for free. Anything added
+   later gets the treatment automatically.                                */
+
+.portal .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    margin: 0 0 var(--sp-4);
+    padding: 0;
+    border: 0;
+    background: none;
+}
+.portal .card-header h2,
+.portal .card-header h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+.portal .card-header a { font-size: 13px; font-weight: 600; color: var(--pt-blue); text-decoration: none; }
+.portal .card-header a:hover { text-decoration: underline; }
+
+.portal .kv-list { list-style: none; margin: 0; padding: 0; }
+.portal .kv-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    padding: var(--sp-3) 0;
+    border-bottom: 1px solid var(--pt-border);
+    font-size: 14px;
+}
+.portal .kv-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.portal .kv-row:first-child { padding-top: 0; }
+.portal .kv-label { color: var(--pt-ink-2); }
+.portal .kv-value { font-weight: 600; text-align: right; }
+
+/* Legacy badges — core ships .badge-active / .badge-warning etc. */
+.portal .badge-active,
+.portal .badge-success { background: var(--pt-green-soft); color: var(--pt-green); }
+.portal .badge-warning { background: var(--pt-amber-soft); color: var(--pt-amber); }
+
+/* Legacy type utilities used inside widgets. */
+.portal .text-sm    { font-size: 13px; }
+.portal .text-muted { color: var(--pt-ink-2); }
+
+/* ═══ Responsive — collapse below 980px ════════════════════════════════ */
+
+@media (max-width: 980px) {
+    .portal .col-3, .portal .col-4, .portal .col-5,
+    .portal .col-6, .portal .col-7, .portal .col-8 {
+        grid-column: span 12;
+    }
+    .portal .search { display: none; }
+    .portal .hero {
+        padding: var(--sp-6) var(--sp-5);
+    }
+    .portal .hero h1 { font-size: 26px; }
+    .portal .wrap { padding: var(--sp-5) var(--sp-4) var(--sp-9); }
+    .portal .grid { gap: var(--sp-4); }
+}
+
+@media (max-width: 640px) {
+    .portal .card { padding: var(--sp-5); }
+    .portal .topbar-inner { padding: var(--sp-3) var(--sp-4); }
+    .portal .user-name, .portal .user-sub { display: none; }
+    .portal .user-chip { border-left: 0; padding-left: 0; }
+    .portal .hero h1 { font-size: 23px; }
+    .portal .stat-value { font-size: 26px; }
+    .portal .dial { width: 88px; height: 88px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .portal *, .portal *::before, .portal *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}

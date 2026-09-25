@@ -1,0 +1,11 @@
+{
+    "slug": "backups",
+    "name": "Backups",
+    "version": "1.0.0",
+    "description": "Automated daily backup of the whole database and uploaded files, synced to Google Drive, with retention pruning and a manual \"run now\" option. Superadmin-only.",
+    "author": "Kohevo",
+    "requires_core": ">=1.0.0",
+    "permissions": [
+        {"key": "backups.manage", "label": "Manage backups (superadmin only)"}
+    ]
+}
