@@ -342,3 +342,147 @@ unit('phase 1: an existing role from another tenant is never silently reassigned
         fit_drop($dbName);
     }
 });
+
+// ── Phase 5 (client installer rebuild): provisionCore() / createAdminAccount() ──
+//
+// The target installer sequence (docs/02-architecture/05-INSTALLATION-
+// ACTIVATION.md §1) splits what provision() used to do atomically: Step 2
+// ("Install Application") must reach a fully scaffolded, unlicensed,
+// admin-less state, and Step 6 ("Create Admin Account") must only be able
+// to add the admin afterward, never before. provision() itself is
+// unchanged (tests above still exercise it byte-for-byte); these tests
+// cover the two new methods it is now composed from.
+
+unit('Phase 5: provisionCore() scaffolds tenant/profile/role/installation-identity with NO admin', function (): void {
+    $dbName = 'slate_phase5_core_' . slate_test_ns();
+    $pdo = fit_fresh_pdo($dbName);
+    try {
+        $runner = new MigrationRunner($pdo, SLATE_ROOT . '/db/migrations');
+        $runner->migrate(FIT_PHASE1_MIGRATIONS);
+
+        $core = fit_with_database_pdo($pdo, static fn (): array =>
+            \Slate\Services\Installation\InstallationService::provisionCore()
+        );
+
+        assert_true($core['tenant_id'] > 0);
+        assert_true((bool) preg_match('/^[a-f0-9]{32}$/', $core['installation_id']));
+        assert_eq(1, (int) $pdo->query('SELECT COUNT(*) FROM tenants')->fetchColumn());
+        assert_eq(1, (int) $pdo->query('SELECT COUNT(*) FROM tenant_profiles')->fetchColumn());
+        assert_eq(1, (int) $pdo->query('SELECT COUNT(*) FROM installation_identity')->fetchColumn());
+        // db/schema.sql seeds 4 default system roles (Super Admin, Manager,
+        // Editor, Viewer) unconditionally as part of the core schema itself
+        // (0001_core_init) — Step 2's own job is only to confirm/resolve the
+        // Super Admin row (id=1) against the newly-scaffolded tenant, not to
+        // create the roles table's seed data, which already exists by then.
+        $superAdmin = $pdo->query("SELECT tenant_id, slug, is_system FROM roles WHERE id = 1")->fetch();
+        assert_eq($core['tenant_id'], (int) $superAdmin['tenant_id'], 'the seeded Super Admin role must belong to the scaffolded tenant');
+        assert_eq('super-admin', $superAdmin['slug']);
+        assert_eq(0, (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn(), 'no admin account until a license activates (INST-04)');
+    } finally {
+        fit_drop($dbName);
+    }
+});
+
+unit('Phase 5: provisionCore() is safely retryable and reuses the same installation_id', function (): void {
+    $dbName = 'slate_phase5_core_retry_' . slate_test_ns();
+    $pdo = fit_fresh_pdo($dbName);
+    try {
+        $runner = new MigrationRunner($pdo, SLATE_ROOT . '/db/migrations');
+        $runner->migrate(FIT_PHASE1_MIGRATIONS);
+
+        [$first, $second] = fit_with_database_pdo($pdo, static function (): array {
+            return [
+                \Slate\Services\Installation\InstallationService::provisionCore(),
+                \Slate\Services\Installation\InstallationService::provisionCore(),
+            ];
+        });
+
+        assert_eq($first['tenant_id'], $second['tenant_id']);
+        assert_eq($first['installation_id'], $second['installation_id']);
+        assert_eq(1, (int) $pdo->query('SELECT COUNT(*) FROM tenants')->fetchColumn());
+        assert_eq(1, (int) $pdo->query('SELECT COUNT(*) FROM installation_identity')->fetchColumn());
+    } finally {
+        fit_drop($dbName);
+    }
+});
+
+unit('Phase 5: createAdminAccount() adds the admin onto an already-scaffolded (provisionCore()\'d) tenant, and fills in the owner name/email', function (): void {
+    $dbName = 'slate_phase5_admin_' . slate_test_ns();
+    $pdo = fit_fresh_pdo($dbName);
+    try {
+        $runner = new MigrationRunner($pdo, SLATE_ROOT . '/db/migrations');
+        $runner->migrate(FIT_PHASE1_MIGRATIONS);
+
+        [$core, $userId] = fit_with_database_pdo($pdo, static function (): array {
+            $core = \Slate\Services\Installation\InstallationService::provisionCore();
+            $userId = \Slate\Services\Installation\InstallationService::createAdminAccount(
+                $core['tenant_id'],
+                'Phase Five Owner',
+                'phase5-owner@example.test',
+                password_hash('phase5-password', PASSWORD_DEFAULT)
+            );
+            return [$core, $userId];
+        });
+
+        assert_eq(1, (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn());
+        $admin = $pdo->query("SELECT tenant_id, role_id FROM users WHERE email = 'phase5-owner@example.test'")->fetch();
+        assert_eq($core['tenant_id'], (int) $admin['tenant_id']);
+        assert_eq(1, (int) $admin['role_id']);
+
+        $profile = $pdo->query('SELECT owner_name, owner_email FROM tenant_profiles WHERE tenant_id = ' . (int) $core['tenant_id'])->fetch();
+        assert_eq('Phase Five Owner', $profile['owner_name'], 'admin creation must fill in the owner name left blank at Step 2');
+        assert_eq('phase5-owner@example.test', $profile['owner_email']);
+    } finally {
+        fit_drop($dbName);
+    }
+});
+
+unit('Phase 5: createAdminAccount() is idempotent on retry (Scenario E — admin creation retried after a failure must not create a second admin)', function (): void {
+    $dbName = 'slate_phase5_admin_retry_' . slate_test_ns();
+    $pdo = fit_fresh_pdo($dbName);
+    try {
+        $runner = new MigrationRunner($pdo, SLATE_ROOT . '/db/migrations');
+        $runner->migrate(FIT_PHASE1_MIGRATIONS);
+
+        fit_with_database_pdo($pdo, static function () {
+            $core = \Slate\Services\Installation\InstallationService::provisionCore();
+            $first = \Slate\Services\Installation\InstallationService::createAdminAccount(
+                $core['tenant_id'], 'Retry Admin', 'retry-admin@example.test',
+                password_hash('first-password', PASSWORD_DEFAULT)
+            );
+            $second = \Slate\Services\Installation\InstallationService::createAdminAccount(
+                $core['tenant_id'], 'Retry Admin', 'retry-admin@example.test',
+                password_hash('different-password-is-ignored', PASSWORD_DEFAULT)
+            );
+            assert_eq($first, $second, 'retrying with the same tenant/email must resolve to the same admin row');
+        });
+
+        assert_eq(1, (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn(), 'exactly one admin despite two calls');
+    } finally {
+        fit_drop($dbName);
+    }
+});
+
+unit('Phase 5: provision() (the legacy atomic path) still behaves byte-for-byte as before the split', function (): void {
+    $dbName = 'slate_phase5_provision_unchanged_' . slate_test_ns();
+    $pdo = fit_fresh_pdo($dbName);
+    try {
+        $runner = new MigrationRunner($pdo, SLATE_ROOT . '/db/migrations');
+        $runner->migrate(FIT_PHASE1_MIGRATIONS);
+
+        $result = fit_with_database_pdo($pdo, static fn (): array =>
+            \Slate\Services\Installation\InstallationService::provision(
+                'Atomic Owner', 'atomic-owner@example.test', password_hash('atomic-password', PASSWORD_DEFAULT)
+            )
+        );
+
+        assert_true($result['tenant_id'] > 0);
+        assert_true((bool) preg_match('/^[a-f0-9]{32}$/', $result['installation_id']));
+        assert_true($result['user_id'] > 0);
+        assert_eq(1, (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn());
+        $profile = $pdo->query('SELECT owner_name FROM tenant_profiles WHERE tenant_id = ' . (int) $result['tenant_id'])->fetch();
+        assert_eq('Atomic Owner', $profile['owner_name']);
+    } finally {
+        fit_drop($dbName);
+    }
+});

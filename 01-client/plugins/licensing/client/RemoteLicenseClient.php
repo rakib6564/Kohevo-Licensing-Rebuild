@@ -68,6 +68,38 @@ final class RemoteLicenseClient {
      * response is identical either way — leave the cache alone.
      */
     public function checkIn(): bool {
+        return $this->runCheckIn()['ok'];
+    }
+
+    /**
+     * Same check-in attempt as checkIn(), but with a coarse-grained reason
+     * code for a caller that talks directly to an operator (the installer's
+     * License Key step, docs/02-architecture/05-INSTALLATION-ACTIVATION.md
+     * §5) and must show a DIFFERENT message for "couldn't reach the server
+     * at all" vs. "the server responded, but this wasn't accepted" — a
+     * distinction checkIn() itself deliberately does not expose, because a
+     * routine/cron caller never needs to act on it differently (the cache
+     * is left untouched either way regardless).
+     *
+     * Never returns any more detail than this one coarse split: an
+     * installer showing "invalid key" vs. "bad signature" vs. "wrong
+     * installation" to the operator would leak nothing an attacker could
+     * use (this is the operator's own request, on their own install), but
+     * it would blur the one distinction that actually matters to them
+     * behind noise that only makes sense to a developer.
+     *
+     * @return array{ok:bool, reason:?string} reason is 'network' (no HTTP
+     *         response was ever received), 'rejected' (a response WAS
+     *         received but failed validation at any stage — bad status,
+     *         malformed envelope, bad signature, or an installation_id that
+     *         doesn't match this install), or null when ok is true.
+     */
+    public function checkInDetailed(): array {
+        return $this->runCheckIn();
+    }
+
+    /** @return array{ok:bool, reason:?string} */
+    private function runCheckIn(): array {
         $requestBody = json_encode([
             'product'     => $this->productSlug,
             'license_key' => $this->licenseKey,
@@ -76,27 +108,27 @@ final class RemoteLicenseClient {
             'app_version' => $this->appVersion,
             'checked_at'  => gmdate('c'),
         ], JSON_UNESCAPED_SLASHES);
-        if ($requestBody === false) return false;
+        if ($requestBody === false) return ['ok' => false, 'reason' => 'rejected'];
 
         $response = ($this->transport)($this->serverUrl . '/licensing/check', $requestBody);
-        if ($response === null) return false;
+        if ($response === null) return ['ok' => false, 'reason' => 'network'];
 
         [$httpStatus, $responseBody] = $response;
-        if ($httpStatus !== 200) return false;
+        if ($httpStatus !== 200) return ['ok' => false, 'reason' => 'rejected'];
 
         $envelope = json_decode($responseBody, true);
         if (!is_array($envelope) || !isset($envelope['payload'], $envelope['signature'])
             || !is_string($envelope['payload']) || !is_string($envelope['signature'])) {
-            return false;
+            return ['ok' => false, 'reason' => 'rejected'];
         }
 
         if (!$this->verifier->verify($envelope['payload'], $envelope['signature'])) {
-            return false;
+            return ['ok' => false, 'reason' => 'rejected'];
         }
 
         $status = json_decode($envelope['payload'], true);
         if (!is_array($status) || !isset($status['status']) || !is_string($status['status'])) {
-            return false; // signature was valid, but the signed content itself is malformed
+            return ['ok' => false, 'reason' => 'rejected']; // signature was valid, but the signed content itself is malformed
         }
 
         // Phase 4 (docs/02-architecture/15-PHASE-1-DECISIONS.md D14,
@@ -120,13 +152,13 @@ final class RemoteLicenseClient {
         // anything, however the payload is shaped.
         $payloadInstallationId = $status['installation_id'] ?? null;
         if (!is_string($payloadInstallationId) || preg_match(self::INSTALLATION_ID_PATTERN, $payloadInstallationId) !== 1) {
-            return false;
+            return ['ok' => false, 'reason' => 'rejected'];
         }
         if (preg_match(self::INSTALLATION_ID_PATTERN, $this->installId) !== 1) {
-            return false;
+            return ['ok' => false, 'reason' => 'rejected'];
         }
         if ($payloadInstallationId !== $this->installId) {
-            return false;
+            return ['ok' => false, 'reason' => 'rejected'];
         }
 
         $this->store->save([
@@ -139,7 +171,7 @@ final class RemoteLicenseClient {
             'next_check_after' => isset($status['next_check_after']) ? (int) $status['next_check_after'] : null,
             'fetched_at'   => gmdate('c'),
         ]);
-        return true;
+        return ['ok' => true, 'reason' => null];
     }
 
     /** Real transport. Returns null on anything that isn't a completed HTTP round trip. */

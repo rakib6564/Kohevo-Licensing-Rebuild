@@ -30,9 +30,133 @@ final class InstallationService
      * Provision the one tenant, its profile, the one installation identity,
      * and the first admin atomically. Safe to call again after a partial POST.
      *
+     * Phase 5 (client installer rebuild): the target installer sequence no
+     * longer creates the admin account in the same step as the tenant/
+     * identity scaffolding -- admin creation must wait until AFTER a
+     * license has been activated (see createAdminAccount() below). This
+     * method is kept, unchanged in its own external behavior and return
+     * shape, for the one remaining caller that still needs the old atomic
+     * all-at-once shape (and for its own existing test coverage); it is now
+     * a thin composition of provisionCoreSteps() + admin creation, not a
+     * second, diverging implementation of either.
+     *
      * @return array{tenant_id:int, installation_id:string, user_id:int}
      */
     public static function provision(string $adminName, string $adminEmail, string $passwordHash): array
+    {
+        return self::withTransaction(function () use ($adminName, $adminEmail, $passwordHash): array {
+            $core = self::provisionCoreSteps($adminName, $adminEmail);
+            $adminRoleId = self::ensureSuperAdminRole($core['tenant_id']);
+            $userId = self::ensureFirstAdmin($core['tenant_id'], $adminName, $adminEmail, $passwordHash, $adminRoleId);
+
+            return [
+                'tenant_id'       => $core['tenant_id'],
+                'installation_id' => $core['installation_id'],
+                'user_id'         => $userId,
+            ];
+        });
+    }
+
+    /**
+     * Phase 5 (docs/02-architecture/05-INSTALLATION-ACTIVATION.md §1, Step
+     * 2 "Install Application"): the tenant/profile/role/installation-identity
+     * scaffolding ALONE, with no admin account -- the target installer must
+     * be able to reach a "Core Installed, Unlicensed" state (§3) before any
+     * admin exists, since admin creation now happens only after a license
+     * activates (Step 6, createAdminAccount() below). Safe to call again on
+     * a retried Step 2 POST, via the same idempotency
+     * provisionCoreSteps()/ensureInstallationIdentity() already provide.
+     *
+     * @return array{tenant_id:int, installation_id:string}
+     */
+    public static function provisionCore(): array
+    {
+        return self::withTransaction(function (): array {
+            $core = self::provisionCoreSteps('', '');
+            self::ensureSuperAdminRole($core['tenant_id']);
+            return $core;
+        });
+    }
+
+    /**
+     * Phase 5, Step 6 ("Create Admin Account"): reachable only once the
+     * installer's own state machine (install.php's installer_resolve_step())
+     * has confirmed a verified license activation exists -- this method
+     * itself does not re-check that, it trusts its caller, exactly as
+     * provision() always has. It performs only the admin-creation half of
+     * what provision() used to do in one shot. Idempotent on the same
+     * (tenantId, email) pair, exactly like ensureFirstAdmin() already is; a
+     * retried Step 4 POST (e.g. after a failure partway through finishing
+     * setup) never creates a second admin or a second commercial
+     * installation.
+     */
+    public static function createAdminAccount(int $tenantId, string $adminName, string $adminEmail, string $passwordHash): int
+    {
+        return self::withTransaction(function () use ($tenantId, $adminName, $adminEmail, $passwordHash): int {
+            self::setTenantProfileOwner($tenantId, $adminName, $adminEmail);
+            $adminRoleId = self::ensureSuperAdminRole($tenantId);
+            return self::ensureFirstAdmin($tenantId, $adminName, $adminEmail, $passwordHash, $adminRoleId);
+        });
+    }
+
+    /**
+     * The tenant/profile/installation-identity portion shared by provision()
+     * and provisionCore(). Deliberately not public on its own: it must
+     * always run inside a transaction (withTransaction() below), and a
+     * direct caller forgetting that would silently lose the atomicity every
+     * existing test already relies on.
+     *
+     * @return array{tenant_id:int, installation_id:string}
+     */
+    private static function provisionCoreSteps(string $adminName, string $adminEmail): array
+    {
+        $tenants = \Database::rows('SELECT id, name, slug, status FROM tenants ORDER BY id ASC');
+        if (count($tenants) > 1) {
+            throw new \RuntimeException('This installation contains more than one tenant; fresh installation cannot continue safely.');
+        }
+
+        if ($tenants === []) {
+            $slug = self::slugFromUrl();
+            $tenantId = \Database::insert('tenants', [
+                'name'   => $adminName !== '' ? mb_substr($adminName, 0, 120) : 'Kohevo business',
+                'slug'   => $slug,
+                'status' => 'active',
+            ]);
+        } else {
+            $tenantId = (int) $tenants[0]['id'];
+        }
+
+        self::ensureTenantProfile($tenantId, $adminName, $adminEmail);
+        $installationId = self::ensureInstallationIdentity($tenantId);
+
+        return ['tenant_id' => $tenantId, 'installation_id' => $installationId];
+    }
+
+    /**
+     * Refreshes the tenant profile's owner name/email once real admin
+     * details are known (Step 6) -- ensureTenantProfile() only ever SETS
+     * these on first creation (Step 2, when they may still be blank) and
+     * deliberately never overwrites an existing row, so this is the one
+     * place that later fills them in from the split installer flow. A
+     * no-op if both are still blank (defensive; every real caller has both
+     * by the time it creates an admin account).
+     */
+    private static function setTenantProfileOwner(int $tenantId, string $adminName, string $adminEmail): void
+    {
+        $name = trim($adminName);
+        $email = trim($adminEmail);
+        if ($name === '' && $email === '') {
+            return;
+        }
+
+        \Database::update('tenant_profiles', [
+            'owner_name'  => $name !== '' ? mb_substr($name, 0, 120) : null,
+            'owner_email' => $email !== '' ? mb_substr($email, 0, 190) : null,
+        ], 'tenant_id = ?', [$tenantId]);
+    }
+
+    /** Runs $fn inside a transaction, reusing an already-open one if the caller started it. */
+    private static function withTransaction(callable $fn): mixed
     {
         $pdo = \Database::get();
         $started = false;
@@ -42,36 +166,11 @@ final class InstallationService
         }
 
         try {
-            $tenants = \Database::rows('SELECT id, name, slug, status FROM tenants ORDER BY id ASC');
-            if (count($tenants) > 1) {
-                throw new \RuntimeException('This installation contains more than one tenant; fresh installation cannot continue safely.');
-            }
-
-            if ($tenants === []) {
-                $slug = self::slugFromUrl();
-                $tenantId = \Database::insert('tenants', [
-                    'name'   => $adminName !== '' ? mb_substr($adminName, 0, 120) : 'Kohevo business',
-                    'slug'   => $slug,
-                    'status' => 'active',
-                ]);
-            } else {
-                $tenantId = (int) $tenants[0]['id'];
-            }
-
-            self::ensureTenantProfile($tenantId, $adminName, $adminEmail);
-            $adminRoleId = self::ensureSuperAdminRole($tenantId);
-            $installationId = self::ensureInstallationIdentity($tenantId);
-            $userId = self::ensureFirstAdmin($tenantId, $adminName, $adminEmail, $passwordHash, $adminRoleId);
-
+            $result = $fn();
             if ($started) {
                 $pdo->commit();
             }
-
-            return [
-                'tenant_id'       => $tenantId,
-                'installation_id' => $installationId,
-                'user_id'         => $userId,
-            ];
+            return $result;
         } catch (\Throwable $e) {
             if ($started && $pdo->inTransaction()) {
                 $pdo->rollBack();
