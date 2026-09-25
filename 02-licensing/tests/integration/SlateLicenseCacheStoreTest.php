@@ -19,6 +19,28 @@ function slcs_clear(int $tenantId): void {
     Database::query('DELETE FROM remote_license_cache WHERE tenant_id = ?', [$tenantId]);
 }
 
+/**
+ * QA Fix Round 1 (Phase 4, Fix 4/Fix 5): since load() now refuses to trust
+ * a cache row whose installation_id doesn't match this install's own local
+ * installation_identity, every round-trip test below needs BOTH a
+ * well-formed installation_id on the saved row AND a matching local
+ * identity row to read it back as trusted. installation_identity is a
+ * global singleton (not tenant-scoped for lookup purposes), so one shared
+ * canonical value, idempotently upserted, serves every test in this file.
+ */
+function slcs_local_identity(): string { return str_repeat('e', 32); }
+
+function slcs_ensure_local_identity(): void {
+    $row = Database::row('SELECT installation_id FROM installation_identity WHERE singleton_id = 1');
+    if ($row === null) {
+        Database::insert('installation_identity', [
+            'singleton_id' => 1, 'tenant_id' => 1, 'installation_id' => slcs_local_identity(),
+        ]);
+    } elseif ((string) $row['installation_id'] !== slcs_local_identity()) {
+        Database::update('installation_identity', ['installation_id' => slcs_local_identity()], 'singleton_id = 1', []);
+    }
+}
+
 unit('SlateLicenseCacheStore: load() returns null when nothing has ever been saved for this tenant', function () {
     $tenantId = slate_test_tenant(90001);
     slcs_clear($tenantId);
@@ -29,11 +51,13 @@ unit('SlateLicenseCacheStore: load() returns null when nothing has ever been sav
 unit('SlateLicenseCacheStore: save() then load() round-trips every field', function () {
     $tenantId = slate_test_tenant(90002);
     slcs_clear($tenantId);
+    slcs_ensure_local_identity();
     try {
         $store = new SlateLicenseCacheStore($tenantId);
         $store->save([
             'status' => 'active', 'plan' => 'pro', 'entitlements' => ['white_label', 'priority_support'],
             'expires_at' => '2027-01-15 00:00:00', 'fetched_at' => '2026-09-21 10:00:00',
+            'installation_id' => slcs_local_identity(),
         ]);
 
         $loaded = $store->load();
@@ -49,10 +73,11 @@ unit('SlateLicenseCacheStore: save() then load() round-trips every field', funct
 unit('SlateLicenseCacheStore: a second save() updates the existing row in place -- one row per tenant, never a duplicate', function () {
     $tenantId = slate_test_tenant(90003);
     slcs_clear($tenantId);
+    slcs_ensure_local_identity();
     try {
         $store = new SlateLicenseCacheStore($tenantId);
-        $store->save(['status' => 'active', 'plan' => 'pro', 'entitlements' => [], 'expires_at' => null, 'fetched_at' => '2026-09-21 09:00:00']);
-        $store->save(['status' => 'suspended', 'plan' => 'pro', 'entitlements' => [], 'expires_at' => null, 'fetched_at' => '2026-09-21 10:00:00']);
+        $store->save(['status' => 'active', 'plan' => 'pro', 'entitlements' => [], 'expires_at' => null, 'fetched_at' => '2026-09-21 09:00:00', 'installation_id' => slcs_local_identity()]);
+        $store->save(['status' => 'suspended', 'plan' => 'pro', 'entitlements' => [], 'expires_at' => null, 'fetched_at' => '2026-09-21 10:00:00', 'installation_id' => slcs_local_identity()]);
 
         $count = (int) Database::value('SELECT COUNT(*) FROM remote_license_cache WHERE tenant_id = ?', [$tenantId]);
         assert_eq(1, $count);
@@ -69,9 +94,10 @@ unit('SlateLicenseCacheStore: two different tenants never see each others cached
     $tenantB = slate_test_tenant(90005);
     slcs_clear($tenantA);
     slcs_clear($tenantB);
+    slcs_ensure_local_identity();
     try {
-        (new SlateLicenseCacheStore($tenantA))->save(['status' => 'active', 'plan' => null, 'entitlements' => [], 'expires_at' => null, 'fetched_at' => '2026-09-21 10:00:00']);
-        (new SlateLicenseCacheStore($tenantB))->save(['status' => 'suspended', 'plan' => null, 'entitlements' => [], 'expires_at' => null, 'fetched_at' => '2026-09-21 10:00:00']);
+        (new SlateLicenseCacheStore($tenantA))->save(['status' => 'active', 'plan' => null, 'entitlements' => [], 'expires_at' => null, 'fetched_at' => '2026-09-21 10:00:00', 'installation_id' => slcs_local_identity()]);
+        (new SlateLicenseCacheStore($tenantB))->save(['status' => 'suspended', 'plan' => null, 'entitlements' => [], 'expires_at' => null, 'fetched_at' => '2026-09-21 10:00:00', 'installation_id' => slcs_local_identity()]);
 
         assert_eq('active', (new SlateLicenseCacheStore($tenantA))->load()['status']);
         assert_eq('suspended', (new SlateLicenseCacheStore($tenantB))->load()['status']);
@@ -81,9 +107,57 @@ unit('SlateLicenseCacheStore: two different tenants never see each others cached
     }
 });
 
+unit('SlateLicenseCacheStore: QA Fix Round 1 (Fix 1) -- readTrustState() distinguishes "no row" from "an untrusted row" for this same adapter', function () {
+    $tenantId = slate_test_tenant(90007);
+    slcs_clear($tenantId);
+    try {
+        $store = new SlateLicenseCacheStore($tenantId);
+        $none = $store->readTrustState();
+        assert_false($none['found']);
+        assert_false($none['trusted']);
+
+        // A row that exists but was never given a matching local identity.
+        $store->save(['status' => 'active', 'plan' => 'pro', 'entitlements' => [], 'expires_at' => null, 'fetched_at' => '2026-09-21 10:00:00', 'installation_id' => str_repeat('f', 32)]);
+        $untrusted = $store->readTrustState();
+        assert_true($untrusted['found']);
+        assert_false($untrusted['trusted']);
+        assert_null($untrusted['data']);
+        assert_null($store->load(), 'load() must collapse the untrusted-but-found case to null, same as "not found"');
+    } finally {
+        slcs_clear($tenantId);
+    }
+});
+
+unit('SlateLicenseCacheStore: QA Fix Round 1 (Fix 4) -- NULL, empty, and malformed cached installation_id are each independently untrusted, never grandfathered', function () {
+    $tenantId = slate_test_tenant(90008);
+    slcs_ensure_local_identity();
+    foreach ([null, '', 'not-32-hex-chars', str_repeat('e', 31)] as $badValue) {
+        slcs_clear($tenantId);
+        try {
+            $store = new SlateLicenseCacheStore($tenantId);
+            $status = ['status' => 'active', 'plan' => 'pro', 'entitlements' => [], 'expires_at' => null, 'fetched_at' => '2026-09-21 10:00:00'];
+            if ($badValue !== null) $status['installation_id'] = $badValue;
+            $store->save($status);
+
+            $state = $store->readTrustState();
+            assert_true($state['found'], 'the row itself must still be found for value=' . var_export($badValue, true));
+            assert_false($state['trusted'], 'must never be trusted for value=' . var_export($badValue, true));
+            assert_null($store->load());
+        } finally {
+            slcs_clear($tenantId);
+        }
+    }
+});
+
 unit('End to end: RemoteLicenseClient + SlateLicenseCacheStore -- a real license server check-in (LicensingAPI::handleCheckIn) lands correctly in the real cache table', function () {
     $tenantId = slate_test_tenant(90006);
     slcs_clear($tenantId);
+    // QA Fix Round 1 (Phase 4, Fix 1): load() now also requires the cached
+    // installation_id to match this install's own local identity -- this
+    // E2E test's install_id (below) is deliberately the SAME value so the
+    // round trip stays genuinely end-to-end rather than short-circuiting
+    // on a mismatch this test isn't about.
+    slcs_ensure_local_identity();
 
     // Stand up a real (in-process) copy of the server side: schema, a
     // signing keypair, and one product/client/plan/install row -- then
@@ -114,7 +188,7 @@ unit('End to end: RemoteLicenseClient + SlateLicenseCacheStore -- a real license
             'public_key' => (string) LicensingAPI::signingPublicKey(),
             'product'    => 'kohevo',
             'license_key' => 'phase4-e2e-key',
-            'install_id' => 'phase4-e2e-install',
+            'install_id' => slcs_local_identity(),
             'domain'      => 'e2e-phase4.example',
             'app_version' => '1.0.0',
         ], $store, function (string $url, string $body) {

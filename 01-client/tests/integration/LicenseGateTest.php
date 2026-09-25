@@ -28,10 +28,37 @@ function lgate_clear(): void {
     Database::query('DELETE FROM remote_license_cache WHERE tenant_id = ?', [current_tenant_id()]);
 }
 
+/**
+ * QA Fix Round 1 (Phase 4, Fix 4): load()/readTrustState() no longer
+ * grandfather a cache row that has no matching installation_id -- every
+ * existing seeded fixture below now needs BOTH a well-formed
+ * installation_id on the row AND a matching local installation_identity
+ * row, or it would (correctly, per Fix 4) now read back as untrusted
+ * rather than as the "genuinely licensed" state most of these tests are
+ * actually about. lgate_local_identity() is the one shared, canonical
+ * value every ordinary lgate_seed() call uses; the two Fix 1/Fix 4 tests
+ * that are SPECIFICALLY about a mismatch use a deliberately different one.
+ */
+function lgate_local_identity(): string { return str_repeat('c', 32); }
+
+function lgate_ensure_local_identity(?string $installationId = null): void {
+    $installationId ??= lgate_local_identity();
+    $row = Database::row('SELECT installation_id FROM installation_identity WHERE singleton_id = 1');
+    if ($row === null) {
+        Database::insert('installation_identity', [
+            'singleton_id' => 1, 'tenant_id' => current_tenant_id(), 'installation_id' => $installationId,
+        ]);
+    } elseif ((string) $row['installation_id'] !== $installationId) {
+        Database::update('installation_identity', ['installation_id' => $installationId], 'singleton_id = 1', []);
+    }
+}
+
 function lgate_seed(string $status, string $fetchedAt): void {
+    lgate_ensure_local_identity();
     (new SlateLicenseCacheStore(current_tenant_id()))->save([
         'status' => $status, 'plan' => 'pro', 'entitlements' => ['white_label'],
         'expires_at' => null, 'fetched_at' => $fetchedAt,
+        'installation_id' => lgate_local_identity(),
     ]);
 }
 
@@ -127,13 +154,8 @@ unit('license gate: also runs on public.php, BEFORE PublicRouter dispatch -- a s
 
 unit('license gate / read-time verification (Phase 4, D14): a cached installation_id that does not match this install\'s own installation_identity is rejected at read time, exactly like an untrusted cache', function () {
     lgate_clear();
-    $priorIdentity = Database::row('SELECT * FROM installation_identity WHERE singleton_id = 1');
+    lgate_ensure_local_identity(str_repeat('a', 32));
     try {
-        Database::query('DELETE FROM installation_identity WHERE singleton_id = 1');
-        Database::insert('installation_identity', [
-            'singleton_id' => 1, 'tenant_id' => current_tenant_id(), 'installation_id' => str_repeat('a', 32),
-        ]);
-
         // Exactly what a raw_payload/raw_signature pair lifted verbatim from
         // a DIFFERENT, legitimately-licensed installation's cache would look
         // like once written here -- genuinely well-formed, just for the
@@ -149,22 +171,13 @@ unit('license gate / read-time verification (Phase 4, D14): a cached installatio
         assert_true(str_contains($res['body'], 'License inactive'));
     } finally {
         lgate_clear();
-        Database::query('DELETE FROM installation_identity WHERE singleton_id = 1');
-        if ($priorIdentity !== null) {
-            Database::insert('installation_identity', $priorIdentity);
-        }
     }
 });
 
 unit('license gate / read-time verification (Phase 4, D14): a cached installation_id that DOES match this install\'s own installation_identity passes through normally', function () {
     lgate_clear();
-    $priorIdentity = Database::row('SELECT * FROM installation_identity WHERE singleton_id = 1');
+    lgate_ensure_local_identity(str_repeat('a', 32));
     try {
-        Database::query('DELETE FROM installation_identity WHERE singleton_id = 1');
-        Database::insert('installation_identity', [
-            'singleton_id' => 1, 'tenant_id' => current_tenant_id(), 'installation_id' => str_repeat('a', 32),
-        ]);
-
         (new SlateLicenseCacheStore(current_tenant_id()))->save([
             'status' => 'active', 'plan' => 'pro', 'entitlements' => ['white_label'],
             'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
@@ -174,6 +187,110 @@ unit('license gate / read-time verification (Phase 4, D14): a cached installatio
         $res = lgate_probe('index.php');
         assert_eq(200, $res['status']);
         assert_false(str_contains($res['body'], 'License inactive'));
+    } finally {
+        lgate_clear();
+    }
+});
+
+unit('license gate / QA Fix Round 1 (Fix 1): a cache row exists but is untrusted (mismatched) -- this must NOT be misread as "never configured" even when remote mode is off', function () {
+    // Reproduces the exact scenario the QA finding described: no
+    // LICENSE_* env vars set (remoteMode=false) -- the PRE-fix bug let this
+    // combination pass through as 200 because load() === null was
+    // indistinguishable from "no cache row at all".
+    lgate_clear();
+    lgate_ensure_local_identity(str_repeat('a', 32));
+    try {
+        (new SlateLicenseCacheStore(current_tenant_id()))->save([
+            'status' => 'active', 'plan' => 'pro', 'entitlements' => ['white_label'],
+            'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
+            'installation_id' => str_repeat('b', 32),
+        ]);
+
+        $res = lgate_probe('index.php');
+        assert_eq(403, $res['status'], 'an untrusted (found but mismatched) cache row must restrict regardless of remote-mode configuration');
+    } finally {
+        lgate_clear();
+    }
+});
+
+unit('license gate / QA Fix Round 1 (Fix 4): a NULL cached installation_id is untrusted, never grandfathered into trust', function () {
+    lgate_clear();
+    lgate_ensure_local_identity();
+    try {
+        // save() with no installation_id key at all -- persisted as NULL.
+        (new SlateLicenseCacheStore(current_tenant_id()))->save([
+            'status' => 'active', 'plan' => 'pro', 'entitlements' => ['white_label'],
+            'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
+        ]);
+        $stored = Database::row('SELECT installation_id FROM remote_license_cache WHERE tenant_id = ?', [current_tenant_id()]);
+        assert_null($stored['installation_id'], 'sanity check: the row was actually persisted with a NULL installation_id');
+
+        $res = lgate_probe('index.php');
+        assert_eq(403, $res['status'], 'a NULL cached installation_id must never be treated as trusted, even though the license STATUS itself is active');
+    } finally {
+        lgate_clear();
+    }
+});
+
+unit('license gate / QA Fix Round 1 (Fix 4): an EMPTY STRING cached installation_id is untrusted -- never treated as equivalent to NULL, and never trusted either', function () {
+    lgate_clear();
+    lgate_ensure_local_identity();
+    try {
+        // Bypass save()'s own sanitization (which would itself already
+        // coerce '' to NULL) to prove readTrustState() independently
+        // rejects a raw '' value found directly in the row, not merely one
+        // that happens to reach it through save().
+        (new SlateLicenseCacheStore(current_tenant_id()))->save([
+            'status' => 'active', 'plan' => 'pro', 'entitlements' => ['white_label'],
+            'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
+        ]);
+        Database::update('remote_license_cache', ['installation_id' => ''], 'tenant_id = ?', [current_tenant_id()]);
+        $stored = Database::row('SELECT installation_id FROM remote_license_cache WHERE tenant_id = ?', [current_tenant_id()]);
+        assert_eq('', $stored['installation_id'], 'sanity check: the row genuinely holds an empty string, not NULL');
+
+        $res = lgate_probe('index.php');
+        assert_eq(403, $res['status'], 'an empty-string cached installation_id must restrict, exactly like NULL, but via its own independent check');
+    } finally {
+        lgate_clear();
+    }
+});
+
+unit('license gate / QA Fix Round 1 (Fix 4): a MALFORMED (wrong-length/non-hex) cached installation_id is untrusted', function () {
+    lgate_clear();
+    lgate_ensure_local_identity();
+    try {
+        Database::insert('remote_license_cache', [
+            'tenant_id' => current_tenant_id(), 'status' => 'active', 'plan' => 'pro',
+            'entitlements' => json_encode(['white_label']), 'expires_at' => null,
+            'installation_id' => 'not-32-hex-chars', 'fetched_at' => gmdate('Y-m-d H:i:s'),
+        ]);
+
+        $res = lgate_probe('index.php');
+        assert_eq(403, $res['status'], 'a malformed cached installation_id must restrict, not be compared as though it were well-formed');
+    } finally {
+        lgate_clear();
+    }
+});
+
+unit('license gate / QA Fix Round 1 (Fix 2E): a MALFORMED local installation_identity row means NOTHING can ever be trusted, even a well-formed matching-looking cache value', function () {
+    lgate_clear();
+    $priorIdentity = Database::row('SELECT * FROM installation_identity WHERE singleton_id = 1');
+    try {
+        Database::query('DELETE FROM installation_identity WHERE singleton_id = 1');
+        // Only reachable via direct DB corruption/tampering -- provision()
+        // itself never writes anything but a well-formed 32-hex value.
+        Database::insert('installation_identity', [
+            'singleton_id' => 1, 'tenant_id' => current_tenant_id(), 'installation_id' => str_repeat('z', 32),
+        ]);
+
+        (new SlateLicenseCacheStore(current_tenant_id()))->save([
+            'status' => 'active', 'plan' => 'pro', 'entitlements' => ['white_label'],
+            'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
+            'installation_id' => str_repeat('z', 32), // identical string to the corrupted local row
+        ]);
+
+        $res = lgate_probe('index.php');
+        assert_eq(403, $res['status'], 'InstallationService::currentInstallationId() must refuse to return a malformed value, so this can never match anything');
     } finally {
         lgate_clear();
         Database::query('DELETE FROM installation_identity WHERE singleton_id = 1');

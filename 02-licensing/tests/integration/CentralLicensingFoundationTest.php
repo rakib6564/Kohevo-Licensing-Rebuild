@@ -489,6 +489,33 @@ unit('QA fix (Finding 5): InstallationService rejects an invalid domain rather t
     }
 });
 
+unit('QA Fix Round 1 (Phase 4, Fix 2B/2C): InstallationService::activate()/reset() reject a malformed installation_id independently of admin/license.php\'s own pre-check, before any database mutation', function () {
+    licplug_ensure_schema();
+    try {
+        $f = clf_fixture();
+        $license = LicenseService::issue(['client_id' => $f['client_id'], 'product_id' => $f['product_id']], 'kohevo');
+
+        foreach (['too-short', str_repeat('a', 31), str_repeat('a', 33), str_repeat('A', 32), str_repeat('g', 32), ''] as $badId) {
+            assert_throws(\InvalidArgumentException::class, function () use ($license, $badId) {
+                InstallationService::activate($license['id'], ['installation_id' => $badId, 'domain' => 'acme.example']);
+            }, 'activate() must reject installation_id=' . var_export($badId, true));
+        }
+        assert_null(InstallationService::active($license['id']), 'no installation must have been created by any of the rejected attempts');
+
+        // A genuinely valid activation, then prove reset() independently
+        // rejects malformed IDs too.
+        InstallationService::activate($license['id'], ['installation_id' => str_repeat('a', 32), 'domain' => 'acme.example']);
+        assert_throws(\InvalidArgumentException::class, function () use ($license) {
+            InstallationService::reset($license['id'], ['installation_id' => 'not-32-hex-chars', 'domain' => 'acme2.example'], null);
+        }, 'reset() must independently reject a malformed installation_id');
+        // The original binding must be untouched by the rejected reset attempt.
+        $active = InstallationService::active($license['id']);
+        assert_eq(str_repeat('a', 32), $active['installation_id']);
+    } finally {
+        licplug_teardown();
+    }
+});
+
 unit('QA fix (Finding 5): LicenseService::parseDate() rejects malformed dates and renew()/extend() reject a non-future expiry', function () {
     licplug_ensure_schema();
     try {

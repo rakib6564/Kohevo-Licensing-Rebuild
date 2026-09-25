@@ -1,0 +1,138 @@
+name: Kohevo Licensing CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  licensing-ci:
+    name: Licensing & Client Suites (${{ matrix.db_label }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - db_label: MySQL 8.0
+            db_image: mysql:8.0
+          - db_label: MariaDB 10.11
+            db_image: mariadb:10.11
+
+    services:
+      db:
+        image: ${{ matrix.db_image }}
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, mbstring, sodium, curl, json, openssl
+          coverage: none
+
+      - name: Lint PHP files (01-client & 02-licensing)
+        run: |
+          find 01-client 02-licensing -name '*.php' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
+          echo "All PHP files in 01-client and 02-licensing parsed cleanly."
+
+      - name: Provision test databases and .env files
+        run: |
+          mysql -h 127.0.0.1 -uroot -proot -e "
+            CREATE DATABASE IF NOT EXISTS root_slate_t9 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+            CREATE DATABASE IF NOT EXISTS root_slate_t20 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+          "
+
+          cat > 01-client/.env <<'EOF'
+          APP_URL=http://localhost:8080
+          TENANT_ID=1
+          APP_SECRET=ci-test-secret-not-for-production-0123456789abcdef
+          CRON_SECRET=ci-test-cron-secret
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_NAME=root_slate_t9
+          DB_USER=root
+          DB_PASS=root
+          DB_CHARSET=utf8mb4
+          EOF
+
+          cat > 02-licensing/.env <<'EOF'
+          APP_URL=http://localhost:8081
+          TENANT_ID=1
+          APP_SECRET=ci-test-secret-not-for-production-0123456789abcdef
+          CRON_SECRET=ci-test-cron-secret
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_NAME=root_slate_t20
+          DB_USER=root
+          DB_PASS=root
+          DB_CHARSET=utf8mb4
+          EOF
+
+          php 01-client/bin/migrate migrate
+          php 02-licensing/bin/migrate migrate
+
+          for DB in root_slate_t9 root_slate_t20; do
+            mysql -h 127.0.0.1 -uroot -proot "$DB" <<'SQL'
+          INSERT INTO tenants (id,name,slug,status) VALUES (1,'Test Tenant','test-tenant','active')
+            ON DUPLICATE KEY UPDATE name=VALUES(name);
+          INSERT INTO roles (id,tenant_id,name,slug,description,is_system)
+            VALUES (1,1,'Super Admin','super-admin','Test admin',1)
+            ON DUPLICATE KEY UPDATE name=VALUES(name);
+          INSERT INTO users (tenant_id,email,password_hash,name,role_id,status)
+            VALUES (1,'test-admin@example.test','$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC4WvO75mGxU2Rz1nO','Test Admin',1,'active')
+            ON DUPLICATE KEY UPDATE status=VALUES(status), role_id=VALUES(role_id);
+          INSERT INTO settings (tenant_id,setting_key,setting_value) VALUES (1,'site_name','Slate Test')
+            ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value);
+          INSERT INTO settings (tenant_id,setting_key,setting_value) VALUES (1,'slate_test_database','1')
+            ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value);
+          SQL
+          done
+
+          mysql -h 127.0.0.1 -uroot -proot root_slate_t9 <<'SQL'
+          INSERT INTO plugins (slug,name,version,status,manifest_json) VALUES
+            ('booking','Booking Plus','1.0.0','active','{"slug":"booking","name":"Booking Plus"}'),
+            ('forms','Forms','1.0.0','active','{"slug":"forms","name":"Forms"}'),
+            ('membership','Membership','1.0.0','active','{"slug":"membership","name":"Membership"}'),
+            ('stripe-payment','Stripe Payment Gateway','1.0.0','active','{"slug":"stripe-payment","name":"Stripe Payment Gateway"}')
+            ON DUPLICATE KEY UPDATE status=VALUES(status), manifest_json=VALUES(manifest_json);
+          SQL
+
+          mysql -h 127.0.0.1 -uroot -proot root_slate_t9 < 01-client/plugins/forms/install.sql
+          mysql -h 127.0.0.1 -uroot -proot root_slate_t9 < 01-client/plugins/booking/install.sql
+          (cd 01-client && php tests/fixtures/booking-schema.php)
+          mysql -h 127.0.0.1 -uroot -proot root_slate_t9 < 01-client/plugins/membership/install.sql
+          mysql -h 127.0.0.1 -uroot -proot root_slate_t9 < 01-client/plugins/stripe-payment/install.sql
+
+      - name: Run 01-client smoke & licensing suites
+        run: |
+          php 01-client/tests/smoke.php
+          php 01-client/tests/run-phase3-authority.php
+          php 01-client/tests/run-phase3-relevant.php
+          php 01-client/tests/run-phase4-focused.php
+          php -r "require '01-client/config.php'; require '01-client/tests/guard.php'; slate_require_test_database(); require '01-client/tests/unit/harness.php'; require '01-client/tests/integration/FreshInstallMigrationTest.php'; exit(unit_summary());"
+
+      - name: Run 02-licensing smoke & licensing suites
+        run: |
+          php 02-licensing/tests/smoke.php
+          php 02-licensing/tests/unit/RemoteLicenseClientTest.php
+          php 02-licensing/tests/run-phase2-licensing.php
+          php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/LicensingPluginSchemaTest.php'; exit(unit_summary());"
+          php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/CentralLicensingFoundationTest.php'; exit(unit_summary());"
+          php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/SlateLicenseCacheStoreTest.php'; exit(unit_summary());"
+          php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/LicensingQaFixRound2Test.php'; exit(unit_summary());"
+          php 02-licensing/tests/run-phase2-race.php

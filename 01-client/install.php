@@ -165,6 +165,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 2) {
             } else {
                 $envBody .= ($envBody !== '' && !str_ends_with($envBody, "\n") ? "\n" : '') . $tenantLine . "\n";
             }
+
+            // QA Fix Round 1 (Phase 4, Fix 6 / D18): also persist the
+            // resolved Installation ID to .env, alongside TENANT_ID, using
+            // the identical idempotent replace-or-append pattern above —
+            // not a new installer step, just one more line written at the
+            // exact point TENANT_ID already is. The database row
+            // (installation_identity, written atomically inside
+            // provision() itself) remains the source of truth this value is
+            // read FROM; .env is a second, durable copy of the SAME
+            // already-resolved value, never a second place it could be
+            // chosen or regenerated. A retried step 2 POST calls
+            // provision() again, which (per ensureInstallationIdentity()'s
+            // own lookup-before-insert logic) returns the SAME id, so this
+            // line is idempotent on retry too — reusing the existing
+            // TENANT_ID line's own regex, not inventing a new persistence
+            // mechanism.
+            $installationIdLine = 'INSTALLATION_ID=' . (string) $provisioned['installation_id'];
+            if (preg_match('/^INSTALLATION_ID=.*$/m', $envBody)) {
+                $envBody = (string) preg_replace('/^INSTALLATION_ID=.*$/m', $installationIdLine, $envBody);
+            } else {
+                $envBody .= ($envBody !== '' && !str_ends_with($envBody, "\n") ? "\n" : '') . $installationIdLine . "\n";
+            }
+
             if (@file_put_contents($envPath, $envBody) === false) {
                 throw new \RuntimeException('Installation data was created, but the resolved tenant ID could not be persisted to .env.');
             }

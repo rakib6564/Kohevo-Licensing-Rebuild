@@ -20,6 +20,12 @@ require_once __DIR__ . '/LicenseCacheStoreInterface.php';
 
 final class RemoteLicenseClient {
 
+    /**
+     * QA Fix Round 1 (Phase 4, Fix 2): the canonical Installation ID format
+     * — lowercase hex, exactly 32 characters.
+     */
+    private const INSTALLATION_ID_PATTERN = '/^[a-f0-9]{32}$/';
+
     private string $serverUrl;
     private string $productSlug;
     private string $licenseKey;
@@ -104,8 +110,19 @@ final class RemoteLicenseClient {
         // therefore match this install's own configured install_id, or the
         // whole payload is untrusted -- treated exactly like a failed
         // signature check, not merely a soft warning.
-        if (!isset($status['installation_id']) || !is_string($status['installation_id'])
-            || $status['installation_id'] !== $this->installId) {
+        //
+        // QA Fix Round 1 (Phase 4, Fix 2D/Fix 5): format is checked FIRST
+        // and independently of the equality check below, on BOTH sides of
+        // the comparison -- kept identical to the 01-client copy of this
+        // class so the two never diverge in security behavior.
+        $payloadInstallationId = $status['installation_id'] ?? null;
+        if (!is_string($payloadInstallationId) || preg_match(self::INSTALLATION_ID_PATTERN, $payloadInstallationId) !== 1) {
+            return false;
+        }
+        if (preg_match(self::INSTALLATION_ID_PATTERN, $this->installId) !== 1) {
+            return false;
+        }
+        if ($payloadInstallationId !== $this->installId) {
             return false;
         }
 
@@ -114,7 +131,7 @@ final class RemoteLicenseClient {
             'plan'         => $status['plan'] ?? null,
             'entitlements' => is_array($status['entitlements'] ?? null) ? $status['entitlements'] : [],
             'expires_at'   => $status['expires_at'] ?? null,
-            'installation_id' => $status['installation_id'],
+            'installation_id' => $payloadInstallationId,
             'fetched_at'   => gmdate('c'),
         ]);
         return true;

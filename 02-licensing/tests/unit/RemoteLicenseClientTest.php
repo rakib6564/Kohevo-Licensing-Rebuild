@@ -31,7 +31,7 @@ function rlc_config(string $publicKey): array {
         'public_key'  => $publicKey,
         'product'     => 'kohevo',
         'license_key' => 'a-real-license-key',
-        'install_id'  => 'install-uuid-1',
+        'install_id'  => str_repeat('1', 32),
         'domain'      => 'client.example',
         'app_version' => '1.0.0',
     ];
@@ -47,7 +47,7 @@ function rlc_signed_envelope(array $keypair, array $statusFields): array {
 unit('RemoteLicenseClient::checkIn(): a valid signed 200 response updates the cache store and returns true', function () {
     $keypair = LicensingAPI::generateSigningKeypair();
     $envelope = rlc_signed_envelope($keypair, [
-        'installation_id' => 'install-uuid-1',
+        'installation_id' => str_repeat('1', 32),
         'status' => 'active', 'plan' => 'pro', 'entitlements' => ['white_label'],
         'expires_at' => null, 'checked_at' => '2026-09-21T00:00:00Z', 'next_check_after' => 86400,
     ]);
@@ -64,7 +64,7 @@ unit('RemoteLicenseClient::checkIn(): a valid signed 200 response updates the ca
     assert_eq('pro', $store->saved['plan']);
     assert_eq(['white_label'], $store->saved['entitlements']);
     assert_null($store->saved['expires_at']);
-    assert_eq('install-uuid-1', $store->saved['installation_id']);
+    assert_eq(str_repeat('1', 32), $store->saved['installation_id']);
 });
 
 unit('RemoteLicenseClient::checkIn(): Phase 4 (D14) -- a validly signed payload whose installation_id does NOT match this install\'s own install_id is rejected and never touches the cache', function () {
@@ -73,12 +73,12 @@ unit('RemoteLicenseClient::checkIn(): Phase 4 (D14) -- a validly signed payload 
     // cloned raw_payload/raw_signature pair lifted from a DIFFERENT,
     // legitimately-licensed installation would look like.
     $envelope = rlc_signed_envelope($keypair, [
-        'installation_id' => 'some-other-installs-id',
+        'installation_id' => str_repeat('2', 32),
         'status' => 'active', 'plan' => 'pro', 'entitlements' => ['white_label'],
         'expires_at' => null, 'checked_at' => '2026-09-21T00:00:00Z', 'next_check_after' => 86400,
     ]);
     $store = new FakeLicenseCacheStore();
-    // rlc_config()'s install_id is 'install-uuid-1' -- deliberately different.
+    // rlc_config()'s install_id is str_repeat('1', 32) -- deliberately different.
     $client = new RemoteLicenseClient(rlc_config($keypair['public']), $store, function () use ($envelope) {
         return [200, json_encode($envelope)];
     });
@@ -101,6 +101,63 @@ unit('RemoteLicenseClient::checkIn(): a validly signed payload with no installat
     assert_null($store->saved);
 });
 
+unit('RemoteLicenseClient::checkIn(): QA Fix Round 1 (Fix 2D) -- a validly signed payload whose installation_id is well-formed-but-wrong is still rejected on the equality check', function () {
+    $keypair = LicensingAPI::generateSigningKeypair();
+    $envelope = rlc_signed_envelope($keypair, [
+        'installation_id' => str_repeat('9', 32), // well-formed, just not THIS install's id
+        'status' => 'active', 'plan' => 'pro', 'entitlements' => [],
+    ]);
+    $store = new FakeLicenseCacheStore();
+    $client = new RemoteLicenseClient(rlc_config($keypair['public']), $store, function () use ($envelope) {
+        return [200, json_encode($envelope)];
+    });
+
+    assert_false($client->checkIn());
+    assert_null($store->saved);
+});
+
+unit('RemoteLicenseClient::checkIn(): QA Fix Round 1 (Fix 2D) -- a validly signed payload whose installation_id fails FORMAT (not the equality check) is rejected independently', function () {
+    $keypair = LicensingAPI::generateSigningKeypair();
+    // QA Fix Round 2 (Fix 3): strtoupper(str_repeat('1', 32)) is NOT a valid
+    // uppercase fixture -- '1' has no case, so strtoupper() leaves it
+    // byte-for-byte identical to a well-formed lowercase-hex id, meaning
+    // this case never actually exercised format rejection at all. Use a
+    // genuine uppercase-hex-letter fixture instead, so this scenario tests
+    // FORMAT rejection independently of the equality check.
+    foreach (['not-32-hex-chars', str_repeat('1', 31), str_repeat('1', 33), str_repeat('A', 32), ''] as $badId) {
+        $envelope = rlc_signed_envelope($keypair, [
+            'installation_id' => $badId,
+            'status' => 'active', 'plan' => 'pro', 'entitlements' => [],
+        ]);
+        $store = new FakeLicenseCacheStore();
+        $client = new RemoteLicenseClient(rlc_config($keypair['public']), $store, function () use ($envelope) {
+            return [200, json_encode($envelope)];
+        });
+
+        assert_false($client->checkIn(), 'expected rejection for malformed installation_id=' . var_export($badId, true));
+        assert_null($store->saved);
+    }
+});
+
+unit('RemoteLicenseClient::checkIn(): QA Fix Round 1 (Fix 2D) -- a malformed LOCALLY-configured install_id is never treated as though it could legitimately match anything', function () {
+    $keypair = LicensingAPI::generateSigningKeypair();
+    // A genuinely well-formed, self-consistent server payload -- the only
+    // thing wrong here is the CLIENT's own config.
+    $envelope = rlc_signed_envelope($keypair, [
+        'installation_id' => 'not-a-valid-local-id', // mirrors the malformed config below verbatim
+        'status' => 'active', 'plan' => 'pro', 'entitlements' => [],
+    ]);
+    $store = new FakeLicenseCacheStore();
+    $config = rlc_config($keypair['public']);
+    $config['install_id'] = 'not-a-valid-local-id';
+    $client = new RemoteLicenseClient($config, $store, function () use ($envelope) {
+        return [200, json_encode($envelope)];
+    });
+
+    assert_false($client->checkIn(), 'a malformed local install_id must never match, even a payload carrying the identical malformed string');
+    assert_null($store->saved);
+});
+
 unit('RemoteLicenseClient::checkIn(): the outgoing request body carries the configured product/key/install_id/domain', function () {
     $keypair = LicensingAPI::generateSigningKeypair();
     $captured = null;
@@ -115,7 +172,7 @@ unit('RemoteLicenseClient::checkIn(): the outgoing request body carries the conf
     assert_eq('https://license.example.test/licensing/check', $captured['url']);
     assert_eq('kohevo', $captured['body']['product']);
     assert_eq('a-real-license-key', $captured['body']['license_key']);
-    assert_eq('install-uuid-1', $captured['body']['install_id']);
+    assert_eq(str_repeat('1', 32), $captured['body']['install_id']);
     assert_eq('client.example', $captured['body']['domain']);
     assert_eq('1.0.0', $captured['body']['app_version']);
 });
@@ -170,6 +227,28 @@ unit('RemoteLicenseClient::checkIn(): a tampered payload (signature no longer ma
     $keypair = LicensingAPI::generateSigningKeypair();
     $envelope = rlc_signed_envelope($keypair, ['status' => 'active']);
     $envelope['payload'] = json_encode(['status' => 'suspended']); // tampered after signing
+    $store = new FakeLicenseCacheStore();
+    $client = new RemoteLicenseClient(rlc_config($keypair['public']), $store, function () use ($envelope) {
+        return [200, json_encode($envelope)];
+    });
+
+    assert_false($client->checkIn());
+    assert_null($store->saved);
+});
+
+unit('RemoteLicenseClient::checkIn(): a payload tampered to carry a DIFFERENT installation_id after signing fails verification and never touches the cache', function () {
+    $keypair = LicensingAPI::generateSigningKeypair();
+    $envelope = rlc_signed_envelope($keypair, [
+        'installation_id' => str_repeat('1', 32), // matches rlc_config()'s install_id at signing time
+        'status' => 'active', 'plan' => 'pro', 'entitlements' => [],
+    ]);
+    // Tampered AFTER signing -- the signature no longer matches this exact
+    // byte string, so this is caught by signature verification itself, not
+    // merely the installation_id equality check -- proving the two layers
+    // are independently effective.
+    $envelope['payload'] = json_encode([
+        'installation_id' => str_repeat('9', 32), 'status' => 'active', 'plan' => 'pro', 'entitlements' => [],
+    ]);
     $store = new FakeLicenseCacheStore();
     $client = new RemoteLicenseClient(rlc_config($keypair['public']), $store, function () use ($envelope) {
         return [200, json_encode($envelope)];

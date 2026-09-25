@@ -211,15 +211,25 @@ if (!function_exists('slate_license_gate')) {
         try {
             if (!class_exists('\Slate\Services\Licensing\SlateLicenseCacheStore')) return;
             $store = new \Slate\Services\Licensing\SlateLicenseCacheStore(current_tenant_id());
-            $cached = $store->load();
-            if ($cached === null) return; // never configured -- unrestricted
 
-            $licensedStatuses = ['trial', 'active'];
-            $restricted = !in_array($cached['status'], $licensedStatuses, true);
+            // QA Fix Round 1 (Phase 4, Fix 1/Fix 5): readTrustState()
+            // distinguishes "no cache row at all" from "a cache row exists
+            // but failed installation-identity verification" -- kept in
+            // parity with the 01-client copy of this gate so an untrusted
+            // row is never misread as "never configured".
+            $state = $store->readTrustState();
+            if (!$state['found']) return; // never configured -- unrestricted
+            if (!$state['trusted']) {
+                $restricted = true; // an active security signal, never "unconfigured"
+            } else {
+                $cached = $state['data'];
+                $licensedStatuses = ['trial', 'active'];
+                $restricted = !in_array($cached['status'], $licensedStatuses, true);
 
-            if (!$restricted) {
-                $fetchedAt = strtotime((string) $cached['fetched_at']);
-                $restricted = $fetchedAt === false || (time() - $fetchedAt) > $graceSeconds;
+                if (!$restricted) {
+                    $fetchedAt = strtotime((string) $cached['fetched_at']);
+                    $restricted = $fetchedAt === false || (time() - $fetchedAt) > $graceSeconds;
+                }
             }
             if (!$restricted) return;
 

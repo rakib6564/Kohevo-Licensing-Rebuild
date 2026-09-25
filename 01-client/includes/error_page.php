@@ -210,15 +210,24 @@ if (!function_exists('slate_license_gate')) {
             $store = new \Slate\Services\Licensing\SlateLicenseCacheStore(current_tenant_id());
             $remoteMode = class_exists('\Slate\Services\Licensing\EntitlementService')
                 && \Slate\Services\Licensing\EntitlementService::remoteConfigured();
-            $cached = $store->load();
-            if ($cached === null) {
-                if (!$remoteMode) return; // explicit legacy/unconfigured path
+
+            // QA Fix Round 1 (Phase 4, Fix 1): readTrustState() distinguishes
+            // "no cache row at all" from "a cache row exists but failed
+            // installation-identity verification" -- load() alone collapses
+            // both into null, which previously let an untrusted (mismatched)
+            // cache row be misread as "never configured" and pass through.
+            $state = $store->readTrustState();
+
+            if (!$state['found']) {
+                if (!$remoteMode) return; // explicit legacy/unconfigured path -- no cache row has ever been written
+                $restricted = true;
+            } elseif (!$state['trusted']) {
+                // An untrusted row is an active security signal -- it must
+                // NEVER be interpreted as "not yet configured", regardless
+                // of $remoteMode.
                 $restricted = true;
             } else {
-                $restricted = false;
-            }
-
-            if ($cached !== null) {
+                $cached = $state['data'];
                 $licensedStatuses = ['trial', 'active'];
                 $restricted = !in_array($cached['status'], $licensedStatuses, true);
 

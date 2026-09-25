@@ -15,7 +15,11 @@ $clientId = Database::insert('licensing_clients', ['name'=>'Race Client']);
 $installId = Database::insert('licensing_installs', ['client_id'=>$clientId,'product_id'=>$productId,'label'=>'Race','domain'=>'race.example','domain_normalized'=>'race.example','license_key_hash'=>hash('sha256','race-key'),'status'=>'active','activation_limit'=>1]);
 $base = __DIR__ . '/phase2-race-worker.php';
 $procs = [];
-foreach (['race-a','race-b'] as $identity) {
+// QA Fix Round 1 (Phase 4, Fix 2): install_id is now format-validated
+// (lowercase hex, exactly 32 chars) before handleCheckIn() does anything
+// else, so these must be well-formed to exercise the actual race path
+// rather than being rejected at the very first validation step.
+foreach ([str_repeat('a', 32), str_repeat('b', 32)] as $identity) {
     $pipes = [];
     $procs[] = [proc_open(PHP_BINARY . ' ' . escapeshellarg($base) . ' ' . escapeshellarg($identity), [1=>['pipe','w'],2=>['pipe','w']], $pipes), $pipes];
 }

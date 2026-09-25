@@ -177,7 +177,13 @@ class LicensingAPI {
         try {
             $productSlug = trim((string) ($input['product'] ?? ''));
             $licenseKey  = (string) ($input['license_key'] ?? '');
-            $installationId = strtolower(trim((string) ($input['install_id'] ?? '')));
+            // QA Fix Round 2 (Fix 1): the RAW supplied value is validated
+            // below, with no normalization applied first -- lower-casing or
+            // trimming before validation would let an uppercase or
+            // whitespace-padded install_id slip through format validation.
+            // Only after the strict format check succeeds is this exact
+            // validated value ever used.
+            $installationId = (string) ($input['install_id'] ?? '');
             $domain      = self::normalizeDomain((string) ($input['domain'] ?? ''));
             $appVersion  = trim((string) ($input['app_version'] ?? ''));
 
@@ -186,9 +192,9 @@ class LicensingAPI {
             }
             // Fix 2A: format-validated before ANY database lookup or
             // mutation -- a malformed install_id (wrong length, uppercase,
-            // non-hex, whitespace, SQL-shaped, etc.) is rejected exactly
-            // like any other malformed required field, not silently
-            // lower-cased/trimmed-and-tried.
+            // mixed-case, non-hex, whitespace-padded, SQL-shaped, etc.) is
+            // rejected exactly like any other malformed required field,
+            // never normalized-and-retried.
             if (preg_match(self::INSTALLATION_ID_PATTERN, $installationId) !== 1) {
                 return self::checkInError(400, 'invalid_request');
             }

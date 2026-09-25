@@ -15,6 +15,18 @@ namespace Slate\Services\Installation;
 final class InstallationService
 {
     /**
+     * QA Fix Round 1 (Phase 4, Fix 2): the canonical Installation ID format
+     * — lowercase hex, exactly 32 characters (matches the 16-byte
+     * bin2hex(random_bytes(16)) generation convention below).
+     */
+    public const INSTALLATION_ID_PATTERN = '/^[a-f0-9]{32}$/';
+
+    public static function isValidInstallationId(string $installationId): bool
+    {
+        return preg_match(self::INSTALLATION_ID_PATTERN, $installationId) === 1;
+    }
+
+    /**
      * Provision the one tenant, its profile, the one installation identity,
      * and the first admin atomically. Safe to call again after a partial POST.
      *
@@ -126,19 +138,41 @@ final class InstallationService
      * every other call site (bin/license-check.php,
      * SlateLicenseCacheStore's read-time verification, and any future
      * caller) reads it through here rather than repeating the underlying
-     * query. Returns null only for an install that has never completed
+     * query. Returns null for an install that has never completed
      * provisioning (installer step 2, provision() above) — remote licensing
      * simply stays unconfigured/no-op until then, exactly as it already
      * does when LICENSE_* env vars are unset.
+     *
+     * QA Fix Round 1 (Phase 4, Fix 2E): also returns null — never the raw
+     * value — if the stored row does not match the canonical 32-lowercase-
+     * hex format. The column is only ever written by provision() itself
+     * (always well-formed), so a malformed value here can only mean direct
+     * database tampering/corruption; trusting it as-is would hand a
+     * malformed "local identity" to every comparison built on top of this
+     * accessor (RemoteLicenseClient's write-time check,
+     * SlateLicenseCacheStore's read-time check), silently weakening both.
+     * Failing safe here means those comparisons simply never match anything
+     * — the fail-closed outcome the rest of Phase 4 already assumes.
      */
     public static function currentInstallationId(): ?string
     {
         $value = (string) \Database::value(
             'SELECT installation_id FROM installation_identity WHERE singleton_id = 1 LIMIT 1'
         );
-        return $value !== '' ? $value : null;
+        return self::isValidInstallationId($value) ? $value : null;
     }
 
+    /**
+     * QA Fix Round 2 (Fix 4): when the DB identity row is absent, a
+     * well-formed INSTALLATION_ID already sitting in .env is reused
+     * verbatim rather than silently discarded in favor of a fresh random
+     * one -- generating a new value here would orphan whatever remote
+     * license/installation the value on disk was already bound to. A
+     * malformed .env value is never trusted as-is; it falls through to the
+     * normal fresh-generation path below exactly as if no .env value were
+     * present at all, so a corrupted/tampered .env can never propagate into
+     * the database.
+     */
     private static function ensureInstallationIdentity(int $tenantId): string
     {
         $row = \Database::row(
@@ -149,7 +183,11 @@ final class InstallationService
             return (string) $row['installation_id'];
         }
 
-        $installationId = bin2hex(random_bytes(16));
+        $envInstallationId = trim((string) \env('INSTALLATION_ID', ''));
+        $installationId = self::isValidInstallationId($envInstallationId)
+            ? $envInstallationId
+            : bin2hex(random_bytes(16));
+
         \Database::insert('installation_identity', [
             'singleton_id'    => 1,
             'tenant_id'       => $tenantId,

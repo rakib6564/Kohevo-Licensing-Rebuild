@@ -20,6 +20,12 @@ require_once __DIR__ . '/LicenseCacheStoreInterface.php';
 
 final class RemoteLicenseClient {
 
+    /**
+     * QA Fix Round 1 (Phase 4, Fix 2): the canonical Installation ID format
+     * — lowercase hex, exactly 32 characters.
+     */
+    private const INSTALLATION_ID_PATTERN = '/^[a-f0-9]{32}$/';
+
     private string $serverUrl;
     private string $productSlug;
     private string $licenseKey;
@@ -104,8 +110,22 @@ final class RemoteLicenseClient {
         // therefore match this install's own configured install_id, or the
         // whole payload is untrusted -- treated exactly like a failed
         // signature check, not merely a soft warning.
-        if (!isset($status['installation_id']) || !is_string($status['installation_id'])
-            || $status['installation_id'] !== $this->installId) {
+        //
+        // QA Fix Round 1 (Phase 4, Fix 2D): format is checked FIRST and
+        // independently of the equality check below, on BOTH sides of the
+        // comparison -- a malformed payload value is rejected on its own
+        // terms (never merely "happens to not equal" a well-formed local
+        // id), and a malformed LOCAL $this->installId (a caller/config bug)
+        // must never be treated as though it could legitimately match
+        // anything, however the payload is shaped.
+        $payloadInstallationId = $status['installation_id'] ?? null;
+        if (!is_string($payloadInstallationId) || preg_match(self::INSTALLATION_ID_PATTERN, $payloadInstallationId) !== 1) {
+            return false;
+        }
+        if (preg_match(self::INSTALLATION_ID_PATTERN, $this->installId) !== 1) {
+            return false;
+        }
+        if ($payloadInstallationId !== $this->installId) {
             return false;
         }
 
@@ -114,7 +134,7 @@ final class RemoteLicenseClient {
             'plan'         => $status['plan'] ?? null,
             'entitlements' => is_array($status['entitlements'] ?? null) ? $status['entitlements'] : [],
             'expires_at'   => $status['expires_at'] ?? null,
-            'installation_id' => $status['installation_id'],
+            'installation_id' => $payloadInstallationId,
             'remote_checked_at' => $status['checked_at'] ?? null,
             'next_check_after' => isset($status['next_check_after']) ? (int) $status['next_check_after'] : null,
             'fetched_at'   => gmdate('c'),

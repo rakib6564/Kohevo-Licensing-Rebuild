@@ -236,6 +236,88 @@ unit('phase 1: provisioning can be safely retried without duplicate records', fu
     }
 });
 
+unit('QA Fix Round 2 (Fix 4): a well-formed INSTALLATION_ID already in .env is reused verbatim when the DB identity row is absent', function (): void {
+    $dbName = 'slate_phase1_envreuse_' . slate_test_ns();
+    $pdo = fit_fresh_pdo($dbName);
+    $had = array_key_exists('INSTALLATION_ID', $_ENV);
+    $old = $_ENV['INSTALLATION_ID'] ?? null;
+    try {
+        $runner = new MigrationRunner($pdo, SLATE_ROOT . '/db/migrations');
+        $runner->migrate(FIT_PHASE1_MIGRATIONS);
+
+        $preExisting = bin2hex(random_bytes(16));
+        $_ENV['INSTALLATION_ID'] = $preExisting;
+
+        $result = fit_with_database_pdo($pdo, static fn (): array =>
+            \Slate\Services\Installation\InstallationService::provision(
+                'Env Reuse Owner',
+                'env-reuse-owner@example.test',
+                password_hash('env-reuse-password', PASSWORD_DEFAULT)
+            )
+        );
+
+        assert_eq($preExisting, $result['installation_id'], 'the .env value must be reused verbatim, never regenerated');
+        $stored = (string) $pdo->query('SELECT installation_id FROM installation_identity WHERE singleton_id = 1')->fetchColumn();
+        assert_eq($preExisting, $stored, 'the exact .env value must be persisted into installation_identity');
+        assert_eq(1, (int) $pdo->query('SELECT COUNT(*) FROM installation_identity')->fetchColumn());
+
+        // Repeated provisioning (retried step 2) stays stable: the DB row now
+        // exists, so it — not .env — is authoritative on the next call, even
+        // if .env somehow changed underneath it.
+        $_ENV['INSTALLATION_ID'] = bin2hex(random_bytes(16));
+        $second = fit_with_database_pdo($pdo, static fn (): array =>
+            \Slate\Services\Installation\InstallationService::provision(
+                'Env Reuse Owner',
+                'env-reuse-owner@example.test',
+                password_hash('env-reuse-password', PASSWORD_DEFAULT)
+            )
+        );
+        assert_eq($preExisting, $second['installation_id'], 'once a DB row exists it remains authoritative, not a changed .env value');
+    } finally {
+        if ($had) { $_ENV['INSTALLATION_ID'] = $old; } else { unset($_ENV['INSTALLATION_ID']); }
+        fit_drop($dbName);
+    }
+});
+
+unit('QA Fix Round 2 (Fix 4): a malformed INSTALLATION_ID in .env is never trusted -- provisioning falls back to generating a fresh valid identity instead', function (): void {
+    $dbName = 'slate_phase1_envmalformed_' . slate_test_ns();
+    $pdo = fit_fresh_pdo($dbName);
+    $had = array_key_exists('INSTALLATION_ID', $_ENV);
+    $old = $_ENV['INSTALLATION_ID'] ?? null;
+    try {
+        $runner = new MigrationRunner($pdo, SLATE_ROOT . '/db/migrations');
+        $runner->migrate(FIT_PHASE1_MIGRATIONS);
+
+        foreach (['not-32-hex-chars', strtoupper(bin2hex(random_bytes(16))), '  ' . bin2hex(random_bytes(16)), ''] as $badEnvValue) {
+            $pdo->exec('DELETE FROM installation_identity');
+            $pdo->exec('DELETE FROM users');
+            $pdo->exec('DELETE FROM roles');
+            $pdo->exec('DELETE FROM tenant_profiles');
+            $pdo->exec('DELETE FROM tenants');
+            $_ENV['INSTALLATION_ID'] = $badEnvValue;
+
+            $result = fit_with_database_pdo($pdo, static fn (): array =>
+                \Slate\Services\Installation\InstallationService::provision(
+                    'Env Malformed Owner',
+                    'env-malformed-owner@example.test',
+                    password_hash('env-malformed-password', PASSWORD_DEFAULT)
+                )
+            );
+
+            assert_true(
+                (bool) preg_match('/^[a-f0-9]{32}$/', $result['installation_id']),
+                'a malformed .env value (' . var_export($badEnvValue, true) . ') must never propagate into the resolved identity'
+            );
+            assert_true($result['installation_id'] !== $badEnvValue);
+            $stored = (string) $pdo->query('SELECT installation_id FROM installation_identity WHERE singleton_id = 1')->fetchColumn();
+            assert_eq($result['installation_id'], $stored, 'the freshly generated (not the malformed) value must be what is persisted');
+        }
+    } finally {
+        if ($had) { $_ENV['INSTALLATION_ID'] = $old; } else { unset($_ENV['INSTALLATION_ID']); }
+        fit_drop($dbName);
+    }
+});
+
 unit('phase 1: an existing role from another tenant is never silently reassigned', function (): void {
     $dbName = 'slate_phase1_role_safety_' . slate_test_ns();
     $pdo = fit_fresh_pdo($dbName);
