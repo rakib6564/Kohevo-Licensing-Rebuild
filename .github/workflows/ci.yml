@@ -129,10 +129,10 @@ jobs:
       - name: Run 02-licensing smoke & licensing suites
         run: |
           php 02-licensing/tests/smoke.php
-          php 02-licensing/tests/unit/RemoteLicenseClientTest.php
+          php -r "require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/unit/RemoteLicenseClientTest.php'; exit(unit_summary());"
           php 02-licensing/tests/run-phase2-licensing.php
           php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/LicensingPluginSchemaTest.php'; exit(unit_summary());"
-          php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/CentralLicensingFoundationTest.php'; exit(unit_summary());"
+          php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/LicensingPluginSchemaTest.php'; require '02-licensing/tests/integration/CentralLicensingFoundationTest.php'; exit(unit_summary());"
           php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/SlateLicenseCacheStoreTest.php'; exit(unit_summary());"
           php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/LicensingQaFixRound2Test.php'; exit(unit_summary());"
           php 02-licensing/tests/run-phase2-race.php
