@@ -88,7 +88,7 @@ final class SlateLicenseCacheStore implements \LicenseCacheStoreInterface {
             'installation_id' => is_string($installationId) && $installationId !== ''
                 && preg_match(self::INSTALLATION_ID_PATTERN, $installationId) === 1
                 ? $installationId : null,
-            'fetched_at'   => (string) ($status['fetched_at'] ?? \slate_db_now()),
+            'fetched_at'   => self::dbDateTime($status['fetched_at'] ?? null) ?? \slate_db_now(),
         ];
 
         // anti-drift-ignore: TENANT — writes the specific tenant this store was constructed for, an explicit constructor parameter, not the caller's ambient current_tenant_id()
@@ -99,5 +99,12 @@ final class SlateLicenseCacheStore implements \LicenseCacheStoreInterface {
             $data['tenant_id'] = $this->tenantId;
             \Database::insert('remote_license_cache', $data);
         }
+    }
+
+    private static function dbDateTime(mixed $value): ?string
+    {
+        if ($value === null || trim((string) $value) === '') return null;
+        $timestamp = strtotime((string) $value);
+        return $timestamp === false ? null : gmdate('Y-m-d H:i:s', $timestamp);
     }
 }

@@ -27,5 +27,6 @@ $results = [];
 foreach ($procs as [$proc,$pipes]) { $results[] = stream_get_contents($pipes[1]); fclose($pipes[1]); fclose($pipes[2]); proc_close($proc); }
 $count = (int) Database::value('SELECT activation_count FROM licensing_installs WHERE id = ?', [$installId]);
 $bound = (int) Database::value('SELECT COUNT(*) FROM licensing_installation_bindings WHERE install_id = ?', [$installId]);
+foreach (['licensing_installation_bindings','licensing_checkins','licensing_installs','licensing_plans','licensing_clients','licensing_products'] as $table) Database::query("DELETE FROM `$table`");
 if ($count !== 1 || $bound !== 1) { fwrite(STDERR, "race failed: activation_count=$count bindings=$bound\n"); exit(1); }
 echo "PASS\nconcurrent_results=" . count($results) . "\nactivation_count=$count\nbindings=$bound\n";
