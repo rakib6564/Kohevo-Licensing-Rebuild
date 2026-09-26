@@ -1,6 +1,7 @@
 # Environment & secrets
 .env
 .env.*
+.installed
 !.env.example
 *.pem
 *.key
@@ -12,14 +13,18 @@
 *.log
 01-client/data/*
 !01-client/data/.gitkeep
+!01-client/data/.htaccess
 02-licensing/data/*
 !02-licensing/data/.gitkeep
+!02-licensing/data/.htaccess
 
 # Local database backups
 01-client/db_backups/*
 !01-client/db_backups/.gitkeep
+!01-client/db_backups/.htaccess
 02-licensing/db_backups/*
 !02-licensing/db_backups/.gitkeep
+!02-licensing/db_backups/.htaccess
 *.sqlite
 *.sqlite3
 *.db

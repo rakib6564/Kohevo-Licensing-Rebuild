@@ -1,0 +1,30 @@
+# Slate / Kohevo Client Web Server Security & Routing Configuration
+
+# Disable Directory Browsing
+Options -Indexes
+
+# Block direct access to sensitive files and directories
+<FilesMatch "^(\.env|\.installed|\.git|composer\.(json|lock)|Makefile|AUDIT\.md|SECURITY\.md|INSTALL\.md)">
+    Require all denied
+</FilesMatch>
+
+# Block access to internal directories
+RedirectMatch 403 ^/(data|db_backups|includes|src|bin|db|tests|audit|docs|Claude)/
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block hidden files/folders
+    RewriteRule "(^|/)\." - [F]
+
+    # Serve existing files and directories directly
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Legacy shop storefront routing
+    RewriteRule ^shop(/.*)?$ plugins/shop/storefront/router.php [QSA,L]
+
+    # Route all other non-file requests to public.php router
+    RewriteRule ^(.*)$ public.php?_path=$1 [QSA,L]
+</IfModule>

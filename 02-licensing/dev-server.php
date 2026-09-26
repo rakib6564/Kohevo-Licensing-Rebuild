@@ -26,7 +26,7 @@ if (str_contains($path, '..')) {
 $file = __DIR__ . $path;
 
 // Block sensitive system and configuration files
-if (preg_match('#/(?:\.env|\.git|includes/|db/|bin/|tests/|docs/|uploads/_plugin_staging)#', $path)) {
+if (preg_match('#/(?:\.env|\.installed|\.git|includes/|db/|bin/|tests/|docs/|data/|db_backups/|audit/|Claude/|uploads/_plugin_staging)#', $path)) {
     http_response_code(403);
     echo 'Forbidden';
     exit;
