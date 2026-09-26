@@ -19,7 +19,10 @@ require $root . '/config.php';
 http_response_code(200);
 header('Content-Type: text/plain');
 
-if (!PluginLoader::isActive('booking')) {
+// Phase 11: an unentitled installation acknowledges but does no sync work —
+// the webhook rule from 07 §2 (guard the effect, not the receipt, so Google
+// does not retry-storm and then drop the channel).
+if (!PluginLoader::isActive('booking') || !ModuleGuard::allows('booking')) {
     echo 'ok';
     exit;
 }

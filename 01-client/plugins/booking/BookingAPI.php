@@ -2372,6 +2372,10 @@ class BookingAPI {
      */
     public static function renderContentBlock(array $props, array $block = []): string
     {
+        // Phase 11: the block is a public Booking surface on any page — an
+        // unentitled installation renders nothing, like its /book route (07 §4).
+        if (!\ModuleGuard::allows('booking')) return '';
+
         $serviceId = (int)($props['service'] ?? 0);
         $base = rtrim(SLATE_URL, '/') . '/book';
 

@@ -45,7 +45,7 @@ if (getenv('SLATE_LICENSE_GUARD_LIVE') !== '1') {
 $_SERVER['REQUEST_METHOD'] = 'POST';
 
 require $root . '/config.php';
-require $root . '/plugins/mcp-gateway/McpGatewayAPI.php';
+require_once $root . '/plugins/mcp-gateway/McpGatewayAPI.php'; // once: the gateway's own boot loads it when active
 
 try {
     $result = \McpGatewayAPI::runAsAdmin($toolName, $args);

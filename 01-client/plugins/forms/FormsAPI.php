@@ -2562,6 +2562,10 @@ class FormsAPI {
      * one and deserves its own commit.
      */
     public static function renderContentBlock(array $props, array $block = []): string {
+        // Phase 11: the block is a public Forms surface on any page — an
+        // unentitled installation renders nothing, like /forms/<slug> (07 §4).
+        if (!\ModuleGuard::allows('forms')) return '';
+
         $slug = trim((string)($props['formSlug'] ?? ''));
         if ($slug === '' && !empty($props['formId'])) {
             $f = self::getFormById((int)$props['formId']);

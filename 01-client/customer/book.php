@@ -22,6 +22,10 @@ use Slate\Data\Database;
 use Slate\Services\Auth\Auth;
 
 Auth::requireCustomer();
+// Customer portal treatment (07 §2, §4): same position and response as the
+// Membership portal router — a signed-in customer gets the clear 403
+// "not included in your license" page when Booking is not entitled.
+ModuleGuard::require('booking');
 
 $cid = (int) Auth::customerId();
 $tid = function_exists('current_tenant_id') ? current_tenant_id() : 1;

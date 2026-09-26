@@ -12,6 +12,7 @@
  */
 require_once dirname(__DIR__, 3) . '/config.php';
 slate_public_entry('booking');
+ModuleGuard::requirePublic('booking'); // Phase 11: active is not entitled (07 §2, §4)
 require_once dirname(__DIR__) . '/BookingPlusAPI.php';
 
 BookingPlusAPI::ensureSchema();

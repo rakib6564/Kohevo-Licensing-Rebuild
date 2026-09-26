@@ -276,6 +276,10 @@ class MembershipAPI {
 
     /** The `membership-plans` block. Renders cards; never initiates a purchase. */
     public static function renderContentBlock(array $props, array $block = []): string {
+        // Phase 11: the block is a public Membership surface on any page — an
+        // unentitled installation renders nothing, like /member?view=plans (07 §4).
+        if (!\ModuleGuard::allows('membership')) return '';
+
         $planId = (int)($props['plan'] ?? 0);
         $base   = rtrim(SLATE_URL, '/') . '/member';
 

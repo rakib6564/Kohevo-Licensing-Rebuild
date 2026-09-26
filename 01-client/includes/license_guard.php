@@ -99,7 +99,30 @@ if (!function_exists('slate_license_guard_current_path')) {
         $path = (string) ($_SERVER['SCRIPT_NAME'] ?? '');
         if ($path === '') return '';
         if (($q = strpos($path, '?')) !== false) $path = substr($path, 0, $q);
-        return strtolower(ltrim(str_replace('\\', '/', $path), '/'));
+        $path = strtolower(ltrim(str_replace('\\', '/', $path), '/'));
+        return slate_license_guard_strip_base($path, defined('SLATE_URL') ? SLATE_URL : '');
+    }
+}
+
+if (!function_exists('slate_license_guard_strip_base')) {
+    /**
+     * Phase 11: under a /subdir/ deployment (APP_URL's own path, e.g. the
+     * default .../slate) SCRIPT_NAME carries that prefix, so without this
+     * the whitelist never matched and a locked install could not reach
+     * login, the License page, or cron's own secret check. Only the exact
+     * configured base segment is removed — anything else stays as-is and
+     * so stays guarded.
+     *
+     * @param string $path   already lower-cased, no leading slash
+     * @param string $appUrl the configured APP_URL (SLATE_URL)
+     */
+    function slate_license_guard_strip_base(string $path, string $appUrl): string
+    {
+        $base = strtolower(trim((string) parse_url($appUrl, PHP_URL_PATH), '/'));
+        if ($base !== '' && str_starts_with($path, $base . '/')) {
+            return substr($path, strlen($base) + 1);
+        }
+        return $path;
     }
 }
 

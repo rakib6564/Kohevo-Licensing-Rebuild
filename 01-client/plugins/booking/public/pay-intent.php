@@ -36,6 +36,12 @@ function bpi_out(int $code, array $body): void {
 if (!PluginLoader::isActive('booking')) {
     bpi_out(503, ['error' => 'Booking plugin not active.']);
 }
+// Phase 11: an active plugin is not an entitled one (07 §2). Same 404 the
+// Module Guard gives every anonymous public route (07 §4), kept as JSON
+// because this endpoint's caller is the booking widget's fetch().
+if (!ModuleGuard::allows('booking')) {
+    bpi_out(404, ['error' => 'Not found.']);
+}
 require_once dirname(__DIR__) . '/BookingAPI.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

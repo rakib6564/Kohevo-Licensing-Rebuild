@@ -56,10 +56,12 @@ class ReportingMcpTools {
         return [
             'period_days' => $days,
             'since'       => gmdate('Y-m-d H:i:s', time() - $days * 86400),
-            'bookings'    => self::bookingsSection($tid, $days),
-            'membership'  => self::membershipSection($tid, $days),
+            // Phase 11: a licensed module's data is reported only while that
+            // module is entitled — the same null an uninstalled module yields.
+            'bookings'    => ModuleGuard::allows('booking') ? self::bookingsSection($tid, $days) : null,
+            'membership'  => ModuleGuard::allows('membership') ? self::membershipSection($tid, $days) : null,
             'payments'    => self::paymentsSection($days),
-            'forms'       => self::formsSection($tid, $days),
+            'forms'       => ModuleGuard::allows('forms') ? self::formsSection($tid, $days) : null,
             'activity'    => self::activitySection($tid, $days),
         ];
     }
