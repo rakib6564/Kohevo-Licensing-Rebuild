@@ -194,9 +194,11 @@ if (!function_exists('slate_license_gate')) {
      * An install that has never configured remote licensing remains
      * unrestricted only through the explicit legacy/unconfigured path.
      * Once remote configuration is present, a missing cache is not a valid
-     * commercial state and therefore restricts non-admin traffic. Going
-     * stale past the existing seven-day grace period also restricts. A
-     * failed check-in never overwrites the last verified cache.
+     * commercial state and therefore restricts non-admin traffic. A trusted
+     * row is judged by CommercialLicenseWindow, exactly as the Global License
+     * Guard judges it: open through the pre-expiry warning and the 7-day
+     * commercial grace, restricted when locked or past the 7-day offline
+     * tolerance. A failed check-in never overwrites the last verified cache.
      *
      * A logged-in admin always passes through, same as the maintenance
      * gate above — restricting must never lock the one person who can
@@ -204,7 +206,6 @@ if (!function_exists('slate_license_gate')) {
      * install.
      */
     function slate_license_gate(): void {
-        $graceSeconds = 7 * 86400;
         try {
             if (!class_exists('\Slate\Services\Licensing\SlateLicenseCacheStore')) return;
             $store = new \Slate\Services\Licensing\SlateLicenseCacheStore(current_tenant_id());
@@ -227,14 +228,14 @@ if (!function_exists('slate_license_gate')) {
                 // of $remoteMode.
                 $restricted = true;
             } else {
-                $cached = $state['data'];
-                $licensedStatuses = ['trial', 'active'];
-                $restricted = !in_array($cached['status'], $licensedStatuses, true);
-
-                if (!$restricted) {
-                    $fetchedAt = strtotime((string) $cached['fetched_at']);
-                    $restricted = $fetchedAt === false || (time() - $fetchedAt) > $graceSeconds;
-                }
+                // Same decision as the Global License Guard: status, offline
+                // tolerance and the 7-day commercial grace after expires_at
+                // all come from CommercialLicenseWindow. Before this, any
+                // non-trial/active status restricted here, so an 'expired'
+                // license inside its grace period locked visitors out of the
+                // public site while the Guard (and admins) kept access.
+                $window = \Slate\Services\Licensing\CommercialLicenseWindow::evaluate($state, time());
+                $restricted = $window['allowed'] !== true;
             }
             if (!$restricted) return;
 

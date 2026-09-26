@@ -142,6 +142,51 @@ unit('license gate: an "active" status still within the 7-day grace period does 
     }
 });
 
+/**
+ * Deployment finding (live test, 2026-09-27): the gate used its own
+ * "trial/active only" rule, so an 'expired' license inside its 7-day
+ * commercial grace locked anonymous visitors out of the public site while
+ * the Global License Guard and admins kept access. It now uses the same
+ * CommercialLicenseWindow evaluation as the Guard.
+ */
+function lgate_seed_expiry(string $status, string $expiresAt): void {
+    lgate_ensure_local_identity();
+    license_test_seed_cache(current_tenant_id(), [
+        'status' => $status, 'plan' => 'pro', 'entitlements' => ['white_label'],
+        'expires_at' => $expiresAt, 'fetched_at' => gmdate('Y-m-d H:i:s'),
+        'installation_id' => lgate_local_identity(),
+    ]);
+}
+
+unit('license gate: an expired license inside its 7-day grace keeps the public site open for visitors (index.php and public.php)', function () {
+    lgate_clear();
+    try {
+        lgate_seed_expiry('expired', gmdate('Y-m-d H:i:s', time() - 2 * 86400));
+        $res = lgate_probe('index.php');
+        assert_eq(200, $res['status'], 'grace: the landing page must stay open');
+        assert_false(str_contains($res['body'], 'License inactive'));
+        $res = lgate_probe('public.php', '_path=totally-nonexistent-route-xyz');
+        assert_true($res['status'] !== 403 && !str_contains($res['body'], 'License inactive'), 'grace: public.php reaches routing, not the lock page');
+    } finally {
+        lgate_clear();
+    }
+});
+
+unit('license gate: an expired license past its 7-day grace restricts; one expiring soon does not', function () {
+    lgate_clear();
+    try {
+        lgate_seed_expiry('expired', gmdate('Y-m-d H:i:s', time() - 8 * 86400));
+        $res = lgate_probe('index.php');
+        assert_eq(403, $res['status'], 'beyond grace: restricted');
+        assert_true(str_contains($res['body'], 'License inactive'));
+
+        lgate_seed_expiry('active', gmdate('Y-m-d H:i:s', time() + 3 * 86400));
+        assert_eq(200, lgate_probe('index.php')['status'], 'expiring in 3 days: still open');
+    } finally {
+        lgate_clear();
+    }
+});
+
 unit('license gate: also runs on public.php, BEFORE PublicRouter dispatch -- a suspended install gets 403, not the route\'s own 404', function () {
     lgate_clear();
     try {

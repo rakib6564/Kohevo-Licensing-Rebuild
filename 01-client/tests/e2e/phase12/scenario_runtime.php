@@ -96,6 +96,8 @@ license_check();
 $d = admin_get('/admin/');
 check(cval('SELECT status FROM remote_license_cache') === 'expired', 'expired 2 days ago: central delivers signed expired');
 check($d['status'] === 200 && stripos($d['body'], 'grace') !== false, 'grace (expired 2 days ago): usable, with a grace warning', (string) $d['status']);
+$pub = http('GET', '/', [], 'jar-anon.txt');
+check($pub['status'] === 200 && !str_contains($pub['body'], 'License inactive'), 'grace (expired 2 days ago): the public site stays open for visitors', (string) $pub['status']);
 central('set-expiry', (string) $lid, gmdate('Y-m-d H:i:s', time() - 8 * 86400));
 license_check();
 lock_matrix('expired beyond grace', true);
