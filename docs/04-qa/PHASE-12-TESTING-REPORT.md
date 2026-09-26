@@ -8,7 +8,7 @@
 | Branch | `main` |
 | HEAD at start | `711b492cd6b76cac70c5c033c57044384cebf909` — `feat(licensing): implement Phase 11 security hardening` |
 | `git status` at start | clean |
-| Phase 12 changes | uncommitted working tree (listed under **New Defects** and **Tests added**) |
+| Phase 12 changes | commit `66d85bb` on `main` (listed under **New Defects** and **Tests added**) |
 
 ## Environment
 
@@ -17,7 +17,7 @@
 | OS | macOS 26.6.2 (25G83), arm64 |
 | PHP | 8.5.9 CLI (NTS) — sodium, pdo_mysql, curl |
 | MySQL | 26.7.0 (Homebrew), 127.0.0.1 — **executed locally** |
-| MariaDB | **not available locally — not executed locally.** CI (GitHub Actions) ran the licensing suites on **MariaDB 10.11** and **MySQL 8.0**, PHP 8.3, for HEAD `711b492` (run 36253064933: both jobs success). The Phase 12 fixes below have **not** yet run in CI. |
+| MariaDB | **not available locally — not executed locally.** CI (GitHub Actions) ran the licensing suites on **MariaDB 10.11** and **MySQL 8.0**, PHP 8.3, for `711b492` (run 36253064933) and for the Phase 12 commit `66d85bb` (run 36255054336) — both jobs success both times, so the Phase 12 fixes are CI-verified on MariaDB 10.11 and MySQL 8.0. |
 | Servers | `php -S` (built-in server) with each app's `dev-server.php` router; no Apache/nginx available |
 
 ---
@@ -113,9 +113,9 @@ Gaps (not failures): no Forms REST API surface exists; Membership customer porta
 
 No legacy path unlocks the Global Guard (it always requires a signed, installation-bound, fresh cache row): `slate_license_gate()` runs after the Guard; legacy `licenses` / `tenant_profiles` / plan tables are read only in `LICENSE_COMPAT_MODE=legacy`; central legacy `licensing_installs` check-in signs `installation_id` after binding checks; legacy admin pages require `licensing.manage` + CSRF. Residual items are listed under readiness (all need `.env` control).
 
-## CI — **PASS** (for HEAD `711b492`)
+## CI — **PASS** (`711b492` and Phase 12 commit `66d85bb`)
 
-`.github/workflows/ci.yml`: MySQL 8.0 and MariaDB 10.11, PHP 8.3, lint; runs Phase 3/4 runners, FreshInstallMigration, GlobalLicenseGuard, ModuleGuard, MCP ModuleGuard, CommercialLicenseWindow, Phase 9, RemoteLicenseClientSync, Phase 10 runner, **Phase 11 runner**, and the central smoke / schema / foundation / cache / QA / Phase 10 / race suites. Run 36253064933: both jobs success. Not in CI: full client unit/integration runs, central unit run, the E2E harness (needs two HTTP servers). No CI change needed: the Phase 12 tests live in files CI already runs.
+`.github/workflows/ci.yml`: MySQL 8.0 and MariaDB 10.11, PHP 8.3, lint; runs Phase 3/4 runners, FreshInstallMigration, GlobalLicenseGuard, ModuleGuard, MCP ModuleGuard, CommercialLicenseWindow, Phase 9, RemoteLicenseClientSync, Phase 10 runner, **Phase 11 runner**, and the central smoke / schema / foundation / cache / QA / Phase 10 / race suites. Run 36253064933 (`711b492`) and run 36255054336 (`66d85bb`, Phase 12): both jobs success. On both databases run 36255054336 reports CommercialLicenseWindowTest 42/42, Phase 10 runner 144/144 (incl. the D1/D3 installer tests), Phase 11 runner 172/172, central Phase10CheckInSyncTest 9/9 (incl. D2), race activation_count=1 / bindings=1. Not in CI: full client unit/integration runs, central unit run, the E2E harness (needs two HTTP servers). No CI change needed: the Phase 12 tests live in files CI already runs.
 
 ## Full Test Results (local, MySQL 26.7, after the Phase 12 fixes)
 
@@ -183,6 +183,6 @@ Not code defects in the licensing architecture; each must be closed before produ
 
 ## Final Verdict
 
-All critical flows and security boundaries pass end to end after the three in-phase fixes (D1–D3), with regression coverage and an unchanged pre-existing failure set. The remaining items are production deployment and data-hygiene requirements, not blockers for the Phase 13 migration; the system is **not** production-ready until items 1–3 above are closed. The Phase 12 changes still need CI and independent verification.
+All critical flows and security boundaries pass end to end after the three in-phase fixes (D1–D3), with regression coverage and an unchanged pre-existing failure set. The remaining items are production deployment and data-hygiene requirements, not blockers for the Phase 13 migration; the system is **not** production-ready until items 1–3 above are closed. The Phase 12 changes are CI-verified on MySQL 8.0 and MariaDB 10.11 (run 36255054336) and await independent verification.
 
 **PHASE 12 VERIFIED — READY FOR PHASE 13**
