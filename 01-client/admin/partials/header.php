@@ -188,6 +188,17 @@ $coreNav = [
         'order' => 840,
         'group' => 'settings',
     ],
+    // Phase 8 — this installation's own license (status, plan, modules).
+    // Not the platform-only 'licenses' management page below.
+    [
+        'slug'  => 'license',
+        'label' => __('license', 'License'),
+        'href'  => SLATE_URL . '/admin/license.php',
+        'icon'  => 'shield',
+        'perm'  => 'settings.view',
+        'order' => 850,
+        'group' => 'settings',
+    ],
     // ── System ──
     [
         'slug'  => 'users',
@@ -343,6 +354,7 @@ if (!$currentNav) {
         'settings.php'      => 'settings-general',
         'audit.php'         => 'audit',
         'help.php'          => 'help',
+        'license.php'       => 'license',
     ];
     $currentNav = $map[$script] ?? null;
     if ($script === 'posts.php') {

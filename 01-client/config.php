@@ -139,6 +139,16 @@ if (PHP_SAPI !== 'cli') {
 // bootstrap, calls boot(). Inactive plugins are never touched.
 PluginLoader::boot();
 
+// ── Global License Guard (Phase 6) ───────────────────────────
+// The single mandatory choke point for every entry point that reaches this
+// line — docs/02-architecture/06-GLOBAL-LICENSE-GUARD.md §3 Option A.
+// Placed after Database/Auth/PluginLoader::boot() are all available, since
+// the Guard needs all three (readTrustState() reads the database; the
+// whitelisted admin/login.php, admin/logout.php, admin/license.php routes
+// still need Auth available to themselves gate on).
+require_once SLATE_ROOT . '/includes/license_guard.php';
+slate_license_guard();
+
 // ── Dynamic notifications ────────────────────────────────────
 // Surface key events in the topbar bell. Listeners are registered after
 // plugins boot so the actions they fire are caught. Kept defensive so a

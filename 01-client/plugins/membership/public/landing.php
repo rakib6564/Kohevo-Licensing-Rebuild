@@ -12,6 +12,7 @@ if (!defined('SLATE_ROOT')) {
     require_once dirname(__DIR__, 3) . '/config.php';
 }
 slate_public_entry('membership');
+ModuleGuard::requirePublic('membership');
 require_once dirname(__DIR__) . '/MembershipAPI.php';
 MembershipAPI::ensureSchema();
 

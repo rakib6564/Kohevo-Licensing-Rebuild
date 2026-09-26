@@ -11,6 +11,7 @@ require_once dirname(__DIR__) . '/BookingAPI.php';
 
 Auth::require();
 Auth::requirePerm('booking.manage_providers');
+ModuleGuard::require('booking');
 
 $providerId = (int)($_GET['provider_id'] ?? 0);
 $tid = current_tenant_id();

@@ -16,6 +16,7 @@ if (!defined('SLATE_ROOT')) {
     require_once dirname(__DIR__, 3) . '/config.php';
 }
 slate_public_entry('forms');
+ModuleGuard::requirePublic('forms');
 require_once dirname(__DIR__) . '/FormsAPI.php';
 require_once dirname(__DIR__) . '/lib/FormsPdf.php';
 FormsAPI::ensureSchema();

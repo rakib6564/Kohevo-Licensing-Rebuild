@@ -29,6 +29,18 @@ $root = dirname(__DIR__, 2);
 $file = $root . '/' . ltrim($page, '/');
 if (!is_file($file)) { fwrite(STDERR, "no such page: {$file}\n"); exit(2); }
 
+// Phase 6 (Global License Guard) test toggle — see
+// docs/02-architecture/06-GLOBAL-LICENSE-GUARD.md §3a. By default this
+// probe bypasses the Guard exactly like every other non-licensing
+// integration test (SLATE_TESTING, D19 LOCKED) so existing suites
+// (including LicenseGateTest.php's own slate_license_gate()-only
+// assertions) are unaffected by its addition. GlobalLicenseGuardTest.php
+// sets SLATE_LICENSE_GUARD_LIVE=1 to instead exercise the real Guard
+// end-to-end.
+if (getenv('SLATE_LICENSE_GUARD_LIVE') !== '1') {
+    define('SLATE_TESTING', true);
+}
+
 parse_str($query, $_GET);
 $_POST   = [];
 $_SERVER['REQUEST_METHOD'] = 'GET';

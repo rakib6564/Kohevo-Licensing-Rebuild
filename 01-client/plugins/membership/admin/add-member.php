@@ -14,6 +14,7 @@ Auth::require();
 if (!Auth::can('membership.manage_members') && !Auth::isSuperAdmin()) {
     Auth::requirePerm('membership.manage_members');
 }
+ModuleGuard::require('membership');
 MembershipAPI::ensureSchema();
 
 $pageTitle  = 'Add member';

@@ -45,15 +45,35 @@ if (!in_array($mode, ['wrong', 'none', 'valid'], true)) {
 }
 
 $root = dirname(__DIR__, 2);
-require $root . '/config.php';
 
+// Phase 6 (Global License Guard) test toggle — see
+// docs/02-architecture/06-GLOBAL-LICENSE-GUARD.md §3a. By default this
+// probe bypasses the Guard exactly like every other non-licensing
+// integration test (SLATE_TESTING, D19 LOCKED) so existing suites are
+// unaffected by its addition. GlobalLicenseGuardTest.php sets
+// SLATE_LICENSE_GUARD_LIVE=1 to instead prove cron.php's OWN
+// CRON_SECRET-gated auth still runs even when the Guard is live and this
+// installation is fully locked (cron.php is on the Guard's own whitelist —
+// see includes/license_guard.php's docblock for why).
+if (getenv('SLATE_LICENSE_GUARD_LIVE') !== '1') {
+    define('SLATE_TESTING', true);
+}
+
+// Set BEFORE config.php loads (not after) so a request-level check made at
+// boot time — the Global License Guard — sees the same simulated request
+// context a real HTTP request would already have from its first line.
 $_GET = [];
 unset($_SERVER['HTTP_X_CRON_KEY']);
 if ($mode === 'wrong') $_GET['key'] = 'not-the-real-secret';
-if ($mode === 'valid') $_GET['key'] = defined('CRON_SECRET') ? (string) CRON_SECRET : '';
 $_SERVER['REQUEST_METHOD'] = 'GET';
 $_SERVER['REMOTE_ADDR']    = $ip;
+$_SERVER['SCRIPT_NAME']    = '/cron.php';
 
+// Buffering and the STATUS-line shutdown reporter must be registered BEFORE
+// config.php loads, not after — a request-level check made at boot time
+// (the Global License Guard, Phase 6) can itself call exit() from inside
+// config.php's own require chain, before this fixture would otherwise reach
+// this point.
 ob_start();
 $shutdownDone = false;
 register_shutdown_function(static function () use (&$shutdownDone): void {
@@ -64,5 +84,9 @@ register_shutdown_function(static function () use (&$shutdownDone): void {
     fwrite(STDOUT, 'STATUS ' . ($code === false ? 200 : (int) $code) . "\n");
     fwrite(STDOUT, $body);
 });
+
+require $root . '/config.php';
+
+if ($mode === 'valid') $_GET['key'] = defined('CRON_SECRET') ? (string) CRON_SECRET : '';
 
 require $root . '/cron.php';

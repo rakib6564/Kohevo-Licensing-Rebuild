@@ -14,8 +14,6 @@ namespace Slate\Services\Licensing;
 
 final class EntitlementService
 {
-    private const LICENSED_STATUSES = ['trial', 'active'];
-    private const REMOTE_GRACE_SECONDS = 7 * 86400;
     private const REMOTE_REQUIRED_ENV = ['LICENSE_SERVER_URL', 'LICENSE_SERVER_PUBLIC_KEY', 'LICENSE_PRODUCT', 'LICENSE_KEY'];
 
     public static function canAccess(int $tenantId, string $featureKey): bool
@@ -57,10 +55,7 @@ final class EntitlementService
     {
         try {
             $state = (new SlateLicenseCacheStore($tenantId))->load();
-            if ($state === null) return false;
-            if (!in_array((string) ($state['status'] ?? ''), self::LICENSED_STATUSES, true)) return false;
-            if (!empty($state['expires_at']) && strtotime((string) $state['expires_at']) <= time()) return false;
-            if (!self::remoteStateFresh($state)) return false;
+            if (!self::remoteStateUsable($state)) return false;
             if (!in_array($featureKey, is_array($state['entitlements'] ?? null) ? $state['entitlements'] : [], true)) return false;
             return \Database::setting("entitlement.$featureKey.enabled", $tenantId) !== '0';
         } catch (\Throwable $e) {
@@ -91,9 +86,7 @@ final class EntitlementService
         if (self::authorityMode() === 'remote') {
             try {
                 $state = (new SlateLicenseCacheStore($tenantId))->load();
-                if ($state === null || !in_array((string) ($state['status'] ?? ''), self::LICENSED_STATUSES, true)
-                    || (!empty($state['expires_at']) && strtotime((string) $state['expires_at']) <= time())
-                    || !self::remoteStateFresh($state)) return [];
+                if (!self::remoteStateUsable($state)) return [];
                 $keys = is_array($state['entitlements'] ?? null) ? $state['entitlements'] : [];
                 return array_values(array_filter($keys, fn($key) => is_string($key) && self::remoteAllows($tenantId, $key)));
             } catch (\Throwable $e) { return []; }
@@ -103,9 +96,20 @@ final class EntitlementService
         return array_values(array_filter($allFeatureKeys, fn(string $key) => self::legacyAllows($tenantId, $key)));
     }
 
-    private static function remoteStateFresh(array $state): bool
+    /**
+     * Phase 9: whether a trusted remote snapshot still grants module access
+     * at all — the exact same answer the Global License Guard gives, from
+     * the same CommercialLicenseWindow evaluation. Entitlements therefore
+     * stay live through the pre-expiry warning and the 7-day commercial
+     * grace period (08 §2; Phase 9 §12) and end at exactly the moment the
+     * Guard locks the application — no module-specific grace timer, and no
+     * earlier cut-off at expires_at. Suspended/revoked/stale/malformed
+     * snapshots are denied exactly as before (the evaluator's precedence).
+     */
+    private static function remoteStateUsable(?array $state): bool
     {
-        $fetchedAt = strtotime((string) ($state['fetched_at'] ?? ''));
-        return $fetchedAt !== false && (time() - $fetchedAt) <= self::REMOTE_GRACE_SECONDS;
+        if ($state === null) return false;
+        $window = CommercialLicenseWindow::evaluate(['found' => true, 'trusted' => true, 'data' => $state], time());
+        return $window['allowed'] === true;
     }
 }

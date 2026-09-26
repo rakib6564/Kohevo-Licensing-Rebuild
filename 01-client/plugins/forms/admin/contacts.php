@@ -11,6 +11,7 @@ require_once dirname(__DIR__) . '/FormsAPI.php';
 
 Auth::require();
 Auth::requirePerm('forms.view');
+ModuleGuard::require('forms');
 FormsAPI::ensureSchema();
 
 $tid = current_tenant_id();

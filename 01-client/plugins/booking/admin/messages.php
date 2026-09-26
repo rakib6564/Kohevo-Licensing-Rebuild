@@ -13,6 +13,7 @@ Auth::require();
 if (!Auth::can('booking.view') && !Auth::isSuperAdmin()) {
     Auth::requirePerm('booking.view');
 }
+ModuleGuard::require('booking');
 
 // The capability toggle in Booking → Settings must actually turn this inbox
 // off, not just hide its nav link. Placed before the mark_replied POST

@@ -149,6 +149,11 @@ class Membership extends Plugin {
     }
 
     public function onStripeEvent(array $event): void {
+        // Guard the EFFECT, not the webhook receipt (07 §2) — mirrors
+        // Booking::onStripeEvent(). The HTTP ack to Stripe happens in the
+        // webhook controller regardless; this only stops an unentitled
+        // installation from activating a membership subscription.
+        if (!ModuleGuard::allows('membership')) return;
         try {
             MembershipAPI::handleStripeEvent($event);
         } catch (\Throwable $e) {

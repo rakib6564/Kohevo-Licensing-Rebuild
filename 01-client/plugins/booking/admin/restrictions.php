@@ -12,6 +12,7 @@ require_once dirname(__DIR__) . '/BookingPlusAPI.php';
 
 Auth::require();
 Auth::requirePerm('booking.manage_services');
+ModuleGuard::require('booking');
 
 // The capability toggle in Booking → Settings must actually turn this page
 // off, not just hide its nav link. Placed before any POST handling below, so

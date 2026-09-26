@@ -125,6 +125,9 @@ jobs:
           php 01-client/tests/run-phase3-relevant.php
           php 01-client/tests/run-phase4-focused.php
           php -r "require '01-client/config.php'; require '01-client/tests/guard.php'; slate_require_test_database(); require '01-client/tests/unit/harness.php'; require '01-client/tests/integration/FreshInstallMigrationTest.php'; exit(unit_summary());"
+          php -r "require '01-client/config.php'; require '01-client/tests/guard.php'; slate_require_test_database(); require '01-client/tests/unit/harness.php'; require '01-client/tests/integration/GlobalLicenseGuardTest.php'; exit(unit_summary());"
+          php -r "require '01-client/config.php'; require '01-client/tests/guard.php'; slate_require_test_database(); require '01-client/tests/unit/harness.php'; require '01-client/tests/integration/ModuleGuardTest.php'; exit(unit_summary());"
+          php -r "require '01-client/config.php'; require '01-client/tests/guard.php'; slate_require_test_database(); require '01-client/tests/unit/harness.php'; require '01-client/tests/integration/McpModuleGuardTest.php'; exit(unit_summary());"
 
       - name: Run 02-licensing smoke & licensing suites
         run: |

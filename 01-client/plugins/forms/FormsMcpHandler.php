@@ -87,6 +87,15 @@ class FormsMcpHandler {
     public static function callTool($result, string $name, array $args, array $context): mixed {
         if ($result !== null) return $result;
 
+        // Module Guard (07 §2, "Service/internal call" — defense-in-depth
+        // against a caller that reaches the service directly): the MCP
+        // gateway is an API surface like any other, and scope-based auth
+        // (forms.read/forms.write) is an independent axis from license
+        // entitlement — a valid scope must never substitute for it (07 §6).
+        if (str_starts_with($name, 'slate_forms_') && !ModuleGuard::allows('forms')) {
+            throw new RuntimeException('This module is not included in your current license.');
+        }
+
         if ($name === 'slate_forms_list_definitions') {
             self::requireScope($context, 'forms.read');
             $rows = Database::rows(

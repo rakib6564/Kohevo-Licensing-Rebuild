@@ -7,6 +7,7 @@ require_once dirname(__DIR__) . '/BookingAPI.php';
 
 Auth::require();
 Auth::requirePerm('booking.manage_providers');
+ModuleGuard::require('booking');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

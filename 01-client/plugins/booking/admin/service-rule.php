@@ -11,6 +11,7 @@ require_once SLATE_ROOT . '/includes/record_editor.php';
 
 Auth::require();
 Auth::requirePerm('booking.manage_services');
+ModuleGuard::require('booking');
 
 // See admin/service-rules.php's identical guard: the capability toggle must
 // actually turn this editor off, not just hide its nav link.

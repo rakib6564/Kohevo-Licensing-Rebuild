@@ -29,6 +29,16 @@ $query     = (string)($argv[4] ?? '');
 
 $root = dirname(__DIR__, 2);
 
+// Phase 6 (Global License Guard) test toggle — see
+// docs/02-architecture/06-GLOBAL-LICENSE-GUARD.md §3a. By default this
+// probe bypasses the Guard exactly like every other non-licensing
+// integration test (SLATE_TESTING, D19 LOCKED) so existing suites are
+// unaffected by its addition. GlobalLicenseGuardTest.php sets
+// SLATE_LICENSE_GUARD_LIVE=1 to instead exercise the real Guard end-to-end.
+if (getenv('SLATE_LICENSE_GUARD_LIVE') !== '1') {
+    define('SLATE_TESTING', true);
+}
+
 parse_str($query, $_GET);
 $_GET['_route_path'] = $routePath;
 $_POST = [];

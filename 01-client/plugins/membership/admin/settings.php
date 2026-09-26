@@ -8,6 +8,7 @@ require_once dirname(__DIR__) . '/MembershipAPI.php';
 
 Auth::require();
 Auth::requirePerm('membership.manage_settings');
+ModuleGuard::require('membership');
 MembershipAPI::ensureSchema();
 
 $pageTitle  = 'Membership settings';

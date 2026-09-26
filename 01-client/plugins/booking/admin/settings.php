@@ -9,6 +9,7 @@ require_once dirname(__DIR__) . '/BookingAPI.php';
 
 Auth::require();
 Auth::requirePerm('booking.manage_settings');
+ModuleGuard::require('booking');
 BookingAPI::ensureSchema();
 
 $pageTitle  = __('booking_settings', 'Booking settings');

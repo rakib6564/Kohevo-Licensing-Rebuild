@@ -16,6 +16,8 @@ use Slate\Kernel\Http\ApiRouter;
 class BookingApiHandler {
 
     public static function handle(string $subPath, string $method, array $auth): void {
+        ModuleGuard::requireApi('booking');
+
         $subPath = trim($subPath, '/');
         $parts   = explode('/', $subPath);
         $action  = $parts[0] ?? '';

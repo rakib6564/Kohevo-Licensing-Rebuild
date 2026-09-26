@@ -12,6 +12,7 @@
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/BookingAPI.php';
 BookingAPI::ensureSchema();
+ModuleGuard::require('booking');
 
 $tid = current_tenant_id();
 $id    = (int)($_GET['id'] ?? 0);

@@ -18,6 +18,12 @@ declare(strict_types=1);
 // when server config does not.
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 
+// Non-request-controllable bypass for the Global License Guard (Phase 6) —
+// docs/02-architecture/06-GLOBAL-LICENSE-GUARD.md §3a, D19 LOCKED. This
+// runner boots config.php against a test database that has no licensing
+// state seeded at all; that is not a licensing decision.
+define('SLATE_TESTING', true);
+
 require __DIR__ . '/../../config.php';       // full bootstrap (autoloader + DB + aliases)
 require __DIR__ . '/../guard.php';
 slate_require_test_database();

@@ -104,6 +104,16 @@ class MembershipMcpHandler {
     public static function callTool($result, string $name, array $args, array $context): mixed {
         if ($result !== null) return $result;
 
+        // Module Guard (07 §2, "Service/internal call" — defense-in-depth
+        // against a caller that reaches the service directly): the MCP
+        // gateway is an API surface like any other, and scope-based auth
+        // (membership.read/membership.write/...) is an independent axis
+        // from license entitlement — a valid scope must never substitute
+        // for it (07 §6).
+        if (str_starts_with($name, 'slate_membership_') && !ModuleGuard::allows('membership')) {
+            throw new RuntimeException('This module is not included in your current license.');
+        }
+
         if ($name === 'slate_membership_list_plans') {
             self::requireScope($context, 'membership.read');
             $activeOnly = !array_key_exists('active_only', $args) || !empty($args['active_only']);

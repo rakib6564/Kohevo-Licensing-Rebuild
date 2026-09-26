@@ -13,6 +13,7 @@ Auth::require();
 if (!Auth::can('membership.view') && !Auth::isSuperAdmin()) {
     Auth::requirePerm('membership.view');
 }
+ModuleGuard::require('membership');
 MembershipAPI::ensureSchema();
 
 $tid = current_tenant_id();

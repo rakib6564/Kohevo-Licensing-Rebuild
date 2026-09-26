@@ -12,6 +12,7 @@ require_once SLATE_ROOT . '/includes/record_editor.php';   // slate_edit_* kit
 
 Auth::require();
 Auth::requirePerm('membership.manage_plans');
+ModuleGuard::require('membership');
 MembershipAPI::ensureSchema();
 
 $pageTitle  = 'Membership plans';

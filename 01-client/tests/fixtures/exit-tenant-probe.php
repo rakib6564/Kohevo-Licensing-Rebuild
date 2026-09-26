@@ -27,35 +27,31 @@ if ($userId <= 0 || $overrideTenantId <= 0) {
 }
 
 $root = dirname(__DIR__, 2);
-require $root . '/config.php';
 
-use Slate\Services\Auth\Auth;
-use Slate\Services\Auth\SessionRepository;
-use Slate\Tenancy\TenantContext;
+// Phase 6 (Global License Guard) test toggle — see
+// docs/02-architecture/06-GLOBAL-LICENSE-GUARD.md §3a. By default this
+// probe bypasses the Guard exactly like every other non-licensing
+// integration test (SLATE_TESTING, D19 LOCKED) so existing suites are
+// unaffected by its addition. GlobalLicenseGuardTest.php sets
+// SLATE_LICENSE_GUARD_LIVE=1 to instead exercise the real Guard end-to-end.
+if (getenv('SLATE_LICENSE_GUARD_LIVE') !== '1') {
+    define('SLATE_TESTING', true);
+}
 
-$row = Database::row("SELECT id, tenant_id, role_id FROM users WHERE id = ?", [$userId]);
-if (!$row) { fwrite(STDERR, "no such user id: {$userId}\n"); exit(2); }
-
-session_id('exittenantprobe_' . bin2hex(random_bytes(12)));
-Auth::startSession();
-$_SESSION['slate_user'] = [
-    'id'        => (int) $row['id'],
-    'tenant_id' => (int) $row['tenant_id'],
-    'email'     => 'exit-tenant-probe@example.test',
-    'role_id'   => (int) $row['role_id'],
-];
-(new SessionRepository(new TenantContext()))->register(
-    (int) $row['id'], session_id(), 'Exit-tenant probe', '127.0.0.1', 'ProbeAgent/1'
-);
-$_SESSION['slate_override_tenant'] = $overrideTenantId;
-
-$_POST = ['_csrf' => csrf_token()];
+// Set BEFORE config.php loads (not after) so a request-level check made at
+// boot time — the Global License Guard — sees the same simulated request
+// context a real HTTP request would already have from its first line.
 $_GET  = [];
 $_SERVER['REQUEST_METHOD'] = 'POST';
 $_SERVER['REQUEST_URI']    = '/admin/exit-tenant.php';
 $_SERVER['HTTP_HOST']      = 'localhost';
 $_SERVER['SCRIPT_NAME']    = '/admin/exit-tenant.php';
 
+// Buffering and the STATUS-line shutdown reporter must be registered BEFORE
+// config.php loads, not after — a request-level check made at boot time
+// (the Global License Guard, Phase 6) can itself call exit() from inside
+// config.php's own require chain, before this fixture would otherwise reach
+// this point.
 ob_start();
 $shutdownDone = false;
 register_shutdown_function(static function () use (&$shutdownDone, $userId): void {
@@ -71,5 +67,38 @@ register_shutdown_function(static function () use (&$shutdownDone, $userId): voi
         // best-effort; a leaked probe session row is harmless and namespaced by its random id
     }
 });
+
+require $root . '/config.php';
+
+use Slate\Services\Auth\Auth;
+use Slate\Services\Auth\SessionRepository;
+use Slate\Tenancy\TenantContext;
+
+$row = Database::row("SELECT id, tenant_id, role_id FROM users WHERE id = ?", [$userId]);
+if (!$row) {
+    // Usage error, not a probe result — skip the STATUS-line reporter
+    // entirely so this still exits exactly as it did before the shutdown
+    // function had to be registered earlier (to also catch a Guard exit
+    // during config.php's own load, above).
+    $shutdownDone = true;
+    ob_end_clean();
+    fwrite(STDERR, "no such user id: {$userId}\n");
+    exit(2);
+}
+
+session_id('exittenantprobe_' . bin2hex(random_bytes(12)));
+Auth::startSession();
+$_SESSION['slate_user'] = [
+    'id'        => (int) $row['id'],
+    'tenant_id' => (int) $row['tenant_id'],
+    'email'     => 'exit-tenant-probe@example.test',
+    'role_id'   => (int) $row['role_id'],
+];
+(new SessionRepository(new TenantContext()))->register(
+    (int) $row['id'], session_id(), 'Exit-tenant probe', '127.0.0.1', 'ProbeAgent/1'
+);
+$_SESSION['slate_override_tenant'] = $overrideTenantId;
+
+$_POST = ['_csrf' => csrf_token()];
 
 require $root . '/admin/exit-tenant.php';

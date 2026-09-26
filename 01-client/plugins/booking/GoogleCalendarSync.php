@@ -507,6 +507,7 @@ class GoogleCalendarSync
     /** Runs on every cron tick: pulls each connected provider, retries failed pushes, renews expiring watch channels. */
     public static function runCron(): void {
         if (!self::isEnabled()) return;
+        if (!ModuleGuard::allows('booking')) return;
         $tid = current_tenant_id();
 
         $providers = Database::rows("SELECT * FROM booking_providers WHERE tenant_id = ? AND google_refresh_token IS NOT NULL", [$tid]);

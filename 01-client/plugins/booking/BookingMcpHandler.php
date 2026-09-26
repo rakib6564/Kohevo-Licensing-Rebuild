@@ -117,6 +117,16 @@ class BookingMcpHandler {
     public static function callTool($result, string $name, array $args, array $context): mixed {
         if ($result !== null) return $result;
 
+        // Module Guard (07 §2, "Service/internal call" — defense-in-depth
+        // against a caller that reaches the service directly): the MCP
+        // gateway is an API surface like any other, and scope-based auth
+        // (booking.read/booking.write/...) is an independent axis from
+        // license entitlement — a valid scope must never substitute for it
+        // (07 §6), matching BookingApiHandler.php's own ModuleGuard::requireApi() call.
+        if (str_starts_with($name, 'slate_booking_') && !ModuleGuard::allows('booking')) {
+            throw new RuntimeException('This module is not included in your current license.');
+        }
+
         if ($name === 'slate_booking_list_services') {
             if (!in_array('booking.read', (array)($context['scopes'] ?? []), true)) {
                 throw new RuntimeException('This token does not grant booking read access.');

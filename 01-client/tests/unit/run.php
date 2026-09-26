@@ -16,6 +16,10 @@ declare(strict_types=1);
 // when server config does not.
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 
+// Non-request-controllable bypass for the Global License Guard (Phase 6) —
+// docs/02-architecture/06-GLOBAL-LICENSE-GUARD.md §3a, D19 LOCKED.
+define('SLATE_TESTING', true);
+
 require __DIR__ . '/../../src/autoload.php';   // Slate\ -> src/ (no side effects)
 require __DIR__ . '/harness.php';
 

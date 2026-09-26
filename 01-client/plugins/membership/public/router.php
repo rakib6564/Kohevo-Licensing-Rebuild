@@ -30,6 +30,11 @@ if (!headers_sent()) {
 }
 
 Auth::requireCustomer();
+// Customer portal treatment (07 §4): the customer is already identifiable
+// via their session, so a clear "not available" 403 is appropriate here —
+// unlike the anonymous marketing landing page (public/landing.php), which
+// uses the anti-enumeration 404 instead.
+ModuleGuard::require('membership');
 $cid  = (int) Auth::customerId();
 $view = (string)($_GET['view'] ?? '');
 if ($view === '') {

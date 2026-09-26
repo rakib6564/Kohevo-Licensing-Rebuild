@@ -9,6 +9,7 @@ require_once __DIR__ . '/_editor_ui.php';   // reusable record-editor UI kit
 
 Auth::require();
 Auth::requirePerm('booking.manage_payments');
+ModuleGuard::require('booking');
 BookingAPI::ensureSchema();
 
 $pageTitle  = __('booking_giftcards', 'Gift cards');

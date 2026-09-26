@@ -37,3 +37,11 @@ class_alias(\Slate\Services\Auth\Auth::class, 'Auth'); // was includes/Auth.php
 class_alias(\Slate\Kernel\Module\PluginLoader::class, 'PluginLoader'); // was includes/PluginLoader.php
 class_alias(\Slate\Services\Portal\CustomerPortal::class, 'CustomerPortal');
 class_alias(\Slate\Services\Notifications\BrandedEmail::class, 'BrandedEmail'); // shared branded email chrome, new — no includes/ predecessor
+// Phase 7 — aliased (not just namespace-convention like EntitlementService)
+// so every module entry point can call it unqualified, matching Auth::/
+// PluginLoader:: above — and so its own fully-qualified name never appears
+// as a literal string in plugin source files, several of which (e.g.
+// plugins/booking/admin/{providers,settings}.php,
+// tests/unit/Phase7SlateKohevoIdentityTest.php) are asserted to contain NO
+// occurrence of the internal "Slate" codename anywhere in the file.
+class_alias(\Slate\Services\Licensing\ModuleGuard::class, 'ModuleGuard');

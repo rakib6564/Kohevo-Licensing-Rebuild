@@ -17,6 +17,7 @@ if (!defined('SLATE_ROOT')) {
     require_once dirname(__DIR__, 3) . '/config.php';
 }
 slate_public_entry('booking');
+ModuleGuard::requirePublic('booking');
 require_once dirname(__DIR__) . '/BookingAPI.php';
 BookingAPI::ensureSchema();
 

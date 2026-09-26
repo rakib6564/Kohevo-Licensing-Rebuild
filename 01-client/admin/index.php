@@ -351,39 +351,62 @@ if (Auth::isPlatformSuperAdmin()):
         <?php slate_stat_card(['icon' => 'tag', 'number' => $planCount, 'label' => __('active_plans', 'Active plans')]); ?>
         <?php slate_stat_card(['icon' => 'shield', 'number' => $platformAdminCount, 'label' => __('platform_admins', 'Platform Administrators')]); ?>
     </div>
-<?php else:
+<?php elseif (\Slate\Services\Licensing\EntitlementService::authorityMode() === 'legacy'):
     $myTenantId = current_tenant_id();
-    $authorityMode = \Slate\Services\Licensing\EntitlementService::authorityMode();
+    // Temporary migration display only; EntitlementService still owns
+    // the compatibility decision and its finite expiry.
     $myFeatures = \Slate\Services\Licensing\EntitlementService::enabledFeaturesFor($myTenantId);
-    $remoteState = $authorityMode === 'remote'
-        ? (new \Slate\Services\Licensing\SlateLicenseCacheStore($myTenantId))->load()
-        : null;
-    if ($authorityMode === 'legacy') {
-        // Temporary migration display only; EntitlementService still owns
-        // the compatibility decision and its finite expiry.
-        $myLicense = \Slate\Services\Licensing\LicenseService::forTenant($myTenantId);
-        $myPlanId = Database::value("SELECT plan_id FROM tenant_profiles WHERE tenant_id = ?", [$myTenantId]);
-        $myPlan = $myPlanId ? \Slate\Services\Licensing\PlanService::find((int)$myPlanId) : null;
-        $displayPlan = $myPlan['name'] ?? __('no_plan', 'No plan');
-        $displayStatus = $myLicense ? ucfirst((string)\Slate\Services\Licensing\LicenseService::effectiveStatus($myTenantId)) : __('none', 'None');
-        $displayExpiry = ($myLicense['expires_at'] ?? null) ? I18n::localDate('M j, Y', strtotime($myLicense['expires_at'])) : __('never', 'Never');
-    } else {
-        $displayPlan = $remoteState['plan'] ?? ($authorityMode === 'remote' ? __('pending_check_in', 'Pending check-in') : __('not_configured', 'Not configured'));
-        $displayStatus = $remoteState['status'] ?? ($authorityMode === 'remote' ? __('no_verified_state', 'No verified state') : __('not_configured', 'Not configured'));
-        $displayExpiry = !empty($remoteState['expires_at']) ? I18n::localDate('M j, Y', strtotime((string)$remoteState['expires_at'])) : __('not_available', 'Not available');
-    }
+    $myLicense = \Slate\Services\Licensing\LicenseService::forTenant($myTenantId);
+    $myPlanId = Database::value("SELECT plan_id FROM tenant_profiles WHERE tenant_id = ?", [$myTenantId]);
+    $myPlan = $myPlanId ? \Slate\Services\Licensing\PlanService::find((int)$myPlanId) : null;
+    $displayPlan = $myPlan['name'] ?? __('no_plan', 'No plan');
+    $displayStatus = $myLicense ? ucfirst((string)\Slate\Services\Licensing\LicenseService::effectiveStatus($myTenantId)) : __('none', 'None');
+    $displayExpiry = ($myLicense['expires_at'] ?? null) ? I18n::localDate('M j, Y', strtotime($myLicense['expires_at'])) : __('never', 'Never');
     ?>
     <div class="page-header" style="margin-top:24px;">
-        <div>
-            <h2><?= $authorityMode === 'legacy' ? __('your_plan', 'Your plan') : __('remote_entitlement', 'Remote entitlement') ?></h2>
-            <?php if ($authorityMode !== 'legacy'): ?><p class="page-header-sub"><?= __('remote_entitlement_help', 'Commercial access is controlled by the Kohevo License Server for this installation.') ?></p><?php endif; ?>
-        </div>
+        <div><h2><?= __('your_plan', 'Your plan') ?></h2></div>
     </div>
     <div class="dash-stats">
         <?php slate_stat_card(['icon' => 'tag', 'number' => $displayPlan, 'label' => __('plan', 'Plan')]); ?>
         <?php slate_stat_card(['icon' => 'key', 'number' => $displayStatus, 'label' => __('license_status', 'License Status')]); ?>
         <?php slate_stat_card(['icon' => 'clock', 'number' => $displayExpiry, 'label' => __('license_expiry', 'License Expiry')]); ?>
         <?php slate_stat_card(['icon' => 'check-circle', 'number' => count($myFeatures), 'label' => __('enabled_features', 'Enabled Features'), 'caption' => $myFeatures ? implode(', ', $myFeatures) : '']); ?>
+    </div>
+<?php endif; ?>
+
+<?php if (\Slate\Services\Licensing\EntitlementService::authorityMode() !== 'legacy'):
+    // Phase 8 — concise summary of the client License page, from the
+    // same read-only presenter (trusted cache + Guard + ModuleGuard).
+    // Untrusted/missing state shows no plan, expiry or modules. Shown
+    // to every admin, including the installation's own Super Admin
+    // (which Auth::isPlatformSuperAdmin() also matches today, via the
+    // legacy role_id=1 rule): this is THIS installation's license only.
+    $licenseView = \Slate\Services\Licensing\LicenseStatusPresenter::current();
+    $licenseModulesOn = array_values(array_filter($licenseView['modules'], fn(array $m): bool => $m['state'] === 'enabled'));
+    $licenseModulesCaption = $licenseModulesOn
+        ? implode(', ', array_column($licenseModulesOn, 'label'))
+        : __('no_optional_modules', 'No optional modules');
+    $licenseExpiryText = !$licenseView['show_details'] ? '—'
+        : ($licenseView['expires_at'] !== null
+            ? I18n::localDate('M j, Y', strtotime($licenseView['expires_at']))
+            : __('no_expiry', 'No expiry'));
+    ?>
+    <div class="page-header" style="margin-top:24px;">
+        <div>
+            <h2><?= __('remote_entitlement', 'Remote entitlement') ?></h2>
+            <p class="page-header-sub"><?= __('remote_entitlement_help', 'Commercial access is controlled by the Kohevo License Server for this installation.') ?></p>
+        </div>
+        <?php if (Auth::can('settings.view')): ?>
+            <a href="<?= e(SLATE_URL) ?>/admin/license.php" class="btn"><?= __('view_license', 'View license') ?></a>
+        <?php endif; ?>
+    </div>
+    <div class="dash-stats" data-license-summary>
+        <?php slate_stat_card(['icon' => 'shield', 'number' => $licenseView['label'], 'label' => __('license_status', 'License Status'),
+            'tone' => $licenseView['tone'] === 'success' ? 'success' : '']); ?>
+        <?php slate_stat_card(['icon' => 'tag', 'number' => $licenseView['plan'] ?? '—', 'label' => __('plan', 'Plan')]); ?>
+        <?php slate_stat_card(['icon' => 'clock', 'number' => $licenseExpiryText, 'label' => __('license_expiry', 'License Expiry')]); ?>
+        <?php slate_stat_card(['icon' => 'box', 'number' => count($licenseModulesOn) . ' / ' . count($licenseView['modules']),
+            'label' => __('enabled_modules', 'Enabled modules'), 'caption' => $licenseModulesCaption]); ?>
     </div>
 <?php endif; ?>
 

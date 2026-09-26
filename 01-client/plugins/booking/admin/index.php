@@ -16,6 +16,7 @@ require_once dirname(__DIR__) . '/BookingAPI.php';
 
 Auth::require();
 Auth::requirePerm('booking.view');
+ModuleGuard::require('booking');
 BookingAPI::ensureSchema();
 
 $pageTitle  = __('booking', 'Booking');

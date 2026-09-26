@@ -8,6 +8,7 @@ require_once dirname(__DIR__) . '/BookingAPI.php';
 
 Auth::require();
 Auth::requirePerm('booking.manage_providers');
+ModuleGuard::require('booking');
 
 function bgc_back(int $providerId, array $params): void {
     $qs = http_build_query($params);

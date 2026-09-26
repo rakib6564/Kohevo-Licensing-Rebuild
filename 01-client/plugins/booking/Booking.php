@@ -132,6 +132,13 @@ class Booking extends Plugin {
 
     /** Confirm a pending appointment when its Stripe payment succeeds. */
     public function onStripeEvent(array $event): void {
+        // Guard the EFFECT, not the webhook receipt (07 §2) — the HTTP 200
+        // ack to Stripe happens in the webhook controller regardless of
+        // what listeners do; skipping this listener's side effect here
+        // just means an unentitled installation's booking does not get
+        // confirmed, avoiding a Stripe retry storm that acking-then-
+        // rejecting would otherwise cause.
+        if (!ModuleGuard::allows('booking')) return;
         try {
             BookingAPI::handleStripeEvent($event);
         } catch (\Throwable $e) {
@@ -459,6 +466,11 @@ class Booking extends Plugin {
      * nothing is due.
      */
     public function sendReminders(): void {
+        // Module Guard (07 §5): checked once, at the top of the listener,
+        // not per-appointment inside the loop below — an unentitled
+        // installation sends no reminder emails at all for this tick, which
+        // is expected routine behavior, not a fault, so nothing is logged.
+        if (!ModuleGuard::allows('booking')) return;
         try {
             foreach (BookingAPI::reminderLeads() as $lead) {
                 // Appointments now within `lead` minutes of starting that
@@ -969,6 +981,7 @@ class Booking extends Plugin {
     }
 
     public function runMessagingNudgeCron(): void {
+        if (!ModuleGuard::allows('booking')) return;
         try {
             $tid   = current_tenant_id();
             $hours = BookingPlusAPI::globalNudgeHours();
