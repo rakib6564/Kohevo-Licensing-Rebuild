@@ -1,13 +1,17 @@
 <?php
 /**
- * Licensing — single install detail: edit, check-in history, key rotation.
+ * Licensing — single legacy license (licensing_installs): details and
+ * check-in history.
  *
- * Regenerating shows the new raw key inline (same one-time-reveal pattern
- * as installs.php's "issue" flow) rather than redirecting, since the key
- * only ever exists for this one response.
+ * Phase 13 (docs/03-implementation/PHASE-13-LEGACY-HANDLING.md): restrict
+ * only. Key regeneration and binding reset are refused (each would grant a
+ * new credential or a new activation); an update keeps the label and may
+ * only shorten expiry or lower the activation limit (LegacyLicensePolicy).
+ * Delete is unchanged.
  */
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/LicensingAPI.php';
+require_once dirname(__DIR__) . '/LegacyLicensePolicy.php';
 
 Auth::require();
 Auth::requirePerm('licensing.manage');
@@ -28,7 +32,6 @@ if (!$install) { http_response_code(404); echo 'License not found.'; exit; }
 $pageTitle  = $install['label'] ?: $install['domain'];
 $currentNav = 'licensing-installs';
 $flash      = null;
-$newKey     = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_verify()) {
@@ -36,22 +39,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $action = $_POST['_action'] ?? '';
         if ($action === 'update') {
+            $requestedExpiry = trim((string) ($_POST['expires_at'] ?? ''));
+            [$expiresAt, $expiryRefused] = LegacyLicensePolicy::restrictedExpiry(
+                $install['expires_at'], $requestedExpiry !== '' ? $requestedExpiry . ' 00:00:00' : null
+            );
+            [$limit, $limitRefused] = LegacyLicensePolicy::restrictedActivationLimit(
+                (int) $install['activation_limit'], (int) ($_POST['activation_limit'] ?? 1)
+            );
             Database::update('licensing_installs', [
                 'label'            => trim((string) ($_POST['label'] ?? '')) ?: $install['domain'],
-                'expires_at'       => trim((string) ($_POST['expires_at'] ?? '')) !== '' ? $_POST['expires_at'] . ' 00:00:00' : null,
-                'activation_limit' => max(1, (int) ($_POST['activation_limit'] ?? 1)),
+                'expires_at'       => $expiresAt,
+                'activation_limit' => $limit,
             ], 'id = ?', [$id]);
-            AuditLog::record('licensing.install_updated', (string) $id);
+            AuditLog::record('licensing.install_updated', (string) $id,
+                ($expiryRefused || $limitRefused) ? ['refused' => array_keys(array_filter(['expires_at' => $expiryRefused, 'activation_limit' => $limitRefused]))] : []);
             header('Location: ' . plugin_url('licensing', 'admin/install.php?id=' . $id));
             exit;
-        } elseif ($action === 'regenerate') {
-            $newKey = LicensingAPI::regenerateLicenseKey($id, (string) $install['product_slug']);
-            AuditLog::record('licensing.install_key_regenerated', (string) $id);
-            $flash = ['type' => 'success', 'msg' => __('licensing_key_regenerated', 'New key generated. Copy it now — the old key stopped working immediately.')];
-        } elseif ($action === 'reset_bindings') {
-            LicensingAPI::resetBindings($id);
-            AuditLog::record('licensing.install_bindings_reset', (string) $id);
-            $flash = ['type' => 'success', 'msg' => __('licensing_bindings_reset', 'Installation bindings reset. The next valid identity will register again.')];
+        } elseif ($action === 'regenerate' || $action === 'reset_bindings') {
+            // Phase 13: a new key or a released binding would grant a new
+            // activation on a legacy license. Nothing is written.
+            AuditLog::record('licensing.install_' . $action . '_refused', (string) $id);
+            $flash = ['type' => 'error', 'msg' => __('licensing_legacy_action_closed', 'Legacy licenses can no longer be re-keyed or have their bindings reset.')];
         } elseif ($action === 'delete') {
             Database::delete('licensing_checkins', 'install_id = ?', [$id]);
             Database::delete('licensing_installs', 'id = ?', [$id]);
@@ -59,17 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: ' . plugin_url('licensing', 'admin/installs.php'));
             exit;
         }
-    }
-    if (!$newKey) {
-        // Refresh $install after an update, so the form below shows current values.
-        $install = Database::row(
-            "SELECT i.*, c.name AS client_name, p.name AS product_name, p.slug AS product_slug, pl.name AS plan_name
-               FROM licensing_installs i
-               JOIN licensing_clients c ON c.id = i.client_id
-               JOIN licensing_products p ON p.id = i.product_id
-               LEFT JOIN licensing_plans pl ON pl.id = i.plan_id
-              WHERE i.id = ?", [$id]
-        );
     }
 }
 
@@ -96,13 +93,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
 <?php if ($flash): ?><div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div><?php endif; ?>
 
-<?php if ($newKey): ?>
-<section class="card mb-3">
-    <div class="card-header"><h2><?= e(__('licensing_copy_key_now', 'Copy this license key now')) ?></h2></div>
-    <p class="text-muted"><?= e(__('licensing_copy_key_desc', 'Send it to the client for their install\'s .env. It cannot be shown again — only its hash is stored.')) ?></p>
-    <textarea class="mcp-token" readonly onclick="this.select()"><?= e($newKey) ?></textarea>
-</section>
-<?php endif; ?>
+<p class="text-muted"><?= e(__('licensing_legacy_detail_desc', 'Legacy license: it keeps checking in as it is. Expiry can only be brought forward and the activation limit only lowered; it cannot be re-keyed, reset, reactivated or extended.')) ?></p>
 
 <section class="card mb-3">
     <div class="card-header"><h2><?= e(__('licensing_details', 'Details')) ?></h2></div>
@@ -178,16 +169,6 @@ require SLATE_ROOT . '/admin/partials/header.php';
 <section class="card">
     <div class="card-header"><h2><?= e(__('licensing_danger_zone', 'Danger zone')) ?></h2></div>
     <div class="mcp-grid">
-        <form method="post" onsubmit="return confirm(<?= e(json_encode(__('licensing_regenerate_confirm', 'Generate a new key? The current key stops working immediately.'))) ?>);">
-            <?= csrf_field() ?>
-            <input type="hidden" name="_action" value="regenerate">
-            <button class="btn btn-secondary" type="submit"><?= e(__('licensing_regenerate_key', 'Regenerate key')) ?></button>
-        </form>
-        <form method="post" onsubmit="return confirm(<?= e(json_encode(__('licensing_reset_bindings_confirm', 'Reset all registered installation identities for this license?'))) ?>);">
-            <?= csrf_field() ?>
-            <input type="hidden" name="_action" value="reset_bindings">
-            <button class="btn btn-secondary" type="submit"><?= e(__('licensing_reset_bindings', 'Reset bindings')) ?></button>
-        </form>
         <form method="post" onsubmit="return confirm(<?= e(json_encode(__('licensing_delete_install_confirm', 'Permanently delete this license and its check-in history? This cannot be undone.'))) ?>);">
             <?= csrf_field() ?>
             <input type="hidden" name="_action" value="delete">

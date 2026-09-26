@@ -329,13 +329,15 @@ if (Auth::isPlatformSuperAdmin()):
             (SELECT COUNT(*) FROM tenant_profiles WHERE lifecycle_status = 'trial') AS trial_tenants,
             (SELECT COUNT(*) FROM tenant_profiles WHERE lifecycle_status = 'suspended') AS suspended_tenants"
     ) ?: ['total_tenants' => 0, 'active_tenants' => 0, 'trial_tenants' => 0, 'suspended_tenants' => 0];
-    $licenseCounts = Database::row(
-        "SELECT
-            (SELECT COUNT(*) FROM licenses WHERE status = 'active') AS active_licenses,
-            (SELECT COUNT(*) FROM licenses WHERE status = 'expired') AS expired_licenses"
-    ) ?: ['active_licenses' => 0, 'expired_licenses' => 0];
-    $planCount = (int) Database::value("SELECT COUNT(*) FROM platform_plans WHERE is_active = 1");
-    $platformAdminCount = (int) Database::value("SELECT COUNT(*) FROM platform_admins");
+    // Phase 13: no counts from the legacy local licenses/platform_plans
+    // tables — they are not this installation's license, and a fresh
+    // install does not have them (the query fataled the dashboard).
+    // platform_admins is not part of the installer's migration set either.
+    try {
+        $platformAdminCount = (int) Database::value("SELECT COUNT(*) FROM platform_admins");
+    } catch (\Throwable $e) {
+        $platformAdminCount = 0;
+    }
     ?>
     <div class="page-header" style="margin-top:24px;">
         <div><h2><?= __('platform_overview', 'Platform overview') ?></h2></div>
@@ -346,35 +348,14 @@ if (Auth::isPlatformSuperAdmin()):
         <?php slate_stat_card(['icon' => 'check-circle', 'number' => (int)$tenantCounts['active_tenants'], 'label' => __('active_tenants', 'Active tenants')]); ?>
         <?php slate_stat_card(['icon' => 'clock', 'number' => (int)$tenantCounts['trial_tenants'], 'label' => __('trial_tenants', 'Trial tenants')]); ?>
         <?php slate_stat_card(['icon' => 'pause-circle', 'number' => (int)$tenantCounts['suspended_tenants'], 'label' => __('suspended_tenants', 'Suspended tenants')]); ?>
-        <?php slate_stat_card(['icon' => 'key', 'number' => (int)$licenseCounts['active_licenses'], 'label' => __('active_licenses', 'Active licenses')]); ?>
-        <?php slate_stat_card(['icon' => 'alert-triangle', 'number' => (int)$licenseCounts['expired_licenses'], 'label' => __('expired_licenses', 'Expired licenses')]); ?>
-        <?php slate_stat_card(['icon' => 'tag', 'number' => $planCount, 'label' => __('active_plans', 'Active plans')]); ?>
         <?php slate_stat_card(['icon' => 'shield', 'number' => $platformAdminCount, 'label' => __('platform_admins', 'Platform Administrators')]); ?>
-    </div>
-<?php elseif (\Slate\Services\Licensing\EntitlementService::authorityMode() === 'legacy'):
-    $myTenantId = current_tenant_id();
-    // Temporary migration display only; EntitlementService still owns
-    // the compatibility decision and its finite expiry.
-    $myFeatures = \Slate\Services\Licensing\EntitlementService::enabledFeaturesFor($myTenantId);
-    $myLicense = \Slate\Services\Licensing\LicenseService::forTenant($myTenantId);
-    $myPlanId = Database::value("SELECT plan_id FROM tenant_profiles WHERE tenant_id = ?", [$myTenantId]);
-    $myPlan = $myPlanId ? \Slate\Services\Licensing\PlanService::find((int)$myPlanId) : null;
-    $displayPlan = $myPlan['name'] ?? __('no_plan', 'No plan');
-    $displayStatus = $myLicense ? ucfirst((string)\Slate\Services\Licensing\LicenseService::effectiveStatus($myTenantId)) : __('none', 'None');
-    $displayExpiry = ($myLicense['expires_at'] ?? null) ? I18n::localDate('M j, Y', strtotime($myLicense['expires_at'])) : __('never', 'Never');
-    ?>
-    <div class="page-header" style="margin-top:24px;">
-        <div><h2><?= __('your_plan', 'Your plan') ?></h2></div>
-    </div>
-    <div class="dash-stats">
-        <?php slate_stat_card(['icon' => 'tag', 'number' => $displayPlan, 'label' => __('plan', 'Plan')]); ?>
-        <?php slate_stat_card(['icon' => 'key', 'number' => $displayStatus, 'label' => __('license_status', 'License Status')]); ?>
-        <?php slate_stat_card(['icon' => 'clock', 'number' => $displayExpiry, 'label' => __('license_expiry', 'License Expiry')]); ?>
-        <?php slate_stat_card(['icon' => 'check-circle', 'number' => count($myFeatures), 'label' => __('enabled_features', 'Enabled Features'), 'caption' => $myFeatures ? implode(', ', $myFeatures) : '']); ?>
     </div>
 <?php endif; ?>
 
-<?php if (\Slate\Services\Licensing\EntitlementService::authorityMode() !== 'legacy'):
+<?php
+    // Phase 13: shown in every authority mode. The former legacy-mode
+    // "Your plan" card presented local licenses/plans as this install's
+    // commercial state; that data never grants access, so it is not shown.
     // Phase 8 — concise summary of the client License page, from the
     // same read-only presenter (trusted cache + Guard + ModuleGuard).
     // Untrusted/missing state shows no plan, expiry or modules. Shown
@@ -416,7 +397,6 @@ if (Auth::isPlatformSuperAdmin()):
         <?php slate_stat_card(['icon' => 'box', 'number' => count($licenseModulesOn) . ' / ' . count($licenseView['modules']),
             'label' => __('enabled_modules', 'Enabled modules'), 'caption' => $licenseModulesCaption]); ?>
     </div>
-<?php endif; ?>
 
 <div class="dash-layout">
     <div class="dash-main">

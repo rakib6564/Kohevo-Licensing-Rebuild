@@ -84,7 +84,11 @@ unit('Phase 3: verified remote state wins over conflicting local license/plan an
     }
 });
 
-unit('Phase 3: legacy compatibility is explicit and time-bounded', function (): void {
+// Phase 13 (PHASE-13-LEGACY-HANDLING.md): LICENSE_COMPAT_MODE=legacy is
+// still recognised and time-bounded, but it no longer grants anything from
+// the local licenses/plans tables — before Phase 13 this asserted the
+// white_label grant below was true.
+unit('Phase 3/13: legacy compatibility is explicit, time-bounded, and never grants from local tables', function (): void {
     $tenantId = TenantService::create(['name'=>'Phase 3 Legacy Compatibility', 'slug'=>'phase3-legacy-'.bin2hex(random_bytes(4))]);
     $planId = PlanService::save(null, ['name'=>'Phase 3 Legacy Plan', 'slug'=>'phase3-legacy-plan-'.bin2hex(random_bytes(4))], ['white_label']);
     $old = p3_set_remote_env(false);
@@ -94,7 +98,8 @@ unit('Phase 3: legacy compatibility is explicit and time-bounded', function (): 
         $_ENV['LICENSE_COMPAT_MODE'] = 'legacy';
         $_ENV['LICENSE_COMPAT_UNTIL'] = gmdate('Y-m-d', time() + 86400);
         assert_eq('legacy', EntitlementService::authorityMode());
-        assert_true(EntitlementService::canAccessCapability($tenantId, 'white_label'));
+        assert_false(EntitlementService::canAccessCapability($tenantId, 'white_label'), 'an active local license on an entitled local plan must not grant in legacy mode');
+        assert_eq([], EntitlementService::enabledFeaturesFor($tenantId));
         $_ENV['LICENSE_COMPAT_UNTIL'] = gmdate('Y-m-d', time() - 86400);
         assert_eq('unconfigured', EntitlementService::authorityMode());
         assert_false(EntitlementService::canAccessCapability($tenantId, 'white_label'));

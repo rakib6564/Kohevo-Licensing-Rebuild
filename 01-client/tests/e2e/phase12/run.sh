@@ -59,6 +59,8 @@ for s in scenario_install scenario_runtime scenario_central_authz scenario_expir
   echo "### $s"
   php "$HERE/$s.php" || status=1
 done
+echo "### phase13/scenario_legacy"
+php "$HERE/../phase13/scenario_legacy.php" || status=1
 echo "### perf_client (informational)"
 php "$HERE/scenario_install.php" > /dev/null && php "$HERE/perf_client.php" || true
 exit $status

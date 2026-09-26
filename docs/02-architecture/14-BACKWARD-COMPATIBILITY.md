@@ -54,3 +54,14 @@ The direct-PHP-script convention (`admin/*.php`, each beginning with `Auth::requ
 ## 7. What This Document Does Not Cover
 
 Per `DECISIONS.md` §15's "no assumption... treated as fact until verified," this document does not assert compatibility guarantees for anything Phase 0 did not actually inspect. Notably out of scope: Content/Editor internals (explicitly excluded from V1 licensing per `DECISIONS.md` §6, and not separately re-audited here), Stripe payment integration internals beyond the one webhook-guard note in `07-MODULE-GUARD-ARCHITECTURE.md` §2, and any environment/hosting-level configuration not already surfaced by the Phase 0 audits.
+
+## 8. Phase 13 — `LICENSE_COMPAT_MODE`
+
+`06-GLOBAL-LICENSE-GUARD.md` §8 deferred the question of whether `LICENSE_COMPAT_MODE` is retained. Phase 13 settles it:
+
+- **Kept as a recognised value.** `EntitlementService::authorityMode()` still returns `legacy` while `LICENSE_COMPAT_MODE=legacy` and `LICENSE_COMPAT_UNTIL` is in the future, for diagnostics.
+- **It grants nothing.** Module and capability access (`canAccess`, `canAccessCapability`, `enabledFeaturesFor`, and so `ModuleGuard`, `PlatformIdentityPolicy` for white_label, and module cron listeners) requires remote mode and a verified signed snapshot. `legacy` and `unconfigured` both fail closed. Before Phase 13, legacy mode granted from the local `licenses`/`platform_plans` tables, including a `none` (no license) status.
+- **The Global License Guard was never affected**: it reads only the signed cache. Remote mode still wins whenever all four `LICENSE_*` values are set.
+- **UI:** the dashboard no longer shows the local legacy plan/license card in legacy mode. The License page shows the "optional modules cannot be enabled" notice for `legacy` as well as `unconfigured`.
+
+Details: `docs/03-implementation/PHASE-13-LEGACY-HANDLING.md`.

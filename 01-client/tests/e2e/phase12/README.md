@@ -22,6 +22,7 @@ Needs `php` (sodium, pdo_mysql, curl), `mysql`, `rsync`, `openssl`.
 | `scenario_expired_activation.php` | First activation of a license issued with a past expiry (Phase 12 D2) |
 | `scenario_reinstall.php` | Bound installation reinstalling while suspended / revoked / expired (Phase 12 D1) |
 | `scenario_stress.php` | Concurrent activation (12 installations; 12 × same installation), 300 refreshes, 300 unknown-key requests |
+| `../phase13/scenario_legacy.php` | Phase 13: upgrade migration adds the legacy tables without touching identity or signed cache; `LICENSE_COMPAT_MODE=legacy` with all-granting legacy data (modern and incomplete remote config): module admin / AJAX / POST / public / API; suspended lock matrix under legacy mode; a pre-rebuild installation (identity row, no cache table, no key) stays locked and gets nothing fabricated; central legacy screens refuse issue / reactivate / re-key / extend over HTTP |
 | `perf_client.php` | Informational per-request timings on the client |
 
 `central-modules-fixture.php` is copied into the throwaway central only; it

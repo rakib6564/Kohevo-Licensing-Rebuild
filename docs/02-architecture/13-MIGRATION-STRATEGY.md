@@ -54,3 +54,17 @@ Because there is no live data to preserve (§1) and no existing consumer of the 
 | Is legacy Central Server schema removed? | **No**, not this phase — coexists alongside new schema, no data migration between them |
 | Does a fresh client install provision legacy licensing tables? | **No** — new installer's migration list excludes them (§3) |
 | Is dual-write/sync between old and new Central schema required? | **No** — explicitly recommended against (§4) |
+
+---
+
+## 6. Phase 13 Implementation Status
+
+Phase 13 applied this document without a data migration. Detail, inventory and tests: `docs/03-implementation/PHASE-13-LEGACY-HANDLING.md`.
+
+| Question | Phase 13 outcome |
+| :--- | :--- |
+| Are existing installations migrated, re-keyed, or given an Installation ID? | **No.** Nothing is created or rewritten automatically. An existing installation that receives this code is locked by the Global License Guard until it holds signed, installation-bound state. That state comes only from an explicit activation with a central-issued key: the installer for new installations, or the License page for an installation that already has an identity. |
+| Is legacy client licensing data used for access? | **No.** `licenses`, `platform_plans`, `plan_entitlements` and `tenant_profiles.plan_id` stay in the database, untouched, and are never read for an access decision. `LICENSE_COMPAT_MODE=legacy` still exists as a diagnostic label but grants nothing. |
+| Legacy client admin pages (`admin/licenses.php`, `admin/plans.php`, `admin/tenants.php`, `admin/platform-admins.php`) | Unchanged: still behind the Global Guard, `requirePlatformAdmin()` and CSRF. Their data no longer grants anything. **Correction to §2:** these pages are *not* unreachable on a new install. `Auth::isPlatformSuperAdmin()` equals `isSuperAdmin()`, which is true for `role_id = 1`, and the installer's first admin has that role. R12 (nav hiding) stays open. |
+| Legacy Central tables and the legacy check-in path | Kept, unchanged. Existing `licensing_installs` keys still check in (signed, binding-checked). The legacy **admin** is restrict-only: it can no longer issue, reactivate, re-key, reset bindings, extend expiry, raise activation limits, or add legacy plan entitlements (`LegacyLicensePolicy`). |
+| Migrations | None added. History untouched. Legacy tables are created only by `bin/migrate` on an upgrade, never by the installer. |

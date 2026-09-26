@@ -2,10 +2,16 @@
 /**
  * Kohevo commercial entitlement gate.
  *
- * In remote mode, only the latest successfully verified remote_license_cache
- * row is authoritative. Local licenses, plans, and tenant plan assignments
- * remain available for administration and an explicitly time-bounded legacy
- * compatibility mode, but never override verified remote state.
+ * Only the latest successfully verified remote_license_cache row is
+ * authoritative, and only in remote mode. Local licenses, plans, and tenant
+ * plan assignments remain in the database for administration and display,
+ * but never grant an entitlement.
+ *
+ * Phase 13 (docs/03-implementation/PHASE-13-LEGACY-HANDLING.md): the
+ * LICENSE_COMPAT_MODE=legacy flag is still recognised, so authorityMode()
+ * can report 'legacy' for diagnostics, but it no longer grants access from
+ * the local tables. A legacy or unconfigured installation is not entitled to
+ * any module or capability until it holds verified remote state.
  */
 
 declare(strict_types=1);
@@ -43,12 +49,11 @@ final class EntitlementService
         return true;
     }
 
+    /** Remote mode only; 'legacy' and 'unconfigured' both fail closed. */
     private static function licensedForFeature(int $tenantId, string $featureKey): bool
     {
-        $mode = self::authorityMode();
-        if ($mode === 'remote') return self::remoteAllows($tenantId, $featureKey);
-        if ($mode === 'legacy') return self::legacyAllows($tenantId, $featureKey);
-        return false;
+        if (self::authorityMode() !== 'remote') return false;
+        return self::remoteAllows($tenantId, $featureKey);
     }
 
     private static function remoteAllows(int $tenantId, string $featureKey): bool
@@ -61,16 +66,6 @@ final class EntitlementService
         } catch (\Throwable $e) {
             return false;
         }
-    }
-
-    private static function legacyAllows(int $tenantId, string $featureKey): bool
-    {
-        $licenseStatus = LicenseService::effectiveStatus($tenantId);
-        if (!in_array($licenseStatus, ['trial', 'active', 'none'], true)) return false;
-        // anti-drift-ignore: TENANT — explicit tenant argument in compatibility path
-        $planId = \Database::value('SELECT plan_id FROM tenant_profiles WHERE tenant_id = ?', [$tenantId]);
-        if (empty($planId) || !in_array($featureKey, PlanService::entitlementsFor((int) $planId), true)) return false;
-        return \Database::setting("entitlement.$featureKey.enabled", $tenantId) !== '0';
     }
 
     private static function legacyCompatibilityEnabled(): bool
@@ -91,9 +86,7 @@ final class EntitlementService
                 return array_values(array_filter($keys, fn($key) => is_string($key) && self::remoteAllows($tenantId, $key)));
             } catch (\Throwable $e) { return []; }
         }
-        if (self::authorityMode() !== 'legacy') return [];
-        $allFeatureKeys = array_unique(array_merge(...array_map(fn(array $p) => PlanService::entitlementsFor((int) $p['id']), PlanService::list())));
-        return array_values(array_filter($allFeatureKeys, fn(string $key) => self::legacyAllows($tenantId, $key)));
+        return [];
     }
 
     /**

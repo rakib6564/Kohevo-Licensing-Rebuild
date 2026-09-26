@@ -160,8 +160,9 @@ class LicensingAPI {
      *     InstallationService -- never a second, competing implementation
      *     of the same lifecycle/binding rules.
      *   - A key hashing into the legacy `licensing_installs` table
-     *     (issued via LicensingAPI::issueInstall() / admin/installs.php,
-     *     still-supported per 13-MIGRATION-STRATEGY.md) is handled by
+     *     (issued before Phase 13 via admin/installs.php, which no longer
+     *     issues — see LegacyLicensePolicy; still served per
+     *     13-MIGRATION-STRATEGY.md) is handled by
      *     handleLegacyCheckIn() -- byte-for-byte the same logic this
      *     method used to contain directly, entirely unchanged, so every
      *     existing legacy-path behavior (and its test coverage) is
@@ -623,6 +624,10 @@ class LicensingAPI {
     }
 
     /**
+     * Phase 13: no admin screen calls this any more (admin/installs.php no
+     * longer issues legacy licenses); kept for the legacy check-in test
+     * suites and tooling that build legacy fixtures.
+     *
      * Create a new install/license row. $data keys: client_id, product_id,
      * plan_id (nullable), label, domain, status, expires_at (nullable),
      * activation_limit. Returns ['id' => int, 'license_key' => string] —

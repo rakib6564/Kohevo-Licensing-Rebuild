@@ -172,7 +172,7 @@ final class LicenseStatusPresenter
         }
 
         $notice = null;
-        if (!$locked && $authorityMode === 'unconfigured') {
+        if (!$locked && $authorityMode !== 'remote') { // unconfigured, or legacy (Phase 13: never grants)
             $notice = 'License server settings are incomplete for this installation, so optional modules cannot be enabled. Contact your provider.';
         }
 

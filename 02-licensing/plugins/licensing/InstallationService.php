@@ -12,12 +12,12 @@
  * history required by docs/00-project/REQUIREMENTS.md §8 is preserved
  * (docs/02-architecture/09-CENTRAL-DATABASE-DESIGN.md §7, decision D17).
  *
- * Scope note: this class is the *foundation* for what the public check-in
- * endpoint will eventually call (a later phase). It does not itself wire
- * into `LicensingAPI::handleCheckIn()` or any HTTP route — that endpoint
- * still operates on the pre-existing `licensing_installs`/
- * `licensing_installation_bindings` tables, unchanged, per
- * docs/02-architecture/13-MIGRATION-STRATEGY.md §4.
+ * Scope note: `LicensingAPI::handleCheckIn()` calls this class for every
+ * key issued as a commercial License (handleCommercialCheckIn()). Keys that
+ * exist only in the legacy `licensing_installs` table are still served by
+ * handleLegacyCheckIn() over `licensing_installation_bindings`, which this
+ * class never touches (13-MIGRATION-STRATEGY.md §4; Phase 13,
+ * docs/03-implementation/PHASE-13-LEGACY-HANDLING.md).
  */
 
 declare(strict_types=1);

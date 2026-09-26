@@ -5,11 +5,15 @@
  * `entitlements_json` is a freeform list of feature-key strings — edited
  * here as one key per line and joined/split as JSON on save/load, same
  * convention as the local per-tenant white_label entitlement elsewhere.
+ * It is read only by the legacy check-in path; since Phase 13 it may lose
+ * keys here but never gain them (LegacyLicensePolicy), and a new plan
+ * starts with none.
  */
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/LicensingAPI.php';
 require_once dirname(__DIR__) . '/LicenseService.php';
 require_once dirname(__DIR__) . '/PlanService.php';
+require_once dirname(__DIR__) . '/LegacyLicensePolicy.php';
 
 Auth::require();
 Auth::requirePerm('licensing.manage');
@@ -77,6 +81,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($existing) {
                     $flash = ['type' => 'error', 'msg' => __('licensing_plan_slug_taken', 'That slug is already used by another plan on this product.')];
                 } else {
+                    // Phase 13: legacy entitlements may only shrink.
+                    $currentEntitlements = $id > 0
+                        ? (array) (json_decode((string) Database::value("SELECT entitlements_json FROM licensing_plans WHERE id = ?", [$id]), true) ?: [])
+                        : [];
+                    [$entitlements] = LegacyLicensePolicy::restrictedEntitlements($currentEntitlements, $entitlements);
                     $row = [
                         'product_id'        => $productId,
                         'name'              => mb_substr($name, 0, 160),
@@ -240,7 +249,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <div class="field">
             <label class="field-label" for="entitlements"><?= __('licensing_entitlements', 'Entitlements (legacy)') ?></label>
             <textarea id="entitlements" name="entitlements" rows="5" placeholder="white_label&#10;api_access"><?= e($entText) ?></textarea>
-            <p class="field-help"><?= __('licensing_entitlements_hint', 'One feature key per line. Still read by the live check-in endpoint for licenses issued through the legacy Licenses (Legacy) screen — the Module template above is the current source for new-schema licenses.') ?></p>
+            <p class="field-help"><?= __('licensing_entitlements_hint', 'One feature key per line. Read only by the check-in endpoint for legacy licenses (Licenses (Legacy) screen). Keys can be removed here but not added — the Module template above is the source for current licenses.') ?></p>
         </div>
         <button class="btn btn-primary" type="submit"><?= $editing ? e(__('save', 'Save')) : e(__('licensing_create_plan', 'Create plan')) ?></button>
         <a href="<?= e(plugin_url('licensing', 'admin/plans.php')) ?>" class="btn btn-ghost"><?= __('cancel', 'Cancel') ?></a>

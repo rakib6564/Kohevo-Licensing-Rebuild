@@ -20,6 +20,8 @@ require_once __DIR__ . '/LicensingAPI.php';
 require_once __DIR__ . '/PlanService.php';
 require_once __DIR__ . '/LicenseService.php';
 require_once __DIR__ . '/InstallationService.php';
+// Phase 13: the legacy (licensing_installs) screens may only restrict.
+require_once __DIR__ . '/LegacyLicensePolicy.php';
 
 class Licensing extends Plugin {
 
