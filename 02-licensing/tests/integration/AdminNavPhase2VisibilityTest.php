@@ -1,12 +1,12 @@
 <?php
 /**
- * admin/partials/header.php previously hid Pages/Posts/Editor/Templates from
- * the sidebar whenever the archived content-builder plugin wasn't active —
- * which is now permanently the case, since that plugin was never migrated
- * and can't be reinstalled. That left the Phase 2 editor fully working but
- * unreachable from the nav. Fixed by gating those items on editor_phase2_enabled
- * instead; Navigation (menus.php) stays gated on the plugin, since it's a
- * literal bridge into files that no longer exist.
+ * The visual page editor and the Content section (Pages, Posts, Templates,
+ * Navigation) were removed: admin/editor.php, editor-preview.php, posts.php,
+ * post-edit.php, templates.php, template-export.php and menus.php are gone,
+ * along with the content-page services and the public content-page route.
+ * These tests pin that nothing in the sidebar still points at them and that
+ * an unknown public path is a plain 404 (it used to fall through to the
+ * content-page lookup, which fataled on installs without content_pages).
  */
 
 declare(strict_types=1);
@@ -21,23 +21,29 @@ function anpv_probe(): array
     return ['status' => (int) $m[1], 'body' => substr($out, strlen($m[0]))];
 }
 
-unit('sidebar shows Pages/Posts/Editor/Templates by default, but not Navigation', function () {
+unit('sidebar has no Editor or Content items', function () {
     $res = anpv_probe();
     assert_eq(200, $res['status']);
-    assert_true(str_contains($res['body'], 'admin/posts.php?type=page'), 'Pages must be linked');
-    assert_true(str_contains($res['body'], 'admin/posts.php?type=post'), 'Posts must be linked');
-    assert_true(str_contains($res['body'], 'admin/templates.php'), 'Templates must be linked');
-    assert_false(str_contains($res['body'], 'admin/menus.php'), 'Navigation must stay hidden — menus.php still bridges into an archived plugin file');
+    foreach (['admin/editor.php', 'admin/posts.php', 'admin/templates.php', 'admin/menus.php'] as $href) {
+        assert_false(str_contains($res['body'], $href), "sidebar must not link {$href}");
+    }
+    assert_false(str_contains($res['body'], 'Visual Page Editor'), 'no Visual Page Editor item');
+    assert_true(str_contains($res['body'], 'admin/media.php'), 'unrelated items (Media Library) are still there');
 });
 
-unit('sidebar hides Pages/Posts/Editor/Templates when editor_phase2_enabled is disabled', function () {
-    Database::setSetting('editor_phase2_enabled', '0');
-    try {
-        $res = anpv_probe();
-        assert_eq(200, $res['status']);
-        assert_false(str_contains($res['body'], 'admin/posts.php?type=page'), 'Pages must be hidden while the Phase 2 editor is disabled');
-        assert_false(str_contains($res['body'], 'admin/templates.php'), 'Templates must be hidden while the Phase 2 editor is disabled');
-    } finally {
-        Database::query('DELETE FROM settings WHERE tenant_id = ? AND setting_key = ?', [current_tenant_id(), 'editor_phase2_enabled']);
+unit('the removed admin pages are gone from disk', function () {
+    $root = dirname(__DIR__, 2);
+    foreach (['editor', 'editor-preview', 'posts', 'post-edit', 'templates', 'template-export', 'menus'] as $page) {
+        assert_false(is_file("{$root}/admin/{$page}.php"), "admin/{$page}.php must not exist");
     }
+});
+
+unit('an unknown public path is a 404, not a content-page lookup', function () {
+    $cmd = escapeshellarg(PHP_BINARY) . ' '
+         . escapeshellarg(dirname(__DIR__) . '/fixtures/public-page-probe.php') . ' '
+         . escapeshellarg('public.php') . ' '
+         . escapeshellarg('_path=no-such-page-' . bin2hex(random_bytes(4))) . ' 2>/dev/null';
+    $out = (string) shell_exec($cmd);
+    preg_match('/^STATUS (\d+)\n/', $out, $m);
+    assert_eq(404, (int) ($m[1] ?? 0), 'unknown public path must be 404');
 });

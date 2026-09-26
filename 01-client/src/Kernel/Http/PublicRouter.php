@@ -85,13 +85,6 @@ class PublicRouter {
         }
 
         if ($best === null) {
-            // Core content pages are the final dynamic fallback. Registered
-            // plugin prefixes always win above, while this path serves only a
-            // published tenant-scoped content_pages row.
-            if (class_exists('Slate\\Services\\Content\\PublicContentRoute')
-                && \Slate\Services\Content\PublicContentRoute::dispatch($path)) {
-                return;
-            }
             self::renderNotFound($path);
             return;
         }

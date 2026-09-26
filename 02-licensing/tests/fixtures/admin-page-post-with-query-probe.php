@@ -2,9 +2,9 @@
 /**
  * Sibling to admin-page-post-probe.php that ALSO sets $_GET from a query
  * string, for admin pages whose POST handler needs a query param to resolve
- * its target (e.g. admin/editor.php?id=<postId> — the editor resolves which
- * page a save/publish/preview/restore _editor_action applies to from $_GET,
- * not the POST body). admin-page-post-probe.php deliberately hardcodes
+ * its target (e.g. plugins/licensing/admin/install.php?id=<installId>, which
+ * resolves the install an action applies to from $_GET, not the POST body).
+ * admin-page-post-probe.php deliberately hardcodes
  * $_GET = [] because none of its existing callers need a query param
  * alongside POST fields; this fixture exists rather than changing that one,
  * matching this suite's convention of adding a new fixture for a genuinely

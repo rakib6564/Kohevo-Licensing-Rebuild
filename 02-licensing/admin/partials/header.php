@@ -72,53 +72,6 @@ $coreNav = [
         'order' => 10,
         'group' => 'overview',
     ],
-    // ── Editor ──
-    [
-        'slug'  => 'editor',
-        'label' => __('visual_page_editor', 'Visual Page Editor'),
-        'href'  => SLATE_URL . '/admin/editor.php',
-        'icon'  => 'layout',
-        'perm'  => 'content.edit',
-        'order' => 50,
-        'group' => 'editor',
-    ],
-    // ── Content ──
-    [
-        'slug'  => 'content-page',
-        'label' => __('pages', 'Pages'),
-        'href'  => SLATE_URL . '/admin/posts.php?type=page',
-        'icon'  => 'file-text',
-        'perm'  => 'content.view',
-        'order' => 100,
-        'group' => 'content',
-    ],
-    [
-        'slug'  => 'content-post',
-        'label' => __('posts', 'Posts'),
-        'href'  => SLATE_URL . '/admin/posts.php?type=post',
-        'icon'  => 'edit-3',
-        'perm'  => 'content.view',
-        'order' => 110,
-        'group' => 'content',
-    ],
-    [
-        'slug'  => 'content-templates',
-        'label' => __('templates', 'Templates'),
-        'href'  => SLATE_URL . '/admin/templates.php',
-        'icon'  => 'copy',
-        'perm'  => 'content.view',
-        'order' => 120,
-        'group' => 'content',
-    ],
-    [
-        'slug'  => 'content-menus',
-        'label' => __('navigation', 'Navigation'),
-        'href'  => SLATE_URL . '/admin/menus.php',
-        'icon'  => 'list',
-        'perm'  => 'content.edit',
-        'order' => 130,
-        'group' => 'content',
-    ],
     [
         'slug'       => 'media',
         'label'      => __('media_library', 'Media Library'),
@@ -289,28 +242,6 @@ if (Auth::isPlatformSuperAdmin()) {
     ];
 }
 
-// 'editor', 'content-page', 'content-post' and 'content-templates' are
-// served by the Phase 2 DocumentSchema pipeline (admin/editor.php,
-// admin/posts.php, admin/templates.php) — no plugin required. They're hidden
-// only if that pipeline itself has been switched off (see admin/editor.php's
-// own editor_phase2_enabled check).
-//
-// 'content-menus' (Navigation) is different: admin/menus.php is still a
-// straight bridge into plugins/content-builder/admin/menus.php, which does
-// not exist — that plugin was archived, not migrated. Keep it gated on the
-// plugin actually being active; it reappears automatically if a real
-// Content Builder plugin is ever installed again.
-$hiddenNavSlugs = [];
-if (Database::setting('editor_phase2_enabled') === '0') {
-    $hiddenNavSlugs = array_merge($hiddenNavSlugs, ['editor', 'content-page', 'content-post', 'content-templates']);
-}
-if (!PluginLoader::isActive('content-builder')) {
-    $hiddenNavSlugs[] = 'content-menus';
-}
-if ($hiddenNavSlugs !== []) {
-    $coreNav = array_values(array_filter($coreNav, fn(array $item): bool => !in_array($item['slug'], $hiddenNavSlugs, true)));
-}
-
 // Plugin nav contributions
 $navItems = Hook::applyFilters('admin_nav_items', $coreNav);
 
@@ -331,9 +262,6 @@ if (!$currentNav) {
     $script = basename($_SERVER['SCRIPT_NAME'] ?? '');
     $map = [
         'index.php'         => 'dashboard',
-        'editor.php'        => 'editor',
-        'templates.php'     => 'content-templates',
-        'menus.php'         => 'content-menus',
         'media.php'         => 'media',
         'plugins.php'       => 'plugins',
         'users.php'         => 'users',
@@ -345,10 +273,6 @@ if (!$currentNav) {
         'help.php'          => 'help',
     ];
     $currentNav = $map[$script] ?? null;
-    if ($script === 'posts.php') {
-        $pt = $_GET['type'] ?? 'post';
-        $currentNav = 'content-' . $pt;
-    }
     if ($script === 'settings.php') {
         $tab = $_GET['tab'] ?? 'general';
         if ($tab === 'profile') $tab = 'general';
@@ -380,12 +304,10 @@ foreach ($navItems as $item) {
 }
 unset($_navGroupKey, $item);
 
-// Canonical group ordering: Overview -> Editor -> Content -> Business plugins -> Settings -> Tools/System -> other
+// Canonical group ordering: Overview -> Business plugins -> Settings -> Tools/System -> other
 static $groupPriorities = [
     'platform'      => 5,
     'overview'      => 10,
-    'editor'        => 20,
-    'content'       => 25,
     'shop'          => 40,
     'booking'       => 45,
     'nutrition-app' => 50,
@@ -416,8 +338,6 @@ if (!function_exists('slate_admin_group_label')) {
         static $defaults = [
             'platform'      => ['Platform',            'Plateforme'],
             'overview'      => ['Overview',             'Aperçu'],
-            'editor'        => ['Editor',                'Éditeur'],
-            'content'       => ['Content',               'Contenu'],
             'booking'       => ['Booking engine',        'Moteur de réservation'],
             'settings'      => ['Site settings',         'Réglages du site'],
             'system'        => ['Tools & connection',    'Outils et connexions'],
@@ -445,12 +365,12 @@ if (!function_exists('slate_admin_group_label')) {
 
 // ── Split nav for mobile tab bar vs the "More" sheet ─────────
 // The bottom bar should surface day-to-day destinations, not occasional
-// admin chores. So we fill it from the "overview" + "content" groups first
+// admin chores. So we fill it from the "overview" group first
 // (Dashboard, Forms, Submissions, Media, …) and let "system" items (Users,
 // Roles, Plugins, Audit, Settings) fall through to "More". If there aren't
 // four day-to-day items, we top up from whatever's left so the bar is full.
 // Plugins can force an item onto/off the bar with 'mobile_tab' => true|false.
-$tabGroups = ['overview', 'content'];
+$tabGroups = ['overview'];
 $tabForced = array_values(array_filter($navItems, fn($i) => !empty($i['mobile_tab'])));
 $tabPrimary = array_values(array_filter($navItems, fn($i) =>
     empty($i['mobile_tab']) && in_array($i['group'] ?? '', $tabGroups, true) && ($i['mobile_tab'] ?? true) !== false));

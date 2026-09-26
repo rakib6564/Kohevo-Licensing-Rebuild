@@ -7,13 +7,10 @@
  * tenant settings can change what is returned here; they can never reach
  * PlatformIdentity's values (see that class's own docblock).
  *
- * KEYS/resolve() back admin/editor.php's "Site Settings" panel (the editor's
- * own in-context equivalent of admin/settings.php's Branding section — same
- * brand_accent_color setting key, so the two never drift) and are UNCHANGED
- * by the Phase 1 expansion below — same keys, same return shape, same
- * callers (ContentServiceFactory::theme()/themeVersion(), admin/editor.php).
- * TenantThemeResolver itself must stay pure (Presentation may not read the
- * database; see its own docblock) — this class is where that read happens.
+ * KEYS/resolve() read the brand color/font settings (the same keys as
+ * admin/settings.php's Branding section). Their original callers — the
+ * visual page editor and its theme resolver — were removed with the
+ * editor; they are kept as the canonical read path for those settings.
  *
  * The methods below this point are net-new additions (Phase 1). They read
  * the exact same `settings` keys already read independently today by
@@ -35,8 +32,7 @@ namespace Slate\Services\Content;
 
 final class TenantBranding
 {
-    /** Setting keys this panel owns — the Site Settings AJAX handler in
-     * admin/editor.php writes exactly these, nothing else. */
+    /** Brand color/font setting keys. */
     public const KEYS = [
         'accent' => 'brand_accent_color',
         'ink' => 'brand_text_color',
@@ -45,7 +41,7 @@ final class TenantBranding
         'body' => 'brand_body_font',
     ];
 
-    /** @return array<string,string> the TenantThemeResolver::fromBrand() input shape */
+    /** @return array<string,string> brand key => stored setting value */
     public static function resolve(): array
     {
         $out = [];
