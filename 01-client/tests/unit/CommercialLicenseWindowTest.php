@@ -384,3 +384,16 @@ unit('Phase 9 presenter: a Guard that is locked always wins over the timeline (n
     assert_eq('stale', $v['state']);
     assert_null($v['banner']);
 });
+
+// ── Phase 12: offline tolerance boundaries (exact seconds) ──────────────
+
+unit('Phase 12 offline: fresh, 6 days and EXACTLY 7 days since the last verified contact are trusted; 7 days + 1 second is stale', function () {
+    $now = clw_expires_ts() - 30 * CLW_DAY; // well before any commercial window
+    foreach (['fresh' => 0, '6 days' => 6 * CLW_DAY, 'exactly 7 days' => 7 * CLW_DAY] as $label => $age) {
+        $w = CLW::evaluate(clw_trust($now, ['fetched_at' => gmdate('Y-m-d H:i:s', $now - $age)]), $now);
+        assert_true($w['allowed'], "offline $label must still be trusted");
+    }
+    $w = CLW::evaluate(clw_trust($now, ['fetched_at' => gmdate('Y-m-d H:i:s', $now - 7 * CLW_DAY - 1)]), $now);
+    assert_false($w['allowed']);
+    assert_eq('stale', $w['reason']);
+});

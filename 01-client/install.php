@@ -211,14 +211,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $requestedStep === $step) {
                     ], $store);
 
                     $result = $client->checkInDetailed();
-                    if ($result['ok']) {
+                    if ($result['ok'] && installer_license_usable($store->readTrustState())) {
+                        // Phase 12: persist the key that just verified, as the
+                        // License page's recovery re-check already does, so
+                        // the unattended check-in (bin/license-check.php,
+                        // 06 §5.1) can keep this installation's state fresh.
+                        // Without it the cron skips and a new install locks
+                        // once the 7-day offline tolerance runs out.
+                        $envPath = SLATE_ROOT . '/.env';
+                        $envBody = installer_set_env_line((string) file_get_contents($envPath), 'LICENSE_KEY', $licenseKeyInput['value']);
+                        if (@file_put_contents($envPath, $envBody) === false) {
+                            slate_log('Installer step 3: license verified but LICENSE_KEY could not be persisted to .env', 'error');
+                        } else {
+                            @chmod($envPath, 0640);
+                        }
                         header('Location: ' . $_SERVER['PHP_SELF'] . '?step=4');
                         exit;
                     }
-                    slate_log('Installer step 3 (license validation) check-in failed: ' . ($client->lastFailure() ?? 'unknown'), 'warning');
-                    $error = $result['reason'] === 'network'
-                        ? 'Could not reach the licensing server. Check your connection and try again.'
-                        : 'This license key could not be validated. Double-check the key and try again.';
+                    if ($result['ok']) {
+                        // Verified, but not activatable (05 §1 Step 4): a
+                        // bound installation's license is expired,
+                        // suspended or revoked. The signed state stays
+                        // cached for the Guard; the installer stops here.
+                        slate_log('Installer step 3 (license validation): license is not active', 'warning');
+                        $error = 'This license is not currently active. Please contact your provider.';
+                    } else {
+                        slate_log('Installer step 3 (license validation) check-in failed: ' . ($client->lastFailure() ?? 'unknown'), 'warning');
+                        $error = $result['reason'] === 'network'
+                            ? 'Could not reach the licensing server. Check your connection and try again.'
+                            : 'This license key could not be validated. Double-check the key and try again.';
+                    }
                 } catch (\Throwable $e) {
                     slate_log('Installer step 3 (license validation) failed: ' . $e->getMessage(), 'error');
                     $error = 'This license key could not be validated. Double-check the key and try again.';

@@ -202,3 +202,25 @@ unit('Phase 10 central: malformed install_id shapes are still refused before any
         assert_null(InstallationService::active($f['licenseId']));
     } finally { p10s_reset(); }
 });
+
+unit('Phase 12 central (11 §7): first activation of a license whose expires_at already passed is signed and stored as expired, never active', function () {
+    p10s_reset();
+    try {
+        foreach (['inside grace' => 86400, 'beyond grace' => 30 * 86400] as $label => $age) {
+            $f = p10s_issue(['expires_at' => gmdate('Y-m-d H:i:s', time() - $age)]);
+            $installId = bin2hex(random_bytes(16));
+            $p = p10s_payload(p10s_check($f['licenseKey'], $installId));
+            assert_eq('expired', $p['status'], "$label: the signed payload carries the actual commercial state");
+            assert_eq($installId, $p['installation_id']);
+            $license = LicenseService::find($f['licenseId']);
+            assert_eq('expired', $license['status'], "$label: never stored as active with a past expiry");
+            $events = array_column(LicenseService::events($f['licenseId']), 'event_type');
+            assert_true(in_array('activate', $events, true) && in_array('expire', $events, true), "$label: activate then expire recorded: " . implode(',', $events));
+            LicenseService::renew($f['licenseId'], gmdate('Y-m-d H:i:s', time() + 365 * 86400), null, 'phase 12');
+            assert_eq('active', p10s_payload(p10s_check($f['licenseKey'], $installId))['status'], "$label: renewal is reachable and restores active");
+        }
+        // Unchanged: a future expiry still activates as active.
+        $f = p10s_issue();
+        assert_eq('active', p10s_payload(p10s_check($f['licenseKey'], bin2hex(random_bytes(16))))['status']);
+    } finally { p10s_reset(); }
+});

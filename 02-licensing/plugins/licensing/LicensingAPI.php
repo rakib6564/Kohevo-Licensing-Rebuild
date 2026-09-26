@@ -352,8 +352,13 @@ class LicensingAPI {
             $installation = InstallationService::find($newId);
             // activate() may have just transitioned Unactivated -> Active;
             // re-read so the signed payload reflects the license's actual
-            // current status, not the pre-activation snapshot.
-            $license = LicenseService::find((int) $license['id']);
+            // current status, not the pre-activation snapshot. Through
+            // syncExpiry(), not a plain find(): the lazy expiry sync above
+            // skipped the license while it was still Unactivated, so a
+            // License issued with an expires_at that has already passed
+            // would otherwise be stored and SIGNED as 'active' (Phase 12,
+            // 11 §7: the payload carries the actual commercial state).
+            $license = LicenseService::syncExpiry((int) $license['id']);
         }
 
         $planSlug = null;

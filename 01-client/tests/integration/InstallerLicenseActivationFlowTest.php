@@ -298,3 +298,60 @@ unit('installer_set_env_line(): appends a new key and idempotently replaces an e
     $body = installer_set_env_line($body, 'INSTALLATION_ID', str_repeat('a', 32));
     assert_eq("APP_URL=https://example.com\nTENANT_ID=2\nINSTALLATION_ID=" . str_repeat('a', 32) . "\n", $body);
 });
+
+unit('Phase 12 (05 §1 Step 4): a BOUND installation receiving a signed suspended / revoked / expired state is cached for the Guard but never advances past the License step', function (): void {
+    $dbName = 'slate_ilaf_inactive_' . slate_test_ns();
+    $pdo = ilaf_prepared_pdo($dbName);
+    try {
+        $keypair = ilaf_keypair();
+        $results = ilaf_with_database_pdo($pdo, static function () use ($keypair): array {
+            $core = InstallationService::provisionCore();
+            $out = [];
+            $cases = [
+                'suspended'            => ['status' => 'suspended', 'expires_at' => null],
+                'revoked'              => ['status' => 'revoked', 'expires_at' => null],
+                'expired inside grace' => ['status' => 'expired', 'expires_at' => gmdate('Y-m-d H:i:s', time() - 86400)],
+                'expired beyond grace' => ['status' => 'expired', 'expires_at' => gmdate('Y-m-d H:i:s', time() - 30 * 86400)],
+                'active past grace'    => ['status' => 'active', 'expires_at' => gmdate('Y-m-d H:i:s', time() - 30 * 86400)],
+                'active, expiring in 3 days' => ['status' => 'active', 'expires_at' => gmdate('Y-m-d H:i:s', time() + 3 * 86400)],
+                'trial'                => ['status' => 'trial', 'expires_at' => null],
+            ];
+            $sequence = 0;
+            foreach ($cases as $label => $fields) {
+                \Database::query('DELETE FROM remote_license_cache WHERE tenant_id = ?', [(int) TENANT_ID]);
+                $envelope = ilaf_signed_envelope($keypair, [
+                    'installation_id' => $core['installation_id'], 'plan' => 'pro', 'entitlements' => ['forms'],
+                    'checked_at' => gmdate('c', time() + $sequence++), 'next_check_after' => 86400,
+                ] + $fields);
+                $client = ilaf_client($core['installation_id'], $keypair['public'], static fn () => [200, json_encode($envelope)]);
+                $ok = $client->checkInDetailed()['ok'];
+                $trust = (new SlateLicenseCacheStore((int) TENANT_ID))->readTrustState();
+                $out[$label] = [$ok, $trust['trusted'], installer_license_usable($trust), installer_resolve_step()];
+            }
+            return $out;
+        });
+
+        foreach (['suspended', 'revoked', 'expired inside grace', 'expired beyond grace', 'active past grace'] as $label) {
+            [$ok, $trusted, $usable, $step] = $results[$label];
+            assert_true($ok && $trusted, "$label: the genuine signed state is still verified and cached (Guard enforcement)");
+            assert_false($usable, "$label: not usable for installation");
+            assert_eq(3, $step, "$label: the installer stays on the License step");
+        }
+        foreach (['active, expiring in 3 days', 'trial'] as $label) {
+            [, , $usable, $step] = $results[$label];
+            assert_true($usable, "$label: usable");
+            assert_eq(4, $step, "$label: advances to admin creation");
+        }
+    } finally {
+        ilaf_drop($dbName);
+    }
+});
+
+unit('Phase 12 (06 §5.1): the installer persists the verified license key to .env so the unattended check-in can run after install', function (): void {
+    $src = (string) file_get_contents(SLATE_ROOT . '/install.php');
+    $success = strpos($src, "if (\$result['ok'] && installer_license_usable(\$store->readTrustState())) {");
+    $persist = strpos($src, "installer_set_env_line((string) file_get_contents(\$envPath), 'LICENSE_KEY', \$licenseKeyInput['value'])");
+    $redirect = $success === false ? false : strpos($src, "'?step=4'", $success);
+    assert_true($success !== false, 'step 3 advances only on a usable verified license');
+    assert_true($persist !== false && $persist > $success && $persist < $redirect, 'LICENSE_KEY is written on that success path, before the redirect to step 4');
+});

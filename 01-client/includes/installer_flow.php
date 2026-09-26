@@ -23,7 +23,8 @@ if (!function_exists('installer_resolve_step')) {
      *
      *   1 = Database Configuration   -- no .env yet
      *   2 = Install Application      -- .env exists, no installation identity yet
-     *   3 = License Key              -- identity exists, no trusted/verified license yet
+     *   3 = License Key              -- identity exists, no verified license that
+     *                                   permits installation yet (installer_license_usable())
      *   4 = Create Admin Account     -- license verified, no admin user yet
      *   5 = Finish                   -- admin exists, .installed not yet written
      *
@@ -50,11 +51,11 @@ if (!function_exists('installer_resolve_step')) {
 
         try {
             $store = new \Slate\Services\Licensing\SlateLicenseCacheStore((int) TENANT_ID);
-            $trusted = $store->readTrustState()['trusted'];
+            $usable = installer_license_usable($store->readTrustState());
         } catch (\Throwable $e) {
-            $trusted = false;
+            $usable = false;
         }
-        if (!$trusted) {
+        if (!$usable) {
             return 3;
         }
 
@@ -68,6 +69,32 @@ if (!function_exists('installer_resolve_step')) {
         }
 
         return 5;
+    }
+}
+
+if (!function_exists('installer_license_usable')) {
+    /**
+     * Phase 12: whether a verified license state lets the installer move
+     * past the License step. 05 §1 Step 4: the Central validation "MUST
+     * succeed (HTTP 200, valid signature, status in {trial, active})". A
+     * trusted cache is not enough on its own: since Phase 10 a BOUND
+     * installation also receives a signed expired/suspended/revoked
+     * payload (11 §7), which is correctly cached so the runtime Guard can
+     * enforce it — but it must never let a reinstall create an admin or
+     * finish. The same CommercialLicenseWindow the Guard uses must also
+     * allow the state, so an install never completes into a locked app.
+     *
+     * @param array{found:bool,trusted:bool,data:?array} $trust SlateLicenseCacheStore::readTrustState()
+     */
+    function installer_license_usable(array $trust): bool
+    {
+        if (empty($trust['trusted']) || !is_array($trust['data'] ?? null)) {
+            return false;
+        }
+        if (!in_array($trust['data']['status'] ?? null, ['trial', 'active'], true)) {
+            return false;
+        }
+        return \Slate\Services\Licensing\CommercialLicenseWindow::evaluate($trust, time())['allowed'];
     }
 }
 
