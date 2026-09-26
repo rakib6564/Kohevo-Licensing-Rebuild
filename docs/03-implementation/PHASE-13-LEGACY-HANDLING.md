@@ -123,7 +123,7 @@ The tests that still pass lock in behaviour that was already correct.
 
 ## 5. Regression
 
-Local run, MySQL 26.7 (Homebrew), PHP 8.5.9. MariaDB was **not** run locally; CI (`.github/workflows/ci.yml`) runs MySQL 8.0 and MariaDB 10.11 and now also runs `run-phase13-legacy.php` and `Phase13LegacyAdminTest`.
+Local run, MySQL 26.7 (Homebrew), PHP 8.5.9. MariaDB was **not** run locally. The CI result on MySQL 8.0 and MariaDB 10.11 is in §5.1.
 
 | Suite | Phase 12 baseline (re-measured before any change) | After Phase 13 |
 | :--- | :--- | :--- |
@@ -145,6 +145,31 @@ Local run, MySQL 26.7 (Homebrew), PHP 8.5.9. MariaDB was **not** run locally; CI
 **`booking_can_book` (2 tests, `BookingCanBookGateTest`) — pre-existing time-of-day failure, not Phase 13.** The test books a 30-minute slot at *now + 3 days* against 00:00–23:59 working hours in local time. Between 23:30 and 24:00 local (+06 here) the slot ends after 23:59. It passed in the baseline (run at 23:12) and failed at 23:35–23:44. It fails identically on untouched `HEAD` in a clean worktree at 23:44. Phase 13 touches no booking code.
 
 ---
+
+### 5.1 CI — MySQL 8.0 and MariaDB 10.11
+
+Commit `cfdcb47` (Phase 13), GitHub Actions run **36260339736**, PHP 8.3. Both jobs **success**:
+- Licensing & Client Suites (MariaDB 10.11), job 108454821753
+- Licensing & Client Suites (MySQL 8.0), job 108454821812
+
+MariaDB was not run locally; this CI run is the MariaDB evidence. The two databases gave identical counts:
+
+| Suite | MySQL 8.0 | MariaDB 10.11 |
+| :--- | :--- | :--- |
+| **`run-phase13-legacy.php`** (new) | 92 / 92 | 92 / 92 |
+| **central `Phase13LegacyAdminTest`** (new) | 7 / 7 | 7 / 7 |
+| `run-phase3-relevant.php` (two files moved out, §4) | 28 / 28 | 28 / 28 |
+| client smoke / Phase 3 authority / Phase 4 | 21, 18, 31 | 21, 18, 31 |
+| FreshInstallMigration / GlobalLicenseGuard / ModuleGuard / McpModuleGuard | 13, 17, 18, 5 | 13, 17, 18, 5 |
+| CommercialLicenseWindow / Phase 9 / RemoteLicenseClientSync | 42, 29, 3 | 42, 29, 3 |
+| Phase 10 / Phase 11 runners | 144 / 144, 172 / 172 | 144 / 144, 172 / 172 |
+| central smoke / RemoteLicenseClient / Phase 2 / schema / schema+foundation | 21, 14, 22, 5, 27 | 21, 14, 22, 5, 27 |
+| central cache store / QA round 2 / Phase 10 check-in | 7, 4, 9 | 7, 4, 9 |
+| central race | activation_count=1, bindings=1 | activation_count=1, bindings=1 |
+
+The Phase 11 runner is 172/172 in CI. CI ran at 17:49 UTC, outside the local 23:30–24:00 window that trips `booking_can_book` (§5), which is consistent with that failure being time-of-day only.
+
+Not in CI (unchanged from Phase 12): the full client unit/integration runs, the central unit run, and the E2E harness (it needs two HTTP servers). Those were run locally (§5).
 
 ## 6. Remaining risks (verified)
 
