@@ -67,6 +67,16 @@ $client = new RemoteLicenseClient([
 ], $store);
 
 $ok = $client->checkIn();
-echo $ok
-    ? "Check-in succeeded -- local cache updated.\n"
-    : "Check-in failed -- last known status left untouched (this is safe: silence never restricts anything).\n";
+if ($ok) {
+    $synced = $store->load();
+    slate_log('License check-in succeeded: status=' . ($synced['status'] ?? 'unknown'), 'info');
+    echo "Check-in succeeded -- local cache updated.\n";
+} else {
+    // Phase 10: a stable failure category (network, http_status,
+    // signature_invalid, installation_mismatch, stale_response, ...) for the
+    // server log only. The last trusted state is left exactly as it was;
+    // offline tolerance (08 §4), not this failure, decides how long it
+    // stays usable.
+    slate_log('License check-in failed: ' . ($client->lastFailure() ?? 'unknown'), 'warning');
+    echo "Check-in failed (" . ($client->lastFailure() ?? 'unknown') . ") -- last verified status left untouched.\n";
+}

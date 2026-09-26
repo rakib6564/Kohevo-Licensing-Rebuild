@@ -262,19 +262,20 @@ class LicensingAPI {
         // ours). Reuses the EXISTING lifecycle authority -- never a second,
         // check-in-specific expiry computation (requirement #14).
         $license = LicenseService::syncExpiry((int) $license['id']);
+        $activatable = in_array($license['status'], LicenseService::ACTIVATABLE_STATUSES, true);
 
-        // Requirement #5/#15: unactivated/trial/active may proceed
-        // (unactivated is what makes a genuine FIRST activation possible at
-        // all); expired/suspended/revoked/cancelled must not become
-        // bindable -- nor even refreshable -- merely because check-in is
-        // public. Reuses LicenseService's own activatable-state definition
-        // rather than a second, parallel one.
-        if (!in_array($license['status'], LicenseService::ACTIVATABLE_STATUSES, true)) {
+        $installation = InstallationService::findByInstallationId($installationId);
+
+        // Requirement #5/#15: an expired/suspended/revoked/cancelled License
+        // must never GAIN a binding merely because check-in is public --
+        // with no bound Installation there is no "current state" to sign
+        // for (11-LICENSING-API-CONTRACT.md §13's first-activation case).
+        // Reuses LicenseService's own activatable-state definition rather
+        // than a second, parallel one.
+        if ($installation === null && !$activatable) {
             slate_log('Licensing check-in rejected (commercial): license=' . $license['id'] . ' reason=inactive status=' . $license['status'], 'warning');
             return self::checkInError(403, 'invalid_request');
         }
-
-        $installation = InstallationService::findByInstallationId($installationId);
 
         if ($installation !== null) {
             // Requirement #16: cross-license installation manipulation must
@@ -295,6 +296,18 @@ class LicensingAPI {
             // An ordinary routine refresh -- never re-activate, never a
             // second 'activate' event (requirement #11's "exactly ONE").
             InstallationService::touch((int) $installation['id'], $appVersion !== '' ? $appVersion : null, $ip !== '' ? $ip : null);
+
+            // Phase 10 (11-LICENSING-API-CONTRACT.md §7, LOCKED -- resolves
+            // F-02): a correctly bound Installation whose License is
+            // expired/suspended/revoked/cancelled receives a normal HTTP 200
+            // SIGNED payload carrying that actual status -- never a 403 with
+            // no payload. This is the only way Suspend/Revoke/Expire can
+            // reach the client as authoritative state (08 §3) instead of
+            // looking like a transient network failure that leaves the last
+            // cached "active" snapshot in force.
+            if (!$activatable) {
+                slate_log('Licensing check-in (commercial): delivering signed status=' . $license['status'] . ' license=' . $license['id'], 'info');
+            }
         } else {
             // Requirements #6-#10: bind through the existing, tested
             // commercial installation architecture -- InstallationService::
@@ -353,10 +366,17 @@ class LicensingAPI {
         // entitlements_json source.
         $entitlements = LicenseService::modules((int) $license['id']);
 
+        // Phase 10 (11 §2, 08 §3): warning_days/grace_days travel with every
+        // payload, whatever the status, so the signed state is complete on
+        // its own. installation_id comes from the resolved binding (the
+        // validated value that matched licensing_installations above),
+        // never from anything else in the request.
         $payload = [
-            'installation_id' => $installationId,
+            'installation_id' => (string) $installation['installation_id'],
             'status' => $license['status'], 'plan' => $planSlug, 'entitlements' => $entitlements,
-            'expires_at' => $license['expires_at'], 'checked_at' => gmdate('c'), 'next_check_after' => 86400,
+            'expires_at' => $license['expires_at'],
+            'warning_days' => (int) ($license['warning_days'] ?? 7), 'grace_days' => (int) ($license['grace_days'] ?? 7),
+            'checked_at' => gmdate('c'), 'next_check_after' => 86400,
         ];
         $payloadJson = (string) json_encode($payload, JSON_UNESCAPED_SLASHES);
         $signature = self::sign($payloadJson, $secretKey);

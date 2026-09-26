@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/support/license_signing.php';
+
 use Slate\Services\Content\PlatformIdentityPolicy;
 use Slate\Services\Licensing\EntitlementService;
 use Slate\Services\Licensing\LicenseService;
@@ -15,7 +17,7 @@ function p3_set_remote_env(bool $enabled): array {
     foreach ($keys as $key) { $old[$key] = $_ENV[$key] ?? null; }
     if ($enabled) {
         $_ENV['LICENSE_SERVER_URL'] = 'https://license.test';
-        $_ENV['LICENSE_SERVER_PUBLIC_KEY'] = base64_encode(str_repeat('p', SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES));
+        $_ENV['LICENSE_SERVER_PUBLIC_KEY'] = license_test_public_key();
         $_ENV['LICENSE_PRODUCT'] = 'kohevo';
         $_ENV['LICENSE_KEY'] = 'test-key';
     } else {
@@ -57,18 +59,17 @@ unit('Phase 3: verified remote state wins over conflicting local license/plan an
         p3_ensure_local_identity();
         Database::query('UPDATE tenant_profiles SET plan_id = ? WHERE tenant_id = ?', [$planId, $tenantId]);
         LicenseService::issue($tenantId, $planId, ['status'=>'active']);
-        $store = new SlateLicenseCacheStore($tenantId);
-        $store->save(['status'=>'suspended','plan'=>null,'entitlements'=>[],'expires_at'=>null,'fetched_at'=>gmdate('Y-m-d H:i:s'),'installation_id'=>p3_local_identity()]);
+        license_test_seed_cache($tenantId, ['status'=>'suspended','plan'=>null,'entitlements'=>[],'expires_at'=>null,'fetched_at'=>gmdate('Y-m-d H:i:s'),'installation_id'=>p3_local_identity()]);
         assert_false(EntitlementService::canAccessCapability($tenantId, 'white_label'), 'remote suspended state must defeat active local state');
         PlatformIdentityPolicy::resetCacheForTests();
         assert_false((new TenantContext())->runAs($tenantId, fn() => PlatformIdentityPolicy::whiteLabelActive()), 'Kohevo identity must remain visible without remote entitlement');
 
-        $store->save(['status'=>'active','plan'=>'pro','entitlements'=>['white_label'],'expires_at'=>null,'fetched_at'=>gmdate('Y-m-d H:i:s'),'installation_id'=>p3_local_identity()]);
+        license_test_seed_cache($tenantId, ['status'=>'active','plan'=>'pro','entitlements'=>['white_label'],'expires_at'=>null,'fetched_at'=>gmdate('Y-m-d H:i:s'),'installation_id'=>p3_local_identity()]);
         assert_true(EntitlementService::canAccessCapability($tenantId, 'white_label'));
         PlatformIdentityPolicy::resetCacheForTests();
         assert_true((new TenantContext())->runAs($tenantId, fn() => PlatformIdentityPolicy::whiteLabelActive()));
 
-        $store->save(['status'=>'active','plan'=>'pro','entitlements'=>['white_label'],'expires_at'=>null,'fetched_at'=>gmdate('Y-m-d H:i:s', time() - 8 * 86400),'installation_id'=>p3_local_identity()]);
+        license_test_seed_cache($tenantId, ['status'=>'active','plan'=>'pro','entitlements'=>['white_label'],'expires_at'=>null,'fetched_at'=>gmdate('Y-m-d H:i:s', time() - 8 * 86400),'installation_id'=>p3_local_identity()]);
         assert_false(EntitlementService::canAccessCapability($tenantId, 'white_label'), 'stale remote state must follow the existing seven-day grace policy');
 
         Database::query('DELETE FROM remote_license_cache WHERE tenant_id = ?', [$tenantId]);

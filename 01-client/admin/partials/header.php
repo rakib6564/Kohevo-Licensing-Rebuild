@@ -2046,3 +2046,22 @@ if (!function_exists('slate_admin_nav_icon')) {
                 </form>
             </div>
         <?php unset($_platformModeTenant); endif; ?>
+        <?php
+            // Phase 9 — pre-expiry warning / commercial grace banner. One
+            // compact notice in the admin chrome while access continues;
+            // the License page carries the full detail (and its own copy of
+            // this notice, so it is not repeated there). Read from the same
+            // trusted cache and CommercialLicenseWindow the Guard enforces
+            // with — no request input is consulted.
+            $_licenseBanner = (($currentNav ?? '') !== 'license' && class_exists('\Slate\Services\Licensing\LicenseStatusPresenter'))
+                ? \Slate\Services\Licensing\LicenseStatusPresenter::expiryBanner()
+                : null;
+            if ($_licenseBanner !== null):
+        ?>
+            <div class="alert <?= $_licenseBanner['tone'] === 'danger' ? 'alert-error' : 'alert-warning' ?>" role="status" data-license-banner="<?= e($_licenseBanner['phase']) ?>" style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px;">
+                <span><strong><?= e($_licenseBanner['title']) ?>.</strong> <?= e($_licenseBanner['message']) ?></span>
+                <?php if (class_exists('Auth') && Auth::can('settings.view')): ?>
+                    <a href="<?= e(SLATE_URL) ?>/admin/license.php" class="btn btn-sm"><?= __('view_license', 'View license') ?></a>
+                <?php endif; ?>
+            </div>
+        <?php endif; unset($_licenseBanner); ?>

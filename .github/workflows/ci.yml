@@ -128,6 +128,10 @@ jobs:
           php -r "require '01-client/config.php'; require '01-client/tests/guard.php'; slate_require_test_database(); require '01-client/tests/unit/harness.php'; require '01-client/tests/integration/GlobalLicenseGuardTest.php'; exit(unit_summary());"
           php -r "require '01-client/config.php'; require '01-client/tests/guard.php'; slate_require_test_database(); require '01-client/tests/unit/harness.php'; require '01-client/tests/integration/ModuleGuardTest.php'; exit(unit_summary());"
           php -r "require '01-client/config.php'; require '01-client/tests/guard.php'; slate_require_test_database(); require '01-client/tests/unit/harness.php'; require '01-client/tests/integration/McpModuleGuardTest.php'; exit(unit_summary());"
+          php -r "require '01-client/src/autoload.php'; require '01-client/tests/unit/harness.php'; require '01-client/tests/unit/CommercialLicenseWindowTest.php'; exit(unit_summary());"
+          php -r "require '01-client/config.php'; require '01-client/tests/guard.php'; slate_require_test_database(); require '01-client/tests/unit/harness.php'; require '01-client/tests/integration/Phase9ExpiryGraceTest.php'; exit(unit_summary());"
+          php -r "require '01-client/src/autoload.php'; require '01-client/tests/unit/harness.php'; require '01-client/tests/unit/RemoteLicenseClientSyncTest.php'; exit(unit_summary());"
+          php 01-client/tests/run-phase10-licensing.php
 
       - name: Run 02-licensing smoke & licensing suites
         run: |
@@ -138,4 +142,5 @@ jobs:
           php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/LicensingPluginSchemaTest.php'; require '02-licensing/tests/integration/CentralLicensingFoundationTest.php'; exit(unit_summary());"
           php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/SlateLicenseCacheStoreTest.php'; exit(unit_summary());"
           php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/LicensingQaFixRound2Test.php'; exit(unit_summary());"
+          php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/Phase10CheckInSyncTest.php'; exit(unit_summary());"
           php 02-licensing/tests/run-phase2-race.php

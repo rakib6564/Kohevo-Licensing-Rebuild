@@ -26,6 +26,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/support/license_signing.php';
+
 use Slate\Services\Licensing\SlateLicenseCacheStore;
 
 /**
@@ -45,7 +47,7 @@ use Slate\Services\Licensing\SlateLicenseCacheStore;
 function mg_env_prefix(): string {
     return 'SLATE_LICENSE_GUARD_LIVE=1 '
         . 'LICENSE_SERVER_URL=' . escapeshellarg('https://license.test') . ' '
-        . 'LICENSE_SERVER_PUBLIC_KEY=' . escapeshellarg(base64_encode(str_repeat('p', SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES))) . ' '
+        . 'LICENSE_SERVER_PUBLIC_KEY=' . escapeshellarg(license_test_public_key()) . ' '
         . 'LICENSE_PRODUCT=' . escapeshellarg('kohevo') . ' '
         . 'LICENSE_KEY=' . escapeshellarg('test-key') . ' ';
 }
@@ -107,7 +109,7 @@ function mg_clear(): void {
 /** A globally valid, trusted license with exactly the given module entitlements. */
 function mg_seed(array $entitlements): void {
     mg_ensure_local_identity();
-    (new SlateLicenseCacheStore(current_tenant_id()))->save([
+    license_test_seed_cache(current_tenant_id(), [
         'status' => 'active', 'plan' => 'pro', 'entitlements' => $entitlements,
         'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
         'installation_id' => mg_local_identity(),
@@ -313,7 +315,7 @@ unit('module guard: a cache row bound to a DIFFERENT installation cannot unlock 
     mg_clear();
     try {
         mg_ensure_local_identity(str_repeat('a', 32)); // THIS install's real identity
-        (new SlateLicenseCacheStore(current_tenant_id()))->save([
+        license_test_seed_cache(current_tenant_id(), [
             'status' => 'active', 'plan' => 'pro', 'entitlements' => ['forms', 'membership', 'booking'],
             'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
             'installation_id' => str_repeat('b', 32), // a DIFFERENT installation's identity — tampered/copied row

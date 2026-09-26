@@ -85,19 +85,22 @@ unit('Phase 8 presenter: a module included in the license but with its plugin sw
     assert_eq('inactive', lsp_module_states($view)['membership']);
 });
 
-unit('Phase 8 presenter: past expires_at while the Guard still allows access is labelled grace, with no countdown data', function () {
+unit('Phase 8 presenter: past expires_at while the Guard still allows access is labelled grace (Phase 9: with grace end, remaining time and live entitlements)', function () {
     $view = LicenseStatusPresenter::fromInputs(
         lsp_trusted(['expires_at' => date('Y-m-d H:i:s', time() - 2 * 86400)]),
         LSP_UNLOCKED,
-        lsp_modules()
+        lsp_modules(['forms' => [true, true]])
     );
     assert_eq('grace', $view['state']);
     assert_eq('warning', $view['tone']);
     assert_false($view['locked']);
-    assert_false(array_key_exists('days_remaining', $view), 'Phase 9 owns countdowns');
-    foreach ($view['modules'] as $m) {
-        assert_true($m['state'] !== 'not_included', 'grace must not claim a module is "not included" in the license');
-    }
+    // Phase 9 supersedes Phase 8's "no countdown" and "never not_included"
+    // assertions: entitlements are live during grace (Phase 9 §12), so an
+    // unentitled module can honestly be reported as not included, and the
+    // grace end / remaining time are now part of the view.
+    assert_true($view['grace_ends_label'] !== null, 'Phase 9: grace end is presented');
+    assert_true($view['time_remaining'] !== null, 'Phase 9: remaining grace is presented');
+    assert_eq(['forms' => 'enabled', 'membership' => 'not_included', 'booking' => 'not_included'], lsp_module_states($view));
 });
 
 unit('Phase 8 presenter: expired beyond grace (Guard locked, reason expired) is locked and shows no enabled module', function () {

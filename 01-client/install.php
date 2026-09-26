@@ -157,6 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $requestedStep === $step) {
                 '0022_remote_license_cache',
                 '0024_remote_license_metadata',
                 '0025_remote_license_cache_installation_id',
+                '0026_remote_license_cache_signed_payload',
             ]);
 
             // Tenant/profile/role/installation-identity scaffolding ONLY —
@@ -214,6 +215,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $requestedStep === $step) {
                         header('Location: ' . $_SERVER['PHP_SELF'] . '?step=4');
                         exit;
                     }
+                    slate_log('Installer step 3 (license validation) check-in failed: ' . ($client->lastFailure() ?? 'unknown'), 'warning');
                     $error = $result['reason'] === 'network'
                         ? 'Could not reach the licensing server. Check your connection and try again.'
                         : 'This license key could not be validated. Double-check the key and try again.';

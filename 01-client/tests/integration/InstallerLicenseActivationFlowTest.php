@@ -15,6 +15,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/support/license_signing.php';
+
 use Slate\Data\MigrationRunner;
 use Slate\Services\Installation\InstallationService;
 use Slate\Services\Licensing\SlateLicenseCacheStore;
@@ -27,7 +29,7 @@ const ILAF_CORE_MIGRATIONS = [
     '0001_core_init', '0002_identity_core', '0011_login_attempts',
     '0014_tenant_profiles', '0023_installation_identity',
     '0022_remote_license_cache', '0024_remote_license_metadata',
-    '0025_remote_license_cache_installation_id',
+    '0025_remote_license_cache_installation_id', '0026_remote_license_cache_signed_payload',
 ];
 
 function ilaf_fresh_pdo(string $dbName): \PDO {
@@ -55,10 +57,16 @@ function ilaf_with_database_pdo(\PDO $pdo, callable $fn): mixed {
     $property->setAccessible(true);
     $previous = $property->getValue();
     $property->setValue(null, $pdo);
+    // Phase 10: the installer's own trust check (installer_resolve_step())
+    // re-verifies the cached payload with LICENSE_SERVER_PUBLIC_KEY, exactly
+    // as a real install configured against the test signer would.
+    $previousKey = $_ENV['LICENSE_SERVER_PUBLIC_KEY'] ?? null;
+    $_ENV['LICENSE_SERVER_PUBLIC_KEY'] = license_test_public_key();
     try {
         return $fn();
     } finally {
         $property->setValue(null, $previous);
+        if ($previousKey === null) unset($_ENV['LICENSE_SERVER_PUBLIC_KEY']); else $_ENV['LICENSE_SERVER_PUBLIC_KEY'] = $previousKey;
     }
 }
 
@@ -71,11 +79,11 @@ function ilaf_prepared_pdo(string $dbName): \PDO {
     return $pdo;
 }
 
+/** The Central Server stand-in's keypair (tests/support/license_signing.php) — the key this install is configured to trust. */
 function ilaf_keypair(): array {
-    $pair = sodium_crypto_sign_keypair();
     return [
-        'public' => base64_encode(sodium_crypto_sign_publickey($pair)),
-        'secret' => base64_encode(sodium_crypto_sign_secretkey($pair)),
+        'public' => license_test_public_key(),
+        'secret' => base64_encode(license_test_secret_key()),
     ];
 }
 
@@ -250,7 +258,7 @@ unit('Phase 5: a tampered/mismatched cache row (e.g. cloned from another install
             InstallationService::provisionCore();
             // A well-formed but WRONG installation_id -- exactly what a
             // copied raw cache row from a different installation looks like.
-            (new SlateLicenseCacheStore((int) TENANT_ID))->save([
+            license_test_seed_cache((int) TENANT_ID, [
                 'status' => 'active', 'plan' => 'pro', 'entitlements' => ['forms'],
                 'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
                 'installation_id' => str_repeat('9', 32),

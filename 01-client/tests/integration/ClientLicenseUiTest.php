@@ -15,6 +15,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/support/license_signing.php';
+
 use Slate\Services\Licensing\SlateLicenseCacheStore;
 
 const CLU_SERVER_URL  = 'https://license-phase8.test';
@@ -22,11 +24,16 @@ const CLU_LICENSE_KEY = 'PH8-RAW-LICENSE-KEY-7c1e0f9a';
 const CLU_PLAN        = 'Phase8 Professional';
 
 function clu_public_key(): string {
-    return base64_encode(str_repeat('q', SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES));
+    return license_test_public_key();
 }
 
 function clu_env_prefix(bool $live = true, bool $remote = true): string {
     $prefix = $live ? 'SLATE_LICENSE_GUARD_LIVE=1 ' : '';
+    if (!$remote) {
+        // Phase 10: the cache's verification key alone (never enough to
+        // switch remote mode on) so a seeded signed snapshot still verifies.
+        $prefix .= license_test_env_prefix();
+    }
     if ($remote) {
         $prefix .= 'LICENSE_SERVER_URL=' . escapeshellarg(CLU_SERVER_URL) . ' '
             . 'LICENSE_SERVER_PUBLIC_KEY=' . escapeshellarg(clu_public_key()) . ' '
@@ -80,7 +87,7 @@ function clu_clear(): void {
 
 function clu_seed(array $overrides = []): void {
     clu_ensure_identity(clu_identity());
-    (new SlateLicenseCacheStore(current_tenant_id()))->save($overrides + [
+    license_test_seed_cache(current_tenant_id(), $overrides + [
         'status' => 'active', 'plan' => CLU_PLAN, 'entitlements' => ['forms', 'booking'],
         'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
         'installation_id' => clu_identity(),
@@ -187,9 +194,16 @@ unit('Phase 8 license UI: expired within the existing grace window is labelled g
         assert_eq(200, $res['status']);
         assert_eq('grace', clu_license_state($res['body']));
         assert_false(str_contains($res['body'], 'currently <strong>locked</strong>'));
-        assert_false(str_contains($res['body'], 'data-module-state="enabled"'),
-            'EntitlementService already denies modules past expires_at; the UI must not claim otherwise');
-        assert_false((bool) preg_match('/days? (left|remaining)/i', $res['body']), 'no Phase 9 countdown');
+        // Phase 9 §12 supersedes the Phase 8 assertion here: entitled
+        // modules now stay live through commercial grace (EntitlementService
+        // no longer cuts them off at expires_at), and the page reports that
+        // truthfully — while an unentitled module is still not enabled.
+        assert_eq('enabled', clu_module_state($res['body'], 'forms'), 'entitled modules remain enabled during grace (Phase 9 §12)');
+        assert_eq('enabled', clu_module_state($res['body'], 'booking'));
+        assert_eq('not_included', clu_module_state($res['body'], 'membership'), 'grace never grants an unentitled module');
+        // Phase 9 owns the countdown: the grace end and remaining time render.
+        assert_true(str_contains($res['body'], 'data-license-grace-ends'), 'Phase 9: grace end date is shown');
+        assert_true((bool) preg_match('/\d+ days?( \d+ hours?)? remaining/', $res['body']), 'Phase 9: remaining grace time is shown');
     } finally {
         clu_clear();
     }
@@ -266,7 +280,7 @@ unit('Phase 8 license UI: an installation-ID-mismatched cache row exposes no lic
     clu_clear();
     try {
         clu_ensure_identity(clu_identity());
-        (new SlateLicenseCacheStore(current_tenant_id()))->save([
+        license_test_seed_cache(current_tenant_id(), [
             'status' => 'active', 'plan' => CLU_PLAN, 'entitlements' => ['forms', 'membership', 'booking'],
             'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
             'installation_id' => str_repeat('f', 32), // another installation's identity
@@ -452,7 +466,7 @@ unit('Phase 8 dashboard: untrusted state never fabricates a plan or enabled modu
     clu_clear();
     try {
         clu_ensure_identity(clu_identity());
-        (new SlateLicenseCacheStore(current_tenant_id()))->save([
+        license_test_seed_cache(current_tenant_id(), [
             'status' => 'active', 'plan' => CLU_PLAN, 'entitlements' => ['forms'],
             'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
             'installation_id' => str_repeat('f', 32),

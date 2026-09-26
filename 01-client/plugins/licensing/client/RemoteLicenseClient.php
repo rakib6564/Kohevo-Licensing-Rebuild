@@ -38,6 +38,9 @@ final class RemoteLicenseClient {
     /** @var callable(string, string): ?array{0:int,1:string} */
     private $transport;
 
+    /** Phase 10: see lastFailure(). */
+    private ?string $lastFailure = null;
+
     /**
      * @param array{server_url:string, public_key:string, product:string,
      *              license_key:string, install_id:string, domain:string,
@@ -98,8 +101,35 @@ final class RemoteLicenseClient {
         return $this->runCheckIn();
     }
 
+    /**
+     * Phase 10: the specific, stable category of the most recent failed
+     * check-in, for server-side diagnostics only (bin/license-check.php and
+     * the admin re-check log it via slate_log()). Never shown to an
+     * operator or a browser -- checkInDetailed()'s coarse split is the only
+     * user-facing distinction. Null after a successful check-in.
+     *
+     * One of: network, http_status, malformed_envelope, signature_invalid,
+     * malformed_payload, installation_mismatch, stale_response,
+     * cache_write_failed, request_encoding.
+     *
+     * A wrong product or a wrong/unknown license key cannot be told apart
+     * from each other here by design: the Central Server answers both with
+     * the same anti-enumeration HTTP error (11-LICENSING-API-CONTRACT.md
+     * §1), so both surface as http_status.
+     */
+    public function lastFailure(): ?string {
+        return $this->lastFailure;
+    }
+
+    /** @return array{ok:bool, reason:?string} */
+    private function fail(string $reason, string $category): array {
+        $this->lastFailure = $category;
+        return ['ok' => false, 'reason' => $reason];
+    }
+
     /** @return array{ok:bool, reason:?string} */
     private function runCheckIn(): array {
+        $this->lastFailure = null;
         $requestBody = json_encode([
             'product'     => $this->productSlug,
             'license_key' => $this->licenseKey,
@@ -108,27 +138,27 @@ final class RemoteLicenseClient {
             'app_version' => $this->appVersion,
             'checked_at'  => gmdate('c'),
         ], JSON_UNESCAPED_SLASHES);
-        if ($requestBody === false) return ['ok' => false, 'reason' => 'rejected'];
+        if ($requestBody === false) return $this->fail('rejected', 'request_encoding');
 
         $response = ($this->transport)($this->serverUrl . '/licensing/check', $requestBody);
-        if ($response === null) return ['ok' => false, 'reason' => 'network'];
+        if ($response === null) return $this->fail('network', 'network');
 
         [$httpStatus, $responseBody] = $response;
-        if ($httpStatus !== 200) return ['ok' => false, 'reason' => 'rejected'];
+        if ($httpStatus !== 200) return $this->fail('rejected', 'http_status');
 
-        $envelope = json_decode($responseBody, true);
+        $envelope = is_string($responseBody) ? json_decode($responseBody, true) : null;
         if (!is_array($envelope) || !isset($envelope['payload'], $envelope['signature'])
             || !is_string($envelope['payload']) || !is_string($envelope['signature'])) {
-            return ['ok' => false, 'reason' => 'rejected'];
+            return $this->fail('rejected', 'malformed_envelope');
         }
 
         if (!$this->verifier->verify($envelope['payload'], $envelope['signature'])) {
-            return ['ok' => false, 'reason' => 'rejected'];
+            return $this->fail('rejected', 'signature_invalid');
         }
 
         $status = json_decode($envelope['payload'], true);
-        if (!is_array($status) || !isset($status['status']) || !is_string($status['status'])) {
-            return ['ok' => false, 'reason' => 'rejected']; // signature was valid, but the signed content itself is malformed
+        if (!is_array($status) || !isset($status['status']) || !is_string($status['status']) || $status['status'] === '') {
+            return $this->fail('rejected', 'malformed_payload'); // signature was valid, but the signed content itself is malformed
         }
 
         // Phase 4 (docs/02-architecture/15-PHASE-1-DECISIONS.md D14,
@@ -152,25 +182,59 @@ final class RemoteLicenseClient {
         // anything, however the payload is shaped.
         $payloadInstallationId = $status['installation_id'] ?? null;
         if (!is_string($payloadInstallationId) || preg_match(self::INSTALLATION_ID_PATTERN, $payloadInstallationId) !== 1) {
-            return ['ok' => false, 'reason' => 'rejected'];
+            return $this->fail('rejected', 'installation_mismatch');
         }
         if (preg_match(self::INSTALLATION_ID_PATTERN, $this->installId) !== 1) {
-            return ['ok' => false, 'reason' => 'rejected'];
+            return $this->fail('rejected', 'installation_mismatch');
         }
         if ($payloadInstallationId !== $this->installId) {
-            return ['ok' => false, 'reason' => 'rejected'];
+            return $this->fail('rejected', 'installation_mismatch');
         }
 
-        $this->store->save([
-            'status'       => (string) $status['status'],
-            'plan'         => $status['plan'] ?? null,
-            'entitlements' => is_array($status['entitlements'] ?? null) ? $status['entitlements'] : [],
-            'expires_at'   => $status['expires_at'] ?? null,
-            'installation_id' => $payloadInstallationId,
-            'remote_checked_at' => $status['checked_at'] ?? null,
-            'next_check_after' => isset($status['next_check_after']) ? (int) $status['next_check_after'] : null,
-            'fetched_at'   => gmdate('c'),
-        ]);
+        // Phase 10: the rest of the signed shape must be what the contract
+        // (11 §2) says it is, rather than silently coerced -- a signed
+        // payload whose fields are the wrong type is malformed, and never
+        // replaces a trusted cache. checked_at is required: it is the
+        // server-issued timestamp the store orders concurrent writes by.
+        $entitlements = $status['entitlements'] ?? [];
+        if (!is_array($entitlements) || !array_is_list($entitlements)) {
+            return $this->fail('rejected', 'malformed_payload');
+        }
+        foreach ($entitlements as $key) {
+            if (!is_string($key)) return $this->fail('rejected', 'malformed_payload');
+        }
+        foreach (['plan', 'expires_at'] as $field) {
+            if (isset($status[$field]) && !is_string($status[$field])) return $this->fail('rejected', 'malformed_payload');
+        }
+        if (!isset($status['checked_at']) || !is_string($status['checked_at']) || strtotime($status['checked_at']) === false) {
+            return $this->fail('rejected', 'malformed_payload');
+        }
+        if (isset($status['next_check_after']) && !is_int($status['next_check_after'])) {
+            return $this->fail('rejected', 'malformed_payload');
+        }
+
+        // Atomic by contract (LicenseCacheStoreInterface::save()): a store
+        // failure leaves the previous trusted state untouched, and is
+        // reported here as a failed check-in rather than an exception that
+        // escapes into a cron run or an admin page.
+        try {
+            $this->store->save([
+                'status'       => $status['status'],
+                'plan'         => $status['plan'] ?? null,
+                'entitlements' => $entitlements,
+                'expires_at'   => $status['expires_at'] ?? null,
+                'installation_id' => $payloadInstallationId,
+                'remote_checked_at' => $status['checked_at'],
+                'next_check_after' => $status['next_check_after'] ?? null,
+                'fetched_at'   => gmdate('c'),
+                'raw_payload'  => $envelope['payload'],
+                'raw_signature' => $envelope['signature'],
+            ]);
+        } catch (\LicenseCacheStaleException $e) {
+            return $this->fail('rejected', 'stale_response');
+        } catch (\Throwable $e) {
+            return $this->fail('rejected', 'cache_write_failed');
+        }
         return ['ok' => true, 'reason' => null];
     }
 

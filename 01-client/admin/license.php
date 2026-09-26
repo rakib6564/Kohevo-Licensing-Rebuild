@@ -101,6 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         AuditLog::record('license.recovery_recheck', Auth::user()['email'] ?? '');
                         $success = 'License verified. This installation is now unlocked.';
                     } else {
+                        slate_log('License recovery re-check failed: ' . ($client->lastFailure() ?? 'unknown'), 'warning');
                         $error = $result['reason'] === 'network'
                             ? 'Could not reach the licensing server. Check your connection and try again.'
                             : 'This license key could not be validated. Double-check the key and try again.';
@@ -135,7 +136,10 @@ $badgeClass = static fn(string $tone): string => match ($tone) {
 $renderLicenseBody = static function () use ($license, $error, $success, $canManageLicense, $licenseDate, $badgeClass): void {
     $expiryText = '—';
     if ($license['show_details']) {
-        $expiryText = $license['expires_at'] !== null ? $licenseDate($license['expires_at']) : 'No expiry date';
+        // Phase 9: the exact UTC instant when known — expiry and grace
+        // boundaries are enforced to the second, in UTC.
+        $expiryText = $license['expires_label']
+            ?? ($license['expires_at'] !== null ? $licenseDate($license['expires_at']) : 'No expiry date');
     }
     $verifiedText = $license['last_verified_at'] !== null ? $licenseDate($license['last_verified_at']) : '—';
     ?>
@@ -171,6 +175,14 @@ $renderLicenseBody = static function () use ($license, $error, $success, $canMan
     <div class="alert alert-warning"><span>This installation is currently <strong>locked</strong>. <?= e($license['summary']) ?></span></div>
 <?php endif; ?>
 <?php if ($license['notice'] !== null): ?><div class="alert alert-info"><?= e($license['notice']) ?></div><?php endif; ?>
+<?php if ($license['banner'] !== null):
+    // Phase 9 — pre-expiry warning / commercial grace. This page is the
+    // authoritative detailed view, so the admin-chrome banner is suppressed
+    // here (admin/partials/header.php) and this one is shown instead. ?>
+    <div class="alert <?= $license['banner']['tone'] === 'danger' ? 'alert-error' : 'alert-warning' ?>" role="status" data-license-banner="<?= e($license['banner']['phase']) ?>">
+        <span><strong><?= e($license['banner']['title']) ?>.</strong> <?= e($license['banner']['message']) ?></span>
+    </div>
+<?php endif; ?>
 
 <div class="lic-grid">
     <section class="card" aria-labelledby="lic-status-h">
@@ -182,8 +194,16 @@ $renderLicenseBody = static function () use ($license, $error, $success, $canMan
         <dl class="lic-facts">
             <dt>Plan</dt>
             <dd data-license-plan><?= e($license['plan'] ?? '—') ?></dd>
-            <dt>Expires</dt>
+            <dt><?= $license['state'] === 'grace' || $license['state'] === 'expired' ? 'Expired' : 'Expires' ?></dt>
             <dd data-license-expiry><?= e($expiryText) ?></dd>
+            <?php if ($license['grace_ends_label'] !== null): ?>
+            <dt><?= $license['locked'] ? 'Grace period ended' : 'Grace period ends' ?></dt>
+            <dd data-license-grace-ends><?= e($license['grace_ends_label']) ?></dd>
+            <?php endif; ?>
+            <?php if ($license['time_remaining'] !== null): ?>
+            <dt><?= $license['state'] === 'grace' ? 'Grace remaining' : 'Time remaining' ?></dt>
+            <dd data-license-remaining><?= e($license['time_remaining']) ?></dd>
+            <?php endif; ?>
             <dt>Last verified</dt>
             <dd><?= e($verifiedText) ?></dd>
         </dl>

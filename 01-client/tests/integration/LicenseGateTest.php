@@ -13,10 +13,12 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/support/license_signing.php';
+
 use Slate\Services\Licensing\SlateLicenseCacheStore;
 
 function lgate_probe(string $page, string $query = ''): array {
-    $cmd = escapeshellarg(PHP_BINARY) . ' '
+    $cmd = license_test_env_prefix() . escapeshellarg(PHP_BINARY) . ' '
          . escapeshellarg(dirname(__DIR__) . '/fixtures/public-page-probe.php') . ' '
          . escapeshellarg($page) . ' ' . escapeshellarg($query) . ' 2>/dev/null';
     $out = (string) shell_exec($cmd);
@@ -55,7 +57,7 @@ function lgate_ensure_local_identity(?string $installationId = null): void {
 
 function lgate_seed(string $status, string $fetchedAt): void {
     lgate_ensure_local_identity();
-    (new SlateLicenseCacheStore(current_tenant_id()))->save([
+    license_test_seed_cache(current_tenant_id(), [
         'status' => $status, 'plan' => 'pro', 'entitlements' => ['white_label'],
         'expires_at' => null, 'fetched_at' => $fetchedAt,
         'installation_id' => lgate_local_identity(),
@@ -160,7 +162,7 @@ unit('license gate / read-time verification (Phase 4, D14): a cached installatio
         // a DIFFERENT, legitimately-licensed installation's cache would look
         // like once written here -- genuinely well-formed, just for the
         // wrong installation.
-        (new SlateLicenseCacheStore(current_tenant_id()))->save([
+        license_test_seed_cache(current_tenant_id(), [
             'status' => 'active', 'plan' => 'pro', 'entitlements' => ['white_label'],
             'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
             'installation_id' => str_repeat('b', 32),
@@ -178,7 +180,7 @@ unit('license gate / read-time verification (Phase 4, D14): a cached installatio
     lgate_clear();
     lgate_ensure_local_identity(str_repeat('a', 32));
     try {
-        (new SlateLicenseCacheStore(current_tenant_id()))->save([
+        license_test_seed_cache(current_tenant_id(), [
             'status' => 'active', 'plan' => 'pro', 'entitlements' => ['white_label'],
             'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
             'installation_id' => str_repeat('a', 32),
@@ -200,7 +202,7 @@ unit('license gate / QA Fix Round 1 (Fix 1): a cache row exists but is untrusted
     lgate_clear();
     lgate_ensure_local_identity(str_repeat('a', 32));
     try {
-        (new SlateLicenseCacheStore(current_tenant_id()))->save([
+        license_test_seed_cache(current_tenant_id(), [
             'status' => 'active', 'plan' => 'pro', 'entitlements' => ['white_label'],
             'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
             'installation_id' => str_repeat('b', 32),
@@ -217,11 +219,15 @@ unit('license gate / QA Fix Round 1 (Fix 4): a NULL cached installation_id is un
     lgate_clear();
     lgate_ensure_local_identity();
     try {
-        // save() with no installation_id key at all -- persisted as NULL.
-        (new SlateLicenseCacheStore(current_tenant_id()))->save([
+        // Phase 10: save() only ever persists a verified, installation-bound
+        // payload, so a NULL column can only come from a direct edit of an
+        // otherwise valid row -- which is exactly what is simulated here.
+        license_test_seed_cache(current_tenant_id(), [
             'status' => 'active', 'plan' => 'pro', 'entitlements' => ['white_label'],
             'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
+            'installation_id' => \Slate\Services\Installation\InstallationService::currentInstallationId(),
         ]);
+        Database::update('remote_license_cache', ['installation_id' => null], 'tenant_id = ?', [current_tenant_id()]);
         $stored = Database::row('SELECT installation_id FROM remote_license_cache WHERE tenant_id = ?', [current_tenant_id()]);
         assert_null($stored['installation_id'], 'sanity check: the row was actually persisted with a NULL installation_id');
 
@@ -240,9 +246,10 @@ unit('license gate / QA Fix Round 1 (Fix 4): an EMPTY STRING cached installation
         // coerce '' to NULL) to prove readTrustState() independently
         // rejects a raw '' value found directly in the row, not merely one
         // that happens to reach it through save().
-        (new SlateLicenseCacheStore(current_tenant_id()))->save([
+        license_test_seed_cache(current_tenant_id(), [
             'status' => 'active', 'plan' => 'pro', 'entitlements' => ['white_label'],
             'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
+            'installation_id' => \Slate\Services\Installation\InstallationService::currentInstallationId(),
         ]);
         Database::update('remote_license_cache', ['installation_id' => ''], 'tenant_id = ?', [current_tenant_id()]);
         $stored = Database::row('SELECT installation_id FROM remote_license_cache WHERE tenant_id = ?', [current_tenant_id()]);
@@ -283,10 +290,19 @@ unit('license gate / QA Fix Round 1 (Fix 2E): a MALFORMED local installation_ide
             'singleton_id' => 1, 'tenant_id' => current_tenant_id(), 'installation_id' => str_repeat('z', 32),
         ]);
 
-        (new SlateLicenseCacheStore(current_tenant_id()))->save([
+        // A signed payload can never carry a malformed id (save() refuses
+        // it), so the matching-looking row is written directly.
+        $payload = license_test_payload([
             'status' => 'active', 'plan' => 'pro', 'entitlements' => ['white_label'],
             'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
             'installation_id' => str_repeat('z', 32), // identical string to the corrupted local row
+        ]);
+        Database::insert('remote_license_cache', [
+            'tenant_id' => current_tenant_id(), 'status' => 'active', 'plan' => 'pro',
+            'entitlements' => json_encode(['white_label']), 'expires_at' => null,
+            'installation_id' => str_repeat('z', 32), 'fetched_at' => gmdate('Y-m-d H:i:s'),
+            'remote_checked_at' => gmdate('Y-m-d H:i:s'), 'next_check_after' => 86400,
+            'raw_payload' => $payload, 'raw_signature' => license_test_sign($payload),
         ]);
 
         $res = lgate_probe('index.php');

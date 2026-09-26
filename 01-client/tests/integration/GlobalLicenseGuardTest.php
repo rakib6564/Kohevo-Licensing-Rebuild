@@ -16,10 +16,12 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/support/license_signing.php';
+
 use Slate\Services\Licensing\SlateLicenseCacheStore;
 
 function glg_shell(string $fixture, array $args): array {
-    $cmd = 'SLATE_LICENSE_GUARD_LIVE=1 ' . escapeshellarg(PHP_BINARY) . ' '
+    $cmd = 'SLATE_LICENSE_GUARD_LIVE=1 ' . license_test_env_prefix() . escapeshellarg(PHP_BINARY) . ' '
          . escapeshellarg(dirname(__DIR__) . '/fixtures/' . $fixture);
     foreach ($args as $arg) {
         $cmd .= ' ' . escapeshellarg((string) $arg);
@@ -71,7 +73,7 @@ function glg_ensure_local_identity(?string $installationId = null): void {
 
 function glg_seed(string $status, string $fetchedAt, ?string $expiresAt = null): void {
     glg_ensure_local_identity();
-    (new SlateLicenseCacheStore(current_tenant_id()))->save([
+    license_test_seed_cache(current_tenant_id(), [
         'status' => $status, 'plan' => 'pro', 'entitlements' => ['white_label'],
         'expires_at' => $expiresAt, 'fetched_at' => $fetchedAt,
         'installation_id' => glg_local_identity(),
@@ -110,7 +112,7 @@ unit('global guard: an untrusted cache row (installation_id mismatch — tamperi
     glg_clear();
     glg_ensure_local_identity(str_repeat('a', 32));
     try {
-        (new SlateLicenseCacheStore(current_tenant_id()))->save([
+        license_test_seed_cache(current_tenant_id(), [
             'status' => 'active', 'plan' => 'pro', 'entitlements' => ['white_label'],
             'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
             'installation_id' => str_repeat('b', 32), // a DIFFERENT installation's identity

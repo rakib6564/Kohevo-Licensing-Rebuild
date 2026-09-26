@@ -390,6 +390,13 @@ if (Auth::isPlatformSuperAdmin()):
         : ($licenseView['expires_at'] !== null
             ? I18n::localDate('M j, Y', strtotime($licenseView['expires_at']))
             : __('no_expiry', 'No expiry'));
+    // Phase 9 — the commercial timeline in one line under the expiry card;
+    // the full warning is the admin-chrome banner and the License page.
+    $licenseExpiryCaption = match ($licenseView['state']) {
+        'expiring_soon' => $licenseView['time_remaining'] !== null ? 'Expires in ' . $licenseView['time_remaining'] : '',
+        'grace'         => $licenseView['grace_ends_label'] !== null ? 'Grace period ends ' . $licenseView['grace_ends_label'] : '',
+        default         => '',
+    };
     ?>
     <div class="page-header" style="margin-top:24px;">
         <div>
@@ -404,7 +411,8 @@ if (Auth::isPlatformSuperAdmin()):
         <?php slate_stat_card(['icon' => 'shield', 'number' => $licenseView['label'], 'label' => __('license_status', 'License Status'),
             'tone' => $licenseView['tone'] === 'success' ? 'success' : '']); ?>
         <?php slate_stat_card(['icon' => 'tag', 'number' => $licenseView['plan'] ?? '—', 'label' => __('plan', 'Plan')]); ?>
-        <?php slate_stat_card(['icon' => 'clock', 'number' => $licenseExpiryText, 'label' => __('license_expiry', 'License Expiry')]); ?>
+        <?php slate_stat_card(['icon' => 'clock', 'number' => $licenseExpiryText, 'label' => __('license_expiry', 'License Expiry'),
+            'caption' => $licenseExpiryCaption]); ?>
         <?php slate_stat_card(['icon' => 'box', 'number' => count($licenseModulesOn) . ' / ' . count($licenseView['modules']),
             'label' => __('enabled_modules', 'Enabled modules'), 'caption' => $licenseModulesCaption]); ?>
     </div>

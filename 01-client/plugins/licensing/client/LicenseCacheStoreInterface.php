@@ -5,7 +5,7 @@
  * directly; it only ever calls load()/save() on whatever implements
  * this. Each product wires its own adapter against its own storage
  * however fits (Kohevo's is Slate\Services\Licensing\SlateLicenseCacheStore,
- * a ~30-line class over a single DB table) — the HTTP + signature-
+ * a small class over a single DB table) — the HTTP + signature-
  * verification logic in RemoteLicenseClient never changes across products.
  */
 
@@ -28,9 +28,27 @@ interface LicenseCacheStoreInterface {
 
     /**
      * Persist a newly verified status. Only ever called after a response
-     * has been signature-verified — a store implementation never needs to
-     * (and never should) second-guess whether the data it's given is
-     * trustworthy.
+     * has been signature-verified and bound to this installation.
+     *
+     * Phase 10: $status also carries `raw_payload` (the exact signed JSON
+     * string) and `raw_signature` (its base64 Ed25519 signature) so an
+     * implementation can retain them and re-verify at read time
+     * (docs/02-architecture/10-CLIENT-LICENSING-DATABASE-DESIGN.md §3–§4).
+     *
+     * A save must be all-or-nothing: on any failure it throws and leaves
+     * the previously stored state exactly as it was. An implementation
+     * that already holds a state signed LATER than this one (by the
+     * payload's own server-issued `checked_at`) throws
+     * LicenseCacheStaleException instead of overwriting newer state with
+     * older state.
      */
     public function save(array $status): void;
 }
+
+/**
+ * Thrown by LicenseCacheStoreInterface::save() when the store already holds
+ * a verified state the Central Server issued later than the one offered —
+ * e.g. two overlapping check-ins (cron + an admin re-check) completing out
+ * of order. The newer state is kept; the older one is discarded.
+ */
+final class LicenseCacheStaleException extends \RuntimeException {}
