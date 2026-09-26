@@ -120,7 +120,7 @@ server {
 The central licensing server performs lazy status checks during check-in. Optional daily background sweeps can also be scheduled via cron or `cron.php`:
 
 ```cron
-0 3 * * * /usr/bin/php /var/www/kohevo-licensing/cron.php?secret=YOUR_CRON_SECRET >> /var/www/kohevo-licensing/data/cron-sweep.log 2>&1
+0 3 * * * curl -fsS -H 'X-Cron-Key: YOUR_CRON_SECRET' 'https://licensing.example.com/cron.php' >> /var/www/kohevo-licensing/data/cron-sweep.log 2>&1
 ```
 
 ---

@@ -45,3 +45,6 @@ Thumbs.db
 tmp/
 temp/
 .phpunit.result.cache
+
+# Built deployment packages (rebuild from the tree; never version them)
+production-artifacts/*.zip

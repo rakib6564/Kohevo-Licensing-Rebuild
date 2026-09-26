@@ -14,7 +14,9 @@ RedirectMatch 403 ^/(data|db_backups|includes|src|bin|db|tests|audit|docs|Claude
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Block hidden files/folders
+    # Block hidden files/folders, except /.well-known/ (ACME / Let's Encrypt
+    # HTTP-01 certificate renewal)
+    RewriteCond %{REQUEST_URI} !/\.well-known/
     RewriteRule "(^|/)\." - [F]
 
     # Serve existing files and directories directly
@@ -24,6 +26,12 @@ RedirectMatch 403 ^/(data|db_backups|includes|src|bin|db|tests|audit|docs|Claude
 
     # Legacy shop storefront routing
     RewriteRule ^shop(/.*)?$ plugins/shop/storefront/router.php [QSA,L]
+
+    # Headless API: /api/v1/... -> api/v1.php, as in the original rules. Routed
+    # through public.php instead, a locked install answers API callers with the
+    # HTML lock page rather than the JSON LICENSE_INACTIVE error.
+    RewriteRule ^api/v1/?$ api/v1.php?_route_path= [QSA,L]
+    RewriteRule ^api/v1/(.+)$ api/v1.php?_route_path=$1 [QSA,L]
 
     # Route all other non-file requests to public.php router
     RewriteRule ^(.*)$ public.php?_path=$1 [QSA,L]
