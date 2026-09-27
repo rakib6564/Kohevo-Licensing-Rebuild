@@ -122,10 +122,15 @@ function bcbg_rows(int $serviceId): int
     );
 }
 
-/** A start time safely in the future — the gate sits behind a past-time check. */
+/**
+ * A start time safely in the future — the gate sits behind a past-time check.
+ * Pinned to 10:00 rather than "now + 3 days": keeping the current time of day
+ * put a 30-minute slot past the 23:59 closing whenever the suite ran after
+ * 23:29, so the hours check refused it and the success cases failed.
+ */
 function bcbg_future(): string
 {
-    return date('Y-m-d H:i', strtotime(slate_db_now() . ' +3 days'));
+    return date('Y-m-d', strtotime(slate_db_now() . ' +3 days')) . ' 10:00';
 }
 
 /** The args every case shares; $source is what varies. */
