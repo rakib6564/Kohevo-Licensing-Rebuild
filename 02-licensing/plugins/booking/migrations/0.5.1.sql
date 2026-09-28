@@ -1,0 +1,3 @@
+-- Booking 0.5.1 — payment column additions only (see Booking.php 0.5.1
+-- block). Group price tiers are stored as JSON on booking_services
+-- (price_tiers_json), so no table is needed here.

@@ -1,0 +1,1485 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Coaching — customer portal design system
+   ───────────────────────────────────────────────────────────────────────
+   Namespace: .ck-*  (coaching kit). Deliberately a fresh prefix, replacing
+   the old .app-* system, so any stale markup left behind renders unstyled
+   — visibly broken beats silently half-styled.
+
+   COLOUR CONTRACT
+   Every accent tone is derived from var(--accent), which Slate emits from
+   the tenant's brand_accent_color setting (includes/ui_components.php →
+   slate_brand_accent_emit). Change the colour in Admin → Settings and the
+   whole portal — hero gradient, rings, chips, FAB, focus rings — shifts
+   with it. No brand hex is hardcoded anywhere below.
+
+   THE ONE EXCEPTION: status semantics (--ck-miss / --ck-part / --ck-done)
+   stay fixed red/amber/green. "Red means you missed it" is meaning, not
+   branding; deriving it from --accent would make a cyan tenant's "missed"
+   look identical to their "done". Semantic colour is not brand colour.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+    /* ── Brand ladder, all derived ─────────────────────────────────── */
+    --ck-brand:       var(--accent, #0EA5E9);
+    --ck-on-brand:    var(--on-accent, #FFFFFF);
+
+    --ck-brand-lift:  color-mix(in srgb, var(--ck-brand) 74%, #FFFFFF);
+    --ck-brand-soft:  color-mix(in srgb, var(--ck-brand) 88%, #FFFFFF);
+    --ck-brand-ink:   color-mix(in srgb, var(--ck-brand) 68%, #06111A);
+    --ck-brand-deep:  color-mix(in srgb, var(--ck-brand) 46%, #071620);
+
+    /* Gradient far-stop — NOT --ck-brand-ink/-deep.
+       Those two mix 32%/54% toward near-black so they can serve as TEXT on a
+       white tile. Used as the far end of a filled gradient they break the
+       surface instead: --on-accent is chosen by the shell against the
+       *undarkened* brand, so on a light brand it resolves to dark ink and then
+       has to sit on a stop that has gone dark. This tenant is the proof —
+       #F89DC1 deepens to ~#74495A and dark-on-dark lands at ~1.9:1.
+       12% is a tonal shift, not a polarity flip: a light brand stays light and
+       a dark brand stays dark, so whichever ink --on-accent picked stays legible
+       across the whole ramp. */
+    --ck-brand-far:   color-mix(in srgb, var(--ck-brand) 88%, #000000);
+
+    /* Tints for washes, hovers, active chips */
+    --ck-tint-03:     color-mix(in srgb, var(--ck-brand)  3%, transparent);
+    --ck-tint-06:     color-mix(in srgb, var(--ck-brand)  6%, transparent);
+    --ck-tint-10:     color-mix(in srgb, var(--ck-brand) 10%, transparent);
+    --ck-tint-16:     color-mix(in srgb, var(--ck-brand) 16%, transparent);
+    --ck-tint-28:     color-mix(in srgb, var(--ck-brand) 28%, transparent);
+    --ck-focus:       color-mix(in srgb, var(--ck-brand) 45%, transparent);
+
+    /* Ring ladder — same hue, three lightness steps. Differentiated by
+       label + glyph rather than hue, so it stays 100% brand-driven. */
+    --ck-ring-1:      var(--ck-brand);
+    --ck-ring-2:      var(--ck-brand-ink);
+    --ck-ring-3:      var(--ck-brand-lift);
+
+    /* ── Fixed semantics (see note above) ──────────────────────────── */
+    --ck-miss:        #E5484D;
+    --ck-part:        #F5A524;
+    --ck-done:        #17A673;
+    --ck-miss-soft:   color-mix(in srgb, #E5484D 12%, transparent);
+    --ck-part-soft:   color-mix(in srgb, #F5A524 14%, transparent);
+    --ck-done-soft:   color-mix(in srgb, #17A673 12%, transparent);
+
+    /* ── Neutrals ──────────────────────────────────────────────────── */
+    --ck-ink:         #0D1520;
+    --ck-body:        #334155;
+    --ck-muted:       #64748B;
+    --ck-faint:       #94A3B8;
+    --ck-line:        rgba(13, 21, 32, 0.07);
+    --ck-line-2:      rgba(13, 21, 32, 0.12);
+    --ck-surface:     #FFFFFF;
+    --ck-surface-2:   #F7F9FB;
+    --ck-surface-3:   rgba(100, 116, 139, 0.07);
+
+    /* ── Form ──────────────────────────────────────────────────────── */
+    --ck-r-lg:        24px;
+    --ck-r:           16px;
+    --ck-r-sm:        11px;
+    --ck-pad:         22px;
+
+    --ck-shadow:      0 1px 2px rgba(13,21,32,0.04),
+                      0 6px 16px rgba(13,21,32,0.04),
+                      0 20px 40px -24px rgba(13,21,32,0.14);
+    --ck-shadow-lift: 0 2px 4px rgba(13,21,32,0.05),
+                      0 12px 28px rgba(13,21,32,0.07),
+                      0 32px 64px -28px rgba(13,21,32,0.20);
+    --ck-shadow-brand: 0 8px 24px -6px color-mix(in srgb, var(--ck-brand) 45%, transparent);
+
+    --ck-nav-h:       68px;
+}
+
+/* ═══ Page canvas ═══════════════════════════════════════════════════ */
+
+body.ck-body {
+    margin: 0;
+    background:
+        radial-gradient(900px 420px at 88% -8%,  var(--ck-tint-10), transparent 68%),
+        radial-gradient(760px 380px at -6% 4%,   var(--ck-tint-06), transparent 64%),
+        linear-gradient(180deg, #FBFCFD 0%, #F2F5F8 100%);
+    background-attachment: fixed;
+    color: var(--ck-ink);
+    font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                 Roboto, "Helvetica Neue", Arial, sans-serif);
+    font-size: 15px;
+    line-height: 1.55;
+    min-height: 100vh;
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
+}
+
+.ck-body * { box-sizing: border-box; }
+
+.ck-wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 20px 20px calc(var(--ck-nav-h) + 44px + env(safe-area-inset-bottom));
+}
+
+/* Universal focus treatment — every interactive element, no exceptions. */
+.ck-body :focus-visible {
+    outline: 2px solid var(--ck-brand);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+/* ═══ Topbar ════════════════════════════════════════════════════════ */
+
+.ck-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 20px;
+    background: rgba(251, 252, 253, 0.82);
+    backdrop-filter: saturate(180%) blur(14px);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
+    border-bottom: 1px solid var(--ck-line);
+}
+
+.ck-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    flex-shrink: 0;
+}
+
+/* The tenant logo. Sized, never stretched. Falls back to a brand-tinted
+   initial mark when brand_logo_path is unset. */
+.ck-brand-logo {
+    display: block;
+    height: 34px;
+    width: auto;
+    max-width: 150px;
+    object-fit: contain;
+}
+
+.ck-brand-mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(140deg, var(--ck-brand), var(--ck-brand-far));
+    color: var(--ck-on-brand);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    box-shadow: var(--ck-shadow-brand);
+}
+
+.ck-brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+.ck-brand-name { font-size: 14px; font-weight: 700; letter-spacing: -0.015em; }
+.ck-brand-sub  {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ck-faint);
+}
+
+/* Page context sits centre-left, separated by a hairline rule. */
+.ck-topbar-page {
+    flex: 1;
+    min-width: 0;
+    padding-left: 14px;
+    border-left: 1px solid var(--ck-line-2);
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+.ck-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ck-brand-ink);
+}
+.ck-topbar-title {
+    font-size: 15px;
+    font-weight: 650;
+    letter-spacing: -0.015em;
+    color: var(--ck-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ck-topbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.ck-signout {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ck-muted);
+    text-decoration: none;
+    padding: 7px 12px;
+    border-radius: 999px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.ck-signout:hover { background: var(--ck-surface-3); color: var(--ck-ink); }
+
+.ck-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--ck-tint-16);
+    color: var(--ck-brand-ink);
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    border: 1px solid var(--ck-tint-28);
+    transition: transform 0.15s ease;
+}
+.ck-avatar:hover { transform: scale(1.06); }
+
+/* ═══ Bento grid ════════════════════════════════════════════════════ */
+
+.ck-bento {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+    /* stretch, not start. With `start` every tile is only as tall as its own
+       content, so a row containing one tall tile (Mood, with ten emotion
+       chips) left its neighbours floating with dead space beneath them — the
+       ragged look. Stretching aligns each row top AND bottom, which is what
+       makes a bento read as a grid rather than as columns of loose cards.
+       .ck-tile is already flex-column, so content stays top-aligned inside. */
+    align-items: stretch;
+}
+
+.ck-s3  { grid-column: span 3;  }
+.ck-s4  { grid-column: span 4;  }
+.ck-s5  { grid-column: span 5;  }
+.ck-s6  { grid-column: span 6;  }
+.ck-s7  { grid-column: span 7;  }
+.ck-s8  { grid-column: span 8;  }
+.ck-s12 { grid-column: span 12; }
+
+/* An explicit equal-thirds tile, for a row of three that must STAY three.
+   Not .ck-s4: that one collapses to a half at tablet, which is right for the
+   goals view (a s4 scorecard beside a s8 column) but strands the third tile of
+   a trio on its own row. This tracks 3-up → 3-up → 1-up instead. */
+.ck-trio { grid-column: span 4; }
+
+/* ═══ Tile ══════════════════════════════════════════════════════════ */
+
+.ck-tile {
+    background: var(--ck-surface);
+    border-radius: var(--ck-r-lg);
+    padding: var(--ck-pad);
+    box-shadow: var(--ck-shadow);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.18s ease;
+}
+
+/* Lift only where it signals affordance — tiles that are themselves links,
+   or explicitly opted in. A static tile that lifts is a lie. */
+.ck-tile--tap:hover,
+a.ck-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--ck-shadow-lift);
+}
+
+.ck-tile-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.ck-tile-head > div:first-child { min-width: 0; }
+
+.ck-tile-title {
+    margin: 2px 0 0;
+    font-size: 16px;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    color: var(--ck-ink);
+}
+.ck-tile-sub {
+    margin: 6px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ck-muted);
+}
+
+/* Right-side action on a tile head */
+.ck-tile-action {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 650;
+    color: var(--ck-brand-ink);
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: var(--ck-tint-10);
+    transition: background 0.15s ease;
+    white-space: nowrap;
+}
+.ck-tile-action:hover { background: var(--ck-tint-16); }
+
+.ck-count {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ck-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ═══ Hero tile ═════════════════════════════════════════════════════ */
+
+/* Rebuilt from a solid, fully-saturated brand-color fill to a soft tinted
+   gradient with a dot-grid texture and accent glows — the same treatment
+   admin/index.php's own .dash-hero uses, just keyed to this plugin's own
+   --ck-brand instead of the admin theme's --accent, so the client portal
+   keeps its own gold identity rather than borrowing the admin's blue. A
+   fully solid hero read as a flat block of color; this reads as a card with
+   light falling across it, like every other soft-elevated tile on this page. */
+.ck-hero {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--ck-brand) 16%, transparent);
+    color: var(--ck-ink);
+    background:
+        radial-gradient(120% 160% at 96% -25%, var(--ck-tint-28), transparent 55%),
+        radial-gradient(90% 140% at -8% 120%, var(--ck-tint-16), transparent 50%),
+        linear-gradient(135deg, var(--ck-tint-10), var(--ck-tint-03) 55%, var(--ck-surface) 100%);
+    box-shadow: var(--ck-shadow);
+    padding: 26px var(--ck-pad);
+}
+/* Fine dot-grid texture, fading out toward the greeting text — mirrors
+   admin/index.php's .dash-hero::before treatment. */
+.ck-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: .55;
+    background-image: radial-gradient(var(--ck-tint-28) 1px, transparent 1.5px);
+    background-size: 20px 20px;
+    -webkit-mask-image: linear-gradient(120deg, transparent 40%, #000);
+            mask-image: linear-gradient(120deg, transparent 40%, #000);
+}
+.ck-hero > * { position: relative; }
+
+.ck-hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ck-muted);
+}
+.ck-hero-eyebrow::before {
+    content: "";
+    width: 16px;
+    height: 1px;
+    background: var(--ck-brand);
+    opacity: .7;
+}
+.ck-hero-name {
+    margin: 6px 0 0;
+    font-size: clamp(26px, 4.4vw, 34px);
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.08;
+    background: linear-gradient(100deg, var(--ck-brand-ink), var(--ck-brand-far));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.ck-hero-sub {
+    margin: 10px 0 0;
+    font-size: 14px;
+    line-height: 1.55;
+    max-width: 46ch;
+    color: var(--ck-muted);
+}
+
+.ck-hero-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+}
+.ck-hero-stat {
+    flex: 1 1 110px;
+    padding: 12px 14px;
+    border-radius: var(--ck-r);
+    /* Little cards riding on the now-light hero background, the same way
+       admin's .dash-stat cards sit on its own soft-gradient hero — a
+       plain surface + hairline reads as "elevated" against the soft tint
+       gradient behind it, where the old on-brand wash needed the hero itself
+       to be fully saturated to stay visible. */
+    background: var(--ck-surface);
+    border: 1px solid var(--ck-line);
+    box-shadow: var(--ck-shadow);
+}
+.ck-hero-stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+    color: var(--ck-ink);
+}
+.ck-hero-stat-value small { font-size: 13px; font-weight: 600; color: var(--ck-muted); }
+.ck-hero-stat-label {
+    margin-top: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ck-muted);
+}
+
+/* ═══ Progress rings ════════════════════════════════════════════════ */
+
+.ck-rings {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    text-align: center;
+}
+
+.ck-ring { position: relative; display: inline-grid; place-items: center; }
+.ck-ring svg { display: block; transform: rotate(-90deg); }
+.ck-ring-track { fill: none; stroke: var(--ck-surface-3); stroke-width: 9; }
+.ck-ring-fill {
+    fill: none;
+    stroke-width: 9;
+    stroke-linecap: round;
+    animation: ck-ring-in 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+/* --ck-circ is set inline per ring; the keyframe resolves it per element,
+   so every ring sweeps from empty to its own target. */
+@keyframes ck-ring-in { from { stroke-dashoffset: var(--ck-circ); } }
+
+.ck-ring-mid {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.1;
+}
+.ck-ring-glyph { font-size: 14px; }
+.ck-ring-val {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--ck-ink);
+    font-variant-numeric: tabular-nums;
+}
+.ck-ring-label {
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ck-muted);
+}
+
+/* ═══ Hydration ═════════════════════════════════════════════════════ */
+
+.ck-hydro-value {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    color: var(--ck-brand-ink);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+.ck-hydro-value small {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ck-faint);
+    letter-spacing: 0;
+}
+
+.ck-glasses {
+    display: flex;
+    gap: 5px;
+    margin: 16px 0;
+    flex-wrap: wrap;
+}
+.ck-glass {
+    flex: 1 1 0;
+    min-width: 14px;
+    height: 34px;
+    border-radius: 5px 5px 7px 7px;
+    background: var(--ck-surface-3);
+    border: 1.5px solid var(--ck-line);
+    transition: background 0.25s ease, border-color 0.25s ease;
+}
+.ck-glass.is-full {
+    background: linear-gradient(180deg, var(--ck-brand-lift), var(--ck-brand));
+    border-color: transparent;
+}
+
+.ck-hydro-controls { display: flex; gap: 8px; margin: 0; margin-top: auto; }
+.ck-step {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1.5px solid var(--ck-line-2);
+    background: var(--ck-surface);
+    color: var(--ck-ink);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.ck-step:hover  { background: var(--ck-surface-2); }
+.ck-step:active { transform: scale(0.93); }
+.ck-step--go {
+    background: linear-gradient(140deg, var(--ck-brand), var(--ck-brand-far));
+    color: var(--ck-on-brand);
+    border-color: transparent;
+    /* NOT --ck-shadow-brand: that glow is scaled for the 56px FAB and on a
+       46px control reads as a halo twice the button's size, which made the
+       +/- pair look mismatched. Tighter and proportionate here. */
+    box-shadow: 0 3px 10px -3px color-mix(in srgb, var(--ck-brand) 55%, transparent);
+}
+/* .ck-step:hover above (".ck-step" + ":hover" = two selectors) has the same
+   specificity as a bare ".ck-step--go" rule and, being a compound of two
+   classes, actually outranks it -- so on hover the "+" button's gold
+   gradient was losing to the "-" button's plain grey hover fill. Needs its
+   own :hover at the same specificity, declared after, to win the tie. */
+.ck-step--go:hover {
+    background: linear-gradient(140deg, var(--ck-brand), var(--ck-brand-far));
+}
+
+/* ═══ Meal rows ═════════════════════════════════════════════════════ */
+
+.ck-meals { display: flex; flex-direction: column; gap: 8px; }
+
+.ck-meal {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: var(--ck-r);
+    background: var(--ck-surface-2);
+    border: 1px solid transparent;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+.ck-meal:hover  { background: var(--ck-tint-06); border-color: var(--ck-tint-16); }
+.ck-meal:active { transform: scale(0.99); }
+.ck-meal--empty { background: transparent; border: 1.5px dashed var(--ck-line-2); }
+
+.ck-meal-icon { font-size: 22px; line-height: 1; flex-shrink: 0; }
+.ck-meal--empty .ck-meal-icon { opacity: 0.45; }
+.ck-meal-body { flex: 1; min-width: 0; }
+.ck-meal-title {
+    font-size: 14px;
+    font-weight: 650;
+    text-transform: capitalize;
+    color: var(--ck-ink);
+}
+.ck-meal--empty .ck-meal-title { color: var(--ck-muted); }
+.ck-meal-sub {
+    font-size: 12.5px;
+    color: var(--ck-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ck-meal--empty .ck-meal-sub { color: var(--ck-faint); }
+
+.ck-meal-status {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    font-weight: 700;
+    background: var(--ck-done-soft);
+    color: var(--ck-done);
+}
+.ck-meal--empty .ck-meal-status {
+    background: var(--ck-surface-3);
+    color: var(--ck-faint);
+}
+
+/* ═══ Chip picker ═══════════════════════════════════════════════════ */
+
+.ck-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+
+.ck-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 15px;
+    border-radius: 999px;
+    border: 1.5px solid var(--ck-line-2);
+    background: var(--ck-surface);
+    color: var(--ck-body);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease,
+                color 0.15s ease, transform 0.12s ease;
+}
+.ck-chip:hover  { border-color: var(--ck-tint-28); background: var(--ck-tint-06); }
+.ck-chip:active { transform: scale(0.96); }
+.ck-chip[aria-pressed="true"],
+.ck-chip.is-on {
+    background: linear-gradient(140deg, var(--ck-brand), var(--ck-brand-far));
+    border-color: transparent;
+    color: var(--ck-on-brand);
+    box-shadow: var(--ck-shadow-brand);
+}
+.ck-chip-glyph { font-size: 15px; line-height: 1; }
+
+/* Link-flavoured chips (range switchers) + tag pills */
+.ck-chip--link { text-decoration: none; }
+.ck-tag {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--ck-surface-3);
+    color: var(--ck-muted);
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+}
+
+/* ═══ Emoji picker ══════════════════════════════════════════════════ */
+
+.ck-emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
+    gap: 7px;
+}
+.ck-emoji {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 3px;
+    border-radius: 14px;
+    border: 2px solid transparent;
+    background: var(--ck-surface-2);
+    color: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+.ck-emoji:hover  { background: var(--ck-tint-06); transform: translateY(-1px); }
+.ck-emoji:active { transform: scale(0.94); }
+.ck-emoji[aria-pressed="true"],
+.ck-emoji.is-on {
+    background: var(--ck-tint-16);
+    border-color: var(--ck-brand);
+}
+.ck-emoji-glyph { font-size: 22px; line-height: 1; }
+.ck-emoji-label {
+    font-size: 9px;
+    font-weight: 650;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--ck-muted);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ck-emoji[aria-pressed="true"] .ck-emoji-label,
+.ck-emoji.is-on .ck-emoji-label { color: var(--ck-brand-ink); }
+
+/* ═══ Dot rating (1–5) ══════════════════════════════════════════════ */
+
+.ck-dots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.ck-dot {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 2px solid var(--ck-line-2);
+    background: var(--ck-surface);
+    color: var(--ck-muted);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease,
+                color 0.15s ease, transform 0.12s ease;
+}
+.ck-dot:hover  { border-color: var(--ck-tint-28); }
+.ck-dot:active { transform: scale(0.92); }
+.ck-dot[aria-pressed="true"],
+.ck-dot.is-on {
+    background: linear-gradient(140deg, var(--ck-brand), var(--ck-brand-far));
+    border-color: transparent;
+    color: var(--ck-on-brand);
+}
+
+.ck-scale-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.ck-scale-label span:last-child {
+    color: var(--ck-faint);
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+}
+
+/* ═══ Goal check-in (4 status) ══════════════════════════════════════ */
+
+.ck-goal { padding: 14px 0; border-bottom: 1px solid var(--ck-line); }
+.ck-goal:first-of-type { padding-top: 0; }
+.ck-goal:last-child { border-bottom: 0; padding-bottom: 0; }
+
+.ck-goal-title {
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--ck-ink);
+    margin-bottom: 4px;
+}
+.ck-goal-desc { font-size: 12.5px; color: var(--ck-muted); margin-bottom: 10px; }
+
+.ck-goal-btns { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.ck-gbtn {
+    flex: 1 1 auto;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1.5px solid var(--ck-line-2);
+    background: var(--ck-surface);
+    color: var(--ck-muted);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease, border-color 0.15s ease,
+                color 0.15s ease, transform 0.12s ease;
+}
+.ck-gbtn:active { transform: scale(0.97); }
+.ck-gbtn--miss.is-on   { background: var(--ck-miss-soft); border-color: var(--ck-miss); color: var(--ck-miss); }
+.ck-gbtn--part.is-on   { background: var(--ck-part-soft); border-color: var(--ck-part); color: color-mix(in srgb, var(--ck-part) 80%, #000); }
+.ck-gbtn--done.is-on   { background: var(--ck-done-soft); border-color: var(--ck-done); color: var(--ck-done); }
+.ck-gbtn--exceed.is-on {
+    background: linear-gradient(140deg, var(--ck-brand), var(--ck-brand-far));
+    border-color: transparent;
+    color: var(--ck-on-brand);
+    box-shadow: var(--ck-shadow-brand);
+}
+
+/* ═══ Photo grid ════════════════════════════════════════════════════ */
+
+.ck-photos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.ck-photo {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--ck-surface-2);
+}
+.ck-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ck-photo form { position: absolute; top: 5px; right: 5px; margin: 0; }
+.ck-photo-del {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 0;
+    background: rgba(13, 21, 32, 0.62);
+    backdrop-filter: blur(4px);
+    color: #fff;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: background 0.15s ease;
+}
+.ck-photo-del:hover { background: var(--ck-miss); }
+
+.ck-dropzone {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 22px;
+    border: 2px dashed var(--ck-line-2);
+    border-radius: var(--ck-r);
+    color: var(--ck-muted);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.ck-dropzone:hover {
+    border-color: var(--ck-brand);
+    color: var(--ck-brand-ink);
+    background: var(--ck-tint-03);
+}
+.ck-dropzone small { font-weight: 500; color: var(--ck-faint); }
+
+/* ═══ Chat ══════════════════════════════════════════════════════════ */
+
+.ck-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: min(58vh, 560px);
+    overflow-y: auto;
+    padding: 4px 2px 12px;
+    overscroll-behavior: contain;
+}
+
+.ck-daydiv {
+    align-self: center;
+    margin: 16px 0 10px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--ck-surface-3);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ck-muted);
+}
+
+.ck-bubble {
+    max-width: min(78%, 460px);
+    padding: 9px 13px 7px;
+    border-radius: 18px;
+    font-size: 14.5px;
+    line-height: 1.45;
+    position: relative;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+}
+.ck-bubble--them {
+    align-self: flex-start;
+    background: var(--ck-surface-2);
+    color: var(--ck-ink);
+    border-bottom-left-radius: 6px;
+}
+.ck-bubble--me {
+    align-self: flex-end;
+    background: linear-gradient(140deg, var(--ck-brand), var(--ck-brand-far));
+    color: var(--ck-on-brand);
+    border-bottom-right-radius: 6px;
+}
+/* Consecutive bubbles from the same sender tuck together. */
+.ck-bubble--them + .ck-bubble--them { border-top-left-radius: 6px; }
+.ck-bubble--me   + .ck-bubble--me   { border-top-right-radius: 6px; }
+
+.ck-bubble-text { white-space: pre-wrap; }
+.ck-bubble img {
+    max-width: 100%;
+    border-radius: 12px;
+    display: block;
+    margin-bottom: 6px;
+}
+.ck-bubble-meta {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    margin-top: 3px;
+    font-size: 10.5px;
+    opacity: 0.68;
+    font-variant-numeric: tabular-nums;
+}
+.ck-seen { font-size: 11px; letter-spacing: -2px; }
+
+.ck-composer {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    margin: 14px 0 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--ck-line);
+}
+.ck-composer textarea {
+    flex: 1;
+    resize: none;
+    min-height: 44px;
+    max-height: 140px;
+}
+
+/* Chat preview on the home dashboard */
+.ck-chat-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: var(--ck-r);
+    background: var(--ck-surface-2);
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.15s ease;
+}
+.ck-chat-preview:hover { background: var(--ck-tint-06); }
+.ck-chat-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(140deg, var(--ck-brand), var(--ck-brand-far));
+    color: var(--ck-on-brand);
+    font-weight: 700;
+    font-size: 16px;
+}
+.ck-chat-name { font-size: 13px; font-weight: 650; color: var(--ck-ink); }
+.ck-chat-msg {
+    font-size: 13px;
+    color: var(--ck-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.ck-badge {
+    display: inline-block;
+    min-width: 19px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--ck-miss);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 17px;
+}
+
+/* ═══ Forms ═════════════════════════════════════════════════════════ */
+
+.ck-field { margin-bottom: 14px; }
+.ck-field:last-child { margin-bottom: 0; }
+
+.ck-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ck-muted);
+}
+
+.ck-input {
+    width: 100%;
+    padding: 11px 13px;
+    border: 1.5px solid var(--ck-line-2);
+    border-radius: var(--ck-r-sm);
+    background: var(--ck-surface);
+    color: var(--ck-ink);
+    font-family: inherit;
+    font-size: 16px; /* 16px stops iOS Safari zooming the viewport on focus */
+    line-height: 1.45;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ck-input:focus {
+    outline: none;
+    border-color: var(--ck-brand);
+    box-shadow: 0 0 0 3px var(--ck-focus);
+}
+.ck-input::placeholder { color: var(--ck-faint); }
+textarea.ck-input { resize: vertical; min-height: 76px; }
+
+.ck-hint { margin-top: 5px; font-size: 12px; color: var(--ck-faint); }
+
+.ck-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ck-grid-auto {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+}
+
+.ck-inline-form { display: flex; gap: 8px; flex-wrap: wrap; margin: 0; }
+.ck-inline-form .ck-input { flex: 1 1 150px; width: auto; }
+
+/* ═══ Buttons ═══════════════════════════════════════════════════════ */
+
+.ck-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 11px 18px;
+    border-radius: 999px;
+    border: 1.5px solid transparent;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: transform 0.12s ease, box-shadow 0.18s ease,
+                background 0.15s ease, border-color 0.15s ease;
+}
+.ck-btn:active { transform: scale(0.97); }
+
+.ck-btn--primary {
+    background: linear-gradient(140deg, var(--ck-brand), var(--ck-brand-far));
+    color: var(--ck-on-brand);
+    box-shadow: var(--ck-shadow-brand);
+}
+.ck-btn--primary:hover { box-shadow: 0 10px 30px -6px var(--ck-tint-28); }
+
+.ck-btn--ghost {
+    background: var(--ck-surface);
+    border-color: var(--ck-line-2);
+    color: var(--ck-body);
+}
+.ck-btn--ghost:hover { background: var(--ck-surface-2); border-color: var(--ck-tint-28); }
+
+.ck-btn--quiet { background: transparent; color: var(--ck-muted); padding: 9px 12px; }
+.ck-btn--quiet:hover { background: var(--ck-surface-3); color: var(--ck-ink); }
+
+.ck-btn--danger { background: transparent; color: var(--ck-miss); }
+.ck-btn--danger:hover { background: var(--ck-miss-soft); }
+
+.ck-btn--sm { padding: 8px 14px; font-size: 13px; }
+
+/* Bottom save bar -- a full-bleed FIXED dock matching the shared portal
+   shell's own .mapp-tabbar treatment (same blur/background language,
+   edge-to-edge instead of an inset floating card that only partially
+   masked what scrolled behind it), so it reads as one more level of the
+   app's own chrome rather than an unrelated floating widget riding over
+   the content. Docks flush to the viewport bottom on desktop (no tab bar
+   there) and right above the mobile tab bar under the same 768px
+   breakpoint .mapp-tabbar itself switches on at (see portal-app.css). */
+.ck-savebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    padding: 12px max(16px, env(safe-area-inset-left))
+             calc(12px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-right));
+    background: color-mix(in srgb, var(--ck-surface) 92%, transparent);
+    backdrop-filter: saturate(180%) blur(18px);
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
+    border-top: 1px solid var(--ck-line);
+    box-shadow: var(--ck-shadow-lift);
+}
+.ck-savebar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+}
+.ck-savebar-right { display: flex; gap: 8px; align-items: center; }
+@media (max-width: 768px) {
+    .ck-savebar { bottom: var(--ck-nav-h); }
+}
+
+/* ═══ Alerts / empty states ═════════════════════════════════════════ */
+
+.ck-alert {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 16px;
+    border-radius: var(--ck-r);
+    font-size: 14px;
+    font-weight: 550;
+    margin-bottom: 16px;
+    border: 1px solid transparent;
+}
+.ck-alert--success { background: var(--ck-done-soft); color: color-mix(in srgb, var(--ck-done) 82%, #000); border-color: color-mix(in srgb, var(--ck-done) 26%, transparent); }
+.ck-alert--danger  { background: var(--ck-miss-soft); color: color-mix(in srgb, var(--ck-miss) 82%, #000); border-color: color-mix(in srgb, var(--ck-miss) 26%, transparent); }
+.ck-alert--warn    { background: var(--ck-part-soft); color: color-mix(in srgb, var(--ck-part) 76%, #000); border-color: color-mix(in srgb, var(--ck-part) 30%, transparent); }
+.ck-alert--info    { background: var(--ck-tint-10);   color: var(--ck-brand-ink); border-color: var(--ck-tint-28); }
+.ck-alert a { color: inherit; font-weight: 700; }
+
+.ck-empty { text-align: center; padding: 26px 16px; }
+.ck-empty-glyph { font-size: 30px; line-height: 1; margin-bottom: 10px; opacity: 0.75; }
+.ck-empty-title { font-size: 15px; font-weight: 650; color: var(--ck-ink); }
+.ck-empty-sub { margin-top: 5px; font-size: 13px; color: var(--ck-muted); line-height: 1.55; }
+.ck-empty-sub a { color: var(--ck-brand-ink); font-weight: 650; }
+
+/* ═══ Stat tiles / lists ════════════════════════════════════════════ */
+
+.ck-stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    color: var(--ck-ink);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.05;
+}
+.ck-stat-value small { font-size: 15px; font-weight: 600; color: var(--ck-faint); }
+.ck-stat-label {
+    margin-top: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ck-muted);
+}
+
+.ck-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--ck-line);
+}
+.ck-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.ck-row:first-child { padding-top: 0; }
+.ck-row-body { flex: 1; min-width: 0; }
+.ck-row-title { font-size: 14px; font-weight: 650; color: var(--ck-ink); }
+.ck-row-sub { font-size: 12.5px; color: var(--ck-muted); }
+.ck-row-glyph { font-size: 20px; line-height: 1; flex-shrink: 0; }
+
+.ck-icon-btn {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 0;
+    background: transparent;
+    color: var(--ck-faint);
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.ck-icon-btn:hover { background: var(--ck-miss-soft); color: var(--ck-miss); }
+
+.ck-prose { font-size: 14.5px; line-height: 1.65; color: var(--ck-body); }
+.ck-prose p:first-child { margin-top: 0; }
+.ck-prose p:last-child { margin-bottom: 0; }
+.ck-prose ul, .ck-prose ol { margin: 0 0 10px; padding-left: 20px; }
+.ck-prose li { margin-bottom: 5px; }
+.ck-quote {
+    font-size: 16px;
+    line-height: 1.7;
+    font-style: italic;
+    color: var(--ck-body);
+    margin: 0;
+    padding-left: 16px;
+    border-left: 3px solid var(--ck-tint-28);
+}
+
+/* Program navigation tile — the views the 5-slot bottom nav can't hold */
+.ck-navgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 9px;
+}
+.ck-navcard {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 14px;
+    border-radius: var(--ck-r);
+    background: var(--ck-surface-2);
+    text-decoration: none;
+    color: var(--ck-ink);
+    font-size: 13.5px;
+    font-weight: 650;
+    transition: background 0.15s ease, transform 0.12s ease;
+}
+.ck-navcard:hover { background: var(--ck-tint-10); transform: translateY(-1px); }
+.ck-navcard span:first-child { font-size: 19px; line-height: 1; }
+
+/* Recipe cards */
+.ck-recipes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 14px;
+}
+.ck-recipe {
+    border-radius: var(--ck-r);
+    overflow: hidden;
+    background: var(--ck-surface-2);
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.15s ease, box-shadow 0.18s ease;
+}
+.ck-recipe:hover { transform: translateY(-3px); box-shadow: var(--ck-shadow-lift); }
+.ck-recipe-img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block; }
+.ck-recipe-ph {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    display: grid;
+    place-items: center;
+    font-size: 34px;
+    background: linear-gradient(140deg, var(--ck-tint-10), var(--ck-tint-16));
+}
+.ck-recipe-body { padding: 12px 14px 14px; }
+.ck-recipe-title { font-size: 14px; font-weight: 650; color: var(--ck-ink); }
+.ck-recipe-sub { margin-top: 3px; font-size: 12px; color: var(--ck-muted); }
+
+.ck-hero-img {
+    width: 100%;
+    max-height: 340px;
+    object-fit: cover;
+    border-radius: var(--ck-r);
+    display: block;
+}
+
+/* Charts injected by CoachingCharts — keep them inside their tile. */
+.ck-chart { width: 100%; overflow-x: auto; }
+.ck-chart svg { max-width: 100%; height: auto; display: block; }
+
+/* ═══ FAB ═══════════════════════════════════════════════════════════ */
+
+.ck-fab {
+    position: fixed;
+    right: 18px;
+    bottom: calc(var(--ck-nav-h) + 16px + env(safe-area-inset-bottom));
+    z-index: 45;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(140deg, var(--ck-brand), var(--ck-brand-far));
+    color: var(--ck-on-brand);
+    font-size: 27px;
+    font-weight: 300;
+    line-height: 1;
+    text-decoration: none;
+    box-shadow: 0 6px 20px -4px var(--ck-tint-28), 0 12px 32px -8px rgba(13,21,32,0.28);
+    transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease;
+}
+.ck-fab:hover  { transform: scale(1.07) rotate(90deg); }
+.ck-fab:active { transform: scale(0.94); }
+
+/* ═══ Bottom nav ════════════════════════════════════════════════════ */
+
+.ck-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    height: calc(var(--ck-nav-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: rgba(251, 252, 253, 0.86);
+    backdrop-filter: saturate(190%) blur(20px);
+    -webkit-backdrop-filter: saturate(190%) blur(20px);
+    border-top: 1px solid var(--ck-line);
+}
+
+.ck-nav a {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    text-decoration: none;
+    color: var(--ck-faint);
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+    transition: color 0.15s ease;
+}
+.ck-nav a:hover { color: var(--ck-muted); }
+.ck-nav a.is-on { color: var(--ck-brand-ink); }
+
+.ck-nav-glyph { font-size: 20px; line-height: 1; transition: transform 0.16s ease; }
+.ck-nav a.is-on .ck-nav-glyph { transform: translateY(-1px) scale(1.08); }
+
+/* Active pill behind the current item */
+.ck-nav a.is-on::before {
+    content: "";
+    position: absolute;
+    top: 7px;
+    width: 46px;
+    height: 30px;
+    border-radius: 999px;
+    background: var(--ck-tint-10);
+}
+
+.ck-nav-badge {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    margin-left: 5px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--ck-miss);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 17px;
+    text-align: center;
+    box-shadow: 0 0 0 2px rgba(251, 252, 253, 0.9);
+}
+
+/* ═══ Responsive ════════════════════════════════════════════════════ */
+
+/* Tablet — 12-col collapses to 6. */
+@media (max-width: 980px) {
+    .ck-bento { grid-template-columns: repeat(6, 1fr); gap: 14px; }
+    .ck-s3  { grid-column: span 3; }
+    .ck-s4,
+    .ck-s5  { grid-column: span 3; }
+    .ck-trio { grid-column: span 2; }   /* stays a clean 3-up in the 6-col grid */
+    .ck-s6,
+    .ck-s7,
+    .ck-s8,
+    .ck-s12 { grid-column: span 6; }
+}
+
+/* Mobile — single column, tighter padding. */
+@media (max-width: 640px) {
+    :root { --ck-pad: 17px; --ck-r-lg: 20px; }
+
+    .ck-wrap { padding: 14px 13px calc(var(--ck-nav-h) + 34px + env(safe-area-inset-bottom)); }
+    .ck-bento { grid-template-columns: 1fr; gap: 12px; }
+    .ck-s3, .ck-s4, .ck-s5, .ck-s6, .ck-s7, .ck-s8, .ck-s12 { grid-column: span 1; }
+
+    .ck-topbar { padding: 8px 13px; gap: 10px; }
+    .ck-brand-sub { display: none; }
+    .ck-brand-logo { height: 28px; max-width: 110px; }
+    .ck-brand-mark { width: 30px; height: 30px; font-size: 14px; }
+    .ck-brand-name { display: none; }
+    .ck-signout { display: none; } /* still reachable from the Profile view */
+
+    .ck-hero { padding: 22px 18px; }
+    .ck-hero-stat { flex: 1 1 84px; padding: 10px 11px; }
+    .ck-hero-stat-value { font-size: 19px; }
+
+    .ck-grid-2 { grid-template-columns: 1fr; }
+    .ck-rings { gap: 4px; }
+    .ck-bubble { max-width: 86%; }
+    .ck-thread { max-height: 62vh; }
+    .ck-gbtn { flex: 1 1 calc(50% - 3px); }
+    .ck-stat-value { font-size: 26px; }
+}
+
+@media (max-width: 380px) {
+    .ck-emoji-grid { grid-template-columns: repeat(auto-fit, minmax(50px, 1fr)); }
+    .ck-nav a { font-size: 9.5px; }
+}
+
+/* Desktop — the bottom nav and FAB are a mobile pattern. Above 900px the
+   nav moves up under the topbar and the FAB is redundant with tile CTAs. */
+@media (min-width: 901px) {
+    .ck-fab { display: none; }
+    .ck-nav {
+        position: sticky;
+        top: 55px;
+        bottom: auto;
+        height: auto;
+        grid-template-columns: repeat(5, max-content);
+        justify-content: center;
+        gap: 4px;
+        padding: 8px 0;
+        border-top: 0;
+        border-bottom: 1px solid var(--ck-line);
+    }
+    .ck-nav a {
+        flex-direction: row;
+        gap: 7px;
+        padding: 8px 16px;
+        border-radius: 999px;
+        font-size: 13px;
+    }
+    .ck-nav a.is-on::before { inset: 0; top: 0; width: auto; height: auto; }
+    .ck-nav-glyph { font-size: 15px; }
+    .ck-nav-badge { position: static; margin-left: 2px; }
+    .ck-wrap { padding-bottom: 56px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ck-body *,
+    .ck-body *::before,
+    .ck-body *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    .ck-fab:hover { transform: none; }
+}
+
+@media print {
+    .ck-nav, .ck-fab, .ck-savebar, .ck-topbar-actions { display: none !important; }
+    .ck-tile { box-shadow: none; border: 1px solid var(--ck-line-2); }
+}
+
+/* ── Page heading inside the shared portal shell ──────────────────────
+   The eyebrow/title used to live in coaching's own topbar. The bar now
+   belongs to the shared portal (brand + global nav + account), so the page
+   labels itself here instead — otherwise views like "Log a meal" arrive
+   with no title at all. */
+.ck-pagehead { margin: 0 0 18px; }
+.ck-pagehead-eyebrow {
+    display: block;
+    font-family: var(--font-mono, monospace);
+    font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--m-muted, #737886); margin-bottom: 4px;
+}
+.ck-pagehead-title {
+    margin: 0; font-size: 22px; font-weight: 700;
+    letter-spacing: -.02em; color: var(--m-ink, #15181E);
+}
+/* The shell owns the outer <main>; ck-wrap is now an inner block, so it must
+   not re-apply the page gutter or the content indents twice. */
+.ck-body .ck-wrap { max-width: none; margin: 0; padding: 0; }
+
+/* ...but that zeroed-out padding also wiped the bottom clearance this file
+   used to reserve for its own UI riding above the shell's fixed tab bar.
+   The shell's .mapp-main padding-bottom only accounts for its own tab bar
+   height, not for a plugin-level sticky .ck-savebar floating above it --
+   so a form ending in one (Log a meal, Profile) had the bar overlap real
+   fields instead of clearing them. Reserve enough room, specifically on
+   pages that have a savebar, so it never covers content underneath.
+   (:has() is already relied on elsewhere in this codebase, see
+   customer-shell.css's note on `body:has(main.cust-content)`.) */
+.ck-body .ck-wrap:has(.ck-savebar) {
+    padding-bottom: calc(var(--ck-nav-h) + 100px + env(safe-area-inset-bottom));
+}
+@media (max-width: 640px) {
+    .ck-body .ck-wrap:has(.ck-savebar) {
+        padding-bottom: calc(var(--ck-nav-h) + 120px + env(safe-area-inset-bottom));
+    }
+}

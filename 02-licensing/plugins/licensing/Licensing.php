@@ -34,6 +34,7 @@ class Licensing extends Plugin {
 
         Hook::addFilter('public_routes', [$this, 'addPublicRoutes']);
         Hook::addFilter('admin_nav_items', [$this, 'addAdminNav']);
+        Hook::addFilter('admin_dashboard_widgets', [$this, 'addAdminDashboardWidget']);
 
         // Persists the Active/Trial -> Expired transition once a day for any
         // License nobody happens to view in the admin in the meantime — see
@@ -57,6 +58,68 @@ class Licensing extends Plugin {
             'methods' => ['POST'],
         ];
         return $routes;
+    }
+
+    public function addAdminDashboardWidget(array $widgets): array {
+        if (!Auth::can('licensing.manage') && !Auth::isSuperAdmin()) return $widgets;
+
+        require_once __DIR__ . '/ModuleCatalog.php';
+        $selectionCatalog = ModuleCatalog::selectionCatalog();
+        $infrastructureCatalog = ModuleCatalog::supportingInfrastructure();
+
+        ob_start();
+        ?>
+        <section class="card mb-3">
+            <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <h2><?= e(__('licensing_module_catalog_heading', 'Commercial Module Catalog')) ?></h2>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span class="badge"><?= count($selectionCatalog) + count($infrastructureCatalog) ?> <?= e(__('modules', 'modules')) ?></span>
+                    <a href="<?= e(plugin_url('licensing', 'admin/index.php')) ?>" class="btn btn-sm"><?= e(__('view_all', 'View all')) ?></a>
+                </div>
+            </div>
+            <div class="data-list" data-single-open>
+                <?php foreach ($selectionCatalog as $mKey => $mMeta):
+                    $isV1 = !empty($mMeta['v1_available']);
+                    $classification = $isV1 ? 'V1 Commercial' : 'Not V1 / Future';
+                    $deps = !empty($mMeta['dependencies']) ? implode(', ', $mMeta['dependencies']) : 'None';
+                    slate_data_row([
+                        'avatar'       => mb_strtoupper(mb_substr((string) $mMeta['display_name'], 0, 1)),
+                        'avatar_color' => $isV1 ? 'accent' : 'muted',
+                        'title'        => (string) $mMeta['display_name'],
+                        'meta'         => $mKey . ' · ' . (string) $mMeta['description'],
+                        'badge'        => [$classification, $isV1 ? 'active' : 'muted'],
+                        'detail'       => [
+                            __('licensing_col_module', 'Module')                       => (string) $mMeta['display_name'],
+                            __('licensing_col_key', 'Entitlement Key')                 => (string) $mKey,
+                            __('licensing_col_plugin', 'Plugin Slug')                  => (string) $mMeta['plugin_identifier'],
+                            __('licensing_col_status', 'Classification')               => $classification,
+                            __('licensing_col_dependencies', 'Infrastructure Dependencies') => $deps,
+                            __('description', 'Description')                           => (string) $mMeta['description'],
+                        ],
+                    ]);
+                endforeach; ?>
+                <?php foreach ($infrastructureCatalog as $iKey => $iMeta):
+                    slate_data_row([
+                        'avatar'       => mb_strtoupper(mb_substr((string) $iMeta['display_name'], 0, 1)),
+                        'avatar_color' => 'info',
+                        'title'        => (string) $iMeta['display_name'],
+                        'meta'         => (string) $iMeta['plugin_identifier'] . ' · ' . (string) $iMeta['description'],
+                        'badge'        => ['Supporting Infrastructure', 'info'],
+                        'detail'       => [
+                            __('licensing_col_module', 'Module')                       => (string) $iMeta['display_name'],
+                            __('licensing_col_key', 'Entitlement Key')                 => 'N/A (auto-provisioned)',
+                            __('licensing_col_plugin', 'Plugin Slug')                  => (string) $iMeta['plugin_identifier'],
+                            __('licensing_col_status', 'Classification')               => 'Supporting Infrastructure',
+                            __('licensing_col_dependencies', 'Infrastructure Dependencies') => 'Auto-enabled for Membership / Booking',
+                            __('description', 'Description')                           => (string) $iMeta['description'],
+                        ],
+                    ]);
+                endforeach; ?>
+            </div>
+        </section>
+        <?php
+        $widgets[] = ob_get_clean();
+        return $widgets;
     }
 
     public function addAdminNav(array $items): array {

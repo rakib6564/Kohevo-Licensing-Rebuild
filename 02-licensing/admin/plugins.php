@@ -284,6 +284,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 // ─────────────────────────────────────────────────────────────
 require __DIR__ . '/partials/header.php';
 
+// Auto-discover and register any unindexed plugins on disk so they appear in the UI
+try {
+    foreach (PluginLoader::discoverOnDisk() as $diskPlugin) {
+        $slug = $diskPlugin['slug'];
+        if (!Database::row("SELECT id FROM plugins WHERE slug = ?", [$slug])) {
+            PluginLoader::installFromDisk($slug);
+        }
+    }
+} catch (\Throwable $e) {
+    // Database table not ready or error - safe fallback
+}
+
 $plugins         = PluginLoader::listAll();
 $canUpload       = Auth::isPlatformSuperAdmin();
 $canUninstall    = Auth::isPlatformSuperAdmin();

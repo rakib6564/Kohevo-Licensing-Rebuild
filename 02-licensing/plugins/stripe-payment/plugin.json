@@ -1,0 +1,18 @@
+{
+    "slug": "stripe-payment",
+    "name": "Stripe Payment Gateway",
+    "version": "1.2.1",
+    "description": "Generic Stripe checkout for any Kohevo plugin (v1.2). Exposes StripePaymentAPI::createCheckout(lineItems, opts) so plugins don't need their own Stripe wiring. Fires a stripe_webhook_event action so consumers can react to events. Includes a Charges admin page with refund support and a test/live mode toggle. Continues to drive Shop checkout (hosted + embedded Payment Element).",
+    "author": "Kohevo",
+    "requires_core": ">=1.0.0",
+    "permissions": [
+        {
+            "key": "stripe.manage_settings",
+            "label": "Manage Stripe gateway settings and API credentials"
+        },
+        {
+            "key": "stripe.manage_charges",
+            "label": "View Stripe charges and issue refunds"
+        }
+    ]
+}

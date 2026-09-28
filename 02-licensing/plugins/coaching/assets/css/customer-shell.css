@@ -1,0 +1,502 @@
+/* Coaching — premium overlay for the CORE Slate customer area.
+
+   NO LONGER LOADED. Every rule below is scoped to
+   `body:has(main.cust-content)`, and nothing renders that element any more:
+   the customer area moved to the shared portal shell, which emits
+   `main.mapp-main`. Shipping this was 492 lines of inert CSS on every page.
+
+   Kept on disk rather than deleted because it documents the look this overlay
+   gave the old shell. To revive it, re-scope the selectors to `body.mapp` —
+   but consider whether a plugin should be restyling chrome that booking,
+   studio and membership also render in.
+
+   Original note: high-specificity `body:has(main.cust-content)` selectors
+   upgraded the built-in look without touching core PHP. */
+
+:root {
+    --prem-brand:      var(--accent, #0EA5E9);
+    --prem-brand-2:    #0369A1;
+    --prem-brand-3:    var(--accent, #06B6D4);
+    --prem-cyan:       #06B6D4;
+    --prem-good:       #10B981;
+    --prem-warn:       #F59E0B;
+    --prem-danger:     #EF4444;
+
+    --prem-radius:     20px;
+    --prem-radius-lg:  28px;
+    --prem-radius-sm:  12px;
+
+    --prem-text:       #0F172A;
+    --prem-muted:      #64748B;
+    --prem-faint:      #94A3B8;
+    --prem-border:     rgba(15, 23, 42, 0.06);
+
+    --prem-shadow:     0 1px 3px rgba(15, 23, 42, 0.04),
+                       0 12px 32px rgba(15, 23, 42, 0.06);
+    --prem-shadow-lg:  0 4px 8px rgba(15, 23, 42, 0.04),
+                       0 30px 60px rgba(15, 23, 42, 0.10);
+    --prem-shadow-brand: 0 8px 24px rgba(14, 165, 233, 0.24);
+}
+
+body:has(main.cust-content) {
+    background:
+        radial-gradient(1200px 400px at 100% -10%, rgba(124, 58, 237, 0.05), transparent 65%),
+        radial-gradient(1000px 350px at -10% 8%, rgba(14, 165, 233, 0.06), transparent 60%),
+        linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body:has(main.cust-content) main {
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 24px 24px 60px;
+}
+
+@media (max-width: 720px) {
+    body:has(main.cust-content) main {
+        padding: 16px 14px 60px;
+    }
+}
+
+body:has(main.cust-content) .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    background:
+        radial-gradient(140% 200% at 100% 0%, rgba(255,255,255,0.15), transparent 55%),
+        linear-gradient(135deg, var(--prem-brand) 0%, var(--prem-brand-2) 55%, var(--prem-brand-3) 100%);
+    border-radius: var(--prem-radius-lg);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--prem-shadow-brand);
+}
+body:has(main.cust-content) .page-header::before {
+    content: '';
+    position: absolute;
+    right: -60px;
+    top: -80px;
+    width: 240px;
+    height: 240px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 50%;
+    pointer-events: none;
+}
+body:has(main.cust-content) .page-header::after {
+    content: '';
+    position: absolute;
+    right: 40px;
+    bottom: -40px;
+    width: 140px;
+    height: 140px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    pointer-events: none;
+}
+body:has(main.cust-content) .page-header > div {
+    position: relative;
+    z-index: 1;
+}
+body:has(main.cust-content) .page-header h1 {
+    color: #fff;
+    font-size: 32px;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin: 0 0 6px;
+    font-weight: 700;
+}
+body:has(main.cust-content) .page-header .page-header-sub,
+body:has(main.cust-content) .page-header p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 15px;
+    margin: 0;
+    line-height: 1.5;
+    max-width: 480px;
+}
+
+@media (max-width: 720px) {
+    body:has(main.cust-content) .page-header {
+        padding: 24px 22px;
+        border-radius: var(--prem-radius);
+    }
+    body:has(main.cust-content) .page-header h1 { font-size: 26px; }
+}
+
+body:has(main.cust-content) main h2,
+body:has(main.cust-content) main .mt-6 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--prem-muted);
+    font-weight: 700;
+    margin: 32px 0 14px !important;
+}
+
+body:has(main.cust-content) .card {
+    background: #fff;
+    border: 1px solid var(--prem-border);
+    border-radius: var(--prem-radius);
+    box-shadow: var(--prem-shadow);
+    overflow: hidden;
+    padding: 0;
+    transition: transform 0.2s ease, box-shadow 0.25s ease;
+    margin-bottom: 20px;
+}
+body:has(main.cust-content) .card:hover {
+    box-shadow: var(--prem-shadow-lg);
+}
+
+body:has(main.cust-content) .card-header {
+    padding: 22px 24px 4px;
+    background: transparent;
+    border-bottom: 0;
+}
+body:has(main.cust-content) .card-header h2,
+body:has(main.cust-content) .card-header h3 {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0;
+    color: var(--prem-text);
+    text-transform: none;
+}
+
+body:has(main.cust-content) .card > form,
+body:has(main.cust-content) .card > *:not(.card-header) {
+    padding: 8px 24px 22px;
+}
+body:has(main.cust-content) .card > .card-header + form,
+body:has(main.cust-content) .card > .card-header + *:not(.card-header) {
+    padding-top: 12px;
+}
+
+body:has(main.cust-content) .card[style*="padding"] { padding: 0 !important; }
+
+body:has(main.cust-content) .card .kv-list {
+    padding: 4px 24px 22px;
+}
+
+body:has(main.cust-content) .page-layout,
+body:has(main.cust-content) .page-layout-with-aside {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+@media (max-width: 900px) {
+    body:has(main.cust-content) .page-layout,
+    body:has(main.cust-content) .page-layout-with-aside {
+        grid-template-columns: 1fr;
+    }
+}
+
+body:has(main.cust-content) .field,
+body:has(main.cust-content) .field-row {
+    margin-bottom: 16px;
+}
+body:has(main.cust-content) .field-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--prem-muted);
+    font-weight: 700;
+    margin-bottom: 6px;
+    display: block;
+}
+body:has(main.cust-content) input[type="text"],
+body:has(main.cust-content) input[type="email"],
+body:has(main.cust-content) input[type="tel"],
+body:has(main.cust-content) input[type="password"],
+body:has(main.cust-content) input[type="number"],
+body:has(main.cust-content) input[type="date"],
+body:has(main.cust-content) input[type="time"],
+body:has(main.cust-content) select,
+body:has(main.cust-content) textarea {
+    width: 100%;
+    padding: 12px 14px;
+    background: #fff;
+    border: 1.5px solid rgba(15, 23, 42, 0.10);
+    border-radius: 12px;
+    font-size: 14.5px;
+    color: var(--prem-text);
+    font-family: inherit;
+    line-height: 1.4;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+body:has(main.cust-content) input:focus,
+body:has(main.cust-content) select:focus,
+body:has(main.cust-content) textarea:focus {
+    outline: none;
+    border-color: var(--prem-brand);
+    box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.10);
+    background: #fff;
+}
+body:has(main.cust-content) input:disabled {
+    background: rgba(148, 163, 184, 0.06);
+    color: var(--prem-muted);
+    cursor: not-allowed;
+}
+body:has(main.cust-content) .field-hint,
+body:has(main.cust-content) .form-hint,
+body:has(main.cust-content) .text-sm.text-muted {
+    font-size: 12.5px;
+    color: var(--prem-faint);
+    line-height: 1.5;
+    margin-top: 6px;
+}
+
+body:has(main.cust-content) .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 11px 22px;
+    border-radius: 12px;
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    border: 0;
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1.2;
+    transition: transform 0.1s ease, box-shadow 0.2s ease;
+    font-family: inherit;
+}
+body:has(main.cust-content) .btn:active { transform: scale(0.97); }
+
+body:has(main.cust-content) .btn-primary,
+body:has(main.cust-content) .btn.btn-primary {
+    background: linear-gradient(135deg, var(--prem-brand), var(--prem-brand-2));
+    color: #fff;
+    box-shadow: var(--prem-shadow-brand);
+}
+body:has(main.cust-content) .btn-primary:hover {
+    box-shadow: 0 12px 32px rgba(14, 165, 233, 0.32);
+}
+
+body:has(main.cust-content) .btn-secondary,
+body:has(main.cust-content) .btn.btn-secondary,
+body:has(main.cust-content) .btn-outline {
+    background: #fff;
+    color: var(--prem-text);
+    border: 1.5px solid var(--prem-border);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+body:has(main.cust-content) .btn-secondary:hover { border-color: rgba(15, 23, 42, 0.14); }
+
+body:has(main.cust-content) .btn-ghost {
+    background: transparent;
+    color: var(--prem-text);
+}
+body:has(main.cust-content) .btn-ghost:hover { background: rgba(148, 163, 184, 0.10); }
+
+body:has(main.cust-content) .btn-sm { padding: 7px 14px; font-size: 13px; }
+
+body:has(main.cust-content) .badge,
+body:has(main.cust-content) .tag,
+body:has(main.cust-content) .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    line-height: 1.3;
+}
+body:has(main.cust-content) .badge::before,
+body:has(main.cust-content) .tag::before,
+body:has(main.cust-content) .status-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+body:has(main.cust-content) .badge-active,
+body:has(main.cust-content) .badge-success,
+body:has(main.cust-content) .status-active,
+body:has(main.cust-content) .status-verified {
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--prem-good);
+}
+body:has(main.cust-content) .badge-warning,
+body:has(main.cust-content) .status-warning {
+    background: rgba(245, 158, 11, 0.14);
+    color: var(--prem-warn);
+}
+body:has(main.cust-content) .badge-danger,
+body:has(main.cust-content) .badge-error {
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--prem-danger);
+}
+body:has(main.cust-content) .badge-muted,
+body:has(main.cust-content) .badge-inactive {
+    background: rgba(100, 116, 139, 0.12);
+    color: var(--prem-muted);
+}
+
+body:has(main.cust-content) .kv-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+body:has(main.cust-content) .kv-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--prem-border);
+    gap: 12px;
+    flex-wrap: wrap;
+}
+body:has(main.cust-content) .kv-row:last-child { border-bottom: 0; }
+body:has(main.cust-content) .kv-label {
+    font-size: 13px;
+    color: var(--prem-muted);
+    font-weight: 500;
+}
+body:has(main.cust-content) .kv-value {
+    font-size: 14.5px;
+    color: var(--prem-text);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+body:has(main.cust-content) .kv-value strong { font-weight: 700; }
+
+body:has(main.cust-content) .alert {
+    padding: 14px 18px;
+    border-radius: var(--prem-radius-sm);
+    font-size: 14px;
+    line-height: 1.5;
+    border: 1px solid transparent;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+body:has(main.cust-content) .alert-warning {
+    background: rgba(245, 158, 11, 0.08);
+    color: #92400E;
+    border-color: rgba(245, 158, 11, 0.20);
+}
+body:has(main.cust-content) .alert-success {
+    background: rgba(16, 185, 129, 0.08);
+    color: #065F46;
+    border-color: rgba(16, 185, 129, 0.20);
+}
+body:has(main.cust-content) .alert-error,
+body:has(main.cust-content) .alert-danger {
+    background: rgba(239, 68, 68, 0.08);
+    color: #991B1B;
+    border-color: rgba(239, 68, 68, 0.20);
+}
+
+body:has(main.cust-content) > header,
+body:has(main.cust-content) .slate-topbar,
+body:has(main.cust-content) .customer-topbar {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--prem-border);
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+}
+
+body:has(main.cust-content) .appointment-row,
+body:has(main.cust-content) .card .appointment {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--prem-border);
+}
+body:has(main.cust-content) .appointment-row:last-child,
+body:has(main.cust-content) .card .appointment:last-child { border-bottom: 0; }
+
+body:has(main.cust-content) code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    background: rgba(148, 163, 184, 0.12);
+    color: var(--prem-text);
+    padding: 2px 8px;
+    border-radius: 6px;
+    letter-spacing: -0.01em;
+}
+
+body:has(main.cust-content) .empty,
+body:has(main.cust-content) .empty-state {
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--prem-muted);
+}
+body:has(main.cust-content) .empty-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--prem-text);
+    margin-bottom: 6px;
+}
+
+body:has(main.cust-content) .text-muted,
+body:has(main.cust-content) .muted { color: var(--prem-muted) !important; }
+body:has(main.cust-content) .text-sm { font-size: 13px; }
+body:has(main.cust-content) strong { font-weight: 700; letter-spacing: -0.01em; }
+
+body:has(main.cust-content) .card a:not(.btn) {
+    color: var(--prem-brand);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.15s ease;
+}
+body:has(main.cust-content) .card a:not(.btn):hover {
+    color: var(--prem-brand-2);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1.5px;
+}
+
+body:has(main.cust-content) .field-row {
+    display: grid;
+    gap: 14px;
+}
+body:has(main.cust-content) .field-row-2 { grid-template-columns: 1fr 1fr; }
+body:has(main.cust-content) .field-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 640px) {
+    body:has(main.cust-content) .field-row-2,
+    body:has(main.cust-content) .field-row-3 { grid-template-columns: 1fr; }
+}
+
+body:has(main.cust-content) .page-aside .card { padding: 0; }
+body:has(main.cust-content) .page-aside .card-header { padding: 20px 22px 4px; }
+body:has(main.cust-content) .page-aside .card > *:not(.card-header) { padding: 6px 22px 20px; }
+
+body:has(main.cust-content) .page-aside .card-header h2 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--prem-muted);
+    font-weight: 700;
+}
+
+body:has(main.cust-content) header a,
+body:has(main.cust-content) .slate-topbar a,
+body:has(main.cust-content) .customer-topbar a {
+    color: var(--prem-text);
+    font-weight: 500;
+    text-decoration: none;
+    font-size: 14px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: background 0.15s ease;
+}
+body:has(main.cust-content) header a:hover,
+body:has(main.cust-content) .customer-topbar a:hover {
+    background: rgba(148, 163, 184, 0.10);
+}
