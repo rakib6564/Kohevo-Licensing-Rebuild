@@ -43,7 +43,7 @@ try {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_verify()) {
-        $flash = ['type' => 'error', 'msg' => 'Security check failed.'];
+        $flash = ['type' => 'error', 'msg' => __('mb_err_security_check_failed', 'Security check failed.')];
     } else {
         $action = $_POST['_action'] ?? '';
         if ($action === 'save') {
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!array_key_exists($type, MembershipAPI::planTypes())) $type = 'membership';
 
             if ($name === '') {
-                $flash = ['type' => 'error', 'msg' => 'Name is required.'];
+                $flash = ['type' => 'error', 'msg' => __('mb_err_name_is_required', 'Name is required.')];
             } else {
                 $courseId = ($type === 'course' && !empty($_POST['course_id'])) ? (int)$_POST['course_id'] : null;
                 $row = [

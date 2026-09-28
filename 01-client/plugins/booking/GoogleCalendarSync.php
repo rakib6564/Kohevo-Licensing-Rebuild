@@ -113,7 +113,7 @@ class GoogleCalendarSync
      * Returns ['ok'=>true,'email'=>string] or ['ok'=>false,'error'=>string].
      */
     public static function connectProvider(int $providerId, string $code): array {
-        if (!self::isConfigured()) return ['ok' => false, 'error' => 'Google Calendar isn\'t configured yet — add a Client ID/Secret in Booking settings first.'];
+        if (!self::isConfigured()) return ['ok' => false, 'error' => __('bk_err_google_calendar_isn_t_configured_yet_add_a_client_id_sec', 'Google Calendar isn\'t configured yet — add a Client ID/Secret in Booking settings first.')];
 
         $resp = self::httpPost(self::TOKEN_URL, [
             'code'          => $code,
@@ -124,7 +124,7 @@ class GoogleCalendarSync
         ]);
         if (!$resp['ok'] || empty($resp['body']['access_token'])) {
             slate_log('GoogleCalendarSync: token exchange failed: ' . ($resp['body']['error_description'] ?? $resp['error'] ?? 'unknown'), 'error');
-            return ['ok' => false, 'error' => 'Google didn\'t confirm the connection. Please try again.'];
+            return ['ok' => false, 'error' => __('bk_err_google_didn_t_confirm_the_connection_please_try_again', 'Google didn\'t confirm the connection. Please try again.')];
         }
         $tokens = $resp['body'];
         if (empty($tokens['refresh_token'])) {
@@ -134,7 +134,7 @@ class GoogleCalendarSync
             // prior grant). Ask them to revoke access in their Google
             // Account and reconnect rather than storing a connection that
             // can't survive an access-token expiry.
-            return ['ok' => false, 'error' => 'Google didn\'t grant a long-lived connection. In your Google Account → Security → Third-party access, remove any existing access for this app, then try connecting again.'];
+            return ['ok' => false, 'error' => __('bk_err_google_didn_t_grant_a_long_lived_connection_in_your_goog', 'Google didn\'t grant a long-lived connection. In your Google Account → Security → Third-party access, remove any existing access for this app, then try connecting again.')];
         }
 
         $tid = current_tenant_id();

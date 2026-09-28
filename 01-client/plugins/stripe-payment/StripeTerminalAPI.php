@@ -73,14 +73,14 @@ class StripeTerminalAPI {
         ];
         if (!empty($address['line2'])) $params['address[line2]'] = (string)$address['line2'];
         if ($params['address[line1]'] === '') {
-            return ['ok' => false, 'error' => 'A street address (line1) is required to create a Terminal Location.'];
+            return ['ok' => false, 'error' => __('sp_err_a_street_address_line1_is_required_to_create_a_terminal_', 'A street address (line1) is required to create a Terminal Location.')];
         }
         try {
             $resp = StripePaymentAPI::httpRequest('POST', '/v1/terminal/locations', $params);
         } catch (\Throwable $e) {
             return ['ok' => false, 'error' => $e->getMessage()];
         }
-        if (empty($resp['id'])) return ['ok' => false, 'error' => 'Stripe did not return a Location id.'];
+        if (empty($resp['id'])) return ['ok' => false, 'error' => __('sp_err_stripe_did_not_return_a_location_id', 'Stripe did not return a Location id.')];
         self::setLocationId((string)$resp['id']);
         return ['ok' => true, 'id' => (string)$resp['id']];
     }
@@ -118,9 +118,9 @@ class StripeTerminalAPI {
      */
     public static function registerReader(string $registrationCode, string $label, ?string $locationId = null): array {
         $code = trim($registrationCode);
-        if ($code === '') return ['ok' => false, 'error' => 'A registration code is required.'];
+        if ($code === '') return ['ok' => false, 'error' => __('sp_err_a_registration_code_is_required', 'A registration code is required.')];
         $loc = $locationId ?? self::locationId();
-        if ($loc === '') return ['ok' => false, 'error' => 'Create a Terminal Location first.'];
+        if ($loc === '') return ['ok' => false, 'error' => __('sp_err_create_a_terminal_location_first', 'Create a Terminal Location first.')];
         $params = [
             'registration_code' => $code,
             'location'          => $loc,
@@ -131,13 +131,13 @@ class StripeTerminalAPI {
         } catch (\Throwable $e) {
             return ['ok' => false, 'error' => $e->getMessage()];
         }
-        if (empty($resp['id'])) return ['ok' => false, 'error' => 'Stripe did not return a reader id.'];
+        if (empty($resp['id'])) return ['ok' => false, 'error' => __('sp_err_stripe_did_not_return_a_reader_id', 'Stripe did not return a reader id.')];
         return ['ok' => true, 'reader' => $resp];
     }
 
     public static function deleteReader(string $readerId): array {
         $id = trim($readerId);
-        if ($id === '') return ['ok' => false, 'error' => 'Missing reader id.'];
+        if ($id === '') return ['ok' => false, 'error' => __('sp_err_missing_reader_id', 'Missing reader id.')];
         try {
             StripePaymentAPI::httpRequest('DELETE', '/v1/terminal/readers/' . urlencode($id), []);
             return ['ok' => true];
@@ -174,7 +174,7 @@ class StripeTerminalAPI {
     /** Push a PaymentIntent to a reader for card collection (server-driven). */
     public static function processOnReader(string $readerId, string $piId): array {
         $rid = trim($readerId); $pi = trim($piId);
-        if ($rid === '' || $pi === '') return ['ok' => false, 'error' => 'Missing reader or PaymentIntent.'];
+        if ($rid === '' || $pi === '') return ['ok' => false, 'error' => __('sp_err_missing_reader_or_paymentintent', 'Missing reader or PaymentIntent.')];
         try {
             $resp = StripePaymentAPI::httpRequest(
                 'POST',
@@ -251,7 +251,7 @@ class StripeTerminalAPI {
     /** Create a simulated reader (test mode) so the flow is exercisable. */
     public static function createSimulatedReader(string $label, ?string $locationId = null): array {
         $loc = $locationId ?? self::locationId();
-        if ($loc === '') return ['ok' => false, 'error' => 'Create a Terminal Location first.'];
+        if ($loc === '') return ['ok' => false, 'error' => __('sp_err_create_a_terminal_location_first', 'Create a Terminal Location first.')];
         try {
             $resp = StripePaymentAPI::httpRequest('POST', '/v1/terminal/readers', [
                 'registration_code' => 'simulated-wpe',

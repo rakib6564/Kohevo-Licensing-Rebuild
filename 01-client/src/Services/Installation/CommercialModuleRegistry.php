@@ -358,11 +358,11 @@ final class CommercialModuleRegistry
         $selected = [];
         foreach ($requested as $raw) {
             if (!is_string($raw) || trim($raw) === '') {
-                return ['ok' => false, 'error' => 'Invalid module selection.'];
+                return ['ok' => false, 'error' => __('core_err_invalid_module_selection', 'Invalid module selection.')];
             }
             $key = trim($raw);
             if (isset($seen[$key])) {
-                return ['ok' => false, 'error' => 'A module was selected more than once.'];
+                return ['ok' => false, 'error' => __('core_err_a_module_was_selected_more_than_once', 'A module was selected more than once.')];
             }
             $seen[$key] = true;
 
@@ -373,10 +373,10 @@ final class CommercialModuleRegistry
                 return ['ok' => false, 'error' => "Module '{$key}' is supporting infrastructure and cannot be selected directly."];
             }
             if (!isset($definitions[$key])) {
-                return ['ok' => false, 'error' => "One or more selected modules are unknown or not commercial modules."];
+                return ['ok' => false, 'error' => __('core_err_one_or_more_selected_modules_are_unknown_or_not_commerci', "One or more selected modules are unknown or not commercial modules.")];
             }
             if (!isset($entitled[$key])) {
-                return ['ok' => false, 'error' => 'One or more selected modules are not included in this license.'];
+                return ['ok' => false, 'error' => __('core_err_one_or_more_selected_modules_are_not_included_in_this_li', 'One or more selected modules are not included in this license.')];
             }
             $selected[] = $key;
         }
@@ -399,7 +399,7 @@ final class CommercialModuleRegistry
         $needs = [];
         foreach ($selected as $entitlement) {
             if (!is_string($entitlement) || !isset($definitions[$entitlement])) {
-                return ['ok' => false, 'error' => 'Unknown commercial module.'];
+                return ['ok' => false, 'error' => __('core_err_unknown_commercial_module', 'Unknown commercial module.')];
             }
             foreach ($definitions[$entitlement]['required_infrastructure'] as $slug) {
                 $needs[$slug] = true;
@@ -414,7 +414,7 @@ final class CommercialModuleRegistry
                 }
             }
             if (!$found) {
-                return ['ok' => false, 'error' => 'Required payment infrastructure is missing from this package.'];
+                return ['ok' => false, 'error' => __('core_err_required_payment_infrastructure_is_missing_from_this_pac', 'Required payment infrastructure is missing from this package.')];
             }
         }
         return ['ok' => true, 'infrastructure' => array_keys($needs)];

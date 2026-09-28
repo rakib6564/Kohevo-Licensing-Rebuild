@@ -95,7 +95,7 @@ $licenseSummary = null;
 // for a step that isn't actually reachable yet.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $requestedStep === $step) {
     if ($step >= 2 && !csrf_verify()) {
-        $error = 'Your session expired. Please reload the page and try again.';
+        $error = __('core_err_your_session_expired_please_reload_the_page_and_try_agai', 'Your session expired. Please reload the page and try again.');
     } elseif ($step === 1) {
         $dbHost = trim($_POST['db_host'] ?? 'localhost');
         $dbPort = trim($_POST['db_port'] ?? '');
@@ -105,9 +105,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $requestedStep === $step) {
         $appUrl = rtrim(trim($_POST['app_url'] ?? ''), '/');
 
         if ($dbPort !== '' && !preg_match('/^\d{1,5}$/', $dbPort)) {
-            $error = 'Database port must be numeric.';
+            $error = __('core_err_database_port_must_be_numeric', 'Database port must be numeric.');
         } elseif ($dbName === '' || $dbUser === '' || $appUrl === '') {
-            $error = 'Please fill in all required fields.';
+            $error = __('core_err_please_fill_in_all_required_fields', 'Please fill in all required fields.');
         } else {
             try {
                 $dsn = "mysql:host=$dbHost" . ($dbPort !== '' ? ";port=$dbPort" : '') . ";dbname=$dbName;charset=utf8mb4";
@@ -185,7 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $requestedStep === $step) {
             exit;
         } catch (\Throwable $e) {
             slate_log('Installer step 2 (install application) failed: ' . $e->getMessage(), 'error');
-            $error = 'Installation failed. Please check the server logs and try again.';
+            $error = __('core_err_installation_failed_please_check_the_server_logs_and_try', 'Installation failed. Please check the server logs and try again.');
         }
     } elseif ($step === 3) {
         $licenseKeyInput = installer_normalize_license_key((string) ($_POST['license_key'] ?? ''));
@@ -198,7 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $requestedStep === $step) {
             $installId = \Slate\Services\Installation\InstallationService::currentInstallationId();
 
             if ($serverUrl === '' || $publicKey === '' || $product === '' || $installId === null) {
-                $error = 'Licensing is not configured for this build. Contact your provider.';
+                $error = __('core_err_licensing_is_not_configured_for_this_build_contact_your_', 'Licensing is not configured for this build. Contact your provider.');
             } else {
                 try {
                     $store = new \Slate\Services\Licensing\SlateLicenseCacheStore((int) TENANT_ID);
@@ -236,7 +236,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $requestedStep === $step) {
                         // suspended or revoked. The signed state stays
                         // cached for the Guard; the installer stops here.
                         slate_log('Installer step 3 (license validation): license is not active', 'warning');
-                        $error = 'This license is not currently active. Please contact your provider.';
+                        $error = __('core_err_this_license_is_not_currently_active_please_contact_your', 'This license is not currently active. Please contact your provider.');
                     } else {
                         slate_log('Installer step 3 (license validation) check-in failed: ' . ($client->lastFailure() ?? 'unknown'), 'warning');
                         $error = $result['reason'] === 'network'
@@ -245,7 +245,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $requestedStep === $step) {
                     }
                 } catch (\Throwable $e) {
                     slate_log('Installer step 3 (license validation) failed: ' . $e->getMessage(), 'error');
-                    $error = 'This license key could not be validated. Double-check the key and try again.';
+                    $error = __('core_err_this_license_key_could_not_be_validated_double_check_the', 'This license key could not be validated. Double-check the key and try again.');
                 }
             }
         }
@@ -255,9 +255,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $requestedStep === $step) {
         $password = (string)($_POST['password'] ?? '');
 
         if ($name === '' || $email === '' || strlen($password) < 8) {
-            $error = 'Name, email, and a password of at least 8 characters are required.';
+            $error = __('core_err_name_email_and_a_password_of_at_least_8_characters_are_r', 'Name, email, and a password of at least 8 characters are required.');
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $error = 'Invalid email address.';
+            $error = __('core_err_invalid_email_address', 'Invalid email address.');
         } else {
             try {
                 \Slate\Services\Installation\InstallationService::createAdminAccount(
@@ -270,13 +270,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $requestedStep === $step) {
                 exit;
             } catch (\Throwable $e) {
                 slate_log('Installer step 4 (admin account) failed: ' . $e->getMessage(), 'error');
-                $error = 'Could not create the admin account. Please check the server logs and try again.';
+                $error = __('core_err_could_not_create_the_admin_account_please_check_the_serv', 'Could not create the admin account. Please check the server logs and try again.');
             }
         }
     } elseif ($step === 5) {
         $action = (string) ($_POST['_action'] ?? 'finish');
         if ($action !== 'finish') {
-            $error = 'Invalid installer action. Module provisioning cannot be bypassed.';
+            $error = __('core_err_invalid_installer_action_module_provisioning_cannot_be_b', 'Invalid installer action. Module provisioning cannot be bypassed.');
         } else {
             $entitlements = [];
             try {
@@ -346,7 +346,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $requestedStep === $step) {
                             }
                         }
                         $finishSummary = $pluginResults;
-                        $error = 'Module provisioning failed. No installation marker was written; correct the package issue and retry.';
+                        $error = __('core_err_module_provisioning_failed_no_installation_marker_was_wr', 'Module provisioning failed. No installation marker was written; correct the package issue and retry.');
                     } else {
                         file_put_contents($installMarker, "Installed: " . date('Y-m-d H:i:s') . " | Kohevo " . SLATE_VERSION . "\n");
                         @chmod($installMarker, 0640);

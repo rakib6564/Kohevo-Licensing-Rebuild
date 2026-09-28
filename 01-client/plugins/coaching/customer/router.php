@@ -86,7 +86,7 @@ if ($view === 'chat' && isset($_GET['poll']) && $enrolled) {
 // ── POST actions (all views) ────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $enrolled) {
     if (!csrf_verify()) {
-        $flash = ['type' => 'error', 'msg' => 'Security check failed.'];
+        $flash = ['type' => 'error', 'msg' => __('co_err_security_check_failed', 'Security check failed.')];
     } else {
         $action = (string)($_POST['_action'] ?? '');
         // 2026-09-06: "food/mood page needs to interact on-page, not reload".

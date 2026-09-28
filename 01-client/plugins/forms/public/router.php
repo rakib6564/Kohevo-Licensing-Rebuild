@@ -115,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!csrf_verify()) {
-        $errors['_form'] = 'Security check failed. Please try again.';
+        $errors['_form'] = __('fm_err_security_check_failed_please_try_again', 'Security check failed. Please try again.');
     } else {
         // Anti-spam / security gate: IP blocklist, time-trap and content
         // rules drop silently; country / rate-limit / CAPTCHA reject with

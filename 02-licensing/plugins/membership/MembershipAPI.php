@@ -691,7 +691,7 @@ class MembershipAPI {
         $tid  = current_tenant_id();
         $plan = self::plan($planId);
         if (!$plan || empty($plan['is_active'])) {
-            return ['ok' => false, 'error' => 'Plan not available.'];
+            return ['ok' => false, 'error' => __('mb_err_plan_not_available', 'Plan not available.')];
         }
 
         // Insurance add-on (per-plan mode × global fee).
@@ -712,7 +712,7 @@ class MembershipAPI {
         }
 
         if (!class_exists('StripePaymentAPI') || !StripePaymentAPI::isConfigured()) {
-            return ['ok' => false, 'error' => 'Online payment is not available right now.'];
+            return ['ok' => false, 'error' => __('mb_err_online_payment_is_not_available_right_now', 'Online payment is not available right now.')];
         }
 
         // Pending subscription — activated by the webhook on payment success.
@@ -721,7 +721,7 @@ class MembershipAPI {
             'activation'   => 'online',
             'amount_cents' => $total,
         ]);
-        if (!$subId) return ['ok' => false, 'error' => 'Could not start purchase.'];
+        if (!$subId) return ['ok' => false, 'error' => __('mb_err_could_not_start_purchase', 'Could not start purchase.')];
 
         $cust     = self::customerRow($customerId);
         $currency = strtolower((string)($plan['currency'] ?? self::currency()));
@@ -760,7 +760,7 @@ class MembershipAPI {
             return ['ok' => true, 'url' => $sess['url'], 'sub_id' => $subId];
         } catch (\Throwable $e) {
             slate_log('Membership: purchase checkout failed: ' . $e->getMessage(), 'error');
-            return ['ok' => false, 'error' => 'Could not start payment.'];
+            return ['ok' => false, 'error' => __('mb_err_could_not_start_payment', 'Could not start payment.')];
         }
     }
 

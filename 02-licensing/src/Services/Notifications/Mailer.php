@@ -613,7 +613,7 @@ class Mailer {
             $lines = array_values(array_filter(array_map('trim', explode("\n", $debug))));
             $err = $lines ? (string)end($lines) : '';
         }
-        if ($err === '') $err = 'Unknown SMTP error.';
+        if ($err === '') $err = __('core_err_unknown_smtp_error', 'Unknown SMTP error.');
 
         $low  = strtolower($err . ' ' . $debug);
         $hint = '';

@@ -28,9 +28,9 @@ $flash = !empty($_GET['assigned']) ? ['type' => 'success', 'msg' => __('membersh
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_verify()) {
-        $flash = ['type' => 'error', 'msg' => 'Security check failed.'];
+        $flash = ['type' => 'error', 'msg' => __('mb_err_security_check_failed', 'Security check failed.')];
     } elseif (!Auth::can('membership.manage_members') && !Auth::isSuperAdmin()) {
-        $flash = ['type' => 'error', 'msg' => 'You do not have permission to manage members.'];
+        $flash = ['type' => 'error', 'msg' => __('mb_err_you_do_not_have_permission_to_manage_members', 'You do not have permission to manage members.')];
     } else {
         $action = (string)($_POST['_action'] ?? '');
 
@@ -39,8 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $note   = trim((string)($_POST['note'] ?? ''));
             $subId  = MembershipAPI::manualActivate($cid, $planId, $note, !empty($_POST['add_insurance']));
             $flash  = $subId
-                ? ['type' => 'success', 'msg' => 'Membership activated manually.']
-                : ['type' => 'error', 'msg' => 'Could not activate — check the plan.'];
+                ? ['type' => 'success', 'msg' => __('mb_err_membership_activated_manually', 'Membership activated manually.')]
+                : ['type' => 'error', 'msg' => __('mb_err_could_not_activate_check_the_plan', 'Could not activate — check the plan.')];
         }
 
         elseif ($action === 'cancel_sub') {
@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 MembershipAPI::cancelSubscription($subId, false);
                 $flash = ['type' => 'success', 'msg' => 'Subscription cancelled.'];
             } else {
-                $flash = ['type' => 'error', 'msg' => 'Subscription not found.'];
+                $flash = ['type' => 'error', 'msg' => __('mb_err_subscription_not_found', 'Subscription not found.')];
             }
         }
 
@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 AuditLog::record('membership.wallet_adjusted', (string)$cid, ['amount' => $amount]);
                 $flash = ['type' => 'success', 'msg' => 'Wallet adjusted.'];
             } else {
-                $flash = ['type' => 'error', 'msg' => 'Enter a non-zero amount.'];
+                $flash = ['type' => 'error', 'msg' => __('mb_err_enter_a_non_zero_amount', 'Enter a non-zero amount.')];
             }
         }
     }

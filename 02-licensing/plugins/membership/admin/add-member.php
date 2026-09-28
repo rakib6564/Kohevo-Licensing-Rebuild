@@ -32,12 +32,12 @@ if ($customerId > 0) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['_action'] ?? '') === 'assign') {
     if (!csrf_verify()) {
-        $flash = ['type' => 'error', 'msg' => 'Security check failed.'];
+        $flash = ['type' => 'error', 'msg' => __('mb_err_security_check_failed', 'Security check failed.')];
     } else {
         $postCustomerId = (int)($_POST['customer_id'] ?? 0);
         $postCustomer = Database::row("SELECT id FROM customers WHERE id = ? AND tenant_id = ?", [$postCustomerId, $tid]);
         if (!$postCustomer) {
-            $flash = ['type' => 'error', 'msg' => 'Customer not found.'];
+            $flash = ['type' => 'error', 'msg' => __('mb_err_customer_not_found', 'Customer not found.')];
         } else {
             $planId = (int)($_POST['plan_id'] ?? 0);
             $note   = trim((string)($_POST['note'] ?? ''));
@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['_action'] ?? '') === 'assi
                 header('Location: ' . plugin_url('membership', 'admin/member.php?id=' . $postCustomerId . '&assigned=1'));
                 exit;
             }
-            $flash = ['type' => 'error', 'msg' => 'Could not activate — check the plan.'];
+            $flash = ['type' => 'error', 'msg' => __('mb_err_could_not_activate_check_the_plan', 'Could not activate — check the plan.')];
         }
     }
 }

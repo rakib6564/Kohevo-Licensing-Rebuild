@@ -810,13 +810,13 @@ class Auth {
         $phone = trim($phone);
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return ['ok' => false, 'error' => 'Please enter a valid email address.'];
+            return ['ok' => false, 'error' => __('core_err_please_enter_a_valid_email_address', 'Please enter a valid email address.')];
         }
         if (strlen($password) < 8) {
-            return ['ok' => false, 'error' => 'Password must be at least 8 characters.'];
+            return ['ok' => false, 'error' => __('core_err_password_must_be_at_least_8_characters', 'Password must be at least 8 characters.')];
         }
         if (mb_strlen($email) > 190) {
-            return ['ok' => false, 'error' => 'Email is too long.'];
+            return ['ok' => false, 'error' => __('core_err_email_is_too_long', 'Email is too long.')];
         }
 
         $tid = current_tenant_id();
@@ -833,7 +833,7 @@ class Auth {
             if (!empty($existing['email_verified']) || !empty($existing['password_hash'])) {
                 // Account exists. Tell the user generically — don't leak
                 // whether the email is verified or has a password set.
-                return ['ok' => false, 'error' => 'This email is already registered. Try logging in or resetting your password.'];
+                return ['ok' => false, 'error' => __('core_err_this_email_is_already_registered_try_logging_in_or_reset', 'This email is already registered. Try logging in or resetting your password.')];
             }
             // Guest/unverified shell — promote it to a real account.
             \Database::update('customers', [
@@ -971,11 +971,11 @@ class Auth {
      */
     public static function resetCustomerPassword(string $token, string $newPassword): array {
         if (strlen($newPassword) < 8) {
-            return ['ok' => false, 'error' => 'Password must be at least 8 characters.'];
+            return ['ok' => false, 'error' => __('core_err_password_must_be_at_least_8_characters', 'Password must be at least 8 characters.')];
         }
         $customerId = self::consumeCustomerToken($token, 'password_reset');
         if ($customerId === null) {
-            return ['ok' => false, 'error' => 'This reset link is invalid or has expired.'];
+            return ['ok' => false, 'error' => __('core_err_this_reset_link_is_invalid_or_has_expired', 'This reset link is invalid or has expired.')];
         }
 
         \Database::update('customers', [

@@ -294,12 +294,12 @@ class PluginLoader {
      */
     public static function install(string $zipPath): array {
         if (!file_exists($zipPath) || !is_readable($zipPath)) {
-            return ['ok' => false, 'error' => 'ZIP file not found or unreadable.'];
+            return ['ok' => false, 'error' => __('core_err_zip_file_not_found_or_unreadable', 'ZIP file not found or unreadable.')];
         }
 
         $zip = new \ZipArchive();
         if ($zip->open($zipPath) !== true) {
-            return ['ok' => false, 'error' => 'Could not open ZIP archive.'];
+            return ['ok' => false, 'error' => __('core_err_could_not_open_zip_archive', 'Could not open ZIP archive.')];
         }
 
         // Determine the top-level folder. All entries must share one.
@@ -320,13 +320,13 @@ class PluginLoader {
                 $topLevel = $root;
             } elseif ($topLevel !== $root) {
                 $zip->close();
-                return ['ok' => false, 'error' => 'ZIP must contain a single top-level folder.'];
+                return ['ok' => false, 'error' => __('core_err_zip_must_contain_a_single_top_level_folder', 'ZIP must contain a single top-level folder.')];
             }
         }
 
         if ($topLevel === null) {
             $zip->close();
-            return ['ok' => false, 'error' => 'ZIP archive is empty.'];
+            return ['ok' => false, 'error' => __('core_err_zip_archive_is_empty', 'ZIP archive is empty.')];
         }
 
         // Extract to temp staging area. Prefer uploads/_plugin_staging/
@@ -350,7 +350,7 @@ class PluginLoader {
         if (!$zip->extractTo($tmpRoot)) {
             $zip->close();
             self::rmrf($tmpRoot);
-            return ['ok' => false, 'error' => 'Failed to extract ZIP.'];
+            return ['ok' => false, 'error' => __('core_err_failed_to_extract_zip', 'Failed to extract ZIP.')];
         }
         $zip->close();
 
@@ -546,14 +546,14 @@ class PluginLoader {
 
     public static function activate(string $slug): array {
         $row = \Database::row("SELECT * FROM plugins WHERE slug = ?", [$slug]);
-        if (!$row) return ['ok' => false, 'error' => 'Plugin not found.'];
+        if (!$row) return ['ok' => false, 'error' => __('core_err_plugin_not_found', 'Plugin not found.')];
 
         if ($row['status'] === self::STATUS_ACTIVE) {
             return ['ok' => true, 'note' => 'already active'];
         }
 
         $dir = SLATE_ROOT . '/plugins/' . $slug;
-        if (!is_dir($dir)) return ['ok' => false, 'error' => 'Plugin directory missing.'];
+        if (!is_dir($dir)) return ['ok' => false, 'error' => __('core_err_plugin_directory_missing', 'Plugin directory missing.')];
 
         // Re-validate manifest still on disk (could have been edited)
         $manifestPath = $dir . '/plugin.json';
@@ -615,7 +615,7 @@ class PluginLoader {
      */
     public static function deactivate(string $slug): array {
         $row = \Database::row("SELECT * FROM plugins WHERE slug = ?", [$slug]);
-        if (!$row) return ['ok' => false, 'error' => 'Plugin not found.'];
+        if (!$row) return ['ok' => false, 'error' => __('core_err_plugin_not_found', 'Plugin not found.')];
         if ($row['status'] !== self::STATUS_ACTIVE) {
             return ['ok' => true, 'note' => 'not active'];
         }
@@ -637,9 +637,9 @@ class PluginLoader {
      */
     public static function uninstall(string $slug): array {
         $row = \Database::row("SELECT * FROM plugins WHERE slug = ?", [$slug]);
-        if (!$row) return ['ok' => false, 'error' => 'Plugin not found.'];
+        if (!$row) return ['ok' => false, 'error' => __('core_err_plugin_not_found', 'Plugin not found.')];
         if ($row['status'] === self::STATUS_ACTIVE) {
-            return ['ok' => false, 'error' => 'Deactivate the plugin before uninstalling.'];
+            return ['ok' => false, 'error' => __('core_err_deactivate_the_plugin_before_uninstalling', 'Deactivate the plugin before uninstalling.')];
         }
 
         $dir = SLATE_ROOT . '/plugins/' . $slug;

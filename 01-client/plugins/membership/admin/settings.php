@@ -17,7 +17,7 @@ $currentNav = 'membership-settings';
 $flash = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_verify()) {
-        $flash = ['type' => 'error', 'msg' => 'Security check failed.'];
+        $flash = ['type' => 'error', 'msg' => __('mb_err_security_check_failed', 'Security check failed.')];
     } else {
         Database::setSetting('membership.insurance_fee_cents', (string) max(0, (int) round(((float)($_POST['insurance_fee'] ?? 0)) * 100)));
         Database::setSetting('membership.require_membership_to_book', !empty($_POST['require_membership_to_book']) ? '1' : '0');

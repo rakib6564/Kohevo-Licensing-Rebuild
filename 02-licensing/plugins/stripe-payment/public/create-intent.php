@@ -34,7 +34,7 @@ function out(int $code, array $body): void {
 }
 
 if (!PluginLoader::isActive('shop') || !class_exists('ShopAPI')) {
-    out(503, ['error' => 'Shop plugin not active.']);
+    out(503, ['error' => __('sp_err_shop_plugin_not_active', 'Shop plugin not active.')]);
 }
 require_once dirname(__DIR__) . '/StripeAPI.php';
 
@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 if (!StripeAPI::isConfigured()) {
-    out(503, ['error' => 'Stripe is not configured.']);
+    out(503, ['error' => __('sp_err_stripe_is_not_configured', 'Stripe is not configured.')]);
 }
 
 // Identify the cart via the shop_sid cookie. We don't accept the sid
@@ -55,12 +55,12 @@ $sid = sf_session_id();
 
 $cart = ShopAPI::cartTotals($sid);
 if (empty($cart['items'])) {
-    out(400, ['error' => 'Your cart is empty.']);
+    out(400, ['error' => __('sp_err_your_cart_is_empty', 'Your cart is empty.')]);
 }
 
 $total = (float)($cart['total'] ?? 0);
 if ($total <= 0) {
-    out(400, ['error' => 'Cart total must be positive.']);
+    out(400, ['error' => __('sp_err_cart_total_must_be_positive', 'Cart total must be positive.')]);
 }
 
 $currency = strtolower((string)($cart['currency']
@@ -126,7 +126,7 @@ try {
     ]);
 } catch (\Throwable $e) {
     slate_log('Stripe createPaymentIntent failed: ' . $e->getMessage(), 'error');
-    out(502, ['error' => 'Could not initialise payment.']);
+    out(502, ['error' => __('sp_err_could_not_initialise_payment', 'Could not initialise payment.')]);
 }
 
 try {
@@ -143,7 +143,7 @@ try {
     // Don't return the intent to the client if we couldn't record it —
     // we'd never be able to map back when payment completes.
     slate_log('Stripe embedded intent mapping insert failed: ' . $e->getMessage(), 'error');
-    out(500, ['error' => 'Could not record payment session.']);
+    out(500, ['error' => __('sp_err_could_not_record_payment_session', 'Could not record payment session.')]);
 }
 
 out(200, [

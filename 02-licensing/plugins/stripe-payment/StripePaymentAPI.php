@@ -585,7 +585,7 @@ class StripePaymentAPI {
     public static function refundCharge(int $chargeId, ?int $amountCents = null): array {
         self::ensureChargesSchema();
         $row = self::getCharge($chargeId);
-        if (!$row) return ['ok' => false, 'error' => 'Charge not found.'];
+        if (!$row) return ['ok' => false, 'error' => __('sp_err_charge_not_found', 'Charge not found.')];
 
         $piId = (string)($row['stripe_payment_intent_id'] ?? '');
         if ($piId === '') {
@@ -598,13 +598,13 @@ class StripePaymentAPI {
                 }
             }
         }
-        if ($piId === '') return ['ok' => false, 'error' => 'No PaymentIntent to refund against.'];
+        if ($piId === '') return ['ok' => false, 'error' => __('sp_err_no_paymentintent_to_refund_against', 'No PaymentIntent to refund against.')];
 
         $remaining = max(0, (int)$row['amount_cents'] - (int)$row['refunded_cents']);
-        if ($remaining <= 0) return ['ok' => false, 'error' => 'Already fully refunded.'];
+        if ($remaining <= 0) return ['ok' => false, 'error' => __('sp_err_already_fully_refunded', 'Already fully refunded.')];
         $refundAmount = ($amountCents === null) ? $remaining : (int)$amountCents;
         if ($refundAmount <= 0 || $refundAmount > $remaining) {
-            return ['ok' => false, 'error' => 'Refund amount out of range.'];
+            return ['ok' => false, 'error' => __('sp_err_refund_amount_out_of_range', 'Refund amount out of range.')];
         }
 
         $params = ['payment_intent' => $piId];

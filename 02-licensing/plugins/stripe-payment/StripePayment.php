@@ -226,12 +226,12 @@ class StripePayment extends Plugin {
 
     public function handleHostedCheckout(string $sid, array $billing): array {
         if (!class_exists('StripeAPI')) {
-            return ['ok' => false, 'error' => 'Stripe plugin not loaded.'];
+            return ['ok' => false, 'error' => __('sp_err_stripe_plugin_not_loaded', 'Stripe plugin not loaded.')];
         }
 
         $cart = ShopAPI::cartTotals($sid);
         if (empty($cart['items'])) {
-            return ['ok' => false, 'error' => 'Your cart is empty.'];
+            return ['ok' => false, 'error' => __('sp_err_your_cart_is_empty', 'Your cart is empty.')];
         }
 
         $successUrl = SLATE_URL . '/plugins/stripe-payment/public/success.php'
@@ -250,11 +250,11 @@ class StripePayment extends Plugin {
             ]);
         } catch (\Throwable $e) {
             slate_log('Stripe createCheckoutSession failed: ' . $e->getMessage(), 'error');
-            return ['ok' => false, 'error' => 'Could not initialise payment. Please try again.'];
+            return ['ok' => false, 'error' => __('sp_err_could_not_initialise_payment_please_try_again', 'Could not initialise payment. Please try again.')];
         }
 
         if (empty($session['id']) || empty($session['url'])) {
-            return ['ok' => false, 'error' => 'Stripe returned no session URL.'];
+            return ['ok' => false, 'error' => __('sp_err_stripe_returned_no_session_url', 'Stripe returned no session URL.')];
         }
 
         try {
@@ -269,7 +269,7 @@ class StripePayment extends Plugin {
             ]);
         } catch (\Throwable $e) {
             slate_log('Stripe session mapping insert failed: ' . $e->getMessage(), 'error');
-            return ['ok' => false, 'error' => 'Could not record payment session.'];
+            return ['ok' => false, 'error' => __('sp_err_could_not_record_payment_session', 'Could not record payment session.')];
         }
 
         return ['ok' => true, 'redirect' => $session['url']];
@@ -693,7 +693,7 @@ class StripePayment extends Plugin {
      */
     public function handleEmbeddedCheckout(string $sid, array $billing): array {
         if (!class_exists('StripeAPI')) {
-            return ['ok' => false, 'error' => 'Stripe plugin not loaded.'];
+            return ['ok' => false, 'error' => __('sp_err_stripe_plugin_not_loaded', 'Stripe plugin not loaded.')];
         }
 
         $piId = trim((string)($_POST['stripe_payment_intent_id'] ?? ''));
@@ -713,11 +713,11 @@ class StripePayment extends Plugin {
             [$piId]
         );
         if (!$row) {
-            return ['ok' => false, 'error' => 'Unknown payment session.'];
+            return ['ok' => false, 'error' => __('sp_err_unknown_payment_session', 'Unknown payment session.')];
         }
         if ($row['shop_sid'] !== $sid) {
             slate_log("Stripe embedded checkout: shop_sid mismatch on $piId", 'warning');
-            return ['ok' => false, 'error' => 'Payment session does not match your cart.'];
+            return ['ok' => false, 'error' => __('sp_err_payment_session_does_not_match_your_cart', 'Payment session does not match your cart.')];
         }
 
         // Already converted to an order? — webhook beat us here. Return
@@ -733,7 +733,7 @@ class StripePayment extends Plugin {
             $pi = StripeAPI::getPaymentIntent($piId);
         } catch (\Throwable $e) {
             slate_log('Stripe getPaymentIntent failed: ' . $e->getMessage(), 'error');
-            return ['ok' => false, 'error' => 'Could not verify payment with Stripe.'];
+            return ['ok' => false, 'error' => __('sp_err_could_not_verify_payment_with_stripe', 'Could not verify payment with Stripe.')];
         }
         $status = (string)($pi['status'] ?? '');
         if ($status !== 'succeeded' && $status !== 'requires_capture') {

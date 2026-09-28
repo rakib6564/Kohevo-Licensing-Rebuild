@@ -776,7 +776,7 @@ class FormsAPI {
 
             $out[] = $field;
         }
-        if (!$out) $errors[] = 'Add at least one field.';
+        if (!$out) $errors[] = __('fm_err_add_at_least_one_field', 'Add at least one field.');
         return ['fields' => $out, 'errors' => $errors];
     }
 
@@ -943,34 +943,34 @@ class FormsAPI {
             switch ($type) {
                 case 'email':
                     if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                        $errors[$name] = 'Please enter a valid email address.';
+                        $errors[$name] = __('fm_err_please_enter_a_valid_email_address', 'Please enter a valid email address.');
                     }
                     break;
                 case 'url':
                     if (!filter_var($value, FILTER_VALIDATE_URL)) {
-                        $errors[$name] = 'Please enter a valid URL.';
+                        $errors[$name] = __('fm_err_please_enter_a_valid_url', 'Please enter a valid URL.');
                     }
                     break;
                 case 'number':
                     if (!is_numeric($value)) {
-                        $errors[$name] = 'Please enter a number.';
+                        $errors[$name] = __('fm_err_please_enter_a_number', 'Please enter a number.');
                     }
                     break;
                 case 'date':
                     // Accept YYYY-MM-DD; let the browser do the heavy work
                     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
-                        $errors[$name] = 'Please enter a date.';
+                        $errors[$name] = __('fm_err_please_enter_a_date', 'Please enter a date.');
                     }
                     break;
                 case 'time':
                     if (!preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $value)) {
-                        $errors[$name] = 'Please enter a valid time.';
+                        $errors[$name] = __('fm_err_please_enter_a_valid_time', 'Please enter a valid time.');
                     }
                     break;
                 case 'range':
                 case 'rating':
                     if (!is_numeric($value)) {
-                        $errors[$name] = 'Please choose a value.';
+                        $errors[$name] = __('fm_err_please_choose_a_value', 'Please choose a value.');
                     } else {
                         // Clamp to the configured bounds (don't trust the client).
                         [$min, $max] = self::rangeBounds($f);
@@ -991,19 +991,19 @@ class FormsAPI {
                         (array)($f['options'] ?? [])
                     );
                     if (!in_array($value, $opts, true)) {
-                        $errors[$name] = 'Please choose one of the listed options.';
+                        $errors[$name] = __('fm_err_please_choose_one_of_the_listed_options', 'Please choose one of the listed options.');
                     }
                     break;
                 case 'tel':
                     if (!preg_match('/^[0-9+()\-.\s]{4,40}$/', $value)) {
-                        $errors[$name] = 'Please enter a valid phone number.';
+                        $errors[$name] = __('fm_err_please_enter_a_valid_phone_number', 'Please enter a valid phone number.');
                     }
                     break;
                 case 'intlphone':
                     // Validate the number, then prepend the chosen dial code so
                     // the stored value is the full international number.
                     if (!preg_match('/^[0-9+()\-.\s]{4,40}$/', $value)) {
-                        $errors[$name] = 'Please enter a valid phone number.';
+                        $errors[$name] = __('fm_err_please_enter_a_valid_phone_number', 'Please enter a valid phone number.');
                     } else {
                         $cc = trim((string)($input[$name . '__cc'] ?? ''));
                         if (preg_match('/^\+\d{1,4}$/', $cc) && strpos($value, '+') !== 0) {
@@ -1013,7 +1013,7 @@ class FormsAPI {
                     break;
                 case 'textarea':
                     if (mb_strlen($value) > 8000) {
-                        $errors[$name] = 'Please keep this under 8000 characters.';
+                        $errors[$name] = __('fm_err_please_keep_this_under_8000_characters', 'Please keep this under 8000 characters.');
                     }
                     break;
                 case 'address':
@@ -1021,7 +1021,7 @@ class FormsAPI {
                     // we just sanity-cap length. The submitted value is the
                     // formatted address string as displayed in the dropdown.
                     if (mb_strlen($value) > 400) {
-                        $errors[$name] = 'Please keep the address under 400 characters.';
+                        $errors[$name] = __('fm_err_please_keep_the_address_under_400_characters', 'Please keep the address under 400 characters.');
                     }
                     break;
                 case 'file':
@@ -1036,14 +1036,14 @@ class FormsAPI {
                     // shape here (cheap reject of junk); the decode + save to
                     // disk happens in handleSignatures() from the router.
                     if (!preg_match('#^data:image/png;base64,[A-Za-z0-9+/=\s]+$#', $value)) {
-                        $errors[$name] = 'Please add your signature.';
+                        $errors[$name] = __('fm_err_please_add_your_signature', 'Please add your signature.');
                     }
                     // Keep the raw data URL in $value for handleSignatures().
                     break;
                 case 'text':
                 default:
                     if (mb_strlen($value) > 500) {
-                        $errors[$name] = 'Please keep this under 500 characters.';
+                        $errors[$name] = __('fm_err_please_keep_this_under_500_characters', 'Please keep this under 500 characters.');
                     }
                     break;
             }
@@ -2321,28 +2321,28 @@ class FormsAPI {
             }
 
             if (!preg_match('#^data:image/png;base64,(.+)$#s', $raw, $m)) {
-                $errors[$name] = 'Signature could not be read. Please sign again.';
+                $errors[$name] = __('fm_err_signature_could_not_be_read_please_sign_again', 'Signature could not be read. Please sign again.');
                 continue;
             }
             $bytes = base64_decode(preg_replace('/\s+/', '', $m[1]), true);
             if ($bytes === false || $bytes === '') {
-                $errors[$name] = 'Signature could not be read. Please sign again.';
+                $errors[$name] = __('fm_err_signature_could_not_be_read_please_sign_again', 'Signature could not be read. Please sign again.');
                 continue;
             }
             if (strlen($bytes) > self::SIGNATURE_MAX_BYTES) {
-                $errors[$name] = 'Signature image is too large.';
+                $errors[$name] = __('fm_err_signature_image_is_too_large', 'Signature image is too large.');
                 continue;
             }
             // Confirm it really is a PNG (magic bytes) before trusting it.
             if (substr($bytes, 0, 8) !== "\x89PNG\r\n\x1a\n") {
-                $errors[$name] = 'Signature must be a PNG image.';
+                $errors[$name] = __('fm_err_signature_must_be_a_png_image', 'Signature must be a PNG image.');
                 continue;
             }
 
             $dir = Uploads::publicUploadDir('forms');
             $file = 'sig_' . bin2hex(random_bytes(8)) . '.png';
             if (@file_put_contents($dir . '/' . $file, $bytes) === false) {
-                $errors[$name] = 'Could not save the signature.';
+                $errors[$name] = __('fm_err_could_not_save_the_signature', 'Could not save the signature.');
                 continue;
             }
 
@@ -2391,7 +2391,7 @@ class FormsAPI {
             // rebinding between this check and curl's own resolution.
             $vet = self::vetWebhookUrl((string)$hook['url']);
             if ($vet === null) {
-                $error = 'Refused: webhook URL is not a public http(s) endpoint.';
+                $error = __('fm_err_refused_webhook_url_is_not_a_public_http_s_endpoint', 'Refused: webhook URL is not a public http(s) endpoint.');
             } else {
                 try {
                     $ch = curl_init($hook['url']);
@@ -2591,7 +2591,7 @@ class FormsAPI {
         // an empty form again, which reads as "it didn't go through".
         if ((string)($_GET['form_submitted'] ?? '') === $slug) {
             $msg = trim((string)($form['success_message'] ?? ''));
-            if ($msg === '') $msg = 'Thanks — your response has been received.';
+            if ($msg === '') $msg = __('fm_err_thanks_your_response_has_been_received', 'Thanks — your response has been received.');
             return '<div class="cb-form-block forms-public-shell">'
                  . '<article ' . self::publicCardAttrs($set) . '>'
                  . '<div class="alert alert-success" role="status">' . nl2br(e($msg)) . '</div>'

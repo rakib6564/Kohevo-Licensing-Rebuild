@@ -70,7 +70,7 @@ $isDirty = static function (string $key, $value): ?string {
 // ── POST: apply ─────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_verify()) {
-        $flash = ['type' => 'error', 'msg' => 'Security check failed.'];
+        $flash = ['type' => 'error', 'msg' => __('core_err_security_check_failed', 'Security check failed.')];
     } else {
         $reset = $_POST['reset'] ?? [];
         if (!is_array($reset)) $reset = [];

@@ -809,11 +809,12 @@ class Booking extends Plugin {
         if ($minDays > 0) {
             $start = strtotime((string)($ctx['starts_at'] ?? ''));
             if ($start && $start < slate_db_time() + $minDays * 86400) {
-                $nextOk = I18n::localDate('l, j F Y', slate_db_time() + $minDays * 86400);
+                $nextOk = I18n::localDate(__('date_format_weekday_long', 'l, j F Y'), slate_db_time() + $minDays * 86400);
                 return [
                     'ok'    => false,
-                    'error' => 'This session requires a preparation period of at least '
-                             . $minDays . ' days. The earliest we can book is ' . $nextOk . '.',
+                    'error' => sprintf(
+                        __('bk_err_min_advance', 'This session requires a preparation period of at least %d days. The earliest we can book is %s.'),
+                        $minDays, $nextOk),
                 ];
             }
         }
@@ -825,7 +826,7 @@ class Booking extends Plugin {
             if (!$ok) {
                 $msg = trim((string)($cfg['prereq_message'] ?? ''));
                 if ($msg === '') {
-                    $msg = 'This session requires a prior consultation. Please book a Discovery Call first — we can talk it through together.';
+                    $msg = __('bk_err_this_session_requires_a_prior_consultation_please_book_a', 'This session requires a prior consultation. Please book a Discovery Call first — we can talk it through together.');
                 }
                 // A configured redirect sends her to a banner page that
                 // explains the switch and forwards her to the right service's

@@ -617,7 +617,8 @@ if (!function_exists('slate_date_format')) {
     /** The site's configured date display format (PHP date() format string). */
     function slate_date_format(): string {
         $fmt = class_exists('Database') ? trim((string) Database::setting('date_format')) : '';
-        return $fmt !== '' ? $fmt : 'F j, Y';
+        // Unset -> a locale-appropriate default (French reads '29 septembre 2026', not 'September 29, 2026').
+        return $fmt !== '' ? $fmt : (function_exists('__') ? (string) __('date_format_default', 'F j, Y') : 'F j, Y');
     }
 }
 

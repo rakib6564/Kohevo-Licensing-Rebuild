@@ -54,10 +54,10 @@ $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_verify()) {
-        $error = 'Your session expired. Please reload the page and try again.';
+        $error = __('core_err_your_session_expired_please_reload_the_page_and_try_agai', 'Your session expired. Please reload the page and try again.');
     } elseif (!$canManageLicense) {
         http_response_code(403);
-        $error = 'You do not have permission to change the license key.';
+        $error = __('core_err_you_do_not_have_permission_to_change_the_license_key', 'You do not have permission to change the license key.');
     } else {
         $licenseKeyInput = installer_normalize_license_key((string) ($_POST['license_key'] ?? ''));
         if ($licenseKeyInput['error'] !== null) {
@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $installId = \Slate\Services\Installation\InstallationService::currentInstallationId();
 
             if ($serverUrl === '' || $publicKey === '' || $product === '' || $installId === null) {
-                $error = 'Licensing is not configured for this build. Contact your provider.';
+                $error = __('core_err_licensing_is_not_configured_for_this_build_contact_your_', 'Licensing is not configured for this build. Contact your provider.');
             } else {
                 try {
                     $store  = new SlateLicenseCacheStore((int) TENANT_ID);
@@ -108,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 } catch (\Throwable $e) {
                     slate_log('License recovery re-check failed: ' . $e->getMessage(), 'error');
-                    $error = 'This license key could not be validated. Double-check the key and try again.';
+                    $error = __('core_err_this_license_key_could_not_be_validated_double_check_the', 'This license key could not be validated. Double-check the key and try again.');
                 }
             }
         }

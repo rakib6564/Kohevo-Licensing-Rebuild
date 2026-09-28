@@ -360,7 +360,7 @@ class Media {
         if ($ext === 'svg' || $mime === 'image/svg+xml') {
             if (!self::sanitizeSvgFile(SLATE_ROOT . $path)) {
                 Uploads::remove($path);
-                return ['ok' => false, 'error' => 'Could not process SVG file.'];
+                return ['ok' => false, 'error' => __('core_err_could_not_process_svg_file', 'Could not process SVG file.')];
             }
         }
 
@@ -614,7 +614,7 @@ class Media {
     /** Delete by media id. Refuses if the file is referenced anywhere. */
     public static function delete(int $id): array {
         $rec = self::get($id);
-        if (!$rec) return ['ok' => false, 'error' => 'Media not found.'];
+        if (!$rec) return ['ok' => false, 'error' => __('core_err_media_not_found', 'Media not found.')];
         return self::deletePath($rec['path']);
     }
 
@@ -625,7 +625,7 @@ class Media {
 
     private static function deletePath(string $path): array {
         if (!self::isManagedPath($path)) {
-            return ['ok' => false, 'error' => 'Path is not managed by the media library.'];
+            return ['ok' => false, 'error' => __('core_err_path_is_not_managed_by_the_media_library', 'Path is not managed by the media library.')];
         }
         $count = self::usageCountByPath($path);
         if ($count > 0) {
@@ -639,7 +639,7 @@ class Media {
             ];
         }
         if (!Uploads::remove($path)) {
-            return ['ok' => false, 'error' => 'File could not be deleted (may already be gone).'];
+            return ['ok' => false, 'error' => __('core_err_file_could_not_be_deleted_may_already_be_gone', 'File could not be deleted (may already be gone).')];
         }
         self::unregister($path);
         \AuditLog::record('media.deleted', $path);

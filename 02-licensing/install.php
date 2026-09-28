@@ -82,9 +82,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 1) {
     $appUrl = rtrim(trim($_POST['app_url'] ?? ''), '/');
 
     if ($dbPort !== '' && !preg_match('/^\d{1,5}$/', $dbPort)) {
-        $error = 'Database port must be numeric.';
+        $error = __('core_err_database_port_must_be_numeric', 'Database port must be numeric.');
     } elseif ($dbName === '' || $dbUser === '' || $appUrl === '') {
-        $error = 'Please fill in all required fields.';
+        $error = __('core_err_please_fill_in_all_required_fields', 'Please fill in all required fields.');
     } else {
         try {
             $dsn = "mysql:host=$dbHost" . ($dbPort !== '' ? ";port=$dbPort" : '') . ";dbname=$dbName;charset=utf8mb4";
@@ -128,9 +128,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 2) {
     $password = (string)($_POST['password'] ?? '');
 
     if ($name === '' || $email === '' || strlen($password) < 8) {
-        $error = 'Name, email, and a password of at least 8 characters are required.';
+        $error = __('core_err_name_email_and_a_password_of_at_least_8_characters_are_r', 'Name, email, and a password of at least 8 characters are required.');
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error = 'Invalid email address.';
+        $error = __('core_err_invalid_email_address', 'Invalid email address.');
     } else {
         try {
             // Core schema + the identity spine (contacts/identities — customer

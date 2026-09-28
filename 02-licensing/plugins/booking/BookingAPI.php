@@ -562,9 +562,9 @@ class BookingAPI {
         $custom     = is_array($args['custom'] ?? null) ? $args['custom'] : [];
         $recurGroup = isset($args['recurrence_group']) ? substr((string)$args['recurrence_group'], 0, 32) : null;
 
-        if ($serviceId <= 0 || $providerId <= 0) return ['ok' => false, 'error' => 'Service and provider are required.'];
-        if ($name === '')                         return ['ok' => false, 'error' => 'Your name is required.'];
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return ['ok' => false, 'error' => 'A valid email is required.'];
+        if ($serviceId <= 0 || $providerId <= 0) return ['ok' => false, 'error' => __('bk_err_service_and_provider_are_required', 'Service and provider are required.')];
+        if ($name === '')                         return ['ok' => false, 'error' => __('bk_err_your_name_is_required', 'Your name is required.')];
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return ['ok' => false, 'error' => __('bk_err_a_valid_email_is_required', 'A valid email is required.')];
 
         // Normalise starts_at — accept 'YYYY-MM-DDTHH:MM' from datetime-local.
         $startsAt = str_replace('T', ' ', $startsAt);
@@ -575,12 +575,12 @@ class BookingAPI {
         if (!$startTs) return ['ok' => false, 'error' => 'Invalid time.'];
         // Walk-ins can start "now"; online/admin future bookings can't be past.
         if ($source !== 'walkin' && $startTs <= time()) {
-            return ['ok' => false, 'error' => 'Pick a future time slot.'];
+            return ['ok' => false, 'error' => __('bk_err_pick_a_future_time_slot', 'Pick a future time slot.')];
         }
 
         $service = self::getService($serviceId);
         if (!$service || empty($service['is_active'])) {
-            return ['ok' => false, 'error' => 'That service isn\'t available.'];
+            return ['ok' => false, 'error' => __('bk_err_that_service_isn_t_available', 'That service isn\'t available.')];
         }
 
         // Extension point: other plugins may gate self-service (online)
@@ -607,26 +607,26 @@ class BookingAPI {
             "SELECT 1 FROM booking_provider_services WHERE provider_id = ? AND service_id = ?",
             [$providerId, $serviceId]
         );
-        if (!$assoc) return ['ok' => false, 'error' => 'That provider doesn\'t offer this service.'];
+        if (!$assoc) return ['ok' => false, 'error' => __('bk_err_that_provider_doesn_t_offer_this_service', 'That provider doesn\'t offer this service.')];
 
         // Duration = staff/service duration + add-on extra minutes.
         $duration = self::effectiveDuration($service, $providerId);
         $addons   = self::resolveAddons($serviceId, $addonIds);
         foreach ($addons as $a) $duration += (int)($a['duration_min'] ?? 0);
-        if ($duration <= 0) return ['ok' => false, 'error' => 'That service has no duration set.'];
+        if ($duration <= 0) return ['ok' => false, 'error' => __('bk_err_that_service_has_no_duration_set', 'That service has no duration set.')];
 
         $capacity     = max(1, (int)($service['capacity'] ?? 1));
         $bufferBefore = (int)($service['buffer_before_min'] ?? 0);
         $bufferAfter  = (int)($service['buffer_min'] ?? 0);
-        if ($partySize > $capacity) return ['ok' => false, 'error' => 'That exceeds the capacity for this slot.'];
+        if ($partySize > $capacity) return ['ok' => false, 'error' => __('bk_err_that_exceeds_the_capacity_for_this_slot', 'That exceeds the capacity for this slot.')];
 
         // Advance window — enforced for online self-service only.
         if ($source === 'online') {
             $minStart = time() + ((int)($service['min_advance_min'] ?? 0)) * 60;
             $maxAdv   = (int)($service['max_advance_days'] ?? 365);
-            if ($startTs < $minStart) return ['ok' => false, 'error' => 'That time is too soon to book online.'];
+            if ($startTs < $minStart) return ['ok' => false, 'error' => __('bk_err_that_time_is_too_soon_to_book_online', 'That time is too soon to book online.')];
             if ($maxAdv > 0 && $startTs > time() + $maxAdv * 86400) {
-                return ['ok' => false, 'error' => 'That date is too far in advance.'];
+                return ['ok' => false, 'error' => __('bk_err_that_date_is_too_far_in_advance', 'That date is too far in advance.')];
             }
         }
 
@@ -674,7 +674,7 @@ class BookingAPI {
             foreach (self::effectiveIntervals($providerId, date('Y-m-d', $startTs)) as [$ws, $we]) {
                 if ($startTs >= $ws && $endTs <= $we) { $fits = true; break; }
             }
-            if (!$fits) return ['ok' => false, 'error' => 'That time is outside the provider\'s working hours.'];
+            if (!$fits) return ['ok' => false, 'error' => __('bk_err_that_time_is_outside_the_provider_s_working_hours', 'That time is outside the provider\'s working hours.')];
         }
 
         // Required custom fields.
@@ -730,7 +730,7 @@ class BookingAPI {
             );
             if ($taken + $partySize > $capacity) {
                 $pdo->rollBack();
-                return ['ok' => false, 'error' => 'Sorry, that slot was just taken. Pick another time.'];
+                return ['ok' => false, 'error' => __('bk_err_sorry_that_slot_was_just_taken_pick_another_time', 'Sorry, that slot was just taken. Pick another time.')];
             }
 
             // Assign a resource if the service requires one.
@@ -739,7 +739,7 @@ class BookingAPI {
                 $picked = self::freeResourceId($serviceId, $startTs, $endTs, $partySize);
                 if ($picked === null) {
                     $pdo->rollBack();
-                    return ['ok' => false, 'error' => 'No room/resource is free for that time.'];
+                    return ['ok' => false, 'error' => __('bk_err_no_room_resource_is_free_for_that_time', 'No room/resource is free for that time.')];
                 }
                 $resourceId = $picked > 0 ? $picked : null;
             }
@@ -920,10 +920,10 @@ class BookingAPI {
               WHERE a.id = ? AND a.tenant_id = ?",
             [$id, $tid]
         );
-        if (!$row) return ['ok' => false, 'error' => 'Appointment not found.'];
+        if (!$row) return ['ok' => false, 'error' => __('bk_err_appointment_not_found', 'Appointment not found.')];
         if ($row['status'] === 'confirmed') return ['ok' => true]; // already approved — idempotent
         if ($row['status'] !== 'awaiting_approval') {
-            return ['ok' => false, 'error' => 'Only a booking awaiting approval can be approved.'];
+            return ['ok' => false, 'error' => __('bk_err_only_a_booking_awaiting_approval_can_be_approved', 'Only a booking awaiting approval can be approved.')];
         }
 
         Database::update('booking_appointments', ['status' => 'confirmed'], 'id = ? AND tenant_id = ?', [$id, $tid]);
@@ -991,9 +991,9 @@ class BookingAPI {
               WHERE a.id = ? AND a.tenant_id = ?",
             [$id, $tid]
         );
-        if (!$row) return ['ok' => false, 'error' => 'Appointment not found.'];
+        if (!$row) return ['ok' => false, 'error' => __('bk_err_appointment_not_found', 'Appointment not found.')];
         if ($row['status'] !== 'awaiting_approval') {
-            return ['ok' => false, 'error' => 'Only a booking awaiting approval can be declined.'];
+            return ['ok' => false, 'error' => __('bk_err_only_a_booking_awaiting_approval_can_be_declined', 'Only a booking awaiting approval can be declined.')];
         }
 
         $note = $reason !== '' ? $reason : 'Your booking request was not approved.';
@@ -1053,7 +1053,7 @@ class BookingAPI {
               WHERE a.id = ? AND a.tenant_id = ?",
             [$id, $tid]
         );
-        if (!$row) return ['ok' => false, 'error' => 'Appointment not found.'];
+        if (!$row) return ['ok' => false, 'error' => __('bk_err_appointment_not_found', 'Appointment not found.')];
 
         $newStart = str_replace('T', ' ', trim($newStart));
         if (!preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?$/', $newStart)) {
@@ -1063,17 +1063,17 @@ class BookingAPI {
         if (!$startTs) return ['ok' => false, 'error' => 'Invalid time.'];
 
         $service    = self::getService((int)$row['service_id']);
-        if (!$service) return ['ok' => false, 'error' => 'That service no longer exists.'];
+        if (!$service) return ['ok' => false, 'error' => __('bk_err_that_service_no_longer_exists', 'That service no longer exists.')];
 
         // Can't reschedule into the past, and honour the service's
         // minimum-advance window (createAppointment enforces these for new
         // online bookings; reschedule must too, or the rules are bypassable).
         if ($startTs <= time()) {
-            return ['ok' => false, 'error' => 'Please choose a time in the future.'];
+            return ['ok' => false, 'error' => __('bk_err_please_choose_a_time_in_the_future', 'Please choose a time in the future.')];
         }
         $minAdvance = (int)($service['min_advance_min'] ?? 0);
         if ($minAdvance > 0 && $startTs < time() + $minAdvance * 60) {
-            return ['ok' => false, 'error' => 'That time is too soon — please choose a later slot.'];
+            return ['ok' => false, 'error' => __('bk_err_that_time_is_too_soon_please_choose_a_later_slot', 'That time is too soon — please choose a later slot.')];
         }
 
         $providerId = (int)$row['provider_id'];
@@ -1089,7 +1089,7 @@ class BookingAPI {
         foreach (self::effectiveIntervals($providerId, date('Y-m-d', $startTs)) as [$ws, $we]) {
             if ($startTs >= $ws && $endTs <= $we) { $fits = true; break; }
         }
-        if (!$fits) return ['ok' => false, 'error' => 'That time is outside the provider\'s working hours.'];
+        if (!$fits) return ['ok' => false, 'error' => __('bk_err_that_time_is_outside_the_provider_s_working_hours', 'That time is outside the provider\'s working hours.')];
 
         $startsAtSql = date('Y-m-d H:i:s', $startTs);
         $endsAtSql   = date('Y-m-d H:i:s', $endTs);
@@ -1108,7 +1108,7 @@ class BookingAPI {
             );
             if ($taken + $partySize > $capacity) {
                 $pdo->rollBack();
-                return ['ok' => false, 'error' => 'That slot is already full.'];
+                return ['ok' => false, 'error' => __('bk_err_that_slot_is_already_full', 'That slot is already full.')];
             }
             Database::update('booking_appointments', [
                 'starts_at'         => $startsAtSql,
@@ -1234,8 +1234,8 @@ class BookingAPI {
         } catch (\Throwable $e) { $c = null; }
         if (!$c || (int)$c['is_active'] !== 1)             return ['ok' => false, 'discount_cents' => 0, 'row' => null, 'error' => 'Invalid coupon.'];
         if (!empty($c['expires_at']) && strtotime($c['expires_at']) < slate_db_time()) return ['ok' => false, 'discount_cents' => 0, 'row' => null, 'error' => 'Coupon expired.'];
-        if ($c['max_uses'] !== null && (int)$c['used_count'] >= (int)$c['max_uses']) return ['ok' => false, 'discount_cents' => 0, 'row' => null, 'error' => 'Coupon fully redeemed.'];
-        if ($subtotalCents < (int)$c['min_total_cents'])   return ['ok' => false, 'discount_cents' => 0, 'row' => null, 'error' => 'Order below the coupon minimum.'];
+        if ($c['max_uses'] !== null && (int)$c['used_count'] >= (int)$c['max_uses']) return ['ok' => false, 'discount_cents' => 0, 'row' => null, 'error' => __('bk_err_coupon_fully_redeemed', 'Coupon fully redeemed.')];
+        if ($subtotalCents < (int)$c['min_total_cents'])   return ['ok' => false, 'discount_cents' => 0, 'row' => null, 'error' => __('bk_err_order_below_the_coupon_minimum', 'Order below the coupon minimum.')];
 
         $discount = $c['type'] === 'fixed'
             ? min($subtotalCents, (int)$c['value'])
@@ -1295,11 +1295,11 @@ class BookingAPI {
      */
     public static function startPayment(array $appt): array {
         if (!class_exists('StripePaymentAPI') || !StripePaymentAPI::isConfigured()) {
-            return ['ok' => false, 'error' => 'Online payment is not available right now.'];
+            return ['ok' => false, 'error' => __('bk_err_online_payment_is_not_available_right_now', 'Online payment is not available right now.')];
         }
         $due = (int)$appt['deposit_cents'] > 0 ? (int)$appt['deposit_cents'] : ((int)$appt['price_cents'] + (int)$appt['tax_cents']);
         $due -= (int)($appt['paid_cents'] ?? 0);
-        if ($due <= 0) return ['ok' => false, 'error' => 'Nothing to pay.'];
+        if ($due <= 0) return ['ok' => false, 'error' => __('bk_err_nothing_to_pay', 'Nothing to pay.')];
 
         $service  = self::getService((int)$appt['service_id']);
         $currency = strtolower((string)($service['currency'] ?? 'usd'));
@@ -1318,7 +1318,7 @@ class BookingAPI {
             return ['ok' => true, 'url' => $sess['url']];
         } catch (\Throwable $e) {
             slate_log('Booking: startPayment failed: ' . $e->getMessage(), 'error');
-            return ['ok' => false, 'error' => 'Could not start payment.'];
+            return ['ok' => false, 'error' => __('bk_err_could_not_start_payment', 'Could not start payment.')];
         }
     }
 
@@ -1569,11 +1569,11 @@ class BookingAPI {
      * Returns ['ok'=>bool, 'error'=>?string].
      */
     public static function refundAppointment(int $apptId, ?int $amountCents = null): array {
-        if (!class_exists('StripePaymentAPI')) return ['ok' => false, 'error' => 'Stripe plugin not active.'];
+        if (!class_exists('StripePaymentAPI')) return ['ok' => false, 'error' => __('bk_err_stripe_plugin_not_active', 'Stripe plugin not active.')];
         $tid = current_tenant_id();
         $a = Database::row("SELECT * FROM booking_appointments WHERE id = ? AND tenant_id = ?", [$apptId, $tid]);
-        if (!$a) return ['ok' => false, 'error' => 'Appointment not found.'];
-        if (empty($a['charge_id'])) return ['ok' => false, 'error' => 'No recorded charge to refund.'];
+        if (!$a) return ['ok' => false, 'error' => __('bk_err_appointment_not_found', 'Appointment not found.')];
+        if (empty($a['charge_id'])) return ['ok' => false, 'error' => __('bk_err_no_recorded_charge_to_refund', 'No recorded charge to refund.')];
 
         $res = StripePaymentAPI::refundCharge((int)$a['charge_id'], $amountCents);
         if (empty($res['ok'])) return ['ok' => false, 'error' => $res['error'] ?? 'Refund failed.'];
@@ -2370,19 +2370,18 @@ class BookingAPI {
     public static function canSelfCancel(array $appt): array {
         $enabled = (string)(Database::setting('booking.self_cancel_enabled') ?? '1');
         if ($enabled === '0') {
-            return ['ok' => false, 'error' => 'Online cancellation isn\'t available for this booking. Please contact us directly.'];
+            return ['ok' => false, 'error' => __('bk_err_online_cancellation_isn_t_available_for_this_booking_ple', 'Online cancellation isn\'t available for this booking. Please contact us directly.')];
         }
         if (in_array($appt['status'] ?? '', ['cancelled', 'completed', 'no_show'], true)) {
-            return ['ok' => false, 'error' => 'This booking can no longer be cancelled online.'];
+            return ['ok' => false, 'error' => __('bk_err_this_booking_can_no_longer_be_cancelled_online', 'This booking can no longer be cancelled online.')];
         }
         $startTs = strtotime((string)($appt['starts_at'] ?? ''));
         if ($startTs === false || $startTs <= time()) {
-            return ['ok' => false, 'error' => 'This appointment has already started or passed — please contact us directly.'];
+            return ['ok' => false, 'error' => __('bk_err_this_appointment_has_already_started_or_passed_please_co', 'This appointment has already started or passed — please contact us directly.')];
         }
         $minHours = max(0, (int)(Database::setting('booking.cancel_min_notice_hours') ?? 0));
         if ($minHours > 0 && ($startTs - time()) < $minHours * 3600) {
-            return ['ok' => false, 'error' => 'Online cancellation requires at least ' . self::humanNotice($minHours)
-                . ' notice. Please contact us directly to cancel this booking.'];
+            return ['ok' => false, 'error' => sprintf(__('bk_err_cancel_min_notice', 'Online cancellation requires at least %s notice. Please contact us directly to cancel this booking.'), self::humanNotice($minHours))];
         }
         return ['ok' => true];
     }
@@ -2394,24 +2393,23 @@ class BookingAPI {
     public static function canSelfReschedule(array $appt): array {
         $enabled = (string)(Database::setting('booking.self_reschedule_enabled') ?? '1');
         if ($enabled === '0') {
-            return ['ok' => false, 'error' => 'Online rescheduling isn\'t available for this booking. Please contact us directly.'];
+            return ['ok' => false, 'error' => __('bk_err_online_rescheduling_isn_t_available_for_this_booking_ple', 'Online rescheduling isn\'t available for this booking. Please contact us directly.')];
         }
         if (in_array($appt['status'] ?? '', ['cancelled', 'completed', 'no_show'], true)) {
-            return ['ok' => false, 'error' => 'This booking can no longer be rescheduled online.'];
+            return ['ok' => false, 'error' => __('bk_err_this_booking_can_no_longer_be_rescheduled_online', 'This booking can no longer be rescheduled online.')];
         }
         $startTs = strtotime((string)($appt['starts_at'] ?? ''));
         if ($startTs === false || $startTs <= time()) {
-            return ['ok' => false, 'error' => 'This appointment has already started or passed — please contact us directly.'];
+            return ['ok' => false, 'error' => __('bk_err_this_appointment_has_already_started_or_passed_please_co', 'This appointment has already started or passed — please contact us directly.')];
         }
         $minHours = max(0, (int)(Database::setting('booking.reschedule_min_notice_hours') ?? 0));
         if ($minHours > 0 && ($startTs - time()) < $minHours * 3600) {
-            return ['ok' => false, 'error' => 'Online rescheduling requires at least ' . self::humanNotice($minHours)
-                . ' notice. Please contact us directly to reschedule this booking.'];
+            return ['ok' => false, 'error' => sprintf(__('bk_err_reschedule_min_notice', 'Online rescheduling requires at least %s notice. Please contact us directly to reschedule this booking.'), self::humanNotice($minHours))];
         }
         $maxResched = max(0, (int)(Database::setting('booking.max_reschedules') ?? 0));
         if ($maxResched > 0 && (int)($appt['reschedule_count'] ?? 0) >= $maxResched) {
-            $times = $maxResched === 1 ? 'once' : "{$maxResched} times";
-            return ['ok' => false, 'error' => "This booking has already been rescheduled the maximum allowed ({$times}). Please contact us directly."];
+            $times = $maxResched === 1 ? __('bk_times_once', 'once') : sprintf(__('bk_times_n', '%d times'), $maxResched);
+            return ['ok' => false, 'error' => sprintf(__('bk_err_max_reschedules', 'This booking has already been rescheduled the maximum allowed (%s). Please contact us directly.'), $times)];
         }
         return ['ok' => true];
     }
@@ -2419,10 +2417,10 @@ class BookingAPI {
     /** "24" -> "24 hours"; "48" -> "2 days"; used only for policy error text. */
     private static function humanNotice(int $hours): string {
         if ($hours % 24 === 0 && $hours >= 24) {
-            $d = $hours / 24;
-            return $d . ' day' . ($d === 1 ? '' : 's');
+            $d = (int) ($hours / 24);
+            return $d === 1 ? __('bk_notice_one_day', '1 day') : sprintf(__('bk_notice_days', '%d days'), $d);
         }
-        return $hours . ' hour' . ($hours === 1 ? '' : 's');
+        return $hours === 1 ? __('bk_notice_one_hour', '1 hour') : sprintf(__('bk_notice_hours', '%d hours'), $hours);
     }
 
     /**

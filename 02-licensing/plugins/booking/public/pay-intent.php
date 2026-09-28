@@ -34,7 +34,7 @@ function bpi_out(int $code, array $body): void {
 }
 
 if (!PluginLoader::isActive('booking')) {
-    bpi_out(503, ['error' => 'Booking plugin not active.']);
+    bpi_out(503, ['error' => __('bk_err_booking_plugin_not_active', 'Booking plugin not active.')]);
 }
 // Phase 11: an active plugin is not an entitled one (07 §2). Same 404 the
 // Module Guard gives every anonymous public route (07 §4), kept as JSON
@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     bpi_out(405, ['error' => 'POST required.']);
 }
 if (!class_exists('StripePaymentAPI') || !StripePaymentAPI::isConfigured()) {
-    bpi_out(503, ['error' => 'Online payment is not available right now.']);
+    bpi_out(503, ['error' => __('bk_err_online_payment_is_not_available_right_now', 'Online payment is not available right now.')]);
 }
 
 // Token comes from the JSON body (fetch) or a form POST fallback.
@@ -61,15 +61,15 @@ if ($token === '') {
     }
 }
 if (!preg_match('/^[a-f0-9]{32}$/', $token)) {
-    bpi_out(400, ['error' => 'Invalid payment link.']);
+    bpi_out(400, ['error' => __('bk_err_invalid_payment_link', 'Invalid payment link.')]);
 }
 
 $appt = BookingAPI::findByManageToken($token, false);
 if (!$appt) {
-    bpi_out(404, ['error' => 'Booking not found.']);
+    bpi_out(404, ['error' => __('bk_err_booking_not_found', 'Booking not found.')]);
 }
 if (($appt['payment_status'] ?? '') === 'paid') {
-    bpi_out(409, ['error' => 'This booking is already paid.']);
+    bpi_out(409, ['error' => __('bk_err_this_booking_is_already_paid', 'This booking is already paid.')]);
 }
 
 // Amount due: deposit when set, otherwise the full price + tax, less
@@ -79,7 +79,7 @@ $due = (int)$appt['deposit_cents'] > 0
      : ((int)$appt['price_cents'] + (int)$appt['tax_cents']);
 $due -= (int)($appt['paid_cents'] ?? 0);
 if ($due <= 0) {
-    bpi_out(400, ['error' => 'Nothing to pay.']);
+    bpi_out(400, ['error' => __('bk_err_nothing_to_pay', 'Nothing to pay.')]);
 }
 
 $currency = strtolower((string)($appt['currency'] ?? 'usd')) ?: 'usd';
@@ -127,11 +127,11 @@ try {
             $pi = StripePaymentAPI::createPaymentIntent($due, $opts);
         } catch (\Throwable $e2) {
             slate_log('Booking pay-intent: card-only retry failed: ' . $e2->getMessage(), 'error');
-            bpi_out(502, ['error' => 'Could not initialise payment.']);
+            bpi_out(502, ['error' => __('bk_err_could_not_initialise_payment', 'Could not initialise payment.')]);
         }
     } else {
         slate_log('Booking pay-intent: createPaymentIntent failed: ' . $e->getMessage(), 'error');
-        bpi_out(502, ['error' => 'Could not initialise payment.']);
+        bpi_out(502, ['error' => __('bk_err_could_not_initialise_payment', 'Could not initialise payment.')]);
     }
 }
 

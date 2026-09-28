@@ -48,14 +48,14 @@ class Uploads
     public static function handle(string $field, string $folder, array $opts = []): array
     {
         if (empty($_FILES[$field]) || !is_array($_FILES[$field])) {
-            return ['ok' => false, 'error' => 'No file submitted.'];
+            return ['ok' => false, 'error' => __('core_err_no_file_submitted', 'No file submitted.')];
         }
         $file = $_FILES[$field];
 
         $err = $file['error'] ?? UPLOAD_ERR_NO_FILE;
-        if ($err === UPLOAD_ERR_NO_FILE)      return ['ok' => false, 'error' => 'No file submitted.'];
-        if ($err === UPLOAD_ERR_INI_SIZE)     return ['ok' => false, 'error' => 'File exceeds server upload size limit.'];
-        if ($err === UPLOAD_ERR_FORM_SIZE)    return ['ok' => false, 'error' => 'File exceeds form upload size limit.'];
+        if ($err === UPLOAD_ERR_NO_FILE)      return ['ok' => false, 'error' => __('core_err_no_file_submitted', 'No file submitted.')];
+        if ($err === UPLOAD_ERR_INI_SIZE)     return ['ok' => false, 'error' => __('core_err_file_exceeds_server_upload_size_limit', 'File exceeds server upload size limit.')];
+        if ($err === UPLOAD_ERR_FORM_SIZE)    return ['ok' => false, 'error' => __('core_err_file_exceeds_form_upload_size_limit', 'File exceeds form upload size limit.')];
         if ($err !== UPLOAD_ERR_OK)           return ['ok' => false, 'error' => "Upload error ($err)."];
 
         $maxBytes = (int)($opts['max_bytes'] ?? self::DEFAULT_MAX_BYTES);
@@ -74,19 +74,19 @@ class Uploads
         // callers using 'allowed_mime' silently bypass MIME validation.
         $allowedMimes = $opts['allowed_mimes'] ?? $opts['allowed_mime'] ?? null;
         if (is_array($allowedMimes) && !in_array($mime, $allowedMimes, true)) {
-            return ['ok' => false, 'error' => 'File type not allowed.'];
+            return ['ok' => false, 'error' => __('core_err_file_type_not_allowed', 'File type not allowed.')];
         }
 
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $allowedExts = $opts['allowed_exts'] ?? null;
         if (is_array($allowedExts) && !in_array($ext, $allowedExts, true)) {
-            return ['ok' => false, 'error' => 'File extension not allowed.'];
+            return ['ok' => false, 'error' => __('core_err_file_extension_not_allowed', 'File extension not allowed.')];
         }
 
         // Sanitize folder
         $folder = trim($folder, '/');
         if (!preg_match('/^[a-zA-Z0-9_\-\/]+$/', $folder)) {
-            return ['ok' => false, 'error' => 'Invalid folder name.'];
+            return ['ok' => false, 'error' => __('core_err_invalid_folder_name', 'Invalid folder name.')];
         }
 
         $targetDir = self::publicUploadDir($folder);
@@ -94,7 +94,7 @@ class Uploads
         $targetPath = $targetDir . '/' . $newName;
 
         if (!@move_uploaded_file($file['tmp_name'], $targetPath)) {
-            return ['ok' => false, 'error' => 'Could not save uploaded file.'];
+            return ['ok' => false, 'error' => __('core_err_could_not_save_uploaded_file', 'Could not save uploaded file.')];
         }
         @chmod($targetPath, 0644);
 

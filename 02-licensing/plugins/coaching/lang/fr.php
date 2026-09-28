@@ -278,4 +278,5 @@ return [
     'cc_lib_from_prefix' => 'De',
     'cc_lib_comment_placeholder' => 'Commentaire ou correction pour le client…',
     'cc_lib_save_comment' => 'Enregistrer le commentaire',
+    'co_err_security_check_failed' => 'Le contrôle de sécurité a échoué.',
 ];
