@@ -21,8 +21,10 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
 - `&chrome=0` on the widget address for a flat look without the card border.
 
 ### Changed
-- **Plugins page redesign (client):** cleaner cards — a meaningful icon per plugin, name and version, an on/off switch,
-  Capabilities and a "⋯" menu (Download ZIP, Uninstall). The author and description lines are gone.
+- **Plugins page redesign (client):** compact one-row cards — a meaningful icon per plugin, name, status and version, an
+  on/off switch (with a padlock on its knob while protected) and a "⋯" menu holding Capabilities, Download ZIP and
+  Uninstall. Nothing can overflow a card any more; the author and description lines are gone; the search box no longer
+  shows a double border.
 - **Embedded widget look:** a centred, width-capped rounded card; calendar and times side by side on wide frames (stacked
   on phones); the calendar no longer stretches into giant cells on wide pages.
 
