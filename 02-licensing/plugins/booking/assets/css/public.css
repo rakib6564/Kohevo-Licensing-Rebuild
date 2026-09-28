@@ -33,6 +33,40 @@ body.book-public-embed .book-shell, .book-public-embed .book-shell { padding: 0;
 }
 body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: none; border-radius: 0; padding: 22px 18px 18px; max-width: 100%; }
 
+/* ── Embedded in an <iframe> (?embed=1): a polished, width-capped card ─────────────────────────────
+   Scoped to body.book-public-embed (the iframe document). The member-portal fragment mode keeps the flat
+   rules above, because the surrounding page already provides the card. The host page sizes the iframe to
+   the content (assets/js/embed.js), so the widget never needs an inner scrollbar. */
+body.book-public-embed { padding: 6px; }                      /* room for the card's border + shadow inside the frame */
+html.is-autosized, html.is-autosized body.book-public-embed { overflow: hidden; }
+body.book-public-embed .book-card {
+    max-width: 760px; margin: 0 auto;
+    border: 1px solid var(--border, rgba(0,0,0,0.08));
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(15,17,23,0.04), 0 12px 32px -14px rgba(15,17,23,0.16);
+    padding: 26px 24px 22px;
+    animation: book-embed-in .2s ease-out both;
+}
+@keyframes book-embed-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { body.book-public-embed .book-card { animation: none; } }
+/* Never let a wide host page stretch the calendar into giant cells. */
+body.book-public-embed .book-cal { max-width: 440px; }
+/* ?chrome=0 — flush: no card border/shadow/padding, for hosts that draw their own frame. */
+body.book-public-bare { padding: 0; }
+body.book-public-bare .book-card { border: 0; box-shadow: none; border-radius: 0; padding: 4px 2px; max-width: 100%; animation: none; }
+/* Wide frames: calendar on the left, times on the right (saves a lot of height). */
+@media (min-width: 720px) {
+    body.book-public-embed .book-card { max-width: 900px; }
+    body.book-public-embed .book-when { flex-direction: row; align-items: flex-start; gap: 28px; }
+    body.book-public-embed .book-date-form { flex: 0 0 340px; width: 340px; }
+    body.book-public-embed .book-date-form:only-child { flex: 1 1 auto; width: 100%; max-width: 440px; }
+    body.book-public-embed .book-when-slots { flex: 1 1 0; }
+}
+@media (max-width: 480px) {
+    body.book-public-embed { padding: 0; }
+    body.book-public-embed:not(.book-public-bare) .book-card { border-radius: 12px; padding: 20px 16px 18px; }
+}
+
 .book-card h1 {
     font-family: var(--font-display, "Plus Jakarta Sans", -apple-system, sans-serif);
     margin: 6px 0 14px; font-size: 24px; font-weight: 600;

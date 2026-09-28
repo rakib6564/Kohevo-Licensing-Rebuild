@@ -29,6 +29,39 @@
 
 class BookingAPI {
 
+    /**
+     * The copy-paste code that puts the booking widget on another website: an iframe plus the small helper script
+     * that sizes it to its content (see assets/js/embed.js). One source for every place the admin shows it.
+     * Plain text (not HTML-escaped): callers escape it for display, and the Copy button copies the raw text.
+     */
+    public static function embedSnippet(): string
+    {
+        $title = __('booking_embed_iframe_title', 'Book an appointment');
+        return '<iframe src="' . SLATE_URL . '/book?embed=1"' . "\n"
+             . '        data-kohevo-booking' . "\n"
+             . '        title="' . str_replace('"', '&quot;', $title) . '"' . "\n"
+             . '        style="width:100%;min-height:560px;border:0;display:block"' . "\n"
+             . '        loading="lazy"></iframe>' . "\n"
+             . '<script src="' . plugin_url('booking', 'assets/js/embed.js') . '" async></script>';
+    }
+
+    /** The snippet as a dark code block with a Copy button (idempotent script, safe to render twice on a page). */
+    public static function embedSnippetBlock(string $id = 'book-embed-snippet'): string
+    {
+        $copy   = e(__('booking_embed_copy', 'Copy code'));
+        $copied = e(__('booking_embed_copied', 'Copied'));
+        return '<pre class="snippet" id="' . e($id) . '" tabindex="0">' . e(self::embedSnippet()) . '</pre>'
+             . '<div style="margin-top:8px;"><button type="button" class="btn btn-sm" data-copy-target="' . e($id) . '"'
+             . ' data-copied="' . $copied . '">' . $copy . '</button></div>'
+             . '<script>(function(){if(window.__bkCopyInit)return;window.__bkCopyInit=1;'
+             . 'document.addEventListener("click",function(ev){var b=ev.target.closest&&ev.target.closest("[data-copy-target]");if(!b)return;'
+             . 'var el=document.getElementById(b.getAttribute("data-copy-target"));if(!el)return;var t=el.textContent,old=b.textContent;'
+             . 'function done(){b.textContent=b.getAttribute("data-copied");setTimeout(function(){b.textContent=old;},1800);}'
+             . 'if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,function(){});}'
+             . 'else{var r=document.createRange();r.selectNodeContents(el);var s=getSelection();s.removeAllRanges();s.addRange(r);try{document.execCommand("copy");done();}catch(e){}}'
+             . '});})();</script>';
+    }
+
     /** True once per request after we've confirmed the schema exists. */
     private static bool $schemaChecked = false;
 

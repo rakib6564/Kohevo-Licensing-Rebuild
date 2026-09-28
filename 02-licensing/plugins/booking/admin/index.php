@@ -251,9 +251,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <div class="aside-card">
             <div class="aside-card-title"><?= __('booking_public_booking', 'Public booking') ?></div>
             <p class="text-sm text-muted" style="margin:0 0 var(--space-3);"><?= sprintf(__('booking_public_booking_desc', 'Customers book at %s. Embed it on any site with an iframe.'), '<code>/book</code>') ?></p>
-            <pre class="snippet">&lt;iframe src="<?= e(SLATE_URL) ?>/book?embed=1"
-  style="width:100%;border:0;min-height:640px"&gt;
-&lt;/iframe&gt;</pre>
+            <?= BookingAPI::embedSnippetBlock('book-embed-snippet') ?>
+            <p class="text-sm text-muted" style="margin:10px 0 0;"><?= __('booking_embed_autoheight_hint', 'The script makes the frame grow with the booking steps — no scrollbar, nothing cut off.') ?></p>
         </div>
         <div class="aside-card">
             <div class="aside-card-title"><?= __('booking_setup_checklist', 'Setup checklist') ?></div>
