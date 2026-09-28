@@ -9,7 +9,20 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
 
 ## [Unreleased]
 
+### Added
+- **Booking widget auto-height.** The embed code now includes a small helper script (`assets/js/embed.js`) that sizes the
+  iframe to the widget on every step — no cut-off content, no inner scrollbar — and brings the widget back into view when
+  the visitor moves to the next step. The admin shows the ready-to-paste code with a **Copy** button (dashboard and
+  Booking → Settings). See [`docs/05-guides/EMBEDDING.md`](docs/05-guides/EMBEDDING.md).
+- `&chrome=0` on the widget address for a flat look without the card border.
+
+### Changed
+- **Embedded widget look:** a centred, width-capped rounded card; calendar and times side by side on wide frames (stacked
+  on phones); the calendar no longer stretches into giant cells on wide pages.
+
 ### Fixed
+- The widget's height report could never shrink (it read a value tied to the iframe's own height), and nothing on the
+  host page listened to it, so embeds were cut off at the snippet's fixed height. Both sides are fixed.
 - **Admin → Notifications on phones:** the bulk-action bar no longer pushes the page wider than the screen. With long
   (translated) labels such as « Supprimer la sélection » it overflowed and the whole page scrolled sideways. The bar and
   the header actions now wrap and share the row, and long labels wrap instead of overflowing (checked at 320, 360 and

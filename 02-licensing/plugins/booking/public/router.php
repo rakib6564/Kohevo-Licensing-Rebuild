@@ -607,7 +607,7 @@ function bookpub_layout_start(string $title, bool $embed): void {
                . '?v=' . $bookCssVer . '">';
         }
         ?>
-    </head><body class="book-public<?= $embed ? ' book-public-embed' : '' ?>">
+    </head><body class="book-public<?= $embed ? ' book-public-embed' : '' ?><?= ($embed && ($_GET['chrome'] ?? '') === '0') ? ' book-public-bare' : '' ?>">
     <main class="book-shell">
         <article class="book-card">
     <?php
@@ -636,18 +636,39 @@ function bookpub_layout_end(bool $embed): void {
            . '<p class="book-platform-signature">' . \Slate\Services\Content\PlatformSignature::render(\Slate\Services\Content\PlatformSignature::MODE_SIGNATURE) . '</p>'
            . '</footer>';
     } else {
-        // Embedded in a page (Content Builder "Booking" block, or the
-        // classic <iframe src="/book?embed=1">): report our height to the
-        // parent so the host auto-sizes with no scroll.
-        echo '<script>(function(){'
-           . 'function h(){var b=document.body,d=document.documentElement;'
-           . 'var ht=Math.max(b.scrollHeight,d.scrollHeight,b.offsetHeight,d.offsetHeight);'
-           . 'try{parent.postMessage({type:"cb-booking-height",height:ht},"*");}catch(e){}}'
-           . 'window.addEventListener("load",h);window.addEventListener("resize",h);'
-           . 'if(window.ResizeObserver){try{new ResizeObserver(h).observe(document.body);}catch(e){}}'
-           . 'setTimeout(h,60);setTimeout(h,400);})();</script>';
+        // Embedded in a page (Content Builder "Booking" block, or the classic
+        // <iframe src="/book?embed=1">): report our height to the parent so the host
+        // can size the iframe with no inner scroll and no clipped step. The host side is
+        // assets/js/embed.js (also understood by the Content Builder block).
+        echo '<script>' . bookpub_embed_reporter_js() . '</script>';
     }
     echo '</body></html>';
+}
+
+/**
+ * Height reporter that runs inside the embedded widget. Measures the widget shell's own layout box — NOT
+ * <body>/<html> or the document's scroll height: the app's global CSS makes html/body fill the viewport, so those
+ * always equal the iframe's current height and a frame that once grew could never shrink again. Posts the result
+ * to the parent whenever it changes. The first report after each page load is
+ * flagged {first:true} so the host can tell a new step from a resize. Both message names are sent: the current
+ * one and the legacy "cb-booking-height" that the Content Builder block listens for.
+ */
+function bookpub_embed_reporter_js(): string {
+    return '(function(){'
+        . 'var root=document.documentElement,last=-1,first=true,raf=0;'
+        . 'function measure(){raf=0;var sh=document.querySelector(".book-shell")||document.body,cs=getComputedStyle(document.body),'
+        .   'h=Math.ceil(sh.offsetTop+sh.offsetHeight+(parseFloat(cs.paddingBottom)||0)+(parseFloat(cs.marginBottom)||0));'
+        .   'if(h===last&&!first)return;last=h;var f=first;first=false;'
+        .   'try{parent.postMessage({type:"kohevo-booking-height",height:h,first:f},"*");'
+        .   'parent.postMessage({type:"cb-booking-height",height:h},"*");}catch(e){}}'
+        . 'function queue(){if(!raf)raf=(window.requestAnimationFrame||setTimeout)(measure);}'
+        . 'window.addEventListener("message",function(e){var d=e.data;'
+        .   'if(e.source===parent&&d&&d.type==="kohevo-booking-host")root.classList.add("is-autosized");});'
+        . 'window.addEventListener("load",queue);window.addEventListener("resize",queue);'
+        . 'if(window.ResizeObserver){try{var ro=new ResizeObserver(queue);ro.observe(document.querySelector(".book-shell")||document.body);}catch(e){}}'
+        . 'if(document.fonts&&document.fonts.ready)document.fonts.ready.then(queue);'
+        . 'queue();setTimeout(queue,250);'
+        . '})();';
 }
 
 function bookpub_stepper(int $current, bool $embed, bool $hideProvider = false): void {

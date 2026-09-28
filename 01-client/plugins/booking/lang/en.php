@@ -206,4 +206,10 @@ return [
     'booking_settings_embed_desc' => 'Websites allowed to show the booking widget in an iframe. Signing in, the confirmation step and payment always open on this site for security, then send the visitor back to their page.',
     'booking_settings_embed_label' => 'Allowed websites (one per line)',
     'booking_settings_embed_hint' => 'Only the site address, without a page path. Anything not listed here cannot frame your pages.',
+    'booking_embed_iframe_title' => 'Book an appointment',
+    'booking_embed_copy' => 'Copy code',
+    'booking_embed_copied' => 'Copied',
+    'booking_embed_autoheight_hint' => 'The script makes the frame grow with the booking steps — no scrollbar, nothing cut off.',
+    'booking_settings_embed_code_label' => 'Embed code',
+    'booking_settings_embed_code_hint' => 'Paste both lines where the widget should appear. The script resizes the frame to fit each step. Add &amp;chrome=0 to the address for a flat look without the card border.',
 ];

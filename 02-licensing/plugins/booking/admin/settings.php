@@ -212,6 +212,11 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <textarea id="embed_allowed_origins" name="embed_allowed_origins" rows="3" placeholder="https://www.example.com"><?= e(implode("\n", slate_embed_allowed_origins())) ?></textarea>
             <div class="field-hint"><?= __('booking_settings_embed_hint', 'Only the site address, without a page path. Anything not listed here cannot frame your pages.') ?></div>
         </div>
+        <div class="field">
+            <label class="field-label"><?= __('booking_settings_embed_code_label', 'Embed code') ?></label>
+            <?= BookingAPI::embedSnippetBlock('book-embed-snippet-settings') ?>
+            <div class="field-hint"><?= __('booking_settings_embed_code_hint', 'Paste both lines where the widget should appear. The script resizes the frame to fit each step. Add &chrome=0 to the address for a flat look without the card border.') ?></div>
+        </div>
     </div>
 
     <div class="card">

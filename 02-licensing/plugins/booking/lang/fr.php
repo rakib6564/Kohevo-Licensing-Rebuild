@@ -989,4 +989,10 @@ return [
     'booking_settings_embed_desc' => 'Sites autorisés à afficher le widget de réservation dans un iframe. La connexion, l’étape de confirmation et le paiement s’ouvrent toujours sur ce site par sécurité, puis renvoient le visiteur vers sa page.',
     'booking_settings_embed_label' => 'Sites autorisés (un par ligne)',
     'booking_settings_embed_hint' => 'Uniquement l’adresse du site, sans chemin de page. Tout site non listé ici ne peut pas encadrer vos pages.',
+    'booking_embed_iframe_title' => 'Prendre rendez-vous',
+    'booking_embed_copy' => 'Copier le code',
+    'booking_embed_copied' => 'Copié',
+    'booking_embed_autoheight_hint' => 'Le script ajuste la hauteur du cadre à chaque étape — pas de barre de défilement, rien n’est coupé.',
+    'booking_settings_embed_code_label' => 'Code d’intégration',
+    'booking_settings_embed_code_hint' => 'Collez les deux lignes à l’endroit où le widget doit apparaître. Le script adapte la hauteur du cadre à chaque étape. Ajoutez &amp;chrome=0 à l’adresse pour un rendu à plat, sans bordure de carte.',
 ];
