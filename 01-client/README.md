@@ -5,6 +5,9 @@ sales and business management in a single, personalized environment.
 ("Slate" is this repository's internal engineering codename; product/
 brand references outside the codebase should say Kohevo.)
 
+> This is the **client application** of the Kohevo repository. System overview, licensing flow, releasing and guides:
+> [root README](../README.md) · [documentation index](../docs/README.md) · [changelog](../CHANGELOG.md).
+
 This build configures Kohevo as a nutrition practice management
 application — client bookings, coaching programs, food and hydration
 tracking, memberships and payments.
@@ -48,7 +51,7 @@ a customer portal, an audit log, a hook system, and a public router.
 Everything else — bookings, coaching, memberships, forms, payments — is
 a plugin you upload as a ZIP through the admin.
 
-- **Core version:** 1.0.0
+- **Version:** see [`VERSION`](../VERSION) (`SLATE_VERSION` in `config.php`)
 - **Tested on:** PHP 8.4, MySQL/MariaDB
 - **No build step.** Vanilla PHP, vanilla CSS/JS. PHPMailer is the
   only Composer dependency (vendored).
@@ -57,7 +60,7 @@ a plugin you upload as a ZIP through the admin.
 
 ## What's in this package
 
-### Core (v1.0.0)
+### Core
 
 - ✅ Two-step `install.php` wizard (DB creds → admin account)
 - ✅ Premium admin shell — dark sidebar with section labels, light
@@ -92,7 +95,7 @@ a plugin you upload as a ZIP through the admin.
 
 ### Bundled plugins (`plugins/`)
 
-Seven plugins ship in this build. Scope comes from *Solaya — Capacités &
+Nine plugins ship in this build. Scope comes from *Solaya — Capacités &
 Parcours / Capabilities & Journeys*, which names the application as
 Booking, Booking+, Membership and Coaching. Booking has since absorbed
 Booking+ outright — its capabilities are the four flags on the Booking
@@ -101,17 +104,17 @@ with the rest as the dependencies they need.
 
 | Plugin | Slug | Version | Role | What it covers |
 |---|---|---|---|---|
-| **Booking** | `booking` | 0.8.0 | Level 1 · Appointments & practitioner logic | Appointment types with duration, buffers, price and categories; availability with breaks and per-provider date overrides; conflict handling; embeddable `/book` widget with self-service cancel & reschedule; Stripe free / full / deposit / on-site; coupons, gift cards, tax, refunds, invoices; email + SMS/WhatsApp reminders. Four capability flags carry the absorbed Booking+ behaviour: `service_rules` (HSR minimum-advance days, Discovery-Call prerequisite, prep page, WhatsApp, auto-response), `client_messaging` (the client "human message" door and its 8-hour practitioner nudge), `slot_restrictions` (slots reserved per type) and `custom_reminders` (the 8-day / day-before / 10-minute cadence) |
+| **Booking** | `booking` | 0.9.0 | Level 1 · Appointments & practitioner logic | Appointment types with duration, buffers, price and categories; availability with breaks and per-provider date overrides; conflict handling; embeddable `/book` widget with self-service cancel & reschedule; Stripe free / full / deposit / on-site; coupons, gift cards, tax, refunds, invoices; email + SMS/WhatsApp reminders. Four capability flags carry the absorbed Booking+ behaviour: `service_rules` (HSR minimum-advance days, Discovery-Call prerequisite, prep page, WhatsApp, auto-response), `client_messaging` (the client "human message" door and its 8-hour practitioner nudge), `slot_restrictions` (slots reserved per type) and `custom_reminders` (the 8-day / day-before / 10-minute cadence) |
 | **Membership** | `membership` | 0.7.1 | Access control | Fixed-term plans with FR+EN names, pricing, duration and grace period; plan types (membership / insurance / course); member profiles with medical, allergies, emergency contact and consent, plus QR member card; wallet and transaction ledger; the active-membership gate wired into Booking that keeps a one-time assessment from ever unlocking the programme app |
 | **Coaching** | `coaching` | 0.6.0 | Level 2 · Body & Soul app | Full profile with auto BMI/BMR, medical section and intolerances; 3-level goal tracker with "exceeded" and extra actions; food diary (meals, foods, photos, quantities); emotions with hunger/satiety context; hydration and physical activity; charts including the emotion↔food correlation; 1:1 chat with scheduled and immediate messages; meal structure, shopping list, two-way recipes and template library; challenges and end-of-programme summary; 1-year reactivation then automatic data deletion |
-| **Stripe Payment Gateway** | `stripe-payment` | 1.2.0 | Payments engine | Backs every payment mode the spec requires — free, full, deposit and the HSR staged first-hour-then-balance flow — plus refunds and invoices |
+| **Stripe Payment Gateway** | `stripe-payment` | 1.2.1 | Payments engine | Backs every payment mode the spec requires — free, full, deposit and the HSR staged first-hour-then-balance flow — plus refunds and invoices |
 | **Forms** | `forms` | 0.7.5 | Questionnaires | Backs the HSR preparation questionnaire (§5.2) and the interactive 7-day food-diary document sent before a Nutrition Assessment (§5.3) |
 | **Slate Multi Language Visual Translation** | `multilang-translate` | 1.3.0 | Bilingual UI | Closes the §6 gap "Bilingual UI coverage — verify all Booking/Coaching strings." Harvests every rendered string for FR/EN translation |
 | **Media library (compatibility shim)** | `media-library` | 1.1.0 | Media picker | Retained on purpose: core `Media::enqueuePicker()` serves its picker CSS/JS, and coaching's recipe and template library uses it to attach images |
+| **Backups** | `backups` | 1.0.0 | Operations | Automated daily backup of the database and uploaded files synced to Google Drive, with retention pruning and a manual "run now" |
+| **MCP Gateway** | `mcp-gateway` | 0.1.0 | AI administration | Scoped, revocable, audited MCP access for approved AI agents to manage admin tasks; never exposes password changes or user/role deletion |
 
-Everything else Slate ships — shop, CMS, SEO, timeclock, restaurant,
-studio, clientdesk and more — lives in [`archive/plugins/`](archive/plugins/)
-and is never loaded. See that folder's README to restore one.
+Other Slate plugins (shop, CMS, SEO, timeclock, restaurant, studio, clientdesk …) are not part of this build.
 Versions are read from each `plugins/<slug>/plugin.json`.
 
 ---
@@ -137,7 +140,7 @@ No horizontal scrollbars. Plugins get this free via `slate_data_row()`.
 Detail pages use the right-rail layout — `slate_page_layout('with-aside')`
 opens a CSS grid with a 320px aside hosting `.aside-card` blocks
 (`.kv-list`, `.audit-trail`). All tokens and component classes are
-documented in `docs/PLUGIN-API.md` §15 — reuse them rather than adding
+documented in [`PLUGIN-API.md`](../02-licensing/docs/PLUGIN-API.md) §15 — reuse them rather than adding
 parallel CSS.
 
 ## Responsive layout
@@ -173,17 +176,15 @@ slate/
 ├── db/
 │   ├── schema.sql         12 core tables
 │   └── migrations/        phase1.sql
-├── docs/                  PLUGIN-API.md, BUILDING-PLUGINS.md,
-│                          CLIENT-ONBOARDING.md  ← read before plugin work
-├── lang/en.php            Base translations (DB can override)
+├── lang/                  en.php + fr.php — core translations (DB can override)
 ├── templates/             Email/page templates
-├── uploads/               File uploads (branding, shop, plugin staging)
-├── bin/                   package-plugin.php, seed-demo.php, clean-demo.php
-├── vendor/                PHPMailer (Composer)
-├── plugins/               The 7 active plugins (see table above)
-│   └── _dist/             Pre-built upload-ready plugin ZIPs
-└── archive/plugins/       Slate plugins outside this build — never loaded
+├── uploads/               File uploads (created at runtime)
+├── bin/                   migrate, license-check, package-plugin, seed scripts, backup/restore
+├── vendor/                PHPMailer — added when the package is built
+└── plugins/               The 9 bundled plugins (see table above), each with its own lang/ pack
 ```
+
+Plugin-building docs live in [`../02-licensing/docs/`](../02-licensing/docs/).
 
 Core tables (`db/schema.sql`): `tenants`, `roles`, `role_permissions`,
 `users`, `customers`, `customer_auth_tokens`, `settings`, `plugins`,
@@ -203,7 +204,7 @@ Core tables (`db/schema.sql`): `tenants`, `roles`, `role_permissions`,
    re-upload it, activate it, and watch "Hello World" appear in the
    sidebar.
 
-See `INSTALL.md` for the full walkthrough and `docs/CLIENT-ONBOARDING.md`
+See `INSTALL.md` for the full walkthrough and [`CLIENT-ONBOARDING.md`](../02-licensing/docs/CLIENT-ONBOARDING.md)
 for handing a finished site to a client.
 
 ## Packaging a plugin
@@ -215,7 +216,7 @@ php bin/package-plugin.php plugins/my-plugin --dist     # → write into plugins
 
 The packager validates the manifest + SQL before zipping, so a ZIP
 that passes is guaranteed to pass installation. Start from
-`docs/BUILDING-PLUGINS.md`.
+[`BUILDING-PLUGINS.md`](../02-licensing/docs/BUILDING-PLUGINS.md).
 
 ## Requirements
 
@@ -235,103 +236,13 @@ first-class. IE11 is not supported.
 
 ---
 
-## Known issues & remaining work
+## Known issues
 
-**Security hardening pass (latest):**
-- **Login throttling is now enforced.** The `max_login_attempts` /
-  `lockout_minutes` Security settings were previously stored but never
-  read; `Auth` now counts failed attempts per client IP and locks out
-  both admin and customer logins (defaults: 10 attempts / 15 min). The
-  no-such-user path also runs a dummy `password_verify` to flatten the
-  account-enumeration timing oracle.
-- **Force-HTTPS and session idle-timeout are now enforced** (they were
-  inert settings). `config.php` 301-redirects to HTTPS (and sets HSTS)
-  when `force_https` is on; idle sessions past `session_timeout_minutes`
-  are dropped. The non-functional "Require 2FA" toggle was removed.
-- **Stripe secret + webhook keys are encrypted at rest** (AES-256-GCM)
-  via `slate_encrypt_secret()`; legacy plaintext keys are read
-  transparently and re-encrypted on next save. (Publishable key stays
-  plaintext — it's public.)
-- **Stripe completion paths hardened:** the embedded checkout and the
-  bank-redirect `return.php` now reconcile the captured amount against
-  the rebuilt order total (parking mismatches on-hold), `return.php` is
-  bound to the buyer's `shop_sid`, and the charges ledger has unique
-  keys on `(tenant_id, payment_intent_id)` / `(tenant_id, session_id)`
-  so concurrent webhooks can't double-insert.
-- **Booking payment confirmation** (`/book/done`) now verifies the
-  Stripe session's `metadata.booking_appt_id` matches the appointment
-  before marking it paid (was spoofable with any paid session id).
-- **Forms webhooks gained an SSRF guard** — non-http(s) schemes and
-  private/loopback/link-local/reserved IPs are refused, and curl is
-  pinned to the vetted IP. Public form submissions are now rate-limited
-  per IP (≤5/min).
-- **Tenant isolation:** shop variant create/edit/delete now verify the
-  parent product belongs to the tenant; the `shipping-flat-rate` plugin
-  gained a `tenant_id` column + per-tenant scoping on all queries.
-- **Open-redirect fixed** on both login pages (`next=//evil.com` is now
-  rejected via `slate_safe_redirect_target()`).
-- **Booking uploads** (`uploads/booking/`) now get a PHP-off `.htaccess`
-  and a real MIME check. `data/`, `db/`, `docs/`, `includes/` each got a
-  `Require all denied` `.htaccess` (the root rules don't match under a
-  `/subdir/` deployment). SVG logo upload disabled (script-carrying).
-- **Concurrency:** booking gift-card debit is now an atomic conditional
-  UPDATE and coupon redemption respects `max_uses` atomically.
-- **CSV exports** (shop products, form submissions) neutralise formula
-  injection; the `migrate-images` CLI tool blocks SSRF to private IPs.
-- **Booking schema self-heal:** `gift_applied_cents` and the other 0.5.1
-  payment columns are now reconciled even when the version was stamped
-  early (`schemaIsCurrent()` checks them; a one-time pass adds them).
-
-**Still open (deliberately deferred):**
-- **Customer email verification is not a login gate.** An unverified
-  customer can still log in (the dashboard shows a soft banner). Left as
-  intentional UX to avoid locking out existing accounts — don't treat
-  `email_verified` as an authorization signal in plugins.
-- **Storefront checkout has no coupon field.** `ShopAPI::createOrder()`
-  supports coupons but the public checkout never collects one, and cart
-  vs. order totals are computed by two paths — unify before relying on
-  storefront discounts.
-- Logout is a GET with no CSRF token (low-impact session-only).
-
-**Recently fixed (prior audit):**
-- Flat-rate-shipping triggered a PHP 8.4 implicit-nullable deprecation
-  on every request — now `?array $context`.
-- Shop coupons editor crashed when creating a new coupon
-  (`$editing['expires_at']` on null) — now null-safe.
-- Forms threw "Undefined array key 'status'" because
-  `CREATE TABLE IF NOT EXISTS` never adds columns to a pre-existing
-  table — `FormsAPI::ensureSchema()` now reconciles missing columns.
-- **Forms public submissions fatal-crashed** (`Unknown column
-  'data_json'`): `ensureSchema()` only reconciled `forms_definitions`,
-  not `forms_submissions`. Both tables now reconcile, plus a one-time
-  legacy `data` → `data_json` backfill so old submissions still render.
-- **Stripe webhook now rejects future-dated timestamps** via
-  `abs(time() - $t) > tolerance` (was only rejecting too-old).
-- **Shop/Stripe paid amount is now reconciled** against the rebuilt
-  order total at webhook/return time. A mismatch (cart drifted between
-  intent creation and completion) parks the order on `on-hold` for
-  review — logged + audited — instead of silently fulfilling a wrong
-  total. Matching charges advance to `processing` as before.
-- **Shop order numbers** now derive from the row's auto-increment id
-  (collision-safe, never reused after a delete) instead of `COUNT(*)+1`.
-- **Booking** gained an admin month **calendar** (`admin/calendar.php`)
-  and its READMEs were rewritten to the actual 0.5.1 feature set.
-
-**Open / known:**
-- **Two contact-form systems coexist:** the legacy core Contact Forms
-  (`admin/contact_forms.php` + `contact_forms` tables) and the newer
-  Forms plugin. Pick one; retire the other. *Deferred — removing the
-  legacy system drops its tables (data loss) and there's no VCS here,
-  so it needs an explicit go-ahead.*
-- **Forms** (0.1.0) is early — the field editor is line-syntax, not the
-  planned drag-and-drop builder. *Deferred (large feature).*
-- **Booking** (0.5.1) is feature-complete for its manifest; remaining
-  nice-to-haves: calendar drag-to-reschedule, Google/iCal sync,
-  multi-timezone slot computation, waitlist, and membership plans.
-- **`.env` contains live credentials** — keep it out of any
-  distributable ZIP. (Other stray build/backup/log artifacts have been
-  removed from the working tree.)
+The security-hardening notes and open items that used to be listed here predate the licensing rebuild and mention
+plugins that are no longer part of this build; they are kept for reference in
+[`docs/03-implementation/LEGACY-KNOWN-ISSUES.md`](../docs/03-implementation/LEGACY-KNOWN-ISSUES.md). Current
+status: [CHANGELOG](../CHANGELOG.md), [SECURITY.md](SECURITY.md) and the CI results.
 
 ## License
 
-(To be confirmed.)
+See the [root README](../README.md#license).

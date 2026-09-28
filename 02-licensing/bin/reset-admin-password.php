@@ -6,7 +6,9 @@
  * it never asks Claude or anything else for credentials, and it prints
  * no secrets back.
  *
- * Run:  php bin/reset-admin-password.php you@example.com yourNewPassword12
+ * Run:  php bin/reset-admin-password.php <your-real-email> <a-strong-password>
+ *        (use YOUR OWN address — copying an example address creates a real Super Admin with it;
+ *         a password typed on the command line lands in your shell history, so clear it afterwards)
  *
  * - If a user with that email already exists for this tenant, its
  *   password_hash is updated in place (nothing else about the account
@@ -26,7 +28,7 @@ $email    = $argv[1] ?? null;
 $password = $argv[2] ?? null;
 
 if ($email === null || $password === null) {
-    fwrite(STDERR, "Usage: php bin/reset-admin-password.php you@example.com yourNewPassword\n");
+    fwrite(STDERR, "Usage: php bin/reset-admin-password.php <your-real-email> <a-strong-password>\n");
     exit(1);
 }
 

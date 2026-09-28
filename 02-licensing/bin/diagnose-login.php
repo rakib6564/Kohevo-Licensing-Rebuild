@@ -2,7 +2,7 @@
 /**
  * Slate — read-only admin-login diagnostic.
  *
- * Run:  php bin/diagnose-login.php you@example.com yourPassword
+ * Run:  php bin/diagnose-login.php <your-real-email> <your-password>
  *
  * Prints WHY a login is failing without changing anything: whether the
  * `users` table has that email at all, its status/tenant, whether the
@@ -22,7 +22,7 @@ $email    = $argv[1] ?? null;
 $password = $argv[2] ?? null;
 
 if ($email === null) {
-    fwrite(STDERR, "Usage: php bin/diagnose-login.php you@example.com yourPassword\n");
+    fwrite(STDERR, "Usage: php bin/diagnose-login.php <your-real-email> <your-password>\n");
     exit(1);
 }
 
