@@ -186,6 +186,8 @@ return [
     'membership_emergency_phone' => 'Contact phone',
     'membership_emergency_relation' => 'Relationship',
     'membership_consent_terms'   => 'I accept the terms and conditions',
+    'membership_consent_terms_linked' => 'I accept the %s of %s',
+    'membership_terms_link_text' => 'privacy policy',
     'membership_read_terms'      => 'read',
     'membership_consent_media'   => 'I consent to photos/video being used for promotion (optional)',
     'membership_back'            => 'Back',

@@ -184,6 +184,8 @@ return [
     'membership_emergency_phone' => 'Téléphone du contact',
     'membership_emergency_relation' => 'Lien de parenté',
     'membership_consent_terms'   => "J'accepte les conditions générales",
+    'membership_consent_terms_linked' => "J'accepte les %s de %s",
+    'membership_terms_link_text' => 'politique de confidentialité',
     'membership_read_terms'      => 'lire',
     'membership_consent_media'   => "Je consens à l'utilisation de photos/vidéos à des fins promotionnelles (facultatif)",
     'membership_back'            => 'Retour',

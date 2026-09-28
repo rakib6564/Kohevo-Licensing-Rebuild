@@ -97,13 +97,21 @@ $steps   = [
 
         <?php else: /* step 4 */
             $termsUrl = (string) Database::setting('membership.terms_url');
+            $siteName  = (string) (Database::setting('site_name') ?: 'Solaya');
+            // Build the anchor: linked when a URL is configured, plain bold fallback otherwise
+            $termsLink = $termsUrl !== ''
+                ? '<a href="' . e($termsUrl) . '" target="_blank" rel="noopener" style="text-decoration:underline;color:inherit;">'
+                  . e(__('membership_terms_link_text', 'politique de confidentialité')) . '</a>'
+                : '<strong>' . e(__('membership_terms_link_text', 'politique de confidentialité')) . '</strong>';
         ?>
             <div class="field">
                 <label class="switch-label" style="align-items:flex-start;">
                     <span class="switch"><input type="checkbox" name="consent_terms" value="1" required><span class="switch-track"></span></span>
-                    <span><?= __('membership_consent_terms', 'I accept the terms and conditions') ?>
-                        <?php if ($termsUrl !== ''): ?> — <a href="<?= e($termsUrl) ?>" target="_blank" rel="noopener"><?= __('membership_read_terms', 'read') ?></a><?php endif; ?>
-                    </span>
+                    <span><?= sprintf(
+                        __('membership_consent_terms_linked', "J'accepte les %s de %s"),
+                        $termsLink,
+                        e($siteName)
+                    ) ?></span>
                 </label>
             </div>
             <div class="field">

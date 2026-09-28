@@ -650,25 +650,36 @@ function bookpub_render_step2(array $service, bool $embed): void {
  */
 function bookpub_locale_month_names(): array {
     if (strtolower(I18n::currentLocale()) === 'fr') {
-        return ['janvier','février','mars','avril','mai','juin','juillet',
-                'août','septembre','octobre','novembre','décembre'];
+        return ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet',
+                'Août','Septembre','Octobre','Novembre','Décembre'];
     }
     return ['January','February','March','April','May','June','July',
             'August','September','October','November','December'];
 }
+/** Returns the configured week-start day: 0 = Sunday, 1 = Monday (default). */
+function bookpub_week_start(): int {
+    $v = Database::setting('start_of_week');
+    return ($v !== null && $v !== '') ? (int)$v : 1;
+}
 function bookpub_locale_day_abbrevs(): array {
+    $start = bookpub_week_start();   // 0 = Sunday, 1 = Monday
     if (strtolower(I18n::currentLocale()) === 'fr') {
-        return ['Di','Lu','Ma','Me','Je','Ve','Sa'];
+        $all = ['Di','Lu','Ma','Me','Je','Ve','Sa']; // Sun…Sat
+    } else {
+        $all = ['Su','Mo','Tu','We','Th','Fr','Sa']; // Sun…Sat
     }
-    return ['Su','Mo','Tu','We','Th','Fr','Sa'];
+    // Rotate so the configured start day is first
+    return array_merge(array_slice($all, $start), array_slice($all, 0, $start));
 }
 
 function bookpub_calendar_script(): void {
-    $monthsJson = json_encode(bookpub_locale_month_names());
+    $monthsJson  = json_encode(bookpub_locale_month_names());
+    $weekStart   = bookpub_week_start();   // 0 = Sunday, 1 = Monday
     ?>
     <script>
     (function () {
-        var MONTHS = <?= $monthsJson ?>;
+        var MONTHS     = <?= $monthsJson ?>;
+        var WEEK_START = <?= $weekStart ?>; // 0 = Sunday, 1 = Monday
         function pad(n){ return (n < 10 ? '0' : '') + n; }
         function iso(y, m, d){ return y + '-' + pad(m + 1) + '-' + pad(d); }
         function parse(s){ var p = (s || '').split('-'); return p.length === 3
@@ -692,8 +703,10 @@ function bookpub_calendar_script(): void {
             function render(){
                 titleEl.textContent = MONTHS[view.m] + ' ' + view.y;
                 daysEl.innerHTML = '';
-                var first = new Date(view.y, view.m, 1).getDay();
-                var dim   = new Date(view.y, view.m + 1, 0).getDate();
+                // getDay() returns 0=Sun … 6=Sat; adjust so WEEK_START column is 0
+                var rawFirst = new Date(view.y, view.m, 1).getDay();
+                var first    = (rawFirst - WEEK_START + 7) % 7;
+                var dim      = new Date(view.y, view.m + 1, 0).getDate();
                 for (var i = 0; i < first; i++){
                     var sp = document.createElement('span');
                     sp.className = 'book-cal-day is-empty';
