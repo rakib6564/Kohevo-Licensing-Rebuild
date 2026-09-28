@@ -7,7 +7,7 @@
 | [`02-architecture/`](02-architecture/) | Target architecture: licensing domain, lifecycle, entitlements, activation, Global License Guard, module guards, expiry / grace / offline, database design, **API contract**, security, migration and compatibility |
 | [`03-implementation/`](03-implementation/) | Phase notes — security hardening (11), legacy handling (13), production QA (14) |
 | [`04-qa/`](04-qa/) | Test reports (Phase 12) |
-| [`05-guides/`](05-guides/) | How-to guides: [French / i18n](05-guides/I18N.md), [booking-widget embedding](05-guides/EMBEDDING.md), [notification emails](05-guides/EMAIL-TEMPLATES.md) |
+| [`05-guides/`](05-guides/) | How-to guides: [French / i18n](05-guides/I18N.md), [booking-widget embedding](05-guides/EMBEDDING.md), [notification emails](05-guides/EMAIL-TEMPLATES.md), [plugin protection](05-guides/PLUGIN-PROTECTION.md) |
 | [`06-operations/`](06-operations/) | [Releasing](06-operations/RELEASING.md) and [shared-hosting deployment](06-operations/SHARED-HOSTING.md) |
 | [`releases/`](releases/) | Per-release audit reports |
 

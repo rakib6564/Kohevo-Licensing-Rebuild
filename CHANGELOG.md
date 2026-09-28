@@ -10,6 +10,10 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
 ## [Unreleased]
 
 ### Added
+- **Plugin protection (client admin → Plugins).** Deactivating, uninstalling and uploading plugins are now **locked by
+  default** and enforced on the server. "Unlock changes" needs the admin's password and lasts 15 minutes (then re-locks;
+  "Lock now" re-locks at once; wrong passwords are throttled; everything is audited). Uninstall also requires typing the
+  plugin's name. Activating is never locked. See [`docs/05-guides/PLUGIN-PROTECTION.md`](docs/05-guides/PLUGIN-PROTECTION.md).
 - **Booking widget auto-height.** The embed code now includes a small helper script (`assets/js/embed.js`) that sizes the
   iframe to the widget on every step — no cut-off content, no inner scrollbar — and brings the widget back into view when
   the visitor moves to the next step. The admin shows the ready-to-paste code with a **Copy** button (dashboard and
@@ -17,6 +21,8 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
 - `&chrome=0` on the widget address for a flat look without the card border.
 
 ### Changed
+- **Plugins page redesign (client):** cleaner cards — a meaningful icon per plugin, name and version, an on/off switch,
+  Capabilities and a "⋯" menu (Download ZIP, Uninstall). The author and description lines are gone.
 - **Embedded widget look:** a centred, width-capped rounded card; calendar and times side by side on wide frames (stacked
   on phones); the calendar no longer stretches into giant cells on wide pages.
 
