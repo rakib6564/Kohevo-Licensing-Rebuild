@@ -359,7 +359,7 @@ class Membership extends Plugin {
             'icon'  => 'star',
             'tone'  => $days <= 0 ? 'amber' : ($days <= 30 ? 'amber' : 'green'),
             'meta'  => !empty($sub['expires_at'])
-                ? 'Renews <strong>' . e(I18n::localDate('j M Y', strtotime((string)$sub['expires_at']))) . '</strong>'
+                ? 'Renews <strong>' . e(slate_format_date((string)$sub['expires_at'])) . '</strong>'
                 : e((string)($sub['plan_name'] ?? '')),
         ];
         return $kpis;
@@ -399,10 +399,12 @@ class Membership extends Plugin {
         $tabs = [
             ['id' => 'overview', 'label' => __('membership_overview', 'Overview'), 'href' => SLATE_URL . '/member/membership/overview', 'icon' => 'grid'],
             ['id' => 'plans',    'label' => __('membership_plans', 'Plans'),       'href' => SLATE_URL . '/member/membership/plans',    'icon' => 'tag'],
-            ['id' => 'card',     'label' => __('membership_card', 'Card'),         'href' => SLATE_URL . '/member/membership/card',     'icon' => 'qr'],
-            ['id' => 'schedule', 'label' => __('membership_schedule', 'Schedule'), 'href' => SLATE_URL . '/member/membership/schedule','icon' => 'calendar'],
-            ['id' => 'profile',  'label' => __('membership_profile', 'Profile'),   'href' => SLATE_URL . '/member/membership/profile',  'icon' => 'user'],
         ];
+        if (MembershipAPI::cardEnabled()) {
+            $tabs[] = ['id' => 'card', 'label' => __('membership_card', 'Card'), 'href' => SLATE_URL . '/member/membership/card', 'icon' => 'qr'];
+        }
+        $tabs[] = ['id' => 'schedule', 'label' => __('membership_schedule', 'Schedule'), 'href' => SLATE_URL . '/member/membership/schedule', 'icon' => 'calendar'];
+        $tabs[] = ['id' => 'profile',  'label' => __('membership_profile', 'Profile'),   'href' => SLATE_URL . '/member/membership/profile',  'icon' => 'user'];
 
         foreach ($tabs as $t) {
             $items[] = [
@@ -437,7 +439,7 @@ class Membership extends Plugin {
                     'id'          => 'membership-sub-' . $s['id'],
                     'type'        => 'membership',
                     'label'       => __('membership', 'Membership') . ': ' . $planName,
-                    'description' => ucfirst((string)$s['status']) . ' subscription (' . I18n::localDate('M j, Y', strtotime($s['created_at'])) . ')',
+                    'description' => ucfirst((string)$s['status']) . ' subscription (' . slate_format_date($s['created_at']) . ')',
                     'occurred_at' => $s['created_at'],
                     'href'        => SLATE_URL . '/member/membership/overview',
                     'icon'        => 'star',
@@ -498,7 +500,7 @@ class Membership extends Plugin {
                     <li class="kv-row">
                         <span class="kv-label"><?= __('membership_expires', 'Expires') ?></span>
                         <span class="kv-value">
-                            <?= e(I18n::localDate('j M Y', strtotime($sub['expires_at']))) ?>
+                            <?= e(slate_format_date($sub['expires_at'])) ?>
                             <?php if ($status['days_left'] !== null): ?>
                                 <span class="text-xs text-muted">· <?= (int)$status['days_left'] ?> <?= __('membership_days_left', 'days left') ?></span>
                             <?php endif; ?>

@@ -1022,7 +1022,7 @@ function bookpub_render_step4(array $service, array $provider, string $date, str
            . sprintf(e(__('booking_n_times_selected', '%d times selected')), count($multiSelections)) . '</span></div>';
     } else {
         echo '<div><span class="kv-label">' . e(__('booking_when', 'When')) . '</span><span class="kv-value">'
-           . e(I18n::localDate('l, j F Y', strtotime($date))) . ' · ' . e(slate_format_time($date . ' ' . $slot)) . '</span></div>';
+           . e(slate_format_date($date)) . ' · ' . e(slate_format_time($date . ' ' . $slot)) . '</span></div>';
     }
     if ($party > 1) echo '<div><span class="kv-label">' . e(__('booking_people', 'People')) . '</span><span class="kv-value">' . (int)$party . '</span></div>';
     if ($basePrice > 0) {
@@ -1816,7 +1816,7 @@ function bookpub_manage_view(array $appt, bool $embed, string $error): void {
     echo '<div class="book-when-slots">';
     echo '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
     echo '    <span style="font-weight:600;font-size:13.5px;color:var(--text, #111217);">';
-    echo '      ' . e(__('booking_available_times', 'Available times')) . ' &middot; <span style="color:var(--accent, #2563EB);">' . e(I18n::localDate('D, j M Y', strtotime($date))) . '</span>';
+    echo '      ' . e(__('booking_available_times', 'Available times')) . ' &middot; <span style="color:var(--accent, #2563EB);">' . e(slate_format_date($date)) . '</span>';
     echo '    </span>';
 
     $slots = BookingAPI::computeAvailableSlots((int)$appt['service_id'], (int)$appt['provider_id'], $date, $party);
@@ -1830,13 +1830,14 @@ function bookpub_manage_view(array $appt, bool $embed, string $error): void {
     } else {
         echo '<div class="book-slots">';
         foreach ($slots as $time) {
-            echo '<form method="post" style="display:inline;margin:0;" onsubmit="return confirm(\'' . e(sprintf(__('booking_confirm_reschedule_prompt', 'Confirm rescheduling your appointment to %s at %s?'), I18n::localDate('l, j F Y', strtotime($date)), $time)) . '\')">'
+            $slotDisplay = slate_format_time($date . ' ' . $time);
+            echo '<form method="post" style="display:inline;margin:0;" onsubmit="return confirm(\'' . e(sprintf(__('booking_confirm_reschedule_prompt', 'Confirm rescheduling your appointment to %s at %s?'), slate_format_date($date), $slotDisplay)) . '\')">'
                . csrf_field()
                . '<input type="hidden" name="token" value="' . e($token) . '">'
                . '<input type="hidden" name="_action" value="reschedule">'
                . '<input type="hidden" name="date" value="' . e($date) . '">'
                . '<button type="submit" class="book-slot" name="slot" value="' . e($time) . '" style="cursor:pointer;width:100%;font-size:13.5px;font-weight:600;">'
-               . e($time)
+               . e($slotDisplay)
                . '</button>'
                . '</form>';
         }

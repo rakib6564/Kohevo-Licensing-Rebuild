@@ -72,7 +72,7 @@ bookingplus_prereq_page(
 // ── Rendering helper (glass card, matches public/message.php style) ─
 function bookingplus_prereq_page(string $title, string $bodyHtml, string $ctaUrl, string $ctaLabel): void {
     $siteName = Database::setting('site_name') ?: 'Booking';
-    $accent   = (string) (Database::setting('brand_accent_color') ?: '#2563EB');
+    $accent   = (string) (Database::setting('brand_accent_color') ?: '#111111');
     $logoRel  = trim((string) Database::setting('brand_logo_path'));
     $logoUrl  = $logoRel !== '' ? SLATE_URL . '/' . ltrim($logoRel, '/') : '';
     ?>
@@ -114,9 +114,9 @@ function bookingplus_prereq_page(string $title, string $bodyHtml, string $ctaUrl
         .bp-icon {
             width: 56px; height: 56px; margin-bottom: 18px;
             border-radius: 14px;
-            background: linear-gradient(135deg, var(--bp-accent), rgba(37,99,235,0.7));
+            background: linear-gradient(135deg, var(--bp-accent), rgba(17,17,17,0.75));
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+            box-shadow: 0 4px 12px rgba(17,17,17,0.22);
         }
         .bp-icon svg { width: 28px; height: 28px; color: #fff; }
         .bp-card h1 {

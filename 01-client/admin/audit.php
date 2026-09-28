@@ -192,7 +192,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                                 <?php endif; ?>
                             </div>
                             <div class="audit-trail-meta">
-                                <?= e(I18n::localDate('j M Y, H:i:s', strtotime($r['created_at']))) ?>
+                                <?= e(slate_format_datetime($r['created_at'])) ?>
                                 <?php if ($r['user_name']): ?>
                                     · <?= e($r['user_name']) ?>
                                 <?php elseif ($r['user_id']): ?>

@@ -2034,7 +2034,7 @@ class FormsAPI {
 
     /** Lighten (positive) or darken (negative) a #rrggbb colour by a 0–1 ratio. */
     private static function shadeHex(string $hex, float $ratio): string {
-        [$r, $g, $b] = self::hexToRgb(self::sanitizeHex($hex) ?: '#2563eb');
+        [$r, $g, $b] = self::hexToRgb(self::sanitizeHex($hex) ?: '#111111');
         $adj = function (int $c) use ($ratio): int {
             $c = $ratio < 0 ? $c * (1 + $ratio) : $c + (255 - $c) * $ratio;
             return max(0, min(255, (int)round($c)));

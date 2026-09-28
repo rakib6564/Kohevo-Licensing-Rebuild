@@ -111,7 +111,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                                     <?= e($types[$s['plan_type']] ?? $s['plan_type']) ?> ·
                                     <?= e(MembershipAPI::money((int)$s['amount_cents'], $s['currency'])) ?> ·
                                     <?= e((string)$s['activation']) ?>
-                                    <?php if (!empty($s['expires_at'])): ?> · <?= __('membership_expires', 'Expires') ?> <?= e(I18n::localDate('j M Y', strtotime($s['expires_at']))) ?><?php endif; ?>
+                                    <?php if (!empty($s['expires_at'])): ?> · <?= __('membership_expires', 'Expires') ?> <?= e(slate_format_date($s['expires_at'])) ?><?php endif; ?>
                                 </span>
                             </span>
                             <span class="kv-value" style="display:flex;align-items:center;gap:8px;">
@@ -191,7 +191,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     <?php foreach ($txns as $t): $d=(int)$t['delta_cents']; $sign=$d>0?'+':($d<0?'−':''); ?>
                         <li class="kv-row">
                             <span class="kv-label"><strong style="color:var(--text);"><?= e(ucfirst((string)$t['type'])) ?></strong><br>
-                                <span class="text-xs"><?= e((string)($t['description'] ?? '')) ?> · <?= e(I18n::localDate('j M Y', strtotime($t['created_at']))) ?></span></span>
+                                <span class="text-xs"><?= e((string)($t['description'] ?? '')) ?> · <?= e(slate_format_date($t['created_at'])) ?></span></span>
                             <span class="kv-value"><?= $d!==0 ? e($sign . MembershipAPI::money(abs($d), $wallet['currency'] ?? null)) : '—' ?></span>
                         </li>
                     <?php endforeach; ?>

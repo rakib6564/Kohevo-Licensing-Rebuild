@@ -24,7 +24,7 @@
  */
 
 define('SLATE_ROOT', __DIR__);
-define('SLATE_VERSION', '1.0.0');
+define('SLATE_VERSION', '1.3.0');
 $installMarker = SLATE_ROOT . '/.installed';
 
 // ── Already installed ───────────────────────────────────────
@@ -34,6 +34,8 @@ if (file_exists($installMarker)) {
     <!DOCTYPE html>
     <html lang="en"><head>
         <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#0E1117">
+        <link rel="icon" href="assets/img/kohevo-favicon.ico">
         <title>Kohevo is already installed</title>
         <?php require_once __DIR__ . '/includes/ui_components.php'; slate_ui_emit_css(); ?>
     </head><body>
@@ -273,61 +275,87 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $requestedStep === $step) {
         }
     } elseif ($step === 5) {
         $action = (string) ($_POST['_action'] ?? 'finish');
-
-        if ($action === 'finish_anyway') {
-            // Reached only after a partial plugin-activation failure screen
-            // the operator has already seen — finish setup regardless;
-            // failed plugins are simply never activated, nothing was left
-            // half-applied. The license activation and admin account this
-            // gates on already succeeded before this step was reachable.
-            file_put_contents($installMarker, "Installed: " . date('Y-m-d H:i:s') . " | Kohevo " . SLATE_VERSION . "\n");
-            @chmod($installMarker, 0640);
-            header('Location: ' . SLATE_URL . '/admin/login.php?installed=1');
-            exit;
-        }
-
-        $entitlements = [];
-        try {
-            $store = new \Slate\Services\Licensing\SlateLicenseCacheStore((int) TENANT_ID);
-            $state = $store->readTrustState();
-            $entitlements = $state['trusted'] ? (array) ($state['data']['entitlements'] ?? []) : [];
-        } catch (\Throwable $e) {
+        if ($action !== 'finish') {
+            $error = 'Invalid installer action. Module provisioning cannot be bypassed.';
+        } else {
             $entitlements = [];
-        }
+            try {
+                $store = new \Slate\Services\Licensing\SlateLicenseCacheStore((int) TENANT_ID);
+                $state = $store->readTrustState();
+                $entitlements = $state['trusted'] ? (array) ($state['data']['entitlements'] ?? []) : [];
+            } catch (\Throwable $e) {
+                $entitlements = [];
+            }
 
-        // Auto-activated by the ACTIVATED LICENSE's own entitlements — never
-        // an operator checkbox list (docs/05 §1 Step 7; resolves INST-05,
-        // "unentitled plugin selection").
-        $pluginsOnDisk = PluginLoader::discoverOnDisk();
-        $discovered = array_column($pluginsOnDisk, null, 'slug');
-        $toActivate = array_values(array_intersect(
-            array_map('strval', $entitlements),
-            array_keys($discovered)
-        ));
+            // If the Step 5 module form was submitted (`_modules_form` present)
+            // or `modules` was explicitly supplied in $_POST, use $_POST['modules']
+            // literally (an unchecked form submits `_modules_form=1` with no `modules`,
+            // which selects `[]` = Core only / `none`).
+            // If neither `modules` nor `_modules_form` is present (e.g. a bare
+            // `_action=finish` programmatic test call), default to all licensed
+            // V1 commercial modules in the verified license snapshot.
+            if (array_key_exists('modules', $_POST) || !empty($_POST['_modules_form'])) {
+                if (array_key_exists('modules', $_POST) && !is_array($_POST['modules'])) {
+                    $requested = [''];
+                } else {
+                    $requested = $_POST['modules'] ?? [];
+                }
+            } else {
+                $eligibleByDefault = \Slate\Services\Installation\CommercialModuleRegistry::entitledDefinitions($entitlements);
+                $requested = array_keys($eligibleByDefault);
+            }
 
-        $pluginResults = [];
-        foreach ($toActivate as $slug) {
-            $res = PluginLoader::installFromDisk($slug);
-            $pluginResults[] = [
-                'slug'  => $slug,
-                'name'  => $discovered[$slug]['name'] ?? $slug,
-                'ok'    => !empty($res['ok']),
-                'error' => $res['error'] ?? null,
-            ];
+            $selection = \Slate\Services\Installation\CommercialModuleRegistry::validateSelection($requested, $entitlements);
+            if (!$selection['ok']) {
+                $error = (string) $selection['error'];
+            } else {
+                $selected = $selection['selected'];
+                $infra = \Slate\Services\Installation\CommercialModuleRegistry::resolveInfrastructure($selected);
+                if (!$infra['ok']) {
+                    $error = (string) $infra['error'];
+                } else {
+                    $definitions = \Slate\Services\Installation\CommercialModuleRegistry::definitions();
+                    $pluginByEntitlement = [];
+                    foreach ($definitions as $key => $definition) {
+                        $pluginByEntitlement[$key] = $definition['plugin'];
+                    }
+                    $ordered = array_values(array_unique(array_merge(
+                        $infra['infrastructure'],
+                        array_map(static fn(string $key): string => $pluginByEntitlement[$key], $selected)
+                    )));
+                    $before = array_column(PluginLoader::listAll(), 'status', 'slug');
+                    $pluginResults = [];
+                    $failed = null;
+                    foreach ($ordered as $slug) {
+                        $res = PluginLoader::installFromDisk($slug);
+                        $pluginResults[] = [
+                            'slug'  => $slug,
+                            'name'  => $slug === 'stripe-payment' ? 'Stripe Payment infrastructure' : $slug,
+                            'ok'    => !empty($res['ok']),
+                            'error' => $res['error'] ?? null,
+                        ];
+                        if (empty($res['ok'])) {
+                            $failed = $res['error'] ?? 'Module provisioning failed.';
+                            break;
+                        }
+                    }
+                    if ($failed !== null) {
+                        foreach ($ordered as $slug) {
+                            if (($before[$slug] ?? null) !== PluginLoader::STATUS_ACTIVE) {
+                                PluginLoader::deactivate($slug);
+                            }
+                        }
+                        $finishSummary = $pluginResults;
+                        $error = 'Module provisioning failed. No installation marker was written; correct the package issue and retry.';
+                    } else {
+                        file_put_contents($installMarker, "Installed: " . date('Y-m-d H:i:s') . " | Kohevo " . SLATE_VERSION . "\n");
+                        @chmod($installMarker, 0640);
+                        header('Location: ' . SLATE_URL . '/admin/login.php?installed=1');
+                        exit;
+                    }
+                }
+            }
         }
-
-        $anyFailed = (bool) array_filter($pluginResults, static fn(array $r): bool => !$r['ok']);
-        if (!$anyFailed) {
-            file_put_contents($installMarker, "Installed: " . date('Y-m-d H:i:s') . " | Kohevo " . SLATE_VERSION . "\n");
-            @chmod($installMarker, 0640);
-            header('Location: ' . SLATE_URL . '/admin/login.php?installed=1');
-            exit;
-        }
-        // Else fall through and re-render step 5 below with $finishSummary —
-        // shows what succeeded/failed and offers "Continue anyway". The
-        // marker is deliberately not written until the operator has seen
-        // that.
-        $finishSummary = $pluginResults;
     }
 }
 
@@ -340,6 +368,31 @@ if ($step === 5 && $finishSummary === null) {
         $licenseSummary = $state['trusted'] ? $state['data'] : null;
     } catch (\Throwable $e) {
         $licenseSummary = null;
+    }
+}
+
+$eligibleModules = [];
+$allCommercialModules = [];
+$futureModules = [];
+$selectedModulesForView = null;
+if ($step === 5) {
+    try {
+        $allCommercialModules = \Slate\Services\Installation\CommercialModuleRegistry::definitions();
+        $futureModules = \Slate\Services\Installation\CommercialModuleRegistry::futureDefinitions();
+        $store = new \Slate\Services\Licensing\SlateLicenseCacheStore((int) TENANT_ID);
+        $state = $store->readTrustState();
+        $trustedEntitlements = $state['trusted'] ? (array) ($state['data']['entitlements'] ?? []) : [];
+        $eligibleModules = \Slate\Services\Installation\CommercialModuleRegistry::entitledDefinitions($trustedEntitlements);
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && (array_key_exists('modules', $_POST) || !empty($_POST['_modules_form']))) {
+            $rawPosted = is_array($_POST['modules'] ?? null) ? $_POST['modules'] : [];
+            $selectedModulesForView = array_values(array_unique(array_map('strval', $rawPosted)));
+        } else {
+            $selectedModulesForView = array_keys($eligibleModules);
+        }
+    } catch (\Throwable $e) {
+        $eligibleModules = [];
+        $allCommercialModules = [];
+        $futureModules = [];
     }
 }
 
@@ -356,8 +409,9 @@ if ($step === 3) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#FBF8F2">
+    <meta name="theme-color" content="#0E1117">
     <title>Install Kohevo</title>
+    <link rel="icon" href="assets/img/kohevo-favicon.ico">
     <?php require_once __DIR__ . '/includes/ui_components.php'; slate_ui_emit_css(); ?>
     <?php require __DIR__ . '/includes/a11y_head.php'; ?>
     <style>
@@ -584,46 +638,52 @@ if ($step === 3) {
         </form>
 
     <?php elseif ($step === 5): ?>
-        <h2 style="margin-bottom:var(--space-2)">Finish setup</h2>
+        <h2 style="margin-bottom:var(--space-2)">Choose your modules</h2>
+        <p class="text-muted" style="margin:0 0 var(--space-4);font-size:14px;">
+            Core features are included with your license. Select the optional commercial modules you want to enable on this installation.
+        </p>
 
         <?php if ($finishSummary !== null): ?>
-            <p class="text-muted" style="margin:0 0 var(--space-4);font-size:14px;">
-                Some included modules couldn't be activated automatically. This
-                won't block finishing setup — retry them anytime from
-                <strong>Admin → Plugins</strong>.
-            </p>
+            <div class="alert alert-error" role="alert" style="margin-bottom:var(--space-4);">Module provisioning failed. No installation marker was written. Correct the issue and retry.</div>
             <ul class="kv-list" style="margin-bottom:var(--space-4);">
                 <?php foreach ($finishSummary as $r): ?>
-                    <li class="kv-row">
-                        <span class="kv-label"><?= htmlspecialchars($r['name']) ?></span>
-                        <span class="kv-value" style="text-align:right;">
-                            <?php if ($r['ok']): ?>
-                                <span style="color:var(--success,#16A34A);font-weight:600;">Activated</span>
-                            <?php else: ?>
-                                <span style="color:var(--danger,#DC2626);font-weight:600;">Failed</span>
-                                <div class="text-muted" style="font-size:12px;"><?= htmlspecialchars((string)$r['error']) ?></div>
-                            <?php endif; ?>
-                        </span>
-                    </li>
+                    <li class="kv-row"><span class="kv-label"><?= htmlspecialchars($r['name']) ?></span><span class="kv-value" style="text-align:right;<?= $r['ok'] ? 'color:var(--success,#16A34A);' : 'color:var(--danger,#DC2626);' ?>font-weight:600;"><?= $r['ok'] ? 'Rolled back' : 'Failed: ' . htmlspecialchars((string)$r['error']) ?></span></li>
                 <?php endforeach; ?>
             </ul>
-            <form method="post">
-                <?= csrf_field() ?>
-                <input type="hidden" name="_action" value="finish_anyway">
-                <button type="submit" class="btn btn-primary btn-lg btn-block">Continue to admin login →</button>
-            </form>
-        <?php else: ?>
-            <p class="text-muted" style="margin:0 0 var(--space-4);font-size:14px;">
-                Your license is active<?= $licenseSummary && !empty($licenseSummary['plan']) ? ' — plan ' . htmlspecialchars((string)$licenseSummary['plan']) : '' ?>
-                and your admin account is ready. Any modules included in your
-                license will be activated automatically when you finish.
-            </p>
-            <form method="post">
-                <?= csrf_field() ?>
-                <input type="hidden" name="_action" value="finish">
-                <button type="submit" class="btn btn-primary btn-lg btn-block">Finish →</button>
-            </form>
         <?php endif; ?>
+
+        <form method="post">
+            <?= csrf_field() ?>
+            <input type="hidden" name="_action" value="finish">
+            <input type="hidden" name="_modules_form" value="1">
+            <div style="border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:14px;">
+                <strong style="display:block;margin-bottom:10px;">Included Core</strong>
+                <div style="color:var(--muted);font-size:13px;">✓ Admin / Users &nbsp; ✓ Dashboard &nbsp; ✓ Site Settings</div>
+                <div class="field-hint" style="margin-top:6px;">Included with your license</div>
+            </div>
+            <div style="border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:14px;">
+                <strong style="display:block;margin-bottom:10px;">Available Commercial Modules</strong>
+                <?php foreach ($allCommercialModules as $key => $module): $entitled = isset($eligibleModules[$key]); $checked = $entitled && in_array($key, $selectedModulesForView ?? [], true); ?>
+                    <label style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;<?= $entitled ? '' : 'opacity:.62;' ?>">
+                        <input type="checkbox" name="modules[]" value="<?= e($key) ?>" <?= $checked ? 'checked' : '' ?> <?= $entitled ? '' : 'disabled' ?> style="margin-top:3px;">
+                        <span><b><?= e($module['label']) ?></b><br><small class="text-muted"><?= e($module['description']) ?></small><br><small class="field-hint"><?= $entitled ? 'Included in this license' : 'Not included in this license' ?></small></span>
+                    </label>
+                <?php endforeach; ?>
+                <?php foreach ($futureModules as $fKey => $fModule): ?>
+                    <label style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;opacity:.55;">
+                        <input type="checkbox" value="<?= e($fKey) ?>" disabled style="margin-top:3px;">
+                        <span><b><?= e($fModule['display_name']) ?></b> <small class="badge" style="font-size:11px;">Not V1 / Future</small><br><small class="text-muted"><?= e($fModule['description']) ?></small></span>
+                    </label>
+                <?php endforeach; ?>
+            </div>
+            <?php $needsStripe = false; foreach ($selectedModulesForView ?? [] as $selectedKey) { if (!empty($eligibleModules[$selectedKey]['requires_infrastructure'])) { $needsStripe = true; break; } } ?>
+            <?php if ($needsStripe): ?>
+                <div style="border:1px solid color-mix(in srgb, var(--accent) 35%, var(--border));border-radius:var(--radius-lg);padding:14px;margin-bottom:16px;background:var(--accent-soft);">
+                    <strong>Supporting Infrastructure Notice</strong><br><small class="text-muted">✓ Stripe Payment will be automatically enabled because Membership or Booking requires payment infrastructure. Stripe is supporting infrastructure, not a standalone commercial module.</small>
+                </div>
+            <?php endif; ?>
+            <button type="submit" class="btn btn-primary btn-lg btn-block">Finish setup →</button>
+        </form>
     <?php endif; ?>
     </div>
 </div>

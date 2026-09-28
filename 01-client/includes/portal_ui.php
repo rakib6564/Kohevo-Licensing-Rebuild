@@ -166,6 +166,7 @@ function slate_portal_head(string $title, string $bodyClass = ''): void {
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="<?= e($themeColor) ?>">
     <title><?= e($title) ?> — <?= e($siteName) ?></title>
+    <link rel="icon" href="<?= e(slate_favicon_url()) ?>">
     <meta name="csrf" content="<?= e(csrf_token()) ?>">
     <?php slate_ui_emit_css(); ?>
     <?php slate_brand_accent_emit(); ?>
@@ -207,6 +208,9 @@ function slate_portal_topbar(array $opts = []): void {
     $siteName = Database::setting('site_name') ?: 'Kohevo';
     $logoUrls = slate_logo_urls();
     $logoUrl  = $logoUrls['light'];
+    if ($logoUrl === '' && stripos(trim((string)$siteName), 'Kohevo') === 0) {
+        $logoUrl = \Slate\Services\Content\PlatformIdentity::wordmarkUrl();
+    }
     $logoDarkUrl = $logoUrls['dark'];
     $cust     = class_exists('Auth') ? Auth::customer() : null;
 

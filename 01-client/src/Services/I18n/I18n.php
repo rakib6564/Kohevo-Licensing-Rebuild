@@ -171,11 +171,23 @@ class I18n
     public static function localDate(string $format, ?int $ts = null): string
     {
         $ts = $ts ?? time();
+        $tzName = '';
+        if (function_exists('slate_timezone') && class_exists('Database')) {
+            try { $tzName = \slate_timezone(); } catch (\Throwable $e) { $tzName = ''; }
+        }
+        if ($tzName === '') {
+            $tzName = date_default_timezone_get() ?: 'UTC';
+        }
+        try {
+            $dt = (new \DateTimeImmutable('@' . $ts))->setTimezone(new \DateTimeZone($tzName));
+        } catch (\Throwable $e) {
+            $dt = (new \DateTimeImmutable('@' . $ts))->setTimezone(new \DateTimeZone(date_default_timezone_get() ?: 'UTC'));
+        }
         $wdEn = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
         $moEn = ['','January','February','March','April','May','June','July',
                  'August','September','October','November','December'];
-        $w = (int)date('w', $ts);
-        $m = (int)date('n', $ts);
+        $w = (int)$dt->format('w');
+        $m = (int)$dt->format('n');
         $full_wd  = self::translate(strtolower($wdEn[$w]), $wdEn[$w]);
         $short_wd = mb_substr($full_wd, 0, 3);
         $full_mo  = self::translate('month_' . $m, $moEn[$m]);
@@ -190,11 +202,11 @@ class I18n
                 case 'D': $out .= $short_wd;           break;
                 case 'F': $out .= $full_mo;            break;
                 case 'M': $out .= $short_mo;           break;
-                case 'j': $out .= (int)date('j', $ts); break;
-                case 'd': $out .= date('d', $ts);      break;
-                case 'Y': $out .= date('Y', $ts);      break;
+                case 'j': $out .= (int)$dt->format('j'); break;
+                case 'd': $out .= $dt->format('d');      break;
+                case 'Y': $out .= $dt->format('Y');      break;
                 case '\\': if ($i + 1 < $len) { $out .= $format[++$i]; } break;
-                default:  $out .= date($format[$i], $ts);
+                default:  $out .= $dt->format($format[$i]);
             }
         }
         return $out;

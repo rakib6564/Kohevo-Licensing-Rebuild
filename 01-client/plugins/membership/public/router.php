@@ -236,7 +236,7 @@ $siteName = Database::setting('site_name') ?: 'Kohevo';
 // used to read ContentBuilder's accent_color, which drifted to a different
 // cyan than core and broke the "one brand, one accent" contract.
 $accent = trim((string) Database::setting('brand_accent_color'));
-if (!preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent)) $accent = '#2563EB';
+if (!preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent)) $accent = '#111111';
 
 $logoUrls = slate_logo_urls();
 $logoUrl  = $logoUrls['light'];
@@ -249,13 +249,20 @@ $avatarPath = (string)($profile['avatar_path'] ?? '');
 // The member area's own pages. These are SECTION navigation — "which page of
 // my membership" — and stay distinct from the portal's global nav ("which part
 // of my account"), which the shared shell renders in the bar.
+$cardEnabled = MembershipAPI::cardEnabled();
+if ($view === 'card' && !$cardEnabled) {
+    $view = 'home';
+}
+
 $tabs = [
     ['v'=>'home',     'label'=>__('membership_overview', 'Overview'), 'icon'=>'grid'],
     ['v'=>'plans',    'label'=>__('membership_plans', 'Plans'),       'icon'=>'tag'],
-    ['v'=>'card',     'label'=>__('membership_card', 'Card'),         'icon'=>'qr'],
-    ['v'=>'schedule', 'label'=>__('membership_schedule', 'Schedule'), 'icon'=>'calendar'],
-    ['v'=>'profile',  'label'=>__('membership_profile', 'Profile'),   'icon'=>'user'],
 ];
+if ($cardEnabled) {
+    $tabs[] = ['v'=>'card', 'label'=>__('membership_card', 'Card'), 'icon'=>'qr'];
+}
+$tabs[] = ['v'=>'schedule', 'label'=>__('membership_schedule', 'Schedule'), 'icon'=>'calendar'];
+$tabs[] = ['v'=>'profile',  'label'=>__('membership_profile', 'Profile'),   'icon'=>'user'];
 $showChrome = $onboarded;   // the onboarding gate hides section nav
 
 // Slate has ONE language switcher, provided site-wide by the Multilang

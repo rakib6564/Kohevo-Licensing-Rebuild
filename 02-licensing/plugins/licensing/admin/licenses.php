@@ -19,6 +19,7 @@
  */
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/LicensingAPI.php';
+require_once dirname(__DIR__) . '/ModuleCatalog.php';
 require_once dirname(__DIR__) . '/LicenseService.php';
 require_once dirname(__DIR__) . '/PlanService.php';
 
@@ -35,18 +36,11 @@ $newLicense = null; // ['license_key' => ..., 'id' => ..., 'label' => ...]
 $clients  = Database::rows("SELECT id, name FROM licensing_clients ORDER BY name");
 $products = Database::rows("SELECT id, slug, name FROM licensing_products ORDER BY name");
 $plans    = Database::rows("SELECT id, product_id, name FROM licensing_plans WHERE is_active = 1 ORDER BY name");
-$optionalModules = LicenseService::V1_OPTIONAL_MODULE_KEYS;
-$moduleLabels = [
-    'forms' => __('licensing_module_forms', 'Form Builder'),
-    'membership' => __('licensing_module_membership', 'Membership'),
-    'booking' => __('licensing_module_booking', 'Booking'),
-];
+$selectionCatalog = ModuleCatalog::selectionCatalog();
 
 // Plan -> template module map, embedded as a data attribute per <option> so
 // the issue form can pre-fill checkboxes client-side (§ mirrors installs.php's
-// existing product/plan JS filter pattern) — a convenience default only,
-// per docs/02-architecture/04-ENTITLEMENT-ARCHITECTURE.md §4; the admin can
-// still change the selection independently before submitting.
+// existing product/plan JS filter pattern).
 $planModuleMap = [];
 foreach ($plans as $pl) {
     $planModuleMap[(int) $pl['id']] = PlanService::modules((int) $pl['id']);
@@ -68,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $warningDays = (int) ($_POST['warning_days'] ?? 7);
             $graceDays   = (int) ($_POST['grace_days'] ?? 7);
             $actLimit  = max(1, (int) ($_POST['activation_limit'] ?? 1));
-            $modules   = array_values(array_intersect((array) ($_POST['modules'] ?? []), $optionalModules));
+            $rawModules = $_POST['modules'] ?? null;
 
             $product = $productId > 0 ? Database::row("SELECT slug FROM licensing_products WHERE id = ?", [$productId]) : null;
             $client  = $clientId > 0 ? Database::row("SELECT id FROM licensing_clients WHERE id = ?", [$clientId]) : null;
@@ -80,19 +74,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $flash = ['type' => 'error', 'msg' => __('licensing_issue_invalid_plan', 'The selected plan does not exist or does not belong to the selected product.')];
             } elseif ($planId > 0 && empty($plan['is_active'])) {
                 $flash = ['type' => 'error', 'msg' => __('licensing_issue_inactive_plan', 'The selected plan is not active and cannot be used to issue new licenses.')];
+            } elseif ($rawModules !== null && !is_array($rawModules)) {
+                $flash = ['type' => 'error', 'msg' => __('licensing_invalid_modules', 'Invalid module selection.')];
             } else {
                 try {
+                    if ($rawModules === null && $planId > 0 && empty($_POST['_modules_explicit'])) {
+                        $modules = ModuleCatalog::validateCommercialSelection(PlanService::modules($planId));
+                    } else {
+                        $modules = ModuleCatalog::validateCommercialSelection(is_array($rawModules) ? $rawModules : []);
+                    }
+
                     $result = LicenseService::issue([
-                        'client_id'        => $clientId,
-                        'product_id'       => $productId,
-                        'plan_id'          => $planId > 0 ? $planId : null,
-                        'label'            => $label,
-                        'starts_at'        => $startsAt !== '' ? LicenseService::parseDate($startsAt) : null,
-                        'expires_at'       => $expiresAt !== '' ? LicenseService::parseDate($expiresAt) : null,
-                        'warning_days'     => max(0, $warningDays),
-                        'grace_days'       => max(0, $graceDays),
-                        'activation_limit' => $actLimit,
-                        'modules'          => $modules,
+                        'client_id'            => $clientId,
+                        'product_id'           => $productId,
+                        'plan_id'              => $planId > 0 ? $planId : null,
+                        'label'                => $label,
+                        'starts_at'            => $startsAt !== '' ? LicenseService::parseDate($startsAt) : null,
+                        'expires_at'           => $expiresAt !== '' ? LicenseService::parseDate($expiresAt) : null,
+                        'warning_days'         => max(0, $warningDays),
+                        'grace_days'           => max(0, $graceDays),
+                        'activation_limit'     => $actLimit,
+                        'modules'              => $modules,
+                        'enforce_plan_modules' => $planId > 0,
                     ], (string) $product['slug'], Auth::userId());
                     AuditLog::record('licensing.license_issued', (string) $result['id'], ['modules' => $modules]);
                     $newLicense = ['license_key' => $result['license_key'], 'id' => $result['id'], 'label' => $label !== '' ? $label : ('#' . $result['id'])];
@@ -197,7 +200,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </div>
         <div class="mcp-grid">
             <div class="field">
-                <label class="field-label" for="plan_id"><?= __('licensing_plan', 'Plan') ?> <span class="text-muted"><?= __('auth_optional', 'optional — pre-fills modules below') ?></span></label>
+                <label class="field-label" for="plan_id"><?= __('licensing_plan', 'Plan') ?> <span class="text-muted"><?= __('auth_optional', 'optional — pre-fills & constrains modules below') ?></span></label>
                 <select id="plan_id" name="plan_id" data-licensing-plan-select data-module-map="<?= e((string) json_encode($planModuleMap)) ?>">
                     <option value="">— <?= __('licensing_none', 'None') ?> —</option>
                     <?php foreach ($plans as $pl): ?>
@@ -211,13 +214,24 @@ require SLATE_ROOT . '/admin/partials/header.php';
             </div>
         </div>
         <div class="field">
-            <label class="field-label"><?= __('licensing_optional_modules', 'Optional modules') ?></label>
+            <label class="field-label"><?= __('licensing_optional_modules', 'Commercial modules (V1 catalog)') ?></label>
             <div class="mcp-checkbox-row" data-licensing-modules>
-                <?php foreach ($moduleLabels as $key => $label): ?>
-                    <label><input type="checkbox" name="modules[]" value="<?= e($key) ?>"> <?= e($label) ?></label>
+                <?php foreach ($selectionCatalog as $key => $catItem): ?>
+                    <?php if ($catItem['selectable']): ?>
+                        <label>
+                            <input type="checkbox" name="modules[]" value="<?= e($key) ?>" data-v1-commercial="1">
+                            <?= e($catItem['display_name']) ?>
+                        </label>
+                    <?php else: ?>
+                        <label class="text-muted" style="opacity:0.65;cursor:not-allowed;" title="<?= e($catItem['description']) ?>">
+                            <input type="checkbox" disabled aria-disabled="true" value="<?= e($key) ?>">
+                            <?= e($catItem['display_name']) ?>
+                            <span class="badge badge-inactive" style="font-size:10px;padding:1px 6px;"><?= e((string) $catItem['badge']) ?></span>
+                        </label>
+                    <?php endif; ?>
                 <?php endforeach; ?>
             </div>
-            <p class="field-help"><?= __('licensing_optional_modules_hint', 'Admin/User, Dashboard, and Site Settings are core — always included, never individually toggled. Any combination of the optional modules above is valid; there is no dependency between them.') ?></p>
+            <p class="field-help"><?= __('licensing_optional_modules_hint', 'Core (Admin/User, Dashboard, Site Settings) is always included with a valid license. Supporting infrastructure (Stripe Payment) is automatically enabled on client installs when Membership or Booking is selected. Editor and Content are future modules (Not V1 / Future) and cannot be granted.') ?></p>
         </div>
         <div class="mcp-grid">
             <div class="field">
@@ -306,10 +320,15 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
     var moduleMap = {};
     try { moduleMap = JSON.parse(planSel.getAttribute('data-module-map') || '{}'); } catch (e) {}
-    var moduleBoxes = document.querySelectorAll('[data-licensing-modules] input[type=checkbox]');
+    var moduleBoxes = document.querySelectorAll('[data-licensing-modules] input[type=checkbox][data-v1-commercial="1"]');
     planSel.addEventListener('change', function () {
+        var hasPlan = planSel.value !== '';
         var mods = moduleMap[planSel.value] || [];
-        moduleBoxes.forEach(function (box) { box.checked = mods.indexOf(box.value) !== -1; });
+        moduleBoxes.forEach(function (box) {
+            var allowed = !hasPlan || mods.indexOf(box.value) !== -1;
+            box.checked = hasPlan && allowed;
+            box.disabled = !allowed;
+        });
     });
 })();
 </script>

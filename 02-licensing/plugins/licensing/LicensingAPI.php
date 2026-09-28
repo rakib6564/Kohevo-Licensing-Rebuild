@@ -369,8 +369,13 @@ class LicensingAPI {
         }
         // Requirement #13: per-license commercial entitlements
         // (licensing_license_modules), never the legacy per-plan
-        // entitlements_json source.
-        $entitlements = LicenseService::modules((int) $license['id']);
+        // entitlements_json source, and strictly filtered against the
+        // authoritative V1 commercial catalog so non-commercial/infrastructure
+        // or future keys can never enter the signed payload.
+        $entitlements = array_values(array_intersect(
+            LicenseService::modules((int) $license['id']),
+            ModuleCatalog::v1CommercialKeys()
+        ));
 
         // Phase 10 (11 §2, 08 §3): warning_days/grace_days travel with every
         // payload, whatever the status, so the signed state is complete on

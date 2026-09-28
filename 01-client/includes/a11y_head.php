@@ -35,7 +35,7 @@ define('SLATE_A11Y_HEAD_EMITTED', true);
     width: auto; height: auto;
     padding: 12px 18px;
     z-index: 9999;
-    background: var(--accent, #2563EB);
+    background: var(--accent, #111111);
     color: #fff;
     border-radius: 10px;
     font-weight: 600;
@@ -46,7 +46,7 @@ define('SLATE_A11Y_HEAD_EMITTED', true);
 /* Visible focus ring on keyboard navigation only */
 :focus { outline: none; }
 :focus-visible {
-    outline: 2px solid var(--accent, #2563EB);
+    outline: 2px solid var(--accent, #111111);
     outline-offset: 2px;
     border-radius: 4px;
 }
@@ -57,7 +57,7 @@ define('SLATE_A11Y_HEAD_EMITTED', true);
 .field select:focus-visible,
 .field textarea:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px var(--ring, rgba(37,99,235,0.13));
+    box-shadow: 0 0 0 3px var(--ring, rgba(17,17,17,0.14));
 }
 
 /* Reduced motion respect */

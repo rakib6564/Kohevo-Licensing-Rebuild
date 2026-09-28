@@ -62,15 +62,31 @@ switch ($command) {
         $opts = json_decode((string) ($argv[2] ?? '{}'), true) ?: [];
         $productId = Database::value('SELECT id FROM licensing_products WHERE slug = ?', ['kohevo'])
             ?: Database::insert('licensing_products', ['slug' => 'kohevo', 'name' => 'Kohevo']);
-        $planId = Database::value('SELECT id FROM licensing_plans WHERE product_id = ? AND slug = ?', [$productId, 'pro'])
-            ?: PlanService::create(['product_id' => $productId, 'slug' => 'pro', 'name' => 'Pro']);
+        $planSlug = (string) ($opts['plan_slug'] ?? 'pro');
+        $planId = Database::value('SELECT id FROM licensing_plans WHERE product_id = ? AND slug = ?', [$productId, $planSlug]);
+        if (!$planId) {
+            $planData = ['product_id' => $productId, 'slug' => $planSlug, 'name' => ucfirst($planSlug)];
+            if (array_key_exists('plan_modules', $opts)) {
+                $planData['modules'] = $opts['plan_modules'];
+            }
+            $planId = PlanService::create($planData);
+        } elseif (array_key_exists('plan_modules', $opts) && is_array($opts['plan_modules'])) {
+            PlanService::setModules((int) $planId, $opts['plan_modules']);
+        }
         $clientId = Database::insert('licensing_clients', ['name' => 'Phase 10 Client']);
         $license = LicenseService::issue([
             'client_id' => $clientId, 'product_id' => $productId, 'plan_id' => $planId,
             'modules' => $opts['modules'] ?? ['forms', 'booking'],
             'expires_at' => $opts['expires_at'] ?? null,
         ], 'kohevo');
-        $out = ['license_id' => $license['id'], 'license_key' => $license['license_key']];
+        $out = ['license_id' => $license['id'], 'license_key' => $license['license_key'], 'plan_id' => (int) $planId];
+        break;
+
+    case 'set-modules':
+        $licenseId = (int) ($argv[2] ?? 0);
+        $modules = json_decode((string) ($argv[3] ?? '[]'), true);
+        LicenseService::setModules($licenseId, is_array($modules) ? $modules : []);
+        $out = ['license_id' => $licenseId, 'modules' => LicenseService::modules($licenseId)];
         break;
 
     case 'checkin':

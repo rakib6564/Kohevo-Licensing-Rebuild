@@ -471,7 +471,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
 <style>
 .mcp-chat-log{max-height:52vh;overflow-y:auto;padding:6px 4px 16px;display:flex;flex-direction:column;gap:10px}
 .mcp-bubble{max-width:80%;padding:10px 14px;border-radius:14px;font-size:.92rem;line-height:1.5}
-.mcp-bubble-user{align-self:flex-end;background:var(--accent,#2563EB);color:#fff}
+.mcp-bubble-user{align-self:flex-end;background:var(--accent,#111111);color:#fff}
 .mcp-bubble-ai{align-self:flex-start;background:var(--surface-2,#f1f5f9);color:var(--text,#1e293b)}
 .mcp-tool-note{align-self:flex-start;font-size:.78rem;color:var(--muted,#6b7280);background:transparent;padding:2px 4px}
 .mcp-tool-note code{background:var(--surface-2,#f1f5f9);padding:1px 5px;border-radius:5px}
@@ -496,7 +496,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
 .mcp-prompt-group-title{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted,#6b7280);margin-bottom:8px;}
 .mcp-prompt-chips{display:flex;flex-wrap:wrap;gap:8px;}
 .mcp-prompt-chip{border:1px solid var(--border,#e5e7eb);background:var(--surface-2,#f8fafc);border-radius:16px;padding:6px 12px;font-size:.8rem;cursor:pointer;text-align:left;color:var(--text,#1e293b);max-width:340px;}
-.mcp-prompt-chip:hover{background:var(--accent-soft,#eef2ff);border-color:var(--accent,#2563EB);}
+.mcp-prompt-chip:hover{background:var(--accent-soft,#F3F4F6);border-color:var(--accent,#111111);}
 
 @keyframes mcpChatDot { 0%,60%,100%{opacity:.25;transform:translateY(0);} 30%{opacity:1;transform:translateY(-3px);} }
 .mcp-typing{align-self:flex-start;display:flex;gap:4px;padding:10px 14px;background:var(--surface-2,#f1f5f9);border-radius:14px;}

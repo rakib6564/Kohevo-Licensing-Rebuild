@@ -59,10 +59,13 @@ $brandSub  = Database::setting('brand_sublabel') ?: __('admin_login', 'Admin log
 
 // ── Dynamic branding (admin-managed via Settings → Branding) ──
 $accent = preg_match('/^#[0-9a-fA-F]{6}$/', (string)Database::setting('brand_accent_color'))
-    ? Database::setting('brand_accent_color') : '#2563EB';
+    ? Database::setting('brand_accent_color') : '#111111';
 
 $logoUrls = slate_logo_urls();
 $logoUrl  = $logoUrls['light'];
+if ($logoUrl === '' && stripos(trim((string)$siteName), 'Kohevo') === 0) {
+    $logoUrl = \Slate\Services\Content\PlatformIdentity::wordmarkUrl();
+}
 
 $heroPath = (string)Database::setting('brand_login_image_path');
 $heroUrl  = $heroPath !== '' ? SLATE_URL . '/' . ltrim($heroPath, '/') : '';

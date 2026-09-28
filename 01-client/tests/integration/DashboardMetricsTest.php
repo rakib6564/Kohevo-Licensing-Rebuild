@@ -25,24 +25,18 @@ function dmt_probe_get(int $roleId, bool $platformAdmin): array
     return ['status' => (int) $m[1], 'body' => substr($out, strlen($m[0]))];
 }
 
-unit('dashboard: a platform admin sees platform-wide tenant/license/plan counts matching direct queries', function (): void {
+unit('dashboard: the standalone client dashboard omits Platform overview and shows Remote entitlement', function (): void {
     $res = dmt_probe_get(1, false);
     assert_eq(200, $res['status']);
-    assert_true(str_contains($res['body'], 'Platform overview'), 'platform admin must see the "Platform overview" section');
-    assert_true(str_contains($res['body'], 'Total tenants'), 'must show the total-tenants metric');
-
-    $totalTenants = (int) Database::value("SELECT COUNT(*) FROM tenants");
-    // Presence of the correct raw number in the rendered HTML (the stat
-    // card prints it directly) — a loose but real correctness check
-    // without parsing the DOM.
-    assert_true(str_contains($res['body'], (string) $totalTenants) || $totalTenants === 0, 'the rendered total must reflect a direct COUNT(*) query');
+    assert_false(str_contains($res['body'], 'Platform overview'), 'client dashboard must not show legacy multi-tenant Platform overview');
+    assert_true(str_contains($res['body'], 'Remote entitlement'), 'client dashboard must show Remote entitlement section');
 });
 
-unit('dashboard: an ordinary tenant admin never sees platform-wide counts, only their own plan/license section', function (): void {
+unit('dashboard: an ordinary tenant admin never sees platform-wide counts, only Remote entitlement', function (): void {
     $res = dmt_probe_get(5601, false);
     assert_eq(200, $res['status']);
     assert_false(str_contains($res['body'], 'Platform overview'), 'an ordinary tenant admin must never see the platform-wide section');
-    assert_true(str_contains($res['body'], 'Your plan'), 'an ordinary tenant admin must see their own tenant\'s plan section instead');
+    assert_true(str_contains($res['body'], 'Remote entitlement'), 'an ordinary tenant admin must see the Remote entitlement section');
 });
 
 unit('dashboard: the tenant-admin plan section reflects the actual assigned plan, license status, and enabled features', function (): void {

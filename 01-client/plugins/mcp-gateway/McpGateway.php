@@ -84,7 +84,7 @@ class McpGateway extends Plugin {
     /** Tenant's brand accent color, same setting Global Styles/Membership already read — falls back to Slate's default blue. */
     private function brandAccent(): string {
         $accent = trim((string) Database::setting('brand_accent_color'));
-        return preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent) ? $accent : '#2563EB';
+        return preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent) ? $accent : '#111111';
     }
 
     private function widgetHtml(): string {

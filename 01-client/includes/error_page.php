@@ -20,7 +20,7 @@ if (!function_exists('slate_render_error')) {
         $e = static fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 
         $home    = defined('SLATE_URL') ? rtrim((string)SLATE_URL, '/') : '';
-        $accent  = '#2563EB';
+        $accent  = '#111111';
         $hero = $logo = $logoDark = $biz = $siteUrl = '';
 
         // Best-effort branding — never let it break the error page itself.
@@ -59,7 +59,7 @@ if (!function_exists('slate_render_error')) {
 
         $bg = $hero !== ''
             ? 'background:url("' . $e($hero) . '") center/cover no-repeat;'
-            : 'background:radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent) 45%, #0b1c2c), #0b1c2c);';
+            : 'background:radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent) 45%, #0E1117), #0E1117);';
         // Self-contained (no template engine, no plugin code, may run
         // before helpers.php loads — see the 500.php minimal bootstrap),
         // so the default fallback is inlined rather than calling
@@ -80,7 +80,7 @@ if (!function_exists('slate_render_error')) {
     body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         min-height: 100vh; min-height: 100dvh; color: #fff;
-        display: grid; place-items: center; padding: 24px; position: relative; background: #0b1c2c;
+        display: grid; place-items: center; padding: 24px; position: relative; background: #0E1117;
     }
     .bg { position: fixed; inset: 0; z-index: -2; <?= $bg ?> }
     .bg::after { content: ""; position: absolute; inset: 0;

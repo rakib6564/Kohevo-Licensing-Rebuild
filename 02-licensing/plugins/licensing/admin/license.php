@@ -14,6 +14,8 @@
  */
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/LicensingAPI.php';
+require_once dirname(__DIR__) . '/ModuleCatalog.php';
+require_once dirname(__DIR__) . '/PlanService.php';
 require_once dirname(__DIR__) . '/LicenseService.php';
 require_once dirname(__DIR__) . '/InstallationService.php';
 
@@ -32,7 +34,7 @@ function license_load(int $id): ?array {
     );
 }
 
-$id = (int) ($_GET['id'] ?? 0);
+$id = (int) ($_GET['id'] ?? $_POST['id'] ?? 0);
 $license = $id > 0 ? license_load($id) : null;
 if (!$license) { http_response_code(404); echo 'License not found.'; exit; }
 
@@ -49,12 +51,7 @@ if (in_array($license['status'], ['active', 'trial'], true)) {
 $pageTitle  = $license['label'] ?: ('#' . $id);
 $currentNav = 'licensing-licenses';
 $flash      = null;
-$optionalModules = LicenseService::V1_OPTIONAL_MODULE_KEYS;
-$moduleLabels = [
-    'forms' => __('licensing_module_forms', 'Form Builder'),
-    'membership' => __('licensing_module_membership', 'Membership'),
-    'booking' => __('licensing_module_booking', 'Booking'),
-];
+$selectionCatalog = ModuleCatalog::selectionCatalog();
 $actorId = Auth::userId();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -81,10 +78,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 AuditLog::record('licensing.license_updated', (string) $id);
                 $flash = ['type' => 'success', 'msg' => __('saved', 'Saved.')];
             } elseif ($action === 'set_modules') {
-                $desired = array_values(array_intersect((array) ($_POST['modules'] ?? []), $optionalModules));
-                $current = LicenseService::modules($id);
-                foreach (array_diff($desired, $current) as $add) LicenseService::grantModules($id, [$add]);
-                foreach (array_diff($current, $desired) as $remove) LicenseService::revokeModule($id, $remove);
+                $rawModules = $_POST['modules'] ?? [];
+                if (!is_array($rawModules)) {
+                    throw new \InvalidArgumentException(__('licensing_invalid_modules', 'Invalid module selection.'));
+                }
+                LicenseService::setModules($id, $rawModules);
+                $desired = LicenseService::modules($id);
                 AuditLog::record('licensing.license_modules_updated', (string) $id, ['modules' => $desired]);
                 $flash = ['type' => 'success', 'msg' => __('licensing_modules_updated', 'Entitlements updated.')];
             } elseif ($action === 'bind_installation') {
@@ -302,14 +301,37 @@ require SLATE_ROOT . '/admin/partials/header.php';
 <section class="card mb-3">
     <div class="card-header"><h2><?= e(__('licensing_entitlements', 'Entitlements')) ?></h2></div>
     <p class="text-muted"><?= __('licensing_core_always_on', 'Core is always included and cannot be disabled:') ?> <?= implode(', ', LicenseService::CORE_MODULE_KEYS) ?></p>
+    <?php
+    $planRestricted = !empty($license['plan_id']) && PlanService::hasModuleRestrictions((int) $license['plan_id']);
+    $planAllowed = $planRestricted ? PlanService::modules((int) $license['plan_id']) : ModuleCatalog::v1CommercialKeys();
+    ?>
     <form method="post">
         <?= csrf_field() ?>
         <input type="hidden" name="_action" value="set_modules">
         <div class="mcp-checkbox-row">
-            <?php foreach ($moduleLabels as $key => $label): ?>
-                <label><input type="checkbox" name="modules[]" value="<?= e($key) ?>" <?= in_array($key, $modules, true) ? 'checked' : '' ?>> <?= e($label) ?></label>
+            <?php foreach ($selectionCatalog as $key => $catItem): ?>
+                <?php if ($catItem['selectable']):
+                    $allowedByPlan = in_array($key, $planAllowed, true);
+                ?>
+                    <label <?= !$allowedByPlan ? 'class="text-muted" style="opacity:0.65;cursor:not-allowed;"' : '' ?>>
+                        <input type="checkbox" name="modules[]" value="<?= e($key) ?>"
+                            <?= in_array($key, $modules, true) ? 'checked' : '' ?>
+                            <?= !$allowedByPlan ? 'disabled aria-disabled="true"' : '' ?>>
+                        <?= e($catItem['display_name']) ?>
+                        <?php if (!$allowedByPlan): ?>
+                            <span class="badge badge-inactive" style="font-size:10px;padding:1px 6px;">Not in plan</span>
+                        <?php endif; ?>
+                    </label>
+                <?php else: ?>
+                    <label class="text-muted" style="opacity:0.65;cursor:not-allowed;" title="<?= e($catItem['description']) ?>">
+                        <input type="checkbox" disabled aria-disabled="true" value="<?= e($key) ?>">
+                        <?= e($catItem['display_name']) ?>
+                        <span class="badge badge-inactive" style="font-size:10px;padding:1px 6px;"><?= e((string) $catItem['badge']) ?></span>
+                    </label>
+                <?php endif; ?>
             <?php endforeach; ?>
         </div>
+        <p class="field-help"><?= __('licensing_entitlements_catalog_hint', 'Supporting infrastructure (Stripe Payment) is automatically enabled on client installs when Membership or Booking is granted. Editor and Content are future modules (Not V1 / Future) and cannot be granted.') ?></p>
         <button class="btn btn-primary mt-2" type="submit"><?= e(__('save', 'Save')) ?></button>
     </form>
 </section>
@@ -364,15 +386,24 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
     <?php if (count($installationHistory) > (int) (bool) $activeInstallation): ?>
         <h3 class="mt-3"><?= e(__('licensing_installation_history', 'History')) ?></h3>
-        <div class="data-list">
-            <?php foreach ($installationHistory as $h): ?>
-                <div class="mcp-row">
-                    <div>
-                        <strong><?= e($h['domain']) ?> — <?= e(ucfirst($h['status'])) ?></strong>
-                        <span><?= e($h['first_activated_at']) ?><?= $h['deleted_at'] ? ' → ' . e($h['deleted_at']) : '' ?> · <?= e($h['installation_id']) ?></span>
-                    </div>
-                </div>
-            <?php endforeach; ?>
+        <div class="data-list" data-single-open>
+            <?php foreach ($installationHistory as $h):
+                $hStatus = (string) ($h['status'] ?? '');
+                $hTone   = $hStatus === 'active' ? 'active' : 'muted';
+                slate_data_row([
+                    'avatar'       => mb_strtoupper(mb_substr((string) ($h['domain'] ?? 'I'), 0, 1)),
+                    'avatar_color' => $hStatus === 'active' ? 'accent' : 'muted',
+                    'title'        => (string) ($h['domain'] ?? '—'),
+                    'meta'         => ($h['first_activated_at'] ?? '—') . ($h['deleted_at'] ? ' → ' . $h['deleted_at'] : '') . ' · ' . ($h['installation_id'] ?? '—'),
+                    'badge'        => [ucfirst($hStatus), $hTone],
+                    'detail'       => [
+                        __('licensing_domain', 'Domain')                         => (string) ($h['domain'] ?? '—'),
+                        __('licensing_installation_id_short', 'Installation ID') => (string) ($h['installation_id'] ?? '—'),
+                        __('licensing_status', 'Status')                         => ucfirst($hStatus),
+                        __('licensing_first_activated', 'First activated')       => ($h['first_activated_at'] ?? '—') . ($h['deleted_at'] ? ' → ' . $h['deleted_at'] : ''),
+                    ],
+                ]);
+            endforeach; ?>
         </div>
     <?php endif; ?>
 </section>
@@ -431,17 +462,24 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <?php if (!$events): ?>
         <p class="text-muted"><?= e(__('licensing_no_events', 'No events recorded yet.')) ?></p>
     <?php else: ?>
-        <div class="data-list">
+        <div class="data-list" data-single-open>
             <?php foreach ($events as $ev):
                 $actorLabel = $ev['actor_type'] === 'system' ? __('licensing_system', 'System') : ($actorNames[(int) $ev['actor_id']] ?? ('#' . $ev['actor_id']));
-            ?>
-                <div class="mcp-row">
-                    <div>
-                        <strong><?= e(ucfirst($ev['event_type'])) ?> — <?= e($actorLabel) ?></strong>
-                        <span><?= e($ev['created_at']) ?><?= $ev['reason'] ? ' · ' . e($ev['reason']) : '' ?></span>
-                    </div>
-                </div>
-            <?php endforeach; ?>
+                $evMeta     = ($ev['created_at'] ?? '—') . (!empty($ev['reason']) ? ' · ' . $ev['reason'] : '');
+                slate_data_row([
+                    'avatar'       => mb_strtoupper(mb_substr((string) ($ev['event_type'] ?? 'E'), 0, 1)),
+                    'avatar_color' => 'muted',
+                    'title'        => ucfirst((string) $ev['event_type']) . ' — ' . $actorLabel,
+                    'meta'         => $evMeta,
+                    'badge'        => [ucfirst((string) $ev['event_type']), 'muted'],
+                    'detail'       => [
+                        __('licensing_event', 'Event')         => ucfirst((string) $ev['event_type']),
+                        __('licensing_actor', 'Actor')         => $actorLabel,
+                        __('licensing_timestamp', 'Timestamp') => (string) ($ev['created_at'] ?? '—'),
+                        __('licensing_reason', 'Reason')       => (string) ($ev['reason'] ?: '—'),
+                    ],
+                ]);
+            endforeach; ?>
         </div>
     <?php endif; ?>
 </section>
@@ -452,10 +490,6 @@ require SLATE_ROOT . '/admin/partials/header.php';
 .mcp-checkbox-row label{display:flex;align-items:center;gap:6px;font-weight:400}
 .field-help{margin:7px 0 0;font-size:.82rem;color:var(--muted,#6b7280)}
 .field-static{margin:0;padding:8px 0}
-.mcp-row{display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid var(--border,#e5e7eb);padding:14px 0}
-.mcp-row:first-child{border-top:0}
-.mcp-row strong,.mcp-row span{display:block}
-.mcp-row span{margin-top:4px;font-size:.82rem;color:var(--muted,#6b7280)}
 .mt-2{margin-top:8px}
 .mt-3{margin-top:16px}
 details summary{cursor:pointer;list-style:none}
@@ -463,4 +497,5 @@ details summary::-webkit-details-marker{display:none}
 @media(max-width:720px){.mcp-grid{grid-template-columns:1fr}}
 </style>
 
+<?php slate_data_list_script(); ?>
 <?php require SLATE_ROOT . '/admin/partials/footer.php'; ?>

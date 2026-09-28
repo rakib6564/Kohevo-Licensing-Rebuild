@@ -36,7 +36,11 @@ $token  = (string)($profile['qr_token'] ?? '');
 $qrLib  = is_file(dirname(__DIR__, 2) . '/assets/js/qrcode-generator.js');
 $qrUrl  = plugin_url('membership', 'assets/js/qrcode-generator.js');
 
-$fmtDate = fn($d) => $d ? I18n::localDate('j M Y', strtotime($d)) : '—';
+$cardEnabled  = MembershipAPI::cardEnabled();
+$attEnabled   = MembershipAPI::attendanceEnabled();
+$howtoEnabled = MembershipAPI::checkinHowtoEnabled() && $cardEnabled && $attEnabled;
+
+$fmtDate = fn($d) => $d ? slate_format_date($d) : '—';
 $palette = ['var(--m-blue)', 'var(--accent)', 'var(--m-green)', 'var(--m-amber)', '#7C3AED', '#0d9488'];
 ?>
 
@@ -68,6 +72,7 @@ slate_portal_welcome([
 <div class="dash">
     <div class="dash-col">
 
+        <?php if ($howtoEnabled): ?>
         <div class="pcard">
             <div class="howto">
                 <span class="howto-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V7a2 2 0 0 1 2-2h2M17 5h2a2 2 0 0 1 2 2v2M21 15v2a2 2 0 0 1-2 2h-2M7 19H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1.5"/></svg></span>
@@ -77,7 +82,9 @@ slate_portal_welcome([
                 </div>
             </div>
         </div>
+        <?php endif; ?>
 
+        <?php if ($attEnabled): ?>
         <div class="stat-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;">
             <div class="stat stat--accent" style="min-width:0;"><b><?= (int)$stats['total'] ?></b><span><?= __('membership_total_sessions', 'Total sessions') ?></span></div>
             <div class="stat" style="min-width:0;"><b><?= (int)$stats['month'] ?></b><span><?= __('membership_this_month', 'This month') ?></span></div>
@@ -98,10 +105,10 @@ slate_portal_welcome([
                         <div class="att-row">
                             <span class="att-dot" style="background:<?= $dot ?>;"></span>
                             <div class="att-main">
-                                <b><?= e(I18n::localDate('D j M Y', strtotime($a['starts_at']))) ?></b>
+                                <b><?= e(slate_format_date($a['starts_at'])) ?></b>
                                 <span><?= e((string)($a['service_name'] ?? __('membership_session','Session'))) ?></span>
                             </div>
-                            <span class="att-time"><?= $present ? e(date('H:i', strtotime($a['starts_at']))) : '—' ?></span>
+                            <span class="att-time"><?= $present ? e(slate_format_time($a['starts_at'])) : '—' ?></span>
                             <?php if ($present): ?><span class="pill pill-green">✓ <?= __('membership_present','Present') ?></span>
                             <?php elseif ($absent): ?><span class="pill pill-amber">✕ <?= __('membership_absent','Absent') ?></span>
                             <?php else: ?><span class="pill pill-blue"><?= e(ucfirst((string)$a['status'])) ?></span><?php endif; ?>
@@ -110,10 +117,12 @@ slate_portal_welcome([
                 </div>
             <?php endif; ?>
         </div>
+        <?php endif; ?>
     </div>
 
     <div class="dash-col">
 
+        <?php if ($cardEnabled): ?>
         <!-- QR member card -->
         <div class="pcard qr-card">
             <div class="qr-box" id="dash-qr">
@@ -131,6 +140,7 @@ slate_portal_welcome([
                 <a href="<?= e($selfUrl) ?>?view=card" class="mbtn mbtn-ghost mbtn-block"><?= __('membership_card', 'Card') ?></a>
             </div>
         </div>
+        <?php endif; ?>
 
         <!-- Member details -->
         <div class="pcard">
@@ -276,7 +286,7 @@ slate_portal_welcome([
 </div>
 </div><!-- .bento-wall -->
 
-<?php if ($qrLib && $token !== ''): ?>
+<?php if ($cardEnabled && $qrLib && $token !== ''): ?>
 <script src="<?= e($qrUrl) ?>"></script>
 <script>
 (function(){

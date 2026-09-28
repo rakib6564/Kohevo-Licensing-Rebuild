@@ -12,7 +12,7 @@
  */
 
 define('SLATE_ROOT', __DIR__);
-define('SLATE_VERSION', '1.0.0');
+define('SLATE_VERSION', '1.3.0');
 $installMarker = SLATE_ROOT . '/.installed';
 
 // ── Already installed ───────────────────────────────────────
@@ -211,8 +211,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 3) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#FBF8F2">
+    <meta name="theme-color" content="#0E1117">
     <title>Install Kohevo</title>
+    <link rel="icon" href="<?= e(slate_favicon_url()) ?>">
     <?php require_once __DIR__ . '/includes/ui_components.php'; slate_ui_emit_css(); ?>
     <?php require __DIR__ . '/includes/a11y_head.php'; ?>
     <style>
@@ -239,7 +240,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 3) {
     .install-brand-mark {
         width: 66px; height: 66px;
         margin: 0 auto var(--space-3);
-        background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 86%, #fff), var(--accent));
+        background: var(--accent, #111111);
         border-radius: 18px;
         display: inline-flex;
         align-items: center;
@@ -247,7 +248,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 3) {
         color: var(--on-accent, #fff);
         font-size: 30px;
         font-weight: 700;
-        box-shadow: var(--glow-accent), inset 0 1px 0 rgba(255,255,255,.4);
+        box-shadow: var(--glow-accent), inset 0 1px 0 rgba(255,255,255,.2);
         letter-spacing: -0.02em;
     }
     .install-title { font-size: 27px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }

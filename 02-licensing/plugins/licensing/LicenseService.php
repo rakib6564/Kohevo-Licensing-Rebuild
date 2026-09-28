@@ -20,6 +20,8 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/LicensingAPI.php';
+require_once __DIR__ . '/ModuleCatalog.php';
+require_once __DIR__ . '/PlanService.php';
 
 class LicenseService {
 
@@ -103,8 +105,22 @@ class LicenseService {
                 'metadata_json'    => isset($data['metadata']) ? (string) json_encode($data['metadata']) : null,
             ]);
 
-            if (!empty($data['modules'])) {
-                self::grantModulesInTransaction($id, (array) $data['modules']);
+            if (array_key_exists('modules', $data) && $data['modules'] !== null) {
+                if (!is_array($data['modules'])) {
+                    throw new \InvalidArgumentException('License modules must be an array.');
+                }
+                $validatedModules = ModuleCatalog::validateCommercialSelection($data['modules']);
+                if ($planId !== null) {
+                    PlanService::validateLicenseModulesForPlan($planId, $validatedModules, !empty($data['enforce_plan_modules']));
+                }
+                if ($validatedModules !== []) {
+                    self::grantModulesInTransaction($id, $validatedModules);
+                }
+            } elseif ($planId !== null && PlanService::hasModuleRestrictions($planId)) {
+                $planModules = ModuleCatalog::validateCommercialSelection(PlanService::modules($planId));
+                if ($planModules !== []) {
+                    self::grantModulesInTransaction($id, $planModules);
+                }
             }
 
             self::recordEventInTransaction($id, 'create', $actorId !== null ? 'admin' : 'system', $actorId, null, null);
@@ -129,18 +145,55 @@ class LicenseService {
     // ── Entitlements ─────────────────────────────────────────────────────
 
     /**
-     * Grant one or more optional modules to a License. Rejects Core keys
-     * outright (INV-06) — Core is never represented as a row. Idempotent:
-     * a module already granted is left as-is, not duplicated or errored.
+     * Grant one or more optional modules to a License. Validates strictly
+     * against ModuleCatalog::validateCommercialSelection() and enforces the
+     * associated Plan's allowed module set when applicable.
      *
      * @param string[] $moduleKeys
-     * @throws \InvalidArgumentException if a Core key is included
+     * @throws \InvalidArgumentException if any module key is invalid or not allowed by the plan
      */
     public static function grantModules(int $licenseId, array $moduleKeys): void {
+        $validatedModules = ModuleCatalog::validateCommercialSelection($moduleKeys);
+        $license = self::find($licenseId);
+        if ($license !== null && !empty($license['plan_id'])) {
+            PlanService::validateLicenseModulesForPlan((int) $license['plan_id'], $validatedModules);
+        }
+
         $pdo = Database::get();
         $pdo->beginTransaction();
         try {
-            self::grantModulesInTransaction($licenseId, $moduleKeys);
+            self::grantModulesInTransaction($licenseId, $validatedModules);
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Replace a License's commercial module grants wholesale, validating
+     * against ModuleCatalog::validateCommercialSelection() and the associated
+     * Plan's allowed module set.
+     *
+     * @param string[] $moduleKeys
+     * @throws \InvalidArgumentException
+     */
+    public static function setModules(int $licenseId, array $moduleKeys, bool $strictPlanSubset = false): void {
+        $license = self::find($licenseId);
+        if ($license === null) {
+            throw new \InvalidArgumentException('Unknown license.');
+        }
+
+        $validatedModules = ModuleCatalog::validateCommercialSelection($moduleKeys);
+        if (!empty($license['plan_id'])) {
+            PlanService::validateLicenseModulesForPlan((int) $license['plan_id'], $validatedModules, $strictPlanSubset);
+        }
+
+        $pdo = Database::get();
+        $pdo->beginTransaction();
+        try {
+            Database::delete('licensing_license_modules', 'license_id = ?', [$licenseId]);
+            self::grantModulesInTransaction($licenseId, $validatedModules);
             $pdo->commit();
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
@@ -149,13 +202,8 @@ class LicenseService {
     }
 
     private static function grantModulesInTransaction(int $licenseId, array $moduleKeys): void {
-        foreach ($moduleKeys as $key) {
-            $key = (string) $key;
-            if (in_array($key, self::CORE_MODULE_KEYS, true)) {
-                throw new \InvalidArgumentException(
-                    "'$key' is a Core module — Core is implicit and must never be an explicit license_modules row (INV-06)."
-                );
-            }
+        $validatedModules = ModuleCatalog::validateCommercialSelection($moduleKeys);
+        foreach ($validatedModules as $key) {
             $exists = Database::value(
                 'SELECT id FROM licensing_license_modules WHERE license_id = ? AND module_key = ?',
                 [$licenseId, $key]

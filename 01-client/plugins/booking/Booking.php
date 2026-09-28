@@ -311,8 +311,8 @@ class Booking extends Plugin {
                             'avatar_color' => $colors[$a['status']] ?? 'muted',
                             'title'        => $name,
                             'sub'          => trim((string)($a['service_name'] ?? '')) . ' · ' . ucfirst(str_replace('_', ' ', (string)$a['status'])),
-                            'amount'       => $a['starts_at'] ? date('g:ia', strtotime($a['starts_at'])) : '',
-                            'time'         => $a['starts_at'] ? I18n::localDate('M j', strtotime($a['starts_at'])) : '',
+                            'amount'       => $a['starts_at'] ? slate_format_time($a['starts_at']) : '',
+                            'time'         => $a['starts_at'] ? slate_format_date($a['starts_at']) : '',
                             'href'         => $apptUrl,
                         ]);
                     endforeach; ?>
@@ -357,7 +357,7 @@ class Booking extends Plugin {
             'icon'  => 'calendar',
             'tone'  => $count > 0 ? 'blue' : '',
             'meta'  => $next
-                ? 'Next <strong>' . e(slate_format_datetime((string)$next, 'j M')) . '</strong>'
+                ? 'Next <strong>' . e(slate_format_datetime((string)$next)) . '</strong>'
                 : 'Nothing scheduled',
         ];
         return $kpis;
@@ -403,7 +403,7 @@ class Booking extends Plugin {
                     'id'          => 'booking-' . $r['id'],
                     'type'        => 'booking',
                     'label'       => ($r['service_name'] ?? 'Appointment') . ' with ' . ($r['provider_name'] ?? 'Practitioner'),
-                    'description' => ucfirst($status) . ' appointment (' . I18n::localDate('M j, Y g:i a', strtotime($r['starts_at'])) . ')',
+                    'description' => ucfirst($status) . ' appointment (' . slate_format_datetime($r['starts_at']) . ')',
                     'occurred_at' => $r['starts_at'],
                     'href'        => SLATE_URL . '/member/book',
                     'icon'        => 'calendar',
@@ -448,7 +448,7 @@ class Booking extends Plugin {
                             <span class="text-xs"><?= e($a['provider_name']) ?> · ref <code><?= e($a['ref']) ?></code></span>
                         </span>
                         <span class="kv-value">
-                            <?= e(slate_format_datetime($a['starts_at'], 'j M Y')) ?>
+                            <?= e(slate_format_datetime($a['starts_at'])) ?>
                         </span>
                     </li>
                 <?php endforeach; ?>

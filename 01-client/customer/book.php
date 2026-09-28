@@ -71,7 +71,7 @@ slate_portal_shell_open(['active' => 'book', 'area' => 'booking']);
                             <?= e($app['service_name']) ?>
                         </strong>
                         <span style="font-size:13px;color:var(--m-muted,#737886);">
-                            with <?= e($app['provider_name']) ?> · <strong><?= e(I18n::localDate('D, j M Y \a\t g:i a', strtotime($app['starts_at']))) ?></strong>
+                            with <?= e($app['provider_name']) ?> · <strong><?= e(slate_format_datetime($app['starts_at'])) ?></strong>
                         </span>
                     </div>
                     <?php if (!empty($app['manage_token'])): ?>

@@ -14,17 +14,36 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/ModuleCatalog.php';
 require_once __DIR__ . '/LicenseService.php';
 
 class PlanService {
 
-    /** @param array{product_id:int,slug:string,name:string,description?:?string,is_active?:bool} $data */
+    /**
+     * Tracks plan IDs whose module sets were explicitly configured via
+     * setModules() or create(['modules' => ...]), so even an explicit empty
+     * module set (`none` / Core-only plan) restricts licenses assigned to it.
+     *
+     * @var array<int,bool>
+     */
+    private static array $configuredPlanIds = [];
+
+    /** @param array{product_id:int,slug:string,name:string,description?:?string,is_active?:bool,modules?:array<mixed>} $data */
     public static function create(array $data): int {
         $productId = (int) $data['product_id'];
         if (Database::value('SELECT id FROM licensing_products WHERE id = ?', [$productId]) === null) {
             throw new \InvalidArgumentException('Unknown product.');
         }
-        return Database::insert('licensing_plans', [
+
+        $validatedModules = null;
+        if (array_key_exists('modules', $data)) {
+            if (!is_array($data['modules'])) {
+                throw new \InvalidArgumentException('Plan modules must be an array.');
+            }
+            $validatedModules = ModuleCatalog::validateCommercialSelection($data['modules']);
+        }
+
+        $planId = Database::insert('licensing_plans', [
             'product_id'        => $productId,
             'slug'              => (string) $data['slug'],
             'name'              => (string) $data['name'],
@@ -38,6 +57,14 @@ class PlanService {
             // every new row simply gets an empty JSON array here.
             'entitlements_json' => '[]',
         ]);
+
+        if ($validatedModules !== null) {
+            self::setModules($planId, $validatedModules);
+        } else {
+            unset(self::$configuredPlanIds[$planId]);
+        }
+
+        return $planId;
     }
 
     public static function update(int $planId, array $data): void {
@@ -45,12 +72,23 @@ class PlanService {
         if (array_key_exists('name', $data)) $row['name'] = (string) $data['name'];
         if (array_key_exists('description', $data)) $row['description'] = $data['description'] !== '' ? $data['description'] : null;
         if (array_key_exists('is_active', $data)) $row['is_active'] = empty($data['is_active']) ? 0 : 1;
-        if ($row === []) return;
-        Database::update('licensing_plans', $row, 'id = ?', [$planId]);
+        if ($row !== []) {
+            Database::update('licensing_plans', $row, 'id = ?', [$planId]);
+        }
+        if (array_key_exists('modules', $data)) {
+            if (!is_array($data['modules'])) {
+                throw new \InvalidArgumentException('Plan modules must be an array.');
+            }
+            self::setModules($planId, $data['modules']);
+        }
     }
 
     public static function find(int $planId): ?array {
         return Database::row('SELECT * FROM licensing_plans WHERE id = ?', [$planId]);
+    }
+
+    public static function findByProductAndSlug(int $productId, string $slug): ?array {
+        return Database::row('SELECT * FROM licensing_plans WHERE product_id = ? AND slug = ?', [$productId, $slug]);
     }
 
     public static function listForProduct(int $productId): array {
@@ -58,50 +96,32 @@ class PlanService {
     }
 
     /**
-     * Replace a plan's template module set wholesale. Idempotent — safe to
-     * call repeatedly with the same set. This is a pre-fill default only:
-     * it has no effect on any License already issued from this plan.
-     *
-     * `licensing_plan_modules` carries no FK back to `licensing_plans`
-     * (migrations/0025_commercial_licensing_rebuild.sql), so without this
-     * check a tampered request naming a nonexistent plan_id (e.g. an
-     * admin/plans.php `_action=save` POST with `id=999999`) would silently
-     * insert orphaned module rows — the delete-then-reinsert below would
-     * otherwise "succeed" against a plan that was never actually created or
-     * updated.
+     * Replace a plan's commercial module set wholesale. Idempotent — safe to
+     * call repeatedly with the same set. Validates strictly against
+     * ModuleCatalog::validateCommercialSelection(), rejecting unknown keys,
+     * Core keys, Future/Non-V1 keys (editor, content), Supporting
+     * Infrastructure (stripe, stripe-payment), System plugins, and duplicate
+     * module keys.
      *
      * @param string[] $moduleKeys
-     * @throws \InvalidArgumentException if the plan does not exist
+     * @throws \InvalidArgumentException if the plan does not exist or any module key is invalid
      */
     public static function setModules(int $planId, array $moduleKeys): void {
         if (Database::value('SELECT id FROM licensing_plans WHERE id = ?', [$planId]) === null) {
             throw new \InvalidArgumentException('Unknown plan.');
         }
 
-        $moduleKeys = array_values(array_unique(array_filter(
-            array_map('strval', $moduleKeys),
-            fn(string $k) => $k !== ''
-        )));
-
-        // Same convention LicenseService::grantModules() already enforces
-        // for a License's own modules: Core is implicit and must never be
-        // an explicit row, on a Plan template any more than on a License.
-        foreach ($moduleKeys as $key) {
-            if (in_array($key, LicenseService::CORE_MODULE_KEYS, true)) {
-                throw new \InvalidArgumentException(
-                    "'$key' is a Core module — Core is implicit and must never be an explicit plan_modules row."
-                );
-            }
-        }
+        $validatedKeys = ModuleCatalog::validateCommercialSelection($moduleKeys);
 
         $pdo = Database::get();
         $pdo->beginTransaction();
         try {
             Database::delete('licensing_plan_modules', 'plan_id = ?', [$planId]);
-            foreach ($moduleKeys as $key) {
+            foreach ($validatedKeys as $key) {
                 Database::insert('licensing_plan_modules', ['plan_id' => $planId, 'module_key' => $key]);
             }
             $pdo->commit();
+            self::$configuredPlanIds[$planId] = true;
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
@@ -114,5 +134,33 @@ class PlanService {
             Database::rows('SELECT module_key FROM licensing_plan_modules WHERE plan_id = ? ORDER BY module_key', [$planId]),
             'module_key'
         );
+    }
+
+    /**
+     * Whether a plan has an explicit commercial module set configured.
+     */
+    public static function hasModuleRestrictions(int $planId): bool {
+        return !empty(self::$configuredPlanIds[$planId]) || count(self::modules($planId)) > 0;
+    }
+
+    /**
+     * Validate that a license's requested commercial modules do not exceed the
+     * modules allowed by its associated plan.
+     *
+     * @param list<string> $licenseModules
+     * @throws \InvalidArgumentException
+     */
+    public static function validateLicenseModulesForPlan(int $planId, array $licenseModules, bool $strictPlanSubset = false): void {
+        if (!$strictPlanSubset && !self::hasModuleRestrictions($planId)) {
+            return;
+        }
+        $allowed = self::modules($planId);
+        foreach ($licenseModules as $moduleKey) {
+            if (!in_array($moduleKey, $allowed, true)) {
+                throw new \InvalidArgumentException(
+                    "Module \"{$moduleKey}\" is not allowed by the selected plan."
+                );
+            }
+        }
     }
 }

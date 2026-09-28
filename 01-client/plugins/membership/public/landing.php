@@ -66,10 +66,13 @@ $self     = SLATE_URL . '/membership';
 $logoUrls = function_exists('slate_logo_urls') ? slate_logo_urls() : ['light' => '', 'dark' => ''];
 $logoUrl  = $logoUrls['light'];
 $logoDarkUrl = $logoUrls['dark'];
+if ($logoUrl === '' && stripos(trim((string) $siteName), 'Kohevo') === 0 && class_exists(\Slate\Services\Content\PlatformIdentity::class)) {
+    $logoUrl = \Slate\Services\Content\PlatformIdentity::wordmarkUrl();
+}
 $accent  = trim((string) Database::setting('brand_accent_color'));
 $tagline = (string) (Database::setting('site_tagline') ?: '');
 if ($tagline === '') $tagline = trim((string) Database::setting('brand_login_tagline'));
-if (!preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent)) $accent = '#2563EB';
+if (!preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent)) $accent = '#111111';
 $accentDark = mlp_darken($accent, 0.16);
 
 $featuredId = 0;

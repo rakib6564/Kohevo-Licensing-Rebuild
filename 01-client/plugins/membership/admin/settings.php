@@ -22,6 +22,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Database::setSetting('membership.insurance_fee_cents', (string) max(0, (int) round(((float)($_POST['insurance_fee'] ?? 0)) * 100)));
         Database::setSetting('membership.require_membership_to_book', !empty($_POST['require_membership_to_book']) ? '1' : '0');
         Database::setSetting('membership.require_profile_to_book',    !empty($_POST['require_profile_to_book']) ? '1' : '0');
+        Database::setSetting('membership.enable_card',                !isset($_POST['enable_card']) ? '0' : '1');
+        Database::setSetting('membership.enable_attendance',          !isset($_POST['enable_attendance']) ? '0' : '1');
+        Database::setSetting('membership.enable_checkin_howto',       !isset($_POST['enable_checkin_howto']) ? '0' : '1');
         $insSvcs = array_filter(array_map('intval', (array)($_POST['insurance_services'] ?? [])));
         Database::setSetting('membership.insurance_required_services', implode(',', array_unique($insSvcs)));
         Database::setSetting('membership.expiry_reminder_days', preg_replace('/[^0-9,]/', '', (string)($_POST['expiry_reminder_days'] ?? '7,3')) ?: '7,3');
@@ -66,7 +69,36 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
     <div class="card">
         <div class="card-header"><h2><?= __('membership_general', 'General') ?></h2></div>
+        
         <div class="field">
+            <label class="switch-label">
+                <span class="switch">
+                    <input type="checkbox" name="enable_card" value="1" <?= $g('enable_card', '1') !== '0' ? 'checked' : '' ?>>
+                    <span class="switch-track"></span>
+                </span>
+                <span><?= __('membership_enable_card', 'Enable Digital Membership Card & QR Code') ?></span>
+            </label>
+        </div>
+        <div class="field">
+            <label class="switch-label">
+                <span class="switch">
+                    <input type="checkbox" name="enable_attendance" value="1" <?= $g('enable_attendance', '1') !== '0' ? 'checked' : '' ?>>
+                    <span class="switch-track"></span>
+                </span>
+                <span><?= __('membership_enable_attendance', 'Enable Attendance Tracking & Recent Attendance') ?></span>
+            </label>
+        </div>
+        <div class="field">
+            <label class="switch-label">
+                <span class="switch">
+                    <input type="checkbox" name="enable_checkin_howto" value="1" <?= $g('enable_checkin_howto', '1') !== '0' ? 'checked' : '' ?>>
+                    <span class="switch-track"></span>
+                </span>
+                <span><?= __('membership_enable_checkin_howto', 'Enable "How to check in" banner (Requires Card & Attendance)') ?></span>
+            </label>
+        </div>
+
+        <div class="field" style="margin-top: 16px;">
             <label class="field-label" for="terms_url"><?= __('membership_terms_url', 'Terms & consent URL') ?></label>
             <input type="url" id="terms_url" name="terms_url" value="<?= e($g('terms_url')) ?>" placeholder="https://…">
         </div>

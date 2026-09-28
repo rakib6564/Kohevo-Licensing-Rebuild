@@ -67,10 +67,10 @@ body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: n
     display: inline-flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 600;
 }
-.book-step.is-done { background: var(--accent-soft, #EFF6FF); color: var(--accent-deep, #1D4ED8); border-color: transparent; }
-.book-step.is-done .book-step-num { background: var(--accent, #2563EB); color: #fff; border-color: var(--accent, #2563EB); }
-.book-step.is-current { background: var(--accent, #2563EB); color: #fff; border-color: var(--accent, #2563EB); }
-.book-step.is-current .book-step-num { background: #fff; color: var(--accent-deep, #1D4ED8); border-color: transparent; }
+.book-step.is-done { background: var(--accent-soft, #F3F4F6); color: var(--accent-deep, #000000); border-color: transparent; }
+.book-step.is-done .book-step-num { background: var(--accent, #111111); color: #fff; border-color: var(--accent, #111111); }
+.book-step.is-current { background: var(--accent, #111111); color: #fff; border-color: var(--accent, #111111); }
+.book-step.is-current .book-step-num { background: #fff; color: var(--accent-deep, #000000); border-color: transparent; }
 
 /* Cards grid (service + provider lists) */
 .book-grid {
@@ -90,8 +90,8 @@ body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: n
     transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 .book-card-link:hover {
-    border-color: var(--accent, #2563EB);
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+    border-color: var(--accent, #111111);
+    box-shadow: 0 0 0 3px rgba(17,17,17,0.08);
     color: var(--text, #111217);
 }
 .book-card-title { font-weight: 600; font-size: 14px; }
@@ -104,7 +104,7 @@ body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: n
     font-size: 10.5px; font-weight: 700; letter-spacing: .01em;
     line-height: 1.6;
 }
-.book-badge-accent { background: var(--accent, #2563EB); color: #fff; }
+.book-badge-accent { background: var(--accent, #111111); color: #fff; }
 
 /* Date + slots — calendar on the left, time slots fill the space on the right;
    wraps to a stacked layout on narrow screens. */
@@ -129,9 +129,9 @@ body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: n
     transition: all 120ms ease;
 }
 .book-slot:hover {
-    background: var(--accent, #2563EB);
+    background: var(--accent, #111111);
     color: #fff;
-    border-color: var(--accent, #2563EB);
+    border-color: var(--accent, #111111);
 }
 .book-slot-time { display: block; }
 .book-slot-cap {
@@ -142,9 +142,9 @@ body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: n
 /* Multi-slot booking: slot buttons picked into the running list, the
    selected-times bar under the picker, and the confirm-step summary. */
 .book-slot.is-selected {
-    background: var(--accent, #2563EB);
+    background: var(--accent, #111111);
     color: #fff;
-    border-color: var(--accent, #2563EB);
+    border-color: var(--accent, #111111);
 }
 .book-slot.is-full:not(.is-selected) {
     opacity: .4; pointer-events: none;
@@ -189,7 +189,7 @@ body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: n
     color: inherit; font-size: 14px; line-height: 1; cursor: pointer;
     padding: 0; flex: none;
 }
-.book-chip-remove:hover { background: var(--accent, #2563EB); color: #fff; }
+.book-chip-remove:hover { background: var(--accent, #111111); color: #fff; }
 .book-multiselect-actions {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
 }
@@ -201,7 +201,7 @@ body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: n
     --pct: 0%;
     position: relative; width: 36px; height: 36px; flex: none;
     border-radius: 50%;
-    background: conic-gradient(var(--accent, #2563EB) var(--pct), var(--border, rgba(0,0,0,.1)) 0deg);
+    background: conic-gradient(var(--accent, #111111) var(--pct), var(--border, rgba(0,0,0,.1)) 0deg);
     transition: background 160ms ease;
 }
 .book-multiselect-ring::before {
@@ -245,8 +245,8 @@ body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: n
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     width: 42px; height: 42px; flex: none;
     border-radius: 10px;
-    background: var(--accent-soft, #EFF6FF);
-    color: var(--accent-deep, #1D4ED8);
+    background: var(--accent-soft, #F3F4F6);
+    color: var(--accent-deep, #000000);
 }
 .book-multiselect-summary-dow {
     font-size: 9.5px; font-weight: 700; letter-spacing: .04em;
@@ -355,7 +355,7 @@ body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: n
 }
 .book-section-title svg {
     width: 15px; height: 15px;
-    color: var(--accent, #2563EB);
+    color: var(--accent, #111111);
     flex: none;
 }
 
@@ -428,10 +428,10 @@ body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: n
 .book-public .field input:focus,
 .book-public .field select:focus,
 .book-public .field textarea:focus {
-    border-color: var(--accent, #2563EB) !important;
+    border-color: var(--accent, #111111) !important;
     outline: none;
     background: #FFFFFF !important;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #2563EB) 18%, transparent), 0 1px 2px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #111111) 18%, transparent), 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .book-public .field select {
@@ -489,9 +489,9 @@ body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: n
     cursor: pointer;
     transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
 }
-.book-option:hover { border-color: var(--accent, #2563EB); }
+.book-option:hover { border-color: var(--accent, #111111); }
 .book-option > input[type="radio"] {
-    accent-color: var(--accent, #2563EB);
+    accent-color: var(--accent, #111111);
     width: 18px; height: 18px; margin: 0; flex: none;
 }
 .book-option-body { display: flex; flex-direction: column; gap: 2px; }
@@ -502,9 +502,9 @@ body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: n
 }
 .book-option-sub { font-size: 12px; color: var(--muted, #6B7280); }
 .book-option:has(input:checked) {
-    border-color: var(--accent, #2563EB);
-    background: var(--accent-soft, #EFF6FF);
-    box-shadow: inset 0 0 0 1px var(--accent, #2563EB);
+    border-color: var(--accent, #111111);
+    background: var(--accent-soft, #F3F4F6);
+    box-shadow: inset 0 0 0 1px var(--accent, #111111);
 }
 .book-weeks-input {
     max-width: 60px; text-align: center;
@@ -540,13 +540,13 @@ body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: n
     transition: background .15s ease, border-color .15s ease, color .15s ease;
 }
 .book-cal-nav:hover:not(:disabled) {
-    border-color: var(--accent, #2563EB);
-    color: var(--accent, #2563EB);
-    background: var(--accent-soft, #EFF6FF);
+    border-color: var(--accent, #111111);
+    color: var(--accent, #111111);
+    background: var(--accent-soft, #F3F4F6);
 }
 .book-cal-nav:disabled { opacity: .35; cursor: not-allowed; }
 .book-cal-nav:focus-visible {
-    outline: 2px solid var(--accent, #2563EB);
+    outline: 2px solid var(--accent, #111111);
     outline-offset: 2px;
 }
 .book-cal-nav svg { width: 16px; height: 16px; }
@@ -578,16 +578,16 @@ body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: n
 }
 .book-cal-day.is-empty { visibility: hidden; cursor: default; }
 .book-cal-day:hover:not(:disabled):not(.is-selected) {
-    background: var(--accent-soft, #EFF6FF);
-    border-color: var(--accent, #2563EB);
+    background: var(--accent-soft, #F3F4F6);
+    border-color: var(--accent, #111111);
 }
 .book-cal-day:focus-visible {
-    outline: 2px solid var(--accent, #2563EB);
+    outline: 2px solid var(--accent, #111111);
     outline-offset: 2px;
     z-index: 1;
 }
 .book-cal-day.is-today {
-    color: var(--accent-deep, #1D4ED8);
+    color: var(--accent-deep, #000000);
     font-weight: 700;
 }
 .book-cal-day.is-today::after {
@@ -595,15 +595,15 @@ body.book-public-embed .book-card, .book-public-embed .book-card { box-shadow: n
     position: absolute; bottom: 5px; left: 50%;
     transform: translateX(-50%);
     width: 4px; height: 4px; border-radius: 50%;
-    background: var(--accent, #2563EB);
+    background: var(--accent, #111111);
 }
 .book-cal-day.is-selected {
-    background: var(--accent, #2563EB);
+    background: var(--accent, #111111);
     color: var(--on-accent, #fff);
     font-weight: 600;
-    border-color: var(--accent, #2563EB);
+    border-color: var(--accent, #111111);
     box-shadow: 0 2px 6px rgba(0,0,0,0.18);                                  /* fallback */
-    box-shadow: 0 3px 8px color-mix(in srgb, var(--accent, #2563EB) 45%, transparent);
+    box-shadow: 0 3px 8px color-mix(in srgb, var(--accent, #111111) 45%, transparent);
 }
 .book-cal-day.is-selected.is-today::after { background: var(--on-accent, #fff); }
 .book-cal-day:disabled {

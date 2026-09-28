@@ -730,7 +730,7 @@ class PluginLoader {
         $allowedKeys = [
             'slug', 'name', 'version', 'description', 'author',
             'author_url', 'requires_core', 'works_better_with', 'permissions',
-            'system', 'capabilities',
+            'system', 'capabilities', 'commercial_module',
         ];
         $unknown = array_diff(array_keys($m), $allowedKeys);
         if (!empty($unknown)) {
@@ -747,6 +747,24 @@ class PluginLoader {
                 }
                 if (!is_array($capDef) || empty($capDef['name'])) {
                     return ['ok' => false, 'error' => "capability '$capKey' must have a 'name'"];
+                }
+            }
+        }
+
+        if (isset($m['commercial_module'])) {
+            if (!is_array($m['commercial_module'])) {
+                return ['ok' => false, 'error' => "'commercial_module' must be an object"];
+            }
+            $commercial = $m['commercial_module'];
+            if (empty($commercial['entitlement']) || !is_string($commercial['entitlement'])) {
+                return ['ok' => false, 'error' => 'commercial_module.entitlement is required'];
+            }
+            if (isset($commercial['requires_infrastructure']) && !is_array($commercial['requires_infrastructure'])) {
+                return ['ok' => false, 'error' => 'commercial_module.requires_infrastructure must be an array'];
+            }
+            foreach ((array) ($commercial['requires_infrastructure'] ?? []) as $dependency) {
+                if (!is_string($dependency) || !preg_match('/^[a-z][a-z0-9-]{2,63}$/', $dependency)) {
+                    return ['ok' => false, 'error' => 'invalid commercial infrastructure slug'];
                 }
             }
         }

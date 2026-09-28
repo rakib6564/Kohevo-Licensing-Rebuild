@@ -900,7 +900,7 @@ $sec = [
 ];
 $brandSet = [
     'accent_color' => preg_match('/^#[0-9a-fA-F]{6}$/', (string)Database::setting('brand_accent_color'))
-                       ? Database::setting('brand_accent_color') : '#2563EB',
+                       ? Database::setting('brand_accent_color') : '#111111',
     'logo_path'        => $_safeText(Database::setting('brand_logo_path'), 500),
     'logo_dark_path'   => $_safeText(Database::setting('brand_logo_dark_path'), 500),
     'favicon_path'     => $_safeText(Database::setting('brand_favicon_path'), 500),
@@ -1290,7 +1290,7 @@ slate_render_settings_tabs($activeTab);
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <div class="field-hint">Current local server time: <strong><?= date('Y-m-d H:i:s T') ?></strong></div>
+                <div class="field-hint">Current local server time: <strong><?= e(I18n::localDate('Y-m-d H:i:s T')) ?></strong></div>
             </div>
 
             <div class="field" style="margin-top:16px;">
@@ -1302,7 +1302,7 @@ slate_render_settings_tabs($activeTab);
                     foreach ($dFormats as $df): ?>
                         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
                             <input type="radio" name="date_format" value="<?= e($df) ?>" <?= $dateTimeSet['date_format'] === $df ? 'checked' : '' ?>>
-                            <span><?= date($df) ?> &mdash; <code><?= e($df) ?></code></span>
+                            <span><?= e(I18n::localDate($df)) ?> &mdash; <code><?= e($df) ?></code></span>
                         </label>
                     <?php endforeach; ?>
                     <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
@@ -1321,7 +1321,7 @@ slate_render_settings_tabs($activeTab);
                     foreach ($tFormats as $tf): ?>
                         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
                             <input type="radio" name="time_format" value="<?= e($tf) ?>" <?= $dateTimeSet['time_format'] === $tf ? 'checked' : '' ?>>
-                            <span><?= date($tf) ?> &mdash; <code><?= e($tf) ?></code></span>
+                            <span><?= e(I18n::localDate($tf)) ?> &mdash; <code><?= e($tf) ?></code></span>
                         </label>
                     <?php endforeach; ?>
                     <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">

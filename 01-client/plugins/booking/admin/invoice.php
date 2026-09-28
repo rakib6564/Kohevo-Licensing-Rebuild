@@ -76,7 +76,7 @@ $shadeHex = function (string $hex, float $ratio) use ($hexToRgb): string {
     };
     return sprintf('#%02x%02x%02x', $adj($r), $adj($g), $adj($b));
 };
-$accent     = $sanitizeHex((string)(Database::setting('brand_accent_color') ?: '')) ?: '#2563EB';
+$accent     = $sanitizeHex((string)(Database::setting('brand_accent_color') ?: '')) ?: '#111111';
 $accentDeep = $shadeHex($accent, -0.22);
 $accentSoft = $shadeHex($accent, 0.92);
 

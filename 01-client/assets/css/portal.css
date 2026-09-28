@@ -25,7 +25,7 @@
 
 .portal {
     /* ── Brand ladder — all derived from the tenant accent ──────────── */
-    --pt-blue:        var(--accent, #2F6FED);
+    --pt-blue:        var(--accent, #111111);
     --pt-on-blue:     var(--on-accent, #FFFFFF);
     --pt-blue-soft:   color-mix(in srgb, var(--pt-blue) 11%, #FFFFFF);
     --pt-blue-tint:   color-mix(in srgb, var(--pt-blue) 16%, transparent);

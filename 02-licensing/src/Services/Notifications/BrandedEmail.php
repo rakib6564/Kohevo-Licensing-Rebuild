@@ -81,7 +81,7 @@ class BrandedEmail
     public static function accent(array $opts = []): array {
         $brand  = is_array($opts['brand'] ?? null) ? $opts['brand'] : self::brand();
         $accent = self::sanitizeHex((string)($opts['accent'] ?? ''))
-                ?: (self::sanitizeHex((string)($brand['accent'] ?? '')) ?: '#2563eb');
+                ?: (self::sanitizeHex((string)($brand['accent'] ?? '')) ?: '#111111');
         $deep   = self::shadeHex($accent, -0.18);
         [$r, $g, $b] = self::hexToRgb($accent);
         $on     = (0.299 * $r + 0.587 * $g + 0.114 * $b) > 165 ? '#0f172a' : '#ffffff';

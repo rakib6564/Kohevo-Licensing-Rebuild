@@ -29,6 +29,7 @@ foreach ([
     'ModuleGuardTest.php',                // Phase 7
     'McpModuleGuardTest.php',             // Phase 7
     'ClientLicenseUiTest.php',            // Phase 8
+    'DynamicModuleInstallerTest.php',     // Dynamic Modules (v1.2)
 ] as $file) {
     require __DIR__ . '/integration/' . $file;
 }

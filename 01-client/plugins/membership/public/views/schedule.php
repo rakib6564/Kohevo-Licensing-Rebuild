@@ -50,8 +50,8 @@ try {
                 <span><?= __('membership_ref', 'Ref') ?> <code><?= e((string)$a['ref']) ?></code></span>
             </div>
             <div class="sched-when">
-                <b><?= e(I18n::localDate('j M Y', strtotime($a['starts_at']))) ?></b>
-                <span class="qr-meta"><?= e(date('H:i', strtotime($a['starts_at']))) ?></span>
+                <b><?= e(slate_format_date($a['starts_at'])) ?></b>
+                <span class="qr-meta"><?= e(slate_format_time($a['starts_at'])) ?></span>
             </div>
             <span class="pill <?= $confirmed ? 'pill-green' : 'pill-amber' ?>"><?= $confirmed ? '✓ '.__('membership_confirmed','Confirmed') : __('membership_pending','Pending') ?></span>
         </div>

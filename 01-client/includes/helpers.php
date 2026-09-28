@@ -598,39 +598,76 @@ if (!function_exists('slate_log')) {
 // keys used in booking logic, datetime-local form defaults) must keep
 // using date()/strtotime() directly; only what a person actually reads
 // on screen or in an email/SMS should go through slate_time_format().
+if (!function_exists('slate_timezone')) {
+    /** The site's configured display timezone (Settings → Date & Time). */
+    function slate_timezone(): string {
+        if (class_exists('Database')) {
+            try {
+                $tz = trim((string) Database::setting('timezone'));
+                if ($tz !== '' && in_array($tz, DateTimeZone::listIdentifiers(), true)) {
+                    return $tz;
+                }
+            } catch (\Throwable $e) {}
+        }
+        return date_default_timezone_get() ?: 'UTC';
+    }
+}
+
+if (!function_exists('slate_date_format')) {
+    /** The site's configured date display format (PHP date() format string). */
+    function slate_date_format(): string {
+        $fmt = class_exists('Database') ? trim((string) Database::setting('date_format')) : '';
+        return $fmt !== '' ? $fmt : 'F j, Y';
+    }
+}
+
+if (!function_exists('slate_format_date')) {
+    /**
+     * Format a Unix timestamp (int), parseable date/time string, or null (now)
+     * as just the date, using the site's configured date format and timezone.
+     */
+    function slate_format_date($when = null, ?string $format = null): string {
+        $ts = $when === null ? time() : (is_int($when) ? $when : strtotime((string) $when));
+        if (!$ts) return '';
+        $fmt = $format !== null && $format !== '' ? $format : slate_date_format();
+        return class_exists('I18n') ? I18n::localDate($fmt, $ts) : date($fmt, $ts);
+    }
+}
+
 if (!function_exists('slate_time_format')) {
     /** The site's configured time-of-day display format (PHP date() format string). */
     function slate_time_format(): string {
-        $fmt = trim((string) Database::setting('time_format'));
+        $fmt = class_exists('Database') ? trim((string) Database::setting('time_format')) : '';
         return $fmt !== '' ? $fmt : 'g:i a';
     }
 }
 
 if (!function_exists('slate_format_time')) {
     /**
-     * Format a Unix timestamp (int) or a parseable date/time string as
-     * just the time-of-day, using the site's configured time format.
+     * Format a Unix timestamp (int), a parseable date/time string, or null (now)
+     * as just the time-of-day, using the site's configured time format and timezone.
      * Returns '' for an unparsable/empty input.
      */
-    function slate_format_time($when): string {
-        $ts = is_int($when) ? $when : strtotime((string) $when);
+    function slate_format_time($when = null, ?string $format = null): string {
+        $ts = $when === null ? time() : (is_int($when) ? $when : strtotime((string) $when));
         if (!$ts) return '';
-        return date(slate_time_format(), $ts);
+        $fmt = $format !== null && $format !== '' ? $format : slate_time_format();
+        return class_exists('I18n') ? I18n::localDate($fmt, $ts) : date($fmt, $ts);
     }
 }
 
 if (!function_exists('slate_format_datetime')) {
     /**
-     * Format a Unix timestamp (int) or a parseable date/time string as
-     * "<date>, <time>", with the time portion honouring the site's
-     * configured time format. $dateFmt controls only the date part
-     * (default matches the long form used across Booking's admin views
-     * and emails); $sep is the separator between date and time.
+     * Format a Unix timestamp (int), a parseable date/time string, or null (now)
+     * as "<date>, <time>", honouring the site's configured date format, time
+     * format, and timezone.
      */
-    function slate_format_datetime($when, string $dateFmt = 'l, j F Y', string $sep = ', '): string {
-        $ts = is_int($when) ? $when : strtotime((string) $when);
+    function slate_format_datetime($when = null, ?string $dateFmt = null, string $sep = ', '): string {
+        $ts = $when === null ? time() : (is_int($when) ? $when : strtotime((string) $when));
         if (!$ts) return '';
-        return I18n::localDate($dateFmt, $ts) . $sep . date(slate_time_format(), $ts);
+        $legacyFullFormats = [null, '', 'j M Y', 'D j M Y', 'D, j M Y', 'l, j F Y', 'M j, Y', 'F j, Y'];
+        $df = in_array($dateFmt, $legacyFullFormats, true) ? slate_date_format() : (string) $dateFmt;
+        return I18n::localDate($df, $ts) . $sep . slate_format_time($ts);
     }
 }
 

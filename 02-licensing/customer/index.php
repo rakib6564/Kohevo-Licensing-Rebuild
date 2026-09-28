@@ -30,7 +30,7 @@ $verified  = !empty($row['email_verified']);
 $firstName = trim((string) ($row['name'] ?? ''));
 if ($firstName !== '') { $firstName = explode(' ', $firstName)[0]; }
 
-$hour     = (int) date('G');
+$hour     = (int) I18n::localDate('G');
 $greeting = $hour < 12 ? __('good_morning', 'Good morning')
           : ($hour < 18 ? __('good_afternoon', 'Good afternoon') : __('good_evening', 'Good evening'));
 
@@ -129,7 +129,7 @@ slate_portal_welcome([
             </div>
             <div class="kvr">
                 <span class="kvr-k"><?= __('portal_joined', 'Joined') ?></span>
-                <span class="kvr-v"><?= e(I18n::localDate('M Y', strtotime($row['created_at'] ?? 'now'))) ?></span>
+                <span class="kvr-v"><?= e(slate_format_date($row['created_at'] ?? 'now')) ?></span>
             </div>
             <p style="margin:16px 0 0">
                 <a class="mbtn mbtn-ghost mbtn-block" href="<?= e(SLATE_URL) ?>/customer/profile.php">

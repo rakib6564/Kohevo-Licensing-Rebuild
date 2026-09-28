@@ -5,6 +5,12 @@
     "description": "Full appointment booking, including the practitioner-logic capabilities absorbed from the Booking+ plugin. Services with categories, locations, resources, add-ons, per-staff pricing and group tiers; provider schedules with breaks and date overrides; group, recurring and walk-in bookings; an embeddable /book widget with self-service cancel and reschedule; Stripe payments (free/full/deposit), coupons, gift cards, refunds and invoices; email and SMS/WhatsApp reminders. The four capability flags below gate the absorbed Booking+ behaviour: per-service minimum-advance-days and prerequisite-service gates (service_rules), the client 'human message' door with its 8-hour practitioner nudge (client_messaging), type-reserved slots (slot_restrictions), and the multi-tier reminder cadence (custom_reminders).",
     "author": "Kohevo",
     "requires_core": ">=1.0.0",
+    "commercial_module": {
+        "entitlement": "booking",
+        "label": "Booking",
+        "description": "Appointments, schedules and bookings",
+        "requires_infrastructure": ["stripe-payment"]
+    },
     "capabilities": {
         "client_messaging": {
             "name": "Client Messaging & Inquiries",

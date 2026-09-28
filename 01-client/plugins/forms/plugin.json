@@ -5,6 +5,11 @@
     "description": "Public-facing forms — contact, quote requests, intake. Drop a form on any URL with /forms/<slug> or iframe-embed it. Submissions appear in the admin inbox; each submit fires an optional webhook and emails the admin + submitter.",
     "author": "Kohevo",
     "requires_core": ">=1.0.0",
+    "commercial_module": {
+        "entitlement": "forms",
+        "label": "Forms",
+        "description": "Form Builder and submissions"
+    },
     "permissions": [
         {"key": "forms.view",   "label": "View forms and submissions"},
         {"key": "forms.manage", "label": "Create / edit / delete forms"},

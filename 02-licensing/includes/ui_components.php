@@ -528,7 +528,7 @@ if (!function_exists('slate_brand_accent_emit')) {
             if ($m === 'light' || $m === 'dark') $onAccentMode = $m;
         }
 
-        if (($accent === '' || $accent === '#2563EB') && $onAccentMode === '') return; // nothing to override — theme already correct
+        if (($accent === '' || strcasecmp($accent, '#111111') === 0) && $onAccentMode === '') return; // nothing to override — theme already correct
 
         // Both companions come from the shared derivation in brand_tokens.php,
         // which measures contrast rather than testing lightness against a
@@ -542,7 +542,7 @@ if (!function_exists('slate_brand_accent_emit')) {
         // text-color override was requested, derive tokens against this
         // file's own default accent so the emitted --accent matches what the
         // page would otherwise show — only --on-accent actually changes.
-        $effectiveAccent = $accent !== '' ? $accent : '#7C3AED';
+        $effectiveAccent = $accent !== '' ? $accent : '#111111';
         $tokens = slate_brand_accent_tokens($effectiveAccent, $onAccentMode ?: null);
         ?>
 <style>
@@ -703,17 +703,17 @@ if (!function_exists('slate_ui_emit_css')) {
     --border-strong:     #E0E2E6;
     --border-stronger:   #CFD2D8;
 
-    /* Accent — violet/purple, used for primary actions and active states.
-       This is only the factory DEFAULT: any tenant with their own
-       Settings → Branding accent colour overrides it via
+    /* Accent — Kohevo monochrome black/graphite, used for primary actions
+       and active states. This is only the factory DEFAULT: any tenant with
+       their own Settings → Branding accent colour overrides it via
        slate_brand_accent_emit(), which emits its own :root block later in
        <head> so it wins the cascade (see that function's docblock). */
-    --accent:            #7C3AED;
-    --accent-deep:       #6D28D9;
-    --accent-soft:       #F3EEFF;
-    --accent-hover:      #6D28D9;
+    --accent:            #111111;
+    --accent-deep:       #000000;
+    --accent-soft:       #F3F4F6;
+    --accent-hover:      #000000;
     --on-accent:         #FFFFFF;
-    --ring:              rgba(124, 58, 237, 0.13);
+    --ring:              rgba(17, 17, 17, 0.14);
 
     /* Semantic — soft tints kept at a consistent ~100 level so status
        badges/pills read clearly (the green & blue were a washed-out 50). */
@@ -1144,6 +1144,13 @@ hr {
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     white-space: nowrap;
+}
+.btn svg,
+.btn .nav-icon {
+    width: 16px;
+    height: 16px;
+    color: inherit;
+    flex-shrink: 0;
 }
 .btn:hover {
     background: var(--surface-2);

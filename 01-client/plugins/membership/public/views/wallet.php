@@ -20,7 +20,7 @@ $txns   = MembershipAPI::walletTxns($cid, 50);
             <?php foreach ($txns as $t): $delta=(int)$t['delta_cents']; $sign=$delta>0?'+':($delta<0?'−':''); ?>
                 <li class="kv-row">
                     <span class="kv-label"><strong style="color:var(--text);"><?= e(ucfirst((string)$t['type'])) ?></strong><br>
-                        <span class="text-xs"><?= e((string)($t['description'] ?? '')) ?> · <?= e(I18n::localDate('j M Y', strtotime($t['created_at']))) ?></span></span>
+                        <span class="text-xs"><?= e((string)($t['description'] ?? '')) ?> · <?= e(slate_format_date($t['created_at'])) ?></span></span>
                     <span class="kv-value"><?= $delta!==0 ? e($sign . MembershipAPI::money(abs($delta), $wallet['currency'] ?? null)) : '—' ?></span>
                 </li>
             <?php endforeach; ?>

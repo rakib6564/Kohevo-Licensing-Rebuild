@@ -153,15 +153,25 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <?php if (!$checkins): ?>
         <p class="text-muted"><?= e(__('licensing_no_checkins', 'No check-ins recorded yet.')) ?></p>
     <?php else: ?>
-        <div class="data-list">
-            <?php foreach ($checkins as $ck): ?>
-                <div class="mcp-row">
-                    <div>
-                        <strong><?= e($ck['checked_at']) ?></strong>
-                        <span><?= e($ck['response_status']) ?> · <?= e($ck['ip'] ?: '—') ?><?= $ck['reported_version'] ? ' · v' . e($ck['reported_version']) : '' ?></span>
-                    </div>
-                </div>
-            <?php endforeach; ?>
+        <div class="data-list" data-single-open>
+            <?php foreach ($checkins as $ck):
+                $ckStatus = (string) ($ck['response_status'] ?? '');
+                $ckTone   = in_array($ckStatus, ['active', 'trial', 'ok'], true) ? 'active' : 'muted';
+                $ckMeta   = ($ck['ip'] ?: '—') . (!empty($ck['reported_version']) ? ' · v' . $ck['reported_version'] : '');
+                slate_data_row([
+                    'avatar'       => mb_strtoupper(mb_substr($ckStatus ?: 'C', 0, 1)),
+                    'avatar_color' => $ckTone === 'active' ? 'accent' : 'muted',
+                    'title'        => (string) ($ck['checked_at'] ?? '—'),
+                    'meta'         => $ckMeta,
+                    'badge'        => [ucfirst($ckStatus), $ckTone],
+                    'detail'       => [
+                        __('licensing_timestamp', 'Timestamp')                => (string) ($ck['checked_at'] ?? '—'),
+                        __('licensing_status', 'Response status')             => ucfirst($ckStatus),
+                        __('licensing_ip', 'IP Address')                      => (string) ($ck['ip'] ?: '—'),
+                        __('licensing_installed_version', 'Reported version') => $ck['reported_version'] ? 'v' . $ck['reported_version'] : '—',
+                    ],
+                ]);
+            endforeach; ?>
         </div>
     <?php endif; ?>
 </section>
@@ -181,11 +191,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
 .mcp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px}
 .mcp-token{display:block;width:100%;min-height:70px;resize:vertical;font:13px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
 .field-help{margin:7px 0 0;font-size:.82rem;color:var(--muted,#6b7280)}
-.mcp-row{display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid var(--border,#e5e7eb);padding:14px 0}
-.mcp-row:first-child{border-top:0}
-.mcp-row strong,.mcp-row span{display:block}
-.mcp-row span{margin-top:4px;font-size:.82rem;color:var(--muted,#6b7280)}
 @media(max-width:720px){.mcp-grid{grid-template-columns:1fr}}
 </style>
 
+<?php slate_data_list_script(); ?>
 <?php require SLATE_ROOT . '/admin/partials/footer.php'; ?>

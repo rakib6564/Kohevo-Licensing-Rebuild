@@ -268,6 +268,7 @@ require_once dirname(__DIR__) . '/includes/ui_components.php';
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>License — <?= e(defined('SLATE_URL') ? SLATE_URL : 'Kohevo') ?></title>
+<link rel="icon" href="<?= e(slate_favicon_url()) ?>">
 <?php slate_ui_emit_css(); ?>
 </head>
 <body>

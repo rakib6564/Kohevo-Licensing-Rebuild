@@ -124,8 +124,7 @@ body.mapp{margin:0;background:var(--m-bg);color:var(--m-ink);font-family:var(--f
    a light brand (#F89DC1 here) clipped straight into it reads at about 1.9:1 —
    the name in the greeting was the palest thing on the page. */
 .phero-title .name{
-    background:linear-gradient(100deg, var(--accent-ink), color-mix(in srgb, var(--accent-ink) 55%, #6D28D9));
-    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    color:var(--accent-ink, var(--m-ink));
 }
 .phero-sub{margin:8px 0 0;color:var(--m-muted);font-size:13.5px;}
 .phero-side{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-end;gap:10px;}

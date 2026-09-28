@@ -11,18 +11,6 @@ Auth::require();
 $pageTitle = __('dashboard', 'Dashboard');
 require __DIR__ . '/partials/header.php';
 
-// ── Stats ────────────────────────────────────────────────────
-$pluginCounts = Database::row(
-    "SELECT
-        SUM(CASE WHEN status='active'    THEN 1 ELSE 0 END) AS active,
-        SUM(CASE WHEN status='installed' THEN 1 ELSE 0 END) AS installed,
-        SUM(CASE WHEN status='inactive'  THEN 1 ELSE 0 END) AS inactive
-     FROM plugins"
-) ?: ['active' => 0, 'installed' => 0, 'inactive' => 0];
-
-$userCount     = (int)Database::value("SELECT COUNT(*) FROM users WHERE tenant_id = ?", [current_tenant_id()]);
-$customerCount = (int)Database::value("SELECT COUNT(*) FROM customers WHERE tenant_id = ?", [current_tenant_id()]);
-
 $recent = (Auth::can('audit.view') || Auth::isSuperAdmin())
         ? AuditLog::recent(8)
         : [];
@@ -33,7 +21,7 @@ $pluginWidgets = array_values(array_filter($pluginWidgets, fn($w) => is_string($
 $user = Auth::user();
 
 // Time-of-day greeting.
-$hr    = (int)date('G');
+$hr    = (int)I18n::localDate('G');
 $greet = $hr < 12 ? __('good_morning', 'Good morning')
        : ($hr < 17 ? __('good_afternoon', 'Good afternoon')
        : __('good_evening', 'Good evening'));
@@ -224,7 +212,7 @@ $activityMeta = static function (string $action): array {
     </div>
     <div class="dash-hero-side">
         <span class="dash-status"><span class="dot"></span> <?= __('all_systems_operational', 'All systems operational') ?></span>
-        <span class="dash-clock" id="dash-clock"><?= e(I18n::localDate('D · j M Y')) ?> · <span class="t"><?= e(date('g:i a')) ?></span></span>
+        <span class="dash-clock" id="dash-clock" data-tz="<?= e(slate_timezone()) ?>" data-time-format="<?= e(slate_time_format()) ?>"><?= e(slate_format_date()) ?> · <span class="t"><?= e(slate_format_time()) ?></span></span>
     </div>
 </div>
 
@@ -242,14 +230,14 @@ if (!$emailConfigured && (Auth::can('settings.edit') || Auth::isSuperAdmin())):
 .setup-nudge {
     display: flex; align-items: flex-start; gap: 14px;
     padding: 16px 18px; margin-bottom: 18px;
-    background: var(--accent-soft, #eef2ff);
-    border: 1px solid var(--accent, #4f46e5);
+    background: var(--accent-soft, #F3F4F6);
+    border: 1px solid var(--accent, #111111);
     border-radius: var(--radius, 12px);
 }
 .setup-nudge-ico {
     flex: none; width: 38px; height: 38px; border-radius: 10px;
     display: grid; place-items: center;
-    background: var(--accent, #4f46e5); color: #fff;
+    background: var(--accent, #111111); color: #fff;
 }
 .setup-nudge-ico svg { width: 20px; height: 20px; }
 .setup-nudge-body { flex: 1; min-width: 0; }
@@ -292,80 +280,37 @@ if (!$emailConfigured && (Auth::can('settings.edit') || Auth::isSuperAdmin())):
 </script>
 <?php endif; ?>
 
-<!-- KPI cards — via the shared slate_stat_card() component
-     (includes/ui_components.php), so this matches every other dashboard
-     that uses it (e.g. Booking's). -->
-<div class="dash-stats">
-    <?php slate_stat_card([
-        'icon'    => 'box',
-        'number'  => (int)$pluginCounts['active'],
-        'label'   => __('active_plugins', 'Active plugins'),
-        'caption' => (int)$pluginCounts['inactive'] . ' ' . __('inactive', 'inactive'),
-    ]); ?>
-    <?php slate_stat_card([
-        'icon'    => 'shield',
-        'number'  => $userCount,
-        'label'   => __('admin_users', 'Admin users'),
-        'caption' => __('with_dashboard_access', 'Dashboard access'),
-    ]); ?>
-    <?php slate_stat_card([
-        'icon'    => 'users',
-        'number'  => $customerCount,
-        'label'   => __('customers', 'Customers'),
-        'caption' => __('registered_accounts', 'Registered'),
-    ]); ?>
-</div>
-
 <?php
-// Phase 1E C3 — SaaS metrics. Platform admins see platform-wide counts;
-// ordinary tenant admins see only their own tenant's plan/license/features,
-// via the same EntitlementService/LicenseService/PlanService the rest of
-// Phase 1E uses — never a separate, parallel query path.
-if (Auth::isPlatformSuperAdmin()):
-    $tenantCounts = Database::row(
-        "SELECT
-            (SELECT COUNT(*) FROM tenants) AS total_tenants,
-            (SELECT COUNT(*) FROM tenant_profiles WHERE lifecycle_status = 'active') AS active_tenants,
-            (SELECT COUNT(*) FROM tenant_profiles WHERE lifecycle_status = 'trial') AS trial_tenants,
-            (SELECT COUNT(*) FROM tenant_profiles WHERE lifecycle_status = 'suspended') AS suspended_tenants"
-    ) ?: ['total_tenants' => 0, 'active_tenants' => 0, 'trial_tenants' => 0, 'suspended_tenants' => 0];
-    $licenseCounts = Database::row(
-        "SELECT
-            (SELECT COUNT(*) FROM licenses WHERE status = 'active') AS active_licenses,
-            (SELECT COUNT(*) FROM licenses WHERE status = 'expired') AS expired_licenses"
-    ) ?: ['active_licenses' => 0, 'expired_licenses' => 0];
-    $planCount = (int) Database::value("SELECT COUNT(*) FROM platform_plans WHERE is_active = 1");
-    $platformAdminCount = (int) Database::value("SELECT COUNT(*) FROM platform_admins");
+// Central Licensing Overview — displays real metrics from the Central
+// licensing_* tables (with safe fallback if tables are not yet initialized).
+if (Auth::can('licensing.manage') || Auth::isSuperAdmin()):
+    $centralStats = [
+        'active_licenses'     => 0,
+        'bound_installations' => 0,
+        'active_plans'        => 0,
+        'total_clients'       => 0,
+    ];
+    try {
+        $centralStats['active_licenses']     = (int) Database::value("SELECT COUNT(*) FROM licensing_licenses WHERE status IN ('trial','active')");
+        $centralStats['bound_installations'] = (int) Database::value("SELECT COUNT(*) FROM licensing_installations WHERE status = 'active'");
+        $centralStats['active_plans']        = (int) Database::value("SELECT COUNT(*) FROM licensing_plans WHERE is_active = 1");
+        $centralStats['total_clients']       = (int) Database::value("SELECT COUNT(*) FROM licensing_clients");
+    } catch (\Throwable $e) {
+        // Safe fallback if licensing tables are not yet provisioned.
+    }
     ?>
     <div class="page-header" style="margin-top:24px;">
-        <div><h2><?= __('platform_overview', 'Platform overview') ?></h2></div>
-        <a href="<?= e(SLATE_URL) ?>/admin/tenants.php" class="btn"><?= __('manage_tenants', 'Manage tenants') ?></a>
+        <div>
+            <h2><?= __('licensing_overview', 'Licensing overview') ?></h2>
+            <p class="page-header-sub"><?= __('central_licensing_sub', 'Central authority for plans, issued licenses, and bound client installations.') ?></p>
+        </div>
+        <a href="<?= e(plugin_url('licensing', 'admin/licenses.php')) ?>" class="btn"><?= __('manage_licenses', 'Manage licenses') ?></a>
     </div>
     <div class="dash-stats">
-        <?php slate_stat_card(['icon' => 'building-2', 'number' => (int)$tenantCounts['total_tenants'], 'label' => __('total_tenants', 'Total tenants')]); ?>
-        <?php slate_stat_card(['icon' => 'check-circle', 'number' => (int)$tenantCounts['active_tenants'], 'label' => __('active_tenants', 'Active tenants')]); ?>
-        <?php slate_stat_card(['icon' => 'clock', 'number' => (int)$tenantCounts['trial_tenants'], 'label' => __('trial_tenants', 'Trial tenants')]); ?>
-        <?php slate_stat_card(['icon' => 'pause-circle', 'number' => (int)$tenantCounts['suspended_tenants'], 'label' => __('suspended_tenants', 'Suspended tenants')]); ?>
-        <?php slate_stat_card(['icon' => 'key', 'number' => (int)$licenseCounts['active_licenses'], 'label' => __('active_licenses', 'Active licenses')]); ?>
-        <?php slate_stat_card(['icon' => 'alert-triangle', 'number' => (int)$licenseCounts['expired_licenses'], 'label' => __('expired_licenses', 'Expired licenses')]); ?>
-        <?php slate_stat_card(['icon' => 'tag', 'number' => $planCount, 'label' => __('active_plans', 'Active plans')]); ?>
-        <?php slate_stat_card(['icon' => 'shield', 'number' => $platformAdminCount, 'label' => __('platform_admins', 'Platform Administrators')]); ?>
-    </div>
-<?php else:
-    $myTenantId = current_tenant_id();
-    $myLicense  = \Slate\Services\Licensing\LicenseService::forTenant($myTenantId);
-    $myPlanId   = Database::value("SELECT plan_id FROM tenant_profiles WHERE tenant_id = ?", [$myTenantId]);
-    $myPlan     = $myPlanId ? \Slate\Services\Licensing\PlanService::find((int)$myPlanId) : null;
-    $myFeatures = \Slate\Services\Licensing\EntitlementService::enabledFeaturesFor($myTenantId);
-    ?>
-    <div class="page-header" style="margin-top:24px;">
-        <div><h2><?= __('your_plan', 'Your plan') ?></h2></div>
-    </div>
-    <div class="dash-stats">
-        <?php slate_stat_card(['icon' => 'tag', 'number' => $myPlan['name'] ?? __('no_plan', 'No plan'), 'label' => __('plan', 'Plan')]); ?>
-        <?php slate_stat_card(['icon' => 'key', 'number' => $myLicense ? ucfirst((string)\Slate\Services\Licensing\LicenseService::effectiveStatus($myTenantId)) : __('none', 'None'), 'label' => __('license_status', 'License Status')]); ?>
-        <?php slate_stat_card(['icon' => 'clock', 'number' => ($myLicense['expires_at'] ?? null) ? I18n::localDate('M j, Y', strtotime($myLicense['expires_at'])) : __('never', 'Never'), 'label' => __('license_expiry', 'License Expiry')]); ?>
-        <?php slate_stat_card(['icon' => 'check-circle', 'number' => count($myFeatures), 'label' => __('enabled_features', 'Enabled Features'), 'caption' => $myFeatures ? implode(', ', $myFeatures) : '']); ?>
+        <?php slate_stat_card(['icon' => 'shield', 'number' => $centralStats['active_licenses'], 'label' => __('active_licenses', 'Active licenses'), 'tone' => $centralStats['active_licenses'] > 0 ? 'success' : '']); ?>
+        <?php slate_stat_card(['icon' => 'check-circle', 'number' => $centralStats['bound_installations'], 'label' => __('bound_installations', 'Bound installations')]); ?>
+        <?php slate_stat_card(['icon' => 'tag', 'number' => $centralStats['active_plans'], 'label' => __('active_plans', 'Active plans')]); ?>
+        <?php slate_stat_card(['icon' => 'users', 'number' => $centralStats['total_clients'], 'label' => __('clients', 'Clients')]); ?>
     </div>
 <?php endif; ?>
 
@@ -375,11 +320,11 @@ if (Auth::isPlatformSuperAdmin()):
             <?php foreach ($pluginWidgets as $widget) echo $widget; ?>
         <?php else: ?>
             <div class="card">
-                <div class="card-header"><h2><?= __('welcome', 'Welcome to Kohevo') ?></h2></div>
+                <div class="card-header"><h2><?= __('welcome', 'Welcome to Kohevo Central') ?></h2></div>
                 <p class="text-muted"><?= __('dashboard_intro',
-                    'Kohevo is a lean shell. Install plugins to add functionality — booking, products, passes, and more. Each plugin owns its own data and can be deactivated or uninstalled without affecting the others.') ?></p>
+                    'Use this workspace to manage plans, issue licenses, review installations and follow commercial activity.') ?></p>
                 <div class="mt-4">
-                    <a href="<?= e(SLATE_URL) ?>/admin/plugins.php" class="btn btn-primary"><?= __('manage_plugins', 'Manage plugins') ?></a>
+                    <a href="<?= e(plugin_url('licensing', 'admin/licenses.php')) ?>" class="btn btn-primary"><?= __('manage_licenses', 'Manage licenses') ?></a>
                 </div>
             </div>
         <?php endif; ?>
@@ -389,24 +334,26 @@ if (Auth::isPlatformSuperAdmin()):
         <div class="card">
             <div class="card-header"><h2><?= __('quick_actions', 'Quick actions') ?></h2></div>
             <nav class="dash-qa">
-                <a href="<?= e(SLATE_URL) ?>/admin/plugins.php">
-                    <span class="dash-qa-ico"><?= slate_admin_nav_icon('box') ?></span>
-                    <?= __('manage_plugins', 'Manage plugins') ?>
+                <?php if (Auth::can('licensing.manage') || Auth::isSuperAdmin()): ?>
+                <a href="<?= e(plugin_url('licensing', 'admin/index.php')) ?>">
+                    <span class="dash-qa-ico"><?= slate_admin_nav_icon('key') ?></span>
+                    <?= __('licensing_overview', 'Licensing overview') ?>
                     <span class="dash-qa-arr">→</span>
                 </a>
-                <a href="<?= e(SLATE_URL) ?>/admin/users.php">
-                    <span class="dash-qa-ico"><?= slate_admin_nav_icon('users') ?></span>
-                    <?= __('team_and_roles', 'Team &amp; roles') ?>
+                <a href="<?= e(plugin_url('licensing', 'admin/licenses.php')) ?>">
+                    <span class="dash-qa-ico"><?= slate_admin_nav_icon('shield') ?></span>
+                    <?= __('manage_licenses', 'Manage licenses') ?>
                     <span class="dash-qa-arr">→</span>
                 </a>
-                <a href="<?= e(SLATE_URL) ?>/admin/media.php">
-                    <span class="dash-qa-ico"><?= slate_admin_nav_icon('image') ?></span>
-                    <?= __('media_library', 'Media library') ?>
+                <a href="<?= e(plugin_url('licensing', 'admin/plans.php')) ?>">
+                    <span class="dash-qa-ico"><?= slate_admin_nav_icon('tag') ?></span>
+                    <?= __('manage_plans', 'Manage plans') ?>
                     <span class="dash-qa-arr">→</span>
                 </a>
-                <a href="<?= e(SLATE_URL) ?>/admin/settings.php">
-                    <span class="dash-qa-ico"><?= slate_admin_nav_icon('settings') ?></span>
-                    <?= __('settings', 'Settings') ?>
+                <?php endif; ?>
+                <a href="<?= e(SLATE_URL) ?>/admin/audit.php">
+                    <span class="dash-qa-ico"><?= slate_admin_nav_icon('clipboard-list') ?></span>
+                    <?= __('view_audit_log', 'View audit log') ?>
                     <span class="dash-qa-arr">→</span>
                 </a>
             </nav>
@@ -419,7 +366,7 @@ if (Auth::isPlatformSuperAdmin()):
                 <?php foreach ($recent as $row):
                     [$label, $icon, $tone] = $activityMeta((string)($row['action'] ?? ''));
                     $when      = $row['created_at'] ?? '';
-                    $whenShort = $when ? I18n::localDate('M j, g:ia', strtotime($when)) : '—';
+                    $whenShort = $when ? slate_format_datetime($when) : '—';
                 ?>
                     <li class="dash-feed-item">
                         <span class="dash-feed-ico <?= $tone ?>"><?= slate_admin_nav_icon($icon) ?></span>
@@ -439,11 +386,40 @@ if (Auth::isPlatformSuperAdmin()):
 (function () {
     var el = document.getElementById('dash-clock'); if (!el) return;
     var t = el.querySelector('.t'); if (!t) return;
+    var tz = el.getAttribute('data-tz') || 'UTC';
+    var fmt = el.getAttribute('data-time-format') || 'g:i a';
+    function formatPhpTime(d) {
+        var h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+        try {
+            var parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: tz, hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
+            }).formatToParts(d);
+            parts.forEach(function (p) {
+                if (p.type === 'hour') h = parseInt(p.value, 10) % 24;
+                if (p.type === 'minute') m = parseInt(p.value, 10);
+                if (p.type === 'second') s = parseInt(p.value, 10);
+            });
+        } catch (e) {}
+        var h12 = h % 12 || 12;
+        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+        var out = '';
+        for (var i = 0; i < fmt.length; i++) {
+            var c = fmt.charAt(i);
+            if (c === '\\' && i + 1 < fmt.length) { out += fmt.charAt(++i); continue; }
+            if (c === 'H') out += pad(h);
+            else if (c === 'G') out += h;
+            else if (c === 'h') out += pad(h12);
+            else if (c === 'g') out += h12;
+            else if (c === 'i') out += pad(m);
+            else if (c === 's') out += pad(s);
+            else if (c === 'a') out += (h >= 12 ? 'pm' : 'am');
+            else if (c === 'A') out += (h >= 12 ? 'PM' : 'AM');
+            else out += c;
+        }
+        return out;
+    }
     setInterval(function () {
-        var d = new Date();
-        var h = d.getHours(), m = d.getMinutes();
-        var ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12;
-        t.textContent = h + ':' + (m < 10 ? '0' + m : m) + ' ' + ap;
+        t.textContent = formatPhpTime(new Date());
     }, 10000);
 })();
 </script>

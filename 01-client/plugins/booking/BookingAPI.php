@@ -2059,7 +2059,7 @@ class BookingAPI {
     /** The tenant's brand accent color (Global Styles), falling back to Slate's default blue. */
     private static function brandAccent(): string {
         $accent = trim((string) Database::setting('brand_accent_color'));
-        return preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent) ? $accent : '#2563EB';
+        return preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent) ? $accent : '#111111';
     }
 
     /**

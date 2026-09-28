@@ -93,9 +93,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
             'badge'        => $badge,
             'detail'       => [
                 __('membership_plan', 'Plan')    => $planLabel,
-                __('membership_expires', 'Expires') => !empty($m['expires_at']) ? I18n::localDate('j M Y', strtotime($m['expires_at'])) : '—',
+                __('membership_expires', 'Expires') => !empty($m['expires_at']) ? slate_format_date($m['expires_at']) : '—',
                 __('membership_profile', 'Profile') => !empty($m['onboarding_complete']) ? __('membership_complete', 'Complete') : __('membership_incomplete', 'Incomplete'),
-                __('membership_joined', 'Joined')   => !empty($m['created_at']) ? I18n::localDate('j M Y', strtotime($m['created_at'])) : '—',
+                __('membership_joined', 'Joined')   => !empty($m['created_at']) ? slate_format_date($m['created_at']) : '—',
             ],
             'actions'      => $actions,
         ]);

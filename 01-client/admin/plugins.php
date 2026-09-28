@@ -31,6 +31,14 @@ if (!function_exists('slate_is_system_plugin')) {
     }
 }
 
+// Shared payment infrastructure managed by Client Admin through the existing
+// plugins.manage boundary. Other plugins remain platform-admin-only.
+if (!function_exists('slate_is_client_managed_plugin')) {
+    function slate_is_client_managed_plugin(string $slug): bool {
+        return $slug === 'stripe-payment';
+    }
+}
+
 // ─────────────────────────────────────────────────────────────
 // GET: download an installed plugin as a ZIP (on-the-fly packaging)
 //
@@ -188,15 +196,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
         // ─── Activate ──────────────────────────────────────────
         elseif ($action === 'activate') {
-            // The `plugins` table is global, with no tenant_id column (Phase 1
-            // audit H4) — activating a plugin turns on its hooks/routes for
-            // every tenant on this install. Genuinely platform-level, same as
-            // upload/uninstall, not something the tenant-scoped plugins.manage
-            // permission alone should authorize.
-            if (!Auth::isPlatformSuperAdmin()) {
+            $slug = trim((string)($_POST['slug'] ?? ''));
+            $canManageLifecycle = Auth::isPlatformSuperAdmin()
+                || (slate_is_client_managed_plugin($slug) && Auth::can('plugins.manage'));
+            if (!$canManageLifecycle) {
                 $flash = ['type' => 'error', 'msg' => __('only_super_admin', 'Only super-admins can activate plugins.')];
             } else {
-                $slug = trim((string)($_POST['slug'] ?? ''));
                 if ($slug === '') {
                     $flash = ['type' => 'error', 'msg' => __('missing_slug', 'Missing plugin slug.')];
                 } else {
@@ -214,11 +219,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
         // ─── Deactivate ────────────────────────────────────────
         elseif ($action === 'deactivate') {
-            // Same platform-level reasoning as activate() above.
-            if (!Auth::isPlatformSuperAdmin()) {
+            $slug = trim((string)($_POST['slug'] ?? ''));
+            $canManageLifecycle = Auth::isPlatformSuperAdmin()
+                || (slate_is_client_managed_plugin($slug) && Auth::can('plugins.manage'));
+            if (!$canManageLifecycle) {
                 $flash = ['type' => 'error', 'msg' => __('only_super_admin', 'Only super-admins can deactivate plugins.')];
             } else {
-                $slug = trim((string)($_POST['slug'] ?? ''));
                 if ($slug === '') {
                     $flash = ['type' => 'error', 'msg' => __('missing_slug', 'Missing plugin slug.')];
                 } elseif (slate_is_system_plugin($slug)) {
@@ -837,19 +843,23 @@ $csrf = csrf_token();
                             <?= __('required', 'Required') ?>
                         </button>
                     <?php elseif ($status === 'active'): ?>
+                        <?php if (Auth::isPlatformSuperAdmin() || (slate_is_client_managed_plugin((string) $p['slug']) && Auth::can('plugins.manage'))): ?>
                         <form method="post">
                             <?= csrf_field() ?>
                             <input type="hidden" name="_action" value="deactivate">
                             <input type="hidden" name="slug" value="<?= e($p['slug']) ?>">
                             <button type="submit" class="plug-act"><?= __('deactivate', 'Deactivate') ?></button>
                         </form>
+                        <?php endif; ?>
                     <?php elseif ($status === 'inactive' || $status === 'installed'): ?>
+                        <?php if (Auth::isPlatformSuperAdmin() || (slate_is_client_managed_plugin((string) $p['slug']) && Auth::can('plugins.manage'))): ?>
                         <form method="post">
                             <?= csrf_field() ?>
                             <input type="hidden" name="_action" value="activate">
                             <input type="hidden" name="slug" value="<?= e($p['slug']) ?>">
                             <button type="submit" class="plug-act plug-act-primary"><?= __('activate', 'Activate') ?></button>
                         </form>
+                        <?php endif; ?>
                     <?php endif; ?>
 
                     <a class="plug-act" href="<?= e($downloadUrl) ?>"

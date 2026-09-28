@@ -33,7 +33,7 @@ $pluginWidgets = array_values(array_filter($pluginWidgets, fn($w) => is_string($
 $user = Auth::user();
 
 // Time-of-day greeting.
-$hr    = (int)date('G');
+$hr    = (int)I18n::localDate('G');
 $greet = $hr < 12 ? __('good_morning', 'Good morning')
        : ($hr < 17 ? __('good_afternoon', 'Good afternoon')
        : __('good_evening', 'Good evening'));
@@ -113,8 +113,7 @@ $activityMeta = static function (string $action): array {
     font-size: 30px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.08;
 }
 .dash-title .name {
-    background: linear-gradient(100deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #8B5CF6));
-    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    color: var(--accent, var(--text));
 }
 .dash-sub { margin: 8px 0 0; color: var(--muted); font-size: 13.5px; }
 .dash-hero-side {
@@ -224,7 +223,7 @@ $activityMeta = static function (string $action): array {
     </div>
     <div class="dash-hero-side">
         <span class="dash-status"><span class="dot"></span> <?= __('all_systems_operational', 'All systems operational') ?></span>
-        <span class="dash-clock" id="dash-clock"><?= e(I18n::localDate('D · j M Y')) ?> · <span class="t"><?= e(date('g:i a')) ?></span></span>
+        <span class="dash-clock" id="dash-clock" data-tz="<?= e(slate_timezone()) ?>" data-time-format="<?= e(slate_time_format()) ?>"><?= e(slate_format_date()) ?> · <span class="t"><?= e(slate_format_time()) ?></span></span>
     </div>
 </div>
 
@@ -242,14 +241,14 @@ if (!$emailConfigured && (Auth::can('settings.edit') || Auth::isSuperAdmin())):
 .setup-nudge {
     display: flex; align-items: flex-start; gap: 14px;
     padding: 16px 18px; margin-bottom: 18px;
-    background: var(--accent-soft, #eef2ff);
-    border: 1px solid var(--accent, #4f46e5);
+    background: var(--accent-soft, #F3F4F6);
+    border: 1px solid var(--accent, #111111);
     border-radius: var(--radius, 12px);
 }
 .setup-nudge-ico {
     flex: none; width: 38px; height: 38px; border-radius: 10px;
     display: grid; place-items: center;
-    background: var(--accent, #4f46e5); color: #fff;
+    background: var(--accent, #111111); color: var(--on-accent, #fff);
 }
 .setup-nudge-ico svg { width: 20px; height: 20px; }
 .setup-nudge-body { flex: 1; min-width: 0; }
@@ -317,40 +316,10 @@ if (!$emailConfigured && (Auth::can('settings.edit') || Auth::isSuperAdmin())):
 </div>
 
 <?php
-// Phase 1E C3 — SaaS metrics. Platform admins see platform-wide support
-// metrics; ordinary tenant admins see the authoritative entitlement state for
-// their one installation. In remote mode, local license/plan rows are never
-// used to present a competing commercial authority.
-if (Auth::isPlatformSuperAdmin()):
-    $tenantCounts = Database::row(
-        "SELECT
-            (SELECT COUNT(*) FROM tenants) AS total_tenants,
-            (SELECT COUNT(*) FROM tenant_profiles WHERE lifecycle_status = 'active') AS active_tenants,
-            (SELECT COUNT(*) FROM tenant_profiles WHERE lifecycle_status = 'trial') AS trial_tenants,
-            (SELECT COUNT(*) FROM tenant_profiles WHERE lifecycle_status = 'suspended') AS suspended_tenants"
-    ) ?: ['total_tenants' => 0, 'active_tenants' => 0, 'trial_tenants' => 0, 'suspended_tenants' => 0];
-    // Phase 13: no counts from the legacy local licenses/platform_plans
-    // tables — they are not this installation's license, and a fresh
-    // install does not have them (the query fataled the dashboard).
-    // platform_admins is not part of the installer's migration set either.
-    try {
-        $platformAdminCount = (int) Database::value("SELECT COUNT(*) FROM platform_admins");
-    } catch (\Throwable $e) {
-        $platformAdminCount = 0;
-    }
-    ?>
-    <div class="page-header" style="margin-top:24px;">
-        <div><h2><?= __('platform_overview', 'Platform overview') ?></h2></div>
-        <a href="<?= e(SLATE_URL) ?>/admin/tenants.php" class="btn"><?= __('manage_tenants', 'Manage tenants') ?></a>
-    </div>
-    <div class="dash-stats">
-        <?php slate_stat_card(['icon' => 'building-2', 'number' => (int)$tenantCounts['total_tenants'], 'label' => __('total_tenants', 'Total tenants')]); ?>
-        <?php slate_stat_card(['icon' => 'check-circle', 'number' => (int)$tenantCounts['active_tenants'], 'label' => __('active_tenants', 'Active tenants')]); ?>
-        <?php slate_stat_card(['icon' => 'clock', 'number' => (int)$tenantCounts['trial_tenants'], 'label' => __('trial_tenants', 'Trial tenants')]); ?>
-        <?php slate_stat_card(['icon' => 'pause-circle', 'number' => (int)$tenantCounts['suspended_tenants'], 'label' => __('suspended_tenants', 'Suspended tenants')]); ?>
-        <?php slate_stat_card(['icon' => 'shield', 'number' => $platformAdminCount, 'label' => __('platform_admins', 'Platform Administrators')]); ?>
-    </div>
-<?php endif; ?>
+// Platform overview (multi-tenant counts & Manage tenants button) is
+// intentionally omitted on the standalone Kohevo Client dashboard; Client
+// installations show only their own Remote entitlement status below.
+?>
 
 <?php
     // Phase 13: shown in every authority mode. The former legacy-mode
@@ -448,7 +417,7 @@ if (Auth::isPlatformSuperAdmin()):
                 <?php foreach ($recent as $row):
                     [$label, $icon, $tone] = $activityMeta((string)($row['action'] ?? ''));
                     $when      = $row['created_at'] ?? '';
-                    $whenShort = $when ? I18n::localDate('M j, g:ia', strtotime($when)) : '—';
+                    $whenShort = $when ? slate_format_datetime($when) : '—';
                 ?>
                     <li class="dash-feed-item">
                         <span class="dash-feed-ico <?= $tone ?>"><?= slate_admin_nav_icon($icon) ?></span>
@@ -468,11 +437,40 @@ if (Auth::isPlatformSuperAdmin()):
 (function () {
     var el = document.getElementById('dash-clock'); if (!el) return;
     var t = el.querySelector('.t'); if (!t) return;
+    var tz = el.getAttribute('data-tz') || 'UTC';
+    var fmt = el.getAttribute('data-time-format') || 'g:i a';
+    function formatPhpTime(d) {
+        var h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+        try {
+            var parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: tz, hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
+            }).formatToParts(d);
+            parts.forEach(function (p) {
+                if (p.type === 'hour') h = parseInt(p.value, 10) % 24;
+                if (p.type === 'minute') m = parseInt(p.value, 10);
+                if (p.type === 'second') s = parseInt(p.value, 10);
+            });
+        } catch (e) {}
+        var h12 = h % 12 || 12;
+        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+        var out = '';
+        for (var i = 0; i < fmt.length; i++) {
+            var c = fmt.charAt(i);
+            if (c === '\\' && i + 1 < fmt.length) { out += fmt.charAt(++i); continue; }
+            if (c === 'H') out += pad(h);
+            else if (c === 'G') out += h;
+            else if (c === 'h') out += pad(h12);
+            else if (c === 'g') out += h12;
+            else if (c === 'i') out += pad(m);
+            else if (c === 's') out += pad(s);
+            else if (c === 'a') out += (h >= 12 ? 'pm' : 'am');
+            else if (c === 'A') out += (h >= 12 ? 'PM' : 'AM');
+            else out += c;
+        }
+        return out;
+    }
     setInterval(function () {
-        var d = new Date();
-        var h = d.getHours(), m = d.getMinutes();
-        var ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12;
-        t.textContent = h + ':' + (m < 10 ? '0' + m : m) + ' ' + ap;
+        t.textContent = formatPhpTime(new Date());
     }, 10000);
 })();
 </script>

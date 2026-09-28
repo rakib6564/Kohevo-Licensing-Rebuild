@@ -28,11 +28,14 @@ $brandSublabel       = Database::setting('brand_sublabel') ?: __('customer_porta
 // admin login uses — Settings → Branding).
 $brandLogoUrls  = slate_logo_urls();
 $brandLogoUrl   = $brandLogoUrls['light'];
+if ($brandLogoUrl === '' && stripos(trim((string)$siteName), 'Kohevo') === 0) {
+    $brandLogoUrl = \Slate\Services\Content\PlatformIdentity::wordmarkUrl();
+}
 $brandHeroPath  = (string)Database::setting('brand_login_image_path');
 $brandHeroUrl   = $brandHeroPath !== '' ? SLATE_URL . '/' . ltrim($brandHeroPath, '/') : '';
 $brandTagline   = trim((string)Database::setting('brand_login_tagline'));
 $brandAccentRaw = (string)Database::setting('brand_accent_color');
-$brandAccent    = preg_match('/^#[0-9a-fA-F]{6}$/', $brandAccentRaw) ? $brandAccentRaw : '#2563EB';
+$brandAccent    = preg_match('/^#[0-9a-fA-F]{6}$/', $brandAccentRaw) ? $brandAccentRaw : '#111111';
 $brandInitial   = e(mb_strtoupper(mb_substr($siteName, 0, 1)));
 ?>
 <!DOCTYPE html>
@@ -348,11 +351,15 @@ $brandInitial   = e(mb_strtoupper(mb_substr($siteName, 0, 1)));
 ?>
     <header class="cust-topbar">
         <a href="<?= e(SLATE_URL) ?>/customer/" class="auth-brand">
-            <span class="auth-brand-mark" aria-hidden="true"><?= e(mb_strtoupper(mb_substr($siteName, 0, 1))) ?></span>
-            <span class="auth-brand-text">
-                <span class="auth-brand-name"><?= e($siteName) ?></span>
-                <span class="auth-brand-sub"><?= e($brandSublabel) ?></span>
-            </span>
+            <?php if ($brandLogoUrl !== ''): ?>
+                <img src="<?= e($brandLogoUrl) ?>" alt="<?= e($siteName) ?>" style="max-height:32px;max-width:160px">
+            <?php else: ?>
+                <span class="auth-brand-mark" aria-hidden="true"><?= e(mb_strtoupper(mb_substr($siteName, 0, 1))) ?></span>
+                <span class="auth-brand-text">
+                    <span class="auth-brand-name"><?= e($siteName) ?></span>
+                    <span class="auth-brand-sub"><?= e($brandSublabel) ?></span>
+                </span>
+            <?php endif; ?>
         </a>
         <div class="cust-topbar-spacer"></div>
         <?php if ($cust): ?>
@@ -425,11 +432,15 @@ $brandInitial   = e(mb_strtoupper(mb_substr($siteName, 0, 1)));
 
     <div class="auth-shell" id="cust-content">
         <a href="<?= e(SLATE_URL) ?>/" class="auth-brand">
-            <span class="auth-brand-mark" aria-hidden="true"><?= e(mb_strtoupper(mb_substr($siteName, 0, 1))) ?></span>
-            <span class="auth-brand-text">
-                <span class="auth-brand-name"><?= e($siteName) ?></span>
-                <span class="auth-brand-sub"><?= e($brandSublabel) ?></span>
-            </span>
+            <?php if ($brandLogoUrl !== ''): ?>
+                <img src="<?= e($brandLogoUrl) ?>" alt="<?= e($siteName) ?>" style="max-height:40px;max-width:180px">
+            <?php else: ?>
+                <span class="auth-brand-mark" aria-hidden="true"><?= e(mb_strtoupper(mb_substr($siteName, 0, 1))) ?></span>
+                <span class="auth-brand-text">
+                    <span class="auth-brand-name"><?= e($siteName) ?></span>
+                    <span class="auth-brand-sub"><?= e($brandSublabel) ?></span>
+                </span>
+            <?php endif; ?>
         </a>
 
 <?php endif; ?>

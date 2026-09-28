@@ -141,6 +141,15 @@ $coreNav = [
         'order' => 840,
         'group' => 'settings',
     ],
+    [
+        'slug'  => 'settings-translations',
+        'label' => __('translations', 'Translations'),
+        'href'  => SLATE_URL . '/plugins/multilang-translate/admin/index.php',
+        'icon'  => 'globe',
+        'perm'  => 'mlt.view',
+        'order' => 845,
+        'group' => 'settings',
+    ],
     // ── System ──
     [
         'slug'  => 'users',
@@ -198,49 +207,10 @@ $coreNav = [
     ],
 ];
 
-// Platform-level nav — gated directly on Auth::isPlatformSuperAdmin() rather
-// than a 'perm' key, since platform authority is not a per-tenant permission
-// (platform_admins carries no tenant_id — see migration 0013). Ordinary
-// tenant admins, including tenant Super Admins (role_id=1) who are NOT also
-// platform_admins members, never see this group at all.
-if (Auth::isPlatformSuperAdmin()) {
-    $coreNav[] = [
-        'slug'  => 'tenants',
-        'label' => __('tenants', 'Tenants'),
-        'href'  => SLATE_URL . '/admin/tenants.php',
-        'icon'  => 'building-2',
-        'perm'  => null,
-        'order' => 10,
-        'group' => 'platform',
-    ];
-    $coreNav[] = [
-        'slug'  => 'licenses',
-        'label' => __('licenses', 'Licenses'),
-        'href'  => SLATE_URL . '/admin/licenses.php',
-        'icon'  => 'key',
-        'perm'  => null,
-        'order' => 20,
-        'group' => 'platform',
-    ];
-    $coreNav[] = [
-        'slug'  => 'plans',
-        'label' => __('plans', 'Plans'),
-        'href'  => SLATE_URL . '/admin/plans.php',
-        'icon'  => 'tag',
-        'perm'  => null,
-        'order' => 30,
-        'group' => 'platform',
-    ];
-    $coreNav[] = [
-        'slug'  => 'platform-admins',
-        'label' => __('platform_admins', 'Platform Administrators'),
-        'href'  => SLATE_URL . '/admin/platform-admins.php',
-        'icon'  => 'shield',
-        'perm'  => null,
-        'order' => 50,
-        'group' => 'platform',
-    ];
-}
+// Legacy Phase 1E platform-level nav (/admin/tenants.php, /admin/licenses.php,
+// /admin/plans.php, /admin/platform-admins.php) is omitted from the Central
+// sidebar — Kohevo Central's authoritative licensing administration lives
+// under the LICENSING navigation group registered by plugins/licensing/.
 
 // Plugin nav contributions
 $navItems = Hook::applyFilters('admin_nav_items', $coreNav);
@@ -291,6 +261,11 @@ $brandLogoDarkUrl = $brandLogoUrls['dark'];
 $sidebarThemeKey = (string)(Database::setting('sidebar_theme') ?: 'ink');
 $sidebarThemes   = function_exists('slate_sidebar_themes') ? slate_sidebar_themes() : [];
 $sidebarLogoTile = (bool)($sidebarThemes[$sidebarThemeKey]['dark'] ?? true);
+if ($brandLogoUrl === '' && stripos(trim((string)$siteName), 'Kohevo') === 0) {
+    $brandLogoUrl = $sidebarLogoTile
+        ? \Slate\Services\Content\PlatformIdentity::wordmarkDarkUrl()
+        : \Slate\Services\Content\PlatformIdentity::wordmarkUrl();
+}
 
 // ── Group nav items by 'group' field (preserves first-seen order) ─
 // Note: use $_navGroupKey (not $g) so we never clobber a caller's $g variable.
@@ -1148,27 +1123,26 @@ if (!function_exists('slate_admin_nav_icon')) {
             background: color-mix(in srgb, var(--sidebar-strong) 14%, transparent);
             color: var(--sidebar-strong);
         }
-        /* Active — accent-tinted glass pill + a thin accent ring + a glowing
-           accent icon tile + brighter label. A clear, premium selected state. */
+        /* Active — high-contrast sidebar pill + crisp icon tile that works
+           across both monochrome (#111111) and custom brand accents on dark
+           and light sidebar themes. */
         .sidebar-item.is-active a {
             color: var(--sidebar-strong);
             font-weight: 600;
-            background: linear-gradient(90deg,
-                color-mix(in srgb, var(--accent) 28%, transparent),
-                color-mix(in srgb, var(--accent) 11%, transparent));
-            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent);
+            background: var(--sidebar-active);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sidebar-strong) 14%, transparent);
         }
         .sidebar-item.is-active a:hover { transform: none; }
         .sidebar-item.is-active a .nav-icon {
-            background: var(--accent);
-            color: var(--on-accent);
-            box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 50%, transparent),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.30);
+            background: var(--sidebar-strong);
+            color: var(--sidebar-bg);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
         }
         /* Width/height/flex-shrink moved to the unconditional base rule
-           above (needed on mobile too); this desktop-scoped rule now only
-           carries the sidebar/tabbar-appropriate default color. */
-        .nav-icon {
+           above (needed on mobile too); scope the sidebar default color
+           strictly to .sidebar so .nav-icon inside light-surface buttons
+           (.btn) and content cards inherits currentColor cleanly. */
+        .sidebar .nav-icon {
             color: var(--sidebar-muted);
             transition: color .14s ease;
         }

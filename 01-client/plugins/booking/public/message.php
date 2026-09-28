@@ -227,7 +227,7 @@ function bookingplus_notify_therapist(array $appt, string $message): void {
 
 function bookingplus_render_page(string $title, string $bodyHtml): void {
     $siteName = Database::setting('site_name') ?: 'Booking';
-    $accent   = (string) (Database::setting('brand_accent_color') ?: '#2563EB');
+    $accent   = (string) (Database::setting('brand_accent_color') ?: '#111111');
     $logoRel  = trim((string) Database::setting('brand_logo_path'));
     $logoUrl  = $logoRel !== '' ? SLATE_URL . '/' . ltrim($logoRel, '/') : '';
     ?>

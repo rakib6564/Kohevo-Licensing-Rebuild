@@ -168,7 +168,7 @@ if (!function_exists('slate_portal_shell_head')) {
         $siteName = Database::setting('site_name') ?: 'Kohevo';
 
         $accent = trim((string) Database::setting('brand_accent_color'));
-        if (!preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent)) { $accent = '#2563EB'; }
+        if (!preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent)) { $accent = '#111111'; }
         // Settings -> Branding -> Button text color: manual override for
         // the text/icon color placed ON the accent fill (buttons, filled
         // avatars). 'auto' (default) keeps the measured pick.
@@ -328,6 +328,9 @@ if (!function_exists('slate_portal_shell_open')) {
         $siteName = Database::setting('site_name') ?: 'Kohevo';
         $logoUrls = slate_logo_urls();
         $logoUrl  = $logoUrls['light'];
+        if ($logoUrl === '' && stripos(trim((string)$siteName), 'Kohevo') === 0) {
+            $logoUrl = \Slate\Services\Content\PlatformIdentity::wordmarkUrl();
+        }
         $logoDarkUrl = $logoUrls['dark'];
         $cust     = class_exists('Auth') ? Auth::customer() : null;
         $name     = (string) ($cust['name'] ?? $cust['email'] ?? '');
@@ -467,7 +470,7 @@ if (!function_exists('slate_portal_welcome')) {
                     </span>
                 <?php endif; ?>
                 <?php if (!empty($o['clock'])): ?>
-                    <span class="phero-clock"><?= e(I18n::localDate('D · j M Y')) ?> · <span class="t"><?= e(date('g:i a')) ?></span></span>
+                    <span class="phero-clock" data-tz="<?= e(slate_timezone()) ?>" data-time-format="<?= e(slate_time_format()) ?>"><?= e(slate_format_date()) ?> · <span class="t"><?= e(slate_format_time()) ?></span></span>
                 <?php endif; ?>
             </div>
         </div>
@@ -657,6 +660,42 @@ if (!function_exists('slate_portal_shell_close')) {
 </script>
 <?php endif; ?>
 
+<script>
+(function () {
+    var clockWrap = document.querySelector('.phero-clock');
+    var el = clockWrap ? clockWrap.querySelector('.t') : null;
+    if (!el) return;
+    var tz  = clockWrap.getAttribute('data-tz') || 'UTC';
+    var fmt = clockWrap.getAttribute('data-time-format') || 'g:i a';
+    var is24 = fmt.indexOf('H') !== -1 || fmt.indexOf('G') !== -1;
+    var upperAmPm = fmt.indexOf('A') !== -1;
+    var padHour = fmt.indexOf('H') !== -1 || fmt.indexOf('h') !== -1;
+    function tick() {
+        try {
+            var parts = {};
+            new Intl.DateTimeFormat('en-US', {
+                timeZone: tz,
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: !is24
+            }).formatToParts(new Date()).forEach(function (p) { parts[p.type] = p.value; });
+            var h = parseInt(parts.hour || '0', 10);
+            if (is24 && h === 24) h = 0;
+            var hStr = padHour ? (h < 10 ? '0' : '') + h : String(h);
+            var mStr = parts.minute || '00';
+            if (is24) {
+                el.textContent = hStr + ':' + mStr;
+            } else {
+                var ap = (parts.dayPeriod || '').toLowerCase();
+                if (upperAmPm) ap = ap.toUpperCase();
+                var sep = fmt.indexOf(' ') !== -1 ? ' ' : '';
+                el.textContent = hStr + ':' + mStr + (ap ? sep + ap : '');
+            }
+        } catch (e) {}
+    }
+    setInterval(tick, 30000);
+})();
+</script>
 </body>
 </html>
 <?php

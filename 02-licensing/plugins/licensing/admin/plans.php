@@ -11,6 +11,7 @@
  */
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/LicensingAPI.php';
+require_once dirname(__DIR__) . '/ModuleCatalog.php';
 require_once dirname(__DIR__) . '/LicenseService.php';
 require_once dirname(__DIR__) . '/PlanService.php';
 require_once dirname(__DIR__) . '/LegacyLicensePolicy.php';
@@ -49,14 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $isActive    = !empty($_POST['is_active']);
             $entLines    = preg_split('/\r\n|\r|\n/', (string) ($_POST['entitlements'] ?? '')) ?: [];
             $entitlements = array_values(array_filter(array_map('trim', $entLines), fn($v) => $v !== ''));
-            // Module template (licensing_plan_modules) — a pre-fill convenience for
-            // the license-creation screen only, independent of the legacy
-            // entitlements_json textarea above (docs/02-architecture/
-            // 04-ENTITLEMENT-ARCHITECTURE.md §4). Never write a Core key here.
-            $moduleKeys = array_values(array_intersect(
-                (array) ($_POST['modules'] ?? []),
-                LicenseService::V1_OPTIONAL_MODULE_KEYS
-            ));
+            $rawModules  = $_POST['modules'] ?? [];
 
             $productExists = $productId > 0 && Database::value("SELECT id FROM licensing_products WHERE id = ?", [$productId]) !== null;
             // A tampered POST naming an $id that doesn't (or no longer)
@@ -73,6 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $flash = ['type' => 'error', 'msg' => __('licensing_plan_invalid_product', 'Unknown product.')];
             } elseif (!$planExists) {
                 $flash = ['type' => 'error', 'msg' => __('licensing_plan_not_found', 'That plan no longer exists.')];
+            } elseif (!is_array($rawModules)) {
+                $flash = ['type' => 'error', 'msg' => __('licensing_invalid_modules', 'Invalid module selection.')];
             } else {
                 $existing = Database::row(
                     "SELECT id FROM licensing_plans WHERE product_id = ? AND slug = ? AND id != ?",
@@ -81,20 +77,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($existing) {
                     $flash = ['type' => 'error', 'msg' => __('licensing_plan_slug_taken', 'That slug is already used by another plan on this product.')];
                 } else {
-                    // Phase 13: legacy entitlements may only shrink.
-                    $currentEntitlements = $id > 0
-                        ? (array) (json_decode((string) Database::value("SELECT entitlements_json FROM licensing_plans WHERE id = ?", [$id]), true) ?: [])
-                        : [];
-                    [$entitlements] = LegacyLicensePolicy::restrictedEntitlements($currentEntitlements, $entitlements);
-                    $row = [
-                        'product_id'        => $productId,
-                        'name'              => mb_substr($name, 0, 160),
-                        'slug'              => mb_substr($slug, 0, 64),
-                        'description'       => $description !== '' ? mb_substr($description, 0, 2000) : null,
-                        'is_active'         => $isActive ? 1 : 0,
-                        'entitlements_json' => (string) json_encode($entitlements),
-                    ];
                     try {
+                        // Validate against authoritative Central ModuleCatalog BEFORE
+                        // writing the plan row so forged keys (editor, content,
+                        // stripe, stripe-payment, unknown-plugin, core, duplicates)
+                        // are rejected server-side without creating a plan row.
+                        $moduleKeys = ModuleCatalog::validateCommercialSelection($rawModules);
+
+                        // Phase 13: legacy entitlements may only shrink.
+                        $currentEntitlements = $id > 0
+                            ? (array) (json_decode((string) Database::value("SELECT entitlements_json FROM licensing_plans WHERE id = ?", [$id]), true) ?: [])
+                            : [];
+                        [$entitlements] = LegacyLicensePolicy::restrictedEntitlements($currentEntitlements, $entitlements);
+                        $row = [
+                            'product_id'        => $productId,
+                            'name'              => mb_substr($name, 0, 160),
+                            'slug'              => mb_substr($slug, 0, 64),
+                            'description'       => $description !== '' ? mb_substr($description, 0, 2000) : null,
+                            'is_active'         => $isActive ? 1 : 0,
+                            'entitlements_json' => (string) json_encode($entitlements),
+                        ];
                         if ($id > 0) {
                             Database::update('licensing_plans', $row, 'id = ?', [$id]);
                             AuditLog::record('licensing.plan_updated', (string) $id);
@@ -107,9 +109,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         header('Location: ' . plugin_url('licensing', 'admin/plans.php'));
                         exit;
                     } catch (\InvalidArgumentException $e) {
-                        // e.g. PlanService::setModules()'s own "Unknown plan."
-                        // guard, reached if the plan vanished between the
-                        // $planExists check above and here.
                         $flash = ['type' => 'error', 'msg' => $e->getMessage() ?: __('licensing_action_failed', 'That action could not be completed.')];
                     } catch (\Throwable $e) {
                         // Never surface a raw exception message to the admin
@@ -191,11 +190,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     $p = $editing ?: ['id' => 0, 'product_id' => (int) $products[0]['id'], 'name' => '', 'slug' => '', 'description' => '', 'is_active' => 1, 'entitlements_json' => '[]'];
     $entText = implode("\n", (array) (json_decode((string) $p['entitlements_json'], true) ?: []));
     $planModules = $editing ? PlanService::modules((int) $p['id']) : [];
-    $moduleLabels = [
-        'forms' => __('licensing_module_forms', 'Form Builder'),
-        'membership' => __('licensing_module_membership', 'Membership'),
-        'booking' => __('licensing_module_booking', 'Booking'),
-    ];
+    $selectionCatalog = ModuleCatalog::selectionCatalog();
 ?>
 <section class="card mb-3">
     <div class="card-header"><h2><?= $editing ? e(__('licensing_edit_plan', 'Edit plan')) : e(__('licensing_new_plan', 'New plan')) ?></h2></div>
@@ -235,16 +230,24 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <textarea id="description" name="description" rows="2" maxlength="2000" placeholder="<?= e(__('licensing_description_placeholder', 'Shown to admins only, presentational.')) ?>"><?= e((string) ($p['description'] ?? '')) ?></textarea>
         </div>
         <div class="field">
-            <label class="field-label"><?= __('licensing_module_template', 'Module template') ?></label>
+            <label class="field-label"><?= __('licensing_module_template', 'Commercial modules (V1 catalog)') ?></label>
             <div class="mcp-checkbox-row">
-                <?php foreach ($moduleLabels as $key => $label): ?>
-                    <label>
-                        <input type="checkbox" name="modules[]" value="<?= e($key) ?>" <?= in_array($key, $planModules, true) ? 'checked' : '' ?>>
-                        <?= e($label) ?>
-                    </label>
+                <?php foreach ($selectionCatalog as $key => $catItem): ?>
+                    <?php if ($catItem['selectable']): ?>
+                        <label>
+                            <input type="checkbox" name="modules[]" value="<?= e($key) ?>" <?= in_array($key, $planModules, true) ? 'checked' : '' ?>>
+                            <?= e($catItem['display_name']) ?>
+                        </label>
+                    <?php else: ?>
+                        <label class="text-muted" style="opacity:0.65;cursor:not-allowed;" title="<?= e($catItem['description']) ?>">
+                            <input type="checkbox" disabled aria-disabled="true" value="<?= e($key) ?>">
+                            <?= e($catItem['display_name']) ?>
+                            <span class="badge badge-inactive" style="font-size:10px;padding:1px 6px;"><?= e((string) $catItem['badge']) ?></span>
+                        </label>
+                    <?php endif; ?>
                 <?php endforeach; ?>
             </div>
-            <p class="field-help"><?= __('licensing_module_template_hint', 'Pre-fills the optional modules when an admin issues a new license from this plan. Core (Admin/User, Dashboard, Site Settings) is always included and cannot be disabled. Changing this has no effect on licenses already issued.') ?></p>
+            <p class="field-help"><?= __('licensing_module_template_hint', 'Select V1 commercial modules included in this plan. Core (Admin/User, Dashboard, Site Settings) is always included. Supporting infrastructure (Stripe Payment) is automatically enabled on client installs when Membership or Booking is selected. Editor and Content are future modules (Not V1 / Future) and cannot be enabled.') ?></p>
         </div>
         <div class="field">
             <label class="field-label" for="entitlements"><?= __('licensing_entitlements', 'Entitlements (legacy)') ?></label>

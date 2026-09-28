@@ -78,9 +78,15 @@ function slate_render_landing(): void {
     $siteName = Database::setting('site_name')     ?: 'Kohevo';
     $bizName  = Database::setting('business_name')  ?: $siteName;
     $accent   = preg_match('/^#[0-9a-fA-F]{6}$/', (string)Database::setting('brand_accent_color'))
-                ? (string)Database::setting('brand_accent_color') : '#01aced';
-    $logoUrls = slate_logo_urls();
-    $logoUrl  = $logoUrls['light'];
+                ? (string)Database::setting('brand_accent_color') : '#111111';
+    $logoUrls      = slate_logo_urls();
+    $tenantLogoUrl = $logoUrls['light'];
+    $logoUrl       = $tenantLogoUrl !== ''
+        ? $tenantLogoUrl
+        : (stripos(trim((string)$siteName), 'Kohevo') === 0
+            && stripos(trim((string)$bizName), 'Kohevo') === 0
+            ? \Slate\Services\Content\PlatformIdentity::wordmarkUrl()
+            : '');
     $heroPath = (string)Database::setting('brand_login_image_path');
     $heroUrl  = $heroPath !== '' ? SLATE_URL . '/' . ltrim($heroPath, '/') : '';
 
@@ -175,7 +181,7 @@ function slate_render_landing(): void {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= $e($eyebrow !== '' ? $title . ' — ' . $eyebrow : $title) ?></title>
-<link rel="icon" href="<?= $e($logoUrl !== '' ? $logoUrl : slate_default_favicon_url()) ?>">
+<link rel="icon" href="<?= $e($tenantLogoUrl !== '' ? $tenantLogoUrl : slate_default_favicon_url()) ?>">
 <style>
     :root { --accent: <?= $e($accent) ?>; }
     * { box-sizing: border-box; }
@@ -193,7 +199,7 @@ function slate_render_landing(): void {
         display: flex; flex-direction: column; justify-content: space-between;
         min-height: 260px; overflow: hidden;
         <?php if ($heroUrl !== ''): ?>background: url("<?= $e($heroUrl) ?>") center/cover no-repeat;
-        <?php else: ?>background: radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent) 45%, #0b1c2c), #0b1c2c);<?php endif; ?>
+        <?php else: ?>background: radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent) 45%, #0E1117), #0E1117);<?php endif; ?>
     }
     .hero::before { content: ""; position: absolute; inset: 0;
         background: linear-gradient(195deg, rgba(6,8,12,.20) 0%, rgba(6,8,12,.10) 30%, rgba(6,8,12,.78) 100%);

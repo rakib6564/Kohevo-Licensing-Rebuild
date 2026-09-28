@@ -128,6 +128,21 @@ class MembershipAPI {
         return max(0, (int) Database::setting('membership.insurance_fee_cents'));
     }
 
+    /** True when the digital membership card & QR code are enabled (Membership → Settings). */
+    public static function cardEnabled(): bool {
+        return (string) (Database::setting('membership.enable_card') ?? '1') !== '0';
+    }
+
+    /** True when attendance tracking & Recent attendance are enabled (Membership → Settings). */
+    public static function attendanceEnabled(): bool {
+        return (string) (Database::setting('membership.enable_attendance') ?? '1') !== '0';
+    }
+
+    /** True when the "How to check in" banner is enabled (Membership → Settings). */
+    public static function checkinHowtoEnabled(): bool {
+        return (string) (Database::setting('membership.enable_checkin_howto') ?? '1') !== '0';
+    }
+
     /**
      * Resolve whether a purchase of $plan should include the insurance add-on.
      * 'required' → always; 'optional' → only if the member opted in; else no.
@@ -985,7 +1000,7 @@ class MembershipAPI {
 
         $site    = Database::setting('site_name') ?: 'Kohevo';
         $name    = self::planName($sub);
-        $expires = !empty($sub['expires_at']) ? I18n::localDate('j M Y', strtotime($sub['expires_at'])) : '—';
+        $expires = !empty($sub['expires_at']) ? slate_format_date($sub['expires_at']) : '—';
         $subject = sprintf('%s — %s', $site, __('membership_email_active_subject', 'Your membership is active'));
         $body = '<p>' . e($cust['name'] ?? '') . ',</p>'
               . '<p>' . __('membership_email_active_body', 'Your membership is now active.') . '</p>'

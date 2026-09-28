@@ -1,0 +1,14 @@
+{
+    "slug": "multilang-translate",
+    "name": "Multi Language Visual Translation",
+    "version": "1.3.0",
+    "description": "Visual multi-language translation manager. Auto-harvests every text string rendered across admin, customer portal, frontend and all active plugins into a spreadsheet-style grid (columns = languages), lets you translate, find & replace, import/export CSV, and serves live translations through a front-end language switcher.",
+    "author": "Rasel Ahmmed",
+    "author_url": "https://example.com",
+    "requires_core": ">=1.0.0",
+    "permissions": [
+        {"key": "mlt.view",   "label": "View translations"},
+        {"key": "mlt.manage", "label": "Manage languages, translate, publish"},
+        {"key": "mlt.import_export", "label": "Import / export translation CSVs"}
+    ]
+}

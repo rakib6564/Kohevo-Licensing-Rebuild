@@ -97,12 +97,12 @@ slate_portal_shell_open(['active' => 'account', 'area' => 'account']);
             </div>
             <div class="kvr">
                 <span class="kvr-k"><?= __('portal_joined', 'Joined') ?></span>
-                <span class="kvr-v"><?= e(I18n::localDate('j M Y', strtotime($row['created_at'] ?? 'now'))) ?></span>
+                <span class="kvr-v"><?= e(slate_format_date($row['created_at'] ?? 'now')) ?></span>
             </div>
             <?php if (!empty($row['last_login_at'])): ?>
             <div class="kvr">
                 <span class="kvr-k"><?= __('portal_last_sign_in', 'Last sign in') ?></span>
-                <span class="kvr-v"><?= e(I18n::localDate('j M Y, H:i', strtotime($row['last_login_at']))) ?></span>
+                <span class="kvr-v"><?= e(slate_format_datetime($row['last_login_at'])) ?></span>
             </div>
             <?php endif; ?>
         </section>

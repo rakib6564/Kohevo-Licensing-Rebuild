@@ -53,7 +53,7 @@ slate_portal_shell_open(['active' => 'activity', 'area' => 'activity']);
                         <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">
                             <strong style="font-size:14.5px;color:var(--m-ink,#15181E);"><?= e($ev['label']) ?></strong>
                             <span style="font-size:12px;color:var(--m-muted,#737886);">
-                                <?= e(I18n::localDate('j M Y · g:i a', strtotime($ev['occurred_at']))) ?>
+                                <?= e(slate_format_datetime($ev['occurred_at'], null, ' · ')) ?>
                             </span>
                         </div>
                         <?php if (!empty($ev['description'])): ?>
