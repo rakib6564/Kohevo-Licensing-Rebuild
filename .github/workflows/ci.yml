@@ -50,6 +50,15 @@ jobs:
           find 01-client 02-licensing -name '*.php' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
           echo "All PHP files in 01-client and 02-licensing parsed cleanly."
 
+      - name: Check French pack completeness and version consistency
+        run: |
+          php scripts/check-i18n.php
+          V="$(tr -d '[:space:]' < VERSION)"
+          for f in 01-client/config.php 01-client/install.php 02-licensing/config.php 02-licensing/install.php; do
+            grep -q "'SLATE_VERSION', '$V'" "$f" || { echo "::error file=$f::SLATE_VERSION does not match VERSION ($V)"; exit 1; }
+          done
+          echo "Version $V is consistent across both apps."
+
       - name: Provision test databases and .env files
         run: |
           mysql -h 127.0.0.1 -uroot -proot -e "
