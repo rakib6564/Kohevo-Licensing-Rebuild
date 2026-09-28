@@ -334,7 +334,7 @@ function forms_public_render_form(array $form, array $values, array $errors, boo
             <?php endif; ?>
 
             <form method="post" enctype="multipart/form-data" novalidate
-                  data-animate="<?= $set['animate'] ? '1' : '0' ?>" data-validate="<?= $set['validate'] ? '1' : '0' ?>">
+                  data-animate="<?= $set['animate'] ? '1' : '0' ?>" data-validate="<?= $set['validate'] ? '1' : '0' ?>" data-i18n="<?= e(FormsAPI::jsMessages()) ?>">
                 <?= csrf_field() ?>
                 <!-- Honeypot — hidden from humans, often filled by bots.
                      display:none (not off-screen) so browser autofill and
