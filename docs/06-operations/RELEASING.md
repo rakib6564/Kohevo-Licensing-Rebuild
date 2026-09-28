@@ -5,7 +5,8 @@
 - Semantic Versioning. The number lives in [`VERSION`](../../VERSION) and must equal `SLATE_VERSION` in
   `01-client/config.php`, `01-client/install.php`, `02-licensing/config.php` and `02-licensing/install.php`
   (CI fails otherwise). The client reports it to the central server on every license check-in.
-- Packages carry `MAJOR.MINOR` in the file name: `KOHEVO-CLIENT-V1.6-DEPLOYMENT-READY.zip`.
+- Packages carry `MAJOR.MINOR` in the file name for an `x.y.0` release (`KOHEVO-CLIENT-V1.6-DEPLOYMENT-READY.zip`) and the
+  full number for a patch release (`KOHEVO-CLIENT-V1.6.1-DEPLOYMENT-READY.zip`), so a patch never reuses an earlier name.
 - Every release gets an entry in [`CHANGELOG.md`](../../CHANGELOG.md) and a git tag `vMAJOR.MINOR.PATCH`.
 
 ## Cut a release

@@ -13,7 +13,7 @@
 // ── Version + roots ──────────────────────────────────────────
 // Guarded: install.php defines these before requiring config.php,
 // so we skip the redefine to avoid a "Constant already defined" warning.
-if (!defined('SLATE_VERSION')) define('SLATE_VERSION', '1.6.0');
+if (!defined('SLATE_VERSION')) define('SLATE_VERSION', '1.6.1');
 if (!defined('SLATE_ROOT'))    define('SLATE_ROOT', __DIR__);
 
 // ── Error reporting ──────────────────────────────────────────

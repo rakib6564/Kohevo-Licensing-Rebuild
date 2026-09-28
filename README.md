@@ -1,7 +1,7 @@
 # Kohevo — Client Platform & Central Licensing Server
 
 [![CI](https://github.com/rakib6564/Kohevo-Licensing-Rebuild/actions/workflows/ci.yml/badge.svg)](https://github.com/rakib6564/Kohevo-Licensing-Rebuild/actions/workflows/ci.yml)
-![Version](https://img.shields.io/badge/version-1.6.0-blue)
+![Version](https://img.shields.io/badge/version-1.6.1-blue)
 ![PHP](https://img.shields.io/badge/PHP-8.1%2B-777bb4)
 ![Languages](https://img.shields.io/badge/languages-EN%20%7C%20FR-informational)
 
