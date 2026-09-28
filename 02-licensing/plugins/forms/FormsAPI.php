@@ -97,7 +97,7 @@ class FormsAPI {
     const SIGNATURE_MAX_BYTES = 700 * 1024;
 
     /** Bumped to cache-bust public JS/CSS assets. */
-    const ASSET_VERSION = '0.52.6';
+    const ASSET_VERSION = '0.52.7';
 
     /** Webhook signature: HMAC-SHA256 of the raw JSON body, keyed by per-form secret. */
     const WEBHOOK_SIGNATURE_HEADER = 'X-Slate-Signature';
@@ -2007,6 +2007,23 @@ class FormsAPI {
         ]), $inner);
     }
 
+    /**
+     * Translated strings for forms-logic.js (client-side validation + the review step), as JSON for the form's
+     * data-i18n attribute. JavaScript can't call __(), so the server hands the script its messages; the script keeps
+     * the English text as its own fallback.
+     */
+    public static function jsMessages(): string {
+        return (string) json_encode([
+            'required'     => __('forms_js_required', 'This field is required.'),
+            'email'        => __('forms_js_email', 'Enter a valid email address.'),
+            'url'          => __('forms_js_url', 'Enter a valid URL (https://…).'),
+            'number'       => __('forms_js_number', 'Enter a number.'),
+            'tel'          => __('forms_js_tel', 'Enter a valid phone number.'),
+            'check'        => __('forms_js_check', 'Please check this field.'),
+            'review_empty' => __('forms_js_review_empty', 'No answers to review yet.'),
+        ], JSON_UNESCAPED_UNICODE);
+    }
+
     /** Format one submission value as an email-safe HTML cell. */
     private static function emailFieldCell($val, string $base): string {
         if (is_bool($val)) {
@@ -2629,7 +2646,7 @@ class FormsAPI {
         <?php endif; ?>
 
         <form method="post" action="<?= e($action) ?>" enctype="multipart/form-data" novalidate
-              data-animate="<?= $set['animate'] ? '1' : '0' ?>" data-validate="<?= $set['validate'] ? '1' : '0' ?>">
+              data-animate="<?= $set['animate'] ? '1' : '0' ?>" data-validate="<?= $set['validate'] ? '1' : '0' ?>" data-i18n="<?= e(self::jsMessages()) ?>">
             <?= csrf_field() ?>
             <div style="display:none !important;" aria-hidden="true">
                 <label><?= __('forms_leave_empty', 'Leave this field empty') ?>

@@ -18,6 +18,12 @@
     var doAnimate  = form.getAttribute('data-animate')  !== '0';
     var doValidate = form.getAttribute('data-validate') !== '0';
 
+    // Translated messages arrive from the server as data-i18n on the form (JS can't call PHP's __()).
+    // The English text stays as the fallback, so a form without the attribute behaves exactly as before.
+    var MSG = {};
+    try { MSG = JSON.parse(form.getAttribute('data-i18n') || '{}') || {}; } catch (e) { MSG = {}; }
+    function msg(key, fallback) { return (MSG && MSG[key]) || fallback; }
+
     function esc(name) {
         return (window.CSS && CSS.escape) ? CSS.escape(name) : String(name).replace(/"/g, '\\"');
     }
@@ -222,7 +228,7 @@
             });
             if (!any) {
                 var p = document.createElement('p'); p.className = 'forms-summary-empty';
-                p.textContent = 'No answers to review yet.'; body.appendChild(p);
+                p.textContent = msg('review_empty', 'No answers to review yet.'); body.appendChild(p);
             }
         };
 
@@ -289,13 +295,13 @@
         return 'valid';
     }
     function vMsg(inp) {
-        if ((inp.value || '').trim() === '') return 'This field is required.';
+        if ((inp.value || '').trim() === '') return msg('required', 'This field is required.');
         var t = inp.getAttribute('type');
-        if (t === 'email')  return 'Enter a valid email address.';
-        if (t === 'url')    return 'Enter a valid URL (https://…).';
-        if (t === 'number') return 'Enter a number.';
-        if (t === 'tel')    return 'Enter a valid phone number.';
-        return 'Please check this field.';
+        if (t === 'email')  return msg('email', 'Enter a valid email address.');
+        if (t === 'url')    return msg('url', 'Enter a valid URL (https://…).');
+        if (t === 'number') return msg('number', 'Enter a number.');
+        if (t === 'tel')    return msg('tel', 'Enter a valid phone number.');
+        return msg('check', 'Please check this field.');
     }
     function applyState(inp) {
         var field = inp.closest && inp.closest('.field');
