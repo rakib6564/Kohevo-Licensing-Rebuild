@@ -35,7 +35,7 @@ also use them in scripts.
 Add through *Cron Jobs* (binary paths differ per host). Full details: [`production-artifacts/CRON-SETUP.md`](../../production-artifacts/CRON-SETUP.md).
 
 ```
-# Client — required: daily license check-in (CLI script)
+# Client — optional: license check-in (CLI script). The app also refreshes its license by itself, see below
 0 2 * * *   /usr/local/bin/php ~/customer-app/bin/license-check.php >> ~/customer-app/data/cron-license.log 2>&1
 
 # Client and central — web cron: reminders, Drive backups, daily expiry sweep (HTTP endpoint, secret in a header)
@@ -43,8 +43,15 @@ Add through *Cron Jobs* (binary paths differ per host). Full details: [`producti
 ```
 
 `cron.php` is an **HTTP** endpoint protected by `CRON_SECRET` (send it as the `X-Cron-Key` header so it stays out of
-access logs; `?key=` works if your scheduler can not set headers). It is rate-limited. Without the daily check-in the
-client keeps running on its last verified license for the 7-day offline tolerance, then follows the expiry rules.
+access logs; `?key=` works if your scheduler can not set headers). It is rate-limited.
+
+**License changes reach the client on their own.** The Central Server is the source of truth; the client keeps a signed
+copy. A client refreshes that copy automatically: on a normal page load, once the copy is older than
+15 minutes (`LICENSE_SYNC_INTERVAL`, seconds, 300–86400), the check-in runs *after* the response is sent, so nobody waits
+for it. A renewed or extended expiry, a plan or module change made on central therefore shows up within about 15 minutes
+of the next visit — no cron needed. **License → Check for updates now** does it immediately. The cron lines above just
+make it happen on schedule even when nobody visits. If the license server is unreachable the client keeps its last
+verified license for the 7-day offline tolerance, then follows the expiry rules.
 
 ## Mail
 

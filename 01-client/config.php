@@ -150,6 +150,12 @@ PluginLoader::boot();
 // the Guard needs all three (readTrustState() reads the database; the
 // whitelisted admin/login.php, admin/logout.php, admin/license.php routes
 // still need Auth available to themselves gate on).
+// Keep the local license copy in step with the Central Server: a throttled
+// check-in that runs after the response is sent (includes/license_sync.php).
+// Registered before the Guard so a locked install can still sync itself back.
+require_once SLATE_ROOT . '/includes/license_sync.php';
+slate_license_sync_schedule();
+
 require_once SLATE_ROOT . '/includes/license_guard.php';
 slate_license_guard();
 
