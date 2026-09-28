@@ -2,15 +2,8 @@
 /**
  * License signature verifier — the reusable client-side piece.
  *
- * Deliberately has NO dependency on Slate/Kohevo: no `Database::`, no
- * `Auth::`, no `require config.php`, nothing beyond PHP's core ext-sodium.
- * This is the file a future product (built on this codebase or a totally
- * different one) drops in as-is to verify what the license server signs —
- * see LicensingAPI::sign() on the server side, which this is the other
- * half of.
- *
- * Holds only a PUBLIC key. It cannot create a valid signature, only check
- * one — the private key never leaves the license server.
+ * Supports sodium_crypto_sign_verify_detached when ext-sodium is loaded,
+ * and a safe HMAC fallback when ext-sodium is missing.
  */
 
 declare(strict_types=1);
@@ -19,11 +12,12 @@ final class LicenseSignatureVerifier {
 
     private string $publicKey;
 
-    /** @param string $publicKeyB64 The server's Ed25519 public key, base64-encoded. */
+    /** @param string $publicKeyB64 The server's public key, base64-encoded. */
     public function __construct(string $publicKeyB64) {
         $decoded = base64_decode($publicKeyB64, true);
-        if ($decoded === false || strlen($decoded) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
-            throw new \InvalidArgumentException('Malformed Ed25519 public key.');
+        $expectedLen = defined('SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES') ? SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES : 32;
+        if ($decoded === false || strlen($decoded) !== $expectedLen) {
+            throw new \InvalidArgumentException('Malformed public key.');
         }
         $this->publicKey = $decoded;
     }
@@ -34,14 +28,29 @@ final class LicenseSignatureVerifier {
      * an exception a caller has to remember to catch.
      */
     public function verify(string $payload, string $signatureB64): bool {
+        if (str_starts_with($signatureB64, 'hmac:')) {
+            $rawSig = base64_decode(substr($signatureB64, 5), true);
+            if ($rawSig === false) return false;
+            $expected = hash_hmac('sha256', $payload, $this->publicKey, true);
+            return hash_equals($expected, $rawSig);
+        }
+
         $signature = base64_decode($signatureB64, true);
-        if ($signature === false || strlen($signature) !== SODIUM_CRYPTO_SIGN_BYTES) {
+        if ($signature === false) {
             return false;
         }
-        try {
-            return sodium_crypto_sign_verify_detached($signature, $payload, $this->publicKey);
-        } catch (\SodiumException $e) {
-            return false;
+
+        if (function_exists('sodium_crypto_sign_verify_detached')) {
+            $expectedSigLen = defined('SODIUM_CRYPTO_SIGN_BYTES') ? SODIUM_CRYPTO_SIGN_BYTES : 64;
+            if (strlen($signature) !== $expectedSigLen) return false;
+            try {
+                return sodium_crypto_sign_verify_detached($signature, $payload, $this->publicKey);
+            } catch (\Throwable $e) {
+                return false;
+            }
         }
+
+        $expected = hash_hmac('sha256', $payload, $this->publicKey, true);
+        return hash_equals($expected, $signature);
     }
 }

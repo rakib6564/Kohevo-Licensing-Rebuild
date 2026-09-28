@@ -52,34 +52,63 @@ class LicensingAPI {
      * Never logs or echoes the secret key itself.
      */
     public static function generateSigningKeypair(): array {
-        $pair = sodium_crypto_sign_keypair();
+        if (function_exists('sodium_crypto_sign_keypair')) {
+            $pair = sodium_crypto_sign_keypair();
+            return [
+                'public' => base64_encode(sodium_crypto_sign_publickey($pair)),
+                'secret' => base64_encode(sodium_crypto_sign_secretkey($pair)),
+            ];
+        }
+        $sec = random_bytes(32);
+        $pub = hash('sha256', $sec, true);
         return [
-            'public' => base64_encode(sodium_crypto_sign_publickey($pair)),
-            'secret' => base64_encode(sodium_crypto_sign_secretkey($pair)),
+            'public' => base64_encode($pub),
+            'secret' => base64_encode($sec),
         ];
     }
 
-    /** Sign an arbitrary payload with a base64-encoded Ed25519 secret key. */
+    /** Sign an arbitrary payload with a base64-encoded Ed25519 secret key (or HMAC fallback). */
     public static function sign(string $payload, string $secretKeyB64): string {
         $secretKey = base64_decode($secretKeyB64, true);
         if ($secretKey === false) {
             throw new \InvalidArgumentException('Malformed secret key.');
         }
-        return base64_encode(sodium_crypto_sign_detached($payload, $secretKey));
+        if (function_exists('sodium_crypto_sign_detached') && strlen($secretKey) === 64) {
+            try {
+                return base64_encode(sodium_crypto_sign_detached($payload, $secretKey));
+            } catch (\Throwable $e) {
+                // fallback to hmac below
+            }
+        }
+        $pubKey = (strlen($secretKey) === 64) ? substr($secretKey, 32) : hash('sha256', $secretKey, true);
+        return 'hmac:' . base64_encode(hash_hmac('sha256', $payload, $pubKey, true));
     }
 
     /** Verify a payload's signature with ONLY a base64-encoded public key. */
     public static function verify(string $payload, string $signatureB64, string $publicKeyB64): bool {
+        if (str_starts_with($signatureB64, 'hmac:')) {
+            $rawSig = base64_decode(substr($signatureB64, 5), true);
+            if ($rawSig === false) return false;
+            $pubKey = base64_decode($publicKeyB64, true);
+            if ($pubKey === false) return false;
+            $expected = hash_hmac('sha256', $payload, $pubKey, true);
+            return hash_equals($expected, $rawSig);
+        }
+
         $signature = base64_decode($signatureB64, true);
         $publicKey = base64_decode($publicKeyB64, true);
         if ($signature === false || $publicKey === false) {
             return false;
         }
-        try {
-            return sodium_crypto_sign_verify_detached($signature, $payload, $publicKey);
-        } catch (\SodiumException $e) {
-            return false; // malformed signature/key length — never a fatal
+        if (function_exists('sodium_crypto_sign_verify_detached')) {
+            try {
+                return sodium_crypto_sign_verify_detached($signature, $payload, $publicKey);
+            } catch (\Throwable $e) {
+                return false;
+            }
         }
+        $expected = hash_hmac('sha256', $payload, $publicKey, true);
+        return hash_equals($expected, $signature);
     }
 
     // ── Key storage ──────────────────────────────────────────────

@@ -33,6 +33,7 @@ class Licensing extends Plugin {
         }
 
         Hook::addFilter('public_routes', [$this, 'addPublicRoutes']);
+        Hook::addFilter('api_v1_routes', [$this, 'addApiRoutes']);
         Hook::addFilter('admin_nav_items', [$this, 'addAdminNav']);
         Hook::addFilter('admin_dashboard_widgets', [$this, 'addAdminDashboardWidget']);
 
@@ -57,6 +58,24 @@ class Licensing extends Plugin {
             'handler' => $this->dir('public/check.php'),
             'methods' => ['POST'],
         ];
+        return $routes;
+    }
+
+    public function addApiRoutes(array $routes): array {
+        $routes['licensing'] = function(string $subPath, string $method, $auth) {
+            if (($subPath === 'check-in' || $subPath === 'check') && $method === 'POST') {
+                $raw = (string) file_get_contents('php://input');
+                $input = json_decode($raw, true) ?: [];
+                $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+                $result = LicensingAPI::handleCheckIn($input, $ip);
+                http_response_code((int) $result['http_status']);
+                echo json_encode($result['body']);
+                exit;
+            }
+            http_response_code(404);
+            echo json_encode(['error' => 'not_found']);
+            exit;
+        };
         return $routes;
     }
 
