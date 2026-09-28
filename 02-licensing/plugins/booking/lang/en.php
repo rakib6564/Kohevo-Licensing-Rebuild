@@ -146,4 +146,6 @@ return [
     'booking_your_booking_title' => 'Your booking',
     'booking_your_name' => 'Your name',
     'booking_youre_booked' => 'You\'re booked',
+    'booking_email_nudge_heading' => 'A client message is waiting for your reply',
+    'booking_email_new_message_heading' => 'New client message',
 ];

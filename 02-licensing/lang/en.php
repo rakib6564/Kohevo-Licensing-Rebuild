@@ -244,4 +244,10 @@ return [
     'auth_email_link_fallback' => 'If the button doesn\'t work, copy and paste this link into your browser:',
     'auth_email_label_account' => 'Account',
     'auth_email_label_security' => 'Security',
+    'email_greeting' => 'Hello %s,',
+    'email_greeting_generic' => 'Hello,',
+    'smtp_test_subject' => 'Kohevo SMTP test',
+    'smtp_test_heading' => 'Email delivery test',
+    'smtp_test_body_1' => 'This is a test message sent from your Kohevo install.',
+    'smtp_test_body_2' => 'If you received it, your email delivery is working.',
 ];

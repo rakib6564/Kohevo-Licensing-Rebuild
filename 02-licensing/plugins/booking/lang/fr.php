@@ -929,4 +929,6 @@ return [
     'booking_settings_last_sync_fmt' => 'Dernière synchronisation automatique : %s UTC.',
     'booking_settings_no_sync_yet' => 'Aucune synchronisation automatique n\'a encore eu lieu — elle s\'exécute selon le calendrier cron habituel du site.',
     'booking_settings_sync_now_button' => 'Synchroniser maintenant',
+    'booking_email_nudge_heading' => 'Un message client attend votre réponse',
+    'booking_email_new_message_heading' => 'Nouveau message d’un client',
 ];

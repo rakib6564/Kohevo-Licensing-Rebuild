@@ -282,9 +282,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Pass $log=false here to avoid double-logging.
                 $ok = Mailer::send(
                     $to,
-                    'Kohevo SMTP test',
-                    "<p>This is a test message sent from your Kohevo install.</p>"
-                  . "<p>If you received it, your email delivery is working.</p>",
+                    __('smtp_test_subject', 'Kohevo SMTP test'),
+                    \Slate\Services\Notifications\EmailTemplate::compose(
+                        __('smtp_test_heading', 'Email delivery test'),
+                        \Slate\Services\Notifications\EmailTemplate::paragraph(e(__('smtp_test_body_1', 'This is a test message sent from your Kohevo install.')), '0 0 4px')
+                      . \Slate\Services\Notifications\EmailTemplate::paragraph(e(__('smtp_test_body_2', 'If you received it, your email delivery is working.')), '0 0 4px'),
+                        __('smtp_test_body_2', 'If you received it, your email delivery is working.')
+                    ),
                     '',    // toName
                     false  // log — Mailer already records, don't double-log
                 );

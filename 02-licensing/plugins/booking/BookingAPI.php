@@ -2070,36 +2070,8 @@ class BookingAPI {
      * of its own beyond the site name / accent color it reads itself.
      */
     private static function brandedEmailShell(string $innerHtml, string $preheader = ''): string {
-        $siteName = (string) (Database::setting('site_name') ?: 'Kohevo');
-        $accent   = self::brandAccent();
-        $logoRel  = trim((string) Database::setting('brand_logo_path'));
-        $logoUrl  = ($logoRel !== '' && defined('SLATE_URL')) ? SLATE_URL . '/' . ltrim($logoRel, '/') : '';
-        $year     = date('Y');
-
-        $logoHtml = $logoUrl !== ''
-            ? '<img src="' . e($logoUrl) . '" alt="' . e($siteName) . '" height="52" style="height:52px;max-height:52px;display:block;border:0;outline:none;">'
-            : '<span style="font-family:Georgia,\'Times New Roman\',serif;font-size:26px;letter-spacing:.03em;color:' . e($accent) . ';">' . e($siteName) . '</span>';
-
-        return '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">'
-            . '<meta name="viewport" content="width=device-width, initial-scale=1"><title>' . e($siteName) . '</title></head>'
-            . '<body style="margin:0;padding:0;background-color:#f3ede0;font-family:Arial,Helvetica,sans-serif;">'
-            . ($preheader !== '' ? '<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">' . e($preheader) . '</div>' : '')
-            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3ede0;padding:32px 12px;">'
-            . '<tr><td align="center">'
-            . '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:14px;overflow:hidden;">'
-            . '<tr><td align="center" bgcolor="#faf5e8" style="background-color:#faf5e8;background-image:linear-gradient(135deg,#fffdf8 0%,#f6ecd4 100%);padding:34px 24px;border-bottom:1px solid #efe2c0;">' . $logoHtml . '</td></tr>'
-            . '<tr><td style="padding:38px 34px;color:#2d2a26;font-size:15px;line-height:1.65;">' . $innerHtml . '</td></tr>'
-            . '<tr><td style="padding:18px 34px 26px;border-top:1px solid #ece4d3;">'
-            . '<p style="margin:0;color:#a49a86;font-size:12px;text-align:center;">' . e($siteName) . ' &middot; ' . $year . '</p>'
-            // Platform identity (Kohevo) — plain-text signature, secondary to
-            // the tenant name/logo above (this shell has its own footer, not
-            // BrandedEmail's, so it needs the same line added directly).
-            . '<p style="margin:4px 0 0;color:#c4b8a0;font-size:11px;text-align:center;">' . e(\Slate\Services\Content\PlatformIdentity::signature()) . '</p>'
-            . '</td></tr>'
-            . '</table>'
-            . '</td></tr>'
-            . '</table>'
-            . '</body></html>';
+        // The layout now lives in the shared core template so every notification email matches.
+        return \Slate\Services\Notifications\EmailTemplate::shell($innerHtml, $preheader);
     }
 
     /**
@@ -2109,26 +2081,12 @@ class BookingAPI {
      * so callers stay in full control of what's already-safe vs. raw.
      */
     private static function emailInfoCard(array $rows): string {
-        $out = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#faf6ec;border:1px solid #ece0c4;border-radius:10px;margin:22px 0;">'
-             . '<tr><td style="padding:18px 22px;">'
-             . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">';
-        foreach ($rows as [$label, $valueHtml]) {
-            $out .= '<tr>'
-                  . '<td style="padding:7px 0;color:#8a7d61;font-size:12.5px;width:130px;vertical-align:top;white-space:nowrap;">' . e($label) . '</td>'
-                  . '<td style="padding:7px 0;color:#2d2a26;font-size:14px;font-weight:600;">' . $valueHtml . '</td>'
-                  . '</tr>';
-        }
-        $out .= '</table></td></tr></table>';
-        return $out;
+        return \Slate\Services\Notifications\EmailTemplate::infoCard($rows);
     }
 
     /** Bulletproof branded CTA button (table+link, not a bare <a> — renders correctly in Outlook). */
     private static function emailButton(string $url, string $label): string {
-        $accent = self::brandAccent();
-        return '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;"><tr><td style="border-radius:8px;background-color:' . e($accent) . ';">'
-             . '<a href="' . e($url) . '" style="display:inline-block;padding:13px 28px;color:#ffffff;font-size:14px;font-weight:700;'
-             . 'text-decoration:none;border-radius:8px;font-family:Arial,Helvetica,sans-serif;">' . e($label) . '</a>'
-             . '</td></tr></table>';
+        return \Slate\Services\Notifications\EmailTemplate::button($url, $label);
     }
 
     /**

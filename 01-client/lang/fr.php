@@ -1272,4 +1272,10 @@ return array (
     'auth_email_link_fallback' => 'Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :',
     'auth_email_label_account' => 'Compte',
     'auth_email_label_security' => 'Sécurité',
+    'email_greeting' => 'Bonjour %s,',
+    'email_greeting_generic' => 'Bonjour,',
+    'smtp_test_subject' => 'Test SMTP Kohevo',
+    'smtp_test_heading' => 'Test d’envoi d’e-mail',
+    'smtp_test_body_1' => 'Ceci est un message de test envoyé depuis votre installation Kohevo.',
+    'smtp_test_body_2' => 'Si vous l’avez reçu, l’envoi d’e-mails fonctionne.',
 );

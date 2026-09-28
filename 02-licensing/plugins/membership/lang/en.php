@@ -350,4 +350,5 @@ return [
     'membership_session_quota_hint' => 'Number of appointments this plan includes. 0 = unlimited. Shown on the member dashboard as “used / allowance”.',
     'membership_enable_profile_completion' => 'Enable member profile completion (welcome wizard)',
     'membership_enable_profile_completion_help' => 'When off, new members go straight to their portal and the booking gate no longer requires a completed profile.',
+    'membership_email_open_portal' => 'Open my member area',
 ];

@@ -202,25 +202,21 @@ function bookingplus_notify_therapist(array $appt, string $message): void {
     );
 
     $when = I18n::localDate('l, j F Y, H:i', strtotime($appt['starts_at']));
-    $body = '<p>' . e(__('booking_email_new_message_intro', "A client just left you a message about their upcoming booking.")) . '</p>'
-          . '<table style="border-collapse:collapse;font-family:sans-serif;font-size:14px;">'
-          . '<tr><td style="padding:6px 12px;color:#555;">' . e(__('booking_email_label_client', 'Client')) . '</td><td style="padding:6px 12px;">'
-          . e((string)$appt['customer_name']) . ' &lt;' . e((string)$appt['customer_email']) . '&gt;'
-          . (!empty($appt['customer_phone']) ? ' · ' . e((string)$appt['customer_phone']) : '')
-          . '</td></tr>'
-          . '<tr><td style="padding:6px 12px;color:#555;">' . e(__('service', 'Service')) . '</td><td style="padding:6px 12px;">'
-          . e((string)$appt['service_name']) . '</td></tr>'
-          . '<tr><td style="padding:6px 12px;color:#555;">' . e(__('booking_email_label_session', 'Session')) . '</td><td style="padding:6px 12px;">'
-          . e($when) . '</td></tr>'
-          . '<tr><td style="padding:6px 12px;color:#555;">' . e(__('booking_email_label_reference', 'Reference')) . '</td><td style="padding:6px 12px;"><code>'
-          . e((string)$appt['ref']) . '</code></td></tr>'
-          . '</table>'
-          . '<h3 style="margin-top:16px;">' . e(__('booking_email_message_heading', 'Message')) . '</h3>'
-          . '<blockquote style="border-left:3px solid #ccc;padding:8px 12px;color:#333;">'
-          . nl2br(e($message)) . '</blockquote>'
-          . '<p><a href="' . e(SLATE_URL . '/plugins/booking/admin/messages.php')
-          . '">' . e(__('booking_email_open_messages_link', 'Open Booking+ Messages')) . '</a> '
-          . e(__('booking_email_mark_replied_suffix', 'to mark this replied.')) . '</p>';
+    $body = \Slate\Services\Notifications\EmailTemplate::compose(
+        __('booking_email_new_message_heading', 'New client message'),
+        \Slate\Services\Notifications\EmailTemplate::paragraph(e(__('booking_email_new_message_intro', "A client just left you a message about their upcoming booking.")), '0 0 4px')
+      . \Slate\Services\Notifications\EmailTemplate::infoCard([
+            [__('booking_email_label_client', 'Client'), e((string)$appt['customer_name']) . ' &lt;' . e((string)$appt['customer_email']) . '&gt;'
+                . (!empty($appt['customer_phone']) ? ' &middot; ' . e((string)$appt['customer_phone']) : '')],
+            [__('service', 'Service'), e((string)$appt['service_name'])],
+            [__('booking_email_label_session', 'Session'), e($when)],
+            [__('booking_email_label_reference', 'Reference'), '<code>' . e((string)$appt['ref']) . '</code>'],
+        ])
+      . '<h3 style="margin:0 0 8px;font-size:15px;color:#2d2a26;">' . e(__('booking_email_message_heading', 'Message')) . '</h3>'
+      . '<blockquote style="margin:0 0 4px;border-left:3px solid #ece0c4;padding:8px 14px;color:#2d2a26;background:#faf6ec;">' . nl2br(e($message)) . '</blockquote>'
+      . \Slate\Services\Notifications\EmailTemplate::button(SLATE_URL . '/plugins/booking/admin/messages.php', __('booking_email_open_messages_link', 'Open Booking+ Messages')),
+        $subj
+    );
 
     Mailer::send($to, $subj, $body);
 }

@@ -884,19 +884,19 @@ class Auth {
         $verifyUrl = SLATE_URL . '/customer/verify-email.php?token=' . urlencode($token);
         $siteName  = \Database::setting('site_name') ?: 'Kohevo';
 
-        $subject  = __('auth_email_verify_subject', 'Confirm your email address');
-        $bodyHtml = '<p>' . sprintf(__('auth_email_welcome_to', 'Welcome to %s.'), e($siteName)) . '</p>'
-                  . '<p>' . e(__('auth_email_verify_instructions', 'Please confirm your email address by clicking the link below. The link is valid for 3 days.')) . '</p>'
-                  . \Slate\Services\Notifications\BrandedEmail::ctaButton($verifyUrl, __('auth_email_verify_cta', 'Confirm my email address'))
-                  . '<p style="margin:18px 0 0;font-size:13px;color:#64748b;">' . e(__('auth_email_link_fallback', "If the button doesn't work, copy and paste this link into your browser:")) . '<br>'
-                  . '<a href="' . e($verifyUrl) . '" style="color:#64748b;word-break:break-all;">' . e($verifyUrl) . '</a></p>'
-                  . '<p style="margin:18px 0 0;">' . e(__('auth_email_verify_ignore', "If you didn't create an account, you can safely ignore this email.")) . '</p>';
+        $subject   = __('auth_email_verify_subject', 'Confirm your email address');
+        $verifyIns = __('auth_email_verify_instructions', 'Please confirm your email address by clicking the link below. The link is valid for 3 days.');
+        $inner = \Slate\Services\Notifications\EmailTemplate::heading($subject)
+               . \Slate\Services\Notifications\EmailTemplate::greeting((string)($cust['name'] ?? ''))
+               . \Slate\Services\Notifications\EmailTemplate::paragraph(sprintf(__('auth_email_welcome_to', 'Welcome to %s.'), e($siteName)))
+               . \Slate\Services\Notifications\EmailTemplate::paragraph(e($verifyIns), '0 0 4px')
+               . \Slate\Services\Notifications\EmailTemplate::button($verifyUrl, __('auth_email_verify_cta', 'Confirm my email address'))
+               . \Slate\Services\Notifications\EmailTemplate::hint(e(__('auth_email_link_fallback', "If the button doesn't work, copy and paste this link into your browser:")) . '<br>'
+                        . '<a href="' . e($verifyUrl) . '" style="color:#8a7d61;word-break:break-all;">' . e($verifyUrl) . '</a>')
+               . \Slate\Services\Notifications\EmailTemplate::paragraph(e(__('auth_email_verify_ignore', "If you didn't create an account, you can safely ignore this email.")), '22px 0 0');
 
-        // Branded shell: logo / hero, accent colour, dark mode, and the platform signature in the footer.
-        $html = \Slate\Services\Notifications\BrandedEmail::simple($subject, $bodyHtml, [
-            'header_label' => __('auth_email_label_account', 'Account'),
-            'preheader'    => __('auth_email_verify_instructions', 'Please confirm your email address by clicking the link below. The link is valid for 3 days.'),
-        ]);
+        // Same on-brand template as the booking emails (logo band, card, footer + platform signature).
+        $html = \Slate\Services\Notifications\EmailTemplate::shell($inner, $verifyIns);
 
         return (bool) \Mailer::send($cust['email'], $subject, $html, $cust['name'] ?? '');
     }
@@ -946,18 +946,18 @@ class Auth {
         $siteName = \Database::setting('site_name') ?: 'Kohevo';
 
         $subject  = __('auth_email_reset_subject', 'Reset your password');
-        $bodyHtml = '<p>' . sprintf(__('auth_email_reset_requested', 'You requested a password reset for your %s account.'), e($siteName)) . '</p>'
-                  . '<p>' . e(__('auth_email_reset_instructions', 'Click the link below to set a new password. The link is valid for 2 hours.')) . '</p>'
-                  . \Slate\Services\Notifications\BrandedEmail::ctaButton($resetUrl, __('auth_email_reset_cta', 'Reset my password'))
-                  . '<p style="margin:18px 0 0;font-size:13px;color:#64748b;">' . e(__('auth_email_link_fallback', "If the button doesn't work, copy and paste this link into your browser:")) . '<br>'
-                  . '<a href="' . e($resetUrl) . '" style="color:#64748b;word-break:break-all;">' . e($resetUrl) . '</a></p>'
-                  . '<p style="margin:18px 0 0;">' . e(__('auth_email_reset_ignore', "If you didn't request this, you can safely ignore this email — your password won't change.")) . '</p>';
+        $resetIns = __('auth_email_reset_instructions', 'Click the link below to set a new password. The link is valid for 2 hours.');
+        $inner = \Slate\Services\Notifications\EmailTemplate::heading($subject)
+               . \Slate\Services\Notifications\EmailTemplate::greeting((string)($cust['name'] ?? ''))
+               . \Slate\Services\Notifications\EmailTemplate::paragraph(sprintf(__('auth_email_reset_requested', 'You requested a password reset for your %s account.'), e($siteName)))
+               . \Slate\Services\Notifications\EmailTemplate::paragraph(e($resetIns), '0 0 4px')
+               . \Slate\Services\Notifications\EmailTemplate::button($resetUrl, __('auth_email_reset_cta', 'Reset my password'))
+               . \Slate\Services\Notifications\EmailTemplate::hint(e(__('auth_email_link_fallback', "If the button doesn't work, copy and paste this link into your browser:")) . '<br>'
+                        . '<a href="' . e($resetUrl) . '" style="color:#8a7d61;word-break:break-all;">' . e($resetUrl) . '</a>')
+               . \Slate\Services\Notifications\EmailTemplate::paragraph(e(__('auth_email_reset_ignore', "If you didn't request this, you can safely ignore this email — your password won't change.")), '22px 0 0');
 
-        // Branded shell — see sendCustomerVerification().
-        $html = \Slate\Services\Notifications\BrandedEmail::simple($subject, $bodyHtml, [
-            'header_label' => __('auth_email_label_security', 'Security'),
-            'preheader'    => __('auth_email_reset_instructions', 'Click the link below to set a new password. The link is valid for 2 hours.'),
-        ]);
+        // Same on-brand template as the booking emails — see sendCustomerVerification().
+        $html = \Slate\Services\Notifications\EmailTemplate::shell($inner, $resetIns);
 
         \Mailer::send($cust['email'], $subject, $html, $cust['name'] ?? '');
 

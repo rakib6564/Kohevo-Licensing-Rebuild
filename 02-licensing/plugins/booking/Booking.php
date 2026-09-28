@@ -969,6 +969,11 @@ class Booking extends Plugin {
                        . '" style="display:inline-block;padding:10px 18px;background:#2563EB;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">' . e(__('booking_email_send_message_btn', 'Send me a message')) . '</a></p>';
             }
 
+            // Same on-brand template as every other Booking email (skipped when the admin's own template is a full HTML document).
+            if (stripos($html, '<html') === false) {
+                $html = \Slate\Services\Notifications\EmailTemplate::compose($subject, $html, $subject);
+            }
+
             Mailer::send(
                 (string)$appt['customer_email'],
                 $subject,
@@ -1007,13 +1012,17 @@ class Booking extends Plugin {
 
             foreach ($rows as $m) {
                 $subj = $siteName . ' · ' . __('booking_email_nudge_subject', 'client message still waiting for your reply');
-                $body = '<p>' . sprintf(__('booking_email_nudge_body_intro', 'A client sent you a message %sh+ ago and no reply is recorded yet.'), $hours) . '</p>'
-                      . '<p><strong>' . e((string)$m['customer_name']) . '</strong> · '
-                      . e((string)$m['service_name']) . '</p>'
-                      . '<blockquote style="border-left:3px solid #ccc;padding:8px 12px;color:#444;">'
-                      . nl2br(e((string)$m['client_message']))
-                      . '</blockquote>'
-                      . '<p><a href="' . e($this->url('admin/messages.php')) . '">' . e(__('booking_email_nudge_open_link', 'Open Booking messages')) . '</a></p>';
+                $body = \Slate\Services\Notifications\EmailTemplate::compose(
+                    __('booking_email_nudge_heading', 'A client message is waiting for your reply'),
+                    \Slate\Services\Notifications\EmailTemplate::paragraph(e(sprintf(__('booking_email_nudge_body_intro', 'A client sent you a message %sh+ ago and no reply is recorded yet.'), $hours)), '0 0 4px')
+                  . \Slate\Services\Notifications\EmailTemplate::infoCard([
+                        [__('booking_email_label_client', 'Client'), e((string)$m['customer_name'])],
+                        [__('service', 'Service'), e((string)$m['service_name'])],
+                    ])
+                  . '<blockquote style="margin:0 0 4px;border-left:3px solid #ece0c4;padding:8px 14px;color:#2d2a26;background:#faf6ec;">' . nl2br(e((string)$m['client_message'])) . '</blockquote>'
+                  . \Slate\Services\Notifications\EmailTemplate::button($this->url('admin/messages.php'), __('booking_email_nudge_open_link', 'Open Booking messages')),
+                    $subj
+                );
                 Mailer::send($to, $subj, $body);
                 Database::update('bookingplus_appointment_meta',
                     ['nudge_sent_at' => slate_db_now()],

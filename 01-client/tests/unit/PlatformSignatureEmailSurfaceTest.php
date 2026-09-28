@@ -45,28 +45,28 @@ unit('BrandedEmail.php: the platform signature is appended after the tenant "Sen
 
 // ── Auth.php: verification + password reset ─────────────────
 
-unit('Auth.php: the verification and reset emails go through the branded shell, which supplies the platform signature exactly once each (no hand-appended copy)', function () {
+unit('Auth.php: the verification and reset emails use the shared notification template, which supplies the platform signature exactly once each (no hand-appended copy)', function () {
     $src = _p5_src('src/Services/Auth/Auth.php');
-    // The shell (BrandedEmail::shell) appends the signature. A second, hand-appended copy in Auth.php would print it twice.
-    assert_eq(0, substr_count($src, 'PlatformIdentity::signature()'), 'Auth.php must not append the signature itself; the branded shell does');
+    // The template's footer appends the signature. A second, hand-appended copy in Auth.php would print it twice.
+    assert_eq(0, substr_count($src, 'PlatformIdentity::signature()'), 'Auth.php must not append the signature itself; the template does');
     assert_false(str_contains($src, '/assets/platform/brand/'));
-    assert_eq(2, substr_count($src, 'BrandedEmail::simple('), 'expected exactly one branded-shell call per email function');
+    assert_eq(2, substr_count($src, 'EmailTemplate::shell('), 'expected exactly one template call per email function');
 
     $verifyIgnorePos = strpos($src, 'auth_email_verify_ignore');
     $resetIgnorePos  = strpos($src, 'auth_email_reset_ignore');
     assert_true($verifyIgnorePos !== false && $resetIgnorePos !== false);
     assert_true($verifyIgnorePos < $resetIgnorePos, 'sendCustomerVerification is expected to appear before sendCustomerPasswordReset in the file');
 
-    $verifyShellPos = strpos($src, 'BrandedEmail::simple(', $verifyIgnorePos);
-    $resetShellPos  = strpos($src, 'BrandedEmail::simple(', $resetIgnorePos);
+    $verifyShellPos = strpos($src, 'EmailTemplate::shell(', $verifyIgnorePos);
+    $resetShellPos  = strpos($src, 'EmailTemplate::shell(', $resetIgnorePos);
     assert_true($verifyShellPos !== false && $resetShellPos !== false);
     assert_true($verifyShellPos > $verifyIgnorePos && $verifyShellPos < $resetIgnorePos,
-        'verification email must use the shell within sendCustomerVerification, not leak into sendCustomerPasswordReset');
-    assert_true($resetShellPos > $resetIgnorePos, 'reset email must use the shell within sendCustomerPasswordReset');
+        'verification email must use the template within sendCustomerVerification, not leak into sendCustomerPasswordReset');
+    assert_true($resetShellPos > $resetIgnorePos, 'reset email must use the template within sendCustomerPasswordReset');
 
-    // ...and the shell really does supply the signature, exactly once.
-    $shell = _p5_src('src/Services/Notifications/BrandedEmail.php');
-    assert_eq(1, substr_count($shell, 'PlatformIdentity::signature()'), 'BrandedEmail::shell must carry the platform signature exactly once');
+    // ...and the template really does supply the signature, exactly once.
+    $tpl = _p5_src('src/Services/Notifications/EmailTemplate.php');
+    assert_eq(1, substr_count($tpl, 'PlatformIdentity::signature()'), 'EmailTemplate::shell must carry the platform signature exactly once');
 });
 
 unit('Auth.php: token issuance/consumption and Mailer dispatch are untouched by the Phase 5 branding change (regression guard)', function () {
@@ -80,34 +80,55 @@ unit('Auth.php: token issuance/consumption and Mailer dispatch are untouched by 
 
 // ── BookingAPI.php: brandedEmailShell() footer ──────────────
 
-unit('BookingAPI.php: brandedEmailShell() footer carries the platform signature via PlatformIdentity, after the tenant site-name/year line', function () {
+unit('BookingAPI.php: its email chrome delegates to EmailTemplate, whose footer carries the platform signature via PlatformIdentity, after the tenant site-name/year line', function () {
     $src = _p5_src('plugins/booking/BookingAPI.php');
-    assert_eq(1, substr_count($src, 'PlatformIdentity::signature()'));
+    // The layout moved into the shared core template; BookingAPI must delegate and must not append a second copy.
+    assert_eq(0, substr_count($src, 'PlatformIdentity::signature()'));
     assert_false(str_contains($src, '/assets/platform/brand/'));
+    assert_eq(1, substr_count($src, 'EmailTemplate::shell('), 'brandedEmailShell() must delegate to the shared template');
 
-    $tenantLinePos   = strpos($src, "e(\$siteName) . ' &middot; ' . \$year . '</p>'");
-    $platformLinePos = strpos($src, 'PlatformIdentity::signature()');
+    $tpl = _p5_src('src/Services/Notifications/EmailTemplate.php');
+    assert_eq(1, substr_count($tpl, 'PlatformIdentity::signature()'));
+    assert_false(str_contains($tpl, '/assets/platform/brand/'));
+    $tenantLinePos   = strpos($tpl, "self::esc(\$siteName) . ' &middot; ' . \$year . '</p>'");
+    // The signature is fetched in a guarded block above the markup; what matters is where it is RENDERED.
+    $platformLinePos = strpos($tpl, 'self::esc($signature)');
     assert_true($tenantLinePos !== false && $platformLinePos !== false, 'expected markers not found');
     assert_true($platformLinePos > $tenantLinePos, 'platform signature must render after the tenant site-name/year footer line');
 });
 
 // ── MembershipAPI.php: purchase + cancel ────────────────────
 
-unit('MembershipAPI.php: both the purchase and cancel email bodies carry the platform signature exactly once each, appended before their Mailer::send call, in file order', function () {
+unit('MembershipAPI.php: the purchase and cancel emails each use the shared notification template exactly once, in file order (the template supplies the signature)', function () {
     $src = _p5_src('plugins/membership/MembershipAPI.php');
-    assert_eq(2, substr_count($src, 'PlatformIdentity::signature()'));
+    assert_eq(0, substr_count($src, 'PlatformIdentity::signature()'), 'the template appends the signature; a hand-appended copy would print it twice');
     assert_false(str_contains($src, '/assets/platform/brand/'));
+    assert_eq(2, substr_count($src, 'EmailTemplate::shell('));
 
     $activeBodyPos = strpos($src, 'membership_email_active_body');
     $cancelBodyPos = strpos($src, 'membership_email_cancel_body');
     assert_true($activeBodyPos !== false && $cancelBodyPos !== false);
     assert_true($activeBodyPos < $cancelBodyPos, 'sendPurchaseEmail is expected to appear before sendCancelEmail in the file');
 
-    $purchaseSignaturePos = strpos($src, 'PlatformIdentity::signature()', $activeBodyPos);
-    $cancelSignaturePos   = strpos($src, 'PlatformIdentity::signature()', $cancelBodyPos);
-    assert_true($purchaseSignaturePos !== false && $cancelSignaturePos !== false);
-    assert_true($purchaseSignaturePos > $activeBodyPos && $purchaseSignaturePos < $cancelBodyPos,
-        'purchase email signature must be appended within sendPurchaseEmail, not leak into sendCancelEmail');
-    assert_true($cancelSignaturePos > $cancelBodyPos,
-        'cancel email signature must be appended within sendCancelEmail');
+    $purchaseShellPos = strrpos(substr($src, 0, $activeBodyPos), 'EmailTemplate::shell(');
+    $cancelShellPos   = strrpos(substr($src, 0, $cancelBodyPos), 'EmailTemplate::shell(');
+    assert_true($purchaseShellPos !== false && $cancelShellPos !== false);
+    assert_true($purchaseShellPos < $activeBodyPos && $purchaseShellPos < $cancelShellPos,
+        'purchase email must use the template within sendPurchaseEmail, not leak into sendCancelEmail');
+});
+
+// ── EmailTemplate itself ────────────────────────────────────
+
+unit('EmailTemplate: the layout, escaping and default accent (DB-free)', function () {
+    $T = 'Slate\\Services\\Notifications\\EmailTemplate';
+    $html = $T::shell($T::heading('Tom & <Jerry>') . $T::paragraph('<b>ok</b>') . $T::infoCard([['A <b>', '<code>x</code>']]) . $T::button('https://ex.test/a?b=1&c=2', 'Go "now"'), 'pre <view>');
+    assert_true(str_contains($html, '<!DOCTYPE html>') && str_contains($html, 'max-width:600px'), 'card layout');
+    assert_true(str_contains($html, 'Tom &amp; &lt;Jerry&gt;'), 'heading text must be escaped');
+    assert_true(str_contains($html, '<b>ok</b>'), 'paragraph html is trusted, passed through');
+    assert_true(str_contains($html, 'A &lt;b&gt;') && str_contains($html, '<code>x</code>'), 'info-card label escaped, value trusted');
+    assert_true(str_contains($html, 'href="https://ex.test/a?b=1&amp;c=2"'), 'button href escaped');
+    assert_true(str_contains($html, 'Go &quot;now&quot;'), 'button label escaped');
+    assert_true(str_contains($html, 'pre &lt;view&gt;'), 'preheader escaped');
+    assert_true(str_contains($html, ' &middot; ' . date('Y') . '</p>'), 'footer site-name/year line');
+    assert_true(str_contains($html, 'background-color:#111111'), 'default accent when no brand colour is configured');
 });

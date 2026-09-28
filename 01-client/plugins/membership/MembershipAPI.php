@@ -1012,16 +1012,18 @@ class MembershipAPI {
         $name    = self::planName($sub);
         $expires = !empty($sub['expires_at']) ? slate_format_date($sub['expires_at']) : '—';
         $subject = sprintf('%s — %s', $site, __('membership_email_active_subject', 'Your membership is active'));
-        $body = '<p>' . e($cust['name'] ?? '') . ',</p>'
-              . '<p>' . __('membership_email_active_body', 'Your membership is now active.') . '</p>'
-              . '<ul>'
-              . '<li><strong>' . __('membership_plan', 'Plan') . ':</strong> ' . e($name) . '</li>'
-              . '<li><strong>' . __('membership_expires', 'Expires') . ':</strong> ' . e($expires) . '</li>'
-              . '<li><strong>' . __('membership_price', 'Price') . ':</strong> ' . e(self::money((int)$sub['amount_cents'], $sub['currency'])) . '</li>'
-              . '</ul>'
-              // Platform identity (Kohevo) — this path builds raw HTML with no
-              // shared shell, so the plain-text signature is added directly.
-              . '<p style="margin-top:16px;color:#94a3b8;font-size:12px;">' . e(\Slate\Services\Content\PlatformIdentity::signature()) . '</p>';
+        $body = \Slate\Services\Notifications\EmailTemplate::shell(
+            \Slate\Services\Notifications\EmailTemplate::heading(__('membership_email_active_subject', 'Your membership is active'))
+          . \Slate\Services\Notifications\EmailTemplate::greeting((string)($cust['name'] ?? ''))
+          . \Slate\Services\Notifications\EmailTemplate::paragraph(e(__('membership_email_active_body', 'Your membership is now active.')), '0 0 4px')
+          . \Slate\Services\Notifications\EmailTemplate::infoCard([
+                [__('membership_plan', 'Plan'), e($name)],
+                [__('membership_expires', 'Expires'), e($expires)],
+                [__('membership_price', 'Price'), e(self::money((int)$sub['amount_cents'], $sub['currency']))],
+            ])
+          . (defined('SLATE_URL') ? \Slate\Services\Notifications\EmailTemplate::button(SLATE_URL . '/member', __('membership_email_open_portal', 'Open my member area')) : ''),
+            __('membership_email_active_body', 'Your membership is now active.')
+        );
         Mailer::send((string)$cust['email'], $subject, $body, (string)($cust['name'] ?? ''));
     }
 
@@ -1034,11 +1036,13 @@ class MembershipAPI {
 
         $site    = Database::setting('site_name') ?: 'Kohevo';
         $subject = sprintf('%s — %s', $site, __('membership_email_cancel_subject', 'Your membership was cancelled'));
-        $body = '<p>' . e($cust['name'] ?? '') . ',</p>'
-              . '<p>' . __('membership_email_cancel_body', 'Your membership has been cancelled.') . '</p>'
-              . '<p><strong>' . __('membership_plan', 'Plan') . ':</strong> ' . e(self::planName($sub)) . '</p>'
-              // Platform identity (Kohevo) — see sendPurchaseEmail() above.
-              . '<p style="margin-top:16px;color:#94a3b8;font-size:12px;">' . e(\Slate\Services\Content\PlatformIdentity::signature()) . '</p>';
+        $body = \Slate\Services\Notifications\EmailTemplate::shell(
+            \Slate\Services\Notifications\EmailTemplate::heading(__('membership_email_cancel_subject', 'Your membership was cancelled'))
+          . \Slate\Services\Notifications\EmailTemplate::greeting((string)($cust['name'] ?? ''))
+          . \Slate\Services\Notifications\EmailTemplate::paragraph(e(__('membership_email_cancel_body', 'Your membership has been cancelled.')), '0 0 4px')
+          . \Slate\Services\Notifications\EmailTemplate::infoCard([[__('membership_plan', 'Plan'), e(self::planName($sub))]]),
+            __('membership_email_cancel_body', 'Your membership has been cancelled.')
+        );
         Mailer::send((string)$cust['email'], $subject, $body, (string)($cust['name'] ?? ''));
     }
 
