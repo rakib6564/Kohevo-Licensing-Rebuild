@@ -7,6 +7,14 @@ All notable changes to Kohevo (client and central) are recorded here. The format
 
 Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT-READY.zip`.
 
+## [Unreleased]
+
+### Fixed
+- **Admin → Notifications on phones:** the bulk-action bar no longer pushes the page wider than the screen. With long
+  (translated) labels such as « Supprimer la sélection » it overflowed and the whole page scrolled sideways. The bar and
+  the header actions now wrap and share the row, and long labels wrap instead of overflowing (checked at 320, 360 and
+  390 px in English and French, with rows expanded; desktop layout unchanged).
+
 ## [1.6.0] — 2026-09-28
 
 ### Added
