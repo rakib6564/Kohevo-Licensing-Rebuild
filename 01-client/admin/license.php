@@ -48,6 +48,7 @@ $canManageLicense = Auth::can('settings.edit');
 
 require_once dirname(__DIR__) . '/includes/installer_flow.php';
 require_once dirname(__DIR__) . '/plugins/licensing/client/RemoteLicenseClient.php';
+require_once dirname(__DIR__) . '/includes/license_sync.php';
 
 $error   = '';
 $success = '';
@@ -58,6 +59,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!$canManageLicense) {
         http_response_code(403);
         $error = __('core_err_you_do_not_have_permission_to_change_the_license_key', 'You do not have permission to change the license key.');
+    } elseif (($_POST['_action'] ?? '') === 'sync') {
+        // "Check for updates now": re-fetch this installation's license from
+        // the Central Server using the key already stored in .env — picks up
+        // a renewed/extended expiry, plan or module change immediately.
+        if (!slate_license_sync_configured()) {
+            $error = env('LICENSE_KEY', '') === ''
+                ? __('core_lic_sync_nokey', 'No license key is stored for this installation. Enter it below to activate.')
+                : __('core_err_licensing_is_not_configured_for_this_build_contact_your_', 'Licensing is not configured for this build. Contact your provider.');
+        } else {
+            $sync = slate_license_sync_run(true);
+            if ($sync['ok']) {
+                AuditLog::record('license.sync_manual', Auth::user()['email'] ?? '');
+                $success = __('core_lic_sync_ok', 'License refreshed from the license server.');
+            } else {
+                $error = $sync['reason'] === 'network'
+                    ? __('core_lic_sync_network', 'Could not reach the license server. Try again in a moment.')
+                    : __('core_lic_sync_rejected', 'The license server did not accept this check. Verify the license key below.');
+            }
+        }
     } else {
         $licenseKeyInput = installer_normalize_license_key((string) ($_POST['license_key'] ?? ''));
         if ($licenseKeyInput['error'] !== null) {
@@ -159,6 +179,8 @@ $renderLicenseBody = static function () use ($license, $error, $success, $canMan
 .lic-module-mark.is-on { color: var(--success); }
 .lic-foot { font-size: 12.5px; color: var(--muted); margin: 12px 0 0; }
 .lic-action { margin-top: 16px; }
+.lic-sync { margin-top: 16px; }
+.lic-sync .lic-foot { margin-top: 8px; }
 @media (max-width: 860px) { .lic-grid { grid-template-columns: 1fr; } }
 </style>
 
@@ -207,6 +229,14 @@ $renderLicenseBody = static function () use ($license, $error, $success, $canMan
             <dt>Last verified</dt>
             <dd><?= e($verifiedText) ?></dd>
         </dl>
+        <?php if ($canManageLicense && function_exists('slate_license_sync_configured') && slate_license_sync_configured()): ?>
+        <form method="post" class="lic-sync">
+            <?= csrf_field() ?>
+            <input type="hidden" name="_action" value="sync">
+            <button type="submit" class="btn btn-secondary" data-license-sync><?= e(__('core_lic_sync_button', 'Check for updates now')) ?></button>
+            <p class="lic-foot"><?= e(sprintf(__('core_lic_sync_hint', 'This installation also refreshes its license from the license server automatically, about every %d minutes.'), (int) round(slate_license_sync_interval() / 60))) ?></p>
+        </form>
+        <?php endif; ?>
     </section>
 
     <section class="card" aria-labelledby="lic-modules-h">

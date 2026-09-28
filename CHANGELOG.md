@@ -9,6 +9,13 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
 
 ## [Unreleased]
 
+### Fixed
+- **Client did not pick up license changes made on the Central Server** (for example a renewed or extended expiry kept
+  showing the old date). The client only refreshed its license through an optional cron job, so an install without that
+  cron never updated. It now refreshes itself automatically — about every 15 minutes, after the response is sent so
+  pages are not slowed — and the License page has a **Check for updates now** button. Trust rules are unchanged: the
+  signed response is still verified, and any failure leaves the last verified license untouched.
+
 ## [1.6.1] — 2026-09-28
 
 ### Added
