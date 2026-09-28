@@ -38,8 +38,9 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO"
 
 git rev-parse --verify --quiet "$REF^{commit}" >/dev/null || { echo "Unknown git ref: $REF" >&2; exit 1; }
-SHA="$(git rev-parse "$REF")"
-SHORT="$(git rev-parse --short "$REF")"
+# ^{commit}: for an annotated tag, `git rev-parse <tag>` is the tag OBJECT, not the commit that was built.
+SHA="$(git rev-parse "$REF^{commit}")"
+SHORT="$(git rev-parse --short "$REF^{commit}")"
 
 # Default the package version from the tree's VERSION file: x.y.0 -> "x.y" (1.6.0 -> 1.6), a patch release keeps its
 # full number (1.6.1 -> 1.6.1), so a patch package never reuses the name of the release before it.
