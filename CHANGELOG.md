@@ -5,9 +5,11 @@ All notable changes to Kohevo (client and central) are recorded here. The format
 (`MAJOR.MINOR.PATCH`). The current number lives in [`VERSION`](VERSION) and in `SLATE_VERSION`
 (`config.php`, `install.php` of each app); CI fails if they disagree.
 
-Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT-READY.zip`.
+Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT-READY.zip` (`V<MAJOR.MINOR.PATCH>` for a patch release).
 
 ## [Unreleased]
+
+## [1.6.1] — 2026-09-28
 
 ### Added
 - **Plugin protection (client admin → Plugins).** Deactivating, uninstalling and uploading plugins are now **locked by
@@ -112,4 +114,5 @@ The commercial licensing architecture was rebuilt end to end; phase notes are in
   handling; daily `bin/license-check.php` check-in.
 - **Security hardening** (Phase 11) and production QA (Phases 12–14), verified in CI on MySQL 8.0 and MariaDB 10.11.
 
+[1.6.1]: https://github.com/rakib6564/Kohevo-Licensing-Rebuild/releases/tag/v1.6.1
 [1.6.0]: https://github.com/rakib6564/Kohevo-Licensing-Rebuild/releases/tag/v1.6.0

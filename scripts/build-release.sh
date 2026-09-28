@@ -41,10 +41,11 @@ git rev-parse --verify --quiet "$REF^{commit}" >/dev/null || { echo "Unknown git
 SHA="$(git rev-parse "$REF")"
 SHORT="$(git rev-parse --short "$REF")"
 
-# Default the package version to major.minor of the tree's VERSION file (1.6.0 -> 1.6).
+# Default the package version from the tree's VERSION file: x.y.0 -> "x.y" (1.6.0 -> 1.6), a patch release keeps its
+# full number (1.6.1 -> 1.6.1), so a patch package never reuses the name of the release before it.
 if [ -z "$VERSION" ]; then
   FULL="$(git show "$REF:VERSION" | tr -d '[:space:]')"
-  VERSION="${FULL%.*}"
+  case "$FULL" in *.0) VERSION="${FULL%.*}" ;; *) VERSION="$FULL" ;; esac
 fi
 
 # The version in code must agree with the VERSION file at that ref, or the package would lie about itself.
