@@ -86,6 +86,10 @@ if (is_dir($_pm)) { foreach (["Exception.php","OAuthTokenProvider.php","PHPMaile
 unset($_pm, $_pmf);
 
 require_once SLATE_ROOT . '/includes/helpers.php';
+
+// Framing: every page is same-origin only (clickjacking protection for login/admin). The booking widget relaxes this
+// for the sites listed in Settings; the Forms embed sets its own header.
+if (PHP_SAPI !== 'cli') slate_send_frame_policy(false);
 require_once SLATE_ROOT . '/includes/Database.php';
 require_once SLATE_ROOT . '/includes/Hook.php';
 require_once SLATE_ROOT . '/includes/Auth.php';

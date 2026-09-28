@@ -32,6 +32,9 @@ if (!headers_sent()) {
 }
 
 $embed     = !empty($_GET['embed']);
+
+// The widget may be framed by the websites allowed in Settings (and only those).
+slate_send_frame_policy(true);
 $serviceId = (int)($_GET['service']  ?? 0);
 $providerId= (int)($_GET['provider'] ?? 0);
 $date      = (string)($_GET['date']  ?? '');
@@ -60,6 +63,10 @@ if ($routePath !== '' && $serviceId === 0) {
 // ── POST: confirm submission ─────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_verify()) {
+        if (bookpub_is_iframe($embed) && (int)($_POST['service'] ?? 0) > 0) {
+            bookpub_break_out(['service' => (int)$_POST['service'], 'provider' => (int)($_POST['provider'] ?? 0), 'date' => (string)($_POST['date'] ?? ''), 'slot' => (string)($_POST['slot'] ?? ''), 'party' => max(1, (int)($_POST['party'] ?? 1))]);
+            return;
+        }
         bookpub_render_error(__('booking_security_check_failed_retry', 'Security check failed. Please try again.'), $embed);
         return;
     }
@@ -261,10 +268,12 @@ if (!empty($_GET['multi']) && !empty($_GET['sel'])) {
         // matches what actually gets submitted rather than showing a
         // one-item "batch" summary for something that isn't one.
         [$soloDate, $soloSlot] = array_pad(explode(' ', $selections[0]), 2, '');
+        if (bookpub_is_iframe($embed)) { bookpub_break_out(['service' => (int)$service['id'], 'provider' => (int)$provider['id'], 'date' => $soloDate, 'slot' => $soloSlot, 'party' => $party]); return; }
         bookpub_render_step4($service, $provider, $soloDate, $soloSlot, $party, [], '', $embed);
         return;
     }
     if (count($selections) >= 2) {
+        if (bookpub_is_iframe($embed)) { bookpub_break_out(['service' => (int)$service['id'], 'provider' => (int)$provider['id'], 'party' => $party, 'multi' => 1, 'sel' => json_encode($selections)]); return; }
         bookpub_render_step4($service, $provider, '', '', $party, [], '', $embed, $selections);
         return;
     }
@@ -276,6 +285,8 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $slot === '') {
 }
 
 // service + provider + date + slot — show confirm form.
+// The confirm form carries a CSRF token tied to the session, so it is never rendered inside a cross-site iframe.
+if (bookpub_is_iframe($embed)) { bookpub_break_out(['service' => (int)$service['id'], 'provider' => (int)$provider['id'], 'date' => $date, 'slot' => $slot, 'party' => $party]); return; }
 bookpub_render_step4($service, $provider, $date, $slot, $party, [], '', $embed);
 
 
@@ -298,6 +309,8 @@ bookpub_render_step4($service, $provider, $date, $slot, $party, [], '', $embed);
  */
 function bookpub_qs(array $params, bool $embed, bool $inPageContext = true): string {
     if ($embed) $params['embed'] = 1;
+    // Keep the host page's address (validated) so the success page can send the visitor back to it.
+    if (!isset($params['return']) && ($ret = bookpub_return_url()) !== '') $params['return'] = $ret;
     // Fragment mode has to survive every step link, not just the first --
     // without this, clicking "next step" drops back to $embed-but-not-
     // fragment (bookpub_is_fragment() checks $_GET['portal'] fresh on
@@ -487,6 +500,68 @@ function bookpub_store_upload(string $inputName): ?string {
  */
 function bookpub_is_fragment(): bool {
     return !empty($_GET['portal']);
+}
+
+/**
+ * True when the widget is running inside an <iframe> on another website. In that position the browser won't keep
+ * our session cookie (SameSite=Lax, third-party cookie blocking), so anything that needs a session — signing in,
+ * the confirmation form and its CSRF token, payment — must happen in the top window instead. Native fragment mode
+ * (portal=1) is the app's own page, so it is never an iframe here.
+ */
+function bookpub_is_iframe(bool $embed): bool {
+    if (bookpub_is_fragment()) return false;
+    return $embed || strtolower((string)($_SERVER['HTTP_SEC_FETCH_DEST'] ?? '')) === 'iframe';
+}
+
+/**
+ * Where to send the visitor when the booking is done: the page that hosts the iframe. That page passes it as
+ * ?return=<url>; it is honoured only if its site is on the allowed-embedding list (never an open redirect), and is
+ * remembered in the session once we're in the top window, where the session works.
+ */
+function bookpub_return_url(): string {
+    static $resolved = null;
+    if ($resolved !== null) return $resolved;
+    $raw = trim((string)($_GET['return'] ?? ''));
+    $fromGet = $raw !== '';
+    if ($raw === '' && !empty($_SESSION['bookpub_return'])) $raw = (string)$_SESSION['bookpub_return'];
+    $resolved = ($raw !== '' && slate_embed_origin_allowed($raw)) ? $raw : '';
+    if ($resolved !== '' && $fromGet && session_status() === PHP_SESSION_ACTIVE && !bookpub_is_iframe(!empty($_GET['embed']))) {
+        $_SESSION['bookpub_return'] = $resolved;
+    }
+    return $resolved;
+}
+
+/** Absolute standalone (top-window) URL for a booking step: no embed/portal flags, keeps the validated ?return=. */
+function bookpub_top_url(array $params): string {
+    return SLATE_URL . '/book' . bookpub_qs($params, false);
+}
+
+/**
+ * Leave the iframe. Renders a tiny page that navigates the TOP window to $params' step on this site, with a visible
+ * button as the fallback (browsers only allow a cross-site frame to navigate the top window after a user gesture).
+ */
+function bookpub_break_out(array $params): void {
+    $url = bookpub_top_url($params);
+    bookpub_layout_start(__('booking_breakout_title', 'Continue your booking'), true);
+    echo '<div class="book-breakout" style="text-align:center;padding:24px 0;">'
+       . '<p>' . e(__('booking_breakout_note', 'To keep your booking secure, the next step opens on our booking page.')) . '</p>'
+       . '<p><a class="btn btn-primary btn-lg" target="_top" rel="noopener" href="' . e($url) . '">' . e(__('booking_breakout_cta', 'Continue')) . '</a></p>'
+       . '</div>'
+       . '<script>try{window.top.location.replace(' . json_encode($url, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ');}catch(e){}</script>';
+    bookpub_layout_end(true);
+}
+
+/** "Back to website" button for the success pages (top window only): the page that embeds us, else the site link. */
+function bookpub_back_to_site_link(): string {
+    if (bookpub_is_iframe(!empty($_GET['embed']))) return '';
+    $url = bookpub_return_url();
+    if ($url === '') {
+        $u = trim((string) Database::setting('landing_website_url'));
+        if (preg_match('#^https?://#i', $u)) $url = $u;
+    }
+    if ($url === '') { $o = slate_embed_allowed_origins(); if ($o) $url = $o[0] . '/'; }
+    if ($url === '') return '';
+    return '<p class="mt-2"><a class="btn btn-ghost" href="' . e($url) . '">' . e(__('back_to_website', 'Back to website')) . '</a></p>';
 }
 
 function bookpub_layout_start(string $title, bool $embed): void {
@@ -862,14 +937,19 @@ function bookpub_render_step3(array $service, array $provider, string $date, int
             // key it needs for that. With JS disabled the link still just
             // navigates straight to step 4 for that one time, same as the
             // single-select path.
+            $slotParams = [
+                'service'  => (int)$service['id'],
+                'provider' => (int)$provider['id'],
+                'date'     => $date,
+                'slot'     => $time,
+                'party'    => $party,
+            ];
+            // Picking a time starts the personal part of the booking, which needs a session: in an iframe on another
+            // site the confirm step opens in the top window (this site) instead of inside the frame.
+            $inFrame = bookpub_is_iframe($embed);
             echo '<a class="book-slot' . ($isSelected ? ' is-selected' : '') . '" href="'
-               . e(bookpub_qs([
-                    'service'  => (int)$service['id'],
-                    'provider' => (int)$provider['id'],
-                    'date'     => $date,
-                    'slot'     => $time,
-                    'party'    => $party,
-                 ], $embed)) . '"'
+               . e($inFrame ? bookpub_top_url($slotParams) : bookpub_qs($slotParams, $embed)) . '"'
+               . ($inFrame ? ' target="_top" rel="noopener"' : '')
                . ($multiEnabled ? ' data-slot-btn data-value="' . e($key) . '"' : '') . '>'
                . '<span class="book-slot-time">' . e(slate_format_time($date . ' ' . $time)) . '</span>'
                . $capBadge . '</a>';
@@ -1234,7 +1314,8 @@ function bookpub_render_membership_notice(string $message, array $service, array
         $returnParams['date'] = $date;
         $returnParams['slot'] = $slot;
     }
-    $returnUrl = SLATE_URL . '/book' . bookpub_qs($returnParams, $embed, false);
+    // After signing in, continue on this site (top window), not inside the iframe.
+    $returnUrl = bookpub_is_iframe($embed) ? bookpub_top_url($returnParams) : SLATE_URL . '/book' . bookpub_qs($returnParams, $embed, false);
 
     echo '<div class="alert alert-warning">' . e($message) . '</div>';
 
@@ -1245,7 +1326,7 @@ function bookpub_render_membership_notice(string $message, array $service, array
         $ctaUrl   = SLATE_URL . '/member/membership/plans?return_to=' . rawurlencode($returnUrl);
         $ctaLabel = __('membership_plans_cta', 'View Membership Plans');
     }
-    echo '<a href="' . e($ctaUrl) . '" class="btn btn-primary btn-lg btn-block">' . e($ctaLabel) . '</a>';
+    echo '<a href="' . e($ctaUrl) . '" class="btn btn-primary btn-lg btn-block"' . (bookpub_is_iframe($embed) ? ' target="_top" rel="noopener"' : '') . '>' . e($ctaLabel) . '</a>';
 }
 
 /** Render a single custom field input. */
@@ -1324,6 +1405,7 @@ function bookpub_render_success(string $ref, array $args, bool $embed, string $s
         <?php endif; ?>
         <p class="text-sm text-muted"><?= __('booking_reference', 'Reference:') ?> <code><?= e($ref) ?></code></p>
         <p class="mt-3"><a href="<?= e(bookpub_home($embed)) ?>" class="btn btn-ghost"><?= __('booking_something_else', 'Book something else') ?></a></p>
+        <?= bookpub_back_to_site_link() ?>
     </div>
     <?php
     bookpub_layout_end($embed);
@@ -1990,6 +2072,7 @@ function bookpub_pay_done(bool $embed): void {
     echo '<p>' . sprintf(e(__('booking_booking_confirmed_msg', 'Your booking for %s is confirmed.')), '<strong>' . e(bookpub_service_name($appt)) . '</strong>') . '</p>';
     echo '<p class="text-sm text-muted">' . e(__('booking_reference', 'Reference:')) . ' <code>' . e($appt['ref']) . '</code></p>';
     echo '<p class="mt-3"><a href="' . e(bookpub_home($embed)) . '" class="btn btn-ghost">' . e(__('booking_something_else', 'Book something else')) . '</a></p>';
+    echo bookpub_back_to_site_link();
     echo '</div>';
     bookpub_layout_end($embed);
 }

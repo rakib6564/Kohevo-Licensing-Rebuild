@@ -314,6 +314,64 @@ if (!function_exists('slate_safe_redirect_target')) {
     }
 }
 
+// ── Embedding / frame policy ─────────────────────────────────
+// The booking widget can be shown in an <iframe> on another website. Which sites may do that is a Settings list
+// (embed_allowed_origins); every other page is same-origin only, which also stops clickjacking of login/admin.
+if (!function_exists('slate_normalize_embed_origins')) {
+    /** Reduce free text (one origin per line / comma / space) to unique, valid origins: https://host[:port]. */
+    function slate_normalize_embed_origins(string $raw): array {
+        $out = [];
+        foreach (preg_split('/[\s,]+/', $raw, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $o) {
+            $p = parse_url(trim($o));
+            if (!is_array($p) || empty($p['scheme']) || empty($p['host']) || isset($p['user']) || isset($p['pass'])) continue;
+            $scheme = strtolower($p['scheme']); $host = strtolower($p['host']);
+            $local  = in_array($host, ['localhost', '127.0.0.1'], true);
+            if ($scheme !== 'https' && !($scheme === 'http' && $local)) continue;   // https only, except local development
+            $out[$scheme . '://' . $host . (isset($p['port']) ? ':' . (int)$p['port'] : '')] = true;
+        }
+        return array_keys($out);
+    }
+}
+
+if (!function_exists('slate_embed_allowed_origins')) {
+    /** The origins allowed to frame the booking widget, from Settings. */
+    function slate_embed_allowed_origins(): array {
+        $raw = '';
+        try { if (class_exists('Database')) $raw = (string) (Database::setting('embed_allowed_origins') ?? ''); } catch (\Throwable $e) {}
+        return slate_normalize_embed_origins($raw);
+    }
+}
+
+if (!function_exists('slate_embed_origin_allowed')) {
+    /**
+     * Is $url on one of the allowed embedding sites? Used to validate a ?return= address so it can never become an
+     * open redirect. Compares the exact origin (scheme + host + port); paths are irrelevant.
+     * @param string[]|null $origins override the configured list (tests)
+     */
+    function slate_embed_origin_allowed(string $url, ?array $origins = null): bool {
+        if ($url === '' || preg_match('/[\x00-\x20\x7F\\\\]/', $url)) return false;
+        $n = slate_normalize_embed_origins($url);   // rejects credentials (user@), non-https, and anything unparseable
+        if (count($n) !== 1) return false;
+        return in_array($n[0], $origins ?? slate_embed_allowed_origins(), true);
+    }
+}
+
+if (!function_exists('slate_send_frame_policy')) {
+    /**
+     * Send the framing headers for this response. Default: this site's own pages only. With $allowEmbedSites the
+     * sites from Settings may frame it too (the booking widget). Safe to call more than once — the last call wins.
+     */
+    function slate_send_frame_policy(bool $allowEmbedSites = false): void {
+        if (PHP_SAPI === 'cli' || headers_sent()) return;
+        $ancestors = ["'self'"];
+        if ($allowEmbedSites) $ancestors = array_merge($ancestors, slate_embed_allowed_origins());
+        header('Content-Security-Policy: frame-ancestors ' . implode(' ', $ancestors), true);
+        // X-Frame-Options can't name another site; drop it when a cross-site parent is allowed, keep it otherwise.
+        if ($allowEmbedSites && count($ancestors) > 1) header_remove('X-Frame-Options');
+        else header('X-Frame-Options: SAMEORIGIN', true);
+    }
+}
+
 // ── URL safety ───────────────────────────────────────────────
 if (!function_exists('slate_safe_url')) {
     /**

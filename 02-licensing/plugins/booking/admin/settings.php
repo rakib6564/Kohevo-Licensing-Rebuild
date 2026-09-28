@@ -60,6 +60,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Database::setSetting('booking.multislot_max',
             (string) max(2, min(20, (int)($_POST['multislot_max'] ?? 4))));
 
+        // Websites allowed to show the widget in an <iframe> (also the only sites a ?return= may point at).
+        Database::setSetting('embed_allowed_origins', implode("\n", slate_normalize_embed_origins((string)($_POST['embed_allowed_origins'] ?? ''))));
+
         // Customer self-service — controls the /book/manage page only.
         // Admin-initiated cancel/reschedule is never gated by this (see
         // BookingAPI::canSelfCancel()/canSelfReschedule()).
@@ -198,6 +201,16 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <input type="number" id="multislot_max" name="multislot_max" min="2" max="20"
                    value="<?= (int)$g('multislot_max', '4') ?>">
             <div class="field-hint"><?= __('booking_settings_multislot_max_hint', 'Enforced on submission regardless of what the widget shows.') ?></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h2><?= __('booking_settings_embed_title', 'Embedding on other websites') ?></h2></div>
+        <p class="text-sm text-muted"><?= __('booking_settings_embed_desc', 'Websites allowed to show the booking widget in an iframe. Signing in, the confirmation step and payment always open on this site for security, then send the visitor back to their page.') ?></p>
+        <div class="field">
+            <label class="field-label" for="embed_allowed_origins"><?= __('booking_settings_embed_label', 'Allowed websites (one per line)') ?></label>
+            <textarea id="embed_allowed_origins" name="embed_allowed_origins" rows="3" placeholder="https://www.example.com"><?= e(implode("\n", slate_embed_allowed_origins())) ?></textarea>
+            <div class="field-hint"><?= __('booking_settings_embed_hint', 'Only the site address, without a page path. Anything not listed here cannot frame your pages.') ?></div>
         </div>
     </div>
 

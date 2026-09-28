@@ -982,4 +982,11 @@ return [
     'bk_notice_hours' => '%d heures',
     'bk_times_once' => 'une fois',
     'bk_times_n' => '%d fois',
+    'booking_breakout_title' => 'Poursuivre votre réservation',
+    'booking_breakout_note' => 'Pour garder votre réservation sécurisée, l’étape suivante s’ouvre sur notre page de réservation.',
+    'booking_breakout_cta' => 'Continuer',
+    'booking_settings_embed_title' => 'Intégration sur d’autres sites',
+    'booking_settings_embed_desc' => 'Sites autorisés à afficher le widget de réservation dans un iframe. La connexion, l’étape de confirmation et le paiement s’ouvrent toujours sur ce site par sécurité, puis renvoient le visiteur vers sa page.',
+    'booking_settings_embed_label' => 'Sites autorisés (un par ligne)',
+    'booking_settings_embed_hint' => 'Uniquement l’adresse du site, sans chemin de page. Tout site non listé ici ne peut pas encadrer vos pages.',
 ];
