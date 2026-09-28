@@ -44,6 +44,9 @@ if (!function_exists('slate_is_client_managed_plugin')) {
     }
 }
 
+// Plugin protection lock + per-plugin icons (see includes/plugin_protection.php).
+require_once dirname(__DIR__) . '/includes/plugin_protection.php';
+
 // ─────────────────────────────────────────────────────────────
 // GET: download an installed plugin as a ZIP (on-the-fly packaging)
 //
@@ -148,8 +151,46 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     } else {
         $action = $_POST['_action'] ?? '';
 
+        // Plugin protection: these three are refused while changes are locked. Enforced here on the server, so a
+        // crafted POST or a stale page can not slip past the disabled buttons. (Activate is never locked.)
+        if (in_array($action, ['upload', 'deactivate', 'uninstall'], true) && slate_plugins_locked()) {
+            AuditLog::record('plugin.change_blocked', (string)($_POST['slug'] ?? ''), ['action' => $action]);
+            $flash  = ['type' => 'error', 'msg' => __('plugins_protected_blocked', 'Plugins are protected. Click "Unlock changes" first — this prevents accidental removal.')];
+            $action = '';
+        }
+
+        // ─── Unlock changes (password re-entry, time-limited) ─────
+        if ($action === 'unlock_changes') {
+            $cool = (int)($_SESSION['plugins_unlock_cooldown'] ?? 0);
+            if ($cool > time()) {
+                $flash = ['type' => 'error', 'msg' => sprintf(__('plugins_unlock_too_many', 'Too many attempts. Try again in %d minute(s).'), (int)ceil(($cool - time()) / 60))];
+            } else {
+                $row = Database::row('SELECT password_hash FROM users WHERE id = ? AND tenant_id = ?', [(int)Auth::userId(), current_tenant_id()]);
+                if ($row && password_verify((string)($_POST['password'] ?? ''), (string)$row['password_hash'])) {
+                    $_SESSION['plugins_unlocked_until'] = time() + SLATE_PLUGINS_UNLOCK_SECONDS;
+                    $_SESSION['plugins_unlocked_uid']   = (int)Auth::userId();
+                    unset($_SESSION['plugins_unlock_fails'], $_SESSION['plugins_unlock_cooldown']);
+                    AuditLog::record('plugin.protection_unlocked', '', ['minutes' => SLATE_PLUGINS_UNLOCK_SECONDS / 60]);
+                    $flash = ['type' => 'success', 'msg' => __('plugins_unlocked_msg', 'Plugin changes unlocked for 15 minutes.')];
+                } else {
+                    $fails = (int)($_SESSION['plugins_unlock_fails'] ?? 0) + 1;
+                    if ($fails >= 5) { $_SESSION['plugins_unlock_cooldown'] = time() + 300; $fails = 0; }
+                    $_SESSION['plugins_unlock_fails'] = $fails;
+                    AuditLog::record('plugin.protection_unlock_failed');
+                    $flash = ['type' => 'error', 'msg' => __('plugins_unlock_bad_password', 'Incorrect password.')];
+                }
+            }
+        }
+
+        // ─── Lock changes again right away ────────────────────
+        elseif ($action === 'lock_changes') {
+            unset($_SESSION['plugins_unlocked_until'], $_SESSION['plugins_unlocked_uid']);
+            AuditLog::record('plugin.protection_locked');
+            $flash = ['type' => 'success', 'msg' => __('plugins_locked_msg', 'Plugin changes locked.')];
+        }
+
         // ─── Upload ────────────────────────────────────────────
-        if ($action === 'upload') {
+        elseif ($action === 'upload') {
             // Installing plugin code touches the shared filesystem for every
             // tenant — genuinely platform-level, not a per-tenant permission.
             if (!Auth::isPlatformSuperAdmin()) {
@@ -272,6 +313,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     $flash = ['type' => 'error', 'msg' => __('missing_slug', 'Missing plugin slug.')];
                 } elseif (slate_is_system_plugin($slug)) {
                     $flash = ['type' => 'error', 'msg' => __('system_plugin_locked', 'This is a system plugin and can\'t be uninstalled.')];
+                } elseif (trim((string)($_POST['confirm_slug'] ?? '')) !== $slug) {
+                    // Uninstall deletes the plugin's data for good: the admin must type the plugin's name. Checked here,
+                    // so it holds even if the browser-side prompt is bypassed.
+                    $flash = ['type' => 'error', 'msg' => __('plugin_confirm_mismatch', 'Confirmation did not match. Nothing was removed.')];
                 } else {
                     $res = PluginLoader::uninstall($slug);
                     if ($res['ok']) {
@@ -370,6 +415,9 @@ $plugins         = PluginLoader::listAll();
 $canUpload       = Auth::isPlatformSuperAdmin();
 $canUninstall    = Auth::isPlatformSuperAdmin();
 $hasExampleZip   = file_exists(SLATE_ROOT . '/plugins/_dist/hello-world-v1.0.0.zip');
+$locked          = slate_plugins_locked();
+$unlockedUntil   = slate_plugins_unlocked_until();
+$showUpload      = $canUpload && !$locked;   // the upload box only appears once changes are unlocked
 ?>
 
 <?php
@@ -488,7 +536,7 @@ $csrf = csrf_token();
     margin-left: auto;
     display: inline-flex; align-items: center; gap: 7px;
     padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-full);
-    background: var(--surface); color: var(--subtle); min-width: 190px;
+    background: var(--surface); color: var(--subtle); min-width: min(100%, 250px);
     transition: border-color .14s ease, box-shadow .14s ease;
 }
 .plug-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); color: var(--muted); }
@@ -548,116 +596,139 @@ $csrf = csrf_token();
 .plug-dropzone.has-file .plug-drop-file { display: block; }
 .plug-upload-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 
+/* ── Protection bar ────────────────────────────────────────── */
+.plug-lockbar {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface);
+}
+.plug-lockbar.is-locked { border-color: color-mix(in srgb, var(--accent) 25%, var(--border)); background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+.plug-lockbar.is-open   { border-color: color-mix(in srgb, var(--warning) 45%, var(--border)); background: var(--warning-soft); }
+.plug-lockbar-ico {
+    width: 38px; height: 38px; flex: none; border-radius: 11px; display: grid; place-items: center;
+    background: var(--surface); border: 1px solid var(--border); color: var(--accent);
+}
+.plug-lockbar.is-open .plug-lockbar-ico { color: #B45309; }
+.plug-lockbar-ico svg { width: 18px; height: 18px; }
+.plug-lockbar-text { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.plug-lockbar-text strong { font-size: 13.5px; font-weight: 650; color: var(--text); }
+.plug-lockbar form { margin: 0; }
+
+/* Unlock dialog */
+.plug-dialog {
+    border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 22px;
+    width: min(92vw, 420px); background: var(--surface); color: var(--text); box-shadow: var(--shadow-xl);
+}
+.plug-dialog::backdrop { background: rgba(15, 17, 23, .45); }
+.plug-dialog h2 { margin: 0 0 6px; font-size: 17px; font-weight: 700; }
+.plug-dialog p { margin: 0 0 16px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.plug-dialog input[type="password"] {
+    width: 100%; padding: 10px 12px; font: inherit; font-size: 14px; color: var(--text);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface);
+}
+.plug-dialog input[type="password"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); }
+.plug-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+
 /* ── Plugin card grid ──────────────────────────────────────── */
 .plug-grid {
-    display: grid; gap: 10px;
-    /* min(100%, 300px) keeps a single card from forcing horizontal overflow
-       when the grid container is narrower than 300px (small phones). */
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+    display: grid; gap: 12px;
+    /* min(100%, 260px) keeps a single card from forcing horizontal overflow on small phones. */
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
 }
 .plug-card {
-    position: relative;
-    display: flex; flex-direction: column;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    background: var(--surface);
-    padding: 13px 14px 12px;
-    transition: border-color .14s ease, box-shadow .14s ease, transform .14s ease;
+    position: relative; display: flex; flex-direction: column; gap: 14px;
+    border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface);
+    padding: 16px;
+    transition: border-color .14s ease, box-shadow .14s ease;
 }
 .plug-card.is-hidden { display: none; }
-.plug-card:hover { border-color: var(--border-stronger); box-shadow: var(--shadow-md); transform: translateY(-1px); }
-/* Left status spine — subtle; only the meaningful "on" states get colour. */
-.plug-card::before {
-    content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px;
-    border-radius: 999px; background: transparent;
-}
-.plug-card.is-active::before       { background: var(--success); }
+.plug-card:hover { border-color: var(--border-stronger); box-shadow: var(--shadow-md); }
+.plug-card:has(.plug-menu[open]) { z-index: 5; }
+/* Left status spine — only the meaningful states get colour. */
+.plug-card::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 999px; background: transparent; }
+.plug-card.is-active::before        { background: var(--success); }
 .plug-card.is-system-plugin::before { background: var(--accent); }
 
-.plug-card-top { display: flex; align-items: center; gap: 11px; }
-/* Neutral monochrome avatar — initials on a soft chip, no rainbow gradients. */
+.plug-card-top { display: flex; align-items: center; gap: 12px; }
 .plug-avatar {
-    width: 38px; height: 38px; flex: none; border-radius: 10px;
-    display: grid; place-items: center;
-    font-weight: 700; font-size: 13px; letter-spacing: -0.02em; text-transform: uppercase;
-    color: var(--muted);
-    background: var(--surface-2);
-    border: 1px solid var(--border);
+    width: 42px; height: 42px; flex: none; border-radius: 12px; display: grid; place-items: center;
+    color: var(--muted); background: var(--surface-2); border: 1px solid var(--border);
 }
-.plug-card.is-active .plug-avatar { color: var(--text-2, var(--text)); }
-.plug-card.is-system-plugin .plug-avatar {
-    color: var(--accent); background: var(--accent-soft); border-color: transparent;
-}
+.plug-avatar svg { width: 20px; height: 20px; }
+.plug-card.is-active .plug-avatar { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
 .plug-id { min-width: 0; flex: 1; }
 .plug-name {
-    font-size: 14px; font-weight: 650; letter-spacing: -0.01em; color: var(--text);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: 14.5px; font-weight: 650; letter-spacing: -0.01em; line-height: 1.3; color: var(--text);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
 }
-.plug-slug {
-    font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 1px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
+.plug-slug { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .plug-pill {
-    flex: none; display: inline-flex; align-items: center; gap: 5px;
-    font-size: 10.5px; font-weight: 600; letter-spacing: 0.01em;
-    padding: 3px 8px 3px 6px; border-radius: 999px;
-    border: 1px solid var(--border); background: var(--surface-2); color: var(--muted);
+    flex: none; display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 600;
+    padding: 3px 9px; border-radius: 999px; border: 1px solid transparent;
+    background: var(--accent-soft); color: var(--accent-deep);
 }
-.plug-pill::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: var(--subtle); }
-.plug-pill.is-active   { background: var(--success-soft); color: #15803D; border-color: transparent; }
-.plug-pill.is-active::before   { background: var(--success); box-shadow: 0 0 0 3px rgba(22,163,74,0.16); }
-.plug-pill.is-inactive { background: var(--warning-soft); color: #B45309; border-color: transparent; }
-.plug-pill.is-inactive::before { background: var(--warning); }
-.plug-pill.is-installed { background: var(--accent-soft); color: var(--accent-deep); border-color: transparent; }
-.plug-pill.is-installed::before { background: var(--accent); }
+.plug-card.is-system-plugin { border-color: color-mix(in srgb, var(--accent) 22%, var(--border)); }
 
-.plug-desc {
-    margin: 10px 0 0; font-size: 12px; line-height: 1.5; color: var(--text-2);
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+/* Footer: state switch on the left, secondary actions on the right */
+.plug-foot { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 13px; border-top: 1px solid var(--border); }
+.plug-foot form { margin: 0; }
+.plug-foot-spacer { flex: 1; }
+.plug-state { display: inline-flex; align-items: center; gap: 9px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.plug-card.is-active .plug-state-label { color: #15803D; }
+.plug-switch {
+    position: relative; width: 38px; height: 22px; flex: none; padding: 0; border: 0; border-radius: 999px;
+    background: var(--border-stronger); cursor: pointer; transition: background .15s ease;
 }
-.plug-meta {
-    display: flex; flex-wrap: wrap; gap: 5px 6px; margin-top: 10px;
+.plug-switch::after {
+    content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s ease;
 }
-.plug-tag {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-size: 10.5px; color: var(--muted);
-    background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: 6px; padding: 2px 7px;
-}
-.plug-tag b { color: var(--text-2); font-weight: 600; }
-.plug-tag.is-ver { font-family: var(--font-mono); }
-.plug-tag a { color: var(--accent); text-decoration: none; }
-.plug-tag a:hover { text-decoration: underline; }
+.plug-switch.is-on { background: var(--success); }
+.plug-switch.is-on::after { transform: translateX(16px); }
+.plug-switch:disabled { cursor: not-allowed; opacity: .5; }
+.plug-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.plug-lock-ico { width: 13px; height: 13px; flex: none; color: var(--subtle); }
+.plug-required { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.plug-required svg { width: 14px; height: 14px; }
 
-.plug-actions {
-    display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
-    margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--border);
-}
-.plug-actions form { margin: 0; }
-.plug-actions .plug-spacer { flex: 1; }
-/* Subtle icon-led action button matching the global .btn metrics. */
+/* Buttons (also used by the upload box and the Capabilities button) */
 .plug-act {
-    display: inline-flex; align-items: center; gap: 5px;
-    font: inherit; font-size: 12px; font-weight: 600; line-height: 1;
-    padding: 7px 11px; border-radius: var(--radius-sm);
-    border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2);
-    cursor: pointer; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; font-weight: 600; line-height: 1;
+    padding: 8px 11px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong);
+    background: var(--surface); color: var(--text-2); cursor: pointer; text-decoration: none;
     transition: background .12s ease, border-color .12s ease, color .12s ease;
 }
 .plug-act:hover { background: var(--surface-2); border-color: var(--border-stronger); color: var(--text); text-decoration: none; }
 .plug-act svg { width: 14px; height: 14px; }
 .plug-act-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .plug-act-primary:hover { background: var(--accent-deep); border-color: var(--accent-deep); color: #fff; }
-.plug-act-danger { color: var(--danger); border-color: var(--border-strong); }
-.plug-act-danger:hover { background: var(--danger-soft); border-color: var(--danger-soft); color: var(--danger); }
-/* Locked "Required" action for system plugins (non-interactive). */
-.plug-act-locked { color: var(--muted); background: var(--surface-2); border-color: var(--border); cursor: default; }
-.plug-act-locked:hover { background: var(--surface-2); border-color: var(--border); color: var(--muted); }
-/* System pill — neutral/brand, distinct from the status pills. */
-.plug-pill.is-system { background: var(--accent-soft); color: var(--accent-deep); border-color: transparent; }
-.plug-pill.is-system::before { background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent); }
-.plug-card.is-system-plugin { border-color: color-mix(in srgb, var(--accent) 22%, var(--border)); }
+.plug-act-n { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); background: var(--surface-sunken); border-radius: 999px; padding: 1px 6px; }
+
+/* "⋯" menu (no JavaScript needed to open it) */
+.plug-menu { position: relative; }
+.plug-menu > summary {
+    list-style: none; cursor: pointer; width: 34px; height: 34px; display: grid; place-items: center;
+    border-radius: var(--radius-sm); border: 1px solid var(--border-strong); color: var(--muted); background: var(--surface);
+}
+.plug-menu > summary::-webkit-details-marker { display: none; }
+.plug-menu > summary:hover, .plug-menu[open] > summary { background: var(--surface-2); color: var(--text); }
+.plug-menu > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.plug-menu > summary svg { width: 16px; height: 16px; }
+.plug-menu-pop {
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 224px; padding: 6px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg, var(--shadow-md));
+}
+.plug-menu-pop form { margin: 0; }
+.plug-menu-item {
+    display: flex; align-items: flex-start; gap: 9px; width: 100%; padding: 9px 10px; border: 0; background: transparent;
+    border-radius: 8px; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--text-2); text-align: left; cursor: pointer; text-decoration: none;
+}
+.plug-menu-item svg { width: 15px; height: 15px; flex: none; margin-top: 1px; }
+.plug-menu-item:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
+.plug-menu-item.is-danger { color: var(--danger); }
+.plug-menu-item.is-danger:hover { background: var(--danger-soft); }
+.plug-menu-item[disabled], .plug-menu-item[disabled]:hover { opacity: .6; cursor: not-allowed; background: transparent; color: var(--muted); }
+.plug-menu-hint { display: block; font-size: 11px; font-weight: 400; color: var(--muted); margin-top: 1px; }
 
 /* ── Empty state ───────────────────────────────────────────── */
 .plug-empty {
@@ -707,12 +778,8 @@ $csrf = csrf_token();
     .plug-hero-counts { display: none; }
     .plug-grid { grid-template-columns: minmax(0, 1fr); }
 
-    /* Card actions: unwrap the inline <form>s so their buttons join the flex
-       row and lay out two-up (full-width when alone), keeping tap targets big. */
-    .plug-actions { gap: 8px; }
-    .plug-actions > form { display: contents; }
-    .plug-actions .plug-act { flex: 1 1 calc(50% - 4px); justify-content: center; }
-    .plug-actions .plug-spacer { display: none; }
+    .plug-foot { flex-wrap: wrap; }
+    .plug-lockbar .plug-act { width: 100%; justify-content: center; }
 }
 </style>
 
@@ -722,11 +789,40 @@ $csrf = csrf_token();
         <div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div>
     <?php endif; ?>
 
+    <!-- ── Protection bar ───────────────────────────────────── -->
+    <?php if ($locked): ?>
+    <section class="plug-lockbar is-locked" aria-label="<?= e(__('plugins_protect_title', 'Plugins are protected')) ?>">
+        <span class="plug-lockbar-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+        <div class="plug-lockbar-text">
+            <strong><?= __('plugins_protect_title', 'Plugins are protected') ?></strong>
+            <span><?= __('plugins_protect_desc', 'Deactivating, uninstalling and uploading plugins is locked so nothing is removed by accident. Activating a plugin is always allowed.') ?></span>
+        </div>
+        <button type="button" class="plug-act" onclick="document.getElementById('plug-unlock-dialog').showModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
+            <?= __('plugins_unlock', 'Unlock changes') ?>
+        </button>
+    </section>
+    <?php else: ?>
+    <section class="plug-lockbar is-open" aria-label="<?= e(__('plugins_unlocked_title', 'Changes unlocked')) ?>">
+        <span class="plug-lockbar-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg></span>
+        <div class="plug-lockbar-text">
+            <strong><?= __('plugins_unlocked_title', 'Changes unlocked') ?></strong>
+            <span><?= e(sprintf(__('plugins_unlocked_until', 'Locks again automatically at %s.'), I18n::localDate('H:i', $unlockedUntil))) ?></span>
+        </div>
+        <form method="post">
+            <?= csrf_field() ?>
+            <input type="hidden" name="_action" value="lock_changes">
+            <button type="submit" class="plug-act plug-act-primary"><?= __('plugins_lock_now', 'Lock now') ?></button>
+        </form>
+    </section>
+    <?php endif; ?>
+
     <!-- ── Hero ─────────────────────────────────────────────── -->
     <section class="plug-hero">
         <div class="plug-hero-row">
             <div>
-                <div class="plug-hero-eyebrow"><?= __('plugins', 'Plugins') ?> · <?= __('extensions', 'Extensions') ?></div>
+                <?php $eyeA = __('plugins', 'Plugins'); $eyeB = __('extensions', 'Extensions'); ?>
+                <div class="plug-hero-eyebrow"><?= $eyeA === $eyeB ? $eyeA : $eyeA . ' · ' . $eyeB ?></div>
                 <h1><?= __('plugins_hero_title', 'Extend your platform') ?></h1>
                 <p><?= __('plugins_subtitle', 'Add features by installing and activating plugins.') ?></p>
             </div>
@@ -748,7 +844,7 @@ $csrf = csrf_token();
     </section>
 
     <!-- ── Upload ───────────────────────────────────────────── -->
-    <?php if ($canUpload): ?>
+    <?php if ($showUpload): ?>
     <section class="plug-upload">
         <div class="plug-upload-head">
             <div class="plug-upload-title">
@@ -853,121 +949,95 @@ $csrf = csrf_token();
         <div class="plug-grid" id="plug-grid">
             <?php foreach ($plugins as $p):
                 $status   = $p['status'];
+                $slug     = (string)$p['slug'];
                 $manifest = json_decode($p['manifest_json'] ?? '{}', true) ?: [];
-                $author   = $manifest['author']      ?? '';
-                $desc     = $manifest['description'] ?? '';
-                $homepage = $manifest['homepage']    ?? '';
                 $downloadUrl = SLATE_URL . '/admin/plugins.php?_action=download&slug='
-                             . rawurlencode($p['slug']) . '&_csrf=' . rawurlencode($csrf);
-                $haystack = strtolower($p['name'] . ' ' . $p['slug'] . ' ' . $author . ' ' . $desc);
-                $isSystem = slate_is_system_plugin($p['slug'], $manifest);
+                             . rawurlencode($slug) . '&_csrf=' . rawurlencode($csrf);
+                $haystack = strtolower($p['name'] . ' ' . $slug);
+                $isSystem = slate_is_system_plugin($slug, $manifest);
+                $isActive = $status === 'active';
+                $canToggle = Auth::isPlatformSuperAdmin() || (slate_is_client_managed_plugin($slug) && Auth::can('plugins.manage'));
+                $lockTitle = __('plugin_toggle_locked', 'Locked — click "Unlock changes" first');
+                $capCount  = !empty($manifest['capabilities']) ? count($manifest['capabilities']) : 0;
             ?>
             <article class="plug-card is-<?= e($status) ?><?= $isSystem ? ' is-system-plugin' : '' ?>"
                      data-status="<?= e($status) ?>"
                      data-search="<?= e($haystack) ?>">
                 <div class="plug-card-top">
-                    <span class="plug-avatar" aria-hidden="true"><?= e(mb_substr($p['name'], 0, 2)) ?></span>
+                    <span class="plug-avatar"><?= slate_plugin_icon_svg($slug) ?></span>
                     <div class="plug-id">
-                        <div class="plug-name"><?= e($p['name']) ?></div>
-                        <div class="plug-slug"><?= e($p['slug']) ?> · v<?= e($p['version']) ?></div>
+                        <div class="plug-name" title="<?= e($p['name']) ?>"><?= e($p['name']) ?></div>
+                        <div class="plug-slug"><?= e($slug) ?> · v<?= e($p['version']) ?></div>
                     </div>
                     <?php if ($isSystem): ?>
-                        <span class="plug-pill is-system" title="<?= e(__('system_plugin_hint', 'Built-in — always on, can\'t be removed')) ?>"><?= __('system', 'System') ?></span>
-                    <?php else: ?>
-                        <span class="plug-pill is-<?= e($status) ?>"><?= e(__($status, ucfirst($status))) ?></span>
+                        <span class="plug-pill" title="<?= e(__('system_plugin_hint', 'Built-in — always on, can\'t be removed')) ?>"><?= __('system', 'System') ?></span>
                     <?php endif; ?>
                 </div>
 
-                <?php if ($desc !== ''): ?>
-                    <p class="plug-desc"><?= e($desc) ?></p>
-                <?php endif; ?>
-
-                <div class="plug-meta">
-                    <?php if ($author !== ''): ?>
-                        <span class="plug-tag"><?= __('author', 'Author') ?>: <b><?= e($author) ?></b></span>
-                    <?php endif; ?>
-                    <?php if (!empty($p['installed_at'])): ?>
-                        <span class="plug-tag"><?= __('installed', 'Installed') ?>: <b><?= e(substr((string)$p['installed_at'], 0, 10)) ?></b></span>
-                    <?php endif; ?>
-                    <?php if ($homepage !== ''): ?>
-                        <span class="plug-tag"><a href="<?= e($homepage) ?>" target="_blank" rel="noopener"><?= __('homepage', 'Homepage') ?> ↗</a></span>
-                    <?php endif; ?>
-                    <?php if (!empty($manifest['capabilities'])): ?>
-                        <span class="plug-tag" style="background:var(--accent-soft);color:var(--accent);font-weight:600;">
-                            <?= count($manifest['capabilities']) ?> <?= __('capabilities', 'Capabilities') ?>
-                        </span>
-                    <?php endif; ?>
-                </div>
-
-                <div class="plug-actions">
-                    <?php if (!empty($manifest['capabilities']) && $status === 'active'): ?>
-                        <button type="button" class="plug-act" onclick="document.getElementById('cap-modal-<?= e($p['slug']) ?>').showModal()" title="<?= __('configure_capabilities', 'Configure capabilities') ?>">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                            </svg>
-                            <?= __('capabilities', 'Capabilities') ?>
-                        </button>
-                    <?php endif; ?>
-
-                    <?php if ($isSystem && $status === 'active'): ?>
-                        <button type="button" class="plug-act plug-act-locked" disabled
-                                title="<?= e(__('system_plugin_hint', 'Built-in — always on, can\'t be removed')) ?>">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                                 stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
-                            </svg>
+                <div class="plug-foot">
+                    <?php if ($isSystem && $isActive): ?>
+                        <span class="plug-required" title="<?= e(__('system_plugin_hint', 'Built-in — always on, can\'t be removed')) ?>">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
                             <?= __('required', 'Required') ?>
+                        </span>
+                    <?php elseif ($canToggle): ?>
+                        <?php // Turning ON is never locked; turning OFF is (and asks to confirm). ?>
+                        <form method="post" class="plug-state"
+                              <?= $isActive ? 'data-plug-confirm="' . e(sprintf(__('plugin_confirm_deactivate', 'Deactivate "%s"? Its features stop working until you turn it back on.'), $p['name'])) . '"' : '' ?>>
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="_action" value="<?= $isActive ? 'deactivate' : 'activate' ?>">
+                            <input type="hidden" name="slug" value="<?= e($slug) ?>">
+                            <button type="submit" class="plug-switch<?= $isActive ? ' is-on' : '' ?>" role="switch"
+                                    aria-checked="<?= $isActive ? 'true' : 'false' ?>"
+                                    aria-label="<?= e(($isActive ? __('deactivate', 'Deactivate') : __('activate', 'Activate')) . ' — ' . $p['name']) ?>"
+                                    <?= ($isActive && $locked) ? 'disabled title="' . e($lockTitle) . '"' : '' ?>></button>
+                            <span class="plug-state-label"><?= $isActive ? __('plugin_state_on', 'Active') : __('plugin_state_off', 'Inactive') ?></span>
+                            <?php if ($isActive && $locked): ?>
+                                <svg class="plug-lock-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                            <?php endif; ?>
+                        </form>
+                    <?php else: ?>
+                        <span class="plug-state"><span class="plug-state-label"><?= $isActive ? __('plugin_state_on', 'Active') : __('plugin_state_off', 'Inactive') ?></span></span>
+                    <?php endif; ?>
+
+                    <span class="plug-foot-spacer"></span>
+
+                    <?php if ($capCount > 0 && $isActive): ?>
+                        <button type="button" class="plug-act" onclick="document.getElementById('cap-modal-<?= e($slug) ?>').showModal()" title="<?= __('configure_capabilities', 'Configure capabilities') ?>">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+                            <?= __('capabilities', 'Capabilities') ?> <span class="plug-act-n"><?= $capCount ?></span>
                         </button>
-                    <?php elseif ($status === 'active'): ?>
-                        <?php if (Auth::isPlatformSuperAdmin() || (slate_is_client_managed_plugin((string) $p['slug']) && Auth::can('plugins.manage'))): ?>
-                        <form method="post">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="_action" value="deactivate">
-                            <input type="hidden" name="slug" value="<?= e($p['slug']) ?>">
-                            <button type="submit" class="plug-act"><?= __('deactivate', 'Deactivate') ?></button>
-                        </form>
-                        <?php endif; ?>
-                    <?php elseif ($status === 'inactive' || $status === 'installed'): ?>
-                        <?php if (Auth::isPlatformSuperAdmin() || (slate_is_client_managed_plugin((string) $p['slug']) && Auth::can('plugins.manage'))): ?>
-                        <form method="post">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="_action" value="activate">
-                            <input type="hidden" name="slug" value="<?= e($p['slug']) ?>">
-                            <button type="submit" class="plug-act plug-act-primary"><?= __('activate', 'Activate') ?></button>
-                        </form>
-                        <?php endif; ?>
                     <?php endif; ?>
 
-                    <a class="plug-act" href="<?= e($downloadUrl) ?>"
-                       title="<?= e(sprintf(__('download_plugin_zip', 'Download %s as a ZIP'), $p['name'])) ?>">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                             stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                        </svg>
-                        <?= __('download_zip', 'Download ZIP') ?>
-                    </a>
-
-                    <?php if ($canUninstall && $status !== 'active' && !$isSystem): ?>
-                        <span class="plug-spacer"></span>
-                        <form method="post"
-                              onsubmit="return confirm(<?= e(json_encode(
-                                  sprintf(__('confirm_uninstall',
-                                      "Uninstall %s? This will delete all of this plugin's data and cannot be undone."),
-                                      $p['slug']))) ?>);">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="_action" value="uninstall">
-                            <input type="hidden" name="slug" value="<?= e($p['slug']) ?>">
-                            <button type="submit" class="plug-act plug-act-danger" title="<?= __('uninstall', 'Uninstall') ?>">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                                     stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="3 6 5 6 21 6"/>
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                                </svg>
-                                <?= __('uninstall', 'Uninstall') ?>
-                            </button>
-                        </form>
-                    <?php endif; ?>
+                    <details class="plug-menu">
+                        <summary aria-label="<?= e(__('plugin_more_actions', 'More actions')) ?>" title="<?= e(__('plugin_more_actions', 'More actions')) ?>">
+                            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+                        </summary>
+                        <div class="plug-menu-pop" role="menu">
+                            <a class="plug-menu-item" role="menuitem" href="<?= e($downloadUrl) ?>"
+                               title="<?= e(sprintf(__('download_plugin_zip', 'Download %s as a ZIP'), $p['name'])) ?>">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                <span><?= __('download_zip', 'Download ZIP') ?></span>
+                            </a>
+                            <?php if ($canUninstall && !$isSystem):
+                                $uninstallBlocked = $isActive ? __('plugin_uninstall_deactivate_first', 'Deactivate it first') : ($locked ? __('plugin_toggle_locked', 'Locked — click "Unlock changes" first') : '');
+                            ?>
+                            <form method="post"
+                                  data-plug-type="<?= e($slug) ?>"
+                                  data-plug-type-msg="<?= e(sprintf(__('plugin_uninstall_type_prompt', 'This permanently deletes all data of "%1$s". To confirm, type: %2$s'), $p['name'], $slug)) ?>"
+                                  data-plug-type-mismatch="<?= e(__('plugin_uninstall_type_mismatch', 'What you typed does not match. Nothing was removed.')) ?>">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="_action" value="uninstall">
+                                <input type="hidden" name="slug" value="<?= e($slug) ?>">
+                                <input type="hidden" name="confirm_slug" value="">
+                                <button type="submit" class="plug-menu-item is-danger" role="menuitem" <?= $uninstallBlocked !== '' ? 'disabled' : '' ?>>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    <span><?= __('uninstall', 'Uninstall') ?><?php if ($uninstallBlocked !== ''): ?><span class="plug-menu-hint"><?= e($uninstallBlocked) ?></span><?php endif; ?></span>
+                                </button>
+                            </form>
+                            <?php endif; ?>
+                        </div>
+                    </details>
                 </div>
             </article>
 
@@ -1010,6 +1080,45 @@ $csrf = csrf_token();
     <?php endif; ?>
 
 </div>
+
+<?php if ($locked): ?>
+<dialog id="plug-unlock-dialog" class="plug-dialog">
+    <form method="post">
+        <?= csrf_field() ?>
+        <input type="hidden" name="_action" value="unlock_changes">
+        <h2><?= __('plugins_unlock_dialog_title', 'Unlock plugin changes') ?></h2>
+        <p><?= __('plugins_unlock_dialog_desc', 'Confirm your password to allow deactivating, uninstalling and uploading plugins for 15 minutes. It locks again by itself.') ?></p>
+        <label for="plug-unlock-pw" class="text-sm" style="display:block;margin-bottom:6px;font-weight:600;"><?= __('password', 'Password') ?></label>
+        <input type="password" id="plug-unlock-pw" name="password" autocomplete="current-password" required>
+        <div class="plug-dialog-actions">
+            <button type="button" class="plug-act" onclick="this.closest('dialog').close()"><?= __('cancel', 'Cancel') ?></button>
+            <button type="submit" class="plug-act plug-act-primary"><?= __('plugins_unlock_confirm', 'Unlock for 15 minutes') ?></button>
+        </div>
+    </form>
+</dialog>
+<?php endif; ?>
+
+<!-- Confirmations (deactivate asks; uninstall makes you type the plugin's name) + closing the ⋯ menus -->
+<script>
+(function () {
+    document.addEventListener('submit', function (e) {
+        var f = e.target, msg = f.getAttribute && f.getAttribute('data-plug-confirm');
+        if (msg && !window.confirm(msg)) { e.preventDefault(); return; }
+        var want = f.getAttribute && f.getAttribute('data-plug-type');
+        if (want) {
+            var typed = window.prompt(f.getAttribute('data-plug-type-msg') || want);
+            if (typed === null) { e.preventDefault(); return; }
+            if (typed.trim() !== want) { e.preventDefault(); window.alert(f.getAttribute('data-plug-type-mismatch') || ''); return; }
+            f.querySelector('[name="confirm_slug"]').value = want;   // the server checks it again
+        }
+    });
+    function closeMenus(except) {
+        document.querySelectorAll('details.plug-menu[open]').forEach(function (d) { if (d !== except) d.removeAttribute('open'); });
+    }
+    document.addEventListener('click', function (e) { closeMenus(e.target.closest && e.target.closest('details.plug-menu')); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenus(null); });
+})();
+</script>
 
 <?php if ($canUpload): ?>
 <script>
