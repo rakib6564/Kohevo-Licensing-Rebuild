@@ -5,6 +5,11 @@
     "description": "The 3-month Body & Soul Program — daily tracking, coaching, and communication for clients who have downloaded the program. Layers on top of the membership plugin (fixed-term access) and integrates with booking's follow-up service. Wave 1 ships profile + goals foundation. Wave 2 adds food diary (meals, foods with manual classification, photos), hydration log, physical activity, emotion tracking with hunger/satiety context, and a practitioner-side live feed. Later waves add charts, in-app chat, meal structure, shopping list, recipes, motivation and end-of-program summary.",
     "author": "Kohevo",
     "requires_core": ">=1.0.0",
+    "commercial_module": {
+        "entitlement": "coaching",
+        "label": "Coaching",
+        "description": "Client coaching session, goal, and exercise management"
+    },
     "works_better_with": [
         "membership",
         "booking",
