@@ -31,11 +31,16 @@ if (!function_exists('slate_is_system_plugin')) {
     }
 }
 
-// Shared payment infrastructure managed by Client Admin through the existing
-// plugins.manage boundary. Other plugins remain platform-admin-only.
+// Shared payment infrastructure and commercial modules managed by Client Admin
+// through the existing plugins.manage boundary.
 if (!function_exists('slate_is_client_managed_plugin')) {
     function slate_is_client_managed_plugin(string $slug): bool {
-        return $slug === 'stripe-payment';
+        if ($slug === 'stripe-payment') return true;
+        if (class_exists('\Slate\Services\Installation\CommercialModuleRegistry')) {
+            $comm = \Slate\Services\Installation\CommercialModuleRegistry::definitions();
+            if (isset($comm[$slug])) return true;
+        }
+        return false;
     }
 }
 
@@ -205,13 +210,27 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 if ($slug === '') {
                     $flash = ['type' => 'error', 'msg' => __('missing_slug', 'Missing plugin slug.')];
                 } else {
-                    $res = PluginLoader::activate($slug);
-                    if ($res['ok']) {
+                    $isCommercial = false;
+                    if (class_exists('\Slate\Services\Installation\CommercialModuleRegistry')) {
+                        $comm = \Slate\Services\Installation\CommercialModuleRegistry::definitions();
+                        $isCommercial = isset($comm[$slug]);
+                    }
+                    if ($isCommercial && class_exists('\Slate\Services\Licensing\EntitlementService') && \Slate\Services\Licensing\EntitlementService::remoteConfigured()) {
+                        if (!\Slate\Services\Licensing\EntitlementService::canAccessCapability((int) TENANT_ID, $slug)) {
+                            $flash = ['type' => 'error', 'msg' => sprintf(__('module_not_licensed', 'Plugin "%s" is not included in your active license. Please update your license in Central.'), $slug)];
+                            $res = ['ok' => false];
+                        } else {
+                            $res = PluginLoader::activate($slug);
+                        }
+                    } else {
+                        $res = PluginLoader::activate($slug);
+                    }
+                    if (!empty($res['ok'])) {
                         AuditLog::record('plugin.activated', $slug);
                         $flash = ['type' => 'success',
                                   'msg' => sprintf(__('plugin_activated', 'Plugin "%s" activated.'), $slug)];
-                    } else {
-                        $flash = ['type' => 'error', 'msg' => $res['error']];
+                    } elseif (empty($flash)) {
+                        $flash = ['type' => 'error', 'msg' => $res['error'] ?? 'Activation failed.'];
                     }
                 }
             }
@@ -289,6 +308,63 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 // Page render
 // ─────────────────────────────────────────────────────────────
 require __DIR__ . '/partials/header.php';
+
+// Auto-discover and register any unindexed plugins on disk so they appear in the UI
+try {
+    foreach (PluginLoader::discoverOnDisk() as $diskPlugin) {
+        $slug = $diskPlugin['slug'];
+        if (!Database::row("SELECT id FROM plugins WHERE slug = ?", [$slug])) {
+            Database::insert('plugins', [
+                'slug'          => $slug,
+                'name'          => $diskPlugin['name'],
+                'version'       => $diskPlugin['version'],
+                'status'        => PluginLoader::STATUS_INSTALLED,
+                'manifest_json' => json_encode($diskPlugin['manifest']),
+                'installed_at'  => slate_db_now(),
+            ]);
+        }
+    }
+} catch (\Throwable $e) {
+    // Database table not ready or error - safe fallback
+}
+
+// Auto-sync remote license entitlements from Central if configured and cache is older than 60s
+if (class_exists('\Slate\Services\Licensing\EntitlementService') && \Slate\Services\Licensing\EntitlementService::remoteConfigured()) {
+    try {
+        $serverUrl  = env('LICENSE_SERVER_URL', '');
+        $publicKey  = env('LICENSE_SERVER_PUBLIC_KEY', '');
+        $product    = env('LICENSE_PRODUCT', '');
+        $licenseKey = env('LICENSE_KEY', '');
+        $installId  = \Slate\Services\Installation\InstallationService::currentInstallationId();
+
+        if ($serverUrl && $publicKey && $product && $licenseKey && $installId) {
+            $store  = new \Slate\Services\Licensing\SlateLicenseCacheStore((int) TENANT_ID);
+            $cached = $store->load();
+            $lastChecked = isset($cached['remote_checked_at']) ? strtotime((string)$cached['remote_checked_at']) : 0;
+            if (time() - $lastChecked > 60) {
+                require_once SLATE_ROOT . '/plugins/licensing/client/RemoteLicenseClient.php';
+                $parts = parse_url(SLATE_URL);
+                $domain = strtolower(rtrim((string) ($parts['host'] ?? ''), '.'));
+                $port = isset($parts['port']) ? (int) $parts['port'] : null;
+                if ((($parts['scheme'] ?? '') === 'http' && $port === 80) || (($parts['scheme'] ?? '') === 'https' && $port === 443)) $port = null;
+                if ($port !== null) $domain .= ':' . $port;
+
+                $client = new \RemoteLicenseClient([
+                    'server_url'  => $serverUrl,
+                    'public_key'  => $publicKey,
+                    'product'     => $product,
+                    'license_key' => $licenseKey,
+                    'install_id'  => $installId,
+                    'domain'      => $domain,
+                    'app_version' => SLATE_VERSION,
+                ], $store);
+                $client->checkIn();
+            }
+        }
+    } catch (\Throwable $e) {
+        // Safe fallback
+    }
+}
 
 $plugins         = PluginLoader::listAll();
 $canUpload       = Auth::isPlatformSuperAdmin();
