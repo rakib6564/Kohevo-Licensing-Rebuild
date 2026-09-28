@@ -74,6 +74,11 @@ return [
     // Settings
     'membership_currency_hint'   => 'Used as the default for new plans and wallets.',
     'membership_terms_url'       => 'Terms & consent URL',
+    'membership_portal_features' => 'Member portal features',
+    'membership_portal_features_sub' => 'Choose which features and widgets are displayed to members in their customer portal dashboard.',
+    'membership_enable_card'     => 'Enable digital membership card & QR code',
+    'membership_enable_attendance' => 'Enable attendance tracking & recent attendance',
+    'membership_enable_checkin_howto' => 'Enable check-in instructions ("How to check in")',
     'membership_booking_gate'    => 'Booking gate',
     'membership_booking_gate_hint' => 'These rules are enforced by the Booking plugin once the integration is wired (Phase 4). Configure them now so they take effect automatically.',
     'membership_require_active'  => 'Require an active membership to book',

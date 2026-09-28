@@ -68,7 +68,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <?= csrf_field() ?>
 
     <div class="card">
-        <div class="card-header"><h2><?= __('membership_general', 'General') ?></h2></div>
+        <div class="card-header"><h2><?= __('membership_portal_features', 'Member portal features') ?></h2></div>
+        <p class="text-sm text-muted" style="margin-bottom:var(--space-3);"><?= __('membership_portal_features_sub', 'Choose which features and widgets are displayed to members in their customer portal dashboard.') ?></p>
         
         <div class="field">
             <label class="switch-label">
@@ -76,7 +77,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     <input type="checkbox" name="enable_card" value="1" <?= $g('enable_card', '1') !== '0' ? 'checked' : '' ?>>
                     <span class="switch-track"></span>
                 </span>
-                <span><?= __('membership_enable_card', 'Enable Digital Membership Card & QR Code') ?></span>
+                <span><?= __('membership_enable_card', 'Enable digital membership card & QR code') ?></span>
             </label>
         </div>
         <div class="field">
@@ -85,7 +86,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     <input type="checkbox" name="enable_attendance" value="1" <?= $g('enable_attendance', '1') !== '0' ? 'checked' : '' ?>>
                     <span class="switch-track"></span>
                 </span>
-                <span><?= __('membership_enable_attendance', 'Enable Attendance Tracking & Recent Attendance') ?></span>
+                <span><?= __('membership_enable_attendance', 'Enable attendance tracking & recent attendance') ?></span>
             </label>
         </div>
         <div class="field">
@@ -94,11 +95,14 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     <input type="checkbox" name="enable_checkin_howto" value="1" <?= $g('enable_checkin_howto', '1') !== '0' ? 'checked' : '' ?>>
                     <span class="switch-track"></span>
                 </span>
-                <span><?= __('membership_enable_checkin_howto', 'Enable "How to check in" banner (Requires Card & Attendance)') ?></span>
+                <span><?= __('membership_enable_checkin_howto', 'Enable check-in instructions ("How to check in")') ?></span>
             </label>
         </div>
+    </div>
 
-        <div class="field" style="margin-top: 16px;">
+    <div class="card">
+        <div class="card-header"><h2><?= __('membership_general', 'General') ?></h2></div>
+        <div class="field">
             <label class="field-label" for="terms_url"><?= __('membership_terms_url', 'Terms & consent URL') ?></label>
             <input type="url" id="terms_url" name="terms_url" value="<?= e($g('terms_url')) ?>" placeholder="https://…">
         </div>

@@ -73,6 +73,11 @@ return [
     // Paramètres
     'membership_currency_hint'   => 'Utilisée par défaut pour les nouveaux forfaits et portefeuilles.',
     'membership_terms_url'       => 'URL des conditions et consentements',
+    'membership_portal_features' => 'Fonctionnalités du portail membre',
+    'membership_portal_features_sub' => 'Choisissez les fonctionnalités et widgets affichés aux membres dans leur tableau de bord du portail client.',
+    'membership_enable_card'     => 'Activer la carte de membre numérique et le code QR',
+    'membership_enable_attendance' => 'Activer le suivi des présences et les présences récentes',
+    'membership_enable_checkin_howto' => 'Activer les instructions d\'enregistrement (« Comment s\'enregistrer »)',
     'membership_booking_gate'    => 'Contrôle des réservations',
     'membership_booking_gate_hint' => "Ces règles sont appliquées par le module Réservation une fois l'intégration en place (phase 4). Configurez-les maintenant pour qu'elles s'appliquent automatiquement.",
     'membership_require_active'  => 'Exiger une adhésion active pour réserver',
