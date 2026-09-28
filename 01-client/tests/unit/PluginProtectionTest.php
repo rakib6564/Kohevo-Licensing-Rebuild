@@ -86,4 +86,11 @@ unit('cards: no author, no description, no homepage; the destructive actions are
     assert_true(str_contains($__page, 'class="plug-menu"'), 'download / uninstall live in the ⋯ menu');
     assert_true(str_contains($__page, 'role="switch"'), 'the on/off control is an accessible switch');
     assert_true(str_contains($__page, "\$showUpload      = \$canUpload && !\$locked"), 'the upload box only appears when unlocked');
+
+    // Compact one-row card: everything secondary sits in the ⋯ menu, so a card can never overflow (the old footer row did).
+    assert_true(str_contains($__page, 'class="plug-ctl"'), 'right-hand controls are one small cluster: switch + menu');
+    assert_false(str_contains($__page, 'plug-foot'), 'the crowded two-row footer is gone');
+    assert_true(str_contains($__page, "class=\"plug-menu-item\" role=\"menuitem\" onclick=\"document.getElementById('cap-modal-"), 'Capabilities opens from the ⋯ menu');
+    assert_true(str_contains($__page, 'min(100%, 300px)'), 'the grid can never force horizontal scroll on a small phone');
+    assert_true(str_contains($__page, '.plug-search input#plug-search-input'), 'the search box overrides the global input style (no double border)');
 });

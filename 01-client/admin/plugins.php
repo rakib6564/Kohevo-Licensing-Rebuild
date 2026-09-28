@@ -546,6 +546,10 @@ $csrf = csrf_token();
     font-size: 12.5px; color: var(--text); width: 100%; min-width: 0;
 }
 .plug-search input::placeholder { color: var(--subtle); }
+/* The global form-input style adds its own border/padding/height, which drew a second box inside this pill. */
+.plug-search input#plug-search-input {
+    border: 0; background: transparent; box-shadow: none; border-radius: 0; padding: 0; height: auto; min-height: 0; outline: none;
+}
 
 /* ── Upload dropzone ───────────────────────────────────────── */
 .plug-upload {
@@ -629,52 +633,52 @@ $csrf = csrf_token();
 .plug-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
 
 /* ── Plugin card grid ──────────────────────────────────────── */
+/* One compact row per plugin:  [icon]  Name / ● Status · vX  [switch] [⋯]
+   Everything secondary (Capabilities, Download, Uninstall) lives in the ⋯ menu, so a card can never overflow. */
 .plug-grid {
-    display: grid; gap: 12px;
-    /* min(100%, 260px) keeps a single card from forcing horizontal overflow on small phones. */
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+    display: grid; gap: 10px;
+    /* min(100%, 300px): a single card never forces horizontal overflow on a small phone. */
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
 }
 .plug-card {
-    position: relative; display: flex; flex-direction: column; gap: 14px;
-    border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface);
-    padding: 16px;
+    position: relative; display: flex; align-items: center; gap: 12px;
+    min-height: 68px; padding: 12px 12px 12px 16px;
+    border: 1px solid var(--border); border-radius: 14px; background: var(--surface);
     transition: border-color .14s ease, box-shadow .14s ease;
 }
 .plug-card.is-hidden { display: none; }
 .plug-card:hover { border-color: var(--border-stronger); box-shadow: var(--shadow-md); }
 .plug-card:has(.plug-menu[open]) { z-index: 5; }
 /* Left status spine — only the meaningful states get colour. */
-.plug-card::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 999px; background: transparent; }
+.plug-card::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 0 3px 3px 0; background: transparent; }
 .plug-card.is-active::before        { background: var(--success); }
 .plug-card.is-system-plugin::before { background: var(--accent); }
 
-.plug-card-top { display: flex; align-items: center; gap: 12px; }
 .plug-avatar {
-    width: 42px; height: 42px; flex: none; border-radius: 12px; display: grid; place-items: center;
+    width: 40px; height: 40px; flex: none; border-radius: 11px; display: grid; place-items: center;
     color: var(--muted); background: var(--surface-2); border: 1px solid var(--border);
 }
-.plug-avatar svg { width: 20px; height: 20px; }
+.plug-avatar svg { width: 19px; height: 19px; }
 .plug-card.is-active .plug-avatar { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
+
 .plug-id { min-width: 0; flex: 1; }
 .plug-name {
-    font-size: 14.5px; font-weight: 650; letter-spacing: -0.01em; line-height: 1.3; color: var(--text);
+    font-size: 14px; font-weight: 650; letter-spacing: -0.01em; line-height: 1.3; color: var(--text);
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
 }
-.plug-slug { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-.plug-pill {
-    flex: none; display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 600;
-    padding: 3px 9px; border-radius: 999px; border: 1px solid transparent;
-    background: var(--accent-soft); color: var(--accent-deep);
-}
-.plug-card.is-system-plugin { border-color: color-mix(in srgb, var(--accent) 22%, var(--border)); }
-
-/* Footer: state switch on the left, secondary actions on the right */
-.plug-foot { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 13px; border-top: 1px solid var(--border); }
-.plug-foot form { margin: 0; }
-.plug-foot-spacer { flex: 1; }
-.plug-state { display: inline-flex; align-items: center; gap: 9px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.plug-meta { display: flex; align-items: center; gap: 6px; margin-top: 3px; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.plug-dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--subtle); }
+.plug-card.is-active .plug-dot { background: var(--success); box-shadow: 0 0 0 3px rgba(22,163,74,.14); }
+.plug-card.is-system-plugin .plug-dot { background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent); }
+.plug-state-label { font-weight: 600; }
 .plug-card.is-active .plug-state-label { color: #15803D; }
+.plug-card.is-system-plugin .plug-state-label { color: var(--accent-deep); }
+.plug-ver { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.plug-ver::before { content: "·"; margin-right: 6px; color: var(--border-stronger); }
+
+/* Right-hand controls */
+.plug-ctl { display: flex; align-items: center; gap: 8px; flex: none; }
+.plug-ctl form { margin: 0; display: flex; }
 .plug-switch {
     position: relative; width: 38px; height: 22px; flex: none; padding: 0; border: 0; border-radius: 999px;
     background: var(--border-stronger); cursor: pointer; transition: background .15s ease;
@@ -685,13 +689,16 @@ $csrf = csrf_token();
 }
 .plug-switch.is-on { background: var(--success); }
 .plug-switch.is-on::after { transform: translateX(16px); }
-.plug-switch:disabled { cursor: not-allowed; opacity: .5; }
+/* Locked: the switch shows a small padlock on its knob (no extra icon taking room in the row). */
+.plug-switch:disabled { cursor: not-allowed; opacity: .6; }
+.plug-switch:disabled::after {
+    background: #fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667085' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'><rect x='4' y='11' width='16' height='10' rx='2'/><path d='M8 11V7a4 4 0 0 1 8 0v4'/></svg>") center / 10px no-repeat;
+}
 .plug-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.plug-lock-ico { width: 13px; height: 13px; flex: none; color: var(--subtle); }
-.plug-required { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
-.plug-required svg { width: 14px; height: 14px; }
+.plug-lockchip { width: 34px; height: 34px; display: grid; place-items: center; color: var(--muted); }
+.plug-lockchip svg { width: 16px; height: 16px; }
 
-/* Buttons (also used by the upload box and the Capabilities button) */
+/* Buttons (also used by the protection bar and the upload box) */
 .plug-act {
     display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; font-weight: 600; line-height: 1;
     padding: 8px 11px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong);
@@ -702,23 +709,23 @@ $csrf = csrf_token();
 .plug-act svg { width: 14px; height: 14px; }
 .plug-act-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .plug-act-primary:hover { background: var(--accent-deep); border-color: var(--accent-deep); color: #fff; }
-.plug-act-n { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); background: var(--surface-sunken); border-radius: 999px; padding: 1px 6px; }
 
-/* "⋯" menu (no JavaScript needed to open it) */
+/* "⋯" menu (opens without JavaScript) */
 .plug-menu { position: relative; }
 .plug-menu > summary {
     list-style: none; cursor: pointer; width: 34px; height: 34px; display: grid; place-items: center;
-    border-radius: var(--radius-sm); border: 1px solid var(--border-strong); color: var(--muted); background: var(--surface);
+    border-radius: 10px; border: 1px solid var(--border); color: var(--muted); background: var(--surface);
 }
 .plug-menu > summary::-webkit-details-marker { display: none; }
-.plug-menu > summary:hover, .plug-menu[open] > summary { background: var(--surface-2); color: var(--text); }
+.plug-menu > summary:hover, .plug-menu[open] > summary { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
 .plug-menu > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .plug-menu > summary svg { width: 16px; height: 16px; }
 .plug-menu-pop {
-    position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 224px; padding: 6px;
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 230px; padding: 6px;
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg, var(--shadow-md));
 }
 .plug-menu-pop form { margin: 0; }
+.plug-menu-sep { height: 1px; margin: 5px 4px; background: var(--border); }
 .plug-menu-item {
     display: flex; align-items: flex-start; gap: 9px; width: 100%; padding: 9px 10px; border: 0; background: transparent;
     border-radius: 8px; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--text-2); text-align: left; cursor: pointer; text-decoration: none;
@@ -729,6 +736,7 @@ $csrf = csrf_token();
 .plug-menu-item.is-danger:hover { background: var(--danger-soft); }
 .plug-menu-item[disabled], .plug-menu-item[disabled]:hover { opacity: .6; cursor: not-allowed; background: transparent; color: var(--muted); }
 .plug-menu-hint { display: block; font-size: 11px; font-weight: 400; color: var(--muted); margin-top: 1px; }
+.plug-menu-n { margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); background: var(--surface-sunken); border-radius: 999px; padding: 1px 7px; }
 
 /* ── Empty state ───────────────────────────────────────────── */
 .plug-empty {
@@ -778,7 +786,6 @@ $csrf = csrf_token();
     .plug-hero-counts { display: none; }
     .plug-grid { grid-template-columns: minmax(0, 1fr); }
 
-    .plug-foot { flex-wrap: wrap; }
     .plug-lockbar .plug-act { width: 100%; justify-content: center; }
 }
 </style>
@@ -963,26 +970,24 @@ $csrf = csrf_token();
             <article class="plug-card is-<?= e($status) ?><?= $isSystem ? ' is-system-plugin' : '' ?>"
                      data-status="<?= e($status) ?>"
                      data-search="<?= e($haystack) ?>">
-                <div class="plug-card-top">
-                    <span class="plug-avatar"><?= slate_plugin_icon_svg($slug) ?></span>
-                    <div class="plug-id">
-                        <div class="plug-name" title="<?= e($p['name']) ?>"><?= e($p['name']) ?></div>
-                        <div class="plug-slug"><?= e($slug) ?> · v<?= e($p['version']) ?></div>
+                <span class="plug-avatar"><?= slate_plugin_icon_svg($slug) ?></span>
+                <div class="plug-id">
+                    <div class="plug-name" title="<?= e($p['name'] . ' — ' . $slug) ?>"><?= e($p['name']) ?></div>
+                    <div class="plug-meta">
+                        <span class="plug-dot" aria-hidden="true"></span>
+                        <span class="plug-state-label"><?= ($isSystem && $isActive) ? __('system', 'System') : ($isActive ? __('plugin_state_on', 'Active') : __('plugin_state_off', 'Inactive')) ?></span>
+                        <span class="plug-ver">v<?= e($p['version']) ?></span>
                     </div>
-                    <?php if ($isSystem): ?>
-                        <span class="plug-pill" title="<?= e(__('system_plugin_hint', 'Built-in — always on, can\'t be removed')) ?>"><?= __('system', 'System') ?></span>
-                    <?php endif; ?>
                 </div>
 
-                <div class="plug-foot">
+                <div class="plug-ctl">
                     <?php if ($isSystem && $isActive): ?>
-                        <span class="plug-required" title="<?= e(__('system_plugin_hint', 'Built-in — always on, can\'t be removed')) ?>">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-                            <?= __('required', 'Required') ?>
+                        <span class="plug-lockchip" title="<?= e(__('system_plugin_hint', 'Built-in — always on, can\'t be removed')) ?>">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-label="<?= e(__('required', 'Required')) ?>"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
                         </span>
                     <?php elseif ($canToggle): ?>
                         <?php // Turning ON is never locked; turning OFF is (and asks to confirm). ?>
-                        <form method="post" class="plug-state"
+                        <form method="post"
                               <?= $isActive ? 'data-plug-confirm="' . e(sprintf(__('plugin_confirm_deactivate', 'Deactivate "%s"? Its features stop working until you turn it back on.'), $p['name'])) . '"' : '' ?>>
                             <?= csrf_field() ?>
                             <input type="hidden" name="_action" value="<?= $isActive ? 'deactivate' : 'activate' ?>">
@@ -991,22 +996,7 @@ $csrf = csrf_token();
                                     aria-checked="<?= $isActive ? 'true' : 'false' ?>"
                                     aria-label="<?= e(($isActive ? __('deactivate', 'Deactivate') : __('activate', 'Activate')) . ' — ' . $p['name']) ?>"
                                     <?= ($isActive && $locked) ? 'disabled title="' . e($lockTitle) . '"' : '' ?>></button>
-                            <span class="plug-state-label"><?= $isActive ? __('plugin_state_on', 'Active') : __('plugin_state_off', 'Inactive') ?></span>
-                            <?php if ($isActive && $locked): ?>
-                                <svg class="plug-lock-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-                            <?php endif; ?>
                         </form>
-                    <?php else: ?>
-                        <span class="plug-state"><span class="plug-state-label"><?= $isActive ? __('plugin_state_on', 'Active') : __('plugin_state_off', 'Inactive') ?></span></span>
-                    <?php endif; ?>
-
-                    <span class="plug-foot-spacer"></span>
-
-                    <?php if ($capCount > 0 && $isActive): ?>
-                        <button type="button" class="plug-act" onclick="document.getElementById('cap-modal-<?= e($slug) ?>').showModal()" title="<?= __('configure_capabilities', 'Configure capabilities') ?>">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-                            <?= __('capabilities', 'Capabilities') ?> <span class="plug-act-n"><?= $capCount ?></span>
-                        </button>
                     <?php endif; ?>
 
                     <details class="plug-menu">
@@ -1014,6 +1004,12 @@ $csrf = csrf_token();
                             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
                         </summary>
                         <div class="plug-menu-pop" role="menu">
+                            <?php if ($capCount > 0 && $isActive): ?>
+                            <button type="button" class="plug-menu-item" role="menuitem" onclick="document.getElementById('cap-modal-<?= e($slug) ?>').showModal()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+                                <span><?= __('capabilities', 'Capabilities') ?></span><span class="plug-menu-n"><?= $capCount ?></span>
+                            </button>
+                            <?php endif; ?>
                             <a class="plug-menu-item" role="menuitem" href="<?= e($downloadUrl) ?>"
                                title="<?= e(sprintf(__('download_plugin_zip', 'Download %s as a ZIP'), $p['name'])) ?>">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -1022,6 +1018,7 @@ $csrf = csrf_token();
                             <?php if ($canUninstall && !$isSystem):
                                 $uninstallBlocked = $isActive ? __('plugin_uninstall_deactivate_first', 'Deactivate it first') : ($locked ? __('plugin_toggle_locked', 'Locked — click "Unlock changes" first') : '');
                             ?>
+                            <div class="plug-menu-sep" role="separator"></div>
                             <form method="post"
                                   data-plug-type="<?= e($slug) ?>"
                                   data-plug-type-msg="<?= e(sprintf(__('plugin_uninstall_type_prompt', 'This permanently deletes all data of "%1$s". To confirm, type: %2$s'), $p['name'], $slug)) ?>"
@@ -1115,7 +1112,11 @@ $csrf = csrf_token();
     function closeMenus(except) {
         document.querySelectorAll('details.plug-menu[open]').forEach(function (d) { if (d !== except) d.removeAttribute('open'); });
     }
-    document.addEventListener('click', function (e) { closeMenus(e.target.closest && e.target.closest('details.plug-menu')); });
+    document.addEventListener('click', function (e) {
+        var item = e.target.closest && e.target.closest('button.plug-menu-item[type="button"]');
+        if (item) { var d = item.closest('details'); if (d) d.removeAttribute('open'); }   // e.g. Capabilities opens a dialog
+        closeMenus(e.target.closest && e.target.closest('details.plug-menu'));
+    });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenus(null); });
 })();
 </script>
