@@ -9,6 +9,8 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
 
 ## [Unreleased]
 
+## [1.6.2] — 2026-09-28
+
 ### Fixed
 - **Client did not pick up license changes made on the Central Server** (for example a renewed or extended expiry kept
   showing the old date). The client only refreshed its license through an optional cron job, so an install without that
@@ -121,5 +123,6 @@ The commercial licensing architecture was rebuilt end to end; phase notes are in
   handling; daily `bin/license-check.php` check-in.
 - **Security hardening** (Phase 11) and production QA (Phases 12–14), verified in CI on MySQL 8.0 and MariaDB 10.11.
 
+[1.6.2]: https://github.com/rakib6564/Kohevo-Licensing-Rebuild/releases/tag/v1.6.2
 [1.6.1]: https://github.com/rakib6564/Kohevo-Licensing-Rebuild/releases/tag/v1.6.1
 [1.6.0]: https://github.com/rakib6564/Kohevo-Licensing-Rebuild/releases/tag/v1.6.0

@@ -24,7 +24,7 @@
  */
 
 define('SLATE_ROOT', __DIR__);
-define('SLATE_VERSION', '1.6.1');
+define('SLATE_VERSION', '1.6.2');
 $installMarker = SLATE_ROOT . '/.installed';
 
 // ── Already installed ───────────────────────────────────────
