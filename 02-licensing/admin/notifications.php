@@ -84,6 +84,27 @@ require SLATE_ROOT . '/admin/partials/header.php';
     ['label' => __('notifications', 'Notifications')],
 ]); ?>
 
+<style>
+/* Notifications — layout that survives long (translated) labels on narrow screens. */
+.notif-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.notif-bulkbar { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin:0 0 14px; padding:10px 14px;
+                 background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius-sm); }
+.notif-bulkbar__all { display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; min-width:0; }
+.notif-bulkbar__all input { width:17px; height:17px; accent-color:var(--accent); flex-shrink:0; }
+.notif-bulkbar__spacer { flex:1; }
+.notif-bulkbar .btn { white-space:normal; text-align:center; }
+@media (max-width: 640px) {
+    /* Select-all on its own line; the two bulk actions then share the next line equally. */
+    .notif-bulkbar__all { flex:1 1 100%; }
+    .notif-bulkbar__spacer { display:none; }
+    .notif-bulkbar .btn { flex:1 1 0; min-width:0; align-self:stretch; }
+    /* The shared mobile rule makes every form in a page header full width; keep the two header actions side by side. */
+    .page-header .notif-actions { width:100%; }
+    .page-header .notif-actions form { flex:1 1 0; width:auto; min-width:0; }
+    .page-header .notif-actions .btn { width:100%; white-space:normal; }
+}
+</style>
+
 <div class="page-header">
     <div>
         <h1><?= __('notifications', 'Notifications') ?></h1>
@@ -93,7 +114,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 : e(sprintf(__('notif_count', '%s total.'), number_format($total))) ?>
         </p>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <div class="notif-actions">
         <?php if ($unread > 0): ?>
             <form method="post" style="margin:0">
                 <?= csrf_field() ?>
@@ -112,13 +133,12 @@ require SLATE_ROOT . '/admin/partials/header.php';
 </div>
 
 <?php if (!empty($rows)): ?>
-<div id="notif-bulkbar" hidden
-     style="display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:10px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);">
-    <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
-        <input type="checkbox" id="notif-all" style="width:17px;height:17px;accent-color:var(--accent);">
+<div id="notif-bulkbar" class="notif-bulkbar" hidden>
+    <label class="notif-bulkbar__all">
+        <input type="checkbox" id="notif-all">
         <span id="notif-selcount"><?= e(__('notif_select_all', 'Select all')) ?></span>
     </label>
-    <span style="flex:1;"></span>
+    <span class="notif-bulkbar__spacer"></span>
     <button type="button" id="notif-bulk-read" class="btn btn-sm"><?= e(__('notif_mark_read', 'Mark read')) ?></button>
     <button type="button" id="notif-bulk-del" class="btn btn-sm btn-danger"><?= e(__('notif_delete_selected', 'Delete selected')) ?></button>
 </div>
