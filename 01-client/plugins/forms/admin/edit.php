@@ -1786,6 +1786,9 @@ $fbI18n = [
     'advanced_dsl_btn' => __('forms_edit_advanced_dsl', 'Advanced (DSL)'),
     'close_word' => __('close', 'Close'),
     'copied' => __('copied', 'Copied!'),
+    'disclaimer_ph' => __('forms_edit_js_disclaimer_ph', 'Please read carefully before signing'),
+    'disclaimer_terms' => __('forms_edit_js_disclaimer_terms', 'Enter your terms, disclaimer and indemnity text here. The visitor must tick the agreement box below to submit.'),
+    'disclaimer_agree' => __('forms_edit_js_disclaimer_agree', 'I have read and agree to the terms and disclaimer above.'),
 ];
 ?>
 var FB_I18N = <?= json_encode($fbI18n, JSON_UNESCAPED_UNICODE) ?>;
@@ -1836,9 +1839,9 @@ var FB_I18N = <?= json_encode($fbI18n, JSON_UNESCAPED_UNICODE) ?>;
         var f = { type: t, name: uniqueName(t), label: defaultLabel(t),
                   required: false, placeholder: '', options: defaultOptions(t), _named: false };
         if (t === 'disclaimer') {
-            f.placeholder = 'Please read carefully before signing';
-            f.terms = 'Enter your terms, disclaimer and indemnity text here. The visitor must tick the agreement box below to submit.';
-            f.agree = 'I have read and agree to the terms and disclaimer above.';
+            f.placeholder = FB_I18N.disclaimer_ph;
+            f.terms = FB_I18N.disclaimer_terms;
+            f.agree = FB_I18N.disclaimer_agree;
             f.required = true;
         }
         return f;

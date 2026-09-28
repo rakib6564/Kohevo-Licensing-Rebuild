@@ -25,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Database::setSetting('membership.enable_card',                !isset($_POST['enable_card']) ? '0' : '1');
         Database::setSetting('membership.enable_attendance',          !isset($_POST['enable_attendance']) ? '0' : '1');
         Database::setSetting('membership.enable_checkin_howto',       !isset($_POST['enable_checkin_howto']) ? '0' : '1');
+        Database::setSetting('membership.enable_profile_completion',  !isset($_POST['enable_profile_completion']) ? '0' : '1');
         $insSvcs = array_filter(array_map('intval', (array)($_POST['insurance_services'] ?? [])));
         Database::setSetting('membership.insurance_required_services', implode(',', array_unique($insSvcs)));
         Database::setSetting('membership.expiry_reminder_days', preg_replace('/[^0-9,]/', '', (string)($_POST['expiry_reminder_days'] ?? '7,3')) ?: '7,3');
@@ -97,6 +98,16 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 </span>
                 <span><?= __('membership_enable_checkin_howto', 'Enable check-in instructions ("How to check in")') ?></span>
             </label>
+        </div>
+        <div class="field">
+            <label class="switch-label">
+                <span class="switch">
+                    <input type="checkbox" name="enable_profile_completion" value="1" <?= $g('enable_profile_completion', '1') !== '0' ? 'checked' : '' ?>>
+                    <span class="switch-track"></span>
+                </span>
+                <span><?= __('membership_enable_profile_completion', 'Enable member profile completion (welcome wizard)') ?></span>
+            </label>
+            <p class="field-hint"><?= __('membership_enable_profile_completion_help', 'When off, new members go straight to their portal and the booking gate no longer requires a completed profile.') ?></p>
         </div>
     </div>
 

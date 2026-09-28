@@ -280,7 +280,7 @@ function forms_public_layout_start(string $title, bool $embed): void {
 
 function forms_public_layout_end(bool $embed): void {
     if (!$embed) {
-        echo '<footer class="forms-public-footer text-sm text-muted text-center">Powered by '
+        echo '<footer class="forms-public-footer text-sm text-muted text-center">' . e(__('platform_powered_by', 'Powered by')) . ' '
            . e(Database::setting('site_name') ?: 'Kohevo') . '</footer>';
     } else {
         // Embedded in a page (Content Builder "Form" block): size the host

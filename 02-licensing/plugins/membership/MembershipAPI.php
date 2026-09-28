@@ -549,6 +549,16 @@ class MembershipAPI {
         ) ?: [];
     }
 
+    /**
+     * Whether the member-profile completion step is switched on
+     * (Membership → Settings → Member portal features). On by default; when off, members
+     * are never forced through the welcome wizard and the Booking gate stops asking for a
+     * completed profile.
+     */
+    public static function profileCompletionEnabled(): bool {
+        return (string) Database::setting('membership.enable_profile_completion') !== '0'; // default on
+    }
+
     public static function profile(int $customerId): ?array {
         self::ensureSchema();
         return Database::row(

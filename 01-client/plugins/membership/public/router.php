@@ -73,7 +73,7 @@ if (!empty($_GET['return_to'])) {
 function membership_maybe_return(int $cid): bool {
     if (empty($_SESSION['membership_return_to'])) return false;
     $prof = MembershipAPI::profile($cid);
-    if (empty($prof['onboarding_complete'])) return false;
+    if (MembershipAPI::profileCompletionEnabled() && empty($prof['onboarding_complete'])) return false;
     $dest = $_SESSION['membership_return_to'];
     unset($_SESSION['membership_return_to']);
     header('Location: ' . $dest);
@@ -218,11 +218,16 @@ if ($view === 'return') {
 
 $profile = MembershipAPI::profile($cid) ?: [];
 $status  = MembershipAPI::status($cid);
-$onboarded = !empty($profile['onboarding_complete']);
+// With profile completion switched off nobody is 'un-onboarded', so no gate and the full nav shows.
+$onboarded = !MembershipAPI::profileCompletionEnabled() || !empty($profile['onboarding_complete']);
 
 // Profile-completion gate: until the wizard is done, the only view is itself.
 if (!$onboarded && $view !== 'onboarding') {
     $view = 'onboarding';
+}
+// Switched off: the wizard is unreachable, not merely unforced (old links / bookmarks land on home).
+if (!MembershipAPI::profileCompletionEnabled() && $view === 'onboarding') {
+    $view = 'home';
 }
 
 // ── App shell (self-contained, mobile-app style) ────────────────────────

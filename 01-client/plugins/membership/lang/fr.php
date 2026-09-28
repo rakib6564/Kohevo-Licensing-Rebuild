@@ -365,4 +365,6 @@ return [
     'membership_notif_their_plan' => 'son forfait',
     'membership_notif_payment_failed' => 'Échec du paiement de l\'adhésion',
     'membership_notif_payment_failed_body' => 'Le paiement pour %s n\'a pas abouti.',
+    'membership_enable_profile_completion' => 'Activer la complétion du profil membre (assistant de bienvenue)',
+    'membership_enable_profile_completion_help' => 'Désactivée, les nouveaux membres accèdent directement à leur espace et la réservation n’exige plus de profil complété.',
 ];

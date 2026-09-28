@@ -186,7 +186,9 @@ class Membership extends Plugin {
         // not a blanket "every service needs membership" rule.
         $requireMembership = (string) Database::setting('membership.require_membership_to_book') !== '0' // default on
             && MembershipAPI::serviceRequiresMembership($svcId);
-        $requireProfile    = (string) Database::setting('membership.require_profile_to_book')    !== '0'; // default on
+        // A profile can only be required while the completion step itself is enabled.
+        $requireProfile    = MembershipAPI::profileCompletionEnabled()
+            && (string) Database::setting('membership.require_profile_to_book') !== '0'; // default on
 
         $block = fn(string $msg) => ['ok' => false, 'error' => $msg];
 

@@ -1217,10 +1217,10 @@ class FormsAPI {
             if ($dname === '') return '';
             $did    = 'f_' . preg_replace('/[^a-z0-9_]/i', '', $dname);
             $dreq   = !empty($field['required']);
-            $dtitle = trim((string)($field['label'] ?? '')) ?: 'Disclaimer';
+            $dtitle = trim((string)($field['label'] ?? '')) ?: __('forms_disclaimer_default_title', 'Disclaimer');
             $dsub   = trim((string)($field['placeholder'] ?? ''));
             $dterms = (string)($field['terms'] ?? '');
-            $dagree = trim((string)($field['agree'] ?? '')) ?: 'I have read and agree to the terms above.';
+            $dagree = trim((string)($field['agree'] ?? '')) ?: __('forms_disclaimer_agree_default', 'I have read and agree to the terms above.');
             $warn   = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
             ob_start();
             echo '<div class="field forms-disclaimer"' . $cond . '>';

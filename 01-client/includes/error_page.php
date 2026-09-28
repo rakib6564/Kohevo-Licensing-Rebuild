@@ -18,6 +18,25 @@ if (!function_exists('slate_render_error')) {
     function slate_render_error(int $status, string $title, string $message): void {
         @http_response_code($status);
         $e = static fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
+        // Translate the English title/message/labels when the i18n layer is up. On a
+        // hard failure (database down, i18n not loaded) fall back to the English as given,
+        // so an error page can never itself fail because of translation.
+        $tr = static function (string $s): string {
+            if ($s === '' || !function_exists('__')) return $s;
+            try {
+                $key = 'err_' . substr(trim((string)preg_replace('/[^a-z0-9]+/', '_', strtolower($s)), '_'), 0, 60);
+                return (string)__($key, $s);
+            } catch (\Throwable $ignored) {
+                return $s;
+            }
+        };
+        try {
+            $pageLang = class_exists('I18n') ? (string)I18n::currentLocale() : 'en';
+        } catch (\Throwable $ignored) {
+            $pageLang = 'en';
+        }
+        $title   = $tr($title);
+        $message = $tr($message);
 
         $home    = defined('SLATE_URL') ? rtrim((string)SLATE_URL, '/') : '';
         $accent  = '#111111';
@@ -67,7 +86,7 @@ if (!function_exists('slate_render_error')) {
         $favicon = $logo !== '' ? $logo : ($home !== '' ? $home . '/assets/img/kohevo-favicon.ico' : '');
         ?>
 <!doctype html>
-<html lang="en">
+<html lang="<?= $e($pageLang) ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -136,18 +155,18 @@ if (!function_exists('slate_render_error')) {
         $errLogoUrl = $logoDark !== '' ? $logoDark : $logo;
         ?>
         <?php if ($errLogoUrl !== ''): ?><img class="logo" src="<?= $e($errLogoUrl) ?>" alt="<?= $e($biz) ?>"><?php endif; ?>
-        <div class="code">Error <?= $status ?></div>
+        <div class="code"><?= $e($tr('Error')) ?> <?= $status ?></div>
         <h1><?= $e($title) ?></h1>
         <p><?= $e($message) ?></p>
         <div class="actions">
             <a class="btn btn-primary" href="<?= $e($home) ?>/">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
-                Return home
+                <?= $e($tr('Return home')) ?>
             </a>
             <?php if ($siteUrl !== ''): ?>
             <a class="btn btn-ghost" href="<?= $e($siteUrl) ?>">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
-                Back to website
+                <?= $e($tr('Back to website')) ?>
             </a>
             <?php endif; ?>
         </div>

@@ -97,13 +97,13 @@ function slate_render_landing(): void {
     $eyebrow = (string)Database::setting('landing_eyebrow');
     $title   = (string)Database::setting('landing_title')   ?: $bizName;
     $intro   = (string)Database::setting('landing_intro')   ?:
-        'Choose an option below to get started.';
+        __('landing_default_intro', 'Choose an option below to get started.');
     $footer  = (string)Database::setting('landing_footer')  ?:
-        ('© ' . date('Y') . ' ' . $bizName . '. All rights reserved.');
+        sprintf(__('landing_default_footer', '© %s %s. All rights reserved.'), date('Y'), $bizName);
 
     // Back-to-website link (main domain) — hidden when blank.
     $siteUrl   = (string)Database::setting('landing_website_url');
-    $siteLabel = (string)Database::setting('landing_website_label') ?: 'Back to website';
+    $siteLabel = (string)Database::setting('landing_website_label') ?: __('back_to_website', 'Back to website');
 
     // Contact details from the business profile (Settings → Profile). Each is
     // shown only when set; phone/email become tel:/mailto: links.
@@ -176,7 +176,7 @@ function slate_render_landing(): void {
     }
     ?>
 <!doctype html>
-<html lang="en">
+<html lang="<?= e(I18n::currentLocale()) ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

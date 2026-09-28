@@ -77,7 +77,7 @@ function bookingplus_prereq_page(string $title, string $bodyHtml, string $ctaUrl
     $logoUrl  = $logoRel !== '' ? SLATE_URL . '/' . ltrim($logoRel, '/') : '';
     ?>
 <!doctype html>
-<html lang="en">
+<html lang="<?= e(I18n::currentLocale()) ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">

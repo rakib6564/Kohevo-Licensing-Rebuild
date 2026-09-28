@@ -18,4 +18,11 @@ return [
     'forms_save_pdf'                => 'Save PDF',
     'forms_submission_limit_reached'=> 'This form has reached its submission limit and is no longer accepting entries.',
     'forms_not_found'                => 'Not found',
+  'forms_disclaimer_agree_default' => 'I have read and agree to the terms above.',
+  'forms_disclaimer_default_title' => 'Disclaimer',
+  'forms_edit_js_disclaimer_ph' => 'Please read carefully before signing',
+  'forms_edit_js_disclaimer_terms' => 'Enter your terms, disclaimer and indemnity text here. The visitor must tick the agreement box below to submit.',
+  'forms_edit_js_disclaimer_agree' => 'I have read and agree to the terms and disclaimer above.',
+  'forms_edit_sender_name_ph' => 'Jane Doe',
+  'forms_edit_sender_company_ph' => 'Your Company',
 ];

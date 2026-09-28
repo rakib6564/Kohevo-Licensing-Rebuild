@@ -530,4 +530,11 @@ return [
     'forms_edit_window_seconds' => 'Fenêtre (secondes)',
     'forms_edit_zero_off' => '0 = désactivé',
     'forms_edit_zero_unlimited' => '0 = illimité',
+  'forms_disclaimer_agree_default' => 'J’ai lu et j’accepte les conditions ci-dessus.',
+  'forms_disclaimer_default_title' => 'Avertissement',
+  'forms_edit_js_disclaimer_ph' => 'Veuillez lire attentivement avant de signer',
+  'forms_edit_js_disclaimer_terms' => 'Saisissez ici vos conditions, votre avertissement et votre clause d’indemnisation. Le visiteur doit cocher la case d’acceptation ci-dessous pour envoyer le formulaire.',
+  'forms_edit_js_disclaimer_agree' => 'J’ai lu et j’accepte les conditions et l’avertissement ci-dessus.',
+  'forms_edit_sender_name_ph' => 'Jeanne Dupont',
+  'forms_edit_sender_company_ph' => 'Votre entreprise',
 ];

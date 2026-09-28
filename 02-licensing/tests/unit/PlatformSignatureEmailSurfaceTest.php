@@ -45,25 +45,28 @@ unit('BrandedEmail.php: the platform signature is appended after the tenant "Sen
 
 // ── Auth.php: verification + password reset ─────────────────
 
-unit('Auth.php: both the verification and reset email bodies carry the platform signature exactly once each, appended after their existing content, in file order', function () {
+unit('Auth.php: the verification and reset emails go through the branded shell, which supplies the platform signature exactly once each (no hand-appended copy)', function () {
     $src = _p5_src('src/Services/Auth/Auth.php');
-    assert_eq(2, substr_count($src, 'PlatformIdentity::signature()'), 'expected exactly one platform-signature call site per email function');
+    // The shell (BrandedEmail::shell) appends the signature. A second, hand-appended copy in Auth.php would print it twice.
+    assert_eq(0, substr_count($src, 'PlatformIdentity::signature()'), 'Auth.php must not append the signature itself; the branded shell does');
     assert_false(str_contains($src, '/assets/platform/brand/'));
+    assert_eq(2, substr_count($src, 'BrandedEmail::simple('), 'expected exactly one branded-shell call per email function');
 
     $verifyIgnorePos = strpos($src, 'auth_email_verify_ignore');
     $resetIgnorePos  = strpos($src, 'auth_email_reset_ignore');
     assert_true($verifyIgnorePos !== false && $resetIgnorePos !== false);
     assert_true($verifyIgnorePos < $resetIgnorePos, 'sendCustomerVerification is expected to appear before sendCustomerPasswordReset in the file');
 
-    $verifySignaturePos = strpos($src, 'PlatformIdentity::signature()', $verifyIgnorePos);
-    $resetSignaturePos  = strpos($src, 'PlatformIdentity::signature()', $resetIgnorePos);
-    assert_true($verifySignaturePos !== false && $resetSignaturePos !== false);
+    $verifyShellPos = strpos($src, 'BrandedEmail::simple(', $verifyIgnorePos);
+    $resetShellPos  = strpos($src, 'BrandedEmail::simple(', $resetIgnorePos);
+    assert_true($verifyShellPos !== false && $resetShellPos !== false);
+    assert_true($verifyShellPos > $verifyIgnorePos && $verifyShellPos < $resetIgnorePos,
+        'verification email must use the shell within sendCustomerVerification, not leak into sendCustomerPasswordReset');
+    assert_true($resetShellPos > $resetIgnorePos, 'reset email must use the shell within sendCustomerPasswordReset');
 
-    // verification's signature sits between its own "ignore" line and the reset function's "ignore" line
-    assert_true($verifySignaturePos > $verifyIgnorePos && $verifySignaturePos < $resetIgnorePos,
-        'verification email signature must be appended within sendCustomerVerification, not leak into sendCustomerPasswordReset');
-    assert_true($resetSignaturePos > $resetIgnorePos,
-        'reset email signature must be appended within sendCustomerPasswordReset');
+    // ...and the shell really does supply the signature, exactly once.
+    $shell = _p5_src('src/Services/Notifications/BrandedEmail.php');
+    assert_eq(1, substr_count($shell, 'PlatformIdentity::signature()'), 'BrandedEmail::shell must carry the platform signature exactly once');
 });
 
 unit('Auth.php: token issuance/consumption and Mailer dispatch are untouched by the Phase 5 branding change (regression guard)', function () {

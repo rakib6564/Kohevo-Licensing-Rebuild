@@ -114,7 +114,16 @@ final class PlatformIdentity
         if (PlatformIdentityPolicy::whiteLabelActive()) {
             return '';
         }
-        return 'Powered by ' . self::NAME;
+        // Only the label is localised; the platform name itself never changes. Guarded
+        // because this also renders on error pages, where i18n or the database may be down.
+        $label = 'Powered by';
+        if (\function_exists('__')) {
+            try {
+                $label = (string)\__('platform_powered_by', 'Powered by');
+            } catch (\Throwable $ignored) {
+            }
+        }
+        return $label . ' ' . self::NAME;
     }
 
     /**
