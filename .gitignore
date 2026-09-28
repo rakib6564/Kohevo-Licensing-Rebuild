@@ -48,3 +48,4 @@ temp/
 
 # Built deployment packages (rebuild from the tree; never version them)
 production-artifacts/*.zip
+*.zip
