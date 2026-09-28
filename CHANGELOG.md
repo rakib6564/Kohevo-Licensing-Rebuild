@@ -29,6 +29,8 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
   on phones); the calendar no longer stretches into giant cells on wide pages.
 
 ### Fixed
+- `scripts/build-release.sh` sometimes refused to build (about a third of runs) with a bogus "SLATE_VERSION does not match" error:
+  `git show | grep -q` under `pipefail` fails when grep exits early. The check now captures the file first.
 - The widget's height report could never shrink (it read a value tied to the iframe's own height), and nothing on the
   host page listened to it, so embeds were cut off at the snippet's fixed height. Both sides are fixed.
 - **Admin → Notifications on phones:** the bulk-action bar no longer pushes the page wider than the screen. With long

@@ -50,7 +50,10 @@ fi
 # The version in code must agree with the VERSION file at that ref, or the package would lie about itself.
 FULL="$(git show "$REF:VERSION" | tr -d '[:space:]')"
 for f in 01-client/config.php 01-client/install.php 02-licensing/config.php 02-licensing/install.php; do
-  git show "$REF:$f" | grep -q "'SLATE_VERSION', '$FULL'" \
+  # Capture first, then grep: `git show | grep -q` under pipefail fails at random (grep -q exits on the first match,
+  # git gets SIGPIPE, and the pipeline reports failure even though the file is right).
+  content="$(git show "$REF:$f")"
+  grep -q "'SLATE_VERSION', '$FULL'" <<<"$content" \
     || { echo "SLATE_VERSION in $f does not match VERSION ($FULL) at $REF" >&2; exit 1; }
 done
 
