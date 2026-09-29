@@ -1,0 +1,35 @@
+{
+    "slug": "studio-builder",
+    "name": "Kohevo Studio",
+    "version": "1.0.0",
+    "description": "Structured visual page, layout, and experience builder for Kohevo.",
+    "author": "Kohevo",
+    "requires_core": ">=1.0.0",
+    "commercial_module": {
+        "entitlement": "studio-builder",
+        "label": "Kohevo Studio",
+        "description": "Structured visual page, layout, and experience builder"
+    },
+    "permissions": [
+        {
+            "key": "studio-builder.view",
+            "label": "View Studio pages, revisions, and design tokens"
+        },
+        {
+            "key": "studio-builder.edit",
+            "label": "Create and edit Studio page drafts and blocks"
+        },
+        {
+            "key": "studio-builder.publish",
+            "label": "Publish, unpublish, and roll back Studio pages"
+        },
+        {
+            "key": "studio-builder.tokens",
+            "label": "Manage tenant Studio design tokens and typography"
+        },
+        {
+            "key": "studio-builder.admin",
+            "label": "Manage Studio templates, locks, and module settings"
+        }
+    ]
+}

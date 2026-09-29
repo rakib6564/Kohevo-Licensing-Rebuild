@@ -113,12 +113,13 @@ unit('central module catalog: defines required fields and exact V1 commercial / 
     }
 
     // Exact V1 commercial module keys
-    assert_eq(['forms', 'membership', 'booking', 'mcp-gateway', 'coaching'], ModuleCatalog::v1CommercialKeys());
+    assert_eq(['forms', 'membership', 'booking', 'mcp-gateway', 'coaching', 'studio-builder'], ModuleCatalog::v1CommercialKeys());
 
     // Dependencies
     assert_eq([], $all['forms']['dependencies']);
     assert_eq(['stripe-payment'], $all['membership']['dependencies']);
     assert_eq(['stripe-payment'], $all['booking']['dependencies']);
+    assert_eq([], $all['studio-builder']['dependencies']);
 
     // Future / Non-V1 modules
     $future = ModuleCatalog::futureModules();

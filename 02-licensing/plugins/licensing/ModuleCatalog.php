@@ -87,6 +87,17 @@ final class ModuleCatalog
             'sort_order'        => 30,
         ],
         [
+            'module_key'        => 'studio-builder',
+            'display_name'      => 'Kohevo Studio',
+            'description'       => 'Structured visual page, layout, and experience builder.',
+            'status'            => 'available',
+            'commercial'        => true,
+            'v1_available'      => true,
+            'plugin_identifier' => 'studio-builder',
+            'dependencies'      => [],
+            'sort_order'        => 39,
+        ],
+        [
             'module_key'        => 'editor',
             'display_name'      => 'Editor',
             'description'       => 'Visual page editor (Future / Not in V1).',

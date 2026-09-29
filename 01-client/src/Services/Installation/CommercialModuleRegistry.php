@@ -77,6 +77,16 @@ final class CommercialModuleRegistry
             'sort_order'              => 35,
         ],
         [
+            'module_key'              => 'studio-builder',
+            'display_name'            => 'Kohevo Studio',
+            'description'             => 'Structured visual page, layout, and experience builder',
+            'plugin_slug'             => 'studio-builder',
+            'v1_available'            => true,
+            'commercial'              => true,
+            'required_infrastructure' => [],
+            'sort_order'              => 39,
+        ],
+        [
             'module_key'              => 'coaching',
             'display_name'            => 'Coaching',
             'description'             => 'Client coaching session, goal, and exercise management',
