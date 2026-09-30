@@ -71,5 +71,18 @@ export function createTransport({ apiUrl, csrfToken, fetchImpl, timeoutMs = TIME
     lockAcquire: (pageId) => call('POST', 'lock_acquire', { body: { page_id: pageId } }),
     lockRefresh: (pageId, token) => call('POST', 'lock_refresh', { body: { page_id: pageId, lock_token: token } }),
     lockRelease: (pageId, token) => call('POST', 'lock_release', { body: { page_id: pageId, lock_token: token }, keepalive: true }),
+    // Phase 6 — template library, global components, chrome bindings, design tokens.
+    manifest: () => call('GET', 'manifest'),
+    templates: (type = null) => call('GET', 'templates', { query: type ? { type } : {} }),
+    components: () => call('GET', 'components'),
+    chrome: (pageId) => call('GET', 'chrome', { query: { page: pageId } }),
+    tokens: (group = 'default') => call('GET', 'tokens', { query: { group } }),
+    applyTemplate: (body) => call('POST', 'apply_template', { body }),
+    insertTemplate: (body) => call('POST', 'insert_template', { body }),
+    saveTemplate: (body) => call('POST', 'save_template', { body }),
+    deleteTemplate: (body) => call('POST', 'delete_template', { body }),
+    createComponent: (body) => call('POST', 'create_component', { body }),
+    detachComponent: (body) => call('POST', 'detach_component', { body }),
+    saveTokens: (body) => call('POST', 'save_tokens', { body }),
   };
 }

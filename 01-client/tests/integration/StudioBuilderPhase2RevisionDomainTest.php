@@ -364,7 +364,8 @@ unit('phase2 integration: StudioTemplateService saves/updates templates, protect
             $page = $tenants->runAs($tenantId, static fn(): array => $pageService->createPage('Launch', 'launch', 'page', 'standalone', 1));
             $pageId = (int) $page['page']['id'];
 
-            $applied = $tenants->runAs($tenantId, static fn(): array => $templateService->applyTemplate('landing-basic', $pageId, 1));
+            // Phase 6: applying a template states the expected current draft revision like every other draft write.
+            $applied = $tenants->runAs($tenantId, static fn(): array => $templateService->applyTemplate('landing-basic', $pageId, (int) $page['page']['active_draft_revision_id'], 1));
             assert_eq(2, (int) $applied['revision']['revision_number'], 'applying a template must create a new draft revision');
             $appliedDoc = CanonicalJson::decode((string) $applied['revision']['document_json']);
             assert_eq('page', $appliedDoc['document_type'], 'applied document must adopt the target page type, not the template document_type');
@@ -372,7 +373,7 @@ unit('phase2 integration: StudioTemplateService saves/updates templates, protect
 
             // Applying a nonexistent template fails closed
             assert_throws(StudioNotFoundException::class, function () use ($tenants, $tenantId, $templateService, $pageId): void {
-                $tenants->runAs($tenantId, static fn() => $templateService->applyTemplate('does-not-exist', $pageId, 1));
+                $tenants->runAs($tenantId, static fn() => $templateService->applyTemplate('does-not-exist', $pageId, null, 1));
             });
 
             // Multi-tenant isolation: tenant 2 cannot see tenant 1's templates
@@ -381,7 +382,7 @@ unit('phase2 integration: StudioTemplateService saves/updates templates, protect
                 assert_eq(0, count($templateService->listTemplates()));
             });
             assert_throws(StudioNotFoundException::class, function () use ($tenants, $tenantId2, $templateService, $pageId): void {
-                $tenants->runAs($tenantId2, static fn() => $templateService->applyTemplate('landing-basic', $pageId, 1));
+                $tenants->runAs($tenantId2, static fn() => $templateService->applyTemplate('landing-basic', $pageId, null, 1));
             });
         });
     } finally {

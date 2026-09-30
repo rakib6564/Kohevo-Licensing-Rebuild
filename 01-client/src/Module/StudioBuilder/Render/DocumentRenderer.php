@@ -16,6 +16,17 @@
  *
  * Fallbacks are empty in public output (no hint about module or licence
  * state) and a short labelled notice in authoring contexts.
+ *
+ * Phase 6 — live Global Component references: a section whose `global_ref`
+ * is set owns no blocks; it renders the PUBLISHED content of the referenced
+ * component (resolved by the compiler into `$components`, published revision
+ * only) inside a placeholder `<section class="sb-section--global">`. The
+ * embedded content is rendered by this same walk (same validation, same
+ * renderers, same deferral of dynamic nodes) but never emits editor node
+ * metadata of its own — in the builder canvas a click inside a component
+ * selects the referencing section, whose inspector links to the component.
+ * A missing/unpublished component is an inert fallback like any other
+ * unavailable node.
  */
 
 declare(strict_types=1);
@@ -33,6 +44,9 @@ use Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme;
 
 final class DocumentRenderer
 {
+    /** Marker key on a block rendered as part of an embedded Global Component (never a canonical document key). */
+    public const EMBEDDED_KEY = '__sb_embedded';
+
     private const STYLE_UTILITIES = [
         'font_token'    => 'font',
         'radius_token'  => 'rad',
@@ -51,13 +65,16 @@ final class DocumentRenderer
 
     /**
      * @param list<array<string, mixed>> $sections prepared (normalized) sections
+     * @param array<string, list<array<string, mixed>>> $components ref => the referenced
+     *        Global Component's PREPARED published sections (resolved by the compiler);
+     *        a ref absent from this map renders as unavailable
      */
-    public function renderSections(array $sections, RenderContext $context, ResolvedTheme $theme, RenderCollector $collector, bool $deferDynamic): string
+    public function renderSections(array $sections, RenderContext $context, ResolvedTheme $theme, RenderCollector $collector, bool $deferDynamic, array $components = []): string
     {
         $html = '';
         foreach ($sections as $section) {
             if (is_array($section)) {
-                $html .= $this->renderSection($section, $context, $theme, $collector, $deferDynamic);
+                $html .= $this->renderSection($section, $context, $theme, $collector, $deferDynamic, $components);
             }
         }
         return $html;
@@ -117,7 +134,8 @@ final class DocumentRenderer
             self::hideClasses($visibility),
         );
 
-        return '<div' . Html::classAttr($classes) . $this->nodeMetadata($context, (string) ($block['id'] ?? ''), $type) . '>' . $inner . '</div>';
+        $metadata = empty($block[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($block['id'] ?? ''), $type) : '';
+        return '<div' . Html::classAttr($classes) . $metadata . '>' . $inner . '</div>';
     }
 
     /**
@@ -146,12 +164,18 @@ final class DocumentRenderer
 
     /**
      * @param array<string, mixed> $section
+     * @param array<string, list<array<string, mixed>>> $components
      */
-    private function renderSection(array $section, RenderContext $context, ResolvedTheme $theme, RenderCollector $collector, bool $deferDynamic): string
+    private function renderSection(array $section, RenderContext $context, ResolvedTheme $theme, RenderCollector $collector, bool $deferDynamic, array $components = []): string
     {
         $visibility = is_array($section['visibility'] ?? null) ? $section['visibility'] : [];
         if (!$context->includesAuthState((string) ($visibility['auth_state'] ?? 'any'))) {
             return '';
+        }
+
+        $globalRef = $section['global_ref'] ?? null;
+        if (is_string($globalRef) && $globalRef !== '') {
+            return $this->renderGlobalSection($section, $globalRef, $context, $theme, $collector, $deferDynamic, $components);
         }
 
         $blocks = is_array($section['blocks'] ?? null) ? $section['blocks'] : [];
@@ -188,8 +212,60 @@ final class DocumentRenderer
             }
         }
 
-        return '<section' . Html::classAttr($outer) . $this->nodeMetadata($context, (string) ($section['id'] ?? ''), 'section') . '>'
+        $metadata = empty($section[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($section['id'] ?? ''), 'section') : '';
+        return '<section' . Html::classAttr($outer) . $metadata . '>'
             . '<div' . Html::classAttr($innerClasses) . '>' . $inner . '</div></section>';
+    }
+
+    /**
+     * The placeholder of a live Global Component reference. The consuming
+     * section keeps only its visibility (where it shows); layout and content
+     * come entirely from the component's own published sections, rendered
+     * with embedded blocks (no editor node metadata of their own).
+     *
+     * @param array<string, mixed> $section
+     * @param array<string, list<array<string, mixed>>> $components
+     */
+    private function renderGlobalSection(array $section, string $ref, RenderContext $context, ResolvedTheme $theme, RenderCollector $collector, bool $deferDynamic, array $components): string
+    {
+        $visibility = is_array($section['visibility'] ?? null) ? $section['visibility'] : [];
+        $classes = array_merge(['sb-section', 'sb-section--global'], self::hideClasses($visibility));
+        $open = '<section' . Html::classAttr($classes) . $this->nodeMetadata($context, (string) ($section['id'] ?? ''), 'section') . '>';
+
+        if (!isset($components[$ref]) || !is_array($components[$ref])) {
+            return $open . $this->unavailable('component_unavailable', $context) . '</section>';
+        }
+
+        $inner = '';
+        foreach ($components[$ref] as $componentSection) {
+            if (!is_array($componentSection) || !empty($componentSection['global_ref'])) {
+                continue; // references are one level deep — never resolved recursively
+            }
+            $componentSection[self::EMBEDDED_KEY] = true;
+            $componentSection['blocks'] = self::markEmbedded(is_array($componentSection['blocks'] ?? null) ? $componentSection['blocks'] : []);
+            $inner .= $this->renderSection($componentSection, $context, $theme, $collector, $deferDynamic, []);
+        }
+        return $open . $inner . '</section>';
+    }
+
+    /**
+     * @param list<mixed> $blocks
+     * @return list<array<string, mixed>>
+     */
+    private static function markEmbedded(array $blocks): array
+    {
+        $out = [];
+        foreach ($blocks as $block) {
+            if (!is_array($block)) {
+                continue;
+            }
+            $block[self::EMBEDDED_KEY] = true;
+            if (is_array($block['children'] ?? null) && $block['children'] !== []) {
+                $block['children'] = self::markEmbedded($block['children']);
+            }
+            $out[] = $block;
+        }
+        return $out;
     }
 
     /**

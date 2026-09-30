@@ -335,6 +335,39 @@ export class SyncEngine {
     });
   }
 
+  /**
+   * A server command that rewrites the working document in one step
+   * (apply_template, insert_template, detach_component, create_component from
+   * a section). Same rules as every write: pending edits are drained first,
+   * the command carries `expected_revision_id` = the revision the user sees,
+   * a 409 enters the conflict state, and the server's resulting document
+   * replaces the base (one undo step). Nothing is applied locally first.
+   *
+   * @param {Function} send  (body with page_id/expected_revision_id) => transport promise
+   */
+  async command(send, { label = '' } = {}) {
+    if (!(await this.drain('manual'))) return false;
+    return this.exclusive(async () => {
+      if (this.state.status === STATUS.CONFLICT) return false;
+      const before = this.state.revision ? this.state.revision.id : null;
+      this.set({ status: STATUS.SAVING });
+      const res = await send({ page_id: this.pageId, expected_revision_id: before });
+      if (!res.ok) return this.handleFailure(res, []);
+      const d = res.data;
+      if (!d.document || !d.revision) {
+        // A command that did not change this page (e.g. a component created without a source section).
+        this.set({ status: this.state.pending.length ? STATUS.DIRTY : STATUS.SAVED });
+        return true;
+      }
+      const undo = before && d.revision.id !== before
+        ? [...this.state.undo, { before, after: d.revision.id, label }].slice(-MAX_HISTORY)
+        : this.state.undo;
+      this.rebuild({ base: d.document, page: d.page || this.state.page, revision: d.revision, undo, redo: [], status: STATUS.SAVED, error: null, lastSavedAt: Date.now() });
+      this.onEvent({ type: 'command', label, revision: d.revision });
+      return true;
+    });
+  }
+
   async publish() {
     if (!(await this.drain('manual'))) return false;
     return this.exclusive(async () => {

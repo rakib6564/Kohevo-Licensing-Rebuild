@@ -62,6 +62,8 @@ export const DEFAULT_SECTION_LAYOUT = Object.freeze({
 const op = (name, payload) => ({ op: name, payload });
 
 export const insertSection = (index, section = {}) => op(OPS.INSERT_SECTION, { index, section });
+/** A LIVE reference to a global component: the section owns no blocks; the server renders the component's published content. */
+export const insertGlobalSection = (index, ref, label = '') => op(OPS.INSERT_SECTION, { index, section: { label, global_ref: ref, blocks: [] } });
 export const removeSection = (sectionId) => op(OPS.REMOVE_SECTION, { section_id: sectionId });
 export const moveSection = (sectionId, toIndex) => op(OPS.MOVE_SECTION, { section_id: sectionId, to_index: toIndex });
 export const updateSectionLayout = (sectionId, layout) => op(OPS.UPDATE_SECTION_LAYOUT, { section_id: sectionId, layout });

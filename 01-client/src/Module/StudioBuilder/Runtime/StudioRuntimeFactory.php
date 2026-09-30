@@ -21,6 +21,7 @@ use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeResolver;
+use Slate\Module\StudioBuilder\Render\Component\GlobalComponentResolver;
 use Slate\Module\StudioBuilder\Render\Compile\DynamicSlotResolver;
 use Slate\Module\StudioBuilder\Render\Compile\StudioCompilationInvalidator;
 use Slate\Module\StudioBuilder\Render\Compile\StudioCompiler;
@@ -39,9 +40,11 @@ use Slate\Module\StudioBuilder\Repository\RevisionRepository;
 use Slate\Module\StudioBuilder\Repository\TemplateRepository;
 use Slate\Module\StudioBuilder\Repository\TokenRepository;
 use Slate\Module\StudioBuilder\Service\StudioEditLockService;
+use Slate\Module\StudioBuilder\Service\StudioGlobalComponentService;
 use Slate\Module\StudioBuilder\Service\StudioPageAddressService;
 use Slate\Module\StudioBuilder\Service\StudioRevisionService;
 use Slate\Module\StudioBuilder\Service\StudioTemplateService;
+use Slate\Module\StudioBuilder\Service\StudioThemeService;
 use Slate\Tenancy\TenantContext;
 
 final class StudioRuntimeFactory
@@ -75,7 +78,8 @@ final class StudioRuntimeFactory
 
         $revisionService = new StudioRevisionService($tenants, $pages, $revisions, $dependencies, $registry);
         $pageService     = new StudioPageAddressService($tenants, $pages, $revisionService, $registry);
-        $templateService = new StudioTemplateService($tenants, $templates, $pages, $revisionService, $registry);
+        $templateService = new StudioTemplateService($tenants, $templates, $pages, $revisionService, $registry, $dependencies);
+        $componentService = new StudioGlobalComponentService($tenants, $pages, $revisions, $dependencies);
 
         $themes    = new ThemeResolver($tokens, $overrides['branding'] ?? null);
         $media     = $overrides['media'] ?? new CoreMediaResolver($tenants);
@@ -89,6 +93,7 @@ final class StudioRuntimeFactory
             new ChromeResolver($pages, $revisions),
             $media,
             $compilations,
+            new GlobalComponentResolver($pages, $revisions),
         );
         $render = new StudioRenderService(
             $revisions,
@@ -106,6 +111,9 @@ final class StudioRuntimeFactory
             $render, $invalidator,
             $themes,
             new StudioEditLockService($tenants, $pages, new LockRepository($tenants)),
+            new StudioThemeService($tenants, $tokens, $themes),
+            $componentService,
+            $media,
         );
 
         $publicRuntime = new StudioPublicRuntime(

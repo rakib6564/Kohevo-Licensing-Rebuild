@@ -33,10 +33,23 @@
  * UI reaches none of the services or repositories below except through these
  * methods.
  *
+ * Phase 6 (templates, global components, design system) adds: template
+ * library commands (`applyTemplate` now REQUIRES the client's expected
+ * revision — preflight #1; `insertTemplate`, `saveTemplateFromPage`,
+ * `deleteTemplate`), Global Component commands (`createGlobalComponent`,
+ * `detachGlobalSection`, `listGlobalComponents`; a component is a
+ * `section_preset` page referenced by uuid — see StudioGlobalComponentService),
+ * chrome binding queries (`chromeBindings`), design-token commands
+ * (`designTokens`, `saveDesignTokens` behind `studio-builder.tokens`), and the
+ * dependency invalidation that publishing/archiving a component or a
+ * header/footer partial triggers for its dependents.
+ *
  * Cross-reference validation (`media_exists`/`template_exists`/`partial_exists`)
  * and block entitlement/permission enforcement
  * (`entitlement_check`/`permission_check`) are wired ONCE, here, in
  * `buildValidationOptions()` — never scattered into individual block classes.
+ * `partial_exists` resolves a `section.global_ref` to a non-archived
+ * `section_preset` page of the CURRENT tenant by uuid (Phase 6 live reference).
  */
 
 declare(strict_types=1);
@@ -47,6 +60,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
+use Slate\Module\StudioBuilder\Domain\StudioTemplate;
 use Slate\Module\StudioBuilder\Exception\StudioAuthenticationException;
 use Slate\Module\StudioBuilder\Exception\StudioAuthorizationException;
 use Slate\Module\StudioBuilder\Exception\StudioEntitlementException;
@@ -57,7 +71,9 @@ use Slate\Module\StudioBuilder\Operation\DocumentOperation;
 use Slate\Module\StudioBuilder\Operation\DocumentOperationApplier;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
+use Slate\Module\StudioBuilder\Render\Chrome\ChromeResolver;
 use Slate\Module\StudioBuilder\Render\Compile\StudioCompilationInvalidator;
+use Slate\Module\StudioBuilder\Render\Media\MediaResolverInterface;
 use Slate\Module\StudioBuilder\Render\RenderContext;
 use Slate\Module\StudioBuilder\Render\RenderResult;
 use Slate\Module\StudioBuilder\Render\StudioRenderService;
@@ -66,9 +82,11 @@ use Slate\Module\StudioBuilder\Repository\PageRepository;
 use Slate\Module\StudioBuilder\Repository\RevisionRepository;
 use Slate\Module\StudioBuilder\Repository\TemplateRepository;
 use Slate\Module\StudioBuilder\Service\StudioEditLockService;
+use Slate\Module\StudioBuilder\Service\StudioGlobalComponentService;
 use Slate\Module\StudioBuilder\Service\StudioPageAddressService;
 use Slate\Module\StudioBuilder\Service\StudioRevisionService;
 use Slate\Module\StudioBuilder\Service\StudioTemplateService;
+use Slate\Module\StudioBuilder\Service\StudioThemeService;
 use Slate\Module\StudioBuilder\StudioPermissions;
 use Slate\Data\Database;
 use Slate\Services\Audit\AuditLog;
@@ -94,6 +112,9 @@ final class StudioApplicationService
         private readonly ?StudioCompilationInvalidator $invalidator = null,
         private readonly ?ThemeResolver $themes = null,
         private readonly ?StudioEditLockService $locks = null,
+        private readonly ?StudioThemeService $themeService = null,
+        private readonly ?StudioGlobalComponentService $components = null,
+        private readonly ?MediaResolverInterface $media = null,
     ) {}
 
     /** Builder queries return at most this many pages / revisions per call. */
@@ -134,8 +155,16 @@ final class StudioApplicationService
     public function archivePage(StudioActor $actor, int $pageId): array
     {
         $this->authorize($actor, StudioPermissions::EDIT);
+        $current = $this->pageRepo->find($pageId);
+        if ($current === null) {
+            throw new StudioNotFoundException("Studio page {$pageId} was not found in the active tenant.", ['page_id' => $pageId]);
+        }
+        // Deletion/archive safety: a Global Component still referenced by a page's
+        // current draft or published document cannot be archived.
+        $this->components?->assertNotReferenced($current);
         $result = $this->pages->archivePage($pageId, (int) $actor->userId);
         $this->invalidator?->invalidatePage($pageId);
+        $this->invalidateSharedContent($current);
         AuditLog::record('studio.page.archived', (string) $pageId);
         return $result;
     }
@@ -189,34 +218,7 @@ final class StudioApplicationService
         string $revisionKind = 'manual',
     ): array {
         $this->authorize($actor, StudioPermissions::EDIT);
-        if (!in_array($revisionKind, self::EDITOR_REVISION_KINDS, true)) {
-            throw new StudioValidationException([
-                ['path' => '$.revision_kind', 'code' => 'invalid_revision_kind', 'message' => 'revision_kind must be autosave or manual.'],
-            ]);
-        }
-
-        $page = $this->pageRepo->find($pageId);
-        if ($page === null) {
-            throw new StudioNotFoundException("Studio page {$pageId} was not found in the active tenant.", ['page_id' => $pageId]);
-        }
-
-        $currentDraftId = isset($page['active_draft_revision_id']) && $page['active_draft_revision_id'] !== null
-            ? (int) $page['active_draft_revision_id']
-            : null;
-
-        if ($currentDraftId !== null) {
-            $draftRevision = $this->revisionRepo->findByIdForPage($pageId, $currentDraftId);
-            $currentDocument = $draftRevision !== null
-                ? CanonicalJson::decode((string) $draftRevision['document_json'])
-                : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
-        } else {
-            $currentDocument = CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
-        }
-
-        $mutatedDocument = DocumentOperationApplier::apply($currentDocument, $operations, $this->registry);
-        $validated = ValidatedDocument::from($mutatedDocument, $this->registry, $this->buildValidationOptions($actor));
-
-        $result = $this->revisions->createDraftRevision($pageId, $validated, $expectedRevisionId, (int) $actor->userId, $revisionKind, $summary);
+        $result = $this->mutateDocument($actor, $pageId, $operations, $expectedRevisionId, $summary, $revisionKind);
         AuditLog::record('studio.page.operation_applied', (string) $pageId, [
             'operation_count' => count($operations),
             'revision_kind'   => $revisionKind,
@@ -225,7 +227,32 @@ final class StudioApplicationService
         return $result;
     }
 
-    // ── Template commands ────────────────────────────────────────────────────
+    /**
+     * The operation pipeline without authorization or audit: load the current
+     * working document, apply, validate, normalize, persist a revision.
+     * Callers have already authorized; they audit AFTER any transaction they
+     * own has committed (the platform's AuditLog resolves the session user,
+     * whose lazy schema check implicitly commits an open MySQL transaction).
+     *
+     * @param list<DocumentOperation> $operations
+     * @return array{revision: array<string, mixed>, page: array<string, mixed>, fingerprint: string, deduplicated: bool}
+     */
+    private function mutateDocument(StudioActor $actor, int $pageId, array $operations, ?int $expectedRevisionId, ?string $summary, string $revisionKind): array
+    {
+        if (!in_array($revisionKind, self::EDITOR_REVISION_KINDS, true)) {
+            throw new StudioValidationException([
+                ['path' => '$.revision_kind', 'code' => 'invalid_revision_kind', 'message' => 'revision_kind must be autosave or manual.'],
+            ]);
+        }
+
+        [$page, $currentDocument] = $this->currentDocument($pageId);
+        $mutatedDocument = DocumentOperationApplier::apply($currentDocument, $operations, $this->registry);
+        $validated = ValidatedDocument::from($mutatedDocument, $this->registry, $this->buildValidationOptions($actor));
+
+        return $this->revisions->createDraftRevision($pageId, $validated, $expectedRevisionId, (int) $actor->userId, $revisionKind, $summary);
+    }
+
+    // ── Template commands (reusable presets: COPY semantics) ────────────────
 
     /**
      * @param array<string, mixed> $document
@@ -239,35 +266,316 @@ final class StudioApplicationService
         string $name,
         ?string $description,
         array $document,
+        ?int $thumbnailMediaId = null,
     ): array {
         // Template/system administration — StudioPermissions::ADMIN, not EDIT
         // (target architecture example: "system/template administration -> studio-builder.admin").
         $this->authorize($actor, StudioPermissions::ADMIN);
-        $result = $this->templates->saveTemplate($templateKey, $templateType, $category, $name, $description, $document, (int) $actor->userId, $this->buildValidationOptions($actor));
-        // Pages that reference this template (template_key / section global_ref) recompile on next request.
+        $result = $this->templates->saveTemplate($templateKey, $templateType, $category, $name, $description, $document, (int) $actor->userId, $this->buildValidationOptions($actor), $thumbnailMediaId);
+        // Pages whose document names this template (template_key) recompile on next request.
         $this->invalidator?->invalidateTemplate($templateKey);
         AuditLog::record('studio.template.saved', $templateKey, ['template_type' => $templateType]);
         return $result;
     }
 
     /**
+     * Save a template FROM a page's current working document: the whole page
+     * (page/header/footer templates), one section (section_preset) or one
+     * block (block_preset). The content is read from the stored revision,
+     * never from the client.
+     *
+     * @return array<string, mixed>
+     */
+    public function saveTemplateFromPage(
+        StudioActor $actor,
+        int $pageId,
+        ?string $nodeId,
+        string $templateKey,
+        string $templateType,
+        string $category,
+        string $name,
+        ?string $description,
+        ?int $thumbnailMediaId = null,
+    ): array {
+        $this->authorize($actor, StudioPermissions::ADMIN);
+        [$page, $document] = $this->currentDocument($pageId);
+        $pageType = (string) $page['page_type'];
+        if (($templateType === 'header_preset' && $pageType !== 'header_partial') || ($templateType === 'footer_preset' && $pageType !== 'footer_partial')) {
+            throw new StudioValidationException([
+                ['path' => '$.template_type', 'code' => 'template_type_mismatch', 'message' => "A {$templateType} can only be saved from a matching partial page."],
+            ]);
+        }
+        if ($templateType === 'page_template' && !in_array($pageType, CanonicalDocumentSchema::GLOBAL_REF_DOCUMENT_TYPES, true)) {
+            throw new StudioValidationException([
+                ['path' => '$.template_type', 'code' => 'template_type_mismatch', 'message' => 'A page template can only be saved from a page.'],
+            ]);
+        }
+        $templateDocument = StudioTemplateService::extractTemplateDocument($document, $nodeId, $templateType);
+        return $this->saveTemplate($actor, $templateKey, $templateType, $category, $name, $description, $templateDocument, $thumbnailMediaId);
+    }
+
+    /**
+     * @return array<string, mixed> the deleted template row
+     */
+    public function deleteTemplate(StudioActor $actor, string $templateKey): array
+    {
+        $this->authorize($actor, StudioPermissions::ADMIN);
+        $row = $this->templates->deleteTemplate($templateKey);
+        AuditLog::record('studio.template.deleted', $templateKey);
+        return $row;
+    }
+
+    /**
+     * Replace a page's working document with a page template.
+     *
+     * `$expectedRevisionId` — the client's current draft revision id — is
+     * mandatory in the same sense as for every other draft write: it is
+     * verified under the page row lock by StudioRevisionService, and a stale
+     * or missing value is a StudioConcurrencyException (409) that overwrites
+     * nothing (Phase 6 preflight #1). No second concurrency model exists.
+     *
      * @return array{revision: array<string, mixed>, page: array<string, mixed>, fingerprint: string, deduplicated: bool}
      */
-    public function applyTemplate(StudioActor $actor, string $templateKey, int $pageId): array
+    public function applyTemplate(StudioActor $actor, string $templateKey, int $pageId, ?int $expectedRevisionId): array
     {
         $this->authorize($actor, StudioPermissions::EDIT);
-        $result = $this->templates->applyTemplate($templateKey, $pageId, (int) $actor->userId, $this->buildValidationOptions($actor));
+        $result = $this->templates->applyTemplate($templateKey, $pageId, $expectedRevisionId, (int) $actor->userId, $this->buildValidationOptions($actor));
         AuditLog::record('studio.template.applied', (string) $pageId, ['template_key' => $templateKey]);
         return $result;
     }
 
     /**
+     * Insert a reusable preset (section / header / footer / block preset) into
+     * a page as an OWNED COPY, through the ordinary operation pipeline (same
+     * validation, normalization, concurrency and revision as any edit). The
+     * page records no reference to the template afterwards.
+     *
+     * @return array{revision: array<string, mixed>, page: array<string, mixed>, fingerprint: string, deduplicated: bool}
+     */
+    public function insertTemplate(StudioActor $actor, int $pageId, string $templateKey, int $index, ?string $parentId, ?int $expectedRevisionId): array
+    {
+        $this->authorize($actor, StudioPermissions::EDIT);
+        $operations = $this->templates->insertOperations($templateKey, $index, $parentId);
+        $result = $this->applyDocumentOperation($actor, $pageId, $operations, $expectedRevisionId, "Inserted preset '{$templateKey}'", 'manual');
+        AuditLog::record('studio.template.inserted', (string) $pageId, ['template_key' => $templateKey]);
+        return $result;
+    }
+
+    /**
+     * Template library listing: transport-safe rows plus a structural summary
+     * and the tenant-scoped thumbnail URL (never a document body).
+     *
      * @return list<array<string, mixed>>
      */
     public function listTemplates(StudioActor $actor, ?string $templateType = null, ?string $category = null): array
     {
         $this->authorize($actor, StudioPermissions::VIEW);
+        if ($templateType !== null && !in_array($templateType, StudioTemplate::ALLOWED_TEMPLATE_TYPES, true)) {
+            return [];
+        }
         return $this->templates->listTemplates($templateType, $category);
+    }
+
+    /**
+     * The library view of every template (or of one type), with summary and thumbnail.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function templateLibrary(StudioActor $actor, ?string $templateType = null): array
+    {
+        $out = [];
+        foreach ($this->listTemplates($actor, $templateType) as $row) {
+            $summary = null;
+            try {
+                $summary = $this->templates->summarize(CanonicalJson::decode((string) $row['document_json']));
+            } catch (\Throwable $ignored) {
+                $summary = null;
+            }
+            $out[] = StudioEditorViews::template($row, $this->thumbnailUrl($row), $summary);
+        }
+        return $out;
+    }
+
+    // ── Global Component commands (LIVE reference semantics) ────────────────
+
+    /**
+     * The tenant's Global Components (section_preset pages) with usage counts.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listGlobalComponents(StudioActor $actor): array
+    {
+        $this->authorize($actor, StudioPermissions::VIEW);
+        $out = [];
+        foreach ($this->requireComponents()->listComponents() as $item) {
+            $out[] = StudioEditorViews::component($item['row'], $item['usage_count']);
+        }
+        return $out;
+    }
+
+    /**
+     * Create a Global Component: a new `section_preset` page. When a source
+     * page + section are given, the component's first document is an owned
+     * copy of that section and the source section is replaced, in the same
+     * transaction, by a live reference to the new component — verified
+     * against `$expectedRevisionId` like any other draft write.
+     *
+     * The component starts UNPUBLISHED; consumers render its published
+     * revision only, so it must be published (studio-builder.publish) before
+     * it appears in pages. Nothing here publishes implicitly.
+     *
+     * @return array{component: array<string, mixed>, page: ?array<string, mixed>, revision: ?array<string, mixed>}
+     */
+    public function createGlobalComponent(StudioActor $actor, string $title, string $slug, ?int $fromPageId = null, ?string $sectionId = null, ?int $expectedRevisionId = null): array
+    {
+        $this->authorize($actor, StudioPermissions::EDIT);
+        $components = $this->requireComponents();
+
+        $extraction = null;
+        if ($fromPageId !== null) {
+            if ($sectionId === null || $sectionId === '') {
+                throw new StudioValidationException([
+                    ['path' => '$.section_id', 'code' => 'required_field', 'message' => 'section_id is required when creating a component from a page section.'],
+                ]);
+            }
+            [, $sourceDocument] = $this->currentDocument($fromPageId);
+            $extraction = $components->extractionFor($sourceDocument, $sectionId, $title);
+        }
+
+        $pdo = Database::get();
+        $ownsTx = !$pdo->inTransaction();
+        if ($ownsTx) {
+            $pdo->beginTransaction();
+        }
+        try {
+            $created = $this->pages->createPage($title, $slug, CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE, 'standalone', (int) $actor->userId, $this->buildValidationOptions($actor));
+            $componentRow = $created['page'];
+            $ref = (string) $componentRow['uuid'];
+            $pageResult = null;
+
+            if ($extraction !== null && $fromPageId !== null) {
+                $validated = ValidatedDocument::from($extraction['component_document'], $this->registry, $this->buildValidationOptions($actor));
+                $this->revisions->createDraftRevision((int) $componentRow['id'], $validated, (int) $created['revision']['id'], (int) $actor->userId, 'manual', "Created from page {$fromPageId}");
+                $componentRow = $this->pageRepo->find((int) $componentRow['id']) ?? $componentRow;
+
+                $operations = StudioGlobalComponentService::referenceOperations($extraction['section'], $extraction['index'], $ref);
+                // No audit inside the transaction (see mutateDocument()); recorded below, after commit.
+                $pageResult = $this->mutateDocument($actor, $fromPageId, $operations, $expectedRevisionId, "Replaced section with global component '{$title}'", 'manual');
+            }
+            if ($ownsTx) {
+                $pdo->commit();
+            }
+        } catch (\Throwable $e) {
+            if ($ownsTx && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+
+        if ($pageResult !== null && $fromPageId !== null) {
+            AuditLog::record('studio.page.operation_applied', (string) $fromPageId, ['operation_count' => 2, 'revision_kind' => 'manual', 'deduplicated' => false]);
+        }
+        AuditLog::record('studio.component.created', (string) $componentRow['id'], ['from_page_id' => $fromPageId, 'section_id' => $sectionId]);
+        return [
+            'component' => StudioEditorViews::component($componentRow, $pageResult !== null ? 1 : 0),
+            'page'      => $pageResult['page'] ?? null,
+            'revision'  => $pageResult['revision'] ?? null,
+        ];
+    }
+
+    /**
+     * Turn a live reference back into owned content: the section is replaced
+     * by a copy of the component's content (published revision when it has
+     * one). Runs through the operation pipeline with `$expectedRevisionId`.
+     *
+     * @return array{revision: array<string, mixed>, page: array<string, mixed>, fingerprint: string, deduplicated: bool}
+     */
+    public function detachGlobalSection(StudioActor $actor, int $pageId, string $sectionId, ?int $expectedRevisionId): array
+    {
+        $this->authorize($actor, StudioPermissions::EDIT);
+        [, $document] = $this->currentDocument($pageId);
+        $detach = $this->requireComponents()->detachOperations($document, $sectionId);
+        $result = $this->applyDocumentOperation($actor, $pageId, $detach['operations'], $expectedRevisionId, "Detached global component '{$detach['component']['title']}'", 'manual');
+        AuditLog::record('studio.component.detached', (string) $pageId, ['section_id' => $sectionId, 'component_id' => (int) $detach['component']['id']]);
+        return $result;
+    }
+
+    // ── Chrome (header / footer) bindings ───────────────────────────────────
+
+    /**
+     * What a page's header/footer settings currently resolve to, following
+     * exactly the Phase 4 ChromeResolver rules (published partials only):
+     * the site partial (slug `default`) and the page-specific partial (slug =
+     * the page's slug) of each region, and which one the mode picks.
+     *
+     * @return array<string, mixed>
+     */
+    public function chromeBindings(StudioActor $actor, int $pageId): array
+    {
+        $this->authorize($actor, StudioPermissions::VIEW);
+        [$page, $document] = $this->currentDocument($pageId);
+        $settings = is_array($document['settings'] ?? null) ? $document['settings'] : [];
+        $chromed  = in_array((string) $page['page_type'], ChromeResolver::CHROMED_PAGE_TYPES, true);
+
+        $regions = [];
+        foreach (['header' => 'header_partial', 'footer' => 'footer_partial'] as $region => $partialType) {
+            $mode = (string) ($settings[$region . '_mode'] ?? 'inherit');
+            if (!in_array($mode, CanonicalDocumentSchema::ALLOWED_CHROME_MODES, true)) {
+                $mode = 'inherit';
+            }
+            $site   = $this->pageRepo->findBySlug(ChromeResolver::SITE_PARTIAL_SLUG, $partialType);
+            $custom = (string) $page['slug'] !== ChromeResolver::SITE_PARTIAL_SLUG ? $this->pageRepo->findBySlug((string) $page['slug'], $partialType) : null;
+            $isLive = static fn(?array $row): bool => $row !== null && ($row['status'] ?? null) === 'published' && !empty($row['published_revision_id']);
+
+            if (!$chromed || $mode === 'hidden') {
+                $resolved = 'hidden';
+            } elseif ($mode === 'custom' && $isLive($custom)) {
+                $resolved = 'custom';
+            } elseif ($isLive($site)) {
+                $resolved = 'site';
+            } else {
+                $resolved = 'builtin';
+            }
+            $regions[$region] = [
+                'mode'     => $mode,
+                'resolved' => $resolved,
+                'site'     => $site !== null && ($site['status'] ?? null) !== 'archived' ? StudioEditorViews::page($site) : null,
+                'custom'   => $custom !== null && ($custom['status'] ?? null) !== 'archived' ? StudioEditorViews::page($custom) : null,
+            ];
+        }
+        return ['chromed' => $chromed, 'page_slug' => (string) $page['slug'], 'site_slug' => ChromeResolver::SITE_PARTIAL_SLUG, 'header' => $regions['header'], 'footer' => $regions['footer']];
+    }
+
+    // ── Design tokens ───────────────────────────────────────────────────────
+
+    /**
+     * The supported design tokens with their default / branding / stored
+     * layers and effective values.
+     *
+     * @return array{group: string, tokens: list<array<string, mixed>>}
+     */
+    public function designTokens(StudioActor $actor, string $tokenGroup = ThemeResolver::DEFAULT_GROUP): array
+    {
+        $this->authorize($actor, StudioPermissions::VIEW);
+        return $this->requireThemeService()->layers($tokenGroup);
+    }
+
+    /**
+     * Replace the tenant's stored Studio token overrides of one group
+     * (`studio-builder.tokens`). Values pass the same sanitization the
+     * renderer applies; unknown refs and unsafe values reject the write. Every
+     * page of the tenant that uses the group recompiles on next request.
+     *
+     * @param array<string, mixed> $tokens ref => value|null
+     * @return array{group: string, tokens: list<array<string, mixed>>}
+     */
+    public function saveDesignTokens(StudioActor $actor, string $tokenGroup, array $tokens): array
+    {
+        $this->authorize($actor, StudioPermissions::TOKENS);
+        $result = $this->requireThemeService()->saveTokens($tokenGroup, $tokens, (int) $actor->userId);
+        $this->invalidator?->invalidateTokenGroup($tokenGroup);
+        AuditLog::record('studio.tokens.saved', $tokenGroup, ['count' => count(array_filter($tokens, static fn($v): bool => $v !== null && $v !== ''))]);
+        return $result;
     }
 
     // ── Publish / rollback commands ─────────────────────────────────────────
@@ -281,6 +589,7 @@ final class StudioApplicationService
 
         if ($this->renderer === null) {
             $result = $this->revisions->publishWorkingRevision($pageId, $expectedRevisionId, (int) $actor->userId, $summary, $this->buildValidationOptions($actor));
+            $this->invalidateSharedContent($result['page']);
             AuditLog::record('studio.page.published', (string) $pageId);
             return $result;
         }
@@ -311,6 +620,10 @@ final class StudioApplicationService
             }
             throw $e;
         }
+
+        // A republished Global Component / header / footer partial: drop the
+        // artifacts of every dependent page (they recompile on next request).
+        $this->invalidateSharedContent($result['page']);
 
         AuditLog::record('studio.page.published', (string) $pageId, [
             'revision_id'  => (int) $result['revision']['id'],
@@ -491,7 +804,16 @@ final class StudioApplicationService
                 'admin'   => $actor->can(StudioPermissions::ADMIN),
                 'edit'    => $actor->can(StudioPermissions::EDIT),
                 'publish' => $actor->can(StudioPermissions::PUBLISH),
+                'tokens'  => $actor->can(StudioPermissions::TOKENS),
                 'view'    => $actor->can(StudioPermissions::VIEW),
+            ],
+            'templates'   => [
+                'insertable_types' => StudioTemplateService::INSERTABLE_TYPES,
+                'types'            => StudioTemplate::ALLOWED_TEMPLATE_TYPES,
+            ],
+            'components'  => [
+                'document_type'    => CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE,
+                'referencing_types' => CanonicalDocumentSchema::GLOBAL_REF_DOCUMENT_TYPES,
             ],
         ];
     }
@@ -582,6 +904,73 @@ final class StudioApplicationService
         return $tenantId;
     }
 
+    private function requireComponents(): StudioGlobalComponentService
+    {
+        if ($this->components === null) {
+            throw new \LogicException('StudioApplicationService was built without a StudioGlobalComponentService.');
+        }
+        return $this->components;
+    }
+
+    private function requireThemeService(): StudioThemeService
+    {
+        if ($this->themeService === null) {
+            throw new \LogicException('StudioApplicationService was built without a StudioThemeService.');
+        }
+        return $this->themeService;
+    }
+
+    /**
+     * A page row and its CURRENT working document (decoded from the immutable
+     * draft revision; a blank document when the page has none).
+     *
+     * @return array{0: array<string, mixed>, 1: array<string, mixed>}
+     */
+    private function currentDocument(int $pageId): array
+    {
+        $page = $this->pageRepo->find($pageId);
+        if ($page === null) {
+            throw new StudioNotFoundException("Studio page {$pageId} was not found in the active tenant.", ['page_id' => $pageId]);
+        }
+        $draftId  = isset($page['active_draft_revision_id']) ? (int) $page['active_draft_revision_id'] : 0;
+        $revision = $draftId > 0 ? $this->revisionRepo->findByIdForPage($pageId, $draftId) : null;
+        $document = $revision !== null
+            ? CanonicalJson::decode((string) $revision['document_json'])
+            : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
+        return [$page, $document];
+    }
+
+    /** Tenant-scoped thumbnail URL of a template row through the existing media resolver, or null. */
+    private function thumbnailUrl(array $templateRow): ?string
+    {
+        $mediaId = isset($templateRow['thumbnail_media_id']) ? (int) $templateRow['thumbnail_media_id'] : 0;
+        if ($mediaId <= 0 || $this->media === null) {
+            return null;
+        }
+        return $this->media->resolveImage($mediaId)?->url;
+    }
+
+    /**
+     * After a shared-content page changes what its consumers render (publish,
+     * archive): components → their dependents; header/footer partials → every
+     * chromed page showing that region. Tenant-scoped by construction (the
+     * dependency index and the compilation store are tenant-scoped repositories).
+     *
+     * @param array<string, mixed> $pageRow
+     */
+    private function invalidateSharedContent(array $pageRow): void
+    {
+        if ($this->invalidator === null) {
+            return;
+        }
+        match ((string) ($pageRow['page_type'] ?? '')) {
+            CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE => $this->invalidator->invalidateComponent((string) ($pageRow['uuid'] ?? '')),
+            'header_partial' => $this->invalidator->invalidateChrome('header'),
+            'footer_partial' => $this->invalidator->invalidateChrome('footer'),
+            default => 0,
+        };
+    }
+
     private function requireLocks(): StudioEditLockService
     {
         if ($this->locks === null) {
@@ -635,12 +1024,10 @@ final class StudioApplicationService
      * bound to the CURRENT `TenantContext`, never a value read out of the
      * document itself.
      *
-     * `partial_exists` reuses the same `studiobuilder_templates` table
-     * (`section_preset`/`header_preset`/`footer_preset` types model exactly
-     * what target architecture §9 calls a "Reusable Section / Pattern") —
-     * Studio has no separate global-component/partial table, and building one
-     * before Phase 6 needs it would be exactly the "parallel CMS" table the
-     * architecture forbids without a documented lineage decision.
+     * `partial_exists` (Phase 6) resolves a section's `global_ref` to a
+     * non-archived Global Component — a `section_preset` page of the CURRENT
+     * tenant, by uuid (`PageRepository::findComponentByRef()`). Templates are
+     * copy presets and are never referenced by a document section.
      *
      * @return array<string, mixed>
      */
@@ -656,7 +1043,7 @@ final class StudioApplicationService
                 return $this->templateRepo->findByKey($key) !== null;
             },
             'partial_exists' => function (string $ref): bool {
-                return $this->templateRepo->findByKey($ref) !== null;
+                return $this->pageRepo->findComponentByRef($ref) !== null;
             },
             'entitlement_check' => static function (string $moduleKey) use ($tenantId): bool {
                 return EntitlementService::canAccess($tenantId, $moduleKey);

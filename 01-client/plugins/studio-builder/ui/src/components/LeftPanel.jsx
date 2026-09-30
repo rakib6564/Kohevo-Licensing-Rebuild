@@ -3,6 +3,7 @@
 import { memo, useState } from 'react';
 import { BlockPalette } from './BlockPalette.jsx';
 import { Outline } from './Outline.jsx';
+import { LibraryPanel } from './LibraryPanel.jsx';
 import { t } from '../core/messages.mjs';
 
 export const LeftPanel = memo(function LeftPanel() {
@@ -10,6 +11,7 @@ export const LeftPanel = memo(function LeftPanel() {
   const tabs = [
     { key: 'structure', label: t('panel_structure') },
     { key: 'blocks', label: t('panel_blocks') },
+    { key: 'library', label: t('panel_library') },
   ];
   return (
     <aside className="sbx-left" aria-label={t('panel_structure')}>
@@ -35,6 +37,9 @@ export const LeftPanel = memo(function LeftPanel() {
       </div>
       <div id="sbx-leftpanel-blocks" role="tabpanel" aria-labelledby="sbx-lefttab-blocks" hidden={tab !== 'blocks'} className="sbx-left__body">
         <BlockPalette />
+      </div>
+      <div id="sbx-leftpanel-library" role="tabpanel" aria-labelledby="sbx-lefttab-library" hidden={tab !== 'library'} className="sbx-left__body">
+        {tab === 'library' && <LibraryPanel />}
       </div>
     </aside>
   );

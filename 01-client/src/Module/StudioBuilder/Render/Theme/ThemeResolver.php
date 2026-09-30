@@ -110,6 +110,40 @@ final class ThemeResolver
     }
 
     /**
+     * The three layers separately (each already sanitized), for the Phase 6
+     * design-token UI: neutral defaults, the tenant's branding settings mapped
+     * onto tokens, and the stored Studio overrides of `$tokenGroup`. Same
+     * inputs and same sanitization as `resolve()`; later layers win there.
+     *
+     * @return array{group: string, defaults: array<string, string>, branding: array<string, string>, stored: array<string, string>}
+     */
+    public function layers(string $tokenGroup = self::DEFAULT_GROUP): array
+    {
+        if (preg_match(CanonicalDocumentSchema::TOKEN_GROUP_PATTERN, $tokenGroup) !== 1) {
+            $tokenGroup = self::DEFAULT_GROUP;
+        }
+        $branding = [];
+        foreach ($this->brandingValues() as $brandKey => $value) {
+            foreach (self::BRANDING_TOKEN_MAP[$brandKey] ?? [] as $ref) {
+                $clean = self::sanitizeValue($ref, $value);
+                if ($clean !== null) {
+                    $branding[$ref] = $clean;
+                }
+            }
+        }
+        $stored = [];
+        foreach ($this->storedTokens($tokenGroup) as $ref => $value) {
+            $clean = is_string($ref) ? self::sanitizeValue($ref, $value) : null;
+            if ($clean !== null) {
+                $stored[$ref] = $clean;
+            }
+        }
+        ksort($branding, SORT_STRING);
+        ksort($stored, SORT_STRING);
+        return ['group' => $tokenGroup, 'defaults' => self::DEFAULT_TOKENS, 'branding' => $branding, 'stored' => $stored];
+    }
+
+    /**
      * Return a CSS-safe value for a token, or null. Values are validated per
      * token category; nothing that could close a declaration, a rule, or the
      * surrounding <style> element (`;{}<>\`, comments, url(), expressions) can

@@ -26,6 +26,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Operation;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\DocumentCopier;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 
@@ -263,9 +264,17 @@ final class DocumentOperationApplier
             ]);
         }
 
+        // Children are accepted only for a child-capable definition (a reusable
+        // block preset carries its subtree); every id in the subtree is minted
+        // fresh here, exactly like the block's own id, so a preset can be
+        // inserted any number of times.
+        $children = ($definition->allowsChildren() && is_array($block['children'] ?? null) && array_is_list($block['children']))
+            ? DocumentCopier::copyBlocks($block['children'])
+            : [];
+
         $newBlock = [
             'bindings'   => is_array($block['bindings'] ?? null) ? $block['bindings'] : [],
-            'children'   => [],
+            'children'   => $children,
             'id'         => CanonicalDocumentSchema::newBlockId(),
             'props'      => is_array($block['props'] ?? null) ? $block['props'] : $definition->schema()->defaults(),
             'style'      => is_array($block['style'] ?? null) ? $block['style'] : CanonicalDocumentSchema::defaultBlockStyle(),

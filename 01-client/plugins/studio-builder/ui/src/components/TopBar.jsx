@@ -23,7 +23,7 @@ export const SaveStatus = memo(function SaveStatus() {
   );
 });
 
-export const TopBar = memo(function TopBar({ viewportKey, onViewport, onSave, onUndo, onRedo, onPublish, onHistory }) {
+export const TopBar = memo(function TopBar({ viewportKey, onViewport, onSave, onUndo, onRedo, onPublish, onHistory, onTheme = null }) {
   const { boot, engine, manifest } = useEditor();
   const page = useEngineState((s) => s.page);
   const status = useEngineState((s) => s.status);
@@ -65,6 +65,7 @@ export const TopBar = memo(function TopBar({ viewportKey, onViewport, onSave, on
         <button type="button" className="sbx-btn" onClick={onRedo} disabled={conflict || busy || redoCount === 0} aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z">{t('redo')}</button>
         <button type="button" className="sbx-btn" onClick={onSave} disabled={conflict || pendingCount === 0} aria-keyshortcuts="Control+S Meta+S">{t('save')}</button>
         <button type="button" className="sbx-btn" onClick={onHistory} disabled={conflict}>{t('history')}</button>
+        {onTheme && <button type="button" className="sbx-btn" onClick={onTheme}>{t('theme')}</button>}
         <a className="sbx-btn" href={`${boot.previewUrl}?page=${boot.pageId}`} target="_blank" rel="noopener">{t('preview')}</a>
         {canPublish && (
           <button type="button" className="sbx-btn sbx-btn--primary" onClick={onPublish} disabled={conflict || busy || !engine}>{t('publish')}</button>

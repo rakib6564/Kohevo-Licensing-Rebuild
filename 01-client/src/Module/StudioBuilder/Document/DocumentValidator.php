@@ -155,6 +155,8 @@ final class DocumentValidator
 
             $seenIds = [];
             $totalBlocks = 0;
+            // Phase 6: live global references are only valid in referencing document types.
+            $options['_document_type'] = is_string($docType) ? $docType : '';
 
             foreach ($sections as $sIdx => $section) {
                 self::validateSection(
@@ -364,13 +366,24 @@ final class DocumentValidator
             $errors[] = ValidationResult::issue("{$path}.label", 'invalid_section_label', 'Section label must be a safe string <= 120 chars.');
         }
 
-        // global_ref
+        // global_ref — a LIVE reference to a Global Component (Phase 6). The
+        // section then owns no content of its own: its blocks must be empty and
+        // the referenced component is rendered from its published revision. A
+        // component / header / footer document may not reference (one level).
         if (array_key_exists('global_ref', $section) && $section['global_ref'] !== null) {
             $gRef = $section['global_ref'];
             if (!is_string($gRef) || preg_match(CanonicalDocumentSchema::GLOBAL_REF_PATTERN, $gRef) !== 1) {
                 $errors[] = ValidationResult::issue("{$path}.global_ref", 'invalid_global_ref', 'section.global_ref must be null or a valid symbolic reference key.');
             } elseif (isset($options['partial_exists']) && is_callable($options['partial_exists']) && !($options['partial_exists'])($gRef)) {
                 $errors[] = ValidationResult::issue("{$path}.global_ref", 'cross_tenant_or_missing_partial', "Referenced global_ref '{$gRef}' does not exist in the active tenant.");
+            }
+            $docType = (string) ($options['_document_type'] ?? '');
+            if ($docType !== '' && !in_array($docType, CanonicalDocumentSchema::GLOBAL_REF_DOCUMENT_TYPES, true)) {
+                $errors[] = ValidationResult::issue("{$path}.global_ref", 'global_ref_not_allowed', "A '{$docType}' document cannot reference a global component (references are one level deep).");
+            }
+            $refBlocks = $section['blocks'] ?? null;
+            if (is_array($refBlocks) && $refBlocks !== []) {
+                $errors[] = ValidationResult::issue("{$path}.blocks", 'global_ref_owns_no_blocks', 'A section that references a global component must not carry local blocks.');
             }
         }
 

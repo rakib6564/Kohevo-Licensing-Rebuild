@@ -18,10 +18,13 @@ import { t } from '../core/messages.mjs';
 const RELOAD_DEBOUNCE_MS = 250;
 
 export const CanvasArea = memo(function CanvasArea() {
-  const { boot, selection, select, viewport } = useEditor();
+  const { boot, selection, select, viewport, canvasVersion = 0 } = useEditor();
   const revisionId = useEngineState((s) => (s.revision ? s.revision.id : 0));
   const status = useEngineState((s) => s.status);
-  const [src, setSrc] = useState(() => `${boot.canvasUrl}?page=${boot.pageId}&v=${revisionId}`);
+  // `canvasVersion` bumps when shared inputs of the render change without a new
+  // revision of THIS page (design tokens saved, a global component published).
+  const canvasSrc = `${boot.canvasUrl}?page=${boot.pageId}&v=${revisionId}${canvasVersion ? `-${canvasVersion}` : ''}`;
+  const [src, setSrc] = useState(() => canvasSrc);
   const [loading, setLoading] = useState(true);
   const frameRef = useRef(null);
   const detachRef = useRef(() => {});
@@ -46,9 +49,9 @@ export const CanvasArea = memo(function CanvasArea() {
   const scale = stage.width > 0 ? Math.min(1, stage.width / viewport.width) : 1;
   const frameHeight = stage.height > 0 ? Math.max(480, stage.height / scale) : 800;
 
-  // Reload only when the server revision changes — never on local keystrokes.
+  // Reload only when the server revision (or a shared input) changes — never on local keystrokes.
   useEffect(() => {
-    const next = `${boot.canvasUrl}?page=${boot.pageId}&v=${revisionId}`;
+    const next = canvasSrc;
     if (next === src) return undefined;
     const h = setTimeout(() => {
       try {
@@ -59,7 +62,7 @@ export const CanvasArea = memo(function CanvasArea() {
       setSrc(next);
     }, RELOAD_DEBOUNCE_MS);
     return () => clearTimeout(h);
-  }, [revisionId, boot.canvasUrl, boot.pageId, src]);
+  }, [canvasSrc, src]);
 
   const onLoad = () => {
     setLoading(false);

@@ -59,6 +59,10 @@ final class StudioAuthoringApi
         'revisions'    => ['GET', ['page', 'limit']],
         'templates'    => ['GET', ['type']],
         'pages'        => ['GET', []],
+        // Phase 6 queries
+        'components'   => ['GET', []],
+        'chrome'       => ['GET', ['page']],
+        'tokens'       => ['GET', ['group']],
         // Commands
         'operations'   => ['POST', ['page_id', 'expected_revision_id', 'revision_kind', 'operations', 'summary']],
         'save_draft'   => ['POST', ['page_id', 'expected_revision_id', 'revision_kind', 'document', 'summary']],
@@ -68,6 +72,14 @@ final class StudioAuthoringApi
         'lock_acquire' => ['POST', ['page_id']],
         'lock_refresh' => ['POST', ['page_id', 'lock_token']],
         'lock_release' => ['POST', ['page_id', 'lock_token']],
+        // Phase 6 commands (every document write carries expected_revision_id)
+        'apply_template'   => ['POST', ['page_id', 'template_key', 'expected_revision_id']],
+        'insert_template'  => ['POST', ['page_id', 'template_key', 'index', 'parent_id', 'expected_revision_id']],
+        'save_template'    => ['POST', ['page_id', 'node_id', 'template_key', 'template_type', 'category', 'name', 'description', 'thumbnail_media_id']],
+        'delete_template'  => ['POST', ['template_key']],
+        'create_component' => ['POST', ['title', 'slug', 'page_id', 'section_id', 'expected_revision_id']],
+        'detach_component' => ['POST', ['page_id', 'section_id', 'expected_revision_id']],
+        'save_tokens'      => ['POST', ['group', 'tokens']],
     ];
 
     /** Safe, fixed messages per public error code — never an exception message. */
@@ -163,6 +175,16 @@ final class StudioAuthoringApi
             'lock_acquire' => StudioApiResponse::ok(['lock' => $this->app->acquireEditLock($actor, self::id($input, 'page_id'))]),
             'lock_refresh' => StudioApiResponse::ok(['lock' => $this->app->refreshEditLock($actor, self::id($input, 'page_id'), self::string($input, 'lock_token', 64))]),
             'lock_release' => StudioApiResponse::ok(['released' => $this->app->releaseEditLock($actor, self::id($input, 'page_id'), self::string($input, 'lock_token', 64))]),
+            'components'   => StudioApiResponse::ok(['components' => $this->app->listGlobalComponents($actor)]),
+            'chrome'       => StudioApiResponse::ok(['chrome' => $this->app->chromeBindings($actor, self::id($input, 'page'))]),
+            'tokens'       => StudioApiResponse::ok(['tokens' => $this->app->designTokens($actor, self::tokenGroup($input))]),
+            'apply_template'   => $this->applyTemplate($actor, $input),
+            'insert_template'  => $this->insertTemplate($actor, $input),
+            'save_template'    => $this->saveTemplate($actor, $input),
+            'delete_template'  => StudioApiResponse::ok(['deleted' => StudioEditorViews::template($this->app->deleteTemplate($actor, self::templateKey($input)))]),
+            'create_component' => $this->createComponent($actor, $input),
+            'detach_component' => StudioApiResponse::ok(self::mutationResult($this->app->detachGlobalSection($actor, self::id($input, 'page_id'), self::nodeId($input, 'section_id'), self::expectedRevision($input)))),
+            'save_tokens'      => $this->saveTokens($actor, $input),
         };
     }
 
@@ -183,9 +205,114 @@ final class StudioAuthoringApi
         if ($type !== null && preg_match('/^[a-z_]{1,32}$/', $type) !== 1) {
             throw self::invalid('type', 'invalid_field', 'type must be a template type key.');
         }
-        return StudioApiResponse::ok([
-            'templates' => array_map([StudioEditorViews::class, 'template'], $this->app->listTemplates($actor, $type)),
-        ]);
+        return StudioApiResponse::ok(['templates' => $this->app->templateLibrary($actor, $type)]);
+    }
+
+    // ── Phase 6 commands ──────────────────────────────────────────────────
+
+    /** @param array<string, mixed> $input */
+    private function applyTemplate(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $result = $this->app->applyTemplate($actor, self::templateKey($input), self::id($input, 'page_id'), self::expectedRevision($input));
+        return StudioApiResponse::ok(self::mutationResult($result));
+    }
+
+    /** @param array<string, mixed> $input */
+    private function insertTemplate(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $parentId = self::optionalString($input, 'parent_id', 64);
+        if ($parentId !== null && preg_match('/^(sec|blk)_[a-z0-9]{16,32}$/', $parentId) !== 1) {
+            throw self::invalid('parent_id', 'invalid_field', 'parent_id must be a section or block id.');
+        }
+        $result = $this->app->insertTemplate(
+            $actor,
+            self::id($input, 'page_id'),
+            self::templateKey($input),
+            self::index($input, 'index'),
+            $parentId,
+            self::expectedRevision($input),
+        );
+        return StudioApiResponse::ok(self::mutationResult($result));
+    }
+
+    /** @param array<string, mixed> $input */
+    private function saveTemplate(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $nodeId = self::optionalString($input, 'node_id', 64);
+        if ($nodeId !== null && preg_match('/^(sec|blk)_[a-z0-9]{16,32}$/', $nodeId) !== 1) {
+            throw self::invalid('node_id', 'invalid_field', 'node_id must be a section or block id.');
+        }
+        $type = self::string($input, 'template_type', 32);
+        if (preg_match('/^[a-z_]{1,32}$/', $type) !== 1) {
+            throw self::invalid('template_type', 'invalid_field', 'template_type must be a template type key.');
+        }
+        $thumb = null;
+        if (array_key_exists('thumbnail_media_id', $input) && $input['thumbnail_media_id'] !== null) {
+            $thumb = self::id($input, 'thumbnail_media_id');
+        }
+        $row = $this->app->saveTemplateFromPage(
+            $actor,
+            self::id($input, 'page_id'),
+            $nodeId,
+            self::templateKey($input),
+            $type,
+            self::optionalString($input, 'category', 64) ?? 'general',
+            self::string($input, 'name', 191),
+            self::optionalString($input, 'description', 1000),
+            $thumb,
+        );
+        $library = $this->app->templateLibrary($actor, (string) $row['template_type']);
+        foreach ($library as $view) {
+            if ($view['template_key'] === (string) $row['template_key']) {
+                return StudioApiResponse::ok(['template' => $view], 201);
+            }
+        }
+        return StudioApiResponse::ok(['template' => StudioEditorViews::template($row)], 201);
+    }
+
+    /** @param array<string, mixed> $input */
+    private function createComponent(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $fromPage = array_key_exists('page_id', $input) && $input['page_id'] !== null ? self::id($input, 'page_id') : null;
+        $sectionId = null;
+        $expected = null;
+        if ($fromPage !== null) {
+            $sectionId = self::nodeId($input, 'section_id');
+            $expected  = self::expectedRevision($input);
+        }
+        $result = $this->app->createGlobalComponent(
+            $actor,
+            self::string($input, 'title', 255),
+            self::string($input, 'slug', 191),
+            $fromPage,
+            $sectionId,
+            $expected,
+        );
+        $out = ['component' => $result['component']];
+        if ($result['page'] !== null) {
+            $out['page']     = StudioEditorViews::page($result['page']);
+            $out['revision'] = is_array($result['revision']) && $result['revision'] !== [] ? StudioEditorViews::revision($result['revision']) : null;
+            $out['document'] = isset($result['revision']['document_json']) ? CanonicalJson::decode((string) $result['revision']['document_json']) : null;
+        }
+        return StudioApiResponse::ok($out, 201);
+    }
+
+    /** @param array<string, mixed> $input */
+    private function saveTokens(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $tokens = $input['tokens'] ?? null;
+        if (!is_array($tokens) || ($tokens !== [] && array_is_list($tokens))) {
+            throw self::invalid('tokens', 'invalid_tokens', 'tokens must be a JSON object of token ref => value.');
+        }
+        foreach ($tokens as $ref => $value) {
+            if (!is_string($ref) || preg_match('/^[a-z][a-z0-9_.]{0,63}$/', $ref) !== 1) {
+                throw self::invalid('tokens', 'invalid_tokens', 'token refs must be symbolic names.');
+            }
+            if ($value !== null && (!is_string($value) || strlen($value) > 200)) {
+                throw self::invalid('tokens.' . $ref, 'invalid_token_value', 'token values must be short strings or null.');
+            }
+        }
+        return StudioApiResponse::ok(['tokens' => $this->app->saveDesignTokens($actor, self::tokenGroup($input), $tokens)]);
     }
 
     // ── Commands ──────────────────────────────────────────────────────────
@@ -277,7 +404,8 @@ final class StudioAuthoringApi
 
         $templateKey = self::optionalString($input, 'template_key', 120);
         if ($templateKey !== null && $templateKey !== '') {
-            $applied = $this->app->applyTemplate($actor, $templateKey, (int) $page['id']);
+            // The page was created a moment ago: its initial revision is the expected one.
+            $applied = $this->app->applyTemplate($actor, $templateKey, (int) $page['id'], (int) $created['revision']['id']);
             $page = $applied['page'];
         }
         return StudioApiResponse::ok(['page' => StudioEditorViews::page($page)], 201);
@@ -414,6 +542,49 @@ final class StudioAuthoringApi
     private static function optionalInt(array $input, string $key): ?int
     {
         return array_key_exists($key, $input) ? self::id($input, $key) : null;
+    }
+
+    /** A non-negative position. @param array<string, mixed> $input */
+    private static function index(array $input, string $key): int
+    {
+        $value = $input[$key] ?? null;
+        if (is_string($value) && preg_match('/^(0|[1-9][0-9]{0,5})$/', $value) === 1) {
+            $value = (int) $value;
+        }
+        if (!is_int($value) || $value < 0 || $value > 100000) {
+            throw self::invalid($key, 'invalid_index', "{$key} must be a non-negative integer.");
+        }
+        return $value;
+    }
+
+    /** @param array<string, mixed> $input */
+    private static function nodeId(array $input, string $key): string
+    {
+        $value = self::string($input, $key, 64);
+        if (preg_match('/^(sec|blk)_[a-z0-9]{16,32}$/', $value) !== 1) {
+            throw self::invalid($key, 'invalid_field', "{$key} must be a section or block id.");
+        }
+        return $value;
+    }
+
+    /** @param array<string, mixed> $input */
+    private static function templateKey(array $input): string
+    {
+        $value = self::string($input, 'template_key', 120);
+        if (preg_match('/^[a-z0-9][a-z0-9_-]{0,119}$/', $value) !== 1) {
+            throw self::invalid('template_key', 'invalid_template_key', 'template_key must be a slug.');
+        }
+        return $value;
+    }
+
+    /** @param array<string, mixed> $input */
+    private static function tokenGroup(array $input): string
+    {
+        $value = self::optionalString($input, 'group', 64) ?? 'default';
+        if (preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $value) !== 1) {
+            throw self::invalid('group', 'invalid_token_group', 'group must be a token group identifier.');
+        }
+        return $value;
     }
 
     /**

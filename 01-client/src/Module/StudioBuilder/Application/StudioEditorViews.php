@@ -2,11 +2,16 @@
 /**
  * Kohevo Studio (studio-builder) — Transport-safe builder views of Studio rows.
  *
- * The ONLY shapes of a page / revision / template the builder ever receives.
- * Explicit allowlists: `tenant_id`, `uuid`, author/audit columns beyond the
- * creator id, and revision `document_json` never leave the server through
- * these views (the working document is sent separately, decoded, and only to
- * an actor authorized to edit that page).
+ * The ONLY shapes of a page / revision / template / component the builder
+ * ever receives. Explicit allowlists: `tenant_id`, author/audit columns beyond
+ * the creator id, and revision/template `document_json` never leave the
+ * server through these views (the working document is sent separately,
+ * decoded, and only to an actor authorized to edit that page).
+ *
+ * A page view carries no `uuid`. A Global Component view (Phase 6) exposes
+ * the component page's uuid as `ref` — it IS the value a consuming section
+ * stores in `global_ref`, opaque, tenant-scoped on every lookup, and only
+ * ever returned to an authenticated, entitled actor of that tenant.
  */
 
 declare(strict_types=1);
@@ -60,17 +65,37 @@ final class StudioEditorViews
 
     /**
      * @param array<string, mixed> $row studiobuilder_templates row
+     * @param null|array{sections: int, blocks: int, block_labels: list<string>} $summary
      * @return array<string, mixed>
      */
-    public static function template(array $row): array
+    public static function template(array $row, ?string $thumbnailUrl = null, ?array $summary = null): array
     {
         return [
             'category'      => (string) ($row['category'] ?? ''),
             'description'   => isset($row['description']) ? (string) $row['description'] : null,
             'is_system'     => !empty($row['is_system']),
             'name'          => (string) ($row['name'] ?? ''),
+            'summary'       => $summary,
             'template_key'  => (string) ($row['template_key'] ?? ''),
             'template_type' => (string) ($row['template_type'] ?? ''),
+            'thumbnail_url' => $thumbnailUrl,
+            'updated_at'    => isset($row['updated_at']) ? (string) $row['updated_at'] : null,
         ];
+    }
+
+    /**
+     * A Global Component: a `section_preset` page plus its reference key and usage.
+     *
+     * @param array<string, mixed> $row studiobuilder_pages row (page_type = section_preset)
+     * @return array<string, mixed>
+     */
+    public static function component(array $row, int $usageCount = 0): array
+    {
+        $view = self::page($row);
+        unset($view['public_path'], $view['route_mode']);
+        $view['ref']         = (string) $row['uuid'];
+        $view['usage_count'] = max(0, $usageCount);
+        ksort($view, SORT_STRING);
+        return $view;
     }
 }

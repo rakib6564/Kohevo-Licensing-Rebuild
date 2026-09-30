@@ -46,6 +46,36 @@ final class DependencyRepository extends StudioRepository
     }
 
     /**
+     * Distinct page ids (active tenant) whose CURRENT working draft or CURRENT
+     * published revision depends on (type, key) — the pages that would break
+     * if the dependency disappeared (archive/delete protection). Unlike
+     * `pageIdsForDependency()` this ignores historical revisions.
+     *
+     * @return list<int>
+     */
+    public function currentDependentPageIds(string $dependencyType, string $dependencyKey): array
+    {
+        $this->assertValidTenantScope();
+        if (!$this->tenants->isScoped()) {
+            throw new \LogicException(static::class . '::currentDependentPageIds() requires a scoped tenant.');
+        }
+        $tenantId = $this->tenants->id();
+        $rows = \Slate\Data\Database::rows(
+            'SELECT DISTINCT d.page_id
+               FROM `studiobuilder_dependencies` d
+               INNER JOIN `studiobuilder_pages` p
+                       ON p.tenant_id = d.tenant_id
+                      AND p.id = d.page_id
+                      AND p.status <> \'archived\'
+                      AND (p.active_draft_revision_id = d.revision_id OR p.published_revision_id = d.revision_id)
+              WHERE d.tenant_id = ? AND d.dependency_type = ? AND d.dependency_key = ?
+              ORDER BY d.page_id ASC',
+            [$tenantId, $dependencyType, $dependencyKey]
+        );
+        return array_values(array_map(static fn(array $r): int => (int) $r['page_id'], $rows));
+    }
+
+    /**
      * Distinct page ids (active tenant) with any revision depending on (type, key).
      *
      * @return list<int>

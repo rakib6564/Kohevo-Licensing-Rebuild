@@ -34,6 +34,18 @@ final class CanonicalDocumentSchema
         'section_preset',
     ];
 
+    /**
+     * Phase 6 — live global references. A section whose `global_ref` is set
+     * references the canonical content of a Global Component: a Studio page
+     * of type `section_preset` (COMPONENT_DOCUMENT_TYPE), identified by its
+     * immutable page `uuid`. Only these document types may hold such a
+     * reference; a component, header or footer partial may not (references
+     * are one level deep by construction — no cycles, no nested resolution).
+     */
+    public const COMPONENT_DOCUMENT_TYPE   = 'section_preset';
+    public const GLOBAL_REF_DOCUMENT_TYPES = ['page', 'landing', 'system'];
+    public const CHROMED_DOCUMENT_TYPES    = ['page', 'landing'];
+
     public const ALLOWED_TOP_LEVEL_KEYS = [
         'schema_version',
         'document_type',
@@ -124,6 +136,8 @@ final class CanonicalDocumentSchema
     public const TEMPLATE_KEY_PATTERN = '/^[a-z0-9][a-z0-9_-]{0,119}$/';
     public const TOKEN_GROUP_PATTERN  = '/^[a-z0-9][a-z0-9_-]{0,63}$/';
     public const GLOBAL_REF_PATTERN   = '/^[a-z0-9][a-z0-9_.-]{0,119}$/';
+    /** A Global Component reference is the component page's immutable v4 uuid (a subset of GLOBAL_REF_PATTERN). */
+    public const COMPONENT_REF_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/';
     public const TOKEN_REF_PATTERN    = '/^(surface|text|space|radius|shadow|font|color|border)\.[a-z0-9_]+(\.[a-z0-9_]+)?$/';
     public const PROVIDER_KEY_PATTERN = '/^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/';
 

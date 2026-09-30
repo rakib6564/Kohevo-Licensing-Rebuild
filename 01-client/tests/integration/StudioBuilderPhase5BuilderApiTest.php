@@ -243,7 +243,7 @@ unit('phase5 integration: builder command/query API (real MySQL, tenants 101/202
 
                 $types = array_column($boot['manifest']['blocks'], 'type');
                 assert_true(in_array('booking.services', $types, true) && in_array('core.heading', $types, true), 'entitled module blocks are offered to tenant 101');
-                assert_eq(['admin' => false, 'edit' => true, 'publish' => false, 'view' => true], $boot['manifest']['permissions']);
+                assert_eq(['admin' => false, 'edit' => true, 'publish' => false, 'tokens' => false, 'view' => true], $boot['manifest']['permissions']);
                 $manifestJson = json_encode($boot['manifest']);
                 foreach (['Slate\\\\', '.php', 'Closure', 'tenant_id'] as $leak) {
                     assert_true(!str_contains((string) $manifestJson, $leak), "manifest must not contain {$leak}");

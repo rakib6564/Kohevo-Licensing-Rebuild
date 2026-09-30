@@ -169,10 +169,15 @@ Deliver the visual editor as a thin consumer of the canonical domain.
 
 ---
 
-## Phase 6 — Templates, global components and design system UI
+## Phase 6 — Templates, global components and design system UI (Implemented)
 
 ### Goal
 Add reusable authoring primitives.
+
+Decisions and contracts: `architecture/KOHEVO-STUDIO-PHASE6-TEMPLATES-COMPONENTS.md`
+(no schema change; a global component is a `section_preset` page referenced
+by uuid; presets are copies; template application requires the client's
+expected revision).
 
 ### Scope
 

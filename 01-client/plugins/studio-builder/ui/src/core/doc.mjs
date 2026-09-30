@@ -106,11 +106,15 @@ export function canMoveBlock(doc, manifest, blockId, parentId) {
   const moving = findNode(doc, blockId);
   if (!moving || moving.kind !== 'block') return false;
   if (parentId === blockId || isDescendant(doc, blockId, parentId)) return false;
+  const parent = findNode(doc, parentId);
+  if (parent && parent.kind === 'section' && isGlobalSection(parent.node)) return false;
   return canContain(doc, manifest, parentId, moving.node.type, subtreeHeight(moving.node));
 }
 
 export function canInsertBlock(doc, manifest, parentId, type) {
   const max = (manifest.limits && manifest.limits.max_blocks) || 250;
+  const parent = findNode(doc, parentId);
+  if (parent && parent.kind === 'section' && isGlobalSection(parent.node)) return false; // a reference owns no blocks
   return !!blockDefinition(manifest, type) && countBlocks(doc) < max && canContain(doc, manifest, parentId, type, 1);
 }
 
@@ -178,7 +182,7 @@ export function blockOutdentTarget(doc, manifest, blockId) {
  */
 export function insertionPoint(doc, manifest, selectedId, type) {
   const sel = selectedId ? findNode(doc, selectedId) : null;
-  if (sel && sel.kind === 'section') return { parentId: sel.node.id, index: asList(sel.node.blocks).length };
+  if (sel && sel.kind === 'section' && !isGlobalSection(sel.node)) return { parentId: sel.node.id, index: asList(sel.node.blocks).length };
   if (sel && sel.kind === 'block') {
     const def = blockDefinition(manifest, sel.node.type);
     if (def && def.allows_children && canContain(doc, manifest, sel.node.id, type)) {
@@ -186,16 +190,22 @@ export function insertionPoint(doc, manifest, selectedId, type) {
     }
     if (canContain(doc, manifest, sel.parentId, type)) return { parentId: sel.parentId, index: sel.index + 1 };
   }
-  const sections = sectionsOf(doc);
+  const sections = sectionsOf(doc).filter((s) => !isGlobalSection(s));
   if (!sections.length) return null;
   const last = sections[sections.length - 1];
   return { parentId: last.id, index: asList(last.blocks).length };
 }
 
+/** A section that references a global component (Phase 6): it owns no content of its own. */
+export function isGlobalSection(node) {
+  return !!(node && typeof node.global_ref === 'string' && node.global_ref !== '');
+}
+
 /** A short human label for a node (outline rows, announcements). */
 export function nodeLabel(node, manifest, kind) {
   if (kind === 'section' || (node && Array.isArray(node.blocks))) {
-    return (node && node.label) || 'Section';
+    const base = (node && node.label) || 'Section';
+    return isGlobalSection(node) ? `${base} (global)` : base;
   }
   const def = blockDefinition(manifest, node && node.type);
   const base = def ? def.label : (node && node.type) || 'Block';

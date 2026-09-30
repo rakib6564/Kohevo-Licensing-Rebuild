@@ -86,6 +86,8 @@ $sbBoot = [
     'csrfToken'  => csrf_token(),
     'canvasSandbox' => StudioCanvasPolicy::IFRAME_SANDBOX,
     'mediaPicker'   => $sbMediaPicker,
+    'builderUrl'    => plugin_url('studio-builder', 'admin/builder.php'),
+    'brandingUrl'   => rtrim((string) SLATE_URL, '/') . '/admin/settings.php?tab=branding',
 ];
 ?><!DOCTYPE html>
 <html lang="en">

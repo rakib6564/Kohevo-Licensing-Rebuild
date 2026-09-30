@@ -9,7 +9,8 @@
  *
  * Every read and write goes through StudioApplicationService (tenant ->
  * authentication -> studio-builder entitlement -> RBAC); this file holds no
- * Studio query of its own. Full template-library management is Phase 6.
+ * Studio query of its own. The template library, reusable presets, global
+ * components and design tokens are managed inside the builder (Phase 6).
  */
 
 declare(strict_types=1);
@@ -45,7 +46,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $created = $studioApp->createPage($studioActor, $formValues['title'], $formValues['slug'], $formValues['page_type'], $formValues['route_mode']);
             $newId = (int) $created['page']['id'];
             if ($formValues['template_key'] !== '') {
-                $studioApp->applyTemplate($studioActor, $formValues['template_key'], $newId);
+                // The page was created a moment ago: its initial revision is the expected one.
+                $studioApp->applyTemplate($studioActor, $formValues['template_key'], $newId, (int) $created['revision']['id']);
             }
             header('Location: ' . plugin_url('studio-builder', 'admin/builder.php') . '?page=' . $newId, true, 303);
             exit;

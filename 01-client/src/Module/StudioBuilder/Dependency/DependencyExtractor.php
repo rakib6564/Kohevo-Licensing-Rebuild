@@ -7,7 +7,11 @@
  * - Document-level token group (`settings.token_group` -> `token_group`)
  * - Document-level non-default template (`template_key` -> `partial`)
  * - Document-level SEO OpenGraph image (`seo.og_image_media_id` -> `media`)
- * - Section-level global reference (`section.global_ref` -> `partial`)
+ * - Section-level global reference (`section.global_ref` -> `partial`, key = the
+ *   referenced Global Component's page uuid — Phase 6 live reference)
+ * - Document-level chrome bindings (`settings.header_mode` / `footer_mode` other
+ *   than `hidden` on a chromed document -> `partial` `chrome:header` / `chrome:footer`),
+ *   so publishing a header/footer partial can drop exactly the artifacts that show chrome
  * - Section-level background token (`section.layout.background_token` -> `token_group`)
  * - Block-level style tokens (`block.style.*_token` -> `token_group`)
  * - Block-level props, bindings, and module entitlements via `BlockDefinitionInterface::extractDependencies()`
@@ -18,11 +22,16 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Dependency;
 
+use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 
 final class DependencyExtractor
 {
     public const ROOT_NODE_ID = 'doc_root';
+
+    /** `partial` dependency keys of the two chrome regions (documents that show a header / footer). */
+    public const CHROME_HEADER_KEY = 'chrome:header';
+    public const CHROME_FOOTER_KEY = 'chrome:footer';
 
     /**
      * Extract deduplicated, deterministically ordered dependency records from a normalized document.
@@ -56,6 +65,16 @@ final class DependencyExtractor
         $ogMediaId = $normalizedDocument['seo']['og_image_media_id'] ?? null;
         if (is_int($ogMediaId) && $ogMediaId > 0) {
             $add(new DependencyRecord(self::ROOT_NODE_ID, 'media', (string) $ogMediaId));
+        }
+
+        $docType = (string) ($normalizedDocument['document_type'] ?? '');
+        if (in_array($docType, CanonicalDocumentSchema::CHROMED_DOCUMENT_TYPES, true)) {
+            if (($normalizedDocument['settings']['header_mode'] ?? 'inherit') !== 'hidden') {
+                $add(new DependencyRecord(self::ROOT_NODE_ID, 'partial', self::CHROME_HEADER_KEY));
+            }
+            if (($normalizedDocument['settings']['footer_mode'] ?? 'inherit') !== 'hidden') {
+                $add(new DependencyRecord(self::ROOT_NODE_ID, 'partial', self::CHROME_FOOTER_KEY));
+            }
         }
 
         // 2. Section and Block dependencies

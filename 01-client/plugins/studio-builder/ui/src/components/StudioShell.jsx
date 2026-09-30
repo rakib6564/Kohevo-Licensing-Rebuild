@@ -20,12 +20,16 @@ import { LiveRegion } from './LiveRegion.jsx';
 import { ConflictBanner } from './ConflictBanner.jsx';
 import { InsertDialog } from './InsertDialog.jsx';
 import { HistoryDialog } from './HistoryDialog.jsx';
+import { SaveTemplateDialog } from './SaveTemplateDialog.jsx';
+import { ComponentDialog } from './ComponentDialog.jsx';
+import { ThemeDialog } from './ThemeDialog.jsx';
 import { createTransport } from '../core/api.mjs';
 import { SyncEngine, STATUS } from '../core/sync.mjs';
 import { EditLock } from '../core/lock.mjs';
 import { t, errorMessage } from '../core/messages.mjs';
 import { blockDefinition, findNode, insertionPoint, nodeLabel, sectionsOf } from '../core/doc.mjs';
 import { defaultBindings, setupFields } from '../core/fields.mjs';
+import { insertTargetFor, referenceIndexFor, slugify } from '../core/library.mjs';
 import * as ops from '../core/operations.mjs';
 import { viewportByKey } from '../core/viewport.mjs';
 
@@ -44,6 +48,11 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   const [pendingInsert, setPendingInsert] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [lockState, setLockState] = useState({ held: false, otherEditor: false });
+  // Phase 6: library data (templates + global components), dialogs, and a
+  // canvas version that bumps when a shared render input changes.
+  const [library, setLibrary] = useState(null);
+  const [dialog, setDialog] = useState(null); // 'save_template' | 'component' | 'theme'
+  const [canvasVersion, setCanvasVersion] = useState(0);
 
   const announce = useCallback((text) => {
     // Re-announce identical text by clearing first.
@@ -66,6 +75,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
         case 'undo': announce(t('announce_undo')); break;
         case 'redo': announce(t('announce_redo')); break;
         case 'published': announce(t('announce_published')); break;
+        case 'command': if (e.label) announce(e.label); break;
         default: break;
       }
     },
@@ -84,6 +94,19 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   }, [transport, boot.pageId, engine]);
 
   useEffect(() => { load(); }, [load]);
+
+  // ── Library (templates + global components): server data, refreshed on demand ─
+  const refreshLibrary = useCallback(async () => {
+    if (typeof transport.templates !== 'function') return;
+    const [tpl, cmp] = await Promise.all([transport.templates(), transport.components()]);
+    setLibrary({
+      templates: tpl.ok ? tpl.data.templates : [],
+      components: cmp.ok ? cmp.data.components : [],
+      error: tpl.ok && cmp.ok ? null : errorMessage((tpl.ok ? cmp : tpl).error),
+    });
+  }, [transport]);
+
+  useEffect(() => { if (manifest) refreshLibrary(); }, [manifest, refreshLibrary]);
 
   // ── Advisory edit lock ─────────────────────────────────────────────────
   useEffect(() => {
@@ -208,6 +231,113 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     announce(t('announce_viewport', { label: t(key) }));
   }, [announce]);
 
+  // ── Phase 6 actions: templates (copy), global components (reference), chrome, theme ─
+  const templateName = (tpl) => (tpl && tpl.name) || (tpl && tpl.template_key) || '';
+
+  const applyTemplate = useCallback(async (tpl) => {
+    if (!window.confirm(t('library_confirm_apply', { name: templateName(tpl) }))) return false;
+    return engine.command((base) => transport.applyTemplate({ ...base, template_key: tpl.template_key }), { label: t('announce_template_applied') });
+  }, [engine, transport]);
+
+  const insertTemplate = useCallback(async (tpl) => {
+    const working = engine.getSnapshot().working;
+    const target = insertTargetFor(working, tpl, selectionRef.current, (d, sel) => insertionPoint(d, manifest, sel, 'core.container'));
+    if (!target) {
+      announce(t('empty_page'));
+      return false;
+    }
+    const body = { template_key: tpl.template_key, index: target.index };
+    if (target.parent_id) body.parent_id = target.parent_id;
+    return engine.command((base) => transport.insertTemplate({ ...base, ...body }), { label: t('announce_template_inserted') });
+  }, [engine, transport, manifest, announce]);
+
+  const deleteTemplate = useCallback(async (tpl) => {
+    if (!window.confirm(t('library_confirm_delete', { name: templateName(tpl) }))) return false;
+    const res = await transport.deleteTemplate({ template_key: tpl.template_key });
+    if (!res.ok) { announce(errorMessage(res.error)); return false; }
+    announce(t('announce_template_deleted'));
+    await refreshLibrary();
+    return true;
+  }, [transport, announce, refreshLibrary]);
+
+  /** Insert a LIVE reference to a global component (a section with global_ref; no local blocks). */
+  const insertComponentRef = useCallback((component) => {
+    const working = engine.getSnapshot().working;
+    const index = referenceIndexFor(working, selectionRef.current);
+    const provisionalId = ops.provisionalId('sec');
+    if (engine.apply(ops.insertGlobalSection(index, component.ref, component.title), { provisionalId, label: component.title })) {
+      setSelection(provisionalId);
+      announce(t('announce_component_inserted'));
+      return true;
+    }
+    return false;
+  }, [engine, announce]);
+
+  const detachComponent = useCallback(async (sectionId) => {
+    if (!window.confirm(t('global_section_detach_confirm'))) return false;
+    const ok = await engine.command((base) => transport.detachComponent({ ...base, section_id: sectionId }), { label: t('announce_component_detached') });
+    if (ok) { setSelection(null); refreshLibrary(); }
+    return ok;
+  }, [engine, transport, refreshLibrary]);
+
+  const publishComponent = useCallback(async (component) => {
+    const res = await transport.publish({ page_id: component.id, expected_revision_id: component.active_draft_revision_id });
+    if (!res.ok) { announce(errorMessage(res.error)); return false; }
+    announce(t('announce_component_published'));
+    setCanvasVersion((v) => v + 1); // pages render the component's PUBLISHED version
+    await refreshLibrary();
+    return true;
+  }, [transport, announce, refreshLibrary]);
+
+  const createComponent = useCallback(async ({ title, slug, sectionId, openAfter }) => {
+    let created = null;
+    if (sectionId) {
+      const ok = await engine.command(async (base) => {
+        const res = await transport.createComponent({ ...base, title, slug, section_id: sectionId });
+        if (res.ok) created = res.data.component;
+        return res;
+      }, { label: t('announce_component_created') });
+      if (!ok) {
+        const err = engine.getSnapshot().error;
+        return { error: err ? errorMessage(err) : t('error_server_error') };
+      }
+    } else {
+      const res = await transport.createComponent({ title, slug });
+      if (!res.ok) {
+        const detail = res.error && res.error.details && Array.isArray(res.error.details.errors) ? res.error.details.errors[0] : null;
+        return { error: detail && detail.message ? detail.message : errorMessage(res.error) };
+      }
+      created = res.data.component;
+      announce(t('announce_component_created'));
+    }
+    setDialog(null);
+    setSelection(null);
+    await refreshLibrary();
+    if (openAfter && created && boot.builderUrl) window.open(`${boot.builderUrl}?page=${created.id}`, '_blank', 'noopener');
+    return { component: created };
+  }, [engine, transport, announce, refreshLibrary, boot.builderUrl]);
+
+  /** Create the site (`default`) or this page's own header/footer partial and open it. */
+  const createPartial = useCallback(async (region, slug) => {
+    const pageType = region === 'header' ? 'header_partial' : 'footer_partial';
+    const page = engine.getSnapshot().page;
+    const title = `${page ? page.title : ''} ${region}`.trim();
+    const res = await transport.createPage({ title, slug: slugify(slug, 191) || 'default', page_type: pageType, route_mode: 'standalone' });
+    if (!res.ok) { announce(errorMessage(res.error)); return false; }
+    if (boot.builderUrl) window.open(`${boot.builderUrl}?page=${res.data.page.id}`, '_blank', 'noopener');
+    setCanvasVersion((v) => v + 1);
+    return true;
+  }, [engine, transport, announce, boot.builderUrl]);
+
+  const onTokensSaved = useCallback(async () => {
+    announce(t('announce_tokens_saved'));
+    setCanvasVersion((v) => v + 1);
+    if (typeof transport.manifest === 'function') {
+      const res = await transport.manifest();
+      if (res.ok) { setManifest(res.data.manifest); engine.manifest = res.data.manifest; }
+    }
+  }, [transport, announce, engine]);
+
   // ── Keyboard shortcuts (never while typing in a field, except save) ────
   useEffect(() => {
     const onKey = (e) => {
@@ -227,7 +357,12 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     boot, engine, manifest, transport, selection, select, announce, applyOp,
     insertBlock, insertSection, removeNode, moveBlockTo, moveSectionTo, labelOf,
     viewport: viewportByKey(viewportKey),
-  }), [boot, engine, manifest, transport, selection, select, announce, applyOp, insertBlock, insertSection, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey]);
+    library, refreshLibrary, applyTemplate, insertTemplate, deleteTemplate,
+    insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion,
+    openSaveTemplate: () => setDialog('save_template'),
+    openComponentDialog: () => setDialog('component'),
+  }), [boot, engine, manifest, transport, selection, select, announce, applyOp, insertBlock, insertSection, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey,
+    library, refreshLibrary, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
 
   if (loadError) {
     return (
@@ -266,6 +401,19 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
           setPendingInsert(null);
           commitInsert(req.type, req.target, props, bindings);
         }}
+        onTheme={manifest.permissions && (manifest.permissions.tokens || manifest.permissions.view) ? () => setDialog('theme') : null}
+        dialogs={(
+          <>
+            {dialog === 'save_template' && (
+              <SaveTemplateDialog
+                onClose={() => setDialog(null)}
+                onSaved={() => { setDialog(null); announce(t('announce_template_saved')); refreshLibrary(); }}
+              />
+            )}
+            {dialog === 'component' && <ComponentDialog onClose={() => setDialog(null)} onCreate={createComponent} />}
+            {dialog === 'theme' && <ThemeDialog onClose={() => setDialog(null)} onSaved={onTokensSaved} />}
+          </>
+        )}
       />
     </EditorContext.Provider>
   );
@@ -275,6 +423,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
 export function ShellLayout({
   viewportKey, onViewport, onSave, onUndo, onRedo, onPublish, onReload, announcement, lockState,
   historyOpen = false, setHistoryOpen = () => {}, pendingInsert = null, onCancelInsert = () => {}, onConfirmInsert = () => {},
+  onTheme = null, dialogs = null,
 }) {
   return (
     <div className="sbx-shell" data-viewport={viewportKey}>
@@ -286,6 +435,7 @@ export function ShellLayout({
         onRedo={onRedo}
         onPublish={onPublish}
         onHistory={() => setHistoryOpen(true)}
+        onTheme={onTheme}
       />
       <ConflictBanner onReload={onReload} lockState={lockState} />
       <div className="sbx-workspace">
@@ -296,6 +446,7 @@ export function ShellLayout({
       <LiveRegion text={announcement} />
       {pendingInsert && <InsertDialog request={pendingInsert} onCancel={onCancelInsert} onConfirm={onConfirmInsert} />}
       {historyOpen && <HistoryDialog onClose={() => setHistoryOpen(false)} />}
+      {dialogs}
     </div>
   );
 }

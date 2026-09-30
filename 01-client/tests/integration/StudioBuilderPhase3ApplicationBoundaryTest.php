@@ -569,7 +569,9 @@ unit('phase3 integration: application boundary, entitlement, RBAC, data provider
 
             // ── 8. Phase 2 finding F2 regression: document_type set before, not after, validation ─
 
-            $appliedTemplate = $tenants->runAs(SBP3_TENANT_A, static fn(): array => $app->applyTemplate($editor, 'admin-template', $pageIdA));
+            // Phase 6: applying a template is an ordinary draft write and states the expected revision.
+            $currentA = $tenants->runAs(SBP3_TENANT_A, static fn(): ?array => $pages->find($pageIdA));
+            $appliedTemplate = $tenants->runAs(SBP3_TENANT_A, static fn(): array => $app->applyTemplate($editor, 'admin-template', $pageIdA, (int) $currentA['active_draft_revision_id']));
             $appliedDoc = CanonicalJson::decode((string) $appliedTemplate['revision']['document_json']);
             assert_eq('page', $appliedDoc['document_type']);
             $reNormalized = DocumentNormalizer::normalize($appliedDoc, $registry);

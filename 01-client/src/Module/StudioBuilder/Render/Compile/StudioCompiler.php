@@ -5,6 +5,7 @@
  *   revision.document_json
  *     -> validate / normalize            (RenderDocumentPreparer)
  *     -> template/chrome resolution      (ChromeResolver: published partials)
+ *     -> global component resolution     (GlobalComponentResolver: published components)
  *     -> theme resolution                (ThemeResolver: defaults < branding < tokens)
  *     -> block rendering                 (DocumentRenderer; dynamic nodes deferred)
  *     -> chrome assembly + SEO data      (SeoHead)
@@ -34,6 +35,8 @@ use Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeResolver;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeSource;
+use Slate\Module\StudioBuilder\Render\Component\ComponentSource;
+use Slate\Module\StudioBuilder\Render\Component\GlobalComponentResolver;
 use Slate\Module\StudioBuilder\Render\DocumentRenderer;
 use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Render\Media\MediaResolverInterface;
@@ -62,7 +65,13 @@ final class StudioCompiler
         private readonly ChromeResolver $chrome,
         private readonly MediaResolverInterface $media,
         private readonly ?CompilationRepository $compilations = null,
-    ) {}
+        ?GlobalComponentResolver $components = null,
+    ) {
+        $this->components = $components ?? new GlobalComponentResolver();
+    }
+
+    /** Phase 6: resolves `section.global_ref` to the referenced component's published revision. */
+    private readonly GlobalComponentResolver $components;
 
     /**
      * Compile one revision of one page for a render context. Reads only.
@@ -81,7 +90,7 @@ final class StudioCompiler
             $collector = new RenderCollector();
 
             $header = $this->renderChrome('header', $plan['header'], $context, $theme, $collector);
-            $main   = $this->documents->renderSections($document['sections'] ?? [], $context, $theme, $collector, true);
+            $main   = $this->documents->renderSections($document['sections'] ?? [], $context, $theme, $collector, true, $this->prepareComponents($plan['components']));
             $footer = $this->renderChrome('footer', $plan['footer'], $context, $theme, $collector);
 
             $width = $document['settings']['container_width'] ?? 'wide';
@@ -213,8 +222,33 @@ final class StudioCompiler
     }
 
     /**
+     * The published sections of every resolved component, prepared through
+     * the same validate/normalize path as the page itself. Missing or
+     * unpublished components are simply absent (→ unavailable fallback).
+     *
+     * @param array<string, ComponentSource> $sources
+     * @return array<string, list<array<string, mixed>>>
+     */
+    private function prepareComponents(array $sources): array
+    {
+        $prepared = [];
+        foreach ($sources as $ref => $source) {
+            if (!$source->isPublished()) {
+                continue;
+            }
+            try {
+                $document = RenderDocumentPreparer::prepare((string) $source->documentJson, $this->registry)['document'];
+            } catch (StudioRenderException $ignored) {
+                continue; // an unrenderable component degrades to the unavailable fallback, never breaks the page
+            }
+            $prepared[(string) $ref] = is_array($document['sections'] ?? null) ? $document['sections'] : [];
+        }
+        return $prepared;
+    }
+
+    /**
      * @param array<string, mixed> $revision
-     * @return array{theme: ResolvedTheme, header: ChromeSource, footer: ChromeSource, inputs: array<string, mixed>, hash: string}
+     * @return array{theme: ResolvedTheme, header: ChromeSource, footer: ChromeSource, components: array<string, ComponentSource>, inputs: array<string, mixed>, hash: string}
      */
     private function plan(PageAddress $page, array $revision, RenderContext $context): array
     {
@@ -238,9 +272,20 @@ final class StudioCompiler
         $theme  = $this->themes->resolve((string) $settings['token_group']);
         $header = $this->chrome->resolve('header', (string) $settings['header_mode'], $page);
         $footer = $this->chrome->resolve('footer', (string) $settings['footer_mode'], $page);
+        // Live references resolve to the referenced components' PUBLISHED revisions; their
+        // identity is part of the fingerprint, so a republished component makes every
+        // dependent artifact stale on the next request even without explicit invalidation.
+        $components = is_array($decoded) && in_array((string) ($decoded['document_type'] ?? ''), CanonicalDocumentSchema::GLOBAL_REF_DOCUMENT_TYPES, true)
+            ? $this->components->resolveDocument($decoded)
+            : [];
+        $componentKeys = [];
+        foreach ($components as $ref => $source) {
+            $componentKeys[(string) $ref] = $source->key();
+        }
 
         $inputs = [
             'compiler'    => self::COMPILER_VERSION,
+            'components'  => $componentKeys,
             'document'    => hash('sha256', $documentJson),
             'footer'      => $footer->key(),
             'header'      => $header->key(),
@@ -255,11 +300,12 @@ final class StudioCompiler
         ];
 
         return [
-            'theme'  => $theme,
-            'header' => $header,
-            'footer' => $footer,
-            'inputs' => $inputs,
-            'hash'   => hash('sha256', CanonicalJson::encode($inputs)),
+            'theme'      => $theme,
+            'header'     => $header,
+            'footer'     => $footer,
+            'components' => $components,
+            'inputs'     => $inputs,
+            'hash'       => hash('sha256', CanonicalJson::encode($inputs)),
         ];
     }
 

@@ -33,6 +33,38 @@ final class PageRepository extends StudioRepository
     }
 
     /**
+     * A Global Component: the non-archived `section_preset` page with this
+     * uuid, within the active tenant scope (Phase 6 live reference target).
+     */
+    public function findComponentByRef(string $ref): ?array
+    {
+        if (preg_match(\Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::COMPONENT_REF_PATTERN, $ref) !== 1) {
+            return null;
+        }
+        $row = $this->query()
+            ->where('uuid', $ref)
+            ->where('page_type', \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE)
+            ->first();
+        return ($row !== null && ($row['status'] ?? null) !== 'archived') ? $row : null;
+    }
+
+    /**
+     * All non-archived pages of one type within the active tenant scope.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function allOfType(string $pageType, int $limit = 500): array
+    {
+        $rows = $this->query()
+            ->where('page_type', $pageType)
+            ->orderBy('title', 'ASC')
+            ->orderBy('id', 'ASC')
+            ->limit(max(1, $limit))
+            ->get();
+        return array_values(array_filter($rows, static fn(array $r): bool => ($r['status'] ?? null) !== 'archived'));
+    }
+
+    /**
      * The tenant's published homepage (`route_mode = homepage`) among the given
      * routable page types; the most recently published one wins if several exist.
      *
