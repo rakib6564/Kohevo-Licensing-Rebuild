@@ -12,6 +12,10 @@
  *     -> compile (cached artifact) -> fill -> assemble
  *     -> 200 / 304 with public cache headers
  *
+ * Phase 9C: `robots.txt` and `sitemap.xml` are answered here too, for the
+ * same tenant/entitlement gate (StudioSitemapService; base URL from
+ * SLATE_URL only).
+ *
  * Anti-enumeration: every "no" before a published page is confirmed —
  * unknown slug, draft-only page, archived page, unlicensed Studio, missing
  * tenant, lookup error — returns null, and the caller renders the platform's
@@ -47,6 +51,7 @@ final class StudioPublicRuntime
         private readonly StudioRenderService $renderer,
         private readonly StudioReservedRoutes $reserved,
         ?\Closure $entitlementCheck = null,
+        private readonly ?StudioSitemapService $sitemap = null,
     ) {
         $this->entitlementCheck = $entitlementCheck
             ?? static fn(int $tenantId, string $moduleKey): bool => EntitlementService::canAccess($tenantId, $moduleKey);
@@ -54,6 +59,10 @@ final class StudioPublicRuntime
 
     public function handlePath(string $path, ?string $ifNoneMatch = null): ?PublicResponse
     {
+        $file = $this->seoFileFromPath($path);
+        if ($file !== null) {
+            return $this->serveSeoFile($file, $ifNoneMatch);
+        }
         $slug = $this->slugFromPath($path);
         if ($slug === null) {
             return null;
@@ -81,6 +90,56 @@ final class StudioPublicRuntime
             return null;
         }
         return $path;
+    }
+
+    /** `robots.txt` / `sitemap.xml` (the whole path, nothing else), else null. */
+    private function seoFileFromPath(string $path): ?string
+    {
+        $path = trim($path);
+        if (($q = strpos($path, '?')) !== false) {
+            $path = substr($path, 0, $q);
+        }
+        $path = trim($path, '/');
+        return ($path === 'robots.txt' || $path === 'sitemap.xml') ? $path : null;
+    }
+
+    private function serveSeoFile(string $file, ?string $ifNoneMatch): ?PublicResponse
+    {
+        if ($this->sitemap === null || !$this->tenants->isScoped()) {
+            return null;
+        }
+        $tenantId = $this->tenants->id();
+        if ($tenantId <= 0 || !$this->isEntitled($tenantId, self::ENTITLEMENT_KEY)) {
+            return null;
+        }
+        try {
+            $site = $this->sitemap->site();
+            if ($file === 'robots.txt') {
+                $type = 'text/plain; charset=utf-8';
+                $body = StudioSitemapService::robotsTxt($site);
+            } else {
+                if ($site->baseUrl === '') {
+                    return null; // no configured base URL: no sitemap rather than one on an invented host
+                }
+                $type = 'application/xml; charset=utf-8';
+                $body = StudioSitemapService::xml($this->sitemap->entries($site));
+            }
+        } catch (\Throwable $e) {
+            self::log('seo file', $e);
+            return null;
+        }
+
+        $etag = hash('sha256', $body);
+        $headers = [
+            'Content-Type'           => $type,
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control'          => 'public, no-cache',
+            'ETag'                   => '"' . $etag . '"',
+        ];
+        if ($ifNoneMatch !== null && self::etagMatches($ifNoneMatch, $etag)) {
+            return PublicResponse::notModified($headers);
+        }
+        return PublicResponse::ok($headers, $body);
     }
 
     private function serve(callable $lookup, ?string $ifNoneMatch): ?PublicResponse

@@ -1009,6 +1009,8 @@ final class StudioApplicationService
                 'max_nesting_depth'  => CanonicalDocumentSchema::MAX_NESTING_DEPTH,
                 'max_repeater_items' => CanonicalDocumentSchema::MAX_REPEATER_ITEMS,
                 'max_sections'       => CanonicalDocumentSchema::MAX_SECTIONS,
+                'seo_description_max' => CanonicalDocumentSchema::SEO_DESCRIPTION_MAX_LENGTH,
+                'seo_title_max'      => CanonicalDocumentSchema::SEO_TITLE_MAX_LENGTH,
             ],
             'permissions' => [
                 'admin'   => $actor->can(StudioPermissions::ADMIN),

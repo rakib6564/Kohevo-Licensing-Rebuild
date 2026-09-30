@@ -108,6 +108,16 @@ $sbBoot = [
         'import_html_conversion' => __('studio_ui_import_html_conversion', '{stripped} element(s) removed for security, {unsupported} unsupported element(s) and {hidden} hidden element(s) left out.'),
         'source_empty'           => __('studio_ui_source_empty', 'The file is empty.'),
         'source_too_large'       => __('studio_ui_source_too_large', 'This file is too large to import.'),
+        'seo_title_label' => __('studio_ui_seo_title_label', 'SEO title'),
+        'seo_description_label' => __('studio_ui_seo_description_label', 'Meta description'),
+        'seo_canonical_label' => __('studio_ui_seo_canonical_label', 'Canonical URL'),
+        'seo_canonical_hint' => __('studio_ui_seo_canonical_hint', 'Optional. A path on this site (/about) or a full address on this site. Leave empty to use this page\'s own address. Other websites are ignored: Studio never declares another domain as canonical.'),
+        'seo_canonical_invalid' => __('studio_ui_seo_canonical_invalid', 'Enter a path starting with / or a full http(s) address.'),
+        'seo_og_image_label' => __('studio_ui_seo_og_image_label', 'Social share image'),
+        'seo_og_image_hint' => __('studio_ui_seo_og_image_hint', 'Shown when the page is shared. Choose an image from your media library.'),
+        'seo_robots_label' => __('studio_ui_seo_robots_label', 'Search engine visibility'),
+        'seo_draft_note' => __('studio_ui_seo_draft_note', 'Search settings belong to the draft. They go live only when you publish.'),
+        'seo_remove_image' => __('studio_ui_seo_remove_image', 'Remove image'),
     ],
 ];
 ?><!DOCTYPE html>

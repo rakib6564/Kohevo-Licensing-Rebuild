@@ -1,5 +1,9 @@
-// PageInspector — document settings (update_settings) and the basic search
-// appearance fields (update_seo). The complete SEO UI is out of Phase 5 scope.
+// PageInspector — document settings (update_settings) and the search
+// appearance fields (update_seo): title, description, canonical URL, social
+// share image and robots — exactly the canonical document's `seo` keys (no
+// second store). They are draft data like everything else in the document and
+// reach the public site only through Publish. The server validates every
+// value; the limits shown come from its manifest.
 //
 // Phase 6 adds the header/footer bindings: the mode selects stay canonical
 // settings (`header_mode` / `footer_mode` ∈ inherit|custom|hidden), and the
@@ -12,8 +16,10 @@ import { useEditor, useEngineState } from '../EditorContext.jsx';
 import { asList, asObject } from '../../core/doc.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t, errorMessage } from '../../core/messages.mjs';
+import { seoLimits, canonicalProblem, canonicalValue } from '../../core/seo.mjs';
+import { SeoImageControl } from './SeoImageControl.jsx';
 
-function TextSetting({ label, value, maxLength, multiline = false, onCommit }) {
+function TextSetting({ label, value, maxLength, multiline = false, onCommit, counter = false }) {
   const id = useId();
   const [draft, setDraft] = useState(value ?? '');
   useEffect(() => { setDraft(value ?? ''); }, [value]);
@@ -26,12 +32,45 @@ function TextSetting({ label, value, maxLength, multiline = false, onCommit }) {
         value={draft}
         maxLength={maxLength}
         rows={multiline ? 3 : undefined}
+        aria-describedby={counter ? `${id}-count` : undefined}
         onChange={(e) => {
           const v = multiline ? e.target.value : e.target.value.replace(/[\r\n]+/g, ' ');
           setDraft(v);
           onCommit(v);
         }}
       />
+      {counter && <p className="sbx-hint" id={`${id}-count`} data-testid={`${id}-count`}>{t('seo_count', { count: Array.from(draft).length, max: maxLength })}</p>}
+    </div>
+  );
+}
+
+// The canonical URL: invalid text stays in the box with a message and is NOT
+// sent; an empty box clears the value (null = "use this page's own address").
+function CanonicalSetting({ value, onCommit }) {
+  const id = useId();
+  const [draft, setDraft] = useState(value ?? '');
+  useEffect(() => { setDraft(value ?? ''); }, [value]);
+  const problem = canonicalProblem(draft);
+  return (
+    <div className="sbx-field">
+      <label className="sbx-field__label" htmlFor={id}>{t('seo_canonical_label')}</label>
+      <input
+        id={id}
+        type="text"
+        inputMode="url"
+        autoComplete="off"
+        maxLength={2048}
+        value={draft}
+        aria-invalid={problem ? 'true' : undefined}
+        aria-describedby={`${id}-hint`}
+        onChange={(e) => {
+          const v = e.target.value.replace(/[\r\n\s]+/g, '');
+          setDraft(v);
+          if (canonicalProblem(v) === null) onCommit(canonicalValue(v));
+        }}
+      />
+      <p className="sbx-hint" id={`${id}-hint`}>{t('seo_canonical_hint')}</p>
+      {problem && <p className="sbx-field__problem" role="alert" data-testid="seo-canonical-problem">{t(problem)}</p>}
     </div>
   );
 }
@@ -84,6 +123,7 @@ export function PageInspector() {
   const settings = asObject(working && working.settings);
   const seo = asObject(working && working.seo);
   const vocab = manifest.vocabulary || {};
+  const limits = seoLimits(manifest);
   const chromed = !!page && ['page', 'landing'].includes(page.page_type);
   const [chrome, setChrome] = useState(null);
   const [chromeError, setChromeError] = useState(null);
@@ -131,10 +171,13 @@ export function PageInspector() {
       ))}
 
       <h3 className="sbx-inspector__subtitle">{t('seo')}</h3>
-      <TextSetting label="Title" value={seo.title} maxLength={255} onCommit={(v) => applyOp(ops.updateSeo({ title: v }), { label: t('seo') })} />
-      <TextSetting label="Description" value={seo.description} maxLength={500} multiline onCommit={(v) => applyOp(ops.updateSeo({ description: v }), { label: t('seo') })} />
+      <p className="sbx-hint">{t('seo_draft_note')}</p>
+      <TextSetting label={t('seo_title_label')} value={seo.title} maxLength={limits.title} counter onCommit={(v) => applyOp(ops.updateSeo({ title: v }), { label: t('seo') })} />
+      <TextSetting label={t('seo_description_label')} value={seo.description} maxLength={limits.description} multiline counter onCommit={(v) => applyOp(ops.updateSeo({ description: v }), { label: t('seo') })} />
+      <CanonicalSetting value={seo.canonical_url} onCommit={(v) => applyOp(ops.updateSeo({ canonical_url: v }), { label: t('seo') })} />
+      <SeoImageControl value={seo.og_image_media_id} mediaPicker={boot.mediaPicker} onChange={(v) => applyOp(ops.updateSeo({ og_image_media_id: v }), { label: t('seo') })} />
       <div className="sbx-field">
-        <label className="sbx-field__label" htmlFor="sbx-page-robots">Robots</label>
+        <label className="sbx-field__label" htmlFor="sbx-page-robots">{t('seo_robots_label')}</label>
         <select id="sbx-page-robots" value={seo.robots || 'index,follow'} onChange={(e) => applyOp(ops.updateSeo({ robots: e.target.value }), { label: t('seo') })}>
           {asList(vocab.robots).map((r) => <option key={r} value={r}>{r}</option>)}
         </select>

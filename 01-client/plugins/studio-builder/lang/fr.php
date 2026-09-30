@@ -59,6 +59,16 @@ return [
     'studio_ui_import_html_conversion' => '{stripped} élément(s) supprimé(s) par sécurité, {unsupported} élément(s) non pris en charge et {hidden} élément(s) masqué(s) ignoré(s).',
     'studio_ui_source_empty' => 'Le fichier est vide.',
     'studio_ui_source_too_large' => 'Ce fichier est trop volumineux pour être importé.',
+    'studio_ui_seo_title_label' => 'Titre SEO',
+    'studio_ui_seo_description_label' => 'Méta-description',
+    'studio_ui_seo_canonical_label' => 'URL canonique',
+    'studio_ui_seo_canonical_hint' => 'Facultatif. Un chemin de ce site (/a-propos) ou une adresse complète de ce site. Laissez vide pour utiliser l\'adresse propre de cette page. Les autres sites web sont ignorés : Studio ne déclare jamais un autre domaine comme canonique.',
+    'studio_ui_seo_canonical_invalid' => 'Saisissez un chemin commençant par / ou une adresse http(s) complète.',
+    'studio_ui_seo_og_image_label' => 'Image de partage social',
+    'studio_ui_seo_og_image_hint' => 'Affichée lors du partage de la page. Choisissez une image dans votre médiathèque.',
+    'studio_ui_seo_robots_label' => 'Visibilité dans les moteurs de recherche',
+    'studio_ui_seo_draft_note' => 'Les réglages de recherche font partie du brouillon. Ils ne sont en ligne qu\'après la publication.',
+    'studio_ui_seo_remove_image' => 'Retirer l\'image',
 
     // Phase 9A — strings Studio itself writes into PUBLIC pages (Html::t()). A
     // public page follows the tenant's site language, so a French site gets these.

@@ -84,4 +84,27 @@ final class PageRepository extends StudioRepository
             ->orderBy('id', 'DESC')
             ->first();
     }
+
+    /**
+     * Address metadata of every published, publicly routable page of the active
+     * tenant — the sitemap's candidate set. Identity/lifecycle columns only:
+     * no `seo_json`, no document.
+     *
+     * @param list<string> $pageTypes
+     * @return list<array<string, mixed>>
+     */
+    public function publishedForSitemap(array $pageTypes, int $limit): array
+    {
+        if ($pageTypes === []) {
+            return [];
+        }
+        return $this->query()
+            ->select('id', 'slug', 'page_type', 'route_mode', 'published_revision_id', 'published_at')
+            ->where('status', 'published')
+            ->whereIn('page_type', $pageTypes)
+            ->whereNotNull('published_revision_id')
+            ->orderBy('id', 'ASC')
+            ->limit(max(1, $limit))
+            ->get();
+    }
 }

@@ -446,6 +446,14 @@ final class StudioPackageService
                 if (isset($pageSlugs[$sig]) || $this->pageRepo->findBySlug($slug, $pageType) !== null) {
                     $report->error('route_collision', $key, "\$.items[{$i}].slug", "A {$pageType} with slug '{$slug}' already exists; import never overwrites in create mode.");
                 }
+                // Phase 9C: a page and a landing never share a public address (createPage() enforces it too).
+                if (in_array($pageType, StudioRenderService::PUBLIC_PAGE_TYPES, true)) {
+                    foreach (StudioRenderService::PUBLIC_PAGE_TYPES as $otherType) {
+                        if ($otherType !== $pageType && (isset($pageSlugs[$otherType . '|' . $slug]) || $this->pageRepo->findBySlug($slug, $otherType) !== null)) {
+                            $report->error('route_collision', $key, "\$.items[{$i}].slug", "A {$otherType} with slug '{$slug}' already exists; a {$pageType} cannot share its public address.");
+                        }
+                    }
+                }
                 $pageSlugs[$sig] = true;
             }
             $doc = $this->prepareDocument($item, $i, $pageType, $report, $options, $refResolver, $options2, $mintSection, $mintBlock, $stats, $componentUse, $packageTemplates);

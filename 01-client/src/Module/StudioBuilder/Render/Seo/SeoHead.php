@@ -57,9 +57,7 @@ final class SeoHead
         }
         $description = is_string($seo['description'] ?? null) ? trim($seo['description']) : '';
 
-        $robots = is_string($seo['robots'] ?? null) && in_array($seo['robots'], CanonicalDocumentSchema::ALLOWED_ROBOTS_DIRECTIVES, true)
-            ? $seo['robots']
-            : 'index,follow';
+        $robots = self::effectiveRobots($seo);
 
         $ogImage = null;
         $ogId = $seo['og_image_media_id'] ?? null;
@@ -84,6 +82,14 @@ final class SeoHead
         );
 
         return $head->forMode($mode);
+    }
+
+    /** The robots directive a document publishes: its allowlisted `seo.robots`, else `index,follow`. Shared with the sitemap. */
+    public static function effectiveRobots(array $seo): string
+    {
+        return is_string($seo['robots'] ?? null) && in_array($seo['robots'], CanonicalDocumentSchema::ALLOWED_ROBOTS_DIRECTIVES, true)
+            ? $seo['robots']
+            : 'index,follow';
     }
 
     /** The page's own public path: `/` for the homepage route, `/{slug}` otherwise. */

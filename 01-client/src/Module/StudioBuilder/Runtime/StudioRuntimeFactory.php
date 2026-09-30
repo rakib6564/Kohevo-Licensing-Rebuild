@@ -80,7 +80,8 @@ final class StudioRuntimeFactory
         $tokens       = new TokenRepository($tenants);
 
         $revisionService = new StudioRevisionService($tenants, $pages, $revisions, $dependencies, $registry);
-        $pageService     = new StudioPageAddressService($tenants, $pages, $revisionService, $registry);
+        $reserved        = new StudioReservedRoutes($overrides['known_prefixes'] ?? null);
+        $pageService     = new StudioPageAddressService($tenants, $pages, $revisionService, $registry, $reserved);
         $templateService = new StudioTemplateService($tenants, $templates, $pages, $revisionService, $registry, $dependencies);
         $componentService = new StudioGlobalComponentService($tenants, $pages, $revisions, $dependencies);
 
@@ -106,7 +107,6 @@ final class StudioRuntimeFactory
             $overrides['site'] ?? null,
         );
         $invalidator = new StudioCompilationInvalidator($dependencies, $compilations);
-        $reserved    = new StudioReservedRoutes($overrides['known_prefixes'] ?? null);
         $themeService = new StudioThemeService($tenants, $tokens, $themes);
 
         $app = new StudioApplicationService(
@@ -130,6 +130,8 @@ final class StudioRuntimeFactory
             $pages,
             $render,
             $reserved,
+            null,
+            new StudioSitemapService($tenants, $pages, $revisions, $reserved, $render),
         );
 
         return new StudioRuntime(

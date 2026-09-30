@@ -819,7 +819,9 @@
     "max_blocks": 250,
     "max_nesting_depth": 4,
     "max_repeater_items": 50,
-    "max_sections": 50
+    "max_sections": 50,
+    "seo_description_max": 1000,
+    "seo_title_max": 255
   },
   "permissions": {
     "admin": true,

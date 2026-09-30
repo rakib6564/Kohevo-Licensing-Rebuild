@@ -56,4 +56,22 @@ final class RevisionRepository extends StudioRepository
     {
         throw new \LogicException('Studio revisions are immutable and cannot be deleted.');
     }
+
+    /**
+     * The canonical document JSON of several revisions in the active tenant
+     * (one query per 500 ids), keyed by revision id.
+     *
+     * @param list<int> $ids
+     * @return array<int, string>
+     */
+    public function documentsByIds(array $ids): array
+    {
+        $out = [];
+        foreach (array_chunk(array_values(array_unique(array_map('intval', $ids))), 500) as $chunk) {
+            foreach ($this->query()->select('id', 'document_json')->whereIn('id', $chunk)->get() as $row) {
+                $out[(int) $row['id']] = (string) $row['document_json'];
+            }
+        }
+        return $out;
+    }
 }

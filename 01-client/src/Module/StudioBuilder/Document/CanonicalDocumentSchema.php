@@ -73,6 +73,10 @@ final class CanonicalDocumentSchema
         'og_image_media_id',
     ];
 
+    /** Character limits the validator enforces on `seo.title` / `seo.description` (the Builder shows the same numbers). */
+    public const SEO_TITLE_MAX_LENGTH       = 255;
+    public const SEO_DESCRIPTION_MAX_LENGTH = 1000;
+
     public const ALLOWED_ROBOTS_DIRECTIVES = [
         'index,follow',
         'noindex,follow',

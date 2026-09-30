@@ -29,7 +29,9 @@ use Slate\Module\StudioBuilder\Exception\StudioNotFoundException;
 use Slate\Module\StudioBuilder\Exception\StudioTenantScopeException;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
+use Slate\Module\StudioBuilder\Render\StudioRenderService;
 use Slate\Module\StudioBuilder\Repository\PageRepository;
+use Slate\Module\StudioBuilder\Runtime\StudioReservedRoutes;
 use Slate\Tenancy\TenantContext;
 
 final class StudioPageAddressService
@@ -39,7 +41,50 @@ final class StudioPageAddressService
         private readonly PageRepository $pages,
         private readonly StudioRevisionService $revisions,
         private readonly BlockRegistry $registry,
-    ) {}
+        ?StudioReservedRoutes $reserved = null,
+    ) {
+        // Always enforced (Phase 9C): there is no way to build this service without the reserved-route rule.
+        $this->reserved = $reserved ?? new StudioReservedRoutes();
+    }
+
+    private readonly StudioReservedRoutes $reserved;
+
+    /**
+     * The public-address invariants (Phase 9C), enforced here because every
+     * command path — Builder API, MCP, package/HTML import — ends in this
+     * service. A publicly routable page (`page` / `landing`):
+     *
+     *  - must not use a slug the platform or a module prefix owns (even one
+     *    that is merely inactive right now), and
+     *  - must not share its slug with the OTHER public type of the same
+     *    tenant: the public runtime serves `page` before `landing` for one
+     *    slug, so a same-slug pair would silently shadow one of them.
+     *
+     * Non-public types (header/footer partials, section presets, system) never
+     * occupy a public address and are not restricted by either rule.
+     */
+    private function assertPublicAddressAvailable(string $slug, string $pageType, ?int $exceptPageId): void
+    {
+        if (!in_array($pageType, StudioRenderService::PUBLIC_PAGE_TYPES, true)) {
+            return;
+        }
+        if ($this->reserved->isReserved($slug)) {
+            throw new StudioValidationException([
+                ['path' => '$.slug', 'code' => 'reserved_route', 'message' => "'/{$slug}' is reserved by the platform and cannot be a Studio page address."],
+            ]);
+        }
+        foreach (StudioRenderService::PUBLIC_PAGE_TYPES as $other) {
+            if ($other === $pageType) {
+                continue;
+            }
+            $existing = $this->pages->findBySlug($slug, $other);
+            if ($existing !== null && (int) $existing['id'] !== $exceptPageId) {
+                throw new StudioValidationException([
+                    ['path' => '$.slug', 'code' => 'route_collision', 'message' => "A {$other} with slug '{$slug}' already exists in this tenant; a {$pageType} cannot share its public address."],
+                ]);
+            }
+        }
+    }
 
     /**
      * Create a new Studio page: inserts its `PageAddress` row and its first
@@ -85,6 +130,7 @@ final class StudioPageAddressService
             'active_draft_revision_id' => null,
             'published_revision_id'    => null,
         ]);
+        $this->assertPublicAddressAvailable($slug, $pageType, null);
 
         $pdo = Database::get();
         $ownsTx = !$pdo->inTransaction();
@@ -170,6 +216,10 @@ final class StudioPageAddressService
                     ['path' => '$.slug', 'code' => 'duplicate_slug', 'message' => "A page with slug '{$slug}' and page_type '{$current['page_type']}' already exists in this tenant."],
                 ]);
             }
+        }
+
+        if ($slug !== $current['slug']) {
+            $this->assertPublicAddressAvailable($slug, (string) $current['page_type'], $pageId);
         }
 
         $this->pages->update($pageId, [

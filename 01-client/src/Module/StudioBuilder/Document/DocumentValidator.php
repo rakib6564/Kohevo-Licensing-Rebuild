@@ -278,13 +278,13 @@ final class DocumentValidator
         }
 
         if (array_key_exists('title', $seo) && $seo['title'] !== null) {
-            if (!is_string($seo['title']) || mb_strlen($seo['title'], 'UTF-8') > 255 || FieldSchema::containsExecutableOrSqlFragment($seo['title'])) {
+            if (!is_string($seo['title']) || mb_strlen($seo['title'], 'UTF-8') > CanonicalDocumentSchema::SEO_TITLE_MAX_LENGTH || FieldSchema::containsExecutableOrSqlFragment($seo['title'])) {
                 $errors[] = ValidationResult::issue('$.seo.title', 'invalid_seo_title', 'seo.title must be a safe string <= 255 chars.');
             }
         }
 
         if (array_key_exists('description', $seo) && $seo['description'] !== null) {
-            if (!is_string($seo['description']) || mb_strlen($seo['description'], 'UTF-8') > 1000 || FieldSchema::containsExecutableOrSqlFragment($seo['description'])) {
+            if (!is_string($seo['description']) || mb_strlen($seo['description'], 'UTF-8') > CanonicalDocumentSchema::SEO_DESCRIPTION_MAX_LENGTH || FieldSchema::containsExecutableOrSqlFragment($seo['description'])) {
                 $errors[] = ValidationResult::issue('$.seo.description', 'invalid_seo_description', 'seo.description must be a safe string <= 1000 chars.');
             }
         }
