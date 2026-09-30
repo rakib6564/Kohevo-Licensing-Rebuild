@@ -14,7 +14,12 @@
  *   "not mine" (false) for anything that is not a published Studio page of the
  *   current tenant, so the platform's ordinary 404 / landing page render
  *   unchanged. Both hooks exist only while this plugin is active and booted.
- * - Still registers no visual editor UI or MCP tools (Phase 5 / Phase 7).
+ *
+ * Phase 5 Builder Shell:
+ * - Adds the "Studio pages" admin nav entry (entitled installs, studio-builder.view)
+ *   leading to `admin/index.php` (page list) and `admin/builder.php` (the React
+ *   builder shell, backed by `admin/api.php` + `admin/canvas.php`).
+ * - Still registers no MCP tools (Phase 7).
  */
 
 declare(strict_types=1);
@@ -34,6 +39,28 @@ class StudioBuilder extends Plugin
 
         \Hook::addFilter('public_fallback', [self::class, 'servePublicPath'], 10, 2);
         \Hook::addFilter('public_homepage', [self::class, 'servePublicHomepage'], 10, 1);
+        \Hook::addFilter('admin_nav_items', [$this, 'addAdminNav']);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $items
+     * @return array<int, array<string, mixed>>
+     */
+    public function addAdminNav(array $items): array
+    {
+        if (!self::isEntitled()) {
+            return $items;
+        }
+        $items[] = [
+            'slug'  => 'studio-builder',
+            'label' => function_exists('__') ? __('studio_pages', 'Studio pages') : 'Studio pages',
+            'href'  => $this->url('admin/index.php'),
+            'icon'  => 'layout',
+            'perm'  => 'studio-builder.view',
+            'order' => 205,
+            'group' => 'content',
+        ];
+        return $items;
     }
 
     /**

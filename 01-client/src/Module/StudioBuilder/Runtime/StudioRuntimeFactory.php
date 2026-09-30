@@ -33,10 +33,12 @@ use Slate\Module\StudioBuilder\Render\StudioRenderService;
 use Slate\Module\StudioBuilder\Render\Theme\ThemeResolver;
 use Slate\Module\StudioBuilder\Repository\CompilationRepository;
 use Slate\Module\StudioBuilder\Repository\DependencyRepository;
+use Slate\Module\StudioBuilder\Repository\LockRepository;
 use Slate\Module\StudioBuilder\Repository\PageRepository;
 use Slate\Module\StudioBuilder\Repository\RevisionRepository;
 use Slate\Module\StudioBuilder\Repository\TemplateRepository;
 use Slate\Module\StudioBuilder\Repository\TokenRepository;
+use Slate\Module\StudioBuilder\Service\StudioEditLockService;
 use Slate\Module\StudioBuilder\Service\StudioPageAddressService;
 use Slate\Module\StudioBuilder\Service\StudioRevisionService;
 use Slate\Module\StudioBuilder\Service\StudioTemplateService;
@@ -75,6 +77,7 @@ final class StudioRuntimeFactory
         $pageService     = new StudioPageAddressService($tenants, $pages, $revisionService, $registry);
         $templateService = new StudioTemplateService($tenants, $templates, $pages, $revisionService, $registry);
 
+        $themes    = new ThemeResolver($tokens, $overrides['branding'] ?? null);
         $media     = $overrides['media'] ?? new CoreMediaResolver($tenants);
         $documents = new DocumentRenderer($registry, $renderers, $media, new ProviderBindingResolver($providers, $tenants));
         $compiler  = new StudioCompiler(
@@ -82,7 +85,7 @@ final class StudioRuntimeFactory
             $registry,
             $renderers,
             $documents,
-            new ThemeResolver($tokens, $overrides['branding'] ?? null),
+            $themes,
             new ChromeResolver($pages, $revisions),
             $media,
             $compilations,
@@ -101,6 +104,8 @@ final class StudioRuntimeFactory
             $pageService, $revisionService, $templateService,
             $providers, $registry,
             $render, $invalidator,
+            $themes,
+            new StudioEditLockService($tenants, $pages, new LockRepository($tenants)),
         );
 
         $publicRuntime = new StudioPublicRuntime(

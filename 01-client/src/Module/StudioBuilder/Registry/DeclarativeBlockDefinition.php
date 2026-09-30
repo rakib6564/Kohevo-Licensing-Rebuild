@@ -29,6 +29,8 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
      * @param list<string> $allowedChildTypes
      * @param list<string> $allowedBindingProviders
      * @param list<string> $styleCapabilities
+     * @param array<string, string> $bindingSlots Editor metadata: renderer slot key => the allowlisted
+     *                                            provider that feeds it (e.g. ['items' => 'booking.services']).
      */
     public function __construct(
         private readonly string $type,
@@ -43,6 +45,7 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
         private readonly string $requiredPermission = 'studio-builder.edit',
         private readonly array $allowedBindingProviders = [],
         private readonly array $styleCapabilities = CanonicalDocumentSchema::ALLOWED_STYLE_KEYS,
+        private readonly array $bindingSlots = [],
     ) {
         if (preg_match(CanonicalDocumentSchema::BLOCK_TYPE_PATTERN, $this->type) !== 1) {
             throw new \InvalidArgumentException("Invalid namespaced block type '{$this->type}'. Expected 'namespace.name'.");
@@ -62,6 +65,11 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
         foreach ($this->allowedBindingProviders as $provider) {
             if (!is_string($provider) || preg_match(CanonicalDocumentSchema::PROVIDER_KEY_PATTERN, $provider) !== 1) {
                 throw new \InvalidArgumentException("Block '{$this->type}' declares invalid binding provider '{$provider}'.");
+            }
+        }
+        foreach ($this->bindingSlots as $slot => $provider) {
+            if (!is_string($slot) || preg_match('/^[a-z][a-z0-9_]{0,63}$/', $slot) !== 1 || !in_array($provider, $this->allowedBindingProviders, true)) {
+                throw new \InvalidArgumentException("Block '{$this->type}' declares an invalid binding slot '{$slot}'.");
             }
         }
     }
@@ -126,6 +134,15 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
         return $this->styleCapabilities;
     }
 
+    /**
+     * @return array<string, string> slot key => provider key (editor metadata only; the
+     *                               validator enforces the provider allowlist on its own)
+     */
+    public function bindingSlots(): array
+    {
+        return $this->bindingSlots;
+    }
+
     public function validateProps(array $props, string $basePath = '$.props'): ValidationResult
     {
         return $this->schema->validate($props, $basePath);
@@ -168,6 +185,11 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
             'allowed_binding_providers' => $this->allowedBindingProviders,
             'allowed_child_types'       => $this->allowedChildTypes,
             'allows_children'           => $this->allowsChildren,
+            'binding_slots'             => array_map(
+                static fn(string $slot, string $provider): array => ['provider' => $provider, 'slot' => $slot],
+                array_keys($this->bindingSlots),
+                array_values($this->bindingSlots),
+            ),
             'category'                  => $this->category,
             'default_props'             => $this->schema->defaults(),
             'field_schema'              => $this->schema->toEditorManifest(),

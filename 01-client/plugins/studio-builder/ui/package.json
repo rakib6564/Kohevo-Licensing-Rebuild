@@ -1,0 +1,26 @@
+{
+  "name": "kohevo-studio-builder-ui",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Kohevo Studio builder shell (React). Developer build only: the prebuilt output in ../assets/builder is what ships; customer installs never run Node.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@lexical/html": "0.52.0",
+    "@lexical/link": "0.52.0",
+    "@lexical/list": "0.52.0",
+    "@lexical/react": "0.52.0",
+    "@lexical/rich-text": "0.52.0",
+    "@lexical/utils": "0.52.0",
+    "lexical": "0.52.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

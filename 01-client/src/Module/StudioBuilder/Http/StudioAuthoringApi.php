@@ -1,0 +1,466 @@
+<?php
+/**
+ * Kohevo Studio (studio-builder) — Builder command/query HTTP controller.
+ *
+ * The ONLY server surface the Phase 5 builder UI talks to (besides the canvas
+ * and preview renders). It is deliberately thin:
+ *
+ *   transport checks (method, CSRF, same-origin, content type, size, rate)
+ *     -> strict request-shape validation (unknown fields rejected — a
+ *        `tenant_id` anywhere in a request is an error, never a hint)
+ *     -> ONE StudioApplicationService call (which alone enforces tenant ->
+ *        authentication -> entitlement -> RBAC -> ownership -> concurrency ->
+ *        validation -> persistence -> audit)
+ *     -> transport-safe view of the result
+ *
+ * It never touches a repository, a Studio service, or the database itself,
+ * and never trusts a tenant, page ownership, revision ownership or permission
+ * claim from the client: page and revision ids are only ever resolved by the
+ * tenant-scoped application layer.
+ *
+ * Every document mutation is a canonical `DocumentOperation` (insert/move/
+ * remove section or block, update props/style/visibility/bindings/layout,
+ * settings, SEO) submitted through the single `operations` command — there is
+ * no second, ad-hoc mutation protocol.
+ *
+ * Failures map to a small, stable, safe vocabulary:
+ *   validation_error, authentication_error, authorization_error,
+ *   entitlement_error, csrf_error, not_found, method_not_allowed,
+ *   concurrency_conflict, payload_too_large, unsupported_media_type,
+ *   rate_limited, server_error
+ */
+
+declare(strict_types=1);
+
+namespace Slate\Module\StudioBuilder\Http;
+
+use Slate\Module\StudioBuilder\Application\StudioActor;
+use Slate\Module\StudioBuilder\Application\StudioApplicationService;
+use Slate\Module\StudioBuilder\Application\StudioEditorViews;
+use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Exception\StudioException;
+use Slate\Module\StudioBuilder\Exception\StudioValidationException;
+use Slate\Module\StudioBuilder\Operation\DocumentOperation;
+
+final class StudioAuthoringApi
+{
+    /** A 1 MiB document plus envelope; anything larger is refused before decoding. */
+    public const MAX_BODY_BYTES = 1_572_864;
+    public const MAX_OPERATIONS = 50;
+    private const MAX_JSON_DEPTH = 64;
+
+    /** action => [HTTP method, allowed request fields] */
+    private const ACTIONS = [
+        // Queries
+        'bootstrap'    => ['GET', ['page']],
+        'document'     => ['GET', ['page']],
+        'status'       => ['GET', ['page']],
+        'manifest'     => ['GET', []],
+        'revisions'    => ['GET', ['page', 'limit']],
+        'templates'    => ['GET', ['type']],
+        'pages'        => ['GET', []],
+        // Commands
+        'operations'   => ['POST', ['page_id', 'expected_revision_id', 'revision_kind', 'operations', 'summary']],
+        'save_draft'   => ['POST', ['page_id', 'expected_revision_id', 'revision_kind', 'document', 'summary']],
+        'publish'      => ['POST', ['page_id', 'expected_revision_id', 'summary']],
+        'rollback'     => ['POST', ['page_id', 'target_revision_id', 'expected_revision_id', 'summary']],
+        'create_page'  => ['POST', ['title', 'slug', 'page_type', 'route_mode', 'template_key']],
+        'lock_acquire' => ['POST', ['page_id']],
+        'lock_refresh' => ['POST', ['page_id', 'lock_token']],
+        'lock_release' => ['POST', ['page_id', 'lock_token']],
+    ];
+
+    /** Safe, fixed messages per public error code — never an exception message. */
+    private const MESSAGES = [
+        'authentication_error'   => 'Your session has ended. Please sign in again.',
+        'authorization_error'    => 'You do not have permission to do this.',
+        'entitlement_error'      => 'Kohevo Studio is not available on this site.',
+        'csrf_error'             => 'The security check failed. Reload the builder and try again.',
+        'not_found'              => 'This page or revision was not found.',
+        'method_not_allowed'     => 'This request method is not allowed here.',
+        'concurrency_conflict'   => 'This page was changed elsewhere. Reload to continue.',
+        'validation_error'       => 'The change was rejected because it is not valid.',
+        'payload_too_large'      => 'The request is too large.',
+        'unsupported_media_type' => 'The request must be JSON.',
+        'rate_limited'           => 'Too many requests. Please wait a moment.',
+        'server_error'           => 'The server could not complete this request.',
+    ];
+
+    public function __construct(
+        private readonly StudioApplicationService $app,
+        private readonly ?\Closure $rateLimiter = null,
+        private readonly ?\Closure $logger = null,
+    ) {}
+
+    public function handle(StudioApiRequest $request, StudioActor $actor): StudioApiResponse
+    {
+        try {
+            return $this->dispatch($request, $actor);
+        } catch (StudioValidationException $e) {
+            return self::error(422, 'validation_error', ['errors' => self::safeIssues($e->errors())]);
+        } catch (StudioException $e) {
+            return $this->mapStudioException($e);
+        } catch (\Throwable $e) {
+            if ($this->logger !== null) {
+                ($this->logger)('Studio builder API failure: ' . get_class($e));
+            }
+            return self::error(500, 'server_error');
+        }
+    }
+
+    private function dispatch(StudioApiRequest $request, StudioActor $actor): StudioApiResponse
+    {
+        $action = $request->action;
+        if (preg_match('/^[a-z_]{1,32}$/', $action) !== 1 || !isset(self::ACTIONS[$action])) {
+            return self::error(404, 'not_found');
+        }
+        [$method, $allowed] = self::ACTIONS[$action];
+        if ($request->method !== $method) {
+            return self::error(405, 'method_not_allowed', [], ['Allow' => $method]);
+        }
+        if (!$actor->isAuthenticated()) {
+            return self::error(401, 'authentication_error');
+        }
+
+        if ($method === 'POST') {
+            // Same-origin only: a cross-site request is refused even with a token.
+            if ($request->fetchSite !== null && !in_array($request->fetchSite, ['same-origin', 'none'], true)) {
+                return self::error(403, 'csrf_error');
+            }
+            if (!$request->csrfValid) {
+                return self::error(403, 'csrf_error');
+            }
+            if (preg_match('~^application/json\s*(;|$)~i', trim($request->contentType)) !== 1) {
+                return self::error(415, 'unsupported_media_type');
+            }
+            if (strlen($request->body) > self::MAX_BODY_BYTES) {
+                return self::error(413, 'payload_too_large');
+            }
+            $input = self::decodeBody($request->body);
+        } else {
+            $input = $request->query;
+        }
+
+        if ($this->rateLimiter !== null && ($this->rateLimiter)($method) !== true) {
+            return self::error(429, 'rate_limited', [], ['Retry-After' => '10']);
+        }
+
+        self::rejectUnknownFields($input, $allowed);
+
+        return match ($action) {
+            'bootstrap'    => $this->bootstrap($actor, $input),
+            'document'     => StudioApiResponse::ok(self::editorState($this->app->loadEditorDocument($actor, self::id($input, 'page')))),
+            'status'       => StudioApiResponse::ok(['page' => $this->app->pageStatus($actor, self::id($input, 'page'))]),
+            'manifest'     => StudioApiResponse::ok(['manifest' => $this->app->editorManifest($actor)]),
+            'revisions'    => StudioApiResponse::ok(['revisions' => $this->app->listRevisions($actor, self::id($input, 'page'), self::optionalInt($input, 'limit') ?? 30)]),
+            'templates'    => $this->templates($actor, $input),
+            'pages'        => StudioApiResponse::ok(['pages' => $this->app->listPages($actor)]),
+            'operations'   => $this->operations($actor, $input),
+            'save_draft'   => $this->saveDraft($actor, $input),
+            'publish'      => $this->publish($actor, $input),
+            'rollback'     => $this->rollback($actor, $input),
+            'create_page'  => $this->createPage($actor, $input),
+            'lock_acquire' => StudioApiResponse::ok(['lock' => $this->app->acquireEditLock($actor, self::id($input, 'page_id'))]),
+            'lock_refresh' => StudioApiResponse::ok(['lock' => $this->app->refreshEditLock($actor, self::id($input, 'page_id'), self::string($input, 'lock_token', 64))]),
+            'lock_release' => StudioApiResponse::ok(['released' => $this->app->releaseEditLock($actor, self::id($input, 'page_id'), self::string($input, 'lock_token', 64))]),
+        };
+    }
+
+    // ── Queries ───────────────────────────────────────────────────────────
+
+    /** @param array<string, mixed> $input */
+    private function bootstrap(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $state = self::editorState($this->app->loadEditorDocument($actor, self::id($input, 'page')));
+        $state['manifest'] = $this->app->editorManifest($actor);
+        return StudioApiResponse::ok($state);
+    }
+
+    /** @param array<string, mixed> $input */
+    private function templates(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $type = self::optionalString($input, 'type', 32);
+        if ($type !== null && preg_match('/^[a-z_]{1,32}$/', $type) !== 1) {
+            throw self::invalid('type', 'invalid_field', 'type must be a template type key.');
+        }
+        return StudioApiResponse::ok([
+            'templates' => array_map([StudioEditorViews::class, 'template'], $this->app->listTemplates($actor, $type)),
+        ]);
+    }
+
+    // ── Commands ──────────────────────────────────────────────────────────
+
+    /** @param array<string, mixed> $input */
+    private function operations(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $pageId = self::id($input, 'page_id');
+        $raw = $input['operations'] ?? null;
+        if (!is_array($raw) || !array_is_list($raw) || $raw === []) {
+            throw self::invalid('operations', 'invalid_operations', 'operations must be a non-empty list.');
+        }
+        if (count($raw) > self::MAX_OPERATIONS) {
+            throw self::invalid('operations', 'too_many_operations', 'At most ' . self::MAX_OPERATIONS . ' operations may be sent at once.');
+        }
+        $operations = [];
+        foreach ($raw as $i => $op) {
+            if (!is_array($op) || array_is_list($op) || array_diff(array_keys($op), ['op', 'payload']) !== []) {
+                throw self::invalid("operations[{$i}]", 'invalid_operation', 'Each operation must be {op, payload}.');
+            }
+            $operations[] = DocumentOperation::fromArray($op);
+        }
+
+        $result = $this->app->applyDocumentOperation(
+            $actor,
+            $pageId,
+            $operations,
+            self::expectedRevision($input),
+            self::optionalString($input, 'summary', 255),
+            self::revisionKind($input),
+        );
+        return StudioApiResponse::ok(self::mutationResult($result));
+    }
+
+    /** @param array<string, mixed> $input */
+    private function saveDraft(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $document = $input['document'] ?? null;
+        if (!is_array($document) || ($document !== [] && array_is_list($document))) {
+            throw self::invalid('document', 'invalid_document', 'document must be a JSON object.');
+        }
+        $result = $this->app->saveDraft(
+            $actor,
+            self::id($input, 'page_id'),
+            $document,
+            self::expectedRevision($input),
+            self::revisionKind($input),
+            self::optionalString($input, 'summary', 255),
+        );
+        return StudioApiResponse::ok(self::mutationResult($result));
+    }
+
+    /** @param array<string, mixed> $input */
+    private function publish(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $expected = self::expectedRevision($input);
+        if ($expected === null) {
+            // publish() treats null as "skip the check"; the builder must always state what it publishes.
+            throw self::invalid('expected_revision_id', 'required_field', 'expected_revision_id is required to publish.');
+        }
+        $result = $this->app->publish($actor, self::id($input, 'page_id'), $expected, self::optionalString($input, 'summary', 255));
+        return StudioApiResponse::ok(self::mutationResult($result + ['deduplicated' => false]));
+    }
+
+    /** @param array<string, mixed> $input */
+    private function rollback(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $result = $this->app->rollback(
+            $actor,
+            self::id($input, 'page_id'),
+            self::id($input, 'target_revision_id'),
+            self::expectedRevision($input),
+            self::optionalString($input, 'summary', 255),
+        );
+        return StudioApiResponse::ok(self::mutationResult($result + ['deduplicated' => false]));
+    }
+
+    /** @param array<string, mixed> $input */
+    private function createPage(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $created = $this->app->createPage(
+            $actor,
+            self::string($input, 'title', 255),
+            self::string($input, 'slug', 191),
+            self::optionalString($input, 'page_type', 32) ?? 'page',
+            self::optionalString($input, 'route_mode', 32) ?? 'standalone',
+        );
+        $page = $created['page'];
+
+        $templateKey = self::optionalString($input, 'template_key', 120);
+        if ($templateKey !== null && $templateKey !== '') {
+            $applied = $this->app->applyTemplate($actor, $templateKey, (int) $page['id']);
+            $page = $applied['page'];
+        }
+        return StudioApiResponse::ok(['page' => StudioEditorViews::page($page)], 201);
+    }
+
+    // ── Views ─────────────────────────────────────────────────────────────
+
+    /**
+     * @param array{page: array<string, mixed>, revision: ?array<string, mixed>, document: array<string, mixed>} $state
+     * @return array<string, mixed>
+     */
+    private static function editorState(array $state): array
+    {
+        return ['document' => $state['document'], 'page' => $state['page'], 'revision' => $state['revision']];
+    }
+
+    /**
+     * @param array<string, mixed> $result {revision, page, deduplicated, ...} rows from the application layer
+     * @return array<string, mixed>
+     */
+    private static function mutationResult(array $result): array
+    {
+        $revision = is_array($result['revision'] ?? null) ? $result['revision'] : [];
+        return [
+            'deduplicated' => (bool) ($result['deduplicated'] ?? false),
+            'document'     => isset($revision['document_json']) ? CanonicalJson::decode((string) $revision['document_json']) : null,
+            'page'         => StudioEditorViews::page($result['page']),
+            'revision'     => $revision !== [] ? StudioEditorViews::revision($revision) : null,
+        ];
+    }
+
+    // ── Errors ────────────────────────────────────────────────────────────
+
+    private function mapStudioException(StudioException $e): StudioApiResponse
+    {
+        return match ($e->errorCode()) {
+            'STUDIO_CONCURRENCY_CONFLICT'    => self::error(409, 'concurrency_conflict', self::conflictDetails($e->details())),
+            'STUDIO_AUTHENTICATION_REQUIRED' => self::error(401, 'authentication_error'),
+            'STUDIO_PERMISSION_DENIED',
+            'STUDIO_TENANT_SCOPE_REQUIRED'   => self::error(403, 'authorization_error'),
+            'STUDIO_NOT_ENTITLED'            => self::error(403, 'entitlement_error'),
+            'STUDIO_NOT_FOUND'               => self::error(404, 'not_found'),
+            default                          => self::error(500, 'server_error'),
+        };
+    }
+
+    /**
+     * @param array<string, mixed> $details
+     * @return array<string, int|null>
+     */
+    private static function conflictDetails(array $details): array
+    {
+        $out = [];
+        foreach (['current_revision_id', 'expected_revision_id'] as $key) {
+            if (array_key_exists($key, $details)) {
+                $out[$key] = is_int($details[$key]) ? $details[$key] : null;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Validation issues are produced by Studio's own validators (never by the
+     * database or PHP), so they are returned — bounded — to explain a rejection.
+     *
+     * @param list<array{path?: mixed, code?: mixed, message?: mixed}> $issues
+     * @return list<array{path: string, code: string, message: string}>
+     */
+    private static function safeIssues(array $issues): array
+    {
+        $out = [];
+        foreach (array_slice($issues, 0, 20) as $issue) {
+            $out[] = [
+                'code'    => preg_replace('/[^a-z0-9_]/', '', strtolower((string) ($issue['code'] ?? 'invalid'))) ?: 'invalid',
+                'message' => mb_substr((string) ($issue['message'] ?? ''), 0, 300, 'UTF-8'),
+                'path'    => mb_substr((string) ($issue['path'] ?? '$'), 0, 200, 'UTF-8'),
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * @param array<string, mixed>  $details
+     * @param array<string, string> $headers
+     */
+    private static function error(int $status, string $code, array $details = [], array $headers = []): StudioApiResponse
+    {
+        return StudioApiResponse::error($status, $code, self::MESSAGES[$code] ?? self::MESSAGES['server_error'], $details, $headers);
+    }
+
+    // ── Input validation ─────────────────────────────────────────────────
+
+    /** @return array<string, mixed> */
+    private static function decodeBody(string $body): array
+    {
+        try {
+            $decoded = json_decode($body, true, self::MAX_JSON_DEPTH, JSON_THROW_ON_ERROR | JSON_BIGINT_AS_STRING);
+        } catch (\JsonException) {
+            throw self::invalid('$', 'invalid_json', 'The request body is not valid JSON.');
+        }
+        if (!is_array($decoded) || ($decoded !== [] && array_is_list($decoded))) {
+            throw self::invalid('$', 'invalid_json', 'The request body must be a JSON object.');
+        }
+        return $decoded;
+    }
+
+    /**
+     * @param array<string, mixed> $input
+     * @param list<string>         $allowed
+     */
+    private static function rejectUnknownFields(array $input, array $allowed): void
+    {
+        foreach (array_keys($input) as $key) {
+            if (!in_array((string) $key, $allowed, true)) {
+                throw self::invalid((string) $key, 'unknown_field', 'Unknown request field.');
+            }
+        }
+    }
+
+    /** @param array<string, mixed> $input */
+    private static function id(array $input, string $key): int
+    {
+        $value = $input[$key] ?? null;
+        if (is_string($value) && preg_match('/^[1-9][0-9]{0,17}$/', $value) === 1) {
+            $value = (int) $value;
+        }
+        if (!is_int($value) || $value <= 0) {
+            throw self::invalid($key, 'invalid_id', "{$key} must be a positive integer.");
+        }
+        return $value;
+    }
+
+    /** @param array<string, mixed> $input */
+    private static function optionalInt(array $input, string $key): ?int
+    {
+        return array_key_exists($key, $input) ? self::id($input, $key) : null;
+    }
+
+    /**
+     * `expected_revision_id` must be PRESENT on every revision-writing command:
+     * a positive id, or an explicit null only for a page that has no draft yet.
+     *
+     * @param array<string, mixed> $input
+     */
+    private static function expectedRevision(array $input): ?int
+    {
+        if (!array_key_exists('expected_revision_id', $input)) {
+            throw self::invalid('expected_revision_id', 'required_field', 'expected_revision_id is required.');
+        }
+        return $input['expected_revision_id'] === null ? null : self::id($input, 'expected_revision_id');
+    }
+
+    /** @param array<string, mixed> $input */
+    private static function revisionKind(array $input): string
+    {
+        $kind = $input['revision_kind'] ?? 'manual';
+        if (!is_string($kind) || !in_array($kind, StudioApplicationService::EDITOR_REVISION_KINDS, true)) {
+            throw self::invalid('revision_kind', 'invalid_revision_kind', 'revision_kind must be autosave or manual.');
+        }
+        return $kind;
+    }
+
+    /** @param array<string, mixed> $input */
+    private static function string(array $input, string $key, int $maxLength): string
+    {
+        $value = $input[$key] ?? null;
+        if (!is_string($value) || mb_strlen($value, 'UTF-8') > $maxLength) {
+            throw self::invalid($key, 'invalid_field', "{$key} must be a string of at most {$maxLength} characters.");
+        }
+        return $value;
+    }
+
+    /** @param array<string, mixed> $input */
+    private static function optionalString(array $input, string $key, int $maxLength): ?string
+    {
+        if (!array_key_exists($key, $input) || $input[$key] === null) {
+            return null;
+        }
+        return self::string($input, $key, $maxLength);
+    }
+
+    private static function invalid(string $field, string $code, string $message): StudioValidationException
+    {
+        return new StudioValidationException([['path' => $field === '$' ? '$' : '$.' . $field, 'code' => $code, 'message' => $message]]);
+    }
+}

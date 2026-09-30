@@ -1,0 +1,2 @@
+# Builder UI source + dev tooling: never served. Only ../assets/builder ships to browsers.
+Require all denied

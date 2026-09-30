@@ -25,6 +25,14 @@
  * (anonymous) rendering deliberately does NOT pass through this class — it has
  * no actor to authorize; see `Runtime\StudioPublicRuntime`.
  *
+ * Phase 5 (builder shell) adds the builder's read queries (`listPages`,
+ * `loadEditorDocument`, `editorManifest`, `listRevisions`), the advisory
+ * edit-lock commands, and an explicit `revision_kind` on
+ * `applyDocumentOperation()` so debounced autosaves are recorded as
+ * `autosave` revisions (and deduplicated by the revision service). The builder
+ * UI reaches none of the services or repositories below except through these
+ * methods.
+ *
  * Cross-reference validation (`media_exists`/`template_exists`/`partial_exists`)
  * and block entitlement/permission enforcement
  * (`entitlement_check`/`permission_check`) are wired ONCE, here, in
@@ -44,6 +52,7 @@ use Slate\Module\StudioBuilder\Exception\StudioAuthorizationException;
 use Slate\Module\StudioBuilder\Exception\StudioEntitlementException;
 use Slate\Module\StudioBuilder\Exception\StudioNotFoundException;
 use Slate\Module\StudioBuilder\Exception\StudioTenantScopeException;
+use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Operation\DocumentOperation;
 use Slate\Module\StudioBuilder\Operation\DocumentOperationApplier;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
@@ -52,9 +61,11 @@ use Slate\Module\StudioBuilder\Render\Compile\StudioCompilationInvalidator;
 use Slate\Module\StudioBuilder\Render\RenderContext;
 use Slate\Module\StudioBuilder\Render\RenderResult;
 use Slate\Module\StudioBuilder\Render\StudioRenderService;
+use Slate\Module\StudioBuilder\Render\Theme\ThemeResolver;
 use Slate\Module\StudioBuilder\Repository\PageRepository;
 use Slate\Module\StudioBuilder\Repository\RevisionRepository;
 use Slate\Module\StudioBuilder\Repository\TemplateRepository;
+use Slate\Module\StudioBuilder\Service\StudioEditLockService;
 use Slate\Module\StudioBuilder\Service\StudioPageAddressService;
 use Slate\Module\StudioBuilder\Service\StudioRevisionService;
 use Slate\Module\StudioBuilder\Service\StudioTemplateService;
@@ -81,7 +92,16 @@ final class StudioApplicationService
         private readonly BlockRegistry $registry,
         private readonly ?StudioRenderService $renderer = null,
         private readonly ?StudioCompilationInvalidator $invalidator = null,
+        private readonly ?ThemeResolver $themes = null,
+        private readonly ?StudioEditLockService $locks = null,
     ) {}
+
+    /** Builder queries return at most this many pages / revisions per call. */
+    public const MAX_LISTED_PAGES     = 200;
+    public const MAX_LISTED_REVISIONS = 50;
+
+    /** Revision kinds a builder session may write through `applyDocumentOperation()`. */
+    public const EDITOR_REVISION_KINDS = ['autosave', 'manual'];
 
     // ── Page address commands ───────────────────────────────────────────────
 
@@ -153,6 +173,10 @@ final class StudioApplicationService
      * normalize -> dependency extraction -> transactional persistence) —
      * an operation's result is never persisted without it.
      *
+     * `$revisionKind` is `manual` (an explicit save) or `autosave` (the
+     * builder's debounced flush); an autosave whose result is byte-identical to
+     * the current working draft creates no new revision.
+     *
      * @param list<DocumentOperation> $operations
      * @return array{revision: array<string, mixed>, page: array<string, mixed>, fingerprint: string, deduplicated: bool}
      */
@@ -162,8 +186,14 @@ final class StudioApplicationService
         array $operations,
         ?int $expectedRevisionId,
         ?string $summary = null,
+        string $revisionKind = 'manual',
     ): array {
         $this->authorize($actor, StudioPermissions::EDIT);
+        if (!in_array($revisionKind, self::EDITOR_REVISION_KINDS, true)) {
+            throw new StudioValidationException([
+                ['path' => '$.revision_kind', 'code' => 'invalid_revision_kind', 'message' => 'revision_kind must be autosave or manual.'],
+            ]);
+        }
 
         $page = $this->pageRepo->find($pageId);
         if ($page === null) {
@@ -186,8 +216,12 @@ final class StudioApplicationService
         $mutatedDocument = DocumentOperationApplier::apply($currentDocument, $operations, $this->registry);
         $validated = ValidatedDocument::from($mutatedDocument, $this->registry, $this->buildValidationOptions($actor));
 
-        $result = $this->revisions->createDraftRevision($pageId, $validated, $expectedRevisionId, (int) $actor->userId, 'manual', $summary);
-        AuditLog::record('studio.page.operation_applied', (string) $pageId, ['operation_count' => count($operations)]);
+        $result = $this->revisions->createDraftRevision($pageId, $validated, $expectedRevisionId, (int) $actor->userId, $revisionKind, $summary);
+        AuditLog::record('studio.page.operation_applied', (string) $pageId, [
+            'operation_count' => count($operations),
+            'revision_kind'   => $revisionKind,
+            'deduplicated'    => $result['deduplicated'],
+        ]);
         return $result;
     }
 
@@ -332,6 +366,178 @@ final class StudioApplicationService
         return $renderer->renderRevision($page, $revision, RenderContext::forEditor($tenantId, $renderer->siteContext(), $actor));
     }
 
+    // ── Builder queries (read-only) ─────────────────────────────────────────
+
+    /**
+     * The tenant's Studio pages for the builder's page list (archived pages
+     * excluded). Summaries only — never a document body.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listPages(StudioActor $actor): array
+    {
+        $this->authorize($actor, StudioPermissions::VIEW);
+        $out = [];
+        foreach ($this->pageRepo->all([], 'updated_at DESC', self::MAX_LISTED_PAGES + 50) as $row) {
+            if (($row['status'] ?? '') === 'archived') {
+                continue;
+            }
+            $out[] = StudioEditorViews::page($row);
+            if (count($out) >= self::MAX_LISTED_PAGES) {
+                break;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Lightweight page state (revision pointers, publish status) — what the
+     * builder polls to notice that the server moved on without it.
+     *
+     * @return array<string, mixed>
+     */
+    public function pageStatus(StudioActor $actor, int $pageId): array
+    {
+        $this->authorize($actor, StudioPermissions::VIEW);
+        $page = $this->pageRepo->find($pageId);
+        if ($page === null) {
+            throw new StudioNotFoundException("Studio page {$pageId} was not found in the active tenant.", ['page_id' => $pageId]);
+        }
+        return StudioEditorViews::page($page);
+    }
+
+    /**
+     * The builder's authoritative starting point: the page and its CURRENT
+     * working draft, decoded from the immutable revision row. The builder is
+     * always reconstructed from this — never from browser state.
+     *
+     * @return array{page: array<string, mixed>, revision: ?array<string, mixed>, document: array<string, mixed>}
+     */
+    public function loadEditorDocument(StudioActor $actor, int $pageId): array
+    {
+        $this->authorize($actor, StudioPermissions::EDIT);
+        $page = $this->pageRepo->find($pageId);
+        if ($page === null) {
+            throw new StudioNotFoundException("Studio page {$pageId} was not found in the active tenant.", ['page_id' => $pageId]);
+        }
+
+        $draftId  = isset($page['active_draft_revision_id']) ? (int) $page['active_draft_revision_id'] : 0;
+        $revision = $draftId > 0 ? $this->revisionRepo->findByIdForPage($pageId, $draftId) : null;
+        $document = $revision !== null
+            ? CanonicalJson::decode((string) $revision['document_json'])
+            : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
+
+        return [
+            'page'     => StudioEditorViews::page($page),
+            'revision' => $revision !== null ? StudioEditorViews::revision($revision) : null,
+            'document' => $document,
+        ];
+    }
+
+    /**
+     * Everything the builder needs to generate its palette and property panels,
+     * as transport-safe DATA: block manifests (filtered by this tenant's
+     * entitlements and this actor's permissions), the parameter schemas of the
+     * data providers those blocks may bind to, the resolved design-token refs,
+     * and the canonical vocabulary (breakpoints, spacing scale, limits, ...).
+     * No PHP class name, closure, path, SQL or credential is ever included.
+     *
+     * @return array<string, mixed>
+     */
+    public function editorManifest(StudioActor $actor): array
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::EDIT);
+        $entitled = static fn(?string $moduleKey): bool => $moduleKey === null || $moduleKey === '' || EntitlementService::canAccess($tenantId, $moduleKey);
+
+        $providers = [];
+        foreach ($this->providers->all() as $key => $provider) {
+            if (!$entitled($provider->requiredEntitlement()) || !$actor->can($provider->requiredPermission())) {
+                continue;
+            }
+            $providers[] = [
+                'key'         => (string) $key,
+                'max_results' => $provider->maxResults(),
+                'params'      => $provider->parameterSchema()->toEditorManifest(),
+            ];
+        }
+
+        $tokens = [];
+        $themeTokens = $this->themes !== null ? $this->themes->resolve(ThemeResolver::DEFAULT_GROUP)->tokens() : ThemeResolver::DEFAULT_TOKENS;
+        foreach ($themeTokens as $ref => $value) {
+            $tokens[] = ['category' => explode('.', (string) $ref, 2)[0], 'ref' => (string) $ref, 'value' => (string) $value];
+        }
+
+        return [
+            'blocks'      => $this->registry->editorManifests($entitled, static fn(string $perm): bool => $actor->can($perm)),
+            'providers'   => $providers,
+            'tokens'      => $tokens,
+            'vocabulary'  => [
+                'alignments'       => CanonicalDocumentSchema::ALLOWED_ALIGNMENTS,
+                'auth_states'      => CanonicalDocumentSchema::ALLOWED_AUTH_STATES,
+                'breakpoints'      => CanonicalDocumentSchema::ALLOWED_BREAKPOINTS,
+                'chrome_modes'     => CanonicalDocumentSchema::ALLOWED_CHROME_MODES,
+                'container_widths' => CanonicalDocumentSchema::ALLOWED_CONTAINER_WIDTHS,
+                'robots'           => CanonicalDocumentSchema::ALLOWED_ROBOTS_DIRECTIVES,
+                'spacing_scale'    => CanonicalDocumentSchema::ALLOWED_SPACING_SCALE,
+                'style_keys'       => CanonicalDocumentSchema::ALLOWED_STYLE_KEYS,
+            ],
+            'limits'      => [
+                'max_blocks'         => CanonicalDocumentSchema::MAX_BLOCKS_PER_DOCUMENT,
+                'max_nesting_depth'  => CanonicalDocumentSchema::MAX_NESTING_DEPTH,
+                'max_repeater_items' => CanonicalDocumentSchema::MAX_REPEATER_ITEMS,
+                'max_sections'       => CanonicalDocumentSchema::MAX_SECTIONS,
+            ],
+            'permissions' => [
+                'admin'   => $actor->can(StudioPermissions::ADMIN),
+                'edit'    => $actor->can(StudioPermissions::EDIT),
+                'publish' => $actor->can(StudioPermissions::PUBLISH),
+                'view'    => $actor->can(StudioPermissions::VIEW),
+            ],
+        ];
+    }
+
+    /**
+     * Recent revisions of one page (newest first), as summaries — the history
+     * list a rollback is chosen from. Never includes a document body.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listRevisions(StudioActor $actor, int $pageId, int $limit = 30): array
+    {
+        $this->authorize($actor, StudioPermissions::VIEW);
+        if ($this->pageRepo->find($pageId) === null) {
+            throw new StudioNotFoundException("Studio page {$pageId} was not found in the active tenant.", ['page_id' => $pageId]);
+        }
+        $limit = max(1, min($limit, self::MAX_LISTED_REVISIONS));
+        return array_map([StudioEditorViews::class, 'revision'], $this->revisionRepo->forPage($pageId, $limit));
+    }
+
+    // ── Advisory edit-session lock commands ─────────────────────────────────
+
+    /**
+     * @return array{held: bool, lock_token: ?string, ttl_seconds: int, other_editor: bool, other_expires_in: ?int}
+     */
+    public function acquireEditLock(StudioActor $actor, int $pageId): array
+    {
+        $this->authorize($actor, StudioPermissions::EDIT);
+        return $this->requireLocks()->acquire($pageId, (int) $actor->userId);
+    }
+
+    /**
+     * @return array{held: bool, lock_token: ?string, ttl_seconds: int, other_editor: bool, other_expires_in: ?int}
+     */
+    public function refreshEditLock(StudioActor $actor, int $pageId, string $lockToken): array
+    {
+        $this->authorize($actor, StudioPermissions::EDIT);
+        return $this->requireLocks()->refresh($pageId, (int) $actor->userId, $lockToken);
+    }
+
+    public function releaseEditLock(StudioActor $actor, int $pageId, string $lockToken): bool
+    {
+        $this->authorize($actor, StudioPermissions::EDIT);
+        return $this->requireLocks()->release($pageId, (int) $actor->userId, $lockToken);
+    }
+
     // ── Dynamic data provider command ───────────────────────────────────────
 
     /**
@@ -374,6 +580,14 @@ final class StudioApplicationService
         }
 
         return $tenantId;
+    }
+
+    private function requireLocks(): StudioEditLockService
+    {
+        if ($this->locks === null) {
+            throw new \LogicException('StudioApplicationService was built without a StudioEditLockService.');
+        }
+        return $this->locks;
     }
 
     private function requireRenderer(): StudioRenderService

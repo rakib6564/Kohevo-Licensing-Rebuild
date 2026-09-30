@@ -39,6 +39,7 @@ final class ModuleBlockDefinitions
                 ]),
                 requiredEntitlement: 'booking',
                 allowedBindingProviders: ['booking.services'],
+                bindingSlots: ['items' => 'booking.services'],
             ),
             new DeclarativeBlockDefinition(
                 type: 'membership.plans',
@@ -53,6 +54,7 @@ final class ModuleBlockDefinitions
                 ]),
                 requiredEntitlement: 'membership',
                 allowedBindingProviders: ['membership.plans'],
+                bindingSlots: ['items' => 'membership.plans'],
             ),
             new DeclarativeBlockDefinition(
                 type: 'forms.form_card',
@@ -66,6 +68,7 @@ final class ModuleBlockDefinitions
                 ]),
                 requiredEntitlement: 'forms',
                 allowedBindingProviders: ['forms.form'],
+                bindingSlots: ['form' => 'forms.form'],
             ),
         ];
     }
