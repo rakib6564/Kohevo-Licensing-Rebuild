@@ -70,3 +70,45 @@ never needs to know your plugin's internals.
 `AuditLog::record('mcp-gateway.<tool_name>', ...)` fires for every call,
 allowed or blocked. View them in Admin → Audit Log filtered by action
 prefix `mcp-gateway.`.
+
+## Tool classification (Phase 7)
+
+Every tool descriptor declares a machine-readable risk classification:
+
+```php
+'classification' => ['access' => 'read' | 'write' | 'destructive', 'requires_confirmation' => bool],
+```
+
+`McpGatewayAPI::classify()` normalizes it and exposes it to MCP clients as
+the standard `annotations` hints (`readOnlyHint`, `destructiveHint`). The
+admin AI assistant runs a tool unattended only when it is declared
+`read` without confirmation; a tool that declares nothing is treated as a
+confirmed write (fail closed). Nothing infers a tool's risk from its NAME
+any more — `studio_get_publish_status` would not be "safe" because of the
+word `get`. External MCP clients have no confirmation UX at all: the only
+authority is the server-side check inside each tool handler.
+
+## Dispatch context (Phase 7)
+
+Handlers receive an explicit context: `tenant_id`, `scopes`, `token_id`,
+`issuer_user_id` (the token's `created_by`) and `origin` — `mcp_token` for
+an external bearer token, `admin_assistant` for the in-app chat. A module
+that enforces its own RBAC (Kohevo Studio) builds its actor from these
+fields and treats `scopes` as visibility only.
+
+## Kohevo Studio scopes (Phase 7)
+
+`studio-builder.read`, `studio-builder.edit`, `studio-builder.tokens`,
+`studio-builder.admin` map one-to-one onto the Studio permissions of the
+same name (`read` → `studio-builder.view`). `studio-builder.publish` is
+registered but grants NO tool in this release: the AI cannot publish a
+Studio page; a human publishes from the Studio Builder against the exact
+reviewed revision. A token's effective Studio authority is its scopes
+intersected with its issuer's CURRENT Studio permissions, never super
+admin. A token holding a Studio scope cannot also hold
+`mcp-gateway.debug.read`, `mcp-gateway.tests.run`, `mcp-gateway.cron.write`
+or `mcp-gateway.settings.write` (`McpGatewayAPI::STUDIO_INCOMPATIBLE_SCOPES`).
+Studio draft writes and renders/diffs have their own per-token per-minute
+budgets (`mcp-gateway.studio_rate_limit_write_per_min`, default 30;
+`mcp-gateway.studio_rate_limit_render_per_min`, default 15) on top of the
+generic `mcp-gateway.rate_limit_per_min`.

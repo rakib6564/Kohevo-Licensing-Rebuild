@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Dialog } from './Dialog.jsx';
 import { useEditor, useEngineState } from './EditorContext.jsx';
 import { t, errorMessage } from '../core/messages.mjs';
+import { isAiRevision, revisionKindLabel } from '../core/review.mjs';
 
 export function HistoryDialog({ onClose }) {
   const { transport, boot, engine } = useEditor();
@@ -39,7 +40,8 @@ export function HistoryDialog({ onClose }) {
           {revisions.map((r) => (
             <li key={r.id} className="sbx-history__item">
               <span>
-                <strong>#{r.revision_number}</strong> · {r.revision_kind}
+                <strong>#{r.revision_number}</strong> · {revisionKindLabel(r.revision_kind)}
+                {isAiRevision(r) && <> <span className="sbx-badge sbx-badge--ai">{t('ai_badge')}</span></>}
                 {r.summary ? ` · ${r.summary}` : ''}
                 <br />
                 <span className="sbx-muted">{r.created_at}</span>

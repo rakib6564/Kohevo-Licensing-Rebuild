@@ -11,6 +11,20 @@
  * that performs any of those five actions: that is Layer 1 of the
  * restriction. isBlocked() below is Layer 2, a backstop that refuses a
  * matching tool NAME even if Layer 1 is ever missed by mistake.
+ *
+ * Phase 7 (Kohevo Studio AI + MCP) adds to this gateway, without changing
+ * any existing tool's behavior:
+ *  - an explicit ORIGIN in every dispatch context (`mcp_token` for an
+ *    external bearer token, `admin_assistant` for the in-app chat) plus the
+ *    token's issuer (`issuer_user_id`), so a module can build a precise actor
+ *    instead of guessing from `token_id === 0`;
+ *  - a machine-readable tool CLASSIFICATION (read / write / destructive,
+ *    requires_confirmation) declared by each handler and normalized here into
+ *    MCP `annotations`; an undeclared tool is treated as a confirmed write
+ *    (fail closed). Nothing infers a tool's risk from its name any more;
+ *  - per-class rate limits a module may add on top of the generic one;
+ *  - a guard that keeps a Studio-scoped token from also carrying the
+ *    gateway's debug/ops scopes.
  */
 
 declare(strict_types=1);
@@ -20,6 +34,28 @@ use Slate\Kernel\Http\ApiRouter;
 class McpGatewayAPI {
     private const SCHEMA_V = '1';
     private static bool $schemaChecked = false;
+
+    /** Dispatch-context origins (Phase 7). A module must never guess these from token_id. */
+    public const ORIGIN_MCP_TOKEN       = 'mcp_token';
+    public const ORIGIN_ADMIN_ASSISTANT = 'admin_assistant';
+
+    /** Tool classification vocabulary (declared per tool under `classification`). */
+    public const ACCESS_READ        = 'read';
+    public const ACCESS_WRITE       = 'write';
+    public const ACCESS_DESTRUCTIVE = 'destructive';
+
+    /**
+     * Gateway-wide debug/ops scopes a Studio-scoped token may NOT also hold
+     * (Phase 7 §27): a token issued for a content assistant must not quietly
+     * become a server-diagnostics or test-runner credential. Combine them on
+     * separate tokens if both are genuinely needed.
+     */
+    public const STUDIO_INCOMPATIBLE_SCOPES = [
+        'mcp-gateway.debug.read',
+        'mcp-gateway.tests.run',
+        'mcp-gateway.cron.write',
+        'mcp-gateway.settings.write',
+    ];
 
     // ── Schema ──────────────────────────────────────────────────
 
@@ -58,6 +94,7 @@ class McpGatewayAPI {
         $allowedScopes = array_is_list($available) ? $available : array_keys($available);
         $scopes = array_values(array_intersect($allowedScopes, array_unique(array_map('strval', $scopes))));
         if (!$scopes) throw new InvalidArgumentException('Select at least one scope.');
+        self::assertScopeCombinationAllowed($scopes);
         $expires = null;
         if (trim($expiresAt) !== '') {
             $time = strtotime($expiresAt . ' 23:59:59');
@@ -106,7 +143,12 @@ class McpGatewayAPI {
         );
         if (!$row || !hash_equals((string)$row['token_hash'], hash('sha256', $rawToken))) return null;
         Database::update('mcp_tokens', ['last_used_at' => slate_db_now()], 'id = ?', [(int)$row['id']]);
-        return ['tenant_id' => (int)$row['tenant_id'], 'scopes' => self::decode((string)$row['scopes_json']), 'token_id' => (int)$row['id']];
+        return [
+            'tenant_id'      => (int)$row['tenant_id'],
+            'scopes'         => self::decode((string)$row['scopes_json']),
+            'token_id'       => (int)$row['id'],
+            'issuer_user_id' => (int)$row['created_by'],
+        ];
     }
 
     // ── /api/v1/mcp entry point ─────────────────────────────────
@@ -126,9 +168,11 @@ class McpGatewayAPI {
         }
 
         $context = [
-            'tenant_id' => (int)$auth['tenant_id'],
-            'scopes'    => (array)($auth['scopes'] ?? []),
-            'token_id'  => (int)($auth['token_id'] ?? 0),
+            'tenant_id'      => (int)$auth['tenant_id'],
+            'scopes'         => (array)($auth['scopes'] ?? []),
+            'token_id'       => (int)($auth['token_id'] ?? 0),
+            'issuer_user_id' => (int)($auth['issuer_user_id'] ?? 0),
+            'origin'         => self::ORIGIN_MCP_TOKEN,
         ];
         $payload  = json_decode((string)file_get_contents('php://input'), true);
         $response = self::handleRpc(is_array($payload) ? $payload : [], $context);
@@ -162,7 +206,7 @@ class McpGatewayAPI {
             $params    = is_array($request['params'] ?? null) ? $request['params'] : [];
             $name      = (string)($params['name'] ?? '');
             $arguments = is_array($params['arguments'] ?? null) ? $params['arguments'] : [];
-            $result    = with_tenant($context['tenant_id'], static fn() => self::dispatch($context, $name, $arguments));
+            $result    = self::executeToolCall($context, $name, $arguments);
 
             return self::rpcResult($id, [
                 'content' => [['type' => 'text', 'text' => json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]],
@@ -181,7 +225,51 @@ class McpGatewayAPI {
                 'inputSchema' => ['type' => 'object', 'properties' => (object)[]],
             ],
         ];
-        return Hook::applyFilters('slate_mcp_tools', $tools, $context);
+        $tools = Hook::applyFilters('slate_mcp_tools', $tools, $context);
+        return array_values(array_map([self::class, 'withClassification'], is_array($tools) ? $tools : []));
+    }
+
+    // ── Tool classification (Phase 7) ─────────────────────────────────────
+    // A handler declares `'classification' => ['access' => read|write|destructive,
+    // 'requires_confirmation' => bool]` on each tool descriptor. The gateway
+    // normalizes it, exposes it to MCP clients as the standard `annotations`
+    // hints, and the admin chat decides from it whether a call may run
+    // unattended. A tool that declares nothing is a confirmed WRITE: the
+    // name of a tool ("get", "list", "status", …) is never evidence.
+
+    /** @return array{access: string, requires_confirmation: bool, declared: bool} */
+    public static function classify(array $tool): array {
+        $declared = is_array($tool['classification'] ?? null) ? $tool['classification'] : null;
+        if ($declared === null && ($tool['name'] ?? '') === 'mcp_ping') {
+            $declared = ['access' => self::ACCESS_READ, 'requires_confirmation' => false];
+        }
+        $access = is_string($declared['access'] ?? null) ? $declared['access'] : null;
+        if (!in_array($access, [self::ACCESS_READ, self::ACCESS_WRITE, self::ACCESS_DESTRUCTIVE], true)) {
+            return ['access' => self::ACCESS_WRITE, 'requires_confirmation' => true, 'declared' => false];
+        }
+        $confirm = array_key_exists('requires_confirmation', (array)$declared)
+            ? (bool)$declared['requires_confirmation']
+            : $access !== self::ACCESS_READ;
+        // A destructive tool always pauses for a human in the admin chat, whatever it declares.
+        if ($access === self::ACCESS_DESTRUCTIVE) $confirm = true;
+        return ['access' => $access, 'requires_confirmation' => $confirm, 'declared' => true];
+    }
+
+    /** True when the admin chat may run the tool without pausing for confirmation. */
+    public static function runsUnattended(array $tool): bool {
+        $c = self::classify($tool);
+        return $c['access'] === self::ACCESS_READ && !$c['requires_confirmation'];
+    }
+
+    /** The descriptor with a normalized `classification` and MCP `annotations`. */
+    public static function withClassification(array $tool): array {
+        $c = self::classify($tool);
+        $tool['classification'] = ['access' => $c['access'], 'requires_confirmation' => $c['requires_confirmation']];
+        $annotations = is_array($tool['annotations'] ?? null) ? $tool['annotations'] : [];
+        $annotations['readOnlyHint']    = $c['access'] === self::ACCESS_READ;
+        $annotations['destructiveHint'] = $c['access'] === self::ACCESS_DESTRUCTIVE;
+        $tool['annotations'] = $annotations;
+        return $tool;
     }
 
     // ── In-app AI assistant support (admin chat box) ──────────────────────
@@ -195,9 +283,26 @@ class McpGatewayAPI {
         return array_is_list($scopes) ? $scopes : array_keys($scopes);
     }
 
+    /**
+     * The dispatch context of the in-app admin assistant: the signed-in
+     * human, every registered scope (so every module's tools are listed),
+     * explicit origin `admin_assistant`. NOTE: a module that enforces its own
+     * RBAC (Kohevo Studio) treats these scopes as visibility only — the
+     * human's real permissions decide what runs.
+     */
+    public static function adminContext(): array {
+        return [
+            'tenant_id'      => current_tenant_id(),
+            'scopes'         => self::allScopeKeys(),
+            'token_id'       => 0,
+            'issuer_user_id' => (int)(class_exists('Auth') ? (Auth::userId() ?? 0) : 0),
+            'origin'         => self::ORIGIN_ADMIN_ASSISTANT,
+        ];
+    }
+
     /** The full MCP tool catalog, as if called by a token holding every scope. */
     public static function toolsForAdmin(): array {
-        return self::tools(['tenant_id' => current_tenant_id(), 'scopes' => self::allScopeKeys(), 'token_id' => 0]);
+        return self::tools(self::adminContext());
     }
 
     /**
@@ -208,9 +313,20 @@ class McpGatewayAPI {
      * visible in Audit Log as an external AI agent's would be.
      */
     public static function runAsAdmin(string $name, array $args): array {
-        $context = ['tenant_id' => current_tenant_id(), 'scopes' => self::allScopeKeys(), 'token_id' => 0];
-        $result  = self::dispatch($context, $name, $args);
+        $result = self::dispatch(self::adminContext(), $name, $args);
         return is_array($result) ? $result : ['result' => $result];
+    }
+
+    /**
+     * Execute one tool call for an authenticated token context (what
+     * handleRpc() does per JSON-RPC request), inside that token's tenant.
+     * The context must be the one authenticate() produced — never built
+     * from request data. Public so an integration test can drive the exact
+     * production dispatch path without an HTTP round trip.
+     */
+    public static function executeToolCall(array $context, string $name, array $args): mixed {
+        $context['origin'] = $context['origin'] ?? self::ORIGIN_MCP_TOKEN;
+        return with_tenant((int)$context['tenant_id'], static fn() => self::dispatch($context, $name, $args));
     }
 
     /**
@@ -298,11 +414,61 @@ class McpGatewayAPI {
         // to exactly one tenant (minted per-tenant in mcp_tokens); adding
         // tenant_id here would be redundant, not a safety gap.
         $count = (int) Database::value(
-            "SELECT COUNT(*) FROM mcp_action_log WHERE token_id = ? AND TIMESTAMPDIFF(SECOND, attempted_at, UTC_TIMESTAMP()) <= 60",
+            "SELECT COUNT(*) FROM mcp_action_log WHERE token_id = ? AND action = 'call' AND TIMESTAMPDIFF(SECOND, attempted_at, UTC_TIMESTAMP()) <= 60",
             [$tokenId]
         );
         if ($count > $limit) {
             throw new RuntimeException('Rate limit exceeded — too many MCP actions in the last minute. Try again shortly.');
+        }
+    }
+
+    /**
+     * Phase 7: a module-specific per-minute budget for one CLASS of call
+     * (e.g. Studio draft writes or renders), on top of the generic limit
+     * above. Same table, same database clock, same pruning; rows are tagged
+     * with the class so they never count toward the generic budget. Returns
+     * false when the window is exhausted; a zero/negative configured limit
+     * disables the class limit. Only external tokens are counted here — the
+     * admin assistant has no token row and is limited by its session.
+     */
+    public static function withinClassRateLimit(array $context, string $class, string $settingKey, int $defaultLimit): bool {
+        self::ensureSchema();
+        $tokenId = (int)($context['token_id'] ?? 0);
+        if ($tokenId <= 0) return true;
+        $class = mb_substr(preg_replace('/[^a-z0-9_.-]/', '', strtolower($class)) ?: 'class', 0, 160);
+        $configured = Database::setting($settingKey);
+        $limit = $configured === null || $configured === '' ? $defaultLimit : (int)$configured;
+        if ($limit <= 0) return true;
+        Database::insert('mcp_action_log', [
+            'tenant_id'    => (int)($context['tenant_id'] ?? current_tenant_id()),
+            'token_id'     => $tokenId,
+            'action'       => $class,
+            'attempted_at' => slate_db_now(),
+        ]);
+        // anti-drift-ignore: TENANT — scoped by token_id, which belongs to exactly one tenant (see enforceRateLimit()).
+        $count = (int) Database::value(
+            "SELECT COUNT(*) FROM mcp_action_log WHERE token_id = ? AND action = ? AND TIMESTAMPDIFF(SECOND, attempted_at, UTC_TIMESTAMP()) <= 60",
+            [$tokenId, $class]
+        );
+        return $count <= $limit;
+    }
+
+    /**
+     * Phase 7 §27 guard: a token holding any Studio scope may not also hold
+     * the gateway's debug/ops scopes (see STUDIO_INCOMPATIBLE_SCOPES).
+     */
+    public static function assertScopeCombinationAllowed(array $scopes): void {
+        $hasStudio = false;
+        foreach ($scopes as $scope) {
+            if (is_string($scope) && str_starts_with($scope, 'studio-builder.')) { $hasStudio = true; break; }
+        }
+        if (!$hasStudio) return;
+        $clash = array_values(array_intersect(self::STUDIO_INCOMPATIBLE_SCOPES, array_map('strval', $scopes)));
+        if ($clash) {
+            throw new InvalidArgumentException(
+                'A token with Kohevo Studio scopes cannot also hold gateway debug/ops scopes (' . implode(', ', $clash)
+                . '). Create a separate token for those.'
+            );
         }
     }
 

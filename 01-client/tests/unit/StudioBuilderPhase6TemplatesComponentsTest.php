@@ -393,7 +393,7 @@ unit('phase6 transactions: no audit write or audited command runs inside an appl
         $end = strpos($src, '$pdo->commit();', $start);
         assert_true($end !== false, 'every owned transaction commits');
         $body = substr($src, $start, $end - $start);
-        foreach (['AuditLog::record(', '$this->applyDocumentOperation(', '$this->saveDraft(', '$this->createPage(', '$this->publish(', '$this->rollback('] as $forbidden) {
+        foreach (['AuditLog::record(', '$this->audit(', '$this->applyDocumentOperation(', '$this->saveDraft(', '$this->createPage(', '$this->publish(', '$this->rollback('] as $forbidden) {
             assert_true(!str_contains($body, $forbidden), "'{$forbidden}' must not run inside an owned transaction (verified web-path hazard: implicit commit → \"There is no active transaction\")");
         }
         $blocks++;

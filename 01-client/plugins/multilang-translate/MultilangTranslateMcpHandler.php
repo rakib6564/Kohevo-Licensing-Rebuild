@@ -34,11 +34,13 @@ class MultilangTranslateMcpHandler {
         if (self::has($context, 'mlt.view')) {
             $tools[] = [
                 'name' => 'slate_i18n_list_languages',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'List every configured language (code, name, enabled/default status).',
                 'inputSchema' => ['type' => 'object', 'properties' => (object)[]],
             ];
             $tools[] = [
                 'name' => 'slate_i18n_list_strings',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'List translatable UI strings with their current translation status per locale. Use this to find what still needs translating before calling slate_i18n_translate_string.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'locales' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Locale codes to include, e.g. ["fr"]. Defaults to all enabled languages.'],
@@ -51,6 +53,7 @@ class MultilangTranslateMcpHandler {
         if (self::has($context, 'mlt.manage')) {
             $tools[] = [
                 'name' => 'slate_i18n_add_language',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Add a new language for translation. Name/native name/flag auto-fill from a built-in catalog for common language codes if omitted.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'code'        => ['type' => 'string', 'description' => 'ISO code, e.g. "es", "de", "pt-br".'],
@@ -61,6 +64,7 @@ class MultilangTranslateMcpHandler {
             ];
             $tools[] = [
                 'name' => 'slate_i18n_translate_string',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Save a translation for one string in one locale. Saves as a draft by default; set publish=true to make it live immediately (same effect as saving then calling slate_i18n_publish_translations for just this string).',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'string_id' => ['type' => 'integer', 'description' => 'From slate_i18n_list_strings.'],
@@ -71,6 +75,7 @@ class MultilangTranslateMcpHandler {
             ];
             $tools[] = [
                 'name' => 'slate_i18n_publish_translations',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Publish all draft translations for a locale (or every locale if omitted) so they go live on the site.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'locale' => ['type' => 'string', 'description' => 'Omit to publish drafts across all locales.'],

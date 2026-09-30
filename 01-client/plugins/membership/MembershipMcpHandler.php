@@ -35,6 +35,7 @@ class MembershipMcpHandler {
         if (self::has($context, 'membership.read')) {
             $tools[] = [
                 'name' => 'slate_membership_list_plans',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'List membership plans (base membership, insurance, course).',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'active_only' => ['type' => 'boolean', 'description' => 'Default true'],
@@ -42,6 +43,7 @@ class MembershipMcpHandler {
             ];
             $tools[] = [
                 'name' => 'slate_membership_list_members',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'List members (customers) with their current plan/subscription status.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'search' => ['type' => 'string', 'description' => 'Match against name or email'],
@@ -50,6 +52,7 @@ class MembershipMcpHandler {
             ];
             $tools[] = [
                 'name' => 'slate_membership_member_status',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'Detailed membership status for one customer: active subscription, days left, insurance, profile completeness.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'customer_id' => ['type' => 'integer'],
@@ -59,6 +62,7 @@ class MembershipMcpHandler {
         if (self::has($context, 'membership.write')) {
             $tools[] = [
                 'name' => 'slate_membership_assign_plan',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Manually assign a plan to an existing customer (offline/cash-equivalent activation). Same effect as the admin "Manual activation" form.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'customer_id'   => ['type' => 'integer'],
@@ -69,6 +73,7 @@ class MembershipMcpHandler {
             ];
             $tools[] = [
                 'name' => 'slate_membership_cancel_subscription',
+                'classification' => ['access' => 'destructive', 'requires_confirmation' => true],
                 'description' => 'Cancel a subscription by id.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'subscription_id' => ['type' => 'integer'],
@@ -78,6 +83,7 @@ class MembershipMcpHandler {
         if (self::has($context, 'membership.manage_plans')) {
             $tools[] = [
                 'name' => 'slate_membership_upsert_plan',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Create a new membership plan, or update an existing one when id is given. No delete — deactivate with is_active=false instead.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'id'               => ['type' => 'integer', 'description' => 'Omit to create a new plan; provide to update an existing one.'],

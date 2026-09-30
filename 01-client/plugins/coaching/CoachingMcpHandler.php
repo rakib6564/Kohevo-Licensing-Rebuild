@@ -34,16 +34,19 @@ class CoachingMcpHandler {
         if (self::has($context, 'coaching.read')) {
             $tools[] = [
                 'name' => 'slate_coaching_list_clients',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'List currently enrolled coaching clients.',
                 'inputSchema' => ['type' => 'object', 'properties' => (object)[]],
             ];
             $tools[] = [
                 'name' => 'slate_coaching_list_threads',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'List all chat threads with the last message preview and unread counts.',
                 'inputSchema' => ['type' => 'object', 'properties' => (object)[]],
             ];
             $tools[] = [
                 'name' => 'slate_coaching_get_messages',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'Read a client\'s chat thread (delivered messages, newest last).',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'customer_id' => ['type' => 'integer'],
@@ -54,6 +57,7 @@ class CoachingMcpHandler {
         if (self::has($context, 'coaching.chat.send')) {
             $tools[] = [
                 'name' => 'slate_coaching_send_message',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Send a chat message to a client immediately, as the practitioner.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'customer_id' => ['type' => 'integer'],
@@ -64,6 +68,7 @@ class CoachingMcpHandler {
         if (self::has($context, 'coaching.manage_library')) {
             $tools[] = [
                 'name' => 'slate_coaching_upsert_meal_structure',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Create a new meal-structure template in the practitioner library, or update one when id is given. No delete.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'id'         => ['type' => 'integer', 'description' => 'Omit to create; provide to update.'],
@@ -76,6 +81,7 @@ class CoachingMcpHandler {
             ];
             $tools[] = [
                 'name' => 'slate_coaching_upsert_shopping_list',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Create a new shopping-list template in the practitioner library, or update one when id is given. No delete.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'id'       => ['type' => 'integer', 'description' => 'Omit to create; provide to update.'],
@@ -93,6 +99,7 @@ class CoachingMcpHandler {
             ];
             $tools[] = [
                 'name' => 'slate_coaching_upsert_recipe',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Create a new recipe in the practitioner library, or update one when id is given. No delete.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'id'                 => ['type' => 'integer', 'description' => 'Omit to create; provide to update.'],

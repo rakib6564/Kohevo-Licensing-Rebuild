@@ -31,6 +31,7 @@ class BookingMcpHandler {
         if ($hasRead) {
             $tools[] = [
                 'name'        => 'slate_booking_list_services',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'List all active booking services with duration, price, and buffer details.',
                 'inputSchema' => [
                     'type'       => 'object',
@@ -39,6 +40,7 @@ class BookingMcpHandler {
             ];
             $tools[] = [
                 'name'        => 'slate_booking_list_slots',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'Compute available appointment slots for a service on a specified date.',
                 'inputSchema' => [
                     'type'       => 'object',
@@ -56,6 +58,7 @@ class BookingMcpHandler {
         if ($hasWrite) {
             $tools[] = [
                 'name'        => 'slate_booking_create_appointment',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Create and confirm a new booking appointment for a customer.',
                 'inputSchema' => [
                     'type'       => 'object',
@@ -78,6 +81,7 @@ class BookingMcpHandler {
         if (in_array('booking.manage_services', (array)($context['scopes'] ?? []), true)) {
             $tools[] = [
                 'name'        => 'slate_booking_upsert_service',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Create a new booking service, or update an existing one when id is given. No delete — deactivate with is_active=false instead.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'id'                => ['type' => 'integer', 'description' => 'Omit to create; provide to update.'],
@@ -98,6 +102,7 @@ class BookingMcpHandler {
         if (in_array('booking.manage_providers', (array)($context['scopes'] ?? []), true)) {
             $tools[] = [
                 'name'        => 'slate_booking_upsert_provider',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Create a new booking provider (practitioner/staff), or update an existing one when id is given. No delete — deactivate with is_active=false instead.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'id'         => ['type' => 'integer', 'description' => 'Omit to create; provide to update.'],

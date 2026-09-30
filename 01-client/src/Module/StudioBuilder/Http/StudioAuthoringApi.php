@@ -63,6 +63,8 @@ final class StudioAuthoringApi
         'components'   => ['GET', []],
         'chrome'       => ['GET', ['page']],
         'tokens'       => ['GET', ['group']],
+        // Phase 7 query: structured diff between two revisions of one page (review of AI drafts)
+        'diff'         => ['GET', ['page', 'base', 'proposed']],
         // Commands
         'operations'   => ['POST', ['page_id', 'expected_revision_id', 'revision_kind', 'operations', 'summary']],
         'save_draft'   => ['POST', ['page_id', 'expected_revision_id', 'revision_kind', 'document', 'summary']],
@@ -178,6 +180,7 @@ final class StudioAuthoringApi
             'components'   => StudioApiResponse::ok(['components' => $this->app->listGlobalComponents($actor)]),
             'chrome'       => StudioApiResponse::ok(['chrome' => $this->app->chromeBindings($actor, self::id($input, 'page'))]),
             'tokens'       => StudioApiResponse::ok(['tokens' => $this->app->designTokens($actor, self::tokenGroup($input))]),
+            'diff'         => StudioApiResponse::ok(['review' => $this->app->diffRevisions($actor, self::id($input, 'page'), self::optionalInt($input, 'base'), self::optionalInt($input, 'proposed'))]),
             'apply_template'   => $this->applyTemplate($actor, $input),
             'insert_template'  => $this->insertTemplate($actor, $input),
             'save_template'    => $this->saveTemplate($actor, $input),

@@ -197,10 +197,17 @@ expected revision).
 
 ---
 
-## Phase 7 — AI + MCP
+## Phase 7 — AI + MCP (Implemented)
 
 ### Goal
 Allow AI to operate Studio through the same application boundary as humans.
+
+Decisions and contracts: `architecture/KOHEVO-STUDIO-PHASE7-AI-MCP.md`
+(no schema change; explicit actor origins `session` / `mcp_token` /
+`admin_assistant`; AI draft writes are `ai_operation` revisions; a Studio
+MCP adapter over the existing application service; structured revision
+diff + exact-revision preview + human publish; autonomous publish DISABLED
+for the initial release).
 
 ### Scope
 

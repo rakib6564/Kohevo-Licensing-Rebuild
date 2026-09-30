@@ -161,6 +161,11 @@ html, body.sbx-body { margin: 0; height: 100%; background: var(--sbx-bg); color:
 .sbx-dialog__head h2 { font-size: 15px; margin: 0; }
 .sbx-dialog__body { padding: 1rem; max-height: 65vh; overflow: auto; }
 .sbx-dialog__foot { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 0.75rem 1rem; border-top: 1px solid var(--sbx-border); }
+.sbx-badge--ai { background: var(--sbx-warn-bg); color: var(--sbx-text); font-weight: 600; }
+.sbx-review__summary { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0; }
+.sbx-review__lines { margin: 0.5rem 0 0; padding-left: 1.2rem; max-height: 40vh; overflow: auto; font-size: 13px; }
+.sbx-review__lines li { margin: 0.2rem 0; }
+.sbx-review__meta { font-size: 12px; color: var(--sbx-muted); margin: 0.25rem 0; }
 .sbx-history { list-style: none; margin: 0; padding: 0; }
 .sbx-history__item { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.45rem 0; border-bottom: 1px solid var(--sbx-border); }
 

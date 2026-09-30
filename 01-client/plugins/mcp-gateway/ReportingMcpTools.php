@@ -33,6 +33,7 @@ class ReportingMcpTools {
         if (in_array('mcp-gateway.reports.read', (array)($context['scopes'] ?? []), true)) {
             $tools[] = [
                 'name' => 'slate_business_report',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'Aggregated business report over a trailing window: bookings, membership revenue/activations, payments, form submissions, and admin/agent activity. Returns structured data for the caller to summarize.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'period_days' => ['type' => 'integer', 'description' => 'Trailing window in days. Default 30.'],

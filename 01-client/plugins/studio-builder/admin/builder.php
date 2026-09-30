@@ -75,6 +75,12 @@ if ($sbStatus !== 200) {
 $sbAssetDir = dirname(__DIR__) . '/assets/builder';
 $sbVersion  = (string) (@filemtime($sbAssetDir . '/builder.js') ?: '0');
 $sbMediaPicker = class_exists('PluginLoader') && PluginLoader::isActive('media-library') && Auth::can('media.view');
+// Phase 7: the AI assistant entry point (the MCP gateway's admin chat) is offered only
+// when that module is active and the signed-in admin may open it. The chat prepares
+// DRAFT revisions; publishing stays this builder's own Publish action.
+$sbAssistantUrl = class_exists('PluginLoader') && PluginLoader::isActive('mcp-gateway') && (Auth::can('mcp-gateway.manage') || Auth::isSuperAdmin())
+    ? plugin_url('mcp-gateway', 'admin/chat.php')
+    : null;
 
 $sbBoot = [
     'pageId'     => $sbPageId,
@@ -88,6 +94,7 @@ $sbBoot = [
     'mediaPicker'   => $sbMediaPicker,
     'builderUrl'    => plugin_url('studio-builder', 'admin/builder.php'),
     'brandingUrl'   => rtrim((string) SLATE_URL, '/') . '/admin/settings.php?tab=branding',
+    'assistantUrl'  => $sbAssistantUrl,
 ];
 ?><!DOCTYPE html>
 <html lang="en">

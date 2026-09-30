@@ -33,11 +33,13 @@ class FormsMcpHandler {
         if (self::has($context, 'forms.read')) {
             $tools[] = [
                 'name' => 'slate_forms_list_definitions',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'List available forms (contact, quote, intake, etc.).',
                 'inputSchema' => ['type' => 'object', 'properties' => (object)[]],
             ];
             $tools[] = [
                 'name' => 'slate_forms_list_submissions',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'List submissions for a form, newest first.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'form_slug' => ['type' => 'string'],
@@ -48,6 +50,7 @@ class FormsMcpHandler {
         if (self::has($context, 'forms.write')) {
             $tools[] = [
                 'name' => 'slate_forms_upsert_form',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Create a new form, or update an existing one when id is given. Covers the core builder fields (title, fields, messages) — no delete, and advanced appearance/PDF/email styling is left at its defaults or whatever an existing form already has.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'id'               => ['type' => 'integer', 'description' => 'Omit to create; provide to update.'],
@@ -73,6 +76,7 @@ class FormsMcpHandler {
             ];
             $tools[] = [
                 'name' => 'slate_forms_update_submission_status',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Mark a client-submitted form entry read/unread and/or set its status (new / in_progress / done).',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'submission_id' => ['type' => 'integer'],

@@ -84,5 +84,7 @@ export function createTransport({ apiUrl, csrfToken, fetchImpl, timeoutMs = TIME
     createComponent: (body) => call('POST', 'create_component', { body }),
     detachComponent: (body) => call('POST', 'detach_component', { body }),
     saveTokens: (body) => call('POST', 'save_tokens', { body }),
+    // Phase 7 — structured diff for reviewing an AI-proposed draft.
+    diff: (pageId, base = null, proposed = null) => call('GET', 'diff', { query: { page: pageId, base, proposed } }),
   };
 }

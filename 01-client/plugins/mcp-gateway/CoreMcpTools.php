@@ -46,6 +46,7 @@ class CoreMcpTools {
         if (self::has($context, 'mcp-gateway.settings.read')) {
             $tools[] = [
                 'name' => 'slate_settings_get',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'Read one or more settings by key. Values whose key looks like a password/secret are returned as "[hidden]".',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'keys' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Setting keys, e.g. "site_name", "booking.multislot_max"'],
@@ -55,6 +56,7 @@ class CoreMcpTools {
         if (self::has($context, 'mcp-gateway.settings.write')) {
             $tools[] = [
                 'name' => 'slate_settings_set',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Set a single setting by key. Refused if the key looks like a password/secret field.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'key'   => ['type' => 'string'],
@@ -65,6 +67,7 @@ class CoreMcpTools {
         if (self::has($context, 'mcp-gateway.media.read')) {
             $tools[] = [
                 'name' => 'slate_media_list',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'List files in the media library.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'type'     => ['type' => 'string', 'enum' => ['all', 'image', 'document'], 'description' => 'Default "all"'],
@@ -77,6 +80,7 @@ class CoreMcpTools {
         if (self::has($context, 'mcp-gateway.media.write')) {
             $tools[] = [
                 'name' => 'slate_media_upload',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Upload an image or document to the media library from base64-encoded content.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'filename'       => ['type' => 'string', 'description' => 'Original filename, used only for its extension'],
@@ -85,6 +89,7 @@ class CoreMcpTools {
             ];
             $tools[] = [
                 'name' => 'slate_media_delete',
+                'classification' => ['access' => 'destructive', 'requires_confirmation' => true],
                 'description' => 'Delete a media library file by id. Refused if the file is still referenced anywhere.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'id' => ['type' => 'integer'],
@@ -94,6 +99,7 @@ class CoreMcpTools {
         if (self::has($context, 'mcp-gateway.notifications.write')) {
             $tools[] = [
                 'name' => 'slate_notifications_send',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Send a notification into the admin notifications inbox.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'title' => ['type' => 'string'],
@@ -106,6 +112,7 @@ class CoreMcpTools {
         if (self::has($context, 'mcp-gateway.audit.read')) {
             $tools[] = [
                 'name' => 'slate_audit_search',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'Search the audit log.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'action'  => ['type' => 'string', 'description' => 'Exact action key, e.g. "mcp-gateway.token_created"'],
@@ -119,6 +126,7 @@ class CoreMcpTools {
         if (self::has($context, 'mcp-gateway.debug.read')) {
             $tools[] = [
                 'name' => 'slate_logs_tail',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'Tail the application log (data/slate.log).',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'lines' => ['type' => 'integer', 'description' => 'Default 200, max 1000'],
@@ -127,11 +135,13 @@ class CoreMcpTools {
             ];
             $tools[] = [
                 'name' => 'slate_migration_status',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'Show which core database migrations are applied vs pending.',
                 'inputSchema' => ['type' => 'object', 'properties' => (object)[]],
             ];
             $tools[] = [
                 'name' => 'slate_db_schema_inspect',
+                'classification' => ['access' => 'read', 'requires_confirmation' => false],
                 'description' => 'Read-only schema introspection via information_schema. Omit "table" to list all tables; pass it to list that table\'s columns.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'table' => ['type' => 'string'],
@@ -141,6 +151,7 @@ class CoreMcpTools {
         if (self::has($context, 'mcp-gateway.cron.write')) {
             $tools[] = [
                 'name' => 'slate_cron_trigger',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Run a scheduled cron job on demand (the same hooks cron.php fires).',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'job' => ['type' => 'string', 'enum' => ['frequent', 'daily']],
@@ -150,6 +161,7 @@ class CoreMcpTools {
         if (self::has($context, 'mcp-gateway.tests.run')) {
             $tools[] = [
                 'name' => 'slate_tests_run',
+                'classification' => ['access' => 'write', 'requires_confirmation' => true],
                 'description' => 'Run the automated test suite (unit, integration, or smoke) and return pass/fail plus output. May take a while.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'suite' => ['type' => 'string', 'enum' => ['unit', 'integration', 'smoke', 'all'], 'description' => 'Default "all"'],

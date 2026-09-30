@@ -19,7 +19,12 @@
  * - Adds the "Studio pages" admin nav entry (entitled installs, studio-builder.view)
  *   leading to `admin/index.php` (page list) and `admin/builder.php` (the React
  *   builder shell, backed by `admin/api.php` + `admin/canvas.php`).
- * - Still registers no MCP tools (Phase 7).
+ *
+ * Phase 7 AI + MCP:
+ * - Registers the Studio MCP scopes and tools on the MCP gateway's extension
+ *   points through `StudioBuilderMcpHandler` (same pattern as every other
+ *   commercial module). Every tool call goes through the same application
+ *   boundary as the Builder; no tool publishes.
  */
 
 declare(strict_types=1);
@@ -40,6 +45,12 @@ class StudioBuilder extends Plugin
         \Hook::addFilter('public_fallback', [self::class, 'servePublicPath'], 10, 2);
         \Hook::addFilter('public_homepage', [self::class, 'servePublicHomepage'], 10, 1);
         \Hook::addFilter('admin_nav_items', [$this, 'addAdminNav']);
+
+        // MCP AI Gateway integration (Phase 7): Studio scopes + tools for AI
+        // assistants. Registered unconditionally, like the other modules; the
+        // module guard and the application layer refuse unlicensed tenants.
+        require_once __DIR__ . '/StudioBuilderMcpHandler.php';
+        StudioBuilderMcpHandler::register();
     }
 
     /**

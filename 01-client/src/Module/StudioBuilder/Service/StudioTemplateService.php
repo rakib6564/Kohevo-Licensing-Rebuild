@@ -207,7 +207,7 @@ final class StudioTemplateService
      * @param array<string, mixed> $validationOptions Forwarded to `ValidatedDocument::from()`.
      * @return array{revision: array<string, mixed>, page: array<string, mixed>, fingerprint: string, deduplicated: bool}
      */
-    public function applyTemplate(string $templateKey, int $pageId, ?int $expectedRevisionId, int $actorId, array $validationOptions = []): array
+    public function applyTemplate(string $templateKey, int $pageId, ?int $expectedRevisionId, int $actorId, array $validationOptions = [], string $revisionKind = 'manual'): array
     {
         $this->requireTenantId();
 
@@ -233,7 +233,7 @@ final class StudioTemplateService
             $validated,
             $expectedRevisionId,
             $actorId,
-            'manual',
+            $revisionKind,
             "Applied template '{$templateKey}'",
         );
     }

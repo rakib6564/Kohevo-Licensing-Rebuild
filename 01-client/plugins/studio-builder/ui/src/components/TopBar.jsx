@@ -5,6 +5,7 @@ import { useEditor, useEngineState } from './EditorContext.jsx';
 import { STATUS } from '../core/sync.mjs';
 import { VIEWPORTS } from '../core/viewport.mjs';
 import { t, errorMessage } from '../core/messages.mjs';
+import { isAiRevision } from '../core/review.mjs';
 
 const STATUS_KEY = {
   [STATUS.LOADING]: 'status_loading', [STATUS.IDLE]: 'status_idle', [STATUS.SAVED]: 'status_saved',
@@ -23,9 +24,11 @@ export const SaveStatus = memo(function SaveStatus() {
   );
 });
 
-export const TopBar = memo(function TopBar({ viewportKey, onViewport, onSave, onUndo, onRedo, onPublish, onHistory, onTheme = null }) {
+export const TopBar = memo(function TopBar({ viewportKey, onViewport, onSave, onUndo, onRedo, onPublish, onHistory, onTheme = null, onAiReview = null }) {
   const { boot, engine, manifest } = useEditor();
   const page = useEngineState((s) => s.page);
+  const revision = useEngineState((s) => s.revision);
+  const aiDraft = isAiRevision(revision);
   const status = useEngineState((s) => s.status);
   const undoCount = useEngineState((s) => s.undo.length);
   const redoCount = useEngineState((s) => s.redo.length);
@@ -41,6 +44,7 @@ export const TopBar = memo(function TopBar({ viewportKey, onViewport, onSave, on
         <div className="sbx-topbar__title">
           <strong>{page ? page.title : ''}</strong>
           {page && <span className="sbx-muted"> {page.public_path}{page.is_published ? (page.has_unpublished_changes ? ' · draft changes' : ' · published') : ' · not published'}</span>}
+          {aiDraft && <span className="sbx-badge sbx-badge--ai" data-testid="ai-badge" title={t('ai_review_hint')}>{t('ai_badge')}</span>}
         </div>
       </div>
 
@@ -66,6 +70,8 @@ export const TopBar = memo(function TopBar({ viewportKey, onViewport, onSave, on
         <button type="button" className="sbx-btn" onClick={onSave} disabled={conflict || pendingCount === 0} aria-keyshortcuts="Control+S Meta+S">{t('save')}</button>
         <button type="button" className="sbx-btn" onClick={onHistory} disabled={conflict}>{t('history')}</button>
         {onTheme && <button type="button" className="sbx-btn" onClick={onTheme}>{t('theme')}</button>}
+        {aiDraft && onAiReview && <button type="button" className="sbx-btn sbx-btn--seg" data-testid="ai-review" onClick={onAiReview} disabled={conflict}>{t('ai_review')}</button>}
+        {!aiDraft && boot.assistantUrl && <a className="sbx-btn" href={boot.assistantUrl} target="_blank" rel="noopener">{t('ai_assistant')}</a>}
         <a className="sbx-btn" href={`${boot.previewUrl}?page=${boot.pageId}`} target="_blank" rel="noopener">{t('preview')}</a>
         {canPublish && (
           <button type="button" className="sbx-btn sbx-btn--primary" onClick={onPublish} disabled={conflict || busy || !engine}>{t('publish')}</button>

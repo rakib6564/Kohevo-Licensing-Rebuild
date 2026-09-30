@@ -254,9 +254,10 @@ HTML;
             return [
                 'authenticated' => true,
                 'type'          => 'mcp_token',
-                'tenant_id'     => $context['tenant_id'],
-                'scopes'        => $context['scopes'],
-                'token_id'      => $context['token_id'],
+                'tenant_id'      => $context['tenant_id'],
+                'scopes'         => $context['scopes'],
+                'token_id'       => $context['token_id'],
+                'issuer_user_id' => $context['issuer_user_id'],
             ];
         }
         return $auth;

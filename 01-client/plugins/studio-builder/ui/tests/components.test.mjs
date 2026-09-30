@@ -103,3 +103,47 @@ test('an empty page offers "Add section" and nothing else to edit', { skip: skip
   assert.match(html, /This page is empty/);
   assert.match(html, /Add section/);
 });
+
+// ── Phase 7 — AI-origin indicators and the review handoff ────────────────
+test('an AI draft is marked in the top bar and offers the review step; a human draft offers the assistant entry point instead', { skip: skipReason || false }, () => {
+  const ai = entry.render({ manifest, document: pageDoc, revisionKind: 'ai_operation', assistantUrl: '/plugins/mcp-gateway/admin/chat.php' });
+  assert.match(ai, /data-testid="ai-badge"[^>]*>AI draft</, 'the AI-origin badge is visible');
+  assert.match(ai, /data-testid="ai-review"[^>]*>Review AI draft</, 'the review action is offered');
+  assert.ok(!/>AI assistant</.test(ai), 'while an AI draft awaits review, the entry point is the review itself');
+
+  const human = entry.render({ manifest, document: pageDoc, revisionKind: 'manual', assistantUrl: '/plugins/mcp-gateway/admin/chat.php' });
+  assert.ok(!/data-testid="ai-badge"/.test(human));
+  assert.match(human, /href="\/plugins\/mcp-gateway\/admin\/chat\.php"[^>]*>AI assistant</, 'the assistant entry point links to the admin chat');
+
+  const noAssistant = entry.render({ manifest, document: pageDoc, revisionKind: 'manual' });
+  assert.ok(!/>AI assistant</.test(noAssistant), 'no entry point when the gateway module is not available');
+});
+
+test('the review dialog shows the structured diff as text, the exact-revision preview link and a publish bound to that revision', { skip: skipReason || false }, () => {
+  const review = {
+    page: { id: 1, title: 'About us' },
+    base_revision: { id: 41, revision_number: 6, revision_kind: 'publish' },
+    proposed_revision: { id: 42, revision_number: 7, revision_kind: 'ai_operation' },
+    diff: { summary: { changed: true, sections_added: 0, sections_removed: 0, sections_moved: 0, sections_updated: 0, blocks_added: 1, blocks_removed: 0, blocks_moved: 0, blocks_updated: 1, settings_changed: false, seo_changed: false, template_changed: false },
+      lines: ['Heading (core.heading) updated: text "Welcome" → "<script>alert(1)</script>".', 'Rich text (core.rich_text) added.'] },
+    publish_impact: { proposed_is_current_draft: true, proposed_is_published: false, requires_publish: true, shared_content: false, dependent_pages: null },
+  };
+  const html = entry.render({ manifest, document: pageDoc, revisionKind: 'ai_operation', review });
+  assert.match(html, /data-testid="ai-review"/);
+  assert.match(html, /Proposed revision #7 \(AI draft\)/);
+  assert.match(html, /Compared with revision #6 \(published\)/);
+  assert.match(html, /1 block\(s\) added/);
+  assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/, 'hostile content in the diff is escaped text, never markup');
+  assert.ok(!html.includes('<script>alert(1)</script>'));
+  assert.match(html, /preview\.php\?page=1&amp;revision=42/, 'preview targets the exact reviewed revision');
+  if (manifest.permissions && manifest.permissions.publish) {
+    assert.match(html, /data-testid="ai-publish"/, 'a publisher gets the bound publish action');
+    assert.match(html, /bound to revision #7/);
+  } else {
+    assert.match(html, /Ask a publisher to review/);
+  }
+
+  const stale = entry.render({ manifest, document: pageDoc, revisionKind: 'ai_operation', review: { ...review, publish_impact: { ...review.publish_impact, proposed_is_current_draft: false } } });
+  assert.match(stale, /Reload to review the latest revision/, 'a moved-on draft cannot be published from a stale review');
+  assert.ok(!/data-testid="ai-publish"/.test(stale));
+});

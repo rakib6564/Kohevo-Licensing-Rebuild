@@ -44,6 +44,18 @@
  * dependency invalidation that publishing/archiving a component or a
  * header/footer partial triggers for its dependents.
  *
+ * Phase 7 (AI + MCP) adds NO new mutation path. The actor's ORIGIN (session,
+ * mcp_token, admin_assistant — see StudioActor) now decides how a draft write
+ * is RECORDED: an AI-origin actor's draft mutations are always persisted as
+ * `ai_operation` revisions, whatever kind the caller asked for, and a human
+ * session can only write `autosave` / `manual` (never `ai_operation`). Every
+ * Studio audit event carries the actor's explicit attribution
+ * (`origin`, `user_id`, `token_id`) plus the resulting `revision_id`, so an
+ * MCP tool call, its token, the delegating user, the AI revision and a later
+ * human publish are all linkable in the ONE existing audit log. The
+ * structured revision diff (`diffRevisions`) and the revision lookup
+ * (`findRevision`) are read-only queries added for the review workflow.
+ *
  * Cross-reference validation (`media_exists`/`template_exists`/`partial_exists`)
  * and block entitlement/permission enforcement
  * (`entitlement_check`/`permission_check`) are wired ONCE, here, in
@@ -56,6 +68,8 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Application;
 
+use Slate\Module\StudioBuilder\Dependency\DependencyExtractor;
+use Slate\Module\StudioBuilder\Diff\RevisionDiff;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
@@ -124,6 +138,9 @@ final class StudioApplicationService
     /** Revision kinds a builder session may write through `applyDocumentOperation()`. */
     public const EDITOR_REVISION_KINDS = ['autosave', 'manual'];
 
+    /** The ONLY kind an AI-origin actor (mcp_token / admin_assistant) can write a draft as. */
+    public const AI_REVISION_KIND = 'ai_operation';
+
     // ── Page address commands ───────────────────────────────────────────────
 
     /**
@@ -132,8 +149,8 @@ final class StudioApplicationService
     public function createPage(StudioActor $actor, string $title, string $slug, string $pageType, string $routeMode): array
     {
         $this->authorize($actor, StudioPermissions::EDIT);
-        $result = $this->pages->createPage($title, $slug, $pageType, $routeMode, (int) $actor->userId, $this->buildValidationOptions($actor));
-        AuditLog::record('studio.page.created', (string) $result['page']['id'], ['title' => $title, 'slug' => $slug]);
+        $result = $this->pages->createPage($title, $slug, $pageType, $routeMode, (int) $actor->userId, $this->buildValidationOptions($actor), $this->draftKind($actor, 'manual'));
+        $this->audit($actor, 'studio.page.created', (string) $result['page']['id'], ['title' => $title, 'slug' => $slug, 'revision_id' => (int) ($result['revision']['id'] ?? 0)]);
         return $result;
     }
 
@@ -145,7 +162,7 @@ final class StudioApplicationService
     {
         $this->authorize($actor, StudioPermissions::EDIT);
         $result = $this->pages->updateAddress($pageId, $changes, (int) $actor->userId);
-        AuditLog::record('studio.page.address_updated', (string) $pageId, $changes);
+        $this->audit($actor, 'studio.page.address_updated', (string) $pageId, $changes);
         return $result;
     }
 
@@ -165,7 +182,7 @@ final class StudioApplicationService
         $result = $this->pages->archivePage($pageId, (int) $actor->userId);
         $this->invalidator?->invalidatePage($pageId);
         $this->invalidateSharedContent($current);
-        AuditLog::record('studio.page.archived', (string) $pageId);
+        $this->audit($actor, 'studio.page.archived', (string) $pageId);
         return $result;
     }
 
@@ -190,9 +207,10 @@ final class StudioApplicationService
         ?string $summary = null,
     ): array {
         $this->authorize($actor, StudioPermissions::EDIT);
+        $revisionKind = $this->draftKind($actor, $revisionKind);
         $validated = ValidatedDocument::from($rawDocument, $this->registry, $this->buildValidationOptions($actor));
         $result = $this->revisions->createDraftRevision($pageId, $validated, $expectedRevisionId, (int) $actor->userId, $revisionKind, $summary);
-        AuditLog::record('studio.page.draft_saved', (string) $pageId, ['revision_kind' => $revisionKind, 'deduplicated' => $result['deduplicated']]);
+        $this->audit($actor, 'studio.page.draft_saved', (string) $pageId, ['revision_kind' => $revisionKind, 'deduplicated' => $result['deduplicated'], 'revision_id' => (int) ($result['revision']['id'] ?? 0)]);
         return $result;
     }
 
@@ -204,7 +222,9 @@ final class StudioApplicationService
      *
      * `$revisionKind` is `manual` (an explicit save) or `autosave` (the
      * builder's debounced flush); an autosave whose result is byte-identical to
-     * the current working draft creates no new revision.
+     * the current working draft creates no new revision. For an AI-origin
+     * actor the requested kind is ignored and the revision is always recorded
+     * as `ai_operation` (Phase 7) — the kind is decided here, never by a client.
      *
      * @param list<DocumentOperation> $operations
      * @return array{revision: array<string, mixed>, page: array<string, mixed>, fingerprint: string, deduplicated: bool}
@@ -218,11 +238,13 @@ final class StudioApplicationService
         string $revisionKind = 'manual',
     ): array {
         $this->authorize($actor, StudioPermissions::EDIT);
+        $revisionKind = $this->draftKind($actor, $revisionKind);
         $result = $this->mutateDocument($actor, $pageId, $operations, $expectedRevisionId, $summary, $revisionKind);
-        AuditLog::record('studio.page.operation_applied', (string) $pageId, [
+        $this->audit($actor, 'studio.page.operation_applied', (string) $pageId, [
             'operation_count' => count($operations),
             'revision_kind'   => $revisionKind,
             'deduplicated'    => $result['deduplicated'],
+            'revision_id'     => (int) ($result['revision']['id'] ?? 0),
         ]);
         return $result;
     }
@@ -239,11 +261,7 @@ final class StudioApplicationService
      */
     private function mutateDocument(StudioActor $actor, int $pageId, array $operations, ?int $expectedRevisionId, ?string $summary, string $revisionKind): array
     {
-        if (!in_array($revisionKind, self::EDITOR_REVISION_KINDS, true)) {
-            throw new StudioValidationException([
-                ['path' => '$.revision_kind', 'code' => 'invalid_revision_kind', 'message' => 'revision_kind must be autosave or manual.'],
-            ]);
-        }
+        $revisionKind = $this->draftKind($actor, $revisionKind);
 
         [$page, $currentDocument] = $this->currentDocument($pageId);
         $mutatedDocument = DocumentOperationApplier::apply($currentDocument, $operations, $this->registry);
@@ -274,7 +292,7 @@ final class StudioApplicationService
         $result = $this->templates->saveTemplate($templateKey, $templateType, $category, $name, $description, $document, (int) $actor->userId, $this->buildValidationOptions($actor), $thumbnailMediaId);
         // Pages whose document names this template (template_key) recompile on next request.
         $this->invalidator?->invalidateTemplate($templateKey);
-        AuditLog::record('studio.template.saved', $templateKey, ['template_type' => $templateType]);
+        $this->audit($actor, 'studio.template.saved', $templateKey, ['template_type' => $templateType]);
         return $result;
     }
 
@@ -321,7 +339,7 @@ final class StudioApplicationService
     {
         $this->authorize($actor, StudioPermissions::ADMIN);
         $row = $this->templates->deleteTemplate($templateKey);
-        AuditLog::record('studio.template.deleted', $templateKey);
+        $this->audit($actor, 'studio.template.deleted', $templateKey);
         return $row;
     }
 
@@ -339,8 +357,8 @@ final class StudioApplicationService
     public function applyTemplate(StudioActor $actor, string $templateKey, int $pageId, ?int $expectedRevisionId): array
     {
         $this->authorize($actor, StudioPermissions::EDIT);
-        $result = $this->templates->applyTemplate($templateKey, $pageId, $expectedRevisionId, (int) $actor->userId, $this->buildValidationOptions($actor));
-        AuditLog::record('studio.template.applied', (string) $pageId, ['template_key' => $templateKey]);
+        $result = $this->templates->applyTemplate($templateKey, $pageId, $expectedRevisionId, (int) $actor->userId, $this->buildValidationOptions($actor), $this->draftKind($actor, 'manual'));
+        $this->audit($actor, 'studio.template.applied', (string) $pageId, ['template_key' => $templateKey, 'revision_id' => (int) ($result['revision']['id'] ?? 0)]);
         return $result;
     }
 
@@ -357,7 +375,7 @@ final class StudioApplicationService
         $this->authorize($actor, StudioPermissions::EDIT);
         $operations = $this->templates->insertOperations($templateKey, $index, $parentId);
         $result = $this->applyDocumentOperation($actor, $pageId, $operations, $expectedRevisionId, "Inserted preset '{$templateKey}'", 'manual');
-        AuditLog::record('studio.template.inserted', (string) $pageId, ['template_key' => $templateKey]);
+        $this->audit($actor, 'studio.template.inserted', (string) $pageId, ['template_key' => $templateKey, 'revision_id' => (int) ($result['revision']['id'] ?? 0)]);
         return $result;
     }
 
@@ -448,14 +466,14 @@ final class StudioApplicationService
             $pdo->beginTransaction();
         }
         try {
-            $created = $this->pages->createPage($title, $slug, CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE, 'standalone', (int) $actor->userId, $this->buildValidationOptions($actor));
+            $created = $this->pages->createPage($title, $slug, CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE, 'standalone', (int) $actor->userId, $this->buildValidationOptions($actor), $this->draftKind($actor, 'manual'));
             $componentRow = $created['page'];
             $ref = (string) $componentRow['uuid'];
             $pageResult = null;
 
             if ($extraction !== null && $fromPageId !== null) {
                 $validated = ValidatedDocument::from($extraction['component_document'], $this->registry, $this->buildValidationOptions($actor));
-                $this->revisions->createDraftRevision((int) $componentRow['id'], $validated, (int) $created['revision']['id'], (int) $actor->userId, 'manual', "Created from page {$fromPageId}");
+                $this->revisions->createDraftRevision((int) $componentRow['id'], $validated, (int) $created['revision']['id'], (int) $actor->userId, $this->draftKind($actor, 'manual'), "Created from page {$fromPageId}");
                 $componentRow = $this->pageRepo->find((int) $componentRow['id']) ?? $componentRow;
 
                 $operations = StudioGlobalComponentService::referenceOperations($extraction['section'], $extraction['index'], $ref);
@@ -473,9 +491,9 @@ final class StudioApplicationService
         }
 
         if ($pageResult !== null && $fromPageId !== null) {
-            AuditLog::record('studio.page.operation_applied', (string) $fromPageId, ['operation_count' => 2, 'revision_kind' => 'manual', 'deduplicated' => false]);
+            $this->audit($actor, 'studio.page.operation_applied', (string) $fromPageId, ['operation_count' => 2, 'revision_kind' => $this->draftKind($actor, 'manual'), 'deduplicated' => false, 'revision_id' => (int) ($pageResult['revision']['id'] ?? 0)]);
         }
-        AuditLog::record('studio.component.created', (string) $componentRow['id'], ['from_page_id' => $fromPageId, 'section_id' => $sectionId]);
+        $this->audit($actor, 'studio.component.created', (string) $componentRow['id'], ['from_page_id' => $fromPageId, 'section_id' => $sectionId, 'revision_id' => (int) ($componentRow['active_draft_revision_id'] ?? 0)]);
         return [
             'component' => StudioEditorViews::component($componentRow, $pageResult !== null ? 1 : 0),
             'page'      => $pageResult['page'] ?? null,
@@ -496,7 +514,7 @@ final class StudioApplicationService
         [, $document] = $this->currentDocument($pageId);
         $detach = $this->requireComponents()->detachOperations($document, $sectionId);
         $result = $this->applyDocumentOperation($actor, $pageId, $detach['operations'], $expectedRevisionId, "Detached global component '{$detach['component']['title']}'", 'manual');
-        AuditLog::record('studio.component.detached', (string) $pageId, ['section_id' => $sectionId, 'component_id' => (int) $detach['component']['id']]);
+        $this->audit($actor, 'studio.component.detached', (string) $pageId, ['section_id' => $sectionId, 'component_id' => (int) $detach['component']['id'], 'revision_id' => (int) ($result['revision']['id'] ?? 0)]);
         return $result;
     }
 
@@ -574,7 +592,7 @@ final class StudioApplicationService
         $this->authorize($actor, StudioPermissions::TOKENS);
         $result = $this->requireThemeService()->saveTokens($tokenGroup, $tokens, (int) $actor->userId);
         $this->invalidator?->invalidateTokenGroup($tokenGroup);
-        AuditLog::record('studio.tokens.saved', $tokenGroup, ['count' => count(array_filter($tokens, static fn($v): bool => $v !== null && $v !== ''))]);
+        $this->audit($actor, 'studio.tokens.saved', $tokenGroup, ['count' => count(array_filter($tokens, static fn($v): bool => $v !== null && $v !== ''))]);
         return $result;
     }
 
@@ -590,7 +608,7 @@ final class StudioApplicationService
         if ($this->renderer === null) {
             $result = $this->revisions->publishWorkingRevision($pageId, $expectedRevisionId, (int) $actor->userId, $summary, $this->buildValidationOptions($actor));
             $this->invalidateSharedContent($result['page']);
-            AuditLog::record('studio.page.published', (string) $pageId);
+            $this->audit($actor, 'studio.page.published', (string) $pageId, ['revision_id' => (int) ($result['revision']['id'] ?? 0), 'source_revision_id' => (int) ($result['revision']['parent_revision_id'] ?? 0)]);
             return $result;
         }
 
@@ -625,9 +643,10 @@ final class StudioApplicationService
         // artifacts of every dependent page (they recompile on next request).
         $this->invalidateSharedContent($result['page']);
 
-        AuditLog::record('studio.page.published', (string) $pageId, [
-            'revision_id'  => (int) $result['revision']['id'],
-            'content_hash' => $compiled->contentHash,
+        $this->audit($actor, 'studio.page.published', (string) $pageId, [
+            'revision_id'        => (int) $result['revision']['id'],
+            'source_revision_id' => (int) ($result['revision']['parent_revision_id'] ?? 0),
+            'content_hash'       => $compiled->contentHash,
         ]);
         return $result;
     }
@@ -645,7 +664,7 @@ final class StudioApplicationService
     {
         $this->authorize($actor, StudioPermissions::EDIT);
         $result = $this->revisions->rollbackToRevision($pageId, $targetRevisionId, $expectedRevisionId, (int) $actor->userId, $summary, $this->buildValidationOptions($actor));
-        AuditLog::record('studio.page.rolled_back', (string) $pageId, ['target_revision_id' => $targetRevisionId]);
+        $this->audit($actor, 'studio.page.rolled_back', (string) $pageId, ['target_revision_id' => $targetRevisionId, 'revision_id' => (int) ($result['revision']['id'] ?? 0)]);
         return $result;
     }
 
@@ -834,6 +853,116 @@ final class StudioApplicationService
         return array_map([StudioEditorViews::class, 'revision'], $this->revisionRepo->forPage($pageId, $limit));
     }
 
+    /**
+     * One revision of one page, as a summary (never the document body). The
+     * revision must belong to THAT page of the active tenant — an id from
+     * another page or tenant is simply not found.
+     *
+     * @return array<string, mixed>
+     */
+    public function findRevision(StudioActor $actor, int $pageId, int $revisionId): array
+    {
+        $this->authorize($actor, StudioPermissions::VIEW);
+        if ($this->pageRepo->find($pageId) === null) {
+            throw new StudioNotFoundException("Studio page {$pageId} was not found in the active tenant.", ['page_id' => $pageId]);
+        }
+        $revision = $this->revisionRepo->findByIdForPage($pageId, $revisionId);
+        if ($revision === null) {
+            throw new StudioNotFoundException('The requested revision was not found for this page in the active tenant.', ['page_id' => $pageId]);
+        }
+        return StudioEditorViews::revision($revision);
+    }
+
+    /**
+     * Structured, human-readable diff between two revisions of ONE page
+     * (Phase 7 review workflow). `$proposedRevisionId` defaults to the current
+     * working draft; `$baseRevisionId` defaults to the proposed revision's
+     * parent, else the page's published revision, else an empty document.
+     * Both ids are resolved through the tenant-scoped repository for THIS
+     * page, so a foreign revision id is "not found", never compared. Read-only.
+     *
+     * @return array<string, mixed>
+     */
+    public function diffRevisions(StudioActor $actor, int $pageId, ?int $baseRevisionId = null, ?int $proposedRevisionId = null): array
+    {
+        $this->authorize($actor, StudioPermissions::VIEW);
+        $page = $this->pageRepo->find($pageId);
+        if ($page === null) {
+            throw new StudioNotFoundException("Studio page {$pageId} was not found in the active tenant.", ['page_id' => $pageId]);
+        }
+        $draftId     = isset($page['active_draft_revision_id']) ? (int) $page['active_draft_revision_id'] : 0;
+        $publishedId = isset($page['published_revision_id']) ? (int) $page['published_revision_id'] : 0;
+
+        $proposedId = $proposedRevisionId ?? ($draftId > 0 ? $draftId : null);
+        $proposed   = $proposedId !== null && $proposedId > 0 ? $this->revisionRepo->findByIdForPage($pageId, $proposedId) : null;
+        if ($proposed === null) {
+            throw new StudioNotFoundException('The requested revision was not found for this page in the active tenant.', ['page_id' => $pageId]);
+        }
+
+        $baseId = $baseRevisionId
+            ?? (isset($proposed['parent_revision_id']) && (int) $proposed['parent_revision_id'] > 0 ? (int) $proposed['parent_revision_id'] : null)
+            ?? ($publishedId > 0 ? $publishedId : null);
+        $base = null;
+        if ($baseId !== null && $baseId > 0) {
+            $base = $this->revisionRepo->findByIdForPage($pageId, $baseId);
+            if ($base === null) {
+                throw new StudioNotFoundException('The requested base revision was not found for this page in the active tenant.', ['page_id' => $pageId]);
+            }
+        }
+
+        $baseDocument     = $base !== null ? CanonicalJson::decode((string) $base['document_json']) : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
+        $proposedDocument = CanonicalJson::decode((string) $proposed['document_json']);
+
+        $depsBefore = $this->dependencySignatures($baseDocument);
+        $depsAfter  = $this->dependencySignatures($proposedDocument);
+        $depAdded   = array_values(array_udiff($depsAfter, $depsBefore, static fn(array $a, array $b): int => strcmp($a['type'] . '|' . $a['key'], $b['type'] . '|' . $b['key'])));
+        $depRemoved = array_values(array_udiff($depsBefore, $depsAfter, static fn(array $a, array $b): int => strcmp($a['type'] . '|' . $a['key'], $b['type'] . '|' . $b['key'])));
+
+        $pageType   = (string) $page['page_type'];
+        $dependents = null;
+        if ($pageType === CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE && $this->components !== null) {
+            $dependents = count($this->components->dependentPageIds((string) $page['uuid']));
+        }
+
+        return [
+            'page'              => StudioEditorViews::page($page),
+            'base_revision'     => $base !== null ? StudioEditorViews::revision($base) : null,
+            'proposed_revision' => StudioEditorViews::revision($proposed),
+            'diff'              => RevisionDiff::compare($baseDocument, $proposedDocument),
+            'publish_impact'    => [
+                'page_status'               => (string) $page['status'],
+                'published_revision_id'     => $publishedId > 0 ? $publishedId : null,
+                'proposed_is_current_draft' => $proposedId === $draftId,
+                'proposed_is_published'     => $publishedId > 0 && $proposedId === $publishedId,
+                'requires_publish'          => $proposedId !== $publishedId,
+                'shared_content'            => in_array($pageType, [CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE, 'header_partial', 'footer_partial'], true),
+                'dependent_pages'           => $dependents,
+            ],
+            'dependency_impact' => ['added' => $depAdded, 'removed' => $depRemoved],
+        ];
+    }
+
+    /**
+     * Distinct (type, key) dependencies of a canonical document — what
+     * publishing it would bind the page to (media, modules, templates,
+     * components, chrome). @param array<string, mixed> $document
+     * @return list<array{type: string, key: string}>
+     */
+    private function dependencySignatures(array $document): array
+    {
+        $out = [];
+        try {
+            foreach (DependencyExtractor::extract($document, $this->registry) as $record) {
+                $sig = $record->dependencyType . '|' . $record->dependencyKey;
+                $out[$sig] = ['type' => $record->dependencyType, 'key' => $record->dependencyKey];
+            }
+        } catch (\Throwable $ignored) {
+            // A historical revision that no longer extracts cleanly contributes nothing.
+        }
+        ksort($out, SORT_STRING);
+        return array_values($out);
+    }
+
     // ── Advisory edit-session lock commands ─────────────────────────────────
 
     /**
@@ -902,6 +1031,39 @@ final class StudioApplicationService
         }
 
         return $tenantId;
+    }
+
+    /**
+     * The revision kind a draft write is RECORDED as. An AI-origin actor
+     * (mcp_token / admin_assistant) always produces `ai_operation`; a human
+     * session may only write the editor kinds, so `ai_operation` (and any
+     * other kind) requested by a session is rejected here — never trusted
+     * from a client, never reachable except through the AI actor path.
+     */
+    private function draftKind(StudioActor $actor, string $requested): string
+    {
+        if ($actor->isAiOrigin()) {
+            return self::AI_REVISION_KIND;
+        }
+        if (!in_array($requested, self::EDITOR_REVISION_KINDS, true)) {
+            throw new StudioValidationException([
+                ['path' => '$.revision_kind', 'code' => 'invalid_revision_kind', 'message' => 'revision_kind must be autosave or manual.'],
+            ]);
+        }
+        return $requested;
+    }
+
+    /**
+     * The ONE way this class writes the platform audit log: every Studio
+     * event carries the actor's explicit attribution (origin / user_id /
+     * token_id) merged with the event's own metadata. Never called inside a
+     * transaction this class owns (see the Phase 6 transaction rule).
+     *
+     * @param array<string, mixed> $meta
+     */
+    private function audit(StudioActor $actor, string $action, string $target, array $meta = []): void
+    {
+        AuditLog::record($action, $target, $meta + $actor->auditAttribution());
     }
 
     private function requireComponents(): StudioGlobalComponentService

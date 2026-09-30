@@ -63,6 +63,7 @@ final class StudioPageAddressService
         string $routeMode,
         int $actorId,
         array $validationOptions = [],
+        string $revisionKind = 'manual',
     ): array {
         $this->requireTenantId();
 
@@ -114,7 +115,7 @@ final class StudioPageAddressService
                 $blankDocument,
                 null,
                 $actorId,
-                'manual',
+                $revisionKind,
                 'Initial page creation',
             );
 
