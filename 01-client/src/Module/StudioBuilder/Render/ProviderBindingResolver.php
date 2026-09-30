@@ -24,6 +24,7 @@ namespace Slate\Module\StudioBuilder\Render;
 use Slate\Module\StudioBuilder\Exception\StudioException;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
 use Slate\Module\StudioBuilder\Registry\BlockDefinitionInterface;
+use Slate\Module\StudioBuilder\Runtime\StudioLog;
 use Slate\Tenancy\TenantContext;
 
 final class ProviderBindingResolver
@@ -83,9 +84,7 @@ final class ProviderBindingResolver
         } catch (StudioException $denied) {
             return null; // entitlement / permission / parameters / unknown provider
         } catch (\Throwable $failure) {
-            if (\function_exists('slate_log')) {
-                \slate_log('Studio provider ' . $key . ' failed during render: ' . get_class($failure), 'warning');
-            }
+            StudioLog::failure('render', 'provider.' . $key, $failure, 'warning');
             return null;
         }
 

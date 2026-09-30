@@ -6,8 +6,11 @@ This guide describes how to deploy, configure, and operate the Kohevo Client App
 
 ## 1. System Requirements
 
-- **PHP**: PHP 8.1+ (tested on PHP 8.3, 8.5)
-- **Extensions**: `pdo_mysql`, `sodium` (or `paragonie/sodium_compat`), `curl`, `json`, `mbstring`, `openssl`
+- **PHP**: PHP 8.2+ (CI runs PHP 8.3; also verified on 8.5). The code uses `readonly class`, so 8.1 cannot run it.
+- **Extensions**: `pdo_mysql`, `mbstring`, `curl`, `json`, `openssl`, `sodium`
+  (`mbstring` is used throughout; `sodium` does the Ed25519 licence verification — without it the check degrades to a
+  keyed-hash comparison that is not a real signature check, so treat it as required in production)
+- **Optional extensions**: `dom` + `libxml` — only for Kohevo Studio's HTML/CSS import (that one import is refused without them); `zip` — plugin ZIP upload and backups
 - **Database**: MySQL 8.0+ or MariaDB 10.11+
 - **Web Server**: Apache 2.4+ (with `mod_rewrite` enabled) or Nginx 1.18+
 
@@ -83,7 +86,15 @@ server {
     index index.php;
 
     # Block direct access to sensitive files and internal directories
-    location ~ ^/(\.env|\.installed|\.git|data|db_backups|includes|src|bin|db|tests|audit|docs|Claude) {
+    location ~ ^/(\.env|\.installed|\.git|data|db_backups|includes|src|bin|db|tests|audit|docs|Claude)(/|$) {
+        deny all;
+        return 403;
+    }
+
+    # 2b. Plugin UI sources and dev tooling (Kohevo Studio's `plugins/studio-builder/ui/`: package.json,
+    #     build script, JSX source, UI tests). Apache keeps these private with `ui/.htaccess`; Nginx ignores
+    #     .htaccess, so deny them here. Only `plugins/*/assets/` is meant to reach browsers.
+    location ~ ^/plugins/[^/]+/ui(/|$) {
         deny all;
         return 403;
     }

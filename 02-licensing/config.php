@@ -42,7 +42,10 @@ if (!function_exists('env')) {
 }
 
 // ── App URL + tenant ─────────────────────────────────────────
-define('SLATE_URL', rtrim(env('APP_URL', 'https://greenlightinduction.rakibhasaan.com/slate'), '/'));
+// No APP_URL means no known base URL: fail closed to '' (site-relative links)
+// rather than manufacturing another, real domain (the previous default named a
+// specific live host). The installer always writes APP_URL.
+define('SLATE_URL', rtrim((string)env('APP_URL', ''), '/'));
 define('TENANT_ID', (int)env('TENANT_ID', 1));
 
 // ── App secret (encryption + HMAC) ───────────────────────────

@@ -22,6 +22,7 @@ use Slate\Module\StudioBuilder\Render\DocumentRenderer;
 use Slate\Module\StudioBuilder\Render\RenderCollector;
 use Slate\Module\StudioBuilder\Render\RenderContext;
 use Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme;
+use Slate\Module\StudioBuilder\Runtime\StudioLog;
 
 final class DynamicSlotResolver
 {
@@ -49,9 +50,7 @@ final class DynamicSlotResolver
                 try {
                     $html = $this->documents->renderBlock($block, $context, $theme, $collector, false);
                 } catch (\Throwable $e) {
-                    if (\function_exists('slate_log')) {
-                        \slate_log('Studio dynamic node failed to render: ' . get_class($e), 'warning');
-                    }
+                    StudioLog::failure('render', 'dynamic_node', $e, 'warning');
                     $html = $this->documents->unavailable('render_failed', $context);
                 }
             }

@@ -180,10 +180,25 @@ final class StudioPublicRuntime
             return null;
         }
 
+        $headers = $result->headers + self::languageHeader();
         if ($result->etag !== null && $ifNoneMatch !== null && self::etagMatches($ifNoneMatch, $result->etag)) {
-            return PublicResponse::notModified($result->headers);
+            return PublicResponse::notModified($headers);
         }
-        return PublicResponse::ok($result->headers, $result->html);
+        return PublicResponse::ok($headers, $result->html);
+    }
+
+    /**
+     * `Content-Language` = the tenant's public site locale (Phase 9A), i.e.
+     * exactly what the page was rendered in and what `<html lang>` says —
+     * never the visitor's ?lang= / session / force-locale header. Omitted if
+     * the value is not a plain language tag rather than emitted malformed.
+     *
+     * @return array<string, string>
+     */
+    private static function languageHeader(): array
+    {
+        $locale = str_replace('_', '-', StudioPublicLocale::resolve());
+        return preg_match('/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/', $locale) === 1 ? ['Content-Language' => $locale] : [];
     }
 
     /** @return ?array<string, mixed> */
@@ -223,8 +238,6 @@ final class StudioPublicRuntime
 
     private static function log(string $stage, \Throwable $e): void
     {
-        if (\function_exists('slate_log')) {
-            \slate_log('Studio public ' . $stage . ' failed: ' . get_class($e), 'error');
-        }
+        StudioLog::failure('public', $stage, $e);
     }
 }

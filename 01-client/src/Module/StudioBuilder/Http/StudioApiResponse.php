@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Http;
 
+use Slate\Module\StudioBuilder\Runtime\StudioRequestId;
+
 final class StudioApiResponse
 {
     public const JSON_FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION
@@ -66,7 +68,9 @@ final class StudioApiResponse
     /** @return array<string, string> */
     public function headers(): array
     {
-        return [
+        // A failure carries the request id (Phase 9D) so a report maps to the server log / audit row.
+        $trace = $this->isOk() ? [] : ['X-Request-Id' => StudioRequestId::current()];
+        return $trace + [
             'Content-Type'           => 'application/json; charset=utf-8',
             'Cache-Control'          => 'private, no-store, max-age=0',
             'Pragma'                 => 'no-cache',

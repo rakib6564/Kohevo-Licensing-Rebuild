@@ -40,11 +40,63 @@ final class StudioHttpResponder
         return true;
     }
 
+    /**
+     * The `Set-Cookie` lines that may stay on a public Studio response: every
+     * one EXCEPT the PHP session cookie. Pure — takes `headers_list()` style
+     * lines and the session cookie name.
+     *
+     * The platform starts a session on every web request (config.php), so an
+     * anonymous visitor to a public page would otherwise be handed a
+     * `Set-Cookie: SLATE_SID` on a `Cache-Control: public, no-cache` response:
+     * a cacheable response carrying a session cookie. Studio's public output is
+     * anonymous by contract (no session-dependent content — StudioCachePolicy),
+     * so it never needs that cookie; the next page that does (login, forms)
+     * sets it itself.
+     *
+     * @param list<string> $headerLines
+     * @return list<string> the Set-Cookie lines to keep
+     */
+    public static function keptCookieLines(array $headerLines, string $sessionName): array
+    {
+        $kept = [];
+        foreach ($headerLines as $line) {
+            if (!is_string($line) || stripos($line, 'Set-Cookie:') !== 0) {
+                continue;
+            }
+            $cookie = ltrim(substr($line, strlen('Set-Cookie:')));
+            if ($sessionName !== '' && str_starts_with($cookie, $sessionName . '=')) {
+                continue;
+            }
+            $kept[] = $line;
+        }
+        return $kept;
+    }
+
+    private static function dropSessionCookie(): void
+    {
+        if (headers_sent() || !function_exists('headers_list')) {
+            return;
+        }
+        $lines = headers_list();
+        $sessionName = function_exists('session_name') ? session_name() : '';
+        $kept = self::keptCookieLines($lines, $sessionName);
+        $all = array_filter($lines, static fn($l): bool => is_string($l) && stripos($l, 'Set-Cookie:') === 0);
+        if (count($kept) === count($all)) {
+            return; // no session cookie on this response
+        }
+        header_remove('Set-Cookie');
+        foreach ($kept as $line) {
+            header($line, false);
+        }
+    }
+
     public static function sendPublic(PublicResponse $response): void
     {
+        self::dropSessionCookie();
         if ($response->status === 500) {
             if (!headers_sent()) {
                 header('Cache-Control: no-store');
+                header('X-Request-Id: ' . StudioRequestId::current());
             }
             require_once \SLATE_ROOT . '/includes/error_page.php';
             \slate_render_error(500, 'Something went wrong', "This page couldn't be displayed right now. Please try again later.");
@@ -70,7 +122,7 @@ final class StudioHttpResponder
         };
         self::emit(
             $status,
-            StudioCachePolicy::headersFor(RenderMode::Preview),
+            StudioCachePolicy::headersFor(RenderMode::Preview) + ['X-Request-Id' => StudioRequestId::current()],
             '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><title>'
                 . Html::e(Html::t('studio_preview_error_title', 'Preview unavailable')) . '</title></head><body><p>'
                 . Html::e(Html::t('studio_preview_error_' . $status, $message)) . '</p></body></html>',

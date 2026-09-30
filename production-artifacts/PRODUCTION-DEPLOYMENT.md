@@ -60,7 +60,7 @@ Client Application (app.clientdomain.com)
 Deploy the **Central Licensing Server** first, generate its Ed25519 signing keypair, and embed the resulting public key into each **Client Application** deployment.
 
 1. **Deploy Central Licensing Server** (`CENTRAL-SETUP.md`)
-   - Provision server, PHP 8.1+, and dedicated MySQL 8.0+ / MariaDB 10.11+ database.
+   - Provision server, PHP 8.2+, and dedicated MySQL 8.0+ / MariaDB 10.11+ database.
    - Extract `kohevo-licensing-central-production.zip` into the Central document root.
    - Configure `.env` from `.env.example` (`ENV-SETUP.md`).
    - Configure Apache (`APACHE-SETUP.md`) or Nginx (`NGINX-SETUP.md`) with HTTPS.
@@ -70,7 +70,7 @@ Deploy the **Central Licensing Server** first, generate its Ed25519 signing keyp
    - Configure Central cron (`CRON-SETUP.md`).
 
 2. **Deploy Client Application** (`CLIENT-SETUP.md`)
-   - Provision client server, PHP 8.1+, and dedicated MySQL 8.0+ / MariaDB 10.11+ database.
+   - Provision client server, PHP 8.2+, and dedicated MySQL 8.0+ / MariaDB 10.11+ database.
    - Extract `kohevo-client-production.zip` into the Client document root.
    - Configure Apache (`APACHE-SETUP.md`) or Nginx (`NGINX-SETUP.md`) with HTTPS.
    - Pre-configure licensing environment variables (`LICENSE_SERVER_URL`, `LICENSE_SERVER_PUBLIC_KEY`, `LICENSE_PRODUCT=kohevo`) in `.env` or hosting environment variables (`ENV-SETUP.md`).

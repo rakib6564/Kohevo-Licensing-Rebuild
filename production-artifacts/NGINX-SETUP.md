@@ -104,7 +104,17 @@ server {
         return 403;
     }
 
-    # 3. Serve existing files or route public module URLs (/book, /forms/*, /membership/*) to public.php
+    # 2b. Plugin UI sources and dev tooling (Kohevo Studio's `plugins/studio-builder/ui/`: package.json,
+    #     build script, JSX source, UI tests). Apache keeps these private with `ui/.htaccess`; Nginx ignores
+    #     .htaccess, so deny them here. Only `plugins/*/assets/` is meant to reach browsers.
+    location ~ ^/plugins/[^/]+/ui(/|$) {
+        deny all;
+        return 403;
+    }
+
+    # 3. Serve existing files or route public module URLs (/book, /forms/*, /membership/*, Kohevo Studio pages,
+    #    /robots.txt and /sitemap.xml) to public.php. Do NOT ship static robots.txt / sitemap.xml files or add
+    #    `location = /robots.txt` blocks: a real file wins over this fallback and would hide Studio's per-tenant ones.
     location / {
         try_files $uri $uri/ /public.php?_path=$uri&$args;
     }
@@ -121,7 +131,7 @@ server {
 ```
 
 > [!NOTE]
-> Adjust `fastcgi_pass unix:/run/php/php8.3-fpm.sock;` to match the PHP-FPM socket path on your server (e.g. `php8.1-fpm.sock`, `php8.2-fpm.sock`, `php8.3-fpm.sock`, or `127.0.0.1:9000`).
+> Adjust `fastcgi_pass unix:/run/php/php8.3-fpm.sock;` to match the PHP-FPM socket path on your server (e.g. `php8.2-fpm.sock`, `php8.3-fpm.sock`, or `127.0.0.1:9000`; PHP 8.2 or newer is required).
 
 ---
 
@@ -142,6 +152,8 @@ Both Nginx configurations above explicitly deny (`403 Forbidden`) requests to:
 - `tests/`
 - `docs/`
 - `dev-server.php`, `Makefile`, `composer.json`, `AUDIT.md`, `SECURITY.md`, `INSTALL.md`
+- (Client only) `plugins/*/ui/` — Kohevo Studio's builder UI sources and dev tooling, the Nginx counterpart of the
+  shipped `plugins/studio-builder/ui/.htaccess`. `plugins/*/assets/` stays public.
 
 ---
 
@@ -160,5 +172,8 @@ Verify with `curl` that all sensitive paths return `403` and that `POST /licensi
 curl -I https://licensing.yourdomain.com/.env
 curl -I https://licensing.yourdomain.com/data/slate.log
 curl -I https://licensing.yourdomain.com/bin/licensing-generate-keys.php
+# Client only: the builder UI sources must be denied, the built assets must not be
+curl -I https://app.clientdomain.com/plugins/studio-builder/ui/package.json      # 403
+curl -I https://app.clientdomain.com/plugins/studio-builder/assets/builder/builder.js   # 200
 curl -i -X POST https://licensing.yourdomain.com/licensing/check -H 'Content-Type: application/json' -d '{}'
 ```

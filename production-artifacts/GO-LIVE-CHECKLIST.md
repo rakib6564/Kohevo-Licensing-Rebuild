@@ -7,7 +7,7 @@ Complete this step-by-step verification checklist when launching the **Kohevo Ce
 ## Phase A — Central Licensing Server Go-Live
 
 1. **Infrastructure & Environment**
-   - [ ] PHP 8.1+ with `pdo_mysql`, `sodium`, `openssl`, `curl`, `json`, `mbstring` installed and verified (`php -m`).
+   - [ ] PHP 8.2+ with `pdo_mysql`, `sodium`, `openssl`, `curl`, `json`, `mbstring` installed and verified (`php -m`).
    - [ ] Dedicated MySQL 8.0+ / MariaDB 10.11+ database (`utf8mb4_unicode_ci`) created.
    - [ ] `kohevo-licensing-central-production.zip` extracted into Central document root.
    - [ ] `.env` created from `.env.example`, populated with production `APP_URL`, 32-byte random `APP_SECRET` and `CRON_SECRET`, and `DB_*` credentials.
@@ -44,7 +44,7 @@ Complete this step-by-step verification checklist when launching the **Kohevo Ce
 ## Phase B — Client Application Go-Live
 
 1. **Infrastructure & Pre-Configuration**
-   - [ ] PHP 8.1+ with `pdo_mysql`, `sodium`, `openssl`, `curl`, `json`, `mbstring` installed and verified.
+   - [ ] PHP 8.2+ with `pdo_mysql`, `sodium`, `openssl`, `curl`, `json`, `mbstring` installed and verified.
    - [ ] If Kohevo Studio HTML/CSS import will be used: `dom` and `libxml` enabled in the web PHP (otherwise that import is refused; the rest of Studio is unaffected).
    - [ ] Dedicated MySQL 8.0+ / MariaDB 10.11+ database (`utf8mb4_unicode_ci`) created.
    - [ ] `kohevo-client-production.zip` extracted into Client document root.

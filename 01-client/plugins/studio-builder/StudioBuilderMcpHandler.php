@@ -23,6 +23,7 @@ use Slate\Module\StudioBuilder\Mcp\StudioMcpAdapter;
 use Slate\Module\StudioBuilder\Mcp\StudioMcpScopes;
 use Slate\Module\StudioBuilder\Mcp\StudioMcpToolCatalog;
 use Slate\Module\StudioBuilder\Mcp\StudioMcpToolException;
+use Slate\Module\StudioBuilder\Runtime\StudioLog;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 
 class StudioBuilderMcpHandler
@@ -69,9 +70,7 @@ class StudioBuilderMcpHandler
                 $tools[] = $tool;
             }
         } catch (\Throwable $e) {
-            if (function_exists('slate_log')) {
-                slate_log('Studio MCP tool listing failed: ' . get_class($e), 'error');
-            }
+            StudioLog::failure('mcp', 'tool_listing', $e);
         }
         return $tools;
     }

@@ -24,15 +24,16 @@ Database Configuration (Step 1)
 
 ## 1. Requirements
 
-- **PHP:** PHP 8.1+ (tested on PHP 8.3 and PHP 8.5)
+- **PHP:** PHP 8.2+ (CI runs PHP 8.3; also verified on PHP 8.5). The code uses `readonly class`, so PHP 8.1 cannot run it.
 - **Required PHP Extensions:**
   - `pdo_mysql`
-  - `sodium` (`ext-sodium` for Ed25519 signature verification)
+  - `sodium` (`ext-sodium` for Ed25519 signature verification — required in production: without it the client's signature check degrades to a keyed-hash comparison that is not a real signature check)
   - `curl` (required by `RemoteLicenseClient` to communicate with the Central Licensing Server over HTTPS)
   - `json`
   - `mbstring`
   - `openssl`
 - **Optional PHP Extensions (feature-specific):**
+  - `zip` — plugin ZIP upload and the backups plugin (`ZipArchive`).
   - `dom` + `libxml` — required only for **Kohevo Studio HTML/CSS import** (Builder → Import / Export → HTML/CSS).
     Without them Studio works normally and that one import refuses with `html_import_unavailable`; check the
     **web** PHP (not only `php -m` on the CLI), since the two can differ.

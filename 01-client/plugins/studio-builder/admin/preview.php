@@ -23,6 +23,7 @@ require_once dirname(__DIR__, 3) . '/config.php';
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Exception\StudioException;
 use Slate\Module\StudioBuilder\Runtime\StudioHttpResponder;
+use Slate\Module\StudioBuilder\Runtime\StudioLog;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 
 if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'GET') {
@@ -46,10 +47,11 @@ try {
     $result = StudioRuntimeFactory::build()->app->renderPreview(StudioActor::fromCurrentSession(), $pageId, $revisionId);
     StudioHttpResponder::sendRender($result);
 } catch (StudioException $e) {
+    if ($e->httpStatus() >= 500) {
+        StudioLog::failure('preview', 'render', $e);
+    }
     StudioHttpResponder::sendAuthoringError($e->httpStatus());
 } catch (\Throwable $e) {
-    if (function_exists('slate_log')) {
-        slate_log('Studio preview failed: ' . get_class($e), 'error');
-    }
+    StudioLog::failure('preview', 'render', $e);
     StudioHttpResponder::sendAuthoringError(500);
 }

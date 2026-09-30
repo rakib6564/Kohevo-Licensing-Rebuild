@@ -22,6 +22,7 @@ require_once dirname(__DIR__, 3) . '/config.php';
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Exception\StudioException;
 use Slate\Module\StudioBuilder\Http\StudioCanvasPolicy;
+use Slate\Module\StudioBuilder\Runtime\StudioLog;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 
 Auth::require();
@@ -38,10 +39,11 @@ if ($sbPageId === false || $sbPageId === null) {
         unset($sbState);
     } catch (StudioException $e) {
         $sbStatus = $e->httpStatus();
-    } catch (\Throwable $e) {
-        if (function_exists('slate_log')) {
-            slate_log('Studio builder shell failed: ' . get_class($e), 'error');
+        if ($sbStatus >= 500) {
+            StudioLog::failure('builder', 'shell', $e);
         }
+    } catch (\Throwable $e) {
+        StudioLog::failure('builder', 'shell', $e);
         $sbStatus = 500;
     }
 }

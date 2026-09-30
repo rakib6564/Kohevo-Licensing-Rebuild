@@ -16,7 +16,7 @@ This document provides the exact step-by-step procedure to deploy and initialize
 
 ## 2. PHP Requirements
 
-- **PHP Version:** PHP 8.1 or newer (tested on PHP 8.3 and PHP 8.5)
+- **PHP Version:** PHP 8.2 or newer (CI runs PHP 8.3; also verified on PHP 8.5). The code uses `readonly class`, so PHP 8.1 cannot run it.
 - **Required PHP Extensions:**
   - `pdo_mysql` (database connectivity)
   - `sodium` (`ext-sodium` is **mandatory** on Central for Ed25519 key generation and payload signing)

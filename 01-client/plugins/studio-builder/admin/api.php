@@ -21,6 +21,7 @@ use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Http\StudioApiRateLimiter;
 use Slate\Module\StudioBuilder\Http\StudioApiRequest;
 use Slate\Module\StudioBuilder\Http\StudioAuthoringApi;
+use Slate\Module\StudioBuilder\Runtime\StudioDenialAudit;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 
 $studioApiLimiter = StudioApiRateLimiter::system();
@@ -36,6 +37,13 @@ $api = new StudioAuthoringApi(
         if (function_exists('slate_log')) {
             slate_log($message, 'error');
         }
+    },
+    // Security denials of a signed-in user (CSRF, permission, entitlement, rate limit) → the
+    // platform audit log, throttled per class. Runs after the response is decided: no transaction.
+    static function (string $code, array $meta): void {
+        $state = $_SESSION['studio_denial_audit'] ?? null;
+        StudioDenialAudit::record($state, $code, $meta);
+        $_SESSION['studio_denial_audit'] = $state;
     },
 );
 

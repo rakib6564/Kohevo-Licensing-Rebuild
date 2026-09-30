@@ -42,6 +42,8 @@ use Slate\Module\StudioBuilder\Domain\PageAddress;
 use Slate\Module\StudioBuilder\Exception\StudioException;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Operation\DocumentOperation;
+use Slate\Module\StudioBuilder\Runtime\StudioLog;
+use Slate\Module\StudioBuilder\Runtime\StudioRequestId;
 
 final class StudioAuthoringApi
 {
@@ -111,21 +113,75 @@ final class StudioAuthoringApi
         private readonly StudioApplicationService $app,
         private readonly ?\Closure $rateLimiter = null,
         private readonly ?\Closure $logger = null,
+        /** fn(string $code, array $meta): void — records a security denial (Phase 9D); never gets a body or a secret. */
+        private readonly ?\Closure $denialAudit = null,
     ) {}
 
+    /**
+     * Denials worth an audit row: a signed-in user was refused. Deliberately
+     * NOT audited: 401 (anonymous volume, no actor), 404/405/413/415,
+     * validation (422) and concurrency (409) — ordinary client mistakes, not
+     * security signals — and read-only preview/canvas refusals.
+     */
+    private const AUDITED_DENIALS = ['csrf_error', 'authorization_error', 'entitlement_error', 'rate_limited'];
+
     public function handle(StudioApiRequest $request, StudioActor $actor): StudioApiResponse
+    {
+        $response = $this->respond($request, $actor);
+        $this->auditDenial($request, $response);
+        return $response;
+    }
+
+    private function respond(StudioApiRequest $request, StudioActor $actor): StudioApiResponse
     {
         try {
             return $this->dispatch($request, $actor);
         } catch (StudioValidationException $e) {
             return self::error(422, 'validation_error', ['errors' => self::safeIssues($e->errors())]);
         } catch (StudioException $e) {
-            return $this->mapStudioException($e);
-        } catch (\Throwable $e) {
-            if ($this->logger !== null) {
-                ($this->logger)('Studio builder API failure: ' . get_class($e));
+            $response = $this->mapStudioException($e);
+            if ($response->status >= 500) {
+                $this->logFailure($request, $e);
             }
+            return $response;
+        } catch (\Throwable $e) {
+            $this->logFailure($request, $e);
             return self::error(500, 'server_error');
+        }
+    }
+
+    private function logFailure(StudioApiRequest $request, \Throwable $e): void
+    {
+        if ($this->logger !== null) {
+            ($this->logger)(StudioLog::describe('api', $request->action, $e));
+        }
+    }
+
+    /**
+     * Runs after the response is decided — no Studio transaction is open here
+     * (AuditLog::record can implicitly commit). The row names the denial class,
+     * the endpoint action and method, the request id and, for a CSRF refusal,
+     * whether it was a cross-site fetch or a bad token. Nothing from the body.
+     */
+    private function auditDenial(StudioApiRequest $request, StudioApiResponse $response): void
+    {
+        $code = $response->errorCode();
+        if ($this->denialAudit === null || $code === null || !in_array($code, self::AUDITED_DENIALS, true)) {
+            return;
+        }
+        $meta = [
+            'status'     => $response->status,
+            'method'     => $request->method,
+            'action'     => preg_match('/^[a-z_]{1,32}$/', $request->action) === 1 ? $request->action : 'invalid',
+            'request_id' => StudioRequestId::current(),
+        ];
+        if ($code === 'csrf_error') {
+            $meta['reason'] = ($request->fetchSite !== null && !in_array($request->fetchSite, ['same-origin', 'none'], true)) ? 'cross_site' : 'token';
+        }
+        try {
+            ($this->denialAudit)($code, $meta);
+        } catch (\Throwable $ignored) {
+            // Auditing must never change the response.
         }
     }
 

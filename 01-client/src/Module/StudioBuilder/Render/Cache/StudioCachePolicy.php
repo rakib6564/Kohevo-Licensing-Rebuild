@@ -21,6 +21,16 @@ use Slate\Module\StudioBuilder\Render\RenderMode;
 final class StudioCachePolicy
 {
     /**
+     * Phase 9D: powerful browser features a Studio page never uses. Studio
+     * output carries no script, iframe, embed or media (FieldSchema rejects
+     * them) and the platform signature / language switcher need none of these,
+     * so denying them costs nothing and closes them to injected third-party
+     * content. Deliberately short: no `fullscreen`/`autoplay` (media) and no
+     * directive any current Studio feature could depend on.
+     */
+    public const PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=(), payment=(), usb=()';
+
+    /**
      * @return array<string, string>
      */
     public static function headersFor(RenderMode $mode, ?string $etag = null): array
@@ -40,8 +50,9 @@ final class StudioCachePolicy
         }
 
         $headers += [
-            'Cache-Control'   => 'public, no-cache',
-            'Referrer-Policy' => 'strict-origin-when-cross-origin',
+            'Cache-Control'      => 'public, no-cache',
+            'Referrer-Policy'    => 'strict-origin-when-cross-origin',
+            'Permissions-Policy' => self::PERMISSIONS_POLICY,
         ];
         if ($etag !== null && preg_match('/^[a-f0-9]{64}$/', $etag) === 1) {
             $headers['ETag'] = '"' . $etag . '"';

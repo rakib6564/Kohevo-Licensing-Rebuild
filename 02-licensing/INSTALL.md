@@ -6,8 +6,10 @@ This guide describes how to deploy, configure, and operate the Kohevo Central Li
 
 ## 1. System Requirements
 
-- **PHP**: PHP 8.1+ (tested on PHP 8.3, 8.5)
-- **Extensions**: `pdo_mysql`, `sodium` (or `paragonie/sodium_compat`), `curl`, `json`, `mbstring`, `openssl`
+- **PHP**: PHP 8.2+ (CI runs PHP 8.3; also verified on 8.5). The code uses `readonly class`, so 8.1 cannot run it.
+- **Extensions**: `pdo_mysql`, `mbstring`, `curl`, `json`, `openssl`, `sodium`
+  (`mbstring` is used throughout; `sodium` does the Ed25519 licence verification — without it the check degrades to a
+  keyed-hash comparison that is not a real signature check, so treat it as required in production)
 - **Database**: MySQL 8.0+ or MariaDB 10.11+
 - **Web Server**: Apache 2.4+ (with `mod_rewrite` enabled) or Nginx 1.18+
 
@@ -89,7 +91,7 @@ server {
     index index.php;
 
     # Block direct access to sensitive files and internal directories
-    location ~ ^/(\.env|\.installed|\.git|data|db_backups|includes|src|bin|db|tests|audit|docs|Claude) {
+    location ~ ^/(\.env|\.installed|\.git|data|db_backups|includes|src|bin|db|tests|audit|docs|Claude)(/|$) {
         deny all;
         return 403;
     }

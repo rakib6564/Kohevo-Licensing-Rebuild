@@ -93,7 +93,7 @@ limitations to escape; they are load-bearing product decisions.
 
 | Constraint | Consequence for the architecture |
 |---|---|
-| Flat PHP 8.1+, deploy by upload | Front controller + PSR-4 autoload; no framework kernel; no server build |
+| Flat PHP 8.2+, deploy by upload | Front controller + PSR-4 autoload; no framework kernel; no server build |
 | Shared CloudLinux/cPanel, subpath (`/slate/`) | Base-path–aware routing/assets; file/APCu default drivers for cache & queue |
 | One MySQL/MariaDB database | Shared-DB multi-tenancy default; heavier tenancy is an optional driver, not a rewrite |
 | No mandatory Node/webpack | Runtime asset composition; server-rendered components; vanilla CSS tokens |

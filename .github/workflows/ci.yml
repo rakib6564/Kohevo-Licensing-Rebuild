@@ -51,6 +51,19 @@ jobs:
             || { echo "::error::Kohevo Studio HTML import requires the PHP dom and libxml extensions"; exit 1; }
           php -r 'echo "PHP ", PHP_VERSION, " / libxml ", LIBXML_DOTTED_VERSION, PHP_EOL;'
 
+      - name: Assert required PHP extensions (mbstring first — Kohevo Studio uses mb_* throughout)
+        run: |
+          # mbstring has no polyfill in this repository: every mb_* call is a fatal "undefined function"
+          # without the extension, so fail here, loudly, instead of deep inside a Studio test.
+          php -r 'exit(extension_loaded("mbstring") && function_exists("mb_substr") && function_exists("mb_strlen") && function_exists("mb_strtolower") ? 0 : 1);' \
+            || { echo "::error::The PHP mbstring extension is missing. Kohevo (incl. Kohevo Studio) calls mb_* functions throughout and ships no polyfill — add 'mbstring' to the setup-php 'extensions:' list (on a server: install/enable php-mbstring)."; exit 1; }
+          missing=""
+          for ext in pdo_mysql curl json openssl sodium; do
+            php -r 'exit(extension_loaded($argv[1]) ? 0 : 1);' -- "$ext" || missing="$missing $ext"
+          done
+          [ -z "$missing" ] || { echo "::error::Missing required PHP extension(s):$missing (see INSTALL.md → System Requirements)"; exit 1; }
+          php -r 'echo "mbstring OK (", implode(",", array_slice(mb_list_encodings(), 0, 3)), "...); PHP ", PHP_VERSION, PHP_EOL;'
+
       - name: Lint PHP files (01-client & 02-licensing)
         run: |
           find 01-client 02-licensing -name '*.php' -print0 | xargs -0 -n1 -P4 php -l > /dev/null

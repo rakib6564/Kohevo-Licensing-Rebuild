@@ -77,7 +77,9 @@ RedirectMatch 403 ^/(data|db_backups|includes|src|bin|db|tests|audit|docs|Claude
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Block hidden files/folders
+    # Block hidden files/folders, except /.well-known/ (ACME / Let's Encrypt
+    # HTTP-01 certificate renewal)
+    RewriteCond %{REQUEST_URI} !/\.well-known/
     RewriteRule "(^|/)\." - [F]
 
     # Route /licensing/check directly to public.php
@@ -90,6 +92,12 @@ RedirectMatch 403 ^/(data|db_backups|includes|src|bin|db|tests|audit|docs|Claude
 
     # Legacy shop storefront routing
     RewriteRule ^shop(/.*)?$ plugins/shop/storefront/router.php [QSA,L]
+
+    # Headless API: /api/v1/... -> api/v1.php, as in the original rules. Routed
+    # through public.php instead, a locked install answers API callers with the
+    # HTML lock page rather than the JSON LICENSE_INACTIVE error.
+    RewriteRule ^api/v1/?$ api/v1.php?_route_path= [QSA,L]
+    RewriteRule ^api/v1/(.+)$ api/v1.php?_route_path=$1 [QSA,L]
 
     # Route all other non-file requests to public.php router
     RewriteRule ^(.*)$ public.php?_path=$1 [QSA,L]
@@ -157,7 +165,9 @@ RedirectMatch 403 ^/(data|db_backups|includes|src|bin|db|tests|audit|docs|Claude
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Block hidden files/folders
+    # Block hidden files/folders, except /.well-known/ (ACME / Let's Encrypt
+    # HTTP-01 certificate renewal)
+    RewriteCond %{REQUEST_URI} !/\.well-known/
     RewriteRule "(^|/)\." - [F]
 
     # Serve existing files and directories directly
@@ -168,10 +178,19 @@ RedirectMatch 403 ^/(data|db_backups|includes|src|bin|db|tests|audit|docs|Claude
     # Legacy shop storefront routing
     RewriteRule ^shop(/.*)?$ plugins/shop/storefront/router.php [QSA,L]
 
+    # Headless API: /api/v1/... -> api/v1.php, as in the original rules. Routed
+    # through public.php instead, a locked install answers API callers with the
+    # HTML lock page rather than the JSON LICENSE_INACTIVE error.
+    RewriteRule ^api/v1/?$ api/v1.php?_route_path= [QSA,L]
+    RewriteRule ^api/v1/(.+)$ api/v1.php?_route_path=$1 [QSA,L]
+
     # Route all other non-file requests to public.php router
     RewriteRule ^(.*)$ public.php?_path=$1 [QSA,L]
 </IfModule>
 ```
+
+`/robots.txt` and `/sitemap.xml` reach Kohevo Studio through that last rule (a tenant's generated files). They are only
+answered while no real file of that name exists in the document root, so do not ship static copies.
 
 ---
 
@@ -190,6 +209,7 @@ In addition to the root `.htaccess`, both packages ship with dedicated `.htacces
 | `tests/.htaccess` | Yes | Yes | Denies direct web access to test runners |
 | `audit/.htaccess` | Yes | Yes | Denies direct web access to audit directory |
 | `Claude/.htaccess` | Yes | Yes | Denies direct web access to internal engineering notes |
+| `plugins/studio-builder/ui/.htaccess` | n/a | Yes | Denies direct web access to the Studio builder UI sources and dev tooling (`package.json`, `src/`, `tests/`); only `plugins/studio-builder/assets/` is public. Nginx needs the matching `location` rule in `NGINX-SETUP.md` |
 | `docs/.htaccess` | Yes | *(covered by root `RedirectMatch 403`)* | Denies direct web access to documentation directory |
 | `db_backups/.htaccess` | *(auto-created by `BackupRunner.php` if backups run)* | *(auto-created by `BackupRunner.php` if backups run)* | Covered by root `RedirectMatch 403 ^/(...|db_backups|...)/` and `BackupRunner::localDir()` |
 

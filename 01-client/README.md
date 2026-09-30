@@ -52,7 +52,7 @@ Everything else — bookings, coaching, memberships, forms, payments — is
 a plugin you upload as a ZIP through the admin.
 
 - **Version:** see [`VERSION`](../VERSION) (`SLATE_VERSION` in `config.php`)
-- **Tested on:** PHP 8.4, MySQL/MariaDB
+- **Runs on:** PHP 8.2+ (CI: PHP 8.3; also run on 8.4/8.5), MySQL 8.0+ / MariaDB 10.11+
 - **No build step.** Vanilla PHP, vanilla CSS/JS. PHPMailer is the
   only Composer dependency (vendored).
 
@@ -220,9 +220,9 @@ that passes is guaranteed to pass installation. Start from
 
 ## Requirements
 
-- PHP **8.1+** (developed/tested on **8.4**)
-- MySQL/MariaDB 5.7+ (the Forms schema self-heal uses
-  `information_schema`; MariaDB 10.2+ / MySQL 5.7+)
+- PHP **8.2+** (CI runs **8.3**; also run on 8.4/8.5)
+- MySQL 8.0+ / MariaDB 10.11+ (the versions CI verifies; the Forms schema
+  self-heal uses `information_schema`)
 - PHP extensions: `pdo_mysql`, `mbstring`, `zip`, `openssl`, `fileinfo`,
   `curl` (Stripe/webhooks), `gd` (image dimensions)
 - Apache with `mod_rewrite`, `mod_headers`, `mod_deflate` (the public

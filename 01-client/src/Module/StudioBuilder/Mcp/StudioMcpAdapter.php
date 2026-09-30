@@ -39,6 +39,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalJson;
 use Slate\Module\StudioBuilder\Exception\StudioException;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Operation\DocumentOperation;
+use Slate\Module\StudioBuilder\Runtime\StudioLog;
 
 final class StudioMcpAdapter
 {
@@ -156,10 +157,14 @@ final class StudioMcpAdapter
         } catch (StudioValidationException $e) {
             throw new StudioMcpToolException('validation_error', 422, ['errors' => self::safeIssues($e->errors())]);
         } catch (StudioException $e) {
-            throw self::mapStudioException($e);
+            $mapped = self::mapStudioException($e);
+            if ($mapped->status >= 500 && $this->logger !== null) {
+                ($this->logger)(StudioLog::describe('mcp', $name, $e));
+            }
+            throw $mapped;
         } catch (\Throwable $e) {
             if ($this->logger !== null) {
-                ($this->logger)('Studio MCP tool failure: ' . get_class($e));
+                ($this->logger)(StudioLog::describe('mcp', $name, $e));
             }
             throw new StudioMcpToolException('server_error', 500);
         }

@@ -45,9 +45,9 @@ mechanically true rather than aspirational:
 
 ---
 
-## 2. Language & style (PHP 8.1+)
+## 2. Language & style (PHP 8.2+)
 
-- **Target PHP 8.1**, forward-compatible to the host's 8.4. Use language features
+- **Target PHP 8.2** (the floor: `readonly class` is already in use), forward-compatible to the host's 8.4. Use language features
   that raise safety, not cleverness: typed properties, constructor property
   promotion, enums, `readonly`, first-class callable syntax, named arguments at
   call sites where they aid clarity, `match` over long `switch`.

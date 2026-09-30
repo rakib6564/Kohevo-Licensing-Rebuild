@@ -9,7 +9,7 @@ every time, no surprises.
 ## 0. Before the kickoff call
 
 - Confirm the host. Shared PHP host (Namecheap, Hostinger, cPanel)
-  works fine. Need PHP 8.1+, MySQL/MariaDB 5.7+, mod_rewrite.
+  works fine. Need PHP 8.2+, MySQL 8.0+ / MariaDB 10.11+, mod_rewrite.
 - Decide which plugins the client needs:
 
   | Need | Plugin |

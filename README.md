@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/rakib6564/Kohevo-Licensing-Rebuild/actions/workflows/ci.yml/badge.svg)](https://github.com/rakib6564/Kohevo-Licensing-Rebuild/actions/workflows/ci.yml)
 ![Version](https://img.shields.io/badge/version-1.6.2-blue)
-![PHP](https://img.shields.io/badge/PHP-8.1%2B-777bb4)
+![PHP](https://img.shields.io/badge/PHP-8.2%2B-777bb4)
 ![Languages](https://img.shields.io/badge/languages-EN%20%7C%20FR-informational)
 
 **Kohevo** is a white-label practice-management platform — website, clients, bookings,
@@ -95,8 +95,9 @@ Each app is a self-contained tree: `admin/` `customer/` `api/` `includes/` `src/
 
 ## Getting started (local development)
 
-**Requirements:** PHP 8.1+ (CI runs 8.3), MySQL 8.0+ or MariaDB 10.11+, and the extensions
-`pdo_mysql`, `mbstring`, `curl`, `json`, `openssl`, `sodium` (a pure-PHP fallback exists for hosts without it);
+**Requirements:** PHP 8.2+ (the code uses `readonly class`; CI runs 8.3), MySQL 8.0+ or MariaDB 10.11+, and the extensions
+`pdo_mysql`, `mbstring`, `curl`, `json`, `openssl` and `sodium` (Ed25519 licence verification — without it the check
+degrades to a keyed-hash comparison that is not a real signature check, so treat it as required in production);
 Kohevo Studio's optional HTML/CSS import also needs `dom` and `libxml`.
 No Composer/Node build is needed to run the apps; PHPMailer is added at packaging time.
 
