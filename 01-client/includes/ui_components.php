@@ -44,6 +44,9 @@
  *                  ['label'=>..., 'value'=>..., 'muted'=>bool] OR
  *                  ['label'=>..., 'html'=>raw_html])
  *   actions       (raw HTML for the bottom action row)
+ *   select        (optional ['name'=>'ids[]', 'value'=>'12', 'label'=>aria-label])
+ *                  adds a row checkbox beside (not inside) the summary button;
+ *                  the list should then use slate_data_list_head() for select-all.
  */
 if (!function_exists('slate_data_row')) {
     function slate_data_row(array $args): void {
@@ -59,11 +62,17 @@ if (!function_exists('slate_data_row')) {
         $detail      = (array)($args['detail'] ?? []);
         $actions     = $args['actions'] ?? null;
         $hasDetail   = !empty($detail) || !empty($actions);
+        $select      = is_array($args['select'] ?? null) ? $args['select'] : null;
 
         $avatarClass = 'data-row-avatar';
         if ($avatarColor !== '') $avatarClass .= ' is-' . preg_replace('/[^a-z]/', '', strtolower($avatarColor));
 
-        echo '<article class="data-row">';
+        echo '<article class="data-row' . ($select ? ' has-select' : '') . '">';
+        if ($select) {
+            echo '<label class="data-row-check"><input type="checkbox" class="data-row-select" name="'
+               . e((string)($select['name'] ?? 'ids[]')) . '" value="' . e((string)($select['value'] ?? ''))
+               . '" aria-label="' . e((string)($select['label'] ?? '')) . '"></label>';
+        }
         echo '<button type="button" class="data-row-summary" aria-expanded="false"'
            . ($hasDetail ? '' : ' disabled') . '>';
 
@@ -137,6 +146,28 @@ if (!function_exists('slate_data_row')) {
         }
 
         echo '</article>';
+    }
+}
+
+/**
+ * Column header for a .data-list whose rows carry a select checkbox.
+ * Emit it INSIDE the .data-list (add class "is-columnar has-head") before the rows.
+ *
+ * $cols: 'main' (label over avatar+title), 'value', 'badge' — plain text, escaped.
+ * $opts: 'select_all' (aria-label; renders the select-all checkbox, id data-list-select-all).
+ */
+if (!function_exists('slate_data_list_head')) {
+    function slate_data_list_head(array $cols, array $opts = []): void {
+        echo '<div class="data-list-head">';
+        if (!empty($opts['select_all'])) {
+            echo '<label class="data-row-check"><input type="checkbox" class="data-list-select-all" aria-label="'
+               . e((string)$opts['select_all']) . '"></label>';
+        }
+        echo '<span class="data-list-head-main">' . e((string)($cols['main'] ?? '')) . '</span>';
+        if (isset($cols['value'])) echo '<span class="data-list-head-value">' . e((string)$cols['value']) . '</span>';
+        if (isset($cols['badge'])) echo '<span class="data-list-head-badge">' . e((string)$cols['badge']) . '</span>';
+        echo '<span class="data-list-head-chevron" aria-hidden="true"></span>';
+        echo '</div>';
     }
 }
 
@@ -2155,6 +2186,45 @@ hr {
 @media (max-width: 380px) {
     .data-row-grid { grid-template-columns: 1fr; }
     .data-row-actions .btn { flex-basis: 100%; }
+}
+
+/* Optional selectable + columnar variant (opt-in: .has-select rows, .data-list-head,
+   .is-columnar list). Fixed value/badge widths keep header labels above their cells.
+   Nothing here applies to lists that don't use these classes. */
+.data-row { position: relative; }
+.data-row-check { display: grid; place-items: center; width: 18px; flex: none; margin: 0; cursor: pointer; }
+.data-row-check input { margin: 0; cursor: pointer; }
+.data-row.has-select > .data-row-check { position: absolute; left: 14px; top: 28px; transform: translateY(-50%); z-index: 1; }
+.data-row.has-select > .data-row-summary { padding-left: 44px; }
+.data-row.is-selected { background: var(--accent-soft, var(--surface-2)); }
+.data-list-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 14px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--muted);
+}
+.data-list-head-main { flex: 1; min-width: 0; padding-left: 0; }
+.data-list.is-columnar .data-row-value,
+.data-list-head-value { flex: 0 0 96px; width: 96px; text-align: center; overflow: hidden; text-overflow: ellipsis; }
+.data-list.is-columnar .data-row-summary > .badge,
+.data-list-head-badge { flex: 0 0 92px; width: 92px; text-align: center; justify-content: center; }
+.data-list-head-chevron { flex: 0 0 18px; }
+.data-list-selectbar {
+    display: none; align-items: center; gap: 8px; padding: 10px 14px;
+    background: var(--accent-soft, var(--surface-2)); border-bottom: 1px solid var(--border);
+    font-size: 13px; font-weight: 600;
+}
+.data-list-selectbar.is-active { display: flex; }
+@media (max-width: 640px) {
+    .data-list-head-value { display: none; }
+    .data-list-head { padding: 9px 12px; }
+    .data-row.has-select > .data-row-check { left: 12px; }
+    .data-row.has-select > .data-row-summary { padding-left: 42px; }
+    .data-list.is-columnar .data-row-summary > .badge,
+    .data-list-head-badge { flex-basis: auto; width: auto; }
+    .data-list-head-badge { display: none; }
 }
 
 .data-list .empty {

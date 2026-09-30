@@ -43,7 +43,7 @@ unit('studio admin list: rows use the shared data-row contract (collapsed, acces
     $pages = [sbal_page(1, 'Home', true, true, 'page', '/'), sbal_page(2, 'Promo', false, false, 'landing')];
     $x = sbal_xpath(PageListView::render($pages, true, '/b.php', '/p.php'));
 
-    assert_eq(1, $x->query('//div[contains(@class,"data-list")][@data-single-open]')->length, 'one single-open .data-list');
+    assert_eq(1, $x->query('//div[contains(@class,"data-list")][contains(@class,"is-columnar")][@data-single-open]')->length, 'one single-open columnar .data-list');
     assert_eq(2, $x->query('//article[contains(@class,"data-row")]')->length, 'one row per page');
     assert_eq(0, $x->query('//table | //tr')->length, 'no table markup');
     $btns = $x->query('//button[contains(@class,"data-row-summary")]');
@@ -55,6 +55,32 @@ unit('studio admin list: rows use the shared data-row contract (collapsed, acces
     assert_eq(2, $x->query('//button//svg[contains(@class,"data-row-chevron")]')->length, 'chevron inside each toggle');
     assert_eq(2, $x->query('//div[contains(@class,"data-row-detail")][@hidden]')->length, 'detail is hidden until expanded');
     assert_eq(2, $x->query('//div[contains(@class,"data-row-detail")]/dl[contains(@class,"data-row-grid")]')->length, 'labeled fields');
+});
+
+unit('studio admin list: header row, row checkboxes outside the toggle, selection script', function (): void {
+    $pages = [sbal_page(1, 'Home', true, false), sbal_page(2, 'Promo', false, false)];
+    $x = sbal_xpath(PageListView::render($pages, true, '/b.php', '/p.php'));
+
+    $head = $x->query('//div[contains(@class,"data-list-head")]');
+    assert_eq(1, $head->length, 'one header row');
+    $txt = preg_replace('/\s+/', ' ', $head->item(0)->textContent);
+    foreach (['Title', 'Type', 'Status'] as $label) {
+        assert_true(str_contains($txt, $label), "header label {$label}");
+    }
+    assert_eq(1, $x->query('//div[contains(@class,"data-list-head")]//input[@type="checkbox"][contains(@class,"data-list-select-all")][@aria-label]')->length, 'labelled select-all');
+    $rowChecks = $x->query('//article[contains(@class,"has-select")]/label/input[@type="checkbox"][@name="ids[]"][@aria-label]');
+    assert_eq(2, $rowChecks->length, 'a labelled checkbox per row, sibling of the summary');
+    assert_eq('1', $rowChecks->item(0)->getAttribute('value'));
+    assert_true(str_contains($rowChecks->item(0)->getAttribute('aria-label'), 'Home'));
+    assert_eq(0, $x->query('//button//input')->length, 'no checkbox nested inside an expand button');
+    assert_eq(1, $x->query('//div[contains(@class,"data-list-selectbar")][@role="status"]')->length, 'selection bar');
+
+    $js = PageListView::selectionScript();
+    foreach (['indeterminate', 'is-selected', 'data-list-select-all', 'data-list-clear'] as $needle) {
+        assert_true(str_contains($js, $needle), "script handles {$needle}");
+    }
+    $src = (string) file_get_contents(dirname(__DIR__, 2) . '/plugins/studio-builder/admin/index.php');
+    assert_true(str_contains($src, 'PageListView::selectionScript()'));
 });
 
 unit('studio admin list: status pill, metadata fields and actions', function (): void {
@@ -90,7 +116,7 @@ unit('studio admin list: without edit permission only Preview is offered; values
 });
 
 unit('studio admin list: empty input renders an empty list; index.php keeps its empty state and loads the shared script', function (): void {
-    assert_eq('<div class="data-list" data-single-open></div>', PageListView::render([], true, '/b', '/p'));
+    assert_eq('<div class="data-list" data-single-open></div>', PageListView::render([], true, '/b', '/p'), 'no header for an empty list');
     $src = (string) file_get_contents(dirname(__DIR__, 2) . '/plugins/studio-builder/admin/index.php');
     assert_true(str_contains($src, 'studio_no_pages'), 'empty state retained');
     assert_true(str_contains($src, 'slate_data_list_script()'), 'shared toggle script emitted');
@@ -101,10 +127,10 @@ unit('studio admin list: empty input renders an empty list; index.php keeps its 
 unit('studio admin list: every translation key the list uses has a French entry', function (): void {
     $fr = require dirname(__DIR__, 2) . '/plugins/studio-builder/lang/fr.php';
     $core = require dirname(__DIR__, 2) . '/lang/fr.php';
-    foreach (['studio_status_published', 'studio_status_draft', 'studio_address', 'studio_page_type', 'studio_unpublished_changes', 'studio_open_builder', 'studio_preview', 'studio_no_pages'] as $k) {
+    foreach (['studio_status_published', 'studio_status_draft', 'studio_address', 'studio_page_type', 'studio_unpublished_changes', 'studio_open_builder', 'studio_preview', 'studio_no_pages', 'studio_selected', 'studio_clear_selection', 'studio_select_all_pages', 'studio_select_page'] as $k) {
         assert_true(isset($fr[$k]), "studio-builder fr: {$k}");
     }
-    foreach (['status', 'updated'] as $k) {
+    foreach (['status', 'updated', 'title'] as $k) {
         assert_true(isset($core[$k]), "core fr: {$k}");
     }
 });

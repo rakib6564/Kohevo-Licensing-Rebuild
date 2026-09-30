@@ -147,6 +147,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
 <?php else: ?>
 <?= PageListView::render($pages, $canEdit, plugin_url('studio-builder', 'admin/builder.php'), plugin_url('studio-builder', 'admin/preview.php')) ?>
 <?php slate_data_list_script(); ?>
+<?= PageListView::selectionScript() ?>
 <?php endif; ?>
 
 <?php endif; ?>

@@ -27,8 +27,19 @@ final class PageListView
             require_once dirname(__DIR__, 4) . '/includes/ui_components.php';
         }
 
+        if ($pages === []) {
+            return '<div class="data-list" data-single-open></div>';
+        }
+
         ob_start();
-        echo '<div class="data-list" data-single-open>';
+        echo '<div class="data-list is-columnar" data-single-open id="studio-page-list">';
+        echo '<div class="data-list-selectbar" role="status"><span><span class="data-list-selected-count">0</span> '
+            . \e(\__('studio_selected', 'selected')) . '</span>'
+            . '<button type="button" class="btn btn-sm btn-ghost data-list-clear">' . \e(\__('studio_clear_selection', 'Clear selection')) . '</button></div>';
+        \slate_data_list_head(
+            ['main' => \__('title', 'Title'), 'value' => \__('studio_page_type', 'Type'), 'badge' => \__('status', 'Status')],
+            ['select_all' => \__('studio_select_all_pages', 'Select all pages')]
+        );
         foreach ($pages as $p) {
             $id          = (int) $p['id'];
             $published   = !empty($p['is_published']);
@@ -54,6 +65,7 @@ final class PageListView
                 . \e(\__('studio_preview', 'Preview')) . '</a>';
 
             \slate_data_row([
+                'select'       => ['name' => 'ids[]', 'value' => (string) $id, 'label' => sprintf(\__('studio_select_page', 'Select page %s'), $title)],
                 'avatar'       => $title,
                 'avatar_color' => $published ? 'success' : 'muted',
                 'title'        => $title,
@@ -67,5 +79,38 @@ final class PageListView
         echo '</div>';
 
         return (string) ob_get_clean();
+    }
+
+    /**
+     * Selection behaviour (select-all, indeterminate state, count bar). Row
+     * expansion is the platform's slate_data_list_script(); this only tracks
+     * checkboxes, which live beside the toggle buttons, never inside them.
+     */
+    public static function selectionScript(): string
+    {
+        return <<<'HTML'
+<script>
+(function () {
+    var list = document.getElementById('studio-page-list');
+    if (!list) return;
+    var all = list.querySelector('.data-list-select-all');
+    var bar = list.querySelector('.data-list-selectbar');
+    var count = list.querySelector('.data-list-selected-count');
+    var boxes = function () { return Array.prototype.slice.call(list.querySelectorAll('.data-row-select')); };
+    function sync() {
+        var on = boxes().filter(function (b) { return b.checked; });
+        count.textContent = on.length;
+        bar.classList.toggle('is-active', on.length > 0);
+        boxes().forEach(function (b) { b.closest('.data-row').classList.toggle('is-selected', b.checked); });
+        all.checked = on.length > 0 && on.length === boxes().length;
+        all.indeterminate = on.length > 0 && on.length < boxes().length;
+    }
+    all.addEventListener('change', function () { boxes().forEach(function (b) { b.checked = all.checked; }); sync(); });
+    list.addEventListener('change', function (e) { if (e.target.classList.contains('data-row-select')) sync(); });
+    list.querySelector('.data-list-clear').addEventListener('click', function () { boxes().forEach(function (b) { b.checked = false; }); sync(); all.focus(); });
+    sync();
+})();
+</script>
+HTML;
     }
 }
