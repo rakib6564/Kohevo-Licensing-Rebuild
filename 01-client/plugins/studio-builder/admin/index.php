@@ -17,6 +17,7 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 3) . '/config.php';
 
+use Slate\Module\StudioBuilder\Admin\PageListView;
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Exception\StudioException;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
@@ -136,45 +137,17 @@ require SLATE_ROOT . '/admin/partials/header.php';
 </div>
 <?php endif; ?>
 
-<div class="card">
 <?php if ($pages === []): ?>
+<div class="card">
     <div class="empty">
         <div class="empty-title"><?= e(__('studio_no_pages', 'No Studio pages yet')) ?></div>
         <p class="text-sm"><?= e(__('studio_no_pages_hint', 'Create a page above to open it in the builder.')) ?></p>
     </div>
-<?php else: ?>
-    <table class="table">
-        <thead>
-            <tr>
-                <th scope="col"><?= e(__('title', 'Title')) ?></th>
-                <th scope="col"><?= e(__('studio_address', 'Address')) ?></th>
-                <th scope="col"><?= e(__('status', 'Status')) ?></th>
-                <th scope="col"><span class="sr-only"><?= e(__('actions', 'Actions')) ?></span></th>
-            </tr>
-        </thead>
-        <tbody>
-        <?php foreach ($pages as $p): ?>
-            <tr>
-                <td><?= e((string) $p['title']) ?> <span class="text-sm text-muted">(<?= e((string) $p['page_type']) ?>)</span></td>
-                <td><code><?= e((string) $p['public_path']) ?></code></td>
-                <td>
-                    <?= e($p['is_published'] ? __('studio_status_published', 'Published') : __('studio_status_draft', 'Draft')) ?>
-                    <?php if ($p['is_published'] && $p['has_unpublished_changes']): ?>
-                        <span class="text-sm text-muted"> · <?= e(__('studio_unpublished_changes', 'unpublished changes')) ?></span>
-                    <?php endif; ?>
-                </td>
-                <td class="text-right">
-                    <?php if ($canEdit): ?>
-                        <a class="btn btn-sm btn-primary" href="<?= e(plugin_url('studio-builder', 'admin/builder.php')) ?>?page=<?= (int) $p['id'] ?>"><?= e(__('studio_open_builder', 'Open builder')) ?></a>
-                    <?php endif; ?>
-                    <a class="btn btn-sm btn-ghost" target="_blank" rel="noopener" href="<?= e(plugin_url('studio-builder', 'admin/preview.php')) ?>?page=<?= (int) $p['id'] ?>"><?= e(__('studio_preview', 'Preview')) ?></a>
-                </td>
-            </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
-<?php endif; ?>
 </div>
+<?php else: ?>
+<?= PageListView::render($pages, $canEdit, plugin_url('studio-builder', 'admin/builder.php'), plugin_url('studio-builder', 'admin/preview.php')) ?>
+<?php slate_data_list_script(); ?>
+<?php endif; ?>
 
 <?php endif; ?>
 <?php require SLATE_ROOT . '/admin/partials/footer.php'; ?>
