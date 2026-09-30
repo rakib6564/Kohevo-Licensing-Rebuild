@@ -552,6 +552,15 @@ unit('phase4 routing: only single-segment, non-reserved slugs are Studio candida
     }
 });
 
+unit('phase4 stylesheet: the generic link colour never reaches .sb-button links, so every button variant keeps its own label colour (a primary label was invisible: accent text on an accent background)', function (): void {
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    assert_true(!str_contains($css, '.sb-body a{'), 'no bare link rule that also matches buttons');
+    assert_true(str_contains($css, '.sb-body a:not(.sb-button){color:var(--sb-color-accent)}'), 'ordinary links keep the accent colour');
+    assert_true(str_contains($css, '.sb-button--primary{background:var(--sb-surface-accent);color:var(--sb-text-inverse)}'), 'primary: inverse text on the accent surface');
+    assert_true(str_contains($css, '.sb-button--secondary{background:var(--sb-surface-secondary);color:var(--sb-text-primary)'), 'secondary keeps its own text colour');
+    assert_eq('2', \Slate\Module\StudioBuilder\Render\StudioStylesheet::VERSION, 'stylesheet version bumped so compiled pages are rebuilt');
+});
+
 if (!empty($studioP4UnitStandalone)) {
     exit(unit_summary());
 }

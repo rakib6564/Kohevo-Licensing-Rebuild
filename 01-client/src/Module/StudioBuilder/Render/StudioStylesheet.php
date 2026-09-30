@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '1';
+    public const VERSION = '2';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -46,7 +46,9 @@ final class StudioStylesheet
             . 'body.sb-body{margin:0;background:var(--sb-surface-page);color:var(--sb-text-primary);font-family:var(--sb-font-body);line-height:1.6}'
             . '.sb-body h1,.sb-body h2,.sb-body h3,.sb-body h4,.sb-body h5,.sb-body h6{font-family:var(--sb-font-heading);line-height:1.2;margin:0 0 .5em}'
             . '.sb-body img{max-width:100%;height:auto}'
-            . '.sb-body a{color:var(--sb-color-accent)}'
+            // Buttons are links too: the generic link colour must not reach them (it would equal
+            // the primary button's background and hide the label), so they keep their variant colours.
+            . '.sb-body a:not(.sb-button){color:var(--sb-color-accent)}'
             . '.sb-main{display:block}'
             . '.sb-section__inner{margin:0 auto;padding-left:1rem;padding-right:1rem;display:grid}'
             . '.sb-section__inner>*{min-width:0}'
