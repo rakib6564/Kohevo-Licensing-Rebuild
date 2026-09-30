@@ -27,6 +27,7 @@ use Slate\Services\Content\TenantBranding;
 final class SiteContext
 {
     public const DEFAULT_SITE_KEY = 'default';
+    private const BASE_URL_PATTERN = '~^https?://[^\s/?#<>"\']+(/[^\s?#<>"\']*)?$~iD';
 
     public readonly string $baseUrl;
     public readonly string $logoUrl;
@@ -42,7 +43,7 @@ final class SiteContext
         public readonly string $siteKey = self::DEFAULT_SITE_KEY,
     ) {
         $baseUrl = rtrim(trim($baseUrl), '/');
-        if ($baseUrl !== '' && preg_match('~^https?://[^\s/?#<>"\']+(/[^\s?#<>"\']*)?$~i', $baseUrl) !== 1) {
+        if ($baseUrl !== '' && preg_match(self::BASE_URL_PATTERN, $baseUrl) !== 1) {
             throw new \InvalidArgumentException('SiteContext baseUrl must be an absolute http(s) URL or empty.');
         }
         if (preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $siteKey) !== 1) {
@@ -60,7 +61,7 @@ final class SiteContext
      */
     public static function fromEnvironment(): self
     {
-        $base = defined('SLATE_URL') ? (string) \SLATE_URL : '';
+        $base = self::configuredBaseUrl(defined('SLATE_URL') ? (string) \SLATE_URL : '');
         $name = 'Kohevo';
         $logo = '';
         $favicon = '';
@@ -79,6 +80,18 @@ final class SiteContext
         } catch (\Throwable $ignored) {
         }
         return new self($base, $name, $logo, $favicon, $locale);
+    }
+
+    /**
+     * The install's configured base URL when it is a valid absolute http(s)
+     * URL, else '' — Studio then fails closed (no canonical, no og:url, no
+     * relative og:image) instead of rendering against a malformed or missing
+     * base (Phase 9B). Never derived from the request (Host header).
+     */
+    public static function configuredBaseUrl(string $configured): string
+    {
+        $base = rtrim(trim($configured), '/');
+        return ($base !== '' && preg_match(self::BASE_URL_PATTERN, $base) === 1) ? $base : '';
     }
 
     /** Absolute URL for a site-relative path (`/about`). Relative when the base URL is unknown. */

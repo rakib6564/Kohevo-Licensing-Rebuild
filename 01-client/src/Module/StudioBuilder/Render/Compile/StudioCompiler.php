@@ -52,7 +52,8 @@ use Slate\Tenancy\TenantContext;
 
 final class StudioCompiler
 {
-    public const COMPILER_VERSION        = '1.0.0';
+    // 1.0.1 (Phase 9B): SeoHead drops a site-relative og:image when no base URL is configured.
+    public const COMPILER_VERSION        = '1.0.1';
     public const MODE_PUBLISHED          = 'published';
     public const MAX_ARTIFACT_AGE_SECONDS = 3600;
 

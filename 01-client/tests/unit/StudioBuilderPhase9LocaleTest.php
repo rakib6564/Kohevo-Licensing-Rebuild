@@ -121,7 +121,9 @@ unit('phase9a locale: the pin wraps exactly the public render and the publish-ti
     assert_eq(1, substr_count($app, 'StudioPublicLocale::'), 'publish is the only application-layer pin');
 
     $plugin = sbl9u_source('plugins/studio-builder/StudioBuilder.php');
+    assert_true(preg_match('/if \(\$response === null\) \{\s*return false;\s*\}\s*StudioPublicLocale::pin\(\);\s*StudioHttpResponder::sendPublic\(\$response\);/', sbl9u_method($plugin, 'send')) === 1, 'send(): pins only after a page is confirmed');
     foreach (['servePublicPath', 'servePublicHomepage'] as $hook) {
-        assert_true(preg_match('/if \(\$response === null\) \{\s*return false;\s*\}\s*StudioPublicLocale::pin\(\);\s*StudioHttpResponder::sendPublic\(\$response\);/', sbl9u_method($plugin, $hook)) === 1, "{$hook}: pins only after a page is confirmed");
+        $body = sbl9u_method($plugin, $hook);
+        assert_true(str_contains($body, 'return self::send(self::publicResponse(') && !str_contains($body, 'sendPublic'), "{$hook}: serves only through send()");
     }
 });

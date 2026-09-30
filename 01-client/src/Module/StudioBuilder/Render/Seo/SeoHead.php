@@ -15,7 +15,10 @@
  *                 page's own public URL, so an author cannot point the page's
  *                 canonical at another site/tenant.
  *  - og:image     seo.og_image_media_id resolved through the tenant-scoped
- *                 media resolver (missing/foreign media -> no og:image).
+ *                 media resolver (missing/foreign media -> no og:image; a
+ *                 site-relative URL with no configured base URL -> no og:image).
+ *  - no base URL  (APP_URL unset/invalid) -> no canonical and no og:url: never
+ *                 another host (Phase 9B).
  */
 
 declare(strict_types=1);
@@ -63,8 +66,10 @@ final class SeoHead
         if (is_int($ogId) && $ogId > 0) {
             $resolved = $media->resolveImage($ogId);
             if ($resolved !== null) {
-                $ogImage = str_starts_with($resolved->url, '/') && $site->baseUrl !== ''
-                    ? $site->absoluteUrl($resolved->url)
+                // og:image must be absolute: a site-relative media URL needs the
+                // configured base URL, and without one there is no og:image (fail closed).
+                $ogImage = str_starts_with($resolved->url, '/')
+                    ? ($site->baseUrl !== '' ? $site->absoluteUrl($resolved->url) : null)
                     : $resolved->url;
             }
         }

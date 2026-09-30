@@ -14,6 +14,32 @@ use Slate\Module\StudioBuilder\Render\RenderResult;
 
 final class StudioHttpResponder
 {
+    /**
+     * Output handlers that pass the body through unchanged in content (plain
+     * buffering, transport compression). Any other active handler — e.g.
+     * multilang-translate's `ob_start` closure, which swaps in translations and
+     * injects its language switcher — may rewrite the page AFTER Studio hashed
+     * it, so the Studio ETag would no longer describe the client-visible body.
+     */
+    public const BODY_PRESERVING_HANDLERS = ['default output handler', 'zlib output compression', 'ob_gzhandler'];
+
+    /**
+     * Whether what Studio echoes now is exactly what the client receives, given
+     * the active output handlers (`ob_list_handlers()`). Only then may the
+     * public response carry an ETag and answer 304 (Phase 9B).
+     *
+     * @param list<string> $handlers
+     */
+    public static function bodyIsFinal(array $handlers): bool
+    {
+        foreach ($handlers as $handler) {
+            if (!in_array((string) $handler, self::BODY_PRESERVING_HANDLERS, true)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static function sendPublic(PublicResponse $response): void
     {
         if ($response->status === 500) {

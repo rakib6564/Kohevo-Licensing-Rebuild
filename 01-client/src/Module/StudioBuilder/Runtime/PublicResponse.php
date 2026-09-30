@@ -39,4 +39,16 @@ final class PublicResponse
     {
         return new self(500, ['Cache-Control' => 'no-store'], '');
     }
+
+    /**
+     * The same page without a validator (Phase 9B): no ETag header. Used when
+     * the body the ETag was computed over is not the body the client will get
+     * (a later output buffer rewrites it), so the ETag must not be published.
+     */
+    public function withoutValidator(): self
+    {
+        $headers = $this->headers;
+        unset($headers['ETag']);
+        return new self($this->status, $headers, $this->body);
+    }
 }

@@ -42,7 +42,10 @@ if (!function_exists('env')) {
 }
 
 // ── App URL + tenant ─────────────────────────────────────────
-define('SLATE_URL', rtrim(env('APP_URL', 'https://greenlightinduction.rakibhasaan.com/slate'), '/'));
+// No APP_URL means no known base URL: fail closed to '' (site-relative links)
+// rather than manufacturing another, real domain. The installer always writes
+// APP_URL; Kohevo Studio then emits no canonical/og:url without it.
+define('SLATE_URL', rtrim((string)env('APP_URL', ''), '/'));
 // The installer persists the database-resolved tenant ID. Before that point,
 // fail closed instead of silently selecting tenant 1.
 define('TENANT_ID', (int)env('TENANT_ID', 0));

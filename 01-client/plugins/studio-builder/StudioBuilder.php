@@ -31,11 +31,17 @@
  *   for the rest of the request, so filters that run after the render (e.g.
  *   the multilang-translate output buffer) see the same locale as the page,
  *   not the visitor's ?lang= / session / force-locale header.
+ *
+ * Phase 9B ETag correctness:
+ * - The Studio ETag (and any 304) is used only when no content-rewriting
+ *   output buffer sits above Studio (publicResponse()), so an ETag always
+ *   describes the body the client actually receives.
  */
 
 declare(strict_types=1);
 
 use Slate\Module\StudioBuilder\Infrastructure\StudioSchemaManager;
+use Slate\Module\StudioBuilder\Runtime\PublicResponse;
 use Slate\Module\StudioBuilder\Runtime\StudioHttpResponder;
 use Slate\Module\StudioBuilder\Runtime\StudioPublicLocale;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
@@ -122,13 +128,8 @@ class StudioBuilder extends Plugin
         if (!self::isReadRequest()) {
             return false;
         }
-        $response = StudioRuntimeFactory::build()->publicRuntime->handlePath((string) $path, self::ifNoneMatch());
-        if ($response === null) {
-            return false;
-        }
-        StudioPublicLocale::pin();
-        StudioHttpResponder::sendPublic($response);
-        return true;
+        $runtime = StudioRuntimeFactory::build()->publicRuntime;
+        return self::send(self::publicResponse(static fn(?string $ifNoneMatch) => $runtime->handlePath((string) $path, $ifNoneMatch)));
     }
 
     /**
@@ -144,7 +145,30 @@ class StudioBuilder extends Plugin
         if (!self::isReadRequest()) {
             return false;
         }
-        $response = StudioRuntimeFactory::build()->publicRuntime->handleHomepage(self::ifNoneMatch());
+        $runtime = StudioRuntimeFactory::build()->publicRuntime;
+        return self::send(self::publicResponse(static fn(?string $ifNoneMatch) => $runtime->handleHomepage($ifNoneMatch)));
+    }
+
+    /**
+     * The public response exactly as it will be sent (Phase 9B). The ETag is a
+     * hash of the HTML Studio renders, so it is only published — and a 304
+     * only ever answered — when that HTML is the client-visible body: no
+     * content-rewriting output buffer (e.g. multilang-translate's) is active
+     * above this handler. Otherwise the page is always sent in full (200)
+     * without an ETag. Public for tests; `$serve` receives the If-None-Match
+     * value to honour (null = none).
+     *
+     * @param \Closure(?string): ?PublicResponse $serve
+     */
+    public static function publicResponse(\Closure $serve): ?PublicResponse
+    {
+        $final = StudioHttpResponder::bodyIsFinal(ob_list_handlers());
+        $response = $serve($final ? self::ifNoneMatch() : null);
+        return ($response !== null && !$final) ? $response->withoutValidator() : $response;
+    }
+
+    private static function send(?PublicResponse $response): bool
+    {
         if ($response === null) {
             return false;
         }
