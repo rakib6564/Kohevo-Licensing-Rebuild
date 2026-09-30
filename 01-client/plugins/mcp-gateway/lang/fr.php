@@ -82,6 +82,7 @@ return [
     'mcp_gateway_chat_group_coaching' => 'Coaching',
     'mcp_gateway_chat_group_forms' => 'Formulaires',
     'mcp_gateway_chat_group_translation' => 'Traduction',
+    'mcp_gateway_chat_group_studio_pages' => 'Pages Studio',
     'mcp_gateway_chat_group_core_system' => 'Cœur / Système',
 
     // Bibliothèque de messages — Adhésion
@@ -120,6 +121,14 @@ return [
     'mcp_gateway_chat_prompt_translation_5' => 'Traduire la chaîne n° [id] en [French] : « [translated text] ».',
     'mcp_gateway_chat_prompt_translation_6' => 'Enregistrer cela comme brouillon, ne pas publier pour l\'instant.',
     'mcp_gateway_chat_prompt_translation_7' => 'Publier tous les brouillons de traduction en [French].',
+
+    // Bibliothèque de messages — Pages Studio
+    'mcp_gateway_chat_prompt_studio_1' => 'Lister les pages Studio et indiquer lesquelles ont des modifications en brouillon non publiées.',
+    'mcp_gateway_chat_prompt_studio_2' => 'Afficher la structure de la page Studio « [title] ».',
+    'mcp_gateway_chat_prompt_studio_3' => 'Sur la page Studio « [title] », remplacer le titre principal par « [new heading] » en tant que brouillon.',
+    'mcp_gateway_chat_prompt_studio_4' => 'Ajouter une section avec un titre « [text] » et un paragraphe « [text] » à la fin de la page Studio « [title] » en tant que brouillon.',
+    'mcp_gateway_chat_prompt_studio_5' => 'Afficher les différences entre le brouillon actuel de la page Studio « [title] » et sa version publiée.',
+    'mcp_gateway_chat_prompt_studio_6' => 'Donner le lien d\'aperçu du brouillon actuel de la page Studio « [title] » pour que je puisse le vérifier et le publier.',
 
     // Bibliothèque de messages — Cœur / Système
     'mcp_gateway_chat_prompt_core_1' => 'Quels sont les réglages actuels du site ?',

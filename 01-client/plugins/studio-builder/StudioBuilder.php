@@ -45,12 +45,25 @@ class StudioBuilder extends Plugin
         \Hook::addFilter('public_fallback', [self::class, 'servePublicPath'], 10, 2);
         \Hook::addFilter('public_homepage', [self::class, 'servePublicHomepage'], 10, 1);
         \Hook::addFilter('admin_nav_items', [$this, 'addAdminNav']);
+        \Hook::addFilter('i18n_lang_paths', [$this, 'addLangPath']);
 
         // MCP AI Gateway integration (Phase 7): Studio scopes + tools for AI
         // assistants. Registered unconditionally, like the other modules; the
         // module guard and the application layer refuse unlicensed tenants.
         require_once __DIR__ . '/StudioBuilderMcpHandler.php';
         StudioBuilderMcpHandler::register();
+    }
+
+    /**
+     * @param array<string, array<int, string>> $paths
+     * @return array<string, array<int, string>>
+     */
+    public function addLangPath(array $paths): array
+    {
+        foreach (['fr', 'en'] as $loc) {
+            $paths[$loc][] = $this->dir('lang');
+        }
+        return $paths;
     }
 
     /**
