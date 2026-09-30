@@ -221,7 +221,8 @@ unit('phase5 ui: the builder\'s own node:test suites pass (core, sync, component
         return;
     }
     $dir = realpath(SBP5U_PLUGIN . '/ui');
-    $cmd = 'cd ' . escapeshellarg((string) $dir) . ' && ' . escapeshellarg($node) . ' --test tests/*.test.mjs 2>&1';
+    // Pin the reporter: without a TTY older Node versions default to TAP ("# fail 0"), newer ones to spec.
+    $cmd = 'cd ' . escapeshellarg((string) $dir) . ' && ' . escapeshellarg($node) . ' --test --test-reporter=spec tests/*.test.mjs 2>&1';
     $out = [];
     exec($cmd, $out, $code);
     $text = implode("\n", $out);
