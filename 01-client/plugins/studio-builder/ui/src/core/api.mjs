@@ -86,5 +86,8 @@ export function createTransport({ apiUrl, csrfToken, fetchImpl, timeoutMs = TIME
     saveTokens: (body) => call('POST', 'save_tokens', { body }),
     // Phase 7 — structured diff for reviewing an AI-proposed draft.
     diff: (pageId, base = null, proposed = null) => call('GET', 'diff', { query: { page: pageId, base, proposed } }),
+    // Phase 8A — JSON package export (query) and import (one command; `dry_run` = analysis only).
+    exportPackage: (query) => call('GET', 'export_package', { query }),
+    importPackage: (body) => call('POST', 'import_package', { body }),
   };
 }

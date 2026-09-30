@@ -20,6 +20,9 @@ final class StudioApiRateLimiter
     public const WINDOW_SECONDS  = 60;
     public const MAX_COMMANDS    = 180;
     public const MAX_QUERIES     = 600;
+    /** Package export/import (Phase 8A): heavier requests, a smaller budget on top of the method bucket. */
+    public const MAX_PACKAGES    = 30;
+    public const PACKAGE_ACTIONS = ['export_package', 'import_package'];
 
     /**
      * @param \Closure(): int $clock seconds
@@ -36,18 +39,25 @@ final class StudioApiRateLimiter
      *
      * @param mixed $bucket storage slot (e.g. `$_SESSION['studio_api_rate']`), rewritten in place
      */
-    public function hit(mixed &$bucket, string $method): bool
+    public function hit(mixed &$bucket, string $method, string $action = ''): bool
     {
         $now = ($this->clock)();
         $kind = $method === 'POST' ? 'commands' : 'queries';
         $limit = $kind === 'commands' ? self::MAX_COMMANDS : self::MAX_QUERIES;
 
         if (!is_array($bucket) || !is_int($bucket['start'] ?? null) || $now - $bucket['start'] >= self::WINDOW_SECONDS || $now < $bucket['start']) {
-            $bucket = ['start' => $now, 'commands' => 0, 'queries' => 0];
+            $bucket = ['start' => $now, 'commands' => 0, 'queries' => 0, 'packages' => 0];
         }
         $count = is_int($bucket[$kind] ?? null) ? $bucket[$kind] : 0;
         if ($count >= $limit) {
             return false;
+        }
+        if (in_array($action, self::PACKAGE_ACTIONS, true)) {
+            $packages = is_int($bucket['packages'] ?? null) ? $bucket['packages'] : 0;
+            if ($packages >= self::MAX_PACKAGES) {
+                return false;
+            }
+            $bucket['packages'] = $packages + 1;
         }
         $bucket[$kind] = $count + 1;
         return true;

@@ -26,11 +26,11 @@ use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 $studioApiLimiter = StudioApiRateLimiter::system();
 $api = new StudioAuthoringApi(
     StudioRuntimeFactory::build()->app,
-    static function (string $method) use ($studioApiLimiter): bool {
+    static function (string $method, string $action = '') use ($studioApiLimiter): bool {
         if (!isset($_SESSION['studio_api_rate'])) {
             $_SESSION['studio_api_rate'] = null;
         }
-        return $studioApiLimiter->hit($_SESSION['studio_api_rate'], $method);
+        return $studioApiLimiter->hit($_SESSION['studio_api_rate'], $method, $action);
     },
     static function (string $message): void {
         if (function_exists('slate_log')) {

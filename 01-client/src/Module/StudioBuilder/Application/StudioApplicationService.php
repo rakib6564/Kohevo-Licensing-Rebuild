@@ -56,6 +56,14 @@
  * structured revision diff (`diffRevisions`) and the revision lookup
  * (`findRevision`) are read-only queries added for the review workflow.
  *
+ * Phase 8A (JSON packages) adds `exportPackage()` (studio-builder.view) and
+ * `importPackage()` (studio-builder.edit; token items additionally need
+ * studio-builder.tokens, template items keep the existing template boundary
+ * studio-builder.admin). A dry run plans and validates without any write or
+ * audit row; a commit runs the plan's writes through the canonical services
+ * in ONE transaction owned here, records every draft as `import`, publishes
+ * nothing, and audits after the commit. See StudioPackageService.
+ *
  * Cross-reference validation (`media_exists`/`template_exists`/`partial_exists`)
  * and block entitlement/permission enforcement
  * (`entitlement_check`/`permission_check`) are wired ONCE, here, in
@@ -95,6 +103,7 @@ use Slate\Module\StudioBuilder\Render\Theme\ThemeResolver;
 use Slate\Module\StudioBuilder\Repository\PageRepository;
 use Slate\Module\StudioBuilder\Repository\RevisionRepository;
 use Slate\Module\StudioBuilder\Repository\TemplateRepository;
+use Slate\Module\StudioBuilder\Runtime\StudioReservedRoutes;
 use Slate\Module\StudioBuilder\Service\StudioEditLockService;
 use Slate\Module\StudioBuilder\Service\StudioGlobalComponentService;
 use Slate\Module\StudioBuilder\Service\StudioPageAddressService;
@@ -129,6 +138,7 @@ final class StudioApplicationService
         private readonly ?StudioThemeService $themeService = null,
         private readonly ?StudioGlobalComponentService $components = null,
         private readonly ?MediaResolverInterface $media = null,
+        private ?StudioPackageService $packages = null,
     ) {}
 
     /** Builder queries return at most this many pages / revisions per call. */
@@ -140,6 +150,13 @@ final class StudioApplicationService
 
     /** The ONLY kind an AI-origin actor (mcp_token / admin_assistant) can write a draft as. */
     public const AI_REVISION_KIND = 'ai_operation';
+
+    /**
+     * Phase 8A: the kind every package-import draft is recorded as. Reachable
+     * ONLY through `importPackage()` (never through saveDraft/operations,
+     * never selectable by a client, never by an AI-origin actor).
+     */
+    public const IMPORT_REVISION_KIND = 'import';
 
     // ── Page address commands ───────────────────────────────────────────────
 
@@ -668,6 +685,99 @@ final class StudioApplicationService
         return $result;
     }
 
+    // ── Package export / import (Phase 8A) ──────────────────────────────────
+
+    /**
+     * Export one page (and, when asked, the global components, template and
+     * token overrides it uses) as a Kohevo Studio JSON package.
+     *
+     * @return array{package: array<string, mixed>, package_hash: string, filename: string, summary: array<string, int>}
+     */
+    public function exportPackage(StudioActor $actor, int $pageId, bool $withComponents = true, bool $withTemplate = true, bool $withTokens = false): array
+    {
+        $this->authorize($actor, StudioPermissions::VIEW);
+        $result = $this->requirePackages()->exportPage($pageId, $withComponents, $withTemplate, $withTokens);
+        $this->audit($actor, 'studio.package.exported', (string) $pageId, [
+            'package_hash' => $result['package_hash'],
+            'counts'       => $result['summary'],
+        ]);
+        return $result;
+    }
+
+    /**
+     * Analyse (`$dryRun`) or import a Kohevo Studio JSON package into drafts.
+     *
+     * A dry run validates and plans everything and writes NOTHING (no page,
+     * revision, template, token, dependency row, no audit row). A commit
+     * re-plans with real ids, refuses when the plan has any error, then runs
+     * every write through the canonical services inside one transaction and
+     * audits after it committed. Stale `expected_revision_id` on replace is a
+     * StudioConcurrencyException (409). Nothing is ever published.
+     *
+     * @param array<string, mixed> $options mode, target_page_uuid, expected_revision_id, media_map, component_map, include_tokens
+     * @return array{report: array<string, mixed>, target: ?array<string, mixed>}
+     */
+    public function importPackage(StudioActor $actor, mixed $package, array $options, bool $dryRun): array
+    {
+        $this->authorize($actor, StudioPermissions::EDIT);
+        $revisionKind = $this->importKind($actor);
+        $validationOptions = $this->buildValidationOptions($actor);
+        $packages = $this->requirePackages();
+
+        $plan = $packages->plan($package, $options, static fn(string $perm): bool => $actor->can($perm), $validationOptions, $dryRun);
+        /** @var \Slate\Module\StudioBuilder\Package\StudioImportReport $report */
+        $report = $plan['report'];
+        if ($dryRun || $report->hasErrors()) {
+            return ['report' => $report->toArray(null), 'target' => null];
+        }
+
+        $summary = 'Imported from package ' . substr($report->packageHash, 0, 12);
+        $pdo = Database::get();
+        $ownsTx = !$pdo->inTransaction();
+        if ($ownsTx) {
+            $pdo->beginTransaction();
+        }
+        try {
+            $committed = $packages->commit($plan['work'], (int) $actor->userId, $validationOptions, $revisionKind, $summary);
+            if ($ownsTx) {
+                $pdo->commit();
+            }
+        } catch (\Throwable $e) {
+            if ($ownsTx && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+
+        // After commit only (no audit inside an owned transaction — see mutateDocument()).
+        foreach ($committed['tokens'] as $t) {
+            $this->invalidator?->invalidateTokenGroup((string) $t['token_group']);
+            $this->audit($actor, 'studio.tokens.imported', (string) $t['token_group'], ['package_hash' => $report->packageHash]);
+        }
+        foreach ($committed['templates'] as $t) {
+            $this->invalidator?->invalidateTemplate((string) $t['template_key']);
+            $this->audit($actor, 'studio.template.imported', (string) $t['template_key'], ['package_hash' => $report->packageHash]);
+        }
+        foreach ($committed['global_components'] as $c) {
+            $this->audit($actor, 'studio.component.imported', (string) $c['page_id'], ['package_hash' => $report->packageHash, 'revision_id' => $c['revision_id'], 'revision_kind' => $revisionKind]);
+        }
+        foreach ($committed['pages'] as $p) {
+            $this->audit($actor, 'studio.page.imported', (string) $p['page_id'], ['package_hash' => $report->packageHash, 'mode' => $p['mode'], 'revision_id' => $p['revision_id'], 'revision_kind' => $revisionKind]);
+        }
+        $public = ['pages' => $committed['pages'], 'global_components' => $committed['global_components'], 'templates' => $committed['templates'], 'tokens' => $committed['tokens']];
+        $out = $report->toArray($public);
+        $this->audit($actor, 'studio.package.imported', $report->packageHash, [
+            'package_hash'   => $report->packageHash,
+            'mode'           => $report->mode,
+            'counts'         => $out['summary'],
+            'page_ids'       => array_column($committed['pages'], 'page_id'),
+            'component_ids'  => array_column($committed['global_components'], 'page_id'),
+            'template_keys'  => array_column($committed['templates'], 'template_key'),
+            'token_groups'   => array_column($committed['tokens'], 'token_group'),
+        ]);
+        return ['report' => $out, 'target' => $committed['target']];
+    }
+
     // ── Authoring render commands (read-only) ───────────────────────────────
 
     /**
@@ -1051,6 +1161,32 @@ final class StudioApplicationService
             ]);
         }
         return $requested;
+    }
+
+    /**
+     * The revision kind of a package import: `import`, and ONLY for a human
+     * session. An AI-origin actor can never import (Phase 8A adds no MCP
+     * import tool; this is the defensive backstop), and `draftKind()` is
+     * unchanged — no editor or AI write can select `import`.
+     */
+    private function importKind(StudioActor $actor): string
+    {
+        if ($actor->isAiOrigin()) {
+            throw new StudioAuthorizationException(StudioPermissions::EDIT);
+        }
+        return self::IMPORT_REVISION_KIND;
+    }
+
+    private function requirePackages(): StudioPackageService
+    {
+        if ($this->packages === null) {
+            $this->packages = new StudioPackageService(
+                $this->pageRepo, $this->revisionRepo, $this->templateRepo,
+                $this->pages, $this->revisions, $this->templates, $this->themeService,
+                $this->registry, new StudioReservedRoutes(),
+            );
+        }
+        return $this->packages;
     }
 
     /**

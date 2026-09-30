@@ -23,6 +23,7 @@ import { HistoryDialog } from './HistoryDialog.jsx';
 import { SaveTemplateDialog } from './SaveTemplateDialog.jsx';
 import { ComponentDialog } from './ComponentDialog.jsx';
 import { ThemeDialog } from './ThemeDialog.jsx';
+import { PackageDialog } from './PackageDialog.jsx';
 import { AiReviewDialog } from './AiReviewDialog.jsx';
 import { createTransport } from '../core/api.mjs';
 import { SyncEngine, STATUS } from '../core/sync.mjs';
@@ -52,7 +53,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   // Phase 6: library data (templates + global components), dialogs, and a
   // canvas version that bumps when a shared render input changes.
   const [library, setLibrary] = useState(null);
-  const [dialog, setDialog] = useState(null); // 'save_template' | 'component' | 'theme' | 'ai_review'
+  const [dialog, setDialog] = useState(null); // 'save_template' | 'component' | 'theme' | 'ai_review' | 'package'
   const [canvasVersion, setCanvasVersion] = useState(0);
 
   const announce = useCallback((text) => {
@@ -415,6 +416,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
         }}
         onTheme={manifest.permissions && (manifest.permissions.tokens || manifest.permissions.view) ? () => setDialog('theme') : null}
         onAiReview={() => setDialog('ai_review')}
+        onPackages={manifest.permissions && manifest.permissions.view ? () => setDialog('package') : null}
         dialogs={(
           <>
             {dialog === 'save_template' && (
@@ -426,6 +428,12 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
             {dialog === 'component' && <ComponentDialog onClose={() => setDialog(null)} onCreate={createComponent} />}
             {dialog === 'theme' && <ThemeDialog onClose={() => setDialog(null)} onSaved={onTokensSaved} />}
             {dialog === 'ai_review' && <AiReviewDialog onClose={() => setDialog(null)} onPublish={publishReviewed} />}
+            {dialog === 'package' && (
+              <PackageDialog
+                onClose={() => setDialog(null)}
+                onReplaced={() => { setSelection(null); announce(t('import_done')); refreshLibrary(); }}
+              />
+            )}
           </>
         )}
       />
@@ -437,7 +445,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
 export function ShellLayout({
   viewportKey, onViewport, onSave, onUndo, onRedo, onPublish, onReload, announcement, lockState,
   historyOpen = false, setHistoryOpen = () => {}, pendingInsert = null, onCancelInsert = () => {}, onConfirmInsert = () => {},
-  onTheme = null, dialogs = null, onAiReview = null,
+  onTheme = null, dialogs = null, onAiReview = null, onPackages = null,
 }) {
   return (
     <div className="sbx-shell" data-viewport={viewportKey}>
@@ -451,6 +459,7 @@ export function ShellLayout({
         onHistory={() => setHistoryOpen(true)}
         onTheme={onTheme}
         onAiReview={onAiReview}
+        onPackages={onPackages}
       />
       <ConflictBanner onReload={onReload} lockState={lockState} />
       <div className="sbx-workspace">

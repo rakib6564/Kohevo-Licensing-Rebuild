@@ -90,6 +90,37 @@ final class StudioThemeService
     public function saveTokens(string $tokenGroup, array $tokens, int $actorId): array
     {
         $this->requireTenantId();
+        $clean = $this->validateTokens($tokenGroup, $tokens);
+
+        $row = $this->tokens->findByGroupKey($tokenGroup);
+        $data = [
+            'schema_version'    => CanonicalDocumentSchema::SCHEMA_VERSION,
+            'tokens_json'       => json_encode($clean === [] ? new \stdClass() : $clean, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+            'compiled_css_vars' => (new ResolvedTheme($tokenGroup, $clean))->rootCss(),
+            'updated_by'        => $actorId > 0 ? $actorId : null,
+        ];
+        if ($row !== null) {
+            $this->tokens->update((int) $row['id'], $data);
+        } else {
+            $this->tokens->insert(['token_group' => $tokenGroup] + $data);
+        }
+
+        return $this->layers($tokenGroup);
+    }
+
+    /**
+     * Every rule `saveTokens()` applies before it writes — group identifier,
+     * object shape, count limit, platform-defined refs only, per-category
+     * value sanitization — without writing anything. Returns the clean,
+     * sorted override map; throws StudioValidationException exactly as
+     * `saveTokens()` would. (Phase 8A: the package import dry run.)
+     *
+     * @param array<string, mixed> $tokens
+     * @return array<string, string>
+     */
+    public function validateTokens(string $tokenGroup, array $tokens): array
+    {
+        $this->requireTenantId();
         if (preg_match(CanonicalDocumentSchema::TOKEN_GROUP_PATTERN, $tokenGroup) !== 1) {
             throw new StudioValidationException([
                 ['path' => '$.group', 'code' => 'invalid_token_group', 'message' => 'Invalid token group identifier.'],
@@ -130,20 +161,7 @@ final class StudioThemeService
         }
         ksort($clean, SORT_STRING);
 
-        $row = $this->tokens->findByGroupKey($tokenGroup);
-        $data = [
-            'schema_version'    => CanonicalDocumentSchema::SCHEMA_VERSION,
-            'tokens_json'       => json_encode($clean === [] ? new \stdClass() : $clean, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
-            'compiled_css_vars' => (new ResolvedTheme($tokenGroup, $clean))->rootCss(),
-            'updated_by'        => $actorId > 0 ? $actorId : null,
-        ];
-        if ($row !== null) {
-            $this->tokens->update((int) $row['id'], $data);
-        } else {
-            $this->tokens->insert(['token_group' => $tokenGroup] + $data);
-        }
-
-        return $this->layers($tokenGroup);
+        return $clean;
     }
 
     private static function normalizeGroup(string $group): string

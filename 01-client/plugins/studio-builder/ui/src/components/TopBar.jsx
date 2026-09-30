@@ -24,7 +24,7 @@ export const SaveStatus = memo(function SaveStatus() {
   );
 });
 
-export const TopBar = memo(function TopBar({ viewportKey, onViewport, onSave, onUndo, onRedo, onPublish, onHistory, onTheme = null, onAiReview = null }) {
+export const TopBar = memo(function TopBar({ viewportKey, onViewport, onSave, onUndo, onRedo, onPublish, onHistory, onTheme = null, onAiReview = null, onPackages = null }) {
   const { boot, engine, manifest } = useEditor();
   const page = useEngineState((s) => s.page);
   const revision = useEngineState((s) => s.revision);
@@ -70,6 +70,7 @@ export const TopBar = memo(function TopBar({ viewportKey, onViewport, onSave, on
         <button type="button" className="sbx-btn" onClick={onSave} disabled={conflict || pendingCount === 0} aria-keyshortcuts="Control+S Meta+S">{t('save')}</button>
         <button type="button" className="sbx-btn" onClick={onHistory} disabled={conflict}>{t('history')}</button>
         {onTheme && <button type="button" className="sbx-btn" onClick={onTheme}>{t('theme')}</button>}
+        {onPackages && <button type="button" className="sbx-btn" data-testid="open-packages" onClick={onPackages} disabled={conflict}>{t('packages')}</button>}
         {aiDraft && onAiReview && <button type="button" className="sbx-btn sbx-btn--seg" data-testid="ai-review" onClick={onAiReview} disabled={conflict}>{t('ai_review')}</button>}
         {!aiDraft && boot.assistantUrl && <a className="sbx-btn" href={boot.assistantUrl} target="_blank" rel="noopener">{t('ai_assistant')}</a>}
         <a className="sbx-btn" href={`${boot.previewUrl}?page=${boot.pageId}`} target="_blank" rel="noopener">{t('preview')}</a>

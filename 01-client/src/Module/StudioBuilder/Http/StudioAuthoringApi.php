@@ -82,6 +82,10 @@ final class StudioAuthoringApi
         'create_component' => ['POST', ['title', 'slug', 'page_id', 'section_id', 'expected_revision_id']],
         'detach_component' => ['POST', ['page_id', 'section_id', 'expected_revision_id']],
         'save_tokens'      => ['POST', ['group', 'tokens']],
+        // Phase 8A JSON packages: export is a query (studio-builder.view); import is ONE command
+        // whose `dry_run` decides between analysis (no write) and import into drafts.
+        'export_package'   => ['GET', ['page', 'include_components', 'include_template', 'include_tokens']],
+        'import_package'   => ['POST', ['package', 'dry_run', 'mode', 'target_page_id', 'expected_revision_id', 'media_map', 'component_map', 'include_tokens']],
     ];
 
     /** Safe, fixed messages per public error code — never an exception message. */
@@ -155,7 +159,7 @@ final class StudioAuthoringApi
             $input = $request->query;
         }
 
-        if ($this->rateLimiter !== null && ($this->rateLimiter)($method) !== true) {
+        if ($this->rateLimiter !== null && ($this->rateLimiter)($method, $action) !== true) {
             return self::error(429, 'rate_limited', [], ['Retry-After' => '10']);
         }
 
@@ -188,6 +192,8 @@ final class StudioAuthoringApi
             'create_component' => $this->createComponent($actor, $input),
             'detach_component' => StudioApiResponse::ok(self::mutationResult($this->app->detachGlobalSection($actor, self::id($input, 'page_id'), self::nodeId($input, 'section_id'), self::expectedRevision($input)))),
             'save_tokens'      => $this->saveTokens($actor, $input),
+            'export_package'   => $this->exportPackage($actor, $input),
+            'import_package'   => $this->importPackage($actor, $input),
         };
     }
 
@@ -316,6 +322,135 @@ final class StudioAuthoringApi
             }
         }
         return StudioApiResponse::ok(['tokens' => $this->app->saveDesignTokens($actor, self::tokenGroup($input), $tokens)]);
+    }
+
+    // ── Phase 8A package commands ─────────────────────────────────────────
+
+    /** @param array<string, mixed> $input */
+    private function exportPackage(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $result = $this->app->exportPackage(
+            $actor,
+            self::id($input, 'page'),
+            self::flag($input, 'include_components', true),
+            self::flag($input, 'include_template', true),
+            self::flag($input, 'include_tokens', false),
+        );
+        return StudioApiResponse::ok($result);
+    }
+
+    /** @param array<string, mixed> $input */
+    private function importPackage(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $package = $input['package'] ?? null;
+        if (!is_array($package) || $package === [] || array_is_list($package)) {
+            throw self::invalid('package', 'invalid_package', 'package must be a Kohevo Studio package object.');
+        }
+        $dryRun = $input['dry_run'] ?? null;
+        if (!is_bool($dryRun)) {
+            throw self::invalid('dry_run', 'required_field', 'dry_run must be true (analyse) or false (import into drafts).');
+        }
+        $mode = self::optionalString($input, 'mode', 32) ?? 'create';
+        $options = [
+            'mode'             => $mode,
+            'target_page_id'   => null,
+            'expected_revision_id' => null,
+            'media_map'        => self::mediaMap($input),
+            'component_map'    => self::componentMap($input),
+            'include_tokens'   => ($input['include_tokens'] ?? false) === true,
+        ];
+        if ($mode === 'replace_draft') {
+            // The explicit target: a page id, resolved tenant-scoped like every other builder command
+            // (the builder never receives page uuids — see StudioEditorViews::page()).
+            $targetId = self::id($input, 'target_page_id');
+            $expected = self::expectedRevision($input);
+            if ($expected === null) {
+                throw self::invalid('expected_revision_id', 'required_field', 'Replacing a draft requires expected_revision_id.');
+            }
+            $options['target_page_id'] = $targetId;
+            $options['expected_revision_id'] = $expected;
+        } elseif (array_key_exists('target_page_id', $input) || array_key_exists('expected_revision_id', $input)) {
+            throw self::invalid('mode', 'invalid_field', 'target_page_id and expected_revision_id are only used with mode replace_draft.');
+        }
+
+        $result = $this->app->importPackage($actor, $package, $options, $dryRun);
+        $report = $result['report'];
+        if (!$dryRun && ($report['committed'] ?? null) === null) {
+            // A refused commit: nothing was written; the report says why.
+            return self::error(422, 'validation_error', ['report' => $report]);
+        }
+        $out = ['report' => $report];
+        if (is_array($result['target'] ?? null)) {
+            // replace_draft: the builder adopts the new working draft like any other command result.
+            $out += self::mutationResult($result['target']);
+        }
+        return StudioApiResponse::ok($out, $dryRun ? 200 : 201);
+    }
+
+    /**
+     * `media_map`: source media path -> THIS site's media id (explicit mapping;
+     * verified tenant-local by the application layer).
+     *
+     * @param array<string, mixed> $input
+     * @return array<string, int>
+     */
+    private static function mediaMap(array $input): array
+    {
+        $map = $input['media_map'] ?? [];
+        if ($map === null) {
+            return [];
+        }
+        if (!is_array($map) || ($map !== [] && array_is_list($map)) || count($map) > 250) {
+            throw self::invalid('media_map', 'invalid_field', 'media_map must be an object of media path => media id.');
+        }
+        $out = [];
+        foreach ($map as $path => $id) {
+            if (!is_string($path) || strlen($path) > 500 || !str_starts_with($path, '/uploads/') || str_contains($path, '..') || !is_int($id) || $id <= 0) {
+                throw self::invalid('media_map', 'invalid_field', 'media_map maps /uploads/ paths to positive media ids.');
+            }
+            $out[$path] = $id;
+        }
+        return $out;
+    }
+
+    /**
+     * `component_map`: source component uuid -> THIS site's component uuid.
+     *
+     * @param array<string, mixed> $input
+     * @return array<string, string>
+     */
+    private static function componentMap(array $input): array
+    {
+        $map = $input['component_map'] ?? [];
+        if ($map === null) {
+            return [];
+        }
+        $uuid = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/';
+        if (!is_array($map) || ($map !== [] && array_is_list($map)) || count($map) > 250) {
+            throw self::invalid('component_map', 'invalid_field', 'component_map must be an object of source uuid => component uuid.');
+        }
+        $out = [];
+        foreach ($map as $source => $target) {
+            if (!is_string($source) || preg_match($uuid, $source) !== 1 || !is_string($target) || preg_match($uuid, $target) !== 1) {
+                throw self::invalid('component_map', 'invalid_field', 'component_map maps component uuids to component uuids.');
+            }
+            $out[$source] = $target;
+        }
+        return $out;
+    }
+
+    /** A boolean query flag ('1'/'0'/'true'/'false'), with a default when absent. @param array<string, mixed> $input */
+    private static function flag(array $input, string $key, bool $default): bool
+    {
+        if (!array_key_exists($key, $input)) {
+            return $default;
+        }
+        $value = $input[$key];
+        return match (true) {
+            $value === true, $value === '1', $value === 'true' => true,
+            $value === false, $value === '0', $value === 'false' => false,
+            default => throw self::invalid($key, 'invalid_field', "{$key} must be 1 or 0."),
+        };
     }
 
     // ── Commands ──────────────────────────────────────────────────────────

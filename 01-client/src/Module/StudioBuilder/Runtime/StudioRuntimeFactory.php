@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Runtime;
 
 use Slate\Module\StudioBuilder\Application\StudioApplicationService;
+use Slate\Module\StudioBuilder\Application\StudioPackageService;
 use Slate\Module\StudioBuilder\Provider\BookingServicesProvider;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
 use Slate\Module\StudioBuilder\Provider\FormsFormProvider;
@@ -103,6 +104,8 @@ final class StudioRuntimeFactory
             $overrides['site'] ?? null,
         );
         $invalidator = new StudioCompilationInvalidator($dependencies, $compilations);
+        $reserved    = new StudioReservedRoutes($overrides['known_prefixes'] ?? null);
+        $themeService = new StudioThemeService($tenants, $tokens, $themes);
 
         $app = new StudioApplicationService(
             $tenants, $pages, $templates, $revisions,
@@ -111,16 +114,18 @@ final class StudioRuntimeFactory
             $render, $invalidator,
             $themes,
             new StudioEditLockService($tenants, $pages, new LockRepository($tenants)),
-            new StudioThemeService($tenants, $tokens, $themes),
+            $themeService,
             $componentService,
             $media,
+            // Phase 8A JSON packages — reached only through the application service above.
+            new StudioPackageService($pages, $revisions, $templates, $pageService, $revisionService, $templateService, $themeService, $registry, $reserved),
         );
 
         $publicRuntime = new StudioPublicRuntime(
             $tenants,
             $pages,
             $render,
-            new StudioReservedRoutes($overrides['known_prefixes'] ?? null),
+            $reserved,
         );
 
         return new StudioRuntime(

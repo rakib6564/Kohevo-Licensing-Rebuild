@@ -88,6 +88,66 @@ final class StudioTemplateService
     ): array {
         $this->requireTenantId();
 
+        $clean = $this->validateTemplate($templateKey, $templateType, $category, $name, $description, $document, $validationOptions, $thumbnailMediaId);
+        $category           = $clean['category'];
+        $name               = $clean['name'];
+        $description        = $clean['description'];
+        $normalizedDocument = $clean['document'];
+
+        $existing = $this->templates->findByKey($templateKey);
+        if ($existing !== null && (bool) $existing['is_system']) {
+            throw new StudioValidationException([
+                ['path' => '$.template_key', 'code' => 'system_template_immutable', 'message' => "System template '{$templateKey}' cannot be overwritten."],
+            ]);
+        }
+
+        $data = [
+            'template_key'       => $templateKey,
+            'template_type'      => $templateType,
+            'category'           => $category,
+            'name'               => $name,
+            'description'        => $description,
+            'thumbnail_media_id' => $thumbnailMediaId,
+            'schema_version'     => CanonicalDocumentSchema::SCHEMA_VERSION,
+            'document_json'      => CanonicalJson::encode($normalizedDocument),
+            'is_system'          => 0,
+        ];
+
+        if ($existing !== null) {
+            $this->templates->update((int) $existing['id'], $data);
+            return $this->templates->find((int) $existing['id']) ?? [];
+        }
+
+        $data['uuid']       = self::newUuidV4();
+        $data['created_by'] = $actorId > 0 ? $actorId : null;
+        $templateId = $this->templates->insert($data);
+
+        return $this->templates->find($templateId) ?? [];
+    }
+
+    /**
+     * Every rule `saveTemplate()` applies BEFORE it touches storage — field
+     * checks, full canonical validation/normalization of the document, and the
+     * preset shape rules — without writing anything. Returns the cleaned
+     * values; throws StudioValidationException exactly as `saveTemplate()`
+     * would. (Phase 8A: the package import dry run validates templates here.)
+     *
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $validationOptions
+     * @return array{category: string, name: string, description: ?string, document: array<string, mixed>}
+     */
+    public function validateTemplate(
+        string $templateKey,
+        string $templateType,
+        string $category,
+        string $name,
+        ?string $description,
+        array $document,
+        array $validationOptions = [],
+        ?int $thumbnailMediaId = null,
+    ): array {
+        $this->requireTenantId();
+
         $errors = [];
         if (preg_match(CanonicalDocumentSchema::TEMPLATE_KEY_PATTERN, $templateKey) !== 1) {
             $errors[] = ['path' => '$.template_key', 'code' => 'invalid_template_key', 'message' => 'template_key must be a valid slug string.'];
@@ -124,35 +184,7 @@ final class StudioTemplateService
         $normalizedDocument = ValidatedDocument::from($document, $this->registry, $validationOptions)->toArray();
         self::assertDocumentFitsType($normalizedDocument, $templateType);
 
-        $existing = $this->templates->findByKey($templateKey);
-        if ($existing !== null && (bool) $existing['is_system']) {
-            throw new StudioValidationException([
-                ['path' => '$.template_key', 'code' => 'system_template_immutable', 'message' => "System template '{$templateKey}' cannot be overwritten."],
-            ]);
-        }
-
-        $data = [
-            'template_key'       => $templateKey,
-            'template_type'      => $templateType,
-            'category'           => $category,
-            'name'               => $name,
-            'description'        => $description,
-            'thumbnail_media_id' => $thumbnailMediaId,
-            'schema_version'     => CanonicalDocumentSchema::SCHEMA_VERSION,
-            'document_json'      => CanonicalJson::encode($normalizedDocument),
-            'is_system'          => 0,
-        ];
-
-        if ($existing !== null) {
-            $this->templates->update((int) $existing['id'], $data);
-            return $this->templates->find((int) $existing['id']) ?? [];
-        }
-
-        $data['uuid']       = self::newUuidV4();
-        $data['created_by'] = $actorId > 0 ? $actorId : null;
-        $templateId = $this->templates->insert($data);
-
-        return $this->templates->find($templateId) ?? [];
+        return ['category' => $category, 'name' => $name, 'description' => $description, 'document' => $normalizedDocument];
     }
 
     /**
