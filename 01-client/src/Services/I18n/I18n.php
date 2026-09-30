@@ -27,9 +27,53 @@ class I18n
     private static ?array $cache = null;
     private static ?string $cachedLocale = null;
 
+    /** Server-side locale set by pinLocale(); outranks every visitor-controlled input. */
+    private static ?string $pinnedLocale = null;
+
     public const DEFAULT_LANGUAGES = [
         'en' => 'English',
     ];
+
+    private const LOCALE_PATTERN = '/^[a-z]{2}(?:[-_][a-z]{2,4})?$/iD';
+
+    /**
+     * The tenant's configured site language (`default_language`), normalized
+     * exactly as currentLocale() normalizes it, but independent of the
+     * visitor: no header, query string or session is consulted. Only a
+     * currently supported language is returned; anything else (unset,
+     * malformed, a language whose pack is no longer enabled) falls back to
+     * English.
+     */
+    public static function siteLocale(): string
+    {
+        $setting = '';
+        try {
+            if (class_exists('Database')) {
+                $setting = strtolower(trim((string) (\Database::setting('default_language') ?? '')));
+            }
+        } catch (\Throwable $e) {
+            $setting = '';
+        }
+        if ($setting !== '' && preg_match(self::LOCALE_PATTERN, $setting) === 1 && isset(self::supportedLanguages()[$setting])) {
+            return $setting;
+        }
+        return 'en';
+    }
+
+    /**
+     * Pin the locale that currentLocale() returns until it is pinned again
+     * (null un-pins). While pinned, the force-locale header, ?lang= and the
+     * session are ignored, and ?lang= is not written to the session. Only
+     * server-side code calls this — the Kohevo Studio public runtime pins the
+     * tenant's siteLocale() so a visitor cannot change a public page's
+     * language. Returns the previous pin so a caller can restore it.
+     */
+    public static function pinLocale(?string $locale): ?string
+    {
+        $previous = self::$pinnedLocale;
+        self::$pinnedLocale = ($locale !== null && preg_match(self::LOCALE_PATTERN, $locale) === 1) ? $locale : null;
+        return $previous;
+    }
 
     public static function supportedLanguages(): array
     {
@@ -43,6 +87,10 @@ class I18n
 
     public static function currentLocale(): string
     {
+        if (self::$pinnedLocale !== null) {
+            return self::$pinnedLocale;
+        }
+
         $supported = self::supportedLanguages();
 
         // Generic, core-level escape hatch for a same-origin internal

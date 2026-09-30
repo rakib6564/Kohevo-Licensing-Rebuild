@@ -372,6 +372,9 @@ unit('phase4 integration: server renderer, preview and public runtime (real MySQ
                     $archived = $rt->tenants->runAs(SBP4_TENANT_A, static fn() => sbp4_capture(static fn() => \PublicRouter::dispatch('to-archive')));
                 } finally {
                     \Hook::removeFilter('public_fallback', $cb, 10);
+                    // A served page pins the tenant locale for the rest of its request (Phase 9A);
+                    // this process runs every suite, so end that "request" here.
+                    \Slate\Services\I18n\I18n::pinLocale(null);
                 }
                 assert_true(str_contains($page, 'Alpha About Content'), 'the router serves the published Studio page');
                 assert_true($withoutHook !== '' && str_contains($withoutHook, '404') || str_contains(strtolower($withoutHook), 'not found'), 'baseline is the platform 404 page');

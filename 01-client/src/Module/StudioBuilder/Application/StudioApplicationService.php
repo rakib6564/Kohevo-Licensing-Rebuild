@@ -105,6 +105,7 @@ use Slate\Module\StudioBuilder\Render\Theme\ThemeResolver;
 use Slate\Module\StudioBuilder\Repository\PageRepository;
 use Slate\Module\StudioBuilder\Repository\RevisionRepository;
 use Slate\Module\StudioBuilder\Repository\TemplateRepository;
+use Slate\Module\StudioBuilder\Runtime\StudioPublicLocale;
 use Slate\Module\StudioBuilder\Runtime\StudioReservedRoutes;
 use Slate\Module\StudioBuilder\Service\StudioEditLockService;
 use Slate\Module\StudioBuilder\Service\StudioGlobalComponentService;
@@ -644,11 +645,15 @@ final class StudioApplicationService
         }
         try {
             $result = $this->revisions->publishWorkingRevision($pageId, $expectedRevisionId, (int) $actor->userId, $summary, $this->buildValidationOptions($actor));
-            $compiled = $this->renderer->compilePublished(
+            // The stored artifact is the one public visitors get, so it is compiled
+            // for the tenant's public site locale — never the publisher's own
+            // session locale (Phase 9A), or the first public request would
+            // recompile it.
+            $compiled = StudioPublicLocale::run(fn() => $this->renderer->compilePublished(
                 PageAddress::fromRow($result['page']),
                 $result['revision'],
                 RenderContext::forPublic($tenantId, $this->renderer->siteContext()),
-            );
+            ));
             if ($ownsTx) {
                 $pdo->commit();
             }

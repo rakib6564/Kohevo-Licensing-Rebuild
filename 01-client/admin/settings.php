@@ -1140,6 +1140,9 @@ slate_render_settings_tabs($activeTab);
                         </option>
                     <?php endforeach; ?>
                 </select>
+                <?php if (class_exists('StudioBuilder', false) && StudioBuilder::isEntitled()): ?>
+                    <div class="field-hint"><?= __('default_language_studio_hint', 'Also the language of your public Kohevo Studio pages. Visitors switching language does not change them.') ?></div>
+                <?php endif; ?>
             </div>
 
             <div class="field">

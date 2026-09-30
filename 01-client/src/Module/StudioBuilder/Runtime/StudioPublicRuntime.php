@@ -8,6 +8,7 @@
  *     -> studio-builder entitlement (no bypass)      else: not ours (null)
  *     -> tenant-scoped page lookup: `page`, then `landing`, status=published
  *     -> PUBLISHED revision only                     else: not ours (null)
+ *     -> tenant site locale pinned (StudioPublicLocale — never the visitor's)
  *     -> compile (cached artifact) -> fill -> assemble
  *     -> 200 / 304 with public cache headers
  *
@@ -104,12 +105,14 @@ final class StudioPublicRuntime
         }
 
         try {
-            $context = RenderContext::forPublic(
-                $tenantId,
-                $this->renderer->siteContext(),
-                fn(string $moduleKey): bool => $this->isEntitled($tenantId, $moduleKey),
-            );
-            $result = $this->renderer->renderPublished($page, $context);
+            $result = StudioPublicLocale::run(function () use ($tenantId, $page) {
+                $context = RenderContext::forPublic(
+                    $tenantId,
+                    $this->renderer->siteContext(),
+                    fn(string $moduleKey): bool => $this->isEntitled($tenantId, $moduleKey),
+                );
+                return $this->renderer->renderPublished($page, $context);
+            });
         } catch (\Throwable $e) {
             self::log('render', $e);
             return PublicResponse::error();

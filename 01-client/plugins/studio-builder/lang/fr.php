@@ -59,4 +59,16 @@ return [
     'studio_ui_import_html_conversion' => '{stripped} élément(s) supprimé(s) par sécurité, {unsupported} élément(s) non pris en charge et {hidden} élément(s) masqué(s) ignoré(s).',
     'studio_ui_source_empty' => 'Le fichier est vide.',
     'studio_ui_source_too_large' => 'Ce fichier est trop volumineux pour être importé.',
+
+    // Phase 9A — strings Studio itself writes into PUBLIC pages (Html::t()). A
+    // public page follows the tenant's site language, so a French site gets these.
+    'studio_learn_more' => 'En savoir plus',
+    'studio_book_now' => 'Réserver',
+    'studio_join_now' => 'Adhérer',
+    'studio_open_form' => 'Ouvrir le formulaire',
+    'studio_no_services' => 'Aucun service n\'est disponible pour le moment.',
+    'studio_no_plans' => 'Aucune formule n\'est disponible pour le moment.',
+    'studio_media_unavailable' => 'Image indisponible',
+    'studio_data_unavailable' => 'Données indisponibles dans ce contexte',
+    'studio_block_unavailable' => 'Ce bloc est indisponible',
 ];

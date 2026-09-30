@@ -129,6 +129,7 @@ return array (
   'site_name_hint' => 'Affiché dans le menu latéral, sur l\'écran de connexion et dans les onglets du navigateur.',
   'site_name_required' => 'Le nom du site est requis.',
   'default_language' => 'Langue par défaut',
+  'default_language_studio_hint' => 'C\'est aussi la langue de vos pages publiques Kohevo Studio. Un changement de langue par un visiteur ne les modifie pas.',
   'save_changes' => 'Enregistrer les modifications',
   'settings_saved' => 'Réglages enregistrés.',
   'settings_readonly' => 'Vous disposez d\'un accès en lecture seule aux réglages.',

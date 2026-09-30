@@ -25,12 +25,19 @@
  *   points through `StudioBuilderMcpHandler` (same pattern as every other
  *   commercial module). Every tool call goes through the same application
  *   boundary as the Builder; no tool publishes.
+ *
+ * Phase 9A public locale:
+ * - A served Studio page pins the tenant's site language (StudioPublicLocale)
+ *   for the rest of the request, so filters that run after the render (e.g.
+ *   the multilang-translate output buffer) see the same locale as the page,
+ *   not the visitor's ?lang= / session / force-locale header.
  */
 
 declare(strict_types=1);
 
 use Slate\Module\StudioBuilder\Infrastructure\StudioSchemaManager;
 use Slate\Module\StudioBuilder\Runtime\StudioHttpResponder;
+use Slate\Module\StudioBuilder\Runtime\StudioPublicLocale;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 
 class StudioBuilder extends Plugin
@@ -119,6 +126,7 @@ class StudioBuilder extends Plugin
         if ($response === null) {
             return false;
         }
+        StudioPublicLocale::pin();
         StudioHttpResponder::sendPublic($response);
         return true;
     }
@@ -140,6 +148,7 @@ class StudioBuilder extends Plugin
         if ($response === null) {
             return false;
         }
+        StudioPublicLocale::pin();
         StudioHttpResponder::sendPublic($response);
         return true;
     }

@@ -111,6 +111,7 @@ return [
     'site_name_hint'    => 'Shown in the sidebar, on the login screen, and in browser tabs.',
     'site_name_required'=> 'Site name is required.',
     'default_language'  => 'Default language',
+    'default_language_studio_hint' => 'Also the language of your public Kohevo Studio pages. Visitors switching language does not change them.',
     'save_changes'      => 'Save changes',
     'settings_saved'    => 'Settings saved.',
     'settings_readonly' => 'You have read-only access to settings.',
