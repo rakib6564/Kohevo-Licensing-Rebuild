@@ -30,6 +30,7 @@ use Slate\Module\StudioBuilder\Dependency\DependencyExtractor;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
 use Slate\Module\StudioBuilder\Document\DocumentNormalizer;
+use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Exception\StudioConcurrencyException;
 use Slate\Module\StudioBuilder\Exception\StudioNotFoundException;
 use Slate\Module\StudioBuilder\Exception\StudioTenantScopeException;
@@ -69,7 +70,12 @@ final class StudioRevisionService
     /**
      * Create a new immutable draft revision for a page (`manual`, `autosave`, `ai_operation`, `import`).
      *
-     * @param array<string, mixed> $normalizedDocument Must already be validated and normalized
+     * Takes a `ValidatedDocument`, not a raw array: `ValidatedDocument::from()` is the
+     * only way to construct one, and it always runs the document through
+     * `DocumentNormalizer::validateAndNormalize()` first. This closes the Phase 2
+     * finding that this method previously trusted its caller's word that a plain
+     * array had already been validated.
+     *
      * @return array{
      *   revision: array<string, mixed>,
      *   page: array<string, mixed>,
@@ -79,7 +85,7 @@ final class StudioRevisionService
      */
     public function createDraftRevision(
         int $pageId,
-        array $normalizedDocument,
+        ValidatedDocument $document,
         ?int $expectedRevisionId,
         int $actorId,
         string $revisionKind = 'manual',
@@ -93,6 +99,7 @@ final class StudioRevisionService
             ]);
         }
 
+        $normalizedDocument = $document->toArray();
         $canonicalJson = CanonicalJson::encode($normalizedDocument);
         $fingerprint   = hash('sha256', $canonicalJson);
         $deps          = DependencyExtractor::extract($normalizedDocument, $this->registry);
@@ -257,6 +264,10 @@ final class StudioRevisionService
 
             $this->dependencies->replaceForPageRevision($pageId, $publishRevId, $deps);
 
+            // anti-drift-ignore: CLOCK — slate_db_now() (MySQL's own clock) is always
+            // preferred; the gmdate() fallback only runs in an isolated context (e.g. a
+            // unit test) where includes/helpers.php was never loaded, and is never reached
+            // in a real request.
             $now = \function_exists('slate_db_now') ? \slate_db_now() : gmdate('Y-m-d H:i:s');
             $this->pages->update($pageId, [
                 'active_draft_revision_id' => $publishRevId,

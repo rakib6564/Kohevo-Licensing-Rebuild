@@ -23,6 +23,7 @@ namespace Slate\Module\StudioBuilder\Service;
 
 use Slate\Data\Database;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
 use Slate\Module\StudioBuilder\Exception\StudioNotFoundException;
 use Slate\Module\StudioBuilder\Exception\StudioTenantScopeException;
@@ -44,6 +45,15 @@ final class StudioPageAddressService
      * Create a new Studio page: inserts its `PageAddress` row and its first
      * immutable draft revision (a blank canonical document) in one transaction.
      *
+     * Phase 2 finding F1 fix: the `findBySlug()` pre-check below is
+     * necessarily racy (TOCTOU) — two concurrent requests can both pass it
+     * before either commits. The `catch` block now recognizes the resulting
+     * `uq_studiobuilder_pages_tenant_slug_type` duplicate-key violation
+     * (SQLSTATE 23000) and rewraps it as the same clean `StudioValidationException`
+     * the pre-check throws, rather than leaking a raw `\PDOException`, matching
+     * `StudioRevisionService`'s existing 23000-handling convention.
+     *
+     * @param array<string, mixed> $validationOptions Forwarded to `ValidatedDocument::from()`.
      * @return array{page: array<string, mixed>, revision: array<string, mixed>}
      */
     public function createPage(
@@ -52,6 +62,7 @@ final class StudioPageAddressService
         string $pageType,
         string $routeMode,
         int $actorId,
+        array $validationOptions = [],
     ): array {
         $this->requireTenantId();
 
@@ -92,7 +103,11 @@ final class StudioPageAddressService
                 'updated_by' => $actorId > 0 ? $actorId : null,
             ]);
 
-            $blankDocument = CanonicalDocumentSchema::emptyDocument($pageType, 'default', $title);
+            $blankDocument = ValidatedDocument::from(
+                CanonicalDocumentSchema::emptyDocument($pageType, 'default', $title),
+                $this->registry,
+                $validationOptions,
+            );
 
             $result = $this->revisions->createDraftRevision(
                 $pageId,
@@ -111,6 +126,11 @@ final class StudioPageAddressService
         } catch (\Throwable $e) {
             if ($ownsTx && $pdo->inTransaction()) {
                 $pdo->rollBack();
+            }
+            if ($e instanceof \PDOException && (string) $e->getCode() === '23000') {
+                throw new StudioValidationException([
+                    ['path' => '$.slug', 'code' => 'duplicate_slug', 'message' => "A page with slug '{$slug}' and page_type '{$pageType}' already exists in this tenant."],
+                ]);
             }
             throw $e;
         }

@@ -16,7 +16,7 @@ namespace Slate\Module\StudioBuilder\Service;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
-use Slate\Module\StudioBuilder\Document\DocumentNormalizer;
+use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Domain\StudioTemplate;
 use Slate\Module\StudioBuilder\Exception\StudioNotFoundException;
 use Slate\Module\StudioBuilder\Exception\StudioTenantScopeException;
@@ -42,6 +42,7 @@ final class StudioTemplateService
      * can never be overwritten through this path.
      *
      * @param array<string, mixed> $document Raw or already-normalized canonical document.
+     * @param array<string, mixed> $validationOptions Forwarded to `ValidatedDocument::from()`.
      * @return array<string, mixed>
      */
     public function saveTemplate(
@@ -52,6 +53,7 @@ final class StudioTemplateService
         ?string $description,
         array $document,
         int $actorId,
+        array $validationOptions = [],
     ): array {
         $this->requireTenantId();
 
@@ -61,7 +63,7 @@ final class StudioTemplateService
             ]);
         }
 
-        $normalizedDocument = DocumentNormalizer::validateAndNormalize($document, $this->registry);
+        $normalizedDocument = ValidatedDocument::from($document, $this->registry, $validationOptions)->toArray();
 
         $existing = $this->templates->findByKey($templateKey);
         if ($existing !== null && (bool) $existing['is_system']) {
@@ -99,9 +101,16 @@ final class StudioTemplateService
      * re-normalized before being written — the same fail-closed guarantee a
      * hand-authored draft gets.
      *
+     * Phase 2 finding F2 fix: `document_type` is now overridden on the RAW
+     * template document *before* it is validated/normalized, not mutated
+     * afterward — the persisted revision is guaranteed to be the output of a
+     * single, complete pass through `ValidatedDocument::from()`, never a
+     * validated document subsequently hand-edited.
+     *
+     * @param array<string, mixed> $validationOptions Forwarded to `ValidatedDocument::from()`.
      * @return array{revision: array<string, mixed>, page: array<string, mixed>, fingerprint: string}
      */
-    public function applyTemplate(string $templateKey, int $pageId, int $actorId): array
+    public function applyTemplate(string $templateKey, int $pageId, int $actorId, array $validationOptions = []): array
     {
         $this->requireTenantId();
 
@@ -116,9 +125,11 @@ final class StudioTemplateService
             throw new StudioNotFoundException("Studio page {$pageId} was not found in the active tenant.", ['page_id' => $pageId]);
         }
 
-        $normalizedDocument = DocumentNormalizer::validateAndNormalize($template->document, $this->registry);
-        // A template only supplies content structure; the target page keeps its own address identity.
-        $normalizedDocument['document_type'] = (string) $page['page_type'];
+        // A template only supplies content structure; the target page keeps its own
+        // address identity. Set BEFORE validation, not after — see F2 fix above.
+        $rawDocument = $template->document;
+        $rawDocument['document_type'] = (string) $page['page_type'];
+        $validated = ValidatedDocument::from($rawDocument, $this->registry, $validationOptions);
 
         $expectedRevisionId = isset($page['active_draft_revision_id']) && $page['active_draft_revision_id'] !== null
             ? (int) $page['active_draft_revision_id']
@@ -126,7 +137,7 @@ final class StudioTemplateService
 
         return $this->revisions->createDraftRevision(
             $pageId,
-            $normalizedDocument,
+            $validated,
             $expectedRevisionId,
             $actorId,
             'manual',

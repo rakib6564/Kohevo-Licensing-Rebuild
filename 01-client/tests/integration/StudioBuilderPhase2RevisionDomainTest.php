@@ -41,6 +41,7 @@ use Slate\Data\MigrationRunner;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
 use Slate\Module\StudioBuilder\Document\DocumentNormalizer;
+use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Exception\StudioConcurrencyException;
 use Slate\Module\StudioBuilder\Exception\StudioNotFoundException;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
@@ -186,25 +187,25 @@ unit('phase2 integration: StudioRevisionService full lifecycle, concurrency, dep
 
             // 1. First draft revision (no expected_revision_id yet)
             $doc1 = sbp2_doc($registry, 'Welcome v1');
-            $r1 = $tenants->runAs($tenantId, static fn(): array => $revisionService->createDraftRevision($pageId, $doc1, null, 1, 'manual', 'First draft'));
+            $r1 = $tenants->runAs($tenantId, static fn(): array => $revisionService->createDraftRevision($pageId, ValidatedDocument::from($doc1, $registry), null, 1, 'manual', 'First draft'));
             assert_eq(1, (int) $r1['revision']['revision_number']);
             assert_false($r1['deduplicated']);
             $rev1Id = (int) $r1['revision']['id'];
             assert_eq($rev1Id, (int) $r1['page']['active_draft_revision_id']);
 
             // 2. Stale expected_revision_id must fail closed
-            assert_throws(StudioConcurrencyException::class, function () use ($tenants, $tenantId, $revisionService, $pageId, $doc1): void {
-                $tenants->runAs($tenantId, static fn() => $revisionService->createDraftRevision($pageId, $doc1, 999999, 1, 'manual'));
+            assert_throws(StudioConcurrencyException::class, function () use ($tenants, $tenantId, $revisionService, $pageId, $doc1, $registry): void {
+                $tenants->runAs($tenantId, static fn() => $revisionService->createDraftRevision($pageId, ValidatedDocument::from($doc1, $registry), 999999, 1, 'manual'));
             });
 
             // 3. Autosave with identical content must deduplicate (no new revision row)
-            $rDedup = $tenants->runAs($tenantId, static fn(): array => $revisionService->createDraftRevision($pageId, $doc1, $rev1Id, 1, 'autosave'));
+            $rDedup = $tenants->runAs($tenantId, static fn(): array => $revisionService->createDraftRevision($pageId, ValidatedDocument::from($doc1, $registry), $rev1Id, 1, 'autosave'));
             assert_true($rDedup['deduplicated']);
             assert_eq($rev1Id, (int) $rDedup['revision']['id']);
 
             // 4. Manual save with different content creates revision #2
             $doc2 = sbp2_doc($registry, 'Welcome v2');
-            $r2 = $tenants->runAs($tenantId, static fn(): array => $revisionService->createDraftRevision($pageId, $doc2, $rev1Id, 1, 'manual', 'Second draft'));
+            $r2 = $tenants->runAs($tenantId, static fn(): array => $revisionService->createDraftRevision($pageId, ValidatedDocument::from($doc2, $registry), $rev1Id, 1, 'manual', 'Second draft'));
             assert_eq(2, (int) $r2['revision']['revision_number']);
             assert_eq($rev1Id, (int) $r2['revision']['parent_revision_id']);
             $rev2Id = (int) $r2['revision']['id'];
@@ -239,7 +240,7 @@ unit('phase2 integration: StudioRevisionService full lifecycle, concurrency, dep
             $docWithMedia = sbp2_doc($registry, 'Has Media');
             $docWithMedia['sections'][0]['blocks'][0]['props']['media'] = ['media_id' => 55, 'alt' => 'Alt', 'focal_point' => [0.5, 0.5]];
             $docWithMedia = DocumentNormalizer::normalize($docWithMedia, $registry);
-            $withMedia = $tenants->runAs($tenantId, static fn(): array => $revisionService->createDraftRevision($pageId, $docWithMedia, $rollbackRevId, 1, 'manual', 'With media'));
+            $withMedia = $tenants->runAs($tenantId, static fn(): array => $revisionService->createDraftRevision($pageId, ValidatedDocument::from($docWithMedia, $registry), $rollbackRevId, 1, 'manual', 'With media'));
             $withMediaRevId = (int) $withMedia['revision']['id'];
             $depRows = $tenants->runAs($tenantId, static fn(): array => $deps->forPageRevision($pageId, $withMediaRevId));
             $mediaDepFound = false;
@@ -252,8 +253,8 @@ unit('phase2 integration: StudioRevisionService full lifecycle, concurrency, dep
 
             // 9. Multi-tenant isolation: a second tenant cannot see or act on tenant 1's page
             $tenantId2 = $tenantId + 1000;
-            assert_throws(StudioNotFoundException::class, function () use ($tenants, $tenantId2, $revisionService, $pageId, $doc1): void {
-                $tenants->runAs($tenantId2, static fn() => $revisionService->createDraftRevision($pageId, $doc1, null, 1, 'manual'));
+            assert_throws(StudioNotFoundException::class, function () use ($tenants, $tenantId2, $revisionService, $pageId, $doc1, $registry): void {
+                $tenants->runAs($tenantId2, static fn() => $revisionService->createDraftRevision($pageId, ValidatedDocument::from($doc1, $registry), null, 1, 'manual'));
             });
             $tenants->runAs($tenantId2, static function () use ($pages, $pageId): void {
                 assert_null($pages->find($pageId));
