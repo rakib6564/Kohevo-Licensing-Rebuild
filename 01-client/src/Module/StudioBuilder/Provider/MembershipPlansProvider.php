@@ -17,7 +17,7 @@ use Slate\Module\StudioBuilder\StudioPermissions;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 use Slate\Tenancy\TenantContext;
 
-final class MembershipPlansProvider implements DataProviderInterface
+final class MembershipPlansProvider implements PublicDataProviderInterface
 {
     public function key(): string
     {

@@ -24,7 +24,7 @@ use Slate\Module\StudioBuilder\StudioPermissions;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 use Slate\Tenancy\TenantContext;
 
-final class FormsFormProvider implements DataProviderInterface
+final class FormsFormProvider implements PublicDataProviderInterface
 {
     public function key(): string
     {

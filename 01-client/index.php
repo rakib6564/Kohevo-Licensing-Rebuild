@@ -18,6 +18,13 @@ slate_maintenance_gate();
 // install that has never configured remote licensing.
 slate_license_gate();
 
+// A tenant's published Kohevo Studio homepage (route_mode = homepage), when the
+// studio-builder plugin is active and has one. The listener answers false in
+// every other case, so the landing page below renders exactly as before.
+if (Hook::applyFilters('public_homepage', false) === true) {
+    return;
+}
+
 require_once __DIR__ . '/includes/landing.php';
 
 slate_render_landing();

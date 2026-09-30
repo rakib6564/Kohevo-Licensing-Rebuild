@@ -21,7 +21,7 @@ use Slate\Module\StudioBuilder\StudioPermissions;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 use Slate\Tenancy\TenantContext;
 
-final class BookingServicesProvider implements DataProviderInterface
+final class BookingServicesProvider implements PublicDataProviderInterface
 {
     public function key(): string
     {

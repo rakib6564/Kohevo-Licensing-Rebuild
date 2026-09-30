@@ -44,4 +44,23 @@ final class DependencyRepository extends StudioRepository
             ]);
         }
     }
+
+    /**
+     * Distinct page ids (active tenant) with any revision depending on (type, key).
+     *
+     * @return list<int>
+     */
+    public function pageIdsForDependency(string $dependencyType, string $dependencyKey): array
+    {
+        $rows = $this->query()
+            ->select('page_id')
+            ->where('dependency_type', $dependencyType)
+            ->where('dependency_key', $dependencyKey)
+            ->get();
+        $ids = [];
+        foreach ($rows as $row) {
+            $ids[(int) $row['page_id']] = true;
+        }
+        return array_keys($ids);
+    }
 }

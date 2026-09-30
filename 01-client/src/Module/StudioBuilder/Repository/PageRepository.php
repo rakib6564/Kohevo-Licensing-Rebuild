@@ -31,4 +31,25 @@ final class PageRepository extends StudioRepository
             ->where('uuid', $uuid)
             ->first();
     }
+
+    /**
+     * The tenant's published homepage (`route_mode = homepage`) among the given
+     * routable page types; the most recently published one wins if several exist.
+     *
+     * @param list<string> $pageTypes
+     */
+    public function findPublishedHomepage(array $pageTypes): ?array
+    {
+        if ($pageTypes === []) {
+            return null;
+        }
+        return $this->query()
+            ->where('route_mode', 'homepage')
+            ->where('status', 'published')
+            ->whereIn('page_type', $pageTypes)
+            ->whereNotNull('published_revision_id')
+            ->orderBy('published_at', 'DESC')
+            ->orderBy('id', 'DESC')
+            ->first();
+    }
 }

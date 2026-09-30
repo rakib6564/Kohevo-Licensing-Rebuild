@@ -85,6 +85,13 @@ class PublicRouter {
         }
 
         if ($best === null) {
+            // Last-resort handler for a path no plugin prefix claimed (Kohevo
+            // Studio published pages). Plugin prefixes above always win; a
+            // listener that does not recognise the path returns false and the
+            // ordinary 404 below renders exactly as before.
+            if (\Hook::applyFilters('public_fallback', false, $path) === true) {
+                return;
+            }
             self::renderNotFound($path);
             return;
         }

@@ -18,6 +18,13 @@
  * `applyDocumentOperation`, `applyTemplate`, `publish`, `rollback`, …) — there
  * is deliberately no generic `execute($anything)` entry point.
  *
+ * Phase 4 adds the authoring READ commands `renderPreview()` / `renderForEditor()`
+ * (same enforcement pipeline, no mutation, no persistence) and makes
+ * `publish()` compile the published artifact inside the publish transaction,
+ * so a compilation failure can never leave a half-published page. Public
+ * (anonymous) rendering deliberately does NOT pass through this class — it has
+ * no actor to authorize; see `Runtime\StudioPublicRuntime`.
+ *
  * Cross-reference validation (`media_exists`/`template_exists`/`partial_exists`)
  * and block entitlement/permission enforcement
  * (`entitlement_check`/`permission_check`) are wired ONCE, here, in
@@ -41,6 +48,10 @@ use Slate\Module\StudioBuilder\Operation\DocumentOperation;
 use Slate\Module\StudioBuilder\Operation\DocumentOperationApplier;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
+use Slate\Module\StudioBuilder\Render\Compile\StudioCompilationInvalidator;
+use Slate\Module\StudioBuilder\Render\RenderContext;
+use Slate\Module\StudioBuilder\Render\RenderResult;
+use Slate\Module\StudioBuilder\Render\StudioRenderService;
 use Slate\Module\StudioBuilder\Repository\PageRepository;
 use Slate\Module\StudioBuilder\Repository\RevisionRepository;
 use Slate\Module\StudioBuilder\Repository\TemplateRepository;
@@ -48,6 +59,7 @@ use Slate\Module\StudioBuilder\Service\StudioPageAddressService;
 use Slate\Module\StudioBuilder\Service\StudioRevisionService;
 use Slate\Module\StudioBuilder\Service\StudioTemplateService;
 use Slate\Module\StudioBuilder\StudioPermissions;
+use Slate\Data\Database;
 use Slate\Services\Audit\AuditLog;
 use Slate\Services\Licensing\EntitlementService;
 use Slate\Services\Media\Media;
@@ -67,6 +79,8 @@ final class StudioApplicationService
         private readonly StudioTemplateService $templates,
         private readonly DataProviderRegistry $providers,
         private readonly BlockRegistry $registry,
+        private readonly ?StudioRenderService $renderer = null,
+        private readonly ?StudioCompilationInvalidator $invalidator = null,
     ) {}
 
     // ── Page address commands ───────────────────────────────────────────────
@@ -101,6 +115,7 @@ final class StudioApplicationService
     {
         $this->authorize($actor, StudioPermissions::EDIT);
         $result = $this->pages->archivePage($pageId, (int) $actor->userId);
+        $this->invalidator?->invalidatePage($pageId);
         AuditLog::record('studio.page.archived', (string) $pageId);
         return $result;
     }
@@ -195,6 +210,8 @@ final class StudioApplicationService
         // (target architecture example: "system/template administration -> studio-builder.admin").
         $this->authorize($actor, StudioPermissions::ADMIN);
         $result = $this->templates->saveTemplate($templateKey, $templateType, $category, $name, $description, $document, (int) $actor->userId, $this->buildValidationOptions($actor));
+        // Pages that reference this template (template_key / section global_ref) recompile on next request.
+        $this->invalidator?->invalidateTemplate($templateKey);
         AuditLog::record('studio.template.saved', $templateKey, ['template_type' => $templateType]);
         return $result;
     }
@@ -226,9 +243,45 @@ final class StudioApplicationService
      */
     public function publish(StudioActor $actor, int $pageId, ?int $expectedRevisionId, ?string $summary = null): array
     {
-        $this->authorize($actor, StudioPermissions::PUBLISH);
-        $result = $this->revisions->publishWorkingRevision($pageId, $expectedRevisionId, (int) $actor->userId, $summary, $this->buildValidationOptions($actor));
-        AuditLog::record('studio.page.published', (string) $pageId);
+        $tenantId = $this->authorize($actor, StudioPermissions::PUBLISH);
+
+        if ($this->renderer === null) {
+            $result = $this->revisions->publishWorkingRevision($pageId, $expectedRevisionId, (int) $actor->userId, $summary, $this->buildValidationOptions($actor));
+            AuditLog::record('studio.page.published', (string) $pageId);
+            return $result;
+        }
+
+        // Publish + compile are ONE transaction: publishWorkingRevision() joins it
+        // (it only owns a transaction when none is open), and the published
+        // artifact is compiled from the new publish revision before commit. Any
+        // compilation failure rolls back the revision, the page pointers and the
+        // artifact together — the previous published state stays live.
+        $pdo = Database::get();
+        $ownsTx = !$pdo->inTransaction();
+        if ($ownsTx) {
+            $pdo->beginTransaction();
+        }
+        try {
+            $result = $this->revisions->publishWorkingRevision($pageId, $expectedRevisionId, (int) $actor->userId, $summary, $this->buildValidationOptions($actor));
+            $compiled = $this->renderer->compilePublished(
+                PageAddress::fromRow($result['page']),
+                $result['revision'],
+                RenderContext::forPublic($tenantId, $this->renderer->siteContext()),
+            );
+            if ($ownsTx) {
+                $pdo->commit();
+            }
+        } catch (\Throwable $e) {
+            if ($ownsTx && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+
+        AuditLog::record('studio.page.published', (string) $pageId, [
+            'revision_id'  => (int) $result['revision']['id'],
+            'content_hash' => $compiled->contentHash,
+        ]);
         return $result;
     }
 
@@ -247,6 +300,36 @@ final class StudioApplicationService
         $result = $this->revisions->rollbackToRevision($pageId, $targetRevisionId, $expectedRevisionId, (int) $actor->userId, $summary, $this->buildValidationOptions($actor));
         AuditLog::record('studio.page.rolled_back', (string) $pageId, ['target_revision_id' => $targetRevisionId]);
         return $result;
+    }
+
+    // ── Authoring render commands (read-only) ───────────────────────────────
+
+    /**
+     * Preview a page revision: the page's working draft by default, or an
+     * explicit revision of THAT page. Every id is resolved through the
+     * tenant-scoped repositories, so another tenant's page, or a revision id
+     * belonging to a different page, is simply "not found" — an arbitrary
+     * revision id is never rendered on its own authority. Read-only: no
+     * revision, compilation, audit row or any other write is produced.
+     */
+    public function renderPreview(StudioActor $actor, int $pageId, ?int $revisionId = null): RenderResult
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::VIEW);
+        $renderer = $this->requireRenderer();
+        [$page, $revision] = $this->loadPageRevision($pageId, $revisionId);
+        return $renderer->renderRevision($page, $revision, RenderContext::forPreview($tenantId, $renderer->siteContext(), $actor));
+    }
+
+    /**
+     * Render the working draft for the (Phase 5) builder canvas: editor node
+     * metadata included, never cached or indexed. Requires studio-builder.edit.
+     */
+    public function renderForEditor(StudioActor $actor, int $pageId): RenderResult
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::EDIT);
+        $renderer = $this->requireRenderer();
+        [$page, $revision] = $this->loadPageRevision($pageId, null);
+        return $renderer->renderRevision($page, $revision, RenderContext::forEditor($tenantId, $renderer->siteContext(), $actor));
     }
 
     // ── Dynamic data provider command ───────────────────────────────────────
@@ -291,6 +374,33 @@ final class StudioApplicationService
         }
 
         return $tenantId;
+    }
+
+    private function requireRenderer(): StudioRenderService
+    {
+        if ($this->renderer === null) {
+            throw new \LogicException('StudioApplicationService was built without a StudioRenderService.');
+        }
+        return $this->renderer;
+    }
+
+    /**
+     * @return array{0: PageAddress, 1: array<string, mixed>}
+     */
+    private function loadPageRevision(int $pageId, ?int $revisionId): array
+    {
+        $row = $this->pageRepo->find($pageId);
+        if ($row === null) {
+            throw new StudioNotFoundException("Studio page {$pageId} was not found in the active tenant.", ['page_id' => $pageId]);
+        }
+        $page = PageAddress::fromRow($row);
+
+        $targetId = $revisionId ?? $page->activeDraftRevisionId ?? $page->publishedRevisionId;
+        $revision = ($targetId !== null && $targetId > 0) ? $this->revisionRepo->findByIdForPage($pageId, $targetId) : null;
+        if ($revision === null) {
+            throw new StudioNotFoundException('The requested revision was not found for this page in the active tenant.', ['page_id' => $pageId]);
+        }
+        return [$page, $revision];
     }
 
     private function requireTenantId(): int
