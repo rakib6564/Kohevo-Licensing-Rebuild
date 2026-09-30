@@ -89,5 +89,7 @@ export function createTransport({ apiUrl, csrfToken, fetchImpl, timeoutMs = TIME
     // Phase 8A — JSON package export (query) and import (one command; `dry_run` = analysis only).
     exportPackage: (query) => call('GET', 'export_package', { query }),
     importPackage: (body) => call('POST', 'import_package', { body }),
+    // Phase 8B — constrained HTML/CSS import (same dry-run / import-into-draft contract).
+    importHtml: (body) => call('POST', 'import_html', { body }),
   };
 }

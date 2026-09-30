@@ -38,6 +38,7 @@ use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Application\StudioApplicationService;
 use Slate\Module\StudioBuilder\Application\StudioEditorViews;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Domain\PageAddress;
 use Slate\Module\StudioBuilder\Exception\StudioException;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Operation\DocumentOperation;
@@ -86,6 +87,8 @@ final class StudioAuthoringApi
         // whose `dry_run` decides between analysis (no write) and import into drafts.
         'export_package'   => ['GET', ['page', 'include_components', 'include_template', 'include_tokens']],
         'import_package'   => ['POST', ['package', 'dry_run', 'mode', 'target_page_id', 'expected_revision_id', 'media_map', 'component_map', 'include_tokens']],
+        // Phase 8B: constrained HTML/CSS import — the same dry-run / import-into-draft command shape.
+        'import_html'      => ['POST', ['html', 'css', 'title', 'slug', 'page_type', 'dry_run', 'mode', 'target_page_id', 'expected_revision_id', 'media_map']],
     ];
 
     /** Safe, fixed messages per public error code — never an exception message. */
@@ -194,6 +197,7 @@ final class StudioAuthoringApi
             'save_tokens'      => $this->saveTokens($actor, $input),
             'export_package'   => $this->exportPackage($actor, $input),
             'import_package'   => $this->importPackage($actor, $input),
+            'import_html'      => $this->importHtml($actor, $input),
         };
     }
 
@@ -346,22 +350,87 @@ final class StudioAuthoringApi
         if (!is_array($package) || $package === [] || array_is_list($package)) {
             throw self::invalid('package', 'invalid_package', 'package must be a Kohevo Studio package object.');
         }
-        $dryRun = $input['dry_run'] ?? null;
-        if (!is_bool($dryRun)) {
-            throw self::invalid('dry_run', 'required_field', 'dry_run must be true (analyse) or false (import into drafts).');
-        }
-        $mode = self::optionalString($input, 'mode', 32) ?? 'create';
+        $dryRun = self::dryRun($input);
         $options = [
-            'mode'             => $mode,
+            'mode'             => self::optionalString($input, 'mode', 32) ?? 'create',
             'target_page_id'   => null,
             'expected_revision_id' => null,
             'media_map'        => self::mediaMap($input),
             'component_map'    => self::componentMap($input),
             'include_tokens'   => ($input['include_tokens'] ?? false) === true,
         ];
-        if ($mode === 'replace_draft') {
-            // The explicit target: a page id, resolved tenant-scoped like every other builder command
-            // (the builder never receives page uuids — see StudioEditorViews::page()).
+        self::importTarget($input, $options);
+        return self::importResponse($this->app->importPackage($actor, $package, $options, $dryRun), $dryRun);
+    }
+
+    /**
+     * Phase 8B: constrained HTML/CSS -> one draft page. Strict field types
+     * here (the 1.5 MiB body cap bounds the transport); the source budgets
+     * (512 KiB HTML / 128 KiB CSS -> `source_too_large` in the report),
+     * parsing and every content rule live in the application layer's
+     * converter, which runs only after authorization.
+     *
+     * @param array<string, mixed> $input
+     */
+    private function importHtml(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $html = $input['html'] ?? null;
+        if (!is_string($html)) {
+            throw self::invalid('html', 'invalid_field', 'html must be a string.');
+        }
+        $css = $input['css'] ?? '';
+        if ($css === null) {
+            $css = '';
+        }
+        if (!is_string($css)) {
+            throw self::invalid('css', 'invalid_field', 'css must be a string.');
+        }
+        $title = self::optionalString($input, 'title', 255);
+        if ($title !== null && ($title !== trim($title) || preg_match('/[<>\x00-\x1F\x7F]/', $title) === 1)) {
+            throw self::invalid('title', 'invalid_field', 'title must be plain text.');
+        }
+        $pageType = self::optionalString($input, 'page_type', 32) ?? 'page';
+        if (!in_array($pageType, ['page', 'landing'], true)) {
+            throw self::invalid('page_type', 'invalid_field', 'HTML import creates page or landing documents only.');
+        }
+        $dryRun = self::dryRun($input);
+        $options = [
+            'mode'                 => self::optionalString($input, 'mode', 32) ?? 'create',
+            'target_page_id'       => null,
+            'expected_revision_id' => null,
+            'media_map'            => self::mediaMap($input),
+        ];
+        self::importTarget($input, $options);
+        $slug = self::optionalString($input, 'slug', 191);
+        // A new page needs its address; replacing a draft keeps the target's.
+        if (($slug === null && $options['mode'] !== 'replace_draft') || ($slug !== null && preg_match(PageAddress::SLUG_PATTERN, $slug) !== 1)) {
+            throw self::invalid('slug', 'invalid_field', 'slug must be lowercase letters, digits and single hyphens.');
+        }
+        $source = ['html' => $html, 'css' => $css, 'title' => $title, 'slug' => $slug, 'page_type' => $pageType];
+        return self::importResponse($this->app->importHtml($actor, $source, $options, $dryRun), $dryRun);
+    }
+
+    /** @param array<string, mixed> $input */
+    private static function dryRun(array $input): bool
+    {
+        $dryRun = $input['dry_run'] ?? null;
+        if (!is_bool($dryRun)) {
+            throw self::invalid('dry_run', 'required_field', 'dry_run must be true (analyse) or false (import into drafts).');
+        }
+        return $dryRun;
+    }
+
+    /**
+     * `mode` and, for replace_draft, the explicit target: a page id resolved
+     * tenant-scoped like every other builder command (the builder never
+     * receives page uuids — see StudioEditorViews::page()) + expected_revision_id.
+     *
+     * @param array<string, mixed> $input
+     * @param array<string, mixed> $options receives target_page_id / expected_revision_id
+     */
+    private static function importTarget(array $input, array &$options): void
+    {
+        if ($options['mode'] === 'replace_draft') {
             $targetId = self::id($input, 'target_page_id');
             $expected = self::expectedRevision($input);
             if ($expected === null) {
@@ -372,8 +441,11 @@ final class StudioAuthoringApi
         } elseif (array_key_exists('target_page_id', $input) || array_key_exists('expected_revision_id', $input)) {
             throw self::invalid('mode', 'invalid_field', 'target_page_id and expected_revision_id are only used with mode replace_draft.');
         }
+    }
 
-        $result = $this->app->importPackage($actor, $package, $options, $dryRun);
+    /** @param array{report: array<string, mixed>, target: ?array<string, mixed>} $result */
+    private static function importResponse(array $result, bool $dryRun): StudioApiResponse
+    {
         $report = $result['report'];
         if (!$dryRun && ($report['committed'] ?? null) === null) {
             // A refused commit: nothing was written; the report says why.

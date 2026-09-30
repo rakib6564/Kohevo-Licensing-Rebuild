@@ -259,13 +259,15 @@ final class StudioPackageService
      * @param array{mode?: string, target_page_id?: ?int, expected_revision_id?: ?int, media_map?: array<string, int>, component_map?: array<string, string>, include_tokens?: bool} $options
      * @param callable(string): bool $can the actor's permission check
      * @param array<string, mixed> $validationOptions the application layer's tenant-scoped validation callbacks
+     * @param ?StudioImportReport $report a report that already carries a converted source's findings
+     *        (Phase 8B HTML/CSS: the package was synthesized by the converter); null = a new report
      * @return array{report: StudioImportReport, work: list<array<string, mixed>>}
      */
-    public function plan(mixed $package, array $options, callable $can, array $validationOptions, bool $dryRun): array
+    public function plan(mixed $package, array $options, callable $can, array $validationOptions, bool $dryRun, ?StudioImportReport $report = null): array
     {
         $mode = (string) ($options['mode'] ?? self::MODE_CREATE);
         $packageHash = is_array($package) ? StudioPackageFormat::packageHash($package) : hash('sha256', '');
-        $report = new StudioImportReport(in_array($mode, self::MODES, true) ? $mode : self::MODE_CREATE, $dryRun, $packageHash);
+        $report ??= new StudioImportReport(in_array($mode, self::MODES, true) ? $mode : self::MODE_CREATE, $dryRun, $packageHash);
 
         foreach (StudioPackageFormat::validate($package) as $issue) {
             $report->addIssue($issue);

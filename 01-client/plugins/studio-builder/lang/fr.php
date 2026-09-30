@@ -46,4 +46,17 @@ return [
     'studio_back_to_pages' => 'Retour aux pages Studio',
     'studio_builder_needs_js' => 'Kohevo Studio nécessite l\'activation de JavaScript.',
     'studio_builder_loading' => 'Chargement de l\'éditeur…',
+
+    // ── Builder: import HTML/CSS (Phase 8B) ──────────────────────────────
+    'studio_ui_import_source' => 'Importer depuis',
+    'studio_ui_import_source_package' => 'Paquet Kohevo (.json)',
+    'studio_ui_import_source_html' => 'HTML/CSS',
+    'studio_ui_import_html_hint' => 'Choisissez un fichier HTML et, si besoin, un fichier CSS. La structure de la page est convertie en blocs Studio : les scripts, formulaires, contenus intégrés et styles non pris en charge sont supprimés, les images externes ne sont jamais téléchargées et rien n\'est publié.',
+    'studio_ui_import_html_file' => 'Fichier HTML',
+    'studio_ui_import_css_file' => 'Fichier CSS (facultatif)',
+    'studio_ui_import_title' => 'Titre de la page',
+    'studio_ui_import_slug' => 'Adresse de la page (slug)',
+    'studio_ui_import_html_conversion' => '{stripped} élément(s) supprimé(s) par sécurité, {unsupported} élément(s) non pris en charge et {hidden} élément(s) masqué(s) ignoré(s).',
+    'studio_ui_source_empty' => 'Le fichier est vide.',
+    'studio_ui_source_too_large' => 'Ce fichier est trop volumineux pour être importé.',
 ];

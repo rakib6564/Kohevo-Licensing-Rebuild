@@ -1,7 +1,8 @@
 # Kohevo Studio — Phase 8A: JSON Package Export / Import
 
-Status: implemented (Phase 8A only). Phase 8B (constrained HTML/CSS import)
-and 8C/8D/8E (JSX/React/v0, ZIP, Figma) are **not** implemented. No MCP
+Status: implemented (Phase 8A). Phase 8B (constrained HTML/CSS import) reuses
+this pipeline — see KOHEVO-STUDIO-PHASE8B-HTML-IMPORT.md. 8C/8D/8E
+(JSX/React/v0, ZIP, Figma) are **not** implemented. No MCP
 import/export tool exists. No schema change: every Phase 8A write goes
 through the existing canonical services into the seven existing
 `studiobuilder_*` tables.

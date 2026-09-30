@@ -42,8 +42,14 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: pdo_mysql, mbstring, sodium, curl, json, openssl
+          extensions: pdo_mysql, mbstring, sodium, curl, json, openssl, dom, xml
           coverage: none
+
+      - name: Assert DOM / libxml capability (Kohevo Studio HTML import)
+        run: |
+          php -r 'exit(extension_loaded("dom") && extension_loaded("libxml") && class_exists("DOMDocument") && defined("LIBXML_NONET") && function_exists("libxml_use_internal_errors") ? 0 : 1);' \
+            || { echo "::error::Kohevo Studio HTML import requires the PHP dom and libxml extensions"; exit 1; }
+          php -r 'echo "PHP ", PHP_VERSION, " / libxml ", LIBXML_DOTTED_VERSION, PHP_EOL;'
 
       - name: Lint PHP files (01-client & 02-licensing)
         run: |
@@ -143,6 +149,26 @@ jobs:
           php 01-client/tests/run-phase10-licensing.php
           php 01-client/tests/run-phase11-security.php
           php 01-client/tests/run-phase13-legacy.php
+
+      - name: Run Kohevo Studio (studio-builder) unit & integration suites
+        run: |
+          php 01-client/tests/run-studio-builder.php unit
+          php 01-client/tests/run-studio-builder.php integration
+
+      - name: Setup Node (Kohevo Studio builder UI tests)
+        if: matrix.db_label == 'MySQL 8.0'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: 01-client/plugins/studio-builder/ui/package-lock.json
+
+      - name: Run Kohevo Studio builder UI tests (node:test)
+        if: matrix.db_label == 'MySQL 8.0'
+        working-directory: 01-client/plugins/studio-builder/ui
+        run: |
+          npm ci --no-audit --no-fund
+          npm test
 
       - name: Run 02-licensing smoke & licensing suites
         run: |

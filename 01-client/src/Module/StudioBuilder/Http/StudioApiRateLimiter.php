@@ -22,7 +22,7 @@ final class StudioApiRateLimiter
     public const MAX_QUERIES     = 600;
     /** Package export/import (Phase 8A): heavier requests, a smaller budget on top of the method bucket. */
     public const MAX_PACKAGES    = 30;
-    public const PACKAGE_ACTIONS = ['export_package', 'import_package'];
+    public const PACKAGE_ACTIONS = ['export_package', 'import_package', 'import_html'];
 
     /**
      * @param \Closure(): int $clock seconds

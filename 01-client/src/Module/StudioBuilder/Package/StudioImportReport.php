@@ -15,6 +15,15 @@
  *   route_collision, reserved_route, template_collision, system_template_protected,
  *   permission_denied, concurrency_conflict, target_not_found, page_type_mismatch,
  *   invalid_tokens, tokens_skipped, tokens_replace_live, component_unpublished
+ *
+ * Phase 8B (source_kind `html_css`) reuses this ONE report: the converter's
+ * findings arrive as ordinary issues (html_import_unavailable, source_too_large,
+ * invalid_source, source_limit_exceeded, security_stripped, unsupported_element,
+ * unsupported_css, css_value_unmapped, style_quantized, unsafe_url,
+ * unsupported_media, unsafe_text_dropped, text_truncated, content_dropped_hidden,
+ * chrome_not_imported, output_limit_exceeded, issues_truncated, unresolved_media)
+ * and the report gains `source_hash` + `conversion` counts. A `kohevo_json`
+ * report is byte-for-byte what Phase 8A produced.
  */
 
 declare(strict_types=1);
@@ -23,6 +32,9 @@ namespace Slate\Module\StudioBuilder\Package;
 
 final class StudioImportReport
 {
+    public const SOURCE_KOHEVO_JSON = 'kohevo_json';
+    public const SOURCE_HTML_CSS    = 'html_css';
+
     /** Validator codes mapped onto the import vocabulary (anything else is invalid_document). */
     public const VALIDATOR_CODES = [
         'unknown_block_type'               => 'unknown_block_type',
@@ -59,11 +71,29 @@ final class StudioImportReport
     private int $sections = 0;
     private int $blocks = 0;
 
+    private ?string $sourceHash = null;
+
+    /** @var array<string, int> */
+    private array $conversion = [];
+
     public function __construct(
         public readonly string $mode,
         public readonly bool $dryRun,
         public readonly string $packageHash,
+        public readonly string $sourceKind = self::SOURCE_KOHEVO_JSON,
     ) {}
+
+    /**
+     * Converted sources only (never `kohevo_json`): the hash of the original
+     * source and the converter's counts.
+     *
+     * @param array<string, int> $conversion
+     */
+    public function setSource(string $sourceHash, array $conversion): void
+    {
+        $this->sourceHash = $sourceHash;
+        $this->conversion = $conversion;
+    }
 
     public function setItemOrder(string $key, int $position): void
     {
@@ -151,11 +181,11 @@ final class StudioImportReport
         $unresolved = count(array_filter($issues, static fn(array $i): bool => in_array($i['code'], self::UNRESOLVED_CODES, true)));
         $canCommit = $errors === 0;
 
-        return [
+        $out = [
             // A dry run is "ok" when it could be analysed (validity is `valid` / `can_commit`); a commit is ok once committed.
             'ok'                => $this->dryRun ? true : $committed !== null,
             'dry_run'           => $this->dryRun,
-            'source_kind'       => 'kohevo_json',
+            'source_kind'       => $this->sourceKind,
             'mode'              => $this->mode,
             'package_hash'      => $this->packageHash,
             'valid'             => $canCommit,
@@ -178,6 +208,11 @@ final class StudioImportReport
             'preview_documents' => $canCommit ? $this->previews : [],
             'committed'         => $committed,
         ];
+        if ($this->sourceKind !== self::SOURCE_KOHEVO_JSON) {
+            $out['source_hash'] = $this->sourceHash;
+            $out['conversion']  = $this->conversion;
+        }
+        return $out;
     }
 
     /** @return list<array<string, mixed>> */

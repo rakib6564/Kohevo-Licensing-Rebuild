@@ -91,6 +91,8 @@ use Slate\Module\StudioBuilder\Exception\StudioTenantScopeException;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Operation\DocumentOperation;
 use Slate\Module\StudioBuilder\Operation\DocumentOperationApplier;
+use Slate\Module\StudioBuilder\Package\Html\HtmlImportConverter;
+use Slate\Module\StudioBuilder\Package\StudioImportReport;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeResolver;
@@ -139,6 +141,7 @@ final class StudioApplicationService
         private readonly ?StudioGlobalComponentService $components = null,
         private readonly ?MediaResolverInterface $media = null,
         private ?StudioPackageService $packages = null,
+        private readonly ?HtmlImportConverter $htmlImporter = null,
     ) {}
 
     /** Builder queries return at most this many pages / revisions per call. */
@@ -153,8 +156,8 @@ final class StudioApplicationService
 
     /**
      * Phase 8A: the kind every package-import draft is recorded as. Reachable
-     * ONLY through `importPackage()` (never through saveDraft/operations,
-     * never selectable by a client, never by an AI-origin actor).
+     * ONLY through `importPackage()` / `importHtml()` (Phase 8B) — never through
+     * saveDraft/operations, never selectable by a client, never by an AI-origin actor.
      */
     public const IMPORT_REVISION_KIND = 'import';
 
@@ -725,13 +728,86 @@ final class StudioApplicationService
         $packages = $this->requirePackages();
 
         $plan = $packages->plan($package, $options, static fn(string $perm): bool => $actor->can($perm), $validationOptions, $dryRun);
-        /** @var \Slate\Module\StudioBuilder\Package\StudioImportReport $report */
+        /** @var StudioImportReport $report */
         $report = $plan['report'];
         if ($dryRun || $report->hasErrors()) {
             return ['report' => $report->toArray(null), 'target' => null];
         }
 
-        $summary = 'Imported from package ' . substr($report->packageHash, 0, 12);
+        return $this->commitImportPlan($actor, $plan, $report, $revisionKind, $validationOptions, 'Imported from package ' . substr($report->packageHash, 0, 12), []);
+    }
+
+    /**
+     * Phase 8B — analyse (`$dryRun`) or import constrained HTML/CSS into a draft.
+     *
+     * Authorization (tenant -> authentication -> entitlement -> studio-builder.edit,
+     * AI origin refused) runs BEFORE the untrusted source is parsed. The pure
+     * converter turns the source into a synthesized one-page package using the
+     * tenant's resolved theme (read-only); from there it is the Phase 8A
+     * pipeline unchanged: plan (media resolution, id re-minting, validation,
+     * route checks), the same owned transaction, the same post-commit audit.
+     * Revision kind `import`; nothing is ever published.
+     *
+     * @param array{html: string, css: string, title: ?string, slug: ?string, page_type: string} $source
+     * @param array<string, mixed> $options mode, target_page_id, expected_revision_id, media_map
+     * @return array{report: array<string, mixed>, target: ?array<string, mixed>}
+     */
+    public function importHtml(StudioActor $actor, array $source, array $options, bool $dryRun): array
+    {
+        $this->authorize($actor, StudioPermissions::EDIT);
+        $revisionKind = $this->importKind($actor);
+        $validationOptions = $this->buildValidationOptions($actor);
+        $packages = $this->requirePackages();
+
+        $mode = (string) ($options['mode'] ?? StudioPackageService::MODE_CREATE);
+        $pageType = (string) ($source['page_type'] ?? 'page');
+        if ($mode === StudioPackageService::MODE_REPLACE) {
+            // The document type must match the (tenant-scoped) target; a non-page target is refused by the plan.
+            $row = is_int($options['target_page_id'] ?? null) ? $this->pageRepo->find((int) $options['target_page_id']) : null;
+            $pageType = $row !== null && in_array((string) $row['page_type'], HtmlImportConverter::PAGE_TYPES, true) ? (string) $row['page_type'] : 'page';
+        }
+        $theme = $this->themes?->resolve(ThemeResolver::DEFAULT_GROUP)->tokens() ?? ThemeResolver::DEFAULT_TOKENS;
+
+        $converted = ($this->htmlImporter ?? new HtmlImportConverter())->convert(
+            (string) $source['html'],
+            (string) $source['css'],
+            ['title' => $source['title'] ?? null, 'slug' => $source['slug'] ?? null, 'page_type' => $pageType],
+            $theme,
+        );
+        $report = new StudioImportReport($mode, $dryRun, $converted['package_hash'], StudioImportReport::SOURCE_HTML_CSS);
+        $report->setSource($converted['source_hash'], $converted['conversion']);
+        $report->setItemOrder(HtmlImportConverter::ITEM_KEY, 0);
+        foreach ($converted['issues'] as $issue) {
+            $report->addIssue($issue);
+        }
+        if ($converted['package'] === null) {
+            return ['report' => $report->toArray(null), 'target' => null];
+        }
+
+        $plan = $packages->plan($converted['package'], $options, static fn(string $perm): bool => $actor->can($perm), $validationOptions, $dryRun, $report);
+        if ($dryRun || $report->hasErrors()) {
+            return ['report' => $report->toArray(null), 'target' => null];
+        }
+        return $this->commitImportPlan($actor, $plan, $report, $revisionKind, $validationOptions, 'Imported from HTML ' . substr($converted['source_hash'], 0, 12), [
+            'source_kind' => StudioImportReport::SOURCE_HTML_CSS,
+            'source_hash' => $converted['source_hash'],
+        ]);
+    }
+
+    /**
+     * The commit half shared by every import source: ONE transaction owned
+     * here runs the planned writes through the canonical services; after it
+     * committed (never inside it — AuditLog can implicitly commit), caches
+     * are invalidated and the import is audited.
+     *
+     * @param array{report: StudioImportReport, work: list<array<string, mixed>>} $plan
+     * @param array<string, mixed> $validationOptions
+     * @param array<string, string> $sourceMeta extra audit metadata of a converted source (none for kohevo_json)
+     * @return array{report: array<string, mixed>, target: ?array<string, mixed>}
+     */
+    private function commitImportPlan(StudioActor $actor, array $plan, StudioImportReport $report, string $revisionKind, array $validationOptions, string $summary, array $sourceMeta): array
+    {
+        $packages = $this->requirePackages();
         $pdo = Database::get();
         $ownsTx = !$pdo->inTransaction();
         if ($ownsTx) {
@@ -762,7 +838,7 @@ final class StudioApplicationService
             $this->audit($actor, 'studio.component.imported', (string) $c['page_id'], ['package_hash' => $report->packageHash, 'revision_id' => $c['revision_id'], 'revision_kind' => $revisionKind]);
         }
         foreach ($committed['pages'] as $p) {
-            $this->audit($actor, 'studio.page.imported', (string) $p['page_id'], ['package_hash' => $report->packageHash, 'mode' => $p['mode'], 'revision_id' => $p['revision_id'], 'revision_kind' => $revisionKind]);
+            $this->audit($actor, 'studio.page.imported', (string) $p['page_id'], ['package_hash' => $report->packageHash, 'mode' => $p['mode'], 'revision_id' => $p['revision_id'], 'revision_kind' => $revisionKind] + $sourceMeta);
         }
         $public = ['pages' => $committed['pages'], 'global_components' => $committed['global_components'], 'templates' => $committed['templates'], 'tokens' => $committed['tokens']];
         $out = $report->toArray($public);
@@ -774,7 +850,7 @@ final class StudioApplicationService
             'component_ids'  => array_column($committed['global_components'], 'page_id'),
             'template_keys'  => array_column($committed['templates'], 'template_key'),
             'token_groups'   => array_column($committed['tokens'], 'token_group'),
-        ]);
+        ] + $sourceMeta);
         return ['report' => $out, 'target' => $committed['target']];
     }
 

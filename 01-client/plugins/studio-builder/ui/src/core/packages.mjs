@@ -11,6 +11,11 @@ export const PACKAGE_FORMAT = 'kohevo-studio-package';
 /** The server refuses bodies above ~1.5 MB; refuse obviously larger files before uploading. */
 export const MAX_PACKAGE_BYTES = 1_500_000;
 export const MODES = Object.freeze({ CREATE: 'create', REPLACE: 'replace_draft' });
+/** Phase 8B: where an import comes from. */
+export const SOURCES = Object.freeze({ PACKAGE: 'package', HTML: 'html' });
+/** The server's HTML/CSS source budgets (bytes); larger files are refused before uploading. */
+export const MAX_HTML_BYTES = 524288;
+export const MAX_CSS_BYTES = 131072;
 
 /**
  * Parse the text of a chosen file. Never throws.
@@ -40,6 +45,49 @@ export function importRequest({ pkg, mode = MODES.CREATE, includeTokens = false,
   if (mode === MODES.REPLACE) {
     body.target_page_id = page && Number.isInteger(page.id) ? page.id : null;
     body.expected_revision_id = revisionId;
+  }
+  return body;
+}
+
+/** UTF-8 byte length (the server's budgets are in bytes). */
+export function byteLength(text) {
+  return new TextEncoder().encode(String(text)).length;
+}
+
+/**
+ * Check the text of a chosen HTML or CSS file. Never throws. The browser
+ * never interprets the markup: it is sent as text and converted, filtered
+ * and validated on the server.
+ * @returns {{ ok: true, text: string } | { ok: false, error: string }}
+ */
+export function checkSourceText(text, maxBytes, { allowEmpty = false } = {}) {
+  if (typeof text !== 'string') return { ok: false, error: 'source_empty' };
+  if (!allowEmpty && text.trim() === '') return { ok: false, error: 'source_empty' };
+  if (byteLength(text) > maxBytes) return { ok: false, error: 'source_too_large' };
+  return { ok: true, text };
+}
+
+/** A page address suggestion from a title (the server validates the slug). */
+export function slugify(text) {
+  return String(text || '')
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120);
+}
+
+/**
+ * The `import_html` request body (Phase 8B). Create mode names the new
+ * page's title and slug; replace mode targets the page being edited at the
+ * revision the user is looking at (it keeps that page's address).
+ */
+export function htmlImportRequest({ html, css = '', title = '', slug = '', mode = MODES.CREATE, page = null, revisionId = null, dryRun }) {
+  const body = { html: String(html || ''), css: String(css || ''), dry_run: dryRun === true, mode };
+  const cleanTitle = String(title || '').trim();
+  if (cleanTitle !== '') body.title = cleanTitle;
+  if (mode === MODES.REPLACE) {
+    body.target_page_id = page && Number.isInteger(page.id) ? page.id : null;
+    body.expected_revision_id = revisionId;
+  } else {
+    body.slug = String(slug || '').trim();
   }
   return body;
 }

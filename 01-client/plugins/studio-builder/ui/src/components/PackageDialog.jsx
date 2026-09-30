@@ -1,18 +1,23 @@
 // PackageDialog — Phase 8A: export this page as a Kohevo Studio JSON package,
-// or import one. Import is always two explicit steps: "Analyse (dry run)"
-// (the server validates and plans, writes nothing) and "Import into draft",
-// which is enabled only when that analysis said `can_commit` for exactly the
+// or import one. Phase 8B adds a second import source, HTML/CSS: the files are
+// sent as text and converted, filtered and validated on the server into the
+// same kind of draft, through the same analysis / commit gate.
+//
+// Import is always two explicit steps: "Analyse (dry run)" (the server
+// validates and plans, writes nothing) and "Import into draft", which is
+// enabled only when that analysis said `can_commit` for exactly the
 // current inputs. Replacing this page's draft goes through the sync engine's
 // command path (drains pending edits, carries expected_revision_id, a 409
 // enters the conflict state without losing local edits); nothing is ever
 // published from here.
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Dialog } from './Dialog.jsx';
 import { useEditor, useEngineState } from './EditorContext.jsx';
 import { t, errorMessage } from '../core/messages.mjs';
 import {
-  MODES, parsePackageText, importRequest, analysisKey, canImport, splitIssues, reportOf, exportQuery, downloadPackage,
+  MODES, SOURCES, MAX_HTML_BYTES, MAX_CSS_BYTES, parsePackageText, importRequest, htmlImportRequest, checkSourceText, slugify,
+  analysisKey, canImport, splitIssues, reportOf, exportQuery, downloadPackage,
 } from '../core/packages.mjs';
 
 function IssueList({ title, issues }) {
@@ -60,11 +65,16 @@ export function ReportView({ report }) {
         </div>
       )}
       {(s.global_components_count || 0) > 0 && <p className="sbx-hint">{t('import_components_draft')}</p>}
+      {report.source_kind === 'html_css' && report.conversion && (
+        <p className="sbx-hint" data-testid="html-conversion">
+          {t('import_html_conversion', { stripped: report.conversion.stripped_security || 0, unsupported: report.conversion.unsupported_elements || 0, hidden: report.conversion.hidden_dropped || 0 })}
+        </p>
+      )}
     </div>
   );
 }
 
-export function PackageDialog({ onClose, onReplaced, initialTab = 'export' }) {
+export function PackageDialog({ onClose, onReplaced, initialTab = 'export', initialSource = SOURCES.PACKAGE }) {
   const { transport, boot, manifest, engine } = useEditor();
   const page = useEngineState((s) => s.page);
   const revision = useEngineState((s) => s.revision);
@@ -80,7 +90,12 @@ export function PackageDialog({ onClose, onReplaced, initialTab = 'export' }) {
   const [exported, setExported] = useState(false);
 
   // Import
+  const [source, setSource] = useState(initialSource);
   const [file, setFile] = useState(null); // { name, package, items }
+  const [htmlFile, setHtmlFile] = useState(null); // { name, text }
+  const [cssFile, setCssFile] = useState(null); // { name, text }
+  const [title, setTitle] = useState('');
+  const [slug, setSlug] = useState('');
   const [mode, setMode] = useState(MODES.CREATE);
   const [includeTokens, setIncludeTokens] = useState(false);
   const [report, setReport] = useState(null);
@@ -88,8 +103,17 @@ export function PackageDialog({ onClose, onReplaced, initialTab = 'export' }) {
   const [committed, setCommitted] = useState(null);
 
   const revisionId = revision ? revision.id : null;
-  const body = (dryRun) => importRequest({ pkg: file && file.package, mode, includeTokens, page, revisionId, dryRun });
-  const currentKey = file ? analysisKey(body(true)) : null;
+  const isHtml = source === SOURCES.HTML;
+  const body = (dryRun) => (isHtml
+    ? htmlImportRequest({ html: htmlFile && htmlFile.text, css: cssFile && cssFile.text, title, slug, mode, page, revisionId, dryRun })
+    : importRequest({ pkg: file && file.package, mode, includeTokens, page, revisionId, dryRun }));
+  const send = (req) => (isHtml ? transport.importHtml(req) : transport.importPackage(req));
+  const hasInput = isHtml ? !!htmlFile && (mode === MODES.REPLACE || slug.trim() !== '') : !!file;
+  // Any change of source, files, title, slug, mode or options invalidates an analysis.
+  const currentKey = useMemo(
+    () => (hasInput ? analysisKey(body(true)) : null),
+    [hasInput, isHtml, file, htmlFile, cssFile, title, slug, mode, includeTokens, page, revisionId],
+  );
   const ready = canImport(report, analyzedKey, currentKey);
   const stale = !!report && report.dry_run && analyzedKey !== currentKey;
 
@@ -115,13 +139,34 @@ export function PackageDialog({ onClose, onReplaced, initialTab = 'export' }) {
     setFile({ name: f.name, package: parsed.package, items: parsed.items });
   };
 
+  const resetAnalysis = () => {
+    setReport(null);
+    setAnalyzedKey(null);
+    setCommitted(null);
+    setError(null);
+  };
+
+  const onSourceFile = (setter, maxBytes, optional) => async (e) => {
+    const f = e.target.files && e.target.files[0];
+    resetAnalysis();
+    if (!f) { setter(null); return; }
+    const checked = checkSourceText(await f.text(), maxBytes, { allowEmpty: optional });
+    if (!checked.ok) { setter(null); setError(t(checked.error)); return; }
+    setter({ name: f.name, text: checked.text });
+  };
+
+  const onTitle = (value) => {
+    if (slug === '' || slug === slugify(title)) setSlug(slugify(value));
+    setTitle(value);
+  };
+
   const analyze = async () => {
-    if (!file || busy) return;
+    if (!hasInput || busy) return;
     setBusy(true);
     setError(null);
     setCommitted(null);
     const req = body(true);
-    const res = await transport.importPackage(req);
+    const res = await send(req);
     setBusy(false);
     const rep = reportOf(res);
     if (!rep) { setReport(null); setError(errorMessage(res.error)); return; }
@@ -136,7 +181,7 @@ export function PackageDialog({ onClose, onReplaced, initialTab = 'export' }) {
     if (mode === MODES.REPLACE) {
       let last = null;
       const ok = await engine.command(async (base) => {
-        last = await transport.importPackage({ ...body(false), expected_revision_id: base.expected_revision_id });
+        last = await send({ ...body(false), expected_revision_id: base.expected_revision_id });
         return last;
       }, { label: t('import_done') });
       setBusy(false);
@@ -147,7 +192,7 @@ export function PackageDialog({ onClose, onReplaced, initialTab = 'export' }) {
       if (onReplaced) onReplaced();
       return;
     }
-    const res = await transport.importPackage(body(false));
+    const res = await send(body(false));
     setBusy(false);
     const rep = reportOf(res);
     if (rep) setReport(rep);
@@ -163,7 +208,7 @@ export function PackageDialog({ onClose, onReplaced, initialTab = 'export' }) {
   ) : (
     <>
       <button type="button" className="sbx-btn" onClick={onClose}>{t('cancel')}</button>
-      <button type="button" className="sbx-btn" disabled={!file || busy} onClick={analyze} data-testid="import-analyze">{t('import_analyze')}</button>
+      <button type="button" className="sbx-btn" disabled={!hasInput || busy} onClick={analyze} data-testid="import-analyze">{t('import_analyze')}</button>
       <button type="button" className="sbx-btn sbx-btn--primary" disabled={!ready || busy || !!committed} onClick={commit} data-testid="import-commit">{t('import_commit')}</button>
     </>
   );
@@ -187,17 +232,51 @@ export function PackageDialog({ onClose, onReplaced, initialTab = 'export' }) {
 
       {tab === 'import' && (
         <div data-testid="package-import">
-          <p className="sbx-hint">{t('import_hint')}</p>
-          <div className="sbx-field">
-            <label className="sbx-field__label" htmlFor="sbx-pkg-file">{t('import_file')}</label>
-            <input id="sbx-pkg-file" type="file" accept=".json,application/json" onChange={onFile} />
-          </div>
+          <fieldset className="sbx-field" data-testid="import-source">
+            <legend>{t('import_source')}</legend>
+            <label><input type="radio" name="sbx-pkg-source" checked={!isHtml} onChange={() => { resetAnalysis(); setSource(SOURCES.PACKAGE); }} /> {t('import_source_package')}</label>
+            <label><input type="radio" name="sbx-pkg-source" checked={isHtml} onChange={() => { resetAnalysis(); setSource(SOURCES.HTML); }} /> {t('import_source_html')}</label>
+          </fieldset>
+          {!isHtml && (
+            <>
+              <p className="sbx-hint">{t('import_hint')}</p>
+              <div className="sbx-field">
+                <label className="sbx-field__label" htmlFor="sbx-pkg-file">{t('import_file')}</label>
+                <input id="sbx-pkg-file" type="file" accept=".json,application/json" onChange={onFile} />
+              </div>
+            </>
+          )}
+          {isHtml && (
+            <div data-testid="html-source">
+              <p className="sbx-hint">{t('import_html_hint')}</p>
+              <div className="sbx-field">
+                <label className="sbx-field__label" htmlFor="sbx-html-file">{t('import_html_file')}</label>
+                <input id="sbx-html-file" type="file" accept=".html,.htm,text/html" onChange={onSourceFile(setHtmlFile, MAX_HTML_BYTES, false)} />
+              </div>
+              <div className="sbx-field">
+                <label className="sbx-field__label" htmlFor="sbx-css-file">{t('import_css_file')}</label>
+                <input id="sbx-css-file" type="file" accept=".css,text/css" onChange={onSourceFile(setCssFile, MAX_CSS_BYTES, true)} />
+              </div>
+              {mode === MODES.CREATE && (
+                <>
+                  <div className="sbx-field">
+                    <label className="sbx-field__label" htmlFor="sbx-html-title">{t('import_title')}</label>
+                    <input id="sbx-html-title" type="text" maxLength={255} value={title} onChange={(e) => onTitle(e.target.value)} />
+                  </div>
+                  <div className="sbx-field">
+                    <label className="sbx-field__label" htmlFor="sbx-html-slug">{t('import_slug')}</label>
+                    <input id="sbx-html-slug" type="text" maxLength={191} value={slug} onChange={(e) => setSlug(e.target.value)} data-testid="html-slug" />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           <fieldset className="sbx-field">
             <legend>{t('import_mode')}</legend>
             <label><input type="radio" name="sbx-pkg-mode" checked={mode === MODES.CREATE} onChange={() => setMode(MODES.CREATE)} /> {t('import_mode_create')}</label>
             <label><input type="radio" name="sbx-pkg-mode" checked={mode === MODES.REPLACE} onChange={() => setMode(MODES.REPLACE)} disabled={!page || !Number.isInteger(page.id)} /> {t('import_mode_replace')}</label>
           </fieldset>
-          {perms.tokens && (
+          {perms.tokens && !isHtml && (
             <label className="sbx-field"><input type="checkbox" checked={includeTokens} onChange={(e) => setIncludeTokens(e.target.checked)} /> {t('import_tokens')}</label>
           )}
           {stale && <p className="sbx-hint" role="note" data-testid="package-stale">{t('import_reanalyze')}</p>}

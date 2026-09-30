@@ -32,6 +32,10 @@ Database Configuration (Step 1)
   - `json`
   - `mbstring`
   - `openssl`
+- **Optional PHP Extensions (feature-specific):**
+  - `dom` + `libxml` — required only for **Kohevo Studio HTML/CSS import** (Builder → Import / Export → HTML/CSS).
+    Without them Studio works normally and that one import refuses with `html_import_unavailable`; check the
+    **web** PHP (not only `php -m` on the CLI), since the two can differ.
 - **Database:** MySQL 8.0+ or MariaDB 10.11+ (`utf8mb4_unicode_ci`)
 - **Web Server:** Apache 2.4+ (`mod_rewrite` + `AllowOverride All`) or Nginx 1.18+ with PHP-FPM
 - **Outbound Network Access:** Outbound HTTPS (`TCP 443`) from the Client server to `LICENSE_SERVER_URL` (`POST /licensing/check`)

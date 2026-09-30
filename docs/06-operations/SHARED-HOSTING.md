@@ -20,6 +20,8 @@ Upload/extract the package there. Set up `.env` (mode `600`) from `.env.example`
 - Select PHP **8.1 or newer** and enable `pdo_mysql`, `mbstring`, `curl`, `json`, `openssl`
   (*Select PHP Version / MultiPHP*). `sodium` is preferred; without it licensing falls back to a pure-PHP
   implementation, so it is not a blocker.
+- Kohevo Studio's HTML/CSS import additionally needs `dom` and `libxml` (usually enabled by default). They are
+  optional: without them only that import is refused (`html_import_unavailable`).
 - On CloudLinux hosts the SSH shell may run inside CageFS with a different PHP than the website. Change extensions in
   the control panel, not with `selectorctl` from the shell, and check the CLI (`php -v`, `php -m`) separately from
   the web PHP when a CLI script behaves differently from the site.

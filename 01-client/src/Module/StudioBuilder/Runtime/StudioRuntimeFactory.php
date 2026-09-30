@@ -14,6 +14,7 @@ namespace Slate\Module\StudioBuilder\Runtime;
 
 use Slate\Module\StudioBuilder\Application\StudioApplicationService;
 use Slate\Module\StudioBuilder\Application\StudioPackageService;
+use Slate\Module\StudioBuilder\Package\Html\HtmlImportConverter;
 use Slate\Module\StudioBuilder\Provider\BookingServicesProvider;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
 use Slate\Module\StudioBuilder\Provider\FormsFormProvider;
@@ -60,7 +61,8 @@ final class StudioRuntimeFactory
      *   site?: \Closure,
      *   branding?: \Closure,
      *   signature?: \Closure,
-     *   known_prefixes?: \Closure
+     *   known_prefixes?: \Closure,
+     *   html_capability?: \Closure
      * } $overrides
      */
     public static function build(array $overrides = []): StudioRuntime
@@ -119,6 +121,8 @@ final class StudioRuntimeFactory
             $media,
             // Phase 8A JSON packages — reached only through the application service above.
             new StudioPackageService($pages, $revisions, $templates, $pageService, $revisionService, $templateService, $themeService, $registry, $reserved),
+            // Phase 8B HTML/CSS import converter (pure; its DOM/libxml capability check defaults to this runtime's).
+            new HtmlImportConverter($overrides['html_capability'] ?? null),
         );
 
         $publicRuntime = new StudioPublicRuntime(

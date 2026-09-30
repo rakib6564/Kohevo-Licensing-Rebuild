@@ -95,6 +95,20 @@ $sbBoot = [
     'builderUrl'    => plugin_url('studio-builder', 'admin/builder.php'),
     'brandingUrl'   => rtrim((string) SLATE_URL, '/') . '/admin/settings.php?tab=branding',
     'assistantUrl'  => $sbAssistantUrl,
+    // Phase 8B: translated builder strings (the UI's setMessages(); English is the UI's own fallback).
+    'messages'      => [
+        'import_source'          => __('studio_ui_import_source', 'Import from'),
+        'import_source_package'  => __('studio_ui_import_source_package', 'Kohevo package (.json)'),
+        'import_source_html'     => __('studio_ui_import_source_html', 'HTML/CSS'),
+        'import_html_hint'       => __('studio_ui_import_html_hint', 'Choose an HTML file and, optionally, a CSS file. The page structure is converted into Studio blocks: scripts, forms, embeds and unsupported styling are removed, external images are never downloaded, and nothing is published.'),
+        'import_html_file'       => __('studio_ui_import_html_file', 'HTML file'),
+        'import_css_file'        => __('studio_ui_import_css_file', 'CSS file (optional)'),
+        'import_title'           => __('studio_ui_import_title', 'Page title'),
+        'import_slug'            => __('studio_ui_import_slug', 'Page address (slug)'),
+        'import_html_conversion' => __('studio_ui_import_html_conversion', '{stripped} element(s) removed for security, {unsupported} unsupported element(s) and {hidden} hidden element(s) left out.'),
+        'source_empty'           => __('studio_ui_source_empty', 'The file is empty.'),
+        'source_too_large'       => __('studio_ui_source_too_large', 'This file is too large to import.'),
+    ],
 ];
 ?><!DOCTYPE html>
 <html lang="en">

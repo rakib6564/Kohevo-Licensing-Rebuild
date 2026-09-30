@@ -45,6 +45,7 @@ Complete this step-by-step verification checklist when launching the **Kohevo Ce
 
 1. **Infrastructure & Pre-Configuration**
    - [ ] PHP 8.1+ with `pdo_mysql`, `sodium`, `openssl`, `curl`, `json`, `mbstring` installed and verified.
+   - [ ] If Kohevo Studio HTML/CSS import will be used: `dom` and `libxml` enabled in the web PHP (otherwise that import is refused; the rest of Studio is unaffected).
    - [ ] Dedicated MySQL 8.0+ / MariaDB 10.11+ database (`utf8mb4_unicode_ci`) created.
    - [ ] `kohevo-client-production.zip` extracted into Client document root.
    - [ ] Apache (`AllowOverride All` + `mod_rewrite`) or Nginx server block configured with HTTPS.
