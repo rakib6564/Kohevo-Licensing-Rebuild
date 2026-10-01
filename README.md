@@ -96,8 +96,8 @@ Each app is a self-contained tree: `admin/` `customer/` `api/` `includes/` `src/
 ## Getting started (local development)
 
 **Requirements:** PHP 8.2+ (the code uses `readonly class`; CI runs 8.3), MySQL 8.0+ or MariaDB 10.11+, and the extensions
-`pdo_mysql`, `mbstring`, `curl`, `json`, `openssl` and `sodium` (Ed25519 licence verification — without it the check
-degrades to a keyed-hash comparison that is not a real signature check, so treat it as required in production);
+`pdo_mysql`, `mbstring`, `curl`, `json`, `openssl` and `sodium` (Ed25519 licence signing and verification — required, with no fallback:
+without it the installers refuse to run, Central issues no licences and a client trusts none);
 Kohevo Studio's optional HTML/CSS import also needs `dom` and `libxml`.
 No Composer/Node build is needed to run the apps; PHPMailer is added at packaging time.
 

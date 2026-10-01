@@ -42,73 +42,78 @@ class LicensingAPI {
     // Every response this server sends a client install must be verifiable
     // with ONLY the public key — the private key never leaves this server,
     // and client code (see client/LicenseSignatureVerifier.php) never
-    // touches it. sign()/verify() are pure functions with no Slate
-    // dependency beyond ext-sodium, so the exact same call also works
-    // inside that standalone client file.
+    // touches it. sign()/verify() are Ed25519 through ext-sodium only —
+    // there is deliberately no HMAC or other fallback.
+
+    /**
+     * Whether this PHP can sign and verify Ed25519 at all. There is no
+     * weaker substitute: without ext-sodium Central issues nothing.
+     */
+    public static function sodiumAvailable(): bool {
+        return function_exists('sodium_crypto_sign_detached')
+            && function_exists('sodium_crypto_sign_verify_detached')
+            && function_exists('sodium_crypto_sign_keypair');
+    }
+
+    private static function requireSodium(): void {
+        if (!self::sodiumAvailable()) {
+            throw new \RuntimeException('ext-sodium is required for licence signing; refusing to fall back to a weaker scheme.');
+        }
+    }
 
     /**
      * Generate a new Ed25519 keypair. Returns raw (not yet stored) keys as
      * base64 strings — the caller decides how/whether to persist them.
      * Never logs or echoes the secret key itself.
+     *
+     * @throws \RuntimeException without ext-sodium
      */
     public static function generateSigningKeypair(): array {
-        if (function_exists('sodium_crypto_sign_keypair')) {
-            $pair = sodium_crypto_sign_keypair();
-            return [
-                'public' => base64_encode(sodium_crypto_sign_publickey($pair)),
-                'secret' => base64_encode(sodium_crypto_sign_secretkey($pair)),
-            ];
-        }
-        $sec = random_bytes(32);
-        $pub = hash('sha256', $sec, true);
+        self::requireSodium();
+        $pair = sodium_crypto_sign_keypair();
         return [
-            'public' => base64_encode($pub),
-            'secret' => base64_encode($sec),
+            'public' => base64_encode(sodium_crypto_sign_publickey($pair)),
+            'secret' => base64_encode(sodium_crypto_sign_secretkey($pair)),
         ];
     }
 
-    /** Sign an arbitrary payload with a base64-encoded Ed25519 secret key (or HMAC fallback). */
+    /**
+     * Sign an arbitrary payload with a base64-encoded Ed25519 secret key
+     * (64 bytes). Ed25519 or an exception — never a substitute signature.
+     *
+     * @throws \RuntimeException         without ext-sodium
+     * @throws \InvalidArgumentException when the key is not a 64-byte Ed25519 secret key
+     */
     public static function sign(string $payload, string $secretKeyB64): string {
+        self::requireSodium();
         $secretKey = base64_decode($secretKeyB64, true);
-        if ($secretKey === false) {
+        if ($secretKey === false || strlen($secretKey) !== SODIUM_CRYPTO_SIGN_SECRETKEYBYTES) {
             throw new \InvalidArgumentException('Malformed secret key.');
         }
-        if (function_exists('sodium_crypto_sign_detached') && strlen($secretKey) === 64) {
-            try {
-                return base64_encode(sodium_crypto_sign_detached($payload, $secretKey));
-            } catch (\Throwable $e) {
-                // fallback to hmac below
-            }
-        }
-        $pubKey = (strlen($secretKey) === 64) ? substr($secretKey, 32) : hash('sha256', $secretKey, true);
-        return 'hmac:' . base64_encode(hash_hmac('sha256', $payload, $pubKey, true));
+        return base64_encode(sodium_crypto_sign_detached($payload, $secretKey));
     }
 
-    /** Verify a payload's signature with ONLY a base64-encoded public key. */
+    /**
+     * Verify a payload's Ed25519 signature with ONLY a base64-encoded public
+     * key. Returns false for anything that is not a valid 64-byte signature
+     * (including any "hmac:"-prefixed value) and when sodium is missing.
+     */
     public static function verify(string $payload, string $signatureB64, string $publicKeyB64): bool {
-        if (str_starts_with($signatureB64, 'hmac:')) {
-            $rawSig = base64_decode(substr($signatureB64, 5), true);
-            if ($rawSig === false) return false;
-            $pubKey = base64_decode($publicKeyB64, true);
-            if ($pubKey === false) return false;
-            $expected = hash_hmac('sha256', $payload, $pubKey, true);
-            return hash_equals($expected, $rawSig);
-        }
-
-        $signature = base64_decode($signatureB64, true);
-        $publicKey = base64_decode($publicKeyB64, true);
-        if ($signature === false || $publicKey === false) {
+        if (!function_exists('sodium_crypto_sign_verify_detached')) {
             return false;
         }
-        if (function_exists('sodium_crypto_sign_verify_detached')) {
-            try {
-                return sodium_crypto_sign_verify_detached($signature, $payload, $publicKey);
-            } catch (\Throwable $e) {
-                return false;
-            }
+        $signature = base64_decode($signatureB64, true);
+        $publicKey = base64_decode($publicKeyB64, true);
+        if ($signature === false || $publicKey === false
+            || strlen($signature) !== SODIUM_CRYPTO_SIGN_BYTES
+            || strlen($publicKey) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
+            return false;
         }
-        $expected = hash_hmac('sha256', $payload, $publicKey, true);
-        return hash_equals($expected, $signature);
+        try {
+            return sodium_crypto_sign_verify_detached($signature, $payload, $publicKey);
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     // ── Key storage ──────────────────────────────────────────────
@@ -232,11 +237,24 @@ class LicensingAPI {
             $product = Database::row('SELECT id FROM licensing_products WHERE slug = ?', [$productSlug]);
             if (!$product) return self::checkInError(404, 'invalid_request');
 
+            // Ed25519 or nothing: no sodium, no key, or a key that is not a
+            // real 64-byte Ed25519 secret (e.g. a pseudo-key from an old
+            // no-sodium build) means Central issues no signed state at all.
+            if (!self::sodiumAvailable()) {
+                slate_log('Licensing check-in: ext-sodium is not available; refusing to issue unsigned or weakly signed state', 'error');
+                return self::checkInError(500, 'server_error');
+            }
             $secretKey = self::signingSecretKey();
             if ($secretKey === null) {
                 slate_log('Licensing check-in: no signing keypair provisioned', 'error');
                 return self::checkInError(500, 'server_error');
             }
+            $secretRaw = base64_decode($secretKey, true);
+            if ($secretRaw === false || strlen($secretRaw) !== SODIUM_CRYPTO_SIGN_SECRETKEYBYTES) {
+                slate_log('Licensing check-in: the stored signing key is not a 64-byte Ed25519 secret key; regenerate it with bin/licensing-generate-keys.php --force', 'error');
+                return self::checkInError(500, 'server_error');
+            }
+            unset($secretRaw);
 
             $keyHash = hash('sha256', $licenseKey);
 

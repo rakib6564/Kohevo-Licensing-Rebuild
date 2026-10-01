@@ -52,6 +52,17 @@ if (file_exists($installMarker)) {
     exit;
 }
 
+// ── Hard requirement: ext-sodium ────────────────────────────
+// Licence signatures are Ed25519 only; there is no weaker fallback, so an
+// install on PHP without sodium could never trust (or issue) a licence.
+if (!function_exists('sodium_crypto_sign_verify_detached')) {
+    http_response_code(500);
+    header('Content-Type: text/plain; charset=UTF-8');
+    echo "Kohevo cannot be installed: the PHP sodium extension (ext-sodium) is required for licence signature verification and is not loaded.\n"
+       . "Enable it (cPanel: Select PHP Version / MultiPHP -> sodium) and reload this page.\n";
+    exit;
+}
+
 require __DIR__ . '/includes/helpers.php';
 require __DIR__ . '/includes/installer_flow.php';
 

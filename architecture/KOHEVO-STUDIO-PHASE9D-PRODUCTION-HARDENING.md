@@ -93,7 +93,8 @@ defaults to 0 on the client. `APP_ENV=testing` is a locked test bypass (D19): do
 
 - Licence signature verification falls back to `hash_hmac(sha256, payload, publicKey)` when ext-sodium is missing —
   forgeable by anyone holding the public key (flagged by the repo's own anti-drift HMAC rule). Docs now say sodium is
-  required; failing closed is a licensing-behaviour change for a decision.
+  required; failing closed is a licensing-behaviour change for a decision. **Resolved after Phase 9D:** every HMAC
+  path was removed and sodium is enforced (see CHANGELOG, Unreleased → Security).
 - Nginx guide has no equivalent of the Apache `api/v1` → `api/v1.php` rewrite (untested here; not Studio).
 - `FormsAPI::clientIp()` trusts `CF-Connecting-IP` / `X-Forwarded-For` (forms plugin, spoofable).
 - Release zips still ship `plugins/studio-builder/ui/` (sources); now denied on both servers, could also be excluded

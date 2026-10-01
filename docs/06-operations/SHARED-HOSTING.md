@@ -18,8 +18,8 @@ Upload/extract the package there. Set up `.env` (mode `600`) from `.env.example`
 ## PHP
 
 - Select PHP **8.2 or newer** and enable `pdo_mysql`, `mbstring`, `curl`, `json`, `openssl` and `sodium`
-  (*Select PHP Version / MultiPHP*). `sodium` does the Ed25519 licence verification; without it the check degrades to a
-  keyed-hash comparison that is not a real signature check, so do not run production without it.
+  (*Select PHP Version / MultiPHP*). `sodium` does the Ed25519 licence signing and verification and is required — there is no fallback:
+  without it the installers refuse to run, Central issues nothing and a client trusts no licence.
 - Kohevo Studio's HTML/CSS import additionally needs `dom` and `libxml` (usually enabled by default). They are
   optional: without them only that import is refused (`html_import_unavailable`).
 - On CloudLinux hosts the SSH shell may run inside CageFS with a different PHP than the website. Change extensions in

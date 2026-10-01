@@ -27,7 +27,7 @@ Database Configuration (Step 1)
 - **PHP:** PHP 8.2+ (CI runs PHP 8.3; also verified on PHP 8.5). The code uses `readonly class`, so PHP 8.1 cannot run it.
 - **Required PHP Extensions:**
   - `pdo_mysql`
-  - `sodium` (`ext-sodium` for Ed25519 signature verification — required in production: without it the client's signature check degrades to a keyed-hash comparison that is not a real signature check)
+  - `sodium` (`ext-sodium` for Ed25519 signature verification — required: without it the installer refuses to run and the client trusts no licence — there is no fallback)
   - `curl` (required by `RemoteLicenseClient` to communicate with the Central Licensing Server over HTTPS)
   - `json`
   - `mbstring`

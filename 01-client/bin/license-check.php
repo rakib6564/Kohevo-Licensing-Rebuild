@@ -27,6 +27,11 @@ if (PHP_SAPI !== 'cli') {
     exit;
 }
 
+if (!function_exists('sodium_crypto_sign_verify_detached')) {
+    fwrite(STDERR, "ext-sodium is required to verify licence signatures and is not loaded on this PHP; refusing to run.\n");
+    exit(1);
+}
+
 require __DIR__ . '/../config.php';
 require __DIR__ . '/../plugins/licensing/client/RemoteLicenseClient.php';
 
