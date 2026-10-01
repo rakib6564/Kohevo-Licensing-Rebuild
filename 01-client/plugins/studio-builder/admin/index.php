@@ -93,46 +93,54 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
 <?php if ($canEdit): ?>
 <div class="card">
-    <h2 class="card-title"><?= e(__('studio_new_page', 'New page')) ?></h2>
-    <form method="post" class="form-grid">
+    <div class="card-header">
+        <div>
+            <h2><?= e(__('studio_new_page', 'New page')) ?></h2>
+            <div class="card-sub"><?= e(__('studio_new_page_sub', 'Give it a title and an address, then open it in the builder.')) ?></div>
+        </div>
+    </div>
+    <form method="post">
         <?= csrf_field() ?>
-        <div>
-            <label class="field-label" for="sb-title"><?= e(__('title', 'Title')) ?></label>
-            <input id="sb-title" name="title" required maxlength="255" value="<?= e($formValues['title']) ?>">
+        <div class="field-row field-row-2">
+            <div class="field">
+                <label class="field-label" for="sb-title"><?= e(__('title', 'Title')) ?> <span class="field-required">*</span></label>
+                <input type="text" id="sb-title" name="title" required maxlength="255" placeholder="<?= e(__('studio_title_placeholder', 'About us')) ?>" value="<?= e($formValues['title']) ?>">
+            </div>
+            <div class="field">
+                <label class="field-label" for="sb-slug"><?= e(__('studio_slug', 'Address (slug)')) ?></label>
+                <input type="text" id="sb-slug" name="slug" maxlength="191" pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" placeholder="about-us" value="<?= e($formValues['slug']) ?>">
+                <div class="field-hint"><?= e(__('studio_slug_hint', 'Lowercase letters, numbers and hyphens. Leave blank to use the title.')) ?></div>
+            </div>
         </div>
-        <div>
-            <label class="field-label" for="sb-slug"><?= e(__('studio_slug', 'Address (slug)')) ?></label>
-            <input id="sb-slug" name="slug" maxlength="191" pattern="[a-z0-9]([a-z0-9-]*[a-z0-9])?" placeholder="about-us" value="<?= e($formValues['slug']) ?>">
+        <div class="field-row <?= $templates !== [] ? 'field-row-3' : 'field-row-2' ?>">
+            <div class="field">
+                <label class="field-label" for="sb-type"><?= e(__('studio_page_type', 'Type')) ?></label>
+                <select id="sb-type" name="page_type">
+                    <?php foreach (['page' => __('studio_type_page', 'Page'), 'landing' => __('studio_type_landing', 'Landing page'), 'header_partial' => __('studio_type_header', 'Site header'), 'footer_partial' => __('studio_type_footer', 'Site footer')] as $v => $l): ?>
+                        <option value="<?= e($v) ?>"<?= $formValues['page_type'] === $v ? ' selected' : '' ?>><?= e($l) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="field">
+                <label class="field-label" for="sb-route"><?= e(__('studio_route_mode', 'Route')) ?></label>
+                <select id="sb-route" name="route_mode">
+                    <option value="standalone"<?= $formValues['route_mode'] === 'standalone' ? ' selected' : '' ?>><?= e(__('studio_route_standalone', 'Its own address')) ?></option>
+                    <option value="homepage"<?= $formValues['route_mode'] === 'homepage' ? ' selected' : '' ?>><?= e(__('studio_route_homepage', 'Site homepage')) ?></option>
+                </select>
+            </div>
+            <?php if ($templates !== []): ?>
+            <div class="field">
+                <label class="field-label" for="sb-template"><?= e(__('studio_template', 'Start from template')) ?></label>
+                <select id="sb-template" name="template_key">
+                    <option value=""><?= e(__('studio_template_blank', 'Blank page')) ?></option>
+                    <?php foreach ($templates as $tpl): ?>
+                        <option value="<?= e((string) $tpl['template_key']) ?>"<?= $formValues['template_key'] === $tpl['template_key'] ? ' selected' : '' ?>><?= e((string) $tpl['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php endif; ?>
         </div>
-        <div>
-            <label class="field-label" for="sb-type"><?= e(__('studio_page_type', 'Type')) ?></label>
-            <select id="sb-type" name="page_type">
-                <?php foreach (['page' => __('studio_type_page', 'Page'), 'landing' => __('studio_type_landing', 'Landing page'), 'header_partial' => __('studio_type_header', 'Site header'), 'footer_partial' => __('studio_type_footer', 'Site footer')] as $v => $l): ?>
-                    <option value="<?= e($v) ?>"<?= $formValues['page_type'] === $v ? ' selected' : '' ?>><?= e($l) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div>
-            <label class="field-label" for="sb-route"><?= e(__('studio_route_mode', 'Route')) ?></label>
-            <select id="sb-route" name="route_mode">
-                <option value="standalone"<?= $formValues['route_mode'] === 'standalone' ? ' selected' : '' ?>><?= e(__('studio_route_standalone', 'Its own address')) ?></option>
-                <option value="homepage"<?= $formValues['route_mode'] === 'homepage' ? ' selected' : '' ?>><?= e(__('studio_route_homepage', 'Site homepage')) ?></option>
-            </select>
-        </div>
-        <?php if ($templates !== []): ?>
-        <div>
-            <label class="field-label" for="sb-template"><?= e(__('studio_template', 'Start from template')) ?></label>
-            <select id="sb-template" name="template_key">
-                <option value=""><?= e(__('studio_template_blank', 'Blank page')) ?></option>
-                <?php foreach ($templates as $tpl): ?>
-                    <option value="<?= e((string) $tpl['template_key']) ?>"<?= $formValues['template_key'] === $tpl['template_key'] ? ' selected' : '' ?>><?= e((string) $tpl['name']) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <?php endif; ?>
-        <div>
-            <button type="submit" class="btn btn-primary"><?= e(__('studio_create_and_open', 'Create and open builder')) ?></button>
-        </div>
+        <button type="submit" class="btn btn-primary"><?= e(__('studio_create_and_open', 'Create and open builder')) ?></button>
     </form>
 </div>
 <?php endif; ?>
