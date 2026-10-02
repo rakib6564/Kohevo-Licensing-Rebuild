@@ -151,7 +151,18 @@ final class StudioStylesheet
             . '.sb-heading--align-right{text-align:right}'
             . '.sb-button--sm{padding:.4rem .8rem;font-size:.875rem}'
             . '.sb-button--md{padding:.7rem 1.3rem;font-size:1rem}'
-            . '.sb-button--lg{padding:.9rem 1.8rem;font-size:1.125rem}';
+            . '.sb-button--lg{padding:.9rem 1.8rem;font-size:1.125rem}'
+            . '.sb-font-normal{font-weight:400}.sb-font-medium{font-weight:500}.sb-font-semibold{font-weight:600}.sb-font-bold{font-weight:700}.sb-font-extrabold{font-weight:800}'
+            . '.sb-uppercase{text-transform:uppercase}.sb-lowercase{text-transform:lowercase}.sb-capitalize{text-transform:capitalize}.sb-normal-case{text-transform:none}'
+            . '.sb-leading-tight{line-height:1.25}.sb-leading-snug{line-height:1.375}.sb-leading-normal{line-height:1.5}.sb-leading-relaxed{line-height:1.625}.sb-leading-loose{line-height:2}'
+            . '.sb-tracking-tighter{letter-spacing:-0.05em}.sb-tracking-tight{letter-spacing:-0.025em}.sb-tracking-normal{letter-spacing:0}.sb-tracking-wide{letter-spacing:0.025em}.sb-tracking-wider{letter-spacing:0.05em}.sb-tracking-widest{letter-spacing:0.1em}'
+            . '.sb-radius-none{border-radius:0}.sb-radius-sm{border-radius:.25rem}.sb-radius-md{border-radius:.5rem}.sb-radius-lg{border-radius:1rem}.sb-radius-xl{border-radius:1.5rem}.sb-radius-2xl{border-radius:2rem}.sb-radius-full{border-radius:9999px}'
+            . '.sb-shadow-none{box-shadow:none}.sb-shadow-sm{box-shadow:0 1px 2px 0 rgba(0,0,0,0.05)}.sb-shadow-md{box-shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -2px rgba(0,0,0,0.1)}.sb-shadow-lg{box-shadow:0 10px 15px -3px rgba(0,0,0,0.1),0 4px 6px -4px rgba(0,0,0,0.1)}.sb-shadow-xl{box-shadow:0 20px 25px -5px rgba(0,0,0,0.1),0 8px 10px -6px rgba(0,0,0,0.1)}.sb-shadow-2xl{box-shadow:0 25px 50px -12px rgba(0,0,0,0.25)}.sb-shadow-inner{box-shadow:inset 0 2px 4px 0 rgba(0,0,0,0.05)}'
+            . '.sb-border{border:1px solid var(--sb-border-default,#e2e8f0)}.sb-border-2{border-width:2px}.sb-border-4{border-width:4px}.sb-border-none{border:none}.sb-border-dashed{border-style:dashed}'
+            . '.sb-m-auto{margin:auto}.sb-mx-auto{margin-left:auto;margin-right:auto}.sb-my-auto{margin-top:auto;margin-bottom:auto}.sb-m-none{margin:0}.sb-my-none{margin-top:0;margin-bottom:0}'
+            . '.sb-align-desktop-left{text-align:left}.sb-align-desktop-center{text-align:center}.sb-align-desktop-right{text-align:right}'
+            . '.sb-align-tablet-left{text-align:left}.sb-align-tablet-center{text-align:center}.sb-align-tablet-right{text-align:right}'
+            . '.sb-align-mobile-left{text-align:left}.sb-align-mobile-center{text-align:center}.sb-align-mobile-right{text-align:right}';
 
         foreach (self::WIDTHS as $name => $max) {
             $css .= '.sb-w-' . $name . '{max-width:' . $max . ';margin-left:auto;margin-right:auto}';

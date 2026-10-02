@@ -139,4 +139,28 @@ final class DocumentOperation
     {
         return ['op' => $this->op, 'payload' => $this->payload];
     }
+
+    /**
+     * @param array<string, mixed> $responsive
+     */
+    public static function updateBlockResponsive(string $blockId, array $responsive): self
+    {
+        return new self(self::OP_UPDATE_BLOCK_RESPONSIVE, ['block_id' => $blockId, 'responsive' => $responsive]);
+    }
+
+    /**
+     * @param list<string> $classNames
+     */
+    public static function updateBlockClassNames(string $blockId, array $classNames): self
+    {
+        return new self(self::OP_UPDATE_BLOCK_CLASS_NAMES, ['block_id' => $blockId, 'classNames' => $classNames]);
+    }
+
+    /**
+     * @param array<string, mixed> $attributes
+     */
+    public static function updateBlockAttributes(string $blockId, array $attributes): self
+    {
+        return new self(self::OP_UPDATE_BLOCK_ATTRIBUTES, ['block_id' => $blockId, 'attributes' => $attributes]);
+    }
 }

@@ -79,7 +79,8 @@ test('operations use the canonical {op, payload} vocabulary', () => {
   assert.deepEqual(ops.insertBlock('sec_1', 0, { type: 'core.heading' }), { op: 'insert_block', payload: { parent_id: 'sec_1', index: 0, block: { type: 'core.heading' } } });
   assert.deepEqual(ops.moveSection('sec_1', 3), { op: 'move_section', payload: { section_id: 'sec_1', to_index: 3 } });
   const serverOps = ['update_settings', 'update_seo', 'update_template', 'insert_section', 'remove_section', 'move_section', 'update_section_layout',
-    'update_section_visibility', 'insert_block', 'remove_block', 'move_block', 'update_block_props', 'update_block_style', 'update_block_visibility', 'update_block_bindings'];
+    'update_section_visibility', 'insert_block', 'remove_block', 'move_block', 'update_block_props', 'update_block_style', 'update_block_visibility', 'update_block_bindings',
+    'update_block_responsive', 'update_block_class_names', 'update_block_attributes'];
   for (const name of Object.values(ops.OPS)) assert.ok(serverOps.includes(name), `${name} is a server DocumentOperation`);
 });
 

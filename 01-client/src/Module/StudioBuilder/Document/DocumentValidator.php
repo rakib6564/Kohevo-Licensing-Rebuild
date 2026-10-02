@@ -858,6 +858,179 @@ final class DocumentValidator
                 }
             }
         }
+
+        self::validateVisualStyles($style, $path, $errors);
+    }
+
+    private static function isSafeCssValue(string $val): bool
+    {
+        if (str_contains($val, '<') || str_contains($val, '>') || str_contains($val, ';') || str_contains($val, '{') || str_contains($val, '}')) {
+            return false;
+        }
+        $lower = strtolower($val);
+        if (str_contains($lower, 'javascript:') || str_contains($lower, 'expression(') || str_contains($lower, 'behavior:')) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * @param array<string, mixed> $style
+     * @param list<array{path: string, code: string, message: string}> $errors
+     */
+    private static function validateVisualStyles(array $style, string $path, array &$errors): void
+    {
+        // 1. typography
+        if (isset($style['typography'])) {
+            $typo = $style['typography'];
+            if (is_string($typo)) {
+                if (!self::isSafeCssValue($typo)) {
+                    $errors[] = ValidationResult::issue("{$path}.typography", 'invalid_style_value', 'Unsafe typography value.');
+                }
+            } elseif (is_array($typo) && !array_is_list($typo)) {
+                if (isset($typo['size'])) {
+                    $size = $typo['size'];
+                    if (is_string($size)) {
+                        if (!self::isSafeCssValue($size)) {
+                            $errors[] = ValidationResult::issue("{$path}.typography.size", 'invalid_style_value', 'Unsafe typography size value.');
+                        }
+                    } elseif (is_array($size) && !array_is_list($size)) {
+                        foreach ($size as $bp => $sVal) {
+                            if (!in_array((string) $bp, CanonicalDocumentSchema::ALLOWED_RESPONSIVE_BREAKPOINTS, true)) {
+                                $errors[] = ValidationResult::issue("{$path}.typography.size.{$bp}", 'invalid_breakpoint', "Unknown breakpoint '{$bp}'.");
+                            } elseif (!is_string($sVal) || !self::isSafeCssValue($sVal)) {
+                                $errors[] = ValidationResult::issue("{$path}.typography.size.{$bp}", 'invalid_style_value', 'Unsafe responsive typography size.');
+                            }
+                        }
+                    } else {
+                        $errors[] = ValidationResult::issue("{$path}.typography.size", 'invalid_style_value', 'typography.size must be a string or responsive map.');
+                    }
+                }
+                if (isset($typo['weight']) && (!is_string($typo['weight']) && !is_int($typo['weight']) || !in_array((string) $typo['weight'], CanonicalDocumentSchema::ALLOWED_FONT_WEIGHTS, true))) {
+                    $errors[] = ValidationResult::issue("{$path}.typography.weight", 'invalid_font_weight', 'Invalid font weight.');
+                }
+                if (isset($typo['transform']) && (!is_string($typo['transform']) || !in_array($typo['transform'], CanonicalDocumentSchema::ALLOWED_TEXT_TRANSFORMS, true))) {
+                    $errors[] = ValidationResult::issue("{$path}.typography.transform", 'invalid_text_transform', 'Invalid text transform.');
+                }
+                foreach (['line_height', 'letter_spacing', 'color', 'font_family'] as $field) {
+                    if (isset($typo[$field]) && (!is_string($typo[$field]) && !is_numeric($typo[$field]) || !self::isSafeCssValue((string) $typo[$field]))) {
+                        $errors[] = ValidationResult::issue("{$path}.typography.{$field}", 'invalid_style_value', "Invalid typography {$field}.");
+                    }
+                }
+            } else {
+                $errors[] = ValidationResult::issue("{$path}.typography", 'invalid_style_value', 'style.typography must be an object or string.');
+            }
+        }
+
+        // 2. color
+        if (isset($style['color']) && (!is_string($style['color']) || !self::isSafeCssValue($style['color']))) {
+            $errors[] = ValidationResult::issue("{$path}.color", 'invalid_style_value', 'Invalid color value.');
+        }
+
+        // 3. background
+        if (isset($style['background'])) {
+            $bg = $style['background'];
+            if (is_string($bg)) {
+                if (!self::isSafeCssValue($bg)) {
+                    $errors[] = ValidationResult::issue("{$path}.background", 'invalid_style_value', 'Invalid background value.');
+                }
+            } elseif (is_array($bg) && !array_is_list($bg)) {
+                foreach (['color', 'gradient'] as $bgKey) {
+                    if (isset($bg[$bgKey]) && (!is_string($bg[$bgKey]) || !self::isSafeCssValue($bg[$bgKey]))) {
+                        $errors[] = ValidationResult::issue("{$path}.background.{$bgKey}", 'invalid_style_value', "Invalid background {$bgKey}.");
+                    }
+                }
+            } else {
+                $errors[] = ValidationResult::issue("{$path}.background", 'invalid_style_value', 'style.background must be a string or object.');
+            }
+        }
+
+        // 4. spacing
+        if (isset($style['spacing'])) {
+            $sp = $style['spacing'];
+            if (is_array($sp) && !array_is_list($sp)) {
+                foreach ($sp as $sKey => $sVal) {
+                    if ((!is_string($sVal) && !is_numeric($sVal)) || !self::isSafeCssValue((string) $sVal)) {
+                        $errors[] = ValidationResult::issue("{$path}.spacing.{$sKey}", 'invalid_style_value', "Invalid spacing {$sKey}.");
+                    }
+                }
+            } else {
+                $errors[] = ValidationResult::issue("{$path}.spacing", 'invalid_style_value', 'style.spacing must be an object.');
+            }
+        }
+
+        // 5. border
+        if (isset($style['border'])) {
+            $bd = $style['border'];
+            if (is_array($bd) && !array_is_list($bd)) {
+                if (isset($bd['style']) && (!is_string($bd['style']) || !in_array($bd['style'], CanonicalDocumentSchema::ALLOWED_BORDER_STYLES, true))) {
+                    $errors[] = ValidationResult::issue("{$path}.border.style", 'invalid_border_style', 'Invalid border style.');
+                }
+                if (isset($bd['radius'])) {
+                    $radius = (string) $bd['radius'];
+                    if (preg_match('/^[a-z0-9_-]+$/i', $radius) && !preg_match('/\d+(px|rem|em|%)/i', $radius)) {
+                        if (!in_array($radius, CanonicalDocumentSchema::ALLOWED_RADIUS_PRESETS, true)) {
+                            $errors[] = ValidationResult::issue("{$path}.border.radius", 'invalid_radius_preset', "Unknown border radius preset '{$radius}'.");
+                        }
+                    } elseif (!self::isSafeCssValue($radius)) {
+                        $errors[] = ValidationResult::issue("{$path}.border.radius", 'invalid_style_value', 'Invalid border radius.');
+                    }
+                }
+                foreach (['width', 'color'] as $bField) {
+                    if (isset($bd[$bField]) && ((!is_string($bd[$bField]) && !is_numeric($bd[$bField])) || !self::isSafeCssValue((string) $bd[$bField]))) {
+                        $errors[] = ValidationResult::issue("{$path}.border.{$bField}", 'invalid_style_value', "Invalid border {$bField}.");
+                    }
+                }
+            } else {
+                $errors[] = ValidationResult::issue("{$path}.border", 'invalid_style_value', 'style.border must be an object.');
+            }
+        }
+
+        // 6. shadow
+        if (isset($style['shadow'])) {
+            $sh = $style['shadow'];
+            if (is_string($sh)) {
+                if (preg_match('/^[a-z0-9_-]+$/i', $sh)) {
+                    if (!in_array($sh, CanonicalDocumentSchema::ALLOWED_SHADOW_PRESETS, true)) {
+                        $errors[] = ValidationResult::issue("{$path}.shadow", 'invalid_shadow_preset', "Unknown shadow preset '{$sh}'.");
+                    }
+                } elseif (!self::isSafeCssValue($sh)) {
+                    $errors[] = ValidationResult::issue("{$path}.shadow", 'invalid_style_value', 'Invalid shadow value.');
+                }
+            } elseif (is_array($sh) && !array_is_list($sh)) {
+                foreach ($sh as $shKey => $shVal) {
+                    if ((!is_string($shVal) && !is_numeric($shVal)) || !self::isSafeCssValue((string) $shVal)) {
+                        $errors[] = ValidationResult::issue("{$path}.shadow.{$shKey}", 'invalid_style_value', "Invalid shadow {$shKey}.");
+                    }
+                }
+            } else {
+                $errors[] = ValidationResult::issue("{$path}.shadow", 'invalid_style_value', 'style.shadow must be a string or object.');
+            }
+        }
+
+        // 7. dimensions
+        if (isset($style['dimensions'])) {
+            $dim = $style['dimensions'];
+            if (is_array($dim) && !array_is_list($dim)) {
+                foreach (['width', 'height', 'min_height', 'max_width'] as $dField) {
+                    if (isset($dim[$dField]) && ((!is_string($dim[$dField]) && !is_numeric($dim[$dField])) || !self::isSafeCssValue((string) $dim[$dField]))) {
+                        $errors[] = ValidationResult::issue("{$path}.dimensions.{$dField}", 'invalid_style_value', "Invalid dimensions {$dField}.");
+                    }
+                }
+            } else {
+                $errors[] = ValidationResult::issue("{$path}.dimensions", 'invalid_style_value', 'style.dimensions must be an object.');
+            }
+        }
+
+        // 8. opacity
+        if (isset($style['opacity']) && (!is_numeric($style['opacity']) || $style['opacity'] < 0 || $style['opacity'] > 1)) {
+            $errors[] = ValidationResult::issue("{$path}.opacity", 'invalid_opacity', 'style.opacity must be a number between 0 and 1.');
+        }
+
+        // 9. z_index
+        if (isset($style['z_index']) && (!is_int($style['z_index']) || $style['z_index'] < -999 || $style['z_index'] > 9999)) {
+            $errors[] = ValidationResult::issue("{$path}.z_index", 'invalid_z_index', 'style.z_index must be an integer between -999 and 9999.');
+        }
     }
 
     /**

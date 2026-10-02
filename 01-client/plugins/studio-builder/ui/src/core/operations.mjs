@@ -29,6 +29,9 @@ export const OPS = Object.freeze({
   UPDATE_BLOCK_STYLE: 'update_block_style',
   UPDATE_BLOCK_VISIBILITY: 'update_block_visibility',
   UPDATE_BLOCK_BINDINGS: 'update_block_bindings',
+  UPDATE_BLOCK_RESPONSIVE: 'update_block_responsive',
+  UPDATE_BLOCK_CLASS_NAMES: 'update_block_class_names',
+  UPDATE_BLOCK_ATTRIBUTES: 'update_block_attributes',
 });
 
 /** Operations that change the tree's shape are sent right away, not debounced. */
@@ -43,6 +46,9 @@ const REPLACE_TARGET = {
   [OPS.UPDATE_BLOCK_STYLE]: 'block_id',
   [OPS.UPDATE_BLOCK_VISIBILITY]: 'block_id',
   [OPS.UPDATE_BLOCK_BINDINGS]: 'block_id',
+  [OPS.UPDATE_BLOCK_RESPONSIVE]: 'block_id',
+  [OPS.UPDATE_BLOCK_CLASS_NAMES]: 'block_id',
+  [OPS.UPDATE_BLOCK_ATTRIBUTES]: 'block_id',
   [OPS.UPDATE_SECTION_LAYOUT]: 'section_id',
   [OPS.UPDATE_SECTION_VISIBILITY]: 'section_id',
 };
@@ -75,6 +81,9 @@ export const updateBlockProps = (blockId, props) => op(OPS.UPDATE_BLOCK_PROPS, {
 export const updateBlockStyle = (blockId, style) => op(OPS.UPDATE_BLOCK_STYLE, { block_id: blockId, style });
 export const updateBlockVisibility = (blockId, visibility) => op(OPS.UPDATE_BLOCK_VISIBILITY, { block_id: blockId, visibility });
 export const updateBlockBindings = (blockId, bindings) => op(OPS.UPDATE_BLOCK_BINDINGS, { block_id: blockId, bindings });
+export const updateBlockResponsive = (blockId, responsive) => op(OPS.UPDATE_BLOCK_RESPONSIVE, { block_id: blockId, responsive });
+export const updateBlockClassNames = (blockId, classNames) => op(OPS.UPDATE_BLOCK_CLASS_NAMES, { block_id: blockId, class_names: classNames });
+export const updateBlockAttributes = (blockId, attributes) => op(OPS.UPDATE_BLOCK_ATTRIBUTES, { block_id: blockId, attributes });
 export const updateSettings = (settings) => op(OPS.UPDATE_SETTINGS, { settings });
 export const updateSeo = (seo) => op(OPS.UPDATE_SEO, { seo });
 
@@ -219,6 +228,36 @@ export function applyLocal(doc, operation, ctx = {}) {
         if (b.id !== p.block_id) return b;
         hit = true;
         return { ...b, [field]: asObject(p[field]) };
+      });
+      if (!hit) throw notFound(p.block_id);
+      return next;
+    }
+    case OPS.UPDATE_BLOCK_RESPONSIVE: {
+      let hit = false;
+      const next = mapBlocks(doc, (b) => {
+        if (b.id !== p.block_id) return b;
+        hit = true;
+        return { ...b, responsive: asObject(p.responsive) };
+      });
+      if (!hit) throw notFound(p.block_id);
+      return next;
+    }
+    case OPS.UPDATE_BLOCK_CLASS_NAMES: {
+      let hit = false;
+      const next = mapBlocks(doc, (b) => {
+        if (b.id !== p.block_id) return b;
+        hit = true;
+        return { ...b, classNames: asList(p.class_names) };
+      });
+      if (!hit) throw notFound(p.block_id);
+      return next;
+    }
+    case OPS.UPDATE_BLOCK_ATTRIBUTES: {
+      let hit = false;
+      const next = mapBlocks(doc, (b) => {
+        if (b.id !== p.block_id) return b;
+        hit = true;
+        return { ...b, attributes: asObject(p.attributes) };
       });
       if (!hit) throw notFound(p.block_id);
       return next;

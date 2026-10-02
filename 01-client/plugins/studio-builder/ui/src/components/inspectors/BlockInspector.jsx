@@ -37,10 +37,15 @@ export function BlockInspector({ info }) {
 
   const props = asObject(block.props);
   const style = asObject(block.style);
+  const responsive = asObject(block.responsive);
+  const classNames = asList(block.classNames);
+  const attributes = asObject(block.attributes);
   const slots = asList(def.binding_slots);
   const tabs = [
     { key: 'content', label: t('tab_content') },
     { key: 'style', label: t('tab_style') },
+    { key: 'advanced', label: t('tab_advanced') },
+    { key: 'responsive', label: t('tab_responsive') },
     { key: 'visibility', label: t('tab_visibility') },
     ...(slots.length ? [{ key: 'data', label: t('tab_data') }] : []),
   ];
@@ -85,6 +90,89 @@ export function BlockInspector({ info }) {
               onChange={(align) => applyOp(ops.updateBlockStyle(block.id, { ...style, align: Object.keys(align).length ? align : null }), { label: def.label })}
             />
           )}
+          {capabilities.includes('typography') && (
+            <fieldset className="sbx-fieldset">
+              <legend>{t('typography')}</legend>
+              <div className="sbx-field">
+                <label className="sbx-field__label" htmlFor={`${idPrefix}-typo-weight`}>{t('font_weight')}</label>
+                <select
+                  id={`${idPrefix}-typo-weight`}
+                  value={asObject(style.typography).weight || ''}
+                  onChange={(e) => applyOp(ops.updateBlockStyle(block.id, {
+                    ...style,
+                    typography: { ...asObject(style.typography), weight: e.target.value || undefined },
+                  }), { label: def.label })}
+                >
+                  <option value="">{t('inherit')}</option>
+                  <option value="normal">Normal (400)</option>
+                  <option value="medium">Medium (500)</option>
+                  <option value="semibold">Semibold (600)</option>
+                  <option value="bold">Bold (700)</option>
+                  <option value="extrabold">Extra Bold (800)</option>
+                </select>
+              </div>
+              <div className="sbx-field">
+                <label className="sbx-field__label" htmlFor={`${idPrefix}-typo-transform`}>{t('text_transform')}</label>
+                <select
+                  id={`${idPrefix}-typo-transform`}
+                  value={asObject(style.typography).transform || ''}
+                  onChange={(e) => applyOp(ops.updateBlockStyle(block.id, {
+                    ...style,
+                    typography: { ...asObject(style.typography), transform: e.target.value || undefined },
+                  }), { label: def.label })}
+                >
+                  <option value="">{t('none')}</option>
+                  <option value="uppercase">UPPERCASE</option>
+                  <option value="lowercase">lowercase</option>
+                  <option value="capitalize">Capitalize</option>
+                </select>
+              </div>
+            </fieldset>
+          )}
+          {capabilities.includes('border') && (
+            <fieldset className="sbx-fieldset">
+              <legend>{t('border')}</legend>
+              <div className="sbx-field">
+                <label className="sbx-field__label" htmlFor={`${idPrefix}-border-radius`}>{t('border_radius')}</label>
+                <select
+                  id={`${idPrefix}-border-radius`}
+                  value={asObject(style.border).radius || ''}
+                  onChange={(e) => applyOp(ops.updateBlockStyle(block.id, {
+                    ...style,
+                    border: { ...asObject(style.border), radius: e.target.value || undefined },
+                  }), { label: def.label })}
+                >
+                  <option value="">{t('none')}</option>
+                  <option value="sm">Small</option>
+                  <option value="md">Medium</option>
+                  <option value="lg">Large</option>
+                  <option value="xl">XL</option>
+                  <option value="2xl">2XL</option>
+                  <option value="full">Full (Pill)</option>
+                </select>
+              </div>
+            </fieldset>
+          )}
+          {capabilities.includes('shadow') && (
+            <div className="sbx-field">
+              <label className="sbx-field__label" htmlFor={`${idPrefix}-shadow`}>{t('box_shadow')}</label>
+              <select
+                id={`${idPrefix}-shadow`}
+                value={typeof style.shadow === 'string' ? style.shadow : ''}
+                onChange={(e) => applyOp(ops.updateBlockStyle(block.id, {
+                  ...style,
+                  shadow: e.target.value || undefined,
+                }), { label: def.label })}
+              >
+                <option value="">{t('none')}</option>
+                <option value="sm">Small</option>
+                <option value="md">Medium</option>
+                <option value="lg">Large</option>
+                <option value="xl">XL</option>
+                <option value="2xl">2XL</option>
+              </select>
+            </div>
+          )}
           {Object.keys(STYLE_TOKEN_CATEGORIES).filter((k) => capabilities.includes(k)).map((key) => (
             <div className="sbx-field" key={key}>
               <label className="sbx-field__label" htmlFor={`${idPrefix}-${key}`}>{key.replace('_token', '').replace('_', ' ')}</label>
@@ -96,6 +184,92 @@ export function BlockInspector({ info }) {
               />
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === 'advanced' && (
+        <div role="tabpanel" id={`${idPrefix}-panel-advanced`} aria-labelledby={`${idPrefix}-tab-advanced`}>
+          <div className="sbx-field">
+            <label className="sbx-field__label" htmlFor={`${idPrefix}-classes`}>{t('classes_label')}</label>
+            <input
+              id={`${idPrefix}-classes`}
+              type="text"
+              className="sbx-input"
+              value={classNames.join(' ')}
+              placeholder="e.g. my-custom-class hero-banner"
+              onChange={(e) => {
+                const names = e.target.value.trim().split(/\s+/).filter(Boolean);
+                applyOp(ops.updateBlockClassNames(block.id, names), { label: def.label });
+              }}
+            />
+            <p className="sbx-hint">{t('classes_hint')}</p>
+          </div>
+          <div className="sbx-field">
+            <label className="sbx-field__label" htmlFor={`${idPrefix}-z-index`}>{t('z_index_label')}</label>
+            <input
+              id={`${idPrefix}-z-index`}
+              type="number"
+              className="sbx-input"
+              value={style.z_index !== undefined && style.z_index !== null ? style.z_index : ''}
+              placeholder="0"
+              onChange={(e) => {
+                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                applyOp(ops.updateBlockStyle(block.id, { ...style, z_index: val }), { label: def.label });
+              }}
+            />
+          </div>
+          <div className="sbx-field">
+            <label className="sbx-field__label" htmlFor={`${idPrefix}-attributes`}>{t('attributes_label')}</label>
+            <input
+              id={`${idPrefix}-attributes`}
+              type="text"
+              className="sbx-input"
+              value={Object.entries(attributes).map(([k, v]) => `${k}=${v}`).join(' ')}
+              placeholder="data-custom=value aria-role=article"
+              onChange={(e) => {
+                const pairs = e.target.value.trim().split(/\s+/).filter(Boolean);
+                const nextAttrs = {};
+                for (const pair of pairs) {
+                  const [k, v] = pair.split('=');
+                  if (k) nextAttrs[k] = v || '';
+                }
+                applyOp(ops.updateBlockAttributes(block.id, nextAttrs), { label: def.label });
+              }}
+            />
+            <p className="sbx-hint">{t('attributes_hint')}</p>
+          </div>
+        </div>
+      )}
+
+      {tab === 'responsive' && (
+        <div role="tabpanel" id={`${idPrefix}-panel-responsive`} aria-labelledby={`${idPrefix}-tab-responsive`}>
+          <fieldset className="sbx-fieldset">
+            <legend>{t('device_overrides')}</legend>
+            {['desktop', 'tablet', 'mobile'].map((device) => {
+              const devOverride = asObject(responsive[device]);
+              return (
+                <div key={device} className="sbx-field" style={{ marginBottom: '12px' }}>
+                  <label className="sbx-field__label" style={{ fontWeight: 'bold' }}>
+                    {device === 'desktop' ? t('device_desktop') : device === 'tablet' ? t('device_tablet') : t('device_mobile')}
+                  </label>
+                  <label className="sbx-field sbx-field--check">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(devOverride.hide)}
+                      onChange={(e) => {
+                        const nextDev = { ...devOverride, hide: e.target.checked };
+                        if (!e.target.checked) delete nextDev.hide;
+                        const nextResp = { ...responsive, [device]: nextDev };
+                        if (Object.keys(nextDev).length === 0) delete nextResp[device];
+                        applyOp(ops.updateBlockResponsive(block.id, nextResp), { label: def.label });
+                      }}
+                    />
+                    <span>{t('hide_device', { device })}</span>
+                  </label>
+                </div>
+              );
+            })}
+          </fieldset>
         </div>
       )}
 

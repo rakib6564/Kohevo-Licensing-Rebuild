@@ -102,11 +102,13 @@ final class ControlSchema
      * @param list<array<string, mixed>> $contentControls
      * @param list<array<string, mixed>> $styleControls
      * @param list<array<string, mixed>> $advancedControls
+     * @param list<array<string, mixed>> $responsiveControls
      */
     public static function standard(
         array $contentControls = [],
         array $styleControls = [],
         array $advancedControls = [],
+        array $responsiveControls = [],
     ): self {
         $schema = new self();
         if ($contentControls !== []) {
@@ -119,11 +121,90 @@ final class ControlSchema
                 ['id' => 'styling', 'label' => 'Appearance', 'controls' => $styleControls],
             ]);
         }
-        if ($advancedControls !== []) {
-            $schema->addTab(self::TAB_ADVANCED, 'Advanced', [
-                ['id' => 'advanced', 'label' => 'Advanced Settings', 'controls' => $advancedControls],
+        $advanced = $advancedControls !== [] ? $advancedControls : self::advancedStandardControls();
+        $schema->addTab(self::TAB_ADVANCED, 'Advanced', [
+            ['id' => 'advanced', 'label' => 'Advanced Settings', 'controls' => $advanced],
+        ]);
+        if ($responsiveControls !== []) {
+            $schema->addTab(self::TAB_RESPONSIVE, 'Responsive', [
+                ['id' => 'responsive_overrides', 'label' => 'Device Overrides', 'controls' => $responsiveControls],
             ]);
         }
         return $schema;
+    }
+
+    /**
+     * Standard advanced controls (CSS classes, custom attributes, Z-index).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function advancedStandardControls(): array
+    {
+        return [
+            ['key' => 'classNames', 'type' => 'tags', 'label' => 'CSS Classes', 'description' => 'Custom CSS classes for advanced styling.'],
+            ['key' => 'attributes', 'type' => 'key_value', 'label' => 'HTML Attributes', 'description' => 'Custom data or ARIA attributes.'],
+            ['key' => 'z_index', 'type' => 'number', 'label' => 'Z-Index', 'default' => 0],
+        ];
+    }
+
+    /**
+     * Standard typography style controls.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function typographyControls(): array
+    {
+        return [
+            ['key' => 'typography.size', 'type' => 'responsive_unit', 'label' => 'Font Size', 'default' => '1rem'],
+            ['key' => 'typography.weight', 'type' => 'select', 'label' => 'Font Weight', 'options' => \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::ALLOWED_FONT_WEIGHTS, 'default' => 'normal'],
+            ['key' => 'typography.transform', 'type' => 'select', 'label' => 'Text Transform', 'options' => \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::ALLOWED_TEXT_TRANSFORMS, 'default' => 'none'],
+            ['key' => 'typography.line_height', 'type' => 'text', 'label' => 'Line Height', 'default' => '1.5'],
+            ['key' => 'typography.letter_spacing', 'type' => 'text', 'label' => 'Letter Spacing', 'default' => 'normal'],
+            ['key' => 'typography.color', 'type' => 'color', 'label' => 'Text Color', 'default' => 'inherit'],
+        ];
+    }
+
+    /**
+     * Standard border & radius controls.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function borderControls(): array
+    {
+        return [
+            ['key' => 'border.style', 'type' => 'select', 'label' => 'Border Style', 'options' => \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::ALLOWED_BORDER_STYLES, 'default' => 'none'],
+            ['key' => 'border.width', 'type' => 'unit', 'label' => 'Border Width', 'default' => '1px'],
+            ['key' => 'border.color', 'type' => 'color', 'label' => 'Border Color', 'default' => '#e2e8f0'],
+            ['key' => 'border.radius', 'type' => 'select', 'label' => 'Border Radius', 'options' => \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::ALLOWED_RADIUS_PRESETS, 'default' => 'none'],
+        ];
+    }
+
+    /**
+     * Standard shadow controls.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function shadowControls(): array
+    {
+        return [
+            ['key' => 'shadow', 'type' => 'select', 'label' => 'Box Shadow', 'options' => \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::ALLOWED_SHADOW_PRESETS, 'default' => 'none'],
+        ];
+    }
+
+    /**
+     * Standard responsive overrides controls.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function responsiveOverridesControls(): array
+    {
+        return [
+            ['key' => 'responsive.desktop.align', 'type' => 'select', 'label' => 'Desktop Alignment', 'options' => \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::ALLOWED_ALIGNMENTS],
+            ['key' => 'responsive.tablet.align', 'type' => 'select', 'label' => 'Tablet Alignment', 'options' => \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::ALLOWED_ALIGNMENTS],
+            ['key' => 'responsive.mobile.align', 'type' => 'select', 'label' => 'Mobile Alignment', 'options' => \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::ALLOWED_ALIGNMENTS],
+            ['key' => 'responsive.desktop.hide', 'type' => 'toggle', 'label' => 'Hide on Desktop', 'default' => false],
+            ['key' => 'responsive.tablet.hide', 'type' => 'toggle', 'label' => 'Hide on Tablet', 'default' => false],
+            ['key' => 'responsive.mobile.hide', 'type' => 'toggle', 'label' => 'Hide on Mobile', 'default' => false],
+        ];
     }
 }

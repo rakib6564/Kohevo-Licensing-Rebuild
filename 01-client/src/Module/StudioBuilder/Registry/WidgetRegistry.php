@@ -159,16 +159,19 @@ final class WidgetRegistry implements WidgetRegistryInterface
                     ['key' => 'content_width', 'type' => 'select', 'label' => 'Content Width'],
                     ['key' => 'min_height', 'type' => 'select', 'label' => 'Minimum Height'],
                 ],
-                styleControls: [
-                    ['key' => 'background_token', 'type' => 'token', 'label' => 'Background'],
-                    ['key' => 'padding_y', 'type' => 'select', 'label' => 'Vertical Padding'],
-                ],
-                advancedControls: [
-                    ['key' => 'custom_classes', 'type' => 'text', 'label' => 'CSS Classes'],
-                ],
+                styleControls: array_merge(
+                    [
+                        ['key' => 'background_token', 'type' => 'token', 'label' => 'Background'],
+                        ['key' => 'padding_y', 'type' => 'select', 'label' => 'Vertical Padding'],
+                    ],
+                    \Slate\Module\StudioBuilder\Schema\ControlSchema::borderControls(),
+                    \Slate\Module\StudioBuilder\Schema\ControlSchema::shadowControls(),
+                ),
+                advancedControls: \Slate\Module\StudioBuilder\Schema\ControlSchema::advancedStandardControls(),
+                responsiveControls: \Slate\Module\StudioBuilder\Schema\ControlSchema::responsiveOverridesControls(),
             ),
             allowsChildren: true,
-            supports: ['responsive', 'custom_attributes', 'style_tokens'],
+            supports: ['responsive', 'custom_attributes', 'style_tokens', 'border', 'shadow'],
         ));
 
         // 2. layout.container
@@ -189,12 +192,18 @@ final class WidgetRegistry implements WidgetRegistryInterface
                     ['key' => 'width', 'type' => 'select', 'label' => 'Width Mode'],
                     ['key' => 'alignment', 'type' => 'select', 'label' => 'Alignment'],
                 ],
-                styleControls: [
-                    ['key' => 'padding', 'type' => 'select', 'label' => 'Padding'],
-                ],
+                styleControls: array_merge(
+                    [
+                        ['key' => 'padding', 'type' => 'select', 'label' => 'Padding'],
+                    ],
+                    \Slate\Module\StudioBuilder\Schema\ControlSchema::borderControls(),
+                    \Slate\Module\StudioBuilder\Schema\ControlSchema::shadowControls(),
+                ),
+                advancedControls: \Slate\Module\StudioBuilder\Schema\ControlSchema::advancedStandardControls(),
+                responsiveControls: \Slate\Module\StudioBuilder\Schema\ControlSchema::responsiveOverridesControls(),
             ),
             allowsChildren: true,
-            supports: ['responsive', 'custom_attributes'],
+            supports: ['responsive', 'custom_attributes', 'border', 'shadow'],
         ));
 
         // 3. layout.flex
@@ -219,12 +228,18 @@ final class WidgetRegistry implements WidgetRegistryInterface
                     ['key' => 'justify', 'type' => 'select', 'label' => 'Justify Content'],
                     ['key' => 'align', 'type' => 'select', 'label' => 'Align Items'],
                 ],
-                styleControls: [
-                    ['key' => 'gap', 'type' => 'select', 'label' => 'Gap'],
-                ],
+                styleControls: array_merge(
+                    [
+                        ['key' => 'gap', 'type' => 'select', 'label' => 'Gap'],
+                    ],
+                    \Slate\Module\StudioBuilder\Schema\ControlSchema::borderControls(),
+                    \Slate\Module\StudioBuilder\Schema\ControlSchema::shadowControls(),
+                ),
+                advancedControls: \Slate\Module\StudioBuilder\Schema\ControlSchema::advancedStandardControls(),
+                responsiveControls: \Slate\Module\StudioBuilder\Schema\ControlSchema::responsiveOverridesControls(),
             ),
             allowsChildren: true,
-            supports: ['responsive', 'custom_attributes'],
+            supports: ['responsive', 'custom_attributes', 'border', 'shadow'],
         ));
 
         // 4. layout.grid
@@ -245,12 +260,18 @@ final class WidgetRegistry implements WidgetRegistryInterface
                     ['key' => 'columns', 'type' => 'number', 'label' => 'Columns'],
                     ['key' => 'align', 'type' => 'select', 'label' => 'Alignment'],
                 ],
-                styleControls: [
-                    ['key' => 'gap', 'type' => 'select', 'label' => 'Gap'],
-                ],
+                styleControls: array_merge(
+                    [
+                        ['key' => 'gap', 'type' => 'select', 'label' => 'Gap'],
+                    ],
+                    \Slate\Module\StudioBuilder\Schema\ControlSchema::borderControls(),
+                    \Slate\Module\StudioBuilder\Schema\ControlSchema::shadowControls(),
+                ),
+                advancedControls: \Slate\Module\StudioBuilder\Schema\ControlSchema::advancedStandardControls(),
+                responsiveControls: \Slate\Module\StudioBuilder\Schema\ControlSchema::responsiveOverridesControls(),
             ),
             allowsChildren: true,
-            supports: ['responsive', 'custom_attributes'],
+            supports: ['responsive', 'custom_attributes', 'border', 'shadow'],
         ));
 
         // 5. core.heading
@@ -270,12 +291,18 @@ final class WidgetRegistry implements WidgetRegistryInterface
                     ['key' => 'text', 'type' => 'text', 'label' => 'Text'],
                     ['key' => 'level', 'type' => 'select', 'label' => 'HTML Level'],
                 ],
-                styleControls: [
-                    ['key' => 'align', 'type' => 'select', 'label' => 'Alignment'],
-                ],
+                styleControls: array_merge(
+                    [
+                        ['key' => 'align', 'type' => 'select', 'label' => 'Alignment'],
+                    ],
+                    \Slate\Module\StudioBuilder\Schema\ControlSchema::typographyControls(),
+                    \Slate\Module\StudioBuilder\Schema\ControlSchema::shadowControls(),
+                ),
+                advancedControls: \Slate\Module\StudioBuilder\Schema\ControlSchema::advancedStandardControls(),
+                responsiveControls: \Slate\Module\StudioBuilder\Schema\ControlSchema::responsiveOverridesControls(),
             ),
             allowsChildren: false,
-            supports: ['responsive_typography', 'custom_attributes', 'style_tokens'],
+            supports: ['responsive_typography', 'custom_attributes', 'style_tokens', 'shadow'],
         ));
 
         // 6. core.text
@@ -296,11 +323,16 @@ final class WidgetRegistry implements WidgetRegistryInterface
                 contentControls: [
                     ['key' => 'content', 'type' => 'textarea', 'label' => 'Content'],
                 ],
-                styleControls: [
-                    ['key' => 'size', 'type' => 'select', 'label' => 'Font Size'],
-                    ['key' => 'align', 'type' => 'select', 'label' => 'Alignment'],
-                    ['key' => 'color_token', 'type' => 'token', 'label' => 'Color Token'],
-                ],
+                styleControls: array_merge(
+                    [
+                        ['key' => 'size', 'type' => 'select', 'label' => 'Font Size'],
+                        ['key' => 'align', 'type' => 'select', 'label' => 'Alignment'],
+                        ['key' => 'color_token', 'type' => 'token', 'label' => 'Color Token'],
+                    ],
+                    \Slate\Module\StudioBuilder\Schema\ControlSchema::typographyControls(),
+                ),
+                advancedControls: \Slate\Module\StudioBuilder\Schema\ControlSchema::advancedStandardControls(),
+                responsiveControls: \Slate\Module\StudioBuilder\Schema\ControlSchema::responsiveOverridesControls(),
             ),
             allowsChildren: false,
             supports: ['responsive_typography', 'custom_attributes', 'style_tokens'],
@@ -323,13 +355,19 @@ final class WidgetRegistry implements WidgetRegistryInterface
                 contentControls: [
                     ['key' => 'link', 'type' => 'link', 'label' => 'Link'],
                 ],
-                styleControls: [
-                    ['key' => 'variant', 'type' => 'select', 'label' => 'Variant'],
-                    ['key' => 'full_width', 'type' => 'toggle', 'label' => 'Full Width'],
-                ],
+                styleControls: array_merge(
+                    [
+                        ['key' => 'variant', 'type' => 'select', 'label' => 'Variant'],
+                        ['key' => 'full_width', 'type' => 'toggle', 'label' => 'Full Width'],
+                    ],
+                    \Slate\Module\StudioBuilder\Schema\ControlSchema::borderControls(),
+                    \Slate\Module\StudioBuilder\Schema\ControlSchema::shadowControls(),
+                ),
+                advancedControls: \Slate\Module\StudioBuilder\Schema\ControlSchema::advancedStandardControls(),
+                responsiveControls: \Slate\Module\StudioBuilder\Schema\ControlSchema::responsiveOverridesControls(),
             ),
             allowsChildren: false,
-            supports: ['responsive', 'custom_attributes', 'style_tokens'],
+            supports: ['responsive', 'custom_attributes', 'style_tokens', 'border', 'shadow'],
         ));
 
         // Also add the foundation blocks

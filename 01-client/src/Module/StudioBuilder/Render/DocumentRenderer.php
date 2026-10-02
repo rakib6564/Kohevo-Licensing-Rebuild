@@ -169,8 +169,11 @@ final class DocumentRenderer
             }
         }
 
+        $inlineStyles = $this->buildInlineStyles(is_array($block['style'] ?? null) ? $block['style'] : []);
+        $styleAttr = $inlineStyles !== '' ? ' style="' . Html::e($inlineStyles) . '"' : '';
+
         $metadata = empty($block[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($block['id'] ?? ''), $type) : '';
-        return '<div' . Html::classAttr($classes) . $metadata . $attrs . '>' . $inner . '</div>';
+        return '<div' . Html::classAttr($classes) . $metadata . $attrs . $styleAttr . '>' . $inner . '</div>';
     }
 
     /**
@@ -325,7 +328,119 @@ final class DocumentRenderer
         foreach (self::STYLE_UTILITIES as $key => $kind) {
             $classes[] = $collector->tokenClass($kind, $style[$key] ?? null, $theme);
         }
+
+        // Sprint 2 visual style classes
+        if (isset($style['typography']) && is_array($style['typography'])) {
+            $typo = $style['typography'];
+            if (isset($typo['weight']) && in_array((string) $typo['weight'], CanonicalDocumentSchema::ALLOWED_FONT_WEIGHTS, true)) {
+                $classes[] = 'sb-font-' . $typo['weight'];
+            }
+            if (isset($typo['transform']) && in_array((string) $typo['transform'], CanonicalDocumentSchema::ALLOWED_TEXT_TRANSFORMS, true)) {
+                $classes[] = 'sb-' . $typo['transform'];
+            }
+        }
+        if (isset($style['border']) && is_array($style['border'])) {
+            if (isset($style['border']['radius']) && in_array((string) $style['border']['radius'], CanonicalDocumentSchema::ALLOWED_RADIUS_PRESETS, true)) {
+                $classes[] = 'sb-radius-' . $style['border']['radius'];
+            }
+            if (isset($style['border']['style']) && in_array((string) $style['border']['style'], CanonicalDocumentSchema::ALLOWED_BORDER_STYLES, true)) {
+                $classes[] = 'sb-border-' . $style['border']['style'];
+            }
+        }
+        if (isset($style['shadow']) && is_string($style['shadow']) && in_array($style['shadow'], CanonicalDocumentSchema::ALLOWED_SHADOW_PRESETS, true)) {
+            $classes[] = 'sb-shadow-' . $style['shadow'];
+        }
+
         return $classes;
+    }
+
+    /**
+     * Build sanitized inline CSS style string for custom visual values.
+     *
+     * @param array<string, mixed> $style
+     */
+    private function buildInlineStyles(array $style): string
+    {
+        $rules = [];
+
+        // Typography custom values
+        if (isset($style['typography']) && is_array($style['typography'])) {
+            $typo = $style['typography'];
+            if (isset($typo['size']) && is_string($typo['size'])) {
+                $rules[] = 'font-size:' . $typo['size'];
+            }
+            if (isset($typo['color']) && is_string($typo['color']) && !str_starts_with($typo['color'], 'text.') && !str_starts_with($typo['color'], 'color.')) {
+                $rules[] = 'color:' . $typo['color'];
+            }
+            if (isset($typo['line_height']) && (is_string($typo['line_height']) || is_numeric($typo['line_height']))) {
+                $rules[] = 'line-height:' . $typo['line_height'];
+            }
+            if (isset($typo['letter_spacing']) && is_string($typo['letter_spacing'])) {
+                $rules[] = 'letter-spacing:' . $typo['letter_spacing'];
+            }
+            if (isset($typo['font_family']) && is_string($typo['font_family'])) {
+                $rules[] = 'font-family:' . $typo['font_family'];
+            }
+        }
+
+        // Color
+        if (isset($style['color']) && is_string($style['color']) && !str_starts_with($style['color'], 'text.') && !str_starts_with($style['color'], 'color.')) {
+            $rules[] = 'color:' . $style['color'];
+        }
+
+        // Background
+        if (isset($style['background'])) {
+            if (is_string($style['background']) && !str_starts_with($style['background'], 'surface.') && !str_starts_with($style['background'], 'color.')) {
+                $rules[] = 'background:' . $style['background'];
+            } elseif (is_array($style['background'])) {
+                if (isset($style['background']['color']) && is_string($style['background']['color'])) {
+                    $rules[] = 'background-color:' . $style['background']['color'];
+                }
+                if (isset($style['background']['gradient']) && is_string($style['background']['gradient'])) {
+                    $rules[] = 'background-image:' . $style['background']['gradient'];
+                }
+            }
+        }
+
+        // Border
+        if (isset($style['border']) && is_array($style['border'])) {
+            if (isset($style['border']['width'])) {
+                $rules[] = 'border-width:' . $style['border']['width'];
+            }
+            if (isset($style['border']['color']) && is_string($style['border']['color'])) {
+                $rules[] = 'border-color:' . $style['border']['color'];
+            }
+            if (isset($style['border']['radius']) && !in_array((string) $style['border']['radius'], CanonicalDocumentSchema::ALLOWED_RADIUS_PRESETS, true)) {
+                $rules[] = 'border-radius:' . $style['border']['radius'];
+            }
+        }
+
+        // Shadow
+        if (isset($style['shadow']) && is_string($style['shadow']) && !in_array($style['shadow'], CanonicalDocumentSchema::ALLOWED_SHADOW_PRESETS, true)) {
+            $rules[] = 'box-shadow:' . $style['shadow'];
+        }
+
+        // Dimensions
+        if (isset($style['dimensions']) && is_array($style['dimensions'])) {
+            foreach (['width', 'height', 'min_height', 'max_width'] as $dim) {
+                if (isset($style['dimensions'][$dim])) {
+                    $cssProp = str_replace('_', '-', $dim);
+                    $rules[] = $cssProp . ':' . $style['dimensions'][$dim];
+                }
+            }
+        }
+
+        // Opacity
+        if (isset($style['opacity'])) {
+            $rules[] = 'opacity:' . $style['opacity'];
+        }
+
+        // Z-Index
+        if (isset($style['z_index'])) {
+            $rules[] = 'z-index:' . $style['z_index'];
+        }
+
+        return implode(';', $rules);
     }
 
     /**
