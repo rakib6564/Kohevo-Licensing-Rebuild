@@ -73,10 +73,11 @@ final class ModuleBlockDefinitions
         ];
     }
 
-    /** Core foundation blocks plus the business-module catalogue blocks. */
+    /** Core foundation blocks plus layout primitives and the business-module catalogue blocks. */
     public static function studioRegistry(): BlockRegistry
     {
         $registry = BlockRegistry::withCoreFoundationBlocks();
+        BlockRegistry::registerLayoutBlocks($registry);
         foreach (self::all() as $definition) {
             $registry->register($definition);
         }

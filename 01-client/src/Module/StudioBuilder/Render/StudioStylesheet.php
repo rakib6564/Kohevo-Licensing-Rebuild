@@ -84,13 +84,83 @@ final class StudioStylesheet
             . '.sb-unavailable{padding:.75rem 1rem;border:1px dashed #b45309;color:#92400e;background:#fffbeb;border-radius:6px;font-size:.875rem}'
             . '.sb-preview-banner{position:sticky;top:0;z-index:10;padding:.5rem 1rem;background:#1e293b;color:#fff;font:600 .8rem/1.4 system-ui,sans-serif;text-align:center}'
             . '.sb-platform-signature{padding:.75rem 1rem;text-align:center;font-size:.75rem;color:#6b7280}'
-            . '.sb-platform-signature img{height:1rem;width:auto;vertical-align:middle}';
+            . '.sb-platform-signature img{height:1rem;width:auto;vertical-align:middle}'
+            . '.sb-layout-section{position:relative;width:100%}'
+            . '.sb-layout-section--boxed{max-width:80rem;margin-left:auto;margin-right:auto}'
+            . '.sb-layout-section--full{width:100%}'
+            . '.sb-layout-section--narrow{max-width:48rem;margin-left:auto;margin-right:auto}'
+            . '.sb-layout-section--min-screen{min-height:100vh}'
+            . '.sb-layout-section--min-half-screen{min-height:50vh}'
+            . '.sb-layout-section--min-sm{min-height:16rem}'
+            . '.sb-layout-section--min-md{min-height:24rem}'
+            . '.sb-layout-section--min-lg{min-height:36rem}'
+            . '.sb-layout-section--min-xl{min-height:48rem}'
+            . '.sb-container{width:100%;margin-left:auto;margin-right:auto}'
+            . '.sb-container--compact{max-width:48rem}'
+            . '.sb-container--constrained{max-width:75rem}'
+            . '.sb-container--full{max-width:100%}'
+            . '.sb-container--align-left{margin-left:0;margin-right:auto}'
+            . '.sb-container--align-center{margin-left:auto;margin-right:auto}'
+            . '.sb-container--align-right{margin-left:auto;margin-right:0}'
+            . '.sb-flex{display:flex}'
+            . '.sb-flex--row{flex-direction:row}'
+            . '.sb-flex--column{flex-direction:column}'
+            . '.sb-flex--row-reverse{flex-direction:row-reverse}'
+            . '.sb-flex--column-reverse{flex-direction:column-reverse}'
+            . '.sb-flex--wrap{flex-wrap:wrap}'
+            . '.sb-flex--nowrap{flex-wrap:nowrap}'
+            . '.sb-flex--wrap-reverse{flex-wrap:wrap-reverse}'
+            . '.sb-flex--justify-start{justify-content:flex-start}'
+            . '.sb-flex--justify-center{justify-content:center}'
+            . '.sb-flex--justify-end{justify-content:flex-end}'
+            . '.sb-flex--justify-between{justify-content:space-between}'
+            . '.sb-flex--justify-around{justify-content:space-around}'
+            . '.sb-flex--justify-evenly{justify-content:space-evenly}'
+            . '.sb-flex--align-start{align-items:flex-start}'
+            . '.sb-flex--align-center{align-items:center}'
+            . '.sb-flex--align-end{align-items:flex-end}'
+            . '.sb-flex--align-stretch{align-items:stretch}'
+            . '.sb-flex--align-baseline{align-items:baseline}'
+            . '.sb-grid{display:grid}'
+            . '.sb-grid--align-start{align-items:flex-start}'
+            . '.sb-grid--align-center{align-items:center}'
+            . '.sb-grid--align-end{align-items:flex-end}'
+            . '.sb-grid--align-stretch{align-items:stretch}'
+            . '.sb-text{margin:0 0 1rem;line-height:1.6}'
+            . '.sb-text--xs{font-size:.75rem}'
+            . '.sb-text--sm{font-size:.875rem}'
+            . '.sb-text--base{font-size:1rem}'
+            . '.sb-text--lg{font-size:1.125rem}'
+            . '.sb-text--xl{font-size:1.25rem}'
+            . '.sb-text--lead{font-size:1.25rem;line-height:1.75;font-weight:400}'
+            . '.sb-text--align-left{text-align:left}'
+            . '.sb-text--align-center{text-align:center}'
+            . '.sb-text--align-right{text-align:right}'
+            . '.sb-text--align-justify{text-align:justify}'
+            . '.sb-heading--xs{font-size:.875rem}'
+            . '.sb-heading--sm{font-size:1rem}'
+            . '.sb-heading--base{font-size:1.25rem}'
+            . '.sb-heading--lg{font-size:1.5rem}'
+            . '.sb-heading--xl{font-size:1.875rem}'
+            . '.sb-heading--2xl{font-size:2.25rem}'
+            . '.sb-heading--3xl{font-size:3rem}'
+            . '.sb-heading--4xl{font-size:3.75rem}'
+            . '.sb-heading--5xl{font-size:4.5rem}'
+            . '.sb-heading--align-left{text-align:left}'
+            . '.sb-heading--align-center{text-align:center}'
+            . '.sb-heading--align-right{text-align:right}'
+            . '.sb-button--sm{padding:.4rem .8rem;font-size:.875rem}'
+            . '.sb-button--md{padding:.7rem 1.3rem;font-size:1rem}'
+            . '.sb-button--lg{padding:.9rem 1.8rem;font-size:1.125rem}';
 
         foreach (self::WIDTHS as $name => $max) {
             $css .= '.sb-w-' . $name . '{max-width:' . $max . ';margin-left:auto;margin-right:auto}';
         }
         foreach (self::GAP as $name => $value) {
             $css .= '.sb-gap-' . $name . '{gap:' . $value . '}';
+        }
+        foreach (self::PADDING as $name => $value) {
+            $css .= '.sb-pad-' . $name . '{padding:' . $value . '}';
         }
 
         $css .= self::responsive('');
@@ -100,8 +170,16 @@ final class StudioStylesheet
         foreach (self::HIDE_QUERIES as $bp => $query) {
             $css .= '@media ' . $query . '{.sb-hide-' . $bp . '{display:none!important}}';
         }
+        $css .= '@media (min-width:1024px){.sb-hide-desktop{display:none!important}}';
+        $css .= '@media (min-width:768px) and (max-width:1023.98px){.sb-hide-tablet{display:none!important}}';
+        $css .= '@media (max-width:767.98px){.sb-hide-mobile{display:none!important}}';
 
         return self::$cache = $css;
+    }
+
+    public static function resetCache(): void
+    {
+        self::$cache = null;
     }
 
     private static function responsive(string $prefix): string

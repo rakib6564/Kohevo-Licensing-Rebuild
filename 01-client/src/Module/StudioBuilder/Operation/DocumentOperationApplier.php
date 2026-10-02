@@ -71,6 +71,9 @@ final class DocumentOperationApplier
             DocumentOperation::OP_UPDATE_BLOCK_STYLE => self::updateBlockField($document, $payload, 'style'),
             DocumentOperation::OP_UPDATE_BLOCK_VISIBILITY => self::updateBlockField($document, $payload, 'visibility'),
             DocumentOperation::OP_UPDATE_BLOCK_BINDINGS => self::updateBlockField($document, $payload, 'bindings'),
+            DocumentOperation::OP_UPDATE_BLOCK_RESPONSIVE => self::updateBlockField($document, $payload, 'responsive'),
+            DocumentOperation::OP_UPDATE_BLOCK_CLASS_NAMES => self::updateBlockArrayField($document, $payload, 'classNames'),
+            DocumentOperation::OP_UPDATE_BLOCK_ATTRIBUTES => self::updateBlockField($document, $payload, 'attributes'),
             default => throw new StudioValidationException([
                 ['path' => '$.op', 'code' => 'unknown_operation', 'message' => "Unknown Studio document operation '{$operation->op}'."],
             ]),
@@ -282,6 +285,11 @@ final class DocumentOperationApplier
             'version'    => $definition->version(),
             'visibility' => is_array($block['visibility'] ?? null) ? $block['visibility'] : CanonicalDocumentSchema::defaultVisibility(),
         ];
+        foreach (CanonicalDocumentSchema::OPTIONAL_BLOCK_KEYS as $optKey) {
+            if (isset($block[$optKey])) {
+                $newBlock[$optKey] = $block[$optKey];
+            }
+        }
 
         $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
 
@@ -535,6 +543,33 @@ final class DocumentOperationApplier
     }
 
     /**
+     * Replace an array field (e.g. `classNames`) wholesale for a target block id.
+     *
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function updateBlockArrayField(array $document, array $payload, string $field): array
+    {
+        $blockId = self::requireString($payload, 'block_id', '$.payload.block_id');
+        $value   = self::requireList($payload, $field, "\$.payload.{$field}");
+
+        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
+        $found = false;
+        foreach ($sections as $sIdx => $section) {
+            if (!is_array($section)) {
+                continue;
+            }
+            $blocks = is_array($section['blocks'] ?? null) ? $section['blocks'] : [];
+            $sections[$sIdx]['blocks'] = self::updateBlockFieldRecursive($blocks, $blockId, $field, $value, $found);
+        }
+
+        self::assertFound($found, 'block_id', $blockId, 'block');
+        $document['sections'] = $sections;
+        return $document;
+    }
+
+    /**
      * @param list<array<string, mixed>> $blocks
      * @param array<string, mixed> $value
      * @return list<array<string, mixed>>
@@ -573,6 +608,21 @@ final class DocumentOperationApplier
         if (!is_array($value) || ($value !== [] && array_is_list($value))) {
             throw new StudioValidationException([
                 ['path' => $path, 'code' => 'invalid_payload_field', 'message' => "payload.{$key} must be a JSON object."],
+            ]);
+        }
+        return $value;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return list<mixed>
+     */
+    private static function requireList(array $payload, string $key, string $path): array
+    {
+        $value = $payload[$key] ?? null;
+        if (!is_array($value) || !array_is_list($value)) {
+            throw new StudioValidationException([
+                ['path' => $path, 'code' => 'invalid_payload_field', 'message' => "payload.{$key} must be a JSON array (list)."],
             ]);
         }
         return $value;

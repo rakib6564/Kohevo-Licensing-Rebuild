@@ -62,6 +62,11 @@ final class BlockRendererRegistry
         $registry->register(new CoreRenderers\ButtonRenderer());
         $registry->register(new CoreRenderers\FeatureListRenderer());
         $registry->register(new CoreRenderers\ContainerRenderer());
+        $registry->register(new CoreRenderers\SectionRenderer());
+        $registry->register(new CoreRenderers\LayoutContainerRenderer());
+        $registry->register(new CoreRenderers\FlexRenderer());
+        $registry->register(new CoreRenderers\GridRenderer());
+        $registry->register(new CoreRenderers\TextRenderer());
         return $registry;
     }
 

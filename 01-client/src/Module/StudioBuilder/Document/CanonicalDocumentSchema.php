@@ -109,8 +109,27 @@ final class CanonicalDocumentSchema
     ];
 
     public const ALLOWED_BREAKPOINTS = ['base', 'sm', 'md', 'lg'];
+    public const ALLOWED_RESPONSIVE_BREAKPOINTS = ['desktop', 'tablet', 'mobile', 'base', 'sm', 'md', 'lg'];
     public const ALLOWED_AUTH_STATES = ['any', 'authenticated', 'guest'];
 
+    /**
+     * Mandatory keys that every block in a canonical document must possess.
+     */
+    public const REQUIRED_BLOCK_KEYS = [
+        'id',
+        'type',
+        'version',
+        'props',
+        'style',
+        'visibility',
+        'bindings',
+        'children',
+    ];
+
+    /**
+     * All allowed block keys, including required keys and optional extension keys
+     * (responsive overrides, attributes, classNames, conditions, metadata).
+     */
     public const ALLOWED_BLOCK_KEYS = [
         'id',
         'type',
@@ -120,6 +139,22 @@ final class CanonicalDocumentSchema
         'visibility',
         'bindings',
         'children',
+        'responsive',
+        'attributes',
+        'classNames',
+        'conditions',
+        'metadata',
+    ];
+
+    /**
+     * Optional extension keys for blocks.
+     */
+    public const OPTIONAL_BLOCK_KEYS = [
+        'responsive',
+        'attributes',
+        'classNames',
+        'conditions',
+        'metadata',
     ];
 
     public const ALLOWED_STYLE_KEYS = [

@@ -128,14 +128,49 @@ final class DocumentRenderer
 
         $inner = $renderer->render(new BlockRenderScope($block, $context, $this->media, $theme, $collector, $children, $rows));
 
+        $customClasses = [];
+        if (isset($block['classNames']) && is_array($block['classNames'])) {
+            foreach ($block['classNames'] as $c) {
+                if (is_string($c) && preg_match('/^[a-zA-Z0-9_-]+$/', $c) === 1) {
+                    $customClasses[] = $c;
+                }
+            }
+        }
+
+        $responsiveClasses = [];
+        if (isset($block['responsive']) && is_array($block['responsive'])) {
+            foreach ($block['responsive'] as $device => $conf) {
+                if (!in_array($device, CanonicalDocumentSchema::ALLOWED_RESPONSIVE_BREAKPOINTS, true) || !is_array($conf)) {
+                    continue;
+                }
+                if (!empty($conf['hide'])) {
+                    $responsiveClasses[] = 'sb-hide-' . $device;
+                }
+                if (!empty($conf['align']) && is_string($conf['align']) && in_array($conf['align'], CanonicalDocumentSchema::ALLOWED_ALIGNMENTS, true)) {
+                    $responsiveClasses[] = 'sb-align-' . $device . '-' . $conf['align'];
+                }
+            }
+        }
+
         $classes = array_merge(
             ['sb-block', 'sb-block--' . str_replace(['.', '_'], '-', $type)],
             $this->styleClasses(is_array($block['style'] ?? null) ? $block['style'] : [], $theme, $collector),
             self::hideClasses($visibility),
+            $customClasses,
+            $responsiveClasses,
         );
 
+        $attrs = '';
+        if (isset($block['attributes']) && is_array($block['attributes'])) {
+            foreach ($block['attributes'] as $attrKey => $attrVal) {
+                if (is_string($attrKey) && preg_match('/^[a-zA-Z][a-zA-Z0-9_-]*$/', $attrKey) === 1) {
+                    $attrs .= ' ' . $attrKey . '="' . Html::e((string) $attrVal) . '"';
+                }
+            }
+        }
+
         $metadata = empty($block[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($block['id'] ?? ''), $type) : '';
-        return '<div' . Html::classAttr($classes) . $metadata . '>' . $inner . '</div>';
+        return '<div' . Html::classAttr($classes) . $metadata . $attrs . '>' . $inner . '</div>';
     }
 
     /**

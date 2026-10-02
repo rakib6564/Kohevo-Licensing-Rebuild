@@ -598,9 +598,42 @@ final class DocumentValidator
             }
         }
 
-        foreach (CanonicalDocumentSchema::ALLOWED_BLOCK_KEYS as $reqKey) {
+        foreach (CanonicalDocumentSchema::REQUIRED_BLOCK_KEYS as $reqKey) {
             if (!array_key_exists($reqKey, $block)) {
                 $errors[] = ValidationResult::issue("{$path}.{$reqKey}", 'required_field', "Missing required block field '{$reqKey}'.");
+            }
+        }
+
+        // Validate optional responsive overrides if present
+        if (array_key_exists('responsive', $block)) {
+            $resp = $block['responsive'];
+            if (!is_array($resp) || ($resp !== [] && array_is_list($resp))) {
+                $errors[] = ValidationResult::issue("{$path}.responsive", 'invalid_responsive', 'block.responsive must be a JSON object.');
+            } else {
+                foreach ($resp as $bpKey => $bpVal) {
+                    if (!in_array((string) $bpKey, CanonicalDocumentSchema::ALLOWED_RESPONSIVE_BREAKPOINTS, true)) {
+                        $errors[] = ValidationResult::issue("{$path}.responsive.{$bpKey}", 'invalid_breakpoint', "Invalid responsive breakpoint '{$bpKey}'.");
+                    }
+                    if (!is_array($bpVal) && !is_scalar($bpVal) && $bpVal !== null) {
+                        $errors[] = ValidationResult::issue("{$path}.responsive.{$bpKey}", 'invalid_responsive_value', "Responsive breakpoint '{$bpKey}' value must be an object, array, or scalar.");
+                    }
+                }
+            }
+        }
+
+        // Validate optional attributes if present
+        if (array_key_exists('attributes', $block)) {
+            $attrs = $block['attributes'];
+            if (!is_array($attrs) || ($attrs !== [] && array_is_list($attrs))) {
+                $errors[] = ValidationResult::issue("{$path}.attributes", 'invalid_attributes', 'block.attributes must be a JSON object.');
+            }
+        }
+
+        // Validate optional classNames if present
+        if (array_key_exists('classNames', $block)) {
+            $cNames = $block['classNames'];
+            if (!is_string($cNames) && (!is_array($cNames) || !array_is_list($cNames))) {
+                $errors[] = ValidationResult::issue("{$path}.classNames", 'invalid_class_names', 'block.classNames must be a string or list of strings.');
             }
         }
 

@@ -38,6 +38,9 @@ final class DocumentOperation
     public const OP_UPDATE_BLOCK_STYLE      = 'update_block_style';
     public const OP_UPDATE_BLOCK_VISIBILITY = 'update_block_visibility';
     public const OP_UPDATE_BLOCK_BINDINGS   = 'update_block_bindings';
+    public const OP_UPDATE_BLOCK_RESPONSIVE  = 'update_block_responsive';
+    public const OP_UPDATE_BLOCK_CLASS_NAMES = 'update_block_class_names';
+    public const OP_UPDATE_BLOCK_ATTRIBUTES  = 'update_block_attributes';
 
     public const ALLOWED_OPS = [
         self::OP_UPDATE_SETTINGS,
@@ -55,6 +58,9 @@ final class DocumentOperation
         self::OP_UPDATE_BLOCK_STYLE,
         self::OP_UPDATE_BLOCK_VISIBILITY,
         self::OP_UPDATE_BLOCK_BINDINGS,
+        self::OP_UPDATE_BLOCK_RESPONSIVE,
+        self::OP_UPDATE_BLOCK_CLASS_NAMES,
+        self::OP_UPDATE_BLOCK_ATTRIBUTES,
     ];
 
     /**
@@ -77,6 +83,9 @@ final class DocumentOperation
         self::OP_UPDATE_BLOCK_STYLE        => ['block_id', 'style'],
         self::OP_UPDATE_BLOCK_VISIBILITY   => ['block_id', 'visibility'],
         self::OP_UPDATE_BLOCK_BINDINGS     => ['block_id', 'bindings'],
+        self::OP_UPDATE_BLOCK_RESPONSIVE   => ['block_id', 'responsive'],
+        self::OP_UPDATE_BLOCK_CLASS_NAMES  => ['block_id', 'classNames'],
+        self::OP_UPDATE_BLOCK_ATTRIBUTES   => ['block_id', 'attributes'],
     ];
 
     /**

@@ -164,6 +164,7 @@ final class BlockRegistry
             schema: FieldSchema::define([
                 ['key' => 'link', 'type' => 'link', 'label' => 'Button Link', 'required' => true],
                 ['key' => 'variant', 'type' => 'enum', 'label' => 'Button Variant', 'required' => false, 'allowed_values' => ['primary', 'secondary', 'outline', 'ghost'], 'default' => 'primary'],
+                ['key' => 'size', 'type' => 'enum', 'label' => 'Button Size', 'required' => false, 'allowed_values' => ['sm', 'md', 'lg'], 'default' => 'md'],
                 ['key' => 'full_width', 'type' => 'boolean', 'label' => 'Full Width', 'required' => false, 'default' => false],
             ]),
             allowsChildren: false,
@@ -220,6 +221,102 @@ final class BlockRegistry
             allowsChildren: true,
         ));
 
+        return $registry;
+    }
+
+    /**
+     * Register the Sprint 1 layout primitives and content blocks.
+     */
+    public static function registerLayoutBlocks(self $registry): void
+    {
+        // 8. layout.section
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'layout.section',
+            version: 1,
+            label: 'Section',
+            category: 'layout',
+            icon: 'layout-section',
+            schema: FieldSchema::define([
+                ['key' => 'tag', 'type' => 'enum', 'label' => 'HTML Tag', 'required' => false, 'allowed_values' => ['section', 'header', 'footer', 'article', 'aside', 'div'], 'default' => 'section'],
+                ['key' => 'content_width', 'type' => 'enum', 'label' => 'Content Width', 'required' => false, 'allowed_values' => ['boxed', 'full', 'narrow'], 'default' => 'boxed'],
+                ['key' => 'min_height', 'type' => 'enum', 'label' => 'Minimum Height', 'required' => false, 'allowed_values' => ['auto', 'screen', 'half_screen', 'sm', 'md', 'lg', 'xl'], 'default' => 'auto'],
+                ['key' => 'padding_y', 'type' => 'enum', 'label' => 'Vertical Padding', 'required' => false, 'allowed_values' => CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, 'default' => 'md'],
+                ['key' => 'background_token', 'type' => 'token_ref', 'label' => 'Background Token', 'required' => false, 'default' => null],
+            ]),
+            allowsChildren: true,
+        ));
+
+        // 9. layout.container
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'layout.container',
+            version: 1,
+            label: 'Container',
+            category: 'layout',
+            icon: 'layout-container',
+            schema: FieldSchema::define([
+                ['key' => 'width', 'type' => 'enum', 'label' => 'Width Mode', 'required' => false, 'allowed_values' => ['full', 'constrained', 'compact'], 'default' => 'constrained'],
+                ['key' => 'alignment', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['left', 'center', 'right'], 'default' => 'center'],
+                ['key' => 'padding', 'type' => 'enum', 'label' => 'Padding', 'required' => false, 'allowed_values' => CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, 'default' => 'none'],
+            ]),
+            allowsChildren: true,
+        ));
+
+        // 10. layout.flex
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'layout.flex',
+            version: 1,
+            label: 'Flex',
+            category: 'layout',
+            icon: 'layout-flex',
+            schema: FieldSchema::define([
+                ['key' => 'direction', 'type' => 'enum', 'label' => 'Direction', 'required' => false, 'allowed_values' => ['row', 'column', 'row_reverse', 'column_reverse'], 'default' => 'row'],
+                ['key' => 'wrap', 'type' => 'enum', 'label' => 'Wrap', 'required' => false, 'allowed_values' => ['nowrap', 'wrap', 'wrap_reverse'], 'default' => 'nowrap'],
+                ['key' => 'justify', 'type' => 'enum', 'label' => 'Justify Content', 'required' => false, 'allowed_values' => ['start', 'center', 'end', 'between', 'around', 'evenly'], 'default' => 'start'],
+                ['key' => 'align', 'type' => 'enum', 'label' => 'Align Items', 'required' => false, 'allowed_values' => ['start', 'center', 'end', 'stretch', 'baseline'], 'default' => 'start'],
+                ['key' => 'gap', 'type' => 'enum', 'label' => 'Gap', 'required' => false, 'allowed_values' => CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, 'default' => 'md'],
+            ]),
+            allowsChildren: true,
+        ));
+
+        // 11. layout.grid
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'layout.grid',
+            version: 1,
+            label: 'Grid',
+            category: 'layout',
+            icon: 'layout-grid',
+            schema: FieldSchema::define([
+                ['key' => 'columns', 'type' => 'number', 'label' => 'Columns', 'required' => false, 'default' => 2, 'min' => 1, 'max' => 12, 'integer_only' => true],
+                ['key' => 'gap', 'type' => 'enum', 'label' => 'Gap', 'required' => false, 'allowed_values' => CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, 'default' => 'md'],
+                ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['start', 'center', 'end', 'stretch'], 'default' => 'stretch'],
+            ]),
+            allowsChildren: true,
+        ));
+
+        // 12. core.text
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.text',
+            version: 1,
+            label: 'Text',
+            category: 'content',
+            icon: 'type',
+            schema: FieldSchema::define([
+                ['key' => 'content', 'type' => 'text', 'label' => 'Text Content', 'required' => false, 'default' => '', 'max_length' => 5000],
+                ['key' => 'size', 'type' => 'enum', 'label' => 'Size', 'required' => false, 'allowed_values' => ['xs', 'sm', 'base', 'lg', 'xl', 'lead'], 'default' => 'base'],
+                ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['left', 'center', 'right', 'justify'], 'default' => 'left'],
+                ['key' => 'color_token', 'type' => 'token_ref', 'label' => 'Color Token', 'required' => false, 'default' => null],
+            ]),
+            allowsChildren: false,
+        ));
+    }
+
+    /**
+     * Return a BlockRegistry with both foundation and layout primitives.
+     */
+    public static function withAllCoreBlocks(): self
+    {
+        $registry = self::withCoreFoundationBlocks();
+        self::registerLayoutBlocks($registry);
         return $registry;
     }
 }

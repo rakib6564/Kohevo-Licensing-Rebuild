@@ -189,7 +189,7 @@ final class DocumentNormalizer
             }
         }
 
-        return CanonicalJson::sortKeysRecursively([
+        $normalizedBlock = [
             'bindings'   => CanonicalJson::sortKeysRecursively($bindings),
             'children'   => $normalizedChildren,
             'id'         => (string) $block['id'],
@@ -198,7 +198,19 @@ final class DocumentNormalizer
             'type'       => $type,
             'version'    => (int) $block['version'],
             'visibility' => $visibility,
-        ]);
+        ];
+
+        if (array_key_exists('responsive', $block) && is_array($block['responsive'])) {
+            $normalizedBlock['responsive'] = CanonicalJson::sortKeysRecursively($block['responsive']);
+        }
+        if (array_key_exists('attributes', $block) && is_array($block['attributes'])) {
+            $normalizedBlock['attributes'] = CanonicalJson::sortKeysRecursively($block['attributes']);
+        }
+        if (array_key_exists('classNames', $block)) {
+            $normalizedBlock['classNames'] = is_array($block['classNames']) ? array_values($block['classNames']) : (string) $block['classNames'];
+        }
+
+        return CanonicalJson::sortKeysRecursively($normalizedBlock);
     }
 
     /**

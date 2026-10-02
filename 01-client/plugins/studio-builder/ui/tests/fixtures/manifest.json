@@ -1,138 +1,1223 @@
 {
-  "blocks": [
-    {
-      "allowed_binding_providers": [
-        "booking.services"
-      ],
-      "allowed_child_types": [],
-      "allows_children": false,
-      "binding_slots": [
+    "blocks": [
         {
-          "provider": "booking.services",
-          "slot": "items"
+            "allowed_binding_providers": [
+                "booking.services"
+            ],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [
+                {
+                    "provider": "booking.services",
+                    "slot": "items"
+                }
+            ],
+            "category": "business",
+            "default_props": {
+                "cta_label": "",
+                "heading": "",
+                "show_prices": true
+            },
+            "field_schema": [
+                {
+                    "key": "heading",
+                    "type": "string",
+                    "label": "Heading",
+                    "required": false,
+                    "default": "",
+                    "max_length": 200
+                },
+                {
+                    "key": "show_prices",
+                    "type": "boolean",
+                    "label": "Show prices",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "cta_label",
+                    "type": "string",
+                    "label": "Button label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                }
+            ],
+            "icon": "calendar",
+            "label": "Booking Services",
+            "required_entitlement": "booking",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token"
+            ],
+            "type": "booking.services",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "full_width": false,
+                "link": null,
+                "size": "md",
+                "variant": "primary"
+            },
+            "field_schema": [
+                {
+                    "key": "link",
+                    "type": "link",
+                    "label": "Button Link",
+                    "required": true,
+                    "default": null
+                },
+                {
+                    "key": "variant",
+                    "type": "enum",
+                    "label": "Button Variant",
+                    "required": false,
+                    "default": "primary",
+                    "allowed_values": [
+                        "primary",
+                        "secondary",
+                        "outline",
+                        "ghost"
+                    ]
+                },
+                {
+                    "key": "size",
+                    "type": "enum",
+                    "label": "Button Size",
+                    "required": false,
+                    "default": "md",
+                    "allowed_values": [
+                        "sm",
+                        "md",
+                        "lg"
+                    ]
+                },
+                {
+                    "key": "full_width",
+                    "type": "boolean",
+                    "label": "Full Width",
+                    "required": false,
+                    "default": false
+                }
+            ],
+            "icon": "cursor-click",
+            "label": "Button",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token"
+            ],
+            "type": "core.button",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "direction": "vertical",
+                "gap": "md"
+            },
+            "field_schema": [
+                {
+                    "key": "gap",
+                    "type": "enum",
+                    "label": "Gap",
+                    "required": false,
+                    "default": "md",
+                    "allowed_values": [
+                        "none",
+                        "xs",
+                        "sm",
+                        "md",
+                        "lg",
+                        "xl",
+                        "2xl"
+                    ]
+                },
+                {
+                    "key": "direction",
+                    "type": "enum",
+                    "label": "Direction",
+                    "required": false,
+                    "default": "vertical",
+                    "allowed_values": [
+                        "vertical",
+                        "horizontal"
+                    ]
+                }
+            ],
+            "icon": "box",
+            "label": "Container",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token"
+            ],
+            "type": "core.container",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "card_options": {
+                    "bordered": true,
+                    "surface_token": null
+                },
+                "columns": 3,
+                "items": [],
+                "title": ""
+            },
+            "field_schema": [
+                {
+                    "key": "title",
+                    "type": "string",
+                    "label": "Title",
+                    "required": false,
+                    "default": "",
+                    "max_length": 200
+                },
+                {
+                    "key": "columns",
+                    "type": "number",
+                    "label": "Columns",
+                    "required": false,
+                    "default": 3,
+                    "min": 1,
+                    "max": 4,
+                    "integer_only": true
+                },
+                {
+                    "key": "items",
+                    "type": "repeater",
+                    "label": "Features",
+                    "required": false,
+                    "default": [],
+                    "max_items": 12,
+                    "item_schema": [
+                        {
+                            "key": "heading",
+                            "type": "string",
+                            "label": "Heading",
+                            "required": true,
+                            "default": "",
+                            "max_length": 150
+                        },
+                        {
+                            "key": "body",
+                            "type": "text",
+                            "label": "Description",
+                            "required": false,
+                            "default": "",
+                            "max_length": 600
+                        },
+                        {
+                            "key": "url",
+                            "type": "url",
+                            "label": "Optional URL",
+                            "required": false,
+                            "default": null
+                        }
+                    ]
+                },
+                {
+                    "key": "card_options",
+                    "type": "object",
+                    "label": "Card Options",
+                    "required": false,
+                    "default": {
+                        "bordered": true,
+                        "surface_token": null
+                    },
+                    "properties": [
+                        {
+                            "key": "bordered",
+                            "type": "boolean",
+                            "label": "Bordered",
+                            "required": false,
+                            "default": true
+                        },
+                        {
+                            "key": "surface_token",
+                            "type": "token_ref",
+                            "label": "Surface Token",
+                            "required": false,
+                            "default": null
+                        }
+                    ]
+                }
+            ],
+            "icon": "list-check",
+            "label": "Feature List",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token"
+            ],
+            "type": "core.feature_list",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "level": "h2",
+                "text": "Section Heading"
+            },
+            "field_schema": [
+                {
+                    "key": "text",
+                    "type": "string",
+                    "label": "Heading Text",
+                    "required": true,
+                    "default": "Section Heading",
+                    "max_length": 300
+                },
+                {
+                    "key": "level",
+                    "type": "enum",
+                    "label": "Heading Level",
+                    "required": false,
+                    "default": "h2",
+                    "allowed_values": [
+                        "h1",
+                        "h2",
+                        "h3",
+                        "h4",
+                        "h5",
+                        "h6"
+                    ]
+                }
+            ],
+            "icon": "type-heading",
+            "label": "Heading",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token"
+            ],
+            "type": "core.heading",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "accent_token": null,
+                "eyebrow": "",
+                "heading": "Welcome",
+                "media": null,
+                "primary_cta": null,
+                "subheading": ""
+            },
+            "field_schema": [
+                {
+                    "key": "eyebrow",
+                    "type": "string",
+                    "label": "Eyebrow",
+                    "required": false,
+                    "default": "",
+                    "max_length": 120
+                },
+                {
+                    "key": "heading",
+                    "type": "string",
+                    "label": "Heading",
+                    "required": true,
+                    "default": "Welcome",
+                    "max_length": 255
+                },
+                {
+                    "key": "subheading",
+                    "type": "text",
+                    "label": "Subheading",
+                    "required": false,
+                    "default": "",
+                    "max_length": 1000
+                },
+                {
+                    "key": "primary_cta",
+                    "type": "link",
+                    "label": "Primary Call to Action",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "media",
+                    "type": "media_ref",
+                    "label": "Hero Image",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "accent_token",
+                    "type": "token_ref",
+                    "label": "Accent Token",
+                    "required": false,
+                    "default": null
+                }
+            ],
+            "icon": "layout-hero",
+            "label": "Hero Banner",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token"
+            ],
+            "type": "core.hero",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "media",
+            "default_props": {
+                "aspect_ratio": "auto",
+                "caption": "",
+                "media": null,
+                "rounded": true
+            },
+            "field_schema": [
+                {
+                    "key": "media",
+                    "type": "media_ref",
+                    "label": "Image Asset",
+                    "required": true,
+                    "default": null
+                },
+                {
+                    "key": "caption",
+                    "type": "string",
+                    "label": "Caption",
+                    "required": false,
+                    "default": "",
+                    "max_length": 300
+                },
+                {
+                    "key": "aspect_ratio",
+                    "type": "enum",
+                    "label": "Aspect Ratio",
+                    "required": false,
+                    "default": "auto",
+                    "allowed_values": [
+                        "auto",
+                        "16:9",
+                        "4:3",
+                        "1:1",
+                        "3:4"
+                    ]
+                },
+                {
+                    "key": "rounded",
+                    "type": "boolean",
+                    "label": "Rounded Corners",
+                    "required": false,
+                    "default": true
+                }
+            ],
+            "icon": "image",
+            "label": "Image",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token"
+            ],
+            "type": "core.image",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "content": "<p></p>"
+            },
+            "field_schema": [
+                {
+                    "key": "content",
+                    "type": "rich_text",
+                    "label": "Content",
+                    "required": true,
+                    "default": "<p></p>"
+                }
+            ],
+            "icon": "type-rich-text",
+            "label": "Rich Text",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token"
+            ],
+            "type": "core.rich_text",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "align": "left",
+                "color_token": null,
+                "content": "",
+                "size": "base"
+            },
+            "field_schema": [
+                {
+                    "key": "content",
+                    "type": "text",
+                    "label": "Text Content",
+                    "required": false,
+                    "default": "",
+                    "max_length": 5000
+                },
+                {
+                    "key": "size",
+                    "type": "enum",
+                    "label": "Size",
+                    "required": false,
+                    "default": "base",
+                    "allowed_values": [
+                        "xs",
+                        "sm",
+                        "base",
+                        "lg",
+                        "xl",
+                        "lead"
+                    ]
+                },
+                {
+                    "key": "align",
+                    "type": "enum",
+                    "label": "Alignment",
+                    "required": false,
+                    "default": "left",
+                    "allowed_values": [
+                        "left",
+                        "center",
+                        "right",
+                        "justify"
+                    ]
+                },
+                {
+                    "key": "color_token",
+                    "type": "token_ref",
+                    "label": "Color Token",
+                    "required": false,
+                    "default": null
+                }
+            ],
+            "icon": "type",
+            "label": "Text",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token"
+            ],
+            "type": "core.text",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [
+                "forms.form"
+            ],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [
+                {
+                    "provider": "forms.form",
+                    "slot": "form"
+                }
+            ],
+            "category": "business",
+            "default_props": {
+                "button_label": "",
+                "show_description": true
+            },
+            "field_schema": [
+                {
+                    "key": "button_label",
+                    "type": "string",
+                    "label": "Button label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                },
+                {
+                    "key": "show_description",
+                    "type": "boolean",
+                    "label": "Show description",
+                    "required": false,
+                    "default": true
+                }
+            ],
+            "icon": "clipboard",
+            "label": "Form Card",
+            "required_entitlement": "forms",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token"
+            ],
+            "type": "forms.form_card",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "alignment": "center",
+                "padding": "none",
+                "width": "constrained"
+            },
+            "field_schema": [
+                {
+                    "key": "width",
+                    "type": "enum",
+                    "label": "Width Mode",
+                    "required": false,
+                    "default": "constrained",
+                    "allowed_values": [
+                        "full",
+                        "constrained",
+                        "compact"
+                    ]
+                },
+                {
+                    "key": "alignment",
+                    "type": "enum",
+                    "label": "Alignment",
+                    "required": false,
+                    "default": "center",
+                    "allowed_values": [
+                        "left",
+                        "center",
+                        "right"
+                    ]
+                },
+                {
+                    "key": "padding",
+                    "type": "enum",
+                    "label": "Padding",
+                    "required": false,
+                    "default": "none",
+                    "allowed_values": [
+                        "none",
+                        "xs",
+                        "sm",
+                        "md",
+                        "lg",
+                        "xl",
+                        "2xl"
+                    ]
+                }
+            ],
+            "icon": "layout-container",
+            "label": "Container",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token"
+            ],
+            "type": "layout.container",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "align": "start",
+                "direction": "row",
+                "gap": "md",
+                "justify": "start",
+                "wrap": "nowrap"
+            },
+            "field_schema": [
+                {
+                    "key": "direction",
+                    "type": "enum",
+                    "label": "Direction",
+                    "required": false,
+                    "default": "row",
+                    "allowed_values": [
+                        "row",
+                        "column",
+                        "row_reverse",
+                        "column_reverse"
+                    ]
+                },
+                {
+                    "key": "wrap",
+                    "type": "enum",
+                    "label": "Wrap",
+                    "required": false,
+                    "default": "nowrap",
+                    "allowed_values": [
+                        "nowrap",
+                        "wrap",
+                        "wrap_reverse"
+                    ]
+                },
+                {
+                    "key": "justify",
+                    "type": "enum",
+                    "label": "Justify Content",
+                    "required": false,
+                    "default": "start",
+                    "allowed_values": [
+                        "start",
+                        "center",
+                        "end",
+                        "between",
+                        "around",
+                        "evenly"
+                    ]
+                },
+                {
+                    "key": "align",
+                    "type": "enum",
+                    "label": "Align Items",
+                    "required": false,
+                    "default": "start",
+                    "allowed_values": [
+                        "start",
+                        "center",
+                        "end",
+                        "stretch",
+                        "baseline"
+                    ]
+                },
+                {
+                    "key": "gap",
+                    "type": "enum",
+                    "label": "Gap",
+                    "required": false,
+                    "default": "md",
+                    "allowed_values": [
+                        "none",
+                        "xs",
+                        "sm",
+                        "md",
+                        "lg",
+                        "xl",
+                        "2xl"
+                    ]
+                }
+            ],
+            "icon": "layout-flex",
+            "label": "Flex",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token"
+            ],
+            "type": "layout.flex",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "align": "stretch",
+                "columns": 2,
+                "gap": "md"
+            },
+            "field_schema": [
+                {
+                    "key": "columns",
+                    "type": "number",
+                    "label": "Columns",
+                    "required": false,
+                    "default": 2,
+                    "min": 1,
+                    "max": 12,
+                    "integer_only": true
+                },
+                {
+                    "key": "gap",
+                    "type": "enum",
+                    "label": "Gap",
+                    "required": false,
+                    "default": "md",
+                    "allowed_values": [
+                        "none",
+                        "xs",
+                        "sm",
+                        "md",
+                        "lg",
+                        "xl",
+                        "2xl"
+                    ]
+                },
+                {
+                    "key": "align",
+                    "type": "enum",
+                    "label": "Alignment",
+                    "required": false,
+                    "default": "stretch",
+                    "allowed_values": [
+                        "start",
+                        "center",
+                        "end",
+                        "stretch"
+                    ]
+                }
+            ],
+            "icon": "layout-grid",
+            "label": "Grid",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token"
+            ],
+            "type": "layout.grid",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "background_token": null,
+                "content_width": "boxed",
+                "min_height": "auto",
+                "padding_y": "md",
+                "tag": "section"
+            },
+            "field_schema": [
+                {
+                    "key": "tag",
+                    "type": "enum",
+                    "label": "HTML Tag",
+                    "required": false,
+                    "default": "section",
+                    "allowed_values": [
+                        "section",
+                        "header",
+                        "footer",
+                        "article",
+                        "aside",
+                        "div"
+                    ]
+                },
+                {
+                    "key": "content_width",
+                    "type": "enum",
+                    "label": "Content Width",
+                    "required": false,
+                    "default": "boxed",
+                    "allowed_values": [
+                        "boxed",
+                        "full",
+                        "narrow"
+                    ]
+                },
+                {
+                    "key": "min_height",
+                    "type": "enum",
+                    "label": "Minimum Height",
+                    "required": false,
+                    "default": "auto",
+                    "allowed_values": [
+                        "auto",
+                        "screen",
+                        "half_screen",
+                        "sm",
+                        "md",
+                        "lg",
+                        "xl"
+                    ]
+                },
+                {
+                    "key": "padding_y",
+                    "type": "enum",
+                    "label": "Vertical Padding",
+                    "required": false,
+                    "default": "md",
+                    "allowed_values": [
+                        "none",
+                        "xs",
+                        "sm",
+                        "md",
+                        "lg",
+                        "xl",
+                        "2xl"
+                    ]
+                },
+                {
+                    "key": "background_token",
+                    "type": "token_ref",
+                    "label": "Background Token",
+                    "required": false,
+                    "default": null
+                }
+            ],
+            "icon": "layout-section",
+            "label": "Section",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token"
+            ],
+            "type": "layout.section",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [
+                "membership.plans"
+            ],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [
+                {
+                    "provider": "membership.plans",
+                    "slot": "items"
+                }
+            ],
+            "category": "business",
+            "default_props": {
+                "cta_label": "",
+                "heading": "",
+                "show_prices": true
+            },
+            "field_schema": [
+                {
+                    "key": "heading",
+                    "type": "string",
+                    "label": "Heading",
+                    "required": false,
+                    "default": "",
+                    "max_length": 200
+                },
+                {
+                    "key": "show_prices",
+                    "type": "boolean",
+                    "label": "Show prices",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "cta_label",
+                    "type": "string",
+                    "label": "Button label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                }
+            ],
+            "icon": "id-card",
+            "label": "Membership Plans",
+            "required_entitlement": "membership",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token"
+            ],
+            "type": "membership.plans",
+            "version": 1
         }
-      ],
-      "category": "business",
-      "default_props": {
-        "cta_label": "",
-        "heading": "",
-        "show_prices": true
-      },
-      "field_schema": [
+    ],
+    "providers": [
         {
-          "key": "heading",
-          "type": "string",
-          "label": "Heading",
-          "required": false,
-          "default": "",
-          "max_length": 200
+            "key": "booking.services",
+            "max_results": 100,
+            "params": []
         },
         {
-          "key": "show_prices",
-          "type": "boolean",
-          "label": "Show prices",
-          "required": false,
-          "default": true
+            "key": "forms.form",
+            "max_results": 1,
+            "params": [
+                {
+                    "key": "slug",
+                    "type": "string",
+                    "label": "Form slug",
+                    "required": true,
+                    "default": "",
+                    "max_length": 80
+                }
+            ]
         },
         {
-          "key": "cta_label",
-          "type": "string",
-          "label": "Button label",
-          "required": false,
-          "default": "",
-          "max_length": 80
+            "key": "membership.plans",
+            "max_results": 100,
+            "params": []
         }
-      ],
-      "icon": "calendar",
-      "label": "Booking Services",
-      "required_entitlement": "booking",
-      "required_permission": "studio-builder.edit",
-      "style_capabilities": [
-        "align",
-        "surface_token",
-        "text_token",
-        "spacing_token",
-        "radius_token",
-        "shadow_token",
-        "font_token"
-      ],
-      "type": "booking.services",
-      "version": 1
-    },
-    {
-      "allowed_binding_providers": [],
-      "allowed_child_types": [],
-      "allows_children": false,
-      "binding_slots": [],
-      "category": "content",
-      "default_props": {
-        "full_width": false,
-        "link": null,
-        "variant": "primary"
-      },
-      "field_schema": [
+    ],
+    "tokens": [
         {
-          "key": "link",
-          "type": "link",
-          "label": "Button Link",
-          "required": true,
-          "default": null
+            "category": "border",
+            "ref": "border.default",
+            "value": "#e7e5e4"
         },
         {
-          "key": "variant",
-          "type": "enum",
-          "label": "Button Variant",
-          "required": false,
-          "default": "primary",
-          "allowed_values": [
-            "primary",
-            "secondary",
-            "outline",
-            "ghost"
-          ]
+            "category": "color",
+            "ref": "color.accent",
+            "value": "#1f2937"
         },
         {
-          "key": "full_width",
-          "type": "boolean",
-          "label": "Full Width",
-          "required": false,
-          "default": false
+            "category": "font",
+            "ref": "font.body",
+            "value": "system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif"
+        },
+        {
+            "category": "font",
+            "ref": "font.heading",
+            "value": "system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif"
+        },
+        {
+            "category": "radius",
+            "ref": "radius.full",
+            "value": "9999px"
+        },
+        {
+            "category": "radius",
+            "ref": "radius.lg",
+            "value": "16px"
+        },
+        {
+            "category": "radius",
+            "ref": "radius.md",
+            "value": "8px"
+        },
+        {
+            "category": "radius",
+            "ref": "radius.sm",
+            "value": "4px"
+        },
+        {
+            "category": "shadow",
+            "ref": "shadow.md",
+            "value": "0 4px 12px rgba(0,0,0,0.08)"
+        },
+        {
+            "category": "shadow",
+            "ref": "shadow.sm",
+            "value": "0 1px 2px rgba(0,0,0,0.06)"
+        },
+        {
+            "category": "space",
+            "ref": "space.lg",
+            "value": "3rem"
+        },
+        {
+            "category": "space",
+            "ref": "space.md",
+            "value": "1.5rem"
+        },
+        {
+            "category": "space",
+            "ref": "space.sm",
+            "value": "0.75rem"
+        },
+        {
+            "category": "surface",
+            "ref": "surface.accent",
+            "value": "#1f2937"
+        },
+        {
+            "category": "surface",
+            "ref": "surface.inverse",
+            "value": "#111111"
+        },
+        {
+            "category": "surface",
+            "ref": "surface.muted",
+            "value": "#f5f5f4"
+        },
+        {
+            "category": "surface",
+            "ref": "surface.page",
+            "value": "#ffffff"
+        },
+        {
+            "category": "surface",
+            "ref": "surface.primary",
+            "value": "#ffffff"
+        },
+        {
+            "category": "surface",
+            "ref": "surface.secondary",
+            "value": "#f5f5f4"
+        },
+        {
+            "category": "text",
+            "ref": "text.accent",
+            "value": "#1f2937"
+        },
+        {
+            "category": "text",
+            "ref": "text.inverse",
+            "value": "#ffffff"
+        },
+        {
+            "category": "text",
+            "ref": "text.muted",
+            "value": "#57534e"
+        },
+        {
+            "category": "text",
+            "ref": "text.primary",
+            "value": "#111111"
         }
-      ],
-      "icon": "cursor-click",
-      "label": "Button",
-      "required_entitlement": null,
-      "required_permission": "studio-builder.edit",
-      "style_capabilities": [
-        "align",
-        "surface_token",
-        "text_token",
-        "spacing_token",
-        "radius_token",
-        "shadow_token",
-        "font_token"
-      ],
-      "type": "core.button",
-      "version": 1
-    },
-    {
-      "allowed_binding_providers": [],
-      "allowed_child_types": [],
-      "allows_children": true,
-      "binding_slots": [],
-      "category": "layout",
-      "default_props": {
-        "direction": "vertical",
-        "gap": "md"
-      },
-      "field_schema": [
-        {
-          "key": "gap",
-          "type": "enum",
-          "label": "Gap",
-          "required": false,
-          "default": "md",
-          "allowed_values": [
+    ],
+    "vocabulary": {
+        "alignments": [
+            "left",
+            "center",
+            "right",
+            "justify"
+        ],
+        "auth_states": [
+            "any",
+            "authenticated",
+            "guest"
+        ],
+        "breakpoints": [
+            "base",
+            "sm",
+            "md",
+            "lg"
+        ],
+        "chrome_modes": [
+            "inherit",
+            "custom",
+            "hidden"
+        ],
+        "container_widths": [
+            "narrow",
+            "normal",
+            "wide",
+            "full"
+        ],
+        "robots": [
+            "index,follow",
+            "noindex,follow",
+            "index,nofollow",
+            "noindex,nofollow"
+        ],
+        "spacing_scale": [
             "none",
             "xs",
             "sm",
@@ -140,717 +1225,53 @@
             "lg",
             "xl",
             "2xl"
-          ]
-        },
-        {
-          "key": "direction",
-          "type": "enum",
-          "label": "Direction",
-          "required": false,
-          "default": "vertical",
-          "allowed_values": [
-            "vertical",
-            "horizontal"
-          ]
-        }
-      ],
-      "icon": "box",
-      "label": "Container",
-      "required_entitlement": null,
-      "required_permission": "studio-builder.edit",
-      "style_capabilities": [
-        "align",
-        "surface_token",
-        "text_token",
-        "spacing_token",
-        "radius_token",
-        "shadow_token",
-        "font_token"
-      ],
-      "type": "core.container",
-      "version": 1
+        ],
+        "style_keys": [
+            "align",
+            "surface_token",
+            "text_token",
+            "spacing_token",
+            "radius_token",
+            "shadow_token",
+            "font_token"
+        ]
     },
-    {
-      "allowed_binding_providers": [],
-      "allowed_child_types": [],
-      "allows_children": false,
-      "binding_slots": [],
-      "category": "content",
-      "default_props": {
-        "card_options": {
-          "bordered": true,
-          "surface_token": null
-        },
-        "columns": 3,
-        "items": [],
-        "title": ""
-      },
-      "field_schema": [
-        {
-          "key": "title",
-          "type": "string",
-          "label": "Title",
-          "required": false,
-          "default": "",
-          "max_length": 200
-        },
-        {
-          "key": "columns",
-          "type": "number",
-          "label": "Columns",
-          "required": false,
-          "default": 3,
-          "min": 1,
-          "max": 4,
-          "integer_only": true
-        },
-        {
-          "key": "items",
-          "type": "repeater",
-          "label": "Features",
-          "required": false,
-          "default": [],
-          "max_items": 12,
-          "item_schema": [
-            {
-              "key": "heading",
-              "type": "string",
-              "label": "Heading",
-              "required": true,
-              "default": "",
-              "max_length": 150
-            },
-            {
-              "key": "body",
-              "type": "text",
-              "label": "Description",
-              "required": false,
-              "default": "",
-              "max_length": 600
-            },
-            {
-              "key": "url",
-              "type": "url",
-              "label": "Optional URL",
-              "required": false,
-              "default": null
-            }
-          ]
-        },
-        {
-          "key": "card_options",
-          "type": "object",
-          "label": "Card Options",
-          "required": false,
-          "default": {
-            "bordered": true,
-            "surface_token": null
-          },
-          "properties": [
-            {
-              "key": "bordered",
-              "type": "boolean",
-              "label": "Bordered",
-              "required": false,
-              "default": true
-            },
-            {
-              "key": "surface_token",
-              "type": "token_ref",
-              "label": "Surface Token",
-              "required": false,
-              "default": null
-            }
-          ]
-        }
-      ],
-      "icon": "list-check",
-      "label": "Feature List",
-      "required_entitlement": null,
-      "required_permission": "studio-builder.edit",
-      "style_capabilities": [
-        "align",
-        "surface_token",
-        "text_token",
-        "spacing_token",
-        "radius_token",
-        "shadow_token",
-        "font_token"
-      ],
-      "type": "core.feature_list",
-      "version": 1
+    "limits": {
+        "max_blocks": 250,
+        "max_nesting_depth": 4,
+        "max_repeater_items": 50,
+        "max_sections": 50,
+        "seo_description_max": 1000,
+        "seo_title_max": 255
     },
-    {
-      "allowed_binding_providers": [],
-      "allowed_child_types": [],
-      "allows_children": false,
-      "binding_slots": [],
-      "category": "content",
-      "default_props": {
-        "level": "h2",
-        "text": "Section Heading"
-      },
-      "field_schema": [
-        {
-          "key": "text",
-          "type": "string",
-          "label": "Heading Text",
-          "required": true,
-          "default": "Section Heading",
-          "max_length": 300
-        },
-        {
-          "key": "level",
-          "type": "enum",
-          "label": "Heading Level",
-          "required": false,
-          "default": "h2",
-          "allowed_values": [
-            "h1",
-            "h2",
-            "h3",
-            "h4",
-            "h5",
-            "h6"
-          ]
-        }
-      ],
-      "icon": "type-heading",
-      "label": "Heading",
-      "required_entitlement": null,
-      "required_permission": "studio-builder.edit",
-      "style_capabilities": [
-        "align",
-        "surface_token",
-        "text_token",
-        "spacing_token",
-        "radius_token",
-        "shadow_token",
-        "font_token"
-      ],
-      "type": "core.heading",
-      "version": 1
+    "permissions": {
+        "admin": true,
+        "edit": true,
+        "publish": true,
+        "tokens": true,
+        "view": true
     },
-    {
-      "allowed_binding_providers": [],
-      "allowed_child_types": [],
-      "allows_children": false,
-      "binding_slots": [],
-      "category": "layout",
-      "default_props": {
-        "accent_token": null,
-        "eyebrow": "",
-        "heading": "Welcome",
-        "media": null,
-        "primary_cta": null,
-        "subheading": ""
-      },
-      "field_schema": [
-        {
-          "key": "eyebrow",
-          "type": "string",
-          "label": "Eyebrow",
-          "required": false,
-          "default": "",
-          "max_length": 120
-        },
-        {
-          "key": "heading",
-          "type": "string",
-          "label": "Heading",
-          "required": true,
-          "default": "Welcome",
-          "max_length": 255
-        },
-        {
-          "key": "subheading",
-          "type": "text",
-          "label": "Subheading",
-          "required": false,
-          "default": "",
-          "max_length": 1000
-        },
-        {
-          "key": "primary_cta",
-          "type": "link",
-          "label": "Primary Call to Action",
-          "required": false,
-          "default": null
-        },
-        {
-          "key": "media",
-          "type": "media_ref",
-          "label": "Hero Image",
-          "required": false,
-          "default": null
-        },
-        {
-          "key": "accent_token",
-          "type": "token_ref",
-          "label": "Accent Token",
-          "required": false,
-          "default": null
-        }
-      ],
-      "icon": "layout-hero",
-      "label": "Hero Banner",
-      "required_entitlement": null,
-      "required_permission": "studio-builder.edit",
-      "style_capabilities": [
-        "align",
-        "surface_token",
-        "text_token",
-        "spacing_token",
-        "radius_token",
-        "shadow_token",
-        "font_token"
-      ],
-      "type": "core.hero",
-      "version": 1
+    "templates": {
+        "insertable_types": [
+            "section_preset",
+            "header_preset",
+            "footer_preset",
+            "block_preset"
+        ],
+        "types": [
+            "page_template",
+            "section_preset",
+            "header_preset",
+            "footer_preset",
+            "block_preset"
+        ]
     },
-    {
-      "allowed_binding_providers": [],
-      "allowed_child_types": [],
-      "allows_children": false,
-      "binding_slots": [],
-      "category": "media",
-      "default_props": {
-        "aspect_ratio": "auto",
-        "caption": "",
-        "media": null,
-        "rounded": true
-      },
-      "field_schema": [
-        {
-          "key": "media",
-          "type": "media_ref",
-          "label": "Image Asset",
-          "required": true,
-          "default": null
-        },
-        {
-          "key": "caption",
-          "type": "string",
-          "label": "Caption",
-          "required": false,
-          "default": "",
-          "max_length": 300
-        },
-        {
-          "key": "aspect_ratio",
-          "type": "enum",
-          "label": "Aspect Ratio",
-          "required": false,
-          "default": "auto",
-          "allowed_values": [
-            "auto",
-            "16:9",
-            "4:3",
-            "1:1",
-            "3:4"
-          ]
-        },
-        {
-          "key": "rounded",
-          "type": "boolean",
-          "label": "Rounded Corners",
-          "required": false,
-          "default": true
-        }
-      ],
-      "icon": "image",
-      "label": "Image",
-      "required_entitlement": null,
-      "required_permission": "studio-builder.edit",
-      "style_capabilities": [
-        "align",
-        "surface_token",
-        "text_token",
-        "spacing_token",
-        "radius_token",
-        "shadow_token",
-        "font_token"
-      ],
-      "type": "core.image",
-      "version": 1
-    },
-    {
-      "allowed_binding_providers": [],
-      "allowed_child_types": [],
-      "allows_children": false,
-      "binding_slots": [],
-      "category": "content",
-      "default_props": {
-        "content": "<p></p>"
-      },
-      "field_schema": [
-        {
-          "key": "content",
-          "type": "rich_text",
-          "label": "Content",
-          "required": true,
-          "default": "<p></p>"
-        }
-      ],
-      "icon": "type-rich-text",
-      "label": "Rich Text",
-      "required_entitlement": null,
-      "required_permission": "studio-builder.edit",
-      "style_capabilities": [
-        "align",
-        "surface_token",
-        "text_token",
-        "spacing_token",
-        "radius_token",
-        "shadow_token",
-        "font_token"
-      ],
-      "type": "core.rich_text",
-      "version": 1
-    },
-    {
-      "allowed_binding_providers": [
-        "forms.form"
-      ],
-      "allowed_child_types": [],
-      "allows_children": false,
-      "binding_slots": [
-        {
-          "provider": "forms.form",
-          "slot": "form"
-        }
-      ],
-      "category": "business",
-      "default_props": {
-        "button_label": "",
-        "show_description": true
-      },
-      "field_schema": [
-        {
-          "key": "button_label",
-          "type": "string",
-          "label": "Button label",
-          "required": false,
-          "default": "",
-          "max_length": 80
-        },
-        {
-          "key": "show_description",
-          "type": "boolean",
-          "label": "Show description",
-          "required": false,
-          "default": true
-        }
-      ],
-      "icon": "clipboard",
-      "label": "Form Card",
-      "required_entitlement": "forms",
-      "required_permission": "studio-builder.edit",
-      "style_capabilities": [
-        "align",
-        "surface_token",
-        "text_token",
-        "spacing_token",
-        "radius_token",
-        "shadow_token",
-        "font_token"
-      ],
-      "type": "forms.form_card",
-      "version": 1
-    },
-    {
-      "allowed_binding_providers": [
-        "membership.plans"
-      ],
-      "allowed_child_types": [],
-      "allows_children": false,
-      "binding_slots": [
-        {
-          "provider": "membership.plans",
-          "slot": "items"
-        }
-      ],
-      "category": "business",
-      "default_props": {
-        "cta_label": "",
-        "heading": "",
-        "show_prices": true
-      },
-      "field_schema": [
-        {
-          "key": "heading",
-          "type": "string",
-          "label": "Heading",
-          "required": false,
-          "default": "",
-          "max_length": 200
-        },
-        {
-          "key": "show_prices",
-          "type": "boolean",
-          "label": "Show prices",
-          "required": false,
-          "default": true
-        },
-        {
-          "key": "cta_label",
-          "type": "string",
-          "label": "Button label",
-          "required": false,
-          "default": "",
-          "max_length": 80
-        }
-      ],
-      "icon": "id-card",
-      "label": "Membership Plans",
-      "required_entitlement": "membership",
-      "required_permission": "studio-builder.edit",
-      "style_capabilities": [
-        "align",
-        "surface_token",
-        "text_token",
-        "spacing_token",
-        "radius_token",
-        "shadow_token",
-        "font_token"
-      ],
-      "type": "membership.plans",
-      "version": 1
+    "components": {
+        "document_type": "section_preset",
+        "referencing_types": [
+            "page",
+            "landing",
+            "system"
+        ]
     }
-  ],
-  "providers": [
-    {
-      "key": "booking.services",
-      "max_results": 100,
-      "params": []
-    },
-    {
-      "key": "forms.form",
-      "max_results": 1,
-      "params": [
-        {
-          "key": "slug",
-          "type": "string",
-          "label": "Form slug",
-          "required": true,
-          "default": "",
-          "max_length": 80
-        }
-      ]
-    },
-    {
-      "key": "membership.plans",
-      "max_results": 100,
-      "params": []
-    }
-  ],
-  "tokens": [
-    {
-      "category": "border",
-      "ref": "border.default",
-      "value": "#e7e5e4"
-    },
-    {
-      "category": "color",
-      "ref": "color.accent",
-      "value": "#1f2937"
-    },
-    {
-      "category": "font",
-      "ref": "font.body",
-      "value": "system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif"
-    },
-    {
-      "category": "font",
-      "ref": "font.heading",
-      "value": "system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif"
-    },
-    {
-      "category": "radius",
-      "ref": "radius.full",
-      "value": "9999px"
-    },
-    {
-      "category": "radius",
-      "ref": "radius.lg",
-      "value": "16px"
-    },
-    {
-      "category": "radius",
-      "ref": "radius.md",
-      "value": "8px"
-    },
-    {
-      "category": "radius",
-      "ref": "radius.sm",
-      "value": "4px"
-    },
-    {
-      "category": "shadow",
-      "ref": "shadow.md",
-      "value": "0 4px 12px rgba(0,0,0,0.08)"
-    },
-    {
-      "category": "shadow",
-      "ref": "shadow.sm",
-      "value": "0 1px 2px rgba(0,0,0,0.06)"
-    },
-    {
-      "category": "space",
-      "ref": "space.lg",
-      "value": "3rem"
-    },
-    {
-      "category": "space",
-      "ref": "space.md",
-      "value": "1.5rem"
-    },
-    {
-      "category": "space",
-      "ref": "space.sm",
-      "value": "0.75rem"
-    },
-    {
-      "category": "surface",
-      "ref": "surface.accent",
-      "value": "#1f2937"
-    },
-    {
-      "category": "surface",
-      "ref": "surface.inverse",
-      "value": "#111111"
-    },
-    {
-      "category": "surface",
-      "ref": "surface.muted",
-      "value": "#f5f5f4"
-    },
-    {
-      "category": "surface",
-      "ref": "surface.page",
-      "value": "#ffffff"
-    },
-    {
-      "category": "surface",
-      "ref": "surface.primary",
-      "value": "#ffffff"
-    },
-    {
-      "category": "surface",
-      "ref": "surface.secondary",
-      "value": "#f5f5f4"
-    },
-    {
-      "category": "text",
-      "ref": "text.accent",
-      "value": "#1f2937"
-    },
-    {
-      "category": "text",
-      "ref": "text.inverse",
-      "value": "#ffffff"
-    },
-    {
-      "category": "text",
-      "ref": "text.muted",
-      "value": "#57534e"
-    },
-    {
-      "category": "text",
-      "ref": "text.primary",
-      "value": "#111111"
-    }
-  ],
-  "vocabulary": {
-    "alignments": [
-      "left",
-      "center",
-      "right",
-      "justify"
-    ],
-    "auth_states": [
-      "any",
-      "authenticated",
-      "guest"
-    ],
-    "breakpoints": [
-      "base",
-      "sm",
-      "md",
-      "lg"
-    ],
-    "chrome_modes": [
-      "inherit",
-      "custom",
-      "hidden"
-    ],
-    "container_widths": [
-      "narrow",
-      "normal",
-      "wide",
-      "full"
-    ],
-    "robots": [
-      "index,follow",
-      "noindex,follow",
-      "index,nofollow",
-      "noindex,nofollow"
-    ],
-    "spacing_scale": [
-      "none",
-      "xs",
-      "sm",
-      "md",
-      "lg",
-      "xl",
-      "2xl"
-    ],
-    "style_keys": [
-      "align",
-      "surface_token",
-      "text_token",
-      "spacing_token",
-      "radius_token",
-      "shadow_token",
-      "font_token"
-    ]
-  },
-  "limits": {
-    "max_blocks": 250,
-    "max_nesting_depth": 4,
-    "max_repeater_items": 50,
-    "max_sections": 50,
-    "seo_description_max": 1000,
-    "seo_title_max": 255
-  },
-  "permissions": {
-    "admin": true,
-    "edit": true,
-    "publish": true,
-    "tokens": true,
-    "view": true
-  },
-  "templates": {
-    "insertable_types": [
-      "section_preset",
-      "header_preset",
-      "footer_preset",
-      "block_preset"
-    ],
-    "types": [
-      "page_template",
-      "section_preset",
-      "header_preset",
-      "footer_preset",
-      "block_preset"
-    ]
-  },
-  "components": {
-    "document_type": "section_preset",
-    "referencing_types": [
-      "page",
-      "landing",
-      "system"
-    ]
-  }
 }
