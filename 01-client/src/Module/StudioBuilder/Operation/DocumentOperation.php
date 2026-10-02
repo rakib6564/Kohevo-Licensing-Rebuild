@@ -37,13 +37,15 @@ final class DocumentOperation
     public const OP_REMOVE_BLOCK            = 'remove_block';
     public const OP_MOVE_BLOCK              = 'move_block';
     public const OP_DUPLICATE_BLOCK         = 'duplicate_block';
-    public const OP_UPDATE_BLOCK_PROPS      = 'update_block_props';
-    public const OP_UPDATE_BLOCK_STYLE      = 'update_block_style';
-    public const OP_UPDATE_BLOCK_VISIBILITY = 'update_block_visibility';
-    public const OP_UPDATE_BLOCK_BINDINGS   = 'update_block_bindings';
-    public const OP_UPDATE_BLOCK_RESPONSIVE  = 'update_block_responsive';
-    public const OP_UPDATE_BLOCK_CLASS_NAMES = 'update_block_class_names';
-    public const OP_UPDATE_BLOCK_ATTRIBUTES  = 'update_block_attributes';
+    public const OP_UPDATE_BLOCK_PROPS        = 'update_block_props';
+    public const OP_UPDATE_BLOCK_STYLE        = 'update_block_style';
+    public const OP_UPDATE_BLOCK_VISIBILITY   = 'update_block_visibility';
+    public const OP_UPDATE_BLOCK_BINDINGS     = 'update_block_bindings';
+    public const OP_UPDATE_BLOCK_RESPONSIVE    = 'update_block_responsive';
+    public const OP_UPDATE_BLOCK_CLASS_NAMES   = 'update_block_class_names';
+    public const OP_UPDATE_BLOCK_ATTRIBUTES    = 'update_block_attributes';
+    public const OP_UPDATE_BLOCK_INTERACTIONS  = 'update_block_interactions';
+    public const OP_UPDATE_BLOCK_ANIMATION     = 'update_block_animation';
 
     public const ALLOWED_OPS = [
         self::OP_UPDATE_SETTINGS,
@@ -67,6 +69,8 @@ final class DocumentOperation
         self::OP_UPDATE_BLOCK_RESPONSIVE,
         self::OP_UPDATE_BLOCK_CLASS_NAMES,
         self::OP_UPDATE_BLOCK_ATTRIBUTES,
+        self::OP_UPDATE_BLOCK_INTERACTIONS,
+        self::OP_UPDATE_BLOCK_ANIMATION,
     ];
 
     /**

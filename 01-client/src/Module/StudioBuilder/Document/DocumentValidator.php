@@ -661,6 +661,30 @@ final class DocumentValidator
             }
         }
 
+        // Validate optional interactions if present
+        if (array_key_exists('interactions', $block)) {
+            $interactions = $block['interactions'];
+            if (!is_array($interactions) || ($interactions !== [] && array_is_list($interactions))) {
+                $errors[] = ValidationResult::issue("{$path}.interactions", 'invalid_interactions', 'block.interactions must be a JSON object.');
+            } else {
+                if (isset($interactions['trigger']) && (!is_string($interactions['trigger']) || !in_array($interactions['trigger'], ['hover', 'focus', 'click', 'viewport-enter', 'scroll', 'load'], true))) {
+                    $errors[] = ValidationResult::issue("{$path}.interactions.trigger", 'invalid_interaction_trigger', 'Invalid interaction trigger.');
+                }
+            }
+        }
+
+        // Validate optional animation if present
+        if (array_key_exists('animation', $block)) {
+            $animation = $block['animation'];
+            if (!is_array($animation) || ($animation !== [] && array_is_list($animation))) {
+                $errors[] = ValidationResult::issue("{$path}.animation", 'invalid_animation', 'block.animation must be a JSON object.');
+            } else {
+                if (isset($animation['type']) && (!is_string($animation['type']) || !in_array($animation['type'], ['fade_in', 'fade_up', 'fade_down', 'scale_up', 'slide_in', 'none'], true))) {
+                    $errors[] = ValidationResult::issue("{$path}.animation.type", 'invalid_animation_type', 'Invalid animation type.');
+                }
+            }
+        }
+
         // Block ID
         $blockId = $block['id'] ?? null;
         if (!is_string($blockId) || preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $blockId) !== 1) {

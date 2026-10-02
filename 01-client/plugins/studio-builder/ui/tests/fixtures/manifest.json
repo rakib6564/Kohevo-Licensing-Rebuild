@@ -337,6 +337,321 @@
             "version": 1
         },
         {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "forms",
+            "default_props": {
+                "action": "",
+                "form_name": "contact_form",
+                "method": "post",
+                "submit_text": "Submit",
+                "submit_variant": "primary"
+            },
+            "field_schema": [
+                {
+                    "key": "action",
+                    "type": "string",
+                    "label": "Action URL",
+                    "required": false,
+                    "default": "",
+                    "max_length": 500
+                },
+                {
+                    "key": "method",
+                    "type": "enum",
+                    "label": "Method",
+                    "required": false,
+                    "default": "post",
+                    "allowed_values": [
+                        "post",
+                        "get"
+                    ]
+                },
+                {
+                    "key": "form_name",
+                    "type": "string",
+                    "label": "Form Name",
+                    "required": false,
+                    "default": "contact_form",
+                    "max_length": 64
+                },
+                {
+                    "key": "submit_text",
+                    "type": "string",
+                    "label": "Submit Button Text",
+                    "required": false,
+                    "default": "Submit",
+                    "max_length": 60
+                },
+                {
+                    "key": "submit_variant",
+                    "type": "enum",
+                    "label": "Submit Variant",
+                    "required": false,
+                    "default": "primary",
+                    "allowed_values": [
+                        "primary",
+                        "secondary",
+                        "outline"
+                    ]
+                }
+            ],
+            "icon": "clipboard",
+            "label": "Form",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "type": "core.form",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "forms",
+            "default_props": {
+                "field_type": "text",
+                "help_text": "",
+                "label": "Field Label",
+                "name": "field_name",
+                "options": "",
+                "placeholder": "",
+                "required": false
+            },
+            "field_schema": [
+                {
+                    "key": "name",
+                    "type": "string",
+                    "label": "Field Name",
+                    "required": true,
+                    "default": "field_name",
+                    "max_length": 64
+                },
+                {
+                    "key": "label",
+                    "type": "string",
+                    "label": "Field Label",
+                    "required": true,
+                    "default": "Field Label",
+                    "max_length": 120
+                },
+                {
+                    "key": "field_type",
+                    "type": "enum",
+                    "label": "Field Type",
+                    "required": false,
+                    "default": "text",
+                    "allowed_values": [
+                        "text",
+                        "email",
+                        "tel",
+                        "number",
+                        "url",
+                        "textarea",
+                        "select",
+                        "checkbox",
+                        "radio"
+                    ]
+                },
+                {
+                    "key": "placeholder",
+                    "type": "string",
+                    "label": "Placeholder",
+                    "required": false,
+                    "default": "",
+                    "max_length": 120
+                },
+                {
+                    "key": "required",
+                    "type": "boolean",
+                    "label": "Required",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "help_text",
+                    "type": "string",
+                    "label": "Help Text",
+                    "required": false,
+                    "default": "",
+                    "max_length": 255
+                },
+                {
+                    "key": "options",
+                    "type": "string",
+                    "label": "Options (comma-separated)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 500
+                }
+            ],
+            "icon": "input",
+            "label": "Form Field",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "type": "core.form_field",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "media",
+            "default_props": {
+                "aspect_ratio": "1:1",
+                "columns": "3",
+                "gap": "md",
+                "images": [],
+                "rounded": true
+            },
+            "field_schema": [
+                {
+                    "key": "columns",
+                    "type": "enum",
+                    "label": "Columns",
+                    "required": false,
+                    "default": "3",
+                    "allowed_values": [
+                        "2",
+                        "3",
+                        "4",
+                        "6"
+                    ]
+                },
+                {
+                    "key": "gap",
+                    "type": "enum",
+                    "label": "Gap",
+                    "required": false,
+                    "default": "md",
+                    "allowed_values": [
+                        "none",
+                        "xs",
+                        "sm",
+                        "md",
+                        "lg"
+                    ]
+                },
+                {
+                    "key": "aspect_ratio",
+                    "type": "enum",
+                    "label": "Aspect Ratio",
+                    "required": false,
+                    "default": "1:1",
+                    "allowed_values": [
+                        "auto",
+                        "1:1",
+                        "4:3",
+                        "16:9"
+                    ]
+                },
+                {
+                    "key": "rounded",
+                    "type": "boolean",
+                    "label": "Rounded Corners",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "images",
+                    "type": "repeater",
+                    "label": "Gallery Images",
+                    "required": false,
+                    "default": [],
+                    "max_items": 50,
+                    "item_schema": [
+                        {
+                            "key": "url",
+                            "type": "url",
+                            "label": "Image URL",
+                            "required": true,
+                            "default": null,
+                            "max_length": 1000
+                        },
+                        {
+                            "key": "alt",
+                            "type": "string",
+                            "label": "Alt Text",
+                            "required": false,
+                            "default": "",
+                            "max_length": 200
+                        },
+                        {
+                            "key": "caption",
+                            "type": "string",
+                            "label": "Caption",
+                            "required": false,
+                            "default": "",
+                            "max_length": 255
+                        }
+                    ]
+                }
+            ],
+            "icon": "images",
+            "label": "Gallery",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "type": "core.gallery",
+            "version": 1
+        },
+        {
             "allowed_binding_providers": [
                 "content.posts",
                 "content.authors",
@@ -564,6 +879,96 @@
                 "z_index"
             ],
             "type": "core.image",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "advanced",
+            "default_props": {
+                "modal_id": "modal-1",
+                "size": "md",
+                "title": "Modal Title",
+                "trigger_text": "Open Modal",
+                "trigger_variant": "primary"
+            },
+            "field_schema": [
+                {
+                    "key": "modal_id",
+                    "type": "string",
+                    "label": "Modal ID",
+                    "required": false,
+                    "default": "modal-1",
+                    "max_length": 64
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "label": "Modal Title",
+                    "required": false,
+                    "default": "Modal Title",
+                    "max_length": 255
+                },
+                {
+                    "key": "size",
+                    "type": "enum",
+                    "label": "Dialog Size",
+                    "required": false,
+                    "default": "md",
+                    "allowed_values": [
+                        "sm",
+                        "md",
+                        "lg",
+                        "full"
+                    ]
+                },
+                {
+                    "key": "trigger_text",
+                    "type": "string",
+                    "label": "Trigger Button Text",
+                    "required": false,
+                    "default": "Open Modal",
+                    "max_length": 100
+                },
+                {
+                    "key": "trigger_variant",
+                    "type": "enum",
+                    "label": "Trigger Variant",
+                    "required": false,
+                    "default": "primary",
+                    "allowed_values": [
+                        "primary",
+                        "secondary",
+                        "outline",
+                        "ghost"
+                    ]
+                }
+            ],
+            "icon": "window",
+            "label": "Modal Popup",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "type": "core.modal",
             "version": 1
         },
         {
@@ -930,6 +1335,95 @@
             "version": 1
         },
         {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "media",
+            "default_props": {
+                "aspect_ratio": "16:9",
+                "autoplay": false,
+                "controls": true,
+                "loop": false,
+                "muted": false,
+                "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+            },
+            "field_schema": [
+                {
+                    "key": "url",
+                    "type": "string",
+                    "label": "Video URL",
+                    "required": true,
+                    "default": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                    "max_length": 1000
+                },
+                {
+                    "key": "aspect_ratio",
+                    "type": "enum",
+                    "label": "Aspect Ratio",
+                    "required": false,
+                    "default": "16:9",
+                    "allowed_values": [
+                        "16:9",
+                        "4:3",
+                        "1:1"
+                    ]
+                },
+                {
+                    "key": "autoplay",
+                    "type": "boolean",
+                    "label": "Autoplay",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "controls",
+                    "type": "boolean",
+                    "label": "Show Controls",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "muted",
+                    "type": "boolean",
+                    "label": "Muted",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "loop",
+                    "type": "boolean",
+                    "label": "Loop",
+                    "required": false,
+                    "default": false
+                }
+            ],
+            "icon": "video",
+            "label": "Video",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "type": "core.video",
+            "version": 1
+        },
+        {
             "allowed_binding_providers": [
                 "forms.form"
             ],
@@ -1251,6 +1745,96 @@
                 "z_index"
             ],
             "type": "layout.grid",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "drawer_id": "drawer-1",
+                "position": "right",
+                "title": "Menu",
+                "trigger_text": "Open Menu",
+                "trigger_variant": "outline"
+            },
+            "field_schema": [
+                {
+                    "key": "drawer_id",
+                    "type": "string",
+                    "label": "Drawer ID",
+                    "required": false,
+                    "default": "drawer-1",
+                    "max_length": 64
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "label": "Drawer Title",
+                    "required": false,
+                    "default": "Menu",
+                    "max_length": 255
+                },
+                {
+                    "key": "position",
+                    "type": "enum",
+                    "label": "Drawer Position",
+                    "required": false,
+                    "default": "right",
+                    "allowed_values": [
+                        "left",
+                        "right",
+                        "top",
+                        "bottom"
+                    ]
+                },
+                {
+                    "key": "trigger_text",
+                    "type": "string",
+                    "label": "Trigger Button Text",
+                    "required": false,
+                    "default": "Open Menu",
+                    "max_length": 100
+                },
+                {
+                    "key": "trigger_variant",
+                    "type": "enum",
+                    "label": "Trigger Variant",
+                    "required": false,
+                    "default": "outline",
+                    "allowed_values": [
+                        "primary",
+                        "secondary",
+                        "outline",
+                        "ghost"
+                    ]
+                }
+            ],
+            "icon": "sidebar",
+            "label": "Offcanvas Drawer",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "type": "layout.offcanvas",
             "version": 1
         },
         {

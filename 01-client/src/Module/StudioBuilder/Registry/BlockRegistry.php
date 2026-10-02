@@ -421,6 +421,123 @@ final class BlockRegistry
             ]),
             allowsChildren: false,
         ));
+
+        // 19. core.modal
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.modal',
+            version: 1,
+            label: 'Modal Popup',
+            category: 'advanced',
+            icon: 'window',
+            schema: FieldSchema::define([
+                ['key' => 'modal_id', 'type' => 'string', 'label' => 'Modal ID', 'required' => false, 'default' => 'modal-1', 'max_length' => 64],
+                ['key' => 'title', 'type' => 'string', 'label' => 'Modal Title', 'required' => false, 'default' => 'Modal Title', 'max_length' => 255],
+                ['key' => 'size', 'type' => 'enum', 'label' => 'Dialog Size', 'required' => false, 'allowed_values' => ['sm', 'md', 'lg', 'full'], 'default' => 'md'],
+                ['key' => 'trigger_text', 'type' => 'string', 'label' => 'Trigger Button Text', 'required' => false, 'default' => 'Open Modal', 'max_length' => 100],
+                ['key' => 'trigger_variant', 'type' => 'enum', 'label' => 'Trigger Variant', 'required' => false, 'allowed_values' => ['primary', 'secondary', 'outline', 'ghost'], 'default' => 'primary'],
+            ]),
+            allowsChildren: true,
+        ));
+
+        // 20. layout.offcanvas
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'layout.offcanvas',
+            version: 1,
+            label: 'Offcanvas Drawer',
+            category: 'layout',
+            icon: 'sidebar',
+            schema: FieldSchema::define([
+                ['key' => 'drawer_id', 'type' => 'string', 'label' => 'Drawer ID', 'required' => false, 'default' => 'drawer-1', 'max_length' => 64],
+                ['key' => 'title', 'type' => 'string', 'label' => 'Drawer Title', 'required' => false, 'default' => 'Menu', 'max_length' => 255],
+                ['key' => 'position', 'type' => 'enum', 'label' => 'Drawer Position', 'required' => false, 'allowed_values' => ['left', 'right', 'top', 'bottom'], 'default' => 'right'],
+                ['key' => 'trigger_text', 'type' => 'string', 'label' => 'Trigger Button Text', 'required' => false, 'default' => 'Open Menu', 'max_length' => 100],
+                ['key' => 'trigger_variant', 'type' => 'enum', 'label' => 'Trigger Variant', 'required' => false, 'allowed_values' => ['primary', 'secondary', 'outline', 'ghost'], 'default' => 'outline'],
+            ]),
+            allowsChildren: true,
+        ));
+
+        // 21. core.form
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.form',
+            version: 1,
+            label: 'Form',
+            category: 'forms',
+            icon: 'clipboard',
+            schema: FieldSchema::define([
+                ['key' => 'action', 'type' => 'string', 'label' => 'Action URL', 'required' => false, 'default' => '', 'max_length' => 500],
+                ['key' => 'method', 'type' => 'enum', 'label' => 'Method', 'required' => false, 'allowed_values' => ['post', 'get'], 'default' => 'post'],
+                ['key' => 'form_name', 'type' => 'string', 'label' => 'Form Name', 'required' => false, 'default' => 'contact_form', 'max_length' => 64],
+                ['key' => 'submit_text', 'type' => 'string', 'label' => 'Submit Button Text', 'required' => false, 'default' => 'Submit', 'max_length' => 60],
+                ['key' => 'submit_variant', 'type' => 'enum', 'label' => 'Submit Variant', 'required' => false, 'allowed_values' => ['primary', 'secondary', 'outline'], 'default' => 'primary'],
+            ]),
+            allowsChildren: true,
+        ));
+
+        // 22. core.form_field
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.form_field',
+            version: 1,
+            label: 'Form Field',
+            category: 'forms',
+            icon: 'input',
+            schema: FieldSchema::define([
+                ['key' => 'name', 'type' => 'string', 'label' => 'Field Name', 'required' => true, 'default' => 'field_name', 'max_length' => 64],
+                ['key' => 'label', 'type' => 'string', 'label' => 'Field Label', 'required' => true, 'default' => 'Field Label', 'max_length' => 120],
+                ['key' => 'field_type', 'type' => 'enum', 'label' => 'Field Type', 'required' => false, 'allowed_values' => ['text', 'email', 'tel', 'number', 'url', 'textarea', 'select', 'checkbox', 'radio'], 'default' => 'text'],
+                ['key' => 'placeholder', 'type' => 'string', 'label' => 'Placeholder', 'required' => false, 'default' => '', 'max_length' => 120],
+                ['key' => 'required', 'type' => 'boolean', 'label' => 'Required', 'required' => false, 'default' => false],
+                ['key' => 'help_text', 'type' => 'string', 'label' => 'Help Text', 'required' => false, 'default' => '', 'max_length' => 255],
+                ['key' => 'options', 'type' => 'string', 'label' => 'Options (comma-separated)', 'required' => false, 'default' => '', 'max_length' => 500],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 23. core.gallery
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.gallery',
+            version: 1,
+            label: 'Gallery',
+            category: 'media',
+            icon: 'images',
+            schema: FieldSchema::define([
+                ['key' => 'columns', 'type' => 'enum', 'label' => 'Columns', 'required' => false, 'allowed_values' => ['2', '3', '4', '6'], 'default' => '3'],
+                ['key' => 'gap', 'type' => 'enum', 'label' => 'Gap', 'required' => false, 'allowed_values' => ['none', 'xs', 'sm', 'md', 'lg'], 'default' => 'md'],
+                ['key' => 'aspect_ratio', 'type' => 'enum', 'label' => 'Aspect Ratio', 'required' => false, 'allowed_values' => ['auto', '1:1', '4:3', '16:9'], 'default' => '1:1'],
+                ['key' => 'rounded', 'type' => 'boolean', 'label' => 'Rounded Corners', 'required' => false, 'default' => true],
+                [
+                    'key'         => 'images',
+                    'type'        => 'repeater',
+                    'label'       => 'Gallery Images',
+                    'required'    => false,
+                    'default'     => [],
+                    'max_items'   => 50,
+                    'item_schema' => FieldSchema::define([
+                        ['key' => 'url', 'type' => 'url', 'label' => 'Image URL', 'required' => true, 'max_length' => 1000],
+                        ['key' => 'alt', 'type' => 'string', 'label' => 'Alt Text', 'required' => false, 'default' => '', 'max_length' => 200],
+                        ['key' => 'caption', 'type' => 'string', 'label' => 'Caption', 'required' => false, 'default' => '', 'max_length' => 255],
+                    ]),
+                ],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 24. core.video
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.video',
+            version: 1,
+            label: 'Video',
+            category: 'media',
+            icon: 'video',
+            schema: FieldSchema::define([
+                ['key' => 'url', 'type' => 'string', 'label' => 'Video URL', 'required' => true, 'default' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'max_length' => 1000],
+                ['key' => 'aspect_ratio', 'type' => 'enum', 'label' => 'Aspect Ratio', 'required' => false, 'allowed_values' => ['16:9', '4:3', '1:1'], 'default' => '16:9'],
+                ['key' => 'autoplay', 'type' => 'boolean', 'label' => 'Autoplay', 'required' => false, 'default' => false],
+                ['key' => 'controls', 'type' => 'boolean', 'label' => 'Show Controls', 'required' => false, 'default' => true],
+                ['key' => 'muted', 'type' => 'boolean', 'label' => 'Muted', 'required' => false, 'default' => false],
+                ['key' => 'loop', 'type' => 'boolean', 'label' => 'Loop', 'required' => false, 'default' => false],
+            ]),
+            allowsChildren: false,
+        ));
     }
 
     /**

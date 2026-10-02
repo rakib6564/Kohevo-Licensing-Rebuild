@@ -150,6 +150,8 @@ final class CanonicalDocumentSchema
         'classNames',
         'conditions',
         'metadata',
+        'interactions',
+        'animation',
     ];
 
     /**
@@ -161,6 +163,8 @@ final class CanonicalDocumentSchema
         'classNames',
         'conditions',
         'metadata',
+        'interactions',
+        'animation',
     ];
 
     public const ALLOWED_STYLE_KEYS = [

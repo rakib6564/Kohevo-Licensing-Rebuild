@@ -152,15 +152,42 @@ final class DocumentRenderer
             }
         }
 
+        $animationClasses = [];
+        if (isset($block['animation']) && is_array($block['animation'])) {
+            $animType = (string) ($block['animation']['type'] ?? '');
+            if ($animType !== '' && $animType !== 'none') {
+                $animationClasses[] = 'sb-animate-' . str_replace('_', '-', $animType);
+            }
+        }
+
+        $interactionClasses = [];
+        $interactionAttrs = '';
+        if (isset($block['interactions']) && is_array($block['interactions'])) {
+            $trigger = (string) ($block['interactions']['trigger'] ?? '');
+            if ($trigger !== '') {
+                $interactionClasses[] = 'sb-interaction-' . str_replace(['_', ' '], '-', $trigger);
+                $interactionAttrs .= ' data-sb-interaction-trigger="' . Html::e($trigger) . '"';
+            }
+            if (isset($block['interactions']['animation']) && is_array($block['interactions']['animation'])) {
+                $anim = $block['interactions']['animation'];
+                $animType = (string) ($anim['type'] ?? '');
+                if ($animType !== '' && $animType !== 'none') {
+                    $animationClasses[] = 'sb-animate-' . str_replace('_', '-', $animType);
+                }
+            }
+        }
+
         $classes = array_merge(
             ['sb-block', 'sb-block--' . str_replace(['.', '_'], '-', $type)],
             $this->styleClasses(is_array($block['style'] ?? null) ? $block['style'] : [], $theme, $collector),
             self::hideClasses($visibility),
             $customClasses,
             $responsiveClasses,
+            $animationClasses,
+            $interactionClasses,
         );
 
-        $attrs = '';
+        $attrs = $interactionAttrs;
         if (isset($block['attributes']) && is_array($block['attributes'])) {
             foreach ($block['attributes'] as $attrKey => $attrVal) {
                 if (is_string($attrKey) && preg_match('/^[a-zA-Z][a-zA-Z0-9_-]*$/', $attrKey) === 1) {

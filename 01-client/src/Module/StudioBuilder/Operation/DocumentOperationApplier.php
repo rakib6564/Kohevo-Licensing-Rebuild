@@ -78,6 +78,8 @@ final class DocumentOperationApplier
             DocumentOperation::OP_UPDATE_BLOCK_RESPONSIVE => self::updateBlockField($document, $payload, 'responsive'),
             DocumentOperation::OP_UPDATE_BLOCK_CLASS_NAMES => self::updateBlockArrayField($document, $payload, 'classNames'),
             DocumentOperation::OP_UPDATE_BLOCK_ATTRIBUTES => self::updateBlockField($document, $payload, 'attributes'),
+            DocumentOperation::OP_UPDATE_BLOCK_INTERACTIONS => self::updateBlockField($document, $payload, 'interactions'),
+            DocumentOperation::OP_UPDATE_BLOCK_ANIMATION => self::updateBlockField($document, $payload, 'animation'),
             default => throw new StudioValidationException([
                 ['path' => '$.op', 'code' => 'unknown_operation', 'message' => "Unknown Studio document operation '{$operation->op}'."],
             ]),

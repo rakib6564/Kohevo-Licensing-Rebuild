@@ -209,6 +209,12 @@ final class DocumentNormalizer
         if (array_key_exists('classNames', $block)) {
             $normalizedBlock['classNames'] = is_array($block['classNames']) ? array_values($block['classNames']) : (string) $block['classNames'];
         }
+        if (array_key_exists('animation', $block) && is_array($block['animation'])) {
+            $normalizedBlock['animation'] = CanonicalJson::sortKeysRecursively($block['animation']);
+        }
+        if (array_key_exists('interactions', $block) && is_array($block['interactions'])) {
+            $normalizedBlock['interactions'] = CanonicalJson::sortKeysRecursively($block['interactions']);
+        }
 
         return CanonicalJson::sortKeysRecursively($normalizedBlock);
     }
