@@ -48,8 +48,12 @@ function GlobalSectionPanel({ section, label }) {
 }
 
 export function SectionInspector({ info }) {
-  const { manifest, applyOp, removeNode, moveSectionTo, insertSection, viewport } = useEditor();
+  const { manifest, applyOp, removeNode, moveSectionTo, insertSection, viewport, openSaveTemplate, openComponentDialog } = useEditor();
   const working = useEngineState((s) => s.working);
+  const page = useEngineState((s) => s.page);
+  const perms = (manifest && manifest.permissions) || {};
+  const pageType = page ? page.page_type : 'page';
+  const canReference = asList(manifest && manifest.components && manifest.components.referencing_types).includes(pageType);
   const [tab, setTab] = useState('layout');
   const section = info.node;
   const layout = asObject(section.layout);
@@ -67,6 +71,12 @@ export function SectionInspector({ info }) {
         <button type="button" className="sbx-btn sbx-btn--xs" disabled={info.index === 0} onClick={() => moveSectionTo(section.id, info.index - 1)}>↑ {t('move_up')}</button>
         <button type="button" className="sbx-btn sbx-btn--xs" disabled={info.index >= total - 1} onClick={() => moveSectionTo(section.id, info.index + 1)}>↓ {t('move_down')}</button>
         <button type="button" className="sbx-btn sbx-btn--xs" onClick={() => insertSection(info.index + 1)}>+ {t('add_section')}</button>
+        {!global && perms.admin && openSaveTemplate && (
+          <button type="button" className="sbx-btn sbx-btn--xs" title={t('library_save_template')} onClick={openSaveTemplate}>💾 {t('library_save_template')}</button>
+        )}
+        {!global && perms.edit && canReference && openComponentDialog && (
+          <button type="button" className="sbx-btn sbx-btn--xs" title={t('library_new_component')} onClick={openComponentDialog}>❖ {t('library_new_component')}</button>
+        )}
         <button type="button" className="sbx-btn sbx-btn--xs sbx-btn--danger" onClick={() => removeNode(section.id)}>{t('remove')}</button>
       </div>
       {global && <GlobalSectionPanel section={section} label={label} />}
