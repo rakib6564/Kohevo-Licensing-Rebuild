@@ -123,6 +123,7 @@ final class BlockRegistry
                 ['key' => 'level', 'type' => 'enum', 'label' => 'Heading Level', 'required' => false, 'allowed_values' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], 'default' => 'h2'],
             ]),
             allowsChildren: false,
+            allowedBindingProviders: ['content.posts', 'content.authors', 'content.taxonomy', 'booking.services', 'membership.plans', 'forms.form'],
         ));
 
         // 3. core.rich_text
@@ -136,6 +137,7 @@ final class BlockRegistry
                 ['key' => 'content', 'type' => 'rich_text', 'label' => 'Content', 'required' => true, 'default' => '<p></p>'],
             ]),
             allowsChildren: false,
+            allowedBindingProviders: ['content.posts', 'content.authors', 'content.taxonomy'],
         ));
 
         // 4. core.image
@@ -152,6 +154,7 @@ final class BlockRegistry
                 ['key' => 'rounded', 'type' => 'boolean', 'label' => 'Rounded Corners', 'required' => false, 'default' => true],
             ]),
             allowsChildren: false,
+            allowedBindingProviders: ['content.posts'],
         ));
 
         // 5. core.button
@@ -168,6 +171,7 @@ final class BlockRegistry
                 ['key' => 'full_width', 'type' => 'boolean', 'label' => 'Full Width', 'required' => false, 'default' => false],
             ]),
             allowsChildren: false,
+            allowedBindingProviders: ['content.posts', 'content.authors', 'content.taxonomy', 'booking.services', 'membership.plans', 'forms.form'],
         ));
 
         // 6. core.feature_list (exercises repeater + object field types)
@@ -307,6 +311,39 @@ final class BlockRegistry
                 ['key' => 'color_token', 'type' => 'token_ref', 'label' => 'Color Token', 'required' => false, 'default' => null],
             ]),
             allowsChildren: false,
+            allowedBindingProviders: ['content.posts', 'content.authors', 'content.taxonomy', 'booking.services', 'membership.plans', 'forms.form'],
+        ));
+
+        // 13. core.query_loop
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.query_loop',
+            version: 1,
+            label: 'Query Loop',
+            category: 'layout',
+            icon: 'layout-grid',
+            schema: FieldSchema::define([
+                ['key' => 'source', 'type' => 'enum', 'label' => 'Source', 'required' => false, 'allowed_values' => ['posts', 'pages', 'custom'], 'default' => 'posts'],
+                ['key' => 'category', 'type' => 'string', 'label' => 'Category', 'required' => false, 'default' => '', 'max_length' => 80],
+                ['key' => 'tag', 'type' => 'string', 'label' => 'Tag', 'required' => false, 'default' => '', 'max_length' => 80],
+                ['key' => 'author_id', 'type' => 'number', 'label' => 'Author ID', 'required' => false, 'default' => 0, 'integer_only' => true],
+                ['key' => 'order_by', 'type' => 'enum', 'label' => 'Order By', 'required' => false, 'allowed_values' => ['published_at', 'title', 'created_at'], 'default' => 'published_at'],
+                ['key' => 'order', 'type' => 'enum', 'label' => 'Order Direction', 'required' => false, 'allowed_values' => ['desc', 'asc'], 'default' => 'desc'],
+                ['key' => 'per_page', 'type' => 'number', 'label' => 'Posts Per Page', 'required' => false, 'default' => 6, 'min' => 1, 'max' => 24, 'integer_only' => true],
+                ['key' => 'columns', 'type' => 'number', 'label' => 'Grid Columns', 'required' => false, 'default' => 3, 'min' => 1, 'max' => 6, 'integer_only' => true],
+                ['key' => 'gap', 'type' => 'enum', 'label' => 'Gap', 'required' => false, 'allowed_values' => CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, 'default' => 'md'],
+                ['key' => 'card_variant', 'type' => 'enum', 'label' => 'Card Variant', 'required' => false, 'allowed_values' => ['card', 'minimal', 'horizontal'], 'default' => 'card'],
+                ['key' => 'show_featured_image', 'type' => 'boolean', 'label' => 'Show Image', 'required' => false, 'default' => true],
+                ['key' => 'show_date', 'type' => 'boolean', 'label' => 'Show Date', 'required' => false, 'default' => true],
+                ['key' => 'show_author', 'type' => 'boolean', 'label' => 'Show Author', 'required' => false, 'default' => true],
+                ['key' => 'show_category', 'type' => 'boolean', 'label' => 'Show Category', 'required' => false, 'default' => true],
+                ['key' => 'show_excerpt', 'type' => 'boolean', 'label' => 'Show Excerpt', 'required' => false, 'default' => true],
+                ['key' => 'read_more_text', 'type' => 'string', 'label' => 'Button Text', 'required' => false, 'default' => 'Read More', 'max_length' => 80],
+                ['key' => 'enable_pagination', 'type' => 'boolean', 'label' => 'Pagination', 'required' => false, 'default' => true],
+                ['key' => 'empty_message', 'type' => 'string', 'label' => 'Empty Message', 'required' => false, 'default' => 'No posts found.', 'max_length' => 200],
+            ]),
+            allowsChildren: true,
+            allowedBindingProviders: ['content.posts', 'content.authors', 'content.taxonomy'],
+            bindingSlots: ['items' => 'content.posts'],
         ));
     }
 

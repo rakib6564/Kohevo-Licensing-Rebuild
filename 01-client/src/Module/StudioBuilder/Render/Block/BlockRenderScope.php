@@ -44,6 +44,17 @@ final class BlockRenderScope
 
     public function prop(string $key, mixed $default = null): mixed
     {
+        // 1. Dynamic binding property mapping resolution
+        $bindings = is_array($this->block['bindings'] ?? null) ? $this->block['bindings'] : [];
+        foreach ($bindings as $slot => $binding) {
+            if (is_array($binding) && isset($binding['mapping']) && is_array($binding['mapping'])) {
+                $mappedField = $binding['mapping'][$key] ?? null;
+                if (is_string($mappedField) && isset($this->bindingRows[$slot][0][$mappedField]) && $this->bindingRows[$slot][0][$mappedField] !== null) {
+                    return $this->bindingRows[$slot][0][$mappedField];
+                }
+            }
+        }
+
         $props = $this->props();
         return array_key_exists($key, $props) && $props[$key] !== null ? $props[$key] : $default;
     }

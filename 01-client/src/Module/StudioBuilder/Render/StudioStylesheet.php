@@ -162,7 +162,22 @@ final class StudioStylesheet
             . '.sb-m-auto{margin:auto}.sb-mx-auto{margin-left:auto;margin-right:auto}.sb-my-auto{margin-top:auto;margin-bottom:auto}.sb-m-none{margin:0}.sb-my-none{margin-top:0;margin-bottom:0}'
             . '.sb-align-desktop-left{text-align:left}.sb-align-desktop-center{text-align:center}.sb-align-desktop-right{text-align:right}'
             . '.sb-align-tablet-left{text-align:left}.sb-align-tablet-center{text-align:center}.sb-align-tablet-right{text-align:right}'
-            . '.sb-align-mobile-left{text-align:left}.sb-align-mobile-center{text-align:center}.sb-align-mobile-right{text-align:right}';
+            . '.sb-align-mobile-left{text-align:left}.sb-align-mobile-center{text-align:center}.sb-align-mobile-right{text-align:right}'
+            . '.sb-query-loop{width:100%}'
+            . '.sb-post-card{display:flex;flex-direction:column;border:1px solid var(--sb-border-default,#e2e8f0);border-radius:var(--sb-radius-md,.5rem);overflow:hidden;background:var(--sb-surface-secondary,#ffffff);transition:box-shadow .2s ease}'
+            . '.sb-post-card:hover{box-shadow:var(--sb-shadow-md,0 4px 6px -1px rgba(0,0,0,0.1))}'
+            . '.sb-post-card__media img{width:100%;height:12rem;object-fit:cover;display:block}'
+            . '.sb-post-card__body{padding:1.25rem;display:flex;flex-direction:column;flex:1}'
+            . '.sb-post-card__category{display:inline-block;font-size:.75rem;font-weight:600;text-transform:uppercase;color:var(--sb-color-accent,#6366f1);margin-bottom:.5rem}'
+            . '.sb-post-card__title{margin:0 0 .5rem;font-size:1.25rem;line-height:1.4}'
+            . '.sb-post-card__title a{color:inherit;text-decoration:none}'
+            . '.sb-post-card__title a:hover{color:var(--sb-color-accent,#6366f1)}'
+            . '.sb-post-card__excerpt{color:var(--sb-text-secondary,#475569);font-size:.875rem;line-height:1.5;margin:0 0 1rem;flex:1}'
+            . '.sb-post-card__meta{display:flex;align-items:center;gap:.75rem;font-size:.75rem;color:var(--sb-text-muted,#94a3b8);margin-bottom:1rem}'
+            . '.sb-pagination{display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:2rem}'
+            . '.sb-pagination__page,.sb-pagination__prev,.sb-pagination__next{display:inline-flex;align-items:center;justify-content:center;padding:.5rem .875rem;border-radius:var(--sb-radius-md,.5rem);border:1px solid var(--sb-border-default,#e2e8f0);font-size:.875rem;font-weight:500;text-decoration:none;color:inherit}'
+            . '.sb-pagination__current{background:var(--sb-surface-accent,#6366f1);color:#fff;border-color:var(--sb-surface-accent,#6366f1)}'
+            . '.sb-pagination__disabled{opacity:.5;pointer-events:none}';
 
         foreach (self::WIDTHS as $name => $max) {
             $css .= '.sb-w-' . $name . '{max-width:' . $max . ';margin-left:auto;margin-right:auto}';

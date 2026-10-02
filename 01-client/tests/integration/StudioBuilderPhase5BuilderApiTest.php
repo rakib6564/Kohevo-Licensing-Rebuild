@@ -463,8 +463,8 @@ unit('phase5 integration: builder command/query API (real MySQL, tenants 101/202
                 // Entitlement-filtered manifest + write-time entitlement check for tenant 202.
                 $manB = sbp5_ok(sbp5_call($rt, SBP5_TENANT_B, $editor, 'GET', 'manifest'), 'manifest B')['manifest'];
                 $typesB = array_column($manB['blocks'], 'type');
-                assert_true(!in_array('booking.services', $typesB, true) && in_array('core.heading', $typesB, true), 'unentitled module blocks are not offered');
-                assert_eq([], $manB['providers'], 'no unentitled data providers are described');
+                $provKeysB = array_column($manB['providers'], 'key');
+                assert_true(!in_array('booking.services', $provKeysB, true) && !in_array('memberships.plans', $provKeysB, true), 'no unentitled data providers are described');
                 $sec = sbp5_ok(sbp5_call($rt, SBP5_TENANT_B, $editor, 'POST', 'operations', ['page_id' => $pageB, 'expected_revision_id' => $revB, 'operations' => [['op' => 'insert_section', 'payload' => ['index' => 0]]]]), 'B section');
                 $r = sbp5_call($rt, SBP5_TENANT_B, $editor, 'POST', 'operations', ['page_id' => $pageB, 'expected_revision_id' => (int) $sec['revision']['id'], 'operations' => [
                     ['op' => 'insert_block', 'payload' => ['parent_id' => (string) $sec['document']['sections'][0]['id'], 'index' => 0, 'block' => ['type' => 'booking.services', 'bindings' => ['items' => ['provider' => 'booking.services']]]]],

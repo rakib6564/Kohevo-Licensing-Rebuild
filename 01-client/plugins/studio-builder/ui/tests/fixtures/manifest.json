@@ -69,7 +69,14 @@
             "version": 1
         },
         {
-            "allowed_binding_providers": [],
+            "allowed_binding_providers": [
+                "content.posts",
+                "content.authors",
+                "content.taxonomy",
+                "booking.services",
+                "membership.plans",
+                "forms.form"
+            ],
             "allowed_child_types": [],
             "allows_children": false,
             "binding_slots": [],
@@ -330,7 +337,14 @@
             "version": 1
         },
         {
-            "allowed_binding_providers": [],
+            "allowed_binding_providers": [
+                "content.posts",
+                "content.authors",
+                "content.taxonomy",
+                "booking.services",
+                "membership.plans",
+                "forms.form"
+            ],
             "allowed_child_types": [],
             "allows_children": false,
             "binding_slots": [],
@@ -476,7 +490,9 @@
             "version": 1
         },
         {
-            "allowed_binding_providers": [],
+            "allowed_binding_providers": [
+                "content.posts"
+            ],
             "allowed_child_types": [],
             "allows_children": false,
             "binding_slots": [],
@@ -551,7 +567,238 @@
             "version": 1
         },
         {
-            "allowed_binding_providers": [],
+            "allowed_binding_providers": [
+                "content.posts",
+                "content.authors",
+                "content.taxonomy"
+            ],
+            "allowed_child_types": [],
+            "allows_children": true,
+            "binding_slots": [
+                {
+                    "provider": "content.posts",
+                    "slot": "items"
+                }
+            ],
+            "category": "layout",
+            "default_props": {
+                "author_id": 0,
+                "card_variant": "card",
+                "category": "",
+                "columns": 3,
+                "empty_message": "No posts found.",
+                "enable_pagination": true,
+                "gap": "md",
+                "order": "desc",
+                "order_by": "published_at",
+                "per_page": 6,
+                "read_more_text": "Read More",
+                "show_author": true,
+                "show_category": true,
+                "show_date": true,
+                "show_excerpt": true,
+                "show_featured_image": true,
+                "source": "posts",
+                "tag": ""
+            },
+            "field_schema": [
+                {
+                    "key": "source",
+                    "type": "enum",
+                    "label": "Source",
+                    "required": false,
+                    "default": "posts",
+                    "allowed_values": [
+                        "posts",
+                        "pages",
+                        "custom"
+                    ]
+                },
+                {
+                    "key": "category",
+                    "type": "string",
+                    "label": "Category",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                },
+                {
+                    "key": "tag",
+                    "type": "string",
+                    "label": "Tag",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                },
+                {
+                    "key": "author_id",
+                    "type": "number",
+                    "label": "Author ID",
+                    "required": false,
+                    "default": 0,
+                    "integer_only": true
+                },
+                {
+                    "key": "order_by",
+                    "type": "enum",
+                    "label": "Order By",
+                    "required": false,
+                    "default": "published_at",
+                    "allowed_values": [
+                        "published_at",
+                        "title",
+                        "created_at"
+                    ]
+                },
+                {
+                    "key": "order",
+                    "type": "enum",
+                    "label": "Order Direction",
+                    "required": false,
+                    "default": "desc",
+                    "allowed_values": [
+                        "desc",
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "per_page",
+                    "type": "number",
+                    "label": "Posts Per Page",
+                    "required": false,
+                    "default": 6,
+                    "min": 1,
+                    "max": 24,
+                    "integer_only": true
+                },
+                {
+                    "key": "columns",
+                    "type": "number",
+                    "label": "Grid Columns",
+                    "required": false,
+                    "default": 3,
+                    "min": 1,
+                    "max": 6,
+                    "integer_only": true
+                },
+                {
+                    "key": "gap",
+                    "type": "enum",
+                    "label": "Gap",
+                    "required": false,
+                    "default": "md",
+                    "allowed_values": [
+                        "none",
+                        "xs",
+                        "sm",
+                        "md",
+                        "lg",
+                        "xl",
+                        "2xl"
+                    ]
+                },
+                {
+                    "key": "card_variant",
+                    "type": "enum",
+                    "label": "Card Variant",
+                    "required": false,
+                    "default": "card",
+                    "allowed_values": [
+                        "card",
+                        "minimal",
+                        "horizontal"
+                    ]
+                },
+                {
+                    "key": "show_featured_image",
+                    "type": "boolean",
+                    "label": "Show Image",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_date",
+                    "type": "boolean",
+                    "label": "Show Date",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_author",
+                    "type": "boolean",
+                    "label": "Show Author",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_category",
+                    "type": "boolean",
+                    "label": "Show Category",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_excerpt",
+                    "type": "boolean",
+                    "label": "Show Excerpt",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "read_more_text",
+                    "type": "string",
+                    "label": "Button Text",
+                    "required": false,
+                    "default": "Read More",
+                    "max_length": 80
+                },
+                {
+                    "key": "enable_pagination",
+                    "type": "boolean",
+                    "label": "Pagination",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "empty_message",
+                    "type": "string",
+                    "label": "Empty Message",
+                    "required": false,
+                    "default": "No posts found.",
+                    "max_length": 200
+                }
+            ],
+            "icon": "layout-grid",
+            "label": "Query Loop",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "type": "core.query_loop",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [
+                "content.posts",
+                "content.authors",
+                "content.taxonomy"
+            ],
             "allowed_child_types": [],
             "allows_children": false,
             "binding_slots": [],
@@ -594,7 +841,14 @@
             "version": 1
         },
         {
-            "allowed_binding_providers": [],
+            "allowed_binding_providers": [
+                "content.posts",
+                "content.authors",
+                "content.taxonomy",
+                "booking.services",
+                "membership.plans",
+                "forms.form"
+            ],
             "allowed_child_types": [],
             "allows_children": false,
             "binding_slots": [],
@@ -1181,6 +1435,148 @@
             "params": []
         },
         {
+            "key": "content.authors",
+            "max_results": 50,
+            "params": [
+                {
+                    "key": "limit",
+                    "type": "number",
+                    "label": "Limit",
+                    "required": false,
+                    "default": 10,
+                    "min": 1,
+                    "max": 50,
+                    "integer_only": true
+                }
+            ]
+        },
+        {
+            "key": "content.posts",
+            "max_results": 50,
+            "params": [
+                {
+                    "key": "source",
+                    "type": "enum",
+                    "label": "Source",
+                    "required": false,
+                    "default": "posts",
+                    "allowed_values": [
+                        "posts",
+                        "pages",
+                        "custom"
+                    ]
+                },
+                {
+                    "key": "category",
+                    "type": "string",
+                    "label": "Category filter",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                },
+                {
+                    "key": "tag",
+                    "type": "string",
+                    "label": "Tag filter",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                },
+                {
+                    "key": "author_id",
+                    "type": "number",
+                    "label": "Author ID",
+                    "required": false,
+                    "default": 0,
+                    "integer_only": true
+                },
+                {
+                    "key": "search",
+                    "type": "string",
+                    "label": "Search keyword",
+                    "required": false,
+                    "default": "",
+                    "max_length": 120
+                },
+                {
+                    "key": "order_by",
+                    "type": "enum",
+                    "label": "Order field",
+                    "required": false,
+                    "default": "published_at",
+                    "allowed_values": [
+                        "published_at",
+                        "title",
+                        "created_at"
+                    ]
+                },
+                {
+                    "key": "order",
+                    "type": "enum",
+                    "label": "Sort direction",
+                    "required": false,
+                    "default": "desc",
+                    "allowed_values": [
+                        "desc",
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "limit",
+                    "type": "number",
+                    "label": "Items per page",
+                    "required": false,
+                    "default": 6,
+                    "min": 1,
+                    "max": 50,
+                    "integer_only": true
+                },
+                {
+                    "key": "page",
+                    "type": "number",
+                    "label": "Page number",
+                    "required": false,
+                    "default": 1,
+                    "min": 1,
+                    "integer_only": true
+                },
+                {
+                    "key": "featured_only",
+                    "type": "boolean",
+                    "label": "Featured posts only",
+                    "required": false,
+                    "default": false
+                }
+            ]
+        },
+        {
+            "key": "content.taxonomy",
+            "max_results": 50,
+            "params": [
+                {
+                    "key": "type",
+                    "type": "enum",
+                    "label": "Taxonomy type",
+                    "required": false,
+                    "default": "category",
+                    "allowed_values": [
+                        "category",
+                        "tag"
+                    ]
+                },
+                {
+                    "key": "limit",
+                    "type": "number",
+                    "label": "Limit",
+                    "required": false,
+                    "default": 20,
+                    "min": 1,
+                    "max": 50,
+                    "integer_only": true
+                }
+            ]
+        },
+        {
             "key": "forms.form",
             "max_results": 1,
             "params": [
@@ -1368,7 +1764,16 @@
             "spacing_token",
             "radius_token",
             "shadow_token",
-            "font_token"
+            "font_token",
+            "typography",
+            "color",
+            "background",
+            "spacing",
+            "border",
+            "shadow",
+            "dimensions",
+            "opacity",
+            "z_index"
         ]
     },
     "limits": {

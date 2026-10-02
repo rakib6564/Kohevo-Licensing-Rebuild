@@ -67,6 +67,7 @@ final class BlockRendererRegistry
         $registry->register(new CoreRenderers\FlexRenderer());
         $registry->register(new CoreRenderers\GridRenderer());
         $registry->register(new CoreRenderers\TextRenderer());
+        $registry->register(new CoreRenderers\QueryLoopRenderer());
         return $registry;
     }
 

@@ -254,6 +254,22 @@ final class DocumentValidator
                 $errors[] = ValidationResult::issue("$.settings.{$chromeKey}", 'invalid_chrome_mode', "Invalid settings.{$chromeKey} value.");
             }
         }
+
+        if (isset($settings['category']) && (!is_string($settings['category']) || mb_strlen($settings['category'], 'UTF-8') > 100)) {
+            $errors[] = ValidationResult::issue('$.settings.category', 'invalid_category', 'Invalid settings.category string.');
+        }
+
+        if (isset($settings['featured']) && !is_bool($settings['featured'])) {
+            $errors[] = ValidationResult::issue('$.settings.featured', 'invalid_featured', 'Invalid settings.featured boolean.');
+        }
+
+        if (isset($settings['excerpt']) && (!is_string($settings['excerpt']) || mb_strlen($settings['excerpt'], 'UTF-8') > 500)) {
+            $errors[] = ValidationResult::issue('$.settings.excerpt', 'invalid_excerpt', 'Invalid settings.excerpt string.');
+        }
+
+        if (isset($settings['tags']) && !is_array($settings['tags']) && !is_string($settings['tags'])) {
+            $errors[] = ValidationResult::issue('$.settings.tags', 'invalid_tags', 'Invalid settings.tags value.');
+        }
     }
 
     /**

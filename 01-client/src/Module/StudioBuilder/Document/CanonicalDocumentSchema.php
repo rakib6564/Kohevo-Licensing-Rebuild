@@ -60,6 +60,10 @@ final class CanonicalDocumentSchema
         'token_group',
         'header_mode',
         'footer_mode',
+        'category',
+        'tags',
+        'featured',
+        'excerpt',
     ];
 
     public const ALLOWED_CONTAINER_WIDTHS = ['narrow', 'normal', 'wide', 'full'];

@@ -15,10 +15,13 @@ namespace Slate\Module\StudioBuilder\Runtime;
 use Slate\Module\StudioBuilder\Application\StudioApplicationService;
 use Slate\Module\StudioBuilder\Application\StudioPackageService;
 use Slate\Module\StudioBuilder\Package\Html\HtmlImportConverter;
+use Slate\Module\StudioBuilder\Provider\AuthorsProvider;
 use Slate\Module\StudioBuilder\Provider\BookingServicesProvider;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
 use Slate\Module\StudioBuilder\Provider\FormsFormProvider;
 use Slate\Module\StudioBuilder\Provider\MembershipPlansProvider;
+use Slate\Module\StudioBuilder\Provider\PostsProvider;
+use Slate\Module\StudioBuilder\Provider\TaxonomyProvider;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
@@ -148,6 +151,9 @@ final class StudioRuntimeFactory
         $providers->register(new BookingServicesProvider());
         $providers->register(new MembershipPlansProvider());
         $providers->register(new FormsFormProvider());
+        $providers->register(new PostsProvider());
+        $providers->register(new AuthorsProvider());
+        $providers->register(new TaxonomyProvider());
         return $providers;
     }
 }
