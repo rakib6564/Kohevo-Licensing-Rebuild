@@ -1,0 +1,9 @@
+{
+    "slug": "studio-testimonial-widget",
+    "name": "Studio Testimonial Widget",
+    "version": "1.0.0",
+    "description": "Example third-party extension registering a custom testimonial card widget into Kohevo Studio Builder.",
+    "author": "Acme Plugins",
+    "author_url": "https://example.test",
+    "requires_core": ">=1.0.0"
+}

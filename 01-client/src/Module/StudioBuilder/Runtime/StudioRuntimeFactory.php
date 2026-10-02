@@ -70,6 +70,8 @@ final class StudioRuntimeFactory
      */
     public static function build(array $overrides = []): StudioRuntime
     {
+        \Slate\Module\StudioBuilder\Sdk\WidgetSdk::instance()->loadFromHooks();
+
         $tenants   = $overrides['tenants'] ?? new TenantContext();
         $registry  = $overrides['registry'] ?? ModuleBlockDefinitions::studioRegistry();
         $renderers = $overrides['renderers'] ?? BlockRendererRegistry::withStudioRenderers();

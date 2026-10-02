@@ -378,6 +378,12 @@ final class WidgetRegistry implements WidgetRegistryInterface
             }
         }
 
+        foreach (\Slate\Module\StudioBuilder\Sdk\WidgetSdk::instance()->all() as $customWidget) {
+            if (!$registry->has($customWidget->type())) {
+                $registry->register($customWidget->toBlockDefinition());
+            }
+        }
+
         return $registry;
     }
 }
