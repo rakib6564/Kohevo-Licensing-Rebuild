@@ -29,11 +29,14 @@ final class DocumentOperation
     public const OP_INSERT_SECTION          = 'insert_section';
     public const OP_REMOVE_SECTION          = 'remove_section';
     public const OP_MOVE_SECTION            = 'move_section';
+    public const OP_DUPLICATE_SECTION       = 'duplicate_section';
+    public const OP_UPDATE_SECTION_LABEL    = 'update_section_label';
     public const OP_UPDATE_SECTION_LAYOUT   = 'update_section_layout';
     public const OP_UPDATE_SECTION_VISIBILITY = 'update_section_visibility';
     public const OP_INSERT_BLOCK            = 'insert_block';
     public const OP_REMOVE_BLOCK            = 'remove_block';
     public const OP_MOVE_BLOCK              = 'move_block';
+    public const OP_DUPLICATE_BLOCK         = 'duplicate_block';
     public const OP_UPDATE_BLOCK_PROPS      = 'update_block_props';
     public const OP_UPDATE_BLOCK_STYLE      = 'update_block_style';
     public const OP_UPDATE_BLOCK_VISIBILITY = 'update_block_visibility';
@@ -49,11 +52,14 @@ final class DocumentOperation
         self::OP_INSERT_SECTION,
         self::OP_REMOVE_SECTION,
         self::OP_MOVE_SECTION,
+        self::OP_DUPLICATE_SECTION,
+        self::OP_UPDATE_SECTION_LABEL,
         self::OP_UPDATE_SECTION_LAYOUT,
         self::OP_UPDATE_SECTION_VISIBILITY,
         self::OP_INSERT_BLOCK,
         self::OP_REMOVE_BLOCK,
         self::OP_MOVE_BLOCK,
+        self::OP_DUPLICATE_BLOCK,
         self::OP_UPDATE_BLOCK_PROPS,
         self::OP_UPDATE_BLOCK_STYLE,
         self::OP_UPDATE_BLOCK_VISIBILITY,
@@ -74,11 +80,14 @@ final class DocumentOperation
         self::OP_INSERT_SECTION            => ['index'],
         self::OP_REMOVE_SECTION            => ['section_id'],
         self::OP_MOVE_SECTION              => ['section_id', 'to_index'],
+        self::OP_DUPLICATE_SECTION         => ['section_id'],
+        self::OP_UPDATE_SECTION_LABEL      => ['section_id', 'label'],
         self::OP_UPDATE_SECTION_LAYOUT     => ['section_id', 'layout'],
         self::OP_UPDATE_SECTION_VISIBILITY => ['section_id', 'visibility'],
         self::OP_INSERT_BLOCK              => ['parent_id', 'index', 'block'],
         self::OP_REMOVE_BLOCK              => ['block_id'],
         self::OP_MOVE_BLOCK                => ['block_id', 'parent_id', 'index'],
+        self::OP_DUPLICATE_BLOCK           => ['block_id'],
         self::OP_UPDATE_BLOCK_PROPS        => ['block_id', 'props'],
         self::OP_UPDATE_BLOCK_STYLE        => ['block_id', 'style'],
         self::OP_UPDATE_BLOCK_VISIBILITY   => ['block_id', 'visibility'],
@@ -162,5 +171,28 @@ final class DocumentOperation
     public static function updateBlockAttributes(string $blockId, array $attributes): self
     {
         return new self(self::OP_UPDATE_BLOCK_ATTRIBUTES, ['block_id' => $blockId, 'attributes' => $attributes]);
+    }
+
+    /**
+     * @param array<string, mixed> $visibility
+     */
+    public static function updateBlockVisibility(string $blockId, array $visibility): self
+    {
+        return new self(self::OP_UPDATE_BLOCK_VISIBILITY, ['block_id' => $blockId, 'visibility' => $visibility]);
+    }
+
+    public static function duplicateBlock(string $blockId): self
+    {
+        return new self(self::OP_DUPLICATE_BLOCK, ['block_id' => $blockId]);
+    }
+
+    public static function duplicateSection(string $sectionId): self
+    {
+        return new self(self::OP_DUPLICATE_SECTION, ['section_id' => $sectionId]);
+    }
+
+    public static function updateSectionLabel(string $sectionId, string $label): self
+    {
+        return new self(self::OP_UPDATE_SECTION_LABEL, ['section_id' => $sectionId, 'label' => $label]);
     }
 }

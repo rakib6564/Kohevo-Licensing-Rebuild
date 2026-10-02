@@ -203,6 +203,22 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     }
   }, [engine, manifest, announce]);
 
+  const duplicateNode = useCallback((id) => {
+    const info = findNode(engine.getSnapshot().working, id);
+    if (!info) return;
+    const label = nodeLabel(info.node, manifest, info.kind);
+    const operation = info.kind === 'section' ? ops.duplicateSection(id) : ops.duplicateBlock(id);
+    if (engine.apply(operation, { label: `${label} (Copy)` })) {
+      announce(t('announce_inserted', { label: `${label} (Copy)` }));
+    }
+  }, [engine, manifest, announce]);
+
+  const updateSectionLabel = useCallback((id, label) => {
+    const info = findNode(engine.getSnapshot().working, id);
+    if (!info || info.kind !== 'section') return;
+    engine.apply(ops.updateSectionLabel(id, label), { label });
+  }, [engine]);
+
   const moveBlockTo = useCallback((id, target) => {
     if (!target) return;
     if (engine.apply(ops.moveBlock(id, target.parentId, target.index), { label: labelOf(id) })) {
@@ -358,23 +374,24 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
       const typing = e.target && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName));
       if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); save(); return; }
       if (typing) return;
+      if (mod && e.key.toLowerCase() === 'd' && selectionRef.current) { e.preventDefault(); duplicateNode(selectionRef.current); return; }
       if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
       if (mod && ((e.key.toLowerCase() === 'z' && e.shiftKey) || e.key.toLowerCase() === 'y')) { e.preventDefault(); redo(); return; }
       if (e.key === 'Escape' && selectionRef.current) { setSelection(null); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [save, undo, redo]);
+  }, [save, undo, redo, duplicateNode]);
 
   const ctx = useMemo(() => ({
     boot, engine, manifest, transport, selection, select, announce, applyOp,
-    insertBlock, insertSection, removeNode, moveBlockTo, moveSectionTo, labelOf,
+    insertBlock, insertSection, duplicateNode, updateSectionLabel, removeNode, moveBlockTo, moveSectionTo, labelOf,
     viewport: viewportByKey(viewportKey),
     library, refreshLibrary, applyTemplate, insertTemplate, deleteTemplate,
     insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion,
     openSaveTemplate: () => setDialog('save_template'),
     openComponentDialog: () => setDialog('component'),
-  }), [boot, engine, manifest, transport, selection, select, announce, applyOp, insertBlock, insertSection, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey,
+  }), [boot, engine, manifest, transport, selection, select, announce, applyOp, insertBlock, insertSection, duplicateNode, updateSectionLabel, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey,
     library, refreshLibrary, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
 
   if (loadError) {

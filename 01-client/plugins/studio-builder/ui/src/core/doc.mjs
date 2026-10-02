@@ -214,3 +214,22 @@ export function nodeLabel(node, manifest, kind) {
     .find((v) => typeof v === 'string' && v.trim() !== '');
   return hint ? `${base}: ${hint.length > 40 ? hint.slice(0, 39) + '…' : hint}` : base;
 }
+
+/**
+ * Return an array of ancestors from top-level section down to the target node.
+ * Each entry: { id, kind, label }
+ */
+export function ancestorPath(doc, id, manifest) {
+  if (!id) return [];
+  const path = [];
+  let curr = findNode(doc, id);
+  while (curr) {
+    path.unshift({
+      id: curr.node.id,
+      kind: curr.kind,
+      label: nodeLabel(curr.node, manifest, curr.kind),
+    });
+    curr = curr.parentId ? findNode(doc, curr.parentId) : null;
+  }
+  return path;
+}

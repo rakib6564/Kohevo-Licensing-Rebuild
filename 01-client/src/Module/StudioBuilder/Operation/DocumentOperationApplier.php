@@ -29,6 +29,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\DocumentCopier;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
+use Slate\Module\StudioBuilder\Schema\FieldSchema;
 
 final class DocumentOperationApplier
 {
@@ -62,11 +63,14 @@ final class DocumentOperationApplier
             DocumentOperation::OP_INSERT_SECTION => self::insertSection($document, $payload),
             DocumentOperation::OP_REMOVE_SECTION => self::removeSection($document, $payload),
             DocumentOperation::OP_MOVE_SECTION => self::moveSection($document, $payload),
+            DocumentOperation::OP_DUPLICATE_SECTION => self::duplicateSection($document, $payload),
+            DocumentOperation::OP_UPDATE_SECTION_LABEL => self::updateSectionLabel($document, $payload),
             DocumentOperation::OP_UPDATE_SECTION_LAYOUT => self::updateSectionField($document, $payload, 'layout'),
             DocumentOperation::OP_UPDATE_SECTION_VISIBILITY => self::updateSectionField($document, $payload, 'visibility'),
             DocumentOperation::OP_INSERT_BLOCK => self::insertBlock($document, $payload, $registry),
             DocumentOperation::OP_REMOVE_BLOCK => self::removeBlock($document, $payload),
             DocumentOperation::OP_MOVE_BLOCK => self::moveBlock($document, $payload, $registry),
+            DocumentOperation::OP_DUPLICATE_BLOCK => self::duplicateBlock($document, $payload),
             DocumentOperation::OP_UPDATE_BLOCK_PROPS => self::updateBlockField($document, $payload, 'props'),
             DocumentOperation::OP_UPDATE_BLOCK_STYLE => self::updateBlockField($document, $payload, 'style'),
             DocumentOperation::OP_UPDATE_BLOCK_VISIBILITY => self::updateBlockField($document, $payload, 'visibility'),
@@ -231,6 +235,72 @@ final class DocumentOperationApplier
         foreach ($sections as $idx => $section) {
             if (is_array($section) && ($section['id'] ?? null) === $sectionId) {
                 $sections[$idx][$field] = $value;
+                $found = true;
+                break;
+            }
+        }
+        self::assertFound($found, 'section_id', $sectionId, 'section');
+
+        $document['sections'] = $sections;
+        return $document;
+    }
+
+    /**
+     * Duplicate a section directly after itself, minting a fresh section ID
+     * and fresh IDs for all blocks in its subtree.
+     *
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function duplicateSection(array $document, array $payload): array
+    {
+        $sectionId = self::requireString($payload, 'section_id', '$.payload.section_id');
+        $sections = is_array($document['sections'] ?? null) ? array_values($document['sections']) : [];
+
+        $foundIndex = null;
+        foreach ($sections as $idx => $section) {
+            if (is_array($section) && ($section['id'] ?? null) === $sectionId) {
+                $foundIndex = $idx;
+                break;
+            }
+        }
+        self::assertFound($foundIndex !== null, 'section_id', $sectionId, 'section');
+
+        $source = $sections[$foundIndex];
+        $cloned = $source;
+        $cloned['id'] = CanonicalDocumentSchema::newSectionId();
+        $cloned['label'] = ($source['label'] ?? 'Section') . ' (Copy)';
+        $blocks = is_array($source['blocks'] ?? null) ? $source['blocks'] : [];
+        $cloned['blocks'] = DocumentCopier::copyBlocks($blocks);
+
+        array_splice($sections, $foundIndex + 1, 0, [$cloned]);
+        $document['sections'] = $sections;
+        return $document;
+    }
+
+    /**
+     * Rename / update section label.
+     *
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function updateSectionLabel(array $document, array $payload): array
+    {
+        $sectionId = self::requireString($payload, 'section_id', '$.payload.section_id');
+        $label = self::requireString($payload, 'label', '$.payload.label');
+        if (mb_strlen($label, 'UTF-8') > 120 || FieldSchema::containsExecutableOrSqlFragment($label)) {
+            throw new StudioValidationException([
+                ['path' => '$.payload.label', 'code' => 'invalid_section_label', 'message' => 'Section label must be a safe string <= 120 chars.'],
+            ]);
+        }
+
+        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
+        $found = false;
+        foreach ($sections as $idx => $section) {
+            if (is_array($section) && ($section['id'] ?? null) === $sectionId) {
+                $sections[$idx]['label'] = $label;
                 $found = true;
                 break;
             }
@@ -594,6 +664,67 @@ final class DocumentOperationApplier
             }
         }
         return $blocks;
+    }
+
+    /**
+     * Duplicate a block directly after itself in its parent container or section,
+     * re-minting fresh IDs for the block and all children in its subtree.
+     *
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function duplicateBlock(array $document, array $payload): array
+    {
+        $blockId = self::requireString($payload, 'block_id', '$.payload.block_id');
+        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
+
+        $duplicated = false;
+        foreach ($sections as $sIdx => $section) {
+            if (!is_array($section)) {
+                continue;
+            }
+            $blocks = is_array($section['blocks'] ?? null) ? $section['blocks'] : [];
+            $sections[$sIdx]['blocks'] = self::duplicateBlockRecursive($blocks, $blockId, $duplicated);
+            if ($duplicated) {
+                break;
+            }
+        }
+
+        self::assertFound($duplicated, 'block_id', $blockId, 'block');
+        $document['sections'] = $sections;
+        return $document;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $blocks
+     * @return list<array<string, mixed>>
+     */
+    private static function duplicateBlockRecursive(array $blocks, string $blockId, bool &$duplicated): array
+    {
+        $result = [];
+        foreach ($blocks as $block) {
+            if (!is_array($block)) {
+                continue;
+            }
+            $result[] = $block;
+            if (($block['id'] ?? null) === $blockId) {
+                $copied = DocumentCopier::copyBlocks([$block]);
+                if (!empty($copied[0])) {
+                    $result[] = $copied[0];
+                }
+                $duplicated = true;
+                continue;
+            }
+            $children = is_array($block['children'] ?? null) ? $block['children'] : [];
+            if ($children !== [] && !$duplicated) {
+                $newChildren = self::duplicateBlockRecursive($children, $blockId, $duplicated);
+                if ($duplicated) {
+                    $result[count($result) - 1]['children'] = $newChildren;
+                }
+            }
+        }
+        return $result;
     }
 
     // ── Payload guards ──────────────────────────────────────────────────────

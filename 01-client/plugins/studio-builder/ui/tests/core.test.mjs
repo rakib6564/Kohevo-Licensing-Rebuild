@@ -78,8 +78,12 @@ test('operations use the canonical {op, payload} vocabulary', () => {
   assert.deepEqual(ops.moveBlock('blk_1', 'sec_1', 2), { op: 'move_block', payload: { block_id: 'blk_1', parent_id: 'sec_1', index: 2 } });
   assert.deepEqual(ops.insertBlock('sec_1', 0, { type: 'core.heading' }), { op: 'insert_block', payload: { parent_id: 'sec_1', index: 0, block: { type: 'core.heading' } } });
   assert.deepEqual(ops.moveSection('sec_1', 3), { op: 'move_section', payload: { section_id: 'sec_1', to_index: 3 } });
-  const serverOps = ['update_settings', 'update_seo', 'update_template', 'insert_section', 'remove_section', 'move_section', 'update_section_layout',
-    'update_section_visibility', 'insert_block', 'remove_block', 'move_block', 'update_block_props', 'update_block_style', 'update_block_visibility', 'update_block_bindings',
+  assert.deepEqual(ops.duplicateBlock('blk_1'), { op: 'duplicate_block', payload: { block_id: 'blk_1' } });
+  assert.deepEqual(ops.duplicateSection('sec_1'), { op: 'duplicate_section', payload: { section_id: 'sec_1' } });
+  assert.deepEqual(ops.updateSectionLabel('sec_1', 'Renamed'), { op: 'update_section_label', payload: { section_id: 'sec_1', label: 'Renamed' } });
+  const serverOps = ['update_settings', 'update_seo', 'update_template', 'insert_section', 'remove_section', 'move_section',
+    'duplicate_section', 'update_section_label', 'update_section_layout',
+    'update_section_visibility', 'insert_block', 'remove_block', 'move_block', 'duplicate_block', 'update_block_props', 'update_block_style', 'update_block_visibility', 'update_block_bindings',
     'update_block_responsive', 'update_block_class_names', 'update_block_attributes'];
   for (const name of Object.values(ops.OPS)) assert.ok(serverOps.includes(name), `${name} is a server DocumentOperation`);
 });
@@ -93,6 +97,17 @@ test('local apply: every structural op, with structural sharing', () => {
   assert.equal(moved.sections[1], x.sections[1], 'untouched section keeps its identity');
   const removed = ops.applyLocal(x, ops.removeBlock(b.id), { manifest });
   assert.equal(d.findNode(removed, b.id), null);
+  const dupBlock = ops.applyLocal(x, ops.duplicateBlock(a.id), { manifest });
+  assert.equal(dupBlock.sections[0].blocks.length, 4);
+  assert.equal(dupBlock.sections[0].blocks[0].id, a.id);
+  assert.notEqual(dupBlock.sections[0].blocks[1].id, a.id);
+  assert.equal(dupBlock.sections[0].blocks[1].props.text, 'A');
+  const dupSec = ops.applyLocal(x, ops.duplicateSection(s1.id), { manifest });
+  assert.equal(dupSec.sections.length, 3);
+  assert.notEqual(dupSec.sections[1].id, s1.id);
+  assert.ok(dupSec.sections[1].label.includes('Copy'));
+  const renamed = ops.applyLocal(x, ops.updateSectionLabel(s1.id, 'New Title'));
+  assert.equal(renamed.sections[0].label, 'New Title');
   const inserted = ops.applyLocal(x, ops.insertBlock(s2.id, 0, { type: 'core.button' }), { manifest, provisionalId: 'tmp_x' });
   const ins = d.findNode(inserted, 'tmp_x').node;
   assert.equal(ins.type, 'core.button');

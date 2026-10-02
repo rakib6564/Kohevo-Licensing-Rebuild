@@ -20,11 +20,14 @@ export const OPS = Object.freeze({
   INSERT_SECTION: 'insert_section',
   REMOVE_SECTION: 'remove_section',
   MOVE_SECTION: 'move_section',
+  DUPLICATE_SECTION: 'duplicate_section',
+  UPDATE_SECTION_LABEL: 'update_section_label',
   UPDATE_SECTION_LAYOUT: 'update_section_layout',
   UPDATE_SECTION_VISIBILITY: 'update_section_visibility',
   INSERT_BLOCK: 'insert_block',
   REMOVE_BLOCK: 'remove_block',
   MOVE_BLOCK: 'move_block',
+  DUPLICATE_BLOCK: 'duplicate_block',
   UPDATE_BLOCK_PROPS: 'update_block_props',
   UPDATE_BLOCK_STYLE: 'update_block_style',
   UPDATE_BLOCK_VISIBILITY: 'update_block_visibility',
@@ -36,8 +39,8 @@ export const OPS = Object.freeze({
 
 /** Operations that change the tree's shape are sent right away, not debounced. */
 export const STRUCTURAL = new Set([
-  OPS.INSERT_SECTION, OPS.REMOVE_SECTION, OPS.MOVE_SECTION,
-  OPS.INSERT_BLOCK, OPS.REMOVE_BLOCK, OPS.MOVE_BLOCK,
+  OPS.INSERT_SECTION, OPS.REMOVE_SECTION, OPS.MOVE_SECTION, OPS.DUPLICATE_SECTION,
+  OPS.INSERT_BLOCK, OPS.REMOVE_BLOCK, OPS.MOVE_BLOCK, OPS.DUPLICATE_BLOCK,
 ]);
 
 /** Whole-value replace updates (last write wins → consecutive ones coalesce). */
@@ -49,6 +52,7 @@ const REPLACE_TARGET = {
   [OPS.UPDATE_BLOCK_RESPONSIVE]: 'block_id',
   [OPS.UPDATE_BLOCK_CLASS_NAMES]: 'block_id',
   [OPS.UPDATE_BLOCK_ATTRIBUTES]: 'block_id',
+  [OPS.UPDATE_SECTION_LABEL]: 'section_id',
   [OPS.UPDATE_SECTION_LAYOUT]: 'section_id',
   [OPS.UPDATE_SECTION_VISIBILITY]: 'section_id',
 };
@@ -74,15 +78,18 @@ export const removeSection = (sectionId) => op(OPS.REMOVE_SECTION, { section_id:
 export const moveSection = (sectionId, toIndex) => op(OPS.MOVE_SECTION, { section_id: sectionId, to_index: toIndex });
 export const updateSectionLayout = (sectionId, layout) => op(OPS.UPDATE_SECTION_LAYOUT, { section_id: sectionId, layout });
 export const updateSectionVisibility = (sectionId, visibility) => op(OPS.UPDATE_SECTION_VISIBILITY, { section_id: sectionId, visibility });
+export const updateSectionLabel = (sectionId, label) => op(OPS.UPDATE_SECTION_LABEL, { section_id: sectionId, label });
+export const duplicateSection = (sectionId) => op(OPS.DUPLICATE_SECTION, { section_id: sectionId });
 export const insertBlock = (parentId, index, block) => op(OPS.INSERT_BLOCK, { parent_id: parentId, index, block });
 export const removeBlock = (blockId) => op(OPS.REMOVE_BLOCK, { block_id: blockId });
 export const moveBlock = (blockId, parentId, index) => op(OPS.MOVE_BLOCK, { block_id: blockId, parent_id: parentId, index });
+export const duplicateBlock = (blockId) => op(OPS.DUPLICATE_BLOCK, { block_id: blockId });
 export const updateBlockProps = (blockId, props) => op(OPS.UPDATE_BLOCK_PROPS, { block_id: blockId, props });
 export const updateBlockStyle = (blockId, style) => op(OPS.UPDATE_BLOCK_STYLE, { block_id: blockId, style });
 export const updateBlockVisibility = (blockId, visibility) => op(OPS.UPDATE_BLOCK_VISIBILITY, { block_id: blockId, visibility });
 export const updateBlockBindings = (blockId, bindings) => op(OPS.UPDATE_BLOCK_BINDINGS, { block_id: blockId, bindings });
 export const updateBlockResponsive = (blockId, responsive) => op(OPS.UPDATE_BLOCK_RESPONSIVE, { block_id: blockId, responsive });
-export const updateBlockClassNames = (blockId, classNames) => op(OPS.UPDATE_BLOCK_CLASS_NAMES, { block_id: blockId, class_names: classNames });
+export const updateBlockClassNames = (blockId, classNames) => op(OPS.UPDATE_BLOCK_CLASS_NAMES, { block_id: blockId, classNames, class_names: classNames });
 export const updateBlockAttributes = (blockId, attributes) => op(OPS.UPDATE_BLOCK_ATTRIBUTES, { block_id: blockId, attributes });
 export const updateSettings = (settings) => op(OPS.UPDATE_SETTINGS, { settings });
 export const updateSeo = (seo) => op(OPS.UPDATE_SEO, { seo });
@@ -181,6 +188,26 @@ export function applyLocal(doc, operation, ctx = {}) {
       sections.splice(clamp(p.to_index, sections.length), 0, moved);
       return { ...doc, sections };
     }
+    case OPS.UPDATE_SECTION_LABEL: {
+      let hit = false;
+      const sections = asList(doc.sections).map((s) => {
+        if (s.id !== p.section_id) return s;
+        hit = true;
+        return { ...s, label: String(p.label ?? '') };
+      });
+      if (!hit) throw notFound(p.section_id);
+      return { ...doc, sections };
+    }
+    case OPS.DUPLICATE_SECTION: {
+      const sections = [...asList(doc.sections)];
+      const from = sections.findIndex((s) => s.id === p.section_id);
+      if (from < 0) throw notFound(p.section_id);
+      const source = sections[from];
+      const cloned = cloneWithProvisionalIds(source, 'sec');
+      cloned.label = `${source.label || 'Section'} (Copy)`;
+      sections.splice(from + 1, 0, cloned);
+      return { ...doc, sections };
+    }
     case OPS.UPDATE_SECTION_LAYOUT:
     case OPS.UPDATE_SECTION_VISIBILITY: {
       const field = operation.op === OPS.UPDATE_SECTION_LAYOUT ? 'layout' : 'visibility';
@@ -217,6 +244,34 @@ export function applyLocal(doc, operation, ctx = {}) {
       const { doc: next, removed } = extract(doc, p.block_id);
       if (!removed) throw notFound(p.block_id);
       return insertInto(next, p.parent_id, p.index, removed);
+    }
+    case OPS.DUPLICATE_BLOCK: {
+      let hit = false;
+      const cloneBlockTree = (blocks) => {
+        const out = [];
+        for (const b of asList(blocks)) {
+          out.push(b);
+          if (b.id === p.block_id) {
+            hit = true;
+            out.push(cloneWithProvisionalIds(b, 'blk'));
+            continue;
+          }
+          if (b.children && b.children.length) {
+            const nextKids = cloneBlockTree(b.children);
+            if (hit) {
+              out[out.length - 1] = { ...b, children: nextKids };
+            }
+          }
+        }
+        return out;
+      };
+      const sections = asList(doc.sections).map((s) => {
+        if (hit) return s;
+        const nextBlocks = cloneBlockTree(s.blocks);
+        return hit ? { ...s, blocks: nextBlocks } : s;
+      });
+      if (!hit) throw notFound(p.block_id);
+      return { ...doc, sections };
     }
     case OPS.UPDATE_BLOCK_PROPS:
     case OPS.UPDATE_BLOCK_STYLE:
@@ -354,4 +409,19 @@ function insertInto(doc, parentId, index, block) {
   });
   if (!inserted) throw notFound(parentId);
   return next;
+}
+
+function cloneWithProvisionalIds(node, prefix = 'blk') {
+  const cloned = JSON.parse(JSON.stringify(node));
+  const remint = (item, pfx) => {
+    item.id = provisionalId(pfx);
+    if (Array.isArray(item.blocks)) {
+      item.blocks.forEach((child) => remint(child, 'blk'));
+    }
+    if (Array.isArray(item.children)) {
+      item.children.forEach((child) => remint(child, 'blk'));
+    }
+  };
+  remint(cloned, prefix);
+  return cloned;
 }

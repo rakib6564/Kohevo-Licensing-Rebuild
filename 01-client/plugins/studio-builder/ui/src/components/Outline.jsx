@@ -15,7 +15,7 @@ import {
   asList, blockDefinition, blockIndentTarget, blockMoveTarget, blockOutdentTarget,
   canInsertBlock, canInsertSection, canMoveBlock, nodeLabel,
 } from '../core/doc.mjs';
-import { isProvisionalId } from '../core/operations.mjs';
+import { isProvisionalId, updateBlockVisibility, updateSectionVisibility } from '../core/operations.mjs';
 
 const DRAG_TYPE_NODE = 'application/x-kohevo-studio-node';
 
@@ -23,11 +23,34 @@ const DRAG_TYPE_NODE = 'application/x-kohevo-studio-node';
 export function outlineRows(doc, manifest) {
   const rows = [];
   asList(doc && doc.sections).forEach((section, sIndex, sections) => {
-    rows.push({ id: section.id, kind: 'section', level: 1, parentId: null, index: sIndex, setSize: sections.length, node: section, container: true });
+    const hasBlocks = asList(section.blocks).length > 0;
+    rows.push({
+      id: section.id,
+      kind: 'section',
+      level: 1,
+      parentId: null,
+      index: sIndex,
+      setSize: sections.length,
+      node: section,
+      container: true,
+      hasChildren: hasBlocks,
+    });
     const addBlocks = (blocks, parentId, level) => {
       asList(blocks).forEach((block, index, list) => {
         const def = blockDefinition(manifest, block.type);
-        rows.push({ id: block.id, kind: 'block', level, parentId, index, setSize: list.length, node: block, container: !!(def && def.allows_children) });
+        const allowsKids = !!(def && def.allows_children);
+        const hasKids = asList(block.children).length > 0;
+        rows.push({
+          id: block.id,
+          kind: 'block',
+          level,
+          parentId,
+          index,
+          setSize: list.length,
+          node: block,
+          container: allowsKids,
+          hasChildren: hasKids,
+        });
         addBlocks(block.children, block.id, level + 1);
       });
     };
@@ -58,15 +81,53 @@ export function dropDestination(doc, rows, dragged, row, position) {
 }
 
 export const Outline = memo(function Outline() {
-  const { manifest, selection, select, insertBlock, insertSection, removeNode, moveBlockTo, moveSectionTo } = useEditor();
+  const {
+    manifest, selection, select, insertBlock, insertSection,
+    duplicateNode, updateSectionLabel, removeNode, moveBlockTo, moveSectionTo, applyOp,
+  } = useEditor();
   const working = useEngineState((s) => s.working);
-  const rows = useMemo(() => outlineRows(working, manifest), [working, manifest]);
+  const allRows = useMemo(() => outlineRows(working, manifest), [working, manifest]);
+  const [collapsed, setCollapsed] = useState(() => new Set());
+  const [editingId, setEditingId] = useState(null);
+  const [editLabel, setEditLabel] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [focusId, setFocusId] = useState(null);
   const [dropHint, setDropHint] = useState(null);
   const dragRef = useRef(null);
   const listRef = useRef(null);
 
-  const activeId = rows.some((r) => r.id === focusId) ? focusId : (selection && rows.some((r) => r.id === selection) ? selection : rows[0] && rows[0].id);
+  const toggleCollapse = useCallback((id) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const visibleRows = useMemo(() => {
+    const hiddenAncestorIds = new Set();
+    const result = [];
+    const q = searchQuery.trim().toLowerCase();
+    for (const row of allRows) {
+      if (row.parentId && (hiddenAncestorIds.has(row.parentId) || (!q && collapsed.has(row.parentId)))) {
+        hiddenAncestorIds.add(row.id);
+        continue;
+      }
+      if (q) {
+        const label = row.kind === 'section' ? (row.node.label || t('section')) : nodeLabel(row.node, manifest, 'block');
+        if (!label.toLowerCase().includes(q)) {
+          continue;
+        }
+      }
+      result.push(row);
+    }
+    return result;
+  }, [allRows, collapsed, searchQuery, manifest]);
+
+  const activeId = visibleRows.some((r) => r.id === focusId)
+    ? focusId
+    : (selection && visibleRows.some((r) => r.id === selection) ? selection : (visibleRows[0] && visibleRows[0].id));
 
   const focusRow = useCallback((id) => {
     setFocusId(id);
@@ -75,6 +136,24 @@ export const Outline = memo(function Outline() {
       if (el) el.focus();
     });
   }, []);
+
+  const toggleVisibility = useCallback((row) => {
+    const isHidden = (row.node.visibility && Array.isArray(row.node.visibility.devices) && row.node.visibility.devices.length === 0);
+    const newDevices = isHidden ? ['base', 'sm', 'md', 'lg'] : [];
+    const newVis = { ...(row.node.visibility || {}), devices: newDevices };
+    if (row.kind === 'section') {
+      applyOp(updateSectionVisibility(row.id, newVis));
+    } else {
+      applyOp(updateBlockVisibility(row.id, newVis));
+    }
+  }, [applyOp]);
+
+  const finishRename = useCallback((id) => {
+    if (editLabel.trim() && updateSectionLabel) {
+      updateSectionLabel(id, editLabel.trim());
+    }
+    setEditingId(null);
+  }, [editLabel, updateSectionLabel]);
 
   const keyboardMove = useCallback((row, key) => {
     if (row.kind === 'section') {
@@ -97,10 +176,10 @@ export const Outline = memo(function Outline() {
       return;
     }
     switch (e.key) {
-      case 'ArrowDown': e.preventDefault(); if (rows[i + 1]) focusRow(rows[i + 1].id); break;
-      case 'ArrowUp': e.preventDefault(); if (rows[i - 1]) focusRow(rows[i - 1].id); break;
-      case 'Home': e.preventDefault(); if (rows[0]) focusRow(rows[0].id); break;
-      case 'End': e.preventDefault(); if (rows.length) focusRow(rows[rows.length - 1].id); break;
+      case 'ArrowDown': e.preventDefault(); if (visibleRows[i + 1]) focusRow(visibleRows[i + 1].id); break;
+      case 'ArrowUp': e.preventDefault(); if (visibleRows[i - 1]) focusRow(visibleRows[i - 1].id); break;
+      case 'Home': e.preventDefault(); if (visibleRows[0]) focusRow(visibleRows[0].id); break;
+      case 'End': e.preventDefault(); if (visibleRows.length) focusRow(visibleRows[visibleRows.length - 1].id); break;
       case 'Enter': case ' ': e.preventDefault(); select(row.id); break;
       case 'Delete': case 'Backspace': e.preventDefault(); removeNode(row.id); break;
       default: break;
@@ -127,7 +206,7 @@ export const Outline = memo(function Outline() {
     const dragged = dragRef.current || (e.dataTransfer.types.includes(DRAG_TYPE_NEW) ? { kind: 'block', type: null } : null);
     if (!dragged) return;
     const position = positionFor(e, row, dragged);
-    const dest = dropDestination(working, rows, dragged, row, position);
+    const dest = dropDestination(working, visibleRows, dragged, row, position);
     const valid = dragged.type === null ? !!dest && dest.kind === 'block' : isValidDrop(dragged, dest);
     if (!valid) { setDropHint(null); return; }
     e.preventDefault();
@@ -142,14 +221,14 @@ export const Outline = memo(function Outline() {
     setDropHint(null);
     dragRef.current = null;
     if (!dragged) return;
-    const dest = dropDestination(working, rows, dragged, row, positionFor(e, row, dragged));
+    const dest = dropDestination(working, visibleRows, dragged, row, positionFor(e, row, dragged));
     if (!isValidDrop(dragged, dest)) return;
     if (dest.kind === 'section') moveSectionTo(dragged.id, dest.toIndex);
     else if (dragged.type) insertBlock(dragged.type, { parentId: dest.parentId, index: dest.index });
     else moveBlockTo(dragged.id, { parentId: dest.parentId, index: dest.index });
   };
 
-  if (!rows.length) {
+  if (!allRows.length) {
     return (
       <div className="sbx-outline sbx-outline--empty">
         <p className="sbx-muted">{t('empty_page')}</p>
@@ -158,12 +237,43 @@ export const Outline = memo(function Outline() {
     );
   }
 
+  const allCollapsed = collapsed.size > 0;
+
   return (
     <div className="sbx-outline">
+      <div className="sbx-tree__nav-header">
+        <input
+          type="search"
+          className="sbx-tree__search"
+          placeholder={t('search_blocks')}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          aria-label={t('search_blocks')}
+        />
+        <button
+          type="button"
+          className="sbx-tree__collapse-btn"
+          title={allCollapsed ? t('expand_all') : t('collapse_all')}
+          aria-label={allCollapsed ? t('expand_all') : t('collapse_all')}
+          onClick={() => {
+            if (allCollapsed) {
+              setCollapsed(new Set());
+            } else {
+              setCollapsed(new Set(allRows.filter((r) => r.hasChildren).map((r) => r.id)));
+            }
+          }}
+        >
+          {allCollapsed ? '⊞' : '⊟'}
+        </button>
+      </div>
+
       <ul className="sbx-tree" role="tree" aria-label={t('outline_label')} ref={listRef}>
-        {rows.map((row, i) => {
+        {visibleRows.map((row, i) => {
           const label = row.kind === 'section' ? (row.node.label || t('section')) : nodeLabel(row.node, manifest, 'block');
           const hint = dropHint && dropHint.id === row.id ? ` is-drop-${dropHint.position}` : '';
+          const isRowCollapsed = collapsed.has(row.id);
+          const isHidden = row.node.visibility && Array.isArray(row.node.visibility.devices) && row.node.visibility.devices.length === 0;
+
           return (
             <li
               key={row.id}
@@ -174,11 +284,11 @@ export const Outline = memo(function Outline() {
               aria-setsize={row.setSize}
               aria-posinset={row.index + 1}
               aria-selected={selection === row.id}
-              aria-expanded={row.container ? true : undefined}
+              aria-expanded={row.container ? !isRowCollapsed : undefined}
               aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight Delete"
               tabIndex={row.id === activeId ? 0 : -1}
-              className={`sbx-tree__row sbx-tree__row--${row.kind}${selection === row.id ? ' is-selected' : ''}${isProvisionalId(row.id) ? ' is-pending' : ''}${hint}`}
-              style={{ paddingLeft: `${(row.level - 1) * 14 + 8}px` }}
+              className={`sbx-tree__row sbx-tree__row--${row.kind}${selection === row.id ? ' is-selected' : ''}${isProvisionalId(row.id) ? ' is-pending' : ''}${isHidden ? ' is-hidden' : ''}${hint}`}
+              style={{ paddingLeft: `${(row.level - 1) * 14 + 6}px` }}
               draggable
               onDragStart={(e) => {
                 dragRef.current = { kind: row.kind, id: row.id, type: null };
@@ -193,8 +303,95 @@ export const Outline = memo(function Outline() {
               onFocus={() => setFocusId(row.id)}
               onKeyDown={(e) => onKeyDown(e, row, i)}
             >
-              <span className="sbx-tree__kind" aria-hidden="true">{row.kind === 'section' ? '▦' : row.container ? '▣' : '▪'}</span>
-              <span className="sbx-tree__label">{label}</span>
+              {row.hasChildren ? (
+                <button
+                  type="button"
+                  className="sbx-tree__caret"
+                  aria-label={isRowCollapsed ? t('expand') : t('collapse')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleCollapse(row.id);
+                  }}
+                >
+                  {isRowCollapsed ? '▸' : '▾'}
+                </button>
+              ) : (
+                <span className="sbx-tree__caret-spacer" aria-hidden="true" />
+              )}
+
+              <span className="sbx-tree__kind" aria-hidden="true">
+                {row.kind === 'section' ? '▦' : row.container ? '◫' : '▪'}
+              </span>
+
+              {editingId === row.id ? (
+                <input
+                  type="text"
+                  className="sbx-tree__rename-input"
+                  autoFocus
+                  value={editLabel}
+                  onChange={(e) => setEditLabel(e.target.value)}
+                  onBlur={() => finishRename(row.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') finishRename(row.id);
+                    if (e.key === 'Escape') setEditingId(null);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <span
+                  className="sbx-tree__label"
+                  onDoubleClick={(e) => {
+                    if (row.kind === 'section') {
+                      e.stopPropagation();
+                      setEditingId(row.id);
+                      setEditLabel(row.node.label || '');
+                    }
+                  }}
+                >
+                  {label}
+                </span>
+              )}
+
+              <div className="sbx-tree__actions">
+                <button
+                  type="button"
+                  className="sbx-tree__action"
+                  title={isHidden ? t('show') : t('hide')}
+                  aria-label={isHidden ? t('show') : t('hide')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleVisibility(row);
+                  }}
+                >
+                  {isHidden ? '⊘' : '👁'}
+                </button>
+                {duplicateNode && (
+                  <button
+                    type="button"
+                    className="sbx-tree__action"
+                    title={t('duplicate')}
+                    aria-label={t('duplicate')}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      duplicateNode(row.id);
+                    }}
+                  >
+                    ⧉
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="sbx-tree__action sbx-tree__action--danger"
+                  title={t('remove_item')}
+                  aria-label={t('remove_item')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeNode(row.id);
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
             </li>
           );
         })}
