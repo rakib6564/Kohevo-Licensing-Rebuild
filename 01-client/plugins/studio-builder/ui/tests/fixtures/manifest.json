@@ -1426,6 +1426,310 @@
             ],
             "type": "membership.plans",
             "version": 1
+        },
+        {
+            "allowed_binding_providers": [
+                "content.taxonomy"
+            ],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "theme",
+            "default_props": {
+                "level": "h1",
+                "title": ""
+            },
+            "field_schema": [
+                {
+                    "key": "level",
+                    "type": "enum",
+                    "label": "Heading Level",
+                    "required": false,
+                    "default": "h1",
+                    "allowed_values": [
+                        "h1",
+                        "h2",
+                        "h3"
+                    ]
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "label": "Custom Title",
+                    "required": false,
+                    "default": "",
+                    "max_length": 255
+                }
+            ],
+            "icon": "folder",
+            "label": "Archive Title",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "type": "theme.archive_title",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [
+                "content.posts"
+            ],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "theme",
+            "default_props": {
+                "content": ""
+            },
+            "field_schema": [
+                {
+                    "key": "content",
+                    "type": "text",
+                    "label": "Fallback Content",
+                    "required": false,
+                    "default": "",
+                    "max_length": 50000
+                }
+            ],
+            "icon": "file-text",
+            "label": "Post Content",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "type": "theme.post_content",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [
+                "content.posts",
+                "content.authors"
+            ],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "theme",
+            "default_props": {
+                "separator": " \u2022 ",
+                "show_author": true,
+                "show_category": true,
+                "show_date": true
+            },
+            "field_schema": [
+                {
+                    "key": "show_author",
+                    "type": "boolean",
+                    "label": "Show Author",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_date",
+                    "type": "boolean",
+                    "label": "Show Date",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_category",
+                    "type": "boolean",
+                    "label": "Show Category",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "separator",
+                    "type": "string",
+                    "label": "Separator",
+                    "required": false,
+                    "default": " \u2022 ",
+                    "max_length": 10
+                }
+            ],
+            "icon": "info",
+            "label": "Post Meta",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "type": "theme.post_meta",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [
+                "content.posts"
+            ],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "theme",
+            "default_props": {
+                "align": "left",
+                "level": "h1",
+                "text": ""
+            },
+            "field_schema": [
+                {
+                    "key": "level",
+                    "type": "enum",
+                    "label": "Heading Level",
+                    "required": false,
+                    "default": "h1",
+                    "allowed_values": [
+                        "h1",
+                        "h2",
+                        "h3",
+                        "h4",
+                        "h5",
+                        "h6"
+                    ]
+                },
+                {
+                    "key": "align",
+                    "type": "enum",
+                    "label": "Alignment",
+                    "required": false,
+                    "default": "left",
+                    "allowed_values": [
+                        "left",
+                        "center",
+                        "right"
+                    ]
+                },
+                {
+                    "key": "text",
+                    "type": "string",
+                    "label": "Fallback Title",
+                    "required": false,
+                    "default": "",
+                    "max_length": 255
+                }
+            ],
+            "icon": "heading",
+            "label": "Post Title",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "type": "theme.post_title",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "theme",
+            "default_props": {
+                "button_text": "Search",
+                "placeholder": "Search articles..."
+            },
+            "field_schema": [
+                {
+                    "key": "placeholder",
+                    "type": "string",
+                    "label": "Placeholder",
+                    "required": false,
+                    "default": "Search articles...",
+                    "max_length": 120
+                },
+                {
+                    "key": "button_text",
+                    "type": "string",
+                    "label": "Button Text",
+                    "required": false,
+                    "default": "Search",
+                    "max_length": 60
+                }
+            ],
+            "icon": "search",
+            "label": "Search Box",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "type": "theme.search_box",
+            "version": 1
         }
     ],
     "providers": [

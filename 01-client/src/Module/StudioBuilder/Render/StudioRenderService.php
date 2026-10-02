@@ -80,7 +80,7 @@ final class StudioRenderService
         if (!$context->mode->isPublic()) {
             throw new \LogicException('renderPublished() serves the public context only.');
         }
-        if ($page->id === null || !$page->isPublished() || !in_array($page->pageType, self::PUBLIC_PAGE_TYPES, true)) {
+        if ($page->id === null || !$page->isPublished() || !in_array($page->pageType, ['page', 'landing', 'system'], true)) {
             return null;
         }
 

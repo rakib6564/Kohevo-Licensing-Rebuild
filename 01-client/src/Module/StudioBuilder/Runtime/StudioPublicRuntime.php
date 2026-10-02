@@ -52,6 +52,7 @@ final class StudioPublicRuntime
         private readonly StudioReservedRoutes $reserved,
         ?\Closure $entitlementCheck = null,
         private readonly ?StudioSitemapService $sitemap = null,
+        private readonly ?\Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver $themeTemplates = null,
     ) {
         $this->entitlementCheck = $entitlementCheck
             ?? static fn(int $tenantId, string $moduleKey): bool => EntitlementService::canAccess($tenantId, $moduleKey);
@@ -63,6 +64,28 @@ final class StudioPublicRuntime
         if ($file !== null) {
             return $this->serveSeoFile($file, $ifNoneMatch);
         }
+
+        // Theme Builder: Taxonomy archive routing (e.g. category/Engineering, tag/dev, author/10)
+        $trimmedPath = trim($path, '/');
+        $queryString = '';
+        if (($q = strpos($trimmedPath, '?')) !== false) {
+            $queryString = substr($trimmedPath, $q + 1);
+            $trimmedPath = substr($trimmedPath, 0, $q);
+        }
+        if ($this->themeTemplates !== null && preg_match('#^(category|tag|author)/([^/]+)$#i', $trimmedPath, $m)) {
+            return $this->handleArchive($m[1], urldecode($m[2]), $ifNoneMatch);
+        }
+
+        // Theme Builder: Search routing
+        if ($this->themeTemplates !== null && ($trimmedPath === 'search')) {
+            $query = '';
+            if ($queryString !== '') {
+                parse_str($queryString, $qp);
+                $query = isset($qp['q']) ? (string) $qp['q'] : (isset($qp['s']) ? (string) $qp['s'] : '');
+            }
+            return $this->handleSearch($query, $ifNoneMatch);
+        }
+
         $slug = $this->slugFromPath($path);
         if ($slug === null) {
             return null;
@@ -73,6 +96,53 @@ final class StudioPublicRuntime
     public function handleHomepage(?string $ifNoneMatch = null): ?PublicResponse
     {
         return $this->serve(fn(): ?array => $this->pages->findPublishedHomepage(StudioRenderService::PUBLIC_PAGE_TYPES), $ifNoneMatch);
+    }
+
+    public function handleNotFound(?string $ifNoneMatch = null): ?PublicResponse
+    {
+        if ($this->themeTemplates === null || !$this->tenants->isScoped()) {
+            return null;
+        }
+        $tpl = $this->themeTemplates->resolveNotFound();
+        if ($tpl === null) {
+            return null;
+        }
+        $page = PageAddress::fromRow($tpl['page']);
+        return $this->serveTemplate($page, $ifNoneMatch, 404, ['is_404' => true]);
+    }
+
+    public function handleArchive(string $type, string $term, ?string $ifNoneMatch = null): ?PublicResponse
+    {
+        if ($this->themeTemplates === null || !$this->tenants->isScoped()) {
+            return null;
+        }
+        $tpl = $this->themeTemplates->resolveArchive($type, $term);
+        if ($tpl === null) {
+            return null;
+        }
+        $page = PageAddress::fromRow($tpl['page']);
+        return $this->serveTemplate($page, $ifNoneMatch, 200, [
+            'archive_type' => $type,
+            'term'         => $term,
+            'category'     => $type === 'category' ? $term : '',
+            'tag'          => $type === 'tag' ? $term : '',
+        ]);
+    }
+
+    public function handleSearch(string $query, ?string $ifNoneMatch = null): ?PublicResponse
+    {
+        if ($this->themeTemplates === null || !$this->tenants->isScoped()) {
+            return null;
+        }
+        $tpl = $this->themeTemplates->resolveSearch($query);
+        if ($tpl === null) {
+            return null;
+        }
+        $page = PageAddress::fromRow($tpl['page']);
+        return $this->serveTemplate($page, $ifNoneMatch, 200, [
+            'search_query' => $query,
+            'is_search'    => true,
+        ]);
     }
 
     /** A routable slug, or null for anything Studio must not claim. */
@@ -185,6 +255,55 @@ final class StudioPublicRuntime
             return PublicResponse::notModified($headers);
         }
         return PublicResponse::ok($headers, $result->html);
+    }
+
+    /**
+     * Serve a specific resolved template page address under an optional status code and dynamic context.
+     *
+     * @param PageAddress          $page
+     * @param ?string              $ifNoneMatch
+     * @param int                  $statusCode
+     * @param array<string, mixed> $dynamicContext
+     */
+    private function serveTemplate(PageAddress $page, ?string $ifNoneMatch, int $statusCode = 200, array $dynamicContext = []): ?PublicResponse
+    {
+        if (!$this->tenants->isScoped()) {
+            return null;
+        }
+        $tenantId = $this->tenants->id();
+        if ($tenantId <= 0 || !$this->isEntitled($tenantId, self::ENTITLEMENT_KEY)) {
+            return null;
+        }
+
+        if (!$page->isPublished()) {
+            return null;
+        }
+
+        try {
+            $result = StudioPublicLocale::run(function () use ($tenantId, $page, $dynamicContext) {
+                $context = RenderContext::forPublic(
+                    $tenantId,
+                    $this->renderer->siteContext(),
+                    fn(string $moduleKey): bool => $this->isEntitled($tenantId, $moduleKey),
+                    $dynamicContext,
+                );
+                return $this->renderer->renderPublished($page, $context);
+            });
+        } catch (\Throwable $e) {
+            self::log('render', $e);
+            return PublicResponse::error();
+        }
+        if ($result === null) {
+            return null;
+        }
+
+        $headers = $result->headers + self::languageHeader();
+        if ($result->etag !== null && $ifNoneMatch !== null && self::etagMatches($ifNoneMatch, $result->etag)) {
+            return PublicResponse::notModified($headers);
+        }
+        return $statusCode === 404
+            ? PublicResponse::notFound($headers, $result->html)
+            : PublicResponse::ok($headers, $result->html);
     }
 
     /**

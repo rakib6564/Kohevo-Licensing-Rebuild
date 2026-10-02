@@ -32,6 +32,7 @@ namespace Slate\Module\StudioBuilder\Render\Chrome;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
 use Slate\Module\StudioBuilder\Repository\PageRepository;
 use Slate\Module\StudioBuilder\Repository\RevisionRepository;
+use Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver;
 
 final class ChromeResolver
 {
@@ -48,9 +49,10 @@ final class ChromeResolver
     public function __construct(
         private readonly ?PageRepository $pages = null,
         private readonly ?RevisionRepository $revisions = null,
+        private readonly ?ThemeTemplateResolver $themeResolver = null,
     ) {}
 
-    public function resolve(string $region, string $mode, PageAddress $page): ChromeSource
+    public function resolve(string $region, string $mode, PageAddress $page, array $context = []): ChromeSource
     {
         if (!isset(self::REGION_PAGE_TYPE[$region]) || !in_array($page->pageType, self::CHROMED_PAGE_TYPES, true) || $mode === 'hidden') {
             return ChromeSource::hidden();
@@ -62,6 +64,14 @@ final class ChromeResolver
             $custom = $this->publishedPartial($partialType, $page->slug);
             if ($custom !== null) {
                 return $custom;
+            }
+        }
+
+        // Conditional theme template resolution (Sprint 6 Theme Builder)
+        if ($this->themeResolver !== null) {
+            $conditional = $this->themeResolver->resolveChrome($region, $page, $context);
+            if ($conditional !== null) {
+                return $conditional;
             }
         }
 

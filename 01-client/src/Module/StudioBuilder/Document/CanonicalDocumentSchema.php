@@ -64,6 +64,8 @@ final class CanonicalDocumentSchema
         'tags',
         'featured',
         'excerpt',
+        'template_type',
+        'conditions',
     ];
 
     public const ALLOWED_CONTAINER_WIDTHS = ['narrow', 'normal', 'wide', 'full'];

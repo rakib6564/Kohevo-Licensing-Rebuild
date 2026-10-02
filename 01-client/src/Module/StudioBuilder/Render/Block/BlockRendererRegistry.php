@@ -68,6 +68,11 @@ final class BlockRendererRegistry
         $registry->register(new CoreRenderers\GridRenderer());
         $registry->register(new CoreRenderers\TextRenderer());
         $registry->register(new CoreRenderers\QueryLoopRenderer());
+        $registry->register(new CoreRenderers\PostTitleRenderer());
+        $registry->register(new CoreRenderers\PostContentRenderer());
+        $registry->register(new CoreRenderers\PostMetaRenderer());
+        $registry->register(new CoreRenderers\ArchiveTitleRenderer());
+        $registry->register(new CoreRenderers\SearchBoxRenderer());
         return $registry;
     }
 

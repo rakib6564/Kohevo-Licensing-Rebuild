@@ -270,6 +270,14 @@ final class DocumentValidator
         if (isset($settings['tags']) && !is_array($settings['tags']) && !is_string($settings['tags'])) {
             $errors[] = ValidationResult::issue('$.settings.tags', 'invalid_tags', 'Invalid settings.tags value.');
         }
+
+        if (isset($settings['template_type']) && (!is_string($settings['template_type']) || !in_array($settings['template_type'], ['header', 'footer', 'single', 'archive', 'search', '404', 'not_found', 'default', 'custom', 'page_template'], true))) {
+            $errors[] = ValidationResult::issue('$.settings.template_type', 'invalid_template_type', 'Invalid settings.template_type value.');
+        }
+
+        if (isset($settings['conditions']) && !is_array($settings['conditions'])) {
+            $errors[] = ValidationResult::issue('$.settings.conditions', 'invalid_conditions', 'settings.conditions must be an array or object.');
+        }
     }
 
     /**

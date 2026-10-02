@@ -76,6 +76,11 @@ final class BlockRenderScope
         return $this->context->mode;
     }
 
+    public function context(): RenderContext
+    {
+        return $this->context;
+    }
+
     public function site(): SiteContext
     {
         return $this->context->site;

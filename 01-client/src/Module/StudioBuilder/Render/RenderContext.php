@@ -44,6 +44,7 @@ final class RenderContext
         public readonly SiteContext $site,
         public readonly ?StudioActor $actor,
         ?\Closure $entitlementCheck,
+        public readonly array $attributes = [],
     ) {
         if ($tenantId <= 0) {
             throw new StudioTenantScopeException();
@@ -55,9 +56,14 @@ final class RenderContext
             ?? static fn(string $moduleKey): bool => EntitlementService::canAccess($tenantId, $moduleKey);
     }
 
-    public static function forPublic(int $tenantId, SiteContext $site, ?\Closure $entitlementCheck = null): self
+    public static function forPublic(int $tenantId, SiteContext $site, ?\Closure $entitlementCheck = null, array $attributes = []): self
     {
-        return new self(RenderMode::Public, $tenantId, $site, null, $entitlementCheck);
+        return new self(RenderMode::Public, $tenantId, $site, null, $entitlementCheck, $attributes);
+    }
+
+    public function attribute(string $key, mixed $default = null): mixed
+    {
+        return $this->attributes[$key] ?? $default;
     }
 
     public static function forPreview(int $tenantId, SiteContext $site, StudioActor $actor, ?\Closure $entitlementCheck = null): self

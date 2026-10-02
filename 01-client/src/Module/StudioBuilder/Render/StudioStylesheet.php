@@ -177,7 +177,16 @@ final class StudioStylesheet
             . '.sb-pagination{display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:2rem}'
             . '.sb-pagination__page,.sb-pagination__prev,.sb-pagination__next{display:inline-flex;align-items:center;justify-content:center;padding:.5rem .875rem;border-radius:var(--sb-radius-md,.5rem);border:1px solid var(--sb-border-default,#e2e8f0);font-size:.875rem;font-weight:500;text-decoration:none;color:inherit}'
             . '.sb-pagination__current{background:var(--sb-surface-accent,#6366f1);color:#fff;border-color:var(--sb-surface-accent,#6366f1)}'
-            . '.sb-pagination__disabled{opacity:.5;pointer-events:none}';
+            . '.sb-pagination__disabled{opacity:.5;pointer-events:none}'
+            . '.sb-post-title{margin:0 0 1rem;font-size:2.25rem;line-height:1.25;font-weight:700}'
+            . '.sb-post-title--align-center{text-align:center}.sb-post-title--align-right{text-align:right}'
+            . '.sb-post-content{font-size:1.125rem;line-height:1.75;color:var(--sb-text-default,#1e293b);margin-bottom:2rem}'
+            . '.sb-post-meta{display:flex;align-items:center;gap:.75rem;font-size:.875rem;color:var(--sb-text-muted,#64748b);margin-bottom:1.5rem}'
+            . '.sb-archive-title{font-size:2rem;line-height:1.3;font-weight:700;margin:0 0 1.5rem}'
+            . '.sb-search-form{width:100%;max-width:36rem;margin:0 auto 2rem}'
+            . '.sb-search-input-wrap{display:flex;align-items:center;border:1px solid var(--sb-border-default,#cbd5e1);border-radius:var(--sb-radius-md,.5rem);overflow:hidden;background:#fff}'
+            . '.sb-search-input{flex:1;border:none;padding:.75rem 1rem;font-size:1rem;outline:none}'
+            . '.sb-search-button{background:var(--sb-surface-accent,#6366f1);color:#fff;border:none;padding:.75rem 1.5rem;font-weight:600;cursor:pointer}';
 
         foreach (self::WIDTHS as $name => $max) {
             $css .= '.sb-w-' . $name . '{max-width:' . $max . ';margin-left:auto;margin-right:auto}';

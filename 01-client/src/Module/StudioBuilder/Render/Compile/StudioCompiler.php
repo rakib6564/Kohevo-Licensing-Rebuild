@@ -271,8 +271,8 @@ final class StudioCompiler
         }
 
         $theme  = $this->themes->resolve((string) $settings['token_group']);
-        $header = $this->chrome->resolve('header', (string) $settings['header_mode'], $page);
-        $footer = $this->chrome->resolve('footer', (string) $settings['footer_mode'], $page);
+        $header = $this->chrome->resolve('header', (string) $settings['header_mode'], $page, $settings);
+        $footer = $this->chrome->resolve('footer', (string) $settings['footer_mode'], $page, $settings);
         // Live references resolve to the referenced components' PUBLISHED revisions; their
         // identity is part of the fingerprint, so a republished component makes every
         // dependent artifact stale on the next request even without explicit invalidation.

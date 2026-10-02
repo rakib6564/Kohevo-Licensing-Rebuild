@@ -345,6 +345,82 @@ final class BlockRegistry
             allowedBindingProviders: ['content.posts', 'content.authors', 'content.taxonomy'],
             bindingSlots: ['items' => 'content.posts'],
         ));
+
+        // 14. theme.post_title
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'theme.post_title',
+            version: 1,
+            label: 'Post Title',
+            category: 'theme',
+            icon: 'heading',
+            schema: FieldSchema::define([
+                ['key' => 'level', 'type' => 'enum', 'label' => 'Heading Level', 'required' => false, 'allowed_values' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], 'default' => 'h1'],
+                ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['left', 'center', 'right'], 'default' => 'left'],
+                ['key' => 'text', 'type' => 'string', 'label' => 'Fallback Title', 'required' => false, 'default' => '', 'max_length' => 255],
+            ]),
+            allowsChildren: false,
+            allowedBindingProviders: ['content.posts'],
+        ));
+
+        // 15. theme.post_content
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'theme.post_content',
+            version: 1,
+            label: 'Post Content',
+            category: 'theme',
+            icon: 'file-text',
+            schema: FieldSchema::define([
+                ['key' => 'content', 'type' => 'text', 'label' => 'Fallback Content', 'required' => false, 'default' => '', 'max_length' => 50000],
+            ]),
+            allowsChildren: false,
+            allowedBindingProviders: ['content.posts'],
+        ));
+
+        // 16. theme.post_meta
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'theme.post_meta',
+            version: 1,
+            label: 'Post Meta',
+            category: 'theme',
+            icon: 'info',
+            schema: FieldSchema::define([
+                ['key' => 'show_author', 'type' => 'boolean', 'label' => 'Show Author', 'required' => false, 'default' => true],
+                ['key' => 'show_date', 'type' => 'boolean', 'label' => 'Show Date', 'required' => false, 'default' => true],
+                ['key' => 'show_category', 'type' => 'boolean', 'label' => 'Show Category', 'required' => false, 'default' => true],
+                ['key' => 'separator', 'type' => 'string', 'label' => 'Separator', 'required' => false, 'default' => ' • ', 'max_length' => 10],
+            ]),
+            allowsChildren: false,
+            allowedBindingProviders: ['content.posts', 'content.authors'],
+        ));
+
+        // 17. theme.archive_title
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'theme.archive_title',
+            version: 1,
+            label: 'Archive Title',
+            category: 'theme',
+            icon: 'folder',
+            schema: FieldSchema::define([
+                ['key' => 'level', 'type' => 'enum', 'label' => 'Heading Level', 'required' => false, 'allowed_values' => ['h1', 'h2', 'h3'], 'default' => 'h1'],
+                ['key' => 'title', 'type' => 'string', 'label' => 'Custom Title', 'required' => false, 'default' => '', 'max_length' => 255],
+            ]),
+            allowsChildren: false,
+            allowedBindingProviders: ['content.taxonomy'],
+        ));
+
+        // 18. theme.search_box
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'theme.search_box',
+            version: 1,
+            label: 'Search Box',
+            category: 'theme',
+            icon: 'search',
+            schema: FieldSchema::define([
+                ['key' => 'placeholder', 'type' => 'string', 'label' => 'Placeholder', 'required' => false, 'default' => 'Search articles...', 'max_length' => 120],
+                ['key' => 'button_text', 'type' => 'string', 'label' => 'Button Text', 'required' => false, 'default' => 'Search', 'max_length' => 60],
+            ]),
+            allowsChildren: false,
+        ));
     }
 
     /**

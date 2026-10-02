@@ -40,6 +40,12 @@ final class PublicResponse
         return new self(500, ['Cache-Control' => 'no-store'], '');
     }
 
+    /** @param array<string, string> $headers */
+    public static function notFound(array $headers, string $body): self
+    {
+        return new self(404, $headers, $body);
+    }
+
     /**
      * The same page without a validator (Phase 9B): no ETag header. Used when
      * the body the ETag was computed over is not the body the client will get

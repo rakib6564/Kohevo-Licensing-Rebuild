@@ -91,13 +91,15 @@ final class StudioRuntimeFactory
         $themes    = new ThemeResolver($tokens, $overrides['branding'] ?? null);
         $media     = $overrides['media'] ?? new CoreMediaResolver($tenants);
         $documents = new DocumentRenderer($registry, $renderers, $media, new ProviderBindingResolver($providers, $tenants));
-        $compiler  = new StudioCompiler(
+        $themeTemplates = new \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver($pages, $revisions);
+
+        $compiler = new StudioCompiler(
             $tenants,
             $registry,
             $renderers,
             $documents,
             $themes,
-            new ChromeResolver($pages, $revisions),
+            new ChromeResolver($pages, $revisions, $themeTemplates),
             $media,
             $compilations,
             new GlobalComponentResolver($pages, $revisions),
@@ -135,6 +137,7 @@ final class StudioRuntimeFactory
             $reserved,
             null,
             new StudioSitemapService($tenants, $pages, $revisions, $reserved, $render),
+            $themeTemplates,
         );
 
         return new StudioRuntime(

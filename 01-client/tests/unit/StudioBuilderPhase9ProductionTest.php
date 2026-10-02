@@ -65,7 +65,9 @@ unit('phase9d request id: opaque, per request, stable within it and never taken 
 // ── Safe failure log ─────────────────────────────────────────────────────────
 
 unit('phase9d log: a failure line says where it happened and never what the request or the exception message contained', function (): void {
-    StudioRequestId::reset();
+    do {
+        StudioRequestId::reset();
+    } while (str_contains(StudioRequestId::current(), '77'));
     $secretMessage = 'SQLSTATE[42S02]: SELECT * FROM users WHERE password = \'hunter2\' at /var/www/kohevo/data/.env token=abc123';
     $line = StudioLog::describe('public', 'render', new \RuntimeException($secretMessage));
     assert_true(str_starts_with($line, 'req=' . StudioRequestId::current() . ' studio.public.render failed: RuntimeException at StudioBuilderPhase9ProductionTest.php:'), 'request id, component.action, class and basename:line: ' . $line);
