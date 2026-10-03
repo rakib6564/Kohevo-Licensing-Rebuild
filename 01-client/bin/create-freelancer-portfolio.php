@@ -58,7 +58,7 @@ try {
 
         if ($existingPage !== null) {
             $pageId = (int) $existingPage['id'];
-            $revId  = (int) $existingPage['working_revision_id'];
+            $revId  = (int) ($existingPage['active_draft_revision_id'] ?? $existingPage['working_revision_id'] ?? 0);
             echo "Found existing portfolio page (ID: {$pageId})\n";
             if ($isHomepage && ($existingPage['route_mode'] ?? '') !== 'homepage') {
                 $rt->app->updatePageAddress($actor, $pageId, ['route_mode' => 'homepage']);
