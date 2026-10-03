@@ -160,6 +160,8 @@ unit('freelancer portfolio integration: full website generation, publishing, cus
             );
             $plugin->boot();
 
+            assert_true(Studio::widgets()->has('portfolio.nav_header'), 'Registers portfolio.nav_header');
+            assert_true(Studio::widgets()->has('portfolio.footer'), 'Registers portfolio.footer');
             assert_true(Studio::widgets()->has('portfolio.project_card'), 'Registers portfolio.project_card');
             assert_true(Studio::widgets()->has('portfolio.stat_highlight'), 'Registers portfolio.stat_highlight');
             assert_true(Studio::widgets()->has('portfolio.skill_grid'), 'Registers portfolio.skill_grid');
@@ -220,6 +222,8 @@ unit('freelancer portfolio integration: full website generation, publishing, cus
             assert_true(str_contains($html, 'sb-portfolio-styles'), 'Output includes scoped portfolio stylesheet');
 
             // Assert custom widgets markup
+            assert_true(str_contains($html, 'data-sb-custom-widget="portfolio.nav_header"'), 'Output includes nav header custom widget');
+            assert_true(str_contains($html, 'data-sb-custom-widget="portfolio.footer"'), 'Output includes footer custom widget');
             assert_true(str_contains($html, 'data-sb-custom-widget="portfolio.project_card"'), 'Output includes project card custom widgets');
             assert_true(str_contains($html, 'data-sb-custom-widget="portfolio.stat_highlight"'), 'Output includes stat highlight custom widgets');
             assert_true(str_contains($html, 'data-sb-custom-widget="portfolio.service_card"'), 'Output includes service card custom widgets');

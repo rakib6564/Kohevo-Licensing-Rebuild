@@ -1,36 +1,284 @@
 /**
- * Studio Freelancer Portfolio — Modern, Elegant Stylesheet.
- * Scoped classes under `.sb-portfolio-*` to preserve platform isolation.
+ * Studio Freelancer Portfolio — Ultra-Premium Obsidian Theme Stylesheet.
+ * Designed for high-end product design consultants, fractional architects, and elite developers.
  */
 
+/* ── 1. Global Obsidian Canvas & Typography Overrides ─────────── */
 :root {
-    --sb-port-bg: #0b0f19;
-    --sb-port-surface: rgba(17, 24, 39, 0.75);
+    --sb-port-bg: #06080f;
+    --sb-port-bg-alt: #0b0f19;
+    --sb-port-surface: rgba(15, 23, 42, 0.72);
     --sb-port-surface-hover: rgba(30, 41, 59, 0.85);
+    --sb-port-surface-active: rgba(30, 41, 59, 0.95);
     --sb-port-border: rgba(255, 255, 255, 0.08);
-    --sb-port-border-hover: rgba(99, 102, 241, 0.4);
+    --sb-port-border-hover: rgba(99, 102, 241, 0.45);
+    --sb-port-border-glow: rgba(129, 140, 248, 0.3);
     --sb-port-text-primary: #f8fafc;
     --sb-port-text-secondary: #94a3b8;
+    --sb-port-text-muted: #64748b;
     --sb-port-accent: #6366f1;
+    --sb-port-accent-light: #818cf8;
     --sb-port-accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+    --sb-port-heading-gradient: linear-gradient(135deg, #ffffff 25%, #cbd5e1 75%, #94a3b8 100%);
     --sb-port-glow: 0 0 40px -10px rgba(99, 102, 241, 0.35);
+    --sb-port-card-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6), 0 0 1px 1px rgba(255, 255, 255, 0.05);
 }
 
-/* ── Status Pill ─────────────────────────────────────────────── */
+/* Force dark luxury background across entire document */
+html,
+body,
+body.sb-page,
+main.sb-main,
+section.sb-section,
+.sb-section__inner {
+    background-color: var(--sb-port-bg) !important;
+    color: var(--sb-port-text-secondary) !important;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, "Helvetica Neue", sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body.sb-page {
+    background: 
+        radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.18) 0%, rgba(6, 8, 15, 0.98) 55%),
+        radial-gradient(circle at 90% 80%, rgba(217, 70, 239, 0.06) 0%, transparent 45%),
+        radial-gradient(circle at 10% 40%, rgba(99, 102, 241, 0.05) 0%, transparent 40%),
+        var(--sb-port-bg) !important;
+    min-height: 100vh;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.6;
+}
+
+/* Universal Heading & Text Styling */
+.sb-heading, h1, h2, h3, h4, h5, h6 {
+    color: var(--sb-port-text-primary) !important;
+    font-family: inherit !important;
+    letter-spacing: -0.035em !important;
+    font-weight: 700 !important;
+}
+
+h1.sb-heading,
+.sb-heading[level="h1"] {
+    font-size: clamp(2.5rem, 5.5vw, 4.25rem) !important;
+    line-height: 1.08 !important;
+    background: var(--sb-port-heading-gradient) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    margin-bottom: 24px !important;
+}
+
+h2.sb-heading,
+.sb-heading[level="h2"] {
+    font-size: clamp(1.85rem, 3.5vw, 2.75rem) !important;
+    line-height: 1.15 !important;
+    margin-top: 0 !important;
+    margin-bottom: 16px !important;
+}
+
+.sb-text {
+    color: var(--sb-port-text-secondary) !important;
+    font-size: 1.1rem !important;
+    line-height: 1.7 !important;
+    max-width: 720px;
+}
+
+.sb-text--base {
+    font-size: 1.05rem !important;
+}
+
+.sb-text--lg {
+    font-size: 1.25rem !important;
+    color: #cbd5e1 !important;
+    line-height: 1.65 !important;
+    font-weight: 400 !important;
+}
+
+/* Remove default white site chrome */
+.sb-site-header,
+.sb-site-footer {
+    display: none !important;
+}
+
+.sb-platform-signature {
+    background: var(--sb-port-bg) !important;
+    border-top: 1px solid var(--sb-port-border) !important;
+    color: var(--sb-port-text-muted) !important;
+    padding: 24px 0 !important;
+}
+
+/* ── 2. Buttons & Actions Upgrade ────────────────────────────── */
+.sb-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
+    border-radius: 12px !important;
+    padding: 14px 28px !important;
+    font-size: 1rem !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+}
+
+.sb-button--lg {
+    padding: 16px 32px !important;
+    font-size: 1.05rem !important;
+    border-radius: 14px !important;
+}
+
+.sb-button--primary {
+    background: var(--sb-port-accent-gradient) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+}
+
+.sb-button--primary:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 16px 35px -5px rgba(99, 102, 241, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+}
+
+.sb-button--outline {
+    background: rgba(255, 255, 255, 0.04) !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+}
+
+.sb-button--outline:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
+    color: #ffffff !important;
+    transform: translateY(-2px) !important;
+}
+
+/* ── 3. Luxury Sticky Navigation Header ───────────────────────── */
+.sb-portfolio-nav {
+    position: sticky;
+    top: 20px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    margin: 0 auto 40px auto;
+    width: 100%;
+    max-width: 1180px;
+    background: rgba(11, 15, 25, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
+}
+
+.sb-portfolio-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: var(--sb-port-text-primary);
+}
+
+.sb-portfolio-brand-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--sb-port-accent-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: #fff;
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+}
+
+.sb-portfolio-brand-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.sb-portfolio-brand-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--sb-port-text-primary);
+}
+
+.sb-portfolio-brand-role {
+    font-size: 0.75rem;
+    color: var(--sb-port-text-muted);
+}
+
+.sb-portfolio-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+@media (max-width: 768px) {
+    .sb-portfolio-nav-links {
+        display: none;
+    }
+}
+
+.sb-portfolio-nav-link {
+    color: var(--sb-port-text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.sb-portfolio-nav-link:hover {
+    color: #ffffff;
+}
+
+.sb-portfolio-nav-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    border-radius: 9999px;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    color: #a5b4fc;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.sb-portfolio-nav-cta:hover {
+    background: var(--sb-port-accent);
+    color: #ffffff;
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+}
+
+/* ── 4. Hero Section & Status Pill ────────────────────────────── */
 .sb-portfolio-status-pill {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 14px;
+    padding: 6px 16px;
     border-radius: 9999px;
     background: rgba(16, 185, 129, 0.1);
-    border: 1px solid rgba(16, 185, 129, 0.25);
+    border: 1px solid rgba(16, 185, 129, 0.3);
     color: #34d399;
     font-size: 0.85rem;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    margin-bottom: 20px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    margin-bottom: 24px;
+    box-shadow: 0 0 20px -5px rgba(16, 185, 129, 0.2);
 }
+
 .sb-portfolio-status-dot {
     width: 8px;
     height: 8px;
@@ -39,351 +287,573 @@
     box-shadow: 0 0 10px #10b981;
     animation: sb-port-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
 @keyframes sb-port-pulse {
     0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.85); }
+    50% { opacity: 0.35; transform: scale(0.8); }
 }
 
-/* ── Stat Highlight Counter Banner ───────────────────────────── */
-.sb-portfolio-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 20px;
-    width: 100%;
-    margin: 40px 0 20px 0;
+/* Section Category Eyebrow Pill */
+.sb-portfolio-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    color: var(--sb-port-accent-light);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
 }
+
+/* ── 5. Stat Highlight Counter Banner ─────────────────────────── */
 .sb-portfolio-stat-item {
-    background: var(--sb-port-surface);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%), var(--sb-port-surface);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--sb-port-border);
-    border-radius: 16px;
-    padding: 24px 20px;
+    border-radius: 20px;
+    padding: 28px 24px;
     text-align: center;
+    box-shadow: var(--sb-port-card-shadow);
     transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
+
 .sb-portfolio-stat-item:hover {
-    transform: translateY(-3px);
+    transform: translateY(-4px);
     border-color: var(--sb-port-border-hover);
-    box-shadow: var(--sb-port-glow);
+    box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
+
 .sb-portfolio-stat-number {
-    font-size: 2.5rem;
+    font-size: clamp(2.2rem, 3.2vw, 3rem);
     font-weight: 800;
-    line-height: 1.1;
+    line-height: 1.05;
     background: var(--sb-port-accent-gradient);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    margin-bottom: 6px;
-}
-.sb-portfolio-stat-label {
-    font-size: 0.9rem;
-    color: var(--sb-port-text-secondary);
-    font-weight: 500;
+    margin-bottom: 8px;
+    letter-spacing: -0.03em;
 }
 
-/* ── Project Card Widget ─────────────────────────────────────── */
+.sb-portfolio-stat-label {
+    font-size: 0.95rem;
+    color: var(--sb-port-text-secondary);
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+/* ── 6. Project Card Bento Widget ────────────────────────────── */
 .sb-portfolio-project-card {
     display: flex;
     flex-direction: column;
-    background: var(--sb-port-surface);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%), var(--sb-port-surface);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--sb-port-border);
-    border-radius: 20px;
+    border-radius: 24px;
     overflow: hidden;
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: var(--sb-port-card-shadow);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease, box-shadow 0.35s ease;
     height: 100%;
 }
+
 .sb-portfolio-project-card:hover {
     transform: translateY(-6px);
     border-color: var(--sb-port-border-hover);
-    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), var(--sb-port-glow);
+    box-shadow: 0 24px 50px -15px rgba(99, 102, 241, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
+
 .sb-portfolio-project-thumb {
     position: relative;
     width: 100%;
-    aspect-ratio: 16 / 10;
+    height: 260px;
     overflow: hidden;
-    background: #1e293b;
+    background: #0f172a;
+    border-bottom: 1px solid var(--sb-port-border);
 }
+
 .sb-portfolio-project-thumb img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.5s ease;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .sb-portfolio-project-card:hover .sb-portfolio-project-thumb img {
     transform: scale(1.05);
 }
+
 .sb-portfolio-project-metric-badge {
     position: absolute;
-    top: 14px;
-    right: 14px;
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    top: 16px;
+    right: 16px;
+    background: rgba(11, 15, 25, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #34d399;
+    padding: 6px 14px;
     border-radius: 9999px;
-    padding: 4px 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #38bdf8;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
+
 .sb-portfolio-project-body {
-    padding: 24px;
+    padding: 28px;
     display: flex;
     flex-direction: column;
     flex-grow: 1;
 }
-.sb-portfolio-project-category {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--sb-port-accent);
+
+.sb-portfolio-project-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 8px;
 }
+
+.sb-portfolio-project-category {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--sb-port-accent-light);
+}
+
+.sb-portfolio-project-year {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--sb-port-text-muted);
+}
+
 .sb-portfolio-project-title {
-    font-size: 1.4rem;
+    font-size: 1.45rem;
     font-weight: 700;
     color: var(--sb-port-text-primary);
-    margin: 0 0 10px 0;
+    margin: 4px 0 12px 0;
     line-height: 1.25;
 }
+
 .sb-portfolio-project-desc {
     font-size: 0.95rem;
     color: var(--sb-port-text-secondary);
     line-height: 1.6;
-    margin-bottom: 18px;
+    margin: 0 0 20px 0;
     flex-grow: 1;
 }
+
 .sb-portfolio-project-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 18px;
+    margin-bottom: 24px;
 }
+
 .sb-portfolio-project-tag {
-    font-size: 0.75rem;
-    padding: 4px 10px;
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.05);
-    color: #cbd5e1;
+    padding: 4px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.8rem;
+    color: #cbd5e1;
+    font-weight: 500;
 }
+
 .sb-portfolio-project-link {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 0.9rem;
+    gap: 8px;
+    font-size: 0.95rem;
     font-weight: 600;
     color: #a5b4fc;
     text-decoration: none;
     transition: color 0.2s ease, transform 0.2s ease;
 }
+
 .sb-portfolio-project-link:hover {
     color: #ffffff;
     transform: translateX(4px);
 }
 
-/* ── Skill Grid Widget ───────────────────────────────────────── */
-.sb-portfolio-skills {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 20px;
-    width: 100%;
-}
-.sb-portfolio-skill-group {
-    background: var(--sb-port-surface);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+/* ── 7. Service Offering Card ────────────────────────────────── */
+.sb-portfolio-service-card {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%), var(--sb-port-surface);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--sb-port-border);
-    border-radius: 16px;
-    padding: 24px;
-    transition: border-color 0.25s ease;
+    border-radius: 24px;
+    padding: 36px 32px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-shadow: var(--sb-port-card-shadow);
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
-.sb-portfolio-skill-group:hover {
+
+.sb-portfolio-service-card:hover {
+    transform: translateY(-5px);
     border-color: var(--sb-port-border-hover);
+    box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.25);
 }
-.sb-portfolio-skill-group-title {
-    font-size: 1.1rem;
+
+.sb-portfolio-service-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 16px;
+}
+
+.sb-portfolio-service-num {
+    font-size: 1.85rem;
+    font-weight: 800;
+    background: var(--sb-port-accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.02em;
+}
+
+.sb-portfolio-service-title {
+    font-size: 1.4rem;
     font-weight: 700;
     color: var(--sb-port-text-primary);
-    margin: 0 0 16px 0;
+    margin: 0 0 14px 0;
+    line-height: 1.25;
+}
+
+.sb-portfolio-service-desc {
+    font-size: 0.95rem;
+    color: var(--sb-port-text-secondary);
+    line-height: 1.65;
+    margin: 0 0 24px 0;
+    flex-grow: 1;
+}
+
+.sb-portfolio-service-checklist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-top: 1px solid var(--sb-port-border);
+    padding-top: 20px;
+}
+
+.sb-portfolio-service-checklist li {
+    font-size: 0.9rem;
+    color: #cbd5e1;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
+
+.sb-portfolio-service-check-icon {
+    color: #34d399;
+    font-weight: 700;
+}
+
+/* ── 8. Core Stack & Skill Group ─────────────────────────────── */
+.sb-portfolio-skill-group {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%), var(--sb-port-surface);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--sb-port-border);
+    border-radius: 20px;
+    padding: 28px;
+    height: 100%;
+    box-shadow: var(--sb-port-card-shadow);
+    transition: border-color 0.25s ease, transform 0.25s ease;
+}
+
+.sb-portfolio-skill-group:hover {
+    border-color: var(--sb-port-border-hover);
+    transform: translateY(-3px);
+}
+
+.sb-portfolio-skill-group-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--sb-port-text-primary);
+    margin: 0 0 18px 0;
+    letter-spacing: -0.02em;
+}
+
 .sb-portfolio-skill-pills {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
 }
+
 .sb-portfolio-skill-pill {
-    padding: 6px 12px;
+    padding: 7px 14px;
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
     font-size: 0.85rem;
     color: #e2e8f0;
     font-weight: 500;
-    transition: background 0.2s ease, border-color 0.2s ease;
+    transition: all 0.2s ease;
 }
+
 .sb-portfolio-skill-pill:hover {
     background: rgba(99, 102, 241, 0.15);
-    border-color: rgba(99, 102, 241, 0.35);
+    border-color: rgba(99, 102, 241, 0.4);
+    color: #ffffff;
+    transform: translateY(-1px);
 }
 
-/* ── Experience Timeline Widget ──────────────────────────────── */
-.sb-portfolio-timeline {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    width: 100%;
-}
-.sb-portfolio-timeline-item {
-    display: flex;
-    flex-direction: column;
-    background: var(--sb-port-surface);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--sb-port-border);
-    border-radius: 16px;
-    padding: 24px;
-    transition: border-color 0.25s ease, transform 0.25s ease;
-}
-.sb-portfolio-timeline-item:hover {
-    border-color: var(--sb-port-border-hover);
-    transform: translateY(-2px);
-}
-.sb-portfolio-timeline-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 8px;
-}
-.sb-portfolio-timeline-role {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--sb-port-text-primary);
-}
-.sb-portfolio-timeline-period {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #a5b4fc;
-    background: rgba(99, 102, 241, 0.1);
-    padding: 4px 10px;
-    border-radius: 9999px;
-}
-.sb-portfolio-timeline-company {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--sb-port-accent);
-    margin-bottom: 12px;
-}
-.sb-portfolio-timeline-desc {
-    font-size: 0.95rem;
-    color: var(--sb-port-text-secondary);
-    line-height: 1.6;
-    margin: 0;
-}
-
-/* ── Service Offering Card ───────────────────────────────────── */
-.sb-portfolio-service-card {
-    background: var(--sb-port-surface);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--sb-port-border);
-    border-radius: 20px;
-    padding: 32px 28px;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-.sb-portfolio-service-card:hover {
-    transform: translateY(-4px);
-    border-color: var(--sb-port-border-hover);
-    box-shadow: var(--sb-port-glow);
-}
-.sb-portfolio-service-num {
-    font-size: 0.9rem;
-    font-weight: 800;
-    color: var(--sb-port-accent);
-    letter-spacing: 0.1em;
-    margin-bottom: 16px;
-}
-.sb-portfolio-service-title {
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: var(--sb-port-text-primary);
-    margin: 0 0 12px 0;
-}
-.sb-portfolio-service-desc {
-    font-size: 0.95rem;
-    color: var(--sb-port-text-secondary);
-    line-height: 1.65;
-    margin: 0;
-}
-
-/* ── Testimonial Card Widget ─────────────────────────────────── */
+/* ── 9. Client Testimonial Card ──────────────────────────────── */
 .sb-portfolio-testimonial-card {
-    background: var(--sb-port-surface);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%), var(--sb-port-surface);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--sb-port-border);
-    border-radius: 20px;
-    padding: 32px 28px;
+    border-radius: 24px;
+    padding: 36px 32px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     height: 100%;
+    box-shadow: var(--sb-port-card-shadow);
     transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
+
 .sb-portfolio-testimonial-card:hover {
     transform: translateY(-4px);
     border-color: var(--sb-port-border-hover);
-    box-shadow: var(--sb-port-glow);
+    box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.25);
 }
+
+.sb-portfolio-testimonial-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
 .sb-portfolio-testimonial-rating {
     color: #fbbf24;
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     letter-spacing: 2px;
-    margin-bottom: 14px;
 }
+
+.sb-portfolio-verified-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: #34d399;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-weight: 600;
+}
+
 .sb-portfolio-testimonial-quote {
-    font-size: 1.05rem;
-    line-height: 1.6;
-    color: var(--sb-port-text-primary);
+    font-size: 1.1rem;
+    line-height: 1.65;
+    color: #f1f5f9;
     font-style: italic;
-    margin: 0 0 20px 0;
+    margin: 0 0 24px 0;
     flex-grow: 1;
 }
+
 .sb-portfolio-testimonial-author {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
+    border-top: 1px solid var(--sb-port-border);
+    padding-top: 20px;
 }
+
 .sb-portfolio-testimonial-avatar {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid rgba(99, 102, 241, 0.5);
+    border: 2px solid var(--sb-port-accent-light);
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
 }
+
 .sb-portfolio-testimonial-info {
     display: flex;
     flex-direction: column;
 }
+
 .sb-portfolio-testimonial-name {
-    font-size: 0.95rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--sb-port-text-primary);
 }
+
 .sb-portfolio-testimonial-role {
     font-size: 0.85rem;
+    color: var(--sb-port-text-muted);
+}
+
+/* ── 10. Consultation Inquiry Form Styling ───────────────────── */
+.sb-form {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%), var(--sb-port-surface) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid var(--sb-port-border) !important;
+    border-radius: 24px !important;
+    padding: 40px !important;
+    box-shadow: var(--sb-port-card-shadow) !important;
+    margin-top: 24px !important;
+}
+
+.sb-form-group {
+    margin-bottom: 24px !important;
+}
+
+.sb-form-group label {
+    display: block !important;
+    color: #cbd5e1 !important;
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.02em !important;
+    margin-bottom: 8px !important;
+}
+
+.sb-required {
+    color: #f43f5e !important;
+}
+
+.sb-form-group input,
+.sb-form-group select,
+.sb-form-group textarea {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    background: rgba(11, 15, 25, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 12px !important;
+    padding: 14px 18px !important;
+    font-size: 1rem !important;
+    color: #ffffff !important;
+    outline: none !important;
+    transition: all 0.2s ease !important;
+    font-family: inherit !important;
+}
+
+.sb-form-group input:focus,
+.sb-form-group select:focus,
+.sb-form-group textarea:focus {
+    border-color: var(--sb-port-accent-light) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25) !important;
+}
+
+.sb-form-group textarea {
+    min-height: 120px !important;
+    resize: vertical !important;
+}
+
+.sb-form-group select option {
+    background: #0f172a !important;
+    color: #ffffff !important;
+    padding: 10px !important;
+}
+
+.sb-form__actions {
+    margin-top: 28px !important;
+}
+
+.sb-form__actions button {
+    width: 100% !important;
+    padding: 16px !important;
+    border-radius: 14px !important;
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    background: var(--sb-port-accent-gradient) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+    cursor: pointer !important;
+    box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.5) !important;
+    transition: all 0.3s ease !important;
+}
+
+.sb-form__actions button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 15px 35px -5px rgba(99, 102, 241, 0.7) !important;
+}
+
+/* Form Trust Badges */
+.sb-portfolio-form-reassurance {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--sb-port-border);
+}
+
+.sb-portfolio-reassurance-item {
+    font-size: 0.8rem;
+    color: var(--sb-port-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ── 11. Luxury Custom Footer ────────────────────────────────── */
+.sb-portfolio-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 40px 0;
+    margin-top: 60px;
+    border-top: 1px solid var(--sb-port-border);
+    width: 100%;
+}
+
+.sb-portfolio-footer-left {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sb-portfolio-footer-copy {
+    font-size: 0.9rem;
+    color: var(--sb-port-text-muted);
+}
+
+.sb-portfolio-footer-status {
+    font-size: 0.85rem;
+    color: #34d399;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sb-portfolio-footer-socials {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.sb-portfolio-social-link {
     color: var(--sb-port-text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.sb-portfolio-social-link:hover {
+    color: var(--sb-port-text-primary);
 }

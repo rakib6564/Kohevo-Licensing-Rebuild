@@ -42,6 +42,8 @@ unit('freelancer portfolio: plugin boots and registers all custom widgets', func
     );
     $plugin->boot();
 
+    assert_true(Studio::widgets()->has('portfolio.nav_header'), 'Registers portfolio.nav_header');
+    assert_true(Studio::widgets()->has('portfolio.footer'), 'Registers portfolio.footer');
     assert_true(Studio::widgets()->has('portfolio.project_card'), 'Registers portfolio.project_card');
     assert_true(Studio::widgets()->has('portfolio.stat_highlight'), 'Registers portfolio.stat_highlight');
     assert_true(Studio::widgets()->has('portfolio.skill_grid'), 'Registers portfolio.skill_grid');
@@ -51,6 +53,8 @@ unit('freelancer portfolio: plugin boots and registers all custom widgets', func
 
     assert_eq('portfolio', Studio::widgets()->get('portfolio.project_card')->category());
     assert_eq('Project Case Study Card', Studio::widgets()->get('portfolio.project_card')->label());
+    assert_eq('Luxury Navigation Bar', Studio::widgets()->get('portfolio.nav_header')->label());
+    assert_eq('Luxury Portfolio Footer', Studio::widgets()->get('portfolio.footer')->label());
 });
 
 unit('freelancer portfolio: custom project card renders with tags, metrics, and links', function (): void {
@@ -159,6 +163,40 @@ unit('freelancer portfolio: stat highlight, skill grid, timeline, service, and t
     assert_true(str_contains($htmlTestimonial, 'Marcus Vance'), 'Contains author');
     assert_true(str_contains($htmlTestimonial, 'CloudScale Inc'), 'Contains role');
     assert_true(str_contains($htmlTestimonial, '★★★★★'), 'Contains stars');
+    assert_true(str_contains($htmlTestimonial, 'Verified Client'), 'Contains verified client badge');
+
+    $scopeNav = s_port_scope([
+        'id'      => CanonicalDocumentSchema::newBlockId(),
+        'type'    => 'portfolio.nav_header',
+        'version' => 1,
+        'props'   => [
+            'monogram'  => 'ER',
+            'name'      => 'Elena Rostova',
+            'role'      => 'Principal Product Engineer',
+            'cta_label' => 'Book Intro ↗',
+            'cta_href'  => '#contact',
+        ],
+    ]);
+    $htmlNav = Studio::widgets()->get('portfolio.nav_header')->toBlockRenderer()->render($scopeNav);
+    assert_true(str_contains($htmlNav, 'sb-portfolio-nav'), 'Contains nav header class');
+    assert_true(str_contains($htmlNav, 'ER'), 'Contains brand monogram');
+    assert_true(str_contains($htmlNav, 'Elena Rostova'), 'Contains brand name');
+    assert_true(str_contains($htmlNav, 'Book Intro ↗'), 'Contains CTA button');
+
+    $scopeFooter = s_port_scope([
+        'id'      => CanonicalDocumentSchema::newBlockId(),
+        'type'    => 'portfolio.footer',
+        'version' => 1,
+        'props'   => [
+            'copyright' => '© 2026 Elena Rostova',
+            'status'    => 'Available for Select Q4 Engagements',
+            'location'  => 'San Francisco, CA',
+        ],
+    ]);
+    $htmlFooter = Studio::widgets()->get('portfolio.footer')->toBlockRenderer()->render($scopeFooter);
+    assert_true(str_contains($htmlFooter, 'sb-portfolio-footer'), 'Contains footer class');
+    assert_true(str_contains($htmlFooter, '© 2026 Elena Rostova'), 'Contains copyright');
+    assert_true(str_contains($htmlFooter, 'San Francisco, CA'), 'Contains location');
 });
 
 unit('freelancer portfolio: canonical document generator yields valid, complete structure', function (): void {

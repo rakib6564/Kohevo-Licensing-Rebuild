@@ -23,7 +23,39 @@ class StudioFreelancerPortfolio extends Plugin
 {
     public function boot(): void
     {
-        // 1. Register `portfolio.project_card`
+        // 1. Register `portfolio.nav_header`
+        Studio::widgets()->register([
+            'type'        => 'portfolio.nav_header',
+            'version'     => 1,
+            'label'       => 'Luxury Navigation Bar',
+            'category'    => 'portfolio',
+            'icon'        => 'compass',
+            'schema'      => [
+                ['key' => 'monogram', 'type' => 'string', 'label' => 'Brand Monogram', 'required' => false, 'default' => 'ER', 'max_length' => 10],
+                ['key' => 'name', 'type' => 'string', 'label' => 'Full Name', 'required' => true, 'default' => 'Elena Rostova', 'max_length' => 100],
+                ['key' => 'role', 'type' => 'string', 'label' => 'Title / Tagline', 'required' => false, 'default' => 'Principal Product Engineer', 'max_length' => 120],
+                ['key' => 'cta_label', 'type' => 'string', 'label' => 'CTA Button Label', 'required' => false, 'default' => 'Book Intro ↗', 'max_length' => 60],
+                ['key' => 'cta_href', 'type' => 'string', 'label' => 'CTA Link Target', 'required' => false, 'default' => '#contact', 'max_length' => 255],
+            ],
+            'renderer'    => [self::class, 'renderNavHeader'],
+        ]);
+
+        // 2. Register `portfolio.footer`
+        Studio::widgets()->register([
+            'type'        => 'portfolio.footer',
+            'version'     => 1,
+            'label'       => 'Luxury Portfolio Footer',
+            'category'    => 'portfolio',
+            'icon'        => 'layout',
+            'schema'      => [
+                ['key' => 'copyright', 'type' => 'string', 'label' => 'Copyright Text', 'required' => false, 'default' => '© 2026 Elena Rostova. Crafted with high-performance elegance.', 'max_length' => 200],
+                ['key' => 'status', 'type' => 'string', 'label' => 'Availability Status', 'required' => false, 'default' => 'Available for Select Q4 Engagements', 'max_length' => 120],
+                ['key' => 'location', 'type' => 'string', 'label' => 'Location / Work Mode', 'required' => false, 'default' => 'San Francisco, CA · Remote Worldwide', 'max_length' => 120],
+            ],
+            'renderer'    => [self::class, 'renderFooter'],
+        ]);
+
+        // 3. Register `portfolio.project_card`
         Studio::widgets()->register([
             'type'        => 'portfolio.project_card',
             'version'     => 1,
@@ -33,6 +65,7 @@ class StudioFreelancerPortfolio extends Plugin
             'schema'      => [
                 ['key' => 'title', 'type' => 'string', 'label' => 'Project Title', 'required' => true, 'default' => 'Solaya Analytics Platform', 'max_length' => 120],
                 ['key' => 'category', 'type' => 'string', 'label' => 'Category / Subtitle', 'required' => false, 'default' => 'Fintech / SaaS Architecture', 'max_length' => 80],
+                ['key' => 'year', 'type' => 'string', 'label' => 'Release Year', 'required' => false, 'default' => '2026', 'max_length' => 20],
                 ['key' => 'description', 'type' => 'text', 'label' => 'Summary Description', 'required' => true, 'default' => 'End-to-end product design, tokenized design system, and responsive front-end implementation.', 'max_length' => 600],
                 ['key' => 'image_url', 'type' => 'url', 'label' => 'Mockup / Cover Image URL', 'required' => false, 'default' => 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80'],
                 ['key' => 'metric', 'type' => 'string', 'label' => 'Key Metric / Outcome', 'required' => false, 'default' => '+185% Daily Active Users', 'max_length' => 60],
@@ -43,7 +76,7 @@ class StudioFreelancerPortfolio extends Plugin
             'renderer'    => [self::class, 'renderProjectCard'],
         ]);
 
-        // 2. Register `portfolio.stat_highlight`
+        // 4. Register `portfolio.stat_highlight`
         Studio::widgets()->register([
             'type'        => 'portfolio.stat_highlight',
             'version'     => 1,
@@ -57,7 +90,7 @@ class StudioFreelancerPortfolio extends Plugin
             'renderer'    => [self::class, 'renderStatHighlight'],
         ]);
 
-        // 3. Register `portfolio.skill_grid`
+        // 5. Register `portfolio.skill_grid`
         Studio::widgets()->register([
             'type'        => 'portfolio.skill_grid',
             'version'     => 1,
@@ -71,7 +104,7 @@ class StudioFreelancerPortfolio extends Plugin
             'renderer'    => [self::class, 'renderSkillGrid'],
         ]);
 
-        // 4. Register `portfolio.experience_timeline`
+        // 6. Register `portfolio.experience_timeline`
         Studio::widgets()->register([
             'type'        => 'portfolio.experience_timeline',
             'version'     => 1,
@@ -87,7 +120,7 @@ class StudioFreelancerPortfolio extends Plugin
             'renderer'    => [self::class, 'renderExperienceTimeline'],
         ]);
 
-        // 5. Register `portfolio.service_card`
+        // 7. Register `portfolio.service_card`
         Studio::widgets()->register([
             'type'        => 'portfolio.service_card',
             'version'     => 1,
@@ -98,11 +131,12 @@ class StudioFreelancerPortfolio extends Plugin
                 ['key' => 'number', 'type' => 'string', 'label' => 'Index Number', 'required' => false, 'default' => '01', 'max_length' => 10],
                 ['key' => 'title', 'type' => 'string', 'label' => 'Service Title', 'required' => true, 'default' => 'Product Design & Design Systems', 'max_length' => 120],
                 ['key' => 'description', 'type' => 'text', 'label' => 'Deliverables & Description', 'required' => true, 'default' => 'User research, rapid wireframing, high-fidelity Figma prototypes, and multi-brand tokenized design systems.', 'max_length' => 500],
+                ['key' => 'deliverables', 'type' => 'string', 'label' => 'Deliverables (comma separated)', 'required' => false, 'default' => '', 'max_length' => 400],
             ],
             'renderer'    => [self::class, 'renderServiceCard'],
         ]);
 
-        // 6. Register `portfolio.testimonial_card`
+        // 8. Register `portfolio.testimonial_card`
         Studio::widgets()->register([
             'type'        => 'portfolio.testimonial_card',
             'version'     => 1,
@@ -143,10 +177,57 @@ class StudioFreelancerPortfolio extends Plugin
         return '';
     }
 
+    public static function renderNavHeader(BlockRenderScope $scope): string
+    {
+        $monogram = $scope->string('monogram', 'ER');
+        $name     = $scope->string('name', 'Elena Rostova');
+        $role     = $scope->string('role', 'Principal Product Engineer');
+        $ctaLabel = $scope->string('cta_label', 'Book Intro ↗');
+        $ctaHref  = $scope->string('cta_href', '#contact');
+
+        return self::renderStylesOnce() . '<nav class="sb-portfolio-nav" data-sb-custom-widget="portfolio.nav_header">'
+            . '<a href="#" class="sb-portfolio-brand">'
+            . '<div class="sb-portfolio-brand-avatar">' . Html::e($monogram) . '</div>'
+            . '<div class="sb-portfolio-brand-info">'
+            . '<span class="sb-portfolio-brand-name">' . Html::e($name) . '</span>'
+            . '<span class="sb-portfolio-brand-role">' . Html::e($role) . '</span>'
+            . '</div>'
+            . '</a>'
+            . '<ul class="sb-portfolio-nav-links">'
+            . '<li><a href="#work" class="sb-portfolio-nav-link">Selected Work</a></li>'
+            . '<li><a href="#services" class="sb-portfolio-nav-link">Expertise</a></li>'
+            . '<li><a href="#stack" class="sb-portfolio-nav-link">Tech Stack</a></li>'
+            . '<li><a href="#testimonials" class="sb-portfolio-nav-link">Endorsements</a></li>'
+            . '</ul>'
+            . '<a href="' . Html::e($ctaHref) . '" class="sb-portfolio-nav-cta">' . Html::e($ctaLabel) . '</a>'
+            . '</nav>';
+    }
+
+    public static function renderFooter(BlockRenderScope $scope): string
+    {
+        $copyright = $scope->string('copyright', '© 2026 Elena Rostova. Crafted with high-performance elegance.');
+        $status    = $scope->string('status', 'Available for Select Q4 Engagements');
+        $location  = $scope->string('location', 'San Francisco, CA · Remote Worldwide');
+
+        return self::renderStylesOnce() . '<footer class="sb-portfolio-footer" data-sb-custom-widget="portfolio.footer">'
+            . '<div class="sb-portfolio-footer-left">'
+            . '<span class="sb-portfolio-footer-status"><span class="sb-portfolio-status-dot"></span> ' . Html::e($status) . '</span>'
+            . '<span class="sb-portfolio-footer-copy">' . Html::e($copyright) . ' · ' . Html::e($location) . '</span>'
+            . '</div>'
+            . '<div class="sb-portfolio-footer-socials">'
+            . '<a href="https://github.com" target="_blank" rel="noopener" class="sb-portfolio-social-link">GitHub ↗</a>'
+            . '<a href="https://linkedin.com" target="_blank" rel="noopener" class="sb-portfolio-social-link">LinkedIn ↗</a>'
+            . '<a href="https://twitter.com" target="_blank" rel="noopener" class="sb-portfolio-social-link">X / Twitter ↗</a>'
+            . '<a href="mailto:elena@example.com" class="sb-portfolio-social-link">Email ↗</a>'
+            . '</div>'
+            . '</footer>';
+    }
+
     public static function renderProjectCard(BlockRenderScope $scope): string
     {
         $title    = $scope->string('title', 'Project Title');
         $category = $scope->string('category');
+        $year     = $scope->string('year', '2026');
         $desc     = $scope->string('description');
         $image    = $scope->string('image_url');
         $metric   = $scope->string('metric');
@@ -166,9 +247,14 @@ class StudioFreelancerPortfolio extends Plugin
             $html .= '</div>';
         }
         $html .= '<div class="sb-portfolio-project-body">';
+        $html .= '<div class="sb-portfolio-project-meta-row">';
         if ($category !== '') {
             $html .= '<div class="sb-portfolio-project-category">' . Html::e($category) . '</div>';
         }
+        if ($year !== '') {
+            $html .= '<div class="sb-portfolio-project-year">' . Html::e($year) . '</div>';
+        }
+        $html .= '</div>';
         $html .= '<h3 class="sb-portfolio-project-title">' . Html::e($title) . '</h3>';
         if ($desc !== '') {
             $html .= '<p class="sb-portfolio-project-desc">' . Html::e($desc) . '</p>';
@@ -234,15 +320,30 @@ class StudioFreelancerPortfolio extends Plugin
 
     public static function renderServiceCard(BlockRenderScope $scope): string
     {
-        $num   = $scope->string('number', '01');
-        $title = $scope->string('title', 'Service');
-        $desc  = $scope->string('description');
+        $num          = $scope->string('number', '01');
+        $title        = $scope->string('title', 'Service');
+        $desc         = $scope->string('description');
+        $deliverables = $scope->string('deliverables');
 
-        return self::renderStylesOnce() . '<div class="sb-portfolio-service-card" data-sb-custom-widget="portfolio.service_card">'
-            . '<span class="sb-portfolio-service-num">' . Html::e($num) . '</span>'
-            . '<h3 class="sb-portfolio-service-title">' . Html::e($title) . '</h3>'
-            . '<p class="sb-portfolio-service-desc">' . Html::e($desc) . '</p>'
-            . '</div>';
+        $items = array_filter(array_map('trim', explode(',', $deliverables)));
+
+        $html = self::renderStylesOnce() . '<div class="sb-portfolio-service-card" data-sb-custom-widget="portfolio.service_card">';
+        $html .= '<div class="sb-portfolio-service-header">';
+        $html .= '<span class="sb-portfolio-service-num">' . Html::e($num) . '</span>';
+        $html .= '</div>';
+        $html .= '<h3 class="sb-portfolio-service-title">' . Html::e($title) . '</h3>';
+        if ($desc !== '') {
+            $html .= '<p class="sb-portfolio-service-desc">' . Html::e($desc) . '</p>';
+        }
+        if ($items !== []) {
+            $html .= '<ul class="sb-portfolio-service-checklist">';
+            foreach ($items as $item) {
+                $html .= '<li><span class="sb-portfolio-service-check-icon">✓</span> ' . Html::e($item) . '</li>';
+            }
+            $html .= '</ul>';
+        }
+        $html .= '</div>';
+        return $html;
     }
 
     public static function renderTestimonialCard(BlockRenderScope $scope): string
@@ -256,7 +357,10 @@ class StudioFreelancerPortfolio extends Plugin
         $stars = str_repeat('★', $rating);
 
         $html = self::renderStylesOnce() . '<div class="sb-portfolio-testimonial-card" data-sb-custom-widget="portfolio.testimonial_card">';
+        $html .= '<div class="sb-portfolio-testimonial-top">';
         $html .= '<div class="sb-portfolio-testimonial-rating">' . Html::e($stars) . '</div>';
+        $html .= '<span class="sb-portfolio-verified-badge">✓ Verified Client</span>';
+        $html .= '</div>';
         $html .= '<p class="sb-portfolio-testimonial-quote">“' . Html::e($quote) . '”</p>';
         $html .= '<div class="sb-portfolio-testimonial-author">';
         if ($avatarUrl !== '') {
@@ -311,6 +415,14 @@ class StudioFreelancerPortfolio extends Plugin
     public static function getPortfolioDocument(): array
     {
         // ── 1. Hero Section ──────────────────────────────────────────────────
+        $navHeader = self::makeBlock('portfolio.nav_header', [
+            'monogram'  => 'ER',
+            'name'      => 'Elena Rostova',
+            'role'      => 'Principal Product Engineer',
+            'cta_label' => 'Book Intro ↗',
+            'cta_href'  => '#contact',
+        ]);
+
         $statusPill = self::makeBlock('core.text', [
             'content' => '<div class="sb-portfolio-status-pill"><span class="sb-portfolio-status-dot"></span> Available for Select Product Engagements · Q4 2026</div>',
         ]);
@@ -364,11 +476,15 @@ class StudioFreelancerPortfolio extends Plugin
 
         $heroContainer = self::makeBlock('layout.container', [
             'width' => 'constrained',
-        ], [$statusPill, $heroHeading, $heroSubtext, $heroActions, $statsGrid]);
+        ], [$navHeader, $statusPill, $heroHeading, $heroSubtext, $heroActions, $statsGrid]);
 
         $heroSection = self::makeSection([$heroContainer], 'Hero & Introduction');
 
         // ── 2. Featured Projects / Work Section ──────────────────────────────
+        $eyebrow1 = self::makeBlock('core.text', [
+            'content' => '<div id="work" class="sb-portfolio-eyebrow">// SELECTED FLAGSHIP WORK</div>',
+        ]);
+
         $workHeading = self::makeBlock('core.heading', [
             'text'  => 'Selected Flagship Work',
             'level' => 'h2',
@@ -383,6 +499,7 @@ class StudioFreelancerPortfolio extends Plugin
         $proj1 = self::makeBlock('portfolio.project_card', [
             'title'       => 'Solaya Analytics Platform',
             'category'    => 'Fintech / SaaS Analytics',
+            'year'        => '2026',
             'description' => 'Complete front-end architecture and visual analytics dashboard for a multi-tenant portfolio management system.',
             'image_url'   => 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80',
             'metric'      => '+185% Daily Active Users',
@@ -394,6 +511,7 @@ class StudioFreelancerPortfolio extends Plugin
         $proj2 = self::makeBlock('portfolio.project_card', [
             'title'       => 'Apex Enterprise Design System',
             'category'    => 'Multi-Brand UI System',
+            'year'        => '2025',
             'description' => 'A unified design system spanning 45+ components with zero runtime CSS regressions, strict WCAG AAA compliance, and automated token synchronization.',
             'image_url'   => 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=1200&q=80',
             'metric'      => 'Adopted Across 14 Teams',
@@ -405,6 +523,7 @@ class StudioFreelancerPortfolio extends Plugin
         $proj3 = self::makeBlock('portfolio.project_card', [
             'title'       => 'Nexus AI Generative Workspace',
             'category'    => 'Generative UI & Collaboration',
+            'year'        => '2025',
             'description' => 'Interactive visual node workspace enabling creative teams to orchestrate multimodal generative pipelines with real-time feedback.',
             'image_url'   => 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
             'metric'      => 'Series A Funded ($14M)',
@@ -416,6 +535,7 @@ class StudioFreelancerPortfolio extends Plugin
         $proj4 = self::makeBlock('portfolio.project_card', [
             'title'       => 'Chrono Practice Management',
             'category'    => 'SaaS Productivity',
+            'year'        => '2024',
             'description' => 'Modern client portal, time-tracking, and automated billing software engineered specifically for elite independent consultants and boutique agencies.',
             'image_url'   => 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80',
             'metric'      => '4.9 ★ Average App Rating',
@@ -431,32 +551,39 @@ class StudioFreelancerPortfolio extends Plugin
 
         $workContainer = self::makeBlock('layout.container', [
             'width' => 'constrained',
-        ], [$workHeading, $workSubtext, $projectsGrid]);
+        ], [$eyebrow1, $workHeading, $workSubtext, $projectsGrid]);
 
         $workSection = self::makeSection([$workContainer], 'Selected Work');
 
         // ── 3. Services & Capabilities Section ───────────────────────────────
+        $eyebrow2 = self::makeBlock('core.text', [
+            'content' => '<div id="services" class="sb-portfolio-eyebrow">// AREAS OF EXPERTISE</div>',
+        ]);
+
         $servicesHeading = self::makeBlock('core.heading', [
             'text'  => 'Areas of Expertise',
             'level' => 'h2',
         ]);
 
         $service1 = self::makeBlock('portfolio.service_card', [
-            'number'      => '01',
-            'title'       => 'Product Design & Architecture',
-            'description' => 'Deep UX research, interactive wireframing, high-fidelity Figma components, and ergonomic design systems tailored for rapid engineering velocity.',
+            'number'       => '01',
+            'title'        => 'Product Design & Architecture',
+            'description'  => 'Deep UX research, interactive wireframing, high-fidelity Figma components, and ergonomic design systems tailored for rapid engineering velocity.',
+            'deliverables' => 'Design System Tokens, Figma Component Library, Interactive Prototypes, UX Audit & Journey Maps',
         ]);
 
         $service2 = self::makeBlock('portfolio.service_card', [
-            'number'      => '02',
-            'title'       => 'Full-Stack Web Engineering',
-            'description' => 'Clean, maintainable web applications engineered with modern TypeScript, React, PHP/Slate, and robust server architectures designed to handle traffic spikes.',
+            'number'       => '02',
+            'title'        => 'Full-Stack Web Engineering',
+            'description'  => 'Clean, maintainable web applications engineered with modern TypeScript, React, PHP/Slate, and robust server architectures designed to handle traffic spikes.',
+            'deliverables' => 'Production Web Application, Responsive Front-End, Scalable API Architecture, CI/CD & Deployment',
         ]);
 
         $service3 = self::makeBlock('portfolio.service_card', [
-            'number'      => '03',
-            'title'       => 'Performance, SEO & Conversion',
-            'description' => 'Sub-second Core Web Vitals optimization, semantic accessibility, technical search optimization, and conversion-engineered landing pages.',
+            'number'       => '03',
+            'title'        => 'Performance, SEO & Conversion',
+            'description'  => 'Sub-second Core Web Vitals optimization, semantic accessibility, technical search optimization, and conversion-engineered landing pages.',
+            'deliverables' => 'Sub-second CWV Score, WCAG AAA Compliance, Technical SEO Setup, High-Conversion UX Audit',
         ]);
 
         $servicesGrid = self::makeBlock('layout.grid', [
@@ -466,11 +593,15 @@ class StudioFreelancerPortfolio extends Plugin
 
         $servicesContainer = self::makeBlock('layout.container', [
             'width' => 'constrained',
-        ], [$servicesHeading, $servicesGrid]);
+        ], [$eyebrow2, $servicesHeading, $servicesGrid]);
 
         $servicesSection = self::makeSection([$servicesContainer], 'Services & Offerings');
 
         // ── 4. Technical Stack & Skills ──────────────────────────────────────
+        $eyebrow3 = self::makeBlock('core.text', [
+            'content' => '<div id="stack" class="sb-portfolio-eyebrow">// CORE STACK & SYSTEMS</div>',
+        ]);
+
         $skillsHeading = self::makeBlock('core.heading', [
             'text'  => 'Core Stack & Technologies',
             'level' => 'h2',
@@ -498,11 +629,15 @@ class StudioFreelancerPortfolio extends Plugin
 
         $skillsContainer = self::makeBlock('layout.container', [
             'width' => 'constrained',
-        ], [$skillsHeading, $skillsGrid]);
+        ], [$eyebrow3, $skillsHeading, $skillsGrid]);
 
         $skillsSection = self::makeSection([$skillsContainer], 'Skills & Technologies');
 
         // ── 5. Client Endorsements & Testimonials ────────────────────────────
+        $eyebrow4 = self::makeBlock('core.text', [
+            'content' => '<div id="testimonials" class="sb-portfolio-eyebrow">// CLIENT ENDORSEMENTS</div>',
+        ]);
+
         $testHeading = self::makeBlock('core.heading', [
             'text'  => 'Client Endorsements',
             'level' => 'h2',
@@ -531,11 +666,15 @@ class StudioFreelancerPortfolio extends Plugin
 
         $testContainer = self::makeBlock('layout.container', [
             'width' => 'constrained',
-        ], [$testHeading, $testimonialsGrid]);
+        ], [$eyebrow4, $testHeading, $testimonialsGrid]);
 
         $testimonialsSection = self::makeSection([$testContainer], 'Client Testimonials');
 
         // ── 6. Project Inquiry / Consultation Contact ────────────────────────
+        $eyebrow5 = self::makeBlock('core.text', [
+            'content' => '<div id="contact" class="sb-portfolio-eyebrow">// GET IN TOUCH</div>',
+        ]);
+
         $contactHeading = self::makeBlock('core.heading', [
             'text'  => "Let's Build Something Remarkable",
             'level' => 'h2',
@@ -575,7 +714,7 @@ class StudioFreelancerPortfolio extends Plugin
             'name'        => 'budget_range',
             'field_type'  => 'select',
             'label'       => 'Estimated Budget',
-            'options'     => '$5,000 – $10,000, $10,000 – $25,000, $25,000+',
+            'options'     => '$5k – $10k, $10k – $25k, $25k+',
             'required'    => false,
         ]);
 
@@ -595,9 +734,19 @@ class StudioFreelancerPortfolio extends Plugin
             'submit_variant' => 'primary',
         ], [$fName, $fEmail, $fScope, $fBudget, $fMessage]);
 
+        $reassurance = self::makeBlock('core.text', [
+            'content' => '<div class="sb-portfolio-form-reassurance"><span class="sb-portfolio-reassurance-item">🔒 Strict NDA Guaranteed</span><span class="sb-portfolio-reassurance-item">⚡ Direct Reply Within 24h</span><span class="sb-portfolio-reassurance-item">🤝 Senior Leadership Only</span></div>',
+        ]);
+
+        $footerBlock = self::makeBlock('portfolio.footer', [
+            'copyright' => '© 2026 Elena Rostova. Crafted with high-performance elegance.',
+            'status'    => 'Available for Select Q4 Engagements',
+            'location'  => 'San Francisco, CA · Remote Worldwide',
+        ]);
+
         $contactContainer = self::makeBlock('layout.container', [
             'width' => 'constrained',
-        ], [$contactHeading, $contactSubtext, $contactForm]);
+        ], [$eyebrow5, $contactHeading, $contactSubtext, $contactForm, $reassurance, $footerBlock]);
 
         $contactSection = self::makeSection([$contactContainer], 'Contact & Inquiries');
 
@@ -608,6 +757,8 @@ class StudioFreelancerPortfolio extends Plugin
             'Elena Rostova — Principal Product Designer & Full-Stack Engineer'
         );
 
+        $doc['settings']['header_mode'] = 'hidden';
+        $doc['settings']['footer_mode'] = 'hidden';
         $doc['seo']['description'] = 'Portfolio of Elena Rostova — Principal Product Designer & Senior Design Engineer specializing in high-impact web applications, design systems, and modern SaaS products.';
         $doc['sections'] = [
             $heroSection,
