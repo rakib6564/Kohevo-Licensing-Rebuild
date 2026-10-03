@@ -1,0 +1,9 @@
+{
+    "slug": "studio-freelancer-portfolio",
+    "name": "Studio Freelancer Portfolio",
+    "version": "1.0.0",
+    "description": "Modern, elegant freelancer portfolio website kit and custom widgets for Kohevo Studio Builder.",
+    "author": "Kohevo Studio Team",
+    "author_url": "https://kohevo.com",
+    "requires_core": ">=1.0.0"
+}
