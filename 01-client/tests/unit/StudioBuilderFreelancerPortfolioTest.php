@@ -44,6 +44,9 @@ unit('freelancer portfolio: plugin boots and registers all custom widgets', func
 
     assert_true(Studio::widgets()->has('portfolio.nav_header'), 'Registers portfolio.nav_header');
     assert_true(Studio::widgets()->has('portfolio.footer'), 'Registers portfolio.footer');
+    assert_true(Studio::widgets()->has('portfolio.status_pill'), 'Registers portfolio.status_pill');
+    assert_true(Studio::widgets()->has('portfolio.eyebrow'), 'Registers portfolio.eyebrow');
+    assert_true(Studio::widgets()->has('portfolio.reassurance_badges'), 'Registers portfolio.reassurance_badges');
     assert_true(Studio::widgets()->has('portfolio.project_card'), 'Registers portfolio.project_card');
     assert_true(Studio::widgets()->has('portfolio.stat_highlight'), 'Registers portfolio.stat_highlight');
     assert_true(Studio::widgets()->has('portfolio.skill_grid'), 'Registers portfolio.skill_grid');

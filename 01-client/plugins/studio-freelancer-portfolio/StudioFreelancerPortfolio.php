@@ -55,6 +55,48 @@ class StudioFreelancerPortfolio extends Plugin
             'renderer'    => [self::class, 'renderFooter'],
         ]);
 
+        // 3. Register `portfolio.status_pill`
+        Studio::widgets()->register([
+            'type'        => 'portfolio.status_pill',
+            'version'     => 1,
+            'label'       => 'Live Status Indicator Pill',
+            'category'    => 'portfolio',
+            'icon'        => 'activity',
+            'schema'      => [
+                ['key' => 'text', 'type' => 'string', 'label' => 'Status Text', 'required' => true, 'default' => 'Available for Select Product Engagements · Q4 2026', 'max_length' => 120],
+            ],
+            'renderer'    => [self::class, 'renderStatusPill'],
+        ]);
+
+        // 4. Register `portfolio.eyebrow`
+        Studio::widgets()->register([
+            'type'        => 'portfolio.eyebrow',
+            'version'     => 1,
+            'label'       => 'Section Category Eyebrow',
+            'category'    => 'portfolio',
+            'icon'        => 'tag',
+            'schema'      => [
+                ['key' => 'text', 'type' => 'string', 'label' => 'Eyebrow Text', 'required' => true, 'default' => '// SELECTED WORK', 'max_length' => 100],
+                ['key' => 'anchor_id', 'type' => 'string', 'label' => 'Smooth Scroll Anchor ID', 'required' => false, 'default' => '', 'max_length' => 50],
+            ],
+            'renderer'    => [self::class, 'renderEyebrow'],
+        ]);
+
+        // 5. Register `portfolio.reassurance_badges`
+        Studio::widgets()->register([
+            'type'        => 'portfolio.reassurance_badges',
+            'version'     => 1,
+            'label'       => 'Form Trust Badges',
+            'category'    => 'portfolio',
+            'icon'        => 'shield',
+            'schema'      => [
+                ['key' => 'badge1', 'type' => 'string', 'label' => 'Badge 1', 'required' => false, 'default' => '🔒 Strict NDA Guaranteed', 'max_length' => 80],
+                ['key' => 'badge2', 'type' => 'string', 'label' => 'Badge 2', 'required' => false, 'default' => '⚡ Direct Reply Within 24h', 'max_length' => 80],
+                ['key' => 'badge3', 'type' => 'string', 'label' => 'Badge 3', 'required' => false, 'default' => '🤝 Senior Leadership Only', 'max_length' => 80],
+            ],
+            'renderer'    => [self::class, 'renderReassuranceBadges'],
+        ]);
+
         // 3. Register `portfolio.project_card`
         Studio::widgets()->register([
             'type'        => 'portfolio.project_card',
@@ -221,6 +263,38 @@ class StudioFreelancerPortfolio extends Plugin
             . '<a href="mailto:elena@example.com" class="sb-portfolio-social-link">Email ↗</a>'
             . '</div>'
             . '</footer>';
+    }
+
+    public static function renderStatusPill(BlockRenderScope $scope): string
+    {
+        $text = $scope->string('text', 'Available for Select Product Engagements · Q4 2026');
+        return self::renderStylesOnce() . '<div class="sb-portfolio-status-pill" data-sb-custom-widget="portfolio.status_pill">'
+            . '<span class="sb-portfolio-status-dot"></span> ' . Html::e($text)
+            . '</div>';
+    }
+
+    public static function renderEyebrow(BlockRenderScope $scope): string
+    {
+        $text     = $scope->string('text', '// SELECTED WORK');
+        $anchorId = $scope->string('anchor_id');
+        $idAttr   = $anchorId !== '' ? ' id="' . Html::e($anchorId) . '"' : '';
+
+        return self::renderStylesOnce() . '<div' . $idAttr . ' class="sb-portfolio-eyebrow" data-sb-custom-widget="portfolio.eyebrow">'
+            . Html::e($text)
+            . '</div>';
+    }
+
+    public static function renderReassuranceBadges(BlockRenderScope $scope): string
+    {
+        $b1 = $scope->string('badge1', '🔒 Strict NDA Guaranteed');
+        $b2 = $scope->string('badge2', '⚡ Direct Reply Within 24h');
+        $b3 = $scope->string('badge3', '🤝 Senior Leadership Only');
+
+        return self::renderStylesOnce() . '<div class="sb-portfolio-form-reassurance" data-sb-custom-widget="portfolio.reassurance_badges">'
+            . '<span class="sb-portfolio-reassurance-item">' . Html::e($b1) . '</span>'
+            . '<span class="sb-portfolio-reassurance-item">' . Html::e($b2) . '</span>'
+            . '<span class="sb-portfolio-reassurance-item">' . Html::e($b3) . '</span>'
+            . '</div>';
     }
 
     public static function renderProjectCard(BlockRenderScope $scope): string
@@ -423,8 +497,8 @@ class StudioFreelancerPortfolio extends Plugin
             'cta_href'  => '#contact',
         ]);
 
-        $statusPill = self::makeBlock('core.text', [
-            'content' => '<div class="sb-portfolio-status-pill"><span class="sb-portfolio-status-dot"></span> Available for Select Product Engagements · Q4 2026</div>',
+        $statusPill = self::makeBlock('portfolio.status_pill', [
+            'text' => 'Available for Select Product Engagements · Q4 2026',
         ]);
 
         $heroHeading = self::makeBlock('core.heading', [
@@ -481,8 +555,9 @@ class StudioFreelancerPortfolio extends Plugin
         $heroSection = self::makeSection([$heroContainer], 'Hero & Introduction');
 
         // ── 2. Featured Projects / Work Section ──────────────────────────────
-        $eyebrow1 = self::makeBlock('core.text', [
-            'content' => '<div id="work" class="sb-portfolio-eyebrow">// SELECTED FLAGSHIP WORK</div>',
+        $eyebrow1 = self::makeBlock('portfolio.eyebrow', [
+            'text'      => '// SELECTED FLAGSHIP WORK',
+            'anchor_id' => 'work',
         ]);
 
         $workHeading = self::makeBlock('core.heading', [
@@ -556,8 +631,9 @@ class StudioFreelancerPortfolio extends Plugin
         $workSection = self::makeSection([$workContainer], 'Selected Work');
 
         // ── 3. Services & Capabilities Section ───────────────────────────────
-        $eyebrow2 = self::makeBlock('core.text', [
-            'content' => '<div id="services" class="sb-portfolio-eyebrow">// AREAS OF EXPERTISE</div>',
+        $eyebrow2 = self::makeBlock('portfolio.eyebrow', [
+            'text'      => '// AREAS OF EXPERTISE',
+            'anchor_id' => 'services',
         ]);
 
         $servicesHeading = self::makeBlock('core.heading', [
@@ -598,8 +674,9 @@ class StudioFreelancerPortfolio extends Plugin
         $servicesSection = self::makeSection([$servicesContainer], 'Services & Offerings');
 
         // ── 4. Technical Stack & Skills ──────────────────────────────────────
-        $eyebrow3 = self::makeBlock('core.text', [
-            'content' => '<div id="stack" class="sb-portfolio-eyebrow">// CORE STACK & SYSTEMS</div>',
+        $eyebrow3 = self::makeBlock('portfolio.eyebrow', [
+            'text'      => '// CORE STACK & SYSTEMS',
+            'anchor_id' => 'stack',
         ]);
 
         $skillsHeading = self::makeBlock('core.heading', [
@@ -634,8 +711,9 @@ class StudioFreelancerPortfolio extends Plugin
         $skillsSection = self::makeSection([$skillsContainer], 'Skills & Technologies');
 
         // ── 5. Client Endorsements & Testimonials ────────────────────────────
-        $eyebrow4 = self::makeBlock('core.text', [
-            'content' => '<div id="testimonials" class="sb-portfolio-eyebrow">// CLIENT ENDORSEMENTS</div>',
+        $eyebrow4 = self::makeBlock('portfolio.eyebrow', [
+            'text'      => '// CLIENT ENDORSEMENTS',
+            'anchor_id' => 'testimonials',
         ]);
 
         $testHeading = self::makeBlock('core.heading', [
@@ -671,8 +749,9 @@ class StudioFreelancerPortfolio extends Plugin
         $testimonialsSection = self::makeSection([$testContainer], 'Client Testimonials');
 
         // ── 6. Project Inquiry / Consultation Contact ────────────────────────
-        $eyebrow5 = self::makeBlock('core.text', [
-            'content' => '<div id="contact" class="sb-portfolio-eyebrow">// GET IN TOUCH</div>',
+        $eyebrow5 = self::makeBlock('portfolio.eyebrow', [
+            'text'      => '// GET IN TOUCH',
+            'anchor_id' => 'contact',
         ]);
 
         $contactHeading = self::makeBlock('core.heading', [
@@ -734,9 +813,7 @@ class StudioFreelancerPortfolio extends Plugin
             'submit_variant' => 'primary',
         ], [$fName, $fEmail, $fScope, $fBudget, $fMessage]);
 
-        $reassurance = self::makeBlock('core.text', [
-            'content' => '<div class="sb-portfolio-form-reassurance"><span class="sb-portfolio-reassurance-item">🔒 Strict NDA Guaranteed</span><span class="sb-portfolio-reassurance-item">⚡ Direct Reply Within 24h</span><span class="sb-portfolio-reassurance-item">🤝 Senior Leadership Only</span></div>',
-        ]);
+        $reassurance = self::makeBlock('portfolio.reassurance_badges', []);
 
         $footerBlock = self::makeBlock('portfolio.footer', [
             'copyright' => '© 2026 Elena Rostova. Crafted with high-performance elegance.',
