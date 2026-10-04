@@ -37,7 +37,7 @@ namespace Slate\Services\Media;
 class Media {
 
     /** Bumped when the schema changes so ensureSchema() re-runs. */
-    public const SCHEMA_V = '1';
+    public const SCHEMA_V = '2';
 
     /** Central folder (under /uploads/) for new uploads. */
     public const FOLDER = 'media';
