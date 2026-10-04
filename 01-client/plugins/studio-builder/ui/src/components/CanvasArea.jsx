@@ -20,7 +20,7 @@ import { DRAG_TYPE_NEW } from './BlockPalette.jsx';
 const RELOAD_DEBOUNCE_MS = 250;
 
 export const CanvasArea = memo(function CanvasArea() {
-  const { boot, selection, select, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo } = useEditor();
+  const { boot, selection, select, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode } = useEditor();
   const working = useEngineState((s) => s.working);
   const path = useMemo(() => ancestorPath(working, selection, manifest), [working, selection, manifest]);
   const revisionId = useEngineState((s) => (s.revision ? s.revision.id : 0));
@@ -100,6 +100,25 @@ export const CanvasArea = memo(function CanvasArea() {
     }
   }, [working, manifest, insertBlock, moveBlockTo]);
 
+  // Floating section bar inside the canvas: the listener is attached once per
+  // frame load, so it reads the latest handler through a ref.
+  const actionRef = useRef(() => {});
+  actionRef.current = (action, nodeId) => {
+    const info = nodeId ? findNode(working, nodeId) : null;
+    if (!info) return;
+    if (action === 'duplicate') { duplicateNode && duplicateNode(nodeId); return; }
+    if (action === 'remove') { removeNode && removeNode(nodeId); return; }
+    const delta = action === 'up' ? -1 : action === 'down' ? 1 : 0;
+    if (!delta) return;
+    if (info.kind === 'section') {
+      const to = info.index + delta;
+      if (to >= 0 && to < asList(working && working.sections).length && moveSectionTo) moveSectionTo(nodeId, to);
+    } else if (moveBlockTo) {
+      const to = info.index + delta;
+      if (to >= 0) moveBlockTo(nodeId, { parentId: info.parentId, index: delta > 0 ? to + 1 : to });
+    }
+  };
+
   const onLoad = () => {
     setLoading(false);
     detachRef.current();
@@ -109,6 +128,7 @@ export const CanvasArea = memo(function CanvasArea() {
     detachRef.current = attachCanvas(doc, {
       onSelect: (id) => selectRef.current(id),
       onDrop: onCanvasDrop,
+      onAction: (action, id) => actionRef.current(action, id),
     });
     try { frameRef.current.contentWindow.scrollTo(0, scrollRef.current); } catch { /* ignore */ }
     markSelected(doc, selectionRef.current, { scroll: false });

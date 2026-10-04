@@ -11,5 +11,6 @@ return [
     'media_no_files' => 'Aucun fichier pour le moment',
     'media_open_library' => 'Ouvrir la médiathèque',
     'media_storage' => 'Stockage',
+    'no_file_uploaded' => 'Aucun fichier n\'a été téléversé.',
     'view_all' => 'Tout afficher',
 ];
