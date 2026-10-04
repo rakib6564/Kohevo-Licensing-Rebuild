@@ -48,6 +48,35 @@ body.sb-page {
     margin: 0 !important;
     padding: 0 !important;
     line-height: 1.6;
+    overflow-x: hidden !important;
+}
+
+/* Fluid Spacing & Safe Gutters */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+section.sb-section,
+.sb-layout-section {
+    padding: clamp(36px, 6vw, 72px) 0 !important;
+    width: 100% !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+}
+
+section.sb-section:first-of-type {
+    padding-top: clamp(16px, 3vw, 32px) !important;
+}
+
+.sb-container,
+.sb-section__inner {
+    width: 100% !important;
+    max-width: 1200px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: clamp(16px, 5vw, 36px) !important;
+    padding-right: clamp(16px, 5vw, 36px) !important;
+    box-sizing: border-box !important;
 }
 
 /* Universal Heading & Text Styling */
@@ -857,3 +886,137 @@ h2.sb-heading,
 .sb-portfolio-social-link:hover {
     color: var(--sb-port-text-primary);
 }
+
+/* ── 12. Responsive Breakpoints & Fluid Grid Collapse ──────────── */
+@media (max-width: 768px) {
+    /* Collapse multi-column grids to 1 column on mobile */
+    .sb-grid.sb-cols-2,
+    .sb-grid.sb-cols-3,
+    .sb-grid.sb-cols-4,
+    .sb-grid.sb-cols-5,
+    .sb-grid.sb-cols-6,
+    .sb-grid--cols-2,
+    .sb-grid--cols-3,
+    .sb-grid--cols-4,
+    .sb-section__inner.sb-cols-2,
+    .sb-section__inner.sb-cols-3,
+    .sb-section__inner.sb-cols-4,
+    [class*="sb-cols-2"],
+    [class*="sb-cols-3"],
+    [class*="sb-cols-4"] {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+    }
+
+    /* Sticky Navigation */
+    .sb-portfolio-nav {
+        width: calc(100% - 24px) !important;
+        margin: 12px auto 28px auto !important;
+        padding: 10px 16px !important;
+        border-radius: 20px !important;
+    }
+
+    .sb-portfolio-brand-avatar {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 0.75rem !important;
+    }
+
+    .sb-portfolio-brand-name {
+        font-size: 0.88rem !important;
+    }
+
+    .sb-portfolio-brand-role {
+        font-size: 0.7rem !important;
+    }
+
+    .sb-portfolio-nav-cta {
+        padding: 6px 12px !important;
+        font-size: 0.8rem !important;
+    }
+
+    /* Hero elements */
+    .sb-portfolio-status-pill {
+        font-size: 0.78rem !important;
+        padding: 5px 12px !important;
+        margin-bottom: 18px !important;
+    }
+
+    .sb-flex.sb-flex--row {
+        gap: 12px !important;
+    }
+
+    .sb-portfolio-stat-item {
+        padding: 22px 18px !important;
+        border-radius: 16px !important;
+    }
+
+    .sb-portfolio-project-thumb {
+        height: 210px !important;
+    }
+
+    .sb-portfolio-project-body {
+        padding: 22px 20px !important;
+    }
+
+    .sb-portfolio-service-card,
+    .sb-portfolio-testimonial-card,
+    .sb-portfolio-skill-group {
+        padding: 24px 20px !important;
+        border-radius: 18px !important;
+    }
+
+    .sb-form {
+        padding: 24px 18px !important;
+        border-radius: 20px !important;
+    }
+
+    .sb-portfolio-footer {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 18px !important;
+        padding: 32px 0 24px 0 !important;
+        margin-top: 40px !important;
+    }
+
+    .sb-portfolio-footer-socials {
+        flex-wrap: wrap !important;
+        gap: 14px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .sb-flex.sb-flex--row > .sb-button {
+        width: 100% !important;
+        text-align: center !important;
+    }
+
+    .sb-portfolio-brand-role {
+        display: none !important;
+    }
+
+    .sb-portfolio-reassurance-item {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    /* Tablet 2-column layout */
+    .sb-grid.sb-cols-3,
+    .sb-grid.sb-cols-4,
+    .sb-section__inner.sb-cols-3,
+    .sb-section__inner.sb-cols-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 24px !important;
+    }
+
+    .sb-portfolio-project-thumb {
+        height: 220px !important;
+    }
+
+    .sb-portfolio-stat-item {
+        padding: 24px 20px !important;
+    }
+}
+
