@@ -12,6 +12,7 @@ import { coerce, controlFor, hint, newRepeaterItem, tokensFor, clone } from '../
 import { asList, asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
 import { MediaControl } from './MediaControl.jsx';
+import { UrlControl } from './UrlControl.jsx';
 
 const RichTextEditor = lazy(() => import('./RichTextEditor.jsx'));
 
@@ -102,9 +103,15 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
       );
     case 'url':
       return (
-        <FieldRow id={id} label={field.label} required={field.required} problem={problem}>
-          <input type="text" inputMode="url" {...common} value={draft ?? ''} placeholder="https://… or /path" onChange={(e) => update(coerce(field, e.target.value.trim()))} />
-        </FieldRow>
+        <UrlControl
+          field={field}
+          draft={draft}
+          update={update}
+          problem={problem}
+          common={common}
+          id={id}
+          mediaPicker={mediaPicker}
+        />
       );
     case 'token':
       return (

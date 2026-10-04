@@ -11,7 +11,7 @@ import { asList, asObject } from './doc.mjs';
 
 export const CONTROL = Object.freeze({
   string: 'text', text: 'textarea', rich_text: 'richtext', number: 'number', boolean: 'checkbox',
-  enum: 'select', url: 'url', media_ref: 'media', token_ref: 'token', link: 'link',
+  enum: 'select', url: 'url', image: 'url', media_ref: 'media', media: 'media', token_ref: 'token', link: 'link',
   repeater: 'repeater', object: 'object',
 });
 

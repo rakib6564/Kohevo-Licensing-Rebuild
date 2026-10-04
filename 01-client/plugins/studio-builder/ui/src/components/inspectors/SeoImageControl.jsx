@@ -32,7 +32,16 @@ export function SeoImageControl({ value, onChange, mediaPicker }) {
       <legend>{t('seo_og_image_label')}</legend>
       {preview && mediaId ? <img className="sbx-media__preview" src={preview} alt="" /> : null}
       <div className="sbx-media__row">
-        {pickerAvailable ? <button type="button" className="sbx-btn" onClick={pick}>{t('choose_image')}</button> : null}
+        {pickerAvailable ? (
+          <button type="button" className="sbx-btn" onClick={pick} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+            <span>{t('choose_image')}</span>
+          </button>
+        ) : null}
         <label className="sbx-field sbx-field--inline">
           <span className="sbx-field__label">{t('media_id')}</span>
           <input
