@@ -231,3 +231,32 @@ unit('freelancer portfolio: canonical document generator yields valid, complete 
     WidgetSdk::reset();
 });
 
+unit('freelancer portfolio: multi-page documents (services, case studies, testimonials, contact) yield valid canonical structures', function (): void {
+    $plugin = new StudioFreelancerPortfolio(
+        'studio-freelancer-portfolio',
+        ['version' => '1.0.0'],
+        dirname(__DIR__, 2) . '/plugins/studio-freelancer-portfolio'
+    );
+    $plugin->boot();
+
+    $registry = \Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions::studioRegistry();
+
+    $servicesDoc = StudioFreelancerPortfolio::getServicesDocument();
+    assert_eq('page', $servicesDoc['document_type']);
+    assert_true(DocumentValidator::validate($servicesDoc, $registry)->isValid(), 'Services doc is valid');
+
+    $casesDoc = StudioFreelancerPortfolio::getCaseStudiesDocument();
+    assert_eq('page', $casesDoc['document_type']);
+    assert_true(DocumentValidator::validate($casesDoc, $registry)->isValid(), 'Case studies doc is valid');
+
+    $testimonialsDoc = StudioFreelancerPortfolio::getTestimonialsDocument();
+    assert_eq('page', $testimonialsDoc['document_type']);
+    assert_true(DocumentValidator::validate($testimonialsDoc, $registry)->isValid(), 'Testimonials doc is valid');
+
+    $contactDoc = StudioFreelancerPortfolio::getContactDocument();
+    assert_eq('page', $contactDoc['document_type']);
+    assert_true(DocumentValidator::validate($contactDoc, $registry)->isValid(), 'Contact doc is valid');
+
+    WidgetSdk::reset();
+});
+
