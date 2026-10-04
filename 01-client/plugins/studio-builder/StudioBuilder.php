@@ -88,15 +88,35 @@ class StudioBuilder extends Plugin
         if (!self::isEntitled()) {
             return $items;
         }
-        $items[] = [
-            'slug'  => 'studio-builder',
-            'label' => function_exists('__') ? __('studio_pages', 'Studio pages') : 'Studio pages',
-            'href'  => $this->url('admin/index.php'),
-            'icon'  => 'layout',
-            'perm'  => 'studio-builder.view',
-            'order' => 205,
-            'group' => 'content',
+
+        $studioNav = [
+            ['slug' => 'studio-overview',        'label' => function_exists('__') ? __('studio_overview', 'Overview') : 'Overview',                  'file' => 'admin/index.php',           'icon' => 'bar-chart-2', 'order' => 200],
+            ['slug' => 'studio-pages',           'label' => function_exists('__') ? __('studio_pages', 'Pages') : 'Pages',                            'file' => 'admin/pages.php',           'icon' => 'file-text',   'order' => 201],
+            ['slug' => 'studio-content',         'label' => function_exists('__') ? __('studio_content', 'Content') : 'Content',                      'file' => 'admin/content.php',         'icon' => 'box',         'order' => 202],
+            ['slug' => 'studio-media',           'label' => function_exists('__') ? __('studio_media', 'Media') : 'Media',                            'file' => 'admin/media.php',           'icon' => 'image',       'order' => 203],
+            ['slug' => 'studio-templates',       'label' => function_exists('__') ? __('studio_templates', 'Templates') : 'Templates',              'file' => 'admin/templates.php',       'icon' => 'layout',      'order' => 204],
+            ['slug' => 'studio-types-fields',    'label' => function_exists('__') ? __('studio_types_fields', 'Types & fields') : 'Types & fields',  'file' => 'admin/types-fields.php',    'icon' => 'tag',         'order' => 205],
+            ['slug' => 'studio-themes',          'label' => function_exists('__') ? __('studio_themes', 'Themes') : 'Themes',                        'file' => 'admin/themes.php',          'icon' => 'palette',     'order' => 206],
+            ['slug' => 'studio-seo',             'label' => function_exists('__') ? __('studio_seo', 'Site & SEO') : 'Site & SEO',                    'file' => 'admin/seo.php',             'icon' => 'globe',       'order' => 207],
+            ['slug' => 'studio-global-settings', 'label' => function_exists('__') ? __('studio_global_settings', 'Global settings') : 'Global settings', 'file' => 'admin/global-settings.php', 'icon' => 'sliders',     'order' => 208],
+            ['slug' => 'studio-ai-mcp',          'label' => function_exists('__') ? __('studio_ai_mcp', 'AI & MCP') : 'AI & MCP',                      'file' => 'admin/ai-mcp.php',          'icon' => 'sparkles',    'order' => 209],
+            ['slug' => 'studio-reviews',         'label' => function_exists('__') ? __('studio_reviews', 'Reviews') : 'Reviews',                      'file' => 'admin/reviews.php',         'icon' => 'clock',       'order' => 210],
+            ['slug' => 'studio-code-tracking',   'label' => function_exists('__') ? __('studio_code_tracking', 'Code & tracking') : 'Code & tracking','file' => 'admin/code-tracking.php',   'icon' => 'edit-3',      'order' => 211],
+            ['slug' => 'studio-redirects',       'label' => function_exists('__') ? __('studio_redirects', 'Redirects') : 'Redirects',              'file' => 'admin/redirects.php',       'icon' => 'link',        'order' => 212],
         ];
+
+        foreach ($studioNav as $nav) {
+            $items[] = [
+                'slug'  => $nav['slug'],
+                'label' => $nav['label'],
+                'href'  => $this->url($nav['file']),
+                'icon'  => $nav['icon'],
+                'perm'  => 'studio-builder.view',
+                'order' => $nav['order'],
+                'group' => 'studio',
+            ];
+        }
+
         return $items;
     }
 
