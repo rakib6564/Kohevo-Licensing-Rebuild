@@ -25,11 +25,12 @@ $flash = null;
 // Read existing settings
 $seoTitleFormat = (string) (Database::setting('studio_seo_title_format', $tenantId) ?: '%title% | %site_name%');
 $seoDescription = (string) (Database::setting('studio_seo_description', $tenantId) ?: 'Full-stack software architect & freelancer portfolio crafting high-performance digital products.');
-$seoOgMediaId = (string) (Database::setting('studio_seo_og_media_id', $tenantId) ?: '');
-$seoRobots = (string) (Database::setting('studio_seo_robots', $tenantId) ?: 'index,follow');
+$seoOgMediaId   = (string) (Database::setting('studio_seo_og_media_id', $tenantId) ?: '');
+$seoOgImageUrl  = (string) (Database::setting('studio_seo_og_image_url', $tenantId) ?: '');
+$seoRobots      = (string) (Database::setting('studio_seo_robots', $tenantId) ?: 'index,follow');
 $seoGoogleVerification = (string) (Database::setting('studio_seo_google_verify', $tenantId) ?: '');
-$seoBingVerification = (string) (Database::setting('studio_seo_bing_verify', $tenantId) ?: '');
-$siteName = (string) (Database::setting('site_name', $tenantId) ?: 'Rakib Hasan');
+$seoBingVerification   = (string) (Database::setting('studio_seo_bing_verify', $tenantId) ?: '');
+$siteName       = (string) (Database::setting('site_name', $tenantId) ?: 'Rakib Hasan');
 
 // POST handler
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -40,14 +41,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $seoTitleFormat = trim((string) ($_POST['title_format'] ?? ''));
         $seoDescription = trim((string) ($_POST['description'] ?? ''));
-        $seoOgMediaId = trim((string) ($_POST['og_media_id'] ?? ''));
-        $seoRobots = trim((string) ($_POST['robots'] ?? 'index,follow'));
+        $seoOgMediaId   = trim((string) ($_POST['og_media_id'] ?? ''));
+        $seoOgImageUrl  = trim((string) ($_POST['og_image_url'] ?? ''));
+        $seoRobots      = trim((string) ($_POST['robots'] ?? 'index,follow'));
         $seoGoogleVerification = trim((string) ($_POST['google_verify'] ?? ''));
-        $seoBingVerification = trim((string) ($_POST['bing_verify'] ?? ''));
+        $seoBingVerification   = trim((string) ($_POST['bing_verify'] ?? ''));
 
         Database::setSetting('studio_seo_title_format', $seoTitleFormat, $tenantId);
         Database::setSetting('studio_seo_description', $seoDescription, $tenantId);
         Database::setSetting('studio_seo_og_media_id', $seoOgMediaId, $tenantId);
+        Database::setSetting('studio_seo_og_image_url', $seoOgImageUrl, $tenantId);
         Database::setSetting('studio_seo_robots', $seoRobots, $tenantId);
         Database::setSetting('studio_seo_google_verify', $seoGoogleVerification, $tenantId);
         Database::setSetting('studio_seo_bing_verify', $seoBingVerification, $tenantId);
@@ -61,7 +64,7 @@ $portfolioPage = Database::row("SELECT id FROM studiobuilder_pages WHERE tenant_
 $portfolioPageId = $portfolioPage ? (int) $portfolioPage['id'] : null;
 
 // Resolve OG image preview if ID exists
-$ogImageUrl = '';
+$ogImageUrl = $seoOgImageUrl;
 if ($seoOgMediaId !== '' && is_numeric($seoOgMediaId)) {
     $mediaRow = Database::row("SELECT path FROM media_files WHERE tenant_id = ? AND id = ? LIMIT 1", [$tenantId, (int) $seoOgMediaId]);
     if ($mediaRow && !empty($mediaRow['path'])) {
@@ -132,9 +135,15 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 </div>
 
                 <div style="margin-bottom: 16px;">
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Default OpenGraph Media ID</label>
-                    <input type="number" name="og_media_id" value="<?= e($seoOgMediaId) ?>" class="form-control" placeholder="e.g. 14">
-                    <span style="font-size: 0.75rem; color: var(--sb-muted);">Asset ID from the <a href="media.php">Media Inspector</a> for social cards.</span>
+                    <input type="hidden" name="og_media_id" id="seo_og_media_id" value="<?= e($seoOgMediaId) ?>" data-sb-id-for="seo_og_image_url">
+                    <?= sb_media_picker_field([
+                        'id'          => 'seo_og_image_url',
+                        'name'        => 'og_image_url',
+                        'label'       => 'Default Social Share Image (OpenGraph)',
+                        'value'       => $ogImageUrl,
+                        'placeholder' => 'https://... or choose from Media Library',
+                        'help'        => 'Select an asset from your Media Library (recommended: 1200×630px). Used for Twitter/X, LinkedIn, and social embeds.',
+                    ]) ?>
                 </div>
 
                 <div style="margin-bottom: 16px;">
@@ -218,5 +227,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </div>
     </div>
 </div>
+
+<?php sb_render_media_picker_modal(); ?>
 
 <?php require SLATE_ROOT . '/admin/partials/footer.php'; ?>

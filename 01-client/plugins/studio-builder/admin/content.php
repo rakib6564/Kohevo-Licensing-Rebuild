@@ -76,6 +76,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action_sav
                 'stat_delivery' => trim((string) ($_POST['stat_delivery'] ?? '100%')),
                 'location'      => trim((string) ($_POST['location'] ?? 'San Francisco, CA · Remote Worldwide')),
                 'email'         => trim((string) ($_POST['email'] ?? 'contact@rakibhasaan.com')),
+                'avatar_url'    => trim((string) ($_POST['avatar_url'] ?? '')),
             ];
             Database::setSetting('studio_profile', json_encode($profileData), $tenantId);
             $flash = ['type' => 'success', 'msg' => 'Brand profile and bio updated successfully.'];
@@ -166,6 +167,35 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action_del
                     array_splice($items, $index, 1);
                     Database::setSetting('studio_content_testimonial', json_encode($items), $tenantId);
                     $flash = ['type' => 'success', 'msg' => 'Endorsement deleted.'];
+                }
+            }
+        }
+    }
+}
+
+// ── Handle Action: Update Item Image ─────────────────────────────────────────
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action_update_item_image'])) {
+    if (!csrf_verify()) {
+        $flash = ['type' => 'error', 'msg' => 'Security check failed.'];
+    } else {
+        $index    = (int) ($_POST['item_index'] ?? -1);
+        $imgUrl   = trim((string) ($_POST['image_url'] ?? ''));
+        $itemType = trim((string) ($_POST['item_type'] ?? 'portfolio'));
+
+        if ($index >= 0 && $imgUrl !== '') {
+            if ($itemType === 'portfolio' || $itemType === 'case_study') {
+                $items = StudioFreelancerPortfolio::getProjects($tenantId);
+                if (isset($items[$index])) {
+                    $items[$index]['image_url'] = $imgUrl;
+                    Database::setSetting('studio_content_portfolio', json_encode($items), $tenantId);
+                    $flash = ['type' => 'success', 'msg' => "Cover image for '{$items[$index]['title']}' updated from Media Library!"];
+                }
+            } elseif ($itemType === 'testimonial') {
+                $items = StudioFreelancerPortfolio::getTestimonialsList($tenantId);
+                if (isset($items[$index])) {
+                    $items[$index]['avatar_url'] = $imgUrl;
+                    Database::setSetting('studio_content_testimonial', json_encode($items), $tenantId);
+                    $flash = ['type' => 'success', 'msg' => "Avatar for '{$items[$index]['author']}' updated from Media Library!"];
                 }
             }
         }
@@ -308,6 +338,15 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     <label class="field-label">Location / Timezone</label>
                     <input type="text" name="location" value="<?= e($currentProfile['location']) ?>">
                 </div>
+                <?= sb_media_picker_field([
+                    'id'          => 'profile_avatar_url',
+                    'name'        => 'avatar_url',
+                    'label'       => 'Profile Headshot / Avatar',
+                    'value'       => $currentProfile['avatar_url'] ?? '',
+                    'placeholder' => 'https://... or choose from Media Library',
+                    'variant'     => 'avatar',
+                    'help'        => 'High-resolution headshot or monogram avatar image.',
+                ]) ?>
                 <button type="submit" class="btn btn-primary">
                     <?= sb_svg('check', 14) ?>
                     <span>Save Profile Settings</span>
@@ -341,20 +380,23 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         <input type="text" name="year" value="<?= date('Y') ?>">
                     </div>
                 </div>
-                <div class="field-row field-row-3">
+                <div class="field-row field-row-2">
                     <div class="field">
                         <label class="field-label">Metric Badge (Highlight)</label>
                         <input type="text" name="metric" placeholder="+185% Daily Active Users">
-                    </div>
-                    <div class="field">
-                        <label class="field-label">Cover Image URL</label>
-                        <input type="url" name="image_url" placeholder="https://images.unsplash.com/...">
                     </div>
                     <div class="field">
                         <label class="field-label">Case Study Link URL</label>
                         <input type="text" name="link_url" value="/case-studies" placeholder="/case-studies">
                     </div>
                 </div>
+                <?= sb_media_picker_field([
+                    'id'          => 'project_cover_image',
+                    'name'        => 'image_url',
+                    'label'       => 'Cover Image (Media Library or URL)',
+                    'placeholder' => 'https://... or choose from Media Library',
+                    'help'        => 'Select an asset from your Media Library, pick a curated showcase preset, upload an image, or paste an external URL.',
+                ]) ?>
                 <div class="field">
                     <label class="field-label">Tags (comma-separated)</label>
                     <input type="text" name="tags" placeholder="React, TypeScript, Canvas, Next.js">
@@ -383,7 +425,20 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <div class="sb-feature-card">
                     <div>
                         <?php if (!empty($item['image_url'])): ?>
-                            <img src="<?= e($item['image_url']) ?>" alt="<?= e($item['title'] ?? '') ?>" style="width: 100%; height: 160px; object-fit: cover; border-radius: 10px; margin-bottom: 14px;">
+                            <div style="position: relative; margin-bottom: 14px;">
+                                <img src="<?= e($item['image_url']) ?>" alt="<?= e($item['title'] ?? '') ?>" style="width: 100%; height: 160px; object-fit: cover; border-radius: 10px; display: block;">
+                                <button type="button" class="btn btn-sm btn-outline" style="position: absolute; bottom: 8px; right: 8px; background: rgba(255,255,255,0.95); backdrop-filter: blur(4px); box-shadow: 0 2px 6px rgba(0,0,0,0.15); font-size: 0.75rem; padding: 4px 10px; border-radius: 6px;" onclick="SbMediaPicker.openForCard(<?= $idx ?>, 'portfolio');">
+                                    <?= sb_svg('media', 12) ?>
+                                    <span>Change Image</span>
+                                </button>
+                            </div>
+                        <?php else: ?>
+                            <div style="height: 110px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+                                <button type="button" class="btn btn-sm btn-outline" onclick="SbMediaPicker.openForCard(<?= $idx ?>, 'portfolio');">
+                                    <?= sb_svg('media', 12) ?>
+                                    <span>Select Cover Image</span>
+                                </button>
+                            </div>
                         <?php endif; ?>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                             <span class="badge badge-active"><?= e($item['category'] ?? 'SaaS') ?></span>
@@ -526,10 +581,14 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         </select>
                     </div>
                 </div>
-                <div class="field">
-                    <label class="field-label">Client Avatar URL (Optional)</label>
-                    <input type="url" name="avatar_url" placeholder="https://images.unsplash.com/...">
-                </div>
+                <?= sb_media_picker_field([
+                    'id'          => 'testimonial_avatar_image',
+                    'name'        => 'avatar_url',
+                    'label'       => 'Client Avatar (Media Library or URL)',
+                    'placeholder' => 'https://... or choose from Media Library',
+                    'variant'     => 'avatar',
+                    'help'        => 'Select an avatar from the media library, pick a showcase preset, or paste an external URL.',
+                ]) ?>
                 <div class="field">
                     <label class="field-label">Client Quote / Testimonial</label>
                     <textarea name="quote" rows="3" placeholder="Enter endorsement quote..."></textarea>
@@ -553,18 +612,30 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <?php foreach ($testimonials as $idx => $t): ?>
                 <div class="sb-feature-card">
                     <div>
-                        <div style="color: #f59e0b; margin-bottom: 8px; font-size: 0.95rem; font-weight: 700;">
-                            <?= str_repeat('★', (int) ($t['rating'] ?? 5)) ?>
+                        <div style="color: #f59e0b; margin-bottom: 8px; display: flex; gap: 3px; align-items: center;">
+                            <?php for ($starI = 0; $starI < (int) ($t['rating'] ?? 5); $starI++): ?>
+                                <span style="display: inline-flex; fill: #f59e0b;"><?= sb_svg('star', 13) ?></span>
+                            <?php endfor; ?>
                         </div>
                         <p class="sb-feature-desc" style="font-style: italic; color: #334155;">“<?= e($t['quote'] ?? '') ?>”</p>
-                        <div style="margin-top: 14px; display: flex; align-items: center; gap: 10px;">
-                            <?php if (!empty($t['avatar_url'])): ?>
-                                <img src="<?= e($t['avatar_url']) ?>" alt="<?= e($t['author'] ?? '') ?>" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;">
-                            <?php endif; ?>
-                            <div>
-                                <strong style="font-size: 0.88rem; color: #0f172a; display: block;"><?= e($t['author'] ?? 'Client') ?></strong>
-                                <span style="font-size: 0.78rem; color: #64748b;"><?= e($t['role'] ?? '') ?></span>
+                        <div style="margin-top: 14px; display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <?php if (!empty($t['avatar_url'])): ?>
+                                    <img src="<?= e($t['avatar_url']) ?>" alt="<?= e($t['author'] ?? '') ?>" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
+                                <?php else: ?>
+                                    <div style="width: 38px; height: 38px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #64748b;">
+                                        <?= sb_svg('user', 18) ?>
+                                    </div>
+                                <?php endif; ?>
+                                <div>
+                                    <strong style="font-size: 0.88rem; color: #0f172a; display: block;"><?= e($t['author'] ?? 'Client') ?></strong>
+                                    <span style="font-size: 0.78rem; color: #64748b;"><?= e($t['role'] ?? '') ?></span>
+                                </div>
                             </div>
+                            <button type="button" class="btn btn-sm btn-outline" style="font-size: 0.72rem; padding: 4px 8px;" onclick="SbMediaPicker.openForCard(<?= $idx ?>, 'testimonial');" title="Change Avatar Image">
+                                <?= sb_svg('media', 12) ?>
+                                <span>Avatar</span>
+                            </button>
                         </div>
                     </div>
                     <div class="sb-feature-footer">
@@ -615,5 +686,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </div>
     </div>
 </div>
+
+<?php sb_render_media_picker_modal(); ?>
 
 <?php require SLATE_ROOT . '/admin/partials/footer.php'; ?>
