@@ -17,29 +17,14 @@
  *
  * The picker is a singleton — only one modal exists in the DOM, reused
  * across calls. The list of media is cached for the page's lifetime to
- * avoid re-hitting the API on every open (you'd hit it twice in a row
- * when bouncing between fields). If you need to refresh after an upload
- * elsewhere, call MediaPicker.invalidateCache().
+ * avoid re-hitting the API on every open. Call MediaPicker.invalidateCache()
+ * if needed.
  */
 
 (function () {
     'use strict';
 
-    // Auto-derive the API URL from this script's own location. The
-    // hardcoded '/plugins/media-library/admin/api.php' breaks any
-    // install that lives in a subdirectory (e.g. /slate/) because it
-    // resolves against the document root, not the install root.
-    //
-    // The script tag's src tells us where we are:
-    //   https://example.com/slate/plugins/media-library/assets/js/picker.js
-    // From that we strip the trailing /assets/js/picker.js and replace
-    // it with /admin/api.php:
-    //   https://example.com/slate/plugins/media-library/admin/api.php
     function deriveApiPath() {
-        // document.currentScript is null in some inline-script edge
-        // cases, but in normal <script src="...picker.js"> loads it
-        // points to our script element. Fall back to searching all
-        // scripts if needed.
         var scriptEl = document.currentScript;
         if (!scriptEl) {
             var all = document.getElementsByTagName('script');
@@ -51,15 +36,9 @@
             }
         }
         if (!scriptEl || !scriptEl.src) {
-            // Last-ditch: relative path, won't survive a nested install
-            // but at least the dev environment works.
             return '/plugins/media-library/admin/api.php';
         }
-        // Strip any query string (e.g. ?ver=1.0.0) before path-munging.
         var src = scriptEl.src.split('?')[0].split('#')[0];
-        // Replace the last segment .../assets/js/picker.js → /admin/api.php.
-        // We do this via the explicit suffix so we don't accidentally
-        // match an unrelated 'picker.js' somewhere else in the path.
         var suffix = '/assets/js/picker.js';
         var i2 = src.lastIndexOf(suffix);
         if (i2 === -1) return '/plugins/media-library/admin/api.php';
@@ -67,12 +46,10 @@
     }
 
     var apiPath = deriveApiPath();
-    // Cache is keyed by type filter ('' | 'image' | 'document') so the
-    // SlateMedia type scoping doesn't show a stale all-types list.
     var cacheByType = {};
     var cacheLoadedAt = {};
-    var CACHE_TTL_MS = 60000;  // 1 minute — stale enough to be lazy, fresh enough to be useful
-    var currentType = '';      // active type filter for the next open()
+    var CACHE_TTL_MS = 60000;
+    var currentType = '';
 
     // ──────────────────────────────────────────────────────────
     // Modal DOM (built once, reused)
@@ -82,6 +59,7 @@
     var selectedItem = null;
     var currentMode = 'single';
     var currentCallback = null;
+    var metaSaveTimeout = null;
 
     function buildModal() {
         if (modalEl) return modalEl;
@@ -92,15 +70,47 @@
             '<div class="mlp-modal" role="dialog" aria-modal="true" aria-label="Media library">' +
               '<div class="mlp-header">' +
                 '<div class="mlp-title">Select media</div>' +
-                '<button type="button" class="mlp-close" aria-label="Close">\u00d7</button>' +
+                '<button type="button" class="mlp-close" aria-label="Close">' +
+                  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
+                '</button>' +
               '</div>' +
               '<div class="mlp-toolbar">' +
-                '<input type="search" class="mlp-search" placeholder="Search by filename...">' +
+                '<label class="mlp-upload-label" title="Upload media">' +
+                  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>' +
+                  '<span>Upload</span>' +
+                  '<input type="file" class="mlp-upload-input" accept="image/*,application/pdf" multiple style="display:none;">' +
+                '</label>' +
+                '<span class="mlp-upload-progress"></span>' +
+                '<input type="search" class="mlp-search" placeholder="Search by filename, title, or alt text...">' +
               '</div>' +
-              '<div class="mlp-body">' +
-                '<div class="mlp-loading">Loading...</div>' +
-                '<div class="mlp-grid" style="display:none;"></div>' +
-                '<div class="mlp-empty" style="display:none;">No media found.</div>' +
+              '<div class="mlp-content mlp-body">' +
+                '<div class="mlp-main">' +
+                  '<div class="mlp-loading">Loading...</div>' +
+                  '<div class="mlp-grid" style="display:none;"></div>' +
+                  '<div class="mlp-empty" style="display:none;">No media found.</div>' +
+                '</div>' +
+                '<div class="mlp-sidebar">' +
+                  '<div class="mlp-sidebar-preview">' +
+                    '<img src="" alt="" loading="lazy">' +
+                  '</div>' +
+                  '<div class="mlp-sidebar-info">' +
+                    '<div class="mlp-sidebar-filename"></div>' +
+                    '<div class="mlp-sidebar-meta-details"></div>' +
+                  '</div>' +
+                  '<div class="mlp-meta-group">' +
+                    '<label class="mlp-meta-label">Alt text <span class="mlp-meta-hint">for SEO & accessibility</span></label>' +
+                    '<input type="text" class="mlp-meta-input mlp-input-alt" placeholder="Describe image for screen readers...">' +
+                  '</div>' +
+                  '<div class="mlp-meta-group">' +
+                    '<label class="mlp-meta-label">Title <span class="mlp-meta-hint">media title</span></label>' +
+                    '<input type="text" class="mlp-meta-input mlp-input-title" placeholder="Image title...">' +
+                  '</div>' +
+                  '<div class="mlp-meta-group">' +
+                    '<label class="mlp-meta-label">Description <span class="mlp-meta-hint">caption or notes</span></label>' +
+                    '<textarea class="mlp-meta-input mlp-meta-textarea mlp-input-desc" placeholder="Image description or caption..."></textarea>' +
+                  '</div>' +
+                  '<div class="mlp-meta-save-status"></div>' +
+                '</div>' +
               '</div>' +
               '<div class="mlp-footer">' +
                 '<div class="mlp-status"></div>' +
@@ -118,7 +128,6 @@
         overlay.querySelector('.mlp-close').addEventListener('click', close);
         overlay.querySelector('.mlp-cancel').addEventListener('click', close);
         overlay.addEventListener('click', function (e) {
-            // Click on the overlay backdrop (outside the modal) closes.
             if (e.target === overlay) close();
         });
         document.addEventListener('keydown', function (e) {
@@ -138,7 +147,232 @@
             close();
         });
 
+        // Metadata fields input listeners (debounced auto-save)
+        var altIn = overlay.querySelector('.mlp-input-alt');
+        var titleIn = overlay.querySelector('.mlp-input-title');
+        var descIn = overlay.querySelector('.mlp-input-desc');
+
+        [altIn, titleIn, descIn].forEach(function (inp) {
+            if (inp) inp.addEventListener('input', queueMetaSave);
+        });
+
+        // File upload input listener
+        var fileInput = overlay.querySelector('.mlp-upload-input');
+        fileInput.addEventListener('change', function () {
+            if (fileInput.files && fileInput.files.length) {
+                handleUpload(fileInput.files);
+                fileInput.value = '';
+            }
+        });
+
+        // Drag and drop listeners on main container
+        var mainEl = overlay.querySelector('.mlp-main');
+        ['dragenter', 'dragover'].forEach(function (ev) {
+            mainEl.addEventListener(ev, function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                mainEl.classList.add('is-dragover');
+            });
+        });
+        ['dragleave', 'drop'].forEach(function (ev) {
+            mainEl.addEventListener(ev, function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                mainEl.classList.remove('is-dragover');
+            });
+        });
+        mainEl.addEventListener('drop', function (e) {
+            var dt = e.dataTransfer;
+            if (dt && dt.files && dt.files.length) {
+                handleUpload(dt.files);
+            }
+        });
+
         return overlay;
+    }
+
+    function handleUpload(fileList) {
+        if (!fileList || !fileList.length) return;
+        var progressEl = modalEl.querySelector('.mlp-upload-progress');
+        if (progressEl) {
+            progressEl.style.display = 'inline-block';
+            progressEl.style.color = '#4f46e5';
+            progressEl.textContent = 'Uploading ' + fileList.length + ' file(s)...';
+        }
+
+        var uploads = [];
+        for (var i = 0; i < fileList.length; i++) {
+            (function (file) {
+                var fd = new FormData();
+                fd.append('file', file);
+                uploads.push(
+                    fetch(apiPath + '?action=upload', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        body: fd
+                    }).then(function (r) {
+                        return r.json().then(function (d) {
+                            if (!r.ok || !d.ok) throw new Error(d && d.error ? d.error : 'HTTP ' + r.status);
+                            return d.item;
+                        });
+                    })
+                );
+            })(fileList[i]);
+        }
+
+        Promise.all(uploads).then(function (newItems) {
+            if (progressEl) {
+                progressEl.style.color = '#10b981';
+                progressEl.textContent = 'Upload complete';
+                setTimeout(function () {
+                    if (progressEl && progressEl.textContent === 'Upload complete') {
+                        progressEl.style.display = 'none';
+                    }
+                }, 2500);
+            }
+
+            var typeKey = currentType || '';
+            if (!cacheByType[typeKey]) cacheByType[typeKey] = [];
+            if (!cacheByType['']) cacheByType[''] = [];
+
+            newItems.forEach(function (item) {
+                cacheByType[typeKey].unshift(item);
+                if (typeKey !== '') cacheByType[''].unshift(item);
+            });
+
+            var searchVal = modalEl.querySelector('.mlp-search').value;
+            var filtered = filterItems(cacheByType[typeKey] || [], searchVal);
+            renderGrid(filtered);
+
+            // Auto-select the first uploaded item
+            if (newItems.length > 0) {
+                var firstCard = modalEl.querySelector('.mlp-grid .mlp-item');
+                selectItem(newItems[0], firstCard);
+            }
+        }).catch(function (err) {
+            console.error('MediaPicker upload error:', err);
+            if (progressEl) {
+                progressEl.style.color = '#ef4444';
+                progressEl.textContent = 'Upload failed: ' + (err && err.message ? err.message : 'Error');
+            }
+        });
+    }
+
+    function queueMetaSave() {
+        if (!selectedItem) return;
+        var sidebar = modalEl ? modalEl.querySelector('.mlp-sidebar') : null;
+        if (!sidebar) return;
+
+        var altIn = sidebar.querySelector('.mlp-input-alt');
+        var titleIn = sidebar.querySelector('.mlp-input-title');
+        var descIn = sidebar.querySelector('.mlp-input-desc');
+        var statusEl = sidebar.querySelector('.mlp-meta-save-status');
+
+        if (altIn) selectedItem.alt_text = altIn.value;
+        if (titleIn) selectedItem.title = titleIn.value;
+        if (descIn) selectedItem.description = descIn.value;
+        selectedItem.alt = selectedItem.alt_text;
+        selectedItem.caption = selectedItem.description;
+
+        if (statusEl) {
+            statusEl.style.color = '#64748b';
+            statusEl.textContent = 'Saving...';
+        }
+
+        clearTimeout(metaSaveTimeout);
+        metaSaveTimeout = setTimeout(function () {
+            flushMetaSave();
+        }, 400);
+    }
+
+    function flushMetaSave() {
+        clearTimeout(metaSaveTimeout);
+        metaSaveTimeout = null;
+        if (!selectedItem || !selectedItem.id) return;
+
+        var sidebar = modalEl ? modalEl.querySelector('.mlp-sidebar') : null;
+        var statusEl = sidebar ? sidebar.querySelector('.mlp-meta-save-status') : null;
+
+        var fd = new FormData();
+        fd.append('id', selectedItem.id);
+        fd.append('alt_text', selectedItem.alt_text || '');
+        fd.append('title', selectedItem.title || '');
+        fd.append('description', selectedItem.description || '');
+
+        fetch(apiPath + '?action=update_meta', {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: fd
+        }).then(function (r) {
+            return r.json();
+        }).then(function (data) {
+            if (data && data.ok) {
+                if (statusEl) {
+                    statusEl.style.color = '#10b981';
+                    statusEl.textContent = 'Saved';
+                    setTimeout(function () {
+                        if (statusEl && statusEl.textContent === 'Saved') statusEl.textContent = '';
+                    }, 2000);
+                }
+            } else {
+                if (statusEl) {
+                    statusEl.style.color = '#ef4444';
+                    statusEl.textContent = (data && data.error) ? data.error : 'Save failed';
+                }
+            }
+        }).catch(function (err) {
+            if (statusEl) {
+                statusEl.style.color = '#ef4444';
+                statusEl.textContent = 'Save failed';
+            }
+        });
+    }
+
+    function selectItem(it, card) {
+        var grid = modalEl.querySelector('.mlp-grid');
+        grid.querySelectorAll('.mlp-item').forEach(function (n) {
+            n.classList.remove('is-selected');
+        });
+        if (card) card.classList.add('is-selected');
+        selectedItem = it;
+        modalEl.querySelector('.mlp-pick').disabled = false;
+
+        var sidebar = modalEl.querySelector('.mlp-sidebar');
+        if (!sidebar) return;
+        sidebar.classList.add('is-active');
+
+        var previewImg = sidebar.querySelector('.mlp-sidebar-preview img');
+        if (previewImg) {
+            previewImg.src = it.url || it.path || '';
+            previewImg.alt = it.alt_text || '';
+        }
+
+        var filenameEl = sidebar.querySelector('.mlp-sidebar-filename');
+        if (filenameEl) {
+            filenameEl.textContent = it.original_name || it.filename || '';
+            filenameEl.title = it.original_name || it.filename || '';
+        }
+
+        var detailsEl = sidebar.querySelector('.mlp-sidebar-meta-details');
+        if (detailsEl) {
+            var dim = (it.width && it.height) ? (it.width + ' × ' + it.height) : '';
+            var kb = Math.round((it.size_bytes || 0) / 1024);
+            var parts = [];
+            if (dim) parts.push(dim);
+            if (kb) parts.push(kb + ' KB');
+            if (it.mime) parts.push(it.mime);
+            detailsEl.textContent = parts.join(' · ');
+        }
+
+        var altIn = sidebar.querySelector('.mlp-input-alt');
+        var titleIn = sidebar.querySelector('.mlp-input-title');
+        var descIn = sidebar.querySelector('.mlp-input-desc');
+        var statusEl = sidebar.querySelector('.mlp-meta-save-status');
+
+        if (altIn) altIn.value = it.alt_text || '';
+        if (titleIn) titleIn.value = it.title || '';
+        if (descIn) descIn.value = it.description || '';
+        if (statusEl) statusEl.textContent = '';
     }
 
     function open(opts) {
@@ -152,11 +386,17 @@
         modalEl.querySelector('.mlp-pick').disabled = true;
         modalEl.querySelector('.mlp-search').value = '';
 
+        var progressEl = modalEl.querySelector('.mlp-upload-progress');
+        if (progressEl) progressEl.style.display = 'none';
+
+        var sidebar = modalEl.querySelector('.mlp-sidebar');
+        if (sidebar) sidebar.classList.remove('is-active');
+
         loadItems().then(function (items) {
             renderGrid(items);
         }).catch(function (err) {
             console.error('MediaPicker: API request failed', err, 'URL was:', apiPath);
-            var body = modalEl.querySelector('.mlp-body');
+            var body = modalEl.querySelector('.mlp-main') || modalEl.querySelector('.mlp-body');
             body.querySelector('.mlp-loading').style.display = 'none';
             body.querySelector('.mlp-grid').style.display = 'none';
             var empty = body.querySelector('.mlp-empty');
@@ -166,7 +406,12 @@
     }
 
     function close() {
-        if (modalEl) modalEl.classList.remove('is-open');
+        if (metaSaveTimeout) flushMetaSave();
+        if (modalEl) {
+            modalEl.classList.remove('is-open');
+            var sidebar = modalEl.querySelector('.mlp-sidebar');
+            if (sidebar) sidebar.classList.remove('is-active');
+        }
         selectedItem = null;
         currentCallback = null;
     }
@@ -197,15 +442,17 @@
         query = (query || '').trim().toLowerCase();
         if (!query) return items;
         return items.filter(function (it) {
-            return (it.original_name || '').toLowerCase().indexOf(query) !== -1;
+            var name = (it.original_name || '').toLowerCase();
+            var alt = (it.alt_text || '').toLowerCase();
+            var title = (it.title || '').toLowerCase();
+            var desc = (it.description || '').toLowerCase();
+            return name.indexOf(query) !== -1 ||
+                   alt.indexOf(query) !== -1 ||
+                   title.indexOf(query) !== -1 ||
+                   desc.indexOf(query) !== -1;
         });
     }
 
-    // Tiny HTML escapers — we build cards with innerHTML so any string
-    // that came from the server (filenames, captions) must be escaped.
-    // We don't trust the server output here; an admin could upload a
-    // file named "<img onerror=...>.png" and the API would echo that
-    // filename back to us.
     function escAttr(s) {
         return String(s == null ? '' : s)
             .replace(/&/g, '&amp;')
@@ -217,7 +464,7 @@
     function escText(s) {
         return String(s == null ? '' : s)
             .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
+            .replace(/'/g, '&lt;')
             .replace(/>/g, '&gt;');
     }
     function truncate(s, n) {
@@ -227,10 +474,10 @@
     }
 
     function renderGrid(items) {
-        var body = modalEl.querySelector('.mlp-body');
-        var loading = body.querySelector('.mlp-loading');
-        var grid = body.querySelector('.mlp-grid');
-        var empty = body.querySelector('.mlp-empty');
+        var main = modalEl.querySelector('.mlp-main');
+        var loading = main.querySelector('.mlp-loading');
+        var grid = main.querySelector('.mlp-grid');
+        var empty = main.querySelector('.mlp-empty');
         var status = modalEl.querySelector('.mlp-status');
 
         loading.style.display = 'none';
@@ -238,8 +485,11 @@
         if (!items.length) {
             grid.style.display = 'none';
             empty.style.display = 'block';
-            empty.textContent = 'No media match.';
+            empty.textContent = 'No media found.';
             status.textContent = '';
+            var sidebar = modalEl.querySelector('.mlp-sidebar');
+            if (sidebar) sidebar.classList.remove('is-active');
+            modalEl.querySelector('.mlp-pick').disabled = true;
             return;
         }
         empty.style.display = 'none';
@@ -249,7 +499,7 @@
         grid.innerHTML = '';
         items.forEach(function (it) {
             var card = document.createElement('div');
-            card.className = 'mlp-item';
+            card.className = 'mlp-item' + (selectedItem && selectedItem.id === it.id ? ' is-selected' : '');
             card.setAttribute('data-path', it.path);
             var dim = (it.width && it.height) ? (it.width + '×' + it.height) : '';
             var kb = Math.round((it.size_bytes || 0) / 1024);
@@ -261,18 +511,12 @@
                   '</div>' +
                   '<div>' + escText(dim) + (dim ? ' · ' : '') + kb + ' KB</div>' +
                 '</div>';
+
             card.addEventListener('click', function () {
-                // Select this card. Single-click selects, the "Use this"
-                // button (or double-click) commits.
-                grid.querySelectorAll('.mlp-item').forEach(function (n) {
-                    n.classList.remove('is-selected');
-                });
-                card.classList.add('is-selected');
-                selectedItem = it;
-                modalEl.querySelector('.mlp-pick').disabled = false;
+                selectItem(it, card);
             });
             card.addEventListener('dblclick', function () {
-                selectedItem = it;
+                selectItem(it, card);
                 commitPick(selectedItem);
                 close();
             });
@@ -281,6 +525,23 @@
     }
 
     function commitPick(item) {
+        if (!item) return;
+
+        var sidebar = modalEl ? modalEl.querySelector('.mlp-sidebar') : null;
+        if (sidebar && sidebar.classList.contains('is-active')) {
+            var altIn = sidebar.querySelector('.mlp-input-alt');
+            var titleIn = sidebar.querySelector('.mlp-input-title');
+            var descIn = sidebar.querySelector('.mlp-input-desc');
+            if (altIn) item.alt_text = altIn.value;
+            if (titleIn) item.title = titleIn.value;
+            if (descIn) item.description = descIn.value;
+        }
+
+        item.alt = item.alt_text || '';
+        item.caption = item.description || '';
+
+        flushMetaSave();
+
         if (currentCallback) {
             try { currentCallback(item.path, item); }
             catch (e) { console.error('MediaPicker callback threw', e); }
@@ -291,12 +552,6 @@
     // Auto-wire data-attribute triggers
     // ──────────────────────────────────────────────────────────
 
-    // When a button has data-mlp-target="someInputId", clicking it opens
-    // the picker, and the chosen path is written into the input by id.
-    // For data-mlp-mode="append" (typical for galleries) we instead add
-    // a new hidden input alongside the target (named the same as the
-    // target's name attribute) — this is how the Shop gallery accepts
-    // an array of existing paths.
     document.addEventListener('click', function (e) {
         var btn = e.target.closest('[data-mlp-target]');
         if (!btn) return;
@@ -314,8 +569,6 @@
             mode: mode,
             onPick: function (path, item) {
                 if (mode === 'append') {
-                    // For galleries — append a hidden input with the
-                    // gallery's bracket-array name.
                     var nameAttr = input.getAttribute('data-mlp-array-name')
                                 || input.getAttribute('name')
                                 || '';
@@ -324,29 +577,39 @@
                     hidden.type = 'hidden';
                     hidden.name = nameAttr;
                     hidden.value = path;
-                    // Mark it so a future "remove" can find it.
                     hidden.setAttribute('data-mlp-appended', '1');
                     input.parentNode.insertBefore(hidden, input.nextSibling);
 
-                    // Trigger an event the surrounding page can react to.
                     var ev = new CustomEvent('mlp:append', {
-                        detail: {path: path, name: nameAttr}
+                        detail: {path: path, name: nameAttr, item: item}
                     });
                     input.dispatchEvent(ev);
                 } else {
-                    // Single: replace the input's value.
                     input.value = path;
                     input.dispatchEvent(new Event('change', {bubbles: true}));
 
-                    // If there's a preview <img> with id="<targetId>-preview",
-                    // update it. We use item.url (absolute) rather than
-                    // path (relative-from-root) because the admin pages
-                    // live at /admin/... and a relative /uploads/... path
-                    // would otherwise resolve incorrectly in nested
-                    // contexts.
-                    var preview = document.getElementById(targetId + '-preview');
+                    // Sync alt tag input if present
+                    var altTargetId = btn.getAttribute('data-mlp-alt-target');
+                    var altInput = altTargetId ? document.getElementById(altTargetId) : (document.getElementById(targetId + '_alt') || document.getElementById(targetId + '-alt'));
+                    if (altInput && (item.alt_text || item.alt)) {
+                        altInput.value = item.alt_text || item.alt || '';
+                        altInput.dispatchEvent(new Event('change', {bubbles: true}));
+                    }
+
+                    // Sync title input if present
+                    var titleTargetId = btn.getAttribute('data-mlp-title-target');
+                    var titleInput = titleTargetId ? document.getElementById(titleTargetId) : (document.getElementById(targetId + '_title') || document.getElementById(targetId + '-title'));
+                    if (titleInput && item.title) {
+                        titleInput.value = item.title || '';
+                        titleInput.dispatchEvent(new Event('change', {bubbles: true}));
+                    }
+
+                    // Sync preview image if present
+                    var preview = document.getElementById(targetId + '-preview') || document.getElementById(targetId + '_preview');
                     if (preview && preview.tagName === 'IMG') {
                         preview.src = item.url || path;
+                        if (item.alt_text) preview.alt = item.alt_text;
+                        if (item.title) preview.title = item.title;
                         preview.style.display = '';
                     }
                 }
@@ -354,25 +617,12 @@
         });
     });
 
-    // Expose to window for programmatic use.
     window.MediaPicker = {
         open: open,
         close: close,
         invalidateCache: invalidateCache,
     };
 
-    // ──────────────────────────────────────────────────────────
-    // SlateMedia — the modern core API any plugin can use.
-    //
-    //   SlateMedia.open({
-    //     types:    'image' | 'document' | 'all'   (default 'all'),
-    //     multiple: false,                          (true → gallery/append mode)
-    //     onPick:   function (record) { ... }       (full media record)
-    //   });
-    //
-    // The record is the full object from the API: {id, url, path, mime,
-    // kind, original_name, width, height, size_bytes, in_use, ...}.
-    // ──────────────────────────────────────────────────────────
     function slateOpen(opts) {
         opts = opts || {};
         var t = opts.types || opts.type || 'all';
@@ -381,7 +631,7 @@
         open({
             mode: opts.multiple ? 'append' : 'single',
             onPick: function (path, item) {
-                currentType = '';                // reset for subsequent opens
+                currentType = '';
                 if (cb) { try { cb(item); } catch (e) { console.error('SlateMedia onPick threw', e); } }
             }
         });

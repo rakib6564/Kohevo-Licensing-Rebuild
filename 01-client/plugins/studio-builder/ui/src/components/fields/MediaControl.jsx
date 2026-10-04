@@ -28,7 +28,8 @@ export function MediaControl({ field, value, onChange, problem, mediaPicker }) {
         const mediaId = record && Number.parseInt(record.id, 10);
         if (!Number.isInteger(mediaId) || mediaId <= 0) return;
         if (record.url && /^(https?:\/\/|\/)/.test(record.url)) setPreview(record.url);
-        set({ media_id: mediaId, alt: ref.alt || String(record.original_name || '').replace(/\.[a-z0-9]+$/i, '').slice(0, 200) });
+        const altVal = record.alt_text || record.alt || ref.alt || String(record.original_name || '').replace(/\.[a-z0-9]+$/i, '').slice(0, 200);
+        set({ media_id: mediaId, alt: altVal });
       },
     });
   };

@@ -135,6 +135,9 @@ class Media {
                     `height`        INT UNSIGNED NULL,
                     `original_name` VARCHAR(255) NULL,
                     `folder`        VARCHAR(190) NOT NULL DEFAULT '',
+                    `alt_text`      VARCHAR(255) NULL DEFAULT '',
+                    `title`         VARCHAR(255) NULL DEFAULT '',
+                    `description`   TEXT NULL,
                     `uploaded_by`   INT UNSIGNED NULL,
                     `uploaded_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     `updated_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -160,6 +163,20 @@ class Media {
                     CONSTRAINT `fk_media_usage_media` FOREIGN KEY (`media_id`) REFERENCES `media_files`(`id`) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
             );
+
+            // Migration: ensure alt_text, title, and description columns exist
+            try {
+                $cols = array_column(\Database::rows("SHOW COLUMNS FROM `media_files`"), 'Field');
+                if (!in_array('alt_text', $cols, true)) {
+                    \Database::query("ALTER TABLE `media_files` ADD COLUMN `alt_text` VARCHAR(255) NULL DEFAULT '' AFTER `folder`");
+                }
+                if (!in_array('title', $cols, true)) {
+                    \Database::query("ALTER TABLE `media_files` ADD COLUMN `title` VARCHAR(255) NULL DEFAULT '' AFTER `alt_text`");
+                }
+                if (!in_array('description', $cols, true)) {
+                    \Database::query("ALTER TABLE `media_files` ADD COLUMN `description` TEXT NULL AFTER `title`");
+                }
+            } catch (\Throwable $e) { /* ignore */ }
 
             // Carry over rows from the old plugin cache, if present.
             // Idempotent: the unique (tenant_id, path) matches the source.
@@ -325,10 +342,50 @@ class Media {
             'height'        => isset($row['height']) && $row['height'] !== null ? (int)$row['height'] : null,
             'original_name' => (string)($row['original_name'] ?? basename($path)),
             'folder'        => (string)($row['folder'] ?? ''),
+            'alt_text'      => (string)($row['alt_text'] ?? ''),
+            'title'         => (string)($row['title'] ?? ''),
+            'description'   => (string)($row['description'] ?? ''),
             'uploaded_at'   => (string)($row['uploaded_at'] ?? ''),
             'in_use'        => ($usageMap[$path] ?? 0) > 0,
             'usage_count'   => (int)($usageMap[$path] ?? 0),
         ];
+    }
+
+    /**
+     * Update metadata (alt_text, title, description) on a media record.
+     * Tenant-scoped.
+     */
+    public static function updateMeta(int $id, array $meta): array {
+        $tid = current_tenant_id();
+        $fields = [];
+        $params = [];
+        if (array_key_exists('alt_text', $meta)) {
+            $fields[] = '`alt_text` = ?';
+            $params[] = trim((string)$meta['alt_text']);
+        }
+        if (array_key_exists('title', $meta)) {
+            $fields[] = '`title` = ?';
+            $params[] = trim((string)$meta['title']);
+        }
+        if (array_key_exists('description', $meta)) {
+            $fields[] = '`description` = ?';
+            $params[] = trim((string)$meta['description']);
+        }
+        if ($fields === []) {
+            return ['ok' => false, 'error' => 'No metadata fields provided'];
+        }
+        $params[] = $tid;
+        $params[] = $id;
+        try {
+            \Database::query(
+                "UPDATE `media_files` SET " . implode(', ', $fields) . ", `updated_at` = NOW() WHERE `tenant_id` = ? AND `id` = ?",
+                $params
+            );
+            $item = self::get($id);
+            return ['ok' => true, 'item' => $item];
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'error' => $e->getMessage()];
+        }
     }
 
     // ──────────────────────────────────────────────────────────
