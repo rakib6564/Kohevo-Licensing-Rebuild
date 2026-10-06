@@ -70,6 +70,14 @@ $typeConfigs = [
         'role'          => '404',
         'label'         => '404 Not Found',
     ],
+    'section_preset' => [
+        'template_type' => 'section_preset',
+        'page_type'     => 'section_preset',
+        'doc_type'      => 'section_preset',
+        'category'      => 'section',
+        'role'          => 'section_preset',
+        'label'         => 'Section Preset',
+    ],
 ];
 
 // POST Handlers
@@ -359,6 +367,7 @@ $counts = [
     'single'    => 0,
     'archive'   => 0,
     'not_found' => 0,
+    'sections'  => 0,
 ];
 
 foreach ($allTemplates as $t) {
@@ -368,6 +377,8 @@ foreach ($allTemplates as $t) {
         $counts['header']++;
     } elseif ($tt === 'footer_preset' || $cat === 'footer') {
         $counts['footer']++;
+    } elseif ($tt === 'section_preset' || $tt === 'block_preset' || $cat === 'section' || $cat === 'component') {
+        $counts['sections']++;
     } elseif ($cat === 'single' || $cat === 'single_page') {
         $counts['single']++;
     } elseif ($cat === 'archive' || $cat === 'loop_grid') {
@@ -389,6 +400,9 @@ $templates = array_filter($allTemplates, static function(array $t) use ($typeFil
     }
     if ($typeFilter === 'footer') {
         return $tt === 'footer_preset' || $cat === 'footer';
+    }
+    if ($typeFilter === 'sections') {
+        return $tt === 'section_preset' || $tt === 'block_preset' || $cat === 'section' || $cat === 'component';
     }
     if ($typeFilter === 'single') {
         return $cat === 'single' || $cat === 'single_page';
@@ -457,6 +471,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <a href="<?= e(plugin_url('studio-builder', 'admin/templates.php?type=not_found')) ?>" class="sb-pill-item <?= $typeFilter === 'not_found' ? 'active' : '' ?>">
                 <?= sb_svg('alert-circle', 14) ?> 404 Pages (<?= $counts['not_found'] ?>)
             </a>
+            <a href="<?= e(plugin_url('studio-builder', 'admin/templates.php?type=sections')) ?>" class="sb-pill-item <?= $typeFilter === 'sections' ? 'active' : '' ?>">
+                <?= sb_svg('grid', 14) ?> Sections & Components (<?= $counts['sections'] ?>)
+            </a>
         </div>
 
         <button type="button" class="btn btn-primary" onclick="document.getElementById('sb-tpl-drawer').style.display='block'">
@@ -490,6 +507,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         <option value="single">Single Post / Page (Dynamic single item view)</option>
                         <option value="archive">Archive & Loop Grid (Dynamic collection feed)</option>
                         <option value="not_found">404 Error (Custom Not Found page)</option>
+                        <option value="section_preset">Section & Component Preset (Reusable block layout)</option>
                     </select>
                 </div>
                 <div>
@@ -554,6 +572,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 $displayType = match(true) {
                     $tType === 'header_preset' || $tCat === 'header' => 'header',
                     $tType === 'footer_preset' || $tCat === 'footer' => 'footer',
+                    $tType === 'section_preset' || $tType === 'block_preset' || $tCat === 'section' || $tCat === 'component' => 'section',
                     $tCat === 'single' => 'single',
                     $tCat === 'archive' => 'archive',
                     $tCat === 'not_found' => 'not_found',
@@ -565,12 +584,13 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     : '#';
 
                 $typeBadgeColor = match($displayType) {
-                    'header' => '#6366f1',
-                    'footer' => '#8b5cf6',
-                    'single' => '#0ea5e9',
+                    'header'  => '#6366f1',
+                    'footer'  => '#8b5cf6',
+                    'single'  => '#0ea5e9',
                     'archive' => '#10b981',
                     'not_found' => '#f59e0b',
-                    default => '#64748b',
+                    'section' => '#10b981',
+                    default   => '#64748b',
                 };
             ?>
                 <div class="card" style="border-radius: 14px; border: 1px solid var(--sb-border); padding: 20px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
