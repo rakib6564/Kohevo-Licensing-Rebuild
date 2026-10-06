@@ -5,11 +5,12 @@
 // server revision changed, and that reload is required. No auto-merge.
 
 import { memo } from 'react';
-import { useEngineState } from './EditorContext.jsx';
+import { useEditor, useEngineState } from './EditorContext.jsx';
 import { STATUS } from '../core/sync.mjs';
 import { t, errorMessage } from '../core/messages.mjs';
 
 export const ConflictBanner = memo(function ConflictBanner({ onReload, lockState }) {
+  const { engine } = useEditor();
   const status = useEngineState((s) => s.status);
   const conflict = useEngineState((s) => s.conflict);
   const error = useEngineState((s) => s.error);
@@ -27,7 +28,24 @@ export const ConflictBanner = memo(function ConflictBanner({ onReload, lockState
     );
   }
   if (status === STATUS.ERROR && error) {
-    return <div className="sbx-banner sbx-banner--error" role="alert">{errorMessage(error)}</div>;
+    return (
+      <div className="sbx-banner sbx-banner--error" role="alert">
+        <span className="sbx-banner__message">{errorMessage(error)}</span>
+        <button
+          type="button"
+          className="sbx-banner__close"
+          onClick={() => {
+            if (engine && typeof engine.clearError === 'function') {
+              engine.clearError();
+            }
+          }}
+          aria-label="Dismiss error"
+          title="Dismiss"
+        >
+          ✕
+        </button>
+      </div>
+    );
   }
   if (lockState && lockState.otherEditor) {
     return <div className="sbx-banner sbx-banner--info" role="note">{t('lock_other')}</div>;

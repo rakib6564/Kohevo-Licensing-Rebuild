@@ -103,11 +103,14 @@ export const TopBar = memo(function TopBar({
           title={t('back_to_pages')}
           aria-label={t('back_to_pages')}
         >
-          <IconArrowLeft size={16} />
+          <IconArrowLeft size={15} />
         </a>
 
         <div className="sbx-topbar__title-group">
-          <strong className="sbx-topbar__page-title" title={page ? page.title : 'Page'}>
+          <strong
+            className="sbx-topbar__page-title"
+            title={`${page ? page.title : 'Page'} (/${slugText})`}
+          >
             {page ? page.title : 'Page'}
           </strong>
 
@@ -119,9 +122,11 @@ export const TopBar = memo(function TopBar({
             {page && page.is_published ? 'PUBLISHED' : 'DRAFT'}
           </span>
 
-          <span className="sbx-topbar__meta-pill" title={`Slug: /${slugText}`}>
-            <span className="sbx-topbar__slug-badge">/{slugText}</span>
-            <span className="sbx-topbar__rev-info">REV {revNum} · LIVE {liveNum}</span>
+          <span
+            className="sbx-topbar__rev-badge"
+            title={`Revision ${revNum} · Live ${liveNum} (/${slugText})`}
+          >
+            r{revNum}
           </span>
 
           <SaveStatus />
@@ -138,7 +143,7 @@ export const TopBar = memo(function TopBar({
         </div>
       </div>
 
-      {/* ── Center Area: View Mode & Viewport Switchers ── */}
+      {/* ── Center Area: View Mode, Viewport Switchers, Undo/Redo ── */}
       <div className="sbx-topbar__center">
         <div className="sbx-view-mode-toggle" role="group" aria-label="Editor Mode">
           <button
@@ -147,7 +152,7 @@ export const TopBar = memo(function TopBar({
             onClick={() => setViewMode('edit')}
             title="Edit mode"
           >
-            <IconEdit size={13} />
+            <IconEdit size={12} />
             <span>Edit</span>
           </button>
           <button
@@ -159,32 +164,26 @@ export const TopBar = memo(function TopBar({
             }}
             title="Preview mode"
           >
-            <IconEye size={13} />
+            <IconEye size={12} />
             <span>Preview</span>
           </button>
         </div>
 
         <div className="sbx-viewport-group" role="toolbar" aria-label={t('viewport')}>
-          {VIEWPORTS.map((v) => {
-            const VIcon = VIEWPORT_ICONS[v.key] || IconMonitor;
-            return (
-              <button
-                key={v.key}
-                type="button"
-                className={`sbx-btn sbx-btn--seg${viewportKey === v.key ? ' is-active' : ''}`}
-                aria-pressed={viewportKey === v.key}
-                onClick={() => onViewport(v.key)}
-                title={`${t(v.key)} (${v.breakpoint}, ${v.width}px)`}
-              >
-                {t(v.key)}
-              </button>
-            );
-          })}
+          {VIEWPORTS.map((v) => (
+            <button
+              key={v.key}
+              type="button"
+              className={`sbx-btn sbx-btn--seg${viewportKey === v.key ? ' is-active' : ''}`}
+              aria-pressed={viewportKey === v.key}
+              onClick={() => onViewport(v.key)}
+              title={`${t(v.key)} (${v.breakpoint}, ${v.width}px)`}
+            >
+              {t(v.key)}
+            </button>
+          ))}
         </div>
-      </div>
 
-      {/* ── Right Area: Tools & Actions ── */}
-      <div className="sbx-topbar__right">
         <div className="sbx-topbar__history-group">
           <button
             type="button"
@@ -195,7 +194,7 @@ export const TopBar = memo(function TopBar({
             title="Undo (Ctrl+Z)"
             aria-label={t('undo')}
           >
-            <IconUndo size={14} />
+            <IconUndo size={13} />
           </button>
           <button
             type="button"
@@ -206,10 +205,13 @@ export const TopBar = memo(function TopBar({
             title="Redo (Ctrl+Y)"
             aria-label={t('redo')}
           >
-            <IconRedo size={14} />
+            <IconRedo size={13} />
           </button>
         </div>
+      </div>
 
+      {/* ── Right Area: Tools & Actions ── */}
+      <div className="sbx-topbar__right">
         {/* Secondary Tool Actions */}
         <div className="sbx-topbar__tools">
           <button
@@ -219,7 +221,7 @@ export const TopBar = memo(function TopBar({
             disabled={conflict}
             title="Revision history"
           >
-            <IconClock size={14} />
+            <IconClock size={13} />
             <span className="sbx-btn__text">{t('history')}</span>
           </button>
 
@@ -243,7 +245,7 @@ export const TopBar = memo(function TopBar({
               onClick={onTheme}
               title="Theme tokens"
             >
-              <IconPalette size={14} />
+              <IconPalette size={13} />
               <span className="sbx-btn__text">{t('theme')}</span>
             </button>
           )}
@@ -278,8 +280,8 @@ export const TopBar = memo(function TopBar({
             rel="noopener"
             title="Open preview in new tab"
           >
-            <IconExternalLink size={14} />
-            <span className="sbx-btn__text">Preview link</span>
+            <IconExternalLink size={13} />
+            <span className="sbx-btn__text">Preview</span>
           </a>
         </div>
 
@@ -293,7 +295,7 @@ export const TopBar = memo(function TopBar({
             aria-keyshortcuts="Control+S Meta+S"
             title="Save draft (Ctrl+S)"
           >
-            <IconSaveDisk size={14} />
+            <IconSaveDisk size={13} />
             <span>Save draft</span>
           </button>
 
@@ -307,7 +309,7 @@ export const TopBar = memo(function TopBar({
             >
               {page && page.is_published ? (
                 <>
-                  <IconSendPlane size={14} />
+                  <IconSendPlane size={13} />
                   <span>Update live page</span>
                 </>
               ) : (
@@ -324,7 +326,7 @@ export const TopBar = memo(function TopBar({
             aria-label="More actions"
             title="More actions"
           >
-            <IconMenu size={16} />
+            <IconMenu size={15} />
           </button>
         </div>
       </div>
@@ -337,7 +339,7 @@ export const TopBar = memo(function TopBar({
             className="sbx-mobile-menu-item"
             onClick={() => { setMobileMenuOpen(false); onHistory(); }}
           >
-            <IconClock size={16} />
+            <IconClock size={15} />
             <span>{t('history')}</span>
           </button>
           {onTheme && (
@@ -346,7 +348,7 @@ export const TopBar = memo(function TopBar({
               className="sbx-mobile-menu-item"
               onClick={() => { setMobileMenuOpen(false); onTheme(); }}
             >
-              <IconPalette size={16} />
+              <IconPalette size={15} />
               <span>{t('theme')}</span>
             </button>
           )}
@@ -356,7 +358,7 @@ export const TopBar = memo(function TopBar({
               className="sbx-mobile-menu-item"
               onClick={() => { setMobileMenuOpen(false); onPackages(); }}
             >
-              <IconExport size={16} />
+              <IconExport size={15} />
               <span>Import / Export</span>
             </button>
           )}
@@ -367,7 +369,7 @@ export const TopBar = memo(function TopBar({
             rel="noopener"
             onClick={() => setMobileMenuOpen(false)}
           >
-            <IconExternalLink size={16} />
+            <IconExternalLink size={15} />
             <span>Preview link</span>
           </a>
         </div>

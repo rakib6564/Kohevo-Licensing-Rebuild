@@ -289,6 +289,16 @@ export class SyncEngine {
     return this.drain('manual');
   }
 
+  /** Dismiss/clear an error and return status to clean state. */
+  clearError() {
+    if (this.state.error) {
+      this.set({
+        error: null,
+        status: this.state.pending.length ? STATUS.DIRTY : STATUS.SAVED,
+      });
+    }
+  }
+
   // ── Undo / redo via rollback to immutable revisions ────────────────────
 
   get canUndo() { return this.state.undo.length > 0 && this.state.status !== STATUS.CONFLICT; }
