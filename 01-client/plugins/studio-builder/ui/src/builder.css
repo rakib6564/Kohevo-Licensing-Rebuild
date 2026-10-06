@@ -417,6 +417,63 @@ html, body.sbx-body {
   color: #94a3b8;
 }
 
+.sbx-inspector-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem 1rem;
+  margin: 1rem 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.sbx-inspector-empty__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #818cf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.sbx-inspector-empty__title {
+  margin: 0 0 0.5rem 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #f1f5f9;
+  letter-spacing: -0.01em;
+}
+
+.sbx-inspector-empty__desc {
+  margin: 0 0 1.5rem 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #94a3b8;
+  max-width: 280px;
+}
+
+.sbx-inspector-empty__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 240px;
+}
+
+.sbx-inspector-empty__actions .sbx-btn {
+  width: 100%;
+  justify-content: center;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
 /* Status dot */
 .sbx-status {
   display: inline-flex;

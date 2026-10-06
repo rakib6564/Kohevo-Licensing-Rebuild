@@ -71,6 +71,7 @@ $createThemeTemplate = function(
     array $conditionRules,
     array $document
 ) use ($tenantId, $userId, $runtime, $actor, $genUuid, $force): int {
+    $document['template_key'] = 'default';
     $existing = Database::row("SELECT id FROM studiobuilder_templates WHERE tenant_id = ? AND template_key = ?", [$tenantId, $templateKey]);
     if ($existing !== null) {
         if (!$force) {
@@ -270,7 +271,7 @@ $createSectionPreset = function(
 echo "\n--- 1. Seeding Modern Site-Wide Theme Templates ---\n";
 
 // 1.1 Modern Glassmorphism Site Header
-$docHeaderGlass = CanonicalDocumentSchema::emptyDocument('header_partial', 'header-glass', 'Site Header');
+$docHeaderGlass = CanonicalDocumentSchema::emptyDocument('header_partial', 'default', 'Site Header');
 $docHeaderGlass['settings']['conditions'] = ['rules' => [['type' => 'include', 'condition' => 'entire_site']]];
 $docHeaderGlass['settings']['template_type'] = 'header';
 $docHeaderGlass['sections'] = [
@@ -314,7 +315,7 @@ $createThemeTemplate(
 );
 
 // 1.2 Luxury 4-Column Mega Footer
-$docFooterLuxury = CanonicalDocumentSchema::emptyDocument('footer_partial', 'footer-luxury', 'Site Footer');
+$docFooterLuxury = CanonicalDocumentSchema::emptyDocument('footer_partial', 'default', 'Site Footer');
 $docFooterLuxury['settings']['conditions'] = ['rules' => [['type' => 'include', 'condition' => 'entire_site']]];
 $docFooterLuxury['settings']['template_type'] = 'footer';
 $docFooterLuxury['sections'] = [
@@ -358,7 +359,7 @@ $createThemeTemplate(
 );
 
 // 1.3 Dynamic Case Study Single Page Template
-$docSingleCaseStudy = CanonicalDocumentSchema::emptyDocument('page', 'single-case-study', 'Case Study');
+$docSingleCaseStudy = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Case Study');
 $docSingleCaseStudy['settings']['conditions'] = ['rules' => [['type' => 'include', 'condition' => 'singular', 'value' => 'portfolio']]];
 $docSingleCaseStudy['settings']['template_type'] = 'single';
 $docSingleCaseStudy['sections'] = [
@@ -463,7 +464,7 @@ $createThemeTemplate(
 );
 
 // 1.4 Dynamic Portfolio & Work Loop Grid Archive Template
-$docArchivePortfolio = CanonicalDocumentSchema::emptyDocument('system', 'archive-portfolio', 'Selected Work Archive');
+$docArchivePortfolio = CanonicalDocumentSchema::emptyDocument('system', 'default', 'Selected Work Archive');
 $docArchivePortfolio['settings']['conditions'] = ['rules' => [['type' => 'include', 'condition' => 'entire_site']]];
 $docArchivePortfolio['settings']['template_type'] = 'archive';
 $docArchivePortfolio['sections'] = [
@@ -522,7 +523,7 @@ $createThemeTemplate(
 );
 
 // 1.5 High-Tech Cyberpunk 404 Experience
-$doc404 = CanonicalDocumentSchema::emptyDocument('system', 'not-found-404', '404 Page Not Found');
+$doc404 = CanonicalDocumentSchema::emptyDocument('system', 'default', '404 Page Not Found');
 $doc404['settings']['conditions'] = ['rules' => [['type' => 'include', 'condition' => 'entire_site']]];
 $doc404['settings']['template_type'] = '404';
 $doc404['sections'] = [
@@ -573,7 +574,7 @@ echo "\n--- 2. Seeding Modern Section Presets & Component Blocks ---\n";
 
 // Helper to wrap section into a valid section_preset document
 $wrapSection = function(string $key, string $label, array $blocks, array $layout = []): array {
-    $doc = CanonicalDocumentSchema::emptyDocument('section_preset', $key, $label);
+    $doc = CanonicalDocumentSchema::emptyDocument('section_preset', 'default', $label);
     $doc['sections'] = [
         [
             'id'         => CanonicalDocumentSchema::newSectionId(),

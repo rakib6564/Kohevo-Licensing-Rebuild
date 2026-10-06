@@ -181,13 +181,41 @@ export const LeftPanel = memo(function LeftPanel({
             {info && info.kind === 'block' && <BlockInspector key={info.node.id} info={info} />}
             {info && info.kind === 'section' && <SectionInspector key={info.node.id} info={info} />}
             {!info && (
-              <>
-                <div className="sbx-nothing-selected-banner">
-                  <span className="sbx-nothing-selected-icon"><IconSliders size={20} /></span>
-                  <p className="sbx-hint">{t('nothing_selected')}</p>
+              <div className="sbx-inspector-empty">
+                <div className="sbx-inspector-empty__icon">
+                  <IconSliders size={28} />
                 </div>
-                <PageInspector />
-              </>
+                <h3 className="sbx-inspector-empty__title">{t('nothing_selected')}</h3>
+                <p className="sbx-inspector-empty__desc">
+                  Select any section or block on the canvas or from the Layers tab to customize typography, layout, spacing, colors, and styling.
+                </p>
+                <div className="sbx-inspector-empty__actions">
+                  <button
+                    type="button"
+                    className="sbx-btn sbx-btn--secondary"
+                    onClick={() => setTab('structure')}
+                  >
+                    <IconLayers size={14} />
+                    <span>View Layers</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="sbx-btn sbx-btn--secondary"
+                    onClick={() => setTab('blocks')}
+                  >
+                    <IconPlus size={14} />
+                    <span>Add Elements</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="sbx-btn sbx-btn--ghost"
+                    onClick={() => setTab('settings')}
+                  >
+                    <IconSettings size={14} />
+                    <span>Page Settings</span>
+                  </button>
+                </div>
+              </div>
             )}
           </aside>
         </div>
