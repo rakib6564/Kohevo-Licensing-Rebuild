@@ -94,6 +94,13 @@ final class TemplateConditionMatcher
             return self::SCORE_GLOBAL;
         }
 
+        // Front page rule
+        if ($scope === 'front_page' || $scope === 'home') {
+            $slug = strtolower(trim((string) ($context['slug'] ?? '')));
+            $isFront = !empty($context['is_front_page']) || $slug === '' || $slug === 'home' || $slug === 'index';
+            return $isFront ? self::SCORE_SPECIFIC : self::SCORE_NONE;
+        }
+
         // Category rule
         if ($scope === 'category') {
             $expected = (string) ($rule['value'] ?? $rule['category'] ?? '');
@@ -157,6 +164,12 @@ final class TemplateConditionMatcher
             if ($expected === 'all' || $expected === $actual) {
                 return self::SCORE_CONTENT_TYPE;
             }
+
+            $slug = strtolower(trim((string) ($context['slug'] ?? '')));
+            if ($expected !== '' && $expected === $slug) {
+                return self::SCORE_SPECIFIC;
+            }
+
             return self::SCORE_NONE;
         }
 
