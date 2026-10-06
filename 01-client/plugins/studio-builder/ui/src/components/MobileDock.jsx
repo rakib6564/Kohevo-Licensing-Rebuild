@@ -34,6 +34,8 @@ export const MobileDock = memo(function MobileDock({
           <button
             key={item.key}
             type="button"
+            data-dock={item.key}
+            data-testid={`mobile-dock-${item.key}`}
             className={`sbx-dock-btn${isActive ? ' is-active' : ''}`}
             onClick={() => onSelectTab(item.key)}
             title={item.label}
