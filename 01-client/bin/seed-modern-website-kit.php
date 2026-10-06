@@ -32,15 +32,19 @@ use Slate\Module\StudioBuilder\StudioPermissions;
 use Slate\Tenancy\TenantContext;
 
 $tenantId = (int) (defined('TENANT_ID') ? TENANT_ID : 1);
+$force = false;
 foreach ($argv as $arg) {
     if (str_starts_with($arg, '--tenant=')) {
         $tenantId = (int) substr($arg, 9);
+    }
+    if ($arg === '--force' || $arg === '-f') {
+        $force = true;
     }
 }
 
 echo "=========================================================\n";
 echo "  Kohevo Studio: Modern Website Kit Seeder\n";
-echo "  Tenant ID: {$tenantId}\n";
+echo "  Tenant ID: {$tenantId}" . ($force ? " (FORCE REFRESH)" : "") . "\n";
 echo "=========================================================\n\n";
 
 $adminUser = Database::row('SELECT id FROM users WHERE tenant_id = ? ORDER BY id ASC LIMIT 1', [$tenantId]);
@@ -66,10 +70,58 @@ $createThemeTemplate = function(
     string $conditionRule,
     array $conditionRules,
     array $document
-) use ($tenantId, $userId, $runtime, $actor, $genUuid): int {
+) use ($tenantId, $userId, $runtime, $actor, $genUuid, $force): int {
     $existing = Database::row("SELECT id FROM studiobuilder_templates WHERE tenant_id = ? AND template_key = ?", [$tenantId, $templateKey]);
     if ($existing !== null) {
-        echo "  [skip] Theme template '{$templateKey}' already exists (ID: {$existing['id']})\n";
+        if (!$force) {
+            echo "  [skip] Theme template '{$templateKey}' already exists (ID: {$existing['id']})\n";
+            return (int) $existing['id'];
+        }
+        // Force refresh document_json and metadata
+        Database::query("UPDATE studiobuilder_templates SET document_json = ?, name = ?, description = ?, updated_at = ? WHERE id = ? AND tenant_id = ?", [
+            CanonicalJson::encode($document),
+            $name,
+            $description,
+            date('Y-m-d H:i:s'),
+            $existing['id'],
+            $tenantId,
+        ]);
+        $pageSlug = 'theme-' . $templateKey;
+        $page = Database::row("SELECT id, active_draft_revision_id, published_revision_id FROM studiobuilder_pages WHERE tenant_id = ? AND slug = ?", [$tenantId, $pageSlug]);
+        if ($page !== null) {
+            $pageId = (int) $page['id'];
+            if (!empty($page['active_draft_revision_id'])) {
+                Database::query("UPDATE studiobuilder_revisions SET document_json = ? WHERE id = ? AND tenant_id = ?", [
+                    CanonicalJson::encode($document),
+                    $page['active_draft_revision_id'],
+                    $tenantId,
+                ]);
+            }
+            if (!empty($page['published_revision_id'])) {
+                Database::query("UPDATE studiobuilder_revisions SET document_json = ? WHERE id = ? AND tenant_id = ?", [
+                    CanonicalJson::encode($document),
+                    $page['published_revision_id'],
+                    $tenantId,
+                ]);
+            }
+            try {
+                $validated = ValidatedDocument::from($document, $runtime->registry);
+                $compiled = $runtime->compiler->compile($validated->toArray(), 'published');
+                Database::query("DELETE FROM studiobuilder_compilations WHERE tenant_id = ? AND page_id = ?", [$tenantId, $pageId]);
+                Database::insert('studiobuilder_compilations', [
+                    'tenant_id'             => $tenantId,
+                    'page_id'               => $pageId,
+                    'revision_id'           => (int) ($page['published_revision_id'] ?? $page['active_draft_revision_id']),
+                    'compile_mode'          => 'published',
+                    'compiled_html'         => $compiled['html'],
+                    'compiled_css'          => $compiled['css'],
+                    'dynamic_manifest_json' => json_encode($compiled['dynamic_manifest'] ?? []),
+                    'schema_version'        => CanonicalDocumentSchema::SCHEMA_VERSION,
+                    'created_at'            => date('Y-m-d H:i:s'),
+                ]);
+            } catch (\Throwable $ex) {}
+        }
+        echo "  ✓ [Theme Template] Updated & Recompiled: '{$name}' (Tpl ID: {$existing['id']})\n";
         return (int) $existing['id'];
     }
 
@@ -172,10 +224,22 @@ $createSectionPreset = function(
     string $category,
     string $description,
     array $document
-) use ($tenantId, $userId, $genUuid): int {
+) use ($tenantId, $userId, $genUuid, $force): int {
     $existing = Database::row("SELECT id FROM studiobuilder_templates WHERE tenant_id = ? AND template_key = ?", [$tenantId, $templateKey]);
     if ($existing !== null) {
-        echo "  [skip] Section preset '{$templateKey}' already exists (ID: {$existing['id']})\n";
+        if (!$force) {
+            echo "  [skip] Section preset '{$templateKey}' already exists (ID: {$existing['id']})\n";
+            return (int) $existing['id'];
+        }
+        Database::query("UPDATE studiobuilder_templates SET document_json = ?, name = ?, description = ?, updated_at = ? WHERE id = ? AND tenant_id = ?", [
+            CanonicalJson::encode($document),
+            $name,
+            $description,
+            date('Y-m-d H:i:s'),
+            $existing['id'],
+            $tenantId,
+        ]);
+        echo "  ✓ [Section Preset] Updated: '{$name}' (Tpl ID: {$existing['id']})\n";
         return (int) $existing['id'];
     }
 
