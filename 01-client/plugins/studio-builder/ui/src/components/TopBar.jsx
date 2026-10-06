@@ -1,6 +1,5 @@
-// TopBar — page identity, save state, history, viewport, preview and publish.
-// Styled to mirror the dark-mode reference aesthetic: clean badges, segmented controls,
-// solid green Save Draft CTA, and outline Update Live Page action.
+// TopBar — Page identity, device viewports, undo/redo, preview and publish.
+// Sleek, minimal header with pixel-perfect responsive controls.
 
 import { memo, useState } from 'react';
 import { useEditor, useEngineState } from './EditorContext.jsx';
@@ -18,6 +17,13 @@ import {
   IconExternalLink,
   IconSaveDisk,
   IconSendPlane,
+  IconMonitor,
+  IconTablet,
+  IconSmartphone,
+  IconPalette,
+  IconExport,
+  IconSparkles,
+  IconMenu,
 } from './Icons.jsx';
 
 const STATUS_KEY = {
@@ -28,6 +34,12 @@ const STATUS_KEY = {
   [STATUS.SAVING]: 'status_saving',
   [STATUS.ERROR]: 'status_error',
   [STATUS.CONFLICT]: 'status_conflict',
+};
+
+const VIEWPORT_ICONS = {
+  desktop: IconMonitor,
+  tablet: IconTablet,
+  mobile: IconSmartphone,
 };
 
 export const SaveStatus = memo(function SaveStatus() {
@@ -56,6 +68,7 @@ export const TopBar = memo(function TopBar({
   onTheme = null,
   onAiReview = null,
   onPackages = null,
+  onOpenMobileDock = null,
 }) {
   const { boot, engine, manifest } = useEditor();
   const page = useEngineState((s) => s.page);
@@ -69,6 +82,7 @@ export const TopBar = memo(function TopBar({
   const busy = status === STATUS.SAVING;
   const canPublish = !!(manifest.permissions && manifest.permissions.publish);
   const [viewMode, setViewMode] = useState('edit');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const slugText = page
     ? ((page.slug || page.title || '').replace(/^\/+/, '')).toUpperCase()
@@ -81,6 +95,7 @@ export const TopBar = memo(function TopBar({
 
   return (
     <header className="sbx-topbar" role="banner">
+      {/* ── Left Area: Brand & Document Identity ── */}
       <div className="sbx-topbar__left">
         <a
           className="sbx-topbar__back-btn"
@@ -92,8 +107,10 @@ export const TopBar = memo(function TopBar({
         </a>
 
         <div className="sbx-topbar__title-group">
-          <strong className="sbx-topbar__page-title">{page ? page.title : 'Page'}</strong>
-          <span className="sbx-topbar__slug-badge">/{slugText}</span>
+          <strong className="sbx-topbar__page-title" title={page ? page.title : 'Page'}>
+            {page ? page.title : 'Page'}
+          </strong>
+
           <span
             className={`sbx-status-pill ${
               page && page.is_published ? 'sbx-status-pill--published' : 'sbx-status-pill--draft'
@@ -101,8 +118,14 @@ export const TopBar = memo(function TopBar({
           >
             {page && page.is_published ? 'PUBLISHED' : 'DRAFT'}
           </span>
-          <span className="sbx-topbar__rev-info">REV {revNum} · LIVE {liveNum}</span>
+
+          <span className="sbx-topbar__meta-pill" title={`Slug: /${slugText}`}>
+            <span className="sbx-topbar__slug-badge">/{slugText}</span>
+            <span className="sbx-topbar__rev-info">REV {revNum} · LIVE {liveNum}</span>
+          </span>
+
           <SaveStatus />
+
           {aiDraft && (
             <span
               className="sbx-badge sbx-badge--ai"
@@ -115,6 +138,7 @@ export const TopBar = memo(function TopBar({
         </div>
       </div>
 
+      {/* ── Center Area: View Mode & Viewport Switchers ── */}
       <div className="sbx-topbar__center">
         <div className="sbx-view-mode-toggle" role="group" aria-label="Editor Mode">
           <button
@@ -123,7 +147,7 @@ export const TopBar = memo(function TopBar({
             onClick={() => setViewMode('edit')}
             title="Edit mode"
           >
-            <IconEdit size={14} />
+            <IconEdit size={13} />
             <span>Edit</span>
           </button>
           <button
@@ -135,27 +159,31 @@ export const TopBar = memo(function TopBar({
             }}
             title="Preview mode"
           >
-            <IconEye size={14} />
+            <IconEye size={13} />
             <span>Preview</span>
           </button>
         </div>
 
         <div className="sbx-viewport-group" role="toolbar" aria-label={t('viewport')}>
-          {VIEWPORTS.map((v) => (
-            <button
-              key={v.key}
-              type="button"
-              className={`sbx-btn sbx-btn--seg${viewportKey === v.key ? ' is-active' : ''}`}
-              aria-pressed={viewportKey === v.key}
-              onClick={() => onViewport(v.key)}
-              title={`${t(v.key)} (${v.breakpoint}, ${v.width}px)`}
-            >
-              {t(v.key)}
-            </button>
-          ))}
+          {VIEWPORTS.map((v) => {
+            const VIcon = VIEWPORT_ICONS[v.key] || IconMonitor;
+            return (
+              <button
+                key={v.key}
+                type="button"
+                className={`sbx-btn sbx-btn--seg${viewportKey === v.key ? ' is-active' : ''}`}
+                aria-pressed={viewportKey === v.key}
+                onClick={() => onViewport(v.key)}
+                title={`${t(v.key)} (${v.breakpoint}, ${v.width}px)`}
+              >
+                {t(v.key)}
+              </button>
+            );
+          })}
         </div>
       </div>
 
+      {/* ── Right Area: Tools & Actions ── */}
       <div className="sbx-topbar__right">
         <div className="sbx-topbar__history-group">
           <button
@@ -182,106 +210,168 @@ export const TopBar = memo(function TopBar({
           </button>
         </div>
 
-        <button
-          type="button"
-          className="sbx-btn sbx-btn--action"
-          onClick={onHistory}
-          disabled={conflict}
-          title="Revision history"
-        >
-          <IconClock size={14} />
-          <span>{t('history')}</span>
-        </button>
-
-        {onPackages && (
-          <button
-            type="button"
-            className="sbx-btn sbx-btn--action sbx-btn--export"
-            data-testid="open-packages"
-            onClick={onPackages}
-            disabled={conflict}
-            title="Import or export packages"
-          >
-            {t('packages')}
-          </button>
-        )}
-
-        {onTheme && (
+        {/* Secondary Tool Actions */}
+        <div className="sbx-topbar__tools">
           <button
             type="button"
             className="sbx-btn sbx-btn--action"
-            onClick={onTheme}
-            title="Theme tokens"
-          >
-            {t('theme')}
-          </button>
-        )}
-
-        {aiDraft && onAiReview && (
-          <button
-            type="button"
-            className="sbx-btn sbx-btn--seg sbx-btn--ai-cta"
-            data-testid="ai-review"
-            onClick={onAiReview}
+            onClick={onHistory}
             disabled={conflict}
+            title="Revision history"
           >
-            {t('ai_review')}
+            <IconClock size={14} />
+            <span className="sbx-btn__text">{t('history')}</span>
           </button>
-        )}
 
-        {!aiDraft && boot.assistantUrl && (
+          {onPackages && (
+            <button
+              type="button"
+              className="sbx-btn sbx-btn--action sbx-btn--export"
+              data-testid="open-packages"
+              onClick={onPackages}
+              disabled={conflict}
+              title="Import or export packages"
+            >
+              {t('packages')}
+            </button>
+          )}
+
+          {onTheme && (
+            <button
+              type="button"
+              className="sbx-btn sbx-btn--action"
+              onClick={onTheme}
+              title="Theme tokens"
+            >
+              <IconPalette size={14} />
+              <span className="sbx-btn__text">{t('theme')}</span>
+            </button>
+          )}
+
+          {aiDraft && onAiReview && (
+            <button
+              type="button"
+              className="sbx-btn sbx-btn--seg sbx-btn--ai-cta"
+              data-testid="ai-review"
+              onClick={onAiReview}
+              disabled={conflict}
+            >
+              {t('ai_review')}
+            </button>
+          )}
+
+          {!aiDraft && boot.assistantUrl && (
+            <a
+              className="sbx-btn sbx-btn--action"
+              href={boot.assistantUrl}
+              target="_blank"
+              rel="noopener"
+            >
+              {t('ai_assistant')}
+            </a>
+          )}
+
           <a
-            className="sbx-btn sbx-btn--action"
-            href={boot.assistantUrl}
+            className="sbx-btn sbx-btn--action sbx-btn--preview-link"
+            href={`${boot.previewUrl}?page=${boot.pageId}`}
             target="_blank"
             rel="noopener"
+            title="Open preview in new tab"
           >
-            {t('ai_assistant')}
+            <IconExternalLink size={14} />
+            <span className="sbx-btn__text">Preview link</span>
           </a>
-        )}
+        </div>
 
-        <a
-          className="sbx-btn sbx-btn--action sbx-btn--preview-link"
-          href={`${boot.previewUrl}?page=${boot.pageId}`}
-          target="_blank"
-          rel="noopener"
-          title="Open preview in new tab"
-        >
-          <IconExternalLink size={14} />
-          <span>Preview link</span>
-        </a>
-
-        <button
-          type="button"
-          className="sbx-btn sbx-btn--save-draft"
-          onClick={onSave}
-          disabled={conflict || pendingCount === 0}
-          aria-keyshortcuts="Control+S Meta+S"
-          title="Save draft (Ctrl+S)"
-        >
-          <IconSaveDisk size={14} />
-          <span>Save draft</span>
-        </button>
-
-        {canPublish && (
+        {/* Primary CTA Buttons */}
+        <div className="sbx-topbar__cta-group">
           <button
             type="button"
-            className="sbx-btn sbx-btn--publish"
-            onClick={onPublish}
-            disabled={conflict || busy || !engine}
-            title={page && page.is_published ? 'Update live page' : 'Publish page'}
+            className="sbx-btn sbx-btn--save-draft"
+            onClick={onSave}
+            disabled={conflict || pendingCount === 0}
+            aria-keyshortcuts="Control+S Meta+S"
+            title="Save draft (Ctrl+S)"
           >
-            {page && page.is_published ? (
-              <>
-                <IconSendPlane size={14} />
-                <span>Update live page</span>
-              </>
-            ) : (
-              t('publish')
-            )}
+            <IconSaveDisk size={14} />
+            <span>Save draft</span>
           </button>
-        )}
+
+          {canPublish && (
+            <button
+              type="button"
+              className="sbx-btn sbx-btn--publish"
+              onClick={onPublish}
+              disabled={conflict || busy || !engine}
+              title={page && page.is_published ? 'Update live page' : 'Publish page'}
+            >
+              {page && page.is_published ? (
+                <>
+                  <IconSendPlane size={14} />
+                  <span>Update live page</span>
+                </>
+              ) : (
+                t('publish')
+              )}
+            </button>
+          )}
+
+          {/* Mobile More Menu Toggle */}
+          <button
+            type="button"
+            className="sbx-btn sbx-btn--icon sbx-mobile-more-btn"
+            onClick={() => setMobileMenuOpen((o) => !o)}
+            aria-label="More actions"
+            title="More actions"
+          >
+            <IconMenu size={16} />
+          </button>
+        </div>
       </div>
+
+      {/* Mobile Overflow Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="sbx-topbar__mobile-menu" role="menu">
+          <button
+            type="button"
+            className="sbx-mobile-menu-item"
+            onClick={() => { setMobileMenuOpen(false); onHistory(); }}
+          >
+            <IconClock size={16} />
+            <span>{t('history')}</span>
+          </button>
+          {onTheme && (
+            <button
+              type="button"
+              className="sbx-mobile-menu-item"
+              onClick={() => { setMobileMenuOpen(false); onTheme(); }}
+            >
+              <IconPalette size={16} />
+              <span>{t('theme')}</span>
+            </button>
+          )}
+          {onPackages && (
+            <button
+              type="button"
+              className="sbx-mobile-menu-item"
+              onClick={() => { setMobileMenuOpen(false); onPackages(); }}
+            >
+              <IconExport size={16} />
+              <span>Import / Export</span>
+            </button>
+          )}
+          <a
+            className="sbx-mobile-menu-item"
+            href={`${boot.previewUrl}?page=${boot.pageId}`}
+            target="_blank"
+            rel="noopener"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <IconExternalLink size={16} />
+            <span>Preview link</span>
+          </a>
+        </div>
+      )}
     </header>
   );
 });

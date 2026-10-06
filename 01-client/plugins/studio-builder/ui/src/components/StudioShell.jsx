@@ -11,11 +11,11 @@
 // every change is a canonical operation sent through the command API.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { EditorContext } from './EditorContext.jsx';
+import { EditorContext, useEditor } from './EditorContext.jsx';
 import { TopBar } from './TopBar.jsx';
 import { LeftPanel } from './LeftPanel.jsx';
 import { CanvasArea } from './CanvasArea.jsx';
-import { RightPanel } from './RightPanel.jsx';
+import { MobileDock } from './MobileDock.jsx';
 import { LiveRegion } from './LiveRegion.jsx';
 import { ConflictBanner } from './ConflictBanner.jsx';
 import { InsertDialog } from './InsertDialog.jsx';
@@ -458,12 +458,26 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   );
 }
 
-/** The four explicit regions of the builder (rendered inside an EditorContext). */
+/** The unified one-sided builder shell (rendered inside an EditorContext). */
 export function ShellLayout({
   viewportKey, onViewport, onSave, onUndo, onRedo, onPublish, onReload, announcement, lockState,
   historyOpen = false, setHistoryOpen = () => {}, pendingInsert = null, onCancelInsert = () => {}, onConfirmInsert = () => {},
   onTheme = null, dialogs = null, onAiReview = null, onPackages = null,
 }) {
+  const { selection } = useEditor();
+  const [activeTab, setActiveTab] = useState(() => (selection ? 'inspector' : 'structure'));
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (selection) {
+      setActiveTab('inspector');
+      if (typeof window !== 'undefined' && window.innerWidth <= 860) {
+        setMobileOpen(true);
+      }
+    }
+  }, [selection]);
+
   return (
     <div className="sbx-shell" data-viewport={viewportKey}>
       <TopBar
@@ -477,13 +491,40 @@ export function ShellLayout({
         onTheme={onTheme}
         onAiReview={onAiReview}
         onPackages={onPackages}
+        onOpenMobileDock={() => {
+          setActiveTab('blocks');
+          setMobileOpen(true);
+        }}
       />
       <ConflictBanner onReload={onReload} lockState={lockState} />
       <div className="sbx-workspace">
-        <LeftPanel />
+        <LeftPanel
+          tab={activeTab}
+          onTabChange={setActiveTab}
+          collapsed={collapsed}
+          onToggleCollapse={() => setCollapsed((c) => !c)}
+          mobileOpen={mobileOpen}
+          onCloseMobile={() => setMobileOpen(false)}
+        />
         <CanvasArea />
-        <RightPanel />
       </div>
+      <MobileDock
+        activeTab={activeTab}
+        mobileSheetOpen={mobileOpen}
+        onSelectTab={(key) => {
+          if (key === 'preview') {
+            setMobileOpen(false);
+            return;
+          }
+          if (mobileOpen && activeTab === key) {
+            setMobileOpen(false);
+          } else {
+            setActiveTab(key);
+            setMobileOpen(true);
+          }
+        }}
+        hasSelection={!!selection}
+      />
       <LiveRegion text={announcement} />
       {pendingInsert && <InsertDialog request={pendingInsert} onCancel={onCancelInsert} onConfirm={onConfirmInsert} />}
       {historyOpen && <HistoryDialog onClose={() => setHistoryOpen(false)} />}

@@ -226,29 +226,7 @@ $docHeaderGlass['sections'] = [
                 'type'       => 'core.rich_text',
                 'version'    => 1,
                 'props'      => [
-                    'content' => '<header style="position: sticky; top: 0; z-index: 100; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: rgba(11, 15, 25, 0.82); border-bottom: 1px solid rgba(255,255,255,0.08); padding: 14px 28px;">
-  <div style="max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 20px;">
-    <a href="/" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #ffffff;">
-      <span style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.05rem; color: #fff; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);">K</span>
-      <span style="font-weight: 800; font-size: 1.2rem; letter-spacing: -0.02em; color: #f8fafc;">KOHEVO <span style="color: #818cf8; font-weight: 400;">STUDIO</span></span>
-    </a>
-    <nav style="display: flex; align-items: center; gap: 28px;">
-      <a href="/portfolio" style="color: #cbd5e1; text-decoration: none; font-size: 0.92rem; font-weight: 600; transition: color 0.2s;" onmouseover="this.style.color=\'#818cf8\'" onmouseout="this.style.color=\'#cbd5e1\'">Portfolio</a>
-      <a href="/services" style="color: #cbd5e1; text-decoration: none; font-size: 0.92rem; font-weight: 600; transition: color 0.2s;" onmouseover="this.style.color=\'#818cf8\'" onmouseout="this.style.color=\'#cbd5e1\'">Services</a>
-      <a href="/case-studies" style="color: #cbd5e1; text-decoration: none; font-size: 0.92rem; font-weight: 600; transition: color 0.2s;" onmouseover="this.style.color=\'#818cf8\'" onmouseout="this.style.color=\'#cbd5e1\'">Case Studies</a>
-      <a href="/pricing" style="color: #cbd5e1; text-decoration: none; font-size: 0.92rem; font-weight: 600; transition: color 0.2s;" onmouseover="this.style.color=\'#818cf8\'" onmouseout="this.style.color=\'#cbd5e1\'">Pricing</a>
-      <a href="/testimonials" style="color: #cbd5e1; text-decoration: none; font-size: 0.92rem; font-weight: 600; transition: color 0.2s;" onmouseover="this.style.color=\'#818cf8\'" onmouseout="this.style.color=\'#cbd5e1\'">Reviews</a>
-    </nav>
-    <div style="display: flex; align-items: center; gap: 14px;">
-      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.76rem; font-weight: 700; color: #34d399;">
-        <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></span> Q4 Available
-      </span>
-      <a href="/contact" style="display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #ffffff; text-decoration: none; font-size: 0.88rem; font-weight: 700; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); transition: transform 0.15s, box-shadow 0.15s;">
-        Book Intro ↗
-      </a>
-    </div>
-  </div>
-</header>',
+                    'content' => '<p><strong>KOHEVO STUDIO</strong></p><p><a href="/portfolio">Portfolio</a> · <a href="/services">Services</a> · <a href="/case-studies">Case Studies</a> · <a href="/pricing">Pricing</a> · <a href="/contact">Book Intro</a></p>',
                 ],
                 'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
                 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
@@ -292,59 +270,7 @@ $docFooterLuxury['sections'] = [
                 'type'       => 'core.rich_text',
                 'version'    => 1,
                 'props'      => [
-                    'content' => '<footer style="background: #0b0f19; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.08); padding: 64px 24px 32px 24px; font-family: Inter, sans-serif;">
-  <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 48px; margin-bottom: 48px;">
-    <div>
-      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
-        <span style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.95rem; color: #fff;">K</span>
-        <span style="font-weight: 800; font-size: 1.15rem; color: #f8fafc; letter-spacing: -0.02em;">KOHEVO STUDIO</span>
-      </div>
-      <p style="font-size: 0.88rem; line-height: 1.6; color: #94a3b8; margin-bottom: 20px;">
-        High-performance visual design system, tokenized components, and dynamic experience engine for premium brands and creative leaders worldwide.
-      </p>
-      <div style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #10b981; font-weight: 600;">
-        <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 10px #10b981;"></span>
-        San Francisco, CA · Remote Worldwide
-      </div>
-    </div>
-    <div>
-      <h4 style="color: #f8fafc; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 20px;">Solutions</h4>
-      <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; font-size: 0.9rem;">
-        <li><a href="/services" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">Product Architecture</a></li>
-        <li><a href="/services" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">Design Systems & Tokens</a></li>
-        <li><a href="/services" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">Full-Stack Development</a></li>
-        <li><a href="/services" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">AI & LLM Workflows</a></li>
-      </ul>
-    </div>
-    <div>
-      <h4 style="color: #f8fafc; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 20px;">Company</h4>
-      <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; font-size: 0.9rem;">
-        <li><a href="/portfolio" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">Selected Work</a></li>
-        <li><a href="/case-studies" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">Technical Teardowns</a></li>
-        <li><a href="/testimonials" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">Client Reviews</a></li>
-        <li><a href="/pricing" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">Investment & Retainers</a></li>
-      </ul>
-    </div>
-    <div>
-      <h4 style="color: #f8fafc; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 20px;">Inquiries & Updates</h4>
-      <p style="font-size: 0.85rem; line-height: 1.5; color: #94a3b8; margin-bottom: 16px;">
-        Subscribe to quarterly product design essays and architectural deep dives.
-      </p>
-      <form action="#" onsubmit="event.preventDefault(); alert(\'Subscribed!\');" style="display: flex; gap: 8px;">
-        <input type="email" placeholder="Your email address" style="background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 10px 14px; font-size: 0.85rem; color: #fff; width: 100%;" required>
-        <button type="submit" style="background: #6366f1; border: none; border-radius: 6px; color: #fff; padding: 0 16px; font-weight: 700; font-size: 0.85rem; cursor: pointer;">Join</button>
-      </form>
-    </div>
-  </div>
-  <div style="max-width: 1200px; margin: 0 auto; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; font-size: 0.8rem;">
-    <div>© ' . date('Y') . ' Kohevo Studio. All rights reserved. Crafted with high-performance elegance.</div>
-    <div style="display: flex; gap: 20px;">
-      <a href="#" style="color: #64748b; text-decoration: none;">Privacy Policy</a>
-      <a href="#" style="color: #64748b; text-decoration: none;">Terms of Service</a>
-      <a href="#" style="color: #64748b; text-decoration: none;">Security Architecture</a>
-    </div>
-  </div>
-</footer>',
+                    'content' => '<p><strong>KOHEVO STUDIO</strong></p><p>High-performance visual design system, tokenized components, and dynamic experience engine for premium brands and creative leaders worldwide.</p><p><strong>Solutions:</strong> <a href="/services">Product Architecture</a> · <a href="/services">Design Systems &amp; Tokens</a> · <a href="/services">Full-Stack Development</a> · <a href="/services">AI &amp; LLM Workflows</a></p><p><strong>Company:</strong> <a href="/portfolio">Selected Work</a> · <a href="/case-studies">Technical Teardowns</a> · <a href="/testimonials">Client Reviews</a> · <a href="/pricing">Investment &amp; Retainers</a></p><p>© ' . date('Y') . ' Kohevo Studio. All rights reserved. <a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Service</a> · <a href="/security">Security Architecture</a></p>',
                 ],
                 'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
                 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
@@ -552,31 +478,7 @@ $doc404['sections'] = [
                 'type'       => 'core.rich_text',
                 'version'    => 1,
                 'props'      => [
-                    'content' => '<div style="text-align: center; padding: 60px 20px; font-family: Inter, sans-serif;">
-  <div style="display: inline-block; padding: 6px 16px; border-radius: 9999px; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.35); font-weight: 800; font-size: 0.85rem; color: #818cf8; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 24px;">
-    System Exception · HTTP 404
-  </div>
-  <h1 style="font-size: clamp(3rem, 8vw, 6rem); font-weight: 900; line-height: 1; margin: 0 0 16px 0; background: linear-gradient(135deg, #ffffff 40%, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-    404
-  </h1>
-  <h2 style="font-size: 1.6rem; font-weight: 700; color: #f8fafc; margin: 0 0 14px 0;">
-    Lost in Digital Coordinates
-  </h2>
-  <p style="font-size: 1rem; color: #94a3b8; max-width: 480px; margin: 0 auto 36px auto; line-height: 1.6;">
-    The page or route you requested has migrated, been renamed, or does not exist in our production routing registry.
-  </p>
-  <div style="display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-bottom: 36px;">
-    <a href="/" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 10px; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; text-decoration: none; font-weight: 700; font-size: 0.95rem; box-shadow: 0 4px 18px rgba(99, 102, 241, 0.4);">
-      Return to Homepage ↗
-    </a>
-    <a href="/portfolio" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 10px; background: #1e293b; border: 1px solid #334155; color: #cbd5e1; text-decoration: none; font-weight: 700; font-size: 0.95rem;">
-      Explore Work
-    </a>
-    <a href="/contact" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 10px; background: #1e293b; border: 1px solid #334155; color: #cbd5e1; text-decoration: none; font-weight: 700; font-size: 0.95rem;">
-      Contact Support
-    </a>
-  </div>
-</div>',
+                    'content' => '<h1>404</h1><h2>Lost in Digital Coordinates</h2><p>The page or route you requested has migrated, been renamed, or does not exist in our production routing registry.</p><p><a href="/">Return to Homepage ↗</a> · <a href="/portfolio">Explore Work</a> · <a href="/contact">Contact Support</a></p>',
                 ],
                 'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
                 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
@@ -628,38 +530,7 @@ $heroBlocks = [
         'type'       => 'core.rich_text',
         'version'    => 1,
         'props'      => [
-            'content' => '<div style="text-align: center; max-width: 900px; margin: 0 auto; font-family: Inter, sans-serif;">
-  <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 9999px; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); font-size: 0.8rem; font-weight: 700; color: #818cf8; margin-bottom: 24px;">
-    <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 10px #10b981;"></span>
-    Available for Select Product Engagements · Q4 2026
-  </div>
-  <h1 style="font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 900; letter-spacing: -0.03em; line-height: 1.08; color: #f8fafc; margin-bottom: 24px;">
-    Designing High-Performance <span style="background: linear-gradient(135deg, #6366f1 30%, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Visual Systems</span> for the Web.
-  </h1>
-  <p style="font-size: 1.15rem; line-height: 1.65; color: #94a3b8; max-width: 680px; margin: 0 auto 36px auto;">
-    Principal Product Architect partnering with forward-thinking founders to build tokenized design systems, interactive React canvases, and scalable SaaS platforms.
-  </p>
-  <div style="display: flex; justify-content: center; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 56px;">
-    <a href="/portfolio" style="padding: 14px 28px; border-radius: 10px; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; font-weight: 700; font-size: 0.95rem; text-decoration: none; box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);">
-      Explore Selected Work ↗
-    </a>
-    <a href="/contact" style="padding: 14px 28px; border-radius: 10px; background: #1e293b; border: 1px solid #334155; color: #cbd5e1; font-weight: 700; font-size: 0.95rem; text-decoration: none;">
-      Schedule 20-Min Intro
-    </a>
-  </div>
-  <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 28px;">
-    <div style="font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin-bottom: 18px;">
-      Trusted By Engineering & Product Leaders At
-    </div>
-    <div style="display: flex; justify-content: center; align-items: center; gap: 40px; flex-wrap: wrap; opacity: 0.7; filter: grayscale(1);">
-      <span style="font-weight: 800; font-size: 1.2rem; color: #cbd5e1; letter-spacing: -0.02em;">STRIPE</span>
-      <span style="font-weight: 800; font-size: 1.2rem; color: #cbd5e1; letter-spacing: -0.02em;">LINEAR</span>
-      <span style="font-weight: 800; font-size: 1.2rem; color: #cbd5e1; letter-spacing: -0.02em;">VERCEL</span>
-      <span style="font-weight: 800; font-size: 1.2rem; color: #cbd5e1; letter-spacing: -0.02em;">RAYCAST</span>
-      <span style="font-weight: 800; font-size: 1.2rem; color: #cbd5e1; letter-spacing: -0.02em;">SUPABASE</span>
-    </div>
-  </div>
-</div>',
+            'content' => '<p><em>Available for Select Product Engagements · Q4 2026</em></p><h1>Designing High-Performance <strong>Visual Systems</strong> for the Web.</h1><p>Principal Product Architect partnering with forward-thinking founders to build tokenized design systems, interactive React canvases, and scalable SaaS platforms.</p><p><a href="/portfolio">Explore Selected Work ↗</a> · <a href="/contact">Schedule 20-Min Intro</a></p><p><strong>Trusted by Product Leaders:</strong> STRIPE · LINEAR · VERCEL · RAYCAST · SUPABASE</p>',
         ],
         'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
@@ -682,30 +553,7 @@ $bentoBlocks = [
         'type'       => 'core.rich_text',
         'version'    => 1,
         'props'      => [
-            'content' => '<div style="font-family: Inter, sans-serif; max-width: 1200px; margin: 0 auto;">
-  <div style="text-align: center; margin-bottom: 48px;">
-    <div style="font-size: 0.8rem; font-weight: 800; color: #6366f1; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">// CORE CAPABILITIES</div>
-    <h2 style="font-size: 2.4rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.02em; margin: 0 0 12px 0;">Architected for Speed & Visual Longevity</h2>
-    <p style="font-size: 1rem; color: #94a3b8; max-width: 580px; margin: 0 auto;">Eliminate technical debt with battle-tested modular design patterns.</p>
-  </div>
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
-    <div style="background: #131c2e; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-      <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; color: #818cf8; font-size: 1.4rem; margin-bottom: 20px;">⚡</div>
-      <h3 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin-bottom: 10px;">Tokenized Design Systems</h3>
-      <p style="font-size: 0.9rem; line-height: 1.6; color: #94a3b8; margin: 0;">Comprehensive typography, radius, color, and shadow token tiers mapped directly to CSS custom properties and Figma variables.</p>
-    </div>
-    <div style="background: #131c2e; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-      <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; color: #34d399; font-size: 1.4rem; margin-bottom: 20px;">💎</div>
-      <h3 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin-bottom: 10px;">Interactive Visual Builder</h3>
-      <p style="font-size: 0.9rem; line-height: 1.6; color: #94a3b8; margin: 0;">In-canvas WYSIWYG editing, real-time responsive breakpoints, and strict schema validation protecting your live site from regressions.</p>
-    </div>
-    <div style="background: #131c2e; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-      <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(236, 72, 153, 0.15); display: flex; align-items: center; justify-content: center; color: #f472b6; font-size: 1.4rem; margin-bottom: 20px;">🚀</div>
-      <h3 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin-bottom: 10px;">Sub-100ms Server Renders</h3>
-      <p style="font-size: 0.9rem; line-height: 1.6; color: #94a3b8; margin: 0;">Pre-compiled HTML AST cache, streaming responsive assets, and zero runtime JavaScript overhead on static document slices.</p>
-    </div>
-  </div>
-</div>',
+            'content' => '<h2>Architected for Speed &amp; Visual Longevity</h2><p>Eliminate technical debt with battle-tested modular design patterns.</p><h3>⚡ Tokenized Design Systems</h3><p>Comprehensive typography, radius, color, and shadow token tiers mapped directly to CSS custom properties.</p><h3>💎 Interactive Visual Builder</h3><p>In-canvas WYSIWYG editing, real-time responsive breakpoints, and strict schema validation protecting your live site.</p><h3>🚀 Zero-Runtime Edge Speed</h3><p>Pure static markup compilation delivering sub-50ms TTFB on modern edge infrastructure.</p>',
         ],
         'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
@@ -871,59 +719,7 @@ $pricingBlocks = [
         'type'       => 'core.rich_text',
         'version'    => 1,
         'props'      => [
-            'content' => '<div style="font-family: Inter, sans-serif; max-width: 1200px; margin: 0 auto;">
-  <div style="text-align: center; margin-bottom: 48px;">
-    <div style="font-size: 0.8rem; font-weight: 800; color: #6366f1; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">// TRANSPARENT INVESTMENT</div>
-    <h2 style="font-size: 2.4rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.02em; margin: 0 0 12px 0;">Predictable Retainers & Sprint Pricing</h2>
-    <p style="font-size: 1rem; color: #94a3b8; max-width: 580px; margin: 0 auto;">Transparent flat rates with zero hidden fees. Pause or cancel with 14 days notice.</p>
-  </div>
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; align-items: stretch;">
-    <div style="background: #131c2e; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 36px 28px; display: flex; flex-direction: column; justify-content: space-between;">
-      <div>
-        <div style="font-weight: 700; font-size: 1.15rem; color: #f8fafc; margin-bottom: 8px;">Starter Sprint</div>
-        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 24px;">Ideal for early-stage startups needing a high-conversion MVP launch.</p>
-        <div style="font-size: 2.5rem; font-weight: 900; color: #fff; margin-bottom: 24px;">$2,500 <span style="font-size: 0.9rem; font-weight: 500; color: #64748b;">/ sprint</span></div>
-        <ul style="list-style: none; padding: 0; margin: 0 0 32px 0; display: flex; flex-direction: column; gap: 12px; font-size: 0.88rem; color: #cbd5e1;">
-          <li>✓ 1 Core Product Page & Design System</li>
-          <li>✓ Tokenized Typography & Colors</li>
-          <li>✓ Full Responsive Mobile Optimization</li>
-          <li>✓ 1 Round of Revisions</li>
-        </ul>
-      </div>
-      <a href="/contact" style="display: block; text-align: center; padding: 12px; border-radius: 8px; background: #1e293b; border: 1px solid #334155; color: #fff; text-decoration: none; font-weight: 700;">Select Starter</a>
-    </div>
-    <div style="background: #182338; border: 2px solid #6366f1; border-radius: 16px; padding: 36px 28px; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: 0 8px 30px rgba(99, 102, 241, 0.25);">
-      <div style="position: absolute; top: -12px; right: 24px; background: #6366f1; color: #fff; padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Most Popular</div>
-      <div>
-        <div style="font-weight: 700; font-size: 1.15rem; color: #f8fafc; margin-bottom: 8px;">Growth Architecture</div>
-        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 24px;">Full-scale visual platform architecture, custom widgets, and CMS engine.</p>
-        <div style="font-size: 2.5rem; font-weight: 900; color: #fff; margin-bottom: 24px;">$6,500 <span style="font-size: 0.9rem; font-weight: 500; color: #64748b;">/ month</span></div>
-        <ul style="list-style: none; padding: 0; margin: 0 0 32px 0; display: flex; flex-direction: column; gap: 12px; font-size: 0.88rem; color: #cbd5e1;">
-          <li>✓ Complete Multi-Page Website & Hub</li>
-          <li>✓ Custom Studio Builder Widgets</li>
-          <li>✓ Dynamic Query Loops & Filtering</li>
-          <li>✓ Priority 24h Slack Channel Access</li>
-          <li>✓ Ongoing Weekly Sprints</li>
-        </ul>
-      </div>
-      <a href="/contact" style="display: block; text-align: center; padding: 12px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; text-decoration: none; font-weight: 700; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);">Book Growth Retainer</a>
-    </div>
-    <div style="background: #131c2e; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 36px 28px; display: flex; flex-direction: column; justify-content: space-between;">
-      <div>
-        <div style="font-weight: 700; font-size: 1.15rem; color: #f8fafc; margin-bottom: 8px;">Enterprise Bespoke</div>
-        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 24px;">Custom platform re-architecture, multi-region clustering, and SLA guarantees.</p>
-        <div style="font-size: 2.5rem; font-weight: 900; color: #fff; margin-bottom: 24px;">Custom</div>
-        <ul style="list-style: none; padding: 0; margin: 0 0 32px 0; display: flex; flex-direction: column; gap: 12px; font-size: 0.88rem; color: #cbd5e1;">
-          <li>✓ Dedicated Principal Architect Lead</li>
-          <li>✓ Custom Enterprise API Gateway</li>
-          <li>✓ Strict 99.99% Uptime & Security SLAs</li>
-          <li>✓ Unlimited Production Sprints</li>
-        </ul>
-      </div>
-      <a href="/contact" style="display: block; text-align: center; padding: 12px; border-radius: 8px; background: #1e293b; border: 1px solid #334155; color: #fff; text-decoration: none; font-weight: 700;">Contact Executive Team</a>
-    </div>
-  </div>
-</div>',
+            'content' => '<h2>Predictable Retainers &amp; Sprint Pricing</h2><p>Transparent flat rates with zero hidden fees. Pause or cancel with 14 days notice.</p><h3>Starter Sprint — $2,500 / sprint</h3><p>Ideal for early-stage startups needing a high-conversion MVP launch.</p><ul><li>1 Core Product Page &amp; Design System</li><li>Tokenized Typography &amp; Colors</li><li>Full Responsive Mobile Optimization</li></ul><p><a href="/contact">Select Starter</a></p><h3>Growth Architecture — $6,500 / month (Most Popular)</h3><p>Full-scale visual platform architecture, custom widgets, and CMS engine.</p><ul><li>Complete Multi-Page Website &amp; Hub</li><li>Custom Studio Builder Widgets</li><li>Dynamic Query Loops &amp; Filtering</li><li>Priority 24h Slack Channel Access</li></ul><p><a href="/contact">Book Growth Retainer</a></p><h3>Enterprise Bespoke — Custom</h3><p>Custom platform re-architecture, multi-region clustering, and SLA guarantees.</p><ul><li>Dedicated Principal Architect Lead</li><li>Custom Enterprise API Gateway</li><li>Strict 99.99% Uptime &amp; Security SLAs</li></ul><p><a href="/contact">Contact Executive Team</a></p>',
         ],
         'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
@@ -946,15 +742,7 @@ $ctaBlocks = [
         'type'       => 'core.rich_text',
         'version'    => 1,
         'props'      => [
-            'content' => '<div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%); border-radius: 24px; padding: 64px 32px; text-align: center; color: #fff; box-shadow: 0 10px 40px rgba(99, 102, 241, 0.35); font-family: Inter, sans-serif;">
-  <span style="display: inline-block; padding: 4px 14px; border-radius: 9999px; background: rgba(255,255,255,0.2); font-size: 0.8rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 20px;">Limited Q4 Availability</span>
-  <h2 style="font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 900; line-height: 1.15; margin: 0 0 16px 0; color: #fff;">Ready to Build Something Extraordinary?</h2>
-  <p style="font-size: 1.1rem; line-height: 1.6; max-width: 620px; margin: 0 auto 36px auto; opacity: 0.92;">Let\'s discuss your technical architecture, design system requirements, and sprint timeline. Direct reply guaranteed within 24 hours.</p>
-  <div style="display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
-    <a href="/contact" style="padding: 14px 32px; border-radius: 10px; background: #ffffff; color: #4338ca; font-weight: 800; font-size: 1rem; text-decoration: none; box-shadow: 0 4px 16px rgba(0,0,0,0.2);">Schedule 20-Min Intro ↗</a>
-    <a href="mailto:hello@kohevo.com" style="padding: 14px 28px; border-radius: 10px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.3); color: #fff; font-weight: 700; font-size: 1rem; text-decoration: none;">Send Direct Email</a>
-  </div>
-</div>',
+            'content' => '<h2>Ready to Build Something Extraordinary?</h2><p>Let\'s discuss your technical architecture, design system requirements, and sprint timeline. Direct reply guaranteed within 24 hours.</p><p><a href="/contact">Schedule 20-Min Intro ↗</a> · <a href="mailto:hello@kohevo.com">Send Direct Email</a></p>',
         ],
         'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
@@ -977,57 +765,7 @@ $contactBlocks = [
         'type'       => 'core.rich_text',
         'version'    => 1,
         'props'      => [
-            'content' => '<div style="font-family: Inter, sans-serif; max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 48px; align-items: start;">
-  <div>
-    <div style="font-size: 0.8rem; font-weight: 800; color: #6366f1; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">// GET IN TOUCH</div>
-    <h2 style="font-size: 2.4rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.02em; margin: 0 0 16px 0;">Let\'s Start a Technical Conversation</h2>
-    <p style="font-size: 1rem; color: #94a3b8; line-height: 1.6; margin-bottom: 32px;">
-      Whether you are exploring a complete design system rebuild or require dedicated technical advisory, we are here to help.
-    </p>
-    <div style="display: flex; flex-direction: column; gap: 20px; font-size: 0.95rem;">
-      <div style="display: flex; align-items: center; gap: 14px;">
-        <span style="width: 40px; height: 40px; border-radius: 10px; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; color: #818cf8;">✉</span>
-        <div><div style="font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Direct Email</div><a href="mailto:hello@kohevo.com" style="color: #f8fafc; font-weight: 600; text-decoration: none;">hello@kohevo.com</a></div>
-      </div>
-      <div style="display: flex; align-items: center; gap: 14px;">
-        <span style="width: 40px; height: 40px; border-radius: 10px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; color: #34d399;">⚡</span>
-        <div><div style="font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Response Time</div><div style="color: #f8fafc; font-weight: 600;">Within 24 business hours</div></div>
-      </div>
-      <div style="display: flex; align-items: center; gap: 14px;">
-        <span style="width: 40px; height: 40px; border-radius: 10px; background: rgba(236, 72, 153, 0.15); display: flex; align-items: center; justify-content: center; color: #f472b6;">📍</span>
-        <div><div style="font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Studio Location</div><div style="color: #f8fafc; font-weight: 600;">San Francisco, CA & Global Remote</div></div>
-      </div>
-    </div>
-  </div>
-  <div style="background: #131c2e; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 36px; box-shadow: 0 6px 24px rgba(0,0,0,0.25);">
-    <h3 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin-bottom: 20px;">Send a Direct Message</h3>
-    <form action="#" onsubmit="event.preventDefault(); alert(\'Thank you! Your message has been received.\');" style="display: flex; flex-direction: column; gap: 16px;">
-      <div>
-        <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Your Name</label>
-        <input type="text" placeholder="Alex Morgan" required style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 0.9rem;">
-      </div>
-      <div>
-        <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Work Email</label>
-        <input type="email" placeholder="alex@company.com" required style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 0.9rem;">
-      </div>
-      <div>
-        <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Project Scope / Budget</label>
-        <select style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 0.9rem;">
-          <option>$2,500 - $5,000 (Starter Sprint)</option>
-          <option>$5,000 - $15,000 (Growth Platform)</option>
-          <option>$15,000+ (Enterprise Architecture)</option>
-        </select>
-      </div>
-      <div>
-        <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Project Overview</label>
-        <textarea rows="3" placeholder="Briefly describe what you are looking to build or optimize..." style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 0.9rem;"></textarea>
-      </div>
-      <button type="submit" style="width: 100%; padding: 12px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; color: #fff; font-weight: 700; font-size: 0.95rem; cursor: pointer; margin-top: 8px; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);">
-        Submit Inquiry ↗
-      </button>
-    </form>
-  </div>
-</div>',
+            'content' => '<h2>Let\'s Start a Technical Conversation</h2><p>Whether you are exploring a complete design system rebuild or require dedicated technical advisory, we are here to help.</p><ul><li><strong>Direct Email:</strong> <a href="mailto:hello@kohevo.com">hello@kohevo.com</a></li><li><strong>Response Time:</strong> Within 24 business hours</li><li><strong>Studio Location:</strong> San Francisco, CA &amp; Global Remote</li></ul><p><a href="mailto:hello@kohevo.com">Submit Project Inquiry ↗</a></p>',
         ],
         'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),

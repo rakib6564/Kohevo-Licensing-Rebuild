@@ -195,11 +195,15 @@ export const CanvasArea = memo(function CanvasArea() {
   return (
     <main className="sbx-canvas" aria-label="Canvas">
       <div className="sbx-canvas__meta">
-        <span>{t('editing_at')} <strong>{t(viewport.key)}</strong> · <code>{viewport.breakpoint}</code> · {viewport.width}px{scale < 1 ? ` · ${Math.round(scale * 100)}%` : ''}</span>
-        // "canvas updates after save" is only still true for edits the patch engine
-        // cannot express (structural changes, provider data). Patchable edits —
-        // text, motion, classes, alignment, visibility — are reflected live.
-        {unsaved && <span className="sbx-muted" aria-hidden="true"> · saving…</span>}
+        <span className="sbx-canvas__meta-pill">
+          {t('editing_at')} <strong>{t(viewport.key)}</strong> · <code>{viewport.breakpoint}</code> · {viewport.width}px{scale < 1 ? ` · ${Math.round(scale * 100)}%` : ''}
+        </span>
+        {unsaved && (
+          <span className="sbx-canvas__save-hint" title="canvas updates after save">
+            <span className="sbx-status__dot" aria-hidden="true" />
+            <span>canvas updates after save</span>
+          </span>
+        )}
       </div>
 
       {path.length > 0 && (
