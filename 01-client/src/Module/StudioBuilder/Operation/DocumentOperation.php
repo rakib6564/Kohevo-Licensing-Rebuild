@@ -99,6 +99,8 @@ final class DocumentOperation
         self::OP_UPDATE_BLOCK_RESPONSIVE   => ['block_id', 'responsive'],
         self::OP_UPDATE_BLOCK_CLASS_NAMES  => ['block_id', 'classNames'],
         self::OP_UPDATE_BLOCK_ATTRIBUTES   => ['block_id', 'attributes'],
+        self::OP_UPDATE_BLOCK_INTERACTIONS => ['block_id', 'interactions'],
+        self::OP_UPDATE_BLOCK_ANIMATION    => ['block_id', 'animation'],
     ];
 
     /**

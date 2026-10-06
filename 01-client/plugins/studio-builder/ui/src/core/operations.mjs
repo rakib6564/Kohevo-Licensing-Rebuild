@@ -35,6 +35,8 @@ export const OPS = Object.freeze({
   UPDATE_BLOCK_RESPONSIVE: 'update_block_responsive',
   UPDATE_BLOCK_CLASS_NAMES: 'update_block_class_names',
   UPDATE_BLOCK_ATTRIBUTES: 'update_block_attributes',
+  UPDATE_BLOCK_ANIMATION: 'update_block_animation',
+  UPDATE_BLOCK_INTERACTIONS: 'update_block_interactions',
 });
 
 /** Operations that change the tree's shape are sent right away, not debounced. */
@@ -52,6 +54,8 @@ const REPLACE_TARGET = {
   [OPS.UPDATE_BLOCK_RESPONSIVE]: 'block_id',
   [OPS.UPDATE_BLOCK_CLASS_NAMES]: 'block_id',
   [OPS.UPDATE_BLOCK_ATTRIBUTES]: 'block_id',
+  [OPS.UPDATE_BLOCK_ANIMATION]: 'block_id',
+  [OPS.UPDATE_BLOCK_INTERACTIONS]: 'block_id',
   [OPS.UPDATE_SECTION_LABEL]: 'section_id',
   [OPS.UPDATE_SECTION_LAYOUT]: 'section_id',
   [OPS.UPDATE_SECTION_VISIBILITY]: 'section_id',
@@ -91,6 +95,17 @@ export const updateBlockBindings = (blockId, bindings) => op(OPS.UPDATE_BLOCK_BI
 export const updateBlockResponsive = (blockId, responsive) => op(OPS.UPDATE_BLOCK_RESPONSIVE, { block_id: blockId, responsive });
 export const updateBlockClassNames = (blockId, classNames) => op(OPS.UPDATE_BLOCK_CLASS_NAMES, { block_id: blockId, classNames, class_names: classNames });
 export const updateBlockAttributes = (blockId, attributes) => op(OPS.UPDATE_BLOCK_ATTRIBUTES, { block_id: blockId, attributes });
+
+/**
+ * Motion: `animation` is the entrance preset (a `DocumentValidator` enum of
+ * fade_in / fade_up / fade_down / scale_up / slide_in / none) plus optional
+ * per-block `duration_ms`, `delay_ms` and `easing`. `interactions` holds the
+ * `trigger` and an optional hover `animation` under the same vocabulary.
+ * Both payloads are whole-value replaces, so the inspector sends the complete
+ * object every time and consecutive edits coalesce in the queue.
+ */
+export const updateBlockAnimation = (blockId, animation) => op(OPS.UPDATE_BLOCK_ANIMATION, { block_id: blockId, animation });
+export const updateBlockInteractions = (blockId, interactions) => op(OPS.UPDATE_BLOCK_INTERACTIONS, { block_id: blockId, interactions });
 export const updateSettings = (settings) => op(OPS.UPDATE_SETTINGS, { settings });
 export const updateSeo = (seo) => op(OPS.UPDATE_SEO, { seo });
 
@@ -276,7 +291,9 @@ export function applyLocal(doc, operation, ctx = {}) {
     case OPS.UPDATE_BLOCK_PROPS:
     case OPS.UPDATE_BLOCK_STYLE:
     case OPS.UPDATE_BLOCK_VISIBILITY:
-    case OPS.UPDATE_BLOCK_BINDINGS: {
+    case OPS.UPDATE_BLOCK_BINDINGS:
+    case OPS.UPDATE_BLOCK_ANIMATION:
+    case OPS.UPDATE_BLOCK_INTERACTIONS: {
       const field = operation.op.replace('update_block_', '');
       let hit = false;
       const next = mapBlocks(doc, (b) => {

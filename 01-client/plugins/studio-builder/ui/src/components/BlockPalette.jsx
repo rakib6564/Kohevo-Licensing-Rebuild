@@ -155,6 +155,26 @@ const BLOCK_META = {
     desc: 'A horizontal rule',
     icon: (s) => <IconDivider size={s} />,
   },
+  'core.tabs': {
+    title: 'Tabs',
+    desc: 'Switch between panels in place',
+    icon: (s) => <IconGridPanes size={s} />,
+  },
+  'core.accordion': {
+    title: 'Accordion',
+    desc: 'Stacked rows that expand, ideal for FAQs',
+    icon: (s) => <IconListCheck size={s} />,
+  },
+  'core.carousel': {
+    title: 'Carousel',
+    desc: 'Image and testimonial slides with dots',
+    icon: (s) => <IconGallery size={s} />,
+  },
+  'core.stats': {
+    title: 'Stats',
+    desc: 'Animated figures that count up',
+    icon: (s) => <IconGridDots size={s} />,
+  },
 };
 
 function renderBlockIcon(type, icon, label) {

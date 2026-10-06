@@ -2,11 +2,23 @@
 /**
  * Kohevo Studio — Code & Tracking Injection.
  *
- * Dedicated admin page for managing head/footer scripts, GA4 / GTM IDs,
- * tracking pixels, and tenant-wide custom CSS stylesheets.
+ * Dedicated admin page for tenant-wide analytics IDs and a custom CSS
+ * stylesheet, both consumed by `StudioCodePolicy` at render time.
+ *
+ * SCOPE — read this before adding a field here. This page can only store
+ * what a renderer will actually emit:
+ *   - GA4 / GTM container IDs   → converted to Google's own fixed snippets
+ *   - custom CSS                → sanitized, emitted in <head>
+ * The raw head/footer `<script>` boxes that used to live here were REMOVED.
+ * They were written to settings that no renderer ever read, so tenants were
+ * saving code that silently did nothing. `StudioCodePolicy::DEFERRED_SETTINGS`
+ * names them; tenant-authored JavaScript needs its own permission and audit
+ * story before it can ship, and until then it is absent by construction.
  */
 
 declare(strict_types=1);
+
+use Slate\Module\StudioBuilder\Http\StudioCodePolicy;
 
 require __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/_nav.php';
@@ -23,11 +35,9 @@ $currentNav = 'studio-code-tracking';
 $flash = null;
 
 // Read existing settings
-$headScripts = (string) (Database::setting('studio_code_head', $tenantId) ?: '');
-$footerScripts = (string) (Database::setting('studio_code_footer', $tenantId) ?: '');
-$customCss = (string) (Database::setting('studio_code_custom_css', $tenantId) ?: '');
-$ga4Id = (string) (Database::setting('studio_code_ga4_id', $tenantId) ?: '');
-$gtmId = (string) (Database::setting('studio_code_gtm_id', $tenantId) ?: '');
+$customCss = (string) (Database::setting(StudioCodePolicy::SETTING_CUSTOM_CSS, $tenantId) ?: '');
+$ga4Id = (string) (Database::setting(StudioCodePolicy::SETTING_GA4, $tenantId) ?: '');
+$gtmId = (string) (Database::setting(StudioCodePolicy::SETTING_GTM, $tenantId) ?: '');
 
 // POST handler
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -36,19 +46,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!$canEdit) {
         $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to manage scripts and CSS.')];
     } else {
-        $headScripts = (string) ($_POST['head_scripts'] ?? '');
-        $footerScripts = (string) ($_POST['footer_scripts'] ?? '');
         $customCss = (string) ($_POST['custom_css'] ?? '');
         $ga4Id = trim((string) ($_POST['ga4_id'] ?? ''));
         $gtmId = trim((string) ($_POST['gtm_id'] ?? ''));
 
-        Database::setSetting('studio_code_head', $headScripts, $tenantId);
-        Database::setSetting('studio_code_footer', $footerScripts, $tenantId);
-        Database::setSetting('studio_code_custom_css', $customCss, $tenantId);
-        Database::setSetting('studio_code_ga4_id', $ga4Id, $tenantId);
-        Database::setSetting('studio_code_gtm_id', $gtmId, $tenantId);
+        // Validation mirrors StudioCodePolicy exactly, so a malformed ID is
+        // rejected here with a message instead of being stored and silently
+        // dropped at render time. Never normalized into the snippet.
+        $ga4Err = StudioCodePolicy::ga4Id($ga4Id) === null && $ga4Id !== '';
+        $gtmErr = StudioCodePolicy::gtmId($gtmId) === null && $gtmId !== '';
 
-        $flash = ['type' => 'success', 'msg' => 'Custom code, analytics IDs, and CSS stylesheet saved successfully!'];
+        if ($ga4Err || $gtmErr) {
+            $flash = ['type' => 'error', 'msg' => 'Analytics ID not saved — GA4 must look like G-XXXXXXXXXX and GTM like GTM-XXXXXXX.'];
+        } else {
+            Database::setSetting(StudioCodePolicy::SETTING_CUSTOM_CSS, StudioCodePolicy::sanitizeCustomCss($customCss), $tenantId);
+            Database::setSetting(StudioCodePolicy::SETTING_GA4, $ga4Id, $tenantId);
+            Database::setSetting(StudioCodePolicy::SETTING_GTM, $gtmId, $tenantId);
+
+            AuditLog::record('studio.code_tracking_updated', (string) $tenantId, [
+                'ga4'   => $ga4Id !== '',
+                'gtm'   => $gtmId !== '',
+                'css_bytes' => strlen(StudioCodePolicy::sanitizeCustomCss($customCss)),
+            ]);
+
+            $flash = ['type' => 'success', 'msg' => 'Analytics IDs and custom CSS saved.'];
+        }
     }
 }
 
@@ -98,29 +120,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             </div>
         </div>
 
-        <!-- Section 2: Header & Footer Script Injections -->
-        <div class="card" style="border-radius: 16px; border: 1px solid var(--sb-border); padding: 24px; margin-bottom: 24px;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
-                <?= sb_svg('code-tracking', 20, 'text-accent') ?>
-                <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--sb-text); margin: 0;">Raw Script Injection</h3>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 20px;">
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Header Scripts (Appended inside <code>&lt;head&gt;</code>)</label>
-                    <textarea name="head_scripts" rows="4" class="form-control" style="font-family: ui-monospace, monospace; font-size: 0.85rem;" placeholder="<script>/* custom head scripts */</script>"><?= e($headScripts) ?></textarea>
-                    <span style="font-size: 0.75rem; color: var(--sb-muted);">Useful for Meta Pixel, Hotjar, custom typography link tags, or verification snippets.</span>
-                </div>
-
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Footer Scripts (Appended before closing <code>&lt;/body&gt;</code>)</label>
-                    <textarea name="footer_scripts" rows="4" class="form-control" style="font-family: ui-monospace, monospace; font-size: 0.85rem;" placeholder="<script>/* custom footer scripts */</script>"><?= e($footerScripts) ?></textarea>
-                    <span style="font-size: 0.75rem; color: var(--sb-muted);">Recommended for interactive chat widgets, CRM tracking, or deferred scripts.</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Section 3: Global Custom CSS -->
+        <!-- Section 2: Global Custom CSS -->
         <div class="card" style="border-radius: 16px; border: 1px solid var(--sb-border); padding: 24px; margin-bottom: 28px;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
                 <?= sb_svg('edit', 20, 'text-accent') ?>
@@ -128,7 +128,10 @@ require SLATE_ROOT . '/admin/partials/header.php';
             </div>
 
             <p style="font-size: 0.85rem; color: var(--sb-muted); margin-bottom: 12px;">
-                Cascading style rules defined here are compiled and loaded with highest specificity across all Studio Builder pages.
+                Style rules defined here are loaded after Studio's own stylesheet on every
+                public and preview page, so they override block styling. They are not applied
+                inside the builder canvas, so the canvas always shows the published design.
+                <code>@import</code> and script-bearing URLs are stripped on save.
             </p>
 
             <textarea name="custom_css" rows="6" class="form-control" style="font-family: ui-monospace, monospace; font-size: 0.85rem; background: #0f172a; color: #cbd5e1;" placeholder="/* Custom CSS overrides */
@@ -139,7 +142,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
         <div style="display: flex; justify-content: flex-end;">
             <button type="submit" class="btn btn-primary">
-                <?= sb_svg('save', 14) ?> Save Scripts & CSS
+                <?= sb_svg('save', 14) ?> Save Analytics &amp; CSS
             </button>
         </div>
     </form>

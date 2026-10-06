@@ -77,6 +77,14 @@ final class StudioStylesheet
             . '.sb-feature-list__items,.sb-catalog__list{list-style:none;margin:0;padding:0;display:grid;gap:1rem}'
             . '.sb-feature,.sb-catalog__item,.sb-form-card{padding:1.25rem;border-radius:var(--sb-radius-md)}'
             . '.sb-feature--bordered,.sb-catalog__item,.sb-form-card{border:1px solid var(--sb-border-default)}'
+            // Stats — `.sb-stats` must be the grid itself, because the responsive
+            // `.sb-cols-N` utilities only set `grid-template-columns`. The value
+            // uses tabular figures so the count-up cannot change the cell width
+            // as digits change.
+            . '.sb-stats{display:grid;gap:1.5rem 1rem;margin:0}'
+            . '.sb-stat{display:flex;flex-direction:column;gap:.35rem;min-width:0}'
+            . '.sb-stat__value{font-size:clamp(2rem,4vw,2.75rem);line-height:1.05;font-weight:700;letter-spacing:-.02em;color:var(--sb-text-primary);font-variant-numeric:tabular-nums}'
+            . '.sb-stat__label{font-size:.875rem;line-height:1.4;color:var(--sb-text-muted)}'
             . '.sb-catalog__meta{color:var(--sb-text-muted);display:flex;gap:1rem;margin:.25rem 0 0}'
             . '.sb-catalog__price{font-weight:600;color:var(--sb-text-primary)}'
             . '.sb-stack{display:flex}.sb-stack--vertical{flex-direction:column}.sb-stack--horizontal{flex-direction:row;flex-wrap:wrap}'
@@ -187,11 +195,11 @@ final class StudioStylesheet
             . '.sb-search-input-wrap{display:flex;align-items:center;border:1px solid var(--sb-border-default,#cbd5e1);border-radius:var(--sb-radius-md,.5rem);overflow:hidden;background:#fff}'
             . '.sb-search-input{flex:1;border:none;padding:.75rem 1rem;font-size:1rem;outline:none}'
             . '.sb-search-button{background:var(--sb-surface-accent,#6366f1);color:#fff;border:none;padding:.75rem 1.5rem;font-weight:600;cursor:pointer}'
-            . '.sb-animate-fade-in{animation:sb-fade-in var(--sb-anim-duration,.4s) ease both}'
-            . '.sb-animate-fade-up{animation:sb-fade-up var(--sb-anim-duration,.5s) ease both}'
-            . '.sb-animate-fade-down{animation:sb-fade-down var(--sb-anim-duration,.5s) ease both}'
-            . '.sb-animate-scale-up{animation:sb-scale-up var(--sb-anim-duration,.4s) ease both}'
-            . '.sb-animate-slide-in{animation:sb-slide-in var(--sb-anim-duration,.5s) ease both}'
+            . '.sb-animate-fade-in{animation:sb-fade-in var(--sb-anim-duration,.4s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-fade-up{animation:sb-fade-up var(--sb-anim-duration,.5s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-fade-down{animation:sb-fade-down var(--sb-anim-duration,.5s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-scale-up{animation:sb-scale-up var(--sb-anim-duration,.4s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-slide-in{animation:sb-slide-in var(--sb-anim-duration,.5s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
             . '@keyframes sb-fade-in{from{opacity:0}to{opacity:1}}'
             . '@keyframes sb-fade-up{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}'
             . '@keyframes sb-fade-down{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:translateY(0)}}'
@@ -199,9 +207,92 @@ final class StudioStylesheet
             . '@keyframes sb-slide-in{from{transform:translateX(-100%)}to{transform:translateX(0)}}'
             . '.sb-interaction-hover{transition:transform .25s ease,box-shadow .25s ease}'
             . '.sb-interaction-hover:hover{transform:translateY(-3px) scale(1.02)}'
+            // Keyboard parity: a hover-only lift leaves the block unreachable
+            // for keyboard users, so :focus-visible gets the same affordance.
+            . '.sb-interaction-focus{transition:transform .25s ease,box-shadow .25s ease,outline-color .25s ease}'
+            . '.sb-interaction-focus:focus-visible{transform:translateY(-3px) scale(1.02);outline:2px solid currentColor;outline-offset:3px}'
+            // Click/load are CSS-only affordances; the behavioural part of a
+            // click trigger needs the Phase 2 runtime, so nothing here claims
+            // to deliver it.
+            . '.sb-interaction-click,.sb-interaction-load{transition:transform .25s ease,box-shadow .25s ease}'
+            // Scroll-driven reveal. Guarded by @supports so browsers without
+            // scroll-driven animations show the block NORMALLY rather than
+            // leaving it stuck at opacity:0 — a content-invisible fallback is
+            // worse than no animation at all.
+            . '@supports (animation-timeline:view()){'
+            . '.sb-interaction-viewport-enter{animation-timeline:view();animation-range:entry 5% cover 26%;animation-fill-mode:both;}'
+            . '.sb-interaction-viewport-enter.sb-animate-fade-up{animation-name:sb-fade-up}'
+            . '.sb-interaction-viewport-enter.sb-animate-fade-in{animation-name:sb-fade-in}'
+            . '.sb-interaction-viewport-enter.sb-animate-fade-down{animation-name:sb-fade-down}'
+            . '.sb-interaction-viewport-enter.sb-animate-scale-up{animation-name:sb-scale-up}'
+            . '.sb-interaction-viewport-enter.sb-animate-slide-in{animation-name:sb-slide-in}'
+            . '}'
+            // `scroll` is a continuous/parallax trigger; it is exposed in the
+            // inspector but intentionally renders no CSS until the runtime
+            // ships, so nothing here can imply behaviour that does not exist.
             . '@media (prefers-reduced-motion:reduce){[class*="sb-animate-"],[class*="sb-interaction-"]{animation:none!important;transition:none!important;transform:none!important}}'
+            // ── Interaction runtime (Phase 2) ────────────────────────────────────
+            // Styles for the behaviours `studio-runtime.js` adds on top of the
+            // server-rendered markup. Everything here is progressive: with the
+            // runtime absent the page still reads correctly through the base
+            // rules above, which is why nothing here is load-bearing.
+            //
+            // Tabs / accordion ── ARIA `hidden` does the work; these rules only
+            // give the visible chrome a consistent look.
+            . '.sb-tabs{display:flex;gap:.25rem;border-bottom:1px solid var(--sb-border-default,#e2e8f0);margin-bottom:1.25rem;flex-wrap:wrap}'
+            . '.sb-tabs__tab{background:none;border:0;border-bottom:2px solid transparent;padding:.6rem .95rem;font:inherit;color:inherit;cursor:pointer;opacity:.65;transition:opacity .15s ease,border-color .15s ease}'
+            . '.sb-tabs__tab[aria-selected="true"]{opacity:1;border-bottom-color:currentColor}'
+            . '.sb-tabs__tab:focus-visible{outline:2px solid currentColor;outline-offset:-2px;border-radius:2px}'
+            . '.sb-accordion{border:1px solid var(--sb-border-default,#e2e8f0);border-radius:.5rem;overflow:hidden}'
+            . '.sb-accordion__item+.sb-accordion__item{border-top:1px solid var(--sb-border-default,#e2e8f0)}'
+            . '.sb-accordion__button{width:100%;display:flex;justify-content:space-between;align-items:center;gap:1rem;background:none;border:0;padding:1rem 1.25rem;font:inherit;color:inherit;text-align:left;cursor:pointer}'
+            . '.sb-accordion__button:focus-visible{outline:2px solid currentColor;outline-offset:-2px}'
+            . '.sb-accordion__icon{flex:none;transition:transform .2s ease}'
+            . '.sb-accordion__button[aria-expanded="true"] .sb-accordion__icon{transform:rotate(180deg)}'
+            . '.sb-accordion__panel{padding:0 1.25rem 1.25rem;overflow:hidden}'
+            // Without script, `[hidden]` keeps the browser's default `display:none`
+            // — the closed rows really are gone for everyone, including screen
+            // readers. Once the runtime boots it swaps in a height-0 state so it can
+            // animate the open/close; it is safe to un-hide the box at that point
+            // because the runtime also sets `aria-hidden="true"` on closed panels.
+            . 'html[data-sb-ready] .sb-accordion__panel{transition:height .26s ease}'
+            . 'html[data-sb-ready] .sb-accordion__panel[hidden]{display:block;height:0;padding-top:0;padding-bottom:0}'
+            // Carousel ── the track is translated by the runtime; this only sizes
+            // it. `scrollbar-width:none` keeps a stray scrollbar out of the UI.
+            . '.sb-carousel{position:relative;overflow:hidden}'
+            . '.sb-carousel__track{display:flex;gap:1rem;transition:transform .45s cubic-bezier(.22,1,.36,1);will-change:transform;scrollbar-width:none}'
+            . '.sb-carousel__track::-webkit-scrollbar{display:none}'
+            . '.sb-carousel__slide{flex:0 0 100%;min-width:0}'
+            . '.sb-carousel__nav{display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:1rem}'
+            . '.sb-carousel__btn{width:2.25rem;height:2.25rem;border-radius:50%;border:1px solid var(--sb-border-default,#e2e8f0);background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:inherit}'
+            . '.sb-carousel__btn:disabled{opacity:.35;cursor:default}'
+            . '.sb-carousel__btn:focus-visible{outline:2px solid currentColor;outline-offset:2px}'
+            . '.sb-carousel__dot{width:.55rem;height:.55rem;padding:0;border:0;border-radius:50%;background:currentColor;opacity:.3;cursor:pointer}'
+            // Two active-state spellings must both light up: the server marks the
+            // first dot with `aria-current` so a no-JS page is truthful, while the
+            // runtime rebuilds the dots and switches to `aria-selected` + `.is-active`.
+            . '.sb-carousel__dot[aria-current="true"],.sb-carousel__dot[aria-selected="true"],.sb-carousel__dot.is-active{opacity:1}'
+            // Lightbox ── hidden until the runtime opens it.
+            . '.sb-lightbox{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.9)}'
+            // The runtime marks an open overlay with `[data-sb-open]`, NOT a class.
+            // `:target` still serves the no-JS case, so both selectors stay.
+            . '.sb-lightbox:target,.sb-lightbox[data-sb-open]{display:flex}'
+            . '.sb-lightbox__figure{margin:0;max-width:92vw;max-height:88vh;display:flex;flex-direction:column;gap:.75rem}'
+            . '.sb-lightbox__image{max-width:92vw;max-height:80vh;object-fit:contain}'
+            . '.sb-lightbox__caption{color:#fff;text-align:center;font-size:.9rem}'
+            . '.sb-lightbox__close,.sb-lightbox__nav{position:absolute;background:rgba(255,255,255,.1);border:0;color:#fff;cursor:pointer;width:2.75rem;height:2.75rem;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:1.25rem}'
+            . '.sb-lightbox__close{top:1rem;right:1rem}'
+            . '.sb-lightbox__nav--prev{left:1rem}.sb-lightbox__nav--next{right:1rem}'
+            . '.sb-lightbox__close:focus-visible,.sb-lightbox__nav:focus-visible{outline:2px solid #fff;outline-offset:2px}'
+            // Scroll lock while an overlay owns the screen. `overflow:hidden` on
+            // <html> only — locking <body> as well causes a jump on iOS.
+            . 'html.sb-scroll-lock{overflow:hidden}'
+            // `scroll-margin-top` so a sticky header never covers the heading an
+            // in-page anchor scrolled to.
+            . '[id]{scroll-margin-top:5rem}'
+            . '@media (prefers-reduced-motion:reduce){.sb-carousel__track{transition:none!important}.sb-accordion__icon{transition:none!important}}'
             . '.sb-modal{display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center}'
-            . '.sb-modal:target,.sb-modal.is-open{display:flex}'
+            . '.sb-modal:target,.sb-modal[data-sb-open]{display:flex}'
             . '.sb-modal__backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px)}'
             . '.sb-modal__dialog{position:relative;background:#fff;border-radius:.5rem;max-width:36rem;width:90%;z-index:10000;box-shadow:0 20px 25px -5px rgba(0,0,0,.1);overflow:hidden}'
             . '.sb-modal--sm .sb-modal__dialog{max-width:24rem}.sb-modal--lg .sb-modal__dialog{max-width:48rem}.sb-modal--full .sb-modal__dialog{max-width:95vw;height:90vh}'
@@ -209,7 +300,7 @@ final class StudioStylesheet
             . '.sb-modal__close{background:none;border:none;font-size:1.5rem;text-decoration:none;cursor:pointer;line-height:1;color:#6b7280}'
             . '.sb-modal__body{padding:1.25rem}'
             . '.sb-offcanvas{display:none;position:fixed;inset:0;z-index:9999}'
-            . '.sb-offcanvas:target,.sb-offcanvas.is-open{display:block}'
+            . '.sb-offcanvas:target,.sb-offcanvas[data-sb-open]{display:block}'
             . '.sb-offcanvas__backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5)}'
             . '.sb-offcanvas__panel{position:fixed;top:0;bottom:0;width:22rem;max-width:85vw;background:#fff;z-index:10000;display:flex;flex-direction:column;box-shadow:-4px 0 16px rgba(0,0,0,.15);transition:transform .3s ease}'
             . '.sb-offcanvas--right .sb-offcanvas__panel{right:0}'

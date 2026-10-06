@@ -153,10 +153,17 @@ final class DocumentRenderer
         }
 
         $animationClasses = [];
+        $motionVars = '';
         if (isset($block['animation']) && is_array($block['animation'])) {
-            $animType = (string) ($block['animation']['type'] ?? '');
+            $anim = $block['animation'];
+            $animType = (string) ($anim['type'] ?? '');
             if ($animType !== '' && $animType !== 'none') {
                 $animationClasses[] = 'sb-animate-' . str_replace('_', '-', $animType);
+                // Per-block timing must reach the stylesheet, or the inspector's
+                // duration / delay / easing controls would store values that
+                // never render — the exact "saved but did nothing" bug this
+                // phase exists to close.
+                $motionVars .= $this->motionVariables($anim);
             }
         }
 
@@ -173,8 +180,12 @@ final class DocumentRenderer
                 $animType = (string) ($anim['type'] ?? '');
                 if ($animType !== '' && $animType !== 'none') {
                     $animationClasses[] = 'sb-animate-' . str_replace('_', '-', $animType);
+                    $motionVars .= $this->motionVariables($anim);
                 }
             }
+        }
+        if ($motionVars !== '') {
+            $motionVars .= ';';
         }
 
         $classes = array_merge(
@@ -196,8 +207,11 @@ final class DocumentRenderer
             }
         }
 
+        // One `style` attribute only: the motion variables ride along with the
+        // block's own inline styles rather than opening a second one.
         $inlineStyles = $this->buildInlineStyles(is_array($block['style'] ?? null) ? $block['style'] : []);
-        $styleAttr = $inlineStyles !== '' ? ' style="' . Html::e($inlineStyles) . '"' : '';
+        $combined     = trim($inlineStyles . $motionVars);
+        $styleAttr    = $combined !== '' ? ' style="' . Html::e($combined) . '"' : '';
 
         $metadata = empty($block[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($block['id'] ?? ''), $type) : '';
         return '<div' . Html::classAttr($classes) . $metadata . $attrs . $styleAttr . '>' . $inner . '</div>';
@@ -386,6 +400,47 @@ final class DocumentRenderer
      *
      * @param array<string, mixed> $style
      */
+    /**
+     * Per-block motion timing, emitted as CSS custom properties so
+     * `StudioStylesheet`'s `.sb-animate-*` rules can read them:
+     *
+     *   --sb-anim-duration / --sb-anim-delay / --sb-anim-easing
+     *
+     * Values are validated here rather than trusted, because they land inside a
+     * custom property that the stylesheet feeds straight into `animation:`:
+     *   - timings are integers, clamped to the same 0–4000ms the inspector uses
+     *   - easing is a fixed allowlist; an arbitrary string is DROPPED, not
+     *     escaped, so there is no path from a document to a CSS value the
+     *     server did not itself define
+     * A document that somehow contains junk motion config simply renders with
+     * the stylesheet defaults rather than being rejected.
+     *
+     * @param array<string, mixed> $anim
+     */
+    private function motionVariables(array $anim): string
+    {
+        static $easings = [
+            'ease' => true, 'ease-in' => true, 'ease-out' => true, 'linear' => true,
+            'ease-in-out' => true, 'cubic-bezier(.22,1,.36,1)' => true,
+        ];
+
+        $rules = [];
+
+        foreach (['duration_ms', 'delay_ms'] as $key) {
+            if (!isset($anim[$key]) || !is_numeric($anim[$key])) {
+                continue;
+            }
+            $ms = max(0, min(4000, (int) round((float) $anim[$key])));
+            $rules[] = '--sb-anim-' . ($key === 'duration_ms' ? 'duration' : 'delay') . ':' . $ms . 'ms';
+        }
+
+        if (isset($anim['easing']) && is_string($anim['easing']) && isset($easings[$anim['easing']])) {
+            $rules[] = '--sb-anim-easing:' . $anim['easing'];
+        }
+
+        return $rules === [] ? '' : implode(';', $rules) . ';';
+    }
+
     private function buildInlineStyles(array $style): string
     {
         $rules = [];

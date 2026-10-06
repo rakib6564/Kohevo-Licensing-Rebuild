@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en" data-sb-theme="obsidian" data-sb-runtime="on">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atelier Nine — Contemporary Dance Studio</title>
+<meta name="description" content="Phase 2/3/4/5 interactivity prototype for Kohevo Studio. Dance studio demo.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="studio-tokens.css">
+
+<!-- Inline, first thing in the document head and BEFORE the stylesheet: tells the
+     CSS whether scripting is available, so reveal-on-scroll never hides content
+     on a page where JS cannot run. The watchdog also unhides everything if
+     studio-runtime.js itself fails to load (bad cache, blocked asset). -->
+<script>
+(function (d) {
+  var h = d.documentElement;
+  h.setAttribute('data-sb-js', 'on');
+  setTimeout(function () {
+    if (!d.defaultView || !d.defaultView.StudioRuntime) h.setAttribute('data-sb-fallback', 'on');
+  }, 2000);
+}(document));
+</script>
+</head>
+<body class="sb-body" id="top">
+
+<!-- A/B banner: only visible when the runtime is switched off -->
+<div class="sb-runtime-off-note" role="status">
+  RUNTIME OFF — this is exactly what a Kohevo Studio page renders today: static HTML, no interaction
+</div>
+
+<a class="sb-skip" href="#main">Skip to content</a>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     Inline SVG artwork. Self-contained on purpose: the prototype must render
+     identically offline. In production these are media_ref / core.image blocks
+     served from the tenant media library.
+     ══════════════════════════════════════════════════════════════════════ -->
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  <defs>
+    <linearGradient id="artA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e8734a"/><stop offset="100%" stop-color="#8a3d24"/>
+    </linearGradient>
+    <linearGradient id="artB" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7c8cff"/><stop offset="100%" stop-color="#2f3a7a"/>
+    </linearGradient>
+    <linearGradient id="artC" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f5b942"/><stop offset="100%" stop-color="#b8542f"/>
+    </linearGradient>
+    <linearGradient id="artD" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#2b3358"/><stop offset="100%" stop-color="#0b0c0f"/>
+    </linearGradient>
+    <linearGradient id="ribbon1" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#e8734a" stop-opacity="0.15"/>
+      <stop offset="55%" stop-color="#f0916a" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#f5b942" stop-opacity="0.25"/>
+    </linearGradient>
+    <linearGradient id="ribbon2" x1="1" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#7c8cff" stop-opacity="0.12"/>
+      <stop offset="50%" stop-color="#8f9bff" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#e8734a" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     HEADER (chrome) — data-sb-sticky is a Phase 2 feature
+     ══════════════════════════════════════════════════════════════════════ -->
+<header class="sb-site-header" data-sb-sticky data-sb-node="sec_header" data-sb-type="layout.section">
+  <a class="sb-site-brand" href="#top">
+    <span class="sb-site-brand__mark" aria-hidden="true">A9</span>
+    Atelier Nine
+  </a>
+
+  <nav class="sb-nav" aria-label="Primary">
+    <a href="#services">Classes</a>
+    <a href="#teachers">Teachers</a>
+    <a href="#schedule">Schedule</a>
+    <a href="#membership">Membership</a>
+    <a href="#faq">FAQ</a>
+  </nav>
+
+  <a class="sb-button sb-button--primary sb-button--sm" href="#enrol" data-sb-modal-open="enrol-modal">Book a trial</a>
+
+  <!-- Section 10 (mobile): offcanvas drawer -->
+  <button class="sb-button sb-button--outline sb-button--sm" type="button"
+          data-sb-offcanvas-open="mobile-nav"
+          aria-label="Open menu">
+    Menu
+  </button>
+</header>
+
+<div class="sb-offcanvas sb-offcanvas--right" id="mobile-nav" data-sb-offcanvas aria-labelledby="mobile-nav-title">
+  <a class="sb-offcanvas__backdrop" href="#" data-sb-close aria-label="Close menu"></a>
+  <aside class="sb-offcanvas__panel" role="document">
+    <header class="sb-offcanvas__header">
+      <h3 id="mobile-nav-title">Menu</h3>
+      <a class="sb-modal__close" href="#" data-sb-close aria-label="Close menu">&times;</a>
+    </header>
+    <div class="sb-offcanvas__body">
+      <a href="#services">Classes</a>
+      <a href="#teachers">Teachers</a>
+      <a href="#schedule">Schedule</a>
+      <a href="#membership">Membership</a>
+      <a href="#faq">FAQ</a>
+      <a href="#enrol">Book a trial</a>
+    </div>
+  </aside>
+</div>
+
+<main id="main">
+<!-- ════════════════════════════════════════════════════════════════════
+       SECTION 1 — HERO
+       Proves: Phase 4 staggered entrance + Phase 2 parallax.
+       data-sb-stagger children get their index from the demo script via
+       --i; in production Phase 4 writes that from the inspector.
+       ════════════════════════════════════════════════════════════════════ -->
+  <section class="sb-hero" data-sb-node="sec_hero" data-sb-type="core.hero">
+    <div class="sb-hero__bg" aria-hidden="true" data-sb-parallax="0.12"></div>
+    <div class="sb-hero__grain" aria-hidden="true"></div>
+
+    <div class="sb-section__inner sb-w-wide">
+      <div class="sb-hero__inner">
+        <div class="sb-stagger" data-sb-stagger>
+          <p class="sb-eyebrow" style="--i:0">Contemporary · Improvisation · Conditioning</p>
+          <h1 class="sb-hero__heading" style="--i:1">
+            Move with <em>intention</em>, not instruction.
+          </h1>
+          <p class="sb-lede" style="--i:2">
+            Atelier Nine is a twelve-studio contemporary dance house in Rotterdam.
+            Small classes, working artists as teachers, and a syllabus that gets
+            rebuilt every season.
+          </p>
+          <div class="sb-hero__actions" style="--i:3">
+            <a class="sb-button sb-button--primary" href="#schedule">See this week's classes</a>
+            <a class="sb-button sb-button--outline" href="#membership">Compare membership</a>
+          </div>
+        </div>
+
+        <div data-sb-reveal="scale" data-sb-reveal-delay="0.25">
+          <div class="sb-hero__media">
+            <svg viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice"
+                 role="img" aria-label="Abstract composition of intersecting movement ribbons">
+              <rect width="400" height="500" fill="url(#artD)"/>
+
+              <!-- Long sweeping ribbons: the sense of a body travelling -->
+              <path d="M-30 400C70 300 90 120 210 60c70-35 130-20 180 20"
+                    fill="none" stroke="url(#ribbon1)" stroke-width="54"
+                    stroke-linecap="round" opacity="0.9"/>
+              <path d="M-20 300c90 40 150 150 250 165 60 9 110-10 160-60"
+                    fill="none" stroke="url(#ribbon2)" stroke-width="30"
+                    stroke-linecap="round" opacity="0.75"/>
+              <path d="M120 500c20-70 70-110 150-130"
+                    fill="none" stroke="#f5b942" stroke-width="3"
+                    stroke-linecap="round" opacity="0.35"/>
+
+              <!-- The figure: a head and a single tapered gesture -->
+              <circle cx="228" cy="128" r="17" fill="#f5f3f0" opacity="0.95"/>
+              <path d="M222 150c-14 26-16 56-8 84 6 22 4 44-8 66-10 18-24 34-40 48"
+                    fill="none" stroke="#f5f3f0" stroke-width="9"
+                    stroke-linecap="round" opacity="0.9"/>
+              <path d="M220 176c16 10 34 14 52 12"
+                    fill="none" stroke="#f5f3f0" stroke-width="7"
+                    stroke-linecap="round" opacity="0.75"/>
+
+              <!-- Motion marks -->
+              <g opacity="0.3" stroke="#e8734a" stroke-width="2" stroke-linecap="round">
+                <path d="M300 250h44"/><path d="M312 272h36"/><path d="M296 294h40"/>
+              </g>
+            </svg>
+            <div class="sb-hero__badge">
+              <span class="sb-stat__value" style="font-size:1.6rem"
+                    data-sb-counter data-sb-to="12" data-sb-duration="1200">12</span>
+              <span class="sb-muted" style="font-size:0.8rem">studios<br>across the city</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Marquee: Phase 2 (runtime clones the track; CSS does the loop) -->
+  <div class="sb-marquee" data-sb-marquee data-sb-marquee-speed="46"
+       data-sb-node="sec_marquee" data-sb-type="core.rich_text" aria-hidden="true">
+    <div class="sb-marquee__track" data-sb-marquee-track>
+      <span class="sb-marquee__item">Contemporary</span>
+      <span class="sb-marquee__item">Release</span>
+      <span class="sb-marquee__item">Improvisation</span>
+      <span class="sb-marquee__item">Contact work</span>
+      <span class="sb-marquee__item">Urban</span>
+      <span class="sb-marquee__item">Conditioning</span>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       SECTION 2 — STATS (animated counters)
+       Proves: Phase 2 counter — counts up on scroll into view.
+       ════════════════════════════════════════════════════════════════════ -->
+  <section class="sb-section sb-section--tight" id="stats"
+           data-sb-node="sec_stats" data-sb-type="layout.section">
+    <div class="sb-section__inner sb-w-wide sb-grid sb-cols-4">
+      <div class="sb-stat" data-sb-reveal>
+        <span class="sb-stat__value" data-sb-counter data-sb-to="1840">1,840</span>
+        <span class="sb-stat__label">Students taught</span>
+      </div>
+      <div class="sb-stat" data-sb-reveal data-sb-reveal-delay="0.1">
+        <span class="sb-stat__value" data-sb-counter data-sb-to="96" data-sb-suffix="%">96%</span>
+        <span class="sb-stat__label">Continue past year one</span>
+      </div>
+      <div class="sb-stat" data-sb-reveal data-sb-reveal-delay="0.2">
+        <span class="sb-stat__value" data-sb-counter data-sb-to="11" data-sb-prefix="+">+11</span>
+        <span class="sb-stat__label">Working artists on staff</span>
+      </div>
+      <div class="sb-stat" data-sb-reveal data-sb-reveal-delay="0.3">
+        <span class="sb-stat__value" data-sb-counter data-sb-to="7">7</span>
+        <span class="sb-stat__label">Days a week, year round</span>
+      </div>
+    </div>
+  </section>
+<!-- ════════════════════════════════════════════════════════════════════
+       SECTION 3 — SERVICES GRID  (block type: booking.services)
+       Proves: the data-provider binding ALREADY works in Kohevo today.
+       Nothing here is new — included as the honest baseline of the demo.
+       ════════════════════════════════════════════════════════════════════ -->
+  <section class="sb-section sb-section--sunken" id="services"
+           data-sb-node="sec_services" data-sb-type="booking.services">
+    <div class="sb-section__inner sb-w-wide">
+      <div data-sb-reveal>
+        <p class="sb-eyebrow">What we teach</p>
+        <h2 style="font-size:var(--sb-text-3xl)">Six ways in.</h2>
+        <p class="sb-lede">Every class is capped at fourteen. No waiting lists on the
+          beginner tracks — if it's full we add a Saturday.</p>
+      </div>
+
+      <div class="sb-grid sb-cols-3">
+        <article class="sb-card" data-sb-reveal>
+          <div class="sb-card__thumb">
+            <svg viewBox="0 0 200 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <rect width="200" height="260" fill="url(#artA)"/>
+            </svg>
+          </div>
+          <p class="sb-card__meta">Mon · Wed · 19:00</p>
+          <h3 class="sb-card__title">Contemporary 6+</h3>
+          <p class="sb-muted">Weekly technique and repertoire building on a six-week cycle.</p>
+          <p><strong>€22</strong> / session · drop in</p>
+        </article>
+
+        <article class="sb-card" data-sb-reveal data-sb-reveal-delay="0.08">
+          <div class="sb-card__thumb">
+            <svg viewBox="0 0 200 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <rect width="200" height="260" fill="url(#artB)"/>
+            </svg>
+          </div>
+          <p class="sb-card__meta">Tue · Thu · 18:30</p>
+          <h3 class="sb-card__title">Release &amp; Contact</h3>
+          <p class="sb-muted">Floorwork, partner contact, and long-form release. No mirrors.</p>
+          <p><strong>€24</strong> / session</p>
+        </article>
+
+        <article class="sb-card" data-sb-reveal data-sb-reveal-delay="0.16">
+          <div class="sb-card__thumb">
+            <svg viewBox="0 0 200 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <rect width="200" height="260" fill="url(#artC)"/>
+            </svg>
+          </div>
+          <p class="sb-card__meta">Sat · 11:00</p>
+          <h3 class="sb-card__title">Improvisation Lab</h3>
+          <p class="sb-muted">Open floor, scored prompts, one take. Guests welcome.</p>
+          <p><strong>€18</strong> / session</p>
+        </article>
+
+        <article class="sb-card" data-sb-reveal>
+          <div class="sb-card__thumb">
+            <svg viewBox="0 0 200 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <rect width="200" height="260" fill="url(#artD)"/>
+            </svg>
+          </div>
+          <p class="sb-card__meta">Mon · Fri · 07:30</p>
+          <h3 class="sb-card__title">Conditioning</h3>
+          <p class="sb-muted">Strength, mobility and landings. The class everyone actually needs.</p>
+          <p><strong>€15</strong> / session</p>
+        </article>
+
+        <article class="sb-card" data-sb-reveal data-sb-reveal-delay="0.08">
+          <div class="sb-card__thumb">
+            <svg viewBox="0 0 200 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <rect width="200" height="260" fill="url(#artB)"/>
+            </svg>
+          </div>
+          <p class="sb-card__meta">Wed · 20:30</p>
+          <h3 class="sb-card__title">Urban 16+</h3>
+          <p class="sb-muted">Commercial and street vocabulary, taught as technique not tricks.</p>
+          <p><strong>€22</strong> / session</p>
+        </article>
+
+        <article class="sb-card" data-sb-reveal data-sb-reveal-delay="0.16">
+          <div class="sb-card__thumb">
+            <svg viewBox="0 0 200 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <rect width="200" height="260" fill="url(#artA)"/>
+            </svg>
+          </div>
+          <p class="sb-card__meta">By arrangement</p>
+          <h3 class="sb-card__title">Private coaching</h3>
+          <p class="sb-muted">One to one, audition prep, or rehab work with a physio partner.</p>
+          <p><strong>€60</strong> / hour</p>
+        </article>
+      </div>
+
+      <p style="text-align:center;margin-top:2rem" data-sb-reveal>
+        <a class="sb-button sb-button--outline" href="#schedule">Full timetable</a>
+      </p>
+    </div>
+  </section>
+<!-- ════════════════════════════════════════════════════════════════════
+       SECTION 4 — TEACHERS (Phase 4 hover reveal on cards)
+       ════════════════════════════════════════════════════════════════════ -->
+  <section class="sb-section" id="teachers" data-sb-node="sec_teachers" data-sb-type="core.feature_list">
+    <div class="sb-section__inner sb-w-wide">
+      <div data-sb-reveal style="text-align:center;margin-bottom:3rem">
+        <p class="sb-eyebrow">Who teaches here</p>
+        <h2 style="font-size:var(--sb-text-3xl)">Eleven artists, one syllabus.</h2>
+        <p class="sb-lede" style="margin-inline:auto">Nobody here teaches only here — which is
+          exactly why the teaching is worth listening to.</p>
+      </div>
+
+      <div class="sb-grid sb-cols-4">
+        <figure class="sb-card" data-sb-reveal style="margin:0">
+          <div class="sb-card__thumb" style="aspect-ratio:1;border-radius:50%">
+            <svg viewBox="0 0 200 200" aria-hidden="true">
+              <rect width="200" height="200" fill="url(#artA)"/>
+              <text x="100" y="124" text-anchor="middle" font-size="64" fill="#fff"
+                    font-family="Georgia,serif" opacity="0.9">SR</text>
+            </svg>
+          </div>
+          <figcaption>
+            <h3 class="sb-card__title" style="font-size:var(--sb-text-lg)">Saartje Roelofs</h3>
+            <p class="sb-card__meta">Contemporary · Repertoire</p>
+            <p class="sb-muted" style="font-size:0.9rem">Nine years in the company. Teaches the
+              Friday progression.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="sb-card" data-sb-reveal data-sb-reveal-delay="0.08" style="margin:0">
+          <div class="sb-card__thumb" style="aspect-ratio:1;border-radius:50%">
+            <svg viewBox="0 0 200 200" aria-hidden="true">
+              <rect width="200" height="200" fill="url(#artB)"/>
+              <text x="100" y="124" text-anchor="middle" font-size="64" fill="#fff"
+                    font-family="Georgia,serif" opacity="0.9">MK</text>
+            </svg>
+          </div>
+          <figcaption>
+            <h3 class="sb-card__title" style="font-size:var(--sb-text-lg)">Marek Kowalski</h3>
+            <p class="sb-card__meta">Release · Contact work</p>
+            <p class="sb-muted" style="font-size:0.9rem">Cues with his hands, not his voice. It
+              takes a season.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="sb-card" data-sb-reveal data-sb-reveal-delay="0.16" style="margin:0">
+          <div class="sb-card__thumb" style="aspect-ratio:1;border-radius:50%">
+            <svg viewBox="0 0 200 200" aria-hidden="true">
+              <rect width="200" height="200" fill="url(#artC)"/>
+              <text x="100" y="124" text-anchor="middle" font-size="64" fill="#fff"
+                    font-family="Georgia,serif" opacity="0.9">YN</text>
+            </svg>
+          </div>
+          <figcaption>
+            <h3 class="sb-card__title" style="font-size:var(--sb-text-lg)">Yara Nasser</h3>
+            <p class="sb-card__meta">Improvisation · Urban</p>
+            <p class="sb-muted" style="font-size:0.9rem">Runs the Saturday lab. Has never taught
+              the same score twice.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="sb-card" data-sb-reveal data-sb-reveal-delay="0.24" style="margin:0">
+          <div class="sb-card__thumb" style="aspect-ratio:1;border-radius:50%">
+            <svg viewBox="0 0 200 200" aria-hidden="true">
+              <rect width="200" height="200" fill="url(#artD)"/>
+              <text x="100" y="124" text-anchor="middle" font-size="64" fill="#fff"
+                    font-family="Georgia,serif" opacity="0.9">TO</text>
+            </svg>
+          </div>
+          <figcaption>
+            <h3 class="sb-card__title" style="font-size:var(--sb-text-lg)">Tobias Okonkwo</h3>
+            <p class="sb-card__meta">Conditioning · Rehab</p>
+            <p class="sb-muted" style="font-size:0.9rem">Physiotherapist and dancer. Writes the
+              landing syllabus.</p>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+<!-- ════════════════════════════════════════════════════════════════════
+       SECTION 5 — SCHEDULE (Phase 2 tabs + countdown)
+       Without JS, the tab strip is hidden and all three panels stack —
+       the CSS rule handles that; the content is never lost.
+       ════════════════════════════════════════════════════════════════════ -->
+  <section class="sb-section sb-section--sunken" id="schedule"
+           data-sb-node="sec_schedule" data-sb-type="core.query_loop">
+    <div class="sb-section__inner sb-w-wide">
+      <div data-sb-reveal>
+        <p class="sb-eyebrow">This week</p>
+        <h2 style="font-size:var(--sb-text-3xl)">Timetable</h2>
+      </div>
+
+      <div data-sb-reveal data-sb-reveal-delay="0.1">
+        <div class="sb-countdown" data-sb-countdown="2026-12-19T18:30:00" aria-label="Countdown to winter showcase">
+          <div class="sb-countdown__unit">
+            <span class="sb-countdown__num" data-sb-cd="d">--</span>
+            <span class="sb-countdown__unit-label">Days</span>
+          </div>
+          <div class="sb-countdown__unit">
+            <span class="sb-countdown__num" data-sb-cd="h">--</span>
+            <span class="sb-countdown__unit-label">Hours</span>
+          </div>
+          <div class="sb-countdown__unit">
+            <span class="sb-countdown__num" data-sb-cd="m">--</span>
+            <span class="sb-countdown__unit-label">Min</span>
+          </div>
+          <div class="sb-countdown__unit">
+            <span class="sb-countdown__num" data-sb-cd="s">--</span>
+            <span class="sb-countdown__unit-label">Sec</span>
+          </div>
+          <p class="sb-muted" style="margin:0;align-self:center">
+            until the winter showcase
+          </p>
+        </div>
+      </div>
+
+      <div data-sb-tabs data-sb-reveal data-sb-reveal-delay="0.15">
+        <div class="sb-tabs__list" role="tablist" aria-label="Timetable by day">
+          <button class="sb-tabs__tab" type="button" role="tab" data-sb-tab="mon" aria-selected="true">Monday</button>
+          <button class="sb-tabs__tab" type="button" role="tab" data-sb-tab="wed">Wednesday</button>
+          <button class="sb-tabs__tab" type="button" role="tab" data-sb-tab="sat">Saturday</button>
+        </div>
+
+        <div class="sb-tabs__panel" data-sb-panel="mon" role="tabpanel">
+          <div class="sb-grid sb-cols-3">
+            <div class="sb-card">
+              <p class="sb-card__meta">07:30 · 60 min</p>
+              <h3 class="sb-card__title">Conditioning</h3>
+              <p class="sb-muted">Studio 3 · Tobias</p>
+              <p><span class="sb-muted">6 / 14 places</span></p>
+            </div>
+            <div class="sb-card">
+              <p class="sb-card__meta">19:00 · 90 min</p>
+              <h3 class="sb-card__title">Contemporary 6+</h3>
+              <p class="sb-muted">Studio 1 · Saartje</p>
+              <p><span class="sb-muted">11 / 14 places</span></p>
+            </div>
+            <div class="sb-card">
+              <p class="sb-card__meta">20:30 · 60 min</p>
+              <h3 class="sb-card__title">Open floor</h3>
+              <p class="sb-muted">Studio 2 · self-directed</p>
+              <p><span class="sb-muted">Open</span></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="sb-tabs__panel" data-sb-panel="wed" role="tabpanel" hidden>
+          <div class="sb-grid sb-cols-3">
+            <div class="sb-card">
+              <p class="sb-card__meta">18:30 · 90 min</p>
+              <h3 class="sb-card__title">Release &amp; Contact</h3>
+              <p class="sb-muted">Studio 1 · Marek</p>
+              <p><span class="sb-muted">14 / 14 — waitlist</span></p>
+            </div>
+            <div class="sb-card">
+              <p class="sb-card__meta">19:00 · 90 min</p>
+              <h3 class="sb-card__title">Contemporary 6+</h3>
+              <p class="sb-muted">Studio 1 · Saartje</p>
+              <p><span class="sb-muted">9 / 14 places</span></p>
+            </div>
+            <div class="sb-card">
+              <p class="sb-card__meta">20:30 · 75 min</p>
+              <h3 class="sb-card__title">Urban 16+</h3>
+              <p class="sb-muted">Studio 4 · Yara</p>
+              <p><span class="sb-muted">5 / 14 places</span></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="sb-tabs__panel" data-sb-panel="sat" role="tabpanel" hidden>
+          <div class="sb-grid sb-cols-3">
+            <div class="sb-card">
+              <p class="sb-card__meta">11:00 · 2 hrs</p>
+              <h3 class="sb-card__title">Improvisation Lab</h3>
+              <p class="sb-muted">Studio 1 · Yara + guest</p>
+              <p><span class="sb-muted">12 / 20 places</span></p>
+            </div>
+            <div class="sb-card">
+              <p class="sb-card__meta">14:00 · 60 min</p>
+              <h3 class="sb-card__title">Beginners</h3>
+              <p class="sb-muted">Studio 2 · Saartje</p>
+              <p><span class="sb-muted">Open</span></p>
+            </div>
+            <div class="sb-card">
+              <p class="sb-card__meta">16:00 · 90 min</p>
+              <h3 class="sb-card__title">Company rehearsal</h3>
+              <p class="sb-muted">Studio 1 · closed</p>
+              <p><span class="sb-muted">Invite only</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+<!-- ════════════════════════════════════════════════════════════════════
+       SECTION 6 — MEMBERSHIP (block type: membership.plans)
+       Already works today via the Membership provider. Listed for contrast.
+       ════════════════════════════════════════════════════════════════════ -->
+  <section class="sb-section" id="membership" data-sb-node="sec_plans" data-sb-type="membership.plans">
+    <div class="sb-section__inner sb-w-wide">
+      <div data-sb-reveal style="text-align:center;margin-bottom:3rem">
+        <p class="sb-eyebrow">Membership</p>
+        <h2 style="font-size:var(--sb-text-3xl)">Pay monthly, freeze anytime.</h2>
+        <p class="sb-lede" style="margin-inline:auto">No contracts, no joining fee, and a
+          three-month freeze you can take in one go or in slices.</p>
+      </div>
+
+      <div class="sb-grid sb-cols-3">
+        <article class="sb-card" data-sb-reveal>
+          <p class="sb-card__meta">8 classes / month</p>
+          <h3 class="sb-card__title">Drop-in</h3>
+          <p style="font-size:2rem;font-family:var(--sb-font-heading);margin:0.5rem 0">
+            €68<small class="sb-muted" style="font-size:1rem"> / mo</small>
+          </p>
+          <p class="sb-muted">Any class on the timetable. Book up to 7 days ahead.</p>
+          <p><a class="sb-button sb-button--outline sb-button--sm" href="#enrol"
+                data-sb-modal-open="enrol-modal">Choose</a></p>
+        </article>
+
+        <article class="sb-card" data-sb-reveal data-sb-reveal-delay="0.1"
+                 style="border-color:var(--sb-color-accent);box-shadow:var(--sb-shadow-lg)">
+          <p class="sb-card__meta" style="color:var(--sb-color-accent)">Unlimited · most chosen</p>
+          <h3 class="sb-card__title">Full</h3>
+          <p style="font-size:2rem;font-family:var(--sb-font-heading);margin:0.5rem 0">
+            €124<small class="sb-muted" style="font-size:1rem"> / mo</small>
+          </p>
+          <p class="sb-muted">Every class, priority booking, and two guest passes a quarter.</p>
+          <p><a class="sb-button sb-button--primary sb-button--sm" href="#enrol"
+                data-sb-modal-open="enrol-modal">Choose</a></p>
+        </article>
+
+        <article class="sb-card" data-sb-reveal data-sb-reveal-delay="0.2">
+          <p class="sb-card__meta">4 classes / month</p>
+          <h3 class="sb-card__title">Half</h3>
+          <p style="font-size:2rem;font-family:var(--sb-font-heading);margin:0.5rem 0">
+            €39<small class="sb-muted" style="font-size:1rem"> / mo</small>
+          </p>
+          <p class="sb-muted">For the months when work gets busy. Same rates, fewer classes.</p>
+          <p><a class="sb-button sb-button--outline sb-button--sm" href="#enrol"
+                data-sb-modal-open="enrol-modal">Choose</a></p>
+        </article>
+      </div>
+    </div>
+  </section>
+<!-- ════════════════════════════════════════════════════════════════════
+       SECTION 7 — TESTIMONIAL CAROUSEL (Phase 2)
+       Autoplay pauses on hover, focus, and when the tab is hidden.
+       ════════════════════════════════════════════════════════════════════ -->
+  <section class="sb-section sb-section--sunken" data-sb-node="sec_quotes" data-sb-type="core.gallery">
+    <div class="sb-section__inner sb-w-wide">
+      <div data-sb-reveal style="text-align:center;margin-bottom:2.5rem">
+        <p class="sb-eyebrow">Students</p>
+        <h2 style="font-size:var(--sb-text-3xl)">What actually changed.</h2>
+      </div>
+
+      <div class="sb-carousel" data-sb-carousel data-sb-loop data-sb-autoplay="5200" data-sb-reveal>
+        <button class="sb-carousel__arrow sb-carousel__arrow--prev" type="button"
+                data-sb-car-prev aria-label="Previous slide">&#8249;</button>
+        <button class="sb-carousel__arrow sb-carousel__arrow--next" type="button"
+                data-sb-car-next aria-label="Next slide">&#8250;</button>
+
+        <div class="sb-carousel__viewport">
+          <div class="sb-carousel__track" data-sb-carousel-track>
+            <div class="sb-slide" data-sb-slide>
+              <blockquote class="sb-quote">
+                <span class="sb-quote__mark" aria-hidden="true">&ldquo;</span>
+                <p class="sb-quote__text">I came for the six-week technique cycle and stayed
+                  because nobody here has ever told me to smile while I do it.</p>
+                <footer class="sb-quote__who">
+                  <span class="sb-quote__avatar" aria-hidden="true"></span>
+                  <span>
+                    <span class="sb-quote__name">Lotte van Dam</span><br>
+                    <span class="sb-quote__role">Contemporary, 3 years</span>
+                  </span>
+                </footer>
+              </blockquote>
+            </div>
+
+            <div class="sb-slide" data-sb-slide>
+              <blockquote class="sb-quote">
+                <span class="sb-quote__mark" aria-hidden="true">&ldquo;</span>
+                <p class="sb-quote__text">The conditioning class rebuilt my landings after two
+                  years of street work. Tobias wrote the syllabus around my physio's notes.</p>
+                <footer class="sb-quote__who">
+                  <span class="sb-quote__avatar" aria-hidden="true"></span>
+                  <span>
+                    <span class="sb-quote__name">Deniz Aydın</span><br>
+                    <span class="sb-quote__role">Urban + Conditioning</span>
+                  </span>
+                </footer>
+              </blockquote>
+            </div>
+
+            <div class="sb-slide" data-sb-slide>
+              <blockquote class="sb-quote">
+                <span class="sb-quote__mark" aria-hidden="true">&ldquo;</span>
+                <p class="sb-quote__text">Marek never raises his voice. After a season of that you
+                  stop performing and start actually dancing.</p>
+                <footer class="sb-quote__who">
+                  <span class="sb-quote__avatar" aria-hidden="true"></span>
+                  <span>
+                    <span class="sb-quote__name">Pieter Hoekstra</span><br>
+                    <span class="sb-quote__role">Release &amp; Contact</span>
+                  </span>
+                </footer>
+              </blockquote>
+            </div>
+
+            <div class="sb-slide" data-sb-slide>
+              <blockquote class="sb-quote">
+                <span class="sb-quote__mark" aria-hidden="true">&ldquo;</span>
+                <p class="sb-quote__text">Three years after my first season here I'm now in the
+                  company. That is not a coincidence, and they don't advertise it.</p>
+                <footer class="sb-quote__who">
+                  <span class="sb-quote__avatar" aria-hidden="true"></span>
+                  <span>
+                    <span class="sb-quote__name">Ana Ferreira</span><br>
+                    <span class="sb-quote__role">Company member</span>
+                  </span>
+                </footer>
+              </blockquote>
+            </div>
+          </div>
+        </div>
+
+        <div class="sb-carousel__dots" data-sb-car-dots role="tablist" aria-label="Choose slide"></div>
+      </div>
+    </div>
+  </section>
+<!-- Lightbox: same overlay machinery, driven by the gallery block -->
+  <section class="sb-section sb-section--sunken" style="padding-top:0">
+    <div class="sb-section__inner sb-w-wide">
+      <div data-sb-reveal>
+        <h3 style="font-size:var(--sb-text-xl)">Studio moments</h3>
+        <div class="sb-gallery">
+          <figure class="sb-gallery__item" data-sb-lightbox-item
+                  data-sb-caption="Company rehearsal, week 3" data-sb-alt="Company rehearsal">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <rect width="100" height="100" fill="url(#artA)"/>
+            </svg>
+          </figure>
+          <figure class="sb-gallery__item" data-sb-lightbox-item
+                  data-sb-caption="Contact work intensive" data-sb-alt="Contact work">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <rect width="100" height="100" fill="url(#artB)"/>
+            </svg>
+          </figure>
+          <figure class="sb-gallery__item" data-sb-lightbox-item
+                  data-sb-caption="Saturday improvisation lab" data-sb-alt="Improvisation lab">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <rect width="100" height="100" fill="url(#artC)"/>
+            </svg>
+          </figure>
+          <figure class="sb-gallery__item" data-sb-lightbox-item
+                  data-sb-caption="Studio 4, late evening" data-sb-alt="Studio interior">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <rect width="100" height="100" fill="url(#artD)"/>
+            </svg>
+          </figure>
+          <figure class="sb-gallery__item" data-sb-lightbox-item
+                  data-sb-caption="Winter showcase, 2025" data-sb-alt="Winter showcase">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <rect width="100" height="100" fill="url(#artA)"/>
+            </svg>
+          </figure>
+          <figure class="sb-gallery__item" data-sb-lightbox-item
+                  data-sb-caption="Conditioning, dawn slots" data-sb-alt="Conditioning class">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <rect width="100" height="100" fill="url(#artB)"/>
+            </svg>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sb-lightbox" data-sb-lightbox role="dialog" aria-modal="true" aria-label="Image viewer">
+    <button class="sb-lightbox__close" type="button" data-sb-close aria-label="Close viewer">&times;</button>
+    <button class="sb-lightbox__nav sb-lightbox__nav--prev" type="button"
+            data-sb-lb-prev aria-label="Previous image">&#8249;</button>
+    <img src="" alt="">
+    <button class="sb-lightbox__nav sb-lightbox__nav--next" type="button"
+            data-sb-lb-next aria-label="Next image">&#8250;</button>
+    <div style="text-align:center">
+      <p class="sb-lightbox__caption" data-sb-lightbox-caption></p>
+    </div>
+  </div>
+<!-- ════════════════════════════════════════════════════════════════════
+       SECTION 8 — FAQ ACCORDION (Phase 2)
+       ════════════════════════════════════════════════════════════════════ -->
+  <section class="sb-section" id="faq" data-sb-node="sec_faq" data-sb-type="core.rich_text">
+    <div class="sb-section__inner sb-w-normal">
+      <div data-sb-reveal style="text-align:center;margin-bottom:2.5rem">
+        <p class="sb-eyebrow">Before you come</p>
+        <h2 style="font-size:var(--sb-text-3xl)">Questions we actually get.</h2>
+      </div>
+
+      <div class="sb-accordion" data-sb-accordion data-sb-allow-multiple data-sb-reveal>
+        <div class="sb-accordion__item" data-sb-accordion-item>
+          <h3 style="margin:0">
+            <button class="sb-accordion__button" type="button" data-sb-accordion-button>
+              I've never danced before. Is that a problem?
+              <span class="sb-accordion__icon" aria-hidden="true"></span>
+            </button>
+          </h3>
+          <div class="sb-accordion__panel" data-sb-accordion-panel>
+            <div class="sb-accordion__inner">
+              No. Roughly a third of everyone in a beginner class has never taken a class. The
+              Monday conditioning and Saturday beginners tracks assume zero experience, and nobody
+              in those rooms is asked to pretend otherwise.
+            </div>
+          </div>
+        </div>
+
+        <div class="sb-accordion__item" data-sb-accordion-item>
+          <h3 style="margin:0">
+            <button class="sb-accordion__button" type="button" data-sb-accordion-button>
+              What should I wear?
+              <span class="sb-accordion__icon" aria-hidden="true"></span>
+            </button>
+          </h3>
+          <div class="sb-accordion__panel" data-sb-accordion-panel>
+            <div class="sb-accordion__inner">
+              Anything you can move in. Bare feet or soft soles; we don't teach in heels. Bring a
+              towel — the floor is sprung and warmer than you expect.
+            </div>
+          </div>
+        </div>
+
+        <div class="sb-accordion__item" data-sb-accordion-item>
+          <h3 style="margin:0">
+            <button class="sb-accordion__button" type="button" data-sb-accordion-button>
+              Can I freeze my membership?
+              <span class="sb-accordion__icon" aria-hidden="true"></span>
+            </button>
+          </h3>
+          <div class="sb-accordion__panel" data-sb-accordion-panel>
+            <div class="sb-accordion__inner">
+              Three months per year, free, and you can take it as one block or across three
+              fortnights. Email the front desk — there is no form and no minimum notice.
+            </div>
+          </div>
+        </div>
+
+        <div class="sb-accordion__item" data-sb-accordion-item>
+          <h3 style="margin:0">
+            <button class="sb-accordion__button" type="button" data-sb-accordion-button>
+              Do you actually run a company?
+              <span class="sb-accordion__icon" aria-hidden="true"></span>
+            </button>
+          </h3>
+          <div class="sb-accordion__panel" data-sb-accordion-panel>
+            <div class="sb-accordion__inner">
+              Yes — eight dancers, two seasons a year, and the repertoire is built from the
+              improv lab. Company members are drawn from the student body. Auditions happen twice a
+              year and are announced in the studio, not on Instagram.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+<!-- ════════════════════════════════════════════════════════════════════
+       SECTION 9 — CTA + ENROLMENT MODAL
+       The trigger is a real fragment link to #enrol-modal, so WITHOUT JS the
+       :target rule still opens the dialog. With JS the runtime upgrades it to a
+       focus-trapped, Escape-closable, scroll-locked overlay.
+       ════════════════════════════════════════════════════════════════════ -->
+  <section class="sb-section sb-section--sunken" id="enrol"
+           data-sb-node="sec_cta" data-sb-type="core.button">
+    <div class="sb-section__inner sb-w-normal" style="text-align:center" data-sb-reveal>
+      <p class="sb-eyebrow">First class is free</p>
+      <h2 style="font-size:var(--sb-text-3xl)">Come and see what a room full of people who
+        don't perform feels like.</h2>
+      <p class="sb-lede" style="margin:0 auto 2rem">No card, no commitment. One class, any
+        track, and a conversation afterwards if you want it.</p>
+      <p>
+        <a class="sb-button sb-button--primary" href="#enrol-modal" data-sb-modal-open="enrol-modal">
+          Book a free trial
+        </a>
+      </p>
+    </div>
+  </section>
+
+  <div class="sb-modal" id="enrol-modal" data-sb-modal aria-labelledby="enrol-title">
+    <a class="sb-modal__backdrop" href="#" data-sb-close aria-label="Close"></a>
+    <div class="sb-modal__dialog" role="document">
+      <header class="sb-modal__header">
+        <h3 id="enrol-title">Book your free trial</h3>
+        <a class="sb-modal__close" href="#" data-sb-close aria-label="Close">&times;</a>
+      </header>
+      <div class="sb-modal__body">
+        <!-- block type: forms.form_card -->
+        <form class="sb-form" data-sb-reveal>
+          <div class="sb-form__row">
+            <div class="sb-field">
+              <label for="f-name">Name</label>
+              <input id="f-name" name="name" type="text" autocomplete="name" required data-sb-autofocus>
+            </div>
+            <div class="sb-field">
+              <label for="f-email">Email</label>
+              <input id="f-email" name="email" type="email" autocomplete="email" required>
+            </div>
+          </div>
+          <div class="sb-field">
+            <label for="f-track">Which track interests you?</label>
+            <select id="f-track" name="track">
+              <option>Contemporary</option>
+              <option>Release &amp; Contact</option>
+              <option>Improvisation Lab</option>
+              <option>Conditioning</option>
+              <option>Not sure yet</option>
+            </select>
+          </div>
+          <div class="sb-field">
+            <label for="f-note">Anything we should know?</label>
+            <textarea id="f-note" name="note" placeholder="Injuries, questions, access needs…"></textarea>
+          </div>
+          <button class="sb-button sb-button--primary" type="submit">Request a trial</button>
+          <p class="sb-form__note">
+            Prototype — this form does not submit anywhere. In Kohevo this is the
+            <code>forms.form_card</code> block wired to your Forms module.
+          </p>
+        </form>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     SECTION 10 — FOOTER (chrome)
+     ════════════════════════════════════════════════════════════════════ -->
+<footer class="sb-site-footer" data-sb-node="sec_footer" data-sb-type="layout.section">
+  <div class="sb-section__inner sb-w-wide">
+    <div class="sb-site-footer__grid">
+      <div>
+        <p class="sb-site-brand" style="margin-bottom:1rem">
+          <span class="sb-site-brand__mark" aria-hidden="true">A9</span>
+          Atelier Nine
+        </p>
+        <p style="max-width:34ch">Contemporary dance house. Twelve studios, one syllabus,
+          no mirrors on the release floor.</p>
+      </div>
+      <div>
+        <h4>Classes</h4>
+        <a href="#services">Contemporary</a>
+        <a href="#services">Release &amp; Contact</a>
+        <a href="#services">Improvisation</a>
+        <a href="#services">Conditioning</a>
+      </div>
+      <div>
+        <h4>Studio</h4>
+        <a href="#teachers">Teachers</a>
+        <a href="#schedule">Timetable</a>
+        <a href="#membership">Membership</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <div>
+        <h4>Visit</h4>
+        <a href="#enrol">Katendrechtse Lagedijk 44</a>
+        <a href="#enrol">3082 GC Rotterdam</a>
+        <a href="#enrol">+31 10 123 4567</a>
+      </div>
+    </div>
+    <div class="sb-site-footer__bottom">
+      <span>&copy; 2026 Atelier Nine</span>
+      <span>Built with Kohevo Studio — interactivity prototype</span>
+    </div>
+  </div>
+</footer>
+<!-- ════════════════════════════════════════════════════════════════════
+     DEMO CONTROL BAR — prototype only.
+     This is the decision instrument: the leftmost switch degrades the page to
+     exactly today's Kohevo Studio output. Everything else is for exploring the
+     token layer (Phase 5) and the reduced-motion contract.
+     ════════════════════════════════════════════════════════════════════ -->
+<div class="sb-demo-bar" role="toolbar" aria-label="Prototype controls">
+  <span class="sb-demo-bar__label">RUNTIME</span>
+  <button class="sb-demo-btn" type="button" id="btn-runtime"
+          aria-pressed="true" title="Toggle the Phase 2 interaction runtime">ON</button>
+
+  <span class="sb-demo-sep" aria-hidden="true"></span>
+
+  <span class="sb-demo-bar__label">THEME</span>
+  <button class="sb-demo-btn" type="button" data-theme-set="obsidian" aria-pressed="true">Obsidian</button>
+  <button class="sb-demo-btn" type="button" data-theme-set="porcelain" aria-pressed="false">Porcelain</button>
+  <button class="sb-demo-btn" type="button" data-theme-set="midnight" aria-pressed="false">Midnight</button>
+
+  <span class="sb-demo-sep" aria-hidden="true"></span>
+
+  <button class="sb-demo-btn sb-demo-btn--off" type="button" id="btn-motion" aria-pressed="false"
+          title="Force prefers-reduced-motion">Reduce motion</button>
+</div>
+
+<script src="studio-runtime.js"></script>
+<script>
+/* ── Prototype wiring (not part of a shipped Studio page) ────────────────
+ * Two jobs only:
+ *   1. Drive the A/B toggle through StudioRuntime.mount()/disable().
+ *   2. Assign the --i stagger indices the runtime/CSS expects. In a real
+ *      Kohevo page those come from the Phase 4 inspector when the user sets
+ *      an animation preset — they are data, not script.
+ */
+(function () {
+  'use strict';
+  var html = document.documentElement;
+
+  /* NOTE: stagger indexing and the entrance trigger now live in
+     studio-runtime.js (initStagger) so they respect the A/B runtime toggle and
+     ship as real Phase 2 code rather than demo-page glue. */
+
+  /* ── A/B runtime toggle ─────────────────────────────────────────────── */
+  var btnRuntime = document.getElementById('btn-runtime');
+  btnRuntime.addEventListener('click', function () {
+    var on = html.getAttribute('data-sb-runtime') !== 'off';
+    if (on) {
+      html.setAttribute('data-sb-runtime', 'off');
+      StudioRuntime.disable();
+      btnRuntime.setAttribute('aria-pressed', 'false');
+      btnRuntime.textContent = 'OFF';
+      btnRuntime.classList.add('sb-demo-btn--off');
+      /* No manual counter or reveal repair here on purpose: disable() undoes
+       * every mutation the runtime made, including restoring counter text and
+       * clearing data-sb-in. Prove it by reading the toggle's behaviour — if
+       * this block needed cleanup code, the runtime contract would be broken. */
+    } else {
+      html.setAttribute('data-sb-runtime', 'on');
+      StudioRuntime.mount();
+      btnRuntime.setAttribute('aria-pressed', 'true');
+      btnRuntime.textContent = 'ON';
+      btnRuntime.classList.remove('sb-demo-btn--off');
+    }
+  });
+
+  /* ── Theme switcher (Phase 5: the whole brand is one token block) ───── */
+  document.querySelectorAll('[data-theme-set]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      html.setAttribute('data-sb-theme', b.getAttribute('data-theme-set'));
+      document.querySelectorAll('[data-theme-set]').forEach(function (other) {
+        other.setAttribute('aria-pressed', String(other === b));
+      });
+    });
+  });
+
+  /* ── Reduced motion toggle ─────────────────────────────────────────── */
+  var btnMotion = document.getElementById('btn-motion');
+  btnMotion.addEventListener('click', function () {
+    var on = html.getAttribute('data-sb-motion') === 'reduce';
+    html.setAttribute('data-sb-motion', on ? 'full' : 'reduce');
+    btnMotion.setAttribute('aria-pressed', String(!on));
+    StudioRuntime.refreshMotion();
+  });
+
+  /* ── Prototype form: never actually submits ────────────────────────── */
+  document.querySelectorAll('.sb-form').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var btn = form.querySelector('button[type="submit"]');
+      if (!btn) return;
+      var original = btn.textContent;
+      btn.textContent = 'Prototype — nothing was sent';
+      btn.disabled = true;
+      setTimeout(function () { btn.textContent = original; btn.disabled = false; }, 2200);
+    });
+  });
+}());
+</script>
+</body>
+</html>

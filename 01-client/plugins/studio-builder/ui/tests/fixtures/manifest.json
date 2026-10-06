@@ -69,6 +69,102 @@
             "version": 1
         },
         {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "allow_multiple": false,
+                "items": [
+                    {
+                        "body": "Pick a track, book a trial class, and we handle the rest.",
+                        "heading": "How do I get started?"
+                    },
+                    {
+                        "body": "Yes \u2014 freeze for up to three months, in one go or in slices.",
+                        "heading": "Can I freeze my membership?"
+                    },
+                    {
+                        "body": "Comfortable clothes, water, and socks you can move in.",
+                        "heading": "What should I bring?"
+                    }
+                ]
+            },
+            "field_schema": [
+                {
+                    "key": "items",
+                    "type": "repeater",
+                    "label": "Rows",
+                    "required": false,
+                    "default": [
+                        {
+                            "heading": "How do I get started?",
+                            "body": "Pick a track, book a trial class, and we handle the rest."
+                        },
+                        {
+                            "heading": "Can I freeze my membership?",
+                            "body": "Yes \u2014 freeze for up to three months, in one go or in slices."
+                        },
+                        {
+                            "heading": "What should I bring?",
+                            "body": "Comfortable clothes, water, and socks you can move in."
+                        }
+                    ],
+                    "max_items": 20,
+                    "item_schema": [
+                        {
+                            "key": "heading",
+                            "type": "string",
+                            "label": "Question",
+                            "required": true,
+                            "default": "",
+                            "max_length": 200
+                        },
+                        {
+                            "key": "body",
+                            "type": "text",
+                            "label": "Answer",
+                            "required": false,
+                            "default": "",
+                            "max_length": 2000
+                        }
+                    ]
+                },
+                {
+                    "key": "allow_multiple",
+                    "type": "boolean",
+                    "label": "Allow Multiple Open",
+                    "required": false,
+                    "default": false
+                }
+            ],
+            "icon": "list-check",
+            "label": "Accordion",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "type": "core.accordion",
+            "version": 1
+        },
+        {
             "allowed_binding_providers": [
                 "content.posts",
                 "content.authors",
@@ -151,6 +247,166 @@
                 "z_index"
             ],
             "type": "core.button",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "media",
+            "default_props": {
+                "options": {
+                    "autoplay_ms": 0,
+                    "loop": true,
+                    "per_view": 1
+                },
+                "slides": [
+                    {
+                        "author": "Mara, two years in",
+                        "caption": "",
+                        "image": null,
+                        "quote": "The small classes are the reason I stayed."
+                    },
+                    {
+                        "author": "Tobias, member",
+                        "caption": "",
+                        "image": null,
+                        "quote": "First class I have not talked myself out of."
+                    },
+                    {
+                        "author": "Saartje, teacher",
+                        "caption": "",
+                        "image": null,
+                        "quote": "A syllabus that actually changes each season."
+                    }
+                ]
+            },
+            "field_schema": [
+                {
+                    "key": "slides",
+                    "type": "repeater",
+                    "label": "Slides",
+                    "required": false,
+                    "default": [
+                        {
+                            "image": null,
+                            "quote": "The small classes are the reason I stayed.",
+                            "author": "Mara, two years in",
+                            "caption": ""
+                        },
+                        {
+                            "image": null,
+                            "quote": "First class I have not talked myself out of.",
+                            "author": "Tobias, member",
+                            "caption": ""
+                        },
+                        {
+                            "image": null,
+                            "quote": "A syllabus that actually changes each season.",
+                            "author": "Saartje, teacher",
+                            "caption": ""
+                        }
+                    ],
+                    "max_items": 20,
+                    "item_schema": [
+                        {
+                            "key": "image",
+                            "type": "media_ref",
+                            "label": "Slide Image",
+                            "required": false,
+                            "default": null
+                        },
+                        {
+                            "key": "quote",
+                            "type": "text",
+                            "label": "Quote",
+                            "required": false,
+                            "default": "",
+                            "max_length": 600
+                        },
+                        {
+                            "key": "author",
+                            "type": "string",
+                            "label": "Attribution",
+                            "required": false,
+                            "default": "",
+                            "max_length": 120
+                        },
+                        {
+                            "key": "caption",
+                            "type": "string",
+                            "label": "Caption",
+                            "required": false,
+                            "default": "",
+                            "max_length": 255
+                        }
+                    ]
+                },
+                {
+                    "key": "options",
+                    "type": "object",
+                    "label": "Options",
+                    "required": false,
+                    "default": {
+                        "autoplay_ms": 0,
+                        "loop": true,
+                        "per_view": 1
+                    },
+                    "properties": [
+                        {
+                            "key": "per_view",
+                            "type": "number",
+                            "label": "Slides Per View",
+                            "required": false,
+                            "default": 1,
+                            "min": 1,
+                            "max": 3,
+                            "integer_only": true
+                        },
+                        {
+                            "key": "loop",
+                            "type": "boolean",
+                            "label": "Loop",
+                            "required": false,
+                            "default": true
+                        },
+                        {
+                            "key": "autoplay_ms",
+                            "type": "number",
+                            "label": "Autoplay (ms, 0 = off)",
+                            "required": false,
+                            "default": 0,
+                            "min": 0,
+                            "max": 60000,
+                            "integer_only": true
+                        }
+                    ]
+                }
+            ],
+            "icon": "images",
+            "label": "Carousel",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "type": "core.carousel",
             "version": 1
         },
         {
@@ -1243,6 +1499,266 @@
                 "z_index"
             ],
             "type": "core.rich_text",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "items": [
+                    {
+                        "decimals": 0,
+                        "label": "Students taught",
+                        "prefix": "",
+                        "suffix": "",
+                        "value": 1840
+                    },
+                    {
+                        "decimals": 0,
+                        "label": "Continue past year one",
+                        "prefix": "",
+                        "suffix": "%",
+                        "value": 96
+                    },
+                    {
+                        "decimals": 0,
+                        "label": "Working artists on staff",
+                        "prefix": "+",
+                        "suffix": "",
+                        "value": 11
+                    },
+                    {
+                        "decimals": 0,
+                        "label": "Days a week, year round",
+                        "prefix": "",
+                        "suffix": "",
+                        "value": 4
+                    }
+                ]
+            },
+            "field_schema": [
+                {
+                    "key": "items",
+                    "type": "repeater",
+                    "label": "Figures",
+                    "required": false,
+                    "default": [
+                        {
+                            "value": 1840,
+                            "label": "Students taught",
+                            "prefix": "",
+                            "suffix": "",
+                            "decimals": 0
+                        },
+                        {
+                            "value": 96,
+                            "label": "Continue past year one",
+                            "prefix": "",
+                            "suffix": "%",
+                            "decimals": 0
+                        },
+                        {
+                            "value": 11,
+                            "label": "Working artists on staff",
+                            "prefix": "+",
+                            "suffix": "",
+                            "decimals": 0
+                        },
+                        {
+                            "value": 4,
+                            "label": "Days a week, year round",
+                            "prefix": "",
+                            "suffix": "",
+                            "decimals": 0
+                        }
+                    ],
+                    "max_items": 6,
+                    "item_schema": [
+                        {
+                            "key": "value",
+                            "type": "number",
+                            "label": "Value",
+                            "required": true,
+                            "default": 0.0,
+                            "min": -1000000000,
+                            "max": 1000000000
+                        },
+                        {
+                            "key": "label",
+                            "type": "string",
+                            "label": "Label",
+                            "required": true,
+                            "default": "",
+                            "max_length": 120
+                        },
+                        {
+                            "key": "prefix",
+                            "type": "string",
+                            "label": "Prefix",
+                            "required": false,
+                            "default": "",
+                            "max_length": 8
+                        },
+                        {
+                            "key": "suffix",
+                            "type": "string",
+                            "label": "Suffix",
+                            "required": false,
+                            "default": "",
+                            "max_length": 8
+                        },
+                        {
+                            "key": "decimals",
+                            "type": "number",
+                            "label": "Decimals",
+                            "required": false,
+                            "default": 0,
+                            "min": 0,
+                            "max": 3,
+                            "integer_only": true
+                        }
+                    ]
+                }
+            ],
+            "icon": "layout-grid",
+            "label": "Stats",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "type": "core.stats",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "items": [
+                    {
+                        "content": "What the programme covers at a glance.",
+                        "label": "Overview"
+                    },
+                    {
+                        "content": "The finer points, schedules and requirements.",
+                        "label": "Detail"
+                    },
+                    {
+                        "content": "How to get started in under a minute.",
+                        "label": "Next steps"
+                    }
+                ],
+                "options": {
+                    "position": "top"
+                }
+            },
+            "field_schema": [
+                {
+                    "key": "items",
+                    "type": "repeater",
+                    "label": "Tabs",
+                    "required": false,
+                    "default": [
+                        {
+                            "label": "Overview",
+                            "content": "What the programme covers at a glance."
+                        },
+                        {
+                            "label": "Detail",
+                            "content": "The finer points, schedules and requirements."
+                        },
+                        {
+                            "label": "Next steps",
+                            "content": "How to get started in under a minute."
+                        }
+                    ],
+                    "max_items": 8,
+                    "item_schema": [
+                        {
+                            "key": "label",
+                            "type": "string",
+                            "label": "Tab Label",
+                            "required": true,
+                            "default": "",
+                            "max_length": 60
+                        },
+                        {
+                            "key": "content",
+                            "type": "text",
+                            "label": "Panel Content",
+                            "required": false,
+                            "default": "",
+                            "max_length": 2000
+                        }
+                    ]
+                },
+                {
+                    "key": "options",
+                    "type": "object",
+                    "label": "Options",
+                    "required": false,
+                    "default": {
+                        "position": "top"
+                    },
+                    "properties": [
+                        {
+                            "key": "position",
+                            "type": "enum",
+                            "label": "Tab Position",
+                            "required": false,
+                            "default": "top",
+                            "allowed_values": [
+                                "top",
+                                "bottom"
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "icon": "window",
+            "label": "Tabs",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "type": "core.tabs",
             "version": 1
         },
         {

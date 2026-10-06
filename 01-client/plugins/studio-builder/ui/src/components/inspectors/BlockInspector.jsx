@@ -12,6 +12,8 @@ import { useState } from 'react';
 import { useEditor, useEngineState } from '../EditorContext.jsx';
 import { FieldControl, ObjectFields, TokenSelect } from '../fields/FieldControl.jsx';
 import { ResponsiveSelect, Tabs, VisibilityControls } from './controls.jsx';
+import { StyleControls } from './StyleControls.jsx';
+import { MotionInspector } from './MotionInspector.jsx';
 import { asList, asObject, blockDefinition, blockIndentTarget, blockMoveTarget, blockOutdentTarget } from '../../core/doc.mjs';
 import { STYLE_TOKEN_CATEGORIES, tokensFor } from '../../core/fields.mjs';
 import * as ops from '../../core/operations.mjs';
@@ -44,6 +46,7 @@ export function BlockInspector({ info }) {
   const tabs = [
     { key: 'content', label: t('tab_content') },
     { key: 'style', label: t('tab_style') },
+    { key: 'motion', label: t('tab_motion') },
     { key: 'advanced', label: t('tab_advanced') },
     { key: 'responsive', label: t('tab_responsive') },
     { key: 'visibility', label: t('tab_visibility') },
@@ -129,50 +132,14 @@ export function BlockInspector({ info }) {
               </div>
             </fieldset>
           )}
-          {capabilities.includes('border') && (
-            <fieldset className="sbx-fieldset">
-              <legend>{t('border')}</legend>
-              <div className="sbx-field">
-                <label className="sbx-field__label" htmlFor={`${idPrefix}-border-radius`}>{t('border_radius')}</label>
-                <select
-                  id={`${idPrefix}-border-radius`}
-                  value={asObject(style.border).radius || ''}
-                  onChange={(e) => applyOp(ops.updateBlockStyle(block.id, {
-                    ...style,
-                    border: { ...asObject(style.border), radius: e.target.value || undefined },
-                  }), { label: def.label })}
-                >
-                  <option value="">{t('none')}</option>
-                  <option value="sm">Small</option>
-                  <option value="md">Medium</option>
-                  <option value="lg">Large</option>
-                  <option value="xl">XL</option>
-                  <option value="2xl">2XL</option>
-                  <option value="full">Full (Pill)</option>
-                </select>
-              </div>
-            </fieldset>
-          )}
-          {capabilities.includes('shadow') && (
-            <div className="sbx-field">
-              <label className="sbx-field__label" htmlFor={`${idPrefix}-shadow`}>{t('box_shadow')}</label>
-              <select
-                id={`${idPrefix}-shadow`}
-                value={typeof style.shadow === 'string' ? style.shadow : ''}
-                onChange={(e) => applyOp(ops.updateBlockStyle(block.id, {
-                  ...style,
-                  shadow: e.target.value || undefined,
-                }), { label: def.label })}
-              >
-                <option value="">{t('none')}</option>
-                <option value="sm">Small</option>
-                <option value="md">Medium</option>
-                <option value="lg">Large</option>
-                <option value="xl">XL</option>
-                <option value="2xl">2XL</option>
-              </select>
-            </div>
-          )}
+          {/* Phase 5: typography / colour / background / border / shadow /
+              dimensions / opacity. All of these were already validated and
+              compiled server-side; this is the authoring surface for them. */}
+          <StyleControls
+            style={style}
+            capabilities={capabilities}
+            onChange={(next) => applyOp(ops.updateBlockStyle(block.id, next), { label: def.label })}
+          />
           {Object.keys(STYLE_TOKEN_CATEGORIES).filter((k) => capabilities.includes(k)).map((key) => (
             <div className="sbx-field" key={key}>
               <label className="sbx-field__label" htmlFor={`${idPrefix}-${key}`}>{key.replace('_token', '').replace('_', ' ')}</label>
@@ -184,6 +151,12 @@ export function BlockInspector({ info }) {
               />
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === 'motion' && (
+        <div role="tabpanel" id={`${idPrefix}-panel-motion`} aria-labelledby={`${idPrefix}-tab-motion`}>
+          <MotionInspector block={block} applyOp={applyOp} label={def.label} />
         </div>
       )}
 

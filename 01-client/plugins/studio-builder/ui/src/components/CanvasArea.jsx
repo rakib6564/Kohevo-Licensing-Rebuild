@@ -12,6 +12,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor, useEngineState } from './EditorContext.jsx';
 import { attachCanvas, markSelected } from '../core/canvas.mjs';
+import { patchCanvas } from '../core/canvasPatch.mjs';
 import { STATUS } from '../core/sync.mjs';
 import { t } from '../core/messages.mjs';
 import { ancestorPath, asList, canInsertBlock, canMoveBlock, findNode } from '../core/doc.mjs';
@@ -22,6 +23,12 @@ const RELOAD_DEBOUNCE_MS = 250;
 export const CanvasArea = memo(function CanvasArea() {
   const { boot, selection, select, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode } = useEditor();
   const working = useEngineState((s) => s.working);
+  // The frame is rendered from the server-confirmed revision, so `base` is the
+  // document its DOM corresponds to — not `working`, which may already carry
+  // unsaved edits.
+  const base = useEngineState((s) => s.base);
+  const baseRef = useRef(null);
+  baseRef.current = base;
   const path = useMemo(() => ancestorPath(working, selection, manifest), [working, selection, manifest]);
   const revisionId = useEngineState((s) => (s.revision ? s.revision.id : 0));
   const status = useEngineState((s) => s.status);
@@ -39,6 +46,20 @@ export const CanvasArea = memo(function CanvasArea() {
   selectRef.current = select;
   const stageRef = useRef(null);
   const [stage, setStage] = useState({ width: 0, height: 0 });
+
+  // ── Optimistic canvas patching (Phase 3) ─────────────────────────────────
+  //
+  // The working document changes on every keystroke, long before the server
+  // confirms a revision. Rather than reload the frame each time, diff the
+  // working document against the one the canvas was last painted from and patch
+  // the frame in place — for the changes that can be patched provably. Anything
+  // else simply falls through to the existing reload effect above, so the
+  // worst case is exactly what the builder did before this change.
+  //
+  // `paintedRef` is the document the CURRENT frame content corresponds to. It is
+  // set on load (from the engine's base document) and after every patch, so the
+  // diff is always against what is actually on screen.
+  const paintedRef = useRef(null);
 
   useEffect(() => {
     const el = stageRef.current;
@@ -67,6 +88,31 @@ export const CanvasArea = memo(function CanvasArea() {
     }, RELOAD_DEBOUNCE_MS);
     return () => clearTimeout(h);
   }, [canvasSrc, src]);
+
+  // Patch the frame as soon as the working document changes, without waiting
+  // for a server-confirmed revision. Runs on every `working` change; if the
+  // patch engine declines (structural or provider-driven), we do nothing here
+  // and the reload effect above handles it once the server confirms.
+  useEffect(() => {
+    if (!working || loading) return;
+    const prev = paintedRef.current;
+    if (!prev || prev === working) return;
+
+    let doc = null;
+    try { doc = frameRef.current && frameRef.current.contentDocument; } catch { doc = null; }
+    if (!doc || doc.readyState === 'loading') return;
+
+    const result = patchCanvas(doc, prev, working);
+    if (result.reload) {
+      // Do NOT advance paintedRef: the frame still shows `prev`, and the reload
+      // effect will re-render it and set paintedRef from the fresh base.
+      return;
+    }
+    paintedRef.current = working;
+    // A patched node may have gained or lost the hover/selected outlines, so
+    // repaint the selection over the new DOM.
+    markSelected(doc, selectionRef.current, { scroll: false });
+  }, [working, loading]);
 
   const onCanvasDrop = useCallback(({ targetId, targetType, position, dataTransfer }) => {
     if (!dataTransfer) return;
@@ -125,6 +171,8 @@ export const CanvasArea = memo(function CanvasArea() {
     let doc = null;
     try { doc = frameRef.current.contentDocument; } catch { doc = null; }
     if (!doc) return;
+    // Fresh server render: the DOM now corresponds to the confirmed document.
+    paintedRef.current = baseRef.current;
     detachRef.current = attachCanvas(doc, {
       onSelect: (id) => selectRef.current(id),
       onDrop: onCanvasDrop,
@@ -148,7 +196,10 @@ export const CanvasArea = memo(function CanvasArea() {
     <main className="sbx-canvas" aria-label="Canvas">
       <div className="sbx-canvas__meta">
         <span>{t('editing_at')} <strong>{t(viewport.key)}</strong> · <code>{viewport.breakpoint}</code> · {viewport.width}px{scale < 1 ? ` · ${Math.round(scale * 100)}%` : ''}</span>
-        {unsaved && <span className="sbx-muted" aria-hidden="true"> · canvas updates after save</span>}
+        // "canvas updates after save" is only still true for edits the patch engine
+        // cannot express (structural changes, provider data). Patchable edits —
+        // text, motion, classes, alignment, visibility — are reflected live.
+        {unsaved && <span className="sbx-muted" aria-hidden="true"> · saving…</span>}
       </div>
 
       {path.length > 0 && (

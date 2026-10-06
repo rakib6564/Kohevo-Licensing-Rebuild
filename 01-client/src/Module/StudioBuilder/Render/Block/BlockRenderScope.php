@@ -36,6 +36,28 @@ final class BlockRenderScope
         return (string) ($this->block['type'] ?? '');
     }
 
+    /**
+     * A DOM-id-safe form of this block's node id.
+     *
+     * Renderers need stable, unique element ids for `aria-controls` /
+     * `aria-labelledby` pairs (tabs, accordion) and for fragment targets.
+     * Node ids are `blk_<24 hex>`; stripping the non-hex-safe characters
+     * leaves a stable, collision-free prefix derived from the document rather
+     * than from randomness — so the same document always compiles the same
+     * ids, and two blocks on one page can never collide.
+     *
+     * The fallback matters: a block without an id (hand-built in a test, or
+     * mid-migration) still needs *some* id, and returning '' would silently
+     * produce `id="-panel"`, which is both invalid and shared.
+     */
+    public function domId(string $suffix = ''): string
+    {
+        $raw = (string) ($this->block['id'] ?? '');
+        $safe = preg_replace('/[^a-zA-Z0-9_-]/', '', $raw);
+        $base = ($safe === null || $safe === '') ? 'sb' : 'sb-' . $safe;
+        return $suffix === '' ? $base : $base . '-' . $suffix;
+    }
+
     /** @return array<string, mixed> */
     public function props(): array
     {

@@ -148,6 +148,8 @@
   --sb-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
   --sb-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.55);
   --sb-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.65);
+}
+
 /* ── Base ─────────────────────────────────────────────────────────────── */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -321,8 +323,10 @@ img { max-width: 100%; height: auto; display: block; }
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Scroll reveal ────────────────────────────────────────────────────── */
+/* Gated on data-sb-js (set inline in <head> BEFORE this stylesheet, so it is
+   never in a flash-of-invisible-content race). Without JS, nothing hides. */
 
-[data-sb-reveal] {
+[data-sb-js='on'] [data-sb-reveal] {
   opacity: 0;
   transform: translate3d(0, 28px, 0);
   transition: opacity 0.7s var(--sb-anim-ease), transform 0.7s var(--sb-anim-ease);
@@ -337,6 +341,16 @@ img { max-width: 100%; height: auto; display: block; }
 [data-sb-reveal='right'][data-sb-in],
 [data-sb-reveal='scale'][data-sb-in] { transform: translate3d(0, 0, 0) scale(1); }
 
+/* Safety net: if the runtime asset never loads, reveal everything rather than
+   leaving the page blank. studio-runtime.js sets nothing that blocks this —
+   data-sb-fallback is only ever set by the inline head watchdog. */
+[data-sb-fallback] [data-sb-reveal],
+[data-sb-fallback] .sb-stagger > * {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+
 /* No JS, or reduced motion: visible immediately, no transform. */
 [data-sb-runtime='off'] [data-sb-reveal],
 [data-sb-motion='reduce'] [data-sb-reveal] {
@@ -347,14 +361,13 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* ── Staggered children (hero headline, card grids) ───────────────────── */
 
-.sb-stagger > * {
+[data-sb-js='on'] .sb-stagger > * {
   opacity: 0;
   transform: translate3d(0, 22px, 0);
   transition: opacity 0.8s var(--sb-anim-ease), transform 0.8s var(--sb-anim-ease);
   transition-delay: calc(var(--i, 0) * var(--sb-anim-stagger));
 }
-.sb-stagger > [data-sb-in],
-[data-sb-ready] .sb-stagger.is-in > * { opacity: 1; transform: translate3d(0, 0, 0); }
+.sb-stagger.is-in > * { opacity: 1; transform: translate3d(0, 0, 0); }
 
 [data-sb-runtime='off'] .sb-stagger > *,
 [data-sb-motion='reduce'] .sb-stagger > * {
@@ -500,6 +513,12 @@ img { max-width: 100%; height: auto; display: block; }
   padding: var(--sb-space-5);
 }
 .sb-modal:target, .sb-modal[data-sb-open] { display: flex; }
+
+/* Scroll lock while an overlay owns the screen. The runtime adds this to
+   <html> and clears it when the last overlay closes. */
+html.sb-scroll-lock {
+  overflow: hidden;
+}
 .sb-modal__backdrop {
   position: absolute;
   inset: 0;
@@ -733,7 +752,11 @@ img { max-width: 100%; height: auto; display: block; }
 /* ── Stats ────────────────────────────────────────────────────────────── */
 
 .sb-stat { text-align: center; padding: var(--sb-space-5) var(--sb-space-3); }
+/* Value and label are spans so the counter can own the value node; blockify
+   them here so the stat stacks. Inside .sb-hero__badge they are flex items
+   (already blockified), so this stays correct in both contexts. */
 .sb-stat__value {
+  display: block;
   font-family: var(--sb-font-heading);
   font-size: var(--sb-text-4xl);
   font-weight: 600;
@@ -741,6 +764,7 @@ img { max-width: 100%; height: auto; display: block; }
   font-variant-numeric: tabular-nums;
 }
 .sb-stat__label {
+  display: block;
   font-size: var(--sb-text-xs);
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1012,5 +1036,4 @@ img { max-width: 100%; height: auto; display: block; }
 @media (max-width: 700px) {
   .sb-demo-bar { bottom: var(--sb-space-2); padding: var(--sb-space-2); gap: 4px; }
   .sb-demo-bar__label { display: none; }
-}
 }

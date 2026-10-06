@@ -431,7 +431,12 @@
   function initOverlays(root) {
     var teardowns = [];
 
-    qsa(root, '[data-sb-modal], [data-sb-offcanvas]').forEach(function (el) {
+    // Panels are matched by CLASS as well as attribute: `ModalRenderer` and
+    // `OffcanvasRenderer` already emit `.sb-modal` / `.sb-offcanvas` (plus the
+    // full role/aria set), and compiled pages are cached — so requiring a
+    // `data-sb-modal` attribute the current renderers never write would leave
+    // every already-compiled page un-enhanced until it was invalidated.
+    qsa(root, '[data-sb-modal], [data-sb-offcanvas], .sb-modal, .sb-offcanvas').forEach(function (el) {
       if (!el.id) el.id = uniqueId();
       el.setAttribute('role', 'dialog');
       el.setAttribute('aria-modal', 'true');
@@ -442,17 +447,36 @@
 
       var off = [];
       off.push(on(el, 'click', function (e) {
-        var closer = e.target.closest('[data-sb-close], .sb-modal__backdrop, .sb-offcanvas__backdrop');
+        // Closers: the renderers emit kind-scoped attributes (`data-sb-modal-close` /
+        // `data-sb-offcanvas-close`) and a bare `.sb-modal__backdrop`, so all of
+        // them must be accepted.
+        var closer = e.target.closest('[data-sb-close], [data-sb-modal-close], [data-sb-offcanvas-close], .sb-modal__backdrop, .sb-offcanvas__backdrop');
         if (!closer || !el.contains(closer)) return;
         e.preventDefault();
         if (el.__sbClose) el.__sbClose();
       }));
 
-      var kind = el.hasAttribute('data-sb-modal') ? 'modal' : 'offcanvas';
+      // Kind is decided by whichever signal is present. Class matching means an
+      // element can arrive as a bare `.sb-modal`, so testing only the
+      // `data-sb-modal` attribute would silently label every such panel
+      // "offcanvas" and then wire up offcanvas triggers for it.
+      var kind = el.hasAttribute('data-sb-modal') || el.classList.contains('sb-modal')
+        ? 'modal'
+        : 'offcanvas';
       var openAttr = 'data-sb-' + kind + '-open';
-      var baseAttr = 'data-sb-' + kind;
 
-      qsa(root, '[' + openAttr + ']').forEach(function (trigger) {
+      // Accept the kind-specific open attribute, and the generic one the
+      // prototype used, so a trigger keeps working whichever it was written
+      // with. Generic triggers are wired to the panel they actually name.
+      var triggers = qsa(root, '[' + openAttr + ']');
+      if (kind === 'modal') triggers = triggers.concat(qsa(root, '[data-sb-offcanvas-open]').filter(function (t) {
+        return document.getElementById(t.getAttribute('data-sb-offcanvas-open')) === el;
+      }));
+      else triggers = triggers.concat(qsa(root, '[data-sb-modal-open]').filter(function (t) {
+        return document.getElementById(t.getAttribute('data-sb-modal-open')) === el;
+      }));
+
+      triggers.forEach(function (trigger) {
         var target = trigger.getAttribute(openAttr);
         trigger.setAttribute('href', '#' + target);
         trigger.setAttribute('aria-controls', target);
@@ -468,7 +492,6 @@
         }));
       });
 
-      void baseAttr;
       teardowns.push(function () {
         off.forEach(function (un) { un(); });
         if (el.__sbClose) el.__sbClose();
@@ -483,6 +506,67 @@
       teardowns.forEach(function (fn) { fn(); });
       qsa(root, '[aria-haspopup="dialog"]').forEach(function (el) {
         el.setAttribute('aria-expanded', 'false');
+      });
+    });
+  }
+
+  /* ── Feature: gallery lightbox ────────────────────────────────────────────
+   * `GalleryRenderer` emits plain `<figure class="sb-gallery__item"><img …></figure>`
+   * markup and no lightbox container, so this feature BUILDS one at runtime
+   * rather than requiring the renderer to emit it.
+   *
+   * Building rather than templating is deliberate: compiled pages are cached, so
+   * a renderer change would leave every already-compiled gallery un-enhanced
+   * until its compilation was invalidated. Synthesising the overlay here means
+   * existing pages get the behaviour for free, and a page without the runtime
+   * still shows a perfectly good static grid.
+   */
+  function initGalleryLightbox(root) {
+    var figures = qsa(root, '.sb-gallery__item').filter(function (f) { return !!qs(f, 'img'); });
+    if (figures.length < 1) return;
+
+    // A gallery small enough to see at once is not a gallery.
+    if (figures.length < 2) return;
+
+    var doc = root.ownerDocument || global.document;
+    if (!doc || !doc.createElement) return;
+
+    var lb = doc.createElement('div');
+    lb.className = 'sb-lightbox';
+    lb.setAttribute('data-sb-lightbox', '');
+    lb.setAttribute('role', 'dialog');
+    lb.setAttribute('aria-modal', 'true');
+    lb.setAttribute('aria-label', 'Image viewer');
+    lb.setAttribute('data-sb-overlay', '');
+    lb.innerHTML =
+      '<button type="button" class="sb-lightbox__nav sb-lightbox__nav--prev" data-sb-lb-prev aria-label="Previous image">&lsaquo;</button>'
+      + '<figure class="sb-lightbox__figure">'
+      + '<img class="sb-lightbox__image" alt="">'
+      + '<figcaption class="sb-lightbox__caption" data-sb-lightbox-caption></figcaption>'
+      + '</figure>'
+      + '<button type="button" class="sb-lightbox__nav sb-lightbox__nav--next" data-sb-lb-next aria-label="Next image">&rsaquo;</button>'
+      + '<button type="button" class="sb-lightbox__close" data-sb-close aria-label="Close">&times;</button>';
+    (doc.body || root).appendChild(lb);
+
+    // Hand the freshly built container to the existing lightbox feature.
+    lb.setAttribute('data-sb-lightbox-host', '');
+    figures.forEach(function (fig) {
+      fig.setAttribute('data-sb-lightbox-item', '');
+      fig.setAttribute('role', 'button');
+      fig.setAttribute('tabindex', '0');
+    });
+
+    // The node we appended and the attributes we stamped on the figures are
+    // ours, so disable() has to take them back out — otherwise the A/B toggle
+    // leaves an orphan overlay in <body> and the "static" page is permanently
+    // marked enhanced.
+    mount(function () {
+      if (lb.__sbClose) lb.__sbClose();
+      if (lb.parentNode) lb.parentNode.removeChild(lb);
+      figures.forEach(function (fig) {
+        fig.removeAttribute('data-sb-lightbox-item');
+        fig.removeAttribute('role');
+        fig.removeAttribute('tabindex');
       });
     });
   }
@@ -961,6 +1045,7 @@
     ['parallax', initParallax],
     ['stickyHeader', initStickyHeader],
     ['overlays', initOverlays],
+    ['galleryLightbox', initGalleryLightbox],
     ['lightbox', initLightbox],
     ['tabs', initTabs],
     ['accordion', initAccordion],

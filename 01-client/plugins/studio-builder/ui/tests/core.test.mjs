@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import * as d from '../src/core/doc.mjs';
 import * as ops from '../src/core/operations.mjs';
 import * as fields from '../src/core/fields.mjs';
+import * as motion from '../src/core/motion.mjs';
 import { VIEWPORTS, breakpointForWidth, resolveResponsive, BREAKPOINTS } from '../src/core/viewport.mjs';
 import { toAllowedHtml } from '../src/core/richtext.mjs';
 import { attachCanvas, nodeElementFrom, markSelected } from '../src/core/canvas.mjs';
@@ -84,8 +85,95 @@ test('operations use the canonical {op, payload} vocabulary', () => {
   const serverOps = ['update_settings', 'update_seo', 'update_template', 'insert_section', 'remove_section', 'move_section',
     'duplicate_section', 'update_section_label', 'update_section_layout',
     'update_section_visibility', 'insert_block', 'remove_block', 'move_block', 'duplicate_block', 'update_block_props', 'update_block_style', 'update_block_visibility', 'update_block_bindings',
-    'update_block_responsive', 'update_block_class_names', 'update_block_attributes'];
+    'update_block_responsive', 'update_block_class_names', 'update_block_attributes',
+    // DocumentOperation::ALLOWED_OPS (DocumentOperation.php) — the motion
+    // operations have been server-side since Sprint 7; only the builder UI
+    // was missing them.
+    'update_block_animation', 'update_block_interactions'];
   for (const name of Object.values(ops.OPS)) assert.ok(serverOps.includes(name), `${name} is a server DocumentOperation`);
+});
+
+test('motion operations carry the whole-value payload the server applier reads', () => {
+  assert.deepEqual(ops.updateBlockAnimation('blk_1', { type: 'fade_up', duration_ms: 800 }),
+    { op: 'update_block_animation', payload: { block_id: 'blk_1', animation: { type: 'fade_up', duration_ms: 800 } } });
+  assert.deepEqual(ops.updateBlockInteractions('blk_1', { trigger: 'hover', animation: { type: 'scale_up' } }),
+    { op: 'update_block_interactions', payload: { block_id: 'blk_1', interactions: { trigger: 'hover', animation: { type: 'scale_up' } } } });
+});
+
+test('local apply: animation and interactions replace the field, coalesce, and miss loudly', () => {
+  const a = heading('A');
+  const x = doc([section([a])]);
+  const animated = ops.applyLocal(x, ops.updateBlockAnimation(a.id, { type: 'fade_up' }));
+  assert.deepEqual(animated.sections[0].blocks[0].animation, { type: 'fade_up' });
+
+  const interacted = ops.applyLocal(x, ops.updateBlockInteractions(a.id, { trigger: 'viewport-enter' }));
+  assert.deepEqual(interacted.sections[0].blocks[0].interactions, { trigger: 'viewport-enter' });
+
+  // Both are whole-value replaces on `block_id`, so a rapid second edit wins
+  // instead of queueing every intermediate value.
+  const queue = ops.enqueueCoalesced([], { op: ops.updateBlockAnimation(a.id, { type: 'fade_in' }) });
+  const merged = ops.enqueueCoalesced(queue, { op: ops.updateBlockAnimation(a.id, { type: 'scale_up' }) });
+  assert.equal(merged.length, 1, 'consecutive motion edits coalesce');
+
+  assert.throws(() => ops.applyLocal(x, ops.updateBlockAnimation('nope', { type: 'fade_up' })),
+    /No node/, 'a missing target is an error the caller can drop');
+});
+
+// ── motion.mjs ───────────────────────────────────────────────────────────
+//
+// These are the builder's half of the server contract: the normalizers exist
+// so the inspector can only ever emit a document DocumentValidator accepts.
+
+test('motion: the vocabulary matches the server enums exactly', () => {
+  // DocumentValidator::validateBlock() lists these; a drift here is a
+  // guaranteed save failure, so the lists are pinned by value.
+  assert.deepEqual(motion.ANIMATION_TYPES.map((o) => o.value),
+    ['none', 'fade_in', 'fade_up', 'fade_down', 'scale_up', 'slide_in']);
+  assert.deepEqual(motion.INTERACTION_TRIGGERS.filter((o) => o.value).map((o) => o.value),
+    ['hover', 'focus', 'click', 'viewport-enter', 'scroll', 'load']);
+});
+
+test('motion: normalizeAnimation keeps valid values and collapses junk to none', () => {
+  assert.deepEqual(motion.normalizeAnimation({ type: 'fade_up', duration_ms: 800, easing: 'ease-out' }),
+    { type: 'fade_up', duration_ms: 800, easing: 'ease-out' });
+
+  // A stale or hand-edited document must never send the server an enum it rejects.
+  for (const junk of [{ type: 'wobble' }, {}, null, 'fade_up', [1, 2], { type: 42 }]) {
+    assert.deepEqual(motion.normalizeAnimation(junk), { type: 'none' },
+      `must collapse to none: ${JSON.stringify(junk)}`);
+  }
+});
+
+test('motion: duration and delay are clamped into the range the server accepts', () => {
+  assert.equal(motion.normalizeAnimation({ type: 'fade_in', duration_ms: 99999 }).duration_ms, 4000);
+  assert.equal(motion.normalizeAnimation({ type: 'fade_in', duration_ms: -50 }).duration_ms, 0);
+  assert.equal(motion.normalizeAnimation({ type: 'fade_in', duration_ms: 'abc' }).duration_ms, 500);
+  assert.equal(motion.clampMs('750', motion.DURATION_RANGE), 750);
+});
+
+test('motion: an unknown easing is dropped rather than passed through', () => {
+  const out = motion.normalizeAnimation({ type: 'fade_in', easing: 'steps(99);background:url(x)' });
+  assert.equal(out.easing, undefined, 'arbitrary easing strings never reach the document');
+});
+
+test('motion: normalizeInteractions drops an empty trigger and a meaningless nested animation', () => {
+  assert.deepEqual(motion.normalizeInteractions({}), {});
+  assert.deepEqual(motion.normalizeInteractions({ trigger: '' }), {});
+  assert.deepEqual(motion.normalizeInteractions({ trigger: 'nonsense' }), {});
+  assert.deepEqual(motion.normalizeInteractions({ trigger: 'hover' }), { trigger: 'hover' });
+  // A nested animation with no real type is noise in the document.
+  assert.deepEqual(motion.normalizeInteractions({ trigger: 'hover', animation: { type: 'none' } }), { trigger: 'hover' });
+  assert.deepEqual(motion.normalizeInteractions({ trigger: 'hover', animation: { type: 'scale_up' } }),
+    { trigger: 'hover', animation: { type: 'scale_up' } });
+});
+
+test('motion: hasMotion reflects what the renderer would actually emit', () => {
+  assert.equal(motion.hasMotion({ animation: { type: 'none' } }), false);
+  assert.equal(motion.hasMotion({ interactions: { trigger: '' } }), false);
+  assert.equal(motion.hasMotion({ animation: { type: 'fade_up' } }), true);
+  assert.equal(motion.hasMotion({ interactions: { trigger: 'hover' } }), true);
+  assert.equal(motion.hasMotion({}), false);
+  assert.equal(motion.hasMotion(null), false);
 });
 
 test('local apply: every structural op, with structural sharing', () => {

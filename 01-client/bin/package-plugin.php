@@ -83,7 +83,18 @@ if (!is_array($manifest)) {
 }
 
 // Load PluginLoader purely for its static validators (no DB needed).
-require SLATE_ROOT . '/includes/PluginLoader.php';
+//
+// These were `require`d directly from includes/PluginLoader.php, which is now
+// only a forwarder for the namespaced class — requiring it alone never defined
+// the global `PluginLoader`, so this script died with
+// "Class PluginLoader not found" before it could validate anything.
+//
+// The autoloader + aliases.php are the supported bridge, and both are safe
+// here: autoload.php only registers a PSR-4 resolver, and aliases.php is a
+// list of class_alias() calls. Neither opens a database connection, which is
+// what keeps this script usable on a build box with no configured DB.
+require_once SLATE_ROOT . '/src/autoload.php';
+require_once SLATE_ROOT . '/src/compat/aliases.php';
 
 $check = PluginLoader::validateManifest($manifest);
 if (!$check['ok']) {

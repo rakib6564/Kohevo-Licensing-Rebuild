@@ -538,6 +538,151 @@ final class BlockRegistry
             ]),
             allowsChildren: false,
         ));
+
+        // 25. core.tabs — `items[].label` names the tab, `content` is its panel.
+        //     The renderer pairs each tab to its panel via generated `t1`, `t2` …
+        //     ids, which is the contract the runtime matches on.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.tabs',
+            version: 1,
+            label: 'Tabs',
+            category: 'content',
+            icon: 'window',
+            schema: FieldSchema::define([
+                [
+                    'key'        => 'items',
+                    'type'       => 'repeater',
+                    'label'      => 'Tabs',
+                    'required'   => false,
+                    'default'    => [
+                        ['label' => 'Overview', 'content' => 'What the programme covers at a glance.'],
+                        ['label' => 'Detail', 'content' => 'The finer points, schedules and requirements.'],
+                        ['label' => 'Next steps', 'content' => 'How to get started in under a minute.'],
+                    ],
+                    'max_items'  => 8,
+                    'item_schema' => FieldSchema::define([
+                        ['key' => 'label', 'type' => 'string', 'label' => 'Tab Label', 'required' => true, 'max_length' => 60],
+                        ['key' => 'content', 'type' => 'text', 'label' => 'Panel Content', 'required' => false, 'default' => '', 'max_length' => 2000],
+                    ]),
+                ],
+                [
+                    'key'        => 'options',
+                    'type'       => 'object',
+                    'label'      => 'Options',
+                    'required'   => false,
+                    'properties' => FieldSchema::define([
+                        ['key' => 'position', 'type' => 'enum', 'label' => 'Tab Position', 'required' => false, 'allowed_values' => ['top', 'bottom'], 'default' => 'top'],
+                    ]),
+                ],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 26. core.accordion — FAQ rows. The first row renders open, so the
+        //     no-JS state is readable instead of everything collapsed.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.accordion',
+            version: 1,
+            label: 'Accordion',
+            category: 'content',
+            icon: 'list-check',
+            schema: FieldSchema::define([
+                [
+                    'key'        => 'items',
+                    'type'       => 'repeater',
+                    'label'      => 'Rows',
+                    'required'   => false,
+                    'default'    => [
+                        ['heading' => 'How do I get started?', 'body' => 'Pick a track, book a trial class, and we handle the rest.'],
+                        ['heading' => 'Can I freeze my membership?', 'body' => 'Yes — freeze for up to three months, in one go or in slices.'],
+                        ['heading' => 'What should I bring?', 'body' => 'Comfortable clothes, water, and socks you can move in.'],
+                    ],
+                    'max_items'  => 20,
+                    'item_schema' => FieldSchema::define([
+                        ['key' => 'heading', 'type' => 'string', 'label' => 'Question', 'required' => true, 'max_length' => 200],
+                        ['key' => 'body', 'type' => 'text', 'label' => 'Answer', 'required' => false, 'default' => '', 'max_length' => 2000],
+                    ]),
+                ],
+                ['key' => 'allow_multiple', 'type' => 'boolean', 'label' => 'Allow Multiple Open', 'required' => false, 'default' => false],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 27. core.carousel — image and/or testimonial slides with dots and
+        //     optional autoplay, matching the runtime's data-sb-carousel contract.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.carousel',
+            version: 1,
+            label: 'Carousel',
+            category: 'media',
+            icon: 'images',
+            schema: FieldSchema::define([
+                [
+                    'key'        => 'slides',
+                    'type'       => 'repeater',
+                    'label'      => 'Slides',
+                    'required'   => false,
+                    'default'    => [
+                        ['image' => null, 'quote' => 'The small classes are the reason I stayed.', 'author' => 'Mara, two years in', 'caption' => ''],
+                        ['image' => null, 'quote' => 'First class I have not talked myself out of.', 'author' => 'Tobias, member', 'caption' => ''],
+                        ['image' => null, 'quote' => 'A syllabus that actually changes each season.', 'author' => 'Saartje, teacher', 'caption' => ''],
+                    ],
+                    'max_items'  => 20,
+                    'item_schema' => FieldSchema::define([
+                        ['key' => 'image', 'type' => 'media_ref', 'label' => 'Slide Image', 'required' => false, 'default' => null],
+                        ['key' => 'quote', 'type' => 'text', 'label' => 'Quote', 'required' => false, 'default' => '', 'max_length' => 600],
+                        ['key' => 'author', 'type' => 'string', 'label' => 'Attribution', 'required' => false, 'default' => '', 'max_length' => 120],
+                        ['key' => 'caption', 'type' => 'string', 'label' => 'Caption', 'required' => false, 'default' => '', 'max_length' => 255],
+                    ]),
+                ],
+                [
+                    'key'        => 'options',
+                    'type'       => 'object',
+                    'label'      => 'Options',
+                    'required'   => false,
+                    'properties' => FieldSchema::define([
+                        ['key' => 'per_view', 'type' => 'number', 'label' => 'Slides Per View', 'required' => false, 'default' => 1, 'min' => 1, 'max' => 3, 'integer_only' => true],
+                        ['key' => 'loop', 'type' => 'boolean', 'label' => 'Loop', 'required' => false, 'default' => true],
+                        ['key' => 'autoplay_ms', 'type' => 'number', 'label' => 'Autoplay (ms, 0 = off)', 'required' => false, 'default' => 0, 'min' => 0, 'max' => 60000, 'integer_only' => true],
+                    ]),
+                ],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 28. core.stats — animated figures. `decimals` caps at 3 so the
+        //     pre-rendered number and the runtime's count-up format identically
+        //     and never visibly jump.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.stats',
+            version: 1,
+            label: 'Stats',
+            category: 'content',
+            icon: 'layout-grid',
+            schema: FieldSchema::define([
+                [
+                    'key'        => 'items',
+                    'type'       => 'repeater',
+                    'label'      => 'Figures',
+                    'required'   => false,
+                    'default'    => [
+                        ['value' => 1840, 'label' => 'Students taught', 'prefix' => '', 'suffix' => '', 'decimals' => 0],
+                        ['value' => 96, 'label' => 'Continue past year one', 'prefix' => '', 'suffix' => '%', 'decimals' => 0],
+                        ['value' => 11, 'label' => 'Working artists on staff', 'prefix' => '+', 'suffix' => '', 'decimals' => 0],
+                        ['value' => 4, 'label' => 'Days a week, year round', 'prefix' => '', 'suffix' => '', 'decimals' => 0],
+                    ],
+                    'max_items'  => 6,
+                    'item_schema' => FieldSchema::define([
+                        ['key' => 'value', 'type' => 'number', 'label' => 'Value', 'required' => true, 'min' => -1000000000, 'max' => 1000000000],
+                        ['key' => 'label', 'type' => 'string', 'label' => 'Label', 'required' => true, 'max_length' => 120],
+                        ['key' => 'prefix', 'type' => 'string', 'label' => 'Prefix', 'required' => false, 'default' => '', 'max_length' => 8],
+                        ['key' => 'suffix', 'type' => 'string', 'label' => 'Suffix', 'required' => false, 'default' => '', 'max_length' => 8],
+                        ['key' => 'decimals', 'type' => 'number', 'label' => 'Decimals', 'required' => false, 'default' => 0, 'min' => 0, 'max' => 3, 'integer_only' => true],
+                    ]),
+                ],
+            ]),
+            allowsChildren: false,
+        ));
     }
 
     /**
