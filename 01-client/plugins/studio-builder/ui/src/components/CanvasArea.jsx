@@ -15,6 +15,9 @@ import { ancestorPath, asList, canInsertBlock, canMoveBlock, findNode } from '..
 import { effectivelyLocked, lockIndex } from '../core/layerLock.mjs';
 import * as ops from '../core/operations.mjs';
 import { DRAG_TYPE_NEW } from './BlockPalette.jsx';
+import { CanvasOverlay } from './CanvasOverlay.jsx';
+import { BottomBar } from './BottomBar.jsx';
+import { stepZoom, zoomPercent } from '../core/zoom.mjs';
 
 const RELOAD_DEBOUNCE_MS = 250;
 
@@ -45,7 +48,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   const canvasSrc = `${boot.canvasUrl}?page=${boot.pageId}&v=${revisionId}${canvasVersion ? `-${canvasVersion}` : ''}`;
   const [src, setSrc] = useState(() => canvasSrc);
   const [loading, setLoading] = useState(true);
-  const [zoomMode, setZoomMode] = useState('fit'); // 'fit' | '100' | '75' | '50'
+  const [zoomMode, setZoomMode] = useState('fit'); // 'fit' | 25 | 50 | 75 | 100
   const [showGrid, setShowGrid] = useState(false);
   const loadedRef = useRef(false);
   const interactiveRef = useRef(interactive);
@@ -78,12 +81,8 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   }, []);
 
   const fitScale = stage.width > 0 ? Math.min(1, Math.max(0.35, (stage.width - 48) / viewport.width)) : 1;
-  const scale = useMemo(() => {
-    if (zoomMode === '100') return 1;
-    if (zoomMode === '75') return 0.75;
-    if (zoomMode === '50') return 0.5;
-    return fitScale;
-  }, [zoomMode, fitScale]);
+  const scale = useMemo(() => (zoomMode === 'fit' ? fitScale : zoomPercent(zoomMode, fitScale) / 100), [zoomMode, fitScale]);
+  const percent = Math.round(scale * 100);
 
   const frameHeight = stage.height > 0 ? Math.max(640, (stage.height - 48) / scale) : 900;
 
@@ -282,24 +281,6 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
           <span className="sbx-canvas__meta-pill">
             <strong>{t(viewport.key)}</strong> · {viewport.width}px · <span className="sbx-canvas__scale-badge">{Math.round(scale * 100)}%</span>
           </span>
-          {interactive && (
-            <nav className="sbx-breadcrumb" aria-label={t('breadcrumb')}>
-              <button type="button" className="sbx-breadcrumb__item" onClick={() => select(null)}>{t('page')}</button>
-              {path.map((p, i) => (
-                <span key={p.id} className="sbx-breadcrumb__seg">
-                  <span className="sbx-breadcrumb__sep" aria-hidden="true">›</span>
-                  <button
-                    type="button"
-                    className="sbx-breadcrumb__item"
-                    aria-current={i === path.length - 1 ? 'location' : undefined}
-                    onClick={() => select(p.id)}
-                  >
-                    {p.label}
-                  </button>
-                </span>
-              ))}
-            </nav>
-          )}
           {!interactive && (
             <span className="sbx-canvas__meta-pill sbx-canvas__preview-pill">{t('mode_preview')}</span>
           )}
@@ -311,53 +292,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
           )}
         </div>
 
-        <div className="sbx-canvas__meta-center" role="group" aria-label="Zoom controls">
-          <button
-            type="button"
-            className={`sbx-canvas__zoom-btn ${zoomMode === 'fit' ? 'is-active' : ''}`}
-            onClick={() => setZoomMode('fit')}
-            title="Auto-fit canvas to stage"
-          >
-            Fit
-          </button>
-          <button
-            type="button"
-            className={`sbx-canvas__zoom-btn ${zoomMode === '100' ? 'is-active' : ''}`}
-            onClick={() => setZoomMode('100')}
-            title="Actual 1:1 pixel size (100%)"
-          >
-            100%
-          </button>
-          <button
-            type="button"
-            className={`sbx-canvas__zoom-btn ${zoomMode === '75' ? 'is-active' : ''}`}
-            onClick={() => setZoomMode('75')}
-            title="75% zoom"
-          >
-            75%
-          </button>
-          <button
-            type="button"
-            className={`sbx-canvas__zoom-btn ${zoomMode === '50' ? 'is-active' : ''}`}
-            onClick={() => setZoomMode('50')}
-            title="50% zoom"
-          >
-            50%
-          </button>
-        </div>
-
         <div className="sbx-canvas__meta-right">
-          <button
-            type="button"
-            className={`sbx-canvas__tool-btn${showGrid ? ' is-active' : ''}`}
-            aria-pressed={showGrid}
-            data-testid="canvas-grid-toggle"
-            onClick={() => setShowGrid((g) => !g)}
-            title={t('grid_toggle')}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-            <span>{t('grid')}</span>
-          </button>
           {onToggleCollapse && (
             <button
               type="button"
@@ -385,6 +320,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
         </div>
       </div>
 
+      <div className="sbx-canvas__stage-wrap">
       <div className="sbx-canvas__stage" ref={stageRef}>
         <div
           className="sbx-canvas__fit"
@@ -424,6 +360,26 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
           </div>
         </div>
       </div>
+      <CanvasOverlay
+        frameRef={frameRef}
+        stageRef={stageRef}
+        scale={scale}
+        enabled={interactive}
+        onAction={(action, id) => actionRef.current(action, id)}
+      />
+      </div>
+      <BottomBar
+        path={path}
+        showPath={interactive}
+        onSelectPath={select}
+        percent={percent}
+        fitActive={zoomMode === 'fit'}
+        onFit={() => setZoomMode('fit')}
+        onZoomIn={() => setZoomMode(stepZoom(percent, 1))}
+        onZoomOut={() => setZoomMode(stepZoom(percent, -1))}
+        showGrid={showGrid}
+        onToggleGrid={() => setShowGrid((g) => !g)}
+      />
     </main>
   );
 });

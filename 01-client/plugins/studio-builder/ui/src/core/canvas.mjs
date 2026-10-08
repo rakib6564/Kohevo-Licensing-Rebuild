@@ -50,85 +50,6 @@ const OVERLAY_CSS = `
 }
 a, button { cursor: default; }
 
-.${BAR_CLASS} {
-  position: absolute;
-  top: -28px;
-  left: 0;
-  height: 25px;
-  background: #7c3aed;
-  border-radius: 4px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 4px 0 8px;
-  z-index: 99999;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #ffffff;
-  user-select: none;
-  box-sizing: border-box;
-  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.45);
-  pointer-events: auto;
-}
-
-.${BAR_CLASS}__left {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-}
-
-.${BAR_CLASS}__label {
-  color: #ffffff;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 160px;
-}
-
-.${BAR_CLASS}__actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex: none;
-  margin-left: 2px;
-  padding-left: 4px;
-  border-left: 1px solid rgba(255, 255, 255, 0.25);
-}
-
-.${BAR_CLASS}__btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  background: transparent;
-  border: none;
-  border-radius: 3px;
-  color: rgba(255, 255, 255, 0.9);
-  cursor: pointer;
-  padding: 0;
-  transition: all 0.1s ease;
-}
-
-.${BAR_CLASS}__btn:hover {
-  background: rgba(255, 255, 255, 0.22);
-  color: #ffffff;
-}
-
-.${BAR_CLASS}__btn svg {
-  width: 12px;
-  height: 12px;
-  stroke: currentColor;
-  stroke-width: 2;
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 /* Inline text editing */
 .sbx-inline-editing {
   outline: 2px solid #38bdf8 !important;
@@ -455,7 +376,7 @@ export function attachCanvas(doc, handlers) {
   };
 }
 
-/** Paint the selection outline, show action bar for any block or section, and bring node into view. */
+/** Paint the selection outline on the node(s) and bring the primary into view. */
 export function markSelected(doc, nodeId, { scroll = true, ids = null } = {}) {
   if (!doc || !doc.querySelectorAll) return;
   doc.querySelectorAll('.sbx-selected').forEach((el) => {
@@ -484,59 +405,8 @@ export function markSelected(doc, nodeId, { scroll = true, ids = null } = {}) {
     if (typeof el.classList.add === 'function') el.classList.add('sbx-selected');
   }
 
-  // Attach floating action toolbar for ANY selected element (block or section)
-  if (typeof doc.createElement === 'function' && typeof el.appendChild === 'function') {
-    const type = (el.getAttribute && el.getAttribute(TYPE_ATTR)) || '';
-    const isSection = (el.tagName && el.tagName.toLowerCase() === 'section') || type.startsWith('layout.section');
-
-    let cleanLabel = '';
-    if (isSection) {
-      const heading = el.querySelector('h1, h2, h3, h4, [data-sb-type="core.heading"]');
-      const labelText = (heading ? heading.textContent.trim() : '') || el.getAttribute('data-sb-label') || 'Section';
-      cleanLabel = labelText.replace(/\s+/g, ' ').slice(0, 20);
-    } else {
-      const parts = type.split('.');
-      const rawKind = parts[parts.length - 1] || 'Block';
-      const kindName = rawKind.charAt(0).toUpperCase() + rawKind.slice(1);
-      const snippet = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 14);
-      cleanLabel = snippet ? `${kindName}: "${snippet}"` : kindName;
-    }
-
-    const bar = doc.createElement('div');
-    bar.className = BAR_CLASS;
-    bar.setAttribute('contenteditable', 'false');
-
-    // If near the top edge of viewport, flip bar inside element
-    const rect = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
-    if (rect && rect.top < 32) {
-      bar.style.top = '2px';
-    }
-
-    bar.innerHTML = `
-      <div class="${BAR_CLASS}__left">
-        <span class="${BAR_CLASS}__label">${escapeHtml(cleanLabel)}</span>
-      </div>
-      <div class="${BAR_CLASS}__actions">
-        <button type="button" class="${BAR_CLASS}__btn" data-action="up" data-node-id="${escapeHtml(nodeId)}" title="Move up">
-          <svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-        </button>
-        <button type="button" class="${BAR_CLASS}__btn" data-action="down" data-node-id="${escapeHtml(nodeId)}" title="Move down">
-          <svg viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
-        </button>
-        <button type="button" class="${BAR_CLASS}__btn" data-action="edit" data-node-id="${escapeHtml(nodeId)}" title="Edit inline (or Double Click)">
-          <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        </button>
-        <button type="button" class="${BAR_CLASS}__btn" data-action="duplicate" data-node-id="${escapeHtml(nodeId)}" title="Duplicate">
-          <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        </button>
-        <button type="button" class="${BAR_CLASS}__btn" data-action="remove" data-node-id="${escapeHtml(nodeId)}" title="Delete">
-          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        </button>
-      </div>
-    `;
-    el.appendChild(bar);
-  }
-
+  // The name chip and action toolbar are drawn by the parent (components/CanvasOverlay.jsx);
+  // nothing but the selection class is written into the frame.
   if (scroll && el.scrollIntoView) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 

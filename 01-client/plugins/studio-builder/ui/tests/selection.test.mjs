@@ -196,3 +196,24 @@ test('the mobile shell threshold is one named constant', () => {
   assert.equal(isMobileShellWidth(NaN), false);
   assert.equal(isMobileShellWidth(undefined), false);
 });
+
+// ── zoom ───────────────────────────────────────────────────────────────────
+
+import { ZOOM_STEPS, zoomPercent, stepZoom, canZoomIn, canZoomOut } from '../src/core/zoom.mjs';
+
+test('zoom steps move from the current percent, including a fit value between two steps', () => {
+  assert.deepEqual(ZOOM_STEPS, [25, 50, 75, 100]);
+  assert.equal(zoomPercent('fit', 0.64), 64);
+  assert.equal(zoomPercent(75, 0.64), 75);
+  assert.equal(zoomPercent('bogus', 0.64), 100);
+  assert.equal(stepZoom(64, 1), 75, 'fit at 64% zooms in to 75');
+  assert.equal(stepZoom(64, -1), 50, 'fit at 64% zooms out to 50');
+  assert.equal(stepZoom(100, 1), 100, 'no zoom beyond 100');
+  assert.equal(stepZoom(25, -1), 25, 'no zoom below 25');
+  assert.equal(stepZoom(50, 1), 75);
+  assert.equal(stepZoom(50, -1), 25);
+  assert.equal(canZoomIn(100), false);
+  assert.equal(canZoomIn(99), true);
+  assert.equal(canZoomOut(25), false);
+  assert.equal(canZoomOut(26), true);
+});
