@@ -2959,3 +2959,14 @@ html, body.sbx-body {
 @media (max-width: 860px) {
   .sbx-canvas__meta, .sbx-canvas .sbx-bottombar { display: none; }
 }
+
+/* Short single-line fields and colours read as one row too: label left, control right. Corner and padding grids stay compact. */
+@media (min-width: 861px) {
+  .sbx-inspector .sbx-field:has(> input.sbx-input):not(.sbx-field--stacked),
+  .sbx-inspector .sbx-field:has(> .sbx-color):not(.sbx-field--stacked) { display: grid; grid-template-columns: minmax(70px, 38%) minmax(0, 1fr); align-items: center; column-gap: 10px; }
+  .sbx-inspector .sbx-field:has(> input.sbx-input) > .sbx-field__label,
+  .sbx-inspector .sbx-field:has(> .sbx-color) > .sbx-field__label { margin: 0; }
+  .sbx-inspector .sbx-field > .sbx-field__error, .sbx-inspector .sbx-field > .sbx-hint, .sbx-inspector .sbx-field > .sbx-field__problem { grid-column: 1 / -1; }
+  .sbx-inspector .sbx-spacing__grid .sbx-field:has(> input.sbx-input), .sbx-inspector .sbx-attr-row .sbx-field:has(> input.sbx-input) { display: block; }
+  .sbx-inspector .sbx-spacing__grid .sbx-field > .sbx-field__label { margin-bottom: 0.25rem; }
+}

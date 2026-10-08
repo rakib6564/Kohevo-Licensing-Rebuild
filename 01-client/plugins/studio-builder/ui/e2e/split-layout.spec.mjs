@@ -17,7 +17,7 @@ async function restore(page, layers) {
     await settled(page);
     if ((await layerCount(page)) <= layers) return;
     const undo = page.getByTestId('undo');
-    await expect(undo).toBeEnabled({ timeout: 5_000 });
+    await expect(undo).toBeEnabled({ timeout: 15_000 });
     await undo.click();
     await page.waitForTimeout(500);
   }

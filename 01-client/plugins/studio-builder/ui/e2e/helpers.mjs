@@ -45,3 +45,15 @@ export async function openSection(page, id) {
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   return section.locator('.sbx-isec__body');
 }
+
+/**
+ * Evaluate `fn` on one element of the canvas frame, looking the frame up again on every call. The frame reloads when a
+ * repaint lands, which destroys a cached Frame or handle; use this inside `expect.poll` and a reload just means "try again".
+ */
+export async function frameEval(page, selector, fn, { last = true } = {}) {
+  try {
+    const frame = await frameDocument(page);
+    const loc = last ? frame.locator(selector).last() : frame.locator(selector).first();
+    return await loc.evaluate(fn);
+  } catch { return 'retry'; }
+}

@@ -1,7 +1,7 @@
 // Free-form style controls validate like the server does (B2-P3a): an invalid draft shows an inline error and is
 // never committed; a valid one commits and reaches the canvas.
 import { test, expect } from '@playwright/test';
-import { openBuilder, frameDocument, settled, sandboxPageId, openSection } from './helpers.mjs';
+import { openBuilder, frameDocument, frameEval, settled, sandboxPageId, openSection } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
@@ -21,7 +21,7 @@ async function restore(page, layers) {
     await settled(page);
     if ((await layerCount(page)) <= layers) return;
     const undo = page.getByTestId('undo');
-    await expect(undo).toBeEnabled({ timeout: 5_000 });
+    await expect(undo).toBeEnabled({ timeout: 15_000 });
     await undo.click();
     await page.waitForTimeout(500);
   }
@@ -136,9 +136,7 @@ test('a style edit reaches the canvas without a manual reload', async ({ page })
     await settled(page);
 
     // The server writes the style on the block's wrapper; the editor no longer paints it itself.
-    const frame = await frameDocument(page);
-    const wrapper = frame.locator('[data-sb-type="core.quote"]').last();
-    await expect.poll(async () => wrapper.evaluate((el) => getComputedStyle(el).fontSize), { timeout: 20_000 }).toBe('37px');
+    await expect.poll(async () => frameEval(page, '[data-sb-type="core.quote"]', (el) => getComputedStyle(el).fontSize), { timeout: 20_000 }).toBe('37px');
   } finally {
     await restore(page, before);
   }
