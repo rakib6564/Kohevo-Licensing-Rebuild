@@ -1,17 +1,18 @@
 // Mobile shell (B2-P1): five-tab dock, two-row top bar with a status chip, selection that does
 // not cover the canvas, draggable sheets, the Responsive-view sheet and keyboard handling.
 import { test, expect } from '@playwright/test';
-import { openBuilder, frameDocument } from './helpers.mjs';
+import { openBuilder, frameDocument, settled } from './helpers.mjs';
 
 const dock = (page, key) => page.getByTestId(`mobile-dock-${key}`);
 
 async function ensureSection(page) {
   const frame = await frameDocument(page);
-  if (await frame.locator('[data-sb-node]').count()) return;
+  if (await frame.locator('[data-sb-node]').count()) { await settled(page); return; }
   await dock(page, 'blocks').click();
   await page.getByRole('tab', { name: /Layers/ }).click();
   await page.getByRole('button', { name: /Add section/ }).first().click();
   await expect.poll(async () => (await frameDocument(page)).locator('[data-sb-node]').count(), { timeout: 15_000 }).toBeGreaterThan(0);
+  await settled(page);
   await page.getByRole('button', { name: 'Close panel' }).click();
 }
 

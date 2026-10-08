@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { expect } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -24,4 +25,14 @@ export async function frameDocument(page) {
   const frame = await handle.contentFrame();
   await frame.waitForLoadState('domcontentloaded');
   return frame;
+}
+
+/**
+ * Wait until the document has no optimistic client ids left (`tmp_*`). A block or section you just
+ * added carries a temporary id until the server round trip returns its real one; reading an id (or
+ * clicking a node) before that races the swap, which only shows on a slow runner.
+ */
+export async function settled(page) {
+  const frame = page.frameLocator('iframe.sbx-canvas__frame');
+  await expect.poll(async () => (await frame.locator('[data-sb-node^="tmp_"]').count()) + (await page.locator('[data-row^="tmp_"]').count()), { timeout: 20_000 }).toBe(0);
 }
