@@ -85,3 +85,33 @@ test('the Z-Index field cannot be set above the ceiling that keeps the platform 
     await restore(page, before);
   }
 });
+
+test('the Background controls offer only what the server accepts, and what they write saves', async ({ page }) => {
+  await openBuilder(page);
+  await settled(page);
+  const before = await layerCount(page);
+  try {
+    await page.getByRole('tab', { name: /^(Add|Ajouter)$/ }).click();
+    const panel = page.locator('#sbx-leftpanel-blocks');
+    await panel.getByRole('tab', { name: 'Elements' }).click();
+    await panel.locator('[data-chip="content"]').click();
+    await panel.locator('[data-block-type="core.quote"]').click();
+    await settled(page);
+    await page.locator('[id^="sbx-blk-"][id$="-tab-style"]').click();
+
+    const pills = page.getByRole('radiogroup', { name: 'Background type' }).getByRole('button');
+    await expect(pills).toHaveText(['Image', 'Color', 'Gradient']); // no video: the server has no background video
+
+    await page.getByRole('radiogroup', { name: 'Background type' }).getByRole('button', { name: 'Image' }).click();
+        await expect(page.getByRole('group', { name: 'Background image' }).getByLabel('Media ID')).toBeVisible(); // a media reference, not a typed URL
+    await expect(page.getByLabel('Fit', { exact: true })).toHaveCount(0); // nothing to fit until an image is chosen
+
+    await page.getByRole('radiogroup', { name: 'Background type' }).getByRole('button', { name: 'Gradient' }).click();
+    await page.getByLabel('Angle').fill('90');
+    await settled(page);
+    await expect(page.getByRole('status').filter({ hasText: /saved/i }).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('alert')).toHaveCount(0);
+  } finally {
+    await restore(page, before);
+  }
+});

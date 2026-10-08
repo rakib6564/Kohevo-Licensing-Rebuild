@@ -142,6 +142,7 @@ export function BlockInspector({ info }) {
           <StyleControls
             style={style}
             capabilities={capabilities}
+            mediaPicker={boot.mediaPicker}
             onChange={(next) => applyOp(ops.updateBlockStyle(block.id, next), { label: def.label })}
           />
           {Object.keys(STYLE_TOKEN_CATEGORIES).filter((k) => capabilities.includes(k)).map((key) => (
