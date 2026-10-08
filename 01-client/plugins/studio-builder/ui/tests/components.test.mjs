@@ -81,7 +81,6 @@ test('save state and conflict state are visible and blocking', { skip: skipReaso
   const dirty = entry.render({ manifest, document: pageDoc, mutate: (e) => e.apply(ops.updateBlockProps(h.id, { level: 'h2', text: 'x' })) });
   assert.match(dirty, /data-status="dirty"/);
   assert.match(dirty, /Unsaved changes/);
-  assert.match(dirty, /canvas updates after save/);
 
   const conflicted = entry.render({
     manifest, document: pageDoc,

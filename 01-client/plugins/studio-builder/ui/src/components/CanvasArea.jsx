@@ -85,8 +85,8 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     return () => ro.disconnect();
   }, []);
 
-  // Stage padding is 24px a side on desktop and 2px on the phone shell; never clamp a phone up past its width.
-  const fitScale = stage.width > 0 ? Math.min(1, Math.max(isMobile ? 0.2 : 0.35, (stage.width - (isMobile ? 4 : 48)) / viewport.width)) : 1;
+  // The desktop stage has no padding (the canvas runs edge to edge); the phone shell keeps 2px a side; never clamp a phone up past its width.
+  const fitScale = stage.width > 0 ? Math.min(1, Math.max(isMobile ? 0.2 : 0.35, (stage.width - (isMobile ? 4 : 0)) / viewport.width)) : 1;
   const scale = useMemo(() => (zoomMode === 'fit' ? fitScale : zoomPercent(zoomMode, fitScale) / 100), [zoomMode, fitScale]);
   const percent = Math.round(scale * 100);
   const fitPercent = Math.round(fitScale * 100);
@@ -94,7 +94,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     if (canvasView.fitPercent !== fitPercent) setCanvasView({ fitPercent });
   }, [fitPercent, canvasView.fitPercent, setCanvasView]);
 
-  const frameHeight = stage.height > 0 ? Math.max(640, (stage.height - 48) / scale) : 900;
+  const frameHeight = stage.height > 0 ? Math.max(640, (stage.height - (isMobile ? 48 : 0)) / scale) : 900;
 
   // Direct inline text update: the canvas names the declared prop it edited (core/inlineText.mjs).
   const onInlineText = useCallback((nodeId, newText, prop) => {
@@ -269,10 +269,17 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     if (doc && doc.readyState !== 'loading') markSelected(doc, selection, { ids: selectedIds });
   }, [selection, selectedIds]);
 
+  const reloadCanvas = () => {
+    setLoading(true);
+    setSrc(`${boot.canvasUrl}?page=${boot.pageId}&v=${Date.now()}`);
+    onReloadCanvas && onReloadCanvas();
+  };
+
   const unsaved = status === STATUS.DIRTY || status === STATUS.SAVING;
 
   return (
     <main className="sbx-canvas" aria-label={t('canvas_label')}>
+      {isMobile && (
       <div className="sbx-canvas__meta">
         <div className="sbx-canvas__meta-left">
           <span className="sbx-canvas__meta-pill">
@@ -316,6 +323,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
           </button>
         </div>
       </div>
+      )}
 
       <div className="sbx-canvas__stage-wrap">
       <div className="sbx-canvas__stage" ref={stageRef}>
@@ -378,6 +386,9 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
         onZoomOut={() => setCanvasView({ zoom: stepZoom(percent, -1) })}
         showGrid={showGrid}
         onToggleGrid={() => setCanvasView({ grid: !showGrid })}
+        onToggleCollapse={isMobile ? undefined : onToggleCollapse}
+        collapsed={collapsed}
+        onReload={isMobile ? undefined : reloadCanvas}
       />
     </main>
   );

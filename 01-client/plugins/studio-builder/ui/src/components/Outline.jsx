@@ -440,7 +440,7 @@ export const Outline = memo(function Outline() {
               aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight Delete F2 Shift+F10"
               tabIndex={row.id === activeId ? 0 : -1}
               className={`sbx-tree__row sbx-tree__row--${row.kind}${selection === row.id || picked.has(row.id) ? ' is-selected' : ''}${picked.size > 1 && picked.has(row.id) ? ' is-picked' : ''}${isProvisionalId(row.id) ? ' is-pending' : ''}${isHidden ? ' is-hidden' : ''}${dragId === row.id ? ' is-dragging' : ''}${ownLock ? ' is-locked' : ''}${lockedByAncestor ? ' is-locked-inherited' : ''}${hint}`}
-              style={{ paddingLeft: `${(row.level - 1) * 14 + 6}px` }}
+              style={{ paddingLeft: `${(row.level - 1) * 12 + 4}px` }}
               draggable={dragId === null}
               onDragStart={(e) => {
                 dragRef.current = { kind: row.kind, id: row.id, type: null };
