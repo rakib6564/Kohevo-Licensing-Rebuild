@@ -194,7 +194,8 @@ final class DocumentRenderer
         // block-scoped rule in the page stylesheet. A block without any adds
         // nothing, so documents that never use them render exactly as before.
         $blockStyle   = is_array($block['style'] ?? null) ? $block['style'] : [];
-        $scopedClass  = $collector->scopedRule((string) ($block['id'] ?? ''), StyleSurface::declarations($blockStyle), StyleSurface::hasTransition($blockStyle));
+        $stateRules   = is_array($block['style_states'] ?? null) ? StyleSurface::stateRules($block['style_states']) : [];
+        $scopedClass  = $collector->scopedRule((string) ($block['id'] ?? ''), StyleSurface::declarations($blockStyle), StyleSurface::hasTransition($blockStyle), $stateRules);
         $scopedClasses = $scopedClass !== '' ? [$scopedClass] : [];
 
         $classes = array_merge(

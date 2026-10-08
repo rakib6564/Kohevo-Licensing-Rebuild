@@ -169,6 +169,7 @@ final class CanonicalDocumentSchema
         'metadata',
         'interactions',
         'animation',
+        'style_states',
     ];
 
     /** Exact attribute names an author may set on a block wrapper. */
@@ -226,6 +227,7 @@ final class CanonicalDocumentSchema
         'metadata',
         'interactions',
         'animation',
+        'style_states',
     ];
 
     /**
@@ -257,6 +259,8 @@ final class CanonicalDocumentSchema
         'layout',
         'position',
         'effects',
+        'margin',
+        'padding',
     ];
 
     public const ALLOWED_FONT_WEIGHTS = ['normal', 'medium', 'semibold', 'bold', 'extrabold', '100', '200', '300', '400', '500', '600', '700', '800', '900'];

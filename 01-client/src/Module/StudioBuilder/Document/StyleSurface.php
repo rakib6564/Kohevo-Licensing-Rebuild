@@ -27,7 +27,7 @@ namespace Slate\Module\StudioBuilder\Document;
 final class StyleSurface
 {
     /** Style keys introduced by B2-P3b, in the order their declarations are emitted. */
-    public const KEYS = ['layout', 'position', 'effects'];
+    public const KEYS = ['layout', 'position', 'effects', 'margin', 'padding'];
 
     /** Sub-fields B2-P3b adds to the existing `dimensions` object (the original four stay as they were). */
     public const DIMENSION_EXTRAS = ['min_width', 'max_height', 'aspect_ratio', 'overflow', 'object_fit', 'object_position'];
@@ -81,6 +81,59 @@ final class StyleSurface
         ];
     }
 
+    private const SIDES   = ['top', 'right', 'bottom', 'left'];
+    private const CORNERS = ['tl' => 'top-left', 'tr' => 'top-right', 'br' => 'bottom-right', 'bl' => 'bottom-left'];
+
+    /** Sub-fields B2-P3b adds to `typography` (size, weight, ... keep their existing handling). */
+    public const TYPOGRAPHY_EXTRAS = ['style', 'decoration', 'decoration_style', 'decoration_color', 'decoration_thickness', 'decoration_offset'];
+
+    /** Pseudo-classes an author may style, keyed by the `style_states` name. */
+    public const STATE_SELECTORS = ['hover' => ':hover', 'focus' => ':focus', 'active' => ':active', 'disabled' => ':disabled'];
+
+    /** @return array<string, array<string, array<int, mixed>>> */
+    private static function moreFields(): array
+    {
+        $margin = [];
+        $padding = [];
+        foreach (self::SIDES as $side) {
+            $margin[$side]  = ['length', 'margin-' . $side, true];
+            $padding[$side] = ['padlen', 'padding-' . $side];
+        }
+        $sideDef = [];
+        foreach (self::SIDES as $side) {
+            $sideDef[$side] = [
+                'width' => ['length', 'border-' . $side . '-width'],
+                'style' => ['enum', 'border-' . $side . '-style', CanonicalDocumentSchema::ALLOWED_BORDER_STYLES],
+                'color' => ['color', 'border-' . $side . '-color'],
+            ];
+        }
+        $corners = [];
+        foreach (self::CORNERS as $short => $long) {
+            $corners[$short] = ['length', 'border-' . $long . '-radius'];
+        }
+        return [
+            'margin'     => $margin,
+            'padding'    => $padding,
+            'border'     => $sideDef,
+            'corners'    => $corners,
+            'typography' => [
+                'style'                => ['enum', 'font-style', ['normal', 'italic']],
+                'decoration'           => ['enum', 'text-decoration-line', ['none', 'underline', 'line-through', 'overline']],
+                'decoration_style'     => ['enum', 'text-decoration-style', ['solid', 'dashed', 'dotted', 'wavy', 'double']],
+                'decoration_color'     => ['color', 'text-decoration-color'],
+                'decoration_thickness' => ['length', 'text-decoration-thickness'],
+                'decoration_offset'    => ['length', 'text-underline-offset'],
+            ],
+            'shadow' => [
+                'x'      => ['length', 'x'],
+                'y'      => ['length', 'y'],
+                'blur'   => ['length', 'blur'],
+                'spread' => ['length', 'spread'],
+                'color'  => ['color', 'color'],
+            ],
+        ];
+    }
+
     /** Numeric parts of `effects`: group => field => [min, max, unit]. */
     private const TRANSFORM = ['rotate' => [-360, 360, 'deg'], 'scale' => [0, 5, ''], 'skew_x' => [-90, 90, 'deg'], 'skew_y' => [-90, 90, 'deg']];
     private const FILTER    = ['blur' => [0, 50, 'px'], 'brightness' => [0, 300, '%'], 'contrast' => [0, 300, '%'], 'saturate' => [0, 300, '%'], 'grayscale' => [0, 100, '%']];
@@ -110,6 +163,30 @@ final class StyleSurface
         }
         if (array_key_exists('effects', $style) && $style['effects'] !== null) {
             self::checkEffects($style['effects'], "{$path}.effects", $errors);
+        }
+        $more = self::moreFields();
+        foreach (['margin', 'padding'] as $key) {
+            if (array_key_exists($key, $style) && $style[$key] !== null) {
+                self::checkObject($style[$key], $more[$key], "{$path}.{$key}", $errors);
+            }
+        }
+        if (isset($style['border']) && is_array($style['border'])) {
+            foreach (self::SIDES as $side) {
+                if (array_key_exists($side, $style['border'])) {
+                    self::checkObject($style['border'][$side], $more['border'][$side], "{$path}.border.{$side}", $errors);
+                }
+            }
+            if (array_key_exists('radius_corners', $style['border'])) {
+                self::checkObject($style['border']['radius_corners'], $more['corners'], "{$path}.border.radius_corners", $errors);
+            }
+        }
+        if (isset($style['typography']) && is_array($style['typography'])) {
+            foreach (array_intersect_key($more['typography'], $style['typography']) as $field => $def) {
+                self::checkField($style['typography'][$field], $def, "{$path}.typography.{$field}", $errors);
+            }
+        }
+        if (isset($style['shadow']) && is_array($style['shadow'])) {
+            self::checkShadowObject($style['shadow'], "{$path}.shadow", $errors);
         }
         return $errors;
     }
@@ -158,6 +235,11 @@ final class StyleSurface
                 return is_int($v) && $v >= $def[2] && $v <= $def[3];
             case 'ratio':
                 return is_string($v) && preg_match('/^[1-9][0-9]{0,2}\/[1-9][0-9]{0,2}$/', $v) === 1;
+            case 'padlen':
+                return self::isMeasure($v, false) && !str_starts_with(trim((string) $v), '-');
+            case 'color':
+                // A literal colour only: a token is not a CSS value, and would emit a declaration the browser ignores.
+                return is_string($v) && StyleValueGuard::isColor($v) && !StyleValueGuard::isToken(trim($v));
         }
         return false;
     }
@@ -165,6 +247,15 @@ final class StyleSurface
     /** A length with no CSS-wide keywords; `auto` only where the property takes it. */
     private static function isMeasure(mixed $v, bool $allowAuto): bool
     {
+        // Strings only, and a unit unless it is zero: `12` is not a CSS length, so
+        // it would be stored, shown as accepted, and silently ignored by browsers.
+        if (!is_string($v)) {
+            return false;
+        }
+        $bare = trim($v);
+        if (preg_match('/^-?(\d+\.?\d*|\.\d+)$/', $bare) === 1 && (float) $bare !== 0.0) {
+            return false;
+        }
         if (is_string($v) && strtolower(trim($v)) === 'auto') {
             return $allowAuto;
         }
@@ -172,6 +263,59 @@ final class StyleSurface
             return false;
         }
         return StyleValueGuard::isLength($v);
+    }
+
+    /**
+     * `shadow` as an object: {x, y, blur, spread, color, inset}. Required: x, y, color.
+     *
+     * @param array<string, mixed> $sh
+     * @param list<array{path: string, code: string, message: string}> $errors
+     */
+    private static function checkShadowObject(array $sh, string $path, array &$errors): void
+    {
+        $defs = self::moreFields()['shadow'];
+        foreach ($sh as $field => $v) {
+            if ($field === 'inset') {
+                if (!is_bool($v)) {
+                    $errors[] = self::issue("{$path}.inset", 'inset must be true or false.');
+                }
+            } elseif (!isset($defs[(string) $field])) {
+                $errors[] = self::issue("{$path}.{$field}", "Unknown field '{$field}'.");
+            } else {
+                self::checkField($v, $defs[(string) $field], "{$path}.{$field}", $errors);
+            }
+        }
+        foreach (['x', 'y', 'color'] as $required) {
+            if (!array_key_exists($required, $sh)) {
+                $errors[] = self::issue("{$path}.{$required}", "A custom shadow needs '{$required}'.");
+            }
+        }
+    }
+
+    /** @param array<string, mixed> $sh */
+    private static function shadowValue(array $sh): ?string
+    {
+        $defs = self::moreFields()['shadow'];
+        foreach (['x', 'y', 'color'] as $required) {
+            if (!array_key_exists($required, $sh) || !self::fieldAccepts($sh[$required], $defs[$required])) {
+                return null;
+            }
+        }
+        $parts = [];
+        if (($sh['inset'] ?? false) === true) {
+            $parts[] = 'inset';
+        }
+        foreach (['x', 'y', 'blur', 'spread'] as $f) {
+            if (array_key_exists($f, $sh) && self::fieldAccepts($sh[$f], $defs[$f])) {
+                $parts[] = trim((string) $sh[$f]);
+            } elseif ($f === 'blur' || $f === 'spread') {
+                if (array_key_exists('spread', $sh) && $f === 'blur') {
+                    $parts[] = '0';
+                }
+            }
+        }
+        $parts[] = trim((string) $sh['color']);
+        return implode(' ', $parts);
     }
 
     /**
@@ -281,8 +425,33 @@ final class StyleSurface
                 self::emitFields($style[$key], self::fields()[$key], $out);
             }
         }
+        $more = self::moreFields();
+        foreach (['margin', 'padding'] as $key) {
+            if (isset($style[$key]) && is_array($style[$key])) {
+                self::emitFields($style[$key], $more[$key], $out);
+            }
+        }
         if (isset($style['dimensions']) && is_array($style['dimensions'])) {
             self::emitFields($style['dimensions'], self::fields()['dimensions'], $out);
+        }
+        if (isset($style['border']) && is_array($style['border'])) {
+            foreach (self::SIDES as $side) {
+                if (isset($style['border'][$side]) && is_array($style['border'][$side])) {
+                    self::emitFields($style['border'][$side], $more['border'][$side], $out);
+                }
+            }
+            if (isset($style['border']['radius_corners']) && is_array($style['border']['radius_corners'])) {
+                self::emitFields($style['border']['radius_corners'], $more['corners'], $out);
+            }
+        }
+        if (isset($style['typography']) && is_array($style['typography'])) {
+            self::emitFields($style['typography'], $more['typography'], $out);
+        }
+        if (isset($style['shadow']) && is_array($style['shadow'])) {
+            $shadow = self::shadowValue($style['shadow']);
+            if ($shadow !== null) {
+                $out[] = 'box-shadow:' . $shadow;
+            }
         }
         if (isset($style['effects']) && is_array($style['effects'])) {
             self::emitEffects($style['effects'], $out);
@@ -381,6 +550,171 @@ final class StyleSurface
     {
         $s = rtrim(rtrim(number_format((float) $n, 3, '.', ''), '0'), '.');
         return $s === '' || $s === '-0' ? '0' : $s;
+    }
+
+    // ── interaction states ────────────────────────────────────────────────────
+
+    /** Style keys a state overlay may carry (a deliberately small, safe subset). */
+    private const STATE_KEYS = ['color', 'typography', 'background', 'border', 'shadow', 'opacity', 'effects'];
+
+    /**
+     * Issues for a block's `style_states`: {hover|focus|active|disabled: partial style}.
+     *
+     * @return list<array{path: string, code: string, message: string}>
+     */
+    public static function stateIssues(mixed $states, string $path): array
+    {
+        $errors = [];
+        if (!is_array($states) || ($states !== [] && array_is_list($states))) {
+            return [self::issue($path, 'style_states must be an object.')];
+        }
+        $more = self::moreFields();
+        foreach ($states as $state => $partial) {
+            $p = "{$path}.{$state}";
+            if (!isset(self::STATE_SELECTORS[(string) $state])) {
+                $errors[] = self::issue($p, "Unknown state '{$state}'; use hover, focus, active or disabled.");
+                continue;
+            }
+            if (!is_array($partial) || ($partial !== [] && array_is_list($partial))) {
+                $errors[] = self::issue($p, 'A state must be an object.');
+                continue;
+            }
+            foreach ($partial as $key => $value) {
+                $kp = "{$p}.{$key}";
+                switch ((string) $key) {
+                    case 'color':
+                        self::checkField($value, ['color', 'color'], $kp, $errors);
+                        break;
+                    case 'opacity':
+                        if (!self::inRange($value, 0, 1)) {
+                            $errors[] = self::issue($kp, 'opacity must be a number from 0 to 1.');
+                        }
+                        break;
+                    case 'shadow':
+                        if (is_array($value)) {
+                            self::checkShadowObject($value, $kp, $errors);
+                        } elseif (!is_string($value) || !StyleValueGuard::isShadow($value)) {
+                            $errors[] = self::issue($kp, 'Invalid shadow.');
+                        }
+                        break;
+                    case 'background':
+                        self::checkLimitedObject($value, ['color' => ['color', 'background-color'], 'gradient' => ['gradient']], $kp, $errors);
+                        break;
+                    case 'border':
+                        self::checkLimitedObject($value, ['color' => ['color', 'border-color']], $kp, $errors);
+                        break;
+                    case 'typography':
+                        self::checkLimitedObject($value, ['color' => ['color', 'color']] + $more['typography'], $kp, $errors);
+                        break;
+                    case 'effects':
+                        self::checkEffects($value, $kp, $errors);
+                        foreach (['transition', 'cursor'] as $baseOnly) {
+                            if (is_array($value) && array_key_exists($baseOnly, $value)) {
+                                $errors[] = self::issue("{$kp}.{$baseOnly}", "'{$baseOnly}' belongs to the base style, not a state.");
+                            }
+                        }
+                        break;
+                    default:
+                        $errors[] = self::issue($kp, "A state cannot set '{$key}'.");
+                }
+            }
+        }
+        return $errors;
+    }
+
+    /**
+     * @param array<string, array<int, mixed>> $defs
+     * @param list<array{path: string, code: string, message: string}> $errors
+     */
+    private static function checkLimitedObject(mixed $value, array $defs, string $path, array &$errors): void
+    {
+        if (!is_array($value) || ($value !== [] && array_is_list($value))) {
+            $errors[] = self::issue($path, "{$path} must be an object.");
+            return;
+        }
+        foreach ($value as $field => $v) {
+            $def = $defs[(string) $field] ?? null;
+            if ($def === null) {
+                $errors[] = self::issue("{$path}.{$field}", "Unknown field '{$field}'.");
+            } elseif ($def[0] === 'gradient') {
+                if (!is_string($v) || !StyleValueGuard::isGradient($v)) {
+                    $errors[] = self::issue("{$path}.{$field}", 'Invalid gradient.');
+                }
+            } else {
+                self::checkField($v, $def, "{$path}.{$field}", $errors);
+            }
+        }
+    }
+
+    /**
+     * Declarations for one state's partial style ('' when nothing valid).
+     *
+     * @param array<string, mixed> $p
+     */
+    public static function stateDeclarations(array $p): string
+    {
+        $out = [];
+        $colorDef = ['color', 'color'];
+        if (isset($p['color']) && self::fieldAccepts($p['color'], $colorDef)) {
+            $out[] = 'color:' . trim((string) $p['color']);
+        }
+        $t = is_array($p['typography'] ?? null) ? $p['typography'] : [];
+        if (isset($t['color']) && self::fieldAccepts($t['color'], $colorDef)) {
+            $out[] = 'color:' . trim((string) $t['color']);
+        }
+        $bg = is_array($p['background'] ?? null) ? $p['background'] : [];
+        if (isset($bg['color']) && self::fieldAccepts($bg['color'], $colorDef)) {
+            $out[] = 'background-color:' . trim((string) $bg['color']);
+        }
+        if (isset($bg['gradient']) && StyleValueGuard::isGradient($bg['gradient'])) {
+            $out[] = 'background-image:' . trim((string) $bg['gradient']);
+        }
+        $bd = is_array($p['border'] ?? null) ? $p['border'] : [];
+        if (isset($bd['color']) && self::fieldAccepts($bd['color'], $colorDef)) {
+            $out[] = 'border-color:' . trim((string) $bd['color']);
+        }
+        if (isset($p['shadow']) && is_string($p['shadow']) && StyleValueGuard::isShadow($p['shadow'])) {
+            $out[] = 'box-shadow:' . trim($p['shadow']);
+        }
+        if (isset($p['opacity']) && self::inRange($p['opacity'], 0, 1)) {
+            $out[] = 'opacity:' . self::num($p['opacity']);
+        }
+        // Typography extras, a custom shadow object and effects reuse the base emitter.
+        $reuse = [];
+        if ($t !== []) {
+            $reuse['typography'] = array_intersect_key($t, array_flip(self::TYPOGRAPHY_EXTRAS));
+        }
+        if (isset($p['shadow']) && is_array($p['shadow'])) {
+            $reuse['shadow'] = $p['shadow'];
+        }
+        if (isset($p['effects']) && is_array($p['effects'])) {
+            $reuse['effects'] = array_diff_key($p['effects'], ['transition' => 1, 'cursor' => 1]);
+        }
+        $rest = self::declarations($reuse);
+        if ($rest !== '') {
+            $out[] = $rest;
+        }
+        return implode(';', $out);
+    }
+
+    /**
+     * state name => declarations, only for states that produce something.
+     *
+     * @param array<string, mixed> $states
+     * @return array<string, string>
+     */
+    public static function stateRules(array $states): array
+    {
+        $rules = [];
+        foreach (self::STATE_SELECTORS as $name => $selector) {
+            if (isset($states[$name]) && is_array($states[$name])) {
+                $decl = self::stateDeclarations($states[$name]);
+                if ($decl !== '') {
+                    $rules[$name] = $decl;
+                }
+            }
+        }
+        return $rules;
     }
 
     /** True when the block's style has a transition (so a reduced-motion override is needed). */

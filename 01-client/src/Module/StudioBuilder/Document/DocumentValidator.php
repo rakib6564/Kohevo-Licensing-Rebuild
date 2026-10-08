@@ -714,6 +714,13 @@ final class DocumentValidator
             }
         }
 
+        // Interaction-state overlays (hover/focus/active/disabled).
+        if (array_key_exists('style_states', $block)) {
+            foreach (StyleSurface::stateIssues($block['style_states'], "{$path}.style_states") as $issue) {
+                $errors[] = ValidationResult::issue($issue['path'], $issue['code'], $issue['message']);
+            }
+        }
+
         // Validate optional animation if present
         if (array_key_exists('animation', $block)) {
             $animation = $block['animation'];
@@ -1084,11 +1091,7 @@ final class DocumentValidator
                     $errors[] = ValidationResult::issue("{$path}.shadow", 'invalid_style_value', 'Invalid shadow value.');
                 }
             } elseif (is_array($sh) && !array_is_list($sh)) {
-                foreach ($sh as $shKey => $shVal) {
-                    if (!in_array($shKey, ['x', 'y', 'blur', 'spread'], true) ? !StyleValueGuard::isColor($shVal) : !StyleValueGuard::isLength($shVal)) {
-                        $errors[] = ValidationResult::issue("{$path}.shadow.{$shKey}", 'invalid_style_value', "Invalid shadow {$shKey}.");
-                    }
-                }
+                // An object shadow is a B2-P3b field set; StyleSurface::issues() validates it.
             } else {
                 $errors[] = ValidationResult::issue("{$path}.shadow", 'invalid_style_value', 'style.shadow must be a string or object.');
             }

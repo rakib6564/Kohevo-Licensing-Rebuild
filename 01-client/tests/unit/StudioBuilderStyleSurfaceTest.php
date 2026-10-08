@@ -204,3 +204,164 @@ unit('surface: with position now authorable, nothing can stack above the signatu
         assert_true(str_contains($guard, $decl . '!important'), "the guard resets {$decl}");
     }
 });
+
+// ═══ Slice 2: spacing, border sides/corners, typography extras, custom shadow, interaction states ═══
+
+use Slate\Module\StudioBuilder\Document\DocumentNormalizer;
+use Slate\Module\StudioBuilder\Document\DocumentValidator;
+
+/** Validate a document whose one block carries `style` plus any extra block keys (e.g. style_states). */
+function sbss_validate_block(array $style, array $extra = []): \Slate\Module\StudioBuilder\Schema\ValidationResult
+{
+    $doc = [
+        'schema_version' => '1.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [],
+        'sections' => [[
+            'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'S', 'global_ref' => null, 'layout' => [],
+            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+            'blocks' => [[
+                'id' => CanonicalDocumentSchema::newBlockId(), 'type' => 'core.heading', 'version' => 1,
+                'props' => ['text' => 'x', 'level' => 'h2'], 'style' => $style + CanonicalDocumentSchema::defaultBlockStyle(),
+                'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [],
+            ] + $extra],
+        ]],
+    ];
+    return DocumentValidator::validate($doc, BlockRegistry::withAllCoreBlocks());
+}
+
+unit('surface 2: valid margin, padding, border sides and corners, typography extras and a custom shadow validate', function (): void {
+    foreach ([
+        ['margin' => ['top' => '-1rem', 'bottom' => 'auto', 'left' => '0']],
+        ['padding' => ['top' => '1rem', 'right' => '2rem', 'bottom' => '1rem', 'left' => '2rem']],
+        ['border' => ['top' => ['width' => '2px', 'style' => 'solid', 'color' => '#e8734a'], 'left' => ['width' => '1px'], 'radius_corners' => ['tl' => '8px', 'br' => '50%']]],
+        ['typography' => ['style' => 'italic', 'decoration' => 'underline', 'decoration_style' => 'wavy', 'decoration_color' => 'rgba(0,0,0,.5)', 'decoration_thickness' => '2px', 'decoration_offset' => '4px']],
+        ['shadow' => ['x' => '0', 'y' => '10px', 'blur' => '25px', 'spread' => '-5px', 'color' => 'rgba(0,0,0,.15)', 'inset' => true]],
+        ['shadow' => ['x' => '1px', 'y' => '1px', 'color' => '#000']],
+    ] as $style) {
+        $r = sbss_validate_block($style);
+        assert_true($r->isValid(), 'must validate ' . json_encode($style) . ' → ' . json_encode($r->errors ?? []));
+    }
+});
+
+unit('surface 2: invalid spacing, border, typography and shadow values are refused', function (): void {
+    $bad = [
+        'padding negative'        => ['padding' => ['top' => '-1px']],
+        'padding unitless'        => ['padding' => ['top' => '12']],
+        'padding number'          => ['padding' => ['top' => 12]],
+        'margin unknown side'     => ['margin' => ['middle' => '1px']],
+        'margin url'              => ['margin' => ['top' => 'url(x)']],
+        'margin keyword'          => ['margin' => ['top' => 'inherit']],
+        'border side unknown'     => ['border' => ['top' => ['weight' => '1px']]],
+        'border side style'       => ['border' => ['top' => ['style' => 'groove; x:y']]],
+        'border side token colour' => ['border' => ['top' => ['color' => 'color.primary']]],
+        'border side url colour'  => ['border' => ['top' => ['color' => 'url(x)']]],
+        'border corner unknown'   => ['border' => ['radius_corners' => ['xx' => '1px']]],
+        'border corner url'       => ['border' => ['radius_corners' => ['tl' => 'url(x)']]],
+        'typography decoration'   => ['typography' => ['decoration' => 'blink']],
+        'typography deco colour'  => ['typography' => ['decoration_color' => 'var(--x)']],
+        'typography deco thick'   => ['typography' => ['decoration_thickness' => 'url(x)']],
+        'shadow object no colour' => ['shadow' => ['x' => '1px', 'y' => '1px']],
+        'shadow object url'       => ['shadow' => ['x' => '1px', 'y' => '1px', 'color' => 'url(x)']],
+        'shadow object unknown'   => ['shadow' => ['x' => '1px', 'y' => '1px', 'color' => '#000', 'z' => '1px']],
+        'shadow inset string'     => ['shadow' => ['x' => '1px', 'y' => '1px', 'color' => '#000', 'inset' => 'yes']],
+    ];
+    foreach ($bad as $label => $style) {
+        assert_false(sbss_validate_block($style)->isValid(), "must refuse: {$label}");
+    }
+});
+
+unit('surface 2: declarations for the new fields', function (): void {
+    assert_eq('margin-top:-1rem;margin-bottom:auto;padding-left:2rem', StyleSurface::declarations(['padding' => ['left' => '2rem'], 'margin' => ['bottom' => 'auto', 'top' => '-1rem']]));
+    assert_eq('border-top-width:2px;border-top-style:solid;border-top-color:#e8734a;border-top-left-radius:8px;border-bottom-right-radius:50%', StyleSurface::declarations(['border' => ['radius_corners' => ['br' => '50%', 'tl' => '8px'], 'top' => ['color' => '#e8734a', 'style' => 'solid', 'width' => '2px']]]));
+    assert_eq('font-style:italic;text-decoration-line:underline;text-decoration-style:wavy;text-decoration-thickness:2px;text-underline-offset:4px', StyleSurface::declarations(['typography' => ['decoration_offset' => '4px', 'decoration_thickness' => '2px', 'decoration_style' => 'wavy', 'decoration' => 'underline', 'style' => 'italic', 'size' => '9px']]));
+    assert_eq('box-shadow:inset 0 10px 25px -5px rgba(0,0,0,.15)', StyleSurface::declarations(['shadow' => ['inset' => true, 'x' => '0', 'y' => '10px', 'blur' => '25px', 'spread' => '-5px', 'color' => 'rgba(0,0,0,.15)']]));
+    assert_eq('box-shadow:1px 1px #000', StyleSurface::declarations(['shadow' => ['x' => '1px', 'y' => '1px', 'color' => '#000']]));
+    assert_eq('', StyleSurface::declarations(['shadow' => 'lg']), 'a preset shadow is a class, not a declaration');
+    assert_eq('', StyleSurface::declarations(['shadow' => ['x' => '1px', 'y' => '1px', 'color' => 'url(x)']]), 'a bad stored shadow object emits nothing');
+});
+
+// ── Interaction states ────────────────────────────────────────────────────
+
+unit('states: valid hover, focus, active and disabled overlays validate', function (): void {
+    $states = [
+        'hover'    => ['color' => '#fff', 'background' => ['color' => '#e8734a', 'gradient' => 'linear-gradient(135deg, #e8734a, #8a3d24)'], 'border' => ['color' => '#fff'], 'shadow' => '0 10px 25px rgba(0,0,0,.2)', 'opacity' => 0.9, 'effects' => ['transform' => ['scale' => 1.05, 'translate_y' => '-2px'], 'filter' => ['brightness' => 110]], 'typography' => ['color' => '#000', 'decoration' => 'underline']],
+        'focus'    => ['shadow' => ['x' => '0', 'y' => '0', 'spread' => '3px', 'color' => 'rgba(232,115,74,.5)']],
+        'active'   => ['effects' => ['transform' => ['scale' => 0.98]]],
+        'disabled' => ['opacity' => 0.5, 'effects' => ['blend' => 'normal']],
+    ];
+    $r = sbss_validate_block([], ['style_states' => $states]);
+    assert_true($r->isValid(), json_encode($r->errors ?? []));
+    assert_true(sbss_validate_block([], ['style_states' => []])->isValid(), 'an empty map is fine');
+});
+
+unit('states: unknown states, unknown keys, base-only fields and hostile values are refused', function (): void {
+    $bad = [
+        'unknown state'         => ['visited' => ['color' => '#fff']],
+        'before pseudo'         => ['before' => ['color' => '#fff']],
+        'list'                  => [['color' => '#fff']],
+        'state not object'      => ['hover' => '#fff'],
+        'key not allowed'       => ['hover' => ['position' => ['mode' => 'fixed']]],
+        'layout not allowed'    => ['hover' => ['layout' => ['display' => 'none']]],
+        'z_index not allowed'   => ['hover' => ['z_index' => 5]],
+        'colour url'            => ['hover' => ['color' => 'url(x)']],
+        'colour token'          => ['hover' => ['color' => 'text.primary']],
+        'background url'        => ['hover' => ['background' => ['color' => 'url(x)']]],
+        'background image key'  => ['hover' => ['background' => ['image' => 'x.png']]],
+        'gradient url'          => ['hover' => ['background' => ['gradient' => 'linear-gradient(url(x), red)']]],
+        'opacity high'          => ['hover' => ['opacity' => 2]],
+        'shadow string url'     => ['hover' => ['shadow' => '0 0 0 url(x)']],
+        'effects transition'    => ['hover' => ['effects' => ['transition' => ['duration_ms' => 100]]]],
+        'effects cursor'        => ['hover' => ['effects' => ['cursor' => 'pointer']]],
+        'effects rotate huge'   => ['hover' => ['effects' => ['transform' => ['rotate' => 9999]]]],
+    ];
+    foreach ($bad as $label => $states) {
+        assert_false(sbss_validate_block([], ['style_states' => $states])->isValid(), "must refuse: {$label}");
+    }
+    assert_false(sbss_validate_block([], ['style_states' => 'hover'])->isValid(), 'a string is not a states map');
+});
+
+unit('states: they render as pseudo-class rules scoped to the block, with the base rule', function (): void {
+    $tenants   = new TenantContext();
+    $renderer  = new DocumentRenderer(BlockRegistry::withAllCoreBlocks(), BlockRendererRegistry::withCoreRenderers(), new CoreMediaResolver($tenants), new ProviderBindingResolver(new DataProviderRegistry(), $tenants));
+    $collector = new RenderCollector();
+    $html = $renderer->renderBlock([
+        'id' => 'blk_aaaaaaaaaaaaaaaaaaaaaaaa', 'type' => 'core.heading', 'version' => 1, 'props' => ['text' => 'x', 'level' => 'h2'],
+        'style' => ['effects' => ['cursor' => 'pointer', 'transition' => ['duration_ms' => 200]]] + CanonicalDocumentSchema::defaultBlockStyle(),
+        'style_states' => [
+            'hover'    => ['background' => ['color' => '#e8734a'], 'effects' => ['transform' => ['scale' => 1.05]]],
+            'focus'    => ['shadow' => ['x' => '0', 'y' => '0', 'spread' => '3px', 'color' => '#e8734a']],
+            'disabled' => ['opacity' => 0.5, 'color' => 'url(x)'],
+        ],
+        'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [], 'animation' => [], 'interactions' => [],
+    ], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), $collector, false);
+    $css = $collector->css();
+    assert_true(str_contains($css, '.sb-b-aaaaaaaaaaaaaaaaaaaaaaaa{transition:all 200ms ease;cursor:pointer}'), $css);
+    assert_true(str_contains($css, '.sb-b-aaaaaaaaaaaaaaaaaaaaaaaa:hover{background-color:#e8734a;transform:scale(1.05)}'), $css);
+    assert_true(str_contains($css, '.sb-b-aaaaaaaaaaaaaaaaaaaaaaaa:focus{box-shadow:0 0 0 3px #e8734a}'), 'a spread without a blur keeps the blur slot: ' . $css);
+    assert_true(str_contains($css, '.sb-b-aaaaaaaaaaaaaaaaaaaaaaaa:disabled{opacity:0.5}'), 'the bad colour is dropped, the opacity stays: ' . $css);
+    assert_false(str_contains($css, 'url('), 'no url() anywhere: ' . $css);
+    assert_true(str_contains($css, '@media (prefers-reduced-motion:reduce)'), 'transitions respect reduced motion');
+    assert_false(str_contains($html, 'hover'), 'states never touch the markup');
+});
+
+unit('states: a state with only invalid values produces no rule at all', function (): void {
+    assert_eq([], StyleSurface::stateRules(['hover' => ['color' => 'url(x)'], 'focus' => []]));
+    assert_eq(['hover' => 'opacity:0.5'], StyleSurface::stateRules(['hover' => ['opacity' => 0.5]]));
+});
+
+unit('states: the normalizer drops empty states and keeps keys sorted', function (): void {
+    $block = fn (array $states) => [
+        'id' => CanonicalDocumentSchema::newBlockId(), 'type' => 'core.heading', 'version' => 1, 'props' => ['text' => 'x', 'level' => 'h2'],
+        'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+        'bindings' => [], 'children' => [], 'style_states' => $states,
+    ];
+    $doc = fn (array $b) => ['schema_version' => '1.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'sections' => [[
+        'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'S', 'global_ref' => null, 'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
+        'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'blocks' => [$b],
+    ]]];
+    $registry = BlockRegistry::withAllCoreBlocks();
+    $out = DocumentNormalizer::normalize($doc($block(['hover' => [], 'focus' => ['opacity' => 0.5, 'color' => '#fff']])), $registry);
+    $states = $out['sections'][0]['blocks'][0]['style_states'] ?? null;
+    assert_eq(['focus' => ['color' => '#fff', 'opacity' => 0.5]], $states, 'the empty hover state is gone and keys are sorted');
+    $none = DocumentNormalizer::normalize($doc($block(['hover' => []])), $registry);
+    assert_false(array_key_exists('style_states', $none['sections'][0]['blocks'][0]), 'an all-empty map is not stored');
+});

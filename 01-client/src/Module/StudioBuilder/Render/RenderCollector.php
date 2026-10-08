@@ -16,6 +16,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Render;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\StyleSurface;
 use Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme;
 
 final class RenderCollector
@@ -65,13 +66,19 @@ final class RenderCollector
      * from its id. `$declarations` must come from `StyleSurface` (never from
      * authored text). Returns the class to put on the block wrapper.
      */
-    public function scopedRule(string $blockId, string $declarations, bool $reduceMotion = false): string
+    public function scopedRule(string $blockId, string $declarations, bool $reduceMotion = false, array $states = []): string
     {
-        if ($declarations === '' || preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $blockId) !== 1) {
+        if (($declarations === '' && $states === []) || preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $blockId) !== 1) {
             return '';
         }
         $class = 'sb-b-' . substr($blockId, 4);
-        $rule = '.' . $class . '{' . $declarations . '}';
+        $rule = $declarations !== '' ? '.' . $class . '{' . $declarations . '}' : '';
+        // `$states` is name => declarations from StyleSurface::stateRules(); the pseudo-class comes from its fixed map.
+        foreach (StyleSurface::STATE_SELECTORS as $name => $selector) {
+            if (isset($states[$name]) && $states[$name] !== '') {
+                $rule .= '.' . $class . $selector . '{' . $states[$name] . '}';
+            }
+        }
         if ($reduceMotion) {
             $rule .= '@media (prefers-reduced-motion:reduce){.' . $class . '{transition:none}}';
         }

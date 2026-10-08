@@ -67,7 +67,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Booking Services",
             "type": "booking.services",
@@ -168,7 +170,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Accordion",
             "type": "core.accordion",
@@ -258,7 +262,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Button",
             "type": "core.button",
@@ -332,7 +338,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Card",
             "type": "core.card",
@@ -497,7 +505,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Carousel",
             "type": "core.carousel",
@@ -566,7 +576,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Container",
             "type": "core.container",
@@ -633,7 +645,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Countdown",
             "type": "core.countdown",
@@ -757,7 +771,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Feature list",
             "type": "core.feature_list",
@@ -849,7 +865,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Form",
             "type": "core.form",
@@ -961,7 +979,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Form Field",
             "type": "core.form_field",
@@ -1087,7 +1107,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Gallery",
             "type": "core.gallery",
@@ -1159,7 +1181,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Heading",
             "type": "core.heading",
@@ -1250,7 +1274,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Hero",
             "type": "core.hero",
@@ -1369,7 +1395,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Icon",
             "type": "core.icon",
@@ -1451,7 +1479,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Image",
             "type": "core.image",
@@ -1525,7 +1555,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Link",
             "type": "core.link",
@@ -1618,7 +1650,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "List",
             "type": "core.list",
@@ -1713,7 +1747,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Modal",
             "type": "core.modal",
@@ -1945,7 +1981,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Services grid",
             "type": "core.query_loop",
@@ -2024,7 +2062,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Quote",
             "type": "core.quote",
@@ -2076,7 +2116,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Rich text",
             "type": "core.rich_text",
@@ -2228,7 +2270,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Stats",
             "type": "core.stats",
@@ -2333,7 +2377,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Table",
             "type": "core.table",
@@ -2451,7 +2497,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Tabs",
             "type": "core.tabs",
@@ -2545,7 +2593,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Text",
             "type": "core.text",
@@ -2639,7 +2689,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Video",
             "type": "core.video",
@@ -2703,7 +2755,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Form Card",
             "type": "forms.form_card",
@@ -2786,7 +2840,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Container",
             "type": "layout.container",
@@ -2901,7 +2957,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Flex",
             "type": "layout.flex",
@@ -2983,7 +3041,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Grid",
             "type": "layout.grid",
@@ -3078,7 +3138,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Offcanvas",
             "type": "layout.offcanvas",
@@ -3189,7 +3251,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Section",
             "type": "layout.section",
@@ -3262,7 +3326,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Membership Plans",
             "type": "membership.plans",
@@ -3326,7 +3392,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Archive title",
             "type": "theme.archive_title",
@@ -3377,7 +3445,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Post content",
             "type": "theme.post_content",
@@ -3453,7 +3523,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Post meta",
             "type": "theme.post_meta",
@@ -3533,7 +3605,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Post title",
             "type": "theme.post_title",
@@ -3591,7 +3665,9 @@
                 "z_index",
                 "layout",
                 "position",
-                "effects"
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Search box",
             "type": "theme.search_box",
