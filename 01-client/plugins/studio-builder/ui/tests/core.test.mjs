@@ -93,7 +93,9 @@ test('operations use the canonical {op, payload} vocabulary', () => {
     // Layer lock and block rename (LayerLock.php; update_block_meta / update_section_locked).
     'update_block_meta', 'update_section_locked',
     // B2-P3b: states, wrapper tag, section style and single-property reset.
-    'update_block_style_states', 'update_block_tag', 'reset_block_style_property', 'update_section_style'];
+    'update_block_style_states', 'update_block_tag', 'reset_block_style_property', 'update_section_style',
+    // B2-P3d: a section's own motion.
+    'update_section_animation', 'update_section_interactions'];
   for (const name of Object.values(ops.OPS)) assert.ok(serverOps.includes(name), `${name} is a server DocumentOperation`);
 });
 
@@ -132,7 +134,7 @@ test('motion: the vocabulary matches the server enums exactly', () => {
   // DocumentValidator::validateBlock() lists these; a drift here is a
   // guaranteed save failure, so the lists are pinned by value.
   assert.deepEqual(motion.ANIMATION_TYPES.map((o) => o.value),
-    ['none', 'fade_in', 'fade_up', 'fade_down', 'scale_up', 'slide_in']);
+    ['none', 'fade_in', 'fade_up', 'fade_down', 'scale_up', 'slide_in', 'move_left', 'move_right', 'reveal_left', 'reveal_up']);
   assert.deepEqual(motion.INTERACTION_TRIGGERS.filter((o) => o.value).map((o) => o.value),
     ['hover', 'focus', 'click', 'viewport-enter', 'scroll', 'load']);
 });

@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '3';
+    public const VERSION = '4';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -238,11 +238,19 @@ final class StudioStylesheet
             . '.sb-animate-fade-down{animation:sb-fade-down var(--sb-anim-duration,.5s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
             . '.sb-animate-scale-up{animation:sb-scale-up var(--sb-anim-duration,.4s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
             . '.sb-animate-slide-in{animation:sb-slide-in var(--sb-anim-duration,.5s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-move-left{animation:sb-move-left var(--sb-anim-duration,.5s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-move-right{animation:sb-move-right var(--sb-anim-duration,.5s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-reveal-left{animation:sb-reveal-left var(--sb-anim-duration,.7s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-reveal-up{animation:sb-reveal-up var(--sb-anim-duration,.7s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
             . '@keyframes sb-fade-in{from{opacity:0}to{opacity:1}}'
             . '@keyframes sb-fade-up{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}'
             . '@keyframes sb-fade-down{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:translateY(0)}}'
             . '@keyframes sb-scale-up{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}'
             . '@keyframes sb-slide-in{from{transform:translateX(-100%)}to{transform:translateX(0)}}'
+            . '@keyframes sb-move-left{from{opacity:0;transform:translateX(48px)}to{opacity:1;transform:translateX(0)}}'
+            . '@keyframes sb-move-right{from{opacity:0;transform:translateX(-48px)}to{opacity:1;transform:translateX(0)}}'
+            . '@keyframes sb-reveal-left{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}'
+            . '@keyframes sb-reveal-up{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0 0 0 0)}}'
             . '.sb-interaction-hover{transition:transform .25s ease,box-shadow .25s ease}'
             . '.sb-interaction-hover:hover{transform:translateY(-3px) scale(1.02)}'
             // Keyboard parity: a hover-only lift leaves the block unreachable
@@ -264,11 +272,15 @@ final class StudioStylesheet
             . '.sb-interaction-viewport-enter.sb-animate-fade-down{animation-name:sb-fade-down}'
             . '.sb-interaction-viewport-enter.sb-animate-scale-up{animation-name:sb-scale-up}'
             . '.sb-interaction-viewport-enter.sb-animate-slide-in{animation-name:sb-slide-in}'
+            . '.sb-interaction-viewport-enter.sb-animate-move-left{animation-name:sb-move-left}'
+            . '.sb-interaction-viewport-enter.sb-animate-move-right{animation-name:sb-move-right}'
+            . '.sb-interaction-viewport-enter.sb-animate-reveal-left{animation-name:sb-reveal-left}'
+            . '.sb-interaction-viewport-enter.sb-animate-reveal-up{animation-name:sb-reveal-up}'
             . '}'
             // `scroll` is a continuous/parallax trigger; it is exposed in the
             // inspector but intentionally renders no CSS until the runtime
             // ships, so nothing here can imply behaviour that does not exist.
-            . '@media (prefers-reduced-motion:reduce){[class*="sb-animate-"],[class*="sb-interaction-"]{animation:none!important;transition:none!important;transform:none!important}}'
+            . '@media (prefers-reduced-motion:reduce){[class*="sb-animate-"],[class*="sb-interaction-"]{animation:none!important;transition:none!important;transform:none!important;clip-path:none!important}}'
             // ── Interaction runtime (Phase 2) ────────────────────────────────────
             // Styles for the behaviours `studio-runtime.js` adds on top of the
             // server-rendered markup. Everything here is progressive: with the

@@ -43,6 +43,8 @@ export const OPS = Object.freeze({
   UPDATE_BLOCK_TAG: 'update_block_tag',
   RESET_BLOCK_STYLE_PROPERTY: 'reset_block_style_property',
   UPDATE_SECTION_STYLE: 'update_section_style',
+  UPDATE_SECTION_ANIMATION: 'update_section_animation',
+  UPDATE_SECTION_INTERACTIONS: 'update_section_interactions',
 });
 
 /** Operations that change the tree's shape are sent right away, not debounced. */
@@ -68,6 +70,8 @@ const REPLACE_TARGET = {
   [OPS.UPDATE_BLOCK_STYLE_STATES]: 'block_id',
   [OPS.UPDATE_BLOCK_TAG]: 'block_id',
   [OPS.UPDATE_SECTION_STYLE]: 'section_id',
+  [OPS.UPDATE_SECTION_ANIMATION]: 'section_id',
+  [OPS.UPDATE_SECTION_INTERACTIONS]: 'section_id',
 };
 
 export const DEFAULT_VISIBILITY = Object.freeze({ auth_state: 'any', devices: ['base', 'sm', 'md', 'lg'] });
@@ -127,6 +131,10 @@ export const updateBlockStyleStates = (blockId, styleStates) => op(OPS.UPDATE_BL
 /** Choose the block's wrapper element; null (or `div`) is the default. */
 export const updateBlockTag = (blockId, tag) => op(OPS.UPDATE_BLOCK_TAG, { block_id: blockId, tag });
 /** Replace a section's style ({background, padding}); `{}` clears it. */
+/** Replace a section's entrance animation; `{}` clears it. */
+export const updateSectionAnimation = (sectionId, animation) => op(OPS.UPDATE_SECTION_ANIMATION, { section_id: sectionId, animation });
+/** Replace a section's interactions (trigger, optional animation); `{}` clears them. */
+export const updateSectionInteractions = (sectionId, interactions) => op(OPS.UPDATE_SECTION_INTERACTIONS, { section_id: sectionId, interactions });
 export const updateSectionStyle = (sectionId, style) => op(OPS.UPDATE_SECTION_STYLE, { section_id: sectionId, style });
 /**
  * Remove ONE style property by dotted path (`typography.size`), from the block's style or, with `state`,
@@ -423,6 +431,21 @@ export function applyLocal(doc, operation, ctx = {}) {
         const { style: _old, ...rest } = s;
         const style = asObject(p.style);
         return Object.keys(style).length ? { ...rest, style } : rest;
+      });
+      if (!hit) throw notFound(p.section_id);
+      return { ...doc, sections };
+    }
+    case OPS.UPDATE_SECTION_ANIMATION:
+    case OPS.UPDATE_SECTION_INTERACTIONS: {
+      const field = operation.op === OPS.UPDATE_SECTION_ANIMATION ? 'animation' : 'interactions';
+      const value = p[field];
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${field} must be an object`);
+      let hit = false;
+      const sections = asList(doc.sections).map((s) => {
+        if (s.id !== p.section_id) return s;
+        hit = true;
+        const { [field]: _old, ...rest } = s;
+        return Object.keys(value).length ? { ...rest, [field]: value } : rest;
       });
       if (!hit) throw notFound(p.section_id);
       return { ...doc, sections };

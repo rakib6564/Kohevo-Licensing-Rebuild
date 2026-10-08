@@ -155,6 +155,12 @@ final class DocumentNormalizer
                 $normalizedSection['style'] = CanonicalJson::sortKeysRecursively($style);
             }
         }
+        // Section motion: present only when it holds something (canonical form).
+        foreach (['animation', 'interactions'] as $motionKey) {
+            if (is_array($section[$motionKey] ?? null) && $section[$motionKey] !== []) {
+                $normalizedSection[$motionKey] = CanonicalJson::sortKeysRecursively($section[$motionKey]);
+            }
+        }
         // Canonical form: the lock key exists only while the section is locked.
         if (($section['locked'] ?? null) === true) {
             $normalizedSection['locked'] = true;

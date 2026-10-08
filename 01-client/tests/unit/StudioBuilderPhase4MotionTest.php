@@ -144,14 +144,14 @@ unit('phase4: a hover animation composes with the entrance animation', function 
 unit('phase4: the stylesheet reads the custom properties, not a hardcoded duration', function (): void {
     StudioStylesheet::resetCache();
     $css = StudioStylesheet::css();
-    foreach (['fade-in', 'fade-up', 'fade-down', 'scale-up', 'slide-in'] as $preset) {
+    foreach (['fade-in', 'fade-up', 'fade-down', 'scale-up', 'slide-in', 'move-left', 'move-right', 'reveal-left', 'reveal-up'] as $preset) {
         assert_true(
             str_contains($css, '.sb-animate-' . $preset . '{animation:sb-'),
             "preset {$preset} must animate"
         );
     }
-    assert_true(substr_count($css, '--sb-anim-easing') >= 5, 'every preset must honour --sb-anim-easing');
-    assert_true(substr_count($css, '--sb-anim-delay') >= 5, 'every preset must honour --sb-anim-delay');
+    assert_true(substr_count($css, '--sb-anim-easing') >= 9, 'every preset must honour --sb-anim-easing');
+    assert_true(substr_count($css, '--sb-anim-delay') >= 9, 'every preset must honour --sb-anim-delay');
 });
 
 unit('phase4: scroll-reveal CSS is @supports-guarded so content is never invisible', function (): void {

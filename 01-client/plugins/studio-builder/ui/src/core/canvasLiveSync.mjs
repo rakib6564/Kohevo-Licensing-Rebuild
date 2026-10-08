@@ -54,6 +54,7 @@ export function isStructuralChange(prevDoc, nextDoc) {
     const prevSec = prevSections[s];
     const nextSec = nextSections[s];
     if (!prevSec || !nextSec || prevSec.id !== nextSec.id) return true;
+    if (differs(prevSec.animation, nextSec.animation) || differs(prevSec.interactions, nextSec.interactions)) return true; // section motion: classes written by the server
     if (differs(prevSec.style, nextSec.style)) return true; // section background/padding: scoped CSS from the server
     if (blocksChanged(prevSec.blocks, nextSec.blocks)) return true;
   }

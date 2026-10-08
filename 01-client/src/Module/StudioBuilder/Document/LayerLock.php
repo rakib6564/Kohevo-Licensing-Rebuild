@@ -48,6 +48,8 @@ final class LayerLock
         DocumentOperation::OP_UPDATE_SECTION_LAYOUT,
         DocumentOperation::OP_UPDATE_SECTION_VISIBILITY,
         DocumentOperation::OP_UPDATE_SECTION_STYLE,
+        DocumentOperation::OP_UPDATE_SECTION_ANIMATION,
+        DocumentOperation::OP_UPDATE_SECTION_INTERACTIONS,
         DocumentOperation::OP_MOVE_SECTION,
     ];
 

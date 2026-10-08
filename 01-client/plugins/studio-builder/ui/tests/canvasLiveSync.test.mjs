@@ -130,3 +130,10 @@ test('a heading with a highlighted word repaints from the server instead of havi
   syncLiveDOM(canvasDoc, doc({ text: 'Get started', highlight: 'started' }), doc({ text: 'Get going', highlight: 'started' }));
   assert.equal(el.textContent, 'Get <span>started</span>', 'untouched: the server repaint owns it');
 });
+
+test('a section animation or interaction change repaints from the server (the classes are written there)', () => {
+  const secDoc = (extra) => ({ sections: [{ id: 's1', blocks: [], ...extra }] });
+  assert.equal(isStructuralChange(secDoc({}), secDoc({ animation: { type: 'reveal_up' } })), true);
+  assert.equal(isStructuralChange(secDoc({ interactions: { trigger: 'hover' } }), secDoc({ interactions: { trigger: 'viewport-enter' } })), true);
+  assert.equal(isStructuralChange(secDoc({ animation: { type: 'fade_in' } }), secDoc({ animation: { type: 'fade_in' } })), false, 'an equal copy is not a change');
+});

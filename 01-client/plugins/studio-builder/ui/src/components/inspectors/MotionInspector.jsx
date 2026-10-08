@@ -19,14 +19,15 @@ import {
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
 
-export function MotionInspector({ block, applyOp, label }) {
+/** `block` is the block (or, with `section`, the section) whose motion is edited. */
+export function MotionInspector({ block, applyOp, label, section = false }) {
   const idPrefix = `sbx-motion-${block.id}`;
   const animation = normalizeAnimation(block.animation);
   const interactions = normalizeInteractions(block.interactions);
   const entranceOn = animation.type !== 'none';
 
-  const commitAnimation = (next) => applyOp(ops.updateBlockAnimation(block.id, next), { label });
-  const commitInteractions = (next) => applyOp(ops.updateBlockInteractions(block.id, next), { label });
+  const commitAnimation = (next) => applyOp((section ? ops.updateSectionAnimation : ops.updateBlockAnimation)(block.id, next), { label });
+  const commitInteractions = (next) => applyOp((section ? ops.updateSectionInteractions : ops.updateBlockInteractions)(block.id, next), { label });
 
   const choosePreset = (type) => {
     if (type === 'none') {

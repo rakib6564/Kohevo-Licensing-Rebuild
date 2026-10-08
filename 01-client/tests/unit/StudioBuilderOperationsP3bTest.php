@@ -85,7 +85,7 @@ unit('p3b ops: the PHP applier produces the same document as the editor for ever
 });
 
 unit('p3b ops: they are in the operation vocabulary, so the assistant tools list them too', function (): void {
-    foreach (['update_block_style_states', 'update_block_tag', 'update_section_style', 'reset_block_style_property'] as $op) {
+    foreach (['update_block_style_states', 'update_block_tag', 'update_section_style', 'reset_block_style_property', 'update_section_animation', 'update_section_interactions'] as $op) {
         assert_true(in_array($op, DocumentOperation::ALLOWED_OPS, true), "{$op} is an allowed operation");
     }
     assert_throws(StudioValidationException::class, static fn () => new DocumentOperation('update_block_tag', ['block_id' => 'blk_x']), 'a missing payload key is refused up front');

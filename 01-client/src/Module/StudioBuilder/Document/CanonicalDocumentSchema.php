@@ -105,10 +105,18 @@ final class CanonicalDocumentSchema
         ...self::REQUIRED_SECTION_KEYS,
         'locked',
         'style',
+        'animation',
+        'interactions',
     ];
 
     /** Keys of a section's optional `style` (B2-P3b): a background and padding. */
     public const ALLOWED_SECTION_STYLE_KEYS = ['background', 'padding'];
+
+    /** `animation.type` values (the entrance presets); the stylesheet owns the matching keyframes. */
+    public const ALLOWED_ANIMATION_TYPES = ['fade_in', 'fade_up', 'fade_down', 'scale_up', 'slide_in', 'move_left', 'move_right', 'reveal_left', 'reveal_up', 'none'];
+
+    /** `interactions.trigger` values. */
+    public const ALLOWED_INTERACTION_TRIGGERS = ['hover', 'focus', 'click', 'viewport-enter', 'scroll', 'load'];
 
     /** Wrapper elements an author may choose for a block (`tag`); `div` is the default and is not stored. */
     public const ALLOWED_BLOCK_TAGS = ['div', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'figure'];
