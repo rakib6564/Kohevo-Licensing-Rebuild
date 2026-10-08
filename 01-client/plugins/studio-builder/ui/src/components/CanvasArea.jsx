@@ -269,10 +269,17 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     if (doc && doc.readyState !== 'loading') markSelected(doc, selection, { ids: selectedIds });
   }, [selection, selectedIds]);
 
+  const reloadCanvas = () => {
+    setLoading(true);
+    setSrc(`${boot.canvasUrl}?page=${boot.pageId}&v=${Date.now()}`);
+    onReloadCanvas && onReloadCanvas();
+  };
+
   const unsaved = status === STATUS.DIRTY || status === STATUS.SAVING;
 
   return (
     <main className="sbx-canvas" aria-label={t('canvas_label')}>
+      {isMobile && (
       <div className="sbx-canvas__meta">
         <div className="sbx-canvas__meta-left">
           <span className="sbx-canvas__meta-pill">
@@ -316,6 +323,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
           </button>
         </div>
       </div>
+      )}
 
       <div className="sbx-canvas__stage-wrap">
       <div className="sbx-canvas__stage" ref={stageRef}>
@@ -378,6 +386,9 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
         onZoomOut={() => setCanvasView({ zoom: stepZoom(percent, -1) })}
         showGrid={showGrid}
         onToggleGrid={() => setCanvasView({ grid: !showGrid })}
+        onToggleCollapse={isMobile ? undefined : onToggleCollapse}
+        collapsed={collapsed}
+        onReload={isMobile ? undefined : reloadCanvas}
       />
     </main>
   );

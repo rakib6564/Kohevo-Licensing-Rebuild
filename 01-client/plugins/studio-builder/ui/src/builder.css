@@ -2928,3 +2928,25 @@ html, body.sbx-body {
 .sbx-inspector .sbx-field:has(> select) > .sbx-field__label { margin: 0; }
 .sbx-inspector .sbx-responsive .sbx-field:has(> select) { display: block; }
 @media (max-width: 860px) { .sbx-inspector .sbx-field:has(> select):not(.sbx-field--stacked) { display: block; } }
+
+/* Desktop: no top strip and no bottom bar band. The breadcrumb and zoom float over the canvas as pills,
+   so the page gets the whole column. */
+@media (min-width: 861px) {
+  .sbx-canvas { position: relative; }
+  .sbx-canvas .sbx-bottombar { position: absolute; left: 0; right: 0; bottom: 0; min-height: 0; padding: 0 12px 10px; background: transparent; border-top: 0; pointer-events: none; z-index: 30; }
+  .sbx-canvas .sbx-bottombar > * { pointer-events: auto; }
+  .sbx-canvas .sbx-bottombar__left { flex: 0 1 auto; padding: 4px 12px; border: 1px solid var(--sbx-border); border-radius: 10px; background: rgba(13, 17, 23, 0.92); backdrop-filter: blur(6px); }
+  .sbx-canvas .sbx-bottombar__left:empty { display: none; }
+  .sbx-canvas .sbx-bottombar__center, .sbx-canvas .sbx-bottombar__right { background: rgba(13, 17, 23, 0.92); backdrop-filter: blur(6px); }
+  .sbx-canvas .sbx-bottombar__right { padding: 3px; border: 1px solid var(--sbx-border); border-radius: 10px; }
+  .sbx-canvas .sbx-bottombar__left { margin-right: auto; }
+}
+
+/* Layers: a dense tree, one 26px row per layer. */
+@media (min-width: 861px) {
+  .sbx-tree__row { box-sizing: border-box; min-height: 26px; padding-top: 2px; padding-bottom: 2px; gap: 5px; border-radius: 5px; }
+  .sbx-tree__row--section { margin-top: 2px; }
+  .sbx-tree__label { font-size: 12px; }
+  .sbx-tree__caret { width: 16px; height: 16px; }
+  .sbx-tree__more { height: 20px; }
+}

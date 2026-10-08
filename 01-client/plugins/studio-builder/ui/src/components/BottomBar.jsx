@@ -71,7 +71,7 @@ function ShortcutHelp() {
 }
 
 export const BottomBar = memo(function BottomBar({
-  path, onSelectPath, percent, fitActive, onFit, onZoomIn, onZoomOut, showGrid, onToggleGrid, showPath = true,
+  path, onSelectPath, percent, fitActive, onFit, onZoomIn, onZoomOut, showGrid, onToggleGrid, showPath = true, onToggleCollapse, collapsed, onReload,
 }) {
   return (
     <div className="sbx-bottombar" data-testid="bottom-bar">
@@ -104,6 +104,14 @@ export const BottomBar = memo(function BottomBar({
       </div>
 
       <div className="sbx-bottombar__right">
+        {onToggleCollapse && (
+          <button type="button" className="sbx-bottombar__btn sbx-bottombar__btn--text" onClick={onToggleCollapse} aria-pressed={!!collapsed} title={collapsed ? t('show_sidebar') : t('hide_sidebar')}>
+            {collapsed ? t('show_panel') : t('full_canvas')}
+          </button>
+        )}
+        {onReload && (
+          <button type="button" className="sbx-bottombar__btn sbx-bottombar__btn--text" onClick={onReload} title={t('reload_canvas')}>{t('reload')}</button>
+        )}
         <button
           type="button"
           className={`sbx-bottombar__btn sbx-bottombar__btn--text${showGrid ? ' is-active' : ''}`}
