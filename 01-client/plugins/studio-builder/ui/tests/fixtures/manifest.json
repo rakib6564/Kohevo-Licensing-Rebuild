@@ -45,6 +45,7 @@
                 }
             ],
             "icon": "list-check",
+            "inline_text": [],
             "label": "Booking Services",
             "required_entitlement": "booking",
             "required_permission": "studio-builder.edit",
@@ -148,6 +149,7 @@
                 }
             ],
             "icon": "list-check",
+            "inline_text": [],
             "label": "Accordion",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -240,6 +242,13 @@
                 }
             ],
             "icon": "arrow-up-right",
+            "inline_text": [
+                {
+                    "prop": "link.label",
+                    "selector": ".sb-button",
+                    "multiline": false
+                }
+            ],
             "label": "Button",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -316,6 +325,7 @@
                 }
             ],
             "icon": "box",
+            "inline_text": [],
             "label": "Card",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -483,6 +493,7 @@
                 }
             ],
             "icon": "gallery",
+            "inline_text": [],
             "label": "Carousel",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -554,6 +565,7 @@
                 }
             ],
             "icon": "box",
+            "inline_text": [],
             "label": "Container",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -623,6 +635,7 @@
                 }
             ],
             "icon": "timer",
+            "inline_text": [],
             "label": "Countdown",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -749,6 +762,13 @@
                 }
             ],
             "icon": "list-check",
+            "inline_text": [
+                {
+                    "prop": "title",
+                    "selector": ".sb-feature-list__title",
+                    "multiline": false
+                }
+            ],
             "label": "Feature List",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -843,6 +863,7 @@
                 }
             ],
             "icon": "form",
+            "inline_text": [],
             "label": "Form",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -957,6 +978,7 @@
                 }
             ],
             "icon": "form",
+            "inline_text": [],
             "label": "Form Field",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -1085,6 +1107,7 @@
                 }
             ],
             "icon": "gallery",
+            "inline_text": [],
             "label": "Gallery",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -1159,6 +1182,13 @@
                 }
             ],
             "icon": "heading",
+            "inline_text": [
+                {
+                    "prop": "text",
+                    "selector": ".sb-heading",
+                    "multiline": false
+                }
+            ],
             "label": "Heading",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -1252,6 +1282,23 @@
                 }
             ],
             "icon": "rocket",
+            "inline_text": [
+                {
+                    "prop": "heading",
+                    "selector": ".sb-hero__heading",
+                    "multiline": false
+                },
+                {
+                    "prop": "eyebrow",
+                    "selector": ".sb-hero__eyebrow",
+                    "multiline": false
+                },
+                {
+                    "prop": "subheading",
+                    "selector": ".sb-hero__subheading",
+                    "multiline": true
+                }
+            ],
             "label": "Hero Banner",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -1373,6 +1420,7 @@
                 }
             ],
             "icon": "star",
+            "inline_text": [],
             "label": "Icon",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -1457,6 +1505,7 @@
                 }
             ],
             "icon": "image",
+            "inline_text": [],
             "label": "Image",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -1533,6 +1582,7 @@
                 }
             ],
             "icon": "link",
+            "inline_text": [],
             "label": "Link",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -1628,6 +1678,7 @@
                 }
             ],
             "icon": "list",
+            "inline_text": [],
             "label": "List",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -1725,6 +1776,7 @@
                 }
             ],
             "icon": "box",
+            "inline_text": [],
             "label": "Modal Popup",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -1959,6 +2011,7 @@
                 }
             ],
             "icon": "grid-panes",
+            "inline_text": [],
             "label": "Query Loop",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2040,6 +2093,13 @@
                 }
             ],
             "icon": "quotes",
+            "inline_text": [
+                {
+                    "prop": "text",
+                    "selector": ".sb-quote__text p",
+                    "multiline": true
+                }
+            ],
             "label": "Quote",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2094,6 +2154,7 @@
                 }
             ],
             "icon": "pilcrow",
+            "inline_text": [],
             "label": "Rich Text",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2248,6 +2309,7 @@
                 }
             ],
             "icon": "grid-dots",
+            "inline_text": [],
             "label": "Stats",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2355,6 +2417,7 @@
                 }
             ],
             "icon": "table",
+            "inline_text": [],
             "label": "Table",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2475,6 +2538,7 @@
                 }
             ],
             "icon": "grid-panes",
+            "inline_text": [],
             "label": "Tabs",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2571,6 +2635,13 @@
                 }
             ],
             "icon": "pilcrow",
+            "inline_text": [
+                {
+                    "prop": "content",
+                    "selector": ".sb-text",
+                    "multiline": true
+                }
+            ],
             "label": "Text",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2667,6 +2738,7 @@
                 }
             ],
             "icon": "video",
+            "inline_text": [],
             "label": "Video",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2733,6 +2805,7 @@
                 }
             ],
             "icon": "form",
+            "inline_text": [],
             "label": "Form Card",
             "required_entitlement": "forms",
             "required_permission": "studio-builder.edit",
@@ -2818,6 +2891,7 @@
                 }
             ],
             "icon": "box",
+            "inline_text": [],
             "label": "Container",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2935,6 +3009,7 @@
                 }
             ],
             "icon": "box",
+            "inline_text": [],
             "label": "Flex",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -3019,6 +3094,7 @@
                 }
             ],
             "icon": "grid-panes",
+            "inline_text": [],
             "label": "Grid",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -3116,6 +3192,7 @@
                 }
             ],
             "icon": "layout-section",
+            "inline_text": [],
             "label": "Offcanvas Drawer",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -3229,6 +3306,7 @@
                 }
             ],
             "icon": "layout-section",
+            "inline_text": [],
             "label": "Section",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -3304,6 +3382,7 @@
                 }
             ],
             "icon": "grid-panes",
+            "inline_text": [],
             "label": "Membership Plans",
             "required_entitlement": "membership",
             "required_permission": "studio-builder.edit",
@@ -3370,6 +3449,7 @@
                 }
             ],
             "icon": "heading",
+            "inline_text": [],
             "label": "Archive Title",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -3423,6 +3503,7 @@
                 }
             ],
             "icon": "pilcrow",
+            "inline_text": [],
             "label": "Post Content",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -3501,6 +3582,7 @@
                 }
             ],
             "icon": "list-check",
+            "inline_text": [],
             "label": "Post Meta",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -3583,6 +3665,7 @@
                 }
             ],
             "icon": "heading",
+            "inline_text": [],
             "label": "Post Title",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -3643,6 +3726,7 @@
                 }
             ],
             "icon": "search",
+            "inline_text": [],
             "label": "Search Box",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",

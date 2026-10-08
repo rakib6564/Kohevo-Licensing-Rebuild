@@ -113,6 +113,7 @@ final class BlockRegistry
                 ['key' => 'accent_token', 'type' => 'token_ref', 'label' => 'Accent Token', 'required' => false, 'default' => null],
             ]),
             allowsChildren: false,
+            inlineText: [['prop' => 'heading', 'selector' => '.sb-hero__heading'], ['prop' => 'eyebrow', 'selector' => '.sb-hero__eyebrow'], ['prop' => 'subheading', 'selector' => '.sb-hero__subheading']],
         ));
 
         // 2. core.heading
@@ -130,6 +131,7 @@ final class BlockRegistry
             ]),
             allowsChildren: false,
             allowedBindingProviders: ['content.posts', 'content.authors', 'content.taxonomy', 'booking.services', 'membership.plans', 'forms.form'],
+            inlineText: [['prop' => 'text', 'selector' => '.sb-heading']],
         ));
 
         // 3. core.rich_text
@@ -184,6 +186,7 @@ final class BlockRegistry
             ]),
             allowsChildren: false,
             allowedBindingProviders: ['content.posts', 'content.authors', 'content.taxonomy', 'booking.services', 'membership.plans', 'forms.form'],
+            inlineText: [['prop' => 'link.label', 'selector' => '.sb-button']],
         ));
 
         // 6. core.feature_list (exercises repeater + object field types)
@@ -223,6 +226,7 @@ final class BlockRegistry
                 ],
             ]),
             allowsChildren: false,
+            inlineText: [['prop' => 'title', 'selector' => '.sb-feature-list__title']],
         ));
 
         // 7. core.container (structural container capable of holding nested child blocks)
@@ -338,6 +342,7 @@ final class BlockRegistry
             ]),
             allowsChildren: false,
             allowedBindingProviders: ['content.posts', 'content.authors', 'content.taxonomy', 'booking.services', 'membership.plans', 'forms.form'],
+            inlineText: [['prop' => 'content', 'selector' => '.sb-text']],
         ));
 
         // 13. core.query_loop
@@ -803,6 +808,7 @@ final class BlockRegistry
                 ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['left', 'center'], 'default' => 'left'],
             ]),
             allowsChildren: false,
+            inlineText: [['prop' => 'text', 'selector' => '.sb-quote__text p']],
         ));
 
         // 32. core.link — a plain text link (core.button stays the call-to-action).
