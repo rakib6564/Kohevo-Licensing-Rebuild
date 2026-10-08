@@ -195,7 +195,7 @@ final class DocumentRenderer
         // nothing, so documents that never use them render exactly as before.
         $blockStyle   = is_array($block['style'] ?? null) ? $block['style'] : [];
         $stateRules   = is_array($block['style_states'] ?? null) ? StyleSurface::stateRules($block['style_states']) : [];
-        $scopedClass  = $collector->scopedRule((string) ($block['id'] ?? ''), StyleSurface::declarations($blockStyle), StyleSurface::hasTransition($blockStyle), $stateRules);
+        $scopedClass  = $collector->scopedRule((string) ($block['id'] ?? ''), StyleSurface::declarations($blockStyle, $this->backgroundImageUrl($blockStyle)), StyleSurface::hasTransition($blockStyle), $stateRules);
         $scopedClasses = $scopedClass !== '' ? [$scopedClass] : [];
 
         $classes = array_merge(
@@ -452,6 +452,23 @@ final class DocumentRenderer
         }
 
         return $rules === [] ? '' : implode(';', $rules) . ';';
+    }
+
+    /**
+     * The servable URL of `style.background.image` for the CURRENT tenant, or
+     * null. The id goes through the same tenant-scoped resolver as an image
+     * block; the resulting URL is checked again before it enters a stylesheet.
+     *
+     * @param array<string, mixed> $style
+     */
+    private function backgroundImageUrl(array $style): ?string
+    {
+        $image = $style['background']['image'] ?? null;
+        if (!is_array($image) || !isset($image['media_id']) || !is_int($image['media_id']) || $image['media_id'] <= 0) {
+            return null;
+        }
+        $resolved = $this->media->resolveImage($image['media_id']);
+        return $resolved === null ? null : StyleSurface::safeCssUrl($resolved->url);
     }
 
     private function buildInlineStyles(array $style): string

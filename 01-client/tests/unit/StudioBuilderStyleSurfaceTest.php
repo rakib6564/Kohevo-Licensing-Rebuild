@@ -65,7 +65,7 @@ unit('surface: valid layout, position, size and effects values validate', functi
     ];
     foreach ($valid as $style) {
         $r = sbp5s_validate($style);
-        assert_true($r->isValid(), 'must validate ' . json_encode($style) . ' → ' . json_encode($r->errors ?? []));
+        assert_true($r->isValid(), 'must validate ' . json_encode($style) . ' → ' . json_encode($r->errors()));
     }
 });
 
@@ -238,7 +238,7 @@ unit('surface 2: valid margin, padding, border sides and corners, typography ext
         ['shadow' => ['x' => '1px', 'y' => '1px', 'color' => '#000']],
     ] as $style) {
         $r = sbss_validate_block($style);
-        assert_true($r->isValid(), 'must validate ' . json_encode($style) . ' → ' . json_encode($r->errors ?? []));
+        assert_true($r->isValid(), 'must validate ' . json_encode($style) . ' → ' . json_encode($r->errors()));
     }
 });
 
@@ -289,7 +289,7 @@ unit('states: valid hover, focus, active and disabled overlays validate', functi
         'disabled' => ['opacity' => 0.5, 'effects' => ['blend' => 'normal']],
     ];
     $r = sbss_validate_block([], ['style_states' => $states]);
-    assert_true($r->isValid(), json_encode($r->errors ?? []));
+    assert_true($r->isValid(), json_encode($r->errors()));
     assert_true(sbss_validate_block([], ['style_states' => []])->isValid(), 'an empty map is fine');
 });
 
@@ -364,4 +364,139 @@ unit('states: the normalizer drops empty states and keeps keys sorted', function
     assert_eq(['focus' => ['color' => '#fff', 'opacity' => 0.5]], $states, 'the empty hover state is gone and keys are sorted');
     $none = DocumentNormalizer::normalize($doc($block(['hover' => []])), $registry);
     assert_false(array_key_exists('style_states', $none['sections'][0]['blocks'][0]), 'an all-empty map is not stored');
+});
+
+// ═══ Slice 3: background image (media_ref), fit, repeat, focal point, overlay ═══
+
+use Slate\Module\StudioBuilder\Dependency\DependencyExtractor;
+use Slate\Module\StudioBuilder\Render\Media\MediaResolverInterface;
+use Slate\Module\StudioBuilder\Render\Media\ResolvedMedia;
+
+final class SbssMedia implements MediaResolverInterface
+{
+    /** @param array<int, string> $urls media id => url */
+    public function __construct(private array $urls) {}
+
+    public function resolveImage(int $id): ?ResolvedMedia
+    {
+        return isset($this->urls[$id]) ? new ResolvedMedia($id, $this->urls[$id], 800, 600) : null;
+    }
+}
+
+/** @return array{html: string, css: string} */
+function sbss_render_with_media(array $style, array $urls): array
+{
+    $tenants   = new TenantContext();
+    $renderer  = new DocumentRenderer(BlockRegistry::withAllCoreBlocks(), BlockRendererRegistry::withCoreRenderers(), new SbssMedia($urls), new ProviderBindingResolver(new DataProviderRegistry(), $tenants));
+    $collector = new RenderCollector();
+    $html = $renderer->renderBlock([
+        'id' => 'blk_aaaaaaaaaaaaaaaaaaaaaaaa', 'type' => 'core.heading', 'version' => 1, 'props' => ['text' => 'x', 'level' => 'h2'],
+        'style' => $style + CanonicalDocumentSchema::defaultBlockStyle(),
+        'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [], 'animation' => [], 'interactions' => [],
+    ], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), $collector, false);
+    return ['html' => $html, 'css' => $collector->css()];
+}
+
+unit('background: a media_ref image with fit, repeat, position and overlay validates', function (): void {
+    foreach ([
+        ['background' => ['image' => ['media_id' => 7, 'alt' => '']]],
+        ['background' => ['image' => ['media_id' => 7, 'alt' => 'Team', 'focal_point' => [0.25, 0.75]], 'fit' => 'contain', 'repeat' => 'repeat-x', 'overlay' => ['color' => 'rgba(0,0,0,.4)']]],
+        ['background' => ['image' => ['media_id' => 7, 'alt' => ''], 'position' => 'top-right']],
+        ['background' => ['image' => 'https://typed.example/legacy.png']],   // pre-P3b typed URL: ignored, as before
+    ] as $style) {
+        $r = sbss_validate_block($style);
+        assert_true($r->isValid(), 'must validate ' . json_encode($style) . ' → ' . json_encode($r->errors()));
+    }
+});
+
+unit('background: bad images, fits, repeats, positions and overlays are refused', function (): void {
+    $bad = [
+        'media id zero'         => ['background' => ['image' => ['media_id' => 0, 'alt' => '']]],
+        'media id string'       => ['background' => ['image' => ['media_id' => '7', 'alt' => '']]],
+        'media url key'         => ['background' => ['image' => ['media_id' => 7, 'alt' => '', 'url' => 'https://evil.test/x.png']]],
+        'media tenant id'       => ['background' => ['image' => ['media_id' => 7, 'alt' => '', 'tenant_id' => 2]]],
+        'media no alt'          => ['background' => ['image' => ['media_id' => 7]]],
+        'focal point range'     => ['background' => ['image' => ['media_id' => 7, 'alt' => '', 'focal_point' => [2, 0]]]],
+        'image and gradient'    => ['background' => ['image' => ['media_id' => 7, 'alt' => ''], 'gradient' => 'linear-gradient(red, blue)']],
+        'fit free'              => ['background' => ['fit' => 'cover; x:y']],
+        'repeat free'           => ['background' => ['repeat' => 'space']],
+        'position free'         => ['background' => ['position' => '10px 20px']],
+        'overlay url'           => ['background' => ['overlay' => ['color' => 'url(x)']]],
+        'overlay token'         => ['background' => ['overlay' => ['color' => 'surface.dark']]],
+        'overlay empty'         => ['background' => ['overlay' => []]],
+        'overlay extra'         => ['background' => ['overlay' => ['color' => '#000', 'image' => 'x']]],
+    ];
+    foreach ($bad as $label => $style) {
+        assert_false(sbss_validate_block($style)->isValid(), "must refuse: {$label}");
+    }
+});
+
+unit('background: the image comes from the tenant media resolver and renders as one scoped rule', function (): void {
+    $out = sbss_render_with_media(['background' => ['image' => ['media_id' => 7, 'alt' => '', 'focal_point' => [0.25, 0.75]], 'overlay' => ['color' => 'rgba(0,0,0,.4)'], 'fit' => 'cover', 'repeat' => 'no-repeat']], [7 => '/uploads/t101/hero.jpg']);
+    assert_true(str_contains($out['css'], 'background-image:linear-gradient(rgba(0,0,0,.4),rgba(0,0,0,.4)),url("/uploads/t101/hero.jpg")'), $out['css']);
+    assert_true(str_contains($out['css'], 'background-size:cover;background-repeat:no-repeat;background-position:25% 75%'), $out['css']);
+    assert_false(str_contains($out['html'], 'hero.jpg'), 'the URL lives in the stylesheet only');
+    assert_false(str_contains($out['html'], 'style='), 'nothing inline');
+});
+
+unit('background: defaults, and position keyword when there is no focal point', function (): void {
+    $plain = sbss_render_with_media(['background' => ['image' => ['media_id' => 7, 'alt' => '']]], [7 => '/u/a.jpg']);
+    assert_true(str_contains($plain['css'], 'background-image:url("/u/a.jpg");background-size:cover;background-repeat:no-repeat;background-position:center'), $plain['css']);
+    $kw = sbss_render_with_media(['background' => ['image' => ['media_id' => 7, 'alt' => ''], 'position' => 'bottom-left']], [7 => '/u/a.jpg']);
+    assert_true(str_contains($kw['css'], 'background-position:bottom left'), $kw['css']);
+});
+
+unit('background: a media id that does not resolve for this tenant produces nothing', function (): void {
+    $out = sbss_render_with_media(['background' => ['image' => ['media_id' => 8, 'alt' => '']]], [7 => '/u/a.jpg']);
+    assert_eq('', $out['css'], 'another tenant\'s or deleted media renders nothing');
+});
+
+unit('background: a resolver URL that could break out of url("") is never emitted', function (): void {
+    foreach (['/u/a.jpg") ;}body{background:red', "/u/a.jpg\"", '/u/a b.jpg', "/u/a'.jpg", '/u/a\\.jpg', '/u/a.jpg)', 'javascript:alert(1)', 'data:image/svg+xml;base64,AAAA', '/u/<x>.jpg', '', 'u/a.jpg'] as $url) {
+        $out = sbss_render_with_media(['background' => ['image' => ['media_id' => 7, 'alt' => '']]], [7 => $url]);
+        assert_eq('', $out['css'], 'must refuse URL ' . json_encode($url));
+    }
+    foreach (['/uploads/a.jpg', 'https://cdn.example.test/a/b.jpg?v=3&w=800', '//cdn.example.test/a.png'] as $url) {
+        $out = sbss_render_with_media(['background' => ['image' => ['media_id' => 7, 'alt' => '']]], [7 => $url]);
+        assert_true(str_contains($out['css'], 'url("' . $url . '")'), 'must accept URL ' . $url . ': ' . $out['css']);
+    }
+});
+
+unit('background: a typed legacy URL is still ignored, never rendered', function (): void {
+    $out = sbss_render_with_media(['background' => ['image' => 'https://evil.test/x.png']], []);
+    assert_eq('', $out['css']);
+    assert_false(str_contains($out['html'], 'evil.test'));
+});
+
+unit('background: the image is a tracked media dependency', function (): void {
+    $doc = ['schema_version' => '1.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'sections' => [[
+        'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'S', 'global_ref' => null, 'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
+        'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'blocks' => [[
+            'id' => 'blk_aaaaaaaaaaaaaaaaaaaaaaaa', 'type' => 'core.heading', 'version' => 1, 'props' => ['text' => 'x', 'level' => 'h2'],
+            'style' => ['background' => ['image' => ['media_id' => 7, 'alt' => '']]] + CanonicalDocumentSchema::defaultBlockStyle(),
+            'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [],
+        ]],
+    ]]];
+    $records = DependencyExtractor::extract($doc, BlockRegistry::withAllCoreBlocks());
+    $media = array_values(array_filter($records, static fn ($r) => $r->dependencyType === 'media'));
+    assert_eq(1, count($media), 'one media dependency');
+    assert_eq('7', $media[0]->dependencyKey);
+    assert_eq('blk_aaaaaaaaaaaaaaaaaaaaaaaa', $media[0]->nodeId);
+});
+
+unit('background: the editor\'s tenant check refuses a media id the tenant does not own', function (): void {
+    $doc = ['schema_version' => '1.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'sections' => [[
+        'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'S', 'global_ref' => null, 'layout' => [],
+        'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'blocks' => [[
+            'id' => CanonicalDocumentSchema::newBlockId(), 'type' => 'core.heading', 'version' => 1, 'props' => ['text' => 'x', 'level' => 'h2'],
+            'style' => ['background' => ['image' => ['media_id' => 99, 'alt' => '']]] + CanonicalDocumentSchema::defaultBlockStyle(),
+            'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [],
+        ]],
+    ]]];
+    $own = static fn (int $id): bool => $id === 7;
+    $r = DocumentValidator::validate($doc, BlockRegistry::withAllCoreBlocks(), ['media_exists' => $own]);
+    assert_false($r->isValid(), 'media 99 is not this tenant\'s');
+    assert_true(str_contains(json_encode($r->errors()), 'cross_tenant_or_missing_media'));
+    $doc['sections'][0]['blocks'][0]['style']['background']['image']['media_id'] = 7;
+    assert_true(DocumentValidator::validate($doc, BlockRegistry::withAllCoreBlocks(), ['media_exists' => $own])->isValid(), 'media 7 is');
 });

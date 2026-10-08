@@ -24,6 +24,8 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Document;
 
+use Slate\Module\StudioBuilder\Schema\FieldSchema;
+
 final class StyleSurface
 {
     /** Style keys introduced by B2-P3b, in the order their declarations are emitted. */
@@ -134,6 +136,91 @@ final class StyleSurface
         ];
     }
 
+    private const REPEATS = ['no-repeat', 'repeat', 'repeat-x', 'repeat-y'];
+    private const FITS    = ['cover', 'contain', 'auto'];
+
+    /**
+     * A URL that is safe to place inside `url("...")` in a stylesheet, or null.
+     * The URL comes from the media resolver (never from the document), and is
+     * still checked against a whitelist: no quotes, backslashes, parentheses,
+     * whitespace, angle brackets or braces can get through.
+     */
+    public static function safeCssUrl(string $url): ?string
+    {
+        if ($url === '' || strlen($url) > 2000 || preg_match('~^(?:https?:)?//?[A-Za-z0-9._\~:/?#@!$&*+,=%\-\[\]]*$~', $url) !== 1) {
+            return null;
+        }
+        return $url;
+    }
+
+    /**
+     * Issues for the B2-P3b parts of `background`: image (a media_ref), fit,
+     * repeat, position and overlay. A string `image` (the pre-P3b editor wrote
+     * a typed URL that nothing ever rendered) is left alone, as before.
+     *
+     * @param array<string, mixed> $bg
+     * @return list<array{path: string, code: string, message: string}>
+     */
+    public static function backgroundIssues(array $bg, string $path): array
+    {
+        $errors = [];
+        if (isset($bg['image']) && is_array($bg['image'])) {
+            (FieldSchema::define([]))->validateMediaRef($bg['image'], "{$path}.image", $errors);
+            if (isset($bg['gradient']) && $bg['gradient'] !== '') {
+                $errors[] = self::issue("{$path}.gradient", 'Choose an image or a gradient, not both.');
+            }
+        }
+        if (array_key_exists('fit', $bg) && !(is_string($bg['fit']) && in_array($bg['fit'], self::FITS, true))) {
+            $errors[] = self::issue("{$path}.fit", 'fit must be cover, contain or auto.');
+        }
+        if (array_key_exists('repeat', $bg) && !(is_string($bg['repeat']) && in_array($bg['repeat'], self::REPEATS, true))) {
+            $errors[] = self::issue("{$path}.repeat", 'Unknown repeat mode.');
+        }
+        if (array_key_exists('position', $bg) && !(is_string($bg['position']) && isset(self::POSITIONS[$bg['position']]))) {
+            $errors[] = self::issue("{$path}.position", 'Unknown position.');
+        }
+        if (array_key_exists('overlay', $bg)) {
+            self::checkLimitedObject($bg['overlay'], ['color' => ['color', 'color']], "{$path}.overlay", $errors);
+            if (is_array($bg['overlay']) && !array_key_exists('color', $bg['overlay'])) {
+                $errors[] = self::issue("{$path}.overlay.color", 'An overlay needs a colour.');
+            }
+        }
+        return $errors;
+    }
+
+    /**
+     * Declarations for a background image already resolved to a safe URL.
+     *
+     * @param array<string, mixed> $style
+     * @param list<string> $out
+     */
+    private static function emitBackgroundImage(array $style, ?string $url, array &$out): void
+    {
+        $bg = is_array($style['background'] ?? null) ? $style['background'] : [];
+        if ($url === null || !is_array($bg['image'] ?? null) || self::safeCssUrl($url) === null) {
+            return;
+        }
+        $layers = [];
+        $overlay = is_array($bg['overlay'] ?? null) ? $bg['overlay'] : [];
+        if (isset($overlay['color']) && self::fieldAccepts($overlay['color'], ['color', 'color'])) {
+            $c = trim((string) $overlay['color']);
+            $layers[] = 'linear-gradient(' . $c . ',' . $c . ')';
+        }
+        $layers[] = 'url("' . $url . '")';
+        $out[] = 'background-image:' . implode(',', $layers);
+        $out[] = 'background-size:' . (isset($bg['fit']) && is_string($bg['fit']) && in_array($bg['fit'], self::FITS, true) ? $bg['fit'] : 'cover');
+        $out[] = 'background-repeat:' . (isset($bg['repeat']) && is_string($bg['repeat']) && in_array($bg['repeat'], self::REPEATS, true) ? $bg['repeat'] : 'no-repeat');
+        $position = 'center';
+        $fp = $bg['image']['focal_point'] ?? null;
+        if (is_array($fp) && count($fp) === 2 && self::inRange($fp[0] ?? null, 0, 1) && self::inRange($fp[1] ?? null, 0, 1)) {
+            // Only computed numbers: the focal point is two floats in [0, 1].
+            $position = self::num($fp[0] * 100) . '% ' . self::num($fp[1] * 100) . '%';
+        } elseif (isset($bg['position']) && is_string($bg['position']) && isset(self::POSITIONS[$bg['position']])) {
+            $position = self::POSITIONS[$bg['position']];
+        }
+        $out[] = 'background-position:' . $position;
+    }
+
     /** Numeric parts of `effects`: group => field => [min, max, unit]. */
     private const TRANSFORM = ['rotate' => [-360, 360, 'deg'], 'scale' => [0, 5, ''], 'skew_x' => [-90, 90, 'deg'], 'skew_y' => [-90, 90, 'deg']];
     private const FILTER    = ['blur' => [0, 50, 'px'], 'brightness' => [0, 300, '%'], 'contrast' => [0, 300, '%'], 'saturate' => [0, 300, '%'], 'grayscale' => [0, 100, '%']];
@@ -187,6 +274,9 @@ final class StyleSurface
         }
         if (isset($style['shadow']) && is_array($style['shadow'])) {
             self::checkShadowObject($style['shadow'], "{$path}.shadow", $errors);
+        }
+        if (isset($style['background']) && is_array($style['background'])) {
+            array_push($errors, ...self::backgroundIssues($style['background'], "{$path}.background"));
         }
         return $errors;
     }
@@ -417,7 +507,7 @@ final class StyleSurface
      *
      * @param array<string, mixed> $style
      */
-    public static function declarations(array $style): string
+    public static function declarations(array $style, ?string $backgroundUrl = null): string
     {
         $out = [];
         foreach (['layout', 'position'] as $key) {
@@ -434,6 +524,7 @@ final class StyleSurface
         if (isset($style['dimensions']) && is_array($style['dimensions'])) {
             self::emitFields($style['dimensions'], self::fields()['dimensions'], $out);
         }
+        self::emitBackgroundImage($style, $backgroundUrl, $out);
         if (isset($style['border']) && is_array($style['border'])) {
             foreach (self::SIDES as $side) {
                 if (isset($style['border'][$side]) && is_array($style['border'][$side])) {

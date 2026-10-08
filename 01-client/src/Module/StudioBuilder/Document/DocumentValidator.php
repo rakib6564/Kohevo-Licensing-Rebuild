@@ -800,6 +800,12 @@ final class DocumentValidator
         // Block style
         if (array_key_exists('style', $block)) {
             self::validateBlockStyle($block['style'], $definition, "{$path}.style", $errors);
+            // A background image is a media_ref too: it must belong to the active tenant.
+            $bgImage = is_array($block['style']) && is_array($block['style']['background'] ?? null) ? ($block['style']['background']['image'] ?? null) : null;
+            if (is_array($bgImage) && isset($bgImage['media_id']) && is_int($bgImage['media_id']) && $bgImage['media_id'] > 0
+                && isset($options['media_exists']) && is_callable($options['media_exists']) && !$options['media_exists']($bgImage['media_id'])) {
+                $errors[] = ValidationResult::issue("{$path}.style.background.image.media_id", 'cross_tenant_or_missing_media', "Referenced media_id {$bgImage['media_id']} does not exist in the active tenant.");
+            }
         }
 
         // Block visibility

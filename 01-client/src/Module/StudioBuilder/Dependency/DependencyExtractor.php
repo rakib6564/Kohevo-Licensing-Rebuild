@@ -125,6 +125,12 @@ final class DependencyExtractor
             }
         }
 
+        // A background image is a media reference held in the style, not in props.
+        $bgImage = is_array($style['background'] ?? null) ? ($style['background']['image'] ?? null) : null;
+        if (is_array($bgImage) && isset($bgImage['media_id']) && is_int($bgImage['media_id']) && $bgImage['media_id'] > 0) {
+            $add(new DependencyRecord($blockId, 'media', (string) $bgImage['media_id']));
+        }
+
         // Block definition dependencies (entitlement module, media_ref, token_ref, bindings)
         $def = $registry->get($type);
         if ($def !== null) {
