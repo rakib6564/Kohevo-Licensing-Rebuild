@@ -19,6 +19,10 @@ export const ANIMATION_TYPES = Object.freeze([
   { value: 'fade_down', label: 'Fade down' },
   { value: 'scale_up', label: 'Scale up' },
   { value: 'slide_in', label: 'Slide in' },
+  { value: 'move_left', label: 'Move left' },
+  { value: 'move_right', label: 'Move right' },
+  { value: 'reveal_left', label: 'Reveal from left' },
+  { value: 'reveal_up', label: 'Reveal upward' },
 ]);
 
 /** `interactions.trigger` — must match DocumentValidator's list, in order. */
@@ -52,6 +56,10 @@ export const MOTION_PRESETS = Object.freeze([
   { value: 'fade_in', label: 'Fade in', hint: 'Opacity only' },
   { value: 'scale_up', label: 'Scale up', hint: 'Grows into place' },
   { value: 'slide_in', label: 'Slide', hint: 'Sweeps in from the left' },
+  { value: 'move_left', label: 'Move left', hint: 'Travels in from the right' },
+  { value: 'move_right', label: 'Move right', hint: 'Travels in from the left' },
+  { value: 'reveal_left', label: 'Reveal', hint: 'Wipes into view from the left' },
+  { value: 'reveal_up', label: 'Reveal up', hint: 'Wipes into view from the bottom' },
 ]);
 
 const ANIMATION_VALUES = new Set(ANIMATION_TYPES.map((o) => o.value));

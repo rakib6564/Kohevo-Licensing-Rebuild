@@ -401,6 +401,8 @@ final class DocumentValidator
             $errors[] = ValidationResult::issue("{$path}.label", 'invalid_section_label', 'Section label must be a safe string <= 120 chars.');
         }
 
+        self::validateMotion($section, $path, $errors, true);
+
         // Layer lock (editor aid): a boolean when present.
         if (array_key_exists('locked', $section) && !is_bool($section['locked'])) {
             $errors[] = ValidationResult::issue("{$path}.locked", 'invalid_locked', 'section.locked must be a boolean.');
@@ -687,17 +689,7 @@ final class DocumentValidator
             }
         }
 
-        // Validate optional interactions if present
-        if (array_key_exists('interactions', $block)) {
-            $interactions = $block['interactions'];
-            if (!is_array($interactions) || ($interactions !== [] && array_is_list($interactions))) {
-                $errors[] = ValidationResult::issue("{$path}.interactions", 'invalid_interactions', 'block.interactions must be a JSON object.');
-            } else {
-                if (isset($interactions['trigger']) && (!is_string($interactions['trigger']) || !in_array($interactions['trigger'], ['hover', 'focus', 'click', 'viewport-enter', 'scroll', 'load'], true))) {
-                    $errors[] = ValidationResult::issue("{$path}.interactions.trigger", 'invalid_interaction_trigger', 'Invalid interaction trigger.');
-                }
-            }
-        }
+        self::validateMotion($block, $path, $errors, false);
 
         // Validate optional editor metadata (display name + layer lock) if present
         if (array_key_exists('metadata', $block)) {
@@ -734,18 +726,6 @@ final class DocumentValidator
         if (array_key_exists('style_states', $block)) {
             foreach (StyleSurface::stateIssues($block['style_states'], "{$path}.style_states") as $issue) {
                 $errors[] = ValidationResult::issue($issue['path'], $issue['code'], $issue['message']);
-            }
-        }
-
-        // Validate optional animation if present
-        if (array_key_exists('animation', $block)) {
-            $animation = $block['animation'];
-            if (!is_array($animation) || ($animation !== [] && array_is_list($animation))) {
-                $errors[] = ValidationResult::issue("{$path}.animation", 'invalid_animation', 'block.animation must be a JSON object.');
-            } else {
-                if (isset($animation['type']) && (!is_string($animation['type']) || !in_array($animation['type'], ['fade_in', 'fade_up', 'fade_down', 'scale_up', 'slide_in', 'none'], true))) {
-                    $errors[] = ValidationResult::issue("{$path}.animation.type", 'invalid_animation_type', 'Invalid animation type.');
-                }
             }
         }
 
@@ -911,6 +891,32 @@ final class DocumentValidator
                 /** @var FieldSchema $propSchema */
                 $propSchema = $field['properties'];
                 self::validateMediaReferencesInProps($propSchema->fields(), $val, $fieldPath, $mediaExists, $errors);
+            }
+        }
+    }
+
+    /**
+     * `animation` and `interactions` of a block or a section: shapes and enums only (the stylesheet owns the CSS).
+     *
+     * @param array<string, mixed> $node
+     * @param list<mixed> $errors
+     */
+    private static function validateMotion(array $node, string $path, array &$errors, bool $isSection): void
+    {
+        if (array_key_exists('animation', $node)) {
+            $animation = $node['animation'];
+            if (!is_array($animation) || ($animation !== [] && array_is_list($animation))) {
+                $errors[] = ValidationResult::issue("{$path}.animation", 'invalid_animation', ($isSection ? 'section' : 'block') . '.animation must be a JSON object.');
+            } elseif (isset($animation['type']) && (!is_string($animation['type']) || !in_array($animation['type'], CanonicalDocumentSchema::ALLOWED_ANIMATION_TYPES, true))) {
+                $errors[] = ValidationResult::issue("{$path}.animation.type", 'invalid_animation_type', 'Invalid animation type.');
+            }
+        }
+        if (array_key_exists('interactions', $node)) {
+            $interactions = $node['interactions'];
+            if (!is_array($interactions) || ($interactions !== [] && array_is_list($interactions))) {
+                $errors[] = ValidationResult::issue("{$path}.interactions", 'invalid_interactions', ($isSection ? 'section' : 'block') . '.interactions must be a JSON object.');
+            } elseif (isset($interactions['trigger']) && (!is_string($interactions['trigger']) || !in_array($interactions['trigger'], CanonicalDocumentSchema::ALLOWED_INTERACTION_TRIGGERS, true))) {
+                $errors[] = ValidationResult::issue("{$path}.interactions.trigger", 'invalid_interaction_trigger', 'Invalid interaction trigger.');
             }
         }
     }

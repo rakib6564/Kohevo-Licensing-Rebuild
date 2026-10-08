@@ -93,7 +93,9 @@ test('operations use the canonical {op, payload} vocabulary', () => {
     // Layer lock and block rename (LayerLock.php; update_block_meta / update_section_locked).
     'update_block_meta', 'update_section_locked',
     // B2-P3b: states, wrapper tag, section style and single-property reset.
-    'update_block_style_states', 'update_block_tag', 'reset_block_style_property', 'update_section_style'];
+    'update_block_style_states', 'update_block_tag', 'reset_block_style_property', 'update_section_style',
+    // B2-P3d: a section's own motion.
+    'update_section_animation', 'update_section_interactions'];
   for (const name of Object.values(ops.OPS)) assert.ok(serverOps.includes(name), `${name} is a server DocumentOperation`);
 });
 
@@ -132,7 +134,7 @@ test('motion: the vocabulary matches the server enums exactly', () => {
   // DocumentValidator::validateBlock() lists these; a drift here is a
   // guaranteed save failure, so the lists are pinned by value.
   assert.deepEqual(motion.ANIMATION_TYPES.map((o) => o.value),
-    ['none', 'fade_in', 'fade_up', 'fade_down', 'scale_up', 'slide_in']);
+    ['none', 'fade_in', 'fade_up', 'fade_down', 'scale_up', 'slide_in', 'move_left', 'move_right', 'reveal_left', 'reveal_up']);
   assert.deepEqual(motion.INTERACTION_TRIGGERS.filter((o) => o.value).map((o) => o.value),
     ['hover', 'focus', 'click', 'viewport-enter', 'scroll', 'load']);
 });
@@ -290,6 +292,16 @@ test('rich text output is reduced to the server allowlist', () => {
   assert.equal(toAllowedHtml(lexical), '<p><strong>Bold</strong> and <a href="https://example.com" target="_blank" rel="noopener noreferrer">link</a></p><ul><li>one</li></ul>');
   assert.equal(toAllowedHtml('<p onclick="x()">a<script>alert(1)</script><img src=x onerror=y>b</p>'), '<p>ab</p>');
   assert.equal(toAllowedHtml('<a href="javascript:alert(1)">x</a>'), '<a>x</a>');
+
+test('richtext: a highlight survives as span.sb-hl; Lexical marks become it; any other span attribute is dropped', () => {
+  assert.equal(toAllowedHtml('<p>Make it <mark>count</mark></p>'), '<p>Make it <span class="sb-hl">count</span></p>');
+  assert.equal(toAllowedHtml('<p><span class="sb-hl">a</span></p>'), '<p><span class="sb-hl">a</span></p>');
+  assert.equal(toAllowedHtml('<p><span class="other" style="color:red" onclick="x()">a</span></p>'), '<p>a</p>', 'a plain span is noise');
+  assert.equal(toAllowedHtml('<p><span class="sb-hl other">a</span></p>'), '<p>a</p>', 'only the exact class');
+  assert.equal(toAllowedHtml('<p><mark class="x" style="a:b">a</mark> <em>b</em></p>'), '<p><span class="sb-hl">a</span> <em>b</em></p>');
+  const once = toAllowedHtml('<p>x <mark>y</mark> <strong>z</strong></p>');
+  assert.equal(toAllowedHtml(once), once, 'idempotent');
+});
   assert.equal(toAllowedHtml('<style>p{}</style><iframe src="//x"></iframe>'), '<p></p>');
   assert.equal(toAllowedHtml('<p>unclosed <em>em'), '<p>unclosed <em>em</em></p>');
 });

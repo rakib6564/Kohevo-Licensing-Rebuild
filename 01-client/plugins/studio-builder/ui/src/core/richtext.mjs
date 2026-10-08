@@ -6,7 +6,8 @@
 // the SAME allowlist the server enforces (FieldSchema::validateRichText):
 //
 //   p br strong em b i u s ul ol li blockquote code pre h1-h6 a span
-//   — no attributes, except href / target / rel on <a> (safe URLs only)
+//   — no attributes, except href / target / rel on <a> (safe URLs only) and class="sb-hl" on <span>
+//     (the highlight; Lexical's <mark> is written as that span)
 //
 // Anything else is dropped (its text kept). The server still validates and
 // the renderer still re-sanitizes; this only keeps the editor from producing
@@ -14,8 +15,9 @@
 
 import { isLikelySafeUrl } from './fields.mjs';
 
-const ALLOWED = new Set(['p', 'br', 'strong', 'em', 'b', 'i', 'u', 's', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'span']);
+const ALLOWED = new Set(['mark', 'p', 'br', 'strong', 'em', 'b', 'i', 'u', 's', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'span']);
 const DROP_WITH_CONTENT = new Set(['script', 'style', 'iframe', 'object', 'embed', 'template', 'svg', 'math', 'noscript', 'textarea', 'select']);
+const HIGHLIGHT = 'sb-hl';
 const TAG = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)([^>]*)>|<!--[\s\S]*?-->/g;
 
 function attr(attrs, name) {
@@ -23,6 +25,9 @@ function attr(attrs, name) {
   if (!m) return null;
   return decodeEntities(m[1] ?? m[2] ?? m[3] ?? '');
 }
+
+/** The tag written for a source tag: Lexical's <mark> becomes the highlight span. */
+const outTag = (tag) => (tag === 'mark' ? 'span' : tag);
 
 function decodeEntities(s) {
   return s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
@@ -62,7 +67,7 @@ export function toAllowedHtml(html) {
     if (closing) {
       const idx = open.lastIndexOf(tag);
       if (idx < 0) continue;
-      while (open.length > idx) out += `</${open.pop()}>`;
+      while (open.length > idx) out += `</${outTag(open.pop())}>`;
       continue;
     }
     if (tag === 'br') { out += '<br>'; continue; }
@@ -73,13 +78,15 @@ export function toAllowedHtml(html) {
       if (href && isLikelySafeUrl(href)) a += ` href="${escAttr(href.trim())}"`;
       if (target === '_blank') a += ' target="_blank" rel="noopener noreferrer"';
       out += a + '>';
+    } else if (tag === 'mark' || (tag === 'span' && attr(m[3], 'class') === HIGHLIGHT)) {
+      out += `<span class="${HIGHLIGHT}">`;
     } else {
       out += `<${tag}>`;
     }
     open.push(tag);
   }
   if (!skipDepth) out += input.slice(last);
-  while (open.length) out += `</${open.pop()}>`;
+  while (open.length) out += `</${outTag(open.pop())}>`;
 
   // Attribute-less spans are pure editor noise.
   let prev;

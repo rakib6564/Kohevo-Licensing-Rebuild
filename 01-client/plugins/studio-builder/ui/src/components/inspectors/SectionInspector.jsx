@@ -11,6 +11,7 @@ import { useEditor, useEngineState } from '../EditorContext.jsx';
 import { ResponsiveSelect, Tabs, VisibilityControls } from './controls.jsx';
 import { TokenSelect } from '../fields/FieldControl.jsx';
 import { MediaControl } from '../fields/MediaControl.jsx';
+import { MotionInspector } from './MotionInspector.jsx';
 import { ColorField } from './StyleControls.jsx';
 import { SpacingBox } from './SurfaceControls.jsx';
 import { getPath, setPath, setPaths } from '../../core/styleSurface.mjs';
@@ -87,7 +88,7 @@ export function SectionInspector({ info }) {
         <button type="button" className="sbx-btn sbx-btn--xs sbx-btn--danger" onClick={() => removeNode(section.id)}>{t('remove')}</button>
       </div>
       {global && <GlobalSectionPanel section={section} label={label} />}
-      {!global && <Tabs tabs={[{ key: 'layout', label: t('tab_layout') }, { key: 'style', label: t('tab_style') }, { key: 'visibility', label: t('tab_visibility') }]} active={tab} onChange={setTab} idPrefix={idPrefix} />}
+      {!global && <Tabs tabs={[{ key: 'layout', label: t('tab_layout') }, { key: 'style', label: t('tab_style') }, { key: 'motion', label: t('tab_motion') }, { key: 'visibility', label: t('tab_visibility') }]} active={tab} onChange={setTab} idPrefix={idPrefix} />}
 
       {!global && tab === 'layout' && (
         <div role="tabpanel" id={`${idPrefix}-panel-layout`} aria-labelledby={`${idPrefix}-tab-layout`}>
@@ -141,6 +142,12 @@ export function SectionInspector({ info }) {
             />
           </fieldset>
           <SpacingBox id={`${idPrefix}-style`} group="padding" label={t('section_style_padding')} get={(path) => getPath(style, path)} putAll={putStyleAll} />
+        </div>
+      )}
+
+      {!global && tab === 'motion' && (
+        <div role="tabpanel" id={`${idPrefix}-panel-motion`} aria-labelledby={`${idPrefix}-tab-motion`}>
+          <MotionInspector block={section} applyOp={applyOp} label={label} section />
         </div>
       )}
 

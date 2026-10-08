@@ -27,7 +27,7 @@ import { isLikelySafeUrl } from '../../core/fields.mjs';
 
 const THEME = {
   paragraph: 'sbx-rt-p',
-  text: { bold: 'sbx-rt-b', italic: 'sbx-rt-i', underline: 'sbx-rt-u', strikethrough: 'sbx-rt-s' },
+  text: { bold: 'sbx-rt-b', italic: 'sbx-rt-i', underline: 'sbx-rt-u', strikethrough: 'sbx-rt-s', highlight: 'sbx-rt-hl' },
   list: { ul: 'sbx-rt-ul', ol: 'sbx-rt-ol', listitem: 'sbx-rt-li' },
   link: 'sbx-rt-a',
 };
@@ -42,6 +42,7 @@ function Toolbar() {
       {btn(t('rt_bold_glyph'), t('rt_bold'), () => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold'))}
       {btn(t('rt_italic_glyph'), t('rt_italic'), () => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic'))}
       {btn(t('rt_underline_glyph'), t('rt_underline'), () => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline'))}
+      {btn(t('rt_highlight_glyph'), t('rt_highlight'), () => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'highlight'))}
       {btn('•', t('rt_bulleted'), () => editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined))}
       {btn('1.', t('rt_numbered'), () => editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined))}
       {btn('🔗', t('rt_link'), () => {
@@ -65,6 +66,12 @@ export default function RichTextEditor({ id, value, onChange }) {
     onError: (error) => { throw error; },
     editorState: (editor) => {
       const dom = new DOMParser().parseFromString(value || '<p></p>', 'text/html');
+      // Lexical's highlight format is a <mark>; the stored form is <span class="sb-hl">.
+      dom.querySelectorAll('span.sb-hl').forEach((span) => {
+        const mark = dom.createElement('mark');
+        mark.append(...span.childNodes);
+        span.replaceWith(mark);
+      });
       const nodes = $generateNodesFromDOM(editor, dom);
       $getRoot().clear();
       $getRoot().select();

@@ -26,7 +26,7 @@ test('a heading shows content, the full style stack and the advanced fields, in 
   const ctx = ctxOf('core.heading');
   assert.deepEqual(ids('content', ctx), ['content']);
   assert.deepEqual(ids('style', ctx), ['align', 'layout', 'spacing', 'typography', 'background', 'border', 'shadow', 'dimensions', 'position', 'effects', 'opacity', 'states', 'tokens', 'motion', 'visibility', 'responsive']);
-  assert.deepEqual(ids('advanced', ctx), ['classes', 'stacking', 'tag', 'attributes']);
+  assert.deepEqual(ids('advanced', ctx), ['classes', 'identity', 'stacking', 'tag', 'attributes']);
 });
 
 test('a media block has no Typography section, a text block does', () => {

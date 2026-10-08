@@ -154,41 +154,7 @@ final class DocumentRenderer
             }
         }
 
-        $animationClasses = [];
-        $motionVars = '';
-        if (isset($block['animation']) && is_array($block['animation'])) {
-            $anim = $block['animation'];
-            $animType = (string) ($anim['type'] ?? '');
-            if ($animType !== '' && $animType !== 'none') {
-                $animationClasses[] = 'sb-animate-' . str_replace('_', '-', $animType);
-                // Per-block timing must reach the stylesheet, or the inspector's
-                // duration / delay / easing controls would store values that
-                // never render — the exact "saved but did nothing" bug this
-                // phase exists to close.
-                $motionVars .= $this->motionVariables($anim);
-            }
-        }
-
-        $interactionClasses = [];
-        $interactionAttrs = '';
-        if (isset($block['interactions']) && is_array($block['interactions'])) {
-            $trigger = (string) ($block['interactions']['trigger'] ?? '');
-            if ($trigger !== '') {
-                $interactionClasses[] = 'sb-interaction-' . str_replace(['_', ' '], '-', $trigger);
-                $interactionAttrs .= ' data-sb-interaction-trigger="' . Html::e($trigger) . '"';
-            }
-            if (isset($block['interactions']['animation']) && is_array($block['interactions']['animation'])) {
-                $anim = $block['interactions']['animation'];
-                $animType = (string) ($anim['type'] ?? '');
-                if ($animType !== '' && $animType !== 'none') {
-                    $animationClasses[] = 'sb-animate-' . str_replace('_', '-', $animType);
-                    $motionVars .= $this->motionVariables($anim);
-                }
-            }
-        }
-        if ($motionVars !== '') {
-            $motionVars .= ';';
-        }
+        ['animationClasses' => $animationClasses, 'interactionClasses' => $interactionClasses, 'interactionAttrs' => $interactionAttrs, 'motionVars' => $motionVars] = $this->motionOf($block);
 
         // B2-P3b surface: layout, position, size extras and effects become one
         // block-scoped rule in the page stylesheet. A block without any adds
@@ -214,7 +180,8 @@ final class DocumentRenderer
             foreach ($block['attributes'] as $attrKey => $attrVal) {
                 // Same allow-list the validator enforces; re-checked here so a
                 // document stored before the rule existed can never emit a handler.
-                if (CanonicalDocumentSchema::blockAttributeIssue($attrKey, $attrVal) === null) {
+                if (CanonicalDocumentSchema::blockAttributeIssue($attrKey, $attrVal) === null
+                    && ($attrKey !== 'id' || $collector->claimId((string) $attrVal))) {
                     $attrs .= ' ' . $attrKey . '="' . Html::e((string) $attrVal) . '"';
                 }
             }
@@ -284,6 +251,8 @@ final class DocumentRenderer
         $sectionStyle = is_array($section['style'] ?? null) ? $section['style'] : [];
         $sectionClass = $collector->scopedRule((string) ($section['id'] ?? ''), StyleSurface::sectionDeclarations($sectionStyle, $this->backgroundImageUrl($sectionStyle)));
 
+        ['animationClasses' => $animationClasses, 'interactionClasses' => $interactionClasses, 'interactionAttrs' => $interactionAttrs, 'motionVars' => $motionVars] = $this->motionOf($section);
+
         $outer = ['sb-section', $sectionClass, $collector->tokenClass('bg', $layout['background_token'] ?? null, $theme)];
         foreach ((array) ($layout['padding_y'] ?? []) as $bp => $value) {
             $prefix = StudioStylesheet::prefix((string) $bp);
@@ -291,7 +260,7 @@ final class DocumentRenderer
                 $outer[] = 'sb-' . $prefix . 'py-' . $value;
             }
         }
-        $outer = array_merge($outer, self::hideClasses($visibility));
+        $outer = array_merge($outer, self::hideClasses($visibility), $animationClasses, $interactionClasses);
 
         $width = in_array($layout['width'] ?? null, CanonicalDocumentSchema::ALLOWED_CONTAINER_WIDTHS, true) ? $layout['width'] : 'wide';
         $gap   = in_array($layout['gap'] ?? null, CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, true) ? $layout['gap'] : 'md';
@@ -309,7 +278,8 @@ final class DocumentRenderer
         }
 
         $metadata = empty($section[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($section['id'] ?? ''), 'section') : '';
-        return '<section' . Html::classAttr($outer) . $metadata . '>'
+        $styleAttr = $motionVars !== '' ? ' style="' . Html::e($motionVars) . '"' : '';
+        return '<section' . Html::classAttr($outer) . $metadata . $interactionAttrs . $styleAttr . '>'
             . '<div' . Html::classAttr($innerClasses) . '>' . $inner . '</div></section>';
     }
 
@@ -417,6 +387,53 @@ final class DocumentRenderer
      *
      * @param array<string, mixed> $style
      */
+    /**
+     * The motion a block or a section carries: entrance-animation classes, interaction classes and trigger
+     * attribute, and the timing custom properties (already terminated by `;` when present).
+     *
+     * @param array<string, mixed> $node
+     * @return array{animationClasses: list<string>, interactionClasses: list<string>, interactionAttrs: string, motionVars: string}
+     */
+    private function motionOf(array $node): array
+    {
+        $animationClasses = [];
+        $motionVars = '';
+        if (isset($node['animation']) && is_array($node['animation'])) {
+            $anim = $node['animation'];
+            $animType = (string) ($anim['type'] ?? '');
+            if ($animType !== '' && $animType !== 'none') {
+                $animationClasses[] = 'sb-animate-' . str_replace('_', '-', $animType);
+                // Per-block timing must reach the stylesheet, or the inspector's
+                // duration / delay / easing controls would store values that
+                // never render — the exact "saved but did nothing" bug this
+                // phase exists to close.
+                $motionVars .= $this->motionVariables($anim);
+            }
+        }
+
+        $interactionClasses = [];
+        $interactionAttrs = '';
+        if (isset($node['interactions']) && is_array($node['interactions'])) {
+            $trigger = (string) ($node['interactions']['trigger'] ?? '');
+            if ($trigger !== '') {
+                $interactionClasses[] = 'sb-interaction-' . str_replace(['_', ' '], '-', $trigger);
+                $interactionAttrs .= ' data-sb-interaction-trigger="' . Html::e($trigger) . '"';
+            }
+            if (isset($node['interactions']['animation']) && is_array($node['interactions']['animation'])) {
+                $anim = $node['interactions']['animation'];
+                $animType = (string) ($anim['type'] ?? '');
+                if ($animType !== '' && $animType !== 'none') {
+                    $animationClasses[] = 'sb-animate-' . str_replace('_', '-', $animType);
+                    $motionVars .= $this->motionVariables($anim);
+                }
+            }
+        }
+        if ($motionVars !== '') {
+            $motionVars .= ';';
+        }
+        return ['animationClasses' => $animationClasses, 'interactionClasses' => $interactionClasses, 'interactionAttrs' => $interactionAttrs, 'motionVars' => $motionVars];
+    }
+
     /**
      * Per-block motion timing, emitted as CSS custom properties so
      * `StudioStylesheet`'s `.sb-animate-*` rules can read them:

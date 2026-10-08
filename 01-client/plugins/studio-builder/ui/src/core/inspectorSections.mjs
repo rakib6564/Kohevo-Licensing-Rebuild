@@ -60,9 +60,10 @@ export const SECTIONS = Object.freeze([
   { id: 'responsive', tab: 'style', titleKey: 'tab_responsive', appliesTo: () => true, summary: (ctx) => (count(ctx.node.responsive) ? String(count(ctx.node.responsive)) : ''), openFor: () => false },
 
   { id: 'classes', tab: 'advanced', titleKey: 'classes_label', appliesTo: () => true, summary: (ctx) => (asList(ctx.node.classNames).length ? String(asList(ctx.node.classNames).length) : ''), openFor: () => true },
+  { id: 'identity', tab: 'advanced', titleKey: 'section_identity', appliesTo: () => true, summary: (ctx) => identitySummary(ctx.node.attributes), openFor: () => false },
   { id: 'stacking', tab: 'advanced', titleKey: 'z_index_label', appliesTo: () => true, summary: (ctx) => (Number.isInteger(ctx.style.z_index) ? String(ctx.style.z_index) : ''), openFor: () => false },
   { id: 'tag', tab: 'advanced', titleKey: 'wrapper_tag', appliesTo: () => true, summary: (ctx) => (typeof ctx.node.tag === 'string' ? ctx.node.tag : ''), openFor: () => false },
-  { id: 'attributes', tab: 'advanced', titleKey: 'attributes_label', appliesTo: () => true, summary: (ctx) => (count(ctx.node.attributes) ? String(count(ctx.node.attributes)) : ''), openFor: () => false },
+  { id: 'attributes', tab: 'advanced', titleKey: 'section_data_attributes', appliesTo: () => true, summary: (ctx) => dataAttributeSummary(ctx.node.attributes), openFor: () => false },
 ]);
 
 function layoutSummary(layout) {
@@ -76,6 +77,14 @@ function spacingSummary(style) {
     if (values.length) parts.push(`${label} ${values.every((v) => v === values[0]) ? values[0] : '…'}`);
   }
   return parts.join(' · ');
+}
+function identitySummary(attrs) {
+  const a = asObject(attrs);
+  return [a.id ? `#${a.id}` : '', a.role, a['aria-label'] ? 'aria-label' : ''].filter(Boolean).join(' · ');
+}
+function dataAttributeSummary(attrs) {
+  const n = Object.keys(asObject(attrs)).filter((k) => k.startsWith('data-')).length;
+  return n ? String(n) : '';
 }
 function alignSummary(a) {
   const o = asObject(a);

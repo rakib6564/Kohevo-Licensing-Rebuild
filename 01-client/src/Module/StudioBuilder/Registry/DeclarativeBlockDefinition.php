@@ -33,6 +33,9 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
      *                                            provider that feeds it (e.g. ['items' => 'booking.services']).
      * @param ?string $title       Add-panel card title (defaults to the label); translated at the application boundary.
      * @param string $description  One-line Add-panel card description; translated at the application boundary.
+     * @param list<array{prop: string, selector: string}> $inlineText The text the canvas may edit in place: a `string`/`text`
+     *                                            prop (or `<link field>.label`) and the CSS class selector of the element
+     *                                            that renders it. Declared, never guessed from the markup.
      */
     public function __construct(
         private readonly string $type,
@@ -50,6 +53,7 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
         private readonly array $bindingSlots = [],
         private readonly ?string $title = null,
         private readonly string $description = '',
+        private readonly array $inlineText = [],
     ) {
         if (preg_match(CanonicalDocumentSchema::BLOCK_TYPE_PATTERN, $this->type) !== 1) {
             throw new \InvalidArgumentException("Invalid namespaced block type '{$this->type}'. Expected 'namespace.name'.");
@@ -71,11 +75,47 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
                 throw new \InvalidArgumentException("Block '{$this->type}' declares invalid binding provider '{$provider}'.");
             }
         }
+        $this->assertInlineText();
         foreach ($this->bindingSlots as $slot => $provider) {
             if (!is_string($slot) || preg_match('/^[a-z][a-z0-9_]{0,63}$/', $slot) !== 1 || !in_array($provider, $this->allowedBindingProviders, true)) {
                 throw new \InvalidArgumentException("Block '{$this->type}' declares an invalid binding slot '{$slot}'.");
             }
         }
+    }
+
+    /** @throws \InvalidArgumentException when an inline text declaration does not name a text prop of this schema. */
+    private function assertInlineText(): void
+    {
+        $types = [];
+        foreach ($this->schema->fields() as $field) {
+            $types[(string) ($field['key'] ?? '')] = (string) ($field['type'] ?? '');
+        }
+        foreach ($this->inlineText as $entry) {
+            $prop = is_array($entry) ? ($entry['prop'] ?? null) : null;
+            $selector = is_array($entry) ? ($entry['selector'] ?? null) : null;
+            if (!is_string($prop) || !is_string($selector) || preg_match('/^\.[a-z][a-z0-9_-]*(?: [>] \.[a-z][a-z0-9_-]*| \.[a-z][a-z0-9_-]*| [a-z][a-z0-9]*)*$/i', $selector) !== 1) {
+                throw new \InvalidArgumentException("Block '{$this->type}' declares an invalid inline text entry.");
+            }
+            $field = explode('.', $prop, 2);
+            $ok = isset($types[$field[0]]) && (
+                (count($field) === 1 && in_array($types[$field[0]], ['string', 'text'], true))
+                || (count($field) === 2 && $field[1] === 'label' && $types[$field[0]] === 'link')
+            );
+            if (!$ok) {
+                throw new \InvalidArgumentException("Block '{$this->type}' declares inline text '{$prop}', which is not a text prop of its schema.");
+            }
+        }
+    }
+
+    /** The schema type of an inline text prop (`link.label` counts as a one-line string). */
+    private function inlineTextType(string $prop): string
+    {
+        foreach ($this->schema->fields() as $field) {
+            if (($field['key'] ?? null) === $prop) {
+                return (string) ($field['type'] ?? '');
+            }
+        }
+        return 'string';
     }
 
     public function type(): string
@@ -199,6 +239,14 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
             'description'               => $this->description,
             'field_schema'              => $this->schema->toEditorManifest(),
             'icon'                      => $this->icon,
+            'inline_text'               => array_map(
+                fn(array $e): array => [
+                    'prop' => $e['prop'],
+                    'selector' => $e['selector'],
+                    'multiline' => $this->inlineTextType($e['prop']) === 'text',
+                ],
+                $this->inlineText,
+            ),
             'label'                     => $this->label,
             'required_entitlement'      => $this->requiredEntitlement,
             'required_permission'       => $this->requiredPermission,

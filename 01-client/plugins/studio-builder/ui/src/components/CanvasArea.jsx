@@ -7,6 +7,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { attachCanvas, markSelected } from '../core/canvas.mjs';
+import { inlineSpecsFor, propsWithInlineText } from '../core/inlineText.mjs';
 import { patchCanvas } from '../core/canvasPatch.mjs';
 import { isStructuralChange, syncLiveDOM } from '../core/canvasLiveSync.mjs';
 import { STATUS } from '../core/sync.mjs';
@@ -95,30 +96,12 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
 
   const frameHeight = stage.height > 0 ? Math.max(640, (stage.height - 48) / scale) : 900;
 
-  // Direct Inline WYSIWYG text update handler
-  const onInlineText = useCallback((nodeId, newText) => {
+  // Direct inline text update: the canvas names the declared prop it edited (core/inlineText.mjs).
+  const onInlineText = useCallback((nodeId, newText, prop) => {
     const info = findNode(working, nodeId);
-    if (!info) return;
+    if (!info || info.kind === 'section' || !prop) return;
     const node = info.node;
-    if (info.kind === 'section') {
-      applyOp && applyOp(ops.updateSectionLabel(nodeId, newText), { label: t('op_update_section') });
-    } else {
-      const props = { ...(node.props || {}) };
-      if ('text' in props || ['core.heading', 'core.paragraph', 'core.button', 'core.text'].includes(node.type)) {
-        props.text = newText;
-      } else if ('title' in props) {
-        props.title = newText;
-      } else if ('label' in props) {
-        props.label = newText;
-      } else if ('buttonText' in props) {
-        props.buttonText = newText;
-      } else if ('content' in props) {
-        props.content = newText;
-      } else {
-        props.text = newText;
-      }
-      applyOp && applyOp(ops.updateBlockProps(nodeId, props), { label: t('op_edit_block', { type: node.type }) });
-    }
+    applyOp && applyOp(ops.updateBlockProps(nodeId, propsWithInlineText(node.props, prop, newText)), { label: t('op_edit_block', { type: node.type }) });
   }, [working, applyOp]);
 
   const onInlineTextRef = useRef(onInlineText);
@@ -216,8 +199,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
         const doc = frameRef.current && frameRef.current.contentDocument;
         const el = doc && doc.querySelector(`[data-sb-node="${nodeId}"]`);
         if (el && doc.defaultView && doc.defaultView.sbxStartInlineEdit) {
-          const textEl = el.querySelector('h1, h2, h3, h4, h5, h6, p, a, button, span') || el;
-          doc.defaultView.sbxStartInlineEdit(textEl, el, nodeId);
+          doc.defaultView.sbxStartInlineEdit(el, nodeId);
         }
       } catch (_) {}
       return;
@@ -255,7 +237,11 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       onSelect: (id, _type, mods) => pickRef.current(id, mods || {}),
       onDrop: (drop) => onCanvasDropRef.current(drop),
       onAction: (action, id) => actionRef.current(action, id),
-      onInlineText: (id, text) => onInlineTextRef.current(id, text),
+      onInlineText: (id, text, prop) => onInlineTextRef.current(id, text, prop),
+      inlineSpecs: (id) => {
+        const info = findNode(workingRef.current, id);
+        return info && info.kind !== 'section' ? inlineSpecsFor(manifest, info.node) : [];
+      },
       isLocked: (id) => effectivelyLocked(lockIndex(workingRef.current), id),
     });
     markSelected(doc, selectionRef.current, { scroll: false, ids: selectedIdsRef.current });

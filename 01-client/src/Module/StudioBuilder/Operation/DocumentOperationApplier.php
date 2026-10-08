@@ -91,6 +91,8 @@ final class DocumentOperationApplier
             DocumentOperation::OP_UPDATE_BLOCK_TAG => self::updateBlockTag($document, $payload),
             DocumentOperation::OP_RESET_BLOCK_STYLE_PROPERTY => self::resetBlockStyleProperty($document, $payload),
             DocumentOperation::OP_UPDATE_SECTION_STYLE => self::updateSectionStyle($document, $payload),
+            DocumentOperation::OP_UPDATE_SECTION_ANIMATION => self::updateSectionObjectField($document, $payload, 'animation'),
+            DocumentOperation::OP_UPDATE_SECTION_INTERACTIONS => self::updateSectionObjectField($document, $payload, 'interactions'),
             default => throw new StudioValidationException([
                 ['path' => '$.op', 'code' => 'unknown_operation', 'message' => "Unknown Studio document operation '{$operation->op}'."],
             ]),
@@ -884,6 +886,36 @@ final class DocumentOperationApplier
      * @param array<string, mixed> $payload
      * @return array<string, mixed>
      */
+    /**
+     * Replace a section's `animation` or `interactions` object; `{}` removes the key (canonical form).
+     *
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function updateSectionObjectField(array $document, array $payload, string $field): array
+    {
+        $sectionId = self::requireString($payload, 'section_id', '$.payload.section_id');
+        $value     = self::requireObject($payload, $field, "\$.payload.{$field}");
+
+        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
+        $found = false;
+        foreach ($sections as $idx => $section) {
+            if (is_array($section) && ($section['id'] ?? null) === $sectionId) {
+                if ($value === []) {
+                    unset($sections[$idx][$field]);
+                } else {
+                    $sections[$idx][$field] = $value;
+                }
+                $found = true;
+                break;
+            }
+        }
+        self::assertFound($found, 'section_id', $sectionId, 'section');
+        $document['sections'] = $sections;
+        return $document;
+    }
+
     private static function updateSectionStyle(array $document, array $payload): array
     {
         $sectionId = self::requireString($payload, 'section_id', '$.payload.section_id');

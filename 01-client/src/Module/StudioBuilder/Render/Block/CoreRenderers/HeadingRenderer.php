@@ -49,6 +49,6 @@ final class HeadingRenderer implements BlockRendererInterface
                 $classes[] = $colorClass;
             }
         }
-        return '<' . $level . Html::classAttr($classes) . '>' . Html::e($scope->string('text')) . '</' . $level . '>';
+        return '<' . $level . Html::classAttr($classes) . '>' . Html::highlighted($scope->string('text'), $scope->string('highlight')) . '</' . $level . '>';
     }
 }

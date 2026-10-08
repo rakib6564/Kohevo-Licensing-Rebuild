@@ -16,6 +16,7 @@ import { StyleControls } from './StyleControls.jsx';
 import { BorderExtras, DimensionsExtras, EffectsPane, LayoutPane, PositionPane, ShadowExtras, SpacingPane, StatesPane, TypographyExtras } from './SurfaceControls.jsx';
 import { OPTIONS } from '../../core/styleSurface.mjs';
 import { MotionInspector } from './MotionInspector.jsx';
+import { ClassNamesField, DataAttributes, IdentityFields } from './AdvancedControls.jsx';
 import { InspectorShell } from './InspectorShell.jsx';
 import { InspectorHeader } from './InspectorHeader.jsx';
 import { asList, asObject, blockDefinition, blockIndentTarget, blockMoveTarget, blockOutdentTarget } from '../../core/doc.mjs';
@@ -49,7 +50,6 @@ export function BlockInspector({ info }) {
   const style = asObject(block.style);
   const responsive = asObject(block.responsive);
   const classNames = asList(block.classNames);
-  const attributes = asObject(block.attributes);
   const up = blockMoveTarget(working, manifest, block.id, 'up');
   const down = blockMoveTarget(working, manifest, block.id, 'down');
   const indent = blockIndentTarget(working, manifest, block.id);
@@ -198,20 +198,8 @@ export function BlockInspector({ info }) {
         })}
       </fieldset>
     ),
-    classes: () => (
-      <div className="sbx-field">
-        <label className="sbx-field__label" htmlFor={`${idPrefix}-classes`}>{t('classes_label')}</label>
-        <input
-          id={`${idPrefix}-classes`}
-          type="text"
-          className="sbx-input"
-          value={classNames.join(' ')}
-          placeholder={t('classes_placeholder')}
-          onChange={(e) => save(ops.updateBlockClassNames(block.id, e.target.value.trim().split(/\s+/).filter(Boolean)))}
-        />
-        <p className="sbx-hint">{t('classes_hint')}</p>
-      </div>
-    ),
+    classes: () => <ClassNamesField id={`${idPrefix}-classes`} value={classNames} onChange={(list) => save(ops.updateBlockClassNames(block.id, list))} />,
+    identity: () => <IdentityFields block={block} doc={working} onChange={(attrs) => save(ops.updateBlockAttributes(block.id, attrs))} />,
     stacking: () => (
       <div className="sbx-field">
         <label className="sbx-field__label" htmlFor={`${idPrefix}-z-index`}>{t('z_index_label')}</label>
@@ -232,27 +220,7 @@ export function BlockInspector({ info }) {
         />
       </div>
     ),
-    attributes: () => (
-      <div className="sbx-field">
-        <label className="sbx-field__label" htmlFor={`${idPrefix}-attributes`}>{t('attributes_label')}</label>
-        <input
-          id={`${idPrefix}-attributes`}
-          type="text"
-          className="sbx-input"
-          value={Object.entries(attributes).map(([k, v]) => `${k}=${v}`).join(' ')}
-          placeholder="data-custom=value aria-role=article"
-          onChange={(e) => {
-            const nextAttrs = {};
-            for (const pair of e.target.value.trim().split(/\s+/).filter(Boolean)) {
-              const [k, v] = pair.split('=');
-              if (k) nextAttrs[k] = v || '';
-            }
-            save(ops.updateBlockAttributes(block.id, nextAttrs));
-          }}
-        />
-        <p className="sbx-hint">{t('attributes_hint')}</p>
-      </div>
-    ),
+    attributes: () => <DataAttributes block={block} onChange={(attrs) => save(ops.updateBlockAttributes(block.id, attrs))} />,
   };
 
   return (

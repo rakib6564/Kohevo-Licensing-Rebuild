@@ -580,6 +580,94 @@
     "property": "opacity"
    },
    "error": true
+  },
+  {
+   "name": "section animation set",
+   "op": "update_section_animation",
+   "payload": {
+    "section_id": "sec_aaaaaaaaaaaaaaaa",
+    "animation": {
+     "type": "reveal_up",
+     "duration_ms": 600
+    }
+   },
+   "set": [
+    {
+     "path": [
+      "sections",
+      0,
+      "animation"
+     ],
+     "value": {
+      "type": "reveal_up",
+      "duration_ms": 600
+     }
+    }
+   ],
+   "unset": []
+  },
+  {
+   "name": "section animation clear with {}",
+   "op": "update_section_animation",
+   "payload": {
+    "section_id": "sec_aaaaaaaaaaaaaaaa",
+    "animation": {}
+   },
+   "set": [],
+   "unset": [
+    [
+     "sections",
+     0,
+     "animation"
+    ]
+   ]
+  },
+  {
+   "name": "section interactions set",
+   "op": "update_section_interactions",
+   "payload": {
+    "section_id": "sec_bbbbbbbbbbbbbbbb",
+    "interactions": {
+     "trigger": "viewport-enter"
+    }
+   },
+   "set": [
+    {
+     "path": [
+      "sections",
+      1,
+      "interactions"
+     ],
+     "value": {
+      "trigger": "viewport-enter"
+     }
+    }
+   ],
+   "unset": []
+  },
+  {
+   "name": "section interactions target missing",
+   "op": "update_section_interactions",
+   "payload": {
+    "section_id": "sec_zzzzzzzzzzzzzzzz",
+    "interactions": {
+     "trigger": "hover"
+    }
+   },
+   "set": [],
+   "unset": [],
+   "error": true
+  },
+  {
+   "name": "section animation needs an object",
+   "op": "update_section_animation",
+   "payload": {
+    "section_id": "sec_aaaaaaaaaaaaaaaa",
+    "animation": "fade_up"
+   },
+   "set": [],
+   "unset": [],
+   "error": true
   }
  ]
 }

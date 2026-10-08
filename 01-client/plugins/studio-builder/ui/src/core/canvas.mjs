@@ -7,6 +7,8 @@
 // resolve clicks/hover to node ids and to paint selection outlines. The
 // canvas HTML is never read back as content — only node ids are.
 
+import { asList } from './doc.mjs';
+import { resolveInlineTarget } from './inlineText.mjs';
 export const NODE_ATTR = 'data-sb-node';
 export const TYPE_ATTR = 'data-sb-type';
 const STYLE_ID = 'sbx-canvas-overlay';
@@ -128,7 +130,7 @@ export function nodeElementFrom(target) {
  * @param {{onSelect: Function, onHover?: Function, onDrop?: Function, onAction?: Function, onInlineText?: Function, isLocked?: Function}} handlers
  */
 export function attachCanvas(doc, handlers) {
-  const { onSelect, onHover, onDrop, onAction, onInlineText, isLocked } = handlers || {};
+  const { onSelect, onHover, onDrop, onAction, onInlineText, isLocked, inlineSpecs } = handlers || {};
   if (!doc || !doc.body) return () => {};
   if (!doc.getElementById(STYLE_ID)) {
     const style = doc.createElement('style');
@@ -142,6 +144,7 @@ export function attachCanvas(doc, handlers) {
 
   let activeEditingEl = null;
   let activeOriginalText = '';
+  let activeSpec = null;
 
   function finishInlineEdit(commit = true) {
     if (!activeEditingEl) return;
@@ -162,20 +165,30 @@ export function attachCanvas(doc, handlers) {
 
     const nodeEl = nodeElementFrom(el);
     const nodeId = nodeEl ? nodeEl.getAttribute(NODE_ATTR) : null;
-    const newText = (el.textContent || '').trim();
+    const spec = activeSpec;
+    activeSpec = null;
+    const raw = spec && spec.multiline && typeof el.innerText === 'string' ? el.innerText : (el.textContent || '');
+    const newText = raw.trim();
 
-    if (commit && nodeId && newText !== activeOriginalText.trim() && onInlineText) {
-      onInlineText(nodeId, newText);
+    if (commit && nodeId && spec && newText !== activeOriginalText.trim() && onInlineText) {
+      onInlineText(nodeId, newText, spec.prop);
     }
   }
 
-  function startInlineEdit(textEl, nodeEl, nodeId) {
-    if (!textEl || typeof textEl.setAttribute !== 'function') return;
+  /** Start editing the element a block declares for `target` (nothing happens for a block that declares none). */
+  function startDeclaredEdit(nodeEl, nodeId, target = null) {
+    const hit = nodeId && inlineSpecs ? resolveInlineTarget(nodeEl, asList(inlineSpecs(nodeId)), target) : null;
+    if (hit) startInlineEdit(hit.el, nodeEl, nodeId, hit.spec);
+  }
+
+  function startInlineEdit(textEl, nodeEl, nodeId, spec) {
+    if (!textEl || !spec || typeof textEl.setAttribute !== 'function') return;
     if (isLocked && nodeId && isLocked(nodeId)) return; // layer lock: no inline editing
     if (activeEditingEl && activeEditingEl !== textEl) {
       finishInlineEdit(true);
     }
     activeEditingEl = textEl;
+    activeSpec = spec;
     activeOriginalText = textEl.textContent || '';
 
     textEl.setAttribute('contenteditable', 'true');
@@ -204,8 +217,6 @@ export function attachCanvas(doc, handlers) {
     bubble.className = BUBBLE_CLASS;
     bubble.setAttribute('contenteditable', 'false');
     bubble.innerHTML = `
-      <button type="button" class="${BUBBLE_CLASS}__btn" data-fmt="bold" title="Bold (Ctrl+B)">B</button>
-      <button type="button" class="${BUBBLE_CLASS}__btn" data-fmt="italic" title="Italic (Ctrl+I)"><em>I</em></button>
       <button type="button" class="${BUBBLE_CLASS}__btn ${BUBBLE_CLASS}__btn--done" data-fmt="done" title="Done">✓ Done</button>
     `;
 
@@ -217,10 +228,6 @@ export function attachCanvas(doc, handlers) {
       const fmt = btn.getAttribute('data-fmt');
       if (fmt === 'done') {
         finishInlineEdit(true);
-      } else if (fmt === 'bold') {
-        doc.execCommand('bold', false, null);
-      } else if (fmt === 'italic') {
-        doc.execCommand('italic', false, null);
       }
     });
 
@@ -250,8 +257,8 @@ export function attachCanvas(doc, handlers) {
 
   // Expose on doc.defaultView so parent can start inline editing via action toolbar
   if (doc.defaultView) {
-    doc.defaultView.sbxStartInlineEdit = (textEl, nodeEl, nodeId) => {
-      startInlineEdit(textEl, nodeEl, nodeId);
+    doc.defaultView.sbxStartInlineEdit = (nodeEl, nodeId) => {
+      startDeclaredEdit(nodeEl, nodeId);
     };
   }
 
@@ -266,8 +273,7 @@ export function attachCanvas(doc, handlers) {
       if (action === 'edit') {
         const nodeEl = nodeElementFrom(actionBtn) || doc.querySelector(`[${NODE_ATTR}="${nodeId}"]`);
         if (nodeEl) {
-          const textEl = nodeEl.querySelector('h1, h2, h3, h4, h5, h6, p, a, button, span') || nodeEl;
-          startInlineEdit(textEl, nodeEl, nodeId);
+          startDeclaredEdit(nodeEl, nodeId);
           return;
         }
       }
@@ -295,8 +301,7 @@ export function attachCanvas(doc, handlers) {
     const nodeEl = nodeElementFrom(e.target);
     if (!nodeEl) return;
     const nodeId = nodeEl.getAttribute(NODE_ATTR);
-    const textEl = e.target.closest ? (e.target.closest('h1, h2, h3, h4, h5, h6, p, a, button, span') || e.target) : e.target;
-    startInlineEdit(textEl, nodeEl, nodeId);
+    startDeclaredEdit(nodeEl, nodeId, e.target);
   };
 
   const over = (e) => {

@@ -107,12 +107,14 @@ final class BlockRegistry
             schema: FieldSchema::define([
                 ['key' => 'eyebrow', 'type' => 'string', 'label' => 'Eyebrow', 'required' => false, 'default' => '', 'max_length' => 120],
                 ['key' => 'heading', 'type' => 'string', 'label' => 'Heading', 'required' => true, 'default' => 'Welcome', 'max_length' => 255],
+                ['key' => 'highlight', 'type' => 'string', 'label' => 'Highlighted Word', 'required' => false, 'default' => '', 'max_length' => 100],
                 ['key' => 'subheading', 'type' => 'text', 'label' => 'Subheading', 'required' => false, 'default' => '', 'max_length' => 1000],
                 ['key' => 'primary_cta', 'type' => 'link', 'label' => 'Primary Call to Action', 'required' => false, 'default' => null],
                 ['key' => 'media', 'type' => 'media_ref', 'label' => 'Hero Image', 'required' => false, 'default' => null],
                 ['key' => 'accent_token', 'type' => 'token_ref', 'label' => 'Accent Token', 'required' => false, 'default' => null],
             ]),
             allowsChildren: false,
+            inlineText: [['prop' => 'heading', 'selector' => '.sb-hero__heading'], ['prop' => 'eyebrow', 'selector' => '.sb-hero__eyebrow'], ['prop' => 'subheading', 'selector' => '.sb-hero__subheading']],
         ));
 
         // 2. core.heading
@@ -126,10 +128,12 @@ final class BlockRegistry
             icon: 'heading',
             schema: FieldSchema::define([
                 ['key' => 'text', 'type' => 'string', 'label' => 'Heading Text', 'required' => true, 'default' => 'Section Heading', 'max_length' => 300],
+                ['key' => 'highlight', 'type' => 'string', 'label' => 'Highlighted Word', 'required' => false, 'default' => '', 'max_length' => 100],
                 ['key' => 'level', 'type' => 'enum', 'label' => 'Heading Level', 'required' => false, 'allowed_values' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], 'default' => 'h2'],
             ]),
             allowsChildren: false,
             allowedBindingProviders: ['content.posts', 'content.authors', 'content.taxonomy', 'booking.services', 'membership.plans', 'forms.form'],
+            inlineText: [['prop' => 'text', 'selector' => '.sb-heading']],
         ));
 
         // 3. core.rich_text
@@ -184,6 +188,7 @@ final class BlockRegistry
             ]),
             allowsChildren: false,
             allowedBindingProviders: ['content.posts', 'content.authors', 'content.taxonomy', 'booking.services', 'membership.plans', 'forms.form'],
+            inlineText: [['prop' => 'link.label', 'selector' => '.sb-button']],
         ));
 
         // 6. core.feature_list (exercises repeater + object field types)
@@ -223,6 +228,7 @@ final class BlockRegistry
                 ],
             ]),
             allowsChildren: false,
+            inlineText: [['prop' => 'title', 'selector' => '.sb-feature-list__title']],
         ));
 
         // 7. core.container (structural container capable of holding nested child blocks)
@@ -338,6 +344,7 @@ final class BlockRegistry
             ]),
             allowsChildren: false,
             allowedBindingProviders: ['content.posts', 'content.authors', 'content.taxonomy', 'booking.services', 'membership.plans', 'forms.form'],
+            inlineText: [['prop' => 'content', 'selector' => '.sb-text']],
         ));
 
         // 13. core.query_loop
@@ -803,6 +810,7 @@ final class BlockRegistry
                 ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['left', 'center'], 'default' => 'left'],
             ]),
             allowsChildren: false,
+            inlineText: [['prop' => 'text', 'selector' => '.sb-quote__text p']],
         ));
 
         // 32. core.link — a plain text link (core.button stays the call-to-action).

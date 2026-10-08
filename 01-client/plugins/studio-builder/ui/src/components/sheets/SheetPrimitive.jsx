@@ -65,6 +65,7 @@ export function useSheetDrag(panelRef, onClose) {
     height,
     dragging,
     reset,
+    setHeight,
     handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp },
   };
 }
