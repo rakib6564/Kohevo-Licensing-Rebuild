@@ -354,6 +354,7 @@ const EN = {
   page_services: 'Services',
   page_about: 'About',
   page_contact: 'Contact',
+  change: 'Change',
   multi_select_hint: 'Select a single layer to edit its properties. Use the Layers panel to lock, duplicate or remove the selection.',
   edit_inline: 'Edit text',
   selection_toolbar: 'Actions for the selected layer',

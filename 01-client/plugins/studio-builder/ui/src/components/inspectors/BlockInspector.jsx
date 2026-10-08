@@ -223,7 +223,7 @@ export function BlockInspector({ info }) {
               return (
                 <div key={device} className="sbx-field" style={{ marginBottom: '12px' }}>
                   <label className="sbx-field__label" style={{ fontWeight: 'bold' }}>
-                    {device === 'desktop' ? t('device_desktop') : device === 'tablet' ? t('device_tablet') : t('device_mobile')}
+                    {t(device)}
                   </label>
                   <label className="sbx-field sbx-field--check">
                     <input
@@ -237,7 +237,7 @@ export function BlockInspector({ info }) {
                         applyOp(ops.updateBlockResponsive(block.id, nextResp), { label: def.label });
                       }}
                     />
-                    <span>{t('hide_device', { device })}</span>
+                    <span>{t(`hide_on_${device}`)}</span>
                   </label>
                 </div>
               );

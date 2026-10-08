@@ -66,6 +66,9 @@ test('the Blocks sheet can be dragged and pulled down to close', async ({ page }
   await dock(page, 'blocks').click();
   const sheet = page.locator('.sbx-left.is-mobile-open');
   await expect(sheet).toHaveCount(1);
+  // wait for the slide-up animation to finish so the starting height is stable
+  let last = -1;
+  await expect.poll(async () => { const h = (await sheet.boundingBox()).height; const same = h === last; last = h; return same; }).toBe(true);
   const handle = await page.getByTestId('left-sheet-handle').boundingBox();
   const before = (await sheet.boundingBox()).height;
 
