@@ -61,7 +61,7 @@ test('sections start open where they matter: content always; typography for text
 
 test('a tab with nothing flagged opens its first section, never a wall of closed headers', () => {
   const ctx = ctxOf('core.container');
-  assert.deepEqual(defaultOpenIds('style', ctx), ['align']);
+  assert.deepEqual(defaultOpenIds('style', ctx), ['layout', 'spacing']); // a container opens how it arranges its children
   assert.deepEqual(defaultOpenIds('style', inspectorContext({ id: 'b', type: 'x.y', style: {} }, { style_capabilities: [] })), ['states']);
 });
 
@@ -117,4 +117,12 @@ test('open/closed choices are remembered per block type for the session, notify 
 test('applicableSections groups the non-empty tabs', () => {
   const groups = applicableSections(ctxOf('core.heading'));
   assert.deepEqual(groups.map((g) => g.tab), ['content', 'style', 'advanced']);
+});
+
+test('each kind of block opens the sections an author reaches for first', () => {
+  assert.deepEqual(defaultOpenIds('style', ctxOf('core.button')), ['typography', 'background', 'border']);
+  assert.deepEqual(defaultOpenIds('style', ctxOf('layout.grid')), ['layout', 'spacing']);
+  assert.deepEqual(defaultOpenIds('style', ctxOf('core.image')), ['dimensions']);
+  assert.deepEqual(defaultOpenIds('style', ctxOf('core.heading')), ['typography']);
+  assert.deepEqual(defaultOpenIds('style', ctxOf('core.card')), ['layout', 'spacing', 'background', 'border']);
 });

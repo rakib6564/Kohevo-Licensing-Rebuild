@@ -28,6 +28,12 @@ const TEXT_TYPES = new Set(['core.heading', 'core.text', 'core.rich_text', 'core
  */
 export const MEDIA_TYPES = new Set(['core.image', 'core.video', 'core.gallery']);
 
+/** Types shaped like a button or card: the surface (background, border) is what an author edits first. */
+const SURFACE_TYPES = new Set(['core.button', 'core.card']);
+
+/** A block that holds other blocks: how it arranges and spaces them is what an author edits first. */
+const isContainer = (ctx) => !!ctx.def && ctx.def.allows_children === true;
+
 /**
  * Sections in display order. `titleKey` is a UI message key. `summary(ctx)` is a short string for the collapsed
  * header (empty when the section holds nothing). `openFor(ctx)` marks the sections that start open for this block.
@@ -37,11 +43,11 @@ export const SECTIONS = Object.freeze([
   { id: 'data', tab: 'content', titleKey: 'tab_data', appliesTo: (ctx) => asList(ctx.def.binding_slots).length > 0, summary: (ctx) => (count(ctx.node.bindings) ? String(count(ctx.node.bindings)) : ''), openFor: () => false },
 
   { id: 'align', tab: 'style', titleKey: 'align', appliesTo: (ctx) => has(ctx, 'align'), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
-  { id: 'layout', tab: 'style', titleKey: 'section_layout', appliesTo: (ctx) => has(ctx, 'layout'), summary: (ctx) => layoutSummary(ctx.style.layout), openFor: () => false },
-  { id: 'spacing', tab: 'style', titleKey: 'section_spacing', appliesTo: (ctx) => has(ctx, 'margin') || has(ctx, 'padding'), summary: (ctx) => spacingSummary(ctx.style), openFor: () => false },
+  { id: 'layout', tab: 'style', titleKey: 'section_layout', appliesTo: (ctx) => has(ctx, 'layout'), summary: (ctx) => layoutSummary(ctx.style.layout), openFor: isContainer },
+  { id: 'spacing', tab: 'style', titleKey: 'section_spacing', appliesTo: (ctx) => has(ctx, 'margin') || has(ctx, 'padding'), summary: (ctx) => spacingSummary(ctx.style), openFor: isContainer },
   { id: 'typography', tab: 'style', titleKey: 'typography', appliesTo: (ctx) => (has(ctx, 'typography') || has(ctx, 'color')) && !MEDIA_TYPES.has(ctx.node.type), summary: (ctx) => typographySummary(ctx.style), openFor: (ctx) => TEXT_TYPES.has(ctx.node.type) },
-  { id: 'background', tab: 'style', titleKey: 'background_label', appliesTo: (ctx) => has(ctx, 'background'), summary: (ctx) => backgroundSummary(ctx.style.background), openFor: () => false },
-  { id: 'border', tab: 'style', titleKey: 'border', appliesTo: (ctx) => has(ctx, 'border'), summary: (ctx) => borderSummary(ctx.style.border), openFor: () => false },
+  { id: 'background', tab: 'style', titleKey: 'background_label', appliesTo: (ctx) => has(ctx, 'background'), summary: (ctx) => backgroundSummary(ctx.style.background), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
+  { id: 'border', tab: 'style', titleKey: 'border', appliesTo: (ctx) => has(ctx, 'border'), summary: (ctx) => borderSummary(ctx.style.border), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
   { id: 'shadow', tab: 'style', titleKey: 'box_shadow', appliesTo: (ctx) => has(ctx, 'shadow'), summary: (ctx) => (typeof ctx.style.shadow === 'string' ? ctx.style.shadow : (ctx.style.shadow ? '…' : '')), openFor: () => false },
   { id: 'dimensions', tab: 'style', titleKey: 'dimensions_label', appliesTo: (ctx) => has(ctx, 'dimensions'), summary: (ctx) => dimensionsSummary(ctx.style.dimensions), openFor: (ctx) => ctx.node.type === 'core.image' },
   { id: 'position', tab: 'style', titleKey: 'section_position', appliesTo: (ctx) => has(ctx, 'position'), summary: (ctx) => asObject(ctx.style.position).mode || '', openFor: () => false },
