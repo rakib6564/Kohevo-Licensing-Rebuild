@@ -2577,3 +2577,26 @@ html, body.sbx-body {
 .sbx-wf__dot { fill: #94a3b8; }
 .sbx-wf__section.is-dark ~ .sbx-wf__bar, .sbx-wf__section.is-dark ~ .sbx-wf__line { fill: #e2e8f0; }
 @media (min-width: 420px) and (max-width: 860px) { .sbx-presets__list { grid-template-columns: 1fr 1fr; } }
+
+/* ── Add panel: category rail, View all, disabled cards with a reason (B2-P2a) ── */
+.sbx-chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 8px; margin-bottom: 4px; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+.sbx-chip {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 4px 10px; border-radius: 999px;
+  background: var(--sbx-card-bg); border: 1px solid var(--sbx-border); color: #cbd5e1; font-size: 12px; cursor: pointer; white-space: nowrap;
+}
+.sbx-chip:hover { border-color: rgba(139, 92, 246, 0.5); }
+.sbx-chip.is-active { background: rgba(139, 92, 246, 0.2); border-color: #8b5cf6; color: #fff; }
+.sbx-chip__count { font-size: 10.5px; color: #94a3b8; font-variant-numeric: tabular-nums; }
+.sbx-chip.is-active .sbx-chip__count { color: #ddd6fe; }
+.sbx-elements, .sbx-components, .sbx-search-results { display: flex; flex-direction: column; gap: 12px; }
+.sbx-elements__group { display: flex; flex-direction: column; gap: 6px; }
+.sbx-elements__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.sbx-link-btn { background: none; border: 0; padding: 4px 2px; color: #a78bfa; font-size: 11.5px; cursor: pointer; min-height: 28px; }
+.sbx-link-btn:hover, .sbx-link-btn:focus-visible { color: #ddd6fe; text-decoration: underline; }
+.sbx-palette-card.is-disabled, .sbx-preset-card.is-disabled .sbx-preset-card__insert { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+.sbx-palette-card.is-disabled:hover { transform: none; border-color: var(--sbx-border); box-shadow: none; }
+.sbx-palette-card__reason { font-size: 11px; color: #fbbf24; line-height: 1.3; white-space: normal; }
+@media (max-width: 860px) {
+  .sbx-chip { min-height: 40px; padding: 6px 14px; font-size: 13px; }
+  .sbx-link-btn { min-height: 40px; padding: 8px 6px; }
+}

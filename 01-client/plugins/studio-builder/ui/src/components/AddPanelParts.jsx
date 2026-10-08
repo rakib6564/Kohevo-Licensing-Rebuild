@@ -1,0 +1,74 @@
+// Shared pieces of the Add panel: the block card (with a visible reason when it cannot be inserted
+// right now), the category chip rail, and the hook that reads what insertion rules need.
+
+import { useId } from 'react';
+import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
+import { IconPlus } from './Icons.jsx';
+import { renderBlockIcon, DRAG_TYPE_NEW } from './blockIcons.jsx';
+import { t } from '../core/messages.mjs';
+import { blockInsertState, presetInsertState, reasonKey } from '../core/addPanel.mjs';
+
+/** The working document, the manifest and the primary selection: what insertion rules depend on. */
+export function useInsertContext() {
+  const { manifest } = useEditor();
+  const { selection } = useSelection();
+  const doc = useEngineState((s) => s.working);
+  return { doc, manifest, selection };
+}
+
+export const useBlockInsertState = (type) => {
+  const { doc, manifest, selection } = useInsertContext();
+  return doc ? blockInsertState(doc, manifest, selection, type) : { ok: true };
+};
+
+export const usePresetInsertState = () => {
+  const { doc, manifest } = useInsertContext();
+  return doc ? presetInsertState(doc, manifest) : { ok: true };
+};
+
+export const blockCategoryLabel = (slug) => t(`block_cat_${slug}`);
+
+/** A block card: click or drag to insert, or disabled with the reason shown (not hidden in a tooltip). */
+export function BlockCard({ def, onInsert }) {
+  const state = useBlockInsertState(def.type);
+  const reasonId = useId();
+  const disabled = !state.ok;
+  const title = def.title || def.label;
+  return (
+    <button
+      type="button"
+      className={`sbx-palette-card${disabled ? ' is-disabled' : ''}`}
+      draggable={!disabled}
+      aria-disabled={disabled || undefined}
+      aria-describedby={disabled ? reasonId : undefined}
+      data-block-type={def.type}
+      onDragStart={disabled ? undefined : (e) => { e.dataTransfer.setData(DRAG_TYPE_NEW, def.type); e.dataTransfer.effectAllowed = 'copy'; }}
+      onClick={disabled ? undefined : () => onInsert(def.type)}
+      aria-label={`${t('insert')} ${title}`}
+    >
+      <div className="sbx-palette-card__icon-badge" aria-hidden="true">{renderBlockIcon(def.type, def.icon, def.label)}</div>
+      <div className="sbx-palette-card__content">
+        <span className="sbx-palette-card__title">{title}</span>
+        <span className="sbx-palette-card__desc">{def.description || t('pal_block_component_fallback')}</span>
+        {disabled && <span id={reasonId} className="sbx-palette-card__reason" data-testid="insert-reason">{t(reasonKey(state.reason))}</span>}
+      </div>
+      <span className="sbx-palette-card__plus-btn" aria-hidden="true"><IconPlus size={14} /></span>
+    </button>
+  );
+}
+
+/** A horizontally scrollable category rail: "All" plus one chip per category, with counts. */
+export function CategoryRail({ label, groups, value, onChange, labelOf }) {
+  const total = groups.reduce((n, g) => n + g.items.length, 0);
+  const chip = (key, text, count) => (
+    <button key={key} type="button" className={`sbx-chip${value === key ? ' is-active' : ''}`} aria-pressed={value === key} data-chip={key} onClick={() => onChange(key)}>
+      {text} <span className="sbx-chip__count" aria-hidden="true">{count}</span>
+    </button>
+  );
+  return (
+    <div className="sbx-chips" role="group" aria-label={label}>
+      {chip('all', t('pal_all'), total)}
+      {groups.map((g) => chip(g.category, labelOf(g.category), g.items.length))}
+    </div>
+  );
+}

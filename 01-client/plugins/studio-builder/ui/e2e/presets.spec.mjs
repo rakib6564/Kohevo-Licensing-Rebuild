@@ -63,7 +63,7 @@ test('search filters by name and description; an empty result says so', async ({
   await expect(panel(page).locator('[data-preset="system-section-faq"]')).toBeVisible();
   await search.fill('zzzz-nothing');
   await expect(panel(page).locator('.sbx-preset-card')).toHaveCount(0);
-  await expect(panel(page).getByText('No sections match.')).toBeVisible();
+  await expect(panel(page).getByTestId('search-empty')).toHaveText('Nothing matches your search.');
 });
 
 test('favourites are a real toggle button and do not trigger insertion', async ({ page }) => {

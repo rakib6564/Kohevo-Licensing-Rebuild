@@ -27,6 +27,10 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
   never overwritable or deletable; a tenant template that already uses a preset key is left alone) through the new read-only
   `section_presets` action; no schema change. Block card titles, descriptions and icons now come from the server manifest
   (translated per locale) instead of a hard-coded table in the UI.
+- **Studio builder: Add panel navigation (Builder 2.0 phase 2a).** Elements are grouped by category with a scrollable category
+  rail (touch-sized on phones) and "View all (n)" drill-in; one search box now covers sections, elements, data blocks and
+  components; the Components tab lists Kohevo module blocks (only the licensed ones) and the site's global components. Cards
+  that cannot be inserted right now (block or section limit) are disabled and say why instead of silently failing.
 - **Studio builder: developer test harness.** `plugins/studio-builder/ui/e2e` adds a Playwright DOM/e2e suite
   (desktop 1280, tablet 820, phone 390) and `e2e/sandbox.sh`, which builds a disposable local sandbox. Dev-only (`npm run
   test:e2e`); nothing in it runs on customer installs. CI now runs it as its own job ("Studio builder e2e (Playwright)")
@@ -41,6 +45,8 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
 
 ### Fixed
 
+- **Add panel placeholders.** The Components tab offered "Global header" and "Global footer" cards that only inserted a plain
+  container; they are gone (real global components are listed instead).
 - **Studio builder in French.** The 259 remaining builder messages (Save, Preview, the inspectors, Library, Theme, History,
   AI review, Import/Export, validation and server error messages) were defined in English but never shipped to the browser,
   so French users saw English. All now ship through `boot.messages` with French. The parity test now covers every message in

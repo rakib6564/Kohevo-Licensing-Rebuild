@@ -8,81 +8,15 @@ import { t } from '../core/messages.mjs';
 import { asList } from '../core/doc.mjs';
 import { isAiRevision } from '../core/review.mjs';
 import { SectionPresetsPanel } from './SectionPresetsPanel.jsx';
-import {
-  IconPlus,
-  IconRocket,
-  IconHeading,
-  IconPilcrow,
-  IconImage,
-  IconArrowUpRight,
-  IconGridPanes,
-  IconGridDots,
-  IconSpacer,
-  IconDivider,
-  IconBox,
-  IconLayoutSection,
-  IconVideo,
-  IconGallery,
-  IconForm,
-  IconSearch,
-  IconListCheck,
-  IconQuotes,
-} from './Icons.jsx';
+import { isDynamicBlock } from './blockKinds.mjs';
+import { ElementsPanel } from './ElementsPanel.jsx';
+import { ComponentsPanel } from './ComponentsPanel.jsx';
+import { AddSearchResults } from './AddSearchResults.jsx';
+import { IconPlus, IconSearch } from './Icons.jsx';
+import { DRAG_TYPE_NEW, renderBlockIcon } from './blockIcons.jsx';
 
-export const DRAG_TYPE_NEW = 'application/x-kohevo-studio-block-type';
-
-/**
- * Add-panel icons by the manifest's `icon` name (the server owns title, description, category and
- * icon for every block, so a new or third-party block never falls back to a generic card).
- */
-const ICON_BY_NAME = {
-  rocket: IconRocket,
-  heading: IconHeading,
-  pilcrow: IconPilcrow,
-  image: IconImage,
-  'arrow-up-right': IconArrowUpRight,
-  'grid-panes': IconGridPanes,
-  'grid-dots': IconGridDots,
-  spacer: IconSpacer,
-  divider: IconDivider,
-  box: IconBox,
-  'layout-section': IconLayoutSection,
-  video: IconVideo,
-  gallery: IconGallery,
-  form: IconForm,
-  search: IconSearch,
-  'list-check': IconListCheck,
-  quotes: IconQuotes,
-};
-
-function renderBlockIcon(type, icon, label) {
-  const Named = ICON_BY_NAME[String(icon || '')];
-  if (Named) return <Named size={18} />;
-  const i = (icon || '').toLowerCase();
-  if (i.includes('hero') || i.includes('rocket')) return <IconRocket size={18} />;
-  if (i.includes('heading') || i.includes('title')) return <IconHeading size={18} />;
-  if (i.includes('text') || i.includes('type')) return <IconPilcrow size={18} />;
-  if (i.includes('image') || i.includes('media')) return <IconImage size={18} />;
-  if (i.includes('button') || i.includes('cta') || i.includes('click')) return <IconArrowUpRight size={18} />;
-  if (i.includes('grid')) return <IconGridPanes size={18} />;
-  if (i.includes('dot')) return <IconGridDots size={18} />;
-  if (i.includes('spacer') || i.includes('arrow')) return <IconSpacer size={18} />;
-  if (i.includes('divider') || i.includes('line')) return <IconDivider size={18} />;
-  if (i.includes('video')) return <IconVideo size={18} />;
-  if (i.includes('gallery')) return <IconGallery size={18} />;
-  if (i.includes('form')) return <IconForm size={18} />;
-  if (i.includes('quote') || i.includes('testimonial')) return <IconQuotes size={18} />;
-  if (i.includes('search')) return <IconSearch size={18} />;
-  if (i.includes('check') || i.includes('list')) return <IconListCheck size={18} />;
-  if (i.includes('section')) return <IconLayoutSection size={18} />;
-  return <IconBox size={18} />;
-}
-
-
-/** Blocks fed by a tenant-scoped data provider, or by the current post/archive context. */
-export function isDynamicBlock(def) {
-  return !!def && (asList(def.binding_slots).length > 0 || String(def.type).startsWith('theme.'));
-}
+export { DRAG_TYPE_NEW };
+export { isDynamicBlock };
 
 function providerNote(def) {
   const providers = asList(def.binding_slots).map((b) => b.provider);
@@ -193,24 +127,7 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
     });
   };
 
-  const blockItems = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const list = asList(manifest.blocks);
-    const result = [];
-    for (const b of list) {
-      const title = b.title || b.label;
-      const desc = b.description || t('pal_block_component_fallback');
-      if (q && !`${title} ${desc} ${b.category} ${b.type}`.toLowerCase().includes(q)) {
-        continue;
-      }
-      result.push({
-        ...b,
-        displayTitle: title,
-        displayDesc: desc,
-      });
-    }
-    return result;
-  }, [manifest.blocks, query]);
+  const searching = query.trim() !== '';
 
   return (
     <div className={`sbx-palette${compact ? ' sbx-palette--compact' : ''}`}>
@@ -252,77 +169,22 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
         ))}
       </div>
 
-      {/* Sections Tab Content */}
-      {categoryTab === 'sections' && <SectionPresetsPanel query={query} favorites={favorites} onToggleFavorite={toggleFavorite} />}
+      {searching ? (
+        <AddSearchResults query={query} favorites={favorites} onToggleFavorite={toggleFavorite} />
+      ) : (
+        <>
+          {categoryTab === 'sections' && <SectionPresetsPanel query="" favorites={favorites} onToggleFavorite={toggleFavorite} />}
+          {categoryTab === 'elements' && <ElementsPanel />}
+          {categoryTab === 'components' && <ComponentsPanel />}
 
-      {/* Elements Tab Content */}
-      {categoryTab === 'elements' && (
-        <div className="sbx-palette__cards">
-          {blockItems.map((b) => (
-            <button
-              key={b.type}
-              type="button"
-              className="sbx-palette-card"
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData(DRAG_TYPE_NEW, b.type);
-                e.dataTransfer.effectAllowed = 'copy';
-              }}
-              onClick={() => insertBlock(b.type)}
-              aria-label={`${t('insert')} ${b.displayTitle}`}
-            >
-              <div className="sbx-palette-card__icon-badge" aria-hidden="true">
-                {renderBlockIcon(b.type, b.icon, b.label)}
-              </div>
-              <div className="sbx-palette-card__content">
-                <span className="sbx-palette-card__title">{b.displayTitle}</span>
-                <span className="sbx-palette-card__desc">{b.displayDesc}</span>
-              </div>
-              <span className="sbx-palette-card__plus-btn" aria-hidden="true" title={t('pal_insert')}>
-                <IconPlus size={14} />
-              </span>
-            </button>
-          ))}
-        </div>
+          {categoryTab === 'dynamic' && <DynamicPanel manifest={manifest} query="" insertBlock={insertBlock} />}
+          {categoryTab === 'media' && (
+            <MediaPanel manifest={manifest} query="" insertBlock={insertBlock} insertBlockWithProps={insertBlockWithProps} mediaPicker={boot.mediaPicker} />
+          )}
+          {categoryTab === 'ai' && <AiPanel boot={boot} onReview={openAiReview} />}
+        </>
       )}
 
-      {categoryTab === 'dynamic' && <DynamicPanel manifest={manifest} query={query} insertBlock={insertBlock} />}
-      {categoryTab === 'media' && (
-        <MediaPanel manifest={manifest} query={query} insertBlock={insertBlock} insertBlockWithProps={insertBlockWithProps} mediaPicker={boot.mediaPicker} />
-      )}
-      {categoryTab === 'ai' && <AiPanel boot={boot} onReview={openAiReview} />}
-
-      {/* Components Tab Content */}
-      {categoryTab === 'components' && (
-        <div className="sbx-palette__cards">
-          <button
-            type="button"
-            className="sbx-palette-card"
-            onClick={() => insertBlock('core.container')}
-          >
-            <div className="sbx-palette-card__icon-badge">
-              <IconBox size={18} />
-            </div>
-            <div className="sbx-palette-card__content">
-              <span className="sbx-palette-card__title">{t('pal_global_header')}</span>
-              <span className="sbx-palette-card__desc">{t('pal_site_wide_synchronized_header')}</span>
-            </div>
-          </button>
-          <button
-            type="button"
-            className="sbx-palette-card"
-            onClick={() => insertBlock('core.container')}
-          >
-            <div className="sbx-palette-card__icon-badge">
-              <IconBox size={18} />
-            </div>
-            <div className="sbx-palette-card__content">
-              <span className="sbx-palette-card__title">{t('pal_global_footer')}</span>
-              <span className="sbx-palette-card__desc">{t('pal_site_wide_synchronized_footer')}</span>
-            </div>
-          </button>
-        </div>
-      )}
     </div>
   );
 });
