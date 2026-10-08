@@ -28,6 +28,7 @@ namespace Slate\Module\StudioBuilder\Operation;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\DocumentCopier;
 use Slate\Module\StudioBuilder\Document\LayerLock;
+use Slate\Module\StudioBuilder\Document\StyleSurface;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
@@ -86,6 +87,10 @@ final class DocumentOperationApplier
             DocumentOperation::OP_UPDATE_BLOCK_INTERACTIONS => self::updateBlockField($document, $payload, 'interactions'),
             DocumentOperation::OP_UPDATE_BLOCK_ANIMATION => self::updateBlockField($document, $payload, 'animation'),
             DocumentOperation::OP_UPDATE_BLOCK_META => self::updateBlockMeta($document, $payload),
+            DocumentOperation::OP_UPDATE_BLOCK_STYLE_STATES => self::updateBlockStyleStates($document, $payload),
+            DocumentOperation::OP_UPDATE_BLOCK_TAG => self::updateBlockTag($document, $payload),
+            DocumentOperation::OP_RESET_BLOCK_STYLE_PROPERTY => self::resetBlockStyleProperty($document, $payload),
+            DocumentOperation::OP_UPDATE_SECTION_STYLE => self::updateSectionStyle($document, $payload),
             default => throw new StudioValidationException([
                 ['path' => '$.op', 'code' => 'unknown_operation', 'message' => "Unknown Studio document operation '{$operation->op}'."],
             ]),
@@ -769,6 +774,218 @@ final class DocumentOperationApplier
 
         $document['sections'] = $sections;
         return $document;
+    }
+
+    // ── B2-P3b: states, tag, section style, single-property reset ──────────
+
+    /**
+     * Run `$change` on the block with this id (anywhere in the tree) and store what it returns;
+     * a returned null removes nothing — callers unset keys on the block themselves.
+     *
+     * @param list<mixed> $blocks
+     * @param callable(array<string, mixed>): array<string, mixed> $change
+     * @return list<mixed>
+     */
+    private static function changeBlock(array $blocks, string $blockId, callable $change, bool &$found): array
+    {
+        foreach ($blocks as $idx => $block) {
+            if (!is_array($block)) {
+                continue;
+            }
+            if (($block['id'] ?? null) === $blockId) {
+                $blocks[$idx] = $change($block);
+                $found = true;
+                return $blocks;
+            }
+            $children = is_array($block['children'] ?? null) ? $block['children'] : [];
+            if ($children !== []) {
+                $blocks[$idx]['children'] = self::changeBlock($children, $blockId, $change, $found);
+                if ($found) {
+                    return $blocks;
+                }
+            }
+        }
+        return $blocks;
+    }
+
+    /**
+     * @param array<string, mixed> $document
+     * @param callable(array<string, mixed>): array<string, mixed> $change
+     * @return array<string, mixed>
+     */
+    private static function changeBlockInDocument(array $document, string $blockId, callable $change): array
+    {
+        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
+        $found = false;
+        foreach ($sections as $sIdx => $section) {
+            if (is_array($section)) {
+                $sections[$sIdx]['blocks'] = self::changeBlock(is_array($section['blocks'] ?? null) ? $section['blocks'] : [], $blockId, $change, $found);
+                if ($found) {
+                    break;
+                }
+            }
+        }
+        self::assertFound($found, 'block_id', $blockId, 'block');
+        $document['sections'] = $sections;
+        return $document;
+    }
+
+    /**
+     * Replace the block's `style_states` wholesale; an empty object removes the key.
+     *
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function updateBlockStyleStates(array $document, array $payload): array
+    {
+        $blockId = self::requireString($payload, 'block_id', '$.payload.block_id');
+        $states  = self::requireObject($payload, 'style_states', '$.payload.style_states');
+        return self::changeBlockInDocument($document, $blockId, static function (array $block) use ($states): array {
+            if ($states === []) {
+                unset($block['style_states']);
+            } else {
+                $block['style_states'] = $states;
+            }
+            return $block;
+        });
+    }
+
+    /**
+     * Set the block's wrapper element; null or `div` (the default) removes the key.
+     *
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function updateBlockTag(array $document, array $payload): array
+    {
+        $blockId = self::requireString($payload, 'block_id', '$.payload.block_id');
+        $tag = $payload['tag'] ?? null;
+        if ($tag !== null && (!is_string($tag) || !in_array($tag, CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS, true))) {
+            throw new StudioValidationException([
+                ['path' => '$.payload.tag', 'code' => 'invalid_tag', 'message' => 'payload.tag must be null or one of: ' . implode(', ', CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS) . '.'],
+            ]);
+        }
+        return self::changeBlockInDocument($document, $blockId, static function (array $block) use ($tag): array {
+            if ($tag === null || $tag === 'div') {
+                unset($block['tag']);
+            } else {
+                $block['tag'] = $tag;
+            }
+            return $block;
+        });
+    }
+
+    /**
+     * Replace a section's `style` wholesale; an empty object removes the key.
+     *
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function updateSectionStyle(array $document, array $payload): array
+    {
+        $sectionId = self::requireString($payload, 'section_id', '$.payload.section_id');
+        $style     = self::requireObject($payload, 'style', '$.payload.style');
+
+        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
+        $found = false;
+        foreach ($sections as $idx => $section) {
+            if (is_array($section) && ($section['id'] ?? null) === $sectionId) {
+                if ($style === []) {
+                    unset($sections[$idx]['style']);
+                } else {
+                    $sections[$idx]['style'] = $style;
+                }
+                $found = true;
+                break;
+            }
+        }
+        self::assertFound($found, 'section_id', $sectionId, 'section');
+        $document['sections'] = $sections;
+        return $document;
+    }
+
+    /**
+     * Remove ONE style property (a dotted path such as `typography.size` or `effects.transform.rotate`),
+     * from the block's style or, with `state`, from one interaction state. Emptied parents are removed,
+     * and an absent property is a no-op. Unlike `update_block_style` this cannot overwrite a neighbour.
+     *
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function resetBlockStyleProperty(array $document, array $payload): array
+    {
+        $blockId  = self::requireString($payload, 'block_id', '$.payload.block_id');
+        $property = $payload['property'] ?? null;
+        $state    = $payload['state'] ?? null;
+        if (!is_string($property) || preg_match('/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){0,3}$/', $property) !== 1) {
+            throw new StudioValidationException([
+                ['path' => '$.payload.property', 'code' => 'invalid_property', 'message' => 'payload.property must be a dotted style path such as typography.size.'],
+            ]);
+        }
+        if ($state !== null && (!is_string($state) || !isset(StyleSurface::STATE_SELECTORS[$state]))) {
+            throw new StudioValidationException([
+                ['path' => '$.payload.state', 'code' => 'invalid_state', 'message' => 'payload.state must be hover, focus, active or disabled.'],
+            ]);
+        }
+        $segments = explode('.', $property);
+        $roots = $state === null ? CanonicalDocumentSchema::ALLOWED_STYLE_KEYS : StyleSurface::STATE_KEYS;
+        if (!in_array($segments[0], $roots, true)) {
+            throw new StudioValidationException([
+                ['path' => '$.payload.property', 'code' => 'invalid_property', 'message' => "'{$segments[0]}' is not a style property" . ($state !== null ? ' a state can set.' : '.')],
+            ]);
+        }
+
+        return self::changeBlockInDocument($document, $blockId, static function (array $block) use ($segments, $state): array {
+            if ($state === null) {
+                $block['style'] = self::unsetPath(is_array($block['style'] ?? null) ? $block['style'] : [], $segments);
+                return $block;
+            }
+            $states = is_array($block['style_states'] ?? null) ? $block['style_states'] : [];
+            if (isset($states[$state]) && is_array($states[$state])) {
+                $partial = self::unsetPath($states[$state], $segments);
+                if ($partial === []) {
+                    unset($states[$state]);
+                } else {
+                    $states[$state] = $partial;
+                }
+            }
+            if ($states === []) {
+                unset($block['style_states']);
+            } else {
+                $block['style_states'] = $states;
+            }
+            return $block;
+        });
+    }
+
+    /**
+     * @param array<string, mixed> $tree
+     * @param list<string> $segments
+     * @return array<string, mixed>
+     */
+    private static function unsetPath(array $tree, array $segments): array
+    {
+        $head = array_shift($segments);
+        if (!array_key_exists($head, $tree)) {
+            return $tree;
+        }
+        if ($segments === []) {
+            unset($tree[$head]);
+            return $tree;
+        }
+        if (is_array($tree[$head])) {
+            $child = self::unsetPath($tree[$head], $segments);
+            if ($child === []) {
+                unset($tree[$head]);
+            } else {
+                $tree[$head] = $child;
+            }
+        }
+        return $tree;
     }
 
     /**

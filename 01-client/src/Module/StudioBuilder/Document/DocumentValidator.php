@@ -366,6 +366,17 @@ final class DocumentValidator
             }
         }
 
+        if (array_key_exists('style', $section)) {
+            foreach (StyleSurface::sectionIssues($section['style'], "{$path}.style") as $issue) {
+                $errors[] = ValidationResult::issue($issue['path'], $issue['code'], $issue['message']);
+            }
+            $secImage = is_array($section['style']) && is_array($section['style']['background'] ?? null) ? ($section['style']['background']['image'] ?? null) : null;
+            if (is_array($secImage) && isset($secImage['media_id']) && is_int($secImage['media_id']) && $secImage['media_id'] > 0
+                && isset($options['media_exists']) && is_callable($options['media_exists']) && !$options['media_exists']($secImage['media_id'])) {
+                $errors[] = ValidationResult::issue("{$path}.style.background.image.media_id", 'cross_tenant_or_missing_media', "Referenced media_id {$secImage['media_id']} does not exist in the active tenant.");
+            }
+        }
+
         foreach (CanonicalDocumentSchema::REQUIRED_SECTION_KEYS as $reqKey) {
             if (!array_key_exists($reqKey, $section)) {
                 $errors[] = ValidationResult::issue("{$path}.{$reqKey}", 'required_field', "Missing required section field '{$reqKey}'.");
@@ -712,6 +723,11 @@ final class DocumentValidator
                     $errors[] = ValidationResult::issue("{$path}.metadata.locked", 'invalid_locked', 'block.metadata.locked must be a boolean.');
                 }
             }
+        }
+
+        // Wrapper element (B2-P3b): an allow-listed semantic tag.
+        if (array_key_exists('tag', $block) && (!is_string($block['tag']) || !in_array($block['tag'], CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS, true))) {
+            $errors[] = ValidationResult::issue("{$path}.tag", 'invalid_tag', 'block.tag must be one of: ' . implode(', ', CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS) . '.');
         }
 
         // Interaction-state overlays (hover/focus/active/disabled).

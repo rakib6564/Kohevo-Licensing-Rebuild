@@ -643,10 +643,77 @@ final class StyleSurface
         return $s === '' || $s === '-0' ? '0' : $s;
     }
 
+    // ── section style ─────────────────────────────────────────────────────────
+
+    /**
+     * Issues for a section's `style`: {background, padding}.
+     *
+     * @return list<array{path: string, code: string, message: string}>
+     */
+    public static function sectionIssues(mixed $style, string $path): array
+    {
+        if (!is_array($style) || ($style !== [] && array_is_list($style))) {
+            return [self::issue($path, 'A section style must be an object.')];
+        }
+        $errors = [];
+        foreach ($style as $key => $value) {
+            $p = "{$path}.{$key}";
+            if ($key === 'padding') {
+                self::checkObject($value, self::moreFields()['padding'], $p, $errors);
+            } elseif ($key === 'background') {
+                if (!is_array($value) || ($value !== [] && array_is_list($value))) {
+                    $errors[] = self::issue($p, 'background must be an object.');
+                    continue;
+                }
+                foreach ($value as $bgKey => $bgVal) {
+                    if ($bgKey === 'color') {
+                        self::checkField($bgVal, ['color', 'background-color'], "{$p}.color", $errors);
+                    } elseif ($bgKey === 'gradient') {
+                        if (!is_string($bgVal) || !StyleValueGuard::isGradient($bgVal)) {
+                            $errors[] = self::issue("{$p}.gradient", 'Invalid gradient.');
+                        }
+                    } elseif (!in_array($bgKey, ['image', 'fit', 'repeat', 'position', 'overlay'], true)) {
+                        $errors[] = self::issue("{$p}.{$bgKey}", "Unknown field '{$bgKey}'.");
+                    }
+                }
+                // A section image must be a media_ref; a string here is not tolerated (the section style is new).
+                if (isset($value['image']) && !is_array($value['image'])) {
+                    $errors[] = self::issue("{$p}.image", 'A background image must be a media reference.');
+                }
+                array_push($errors, ...self::backgroundIssues($value, $p));
+            } else {
+                $errors[] = self::issue($p, "A section style cannot set '{$key}'.");
+            }
+        }
+        return $errors;
+    }
+
+    /**
+     * Declarations for a section's `style` (the background image URL is resolved by the caller).
+     *
+     * @param array<string, mixed> $style
+     */
+    public static function sectionDeclarations(array $style, ?string $backgroundUrl = null): string
+    {
+        $out = [];
+        $bg  = is_array($style['background'] ?? null) ? $style['background'] : [];
+        if (isset($bg['color']) && self::fieldAccepts($bg['color'], ['color', 'background-color'])) {
+            $out[] = 'background-color:' . trim((string) $bg['color']);
+        }
+        if (isset($bg['gradient']) && !is_array($bg['image'] ?? null) && StyleValueGuard::isGradient($bg['gradient'])) {
+            $out[] = 'background-image:' . trim((string) $bg['gradient']);
+        }
+        self::emitBackgroundImage($style, $backgroundUrl, $out);
+        if (isset($style['padding']) && is_array($style['padding'])) {
+            self::emitFields($style['padding'], self::moreFields()['padding'], $out);
+        }
+        return implode(';', $out);
+    }
+
     // ── interaction states ────────────────────────────────────────────────────
 
     /** Style keys a state overlay may carry (a deliberately small, safe subset). */
-    private const STATE_KEYS = ['color', 'typography', 'background', 'border', 'shadow', 'opacity', 'effects'];
+    public const STATE_KEYS = ['color', 'typography', 'background', 'border', 'shadow', 'opacity', 'effects'];
 
     /**
      * Issues for a block's `style_states`: {hover|focus|active|disabled: partial style}.

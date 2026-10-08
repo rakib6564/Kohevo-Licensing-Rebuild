@@ -91,7 +91,9 @@ test('operations use the canonical {op, payload} vocabulary', () => {
     // was missing them.
     'update_block_animation', 'update_block_interactions',
     // Layer lock and block rename (LayerLock.php; update_block_meta / update_section_locked).
-    'update_block_meta', 'update_section_locked'];
+    'update_block_meta', 'update_section_locked',
+    // B2-P3b: states, wrapper tag, section style and single-property reset.
+    'update_block_style_states', 'update_block_tag', 'reset_block_style_property', 'update_section_style'];
   for (const name of Object.values(ops.OPS)) assert.ok(serverOps.includes(name), `${name} is a server DocumentOperation`);
 });
 

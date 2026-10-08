@@ -89,6 +89,11 @@ final class DependencyExtractor
                 $add(new DependencyRecord($secId, 'partial', $section['global_ref']));
             }
 
+            $secBg = is_array($section['style']['background'] ?? null) ? $section['style']['background'] : [];
+            if (is_array($secBg['image'] ?? null) && is_int($secBg['image']['media_id'] ?? null) && $secBg['image']['media_id'] > 0) {
+                $add(new DependencyRecord($secId, 'media', (string) $secBg['image']['media_id']));
+            }
+
             $bgToken = $section['layout']['background_token'] ?? null;
             if (is_string($bgToken) && $bgToken !== '') {
                 $add(new DependencyRecord($secId, 'token_group', $bgToken));

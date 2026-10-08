@@ -68,10 +68,12 @@ final class RenderCollector
      */
     public function scopedRule(string $blockId, string $declarations, bool $reduceMotion = false, array $states = []): string
     {
-        if (($declarations === '' && $states === []) || preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $blockId) !== 1) {
+        $isSection = str_starts_with($blockId, 'sec_');
+        $valid = preg_match($isSection ? CanonicalDocumentSchema::SECTION_ID_PATTERN : CanonicalDocumentSchema::BLOCK_ID_PATTERN, $blockId) === 1;
+        if (($declarations === '' && $states === []) || !$valid) {
             return '';
         }
-        $class = 'sb-b-' . substr($blockId, 4);
+        $class = ($isSection ? 'sb-s-' : 'sb-b-') . substr($blockId, 4);
         $rule = $declarations !== '' ? '.' . $class . '{' . $declarations . '}' : '';
         // `$states` is name => declarations from StyleSurface::stateRules(); the pseudo-class comes from its fixed map.
         foreach (StyleSurface::STATE_SELECTORS as $name => $selector) {

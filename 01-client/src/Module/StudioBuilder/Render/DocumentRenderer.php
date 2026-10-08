@@ -227,7 +227,8 @@ final class DocumentRenderer
         $styleAttr    = $combined !== '' ? ' style="' . Html::e($combined) . '"' : '';
 
         $metadata = empty($block[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($block['id'] ?? ''), $type) : '';
-        return '<div' . Html::classAttr($classes) . $metadata . $attrs . $styleAttr . '>' . $inner . '</div>';
+        $tag = isset($block['tag']) && is_string($block['tag']) && in_array($block['tag'], CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS, true) ? $block['tag'] : 'div';
+        return '<' . $tag . Html::classAttr($classes) . $metadata . $attrs . $styleAttr . '>' . $inner . '</' . $tag . '>';
     }
 
     /**
@@ -280,7 +281,10 @@ final class DocumentRenderer
 
         $layout = is_array($section['layout'] ?? null) ? $section['layout'] : CanonicalDocumentSchema::defaultSectionLayout();
 
-        $outer = ['sb-section', $collector->tokenClass('bg', $layout['background_token'] ?? null, $theme)];
+        $sectionStyle = is_array($section['style'] ?? null) ? $section['style'] : [];
+        $sectionClass = $collector->scopedRule((string) ($section['id'] ?? ''), StyleSurface::sectionDeclarations($sectionStyle, $this->backgroundImageUrl($sectionStyle)));
+
+        $outer = ['sb-section', $sectionClass, $collector->tokenClass('bg', $layout['background_token'] ?? null, $theme)];
         foreach ((array) ($layout['padding_y'] ?? []) as $bp => $value) {
             $prefix = StudioStylesheet::prefix((string) $bp);
             if ($prefix !== null && in_array($value, CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, true)) {
