@@ -14,6 +14,7 @@ import { LibraryPanel } from './LibraryPanel.jsx';
 import { InspectorHost } from './InspectorHost.jsx';
 import { useIsMobileShell } from '../hooks/useIsMobileShell.mjs';
 import { PageInspector } from './inspectors/PageInspector.jsx';
+import { SiteSettingsForm } from './SiteSettings.jsx';
 import { blockDefinition, findNode } from '../core/doc.mjs';
 import { t } from '../core/messages.mjs';
 import {
@@ -41,7 +42,7 @@ export const LeftPanel = memo(function LeftPanel({
   mobileOpen = false,
   onCloseMobile = () => {},
 }) {
-  const { manifest } = useEditor();
+  const { manifest, tokensSaved } = useEditor();
   const isMobile = useIsMobileShell();
   const { selection } = useSelection();
   const working = useEngineState((s) => s.working);
@@ -56,6 +57,8 @@ export const LeftPanel = memo(function LeftPanel({
   const [localCollapsed, setLocalCollapsed] = useState(false);
   // The Layers tab holds two views: this page's structure, and the site's pages.
   const [navView, setNavView] = useState('layers');
+  const [settingsView, setSettingsView] = useState('page');
+  const siteAllowed = !!(manifest && manifest.permissions && (manifest.permissions.tokens || manifest.permissions.view));
 
   const setTab = onTabChange || setLocalTab;
   // On a desktop the Inspector has its own docked panel (right); only the phone sheet keeps it as a tab here.
@@ -241,7 +244,16 @@ export const LeftPanel = memo(function LeftPanel({
           hidden={tab !== 'settings'}
           className="sbx-left__body sbx-left__body--settings"
         >
-          <PageInspector />
+          {siteAllowed && (
+            <div className="sbx-segmented-pills sbx-ss__views" role="group" aria-label={t('site_settings_title')}>
+              {['page', 'site'].map((v) => (
+                <button key={v} type="button" className={`sbx-segmented-pill${settingsView === v ? ' is-active' : ''}`} aria-pressed={settingsView === v} data-settings-view={v} onClick={() => setSettingsView(v)}>
+                  {t(`ss_view_${v}`)}
+                </button>
+              ))}
+            </div>
+          )}
+          {siteAllowed && settingsView === 'site' ? <SiteSettingsForm onSaved={tokensSaved} /> : <PageInspector />}
         </div>
       </aside>
 
