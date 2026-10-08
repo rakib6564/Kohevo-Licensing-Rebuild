@@ -35,6 +35,13 @@ export function walk(doc, visit) {
   });
 }
 
+/** Every section and block in document order as `{id, parentId}` (range selection, bulk actions). */
+export function documentRows(doc) {
+  const rows = [];
+  walk(doc, (node, info) => { if (node && node.id) rows.push({ id: node.id, parentId: info.parentId }); });
+  return rows;
+}
+
 /** @returns {null | {kind, node, parentId, index, depth, sectionId}} */
 export function findNode(doc, id) {
   if (!id) return null;

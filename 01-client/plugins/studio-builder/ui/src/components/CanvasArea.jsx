@@ -5,7 +5,7 @@
 // action toolbar, responsive viewport scaling, and multi-mode zoom controls.
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useEditor, useEngineState } from './EditorContext.jsx';
+import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { attachCanvas, markSelected } from '../core/canvas.mjs';
 import { patchCanvas } from '../core/canvasPatch.mjs';
 import { isStructuralChange, syncLiveDOM } from '../core/canvasLiveSync.mjs';
@@ -15,6 +15,10 @@ import { ancestorPath, asList, canInsertBlock, canMoveBlock, findNode } from '..
 import { effectivelyLocked, lockIndex } from '../core/layerLock.mjs';
 import * as ops from '../core/operations.mjs';
 import { DRAG_TYPE_NEW } from './BlockPalette.jsx';
+import { CanvasOverlay } from './CanvasOverlay.jsx';
+import { BottomBar } from './BottomBar.jsx';
+import { stepZoom, zoomPercent } from '../core/zoom.mjs';
+import { useIsMobileShell } from '../hooks/useIsMobileShell.mjs';
 
 const RELOAD_DEBOUNCE_MS = 250;
 
@@ -33,7 +37,9 @@ function blockNavigation(doc) {
 }
 
 export const CanvasArea = memo(function CanvasArea({ interactive = true, collapsed = false, onToggleCollapse = null, onReloadCanvas = null }) {
-  const { boot, selection, select, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode, applyOp } = useEditor();
+  const { boot, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode, applyOp, canvasView, setCanvasView } = useEditor();
+  const isMobile = useIsMobileShell();
+  const { selection, selectedIds, select, pick } = useSelection();
   const working = useEngineState((s) => s.working);
   const base = useEngineState((s) => s.base);
   const baseRef = useRef(null);
@@ -44,8 +50,10 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   const canvasSrc = `${boot.canvasUrl}?page=${boot.pageId}&v=${revisionId}${canvasVersion ? `-${canvasVersion}` : ''}`;
   const [src, setSrc] = useState(() => canvasSrc);
   const [loading, setLoading] = useState(true);
-  const [zoomMode, setZoomMode] = useState('fit'); // 'fit' | '100' | '75' | '50'
-  const [showGrid, setShowGrid] = useState(false);
+  // Zoom, grid and the layout aids live in the shell so the bottom bar and the mobile
+  // Responsive-view sheet drive the same state.
+  const zoomMode = canvasView.zoom;
+  const showGrid = canvasView.grid;
   const loadedRef = useRef(false);
   const interactiveRef = useRef(interactive);
   interactiveRef.current = interactive;
@@ -56,6 +64,10 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   selectionRef.current = selection;
   const selectRef = useRef(select);
   selectRef.current = select;
+  const pickRef = useRef(pick);
+  pickRef.current = pick;
+  const selectedIdsRef = useRef(selectedIds);
+  selectedIdsRef.current = selectedIds;
   const stageRef = useRef(null);
   const [stage, setStage] = useState({ width: 0, height: 0 });
   const paintedRef = useRef(null);
@@ -72,13 +84,14 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     return () => ro.disconnect();
   }, []);
 
-  const fitScale = stage.width > 0 ? Math.min(1, Math.max(0.35, (stage.width - 48) / viewport.width)) : 1;
-  const scale = useMemo(() => {
-    if (zoomMode === '100') return 1;
-    if (zoomMode === '75') return 0.75;
-    if (zoomMode === '50') return 0.5;
-    return fitScale;
-  }, [zoomMode, fitScale]);
+  // Stage padding is 24px a side on desktop and 2px on the phone shell; never clamp a phone up past its width.
+  const fitScale = stage.width > 0 ? Math.min(1, Math.max(isMobile ? 0.2 : 0.35, (stage.width - (isMobile ? 4 : 48)) / viewport.width)) : 1;
+  const scale = useMemo(() => (zoomMode === 'fit' ? fitScale : zoomPercent(zoomMode, fitScale) / 100), [zoomMode, fitScale]);
+  const percent = Math.round(scale * 100);
+  const fitPercent = Math.round(fitScale * 100);
+  useEffect(() => {
+    if (canvasView.fitPercent !== fitPercent) setCanvasView({ fitPercent });
+  }, [fitPercent, canvasView.fitPercent, setCanvasView]);
 
   const frameHeight = stage.height > 0 ? Math.max(640, (stage.height - 48) / scale) : 900;
 
@@ -88,7 +101,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     if (!info) return;
     const node = info.node;
     if (info.kind === 'section') {
-      applyOp && applyOp(ops.updateSectionLabel(nodeId, newText), { label: 'Update section' });
+      applyOp && applyOp(ops.updateSectionLabel(nodeId, newText), { label: t('op_update_section') });
     } else {
       const props = { ...(node.props || {}) };
       if ('text' in props || ['core.heading', 'core.paragraph', 'core.button', 'core.text'].includes(node.type)) {
@@ -104,7 +117,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       } else {
         props.text = newText;
       }
-      applyOp && applyOp(ops.updateBlockProps(nodeId, props), { label: `Edit ${node.type}` });
+      applyOp && applyOp(ops.updateBlockProps(nodeId, props), { label: t('op_edit_block', { type: node.type }) });
     }
   }, [working, applyOp]);
 
@@ -237,13 +250,13 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       return;
     }
     detachRef.current = attachCanvas(doc, {
-      onSelect: (id) => selectRef.current(id),
+      onSelect: (id, _type, mods) => pickRef.current(id, mods || {}),
       onDrop: (drop) => onCanvasDropRef.current(drop),
       onAction: (action, id) => actionRef.current(action, id),
       onInlineText: (id, text) => onInlineTextRef.current(id, text),
       isLocked: (id) => effectivelyLocked(lockIndex(workingRef.current), id),
     });
-    markSelected(doc, selectionRef.current, { scroll: false });
+    markSelected(doc, selectionRef.current, { scroll: false, ids: selectedIdsRef.current });
   };
 
   const onLoad = () => {
@@ -265,103 +278,39 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   useEffect(() => {
     let doc = null;
     try { doc = frameRef.current && frameRef.current.contentDocument; } catch { doc = null; }
-    if (doc && doc.readyState !== 'loading') markSelected(doc, selection);
-  }, [selection]);
+    if (doc && doc.readyState !== 'loading') markSelected(doc, selection, { ids: selectedIds });
+  }, [selection, selectedIds]);
 
   const unsaved = status === STATUS.DIRTY || status === STATUS.SAVING;
 
   return (
-    <main className="sbx-canvas" aria-label="Canvas">
+    <main className="sbx-canvas" aria-label={t('canvas_label')}>
       <div className="sbx-canvas__meta">
         <div className="sbx-canvas__meta-left">
           <span className="sbx-canvas__meta-pill">
             <strong>{t(viewport.key)}</strong> · {viewport.width}px · <span className="sbx-canvas__scale-badge">{Math.round(scale * 100)}%</span>
           </span>
-          {interactive && (
-            <nav className="sbx-breadcrumb" aria-label={t('breadcrumb')}>
-              <button type="button" className="sbx-breadcrumb__item" onClick={() => select(null)}>{t('page')}</button>
-              {path.map((p, i) => (
-                <span key={p.id} className="sbx-breadcrumb__seg">
-                  <span className="sbx-breadcrumb__sep" aria-hidden="true">›</span>
-                  <button
-                    type="button"
-                    className="sbx-breadcrumb__item"
-                    aria-current={i === path.length - 1 ? 'location' : undefined}
-                    onClick={() => select(p.id)}
-                  >
-                    {p.label}
-                  </button>
-                </span>
-              ))}
-            </nav>
-          )}
           {!interactive && (
             <span className="sbx-canvas__meta-pill sbx-canvas__preview-pill">{t('mode_preview')}</span>
           )}
           {unsaved && (
-            <span className="sbx-canvas__save-hint" title="canvas updates after save">
+            <span className="sbx-canvas__save-hint" title={t('canvas_after_save')}>
               <span className="sbx-status__dot" aria-hidden="true" />
-              <span>canvas updates after save</span>
+              <span>{t('canvas_after_save')}</span>
             </span>
           )}
         </div>
 
-        <div className="sbx-canvas__meta-center" role="group" aria-label="Zoom controls">
-          <button
-            type="button"
-            className={`sbx-canvas__zoom-btn ${zoomMode === 'fit' ? 'is-active' : ''}`}
-            onClick={() => setZoomMode('fit')}
-            title="Auto-fit canvas to stage"
-          >
-            Fit
-          </button>
-          <button
-            type="button"
-            className={`sbx-canvas__zoom-btn ${zoomMode === '100' ? 'is-active' : ''}`}
-            onClick={() => setZoomMode('100')}
-            title="Actual 1:1 pixel size (100%)"
-          >
-            100%
-          </button>
-          <button
-            type="button"
-            className={`sbx-canvas__zoom-btn ${zoomMode === '75' ? 'is-active' : ''}`}
-            onClick={() => setZoomMode('75')}
-            title="75% zoom"
-          >
-            75%
-          </button>
-          <button
-            type="button"
-            className={`sbx-canvas__zoom-btn ${zoomMode === '50' ? 'is-active' : ''}`}
-            onClick={() => setZoomMode('50')}
-            title="50% zoom"
-          >
-            50%
-          </button>
-        </div>
-
         <div className="sbx-canvas__meta-right">
-          <button
-            type="button"
-            className={`sbx-canvas__tool-btn${showGrid ? ' is-active' : ''}`}
-            aria-pressed={showGrid}
-            data-testid="canvas-grid-toggle"
-            onClick={() => setShowGrid((g) => !g)}
-            title={t('grid_toggle')}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-            <span>{t('grid')}</span>
-          </button>
           {onToggleCollapse && (
             <button
               type="button"
               className="sbx-canvas__tool-btn"
               onClick={onToggleCollapse}
-              title={collapsed ? 'Show editor sidebar' : 'Hide editor sidebar for full-width canvas'}
+              title={collapsed ? t('show_sidebar') : t('hide_sidebar')}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-              <span>{collapsed ? 'Show Panel' : 'Full Canvas'}</span>
+              <span>{collapsed ? t('show_panel') : t('full_canvas')}</span>
             </button>
           )}
           <button
@@ -372,14 +321,15 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
               setSrc(`${boot.canvasUrl}?page=${boot.pageId}&v=${Date.now()}`);
               onReloadCanvas && onReloadCanvas();
             }}
-            title="Reload canvas"
+            title={t('reload_canvas')}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-            <span>Reload</span>
+            <span>{t('reload')}</span>
           </button>
         </div>
       </div>
 
+      <div className="sbx-canvas__stage-wrap">
       <div className="sbx-canvas__stage" ref={stageRef}>
         <div
           className="sbx-canvas__fit"
@@ -419,6 +369,28 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
           </div>
         </div>
       </div>
+      <CanvasOverlay
+        frameRef={frameRef}
+        stageRef={stageRef}
+        scale={scale}
+        enabled={interactive}
+        outlines={canvasView.outlines}
+        labels={canvasView.labels}
+        onAction={(action, id) => actionRef.current(action, id)}
+      />
+      </div>
+      <BottomBar
+        path={path}
+        showPath={interactive}
+        onSelectPath={select}
+        percent={percent}
+        fitActive={zoomMode === 'fit'}
+        onFit={() => setCanvasView({ zoom: 'fit' })}
+        onZoomIn={() => setCanvasView({ zoom: stepZoom(percent, 1) })}
+        onZoomOut={() => setCanvasView({ zoom: stepZoom(percent, -1) })}
+        showGrid={showGrid}
+        onToggleGrid={() => setCanvasView({ grid: !showGrid })}
+      />
     </main>
   );
 });

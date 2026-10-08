@@ -5,17 +5,18 @@
 
 import { memo, useEffect, useState } from 'react';
 import { useEditor, useEngineState } from './EditorContext.jsx';
-import { IconX, IconTrash, IconPalette } from './Icons.jsx';
+import { IconTrash, IconPalette } from './Icons.jsx';
+import { SheetPrimitive } from './sheets/SheetPrimitive.jsx';
 import { t, errorMessage } from '../core/messages.mjs';
 import { asList, asObject } from '../core/doc.mjs';
 
 const DEFAULT_SWATCHES = [
-  { ref: 'color.primary',    name: 'Primary',    hex: '#8B5CF6' },
-  { ref: 'color.secondary',  name: 'Secondary',  hex: '#A78BFA' },
-  { ref: 'color.background', name: 'Background', hex: '#0B0B0D' },
-  { ref: 'color.surface',    name: 'Surface',    hex: '#141417' },
-  { ref: 'color.border',     name: 'Border',     hex: '#2A2A2F' },
-  { ref: 'color.text',       name: 'Text',       hex: '#F5F5F7' },
+  { ref: 'color.primary',    get name() { return t('swatch_primary'); },    hex: '#8B5CF6' },
+  { ref: 'color.secondary',  get name() { return t('swatch_secondary'); },  hex: '#A78BFA' },
+  { ref: 'color.background', get name() { return t('swatch_background'); }, hex: '#0B0B0D' },
+  { ref: 'color.surface',    get name() { return t('swatch_surface'); },    hex: '#141417' },
+  { ref: 'color.border',     get name() { return t('swatch_border'); },     hex: '#2A2A2F' },
+  { ref: 'color.text',       get name() { return t('swatch_text'); },       hex: '#F5F5F7' },
 ];
 
 export const ThemeBottomSheet = memo(function ThemeBottomSheet({ onClose, onSaved }) {
@@ -77,34 +78,16 @@ export const ThemeBottomSheet = memo(function ThemeBottomSheet({ onClose, onSave
   };
 
   const tabs = [
-    { key: 'brand',      label: 'Brand' },
-    { key: 'colors',     label: 'Colors' },
-    { key: 'typography', label: 'Typography' },
-    { key: 'buttons',    label: 'Buttons' },
-    { key: 'spacing',    label: 'Spacing' },
-    { key: 'components', label: 'Components' },
+    { key: 'brand',      label: t('theme_tab_brand') },
+    { key: 'colors',     label: t('theme_tab_colors') },
+    { key: 'typography', label: t('theme_typography') },
+    { key: 'buttons',    label: t('theme_tab_buttons') },
+    { key: 'spacing',    label: t('theme_tab_spacing') },
+    { key: 'components', label: t('theme_tab_components') },
   ];
 
   return (
-    <div className="sbx-bottom-sheet sbx-theme-sheet" role="dialog" aria-label="Theme Design System">
-      <div className="sbx-bottom-sheet__drag-handle" aria-hidden="true" />
-
-      {/* Header */}
-      <div className="sbx-bottom-sheet__header">
-        <div className="sbx-bottom-sheet__title-group">
-          <h2 className="sbx-bottom-sheet__title">Theme</h2>
-          <p className="sbx-bottom-sheet__subtitle">Manage your site&apos;s global design system</p>
-        </div>
-        <button
-          type="button"
-          className="sbx-bottom-sheet__close"
-          onClick={onClose}
-          aria-label="Close theme settings"
-        >
-          <IconX size={16} />
-        </button>
-      </div>
-
+    <SheetPrimitive title={t('dock_theme')} subtitle={t('theme_subtitle')} onClose={onClose} className="sbx-theme-sheet" label={t('theme_label')} closeLabel={t('close_theme')} testId="sheet-theme">
       {/* Horizontal Subtabs */}
       <div className="sbx-theme-sheet__tabs" role="tablist">
         {tabs.map((t) => (
@@ -128,22 +111,22 @@ export const ThemeBottomSheet = memo(function ThemeBottomSheet({ onClose, onSave
         {/* ── Brand Tab ── */}
         {(activeTab === 'brand' || activeTab === 'colors') && (
           <section className="sbx-theme-section">
-            <h3 className="sbx-theme-section__title">Brand identity</h3>
-            <p className="sbx-theme-section__desc">Set your brand name, logo and general appearance.</p>
+            <h3 className="sbx-theme-section__title">{t('theme_brand_identity')}</h3>
+            <p className="sbx-theme-section__desc">{t('theme_brand_desc')}</p>
 
             <div className="sbx-theme-row">
-              <label className="sbx-theme-label">Logo</label>
+              <label className="sbx-theme-label">{t('theme_logo')}</label>
               <div className="sbx-theme-logo-preview">
                 <span className="sbx-theme-logo-text">{siteName.toLowerCase()}</span>
               </div>
               <div className="sbx-theme-action-row">
-                <button type="button" className="sbx-btn sbx-btn--action" onClick={() => alert('Media Library')}>Change logo</button>
-                <button type="button" className="sbx-btn sbx-btn--icon" title="Remove logo"><IconTrash size={14} /></button>
+                <button type="button" className="sbx-btn sbx-btn--action" onClick={() => alert('Media Library')}>{t('theme_change_logo')}</button>
+                <button type="button" className="sbx-btn sbx-btn--icon" title={t('theme_remove_logo')}><IconTrash size={14} /></button>
               </div>
             </div>
 
             <div className="sbx-theme-field">
-              <label className="sbx-theme-label" htmlFor="sbx-site-name">Site name</label>
+              <label className="sbx-theme-label" htmlFor="sbx-site-name">{t('theme_site_name')}</label>
               <input
                 id="sbx-site-name"
                 type="text"
@@ -154,7 +137,7 @@ export const ThemeBottomSheet = memo(function ThemeBottomSheet({ onClose, onSave
             </div>
 
             <div className="sbx-theme-field">
-              <label className="sbx-theme-label" htmlFor="sbx-tagline">Tagline</label>
+              <label className="sbx-theme-label" htmlFor="sbx-tagline">{t('theme_tagline')}</label>
               <input
                 id="sbx-tagline"
                 type="text"
@@ -165,12 +148,12 @@ export const ThemeBottomSheet = memo(function ThemeBottomSheet({ onClose, onSave
             </div>
 
             <div className="sbx-theme-row">
-              <label className="sbx-theme-label">Favicon</label>
+              <label className="sbx-theme-label">{t('theme_favicon')}</label>
               <div className="sbx-theme-favicon-preview">
                 <div className="sbx-theme-favicon-box" />
                 <div className="sbx-theme-action-row">
-                  <button type="button" className="sbx-btn sbx-btn--action">Change favicon</button>
-                  <button type="button" className="sbx-btn sbx-btn--icon" title="Remove favicon"><IconTrash size={14} /></button>
+                  <button type="button" className="sbx-btn sbx-btn--action">{t('theme_change_favicon')}</button>
+                  <button type="button" className="sbx-btn sbx-btn--icon" title={t('theme_remove_favicon')}><IconTrash size={14} /></button>
                 </div>
               </div>
             </div>
@@ -179,11 +162,11 @@ export const ThemeBottomSheet = memo(function ThemeBottomSheet({ onClose, onSave
 
         {/* ── Color Palette Section ── */}
         <section className="sbx-theme-section">
-          <h3 className="sbx-theme-section__title">Color palette</h3>
-          <p className="sbx-theme-section__desc">Define your global colors and brand palette.</p>
+          <h3 className="sbx-theme-section__title">{t('theme_palette')}</h3>
+          <p className="sbx-theme-section__desc">{t('theme_palette_desc')}</p>
 
           <div className="sbx-theme-mode-row">
-            <span className="sbx-theme-label">Color mode</span>
+            <span className="sbx-theme-label">{t('theme_color_mode')}</span>
             <div className="sbx-theme-mode-pills" role="radiogroup">
               {['light', 'dark', 'auto'].map((mode) => (
                 <button
@@ -194,7 +177,7 @@ export const ThemeBottomSheet = memo(function ThemeBottomSheet({ onClose, onSave
                   className={`sbx-theme-mode-pill${colorMode === mode ? ' is-active' : ''}`}
                   onClick={() => setColorMode(mode)}
                 >
-                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                  {t(`theme_mode_${mode}`)}
                 </button>
               ))}
             </div>
@@ -216,12 +199,12 @@ export const ThemeBottomSheet = memo(function ThemeBottomSheet({ onClose, onSave
 
         {/* ── Typography Section ── */}
         <section className="sbx-theme-section">
-          <h3 className="sbx-theme-section__title">Typography</h3>
-          <p className="sbx-theme-section__desc">Set your global fonts and text styles.</p>
+          <h3 className="sbx-theme-section__title">{t('theme_typography')}</h3>
+          <p className="sbx-theme-section__desc">{t('theme_type_desc')}</p>
 
           <div className="sbx-theme-grid-two">
             <div className="sbx-theme-field">
-              <label className="sbx-theme-label" htmlFor="sbx-heading-font">Heading font</label>
+              <label className="sbx-theme-label" htmlFor="sbx-heading-font">{t('theme_heading_font')}</label>
               <select
                 id="sbx-heading-font"
                 className="sbx-select"
@@ -236,7 +219,7 @@ export const ThemeBottomSheet = memo(function ThemeBottomSheet({ onClose, onSave
             </div>
 
             <div className="sbx-theme-field">
-              <label className="sbx-theme-label" htmlFor="sbx-body-font">Body font</label>
+              <label className="sbx-theme-label" htmlFor="sbx-body-font">{t('theme_body_font')}</label>
               <select
                 id="sbx-body-font"
                 className="sbx-select"
@@ -254,11 +237,11 @@ export const ThemeBottomSheet = memo(function ThemeBottomSheet({ onClose, onSave
       </div>
 
       <div className="sbx-bottom-sheet__footer">
-        <button type="button" className="sbx-btn" onClick={onClose}>Cancel</button>
+        <button type="button" className="sbx-btn" onClick={onClose}>{t('cancel')}</button>
         <button type="button" className="sbx-btn sbx-btn--primary" onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving...' : 'Apply changes'}
+          {saving ? t('theme_saving') : t('theme_apply')}
         </button>
       </div>
-    </div>
+    </SheetPrimitive>
   );
 });

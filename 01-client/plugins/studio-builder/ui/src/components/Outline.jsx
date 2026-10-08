@@ -8,7 +8,7 @@
 // Alt+← out of the container, Delete removes).
 
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
-import { useEditor, useEngineState } from './EditorContext.jsx';
+import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { DRAG_TYPE_NEW } from './BlockPalette.jsx';
 import { t } from '../core/messages.mjs';
 import {
@@ -16,7 +16,7 @@ import {
   canInsertBlock, canInsertSection, canMoveBlock, nodeLabel,
 } from '../core/doc.mjs';
 import { isProvisionalId, updateBlockVisibility, updateSectionVisibility } from '../core/operations.mjs';
-import { nextPicked, topLevelIds } from '../core/shellState.mjs';
+import { topLevelIds } from '../core/shellState.mjs';
 import { effectivelyLocked, isLocked, lockIndex } from '../core/layerLock.mjs';
 
 const DRAG_TYPE_NODE = 'application/x-kohevo-studio-node';
@@ -84,9 +84,10 @@ export function dropDestination(doc, rows, dragged, row, position) {
 
 export const Outline = memo(function Outline() {
   const {
-    manifest, selection, select, insertBlock, insertSection,
+    manifest, insertBlock, insertSection,
     duplicateNode, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, applyOp,
   } = useEditor();
+  const { selection, selectedIds, select, pick } = useSelection();
   const working = useEngineState((s) => s.working);
   const allRows = useMemo(() => outlineRows(working, manifest), [working, manifest]);
   const locks = useMemo(() => lockIndex(working), [working]);
@@ -96,8 +97,8 @@ export const Outline = memo(function Outline() {
   const [searchQuery, setSearchQuery] = useState('');
   const [focusId, setFocusId] = useState(null);
   const [dropHint, setDropHint] = useState(null);
-  const [picked, setPicked] = useState(() => new Set());
-  const anchorRef = useRef(null);
+  // Several rows selected = the shared selection holds more than one id (canvas and Layers stay in sync).
+  const picked = useMemo(() => new Set(selectedIds), [selectedIds]);
   const dragRef = useRef(null);
   const listRef = useRef(null);
 
@@ -255,12 +256,12 @@ export const Outline = memo(function Outline() {
   };
   const bulkDuplicate = () => {
     bulkIds.forEach((id) => duplicateNode(id));
-    setPicked(new Set());
+    select(selection, { announceIt: false });
   };
   const bulkRemove = () => {
     if (!window.confirm(t('bulk_remove_confirm', { count: bulkIds.length }))) return;
+    // Removed nodes leave the shared selection on their own (the shell prunes it).
     bulkIds.forEach((id) => removeNode(id, { confirmed: true }));
-    setPicked(new Set());
   };
 
   return (
@@ -298,7 +299,7 @@ export const Outline = memo(function Outline() {
           <button type="button" className="sbx-btn sbx-btn--seg" onClick={() => bulkLock(false)}>{t('unlock_layer')}</button>
           <button type="button" className="sbx-btn sbx-btn--seg" onClick={bulkDuplicate}>{t('duplicate')}</button>
           <button type="button" className="sbx-btn sbx-btn--seg sbx-btn--danger" onClick={bulkRemove}>{t('remove_item')}</button>
-          <button type="button" className="sbx-btn sbx-btn--seg" onClick={() => setPicked(new Set())}>{t('clear_selection')}</button>
+          <button type="button" className="sbx-btn sbx-btn--seg" onClick={() => select(selection, { announceIt: false })}>{t('clear_selection')}</button>
         </div>
       )}
 
@@ -324,7 +325,7 @@ export const Outline = memo(function Outline() {
               aria-expanded={row.container ? !isRowCollapsed : undefined}
               aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight Delete F2"
               tabIndex={row.id === activeId ? 0 : -1}
-              className={`sbx-tree__row sbx-tree__row--${row.kind}${selection === row.id || picked.has(row.id) ? ' is-selected' : ''}${picked.has(row.id) ? ' is-picked' : ''}${isProvisionalId(row.id) ? ' is-pending' : ''}${isHidden ? ' is-hidden' : ''}${ownLock ? ' is-locked' : ''}${lockedByAncestor ? ' is-locked-inherited' : ''}${hint}`}
+              className={`sbx-tree__row sbx-tree__row--${row.kind}${selection === row.id || picked.has(row.id) ? ' is-selected' : ''}${picked.size > 1 && picked.has(row.id) ? ' is-picked' : ''}${isProvisionalId(row.id) ? ' is-pending' : ''}${isHidden ? ' is-hidden' : ''}${ownLock ? ' is-locked' : ''}${lockedByAncestor ? ' is-locked-inherited' : ''}${hint}`}
               style={{ paddingLeft: `${(row.level - 1) * 14 + 6}px` }}
               draggable
               onDragStart={(e) => {
@@ -338,16 +339,9 @@ export const Outline = memo(function Outline() {
               onDrop={(e) => onDrop(e, row)}
               onClick={(e) => {
                 setFocusId(row.id);
-                if (e.shiftKey || e.metaKey || e.ctrlKey) {
-                  e.preventDefault();
-                  setPicked((prev) => nextPicked(prev, visibleRows, anchorRef.current || selection, row.id, { shift: e.shiftKey, toggle: e.metaKey || e.ctrlKey }));
-                  if (!e.shiftKey) anchorRef.current = row.id;
-                  select(row.id);
-                  return;
-                }
-                anchorRef.current = row.id;
-                setPicked(new Set());
-                select(row.id);
+                const toggle = e.metaKey || e.ctrlKey;
+                if (e.shiftKey || toggle) e.preventDefault();
+                pick(row.id, { shift: e.shiftKey, toggle }, visibleRows);
               }}
               onFocus={() => setFocusId(row.id)}
               onKeyDown={(e) => onKeyDown(e, row, i)}

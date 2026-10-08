@@ -18,6 +18,11 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 3) . '/config.php';
 
+// The editing canvas is not a visitor page: no language-switcher widget (and its inline script) may be added to it.
+if (!defined('SLATE_NO_LANG_SWITCHER')) {
+    define('SLATE_NO_LANG_SWITCHER', true);
+}
+
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Exception\StudioException;
 use Slate\Module\StudioBuilder\Http\StudioCanvasPolicy;

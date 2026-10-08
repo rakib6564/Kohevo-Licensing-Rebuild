@@ -32,148 +32,148 @@ export const DRAG_TYPE_NEW = 'application/x-kohevo-studio-block-type';
 
 const BLOCK_META = {
   'core.hero': {
-    title: 'Hero',
-    desc: 'Lead with a clear proposition',
+    get title() { return t('pal_hero'); },
+    get desc() { return t('pal_lead_with_a_clear_proposition'); },
     icon: (s) => <IconRocket size={s} />,
   },
   'core.heading': {
-    title: 'Heading',
-    desc: 'Create hierarchy',
+    get title() { return t('pal_heading'); },
+    get desc() { return t('pal_create_hierarchy'); },
     icon: (s) => <IconHeading size={s} />,
   },
   'core.text': {
-    title: 'Text',
-    desc: 'Plain-text body copy',
+    get title() { return t('pal_text'); },
+    get desc() { return t('pal_plain_text_body_copy'); },
     icon: (s) => <IconPilcrow size={s} />,
   },
   'core.rich_text': {
-    title: 'Rich text',
-    desc: 'Formatted copy & body content',
+    get title() { return t('pal_rich_text'); },
+    get desc() { return t('pal_formatted_copy_body_content'); },
     icon: (s) => <IconPilcrow size={s} />,
   },
   'core.image': {
-    title: 'Image',
-    desc: 'Media library asset',
+    get title() { return t('pal_image'); },
+    get desc() { return t('pal_media_library_asset'); },
     icon: (s) => <IconImage size={s} />,
   },
   'core.button': {
-    title: 'CTA banner',
-    desc: 'Close with an action',
+    get title() { return t('pal_cta_banner'); },
+    get desc() { return t('pal_close_with_an_action'); },
     icon: (s) => <IconArrowUpRight size={s} />,
   },
   'core.query_loop': {
-    title: 'Services grid',
-    desc: 'Live Service & dynamic posts',
+    get title() { return t('pal_services_grid'); },
+    get desc() { return t('pal_live_service_dynamic_posts'); },
     icon: (s) => <IconGridPanes size={s} />,
   },
   'core.feature_list': {
-    title: 'Feature list',
-    desc: 'Highlights & feature cards',
+    get title() { return t('pal_feature_list'); },
+    get desc() { return t('pal_highlights_feature_cards'); },
     icon: (s) => <IconListCheck size={s} />,
   },
   'core.container': {
-    title: 'Container',
-    desc: 'Inner constraint container',
+    get title() { return t('pal_container'); },
+    get desc() { return t('pal_inner_constraint_container'); },
     icon: (s) => <IconBox size={s} />,
   },
   'layout.section': {
-    title: 'Section',
-    desc: 'Full-width layout section',
+    get title() { return t('pal_section'); },
+    get desc() { return t('pal_full_width_layout_section'); },
     icon: (s) => <IconLayoutSection size={s} />,
   },
   'layout.container': {
-    title: 'Container',
-    desc: 'Constrained width container',
+    get title() { return t('pal_container'); },
+    get desc() { return t('pal_constrained_width_container'); },
     icon: (s) => <IconBox size={s} />,
   },
   'layout.flex': {
-    title: 'Flex',
-    desc: 'Flexible row or column layout',
+    get title() { return t('pal_flex'); },
+    get desc() { return t('pal_flexible_row_or_column_layout'); },
     icon: (s) => <IconBox size={s} />,
   },
   'layout.grid': {
-    title: 'Grid',
-    desc: 'Multi-column responsive grid',
+    get title() { return t('pal_grid'); },
+    get desc() { return t('pal_multi_column_responsive_grid'); },
     icon: (s) => <IconGridPanes size={s} />,
   },
   'core.gallery': {
-    title: 'Gallery',
-    desc: 'Media image gallery',
+    get title() { return t('pal_gallery'); },
+    get desc() { return t('pal_media_image_gallery'); },
     icon: (s) => <IconGallery size={s} />,
   },
   'core.video': {
-    title: 'Video',
-    desc: 'Responsive video player',
+    get title() { return t('pal_video'); },
+    get desc() { return t('pal_responsive_video_player'); },
     icon: (s) => <IconVideo size={s} />,
   },
   'core.form': {
-    title: 'Form',
-    desc: 'Interactive form builder',
+    get title() { return t('pal_form'); },
+    get desc() { return t('pal_interactive_form_builder'); },
     icon: (s) => <IconForm size={s} />,
   },
   'core.modal': {
-    title: 'Modal',
-    desc: 'Pop-up modal dialog',
+    get title() { return t('pal_modal'); },
+    get desc() { return t('pal_pop_up_modal_dialog'); },
     icon: (s) => <IconBox size={s} />,
   },
   'layout.offcanvas': {
-    title: 'Offcanvas',
-    desc: 'Slide-out navigation drawer',
+    get title() { return t('pal_offcanvas'); },
+    get desc() { return t('pal_slide_out_navigation_drawer'); },
     icon: (s) => <IconLayoutSection size={s} />,
   },
   'theme.post_title': {
-    title: 'Post title',
-    desc: 'Dynamic article heading',
+    get title() { return t('pal_post_title'); },
+    get desc() { return t('pal_dynamic_article_heading'); },
     icon: (s) => <IconHeading size={s} />,
   },
   'theme.post_content': {
-    title: 'Post content',
-    desc: 'Dynamic post body copy',
+    get title() { return t('pal_post_content'); },
+    get desc() { return t('pal_dynamic_post_body_copy'); },
     icon: (s) => <IconPilcrow size={s} />,
   },
   'theme.post_meta': {
-    title: 'Post meta',
-    desc: 'Author, date & category info',
+    get title() { return t('pal_post_meta'); },
+    get desc() { return t('pal_author_date_category_info'); },
     icon: (s) => <IconListCheck size={s} />,
   },
   'theme.archive_title': {
-    title: 'Archive title',
-    desc: 'Taxonomy & archive heading',
+    get title() { return t('pal_archive_title'); },
+    get desc() { return t('pal_taxonomy_archive_heading'); },
     icon: (s) => <IconHeading size={s} />,
   },
   'theme.search_box': {
-    title: 'Search box',
-    desc: 'Site search input box',
+    get title() { return t('pal_search_box'); },
+    get desc() { return t('pal_site_search_input_box'); },
     icon: (s) => <IconSearch size={s} />,
   },
   'core.spacer': {
-    title: 'Spacer',
-    desc: 'Tune vertical rhythm',
+    get title() { return t('pal_spacer'); },
+    get desc() { return t('pal_tune_vertical_rhythm'); },
     icon: (s) => <IconSpacer size={s} />,
   },
   'core.divider': {
-    title: 'Divider',
-    desc: 'A horizontal rule',
+    get title() { return t('pal_divider'); },
+    get desc() { return t('pal_a_horizontal_rule'); },
     icon: (s) => <IconDivider size={s} />,
   },
   'core.tabs': {
-    title: 'Tabs',
-    desc: 'Switch between panels in place',
+    get title() { return t('pal_tabs'); },
+    get desc() { return t('pal_switch_between_panels_in_place'); },
     icon: (s) => <IconGridPanes size={s} />,
   },
   'core.accordion': {
-    title: 'Accordion',
-    desc: 'Stacked rows that expand, ideal for FAQs',
+    get title() { return t('pal_accordion'); },
+    get desc() { return t('pal_stacked_rows_that_expand_ideal_for_faqs'); },
     icon: (s) => <IconListCheck size={s} />,
   },
   'core.carousel': {
-    title: 'Carousel',
-    desc: 'Image and testimonial slides with dots',
+    get title() { return t('pal_carousel'); },
+    get desc() { return t('pal_image_and_testimonial_slides_with_dots'); },
     icon: (s) => <IconGallery size={s} />,
   },
   'core.stats': {
-    title: 'Stats',
-    desc: 'Animated figures that count up',
+    get title() { return t('pal_stats'); },
+    get desc() { return t('pal_animated_figures_that_count_up'); },
     icon: (s) => <IconGridDots size={s} />,
   },
 };
@@ -206,50 +206,50 @@ const PRESET_SECTIONS = [
   {
     key: 'hero',
     type: 'core.hero',
-    title: 'Hero Section',
-    desc: 'High-impact intro with image, copy and CTA',
+    get title() { return t('pal_hero_section'); },
+    get desc() { return t('pal_high_impact_intro_with_image_copy_and_cta'); },
   },
   {
     key: 'features',
     type: 'core.feature_list',
-    title: 'Feature Grid',
-    desc: 'Showcase key benefits with clear layout',
+    get title() { return t('pal_feature_grid'); },
+    get desc() { return t('pal_showcase_key_benefits_with_clear_layout'); },
   },
   {
     key: 'services',
     type: 'core.query_loop',
-    title: 'Services Overview',
-    desc: 'Display services or features with icons',
+    get title() { return t('pal_services_overview'); },
+    get desc() { return t('pal_display_services_or_features_with_icons'); },
   },
   {
     key: 'image_text',
     type: 'layout.container',
-    title: 'Image + Text',
-    desc: 'Side-by-side image and content',
+    get title() { return t('pal_image_text'); },
+    get desc() { return t('pal_side_by_side_image_and_content'); },
   },
   {
     key: 'testimonials',
     type: 'core.text',
-    title: 'Testimonials',
-    desc: 'Build trust with customer reviews',
+    get title() { return t('pal_testimonials'); },
+    get desc() { return t('pal_build_trust_with_customer_reviews'); },
   },
   {
     key: 'pricing',
     type: 'core.feature_list',
-    title: 'Pricing Plans',
-    desc: 'Compare plans with features and CTA',
+    get title() { return t('pal_pricing_plans'); },
+    get desc() { return t('pal_compare_plans_with_features_and_cta'); },
   },
   {
     key: 'faq',
     type: 'core.rich_text',
-    title: 'FAQ Section',
-    desc: 'Expandable questions and answers',
+    get title() { return t('pal_faq_section'); },
+    get desc() { return t('pal_expandable_questions_and_answers'); },
   },
   {
     key: 'gallery',
     type: 'core.gallery',
-    title: 'Gallery',
-    desc: 'Image grid for visual media',
+    get title() { return t('pal_gallery'); },
+    get desc() { return t('pal_image_grid_for_visual_media'); },
   },
 ];
 
@@ -375,7 +375,7 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
     for (const b of list) {
       const meta = BLOCK_META[b.type] || {};
       const title = meta.title || b.label;
-      const desc = meta.desc || b.description || 'Block component';
+      const desc = meta.desc || b.description || t('pal_block_component_fallback');
       if (q && !`${title} ${desc} ${b.category} ${b.type}`.toLowerCase().includes(q)) {
         continue;
       }
@@ -402,10 +402,10 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
         <input
           type="search"
           className="sbx-palette__search-input"
-          placeholder="Search sections, elements..."
+          placeholder={t('pal_search_placeholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          aria-label="Search sections and elements"
+          aria-label={t('pal_search_label')}
         />
         <span className="sbx-search-badge" aria-hidden="true">⌘ K</span>
       </div>
@@ -413,9 +413,9 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
       {/* Category Tabs: Sections, Elements, Components */}
       <div className="sbx-palette__category-tabs" role="tablist">
         {[
-          { key: 'sections', label: 'Sections' },
-          { key: 'elements', label: 'Elements' },
-          { key: 'components', label: 'Components' },
+          { key: 'sections', label: t('pal_tab_sections') },
+          { key: 'elements', label: t('pal_tab_elements') },
+          { key: 'components', label: t('pal_tab_components') },
           { key: 'dynamic', label: t('palette_dynamic') },
           { key: 'media', label: t('palette_media') },
           { key: 'ai', label: t('palette_ai') },
@@ -458,8 +458,8 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
                   type="button"
                   className={`sbx-star-btn${isFav ? ' is-favorited' : ''}`}
                   onClick={(e) => toggleFavorite(e, sec.key)}
-                  title={isFav ? 'Remove favorite' : 'Add to favorites'}
-                  aria-label="Favorite"
+                  title={isFav ? t('pal_unfavorite') : t('pal_favorite_add')}
+                  aria-label={t('pal_favorite')}
                 >
                   {isFav ? '★' : '☆'}
                 </button>
@@ -492,7 +492,7 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
                 <span className="sbx-palette-card__title">{b.displayTitle}</span>
                 <span className="sbx-palette-card__desc">{b.displayDesc}</span>
               </div>
-              <span className="sbx-palette-card__plus-btn" aria-hidden="true" title="Insert">
+              <span className="sbx-palette-card__plus-btn" aria-hidden="true" title={t('pal_insert')}>
                 <IconPlus size={14} />
               </span>
             </button>
@@ -518,8 +518,8 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
               <IconBox size={18} />
             </div>
             <div className="sbx-palette-card__content">
-              <span className="sbx-palette-card__title">Global Header</span>
-              <span className="sbx-palette-card__desc">Site-wide synchronized header</span>
+              <span className="sbx-palette-card__title">{t('pal_global_header')}</span>
+              <span className="sbx-palette-card__desc">{t('pal_site_wide_synchronized_header')}</span>
             </div>
           </button>
           <button
@@ -531,8 +531,8 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
               <IconBox size={18} />
             </div>
             <div className="sbx-palette-card__content">
-              <span className="sbx-palette-card__title">Global Footer</span>
-              <span className="sbx-palette-card__desc">Site-wide synchronized footer</span>
+              <span className="sbx-palette-card__title">{t('pal_global_footer')}</span>
+              <span className="sbx-palette-card__desc">{t('pal_site_wide_synchronized_footer')}</span>
             </div>
           </button>
         </div>

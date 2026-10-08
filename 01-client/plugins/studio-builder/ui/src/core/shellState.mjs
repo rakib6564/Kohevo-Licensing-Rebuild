@@ -7,6 +7,13 @@
 
 export const VIEW_MODES = ['edit', 'preview', 'visitor'];
 
+/** At or below this viewport width the builder uses the mobile shell (bottom nav, sheets). */
+export const MOBILE_SHELL_MAX_WIDTH = 860;
+
+export function isMobileShellWidth(width) {
+  return Number.isFinite(width) && width <= MOBILE_SHELL_MAX_WIDTH;
+}
+
 /** Only `edit` lets the canvas select, drag or inline-edit. */
 export function isEditing(mode) {
   return mode === 'edit';

@@ -5,7 +5,7 @@
 import { useMemo, useState } from 'react';
 import { Dialog } from './Dialog.jsx';
 import { MediaControl } from './fields/MediaControl.jsx';
-import { useEditor, useEngineState } from './EditorContext.jsx';
+import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { t, errorMessage } from '../core/messages.mjs';
 import { asList } from '../core/doc.mjs';
 import { saveScopesFor, slugify } from '../core/library.mjs';
@@ -13,7 +13,8 @@ import { saveScopesFor, slugify } from '../core/library.mjs';
 const THUMB_FIELD = Object.freeze({ key: 'thumbnail', type: 'media_ref', label: 'Thumbnail', required: false });
 
 export function SaveTemplateDialog({ onClose, onSaved }) {
-  const { transport, boot, selection, library = null } = useEditor();
+  const { transport, boot, library = null } = useEditor();
+  const { selection } = useSelection();
   const working = useEngineState((s) => s.working);
   const page = useEngineState((s) => s.page);
   const scopes = useMemo(() => saveScopesFor(working, page ? page.page_type : 'page', selection), [working, page, selection]);

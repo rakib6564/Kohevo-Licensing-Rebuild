@@ -12,6 +12,23 @@ export function useEditor() {
   return ctx;
 }
 
+/**
+ * Selection lives in its own context so a click re-renders only what shows the
+ * selection, not every consumer of the (stable) editor services above.
+ *
+ *   sel          the full model {primary, ids, hover, focus}
+ *   selection    primary id (null when nothing is selected)
+ *   selectedIds  every selected id, in pick order
+ *   select(id)   replace the selection; pick(id, {shift, toggle}, rows?) is a modified click
+ */
+export const SelectionContext = createContext(null);
+
+export function useSelection() {
+  const ctx = useContext(SelectionContext);
+  if (!ctx) throw new Error('useSelection() outside <SelectionContext>');
+  return ctx;
+}
+
 /** Subscribe to the engine store (optionally a slice of it). */
 export function useEngineState(selector = (s) => s) {
   const { engine } = useEditor();

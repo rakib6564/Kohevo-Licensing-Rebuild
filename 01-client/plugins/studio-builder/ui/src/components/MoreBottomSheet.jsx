@@ -4,8 +4,9 @@
 // Media library, Version history, Custom code, and more.
 
 import { memo } from 'react';
+import { SheetPrimitive } from './sheets/SheetPrimitive.jsx';
+import { t } from '../core/messages.mjs';
 import {
-  IconX,
   IconSettings,
   IconSearch,
   IconImage,
@@ -31,47 +32,47 @@ export const MoreBottomSheet = memo(function MoreBottomSheet({
 }) {
   const sections = [
     {
-      category: 'Page',
+      category: t('page'),
       items: [
         {
           key: 'settings',
-          title: 'Page settings',
-          desc: 'Title, slug, meta and basic settings',
+          title: t('more_page_settings'),
+          desc: t('more_page_settings_desc'),
           Icon: IconSettings,
           action: () => { onClose(); if (onOpenSettings) onOpenSettings(); },
         },
         {
           key: 'seo',
-          title: 'SEO',
-          desc: 'Search engine optimization',
+          title: t('more_seo'),
+          desc: t('more_seo_desc'),
           Icon: IconSearch,
           action: () => { onClose(); if (onOpenSettings) onOpenSettings(); },
         },
         {
           key: 'background',
-          title: 'Page background',
-          desc: 'Set background for this page',
+          title: t('more_page_bg'),
+          desc: t('more_page_bg_desc'),
           Icon: IconImage,
           action: () => { onClose(); },
         },
         {
           key: 'layout',
-          title: 'Page layout',
-          desc: 'Container, width and spacing',
+          title: t('more_page_layout'),
+          desc: t('more_page_layout_desc'),
           Icon: IconGridPanes,
           action: () => { onClose(); },
         },
         {
           key: 'duplicate',
-          title: 'Duplicate page',
-          desc: 'Create a copy of this page',
+          title: t('more_duplicate_page'),
+          desc: t('more_duplicate_page_desc'),
           Icon: IconCopy,
           action: () => { onClose(); alert('Page duplicated as draft'); },
         },
         {
           key: 'delete',
-          title: 'Delete page',
-          desc: 'Remove this page permanently',
+          title: t('more_delete_page'),
+          desc: t('more_delete_page_desc'),
           Icon: IconTrash,
           danger: true,
           action: () => {
@@ -83,85 +84,85 @@ export const MoreBottomSheet = memo(function MoreBottomSheet({
       ],
     },
     {
-      category: 'Project',
+      category: t('more_project'),
       items: [
         {
           key: 'layers',
-          title: 'Layers',
-          desc: 'View and manage page structure',
+          title: t('tab_layers'),
+          desc: t('more_layers_desc'),
           Icon: IconLayers,
           action: () => { onClose(); if (onOpenLayers) onOpenLayers(); },
         },
         {
           key: 'media',
-          title: 'Media library',
-          desc: 'Manage your images and files',
+          title: t('more_media'),
+          desc: t('more_media_desc'),
           Icon: IconImage,
           action: () => { onClose(); },
         },
         {
           key: 'reusable',
-          title: 'Reusable blocks',
-          desc: 'Manage saved blocks',
+          title: t('more_reusable'),
+          desc: t('more_reusable_desc'),
           Icon: IconBox,
           action: () => { onClose(); },
         },
         {
           key: 'components',
-          title: 'Global components',
-          desc: 'Manage site-wide components',
+          title: t('more_global'),
+          desc: t('more_global_desc'),
           Icon: IconGridPanes,
           action: () => { onClose(); },
         },
       ],
     },
     {
-      category: 'History & Collaboration',
+      category: t('more_history_group'),
       items: [
         {
           key: 'history',
-          title: 'Version history',
-          desc: 'View and restore past versions',
+          title: t('more_version_history'),
+          desc: t('more_version_history_desc'),
           Icon: IconClock,
           action: () => { onClose(); if (onOpenHistory) onOpenHistory(); },
         },
         {
           key: 'packages',
-          title: 'Import & Export',
-          desc: 'Export project package or HTML',
+          title: t('more_import_export'),
+          desc: t('more_import_export_desc'),
           Icon: IconBox,
           action: () => { onClose(); if (onOpenPackages) onOpenPackages(); },
         },
       ],
     },
     {
-      category: 'Developer & Advanced',
+      category: t('more_dev_group'),
       items: [
         {
           key: 'code',
-          title: 'Custom code',
-          desc: 'Add custom CSS, JS or head code',
+          title: t('more_custom_code'),
+          desc: t('more_custom_code_desc'),
           Icon: IconCode,
           action: () => { onClose(); },
         },
         {
           key: 'integrations',
-          title: 'Integrations',
-          desc: 'Connect third-party services',
+          title: t('more_integrations'),
+          desc: t('more_integrations_desc'),
           Icon: IconPlug,
           action: () => { onClose(); },
         },
         {
           key: 'shortcuts',
-          title: 'Keyboard shortcuts',
-          desc: 'View all shortcuts',
+          title: t('shortcuts_title'),
+          desc: t('more_shortcuts_desc'),
           Icon: IconKeyboard,
           action: () => { onClose(); },
         },
         {
           key: 'help',
-          title: 'Help & support',
-          desc: 'Documentation and guides',
+          title: t('more_help'),
+          desc: t('more_help_desc'),
           Icon: IconHelp,
           action: () => { onClose(); },
         },
@@ -170,25 +171,7 @@ export const MoreBottomSheet = memo(function MoreBottomSheet({
   ];
 
   return (
-    <div className="sbx-bottom-sheet sbx-more-sheet" role="dialog" aria-label="More Settings">
-      <div className="sbx-bottom-sheet__drag-handle" aria-hidden="true" />
-
-      {/* Header */}
-      <div className="sbx-bottom-sheet__header">
-        <div className="sbx-bottom-sheet__title-group">
-          <h2 className="sbx-bottom-sheet__title">More</h2>
-          <p className="sbx-bottom-sheet__subtitle">Additional tools and settings for your page</p>
-        </div>
-        <button
-          type="button"
-          className="sbx-bottom-sheet__close"
-          onClick={onClose}
-          aria-label="Close settings"
-        >
-          <IconX size={16} />
-        </button>
-      </div>
-
+    <SheetPrimitive title={t('dock_more')} subtitle={t('more_subtitle')} onClose={onClose} className="sbx-more-sheet" label={t('more_settings_label')} closeLabel={t('close_settings')} testId="sheet-more">
       {/* Categorized Action Grid */}
       <div className="sbx-bottom-sheet__body">
         {sections.map((sec) => (
@@ -218,6 +201,6 @@ export const MoreBottomSheet = memo(function MoreBottomSheet({
           </div>
         ))}
       </div>
-    </div>
+    </SheetPrimitive>
   );
 });

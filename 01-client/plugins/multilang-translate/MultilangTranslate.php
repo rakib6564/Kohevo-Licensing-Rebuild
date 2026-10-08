@@ -107,6 +107,9 @@ class MultilangTranslate extends Plugin {
 
     /** If the page never fired site_footer/admin_footer/customer_footer, append before </body>. */
     private function autoInjectSwitcher(string $html, int $tid): string {
+        // Full-screen app pages (the Studio builder) own their whole viewport: a floating widget there
+        // would sit on top of real controls. They opt out by defining SLATE_NO_LANG_SWITCHER.
+        if (defined('SLATE_NO_LANG_SWITCHER') && SLATE_NO_LANG_SWITCHER) return $html;
         if (stripos($html, '</body>') === false) return $html;
         $widget = $this->switcherHtml();
         if ($widget === '') return $html;

@@ -1,7 +1,7 @@
 // RightPanel — property panels for the current selection (block, section or page).
 
 import { memo } from 'react';
-import { useEditor, useEngineState } from './EditorContext.jsx';
+import { useEngineState, useSelection } from './EditorContext.jsx';
 import { BlockInspector } from './inspectors/BlockInspector.jsx';
 import { SectionInspector } from './inspectors/SectionInspector.jsx';
 import { PageInspector } from './inspectors/PageInspector.jsx';
@@ -9,7 +9,7 @@ import { findNode } from '../core/doc.mjs';
 import { t } from '../core/messages.mjs';
 
 export const RightPanel = memo(function RightPanel() {
-  const { selection } = useEditor();
+  const { selection } = useSelection();
   const working = useEngineState((s) => s.working);
   const info = selection ? findNode(working, selection) : null;
 
