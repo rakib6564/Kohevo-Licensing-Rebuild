@@ -7,7 +7,7 @@
  * `rich_text` value is re-emitted through this allowlist on OUTPUT.
  *
  * - Only the same allowlisted tags as the write validator are emitted, and
- *   only `<a>` keeps attributes (`href` re-checked by `FieldSchema::isSafeUrl`,
+ *   only `<a>` keeps attributes (and `<span class="sb-hl">`, the highlight) (`href` re-checked by `FieldSchema::isSafeUrl`,
  *   `target` in {_self,_blank}, `rel` charset-limited; `_blank` forces
  *   `noopener noreferrer`).
  * - Comments, doctype, processing instructions and every non-allowlisted tag
@@ -87,7 +87,13 @@ final class RichTextSanitizer
                 continue;
             }
 
-            $out .= $tag === 'a' ? self::anchorOpenTag($attrs) : '<' . $tag . '>';
+            if ($tag === 'a') {
+                $out .= self::anchorOpenTag($attrs);
+            } elseif ($tag === 'span' && self::isHighlightAttr($attrs)) {
+                $out .= '<span class="' . Html::HIGHLIGHT_CLASS . '">';
+            } else {
+                $out .= '<' . $tag . '>';
+            }
             $stack[] = $tag;
         }
 
@@ -96,6 +102,12 @@ final class RichTextSanitizer
         }
 
         return $out;
+    }
+
+    /** True for exactly `class="sb-hl"`: the highlight span carries no other attribute and no other class. */
+    public static function isHighlightAttr(string $attrs): bool
+    {
+        return preg_match('/^class\s*=\s*(?:"' . Html::HIGHLIGHT_CLASS . '"|\'' . Html::HIGHLIGHT_CLASS . '\')$/i', trim($attrs)) === 1;
     }
 
     private static function anchorOpenTag(string $attrString): string

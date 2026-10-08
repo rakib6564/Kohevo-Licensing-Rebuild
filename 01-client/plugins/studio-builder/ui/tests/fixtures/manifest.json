@@ -1152,6 +1152,7 @@
             "binding_slots": [],
             "category": "content",
             "default_props": {
+                "highlight": "",
                 "level": "h2",
                 "text": "Section Heading"
             },
@@ -1164,6 +1165,14 @@
                     "required": true,
                     "default": "Section Heading",
                     "max_length": 300
+                },
+                {
+                    "key": "highlight",
+                    "type": "string",
+                    "label": "Highlighted Word",
+                    "required": false,
+                    "default": "",
+                    "max_length": 100
                 },
                 {
                     "key": "level",
@@ -1229,6 +1238,7 @@
                 "accent_token": null,
                 "eyebrow": "",
                 "heading": "Welcome",
+                "highlight": "",
                 "media": null,
                 "primary_cta": null,
                 "subheading": ""
@@ -1250,6 +1260,14 @@
                     "required": true,
                     "default": "Welcome",
                     "max_length": 255
+                },
+                {
+                    "key": "highlight",
+                    "type": "string",
+                    "label": "Highlighted Word",
+                    "required": false,
+                    "default": "",
+                    "max_length": 100
                 },
                 {
                     "key": "subheading",

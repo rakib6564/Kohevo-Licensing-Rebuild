@@ -35,7 +35,7 @@ final class HeroRenderer implements BlockRendererInterface
         $html = '<div' . Html::classAttr(['sb-hero', $image !== null ? 'sb-hero--with-media' : '']) . '>'
             . '<div class="sb-hero__content">'
             . ($eyebrow !== '' ? '<p' . Html::classAttr(['sb-hero__eyebrow', $accent]) . '>' . Html::e($eyebrow) . '</p>' : '')
-            . '<h1 class="sb-hero__heading">' . Html::e($scope->string('heading')) . '</h1>'
+            . '<h1 class="sb-hero__heading">' . Html::highlighted($scope->string('heading'), $scope->string('highlight')) . '</h1>'
             . ($subheading !== '' ? '<p class="sb-hero__subheading">' . Html::text($subheading) . '</p>' : '')
             . (is_array($cta) ? '<p class="sb-button-row">' . Html::link($cta, 'sb-button sb-button--primary') . '</p>' : '')
             . '</div>';

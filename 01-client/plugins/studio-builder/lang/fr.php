@@ -610,6 +610,8 @@ return [
     'studio_ui_rt_bold' => 'Gras',
     'studio_ui_rt_italic' => 'Italique',
     'studio_ui_rt_underline' => 'Souligné',
+    'studio_ui_rt_highlight' => 'Surligner',
+    'studio_ui_rt_highlight_glyph' => 'S',
     'studio_ui_rt_bold_glyph' => 'G',
     'studio_ui_rt_italic_glyph' => 'I',
     'studio_ui_rt_underline_glyph' => 'S',

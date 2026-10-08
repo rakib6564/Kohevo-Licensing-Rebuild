@@ -406,6 +406,10 @@ final class FieldSchema implements \JsonSerializable
                     continue;
                 }
 
+                if ($tag === 'span' && $attrString !== '' && \Slate\Module\StudioBuilder\Render\RichTextSanitizer::isHighlightAttr($attrString)) {
+                    continue;
+                }
+
                 if ($tag !== 'a' && $attrString !== '') {
                     return "HTML tag '<{$tag}>' does not permit attributes in Studio rich_text.";
                 }

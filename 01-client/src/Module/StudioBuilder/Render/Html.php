@@ -71,6 +71,27 @@ final class Html
             . '>' . self::e($label) . '</a>';
     }
 
+    /** The one class a highlight span carries; the only attribute a rich-text `span` may have. */
+    public const HIGHLIGHT_CLASS = 'sb-hl';
+
+    /**
+     * Escaped text with the FIRST occurrence of `$highlight` wrapped in a highlight span. An empty or absent
+     * needle, or one that is not in the text, leaves the text escaped and unwrapped. The needle is matched as
+     * plain text (never as markup) and every part is escaped separately.
+     */
+    public static function highlighted(string $value, string $highlight): string
+    {
+        $highlight = trim($highlight);
+        $at = $highlight === '' ? false : mb_strpos($value, $highlight, 0, 'UTF-8');
+        if ($at === false) {
+            return self::e($value);
+        }
+        $len = mb_strlen($highlight, 'UTF-8');
+        return self::e(mb_substr($value, 0, $at, 'UTF-8'))
+            . '<span class="' . self::HIGHLIGHT_CLASS . '">' . self::e($highlight) . '</span>'
+            . self::e(mb_substr($value, $at + $len, null, 'UTF-8'));
+    }
+
     /** Escaped multi-line text with newlines as `<br>`. */
     public static function text(string $value): string
     {

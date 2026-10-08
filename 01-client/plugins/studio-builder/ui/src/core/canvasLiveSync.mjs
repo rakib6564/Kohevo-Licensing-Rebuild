@@ -60,6 +60,8 @@ export function isStructuralChange(prevDoc, nextDoc) {
   return false;
 }
 
+const asHighlight = (block) => isPlainObject(block.props) && typeof block.props.highlight === 'string' && block.props.highlight.trim() !== '';
+
 function differs(a, b) {
   return a !== b && JSON.stringify(a === undefined ? null : a) !== JSON.stringify(b === undefined ? null : b);
 }
@@ -80,6 +82,12 @@ const SERVER_PAINTED_FIELDS = ['style_states', 'tag', 'classNames', 'attributes'
  */
 export const SERVER_RENDERED_TYPES = new Set(['core.icon', 'core.list', 'core.quote', 'core.link', 'core.card', 'core.table', 'core.countdown']);
 
+/**
+ * Types whose heading can carry a highlighted word: the server wraps it in a span, which the text patch
+ * (textContent) would erase, so while a highlight is set any prop change repaints from the server.
+ */
+const HIGHLIGHT_TYPES = new Set(['core.heading', 'core.hero']);
+
 /** Compare two block lists to any depth: ids, types, child counts and the props of server-rendered types. */
 function blocksChanged(prev, next) {
   const prevBlocks = Array.isArray(prev) ? prev : [];
@@ -91,6 +99,7 @@ function blocksChanged(prev, next) {
     if (!pb || !nb || pb.id !== nb.id || pb.type !== nb.type) return true;
     if (differs(styleWithoutAlign(pb.style), styleWithoutAlign(nb.style))) return true;
     if (SERVER_PAINTED_FIELDS.some((f) => differs(pb[f], nb[f]))) return true;
+    if (HIGHLIGHT_TYPES.has(nb.type) && (asHighlight(pb) || asHighlight(nb)) && differs(pb.props, nb.props)) return true;
     if (SERVER_RENDERED_TYPES.has(nb.type) && pb.props !== nb.props && JSON.stringify(pb.props) !== JSON.stringify(nb.props)) return true;
     if (blocksChanged(pb.children, nb.children)) return true;
   }
@@ -187,6 +196,7 @@ export function syncLiveDOM(canvasDoc, prevDoc, nextDoc, activeBreakpoint = 'bas
       if (prevBlock === nextBlock) continue;
 
       if (SERVER_RENDERED_TYPES.has(nextBlock.type)) continue; // repainted from the server (see isStructuralChange)
+      if (HIGHLIGHT_TYPES.has(nextBlock.type) && (asHighlight(nextBlock) || (prevBlock && asHighlight(prevBlock)))) continue;
 
       const el = canvasDoc.querySelector(`[data-sb-node="${cssEscape(id)}"]`);
       if (!el) continue;

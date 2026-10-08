@@ -286,6 +286,8 @@ const EN = {
   rt_bold: 'Bold',
   rt_italic: 'Italic',
   rt_underline: 'Underline',
+  rt_highlight: 'Highlight',
+  rt_highlight_glyph: 'H',
   rt_bold_glyph: 'B',
   rt_italic_glyph: 'I',
   rt_underline_glyph: 'U',

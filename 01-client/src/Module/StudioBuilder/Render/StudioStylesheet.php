@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '2';
+    public const VERSION = '3';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -177,6 +177,7 @@ final class StudioStylesheet
             . '.sb-text--base{font-size:1rem}'
             . '.sb-text--lg{font-size:1.125rem}'
             . '.sb-text--xl{font-size:1.25rem}'
+            . '.sb-hl{color:var(--sb-color-accent)}'
             . '.sb-text--lead{font-size:1.25rem;line-height:1.75;font-weight:400}'
             . '.sb-text--align-left{text-align:left}'
             . '.sb-text--align-center{text-align:center}'

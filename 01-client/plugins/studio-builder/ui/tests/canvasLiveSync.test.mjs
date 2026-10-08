@@ -119,3 +119,14 @@ test('server-rendered elements repaint from the server on a prop edit, and are n
   assert.equal(syncLiveDOM(canvasDoc, a, b), 0, 'nothing patched');
   assert.equal(el.textContent, 'untouched');
 });
+
+test('a heading with a highlighted word repaints from the server instead of having its markup flattened', () => {
+  const doc = (props) => ({ sections: [sec([blk('h', 'core.heading', props)])] });
+  assert.equal(isStructuralChange(doc({ text: 'Get started' }), doc({ text: 'Get started now' })), false, 'plain heading: live patch');
+  assert.equal(isStructuralChange(doc({ text: 'Get started', highlight: 'started' }), doc({ text: 'Get started now', highlight: 'started' })), true, 'text edit under a highlight');
+  assert.equal(isStructuralChange(doc({ text: 'Get started' }), doc({ text: 'Get started', highlight: 'started' })), true, 'highlight set');
+  const el = fakeEl('h2', ['sb-heading'], 'Get <span>started</span>');
+  const canvasDoc = { querySelector: () => el };
+  syncLiveDOM(canvasDoc, doc({ text: 'Get started', highlight: 'started' }), doc({ text: 'Get going', highlight: 'started' }));
+  assert.equal(el.textContent, 'Get <span>started</span>', 'untouched: the server repaint owns it');
+});

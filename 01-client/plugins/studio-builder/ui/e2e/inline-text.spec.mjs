@@ -98,3 +98,43 @@ test('a block that declares no inline text is not editable in place', async ({ p
     await restore(page, before);
   }
 });
+
+test('a heading highlights one word, in the accent colour', async ({ page }) => {
+  await openBuilder(page);
+  await settled(page);
+  const before = await layerCount(page);
+  try {
+    await insertBlock(page, 'core.heading');
+    const word = page.getByLabel('Highlighted Word', { exact: true });
+    await word.fill('Heading');
+    await word.blur();
+    await settled(page);
+    const frame = await frameDocument(page);
+    const hl = frame.locator('[data-sb-type="core.heading"] .sb-heading .sb-hl').last();
+    await expect(hl).toHaveText('Heading', { timeout: 20_000 });
+    await expect.poll(async () => hl.evaluate((el) => getComputedStyle(el).color !== getComputedStyle(el.parentElement).color), { timeout: 10_000 }).toBe(true);
+    await expect(page.getByRole('alert')).toHaveCount(0);
+  } finally {
+    await restore(page, before);
+  }
+});
+
+test('rich text can highlight a selection, and the saved page carries only the highlight class', async ({ page }) => {
+  await openBuilder(page);
+  await settled(page);
+  const before = await layerCount(page);
+  try {
+    await insertBlock(page, 'core.rich_text');
+    const editor = page.locator('.sbx-rt__editable').first();
+    await editor.click();
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.keyboard.type('Plain and loud');
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.getByRole('button', { name: 'Highlight', exact: true }).click();
+    await settled(page);
+    await expect.poll(async () => /<span class="sb-hl">Plain and loud<\/span>/.test(await canvasHtml(page)), { timeout: 20_000 }).toBe(true);
+    await expect(page.getByRole('alert')).toHaveCount(0);
+  } finally {
+    await restore(page, before);
+  }
+});

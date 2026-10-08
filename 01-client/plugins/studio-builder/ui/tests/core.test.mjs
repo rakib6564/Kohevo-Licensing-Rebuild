@@ -290,6 +290,16 @@ test('rich text output is reduced to the server allowlist', () => {
   assert.equal(toAllowedHtml(lexical), '<p><strong>Bold</strong> and <a href="https://example.com" target="_blank" rel="noopener noreferrer">link</a></p><ul><li>one</li></ul>');
   assert.equal(toAllowedHtml('<p onclick="x()">a<script>alert(1)</script><img src=x onerror=y>b</p>'), '<p>ab</p>');
   assert.equal(toAllowedHtml('<a href="javascript:alert(1)">x</a>'), '<a>x</a>');
+
+test('richtext: a highlight survives as span.sb-hl; Lexical marks become it; any other span attribute is dropped', () => {
+  assert.equal(toAllowedHtml('<p>Make it <mark>count</mark></p>'), '<p>Make it <span class="sb-hl">count</span></p>');
+  assert.equal(toAllowedHtml('<p><span class="sb-hl">a</span></p>'), '<p><span class="sb-hl">a</span></p>');
+  assert.equal(toAllowedHtml('<p><span class="other" style="color:red" onclick="x()">a</span></p>'), '<p>a</p>', 'a plain span is noise');
+  assert.equal(toAllowedHtml('<p><span class="sb-hl other">a</span></p>'), '<p>a</p>', 'only the exact class');
+  assert.equal(toAllowedHtml('<p><mark class="x" style="a:b">a</mark> <em>b</em></p>'), '<p><span class="sb-hl">a</span> <em>b</em></p>');
+  const once = toAllowedHtml('<p>x <mark>y</mark> <strong>z</strong></p>');
+  assert.equal(toAllowedHtml(once), once, 'idempotent');
+});
   assert.equal(toAllowedHtml('<style>p{}</style><iframe src="//x"></iframe>'), '<p></p>');
   assert.equal(toAllowedHtml('<p>unclosed <em>em'), '<p>unclosed <em>em</em></p>');
 });

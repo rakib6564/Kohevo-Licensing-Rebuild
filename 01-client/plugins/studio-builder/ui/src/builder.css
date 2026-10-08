@@ -2707,3 +2707,4 @@ html, body.sbx-body {
 .sbx-spacing__link[aria-pressed='true'] { border-color: var(--sbx-accent, #e8734a); }
 .sbx-more { margin: 8px 0; }
 .sbx-more > summary { cursor: pointer; font-size: 12px; opacity: 0.85; padding: 4px 0; }
+.sbx-rt-hl { background: rgba(232, 115, 74, 0.28); border-radius: 2px; }
