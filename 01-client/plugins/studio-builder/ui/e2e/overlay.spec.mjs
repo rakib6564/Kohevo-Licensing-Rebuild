@@ -72,7 +72,7 @@ test('the toolbar stays inside the canvas area and above the node when there is 
 });
 
 test('the toolbar is a keyboard toolbar: roving arrow keys, Enter activates (duplicate)', async ({ page }) => {
-  await selectSection(page);
+  const id = await selectSection(page);
   const bar = page.getByTestId('overlay-toolbar');
   await expect(bar).toHaveAttribute('role', 'toolbar');
 
@@ -92,10 +92,20 @@ test('the toolbar is a keyboard toolbar: roving arrow keys, Enter activates (dup
   // Exactly one button is in the tab order (roving tabindex).
   expect(await bar.locator('button[tabindex="0"]').count()).toBe(1);
 
-  const before = await page.locator(`${ROWS}[aria-level="1"]`).count();
+  const before0 = await page.locator(`${ROWS}[aria-level="1"]`).evaluateAll((els) => els.map((e) => e.getAttribute('data-row')));
+  const before = before0.length;
   await duplicate.focus();
   await page.keyboard.press('Enter');
   await expect.poll(() => page.locator(`${ROWS}[aria-level="1"]`).count(), { timeout: 15_000 }).toBe(before + 1);
+
+  // take the copy away again: the page is shared with the next specs
+  await settled(page);
+  await page.getByRole('tab', { name: /Layers/ }).click();
+  const copyId = (await page.locator(`${ROWS}[aria-level="1"]`).evaluateAll((els) => els.map((e) => e.getAttribute('data-row')))).find((x) => x !== id && !before0.includes(x));
+  await page.locator(`${ROWS}[data-row="${copyId}"]`).click(); // a row's actions show on hover or selection
+  await page.getByRole('tab', { name: /Layers/ }).click();
+  await rowAction(page, copyId, 'delete');
+  await expect.poll(() => page.locator(`${ROWS}[aria-level="1"]`).count(), { timeout: 15_000 }).toBe(before);
 });
 
 test('a locked layer keeps duplicate but disables move, edit and delete', async ({ page }) => {

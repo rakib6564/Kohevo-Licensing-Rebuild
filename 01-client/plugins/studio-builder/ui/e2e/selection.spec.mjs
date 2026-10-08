@@ -50,12 +50,21 @@ test('Cmd/Ctrl-click on the canvas adds to the selection and Layers reflects it'
   await openBuilder(page);
   await ensureSections(page, 2);
   const [a, b] = await topLevelRowIds(page);
+
+  // The canvas repaints after a save, and a click that lands while it does is lost: tap the first node until the
+  // selection shows it, only then add the second with the modifier.
+  await expect(async () => {
+    const frame = await frameDocument(page);
+    await frame.locator(`[data-sb-node="${a}"]`).click({ position: { x: 4, y: 4 }, timeout: 5_000 });
+    await expect(page.locator(`${ROWS}[aria-selected="true"]`)).toHaveCount(1, { timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
+  await expect(async () => {
+    const frame = await frameDocument(page);
+    await frame.locator(`[data-sb-node="${b}"]`).click({ position: { x: 4, y: 4 }, modifiers: ['ControlOrMeta'], timeout: 5_000 });
+    await expect(page.locator(`${ROWS}[aria-selected="true"]`)).toHaveCount(2, { timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
+
   const frame = await frameDocument(page);
-
-  await frame.locator(`[data-sb-node="${a}"]`).click({ position: { x: 4, y: 4 } });
-  await frame.locator(`[data-sb-node="${b}"]`).click({ position: { x: 4, y: 4 }, modifiers: ['ControlOrMeta'] });
-
-  await expect(page.locator(`${ROWS}[aria-selected="true"]`)).toHaveCount(2);
   await expect(frame.locator('.sbx-selected')).toHaveCount(2);
   await expect(page.getByTestId('inspector-multi')).toBeVisible();
 });
