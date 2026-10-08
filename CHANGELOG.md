@@ -9,6 +9,15 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
 
 ## [Unreleased]
 
+### Added
+- **Studio builder: layer lock and block rename.** Layers can be locked (sections: `locked`; blocks: `metadata.locked`) and
+  blocks can carry a display name (`metadata.label`, max 80 characters, shown in Layers and the breadcrumb). Two new
+  document operations, `update_block_meta` and `update_section_locked`, set them. A locked layer and everything inside it
+  cannot be edited, moved, renamed or removed, nothing can be inserted into it, and a parent holding a locked child cannot
+  be removed; duplicating stays allowed. The rules are enforced in `DocumentOperationApplier` (`Document/LayerLock.php`),
+  so they bind the builder, the MCP/AI path and any other caller, and are mirrored client-side to refuse an edit up front.
+  Assistants may rename layers but cannot lock or unlock them. Documents without locks or names are byte-identical to before.
+
 ### Security
 - **Licence signatures can no longer be forged from the public key (P0).** The client verifier accepted `hmac:`-prefixed
   signatures — and, without `ext-sodium`, bare keyed hashes — computed with the *public* key as the HMAC key, so anyone

@@ -24,6 +24,7 @@ export const OPS = Object.freeze({
   UPDATE_SECTION_LABEL: 'update_section_label',
   UPDATE_SECTION_LAYOUT: 'update_section_layout',
   UPDATE_SECTION_VISIBILITY: 'update_section_visibility',
+  UPDATE_SECTION_LOCKED: 'update_section_locked',
   INSERT_BLOCK: 'insert_block',
   REMOVE_BLOCK: 'remove_block',
   MOVE_BLOCK: 'move_block',
@@ -37,6 +38,7 @@ export const OPS = Object.freeze({
   UPDATE_BLOCK_ATTRIBUTES: 'update_block_attributes',
   UPDATE_BLOCK_ANIMATION: 'update_block_animation',
   UPDATE_BLOCK_INTERACTIONS: 'update_block_interactions',
+  UPDATE_BLOCK_META: 'update_block_meta',
 });
 
 /** Operations that change the tree's shape are sent right away, not debounced. */
@@ -106,6 +108,13 @@ export const updateBlockAttributes = (blockId, attributes) => op(OPS.UPDATE_BLOC
  */
 export const updateBlockAnimation = (blockId, animation) => op(OPS.UPDATE_BLOCK_ANIMATION, { block_id: blockId, animation });
 export const updateBlockInteractions = (blockId, interactions) => op(OPS.UPDATE_BLOCK_INTERACTIONS, { block_id: blockId, interactions });
+/** Lock or unlock a section (the layer lock; see layerLock.mjs). */
+export const updateSectionLocked = (sectionId, locked) => op(OPS.UPDATE_SECTION_LOCKED, { section_id: sectionId, locked: !!locked });
+/**
+ * Patch a block's editor metadata: `label` (display name; null clears) and/or
+ * `locked`. Keys left out are untouched, so these are NOT coalesced in the queue.
+ */
+export const updateBlockMeta = (blockId, meta) => op(OPS.UPDATE_BLOCK_META, { block_id: blockId, ...meta });
 export const updateSettings = (settings) => op(OPS.UPDATE_SETTINGS, { settings });
 export const updateSeo = (seo) => op(OPS.UPDATE_SEO, { seo });
 
@@ -234,6 +243,36 @@ export function applyLocal(doc, operation, ctx = {}) {
       });
       if (!hit) throw notFound(p.section_id);
       return { ...doc, sections };
+    }
+    case OPS.UPDATE_SECTION_LOCKED: {
+      let hit = false;
+      const sections = asList(doc.sections).map((s) => {
+        if (s.id !== p.section_id) return s;
+        hit = true;
+        const { locked: _drop, ...rest } = s;
+        return p.locked === true ? { ...rest, locked: true } : rest;
+      });
+      if (!hit) throw notFound(p.section_id);
+      return { ...doc, sections };
+    }
+    case OPS.UPDATE_BLOCK_META: {
+      let hit = false;
+      const next = mapBlocks(doc, (b) => {
+        if (b.id !== p.block_id) return b;
+        hit = true;
+        const meta = { ...asObject(b.metadata) };
+        if ('label' in p) {
+          const label = typeof p.label === 'string' ? p.label.trim() : '';
+          if (label) meta.label = label; else delete meta.label;
+        }
+        if ('locked' in p) {
+          if (p.locked === true) meta.locked = true; else delete meta.locked;
+        }
+        const { metadata: _old, ...rest } = b;
+        return Object.keys(meta).length ? { ...rest, metadata: meta } : rest;
+      });
+      if (!hit) throw notFound(p.block_id);
+      return next;
     }
     case OPS.INSERT_BLOCK: {
       const given = asObject(p.block);

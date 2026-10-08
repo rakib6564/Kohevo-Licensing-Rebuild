@@ -366,7 +366,7 @@ final class DocumentValidator
             }
         }
 
-        foreach (CanonicalDocumentSchema::ALLOWED_SECTION_KEYS as $reqKey) {
+        foreach (CanonicalDocumentSchema::REQUIRED_SECTION_KEYS as $reqKey) {
             if (!array_key_exists($reqKey, $section)) {
                 $errors[] = ValidationResult::issue("{$path}.{$reqKey}", 'required_field', "Missing required section field '{$reqKey}'.");
             }
@@ -388,6 +388,11 @@ final class DocumentValidator
         $label = $section['label'] ?? null;
         if (!is_string($label) || mb_strlen($label, 'UTF-8') > 120 || FieldSchema::containsExecutableOrSqlFragment($label)) {
             $errors[] = ValidationResult::issue("{$path}.label", 'invalid_section_label', 'Section label must be a safe string <= 120 chars.');
+        }
+
+        // Layer lock (editor aid): a boolean when present.
+        if (array_key_exists('locked', $section) && !is_bool($section['locked'])) {
+            $errors[] = ValidationResult::issue("{$path}.locked", 'invalid_locked', 'section.locked must be a boolean.');
         }
 
         // global_ref — a LIVE reference to a Global Component (Phase 6). The
@@ -669,6 +674,32 @@ final class DocumentValidator
             } else {
                 if (isset($interactions['trigger']) && (!is_string($interactions['trigger']) || !in_array($interactions['trigger'], ['hover', 'focus', 'click', 'viewport-enter', 'scroll', 'load'], true))) {
                     $errors[] = ValidationResult::issue("{$path}.interactions.trigger", 'invalid_interaction_trigger', 'Invalid interaction trigger.');
+                }
+            }
+        }
+
+        // Validate optional editor metadata (display name + layer lock) if present
+        if (array_key_exists('metadata', $block)) {
+            $meta = $block['metadata'];
+            if (!is_array($meta) || ($meta !== [] && array_is_list($meta))) {
+                $errors[] = ValidationResult::issue("{$path}.metadata", 'invalid_metadata', 'block.metadata must be a JSON object.');
+            } else {
+                foreach (array_keys($meta) as $mk) {
+                    if (!in_array((string) $mk, CanonicalDocumentSchema::ALLOWED_BLOCK_METADATA_KEYS, true)) {
+                        $errors[] = ValidationResult::issue("{$path}.metadata.{$mk}", 'unknown_property', "Unknown block metadata property '{$mk}'.");
+                    }
+                }
+                if (array_key_exists('label', $meta)) {
+                    $mLabel = $meta['label'];
+                    if (!is_string($mLabel)
+                        || mb_strlen($mLabel, 'UTF-8') > CanonicalDocumentSchema::BLOCK_LABEL_MAX_LENGTH
+                        || preg_match('/[\x00-\x1F\x7F]/', $mLabel) === 1
+                        || FieldSchema::containsExecutableOrSqlFragment($mLabel)) {
+                        $errors[] = ValidationResult::issue("{$path}.metadata.label", 'invalid_block_label', 'Block label must be a safe string of at most ' . CanonicalDocumentSchema::BLOCK_LABEL_MAX_LENGTH . ' characters.');
+                    }
+                }
+                if (array_key_exists('locked', $meta) && !is_bool($meta['locked'])) {
+                    $errors[] = ValidationResult::issue("{$path}.metadata.locked", 'invalid_locked', 'block.metadata.locked must be a boolean.');
                 }
             }
         }

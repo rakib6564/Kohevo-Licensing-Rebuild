@@ -25,6 +25,7 @@
 //    commands to those immutable revisions (bounded stack).
 
 import { nodeIds, findNode } from './doc.mjs';
+import { lockViolation } from './layerLock.mjs';
 import { applyLocal, enqueueCoalesced, isProvisionalId, referencedIds, remapIds, STRUCTURAL, OPS } from './operations.mjs';
 
 export const STATUS = Object.freeze({
@@ -135,6 +136,11 @@ export class SyncEngine {
    */
   apply(operation, { provisionalId = null, label = '' } = {}) {
     if (this.state.status === STATUS.CONFLICT || this.state.status === STATUS.LOADING) return false;
+    // The layer lock: refuse up front (the server enforces the same rules) and say why.
+    if (lockViolation(this.state.working, operation)) {
+      this.onEvent({ type: 'locked', op: operation });
+      return false;
+    }
     let working;
     try {
       working = applyLocal(this.state.working, operation, { manifest: this.manifest, provisionalId });

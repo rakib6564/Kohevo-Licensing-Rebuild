@@ -36,6 +36,7 @@ import { blockDefinition, findNode, insertionPoint, nodeLabel, sectionsOf } from
 import { defaultBindings, setupFields } from '../core/fields.mjs';
 import { insertTargetFor, referenceIndexFor, slugify } from '../core/library.mjs';
 import * as ops from '../core/operations.mjs';
+import { lockViolation } from '../core/layerLock.mjs';
 import { viewportByKey } from '../core/viewport.mjs';
 import { isEditing, keyboardInset, normalizeViewMode } from '../core/shellState.mjs';
 
@@ -77,6 +78,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
         case 'saved': announce(t('announce_saved')); break;
         case 'conflict': announce(t('announce_conflict')); break;
         case 'rejected': announce(t('announce_rejected')); break;
+        case 'locked': announce(t('announce_locked')); break;
         case 'failed': announce(errorMessage(e.error)); break;
         case 'undo': announce(t('announce_undo')); break;
         case 'redo': announce(t('announce_redo')); break;
@@ -211,8 +213,10 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     const info = findNode(engine.getSnapshot().working, id);
     if (!info) return;
     const label = nodeLabel(info.node, manifest, info.kind);
-    if (!confirmed && info.kind === 'section' && info.node.blocks && info.node.blocks.length && !window.confirm(t('confirm_remove_section'))) return;
     const operation = info.kind === 'section' ? ops.removeSection(id) : ops.removeBlock(id);
+    // Locked layers are refused before any "are you sure?" prompt.
+    if (lockViolation(engine.getSnapshot().working, operation)) { announce(t('announce_locked')); return; }
+    if (!confirmed && info.kind === 'section' && info.node.blocks && info.node.blocks.length && !window.confirm(t('confirm_remove_section'))) return;
     if (engine.apply(operation, { label })) {
       if (selectionRef.current === id) setSelection(info.kind === 'block' ? info.parentId : null);
       announce(t('announce_removed', { label }));
@@ -234,6 +238,30 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     if (!info || info.kind !== 'section') return;
     engine.apply(ops.updateSectionLabel(id, label), { label });
   }, [engine]);
+
+  /** Name a layer: a section's label, or a block's display name (empty clears it). */
+  const renameNode = useCallback((id, label) => {
+    const info = findNode(engine.getSnapshot().working, id);
+    if (!info) return;
+    const name = String(label || '').trim();
+    if (info.kind === 'section') {
+      if (name) engine.apply(ops.updateSectionLabel(id, name), { label: name });
+      return;
+    }
+    if (engine.apply(ops.updateBlockMeta(id, { label: name || null }), { label: name || t('layer_name_cleared') })) {
+      announce(t('announce_renamed', { label: name || labelOf(id) }));
+    }
+  }, [engine, announce, labelOf]);
+
+  /** Lock or unlock a layer (a section, or a block and everything inside it). */
+  const setLocked = useCallback((id, locked) => {
+    const info = findNode(engine.getSnapshot().working, id);
+    if (!info) return;
+    const operation = info.kind === 'section' ? ops.updateSectionLocked(id, locked) : ops.updateBlockMeta(id, { locked });
+    if (engine.apply(operation, { label: labelOf(id) })) {
+      announce(t(locked ? 'announce_layer_locked' : 'announce_layer_unlocked', { label: labelOf(id) }));
+    }
+  }, [engine, announce, labelOf]);
 
   const moveBlockTo = useCallback((id, target) => {
     if (!target) return;
@@ -401,14 +429,14 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
 
   const ctx = useMemo(() => ({
     boot, engine, manifest, transport, selection, select, announce, applyOp,
-    insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, removeNode, moveBlockTo, moveSectionTo, labelOf,
+    insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf,
     viewport: viewportByKey(viewportKey),
     library, refreshLibrary, applyTemplate, insertTemplate, deleteTemplate,
     insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion,
     openSaveTemplate: () => setDialog('save_template'),
     openComponentDialog: () => setDialog('component'),
     openAiReview: () => setDialog('ai_review'),
-  }), [boot, engine, manifest, transport, selection, select, announce, applyOp, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey,
+  }), [boot, engine, manifest, transport, selection, select, announce, applyOp, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey,
     library, refreshLibrary, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
 
   if (loadError) {

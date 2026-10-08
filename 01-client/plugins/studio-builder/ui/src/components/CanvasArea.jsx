@@ -12,6 +12,7 @@ import { isStructuralChange, syncLiveDOM } from '../core/canvasLiveSync.mjs';
 import { STATUS } from '../core/sync.mjs';
 import { t } from '../core/messages.mjs';
 import { ancestorPath, asList, canInsertBlock, canMoveBlock, findNode } from '../core/doc.mjs';
+import { effectivelyLocked, lockIndex } from '../core/layerLock.mjs';
 import * as ops from '../core/operations.mjs';
 import { DRAG_TYPE_NEW } from './BlockPalette.jsx';
 
@@ -217,6 +218,9 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     }
   };
 
+  const workingRef = useRef(working);
+  workingRef.current = working;
+
   const onCanvasDropRef = useRef(onCanvasDrop);
   onCanvasDropRef.current = onCanvasDrop;
 
@@ -237,6 +241,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       onDrop: (drop) => onCanvasDropRef.current(drop),
       onAction: (action, id) => actionRef.current(action, id),
       onInlineText: (id, text) => onInlineTextRef.current(id, text),
+      isLocked: (id) => effectivelyLocked(lockIndex(workingRef.current), id),
     });
     markSelected(doc, selectionRef.current, { scroll: false });
   };

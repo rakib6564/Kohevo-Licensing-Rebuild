@@ -136,4 +136,16 @@ return [
     'studio_ui_media_note' => 'Seul l\'identifiant de l\'image est enregistré dans la page, jamais un chemin de fichier.',
     'studio_ui_ai_panel_note' => 'L\'assistant IA prépare les modifications sous forme de révision brouillon. Rien n\'est mis en ligne tant que vous ne l\'avez pas relue et publiée.',
     'studio_ui_ai_unavailable' => 'L\'assistant IA n\'est pas activé pour votre compte.',
+
+    // ── Builder: layer lock and block rename ────────────────────────────
+    'studio_ui_lock_layer' => 'Verrouiller',
+    'studio_ui_unlock_layer' => 'Déverrouiller',
+    'studio_ui_locked_by_parent' => 'Verrouillé par un calque parent. Déverrouillez d\'abord le parent.',
+    'studio_ui_layer_locked_note' => 'Ce calque est verrouillé. Déverrouillez-le pour le modifier, le déplacer, le renommer ou le supprimer.',
+    'studio_ui_layer_locked_by_parent' => 'Un calque parent est verrouillé : ce calque ne peut pas être modifié. Déverrouillez d\'abord le parent.',
+    'studio_ui_announce_locked' => 'Ce calque est verrouillé. Déverrouillez-le d\'abord.',
+    'studio_ui_announce_layer_locked' => '{label} verrouillé',
+    'studio_ui_announce_layer_unlocked' => '{label} déverrouillé',
+    'studio_ui_announce_renamed' => 'Renommé en {label}',
+    'studio_ui_layer_name_cleared' => 'Nom du calque effacé',
 ];

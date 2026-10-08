@@ -207,6 +207,9 @@ export function nodeLabel(node, manifest, kind) {
     const base = (node && node.label) || 'Section';
     return isGlobalSection(node) ? `${base} (global)` : base;
   }
+  // A name the author gave this layer (block metadata) wins over the generated "Type: hint".
+  const custom = asObject(node && node.metadata).label;
+  if (typeof custom === 'string' && custom.trim() !== '') return custom;
   const def = blockDefinition(manifest, node && node.type);
   const base = def ? def.label : (node && node.type) || 'Block';
   const props = asObject(node && node.props);

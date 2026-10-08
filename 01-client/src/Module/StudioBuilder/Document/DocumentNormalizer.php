@@ -134,14 +134,20 @@ final class DocumentNormalizer
             }
         }
 
-        return CanonicalJson::sortKeysRecursively([
+        $normalizedSection = [
             'blocks'     => $normalizedBlocks,
             'global_ref' => isset($section['global_ref']) && $section['global_ref'] !== '' ? (string) $section['global_ref'] : null,
             'id'         => (string) $section['id'],
             'label'      => trim((string) ($section['label'] ?? '')),
             'layout'     => CanonicalJson::sortKeysRecursively($layout),
             'visibility' => $visibility,
-        ]);
+        ];
+        // Canonical form: the lock key exists only while the section is locked.
+        if (($section['locked'] ?? null) === true) {
+            $normalizedSection['locked'] = true;
+        }
+
+        return CanonicalJson::sortKeysRecursively($normalizedSection);
     }
 
     /**
@@ -214,6 +220,20 @@ final class DocumentNormalizer
         }
         if (array_key_exists('interactions', $block) && is_array($block['interactions'])) {
             $normalizedBlock['interactions'] = CanonicalJson::sortKeysRecursively($block['interactions']);
+        }
+        // Editor metadata: trimmed label and/or `locked: true`; absent when empty (canonical form).
+        if (array_key_exists('metadata', $block) && is_array($block['metadata'])) {
+            $meta  = [];
+            $label = isset($block['metadata']['label']) && is_string($block['metadata']['label']) ? trim($block['metadata']['label']) : '';
+            if ($label !== '') {
+                $meta['label'] = $label;
+            }
+            if (($block['metadata']['locked'] ?? null) === true) {
+                $meta['locked'] = true;
+            }
+            if ($meta !== []) {
+                $normalizedBlock['metadata'] = $meta;
+            }
         }
 
         return CanonicalJson::sortKeysRecursively($normalizedBlock);

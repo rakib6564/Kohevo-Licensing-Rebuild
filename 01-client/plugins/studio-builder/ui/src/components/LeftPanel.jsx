@@ -13,6 +13,7 @@ import { BlockInspector } from './inspectors/BlockInspector.jsx';
 import { SectionInspector } from './inspectors/SectionInspector.jsx';
 import { PageInspector } from './inspectors/PageInspector.jsx';
 import { blockDefinition, findNode } from '../core/doc.mjs';
+import { effectivelyLocked, isLocked, lockIndex } from '../core/layerLock.mjs';
 import { t } from '../core/messages.mjs';
 import {
   IconPlus,
@@ -33,9 +34,11 @@ export const LeftPanel = memo(function LeftPanel({
   mobileOpen = false,
   onCloseMobile = () => {},
 }) {
-  const { selection, manifest } = useEditor();
+  const { selection, manifest, setLocked } = useEditor();
   const working = useEngineState((s) => s.working);
   const info = selection ? findNode(working, selection) : null;
+  const locked = !!info && effectivelyLocked(lockIndex(working), info.node.id);
+  const ownLock = !!info && isLocked(info.node);
 
   const [localTab, setLocalTab] = useState(() => (selection ? 'inspector' : 'blocks'));
   const [localCollapsed, setLocalCollapsed] = useState(false);
@@ -178,8 +181,18 @@ export const LeftPanel = memo(function LeftPanel({
           className="sbx-left__body sbx-left__body--inspector"
         >
           <aside className="sbx-inspector-host" aria-label={t('inspector')}>
-            {info && info.kind === 'block' && <BlockInspector key={info.node.id} info={info} />}
-            {info && info.kind === 'section' && <SectionInspector key={info.node.id} info={info} />}
+            {info && locked && (
+              <div className="sbx-lock-banner" role="status" data-testid="lock-banner">
+                <span>{ownLock ? t('layer_locked_note') : t('layer_locked_by_parent')}</span>
+                {ownLock && (
+                  <button type="button" className="sbx-btn sbx-btn--seg" onClick={() => setLocked(info.node.id, false)}>{t('unlock_layer')}</button>
+                )}
+              </div>
+            )}
+            <fieldset className="sbx-lock-fieldset" disabled={locked}>
+              {info && info.kind === 'block' && <BlockInspector key={info.node.id} info={info} />}
+              {info && info.kind === 'section' && <SectionInspector key={info.node.id} info={info} />}
+            </fieldset>
             {!info && (
               <div className="sbx-inspector-empty">
                 <div className="sbx-inspector-empty__icon">

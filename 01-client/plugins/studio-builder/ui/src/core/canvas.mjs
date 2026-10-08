@@ -198,10 +198,10 @@ export function nodeElementFrom(target) {
 /**
  * Wire a loaded canvas document. Returns a detach function.
  * @param {Document} doc
- * @param {{onSelect: Function, onHover?: Function, onDrop?: Function, onAction?: Function, onInlineText?: Function}} handlers
+ * @param {{onSelect: Function, onHover?: Function, onDrop?: Function, onAction?: Function, onInlineText?: Function, isLocked?: Function}} handlers
  */
 export function attachCanvas(doc, handlers) {
-  const { onSelect, onHover, onDrop, onAction, onInlineText } = handlers || {};
+  const { onSelect, onHover, onDrop, onAction, onInlineText, isLocked } = handlers || {};
   if (!doc || !doc.body) return () => {};
   if (!doc.getElementById(STYLE_ID)) {
     const style = doc.createElement('style');
@@ -244,6 +244,7 @@ export function attachCanvas(doc, handlers) {
 
   function startInlineEdit(textEl, nodeEl, nodeId) {
     if (!textEl || typeof textEl.setAttribute !== 'function') return;
+    if (isLocked && nodeId && isLocked(nodeId)) return; // layer lock: no inline editing
     if (activeEditingEl && activeEditingEl !== textEl) {
       finishInlineEdit(true);
     }
