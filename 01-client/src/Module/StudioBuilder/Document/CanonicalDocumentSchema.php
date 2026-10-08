@@ -104,7 +104,14 @@ final class CanonicalDocumentSchema
     public const ALLOWED_SECTION_KEYS = [
         ...self::REQUIRED_SECTION_KEYS,
         'locked',
+        'style',
     ];
+
+    /** Keys of a section's optional `style` (B2-P3b): a background and padding. */
+    public const ALLOWED_SECTION_STYLE_KEYS = ['background', 'padding'];
+
+    /** Wrapper elements an author may choose for a block (`tag`); `div` is the default and is not stored. */
+    public const ALLOWED_BLOCK_TAGS = ['div', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'figure'];
 
     /**
      * The only keys a block's optional `metadata` object may carry: an editor
@@ -169,6 +176,8 @@ final class CanonicalDocumentSchema
         'metadata',
         'interactions',
         'animation',
+        'style_states',
+        'tag',
     ];
 
     /** Exact attribute names an author may set on a block wrapper. */
@@ -226,6 +235,8 @@ final class CanonicalDocumentSchema
         'metadata',
         'interactions',
         'animation',
+        'style_states',
+        'tag',
     ];
 
     /**
@@ -253,6 +264,12 @@ final class CanonicalDocumentSchema
         'dimensions',
         'opacity',
         'z_index',
+        // B2-P3b: defined by StyleSurface (closed fields, server-formatted CSS).
+        'layout',
+        'position',
+        'effects',
+        'margin',
+        'padding',
     ];
 
     public const ALLOWED_FONT_WEIGHTS = ['normal', 'medium', 'semibold', 'bold', 'extrabold', '100', '200', '300', '400', '500', '600', '700', '800', '900'];

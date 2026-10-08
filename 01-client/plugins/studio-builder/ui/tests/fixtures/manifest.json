@@ -64,7 +64,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Booking Services",
             "type": "booking.services",
@@ -162,7 +167,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Accordion",
             "type": "core.accordion",
@@ -249,7 +259,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Button",
             "type": "core.button",
@@ -320,7 +335,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Card",
             "type": "core.card",
@@ -482,7 +502,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Carousel",
             "type": "core.carousel",
@@ -548,7 +573,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Container",
             "type": "core.container",
@@ -612,7 +642,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Countdown",
             "type": "core.countdown",
@@ -733,7 +768,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Feature list",
             "type": "core.feature_list",
@@ -822,7 +862,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Form",
             "type": "core.form",
@@ -931,7 +976,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Form Field",
             "type": "core.form_field",
@@ -1054,7 +1104,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Gallery",
             "type": "core.gallery",
@@ -1123,7 +1178,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Heading",
             "type": "core.heading",
@@ -1211,7 +1271,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Hero",
             "type": "core.hero",
@@ -1327,7 +1392,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Icon",
             "type": "core.icon",
@@ -1406,7 +1476,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Image",
             "type": "core.image",
@@ -1477,7 +1552,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Link",
             "type": "core.link",
@@ -1567,7 +1647,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "List",
             "type": "core.list",
@@ -1659,7 +1744,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Modal",
             "type": "core.modal",
@@ -1888,7 +1978,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Services grid",
             "type": "core.query_loop",
@@ -1964,7 +2059,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Quote",
             "type": "core.quote",
@@ -2013,7 +2113,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Rich text",
             "type": "core.rich_text",
@@ -2162,7 +2267,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Stats",
             "type": "core.stats",
@@ -2264,7 +2374,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Table",
             "type": "core.table",
@@ -2379,7 +2494,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Tabs",
             "type": "core.tabs",
@@ -2470,7 +2590,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Text",
             "type": "core.text",
@@ -2561,7 +2686,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Video",
             "type": "core.video",
@@ -2622,7 +2752,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Form Card",
             "type": "forms.form_card",
@@ -2702,7 +2837,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Container",
             "type": "layout.container",
@@ -2814,7 +2954,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Flex",
             "type": "layout.flex",
@@ -2893,7 +3038,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Grid",
             "type": "layout.grid",
@@ -2985,7 +3135,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Offcanvas",
             "type": "layout.offcanvas",
@@ -3093,7 +3248,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Section",
             "type": "layout.section",
@@ -3163,7 +3323,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Membership Plans",
             "type": "membership.plans",
@@ -3224,7 +3389,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Archive title",
             "type": "theme.archive_title",
@@ -3272,7 +3442,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Post content",
             "type": "theme.post_content",
@@ -3345,7 +3520,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Post meta",
             "type": "theme.post_meta",
@@ -3422,7 +3602,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Post title",
             "type": "theme.post_title",
@@ -3477,7 +3662,12 @@
                 "shadow",
                 "dimensions",
                 "opacity",
-                "z_index"
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
             ],
             "title": "Search box",
             "type": "theme.search_box",

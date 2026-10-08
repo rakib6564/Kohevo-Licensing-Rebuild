@@ -34,6 +34,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Render;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\StyleSurface;
 use Slate\Module\StudioBuilder\Document\StyleValueGuard;
 use Slate\Module\StudioBuilder\Registry\BlockDefinitionInterface;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
@@ -189,8 +190,17 @@ final class DocumentRenderer
             $motionVars .= ';';
         }
 
+        // B2-P3b surface: layout, position, size extras and effects become one
+        // block-scoped rule in the page stylesheet. A block without any adds
+        // nothing, so documents that never use them render exactly as before.
+        $blockStyle   = is_array($block['style'] ?? null) ? $block['style'] : [];
+        $stateRules   = is_array($block['style_states'] ?? null) ? StyleSurface::stateRules($block['style_states']) : [];
+        $scopedClass  = $collector->scopedRule((string) ($block['id'] ?? ''), StyleSurface::declarations($blockStyle, $this->backgroundImageUrl($blockStyle)), StyleSurface::hasTransition($blockStyle), $stateRules);
+        $scopedClasses = $scopedClass !== '' ? [$scopedClass] : [];
+
         $classes = array_merge(
             ['sb-block', 'sb-block--' . str_replace(['.', '_'], '-', $type)],
+            $scopedClasses,
             $this->styleClasses(is_array($block['style'] ?? null) ? $block['style'] : [], $theme, $collector),
             self::hideClasses($visibility),
             $customClasses,
@@ -217,7 +227,8 @@ final class DocumentRenderer
         $styleAttr    = $combined !== '' ? ' style="' . Html::e($combined) . '"' : '';
 
         $metadata = empty($block[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($block['id'] ?? ''), $type) : '';
-        return '<div' . Html::classAttr($classes) . $metadata . $attrs . $styleAttr . '>' . $inner . '</div>';
+        $tag = isset($block['tag']) && is_string($block['tag']) && in_array($block['tag'], CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS, true) ? $block['tag'] : 'div';
+        return '<' . $tag . Html::classAttr($classes) . $metadata . $attrs . $styleAttr . '>' . $inner . '</' . $tag . '>';
     }
 
     /**
@@ -270,7 +281,10 @@ final class DocumentRenderer
 
         $layout = is_array($section['layout'] ?? null) ? $section['layout'] : CanonicalDocumentSchema::defaultSectionLayout();
 
-        $outer = ['sb-section', $collector->tokenClass('bg', $layout['background_token'] ?? null, $theme)];
+        $sectionStyle = is_array($section['style'] ?? null) ? $section['style'] : [];
+        $sectionClass = $collector->scopedRule((string) ($section['id'] ?? ''), StyleSurface::sectionDeclarations($sectionStyle, $this->backgroundImageUrl($sectionStyle)));
+
+        $outer = ['sb-section', $sectionClass, $collector->tokenClass('bg', $layout['background_token'] ?? null, $theme)];
         foreach ((array) ($layout['padding_y'] ?? []) as $bp => $value) {
             $prefix = StudioStylesheet::prefix((string) $bp);
             if ($prefix !== null && in_array($value, CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, true)) {
@@ -442,6 +456,23 @@ final class DocumentRenderer
         }
 
         return $rules === [] ? '' : implode(';', $rules) . ';';
+    }
+
+    /**
+     * The servable URL of `style.background.image` for the CURRENT tenant, or
+     * null. The id goes through the same tenant-scoped resolver as an image
+     * block; the resulting URL is checked again before it enters a stylesheet.
+     *
+     * @param array<string, mixed> $style
+     */
+    private function backgroundImageUrl(array $style): ?string
+    {
+        $image = $style['background']['image'] ?? null;
+        if (!is_array($image) || !isset($image['media_id']) || !is_int($image['media_id']) || $image['media_id'] <= 0) {
+            return null;
+        }
+        $resolved = $this->media->resolveImage($image['media_id']);
+        return $resolved === null ? null : StyleSurface::safeCssUrl($resolved->url);
     }
 
     private function buildInlineStyles(array $style): string

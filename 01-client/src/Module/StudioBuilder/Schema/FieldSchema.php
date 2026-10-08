@@ -609,7 +609,7 @@ final class FieldSchema implements \JsonSerializable
     /**
      * @param list<array{path: string, code: string, message: string}> $errors
      */
-    private function validateMediaRef(mixed $val, string $path, array &$errors): void
+    public function validateMediaRef(mixed $val, string $path, array &$errors): void
     {
         if (!is_array($val) || array_is_list($val)) {
             $errors[] = ValidationResult::issue($path, 'invalid_media_ref', 'media_ref must be an object with {media_id, alt, focal_point?}.');

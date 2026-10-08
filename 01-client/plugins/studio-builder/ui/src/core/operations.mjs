@@ -39,6 +39,10 @@ export const OPS = Object.freeze({
   UPDATE_BLOCK_ANIMATION: 'update_block_animation',
   UPDATE_BLOCK_INTERACTIONS: 'update_block_interactions',
   UPDATE_BLOCK_META: 'update_block_meta',
+  UPDATE_BLOCK_STYLE_STATES: 'update_block_style_states',
+  UPDATE_BLOCK_TAG: 'update_block_tag',
+  RESET_BLOCK_STYLE_PROPERTY: 'reset_block_style_property',
+  UPDATE_SECTION_STYLE: 'update_section_style',
 });
 
 /** Operations that change the tree's shape are sent right away, not debounced. */
@@ -61,6 +65,9 @@ const REPLACE_TARGET = {
   [OPS.UPDATE_SECTION_LABEL]: 'section_id',
   [OPS.UPDATE_SECTION_LAYOUT]: 'section_id',
   [OPS.UPDATE_SECTION_VISIBILITY]: 'section_id',
+  [OPS.UPDATE_BLOCK_STYLE_STATES]: 'block_id',
+  [OPS.UPDATE_BLOCK_TAG]: 'block_id',
+  [OPS.UPDATE_SECTION_STYLE]: 'section_id',
 };
 
 export const DEFAULT_VISIBILITY = Object.freeze({ auth_state: 'any', devices: ['base', 'sm', 'md', 'lg'] });
@@ -115,6 +122,17 @@ export const updateSectionLocked = (sectionId, locked) => op(OPS.UPDATE_SECTION_
  * `locked`. Keys left out are untouched, so these are NOT coalesced in the queue.
  */
 export const updateBlockMeta = (blockId, meta) => op(OPS.UPDATE_BLOCK_META, { block_id: blockId, ...meta });
+/** Replace a block's interaction states ({hover, focus, active, disabled}); `{}` clears them. */
+export const updateBlockStyleStates = (blockId, styleStates) => op(OPS.UPDATE_BLOCK_STYLE_STATES, { block_id: blockId, style_states: styleStates });
+/** Choose the block's wrapper element; null (or `div`) is the default. */
+export const updateBlockTag = (blockId, tag) => op(OPS.UPDATE_BLOCK_TAG, { block_id: blockId, tag });
+/** Replace a section's style ({background, padding}); `{}` clears it. */
+export const updateSectionStyle = (sectionId, style) => op(OPS.UPDATE_SECTION_STYLE, { section_id: sectionId, style });
+/**
+ * Remove ONE style property by dotted path (`typography.size`), from the block's style or, with `state`,
+ * from one interaction state. Not coalesced: each reset is its own step.
+ */
+export const resetBlockStyleProperty = (blockId, property, state = null) => op(OPS.RESET_BLOCK_STYLE_PROPERTY, state ? { block_id: blockId, property, state } : { block_id: blockId, property });
 export const updateSettings = (settings) => op(OPS.UPDATE_SETTINGS, { settings });
 export const updateSeo = (seo) => op(OPS.UPDATE_SEO, { seo });
 
@@ -373,6 +391,63 @@ export function applyLocal(doc, operation, ctx = {}) {
       if (!hit) throw notFound(p.block_id);
       return next;
     }
+    case OPS.UPDATE_BLOCK_STYLE_STATES: {
+      let hit = false;
+      const next = mapBlocks(doc, (b) => {
+        if (b.id !== p.block_id) return b;
+        hit = true;
+        const { style_states: _old, ...rest } = b;
+        const states = asObject(p.style_states);
+        return Object.keys(states).length ? { ...rest, style_states: states } : rest;
+      });
+      if (!hit) throw notFound(p.block_id);
+      return next;
+    }
+    case OPS.UPDATE_BLOCK_TAG: {
+      if (p.tag !== null && p.tag !== undefined && !BLOCK_TAGS.includes(p.tag)) throw new Error(`Invalid tag ${p.tag}`);
+      let hit = false;
+      const next = mapBlocks(doc, (b) => {
+        if (b.id !== p.block_id) return b;
+        hit = true;
+        const { tag: _old, ...rest } = b;
+        return p.tag && p.tag !== 'div' ? { ...rest, tag: p.tag } : rest;
+      });
+      if (!hit) throw notFound(p.block_id);
+      return next;
+    }
+    case OPS.UPDATE_SECTION_STYLE: {
+      let hit = false;
+      const sections = asList(doc.sections).map((s) => {
+        if (s.id !== p.section_id) return s;
+        hit = true;
+        const { style: _old, ...rest } = s;
+        const style = asObject(p.style);
+        return Object.keys(style).length ? { ...rest, style } : rest;
+      });
+      if (!hit) throw notFound(p.section_id);
+      return { ...doc, sections };
+    }
+    case OPS.RESET_BLOCK_STYLE_PROPERTY: {
+      if (typeof p.property !== 'string' || !PROPERTY_PATH.test(p.property)) throw new Error('Invalid style property path');
+      if (p.state != null && !STATES.includes(p.state)) throw new Error(`Invalid state ${p.state}`);
+      const segments = p.property.split('.');
+      if (!(p.state == null ? STYLE_KEYS : STATE_KEYS).includes(segments[0])) throw new Error(`${segments[0]} is not a resettable style property`);
+      let hit = false;
+      const next = mapBlocks(doc, (b) => {
+        if (b.id !== p.block_id) return b;
+        hit = true;
+        if (p.state == null) return { ...b, style: unsetPath(asObject(b.style), segments) };
+        const states = { ...asObject(b.style_states) };
+        if (states[p.state]) {
+          const partial = unsetPath(asObject(states[p.state]), segments);
+          if (Object.keys(partial).length) states[p.state] = partial; else delete states[p.state];
+        }
+        const { style_states: _old, ...rest } = b;
+        return Object.keys(states).length ? { ...rest, style_states: states } : rest;
+      });
+      if (!hit) throw notFound(p.block_id);
+      return next;
+    }
     default:
       throw new Error(`Unsupported operation ${operation.op}`);
   }
@@ -389,6 +464,29 @@ function notFound(id) {
 }
 
 /** Map every block (depth-first), copying only the paths that changed. */
+// Mirrors CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS / ALLOWED_STYLE_KEYS and StyleSurface::STATE_KEYS / STATE_SELECTORS.
+const BLOCK_TAGS = ['div', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'figure'];
+const STATES = ['hover', 'focus', 'active', 'disabled'];
+const STATE_KEYS = ['color', 'typography', 'background', 'border', 'shadow', 'opacity', 'effects'];
+const STYLE_KEYS = [
+  'align', 'surface_token', 'text_token', 'spacing_token', 'radius_token', 'shadow_token', 'font_token', 'typography', 'color',
+  'background', 'spacing', 'border', 'shadow', 'dimensions', 'opacity', 'z_index', 'layout', 'position', 'effects', 'margin', 'padding',
+];
+const PROPERTY_PATH = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){0,3}$/;
+
+/** Remove a dotted path from a plain object, dropping parents that become empty. */
+function unsetPath(tree, segments) {
+  const [head, ...rest] = segments;
+  if (!(head in tree)) return tree;
+  const { [head]: child, ...others } = tree;
+  if (rest.length === 0) return others;
+  if (child && typeof child === 'object' && !Array.isArray(child)) {
+    const next = unsetPath(child, rest);
+    return Object.keys(next).length ? { ...others, [head]: next } : others;
+  }
+  return tree;
+}
+
 function mapBlocks(doc, fn) {
   const mapList = (blocks) => {
     let changed = false;

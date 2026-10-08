@@ -142,6 +142,19 @@ final class DocumentNormalizer
             'layout'     => CanonicalJson::sortKeysRecursively($layout),
             'visibility' => $visibility,
         ];
+        // Section style: present only when it holds something (canonical form).
+        if (is_array($section['style'] ?? null) && $section['style'] !== []) {
+            $style = [];
+            foreach ($section['style'] as $key => $value) {
+                if (is_array($value) && $value === []) {
+                    continue;
+                }
+                $style[(string) $key] = is_array($value) ? CanonicalJson::sortKeysRecursively($value) : $value;
+            }
+            if ($style !== []) {
+                $normalizedSection['style'] = CanonicalJson::sortKeysRecursively($style);
+            }
+        }
         // Canonical form: the lock key exists only while the section is locked.
         if (($section['locked'] ?? null) === true) {
             $normalizedSection['locked'] = true;
@@ -217,6 +230,22 @@ final class DocumentNormalizer
         }
         if (array_key_exists('animation', $block) && is_array($block['animation'])) {
             $normalizedBlock['animation'] = CanonicalJson::sortKeysRecursively($block['animation']);
+        }
+        // The wrapper tag: absent for the default `div`.
+        if (isset($block['tag']) && is_string($block['tag']) && $block['tag'] !== 'div') {
+            $normalizedBlock['tag'] = $block['tag'];
+        }
+        // Interaction states: empty states (and an empty map) are dropped, so the canonical form has no `style_states` unless one does something.
+        if (array_key_exists('style_states', $block) && is_array($block['style_states'])) {
+            $states = [];
+            foreach ($block['style_states'] as $name => $partial) {
+                if (is_array($partial) && $partial !== []) {
+                    $states[(string) $name] = CanonicalJson::sortKeysRecursively($partial);
+                }
+            }
+            if ($states !== []) {
+                $normalizedBlock['style_states'] = CanonicalJson::sortKeysRecursively($states);
+            }
         }
         if (array_key_exists('interactions', $block) && is_array($block['interactions'])) {
             $normalizedBlock['interactions'] = CanonicalJson::sortKeysRecursively($block['interactions']);

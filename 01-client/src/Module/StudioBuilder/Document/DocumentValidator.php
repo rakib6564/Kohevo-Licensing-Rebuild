@@ -366,6 +366,17 @@ final class DocumentValidator
             }
         }
 
+        if (array_key_exists('style', $section)) {
+            foreach (StyleSurface::sectionIssues($section['style'], "{$path}.style") as $issue) {
+                $errors[] = ValidationResult::issue($issue['path'], $issue['code'], $issue['message']);
+            }
+            $secImage = is_array($section['style']) && is_array($section['style']['background'] ?? null) ? ($section['style']['background']['image'] ?? null) : null;
+            if (is_array($secImage) && isset($secImage['media_id']) && is_int($secImage['media_id']) && $secImage['media_id'] > 0
+                && isset($options['media_exists']) && is_callable($options['media_exists']) && !$options['media_exists']($secImage['media_id'])) {
+                $errors[] = ValidationResult::issue("{$path}.style.background.image.media_id", 'cross_tenant_or_missing_media', "Referenced media_id {$secImage['media_id']} does not exist in the active tenant.");
+            }
+        }
+
         foreach (CanonicalDocumentSchema::REQUIRED_SECTION_KEYS as $reqKey) {
             if (!array_key_exists($reqKey, $section)) {
                 $errors[] = ValidationResult::issue("{$path}.{$reqKey}", 'required_field', "Missing required section field '{$reqKey}'.");
@@ -714,6 +725,18 @@ final class DocumentValidator
             }
         }
 
+        // Wrapper element (B2-P3b): an allow-listed semantic tag.
+        if (array_key_exists('tag', $block) && (!is_string($block['tag']) || !in_array($block['tag'], CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS, true))) {
+            $errors[] = ValidationResult::issue("{$path}.tag", 'invalid_tag', 'block.tag must be one of: ' . implode(', ', CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS) . '.');
+        }
+
+        // Interaction-state overlays (hover/focus/active/disabled).
+        if (array_key_exists('style_states', $block)) {
+            foreach (StyleSurface::stateIssues($block['style_states'], "{$path}.style_states") as $issue) {
+                $errors[] = ValidationResult::issue($issue['path'], $issue['code'], $issue['message']);
+            }
+        }
+
         // Validate optional animation if present
         if (array_key_exists('animation', $block)) {
             $animation = $block['animation'];
@@ -793,6 +816,12 @@ final class DocumentValidator
         // Block style
         if (array_key_exists('style', $block)) {
             self::validateBlockStyle($block['style'], $definition, "{$path}.style", $errors);
+            // A background image is a media_ref too: it must belong to the active tenant.
+            $bgImage = is_array($block['style']) && is_array($block['style']['background'] ?? null) ? ($block['style']['background']['image'] ?? null) : null;
+            if (is_array($bgImage) && isset($bgImage['media_id']) && is_int($bgImage['media_id']) && $bgImage['media_id'] > 0
+                && isset($options['media_exists']) && is_callable($options['media_exists']) && !$options['media_exists']($bgImage['media_id'])) {
+                $errors[] = ValidationResult::issue("{$path}.style.background.image.media_id", 'cross_tenant_or_missing_media', "Referenced media_id {$bgImage['media_id']} does not exist in the active tenant.");
+            }
         }
 
         // Block visibility
@@ -949,6 +978,9 @@ final class DocumentValidator
         }
 
         self::validateVisualStyles($style, $path, $errors);
+        foreach (StyleSurface::issues($style, $path) as $issue) {
+            $errors[] = ValidationResult::issue($issue['path'], $issue['code'], $issue['message']);
+        }
     }
 
     /**
@@ -1081,11 +1113,7 @@ final class DocumentValidator
                     $errors[] = ValidationResult::issue("{$path}.shadow", 'invalid_style_value', 'Invalid shadow value.');
                 }
             } elseif (is_array($sh) && !array_is_list($sh)) {
-                foreach ($sh as $shKey => $shVal) {
-                    if (!in_array($shKey, ['x', 'y', 'blur', 'spread'], true) ? !StyleValueGuard::isColor($shVal) : !StyleValueGuard::isLength($shVal)) {
-                        $errors[] = ValidationResult::issue("{$path}.shadow.{$shKey}", 'invalid_style_value', "Invalid shadow {$shKey}.");
-                    }
-                }
+                // An object shadow is a B2-P3b field set; StyleSurface::issues() validates it.
             } else {
                 $errors[] = ValidationResult::issue("{$path}.shadow", 'invalid_style_value', 'style.shadow must be a string or object.');
             }

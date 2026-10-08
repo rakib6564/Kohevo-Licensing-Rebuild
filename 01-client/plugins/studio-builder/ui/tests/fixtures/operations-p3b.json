@@ -1,0 +1,585 @@
+{
+ "_comment": "Shared by tests/operations-p3b.test.mjs (applyLocal) and tests/unit/StudioBuilderOperationsP3bTest.php (DocumentOperationApplier): both must produce the same document for every case. `set`/`unset` are applied to the original document to form the expectation.",
+ "document": {
+  "schema_version": "1.0",
+  "document_type": "page",
+  "template_key": "default",
+  "settings": {},
+  "seo": {},
+  "sections": [
+   {
+    "id": "sec_aaaaaaaaaaaaaaaa",
+    "label": "One",
+    "global_ref": null,
+    "layout": {},
+    "visibility": {},
+    "blocks": [
+     {
+      "id": "blk_aaaaaaaaaaaaaaaa",
+      "type": "core.heading",
+      "version": 1,
+      "props": {},
+      "style": {
+       "typography": {
+        "size": "2rem",
+        "weight": "600"
+       },
+       "effects": {
+        "transform": {
+         "rotate": 3,
+         "scale": 1.1
+        }
+       },
+       "opacity": 0.9
+      },
+      "visibility": {
+       "auth_state": "any",
+       "devices": [
+        "base",
+        "sm",
+        "md",
+        "lg"
+       ]
+      },
+      "bindings": {},
+      "children": [
+       {
+        "id": "blk_bbbbbbbbbbbbbbbb",
+        "type": "layout.container",
+        "version": 1,
+        "props": {},
+        "style": {
+         "effects": {
+          "transform": {
+           "scale": 1.2
+          }
+         }
+        },
+        "visibility": {
+         "auth_state": "any",
+         "devices": [
+          "base",
+          "sm",
+          "md",
+          "lg"
+         ]
+        },
+        "bindings": {},
+        "children": [
+         {
+          "id": "blk_cccccccccccccccc",
+          "type": "core.text",
+          "version": 1,
+          "props": {},
+          "style": {
+           "color": "#111111"
+          },
+          "visibility": {
+           "auth_state": "any",
+           "devices": [
+            "base",
+            "sm",
+            "md",
+            "lg"
+           ]
+          },
+          "bindings": {},
+          "children": [],
+          "style_states": {
+           "hover": {
+            "color": "#ffffff"
+           }
+          }
+         }
+        ]
+       }
+      ],
+      "style_states": {
+       "hover": {
+        "opacity": 0.8,
+        "color": "#e8734a"
+       },
+       "focus": {
+        "opacity": 1
+       }
+      }
+     }
+    ]
+   },
+   {
+    "id": "sec_bbbbbbbbbbbbbbbb",
+    "label": "Two",
+    "global_ref": null,
+    "layout": {},
+    "visibility": {},
+    "blocks": [],
+    "style": {
+     "padding": {
+      "top": "2rem"
+     },
+     "background": {
+      "color": "#0b0c0f"
+     }
+    }
+   }
+  ]
+ },
+ "cases": [
+  {
+   "name": "states replace",
+   "op": "update_block_style_states",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "style_states": {
+     "active": {
+      "opacity": 0.5
+     }
+    }
+   },
+   "set": [
+    {
+     "path": [
+      "sections",
+      0,
+      "blocks",
+      0,
+      "style_states"
+     ],
+     "value": {
+      "active": {
+       "opacity": 0.5
+      }
+     }
+    }
+   ],
+   "unset": []
+  },
+  {
+   "name": "states clear with {}",
+   "op": "update_block_style_states",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "style_states": {}
+   },
+   "set": [],
+   "unset": [
+    [
+     "sections",
+     0,
+     "blocks",
+     0,
+     "style_states"
+    ]
+   ]
+  },
+  {
+   "name": "states on a nested block",
+   "op": "update_block_style_states",
+   "payload": {
+    "block_id": "blk_bbbbbbbbbbbbbbbb",
+    "style_states": {
+     "hover": {
+      "opacity": 0.7
+     }
+    }
+   },
+   "set": [
+    {
+     "path": [
+      "sections",
+      0,
+      "blocks",
+      0,
+      "children",
+      0,
+      "style_states"
+     ],
+     "value": {
+      "hover": {
+       "opacity": 0.7
+      }
+     }
+    }
+   ],
+   "unset": []
+  },
+  {
+   "name": "states target missing",
+   "op": "update_block_style_states",
+   "payload": {
+    "block_id": "blk_zzzzzzzzzzzzzzzz",
+    "style_states": {}
+   },
+   "error": true
+  },
+  {
+   "name": "tag set",
+   "op": "update_block_tag",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "tag": "section"
+   },
+   "set": [
+    {
+     "path": [
+      "sections",
+      0,
+      "blocks",
+      0,
+      "tag"
+     ],
+     "value": "section"
+    }
+   ],
+   "unset": []
+  },
+  {
+   "name": "tag null clears",
+   "op": "update_block_tag",
+   "payload": {
+    "block_id": "blk_cccccccccccccccc",
+    "tag": null
+   },
+   "set": [],
+   "unset": [
+    [
+     "sections",
+     0,
+     "blocks",
+     0,
+     "children",
+     0,
+     "children",
+     0,
+     "tag"
+    ]
+   ]
+  },
+  {
+   "name": "tag div is the default and is not stored",
+   "op": "update_block_tag",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "tag": "div"
+   },
+   "set": [],
+   "unset": [
+    [
+     "sections",
+     0,
+     "blocks",
+     0,
+     "tag"
+    ]
+   ]
+  },
+  {
+   "name": "tag outside the allow-list",
+   "op": "update_block_tag",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "tag": "script"
+   },
+   "error": true
+  },
+  {
+   "name": "tag is not a free string",
+   "op": "update_block_tag",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "tag": "div onclick=x"
+   },
+   "error": true
+  },
+  {
+   "name": "section style set",
+   "op": "update_section_style",
+   "payload": {
+    "section_id": "sec_aaaaaaaaaaaaaaaa",
+    "style": {
+     "padding": {
+      "bottom": "1rem"
+     }
+    }
+   },
+   "set": [
+    {
+     "path": [
+      "sections",
+      0,
+      "style"
+     ],
+     "value": {
+      "padding": {
+       "bottom": "1rem"
+      }
+     }
+    }
+   ],
+   "unset": []
+  },
+  {
+   "name": "section style replaced",
+   "op": "update_section_style",
+   "payload": {
+    "section_id": "sec_bbbbbbbbbbbbbbbb",
+    "style": {
+     "background": {
+      "color": "#ffffff"
+     }
+    }
+   },
+   "set": [
+    {
+     "path": [
+      "sections",
+      1,
+      "style"
+     ],
+     "value": {
+      "background": {
+       "color": "#ffffff"
+      }
+     }
+    }
+   ],
+   "unset": []
+  },
+  {
+   "name": "section style clear with {}",
+   "op": "update_section_style",
+   "payload": {
+    "section_id": "sec_bbbbbbbbbbbbbbbb",
+    "style": {}
+   },
+   "set": [],
+   "unset": [
+    [
+     "sections",
+     1,
+     "style"
+    ]
+   ]
+  },
+  {
+   "name": "section style target missing",
+   "op": "update_section_style",
+   "payload": {
+    "section_id": "sec_zzzzzzzzzzzzzzzz",
+    "style": {}
+   },
+   "error": true
+  },
+  {
+   "name": "reset one property keeps its siblings",
+   "op": "reset_block_style_property",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "property": "typography.size"
+   },
+   "set": [],
+   "unset": [
+    [
+     "sections",
+     0,
+     "blocks",
+     0,
+     "style",
+     "typography",
+     "size"
+    ]
+   ]
+  },
+  {
+   "name": "reset a nested property keeps its siblings",
+   "op": "reset_block_style_property",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "property": "effects.transform.rotate"
+   },
+   "set": [],
+   "unset": [
+    [
+     "sections",
+     0,
+     "blocks",
+     0,
+     "style",
+     "effects",
+     "transform",
+     "rotate"
+    ]
+   ]
+  },
+  {
+   "name": "reset the last property removes the emptied parents",
+   "op": "reset_block_style_property",
+   "payload": {
+    "block_id": "blk_bbbbbbbbbbbbbbbb",
+    "property": "effects.transform.scale"
+   },
+   "set": [],
+   "unset": [
+    [
+     "sections",
+     0,
+     "blocks",
+     0,
+     "children",
+     0,
+     "style",
+     "effects"
+    ]
+   ]
+  },
+  {
+   "name": "reset a whole group",
+   "op": "reset_block_style_property",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "property": "typography"
+   },
+   "set": [],
+   "unset": [
+    [
+     "sections",
+     0,
+     "blocks",
+     0,
+     "style",
+     "typography"
+    ]
+   ]
+  },
+  {
+   "name": "reset an absent property is a no-op",
+   "op": "reset_block_style_property",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "property": "shadow"
+   },
+   "set": [],
+   "unset": []
+  },
+  {
+   "name": "reset a state property keeps the others",
+   "op": "reset_block_style_property",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "property": "opacity",
+    "state": "hover"
+   },
+   "set": [],
+   "unset": [
+    [
+     "sections",
+     0,
+     "blocks",
+     0,
+     "style_states",
+     "hover",
+     "opacity"
+    ]
+   ]
+  },
+  {
+   "name": "reset the last state property removes the state and the map",
+   "op": "reset_block_style_property",
+   "payload": {
+    "block_id": "blk_cccccccccccccccc",
+    "property": "color",
+    "state": "hover"
+   },
+   "set": [],
+   "unset": [
+    [
+     "sections",
+     0,
+     "blocks",
+     0,
+     "children",
+     0,
+     "children",
+     0,
+     "style_states"
+    ]
+   ]
+  },
+  {
+   "name": "reset a state that is not set is a no-op",
+   "op": "reset_block_style_property",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "property": "opacity",
+    "state": "disabled"
+   },
+   "set": [],
+   "unset": []
+  },
+  {
+   "name": "reset an unknown root",
+   "op": "reset_block_style_property",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "property": "foo.bar"
+   },
+   "error": true
+  },
+  {
+   "name": "reset a root a state cannot set",
+   "op": "reset_block_style_property",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "property": "layout.display",
+    "state": "hover"
+   },
+   "error": true
+  },
+  {
+   "name": "reset a malformed path",
+   "op": "reset_block_style_property",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "property": "Typography.size"
+   },
+   "error": true
+  },
+  {
+   "name": "reset a path with a trailing dot",
+   "op": "reset_block_style_property",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "property": "typography."
+   },
+   "error": true
+  },
+  {
+   "name": "reset a path that is too deep",
+   "op": "reset_block_style_property",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "property": "effects.transform.rotate.x.y"
+   },
+   "error": true
+  },
+  {
+   "name": "reset an unknown state",
+   "op": "reset_block_style_property",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "property": "opacity",
+    "state": "visited"
+   },
+   "error": true
+  },
+  {
+   "name": "reset target missing",
+   "op": "reset_block_style_property",
+   "payload": {
+    "block_id": "blk_zzzzzzzzzzzzzzzz",
+    "property": "opacity"
+   },
+   "error": true
+  }
+ ]
+}

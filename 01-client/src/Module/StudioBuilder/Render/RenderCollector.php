@@ -15,6 +15,8 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Render;
 
+use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\StyleSurface;
 use Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme;
 
 final class RenderCollector
@@ -56,6 +58,40 @@ final class RenderCollector
         }
         $class = 'sb-' . $kind . '--' . str_replace('.', '-', $ref);
         $this->cssRules[$class] = '.' . $class . '{' . self::TOKEN_UTILITIES[$kind] . ':var(' . ResolvedTheme::cssVarName($ref) . ')}';
+        return $class;
+    }
+
+    /**
+     * Register the generated rules for one block or section and return the class to put on its
+     * element. `$declarations` and `$states` must come from `StyleSurface` (never from authored text).
+     *
+     * The class is derived from the RULES, not from the node id: two nodes that look the same share one
+     * class and one rule, which is what keeps the stylesheet small on a real page (many cards, one look).
+     * `$nodeId` only gates the call: a malformed id never produces a rule.
+     *
+     * @param array<string, string> $states state name => declarations
+     */
+    public function scopedRule(string $nodeId, string $declarations, bool $reduceMotion = false, array $states = []): string
+    {
+        $isSection = str_starts_with($nodeId, 'sec_');
+        $valid = preg_match($isSection ? CanonicalDocumentSchema::SECTION_ID_PATTERN : CanonicalDocumentSchema::BLOCK_ID_PATTERN, $nodeId) === 1;
+        if (($declarations === '' && $states === []) || !$valid) {
+            return '';
+        }
+        // NUL stands for the class until it is known; no declaration can contain it (the typed guard
+        // refuses control characters), so the substitution below cannot touch a value.
+        $template = $declarations !== '' ? ".\0{" . $declarations . '}' : '';
+        if ($reduceMotion) {
+            $template .= "@media (prefers-reduced-motion:reduce){.\0{transition:none}}";
+        }
+        // `$states` is name => declarations from StyleSurface::stateRules(); the pseudo-class comes from its fixed map.
+        foreach (StyleSurface::STATE_SELECTORS as $name => $selector) {
+            if (isset($states[$name]) && $states[$name] !== '') {
+                $template .= ".\0" . $selector . '{' . $states[$name] . '}';
+            }
+        }
+        $class = 'sb-x-' . substr(hash('sha256', $template), 0, 16);
+        $this->cssRules['~' . $class] = str_replace("\0", $class, $template);
         return $class;
     }
 
