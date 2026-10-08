@@ -2600,3 +2600,27 @@ html, body.sbx-body {
   .sbx-chip { min-height: 40px; padding: 6px 14px; font-size: 13px; }
   .sbx-link-btn { min-height: 40px; padding: 8px 6px; }
 }
+
+/* ── Navigator: Layers | Pages ─────────────────────────────────────────── */
+.sbx-nav-switch { display: flex; gap: 6px; padding: 8px 8px 4px; }
+.sbx-pages { display: flex; flex-direction: column; gap: 10px; padding: 8px; }
+.sbx-pages__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sbx-page-row { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--sbx-border); border-radius: 10px; background: var(--sbx-card-bg); }
+.sbx-page-row.is-current { border-color: #8b5cf6; box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.35); }
+.sbx-page-row__main { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%; padding: 2px; background: none; border: 0; color: inherit; text-align: left; cursor: pointer; min-height: 40px; }
+.sbx-page-row__main:disabled { cursor: default; opacity: 1; }
+.sbx-page-row__title { font-weight: 600; font-size: 13px; color: #f1f5f9; overflow-wrap: anywhere; }
+.sbx-page-row__path { font-size: 11.5px; color: #94a3b8; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+.sbx-page-row__chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.sbx-page-row__actions { display: flex; flex-wrap: wrap; gap: 0; }
+.sbx-pill { font-size: 10.5px; line-height: 1.2; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--sbx-border); color: #cbd5e1; }
+.sbx-pill--current { background: rgba(139, 92, 246, 0.25); border-color: #8b5cf6; color: #fff; }
+.sbx-pill--published { background: rgba(34, 197, 94, 0.15); border-color: rgba(74, 222, 128, 0.3); color: #4ade80; }
+.sbx-pill--draft { background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3); color: #fbbf24; }
+.sbx-pill--changes { background: rgba(59, 130, 246, 0.15); border-color: rgba(96, 165, 250, 0.35); color: #93c5fd; }
+.sbx-pill--homepage { color: #ddd6fe; }
+.sbx-error { color: #fca5a5; font-size: 12.5px; margin: 6px 0 0; }
+@media (max-width: 860px) {
+  .sbx-page-row__actions .sbx-btn { min-height: 40px; }
+  .sbx-nav-switch .sbx-chip { min-height: 40px; }
+}

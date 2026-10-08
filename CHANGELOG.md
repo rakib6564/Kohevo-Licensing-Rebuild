@@ -10,6 +10,12 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
 ## [Unreleased]
 
 ### Added
+- **Studio builder (Builder 2.0, phase 2c): Pages in the Navigator.** The Layers tab now switches between Layers and Pages. Pages lists the
+  site's pages (pages and landing pages only) with Draft / Published / Unpublished-changes / Homepage chips and the page being edited
+  marked, and offers New page, Rename (name and address), Duplicate (a draft copy of the document, never published and never the
+  homepage) and Archive. New builder API actions `update_page`, `duplicate_page` and `archive_page` run over the existing page services:
+  edit permission, CSRF token, tenant scope, reserved and duplicate address rules and audit entries all apply. Also fixes "create
+  header/footer" in the page inspector, which called a transport method that did not exist.
 - **Studio builder (Builder 2.0, phase 2b): Icon, List, Quote, Link, Card, Table and Countdown elements, and nesting to six levels.**
   Seven new blocks (`core.icon`, `core.list`, `core.quote`, `core.link`, `core.card`, `core.table`, `core.countdown`) with server renderers, escaping, French titles and Add-panel
   cards. Icons come from a built-in set of 25 (`IconLibrary`); only constant markup reaches a page, never author SVG.
