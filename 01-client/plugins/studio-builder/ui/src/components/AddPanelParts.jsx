@@ -3,7 +3,6 @@
 
 import { useEffect, useId } from 'react';
 import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
-import { IconPlus } from './Icons.jsx';
 import { renderBlockIcon, DRAG_TYPE_NEW } from './blockIcons.jsx';
 import { t } from '../core/messages.mjs';
 import { blockInsertState, presetInsertState, reasonKey } from '../core/addPanel.mjs';
@@ -64,14 +63,12 @@ export function BlockCard({ def, onInsert }) {
       onDragStart={disabled || def.variantKey ? undefined : (e) => { e.dataTransfer.setData(DRAG_TYPE_NEW, def.type); e.dataTransfer.effectAllowed = 'copy'; }}
       onClick={disabled ? undefined : () => (def.variantKey ? insertBlockWithProps(def.type, def.variantProps) : onInsert(def.type))}
       aria-label={`${t('insert')} ${title}`}
+      title={def.description || undefined}
     >
       <div className="sbx-palette-card__icon-badge" aria-hidden="true">{renderBlockIcon(def.type, def.icon, def.label)}</div>
-      <div className="sbx-palette-card__content">
-        <span className="sbx-palette-card__title">{title}</span>
-        <span className="sbx-palette-card__desc">{def.description || t('pal_block_component_fallback')}</span>
-        {disabled && <span id={reasonId} className="sbx-palette-card__reason" data-testid="insert-reason">{t(reasonKey(state.reason))}</span>}
-      </div>
-      <span className="sbx-palette-card__plus-btn" aria-hidden="true"><IconPlus size={14} /></span>
+      <span className="sbx-palette-card__title">{title}</span>
+      <span className="sbx-palette-card__desc sbx-sr-only">{def.description || t('pal_block_component_fallback')}</span>
+      {disabled && <span id={reasonId} className="sbx-palette-card__reason" data-testid="insert-reason">{t(reasonKey(state.reason))}</span>}
     </button>
   );
 }

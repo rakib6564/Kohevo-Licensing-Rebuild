@@ -3070,3 +3070,11 @@ html, body.sbx-body {
 .sbx-coltile__cols i { display: block; background: currentColor; opacity: 0.55; border-radius: 1px; }
 .sbx-coltile.is-active .sbx-coltile__cols i { opacity: 1; }
 .sbx-coltiles__num { width: 3.4rem; }
+
+/* ── Add panel: compact tiles (icon over name) instead of one row per block ── */
+.sbx-palette__cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(98px, 1fr)); gap: 6px; }
+.sbx-palette-card { flex-direction: column; justify-content: flex-start; gap: 6px; padding: 10px 6px 8px; text-align: center; min-height: 78px; }
+.sbx-palette-card__icon-badge { width: 32px; height: 32px; }
+.sbx-palette-card__title { font-size: 11.5px; line-height: 1.2; max-width: 100%; overflow-wrap: anywhere; }
+.sbx-palette-card__reason { font-size: 10px; }
+.sbx-palette-card { position: relative; }

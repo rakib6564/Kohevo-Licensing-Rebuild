@@ -11,7 +11,7 @@ import { isDynamicBlock } from '../components/blockKinds.mjs';
 export const BLOCK_CATEGORY_ORDER = ['layout', 'content', 'media', 'forms', 'business', 'advanced', 'theme'];
 
 /** Cards shown per category before "View all". */
-export const GROUP_PREVIEW = 4;
+export const GROUP_PREVIEW = 6;
 
 export const categoryRank = (c) => { const i = BLOCK_CATEGORY_ORDER.indexOf(c); return i === -1 ? BLOCK_CATEGORY_ORDER.length : i; };
 
