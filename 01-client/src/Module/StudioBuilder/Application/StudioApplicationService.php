@@ -211,6 +211,39 @@ final class StudioApplicationService
         return $result;
     }
 
+    /**
+     * Copy a page into a new draft page: same page type and document, a new title and slug, never published and
+     * never the homepage (`standalone`). The copy is created blank and then filled by a normal draft save, so every
+     * validation and audit step runs; if the fill fails the half-made page is archived rather than left behind.
+     *
+     * @return array{page: array<string, mixed>, revision: array<string, mixed>}
+     */
+    public function duplicatePage(StudioActor $actor, int $sourcePageId, string $title, string $slug): array
+    {
+        $this->authorize($actor, StudioPermissions::EDIT);
+        $source = $this->pageRepo->find($sourcePageId);
+        if ($source === null) {
+            throw new StudioNotFoundException("Studio page {$sourcePageId} was not found in the active tenant.", ['page_id' => $sourcePageId]);
+        }
+        $loaded = $this->loadEditorDocument($actor, $sourcePageId);
+        $pageType = (string) $source['page_type'];
+
+        $created = $this->createPage($actor, $title, $slug, $pageType, 'standalone');
+        $newId = (int) $created['page']['id'];
+        try {
+            $filled = $this->saveDraft($actor, $newId, $loaded['document'], (int) $created['revision']['id'], 'manual', 'Duplicated from "' . (string) $source['title'] . '"');
+        } catch (\Throwable $e) {
+            try {
+                $this->pages->archivePage($newId, (int) $actor->userId);
+            } catch (\Throwable $ignored) {
+                // the original failure is the one worth reporting
+            }
+            throw $e;
+        }
+        $this->audit($actor, 'studio.page.duplicated', (string) $newId, ['source_page_id' => $sourcePageId]);
+        return ['page' => $filled['page'], 'revision' => $filled['revision']];
+    }
+
     public function findAddress(StudioActor $actor, int $pageId): ?PageAddress
     {
         $this->authorize($actor, StudioPermissions::VIEW);

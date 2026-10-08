@@ -76,6 +76,9 @@ final class StudioAuthoringApi
         'publish'      => ['POST', ['page_id', 'expected_revision_id', 'summary']],
         'rollback'     => ['POST', ['page_id', 'target_revision_id', 'expected_revision_id', 'summary']],
         'create_page'  => ['POST', ['title', 'slug', 'page_type', 'route_mode', 'template_key']],
+        'update_page'  => ['POST', ['page_id', 'title', 'slug']],
+        'duplicate_page' => ['POST', ['page_id', 'title', 'slug']],
+        'archive_page' => ['POST', ['page_id']],
         'lock_acquire' => ['POST', ['page_id']],
         'lock_refresh' => ['POST', ['page_id', 'lock_token']],
         'lock_release' => ['POST', ['page_id', 'lock_token']],
@@ -240,6 +243,9 @@ final class StudioAuthoringApi
             'publish'      => $this->publish($actor, $input),
             'rollback'     => $this->rollback($actor, $input),
             'create_page'  => $this->createPage($actor, $input),
+            'update_page'  => $this->updatePage($actor, $input),
+            'duplicate_page' => $this->duplicatePage($actor, $input),
+            'archive_page' => StudioApiResponse::ok(['page' => StudioEditorViews::page($this->app->archivePage($actor, self::id($input, 'page_id')))]),
             'lock_acquire' => StudioApiResponse::ok(['lock' => $this->app->acquireEditLock($actor, self::id($input, 'page_id'))]),
             'lock_refresh' => StudioApiResponse::ok(['lock' => $this->app->refreshEditLock($actor, self::id($input, 'page_id'), self::string($input, 'lock_token', 64))]),
             'lock_release' => StudioApiResponse::ok(['released' => $this->app->releaseEditLock($actor, self::id($input, 'page_id'), self::string($input, 'lock_token', 64))]),
@@ -678,6 +684,29 @@ final class StudioAuthoringApi
             $page = $applied['page'];
         }
         return StudioApiResponse::ok(['page' => StudioEditorViews::page($page)], 201);
+    }
+
+    /** @param array<string, mixed> $input */
+    private function updatePage(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $changes = [];
+        foreach (['title' => 255, 'slug' => 191] as $field => $max) {
+            $value = self::optionalString($input, $field, $max);
+            if ($value !== null) {
+                $changes[$field] = $value;
+            }
+        }
+        if ($changes === []) {
+            throw self::invalid('title', 'invalid_field', 'Give a new title or slug.');
+        }
+        return StudioApiResponse::ok(['page' => StudioEditorViews::page($this->app->updatePageAddress($actor, self::id($input, 'page_id'), $changes))]);
+    }
+
+    /** @param array<string, mixed> $input */
+    private function duplicatePage(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $copy = $this->app->duplicatePage($actor, self::id($input, 'page_id'), self::string($input, 'title', 255), self::string($input, 'slug', 191));
+        return StudioApiResponse::ok(['page' => StudioEditorViews::page($copy['page'])], 201);
     }
 
     // ── Views ─────────────────────────────────────────────────────────────

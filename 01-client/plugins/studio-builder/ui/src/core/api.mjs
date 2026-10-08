@@ -76,6 +76,12 @@ export function createTransport({ apiUrl, csrfToken, fetchImpl, timeoutMs = TIME
     templates: (type = null) => call('GET', 'templates', { query: type ? { type } : {} }),
     sectionPresets: () => call('GET', 'section_presets'),
     components: () => call('GET', 'components'),
+    // Pages: the tenant's list and the page commands (rename = title and/or slug, duplicate, archive).
+    pages: () => call('GET', 'pages'),
+    createPage: (body) => call('POST', 'create_page', { body }),
+    updatePage: (body) => call('POST', 'update_page', { body }),
+    duplicatePage: (body) => call('POST', 'duplicate_page', { body }),
+    archivePage: (body) => call('POST', 'archive_page', { body }),
     chrome: (pageId) => call('GET', 'chrome', { query: { page: pageId } }),
     tokens: (group = 'default') => call('GET', 'tokens', { query: { group } }),
     applyTemplate: (body) => call('POST', 'apply_template', { body }),

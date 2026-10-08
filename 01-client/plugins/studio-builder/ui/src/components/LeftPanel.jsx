@@ -9,6 +9,7 @@ import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { useSheetDrag } from './sheets/SheetPrimitive.jsx';
 import { BlockPalette } from './BlockPalette.jsx';
 import { Outline } from './Outline.jsx';
+import { PagesPanel } from './PagesPanel.jsx';
 import { LibraryPanel } from './LibraryPanel.jsx';
 import { BlockInspector } from './inspectors/BlockInspector.jsx';
 import { SectionInspector } from './inspectors/SectionInspector.jsx';
@@ -53,6 +54,8 @@ export const LeftPanel = memo(function LeftPanel({
 
   const [localTab, setLocalTab] = useState(() => (selection ? 'inspector' : 'blocks'));
   const [localCollapsed, setLocalCollapsed] = useState(false);
+  // The Layers tab holds two views: this page's structure, and the site's pages.
+  const [navView, setNavView] = useState('layers');
 
   const tab = controlledTab !== undefined ? controlledTab : localTab;
   const setTab = onTabChange || setLocalTab;
@@ -181,8 +184,15 @@ export const LeftPanel = memo(function LeftPanel({
           hidden={tab !== 'structure'}
           className="sbx-left__body sbx-left__body--structure"
         >
-          <Outline />
-          <BlockPalette compact />
+          <div className="sbx-nav-switch" role="group" aria-label={t('nav_view_label')}>
+            <button type="button" className={`sbx-chip${navView === 'layers' ? ' is-active' : ''}`} aria-pressed={navView === 'layers'} data-nav="layers" onClick={() => setNavView('layers')}>{t('nav_layers')}</button>
+            <button type="button" className={`sbx-chip${navView === 'pages' ? ' is-active' : ''}`} aria-pressed={navView === 'pages'} data-nav="pages" onClick={() => setNavView('pages')}>{t('nav_pages')}</button>
+          </div>
+          <div hidden={navView !== 'layers'}>
+            <Outline />
+            <BlockPalette compact />
+          </div>
+          {navView === 'pages' && <PagesPanel onOpenSettings={() => setTab('settings')} />}
         </div>
 
         {/* 3. Style / Inspector Tab — Metadata-driven property inspector */}

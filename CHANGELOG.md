@@ -10,6 +10,20 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
 ## [Unreleased]
 
 ### Added
+- **Studio builder (Builder 2.0, phase 2c): Pages in the Navigator.** The Layers tab now switches between Layers and Pages. Pages lists the
+  site's pages (pages and landing pages only) with Draft / Published / Unpublished-changes / Homepage chips and the page being edited
+  marked, and offers New page, Rename (name and address), Duplicate (a draft copy of the document, never published and never the
+  homepage) and Archive. New builder API actions `update_page`, `duplicate_page` and `archive_page` run over the existing page services:
+  edit permission, CSRF token, tenant scope, reserved and duplicate address rules and audit entries all apply. Also fixes "create
+  header/footer" in the page inspector, which called a transport method that did not exist.
+  Each Layers row now has one ⋯ menu (Rename, Duplicate, Lock/Unlock, Hide/Show, Move up, Move down, Save to library, Delete) instead of
+  four hover-only buttons: it opens from the keyboard (Enter, Space, arrows, Shift+F10), skips unavailable entries (locked layers,
+  the first and last position) and explains why, and on a phone it is always visible and touch-sized. The page's header and footer
+  appear above and below the layers as references (built-in, shared or this page's own, with an Edit link), not as layers.
+  Layers rows can be reordered with a drag handle that works with mouse, pen and touch (pointer events, auto-scroll near the list
+  edges, Escape cancels, locked rows have no handle); arrow keys on the handle, Alt+arrows on the row and the menu's Move up/down remain
+  the non-dragging routes. The Pages view starts with a quick-tools row (Settings, History, Import / Export, Theme) that opens the
+  existing panels and dialogs.
 - **Studio builder (Builder 2.0, phase 2b): Icon, List, Quote, Link, Card, Table and Countdown elements, and nesting to six levels.**
   Seven new blocks (`core.icon`, `core.list`, `core.quote`, `core.link`, `core.card`, `core.table`, `core.countdown`) with server renderers, escaping, French titles and Add-panel
   cards. Icons come from a built-in set of 25 (`IconLibrary`); only constant markup reaches a page, never author SVG.

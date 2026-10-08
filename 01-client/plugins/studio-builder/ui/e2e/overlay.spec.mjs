@@ -20,6 +20,12 @@ async function firstSectionId(page) {
   return page.locator(`${ROWS}[aria-level="1"]`).first().getAttribute('data-row');
 }
 
+/** Lock or unlock a Layers row through its menu. */
+async function rowAction(page, id, action) {
+  await page.getByTestId(`row-menu-${id}`).click();
+  await page.getByRole('menuitem').and(page.locator(`[data-action="${action}"]`)).click();
+}
+
 async function selectSection(page) {
   await openBuilder(page);
   await ensureSections(page, 2);
@@ -95,7 +101,7 @@ test('the toolbar is a keyboard toolbar: roving arrow keys, Enter activates (dup
 test('a locked layer keeps duplicate but disables move, edit and delete', async ({ page }) => {
   const id = await selectSection(page);
   await page.getByRole('tab', { name: /Layers/ }).click();
-  await page.getByTestId(`lock-${id}`).click();
+  await rowAction(page, id, 'lock');
   await page.locator(`${ROWS}[data-row="${id}"]`).click();
   await expect(page.getByTestId('overlay-toolbar')).toBeVisible();
   for (const a of ['up', 'down', 'edit', 'remove']) await expect(page.getByTestId(`overlay-${a}`)).toBeDisabled();
@@ -103,7 +109,7 @@ test('a locked layer keeps duplicate but disables move, edit and delete', async 
 
   // leave the sandbox page as we found it
   await page.getByRole('tab', { name: /Layers/ }).click();
-  await page.getByTestId(`lock-${id}`).click();
+  await rowAction(page, id, 'unlock');
 });
 
 test('Escape removes the overlay; the box follows zoom changes from the bottom bar', async ({ page }) => {

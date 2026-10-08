@@ -488,6 +488,10 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     openSaveTemplate: () => setDialog('save_template'),
     openComponentDialog: () => setDialog('component'),
     openAiReview: () => setDialog('ai_review'),
+    // Entry points the Pages view's quick tools reuse (null when the person may not use them).
+    openHistory: () => setHistoryOpen(true),
+    openTheme: manifest && manifest.permissions && (manifest.permissions.tokens || manifest.permissions.view) ? () => setDialog('theme') : null,
+    openPackages: manifest && manifest.permissions && manifest.permissions.view ? () => setDialog('package') : null,
   }), [boot, engine, manifest, transport, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey,
     libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
 
