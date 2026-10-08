@@ -951,18 +951,6 @@ final class DocumentValidator
         self::validateVisualStyles($style, $path, $errors);
     }
 
-    private static function isSafeCssValue(string $val): bool
-    {
-        if (str_contains($val, '<') || str_contains($val, '>') || str_contains($val, ';') || str_contains($val, '{') || str_contains($val, '}')) {
-            return false;
-        }
-        $lower = strtolower($val);
-        if (str_contains($lower, 'javascript:') || str_contains($lower, 'expression(') || str_contains($lower, 'behavior:')) {
-            return false;
-        }
-        return true;
-    }
-
     /**
      * @param array<string, mixed> $style
      * @param list<array{path: string, code: string, message: string}> $errors
@@ -973,21 +961,21 @@ final class DocumentValidator
         if (isset($style['typography'])) {
             $typo = $style['typography'];
             if (is_string($typo)) {
-                if (!self::isSafeCssValue($typo)) {
+                if (!StyleValueGuard::isIdentifier($typo)) {
                     $errors[] = ValidationResult::issue("{$path}.typography", 'invalid_style_value', 'Unsafe typography value.');
                 }
             } elseif (is_array($typo) && !array_is_list($typo)) {
                 if (isset($typo['size'])) {
                     $size = $typo['size'];
                     if (is_string($size)) {
-                        if (!self::isSafeCssValue($size)) {
+                        if (!StyleValueGuard::isLength($size)) {
                             $errors[] = ValidationResult::issue("{$path}.typography.size", 'invalid_style_value', 'Unsafe typography size value.');
                         }
                     } elseif (is_array($size) && !array_is_list($size)) {
                         foreach ($size as $bp => $sVal) {
                             if (!in_array((string) $bp, CanonicalDocumentSchema::ALLOWED_RESPONSIVE_BREAKPOINTS, true)) {
                                 $errors[] = ValidationResult::issue("{$path}.typography.size.{$bp}", 'invalid_breakpoint', "Unknown breakpoint '{$bp}'.");
-                            } elseif (!is_string($sVal) || !self::isSafeCssValue($sVal)) {
+                            } elseif (!is_string($sVal) || !StyleValueGuard::isLength($sVal)) {
                                 $errors[] = ValidationResult::issue("{$path}.typography.size.{$bp}", 'invalid_style_value', 'Unsafe responsive typography size.');
                             }
                         }
@@ -1001,8 +989,14 @@ final class DocumentValidator
                 if (isset($typo['transform']) && (!is_string($typo['transform']) || !in_array($typo['transform'], CanonicalDocumentSchema::ALLOWED_TEXT_TRANSFORMS, true))) {
                     $errors[] = ValidationResult::issue("{$path}.typography.transform", 'invalid_text_transform', 'Invalid text transform.');
                 }
-                foreach (['line_height', 'letter_spacing', 'color', 'font_family'] as $field) {
-                    if (isset($typo[$field]) && (!is_string($typo[$field]) && !is_numeric($typo[$field]) || !self::isSafeCssValue((string) $typo[$field]))) {
+                $typoChecks = [
+                    'line_height'    => static fn (mixed $v): bool => StyleValueGuard::isLineHeight($v),
+                    'letter_spacing' => static fn (mixed $v): bool => StyleValueGuard::isLetterSpacing($v),
+                    'color'          => static fn (mixed $v): bool => StyleValueGuard::isColor($v),
+                    'font_family'    => static fn (mixed $v): bool => StyleValueGuard::isFontFamily($v),
+                ];
+                foreach ($typoChecks as $field => $check) {
+                    if (isset($typo[$field]) && !$check($typo[$field])) {
                         $errors[] = ValidationResult::issue("{$path}.typography.{$field}", 'invalid_style_value', "Invalid typography {$field}.");
                     }
                 }
@@ -1012,7 +1006,7 @@ final class DocumentValidator
         }
 
         // 2. color
-        if (isset($style['color']) && (!is_string($style['color']) || !self::isSafeCssValue($style['color']))) {
+        if (isset($style['color']) && !StyleValueGuard::isColor($style['color'])) {
             $errors[] = ValidationResult::issue("{$path}.color", 'invalid_style_value', 'Invalid color value.');
         }
 
@@ -1020,12 +1014,12 @@ final class DocumentValidator
         if (isset($style['background'])) {
             $bg = $style['background'];
             if (is_string($bg)) {
-                if (!self::isSafeCssValue($bg)) {
+                if (!StyleValueGuard::isColor($bg) && !StyleValueGuard::isGradient($bg)) {
                     $errors[] = ValidationResult::issue("{$path}.background", 'invalid_style_value', 'Invalid background value.');
                 }
             } elseif (is_array($bg) && !array_is_list($bg)) {
-                foreach (['color', 'gradient'] as $bgKey) {
-                    if (isset($bg[$bgKey]) && (!is_string($bg[$bgKey]) || !self::isSafeCssValue($bg[$bgKey]))) {
+                foreach (['color' => 'isColor', 'gradient' => 'isGradient'] as $bgKey => $bgCheck) {
+                    if (isset($bg[$bgKey]) && !StyleValueGuard::$bgCheck($bg[$bgKey])) {
                         $errors[] = ValidationResult::issue("{$path}.background.{$bgKey}", 'invalid_style_value', "Invalid background {$bgKey}.");
                     }
                 }
@@ -1039,7 +1033,7 @@ final class DocumentValidator
             $sp = $style['spacing'];
             if (is_array($sp) && !array_is_list($sp)) {
                 foreach ($sp as $sKey => $sVal) {
-                    if ((!is_string($sVal) && !is_numeric($sVal)) || !self::isSafeCssValue((string) $sVal)) {
+                    if (!StyleValueGuard::isLengthOrToken($sVal)) {
                         $errors[] = ValidationResult::issue("{$path}.spacing.{$sKey}", 'invalid_style_value', "Invalid spacing {$sKey}.");
                     }
                 }
@@ -1061,12 +1055,12 @@ final class DocumentValidator
                         if (!in_array($radius, CanonicalDocumentSchema::ALLOWED_RADIUS_PRESETS, true)) {
                             $errors[] = ValidationResult::issue("{$path}.border.radius", 'invalid_radius_preset', "Unknown border radius preset '{$radius}'.");
                         }
-                    } elseif (!self::isSafeCssValue($radius)) {
+                    } elseif (!StyleValueGuard::isLengthList($radius)) {
                         $errors[] = ValidationResult::issue("{$path}.border.radius", 'invalid_style_value', 'Invalid border radius.');
                     }
                 }
-                foreach (['width', 'color'] as $bField) {
-                    if (isset($bd[$bField]) && ((!is_string($bd[$bField]) && !is_numeric($bd[$bField])) || !self::isSafeCssValue((string) $bd[$bField]))) {
+                foreach (['width' => 'isBorderWidth', 'color' => 'isColor'] as $bField => $bCheck) {
+                    if (isset($bd[$bField]) && !StyleValueGuard::$bCheck($bd[$bField])) {
                         $errors[] = ValidationResult::issue("{$path}.border.{$bField}", 'invalid_style_value', "Invalid border {$bField}.");
                     }
                 }
@@ -1083,12 +1077,12 @@ final class DocumentValidator
                     if (!in_array($sh, CanonicalDocumentSchema::ALLOWED_SHADOW_PRESETS, true)) {
                         $errors[] = ValidationResult::issue("{$path}.shadow", 'invalid_shadow_preset', "Unknown shadow preset '{$sh}'.");
                     }
-                } elseif (!self::isSafeCssValue($sh)) {
+                } elseif (!StyleValueGuard::isShadow($sh)) {
                     $errors[] = ValidationResult::issue("{$path}.shadow", 'invalid_style_value', 'Invalid shadow value.');
                 }
             } elseif (is_array($sh) && !array_is_list($sh)) {
                 foreach ($sh as $shKey => $shVal) {
-                    if ((!is_string($shVal) && !is_numeric($shVal)) || !self::isSafeCssValue((string) $shVal)) {
+                    if (!in_array($shKey, ['x', 'y', 'blur', 'spread'], true) ? !StyleValueGuard::isColor($shVal) : !StyleValueGuard::isLength($shVal)) {
                         $errors[] = ValidationResult::issue("{$path}.shadow.{$shKey}", 'invalid_style_value', "Invalid shadow {$shKey}.");
                     }
                 }
@@ -1102,7 +1096,7 @@ final class DocumentValidator
             $dim = $style['dimensions'];
             if (is_array($dim) && !array_is_list($dim)) {
                 foreach (['width', 'height', 'min_height', 'max_width'] as $dField) {
-                    if (isset($dim[$dField]) && ((!is_string($dim[$dField]) && !is_numeric($dim[$dField])) || !self::isSafeCssValue((string) $dim[$dField]))) {
+                    if (isset($dim[$dField]) && !StyleValueGuard::isLength($dim[$dField])) {
                         $errors[] = ValidationResult::issue("{$path}.dimensions.{$dField}", 'invalid_style_value', "Invalid dimensions {$dField}.");
                     }
                 }

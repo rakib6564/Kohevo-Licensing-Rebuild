@@ -34,6 +34,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Render;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\StyleValueGuard;
 use Slate\Module\StudioBuilder\Registry\BlockDefinitionInterface;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
@@ -445,43 +446,55 @@ final class DocumentRenderer
 
     private function buildInlineStyles(array $style): string
     {
+        // Every value goes through StyleValueGuard on the way out as well as on
+        // the way in: a document stored before a rule existed (or written by a
+        // path that skipped the validator) must still never emit `url(...)`,
+        // `@import`, a comment or a stray declaration. A failing value is
+        // dropped, not repaired.
         $rules = [];
+        $emit  = static function (string $prop, mixed $value, bool $ok) use (&$rules): void {
+            if ($ok && (is_string($value) || is_int($value) || is_float($value))) {
+                $rules[] = $prop . ':' . $value;
+            }
+        };
+        $isToken = static fn (mixed $v): bool => is_string($v) && StyleValueGuard::isToken($v);
 
         // Typography custom values
         if (isset($style['typography']) && is_array($style['typography'])) {
             $typo = $style['typography'];
             if (isset($typo['size']) && is_string($typo['size'])) {
-                $rules[] = 'font-size:' . $typo['size'];
+                $emit('font-size', $typo['size'], StyleValueGuard::isLength($typo['size']));
             }
             if (isset($typo['color']) && is_string($typo['color']) && !str_starts_with($typo['color'], 'text.') && !str_starts_with($typo['color'], 'color.')) {
-                $rules[] = 'color:' . $typo['color'];
+                $emit('color', $typo['color'], StyleValueGuard::isColor($typo['color']));
             }
-            if (isset($typo['line_height']) && (is_string($typo['line_height']) || is_numeric($typo['line_height']))) {
-                $rules[] = 'line-height:' . $typo['line_height'];
+            if (isset($typo['line_height'])) {
+                $emit('line-height', $typo['line_height'], StyleValueGuard::isLineHeight($typo['line_height']));
             }
             if (isset($typo['letter_spacing']) && is_string($typo['letter_spacing'])) {
-                $rules[] = 'letter-spacing:' . $typo['letter_spacing'];
+                $emit('letter-spacing', $typo['letter_spacing'], StyleValueGuard::isLetterSpacing($typo['letter_spacing']));
             }
-            if (isset($typo['font_family']) && is_string($typo['font_family'])) {
-                $rules[] = 'font-family:' . $typo['font_family'];
+            if (isset($typo['font_family']) && is_string($typo['font_family']) && !$isToken($typo['font_family'])) {
+                $emit('font-family', $typo['font_family'], StyleValueGuard::isFontFamily($typo['font_family']));
             }
         }
 
         // Color
         if (isset($style['color']) && is_string($style['color']) && !str_starts_with($style['color'], 'text.') && !str_starts_with($style['color'], 'color.')) {
-            $rules[] = 'color:' . $style['color'];
+            $emit('color', $style['color'], StyleValueGuard::isColor($style['color']));
         }
 
         // Background
         if (isset($style['background'])) {
             if (is_string($style['background']) && !str_starts_with($style['background'], 'surface.') && !str_starts_with($style['background'], 'color.')) {
-                $rules[] = 'background:' . $style['background'];
+                $bg = $style['background'];
+                $emit('background', $bg, StyleValueGuard::isColor($bg) || StyleValueGuard::isGradient($bg));
             } elseif (is_array($style['background'])) {
-                if (isset($style['background']['color']) && is_string($style['background']['color'])) {
-                    $rules[] = 'background-color:' . $style['background']['color'];
+                if (isset($style['background']['color']) && is_string($style['background']['color']) && !$isToken($style['background']['color'])) {
+                    $emit('background-color', $style['background']['color'], StyleValueGuard::isColor($style['background']['color']));
                 }
                 if (isset($style['background']['gradient']) && is_string($style['background']['gradient'])) {
-                    $rules[] = 'background-image:' . $style['background']['gradient'];
+                    $emit('background-image', $style['background']['gradient'], StyleValueGuard::isGradient($style['background']['gradient']));
                 }
             }
         }
@@ -489,38 +502,37 @@ final class DocumentRenderer
         // Border
         if (isset($style['border']) && is_array($style['border'])) {
             if (isset($style['border']['width'])) {
-                $rules[] = 'border-width:' . $style['border']['width'];
+                $emit('border-width', $style['border']['width'], StyleValueGuard::isBorderWidth($style['border']['width']));
             }
-            if (isset($style['border']['color']) && is_string($style['border']['color'])) {
-                $rules[] = 'border-color:' . $style['border']['color'];
+            if (isset($style['border']['color']) && is_string($style['border']['color']) && !$isToken($style['border']['color'])) {
+                $emit('border-color', $style['border']['color'], StyleValueGuard::isColor($style['border']['color']));
             }
             if (isset($style['border']['radius']) && !in_array((string) $style['border']['radius'], CanonicalDocumentSchema::ALLOWED_RADIUS_PRESETS, true)) {
-                $rules[] = 'border-radius:' . $style['border']['radius'];
+                $emit('border-radius', $style['border']['radius'], StyleValueGuard::isLengthList($style['border']['radius']));
             }
         }
 
         // Shadow
         if (isset($style['shadow']) && is_string($style['shadow']) && !in_array($style['shadow'], CanonicalDocumentSchema::ALLOWED_SHADOW_PRESETS, true)) {
-            $rules[] = 'box-shadow:' . $style['shadow'];
+            $emit('box-shadow', $style['shadow'], StyleValueGuard::isShadow($style['shadow']));
         }
 
         // Dimensions
         if (isset($style['dimensions']) && is_array($style['dimensions'])) {
             foreach (['width', 'height', 'min_height', 'max_width'] as $dim) {
                 if (isset($style['dimensions'][$dim])) {
-                    $cssProp = str_replace('_', '-', $dim);
-                    $rules[] = $cssProp . ':' . $style['dimensions'][$dim];
+                    $emit(str_replace('_', '-', $dim), $style['dimensions'][$dim], StyleValueGuard::isLength($style['dimensions'][$dim]));
                 }
             }
         }
 
         // Opacity
-        if (isset($style['opacity'])) {
-            $rules[] = 'opacity:' . $style['opacity'];
+        if (isset($style['opacity']) && is_numeric($style['opacity']) && $style['opacity'] >= 0 && $style['opacity'] <= 1) {
+            $rules[] = 'opacity:' . (0 + $style['opacity']);
         }
 
         // Z-Index
-        if (isset($style['z_index'])) {
+        if (isset($style['z_index']) && is_int($style['z_index']) && $style['z_index'] >= -999 && $style['z_index'] <= 9999) {
             $rules[] = 'z-index:' . $style['z_index'];
         }
 
