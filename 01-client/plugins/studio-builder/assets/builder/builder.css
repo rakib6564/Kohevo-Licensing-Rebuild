@@ -2624,3 +2624,37 @@ html, body.sbx-body {
   .sbx-page-row__actions .sbx-btn { min-height: 40px; }
   .sbx-nav-switch .sbx-chip { min-height: 40px; }
 }
+
+/* ── Layers row menu and header/footer references ─────────────────────── */
+/* The actions are always laid out (so showing them on hover never changes the row's height); only their visibility changes. */
+.sbx-tree__actions { display: flex; visibility: hidden; }
+.sbx-tree__row:hover .sbx-tree__actions, .sbx-tree__row:focus-within .sbx-tree__actions,
+.sbx-tree__row.is-selected .sbx-tree__actions, .sbx-tree__row.is-locked .sbx-tree__actions { visibility: visible; }
+.sbx-tree__badge { font-size: 11px; color: var(--sbx-muted); }
+.sbx-tree__more { font-size: 16px; line-height: 14px; height: 18px; padding: 0 6px; min-width: 24px; }
+.sbx-row-menu {
+  position: fixed; z-index: 1200; min-width: 190px; margin: 0; padding: 4px; list-style: none; overflow-y: auto;
+  background: #1e293b; border: 1px solid var(--sbx-border); border-radius: 10px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.sbx-row-menu__item {
+  display: block; width: 100%; text-align: left; background: none; border: 0; color: #e2e8f0; font-size: 13px;
+  padding: 7px 10px; border-radius: 6px; cursor: pointer; min-height: 32px;
+}
+.sbx-row-menu__item:hover:not(.is-disabled), .sbx-row-menu__item:focus-visible { background: rgba(139, 92, 246, 0.25); outline: none; }
+.sbx-row-menu__item.is-danger { color: #fca5a5; }
+.sbx-row-menu__item.is-danger:hover:not(.is-disabled), .sbx-row-menu__item.is-danger:focus-visible { background: rgba(239, 68, 68, 0.2); }
+.sbx-row-menu__item.is-disabled { opacity: 0.4; cursor: not-allowed; }
+.sbx-partial {
+  display: flex; align-items: baseline; gap: 6px; margin: 4px 0; padding: 6px 10px; font-size: 12px; color: #94a3b8;
+  border: 1px dashed var(--sbx-border); border-radius: 8px;
+}
+.sbx-partial__label { font-weight: 600; color: #cbd5e1; }
+.sbx-partial__text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.sbx-partial__edit { flex: none; color: #a78bfa; text-decoration: none; }
+.sbx-partial__edit:hover, .sbx-partial__edit:focus-visible { color: #ddd6fe; text-decoration: underline; }
+@media (hover: none), (max-width: 860px) {
+  .sbx-tree__actions { visibility: visible; }
+  .sbx-tree__more { min-width: 40px; min-height: 40px; font-size: 20px; }
+  .sbx-row-menu__item { min-height: 44px; font-size: 14px; }
+  .sbx-partial__edit { padding: 10px 6px; }
+}

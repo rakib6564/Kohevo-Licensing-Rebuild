@@ -10,6 +10,9 @@
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { DRAG_TYPE_NEW } from './BlockPalette.jsx';
+import { RowMenu } from './RowMenu.jsx';
+import { PartialRows, useChromeBindings } from './PartialRows.jsx';
+import { rowMenuItems } from '../core/rowMenu.mjs';
 import { t } from '../core/messages.mjs';
 import {
   asList, blockDefinition, blockIndentTarget, blockMoveTarget, blockOutdentTarget,
@@ -85,10 +88,12 @@ export function dropDestination(doc, rows, dragged, row, position) {
 export const Outline = memo(function Outline() {
   const {
     manifest, insertBlock, insertSection,
-    duplicateNode, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, applyOp,
+    duplicateNode, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, applyOp, openSaveTemplate,
   } = useEditor();
   const { selection, selectedIds, select, pick } = useSelection();
   const working = useEngineState((s) => s.working);
+  const chrome = useChromeBindings();
+  const pageType = useEngineState((s) => (s.page ? s.page.page_type : 'page'));
   const allRows = useMemo(() => outlineRows(working, manifest), [working, manifest]);
   const locks = useMemo(() => lockIndex(working), [working]);
   const [collapsed, setCollapsed] = useState(() => new Set());
@@ -178,6 +183,22 @@ export const Outline = memo(function Outline() {
     if (target && canMoveBlock(working, manifest, row.id, target.parentId)) moveBlockTo(row.id, target);
   }, [working, manifest, moveBlockTo, moveSectionTo]);
 
+  const runRowAction = useCallback((row, key) => {
+    switch (key) {
+      case 'rename': startRename(row); return;
+      case 'duplicate': duplicateNode(row.id); break;
+      case 'lock': setLocked(row.id, true); break;
+      case 'unlock': setLocked(row.id, false); break;
+      case 'hide': case 'show': toggleVisibility(row); break;
+      case 'move_up': keyboardMove(row, 'ArrowUp'); break;
+      case 'move_down': keyboardMove(row, 'ArrowDown'); break;
+      case 'save_library': select(row.id); if (openSaveTemplate) openSaveTemplate(); return;
+      case 'delete': removeNode(row.id); return;
+      default: break;
+    }
+    focusRow(row.id);
+  }, [startRename, duplicateNode, setLocked, toggleVisibility, keyboardMove, select, openSaveTemplate, removeNode, focusRow]);
+
   const onKeyDown = (e, row, i) => {
     if (e.altKey && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
       e.preventDefault();
@@ -193,6 +214,8 @@ export const Outline = memo(function Outline() {
       case 'Enter': case ' ': e.preventDefault(); select(row.id); break;
       case 'Delete': case 'Backspace': e.preventDefault(); removeNode(row.id); break;
       case 'F2': e.preventDefault(); startRename(row); break;
+      case 'ContextMenu': e.preventDefault(); { const btn = e.currentTarget.querySelector('.sbx-tree__more'); if (btn) btn.click(); } break;
+      case 'F10': if (e.shiftKey) { e.preventDefault(); const btn = e.currentTarget.querySelector('.sbx-tree__more'); if (btn) btn.click(); } break;
       default: break;
     }
   };
@@ -303,6 +326,7 @@ export const Outline = memo(function Outline() {
         </div>
       )}
 
+      <PartialRows region="header" chrome={chrome} />
       <ul className="sbx-tree" role="tree" aria-label={t('outline_label')} ref={listRef}>
         {visibleRows.map((row, i) => {
           const label = row.kind === 'section' ? (row.node.label || t('section')) : nodeLabel(row.node, manifest, 'block');
@@ -323,7 +347,7 @@ export const Outline = memo(function Outline() {
               aria-posinset={row.index + 1}
               aria-selected={selection === row.id || picked.has(row.id)}
               aria-expanded={row.container ? !isRowCollapsed : undefined}
-              aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight Delete F2"
+              aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight Delete F2 Shift+F10"
               tabIndex={row.id === activeId ? 0 : -1}
               className={`sbx-tree__row sbx-tree__row--${row.kind}${selection === row.id || picked.has(row.id) ? ' is-selected' : ''}${picked.size > 1 && picked.has(row.id) ? ' is-picked' : ''}${isProvisionalId(row.id) ? ' is-pending' : ''}${isHidden ? ' is-hidden' : ''}${ownLock ? ' is-locked' : ''}${lockedByAncestor ? ' is-locked-inherited' : ''}${hint}`}
               style={{ paddingLeft: `${(row.level - 1) * 14 + 6}px` }}
@@ -394,64 +418,19 @@ export const Outline = memo(function Outline() {
               )}
 
               <div className="sbx-tree__actions">
-                <button
-                  type="button"
-                  className={`sbx-tree__action${ownLock ? ' is-on' : ''}`}
-                  title={ownLock ? t('unlock_layer') : lockedByAncestor ? t('locked_by_parent') : t('lock_layer')}
-                  aria-label={ownLock ? t('unlock_layer') : t('lock_layer')}
-                  aria-pressed={ownLock}
-                  disabled={lockedByAncestor}
-                  data-testid={`lock-${row.id}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setLocked(row.id, !ownLock);
-                  }}
-                >
-                  {ownLock ? '🔒' : '🔓'}
-                </button>
-                <button
-                  type="button"
-                  className="sbx-tree__action"
-                  title={isHidden ? t('show') : t('hide')}
-                  aria-label={isHidden ? t('show') : t('hide')}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleVisibility(row);
-                  }}
-                >
-                  {isHidden ? '⊘' : '👁'}
-                </button>
-                {duplicateNode && (
-                  <button
-                    type="button"
-                    className="sbx-tree__action"
-                    title={t('duplicate')}
-                    aria-label={t('duplicate')}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      duplicateNode(row.id);
-                    }}
-                  >
-                    ⧉
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="sbx-tree__action sbx-tree__action--danger"
-                  title={t('remove_item')}
-                  aria-label={t('remove_item')}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeNode(row.id);
-                  }}
-                >
-                  ✕
-                </button>
+                {isHidden && <span className="sbx-tree__badge" title={t('show')} aria-hidden="true">⊘</span>}
+                <RowMenu
+                  label={label}
+                  testId={`row-menu-${row.id}`}
+                  items={rowMenuItems({ row, doc: working, manifest, locks, pageType, canSaveToLibrary: !!(manifest.permissions && manifest.permissions.admin) })}
+                  onChoose={(key) => runRowAction(row, key)}
+                />
               </div>
             </li>
           );
         })}
       </ul>
+      <PartialRows region="footer" chrome={chrome} />
       <button type="button" className="sbx-btn sbx-btn--block" onClick={() => insertSection()} disabled={!canInsertSection(working, manifest)}>+ {t('add_section')}</button>
     </div>
   );

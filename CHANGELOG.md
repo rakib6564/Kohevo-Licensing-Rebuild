@@ -16,6 +16,10 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
   homepage) and Archive. New builder API actions `update_page`, `duplicate_page` and `archive_page` run over the existing page services:
   edit permission, CSRF token, tenant scope, reserved and duplicate address rules and audit entries all apply. Also fixes "create
   header/footer" in the page inspector, which called a transport method that did not exist.
+  Each Layers row now has one ⋯ menu (Rename, Duplicate, Lock/Unlock, Hide/Show, Move up, Move down, Save to library, Delete) instead of
+  four hover-only buttons: it opens from the keyboard (Enter, Space, arrows, Shift+F10), skips unavailable entries (locked layers,
+  the first and last position) and explains why, and on a phone it is always visible and touch-sized. The page's header and footer
+  appear above and below the layers as references (built-in, shared or this page's own, with an Edit link), not as layers.
 - **Studio builder (Builder 2.0, phase 2b): Icon, List, Quote, Link, Card, Table and Countdown elements, and nesting to six levels.**
   Seven new blocks (`core.icon`, `core.list`, `core.quote`, `core.link`, `core.card`, `core.table`, `core.countdown`) with server renderers, escaping, French titles and Add-panel
   cards. Icons come from a built-in set of 25 (`IconLibrary`); only constant markup reaches a page, never author SVG.
