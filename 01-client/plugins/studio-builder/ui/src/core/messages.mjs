@@ -332,6 +332,8 @@ const EN = {
   entrance_animation: 'Entrance Animation',
   section_a11y: 'Accessibility',
   section_motion_effects: 'Motion Effects',
+  unit: 'Unit',
+  field_value: 'value',
   bg_overlay: 'Overlay colour',
   section_layout: 'Layout',
   section_spacing: 'Spacing',

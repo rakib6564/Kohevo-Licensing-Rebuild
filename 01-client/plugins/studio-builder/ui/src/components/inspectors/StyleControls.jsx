@@ -20,7 +20,7 @@
 // overwritten — the renderer already skips emitting a literal when a token ref
 // is present, so a literal and a ref never both reach the page.
 
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
 import { acceptsDraft } from '../../core/styleValues.mjs';
@@ -76,40 +76,86 @@ export function ColorField({ id, label, value, onChange }) {
   );
 }
 
+const BARE_NUMBER = /^-?(\d+\.?\d*|\.\d+)$/;
+const NUMBER_UNIT = /^(-?(?:\d+\.?\d*|\.\d+))([a-z%]+)$/i;
+
+/** The unit of a value such as `1.5rem` (`rem`), or '' when it is not a number with a unit. */
+export function unitOf(value) {
+  const m = NUMBER_UNIT.exec(String(value ?? '').trim());
+  return m ? m[2].toLowerCase() : '';
+}
+
 /**
  * A text input that only commits on blur, so typing never half-updates the
  * document. `key` resets the field when the value changes from elsewhere
  * (undo, responsive switch) so the DOM never disagrees with the document.
+ *
+ * `units` adds a unit switch (px, rem, em, %…): a bare number takes the chosen unit when it is committed, and picking
+ * another unit rewrites a number already there. Anything that is not number + unit (`auto`, `calc()`, a token)
+ * is still accepted as typed. `bareUnit` does the same for a bare number without showing a switch (the margin and
+ * padding boxes use it, with one unit chooser for all four sides).
  */
-export function DraftText({ id, label, value, placeholder, onCommit, hint, kind, path }) {
+export function DraftText({ id, label, value, placeholder, onCommit, hint, kind, path, units, bareUnit }) {
   const [error, setError] = useState(false);
+  const [chosen, setChosen] = useState(null);
+  const inputRef = useRef(null);
+  const currentUnit = chosen || unitOf(value) || (units ? units[0] : '');
+  const appendUnit = bareUnit || (units ? currentUnit : '');
+
+  const commit = (raw, unit = appendUnit) => {
+    let next = raw.trim();
+    if (unit && BARE_NUMBER.test(next) && Number(next) !== 0) next += unit;
+    // Same validation as before: `kind` names the grammar the server enforces (core/styleValues.mjs); `path` names a field of
+    // the closed style surface (core/styleSurface.mjs), which is stricter. An invalid draft stays in the box and is never committed.
+    if (path ? !acceptsSurfaceDraft(path, next) : (kind && !acceptsDraft(kind, next))) {
+      setError(true);
+      return;
+    }
+    setError(false);
+    if (inputRef.current && next !== raw.trim()) inputRef.current.value = next;
+    onCommit(next === (value ?? '') ? undefined : (next || undefined));
+  };
+
+  const input = (
+    <input
+      ref={inputRef}
+      id={id}
+      type="text"
+      className="sbx-input"
+      defaultValue={value ?? ''}
+      placeholder={placeholder}
+      key={value ?? ''}
+      aria-invalid={error || undefined}
+      aria-describedby={error ? `${id}-err` : undefined}
+      onChange={() => { if (error) setError(false); }}
+      onBlur={(e) => commit(e.target.value)}
+      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+    />
+  );
+
   return (
     <div className="sbx-field">
       <label className="sbx-field__label" htmlFor={id}>{label}</label>
-      <input
-        id={id}
-        type="text"
-        className="sbx-input"
-        defaultValue={value ?? ''}
-        placeholder={placeholder}
-        key={value ?? ''}
-        aria-invalid={error || undefined}
-        aria-describedby={error ? `${id}-err` : undefined}
-        onChange={() => { if (error) setError(false); }}
-        onBlur={(e) => {
-          const next = e.target.value.trim();
-          // `kind` names the grammar the server enforces (core/styleValues.mjs);
-          // an invalid draft stays in the box with an error and is never committed.
-          // `path` names a field of the closed style surface (core/styleSurface.mjs), which is stricter than `kind`.
-          if (path ? !acceptsSurfaceDraft(path, next) : (kind && !acceptsDraft(kind, next))) {
-            setError(true);
-            return;
-          }
-          setError(false);
-          onCommit(next === (value ?? '') ? undefined : (next || undefined));
-        }}
-        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-      />
+      {units ? (
+        <div className="sbx-unitfield">
+          {input}
+          <select
+            className="sbx-unitfield__unit"
+            aria-label={`${label} (${t('unit')})`}
+            value={currentUnit}
+            onChange={(e) => {
+              const unit = e.target.value;
+              setChosen(unit);
+              const text = inputRef.current ? inputRef.current.value.trim() : '';
+              const m = NUMBER_UNIT.exec(text);
+              if (m) commit(m[1] + unit, '');
+              else if (BARE_NUMBER.test(text)) commit(text, unit);
+            }}
+          >
+            {units.map((u) => <option key={u} value={u}>{u}</option>)}
+          </select>
+        </div>
+      ) : input}
       {error && <p className="sbx-field__error" id={`${id}-err`} role="alert">{t('invalid_css_value')}</p>}
       {hint && <p className="sbx-hint">{hint}</p>}
     </div>
@@ -245,6 +291,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
             kind="length"
             label={t('font_size')}
             value={typo.size}
+            units={['px', 'rem', 'em', '%']}
             placeholder="1.5rem"
             onCommit={(v) => patchNested('typography', 'size', v)}
           />
@@ -261,6 +308,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
             kind="letterSpacing"
             label={t('letter_spacing')}
             value={typo.letter_spacing}
+            units={['px', 'em', 'rem']}
             placeholder="-0.01em"
             onCommit={(v) => patchNested('typography', 'letter_spacing', v)}
           />

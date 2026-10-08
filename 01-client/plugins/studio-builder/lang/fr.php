@@ -656,6 +656,8 @@ return [
     'studio_ui_entrance_animation' => 'Animation d’entrée',
     'studio_ui_section_a11y' => 'Accessibilité',
     'studio_ui_section_motion_effects' => 'Effets de mouvement',
+    'studio_ui_unit' => 'Unité',
+    'studio_ui_field_value' => 'valeur',
     'studio_ui_bg_overlay' => 'Couleur de superposition',
     'studio_ui_section_layout' => 'Disposition',
     'studio_ui_section_spacing' => 'Espacement',
