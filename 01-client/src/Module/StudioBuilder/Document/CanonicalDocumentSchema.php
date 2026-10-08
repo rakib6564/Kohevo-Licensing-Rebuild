@@ -171,6 +171,50 @@ final class CanonicalDocumentSchema
         'animation',
     ];
 
+    /** Exact attribute names an author may set on a block wrapper. */
+    public const ALLOWED_BLOCK_ATTRIBUTE_NAMES = ['id', 'role', 'tabindex', 'title', 'lang'];
+
+    /** Attribute name prefixes an author may use (`aria-*`, `data-*`). */
+    public const ALLOWED_BLOCK_ATTRIBUTE_PREFIXES = ['aria-', 'data-'];
+
+    /** Reserved for editor/runtime metadata; authors must not spoof it. */
+    public const RESERVED_BLOCK_ATTRIBUTE_PREFIX = 'data-sb-';
+
+    public const MAX_BLOCK_ATTRIBUTES = 32;
+
+    /**
+     * Why a block attribute is refused, or null when it is allowed.
+     *
+     * Attributes are emitted verbatim into the block wrapper's tag, so this is a
+     * closed list: event handlers (`on*`), `style`, `srcdoc`, `href`/`src` and
+     * anything else not named here can never reach the page.
+     */
+    public static function blockAttributeIssue(mixed $name, mixed $value): ?string
+    {
+        if (!is_string($name) || preg_match('/^[a-z][a-z0-9-]*$/', $name) !== 1 || strlen($name) > 64) {
+            return 'Attribute names must be lowercase letters, digits and hyphens.';
+        }
+        if (str_starts_with($name, self::RESERVED_BLOCK_ATTRIBUTE_PREFIX)) {
+            return "Attribute '{$name}' is reserved for the builder.";
+        }
+        $allowed = in_array($name, self::ALLOWED_BLOCK_ATTRIBUTE_NAMES, true);
+        foreach (self::ALLOWED_BLOCK_ATTRIBUTE_PREFIXES as $prefix) {
+            if (str_starts_with($name, $prefix) && strlen($name) > strlen($prefix)) {
+                $allowed = true;
+            }
+        }
+        if (!$allowed) {
+            return "Attribute '{$name}' is not allowed; use aria-*, data-*, id, role, tabindex, title or lang.";
+        }
+        if (!is_string($value) && !is_int($value) && !is_float($value)) {
+            return "Attribute '{$name}' must be a string or number.";
+        }
+        if (strlen((string) $value) > self::MAX_STRING_LENGTH) {
+            return "Attribute '{$name}' is too long.";
+        }
+        return null;
+    }
+
     /**
      * Optional extension keys for blocks.
      */

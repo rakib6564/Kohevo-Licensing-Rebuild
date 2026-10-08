@@ -201,7 +201,9 @@ final class DocumentRenderer
         $attrs = $interactionAttrs;
         if (isset($block['attributes']) && is_array($block['attributes'])) {
             foreach ($block['attributes'] as $attrKey => $attrVal) {
-                if (is_string($attrKey) && preg_match('/^[a-zA-Z][a-zA-Z0-9_-]*$/', $attrKey) === 1) {
+                // Same allow-list the validator enforces; re-checked here so a
+                // document stored before the rule existed can never emit a handler.
+                if (CanonicalDocumentSchema::blockAttributeIssue($attrKey, $attrVal) === null) {
                     $attrs .= ' ' . $attrKey . '="' . Html::e((string) $attrVal) . '"';
                 }
             }
