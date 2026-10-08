@@ -105,6 +105,7 @@ use Slate\Module\StudioBuilder\Render\Theme\ThemeResolver;
 use Slate\Module\StudioBuilder\Repository\PageRepository;
 use Slate\Module\StudioBuilder\Repository\RevisionRepository;
 use Slate\Module\StudioBuilder\Repository\TemplateRepository;
+use Slate\Module\StudioBuilder\Presets\ElementVariantCatalog;
 use Slate\Module\StudioBuilder\Presets\SectionPresetCatalog;
 use Slate\Module\StudioBuilder\Presets\WireframeOutline;
 use Slate\Module\StudioBuilder\Runtime\StudioLog;
@@ -491,6 +492,26 @@ final class StudioApplicationService
             }
         }
         return $view;
+    }
+
+    /**
+     * @param array<string, mixed> $variant
+     * @return array<string, mixed>
+     */
+    private static function translateVariantCopy(array $variant): array
+    {
+        if (!\function_exists('__')) {
+            return $variant;
+        }
+        $slug = str_replace('-', '_', (string) $variant['key']);
+        foreach (['title' => 'title', 'description' => 'desc'] as $field => $suffix) {
+            try {
+                $variant[$field] = (string) \__("studio_variant_{$slug}_{$suffix}", (string) $variant[$field]);
+            } catch (\Throwable $ignored) {
+                // keep the English default
+            }
+        }
+        return $variant;
     }
 
     /** Tenant ids whose built-in presets were already synced during this request. */
@@ -1095,11 +1116,18 @@ final class StudioApplicationService
             $tokens[] = ['category' => explode('.', (string) $ref, 2)[0], 'ref' => (string) $ref, 'value' => (string) $value];
         }
 
+        $blocks = array_map(
+            static fn(array $block): array => self::translateBlockCopy($block),
+            $this->registry->editorManifests($entitled, static fn(string $perm): bool => $actor->can($perm)),
+        );
+        $offered = array_column($blocks, 'type');
+
         return [
-            'blocks'      => array_map(
-                static fn(array $block): array => self::translateBlockCopy($block),
-                $this->registry->editorManifests($entitled, static fn(string $perm): bool => $actor->can($perm)),
-            ),
+            'blocks'      => $blocks,
+            'variants'    => array_values(array_filter(
+                array_map(static fn(array $v): array => self::translateVariantCopy($v), ElementVariantCatalog::all()),
+                static fn(array $v): bool => in_array($v['type'], $offered, true),
+            )),
             'providers'   => $providers,
             'tokens'      => $tokens,
             'vocabulary'  => [

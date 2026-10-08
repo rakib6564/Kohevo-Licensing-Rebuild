@@ -99,7 +99,7 @@ export function isDescendant(doc, ancestorId, candidateId) {
 export function canContain(doc, manifest, parentId, type, height = 1) {
   const parent = findNode(doc, parentId);
   if (!parent) return false;
-  const maxDepth = (manifest.limits && manifest.limits.max_nesting_depth) || 4;
+  const maxDepth = (manifest.limits && manifest.limits.max_nesting_depth) || 6;
   if (parent.kind === 'section') return height <= maxDepth;
   const def = blockDefinition(manifest, parent.node.type);
   if (!def || !def.allows_children) return false;

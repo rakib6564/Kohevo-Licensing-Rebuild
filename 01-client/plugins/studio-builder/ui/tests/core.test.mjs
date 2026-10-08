@@ -33,17 +33,17 @@ test('tree: find, walk, ids, depth, labels', () => {
 test('structure rules mirror the server: children only in containers, no cycles, depth limit', () => {
   const leaf = heading('Leaf');
   const c1 = container([]);
-  const c2 = container([container([container([container([])])])]); // depths 1..4 (the maximum)
+  const c2 = container([container([container([container([container([container([])])])])])]); // depths 1..6 (the maximum)
   const s = section([leaf, c1, c2]);
   const x = doc([s]);
   assert.equal(d.canMoveBlock(x, manifest, leaf.id, c1.id), true, 'into a container');
   assert.equal(d.canMoveBlock(x, manifest, c1.id, leaf.id), false, 'a heading does not allow children');
   assert.equal(d.canMoveBlock(x, manifest, c2.id, c2.children[0].id), false, 'never into its own descendant');
-  assert.equal(d.canMoveBlock(x, manifest, c2.id, c1.id), false, 'depth would exceed max_nesting_depth (4)');
-  const third = c2.children[0].children[0];
-  assert.equal(d.canInsertBlock(x, manifest, third.id, 'core.heading'), true, 'a child at depth 4 is allowed');
-  const deepest = third.children[0];
-  assert.equal(d.canInsertBlock(x, manifest, deepest.id, 'core.heading'), false, 'a child at depth 5 is not');
+  assert.equal(d.canMoveBlock(x, manifest, c2.id, c1.id), false, 'depth would exceed max_nesting_depth (6)');
+  const fifth = c2.children[0].children[0].children[0].children[0];
+  assert.equal(d.canInsertBlock(x, manifest, fifth.id, 'core.heading'), true, 'a child at depth 6 is allowed');
+  const deepest = fifth.children[0];
+  assert.equal(d.canInsertBlock(x, manifest, deepest.id, 'core.heading'), false, 'a child at depth 7 is not');
   assert.equal(d.canInsertBlock(x, manifest, s.id, 'unknown.block'), false, 'unregistered types are never offered');
 });
 

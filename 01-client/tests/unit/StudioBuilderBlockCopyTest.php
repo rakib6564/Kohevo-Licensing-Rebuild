@@ -22,11 +22,19 @@ if (!function_exists('unit')) {
 
 use Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions;
 
-/** Icon names the builder UI can draw (ui/src/components/BlockPalette.jsx ICON_BY_NAME). */
-const SBCOPY_ICONS = [
-    'rocket', 'heading', 'pilcrow', 'image', 'arrow-up-right', 'grid-panes', 'grid-dots', 'spacer', 'divider',
-    'box', 'layout-section', 'video', 'gallery', 'form', 'search', 'list-check', 'quotes',
-];
+/**
+ * Icon names the builder UI can draw: the keys of ICON_BY_NAME in ui/src/components/blockIcons.jsx, read from the
+ * source so a new block's icon cannot be added on one side only.
+ *
+ * @return list<string>
+ */
+function sbcopy_ui_icons(): array
+{
+    $src = (string) file_get_contents(__DIR__ . '/../../plugins/studio-builder/ui/src/components/blockIcons.jsx');
+    assert_true(preg_match('/ICON_BY_NAME\s*=\s*\{(.*?)\n\};/s', $src, $m) === 1, 'ICON_BY_NAME is readable');
+    preg_match_all("/^\s*(?:'([a-z0-9-]+)'|([a-z0-9]+))\s*:/m", $m[1], $keys, PREG_SET_ORDER);
+    return array_map(static fn(array $k): string => $k[1] !== '' ? $k[1] : $k[2], $keys);
+}
 
 unit('block copy: every registered block has a title, description, category and a drawable icon', function (): void {
     $manifests = ModuleBlockDefinitions::studioRegistry()->editorManifests();
@@ -36,7 +44,7 @@ unit('block copy: every registered block has a title, description, category and 
         assert_true(trim((string) $m['title']) !== '', "{$type}: title");
         assert_true(trim((string) $m['description']) !== '', "{$type}: description");
         assert_true(trim((string) $m['category']) !== '', "{$type}: category");
-        assert_true(in_array($m['icon'], SBCOPY_ICONS, true), "{$type}: icon '{$m['icon']}' is not in the UI icon map");
+        assert_true(in_array($m['icon'], sbcopy_ui_icons(), true), "{$type}: icon '{$m['icon']}' is not in the UI icon map");
         assert_true(mb_strlen((string) $m['description']) <= 80, "{$type}: card description stays one line");
     }
 });

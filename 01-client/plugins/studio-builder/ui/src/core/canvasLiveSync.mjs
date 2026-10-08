@@ -53,25 +53,28 @@ export function isStructuralChange(prevDoc, nextDoc) {
     const prevSec = prevSections[s];
     const nextSec = nextSections[s];
     if (!prevSec || !nextSec || prevSec.id !== nextSec.id) return true;
+    if (blocksChanged(prevSec.blocks, nextSec.blocks)) return true;
+  }
+  return false;
+}
 
-    const prevBlocks = Array.isArray(prevSec.blocks) ? prevSec.blocks : [];
-    const nextBlocks = Array.isArray(nextSec.blocks) ? nextSec.blocks : [];
-    if (prevBlocks.length !== nextBlocks.length) return true;
+/**
+ * Blocks whose markup is built only on the server (no heuristic live patch exists for them): any
+ * property edit repaints the canvas from the server instead of being patched in place.
+ */
+export const SERVER_RENDERED_TYPES = new Set(['core.icon', 'core.list', 'core.quote', 'core.link', 'core.card', 'core.table', 'core.countdown']);
 
-    for (let b = 0; b < nextBlocks.length; b += 1) {
-      const pb = prevBlocks[b];
-      const nb = nextBlocks[b];
-      if (!pb || !nb || pb.id !== nb.id || pb.type !== nb.type) return true;
-
-      const prevKids = Array.isArray(pb.children) ? pb.children : [];
-      const nextKids = Array.isArray(nb.children) ? nb.children : [];
-      if (prevKids.length !== nextKids.length) return true;
-      for (let k = 0; k < nextKids.length; k += 1) {
-        if (!prevKids[k] || !nextKids[k] || prevKids[k].id !== nextKids[k].id || prevKids[k].type !== nextKids[k].type) {
-          return true;
-        }
-      }
-    }
+/** Compare two block lists to any depth: ids, types, child counts and the props of server-rendered types. */
+function blocksChanged(prev, next) {
+  const prevBlocks = Array.isArray(prev) ? prev : [];
+  const nextBlocks = Array.isArray(next) ? next : [];
+  if (prevBlocks.length !== nextBlocks.length) return true;
+  for (let i = 0; i < nextBlocks.length; i += 1) {
+    const pb = prevBlocks[i];
+    const nb = nextBlocks[i];
+    if (!pb || !nb || pb.id !== nb.id || pb.type !== nb.type) return true;
+    if (SERVER_RENDERED_TYPES.has(nb.type) && pb.props !== nb.props && JSON.stringify(pb.props) !== JSON.stringify(nb.props)) return true;
+    if (blocksChanged(pb.children, nb.children)) return true;
   }
   return false;
 }
@@ -174,6 +177,8 @@ export function syncLiveDOM(canvasDoc, prevDoc, nextDoc, activeBreakpoint = 'bas
     for (const [id, nextBlock] of nextBlocks) {
       const prevBlock = prevBlocks.get(id);
       if (prevBlock === nextBlock) continue;
+
+      if (SERVER_RENDERED_TYPES.has(nextBlock.type)) continue; // repainted from the server (see isStructuralChange)
 
       const el = canvasDoc.querySelector(`[data-sb-node="${cssEscape(id)}"]`);
       if (!el) continue;

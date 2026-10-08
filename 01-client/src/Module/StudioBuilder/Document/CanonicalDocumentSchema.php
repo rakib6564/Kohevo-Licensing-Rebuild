@@ -19,7 +19,7 @@ final class CanonicalDocumentSchema
     public const MAX_JSON_DEPTH          = 32;
     public const MAX_SECTIONS            = 50;
     public const MAX_BLOCKS_PER_DOCUMENT = 250;
-    public const MAX_NESTING_DEPTH       = 4;
+    public const MAX_NESTING_DEPTH       = 6;
     public const MAX_REPEATER_ITEMS      = 50;
     public const MAX_STRING_LENGTH       = 2000;
     public const MAX_TEXT_LENGTH         = 20000;

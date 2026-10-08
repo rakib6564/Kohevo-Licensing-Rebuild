@@ -14,6 +14,8 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Registry;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\CountdownRenderer;
+use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 
 final class BlockRegistry
@@ -736,6 +738,149 @@ final class BlockRegistry
                         ['key' => 'decimals', 'type' => 'number', 'label' => 'Decimals', 'required' => false, 'default' => 0, 'min' => 0, 'max' => 3, 'integer_only' => true],
                     ]),
                 ],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 29. core.icon — one icon from the built-in set (names are stored in documents: add, never rename).
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.icon',
+            version: 1,
+            label: 'Icon',
+            title: 'Icon',
+            description: 'A single icon, sized and tinted',
+            category: 'media',
+            icon: 'star',
+            schema: FieldSchema::define([
+                ['key' => 'name', 'type' => 'enum', 'label' => 'Icon', 'required' => false, 'allowed_values' => IconLibrary::names(), 'default' => 'star'],
+                ['key' => 'size', 'type' => 'enum', 'label' => 'Size', 'required' => false, 'allowed_values' => ['sm', 'md', 'lg', 'xl'], 'default' => 'md'],
+                ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['left', 'center', 'right'], 'default' => 'left'],
+                ['key' => 'color_token', 'type' => 'token_ref', 'label' => 'Colour', 'required' => false, 'default' => null],
+                ['key' => 'label', 'type' => 'string', 'label' => 'Accessible label (leave empty if decorative)', 'required' => false, 'default' => '', 'max_length' => 120],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 30. core.list — bulleted, numbered, ticked or plain.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.list',
+            version: 1,
+            label: 'List',
+            title: 'List',
+            description: 'Bulleted, numbered or ticked items',
+            category: 'content',
+            icon: 'list',
+            schema: FieldSchema::define([
+                ['key' => 'style', 'type' => 'enum', 'label' => 'Style', 'required' => false, 'allowed_values' => ['bullet', 'number', 'check', 'none'], 'default' => 'bullet'],
+                [
+                    'key'         => 'items',
+                    'type'        => 'repeater',
+                    'label'       => 'Items',
+                    'required'    => false,
+                    'default'     => [['text' => 'First item'], ['text' => 'Second item'], ['text' => 'Third item']],
+                    'max_items'   => 30,
+                    'item_schema' => FieldSchema::define([
+                        ['key' => 'text', 'type' => 'string', 'label' => 'Text', 'required' => true, 'max_length' => 300],
+                    ]),
+                ],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 31. core.quote — a pull quote with attribution.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.quote',
+            version: 1,
+            label: 'Quote',
+            title: 'Quote',
+            description: 'A pull quote with its author',
+            category: 'content',
+            icon: 'quotes',
+            schema: FieldSchema::define([
+                ['key' => 'text', 'type' => 'text', 'label' => 'Quote', 'required' => true, 'default' => 'A short, memorable line from someone who matters.', 'max_length' => 1000],
+                ['key' => 'author', 'type' => 'string', 'label' => 'Author', 'required' => false, 'default' => '', 'max_length' => 120],
+                ['key' => 'role', 'type' => 'string', 'label' => 'Role or company', 'required' => false, 'default' => '', 'max_length' => 120],
+                ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['left', 'center'], 'default' => 'left'],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 32. core.link — a plain text link (core.button stays the call-to-action).
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.link',
+            version: 1,
+            label: 'Link',
+            title: 'Link',
+            description: 'A plain text link',
+            category: 'content',
+            icon: 'link',
+            schema: FieldSchema::define([
+                ['key' => 'link', 'type' => 'link', 'label' => 'Link', 'required' => true],
+                ['key' => 'style', 'type' => 'enum', 'label' => 'Style', 'required' => false, 'allowed_values' => ['underline', 'plain', 'arrow'], 'default' => 'underline'],
+                ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['left', 'center', 'right'], 'default' => 'left'],
+            ]),
+            allowsChildren: false,
+            allowedBindingProviders: [],
+        ));
+
+        // 33. core.card — a padded surface that holds other blocks.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.card',
+            version: 1,
+            label: 'Card',
+            title: 'Card',
+            description: 'A padded surface that holds other elements',
+            category: 'layout',
+            icon: 'box',
+            schema: FieldSchema::define([
+                ['key' => 'variant', 'type' => 'enum', 'label' => 'Style', 'required' => false, 'allowed_values' => ['outlined', 'filled', 'shadow'], 'default' => 'outlined'],
+                ['key' => 'padding', 'type' => 'enum', 'label' => 'Padding', 'required' => false, 'allowed_values' => ['sm', 'md', 'lg'], 'default' => 'md'],
+                ['key' => 'surface_token', 'type' => 'token_ref', 'label' => 'Surface colour', 'required' => false, 'default' => null],
+            ]),
+            allowsChildren: true,
+        ));
+
+        // 34. core.table — header line plus one line per row, cells separated by "|".
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.table',
+            version: 1,
+            label: 'Table',
+            title: 'Table',
+            description: 'Rows and columns of plain data',
+            category: 'content',
+            icon: 'table',
+            schema: FieldSchema::define([
+                ['key' => 'caption', 'type' => 'string', 'label' => 'Caption', 'required' => false, 'default' => '', 'max_length' => 160],
+                ['key' => 'header', 'type' => 'string', 'label' => 'Header (separate columns with |)', 'required' => false, 'default' => 'Plan | Price | Seats', 'max_length' => 400],
+                ['key' => 'striped', 'type' => 'boolean', 'label' => 'Striped rows', 'required' => false, 'default' => true],
+                [
+                    'key'         => 'rows',
+                    'type'        => 'repeater',
+                    'label'       => 'Rows',
+                    'required'    => false,
+                    'default'     => [['cells' => 'Starter | $9 | 1'], ['cells' => 'Team | $29 | 5'], ['cells' => 'Business | $99 | 25']],
+                    'max_items'   => 50,
+                    'item_schema' => FieldSchema::define([
+                        ['key' => 'cells', 'type' => 'string', 'label' => 'Cells (separate with |)', 'required' => true, 'max_length' => 600],
+                    ]),
+                ],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 35. core.countdown — counts down to a moment; the runtime drives it (core.stats-style progressive enhancement).
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.countdown',
+            version: 1,
+            label: 'Countdown',
+            title: 'Countdown',
+            description: 'Days, hours, minutes and seconds to a date',
+            category: 'content',
+            icon: 'timer',
+            schema: FieldSchema::define([
+                ['key' => 'target', 'type' => 'string', 'label' => 'Ends at (UTC, e.g. 2030-01-01T00:00:00Z)', 'required' => true, 'default' => '2030-01-01T00:00:00Z', 'max_length' => 40, 'pattern' => CountdownRenderer::TARGET_PATTERN],
+                ['key' => 'label', 'type' => 'string', 'label' => 'Label', 'required' => false, 'default' => 'Starts in', 'max_length' => 120],
+                ['key' => 'done_text', 'type' => 'string', 'label' => 'Text when it ends', 'required' => false, 'default' => '', 'max_length' => 160],
             ]),
             allowsChildren: false,
         ));

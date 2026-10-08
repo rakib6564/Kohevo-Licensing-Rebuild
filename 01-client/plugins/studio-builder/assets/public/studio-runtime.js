@@ -959,6 +959,7 @@
     if (!els.length) return;
 
     var timers = [];
+    var live = [];
     els.forEach(function (el) {
       var target = new Date(el.getAttribute('data-sb-countdown')).getTime();
       if (isNaN(target)) return;
@@ -984,14 +985,26 @@
       }
 
       tick();
+      // The units are hidden by the stylesheet until this attribute is set, so a visitor without JS sees the
+      // static date line instead of a frozen "00:00:00:00".
+      el.setAttribute('data-sb-live', '');
       var handle = global.setInterval(function () {
         if (document.hidden) return; // don't burn cycles on a background tab
         if (!tick()) global.clearInterval(handle);
       }, 1000);
       timers.push(handle);
+      live.push(el);
     });
 
-    mount(function () { timers.forEach(function (t) { global.clearInterval(t); }); });
+    mount(function () {
+      timers.forEach(function (t) { global.clearInterval(t); });
+      // Back to what the server rendered, which is what the A/B toggle relies on.
+      live.forEach(function (el) {
+        el.removeAttribute('data-sb-live');
+        el.removeAttribute('data-sb-finished');
+        qsa(el, '[data-sb-cd]').forEach(function (n) { n.textContent = '00'; });
+      });
+    });
   }
 
   /* ── Feature: smooth anchor scroll ──────────────────────────────────────

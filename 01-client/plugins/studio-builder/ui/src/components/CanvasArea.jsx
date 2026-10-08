@@ -167,7 +167,9 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     // Synchronize all live DOM elements (props, text, styles, typography, colors, surfaces, cards) in 0ms!
     syncLiveDOM(doc, prev, working, viewport.key);
 
-    paintedRef.current = working;
+    // A change the live patch cannot express (a server-rendered element's props, or the tree itself) must
+    // stay "unpainted", so the reload that follows the next save still sees it as structural.
+    if (!isStructuralChange(prev, working)) paintedRef.current = working;
     markSelected(doc, selectionRef.current, { scroll: false });
   }, [working, loading, viewport.key]);
 

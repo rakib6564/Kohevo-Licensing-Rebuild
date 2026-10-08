@@ -14,6 +14,12 @@ const BAR_CLASS = 'sbx-canvas-action-bar';
 const BUBBLE_CLASS = 'sbx-text-bubble';
 
 const OVERLAY_CSS = `
+/* An empty layout block would otherwise collapse to a hairline and be impossible to see or pick. */
+.sb-grid:empty, .sb-flex:empty, .sb-stack:empty, .sb-card:empty {
+  min-height: 56px;
+  outline: 1px dashed rgba(139, 92, 246, 0.45);
+  outline-offset: -1px;
+}
 [${NODE_ATTR}] { cursor: default; transition: outline 0.08s ease; }
 [${NODE_ATTR}].sbx-hover:not(.sbx-selected) {
   outline: 1.5px dashed rgba(139, 92, 246, 0.7) !important;

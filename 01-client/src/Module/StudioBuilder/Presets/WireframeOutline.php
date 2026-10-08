@@ -65,7 +65,7 @@ final class WireframeOutline
         $props = is_array($block['props'] ?? null) ? $block['props'] : [];
         $style = is_array($block['style'] ?? null) ? $block['style'] : [];
         $node  = ['t' => (string) ($block['type'] ?? '')];
-        foreach (['items', 'slides', 'images', 'tabs', 'stats'] as $list) {
+        foreach (['items', 'slides', 'images', 'tabs', 'stats', 'rows'] as $list) {
             if (is_array($props[$list] ?? null)) {
                 $node['n'] = count($props[$list]);
                 break;

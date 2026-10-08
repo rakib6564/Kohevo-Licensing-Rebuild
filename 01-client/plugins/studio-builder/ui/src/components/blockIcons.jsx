@@ -19,6 +19,11 @@ import {
   IconSearch,
   IconListCheck,
   IconQuotes,
+  IconStar,
+  IconList,
+  IconLink,
+  IconTable,
+  IconTimer,
 } from './Icons.jsx';
 
 export const DRAG_TYPE_NEW = 'application/x-kohevo-studio-block-type';
@@ -45,6 +50,11 @@ export const ICON_BY_NAME = {
   search: IconSearch,
   'list-check': IconListCheck,
   quotes: IconQuotes,
+  star: IconStar,
+  list: IconList,
+  link: IconLink,
+  table: IconTable,
+  timer: IconTimer,
 };
 
 export function renderBlockIcon(type, icon, label) {
