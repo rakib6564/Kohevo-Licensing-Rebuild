@@ -1,0 +1,66 @@
+// Free-form style controls validate like the server does (B2-P3a): an invalid draft shows an inline error and is
+// never committed; a valid one commits and reaches the canvas.
+import { test, expect } from '@playwright/test';
+import { openBuilder, frameDocument, settled, sandboxPageId } from './helpers.mjs';
+
+test.beforeEach(async ({}, info) => {
+  test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
+});
+
+test.afterEach(async ({ page }) => {
+  await page.goto(`/plugins/studio-builder/admin/builder.php?page=${sandboxPageId()}&lang=en`);
+});
+
+async function layerCount(page) {
+  await page.getByRole('tab', { name: /^Layers$/ }).click();
+  return page.locator('[role="treeitem"]').count();
+}
+
+async function restore(page, layers) {
+  for (let i = 0; i < 16; i++) {
+    await settled(page);
+    if ((await layerCount(page)) <= layers) return;
+    const undo = page.getByTestId('undo');
+    await expect(undo).toBeEnabled({ timeout: 5_000 });
+    await undo.click();
+    await page.waitForTimeout(500);
+  }
+  throw new Error('could not restore the shared sandbox page');
+}
+
+test('a hostile or malformed value shows an inline error and is not applied; a valid one is', async ({ page }) => {
+  await openBuilder(page);
+  await settled(page);
+  const before = await layerCount(page);
+  try {
+    await page.getByRole('tab', { name: /^(Add|Ajouter)$/ }).click();
+    const panel = page.locator('#sbx-leftpanel-blocks');
+    await panel.getByRole('tab', { name: 'Elements' }).click();
+    await panel.locator('[data-chip="content"]').click();
+    await panel.locator('[data-block-type="core.quote"]').click();
+    await settled(page);
+    await page.locator('[id^="sbx-blk-"][id$="-tab-style"]').click();
+
+    const size = page.getByLabel('Font Size', { exact: true });
+    await size.fill('url(https://evil.test/x.png)');
+    await size.blur();
+    await expect(page.getByRole('alert').filter({ hasText: /Not a valid value/ })).toBeVisible();
+    await expect(size).toHaveAttribute('aria-invalid', 'true');
+    const frame = await frameDocument(page);
+    expect(await frame.locator('body').innerHTML()).not.toContain('evil.test');
+
+    await size.fill('1.5rem');
+    await size.blur();
+    await expect(page.getByRole('alert').filter({ hasText: /Not a valid value/ })).toHaveCount(0);
+    await settled(page);
+    await expect(size).toHaveValue('1.5rem');
+
+    const color = page.locator('input[id$="-tcolor-text"]');
+    await color.fill('url(x)');
+    await expect(page.getByRole('alert').filter({ hasText: /Not a valid value/ })).toBeVisible();
+    await color.fill('#e8734a');
+    await expect(page.getByRole('alert').filter({ hasText: /Not a valid value/ })).toHaveCount(0);
+  } finally {
+    await restore(page, before);
+  }
+});

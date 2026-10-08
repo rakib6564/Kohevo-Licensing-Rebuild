@@ -23,6 +23,7 @@
 import { useId, useState } from 'react';
 import { asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
+import { acceptsDraft } from '../../core/styleValues.mjs';
 import { FocalPointControl } from '../fields/FocalPointControl.jsx';
 /**
  * A colour control that accepts a token reference or a literal hex.
@@ -33,6 +34,11 @@ import { FocalPointControl } from '../fields/FocalPointControl.jsx';
  */
 function ColorField({ id, label, value, onChange }) {
   const literal = typeof value === 'string' && /^#[0-9a-f]{3,8}$/i.test(value) ? value.slice(0, 7) : '';
+  // Typing `#e8` is not yet a colour: keep the draft locally and commit only
+  // once it is one (or empty), so a half-typed value never reaches the document.
+  const [draft, setDraft] = useState(null);
+  const shown = draft ?? value ?? '';
+  const invalid = draft !== null && !acceptsDraft('color', draft);
   return (
     <div className="sbx-field">
       <label className="sbx-field__label" htmlFor={`${id}-text`}>{label}</label>
@@ -42,7 +48,7 @@ function ColorField({ id, label, value, onChange }) {
             type="color"
             className="sbx-color__picker"
             value={literal || '#000000'}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => { setDraft(null); onChange(e.target.value); }}
             tabIndex={-1}
             aria-label={label}
           />
@@ -51,11 +57,19 @@ function ColorField({ id, label, value, onChange }) {
           id={`${id}-text`}
           type="text"
           className="sbx-input"
-          value={value ?? ''}
+          value={shown}
           placeholder={t('inherit')}
-          onChange={(e) => onChange(e.target.value.trim() || undefined)}
+          aria-invalid={invalid || undefined}
+          aria-describedby={invalid ? `${id}-err` : undefined}
+          onChange={(e) => {
+            const next = e.target.value.trim();
+            setDraft(e.target.value);
+            if (acceptsDraft('color', next)) onChange(next || undefined);
+          }}
+          onBlur={() => { if (!invalid) setDraft(null); }}
         />
       </div>
+      {invalid && <p className="sbx-field__error" id={`${id}-err`} role="alert">{t('invalid_css_value')}</p>}
     </div>
   );
 }
@@ -65,7 +79,8 @@ function ColorField({ id, label, value, onChange }) {
  * document. `key` resets the field when the value changes from elsewhere
  * (undo, responsive switch) so the DOM never disagrees with the document.
  */
-function DraftText({ id, label, value, placeholder, onCommit, hint }) {
+function DraftText({ id, label, value, placeholder, onCommit, hint, kind }) {
+  const [error, setError] = useState(false);
   return (
     <div className="sbx-field">
       <label className="sbx-field__label" htmlFor={id}>{label}</label>
@@ -76,12 +91,23 @@ function DraftText({ id, label, value, placeholder, onCommit, hint }) {
         defaultValue={value ?? ''}
         placeholder={placeholder}
         key={value ?? ''}
+        aria-invalid={error || undefined}
+        aria-describedby={error ? `${id}-err` : undefined}
+        onChange={() => { if (error) setError(false); }}
         onBlur={(e) => {
           const next = e.target.value.trim();
+          // `kind` names the grammar the server enforces (core/styleValues.mjs);
+          // an invalid draft stays in the box with an error and is never committed.
+          if (kind && !acceptsDraft(kind, next)) {
+            setError(true);
+            return;
+          }
+          setError(false);
           onCommit(next === (value ?? '') ? undefined : (next || undefined));
         }}
         onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
       />
+      {error && <p className="sbx-field__error" id={`${id}-err`} role="alert">{t('invalid_css_value')}</p>}
       {hint && <p className="sbx-hint">{hint}</p>}
     </div>
   );
@@ -192,6 +218,7 @@ export function StyleControls({ style, capabilities, onChange }) {
           <legend>{t('typography')}</legend>
           <DraftText
             id={`${id}-size`}
+            kind="length"
             label={t('font_size')}
             value={typo.size}
             placeholder="1.5rem"
@@ -199,6 +226,7 @@ export function StyleControls({ style, capabilities, onChange }) {
           />
           <DraftText
             id={`${id}-lh`}
+            kind="lineHeight"
             label={t('line_height')}
             value={typo.line_height}
             placeholder="1.5"
@@ -206,6 +234,7 @@ export function StyleControls({ style, capabilities, onChange }) {
           />
           <DraftText
             id={`${id}-ls`}
+            kind="letterSpacing"
             label={t('letter_spacing')}
             value={typo.letter_spacing}
             placeholder="-0.01em"
@@ -213,6 +242,7 @@ export function StyleControls({ style, capabilities, onChange }) {
           />
           <DraftText
             id={`${id}-ff`}
+            kind="fontFamily"
             label={t('font_family')}
             value={typo.font_family}
             placeholder="Inter, sans-serif"
@@ -356,6 +386,7 @@ export function StyleControls({ style, capabilities, onChange }) {
           </div>
           <DraftText
             id={`${id}-border-width`}
+            kind="borderWidth"
             label={t('border_width')}
             value={border.width}
             placeholder="1px"
@@ -393,6 +424,7 @@ export function StyleControls({ style, capabilities, onChange }) {
           {typeof style.shadow === 'string' && !SHADOW_PRESETS.includes(style.shadow) && (
             <DraftText
               id={`${id}-shadow`}
+              kind="shadow"
               label={t('box_shadow')}
               value={style.shadow}
               placeholder="0 10px 25px rgba(0,0,0,.15)"
@@ -408,6 +440,7 @@ export function StyleControls({ style, capabilities, onChange }) {
           <legend>{t('dimensions_label')}</legend>
           <DraftText
             id={`${id}-width`}
+            kind="length"
             label={t('dimension_width')}
             value={dims.width}
             placeholder="100%"
@@ -415,6 +448,7 @@ export function StyleControls({ style, capabilities, onChange }) {
           />
           <DraftText
             id={`${id}-minh`}
+            kind="length"
             label={t('dimension_min_height')}
             value={dims.min_height}
             placeholder="20rem"
@@ -422,6 +456,7 @@ export function StyleControls({ style, capabilities, onChange }) {
           />
           <DraftText
             id={`${id}-maxw`}
+            kind="length"
             label={t('dimension_max_width')}
             value={dims.max_width}
             placeholder="60rem"

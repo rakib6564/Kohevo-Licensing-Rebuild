@@ -208,3 +208,20 @@ unit('style guard: styleIssues names exactly the refused values', function (): v
     ]);
     assert_eq(['typography.font_family', 'background.color', 'shadow', 'dimensions.height'], array_keys($issues), 'only the refused fields are listed');
 });
+
+// ── Parity with the editor (ui/src/core/styleValues.mjs) ──────────────────
+
+unit('style guard: agrees with every case in the shared UI fixture', function (): void {
+    $fixture = json_decode((string) file_get_contents(__DIR__ . '/../../plugins/studio-builder/ui/tests/fixtures/style-values.json'), true);
+    assert_true(is_array($fixture) && count($fixture['cases']) > 80, 'fixture loads');
+    $methods = [
+        'length' => 'isLength', 'lengthList' => 'isLengthList', 'lengthOrToken' => 'isLengthOrToken',
+        'lineHeight' => 'isLineHeight', 'letterSpacing' => 'isLetterSpacing', 'borderWidth' => 'isBorderWidth',
+        'color' => 'isColor', 'gradient' => 'isGradient', 'shadow' => 'isShadow', 'fontFamily' => 'isFontFamily',
+    ];
+    foreach ($fixture['cases'] as $case) {
+        $method = $methods[$case['kind']] ?? null;
+        assert_true($method !== null, 'unknown kind ' . $case['kind']);
+        assert_eq($case['ok'], StyleValueGuard::$method($case['value']), $case['kind'] . ' ' . json_encode($case['value']));
+    }
+});
