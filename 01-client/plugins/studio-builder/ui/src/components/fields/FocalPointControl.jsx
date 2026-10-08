@@ -3,6 +3,7 @@
 // Shows an interactive preview thumbnail where the user can click or drag
 // a target reticle (⊙) to set the visual focal point coordinates (x%, y%).
 
+import { t } from '../../core/messages.mjs';
 import { memo, useCallback, useRef, useState } from 'react';
 
 export const FocalPointControl = memo(function FocalPointControl({
@@ -58,7 +59,7 @@ export const FocalPointControl = memo(function FocalPointControl({
   return (
     <div className="sbx-focal-point">
       <div className="sbx-focal-point__header">
-        <label className="sbx-field__label">Focal point</label>
+        <label className="sbx-field__label">{t('focal_point')}</label>
         <span className="sbx-focal-point__coords">{coords.x}% {coords.y}%</span>
       </div>
 
@@ -68,13 +69,13 @@ export const FocalPointControl = memo(function FocalPointControl({
         onPointerDown={handlePointerDown}
         onTouchStart={handlePointerDown}
         role="slider"
-        aria-label="Image focal point"
+        aria-label={t('focal_image_label')}
         aria-valuetext={`X ${coords.x}%, Y ${coords.y}%`}
       >
         {imageUrl ? (
           <img
             src={imageUrl}
-            alt="Focal preview"
+            alt={t('focal_preview')}
             className="sbx-focal-point__image"
           />
         ) : (

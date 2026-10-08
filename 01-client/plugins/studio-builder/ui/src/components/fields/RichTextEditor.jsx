@@ -6,6 +6,7 @@
 // value stays an allowlisted HTML string validated by the server — Lexical's
 // own JSON state is never stored anywhere.
 
+import { t } from '../../core/messages.mjs';
 import { useEffect, useRef } from 'react';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
@@ -37,20 +38,20 @@ function Toolbar() {
     <button type="button" className="sbx-btn sbx-btn--xs" title={title} aria-label={title} onMouseDown={(e) => e.preventDefault()} onClick={onClick}>{label}</button>
   );
   return (
-    <div className="sbx-rt__toolbar" role="toolbar" aria-label="Formatting">
-      {btn('B', 'Bold', () => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold'))}
-      {btn('I', 'Italic', () => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic'))}
-      {btn('U', 'Underline', () => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline'))}
-      {btn('•', 'Bulleted list', () => editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined))}
-      {btn('1.', 'Numbered list', () => editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined))}
-      {btn('🔗', 'Link', () => {
+    <div className="sbx-rt__toolbar" role="toolbar" aria-label={t('rt_formatting')}>
+      {btn(t('rt_bold_glyph'), t('rt_bold'), () => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold'))}
+      {btn(t('rt_italic_glyph'), t('rt_italic'), () => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic'))}
+      {btn(t('rt_underline_glyph'), t('rt_underline'), () => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline'))}
+      {btn('•', t('rt_bulleted'), () => editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined))}
+      {btn('1.', t('rt_numbered'), () => editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined))}
+      {btn('🔗', t('rt_link'), () => {
         // eslint-disable-next-line no-alert
-        const url = window.prompt('Link address (https://…, /path, #anchor, mailto:, tel:)');
+        const url = window.prompt(t('rt_link_prompt'));
         if (url === null) return;
         const clean = url.trim();
         editor.dispatchCommand(TOGGLE_LINK_COMMAND, clean === '' ? null : (isLikelySafeUrl(clean) ? clean : null));
       })}
-      {btn('⌫🔗', 'Remove link', () => editor.dispatchCommand(TOGGLE_LINK_COMMAND, null))}
+      {btn('⌫🔗', t('rt_remove_link'), () => editor.dispatchCommand(TOGGLE_LINK_COMMAND, null))}
     </div>
   );
 }

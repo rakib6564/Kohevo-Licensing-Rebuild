@@ -112,3 +112,25 @@ test('no hard-coded English labels slipped into the touched components', () => {
   }
   assert.deepEqual(offenders, []);
 });
+
+test('no hard-coded prose in attributes or <option> text anywhere in the UI', () => {
+  // Product/brand names, font stacks, URL/code examples and the focal-point axis letters are not translated.
+  const allowed = new Set(['KOHEVO STUDIO', 'KOHEVO STUDIO BUILDER 2.0', 'Inter, sans-serif', 'https://...mp4', 'data-custom=value aria-role=article', 'X', 'Y']);
+  const fontOption = /^(Inter|System Sans|Playfair Display|Geist|Open Sans)$/;
+  const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
+  const offenders = [];
+  for (const f of walk(join(here, '..', 'src')).filter((x) => x.endsWith('.jsx'))) {
+    readFileSync(f, 'utf8').split('\n').forEach((line, i) => {
+      if (/^\s*(\/\/|\*|\/\*|import )/.test(line)) return;
+      const where = `${f.split('/src/')[1]}:${i + 1}`;
+      for (const m of line.matchAll(/\b(?:title|aria-label|placeholder|alt|label)="([^"{}]*[A-Za-z]{3,}[^"{}]*)"/g)) {
+        const cssExample = /\d/.test(m[1]) && !/[A-Za-z]{4,} [A-Za-z]{3,}/.test(m[1]);
+        if (!allowed.has(m[1]) && !cssExample) offenders.push(`${where}: ${m[0]}`);
+      }
+      for (const m of line.matchAll(/<option[^>]*>([^<{]*[A-Za-z]{2,}[^<{]*)<\/option>/g)) {
+        if (!fontOption.test(m[1].trim())) offenders.push(`${where}: <option>${m[1]}`);
+      }
+    });
+  }
+  assert.deepEqual(offenders, []);
+});

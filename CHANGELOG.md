@@ -37,6 +37,10 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
   so French users saw English. All now ship through `boot.messages` with French. The parity test now covers every message in
   the table, checks the PHP default matches the English text, and fails on any `t()` key with no English text.
   Block inspector device labels and the media "Change" button used keys that did not exist and showed the raw key name.
+- **Hard-coded English in the inspectors.** The rich-text toolbar, font weight / text case / border style / size / radius
+  options, background type, fit and position controls, focal-point labels, URL placeholders and the dialog close button were
+  literal English. They now go through the message table with French. A test fails on any prose in an attribute or `<option>`
+  anywhere in the UI, and a French e2e checks the block inspector.
 
 ### Security
 

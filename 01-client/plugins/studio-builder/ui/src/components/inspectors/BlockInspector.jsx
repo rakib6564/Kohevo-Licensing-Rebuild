@@ -107,11 +107,11 @@ export function BlockInspector({ info }) {
                   }), { label: def.label })}
                 >
                   <option value="">{t('inherit')}</option>
-                  <option value="normal">Normal (400)</option>
-                  <option value="medium">Medium (500)</option>
-                  <option value="semibold">Semibold (600)</option>
-                  <option value="bold">Bold (700)</option>
-                  <option value="extrabold">Extra Bold (800)</option>
+                  <option value="normal">{t('fw_normal')}</option>
+                  <option value="medium">{t('fw_medium')}</option>
+                  <option value="semibold">{t('fw_semibold')}</option>
+                  <option value="bold">{t('fw_bold')}</option>
+                  <option value="extrabold">{t('fw_extrabold')}</option>
                 </select>
               </div>
               <div className="sbx-field">
@@ -125,9 +125,9 @@ export function BlockInspector({ info }) {
                   }), { label: def.label })}
                 >
                   <option value="">{t('none')}</option>
-                  <option value="uppercase">UPPERCASE</option>
-                  <option value="lowercase">lowercase</option>
-                  <option value="capitalize">Capitalize</option>
+                  <option value="uppercase">{t('tt_uppercase')}</option>
+                  <option value="lowercase">{t('tt_lowercase')}</option>
+                  <option value="capitalize">{t('tt_capitalize')}</option>
                 </select>
               </div>
             </fieldset>
@@ -169,7 +169,7 @@ export function BlockInspector({ info }) {
               type="text"
               className="sbx-input"
               value={classNames.join(' ')}
-              placeholder="e.g. my-custom-class hero-banner"
+              placeholder={t('classes_placeholder')}
               onChange={(e) => {
                 const names = e.target.value.trim().split(/\s+/).filter(Boolean);
                 applyOp(ops.updateBlockClassNames(block.id, names), { label: def.label });

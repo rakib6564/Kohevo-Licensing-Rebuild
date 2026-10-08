@@ -61,7 +61,7 @@ export function UrlControl({ field, draft, update, problem, common, id, mediaPic
           inputMode="url"
           {...common}
           value={draft ?? ''}
-          placeholder="https://… or /path"
+          placeholder={t('url_placeholder_path')}
           onChange={(e) => update(coerce(field, e.target.value.trim()))}
           style={{ flex: '1 1 140px', minWidth: 0 }}
         />
