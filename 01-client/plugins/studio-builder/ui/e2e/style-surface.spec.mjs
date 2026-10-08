@@ -1,7 +1,7 @@
 // The style-surface controls (B2-P3c slice 4): layout, spacing, states, wrapper tag and section style write
 // values the server keeps, and the canvas shows them.
 import { test, expect } from '@playwright/test';
-import { openBuilder, frameDocument, settled, sandboxPageId, openSection } from './helpers.mjs';
+import { openBuilder, frameDocument, frameEval, settled, sandboxPageId, openSection } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
@@ -71,8 +71,7 @@ test('Layout offers flex controls only for flex, refuses a bare number, and the 
     await settled(page);
     await expect(page.locator('[data-section="layout"] .sbx-isec__toggle')).toContainText('flex · column · 18px');
 
-    const w = await wrapper(page);
-    await expect.poll(async () => w.evaluate((el) => `${getComputedStyle(el).display}/${getComputedStyle(el).flexDirection}/${getComputedStyle(el).rowGap}`), { timeout: 20_000 }).toBe('flex/column/18px');
+    await expect.poll(async () => frameEval(page, '[data-sb-type="core.quote"]', (el) => `${getComputedStyle(el).display}/${getComputedStyle(el).flexDirection}/${getComputedStyle(el).rowGap}`), { timeout: 20_000 }).toBe('flex/column/18px');
   } finally {
     await restore(page, before);
   }
@@ -98,8 +97,7 @@ test('Spacing links the four sides by default, so one value sets them all', asyn
     await expect(margin.getByLabel('Top', { exact: true })).toHaveValue('24px');
     await expect(margin.getByLabel('Left', { exact: true })).toHaveValue('0');
 
-    const w = await wrapper(page);
-    await expect.poll(async () => w.evaluate((el) => `${getComputedStyle(el).marginTop}/${getComputedStyle(el).marginLeft}`), { timeout: 20_000 }).toBe('24px/0px');
+    await expect.poll(async () => frameEval(page, '[data-sb-type="core.quote"]', (el) => `${getComputedStyle(el).marginTop}/${getComputedStyle(el).marginLeft}`), { timeout: 20_000 }).toBe('24px/0px');
   } finally {
     await restore(page, before);
   }
@@ -143,10 +141,9 @@ test('the wrapper element can be changed, and goes back to a div', async ({ page
     await expect(select).toHaveValue('div');
     await select.selectOption('article');
     await settled(page);
-    const w = await wrapper(page);
-    await expect.poll(async () => w.evaluate((el) => el.tagName), { timeout: 20_000 }).toBe('ARTICLE');
+    await expect.poll(async () => frameEval(page, '[data-sb-type="core.quote"]', (el) => el.tagName), { timeout: 20_000 }).toBe('ARTICLE');
     await select.selectOption('div');
-    await expect.poll(async () => (await wrapper(page)).evaluate((el) => el.tagName), { timeout: 20_000 }).toBe('DIV');
+    await expect.poll(async () => frameEval(page, '[data-sb-type="core.quote"]', (el) => el.tagName), { timeout: 20_000 }).toBe('DIV');
   } finally {
     await restore(page, before);
   }
@@ -199,9 +196,7 @@ test('a section takes its own background and padding', async ({ page }) => {
     await padding.getByLabel('Top', { exact: true }).blur();
     await settled(page);
     await expect(errors(page)).toHaveCount(0);
-    const frame = await frameDocument(page);
-    const section = frame.locator('[data-sb-node^="sec_"]').first();
-    await expect.poll(async () => section.evaluate((el) => `${getComputedStyle(el).backgroundColor}/${getComputedStyle(el).paddingTop}`), { timeout: 20_000 }).toBe('rgb(18, 52, 86)/48px');
+    await expect.poll(async () => frameEval(page, '[data-sb-node^="sec_"]', (el) => `${getComputedStyle(el).backgroundColor}/${getComputedStyle(el).paddingTop}`, { last: false }), { timeout: 20_000 }).toBe('rgb(18, 52, 86)/48px');
   } finally {
     await restore(page, before);
   }

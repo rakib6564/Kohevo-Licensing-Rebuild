@@ -1,7 +1,7 @@
 // In-place text editing on the canvas follows what each block declares (B2-P3d): the declared prop is written,
 // a block that declares nothing is not editable in place.
 import { test, expect } from '@playwright/test';
-import { openBuilder, frameDocument, settled, sandboxPageId, openSection } from './helpers.mjs';
+import { openBuilder, frameDocument, frameEval, settled, sandboxPageId, openSection } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
@@ -112,7 +112,7 @@ test('a heading highlights one word, in the accent colour', async ({ page }) => 
     const frame = await frameDocument(page);
     const hl = frame.locator('[data-sb-type="core.heading"] .sb-heading .sb-hl').last();
     await expect(hl).toHaveText('Heading', { timeout: 20_000 });
-    await expect.poll(async () => hl.evaluate((el) => getComputedStyle(el).color !== getComputedStyle(el.parentElement).color), { timeout: 10_000 }).toBe(true);
+    await expect.poll(async () => frameEval(page, '[data-sb-type="core.heading"] .sb-heading .sb-hl', (el) => getComputedStyle(el).color !== getComputedStyle(el.parentElement).color), { timeout: 10_000 }).toBe(true);
     await expect(page.getByRole('alert')).toHaveCount(0);
   } finally {
     await restore(page, before);
