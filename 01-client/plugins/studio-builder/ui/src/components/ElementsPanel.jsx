@@ -4,13 +4,12 @@ import { memo, useMemo, useState } from 'react';
 import { useEditor } from './EditorContext.jsx';
 import { BlockCard, CategoryRail, blockCategoryLabel } from './AddPanelParts.jsx';
 import { t } from '../core/messages.mjs';
-import { asList } from '../core/doc.mjs';
-import { GROUP_PREVIEW, groupBlocks, isElementBlock } from '../core/addPanel.mjs';
+import { GROUP_PREVIEW, blocksWithVariants, groupBlocks, isElementBlock } from '../core/addPanel.mjs';
 
 export const ElementsPanel = memo(function ElementsPanel() {
   const { manifest, insertBlock } = useEditor();
   const [cat, setCat] = useState('all');
-  const groups = useMemo(() => groupBlocks(asList(manifest.blocks).filter(isElementBlock), '', blockCategoryLabel), [manifest.blocks]);
+  const groups = useMemo(() => groupBlocks(blocksWithVariants(manifest).filter(isElementBlock), '', blockCategoryLabel), [manifest.blocks, manifest.variants]);
   const active = groups.some((g) => g.category === cat) ? cat : 'all';
   const shown = active === 'all' ? groups : groups.filter((g) => g.category === active);
 
@@ -31,7 +30,7 @@ export const ElementsPanel = memo(function ElementsPanel() {
               )}
             </div>
             <div className="sbx-palette__cards">
-              {items.map((b) => <BlockCard key={b.type} def={b} onInsert={insertBlock} />)}
+              {items.map((b) => <BlockCard key={b.variantKey || b.type} def={b} onInsert={insertBlock} />)}
             </div>
           </section>
         );

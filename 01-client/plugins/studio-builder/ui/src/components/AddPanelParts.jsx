@@ -47,6 +47,7 @@ export const blockCategoryLabel = (slug) => t(`block_cat_${slug}`);
 
 /** A block card: click or drag to insert, or disabled with the reason shown (not hidden in a tooltip). */
 export function BlockCard({ def, onInsert }) {
+  const { insertBlockWithProps } = useEditor();
   const state = useBlockInsertState(def.type);
   const reasonId = useId();
   const disabled = !state.ok;
@@ -55,12 +56,13 @@ export function BlockCard({ def, onInsert }) {
     <button
       type="button"
       className={`sbx-palette-card${disabled ? ' is-disabled' : ''}`}
-      draggable={!disabled}
+      draggable={!disabled && !def.variantKey}
       aria-disabled={disabled || undefined}
       aria-describedby={disabled ? reasonId : undefined}
       data-block-type={def.type}
-      onDragStart={disabled ? undefined : (e) => { e.dataTransfer.setData(DRAG_TYPE_NEW, def.type); e.dataTransfer.effectAllowed = 'copy'; }}
-      onClick={disabled ? undefined : () => onInsert(def.type)}
+      data-variant={def.variantKey || undefined}
+      onDragStart={disabled || def.variantKey ? undefined : (e) => { e.dataTransfer.setData(DRAG_TYPE_NEW, def.type); e.dataTransfer.effectAllowed = 'copy'; }}
+      onClick={disabled ? undefined : () => (def.variantKey ? insertBlockWithProps(def.type, def.variantProps) : onInsert(def.type))}
       aria-label={`${t('insert')} ${title}`}
     >
       <div className="sbx-palette-card__icon-badge" aria-hidden="true">{renderBlockIcon(def.type, def.icon, def.label)}</div>

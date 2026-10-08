@@ -7,7 +7,7 @@ import { useEditor } from './EditorContext.jsx';
 import { BlockCard, blockCategoryLabel, usePresetInsertState, useWhenVisible } from './AddPanelParts.jsx';
 import { PresetCard, categoryLabel } from './SectionPresetsPanel.jsx';
 import { t } from '../core/messages.mjs';
-import { searchAll } from '../core/addPanel.mjs';
+import { blocksWithVariants, searchAll } from '../core/addPanel.mjs';
 
 export const AddSearchResults = memo(function AddSearchResults({ query, favorites, onToggleFavorite }) {
   const { manifest, library = null, ensurePresets, insertBlock, insertComponentRef } = useEditor();
@@ -16,11 +16,11 @@ export const AddSearchResults = memo(function AddSearchResults({ query, favorite
   const presetState = usePresetInsertState();
   const found = useMemo(
     () => searchAll(
-      { blocks: manifest.blocks, presets: library && library.presets, components: library && library.components },
+      { blocks: blocksWithVariants(manifest), presets: library && library.presets, components: library && library.components },
       query,
       { blockCategory: blockCategoryLabel, presetCategory: categoryLabel },
     ),
-    [manifest.blocks, library, query],
+    [manifest.blocks, manifest.variants, library, query],
   );
 
   if (found.total === 0) return <p ref={rootRef} className="sbx-palette__empty sbx-muted" role="status" data-testid="search-empty">{t('pal_no_results')}</p>;
@@ -39,7 +39,7 @@ export const AddSearchResults = memo(function AddSearchResults({ query, favorite
       {found.elements.length > 0 && (
         <section>
           {heading('pal_tab_elements', found.elements.length)}
-          <div className="sbx-palette__cards">{found.elements.map((b) => <BlockCard key={b.type} def={b} onInsert={insertBlock} />)}</div>
+          <div className="sbx-palette__cards">{found.elements.map((b) => <BlockCard key={b.variantKey || b.type} def={b} onInsert={insertBlock} />)}</div>
         </section>
       )}
       {found.dynamic.length > 0 && (

@@ -19,6 +19,10 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
   other blocks; the table takes a header line and one line per row with cells split on `|`; the countdown needs an explicit-zone
   date (for example `2030-01-01T00:00:00Z`), shows a fixed date line without JavaScript, and the public runtime now reveals the
   live units and restores the server markup on disable.
+  The Add panel's Elements tab also offers ready-set variants of blocks that already exist, with no new block types: Two, Three
+  and Four columns (a grid), Stack and Row (flex), Text area and Dropdown (form field). Variants are found by the cross-tab
+  search, follow the block's own insertion rules and are translated; empty grids, flex rows and cards now show a dashed drop
+  area in the editor canvas instead of collapsing to a hairline.
 - **Studio builder (Builder 2.0, phase 1): workspace foundation.** Selection is now a shared model (primary, picked nodes,
   hover, focus): Cmd/Ctrl-click and Shift-click multi-select on the canvas and in Layers stay in sync, the Inspector shows
   "N selected", and Cmd/Ctrl+D duplicates the top-level picked nodes. The selection box, name chip and a keyboard-reachable

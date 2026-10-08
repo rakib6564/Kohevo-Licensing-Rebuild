@@ -79,3 +79,57 @@ test('editing a quote repaints the canvas from the server', async ({ page }) => 
     await restore(page, before);
   }
 });
+
+test('Columns and form-field variants insert ready-set blocks; content added next lands inside the columns', async ({ page }) => {
+  await openBuilder(page);
+  const frame0 = await frameDocument(page);
+  const before = await frame0.locator('[data-sb-node]').count();
+  try {
+    await page.getByRole('tab', { name: /^(Add|Ajouter)$/ }).click();
+    await panel(page).getByRole('tab', { name: 'Elements' }).click();
+    await panel(page).locator('[data-chip="layout"]').click();
+    const card = panel(page).locator('[data-variant="columns-3"]');
+    await expect(card).toBeVisible();
+    await expect(card).toContainText('Three columns');
+    expect(await card.getAttribute('draggable')).toBe('false'); // a drag would lose the ready-set props
+    await card.click();
+    await settled(page);
+    let frame = await frameDocument(page);
+    await expect.poll(() => frame.locator('.sb-grid.sb-cols-3').count(), { timeout: 20_000 }).toBe(1);
+    expect(await frame.locator('.sb-grid.sb-cols-3').evaluate((n) => n.offsetHeight)).toBeGreaterThanOrEqual(56); // an empty layout block stays visible and droppable
+
+    // the new grid is selected (and the inspector took the panel), so the next element goes into it
+    await page.getByRole('tab', { name: /^(Add|Ajouter)$/ }).click();
+    await panel(page).getByRole('tab', { name: 'Elements' }).click();
+    await panel(page).locator('[data-chip="content"]').click();
+    await panel(page).locator('[data-block-type="core.quote"]').click();
+    await settled(page);
+    frame = await frameDocument(page);
+    await expect.poll(() => frame.locator('.sb-grid.sb-cols-3 figure.sb-quote').count(), { timeout: 20_000 }).toBe(1);
+
+    // a form-field variant renders its own control
+    await page.getByRole('tab', { name: /^(Add|Ajouter)$/ }).click();
+    await panel(page).getByRole('tab', { name: 'Elements' }).click();
+    await panel(page).locator('[data-chip="forms"]').click();
+    await panel(page).locator('[data-variant="textarea"]').click();
+    await settled(page);
+    frame = await frameDocument(page);
+    await expect.poll(() => frame.locator('textarea[name="message"]').count(), { timeout: 20_000 }).toBeGreaterThan(0);
+  } finally {
+    await restore(page, before);
+  }
+});
+
+test('search finds variants and the Elements tab is French in French', async ({ page }) => {
+  await openBuilder(page);
+  await page.getByRole('tab', { name: /^(Add|Ajouter)$/ }).click();
+  await panel(page).getByRole('searchbox').fill('columns');
+  await expect(panel(page).getByTestId('add-search-results').locator('[data-variant="columns-2"]')).toBeVisible();
+  await page.goto(`/plugins/studio-builder/admin/builder.php?page=${sandboxPageId()}&lang=fr`);
+  await page.locator('header.sbx-topbar').waitFor({ state: 'visible' });
+  await page.getByRole('tab', { name: /^(Add|Ajouter)$/ }).click();
+  await panel(page).getByRole('tab', { name: /Éléments/ }).click();
+  await panel(page).locator('[data-chip="layout"]').click();
+  await expect(panel(page).locator('[data-variant="columns-3"]')).toContainText('Trois colonnes');
+  await expect(panel(page).locator('[data-variant="stack"]')).toContainText('Pile');
+});

@@ -3869,5 +3869,95 @@
             "landing",
             "system"
         ]
-    }
+    },
+    "variants": [
+        {
+            "key": "columns-2",
+            "type": "layout.grid",
+            "category": "layout",
+            "icon": "grid-panes",
+            "title": "Two columns",
+            "description": "Content side by side",
+            "props": {
+                "columns": 2,
+                "gap": "lg"
+            }
+        },
+        {
+            "key": "columns-3",
+            "type": "layout.grid",
+            "category": "layout",
+            "icon": "grid-panes",
+            "title": "Three columns",
+            "description": "Three equal columns",
+            "props": {
+                "columns": 3,
+                "gap": "lg"
+            }
+        },
+        {
+            "key": "columns-4",
+            "type": "layout.grid",
+            "category": "layout",
+            "icon": "grid-panes",
+            "title": "Four columns",
+            "description": "Four equal columns",
+            "props": {
+                "columns": 4,
+                "gap": "lg"
+            }
+        },
+        {
+            "key": "stack",
+            "type": "layout.flex",
+            "category": "layout",
+            "icon": "box",
+            "title": "Stack",
+            "description": "Elements one under another",
+            "props": {
+                "direction": "column",
+                "align": "stretch"
+            }
+        },
+        {
+            "key": "row",
+            "type": "layout.flex",
+            "category": "layout",
+            "icon": "box",
+            "title": "Row",
+            "description": "Elements in a line that wraps on small screens",
+            "props": {
+                "direction": "row",
+                "wrap": "wrap",
+                "align": "center"
+            }
+        },
+        {
+            "key": "textarea",
+            "type": "core.form_field",
+            "category": "forms",
+            "icon": "form",
+            "title": "Text area",
+            "description": "A multi-line input for a form",
+            "props": {
+                "name": "message",
+                "label": "Message",
+                "field_type": "textarea"
+            }
+        },
+        {
+            "key": "select",
+            "type": "core.form_field",
+            "category": "forms",
+            "icon": "form",
+            "title": "Dropdown",
+            "description": "A list to choose one option from",
+            "props": {
+                "name": "choice",
+                "label": "Choose one",
+                "field_type": "select",
+                "options": "Option one, Option two, Option three"
+            }
+        }
+    ]
 }

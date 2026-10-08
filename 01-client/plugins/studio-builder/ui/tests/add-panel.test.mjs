@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  BLOCK_CATEGORY_ORDER, blockInsertState, groupBlocks, isComponentBlock, isElementBlock, presetInsertState, reasonKey, searchAll,
+  BLOCK_CATEGORY_ORDER, blockInsertState, groupBlocks, isComponentBlock, isElementBlock, presetInsertState, reasonKey, searchAll, variantCards, blocksWithVariants,
 } from '../src/core/addPanel.mjs';
 import { isDynamicBlock } from '../src/components/blockKinds.mjs';
 
@@ -74,4 +74,44 @@ test('search spans presets, elements and components; empty query returns nothing
   const r4 = searchAll({ blocks, presets, components }, 'post title');
   assert.ok(r4.dynamic.some((b) => b.type === 'theme.post_title'), 'data-bound blocks are searchable too');
   assert.ok(!r4.elements.some((b) => b.type === 'theme.post_title'));
+});
+
+test('variants become cards of the real block: its copy, its rules, plus ready-set props', () => {
+  const cards = variantCards(manifest);
+  assert.equal(cards.length, manifest.variants.length, 'one card per variant');
+  for (const c of cards) {
+    const base = blocks.find((b) => b.type === c.type);
+    assert.ok(base, `${c.variantKey} points at a real block`);
+    assert.equal(c.allows_children, base.allows_children, 'the block\'s own capabilities');
+    assert.ok(c.variantKey && c.variantProps && Object.keys(c.variantProps).length, 'carries its props');
+    assert.ok(isElementBlock(c), `${c.variantKey} is listed under Elements`);
+  }
+  const cols3 = cards.find((c) => c.variantKey === 'columns-3');
+  assert.equal(cols3.type, 'layout.grid');
+  assert.equal(cols3.variantProps.columns, 3);
+});
+
+test('a variant of a block the tenant is not offered is not shown', () => {
+  const trimmed = { ...manifest, blocks: blocks.filter((b) => b.type !== 'layout.grid') };
+  const keys = variantCards(trimmed).map((c) => c.variantKey);
+  assert.ok(!keys.some((k) => k.startsWith('columns-')), 'no columns without a grid');
+  assert.ok(keys.includes('stack'), 'the others stay');
+});
+
+test('variants group with their category and are found by search', () => {
+  const groups = groupBlocks(blocksWithVariants(manifest).filter(isElementBlock));
+  const layout = groups.find((g) => g.category === 'layout').items;
+  assert.ok(layout.some((b) => b.variantKey === 'columns-2') && layout.some((b) => b.type === 'layout.grid' && !b.variantKey), 'layout holds the grid and its columns');
+  assert.ok(groups.find((g) => g.category === 'forms').items.some((b) => b.variantKey === 'textarea'));
+  const found = searchAll({ blocks: blocksWithVariants(manifest) }, 'columns');
+  assert.ok(found.elements.filter((b) => b.variantKey).length >= 3, 'three column variants');
+  assert.ok(searchAll({ blocks: blocksWithVariants(manifest) }, 'dropdown').elements.some((b) => b.variantKey === 'select'));
+});
+
+test('a variant obeys the same insertion rules as its block', () => {
+  const card = variantCards(manifest).find((c) => c.variantKey === 'columns-2');
+  assert.deepEqual(blockInsertState(oneSection, manifest, null, card.type), { ok: true });
+  const tiny = { ...manifest, limits: { ...manifest.limits, max_blocks: 1 } };
+  const full = { document_type: 'page', sections: [{ id: 'sec_a', layout: {}, blocks: [{ id: 'blk_a', type: 'core.text', props: {}, children: [] }] }] };
+  assert.equal(blockInsertState(full, tiny, 'sec_a', card.type).reason, 'blocks_limit');
 });

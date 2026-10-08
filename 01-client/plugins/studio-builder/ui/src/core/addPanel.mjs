@@ -21,6 +21,21 @@ export const isComponentBlock = (def) => !!def && def.category === 'business';
 /** Plain building blocks: the Elements tab (everything that is neither data-bound nor a Kohevo component). */
 export const isElementBlock = (def) => !!def && !isDynamicBlock(def) && !isComponentBlock(def);
 
+/**
+ * Add-panel cards for the manifest's variants (a ready-set configuration of an existing block type).
+ * Each card is the real block's definition with the variant's copy, icon, category and props, so
+ * entitlement, limits and insertion rules are the block's own.
+ */
+export function variantCards(manifest) {
+  const defs = new Map(asList(manifest && manifest.blocks).map((b) => [b.type, b]));
+  return asList(manifest && manifest.variants)
+    .filter((v) => defs.has(v.type))
+    .map((v) => ({ ...defs.get(v.type), title: v.title, label: v.title, description: v.description, icon: v.icon, category: v.category, variantKey: v.key, variantProps: v.props }));
+}
+
+/** Blocks plus their variants: what the Elements tab and the cross-tab search list. */
+export const blocksWithVariants = (manifest) => [...asList(manifest && manifest.blocks), ...variantCards(manifest)];
+
 const titleOf = (b) => b.title || b.label || b.type;
 
 /** Text a block is searched by. */
