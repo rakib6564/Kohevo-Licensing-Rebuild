@@ -76,3 +76,15 @@ Dropped from the spec for this phase (no backing in the repo, so they would be f
 ## 6. Verification approach
 
 Same as P1: UI unit tests (`node --test`), Studio PHP unit and integration suites, Playwright e2e (now a CI job), `check-i18n`, golden renders for every seeded preset and new block, then a deploy to `solaya` staging with backup and a real-device pass.
+
+### Nesting measurement (P2b slice 1)
+
+`bin/measure-nesting-depth.php` compiles the same ~250-block document shaped as chains of 1, 4, 5 and 6 levels (15 runs each, median):
+
+| Depth | Blocks | Document JSON | Compiled HTML | Median compile |
+|---|---|---|---|---|
+| 4 | 248 | 84 474 B | 29 680 B | 14.9 ms |
+| 5 | 250 | 84 838 B | 30 216 B | 15.2 ms |
+| 6 | 246 | 83 162 B | 31 986 B | 15.3 ms |
+
+Going from 4 to 6 costs about 3% render time and 8% HTML, with the document size unchanged, so the limit is **6** (no fallback to 5). The HTML importer keeps its own limit of 4 (`HtmlStructureMapper::MAX_CANONICAL_DEPTH`), so imports are unchanged.

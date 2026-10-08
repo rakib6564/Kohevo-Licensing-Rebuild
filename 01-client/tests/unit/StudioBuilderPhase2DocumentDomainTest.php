@@ -304,15 +304,18 @@ unit('phase2 document domain: DocumentValidator fails closed on structural viola
     $unknownBlockType = sb2_document([sb2_section([sb2_block($registry, 'core.hero', ['type' => 'core.does_not_exist'])])]);
     assert_false(DocumentValidator::validate($unknownBlockType, $registry)->isValid());
 
-    // Nesting depth: container > container > container > container > hero exceeds MAX_NESTING_DEPTH (4).
-    $deepHero = sb2_block($registry, 'core.hero');
-    $level4 = sb2_block($registry, 'core.container', ['children' => [$deepHero]]);
-    $level3 = sb2_block($registry, 'core.container', ['children' => [$level4]]);
-    $level2 = sb2_block($registry, 'core.container', ['children' => [$level3]]);
-    $level1 = sb2_block($registry, 'core.container', ['children' => [$level2]]);
-    $tooDeep = sb2_document([sb2_section([$level1])]);
-    $depthResult = DocumentValidator::validate($tooDeep, $registry);
-    assert_false($depthResult->isValid(), 'nesting beyond MAX_NESTING_DEPTH must fail');
+    // Nesting depth: MAX_NESTING_DEPTH (6) levels of containers around a hero is the last valid shape; one more fails.
+    $nest = static function (int $containers) use ($registry): array {
+        $node = sb2_block($registry, 'core.hero');
+        for ($i = 0; $i < $containers; $i++) {
+            $node = sb2_block($registry, 'core.container', ['children' => [$node]]);
+        }
+        return sb2_document([sb2_section([$node])]);
+    };
+    $maxDepth = CanonicalDocumentSchema::MAX_NESTING_DEPTH;
+    assert_eq(6, $maxDepth, 'the approved nesting limit is 6');
+    assert_true(DocumentValidator::validate($nest($maxDepth - 1), $registry)->isValid(), 'a hero at exactly the maximum depth is valid');
+    assert_false(DocumentValidator::validate($nest($maxDepth), $registry)->isValid(), 'nesting beyond MAX_NESTING_DEPTH must fail');
 
     // max_blocks / max_sections overrides
     $twoBlocks = sb2_document([sb2_section([

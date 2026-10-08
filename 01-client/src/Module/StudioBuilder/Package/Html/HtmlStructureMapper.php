@@ -45,7 +45,7 @@ final class HtmlStructureMapper
     private const IMAGE_EXTS  = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg'];
     private const ALL_DEVICES = CanonicalDocumentSchema::ALLOWED_BREAKPOINTS;
 
-    public const MAX_CANONICAL_DEPTH = CanonicalDocumentSchema::MAX_NESTING_DEPTH;
+    public const MAX_CANONICAL_DEPTH = 4;
 
     /** @var list<array<string, mixed>> */
     private array $nodes;

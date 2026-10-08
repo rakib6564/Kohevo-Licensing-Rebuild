@@ -3244,7 +3244,7 @@
     },
     "limits": {
         "max_blocks": 250,
-        "max_nesting_depth": 4,
+        "max_nesting_depth": 6,
         "max_repeater_items": 50,
         "max_sections": 50,
         "seo_description_max": 1000,

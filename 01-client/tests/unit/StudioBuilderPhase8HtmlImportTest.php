@@ -417,7 +417,7 @@ unit('phase8b unit: flex/grid wrappers become core.container (direction from the
     foreach ($d2['sections'] as $s) {
         $walk($s['blocks'], 1);
     }
-    assert_true($max <= CanonicalDocumentSchema::MAX_NESTING_DEPTH, "nesting {$max} <= 4");
+    assert_true($max <= \Slate\Module\StudioBuilder\Package\Html\HtmlStructureMapper::MAX_CANONICAL_DEPTH, "nesting {$max} <= the importer's own limit (4)");
     assert_true(str_contains(json_encode($d2), 'leaf'), 'nothing is lost by flattening');
     sb8h_assert_valid($d2);
 });
