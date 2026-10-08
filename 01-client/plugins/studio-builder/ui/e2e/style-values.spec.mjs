@@ -64,3 +64,24 @@ test('a hostile or malformed value shows an inline error and is not applied; a v
     await restore(page, before);
   }
 });
+
+test('the Z-Index field cannot be set above the ceiling that keeps the platform signature on top', async ({ page }) => {
+  await openBuilder(page);
+  await settled(page);
+  const before = await layerCount(page);
+  try {
+    await page.getByRole('tab', { name: /^(Add|Ajouter)$/ }).click();
+    const panel = page.locator('#sbx-leftpanel-blocks');
+    await panel.getByRole('tab', { name: 'Elements' }).click();
+    await panel.locator('[data-chip="content"]').click();
+    await panel.locator('[data-block-type="core.quote"]').click();
+    await settled(page);
+    await page.locator('[id^="sbx-blk-"][id$="-tab-advanced"]').click();
+    const z = page.getByLabel('Z-Index', { exact: true });
+    await expect(z).toHaveAttribute('max', '999');
+    await z.fill('9999');
+    await expect(z).toHaveValue('999');
+  } finally {
+    await restore(page, before);
+  }
+});

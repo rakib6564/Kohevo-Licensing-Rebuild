@@ -1111,8 +1111,8 @@ final class DocumentValidator
         }
 
         // 9. z_index
-        if (isset($style['z_index']) && (!is_int($style['z_index']) || $style['z_index'] < -999 || $style['z_index'] > 9999)) {
-            $errors[] = ValidationResult::issue("{$path}.z_index", 'invalid_z_index', 'style.z_index must be an integer between -999 and 9999.');
+        if (isset($style['z_index']) && (!is_int($style['z_index']) || $style['z_index'] < CanonicalDocumentSchema::Z_INDEX_MIN || $style['z_index'] > CanonicalDocumentSchema::Z_INDEX_MAX)) {
+            $errors[] = ValidationResult::issue("{$path}.z_index", 'invalid_z_index', 'style.z_index must be an integer between ' . CanonicalDocumentSchema::Z_INDEX_MIN . ' and ' . CanonicalDocumentSchema::Z_INDEX_MAX . '.');
         }
     }
 

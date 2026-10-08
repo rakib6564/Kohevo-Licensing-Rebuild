@@ -531,9 +531,11 @@ final class DocumentRenderer
             $rules[] = 'opacity:' . (0 + $style['opacity']);
         }
 
-        // Z-Index
-        if (isset($style['z_index']) && is_int($style['z_index']) && $style['z_index'] >= -999 && $style['z_index'] <= 9999) {
-            $rules[] = 'z-index:' . $style['z_index'];
+        // Z-Index: clamped, not dropped, so a document stored under the old
+        // 9999 ceiling still stacks the way its author meant, only never above
+        // the platform signature (see StudioCodePolicy::SIGNATURE_Z_INDEX).
+        if (isset($style['z_index']) && is_int($style['z_index'])) {
+            $rules[] = 'z-index:' . max(CanonicalDocumentSchema::Z_INDEX_MIN, min(CanonicalDocumentSchema::Z_INDEX_MAX, $style['z_index']));
         }
 
         return implode(';', $rules);

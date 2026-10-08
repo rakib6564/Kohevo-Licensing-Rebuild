@@ -228,6 +228,14 @@ final class CanonicalDocumentSchema
         'animation',
     ];
 
+    /**
+     * Range of an author's `style.z_index`. The ceiling sits below the platform
+     * signature's own stacking level (`StudioCodePolicy::SIGNATURE_Z_INDEX`), so
+     * no block can be stacked above it.
+     */
+    public const Z_INDEX_MIN = -999;
+    public const Z_INDEX_MAX = 999;
+
     public const ALLOWED_STYLE_KEYS = [
         'align',
         'surface_token',

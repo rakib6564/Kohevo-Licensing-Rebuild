@@ -19,6 +19,10 @@ import { STYLE_TOKEN_CATEGORIES, tokensFor } from '../../core/fields.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
 
+/** Mirrors CanonicalDocumentSchema::Z_INDEX_MIN / Z_INDEX_MAX. */
+const Z_INDEX_MIN = -999;
+const Z_INDEX_MAX = 999;
+
 export function BlockInspector({ info }) {
   const { manifest, boot, applyOp, removeNode, moveBlockTo, viewport } = useEditor();
   const working = useEngineState((s) => s.working);
@@ -183,10 +187,14 @@ export function BlockInspector({ info }) {
               id={`${idPrefix}-z-index`}
               type="number"
               className="sbx-input"
+              min={Z_INDEX_MIN}
+              max={Z_INDEX_MAX}
               value={style.z_index !== undefined && style.z_index !== null ? style.z_index : ''}
               placeholder="0"
               onChange={(e) => {
-                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                // Same range the server enforces (CanonicalDocumentSchema::Z_INDEX_*): authors cannot stack above the platform signature.
+                const raw = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                const val = raw === null || Number.isNaN(raw) ? null : Math.max(Z_INDEX_MIN, Math.min(Z_INDEX_MAX, raw));
                 applyOp(ops.updateBlockStyle(block.id, { ...style, z_index: val }), { label: def.label });
               }}
             />

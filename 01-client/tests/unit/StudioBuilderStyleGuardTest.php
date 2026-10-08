@@ -225,3 +225,78 @@ unit('style guard: agrees with every case in the shared UI fixture', function ()
         assert_eq($case['ok'], StyleValueGuard::$method($case['value']), $case['kind'] . ' ' . json_encode($case['value']));
     }
 });
+
+// ── The platform signature stays on top (B2-P3a slice 3) ──────────────────
+
+use Slate\Module\StudioBuilder\Application\StudioActor;
+use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Http\StudioCodePolicy;
+use Slate\Module\StudioBuilder\Render\Compile\CompiledPage;
+use Slate\Module\StudioBuilder\Render\Compile\FilledPage;
+use Slate\Module\StudioBuilder\Render\PageDocumentAssembler;
+use Slate\Module\StudioBuilder\Render\RenderContext;
+use Slate\Module\StudioBuilder\Render\SiteContext;
+
+unit('signature: the guard stacks above every value an author can set', function (): void {
+    assert_true(StudioCodePolicy::SIGNATURE_Z_INDEX > CanonicalDocumentSchema::Z_INDEX_MAX, 'the signature must out-stack the author ceiling');
+    $guard = StudioCodePolicy::signatureProtectionCss();
+    assert_true(str_contains($guard, 'z-index:' . StudioCodePolicy::SIGNATURE_Z_INDEX . '!important'), 'guard pins the stacking level');
+    assert_true(str_contains($guard, 'position:relative!important'), 'z-index only applies to a positioned box');
+    foreach (['transform:none', 'translate:none', 'rotate:none', 'scale:none', 'mix-blend-mode:normal', 'pointer-events:auto', 'inset:auto'] as $decl) {
+        assert_true(str_contains($guard, $decl . '!important'), "guard re-asserts {$decl}");
+    }
+});
+
+unit('signature: an author cannot save a z-index above the ceiling', function (): void {
+    assert_true(sbp5s_validate(['z_index' => CanonicalDocumentSchema::Z_INDEX_MAX])->isValid(), 'the ceiling itself is allowed');
+    assert_true(sbp5s_validate(['z_index' => CanonicalDocumentSchema::Z_INDEX_MIN])->isValid(), 'the floor is allowed');
+    foreach ([CanonicalDocumentSchema::Z_INDEX_MAX + 1, 9999, 2147483647, '10', 1.5] as $bad) {
+        assert_false(sbp5s_validate(['z_index' => $bad])->isValid(), 'must refuse z-index ' . var_export($bad, true));
+    }
+});
+
+unit('signature: a document stored under the old 9999 ceiling is clamped when rendered', function (): void {
+    foreach ([9999, 2147483647, 1000] as $stored) {
+        $html = sbp5s_render(['z_index' => $stored]);
+        assert_true(str_contains($html, 'z-index:' . CanonicalDocumentSchema::Z_INDEX_MAX), "clamped to the ceiling for {$stored}: " . $html);
+        assert_false(preg_match('/z-index:(\d{4,})/', $html) === 1, 'no four-digit z-index may reach the page: ' . $html);
+    }
+    assert_true(str_contains(sbp5s_render(['z_index' => -5000]), 'z-index:' . CanonicalDocumentSchema::Z_INDEX_MIN), 'the floor is clamped too');
+    assert_true(str_contains(sbp5s_render(['z_index' => 12]), 'z-index:12'), 'an in-range value is untouched');
+});
+
+unit('signature: the audit lists a z-index outside the range', function (): void {
+    assert_eq(['z_index'], array_keys(StyleValueGuard::styleIssues(['z_index' => 9999])), 'out of range is reported');
+    assert_eq([], StyleValueGuard::styleIssues(['z_index' => 999]), 'the ceiling is clean');
+});
+
+unit('signature: the guard is emitted whenever a signature is shown, even with no tenant CSS', function (): void {
+    $site     = new SiteContext('https://example.test', 'Acme');
+    $context  = RenderContext::forPublic(101, $site);
+    $compiled = new CompiledPage(101, 9, 'public', '', '.sb-x{position:relative;z-index:999}', [], ['seo' => []], 'hash', 'test');
+    $filled   = new FilledPage('<main class="sb-main"></main>', '');
+
+    $with = (new PageDocumentAssembler(static fn(): string => 'Powered by Kohevo'))->assemble($compiled, $filled, $context);
+    assert_true(str_contains($with, 'data-sb="platform-signature-guard"'), 'guard present: ' . substr($with, 0, 400));
+    assert_true(strpos($with, 'platform-signature-guard') > strpos($with, '.sb-x{'), 'the guard comes AFTER the compiled stylesheet so it wins the cascade');
+    assert_true(strpos($with, '<div class="sb-platform-signature">') > strpos($with, '</main>'), 'the signature stays at the end of the page');
+
+    $without = (new PageDocumentAssembler(static fn(): string => ''))->assemble($compiled, $filled, $context);
+    assert_false(str_contains($without, 'platform-signature-guard'), 'no signature, no guard');
+});
+
+unit('signature: no style an author can write reaches the signature class or a fixed/absolute position', function (): void {
+    // The authorable surface today has no `position` key at all, and the
+    // renderer must not invent one from any value it is handed.
+    $hostile = [
+        'dimensions' => ['width' => '100vw', 'height' => '100vh', 'min_height' => '9999px'],
+        'z_index'    => 999,
+        'opacity'    => 1,
+        'spacing'    => ['top' => '-99999px', 'bottom' => '-100%'],
+    ];
+    $html = sbp5s_render($hostile + ['typography' => ['size' => '1px;position:fixed;top:0']]);
+    foreach (['position', 'sb-platform-signature', 'fixed', 'absolute'] as $needle) {
+        assert_false(str_contains($html, $needle), "must not emit '{$needle}': {$html}");
+    }
+    assert_false(sbp5s_validate(['position' => 'fixed'])->isValid(), 'an unknown `position` style key is refused');
+});

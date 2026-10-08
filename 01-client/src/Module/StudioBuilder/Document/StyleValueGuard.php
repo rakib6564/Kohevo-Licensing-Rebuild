@@ -263,6 +263,9 @@ final class StyleValueGuard
         foreach (is_array($style['dimensions'] ?? null) ? $style['dimensions'] : [] as $k => $v) {
             $check('dimensions.' . $k, $v, [self::class, 'isLength']);
         }
+        if (isset($style['z_index']) && (!is_int($style['z_index']) || $style['z_index'] < CanonicalDocumentSchema::Z_INDEX_MIN || $style['z_index'] > CanonicalDocumentSchema::Z_INDEX_MAX)) {
+            $bad['z_index'] = (string) json_encode($style['z_index']);
+        }
         return $bad;
     }
 
