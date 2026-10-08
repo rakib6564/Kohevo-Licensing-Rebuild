@@ -202,15 +202,22 @@ final class StudioCodePolicy
      * Same specificity, later in document order, `!important` — so a tenant
      * cannot hide or restyle the Kohevo identity with custom CSS.
      */
+    /**
+     * Stacking level of the signature. Above every value an author can set
+     * (`CanonicalDocumentSchema::Z_INDEX_MAX`), below the platform's own
+     * overlays (modal/offcanvas/lightbox), which are transient and ours.
+     */
+    public const SIGNATURE_Z_INDEX = 1000;
+
     public static function signatureProtectionCss(): string
     {
         return '<style data-sb="platform-signature-guard">'
             . '.sb-platform-signature{display:block!important;visibility:visible!important;'
-            . 'opacity:1!important;position:static!important;transform:none!important;'
+            . 'opacity:1!important;position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;inset:auto!important;transform:none!important;translate:none!important;rotate:none!important;scale:none!important;mix-blend-mode:normal!important;pointer-events:auto!important;isolation:auto!important;'
             . 'filter:none!important;clip-path:none!important;width:auto!important;'
             . 'height:auto!important;overflow:visible!important;float:none!important;'
             . 'margin:0!important;padding:0!important;border:0!important;'
-            . 'content-visibility:visible!important;z-index:auto!important;'
+            . 'content-visibility:visible!important;z-index:' . self::SIGNATURE_Z_INDEX . '!important;'
             . 'text-indent:0!important;letter-spacing:normal!important;line-height:normal!important;'
             . 'font-size:inherit!important;color:inherit!important;background:none!important;'
             . 'text-decoration:none!important;}'

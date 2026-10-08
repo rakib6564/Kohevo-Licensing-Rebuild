@@ -90,6 +90,7 @@ const EN = {
   border_radius: 'Border Radius',
   box_shadow: 'Box Shadow',
   shadow_custom_hint: 'A CSS box-shadow value, e.g. 0 10px 25px rgba(0,0,0,.15).',
+  invalid_css_value: 'Not a valid value. Use a length like 1.5rem or 12px, a colour like #e8734a, or leave it empty to inherit.',
   background_label: 'Background',
   background_color: 'Background Colour',
   gradient: 'Gradient',

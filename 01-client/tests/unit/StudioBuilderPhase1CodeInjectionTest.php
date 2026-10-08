@@ -152,7 +152,7 @@ unit('signature guard: is emitted and wins the cascade over tenant css', functio
     assert_true(str_contains($guard, '.sb-platform-signature'), 'must target the signature');
     assert_true(str_contains($guard, '!important'), 'must use !important to out-rank tenant !important');
     // The properties a tenant would realistically reach for to erase it.
-    foreach (['display:block', 'visibility:visible', 'opacity:1', 'position:static',
+    foreach (['display:block', 'visibility:visible', 'opacity:1', 'position:relative',
               'transform:none', 'font-size:inherit', 'color:inherit'] as $decl) {
         assert_true(str_contains($guard, $decl), 'must re-assert ' . $decl);
     }

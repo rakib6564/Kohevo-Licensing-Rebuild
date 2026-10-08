@@ -45,6 +45,8 @@ html, body.sbx-body {
 .sbx-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .sbx-muted { color: var(--sbx-muted); }
 .sbx-hint { color: var(--sbx-muted); font-size: 12px; margin: 0.25rem 0 0.75rem; }
+.sbx-field__error { color: var(--sbx-danger); font-size: 12px; margin: 0.25rem 0 0.5rem; }
+.sbx-input[aria-invalid='true'] { border-color: var(--sbx-danger); }
 
 :where(.sbx-shell, .sbx-dialog, .sbx-fatal) :focus-visible { outline: none; box-shadow: var(--sbx-focus); }
 

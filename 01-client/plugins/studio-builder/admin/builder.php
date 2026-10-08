@@ -434,6 +434,7 @@ $sbBoot = [
         'border_radius' => __('studio_ui_border_radius', 'Border Radius'),
         'box_shadow' => __('studio_ui_box_shadow', 'Box Shadow'),
         'shadow_custom_hint' => __('studio_ui_shadow_custom_hint', 'A CSS box-shadow value, e.g. 0 10px 25px rgba(0,0,0,.15).'),
+        'invalid_css_value' => __('studio_ui_invalid_css_value', 'Not a valid value. Use a length like 1.5rem or 12px, a colour like #e8734a, or leave it empty to inherit.'),
         'background_label' => __('studio_ui_background_label', 'Background'),
         'background_color' => __('studio_ui_background_color', 'Background Colour'),
         'gradient' => __('studio_ui_gradient', 'Gradient'),

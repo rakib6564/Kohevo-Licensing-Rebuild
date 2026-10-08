@@ -1,0 +1,540 @@
+{
+ "_comment": "Shared by tests/style-values.test.mjs and tests/unit/StudioBuilderStyleGuardTest.php: both sides must agree on every case.",
+ "cases": [
+  {
+   "kind": "length",
+   "value": "0",
+   "ok": true
+  },
+  {
+   "kind": "length",
+   "value": "12px",
+   "ok": true
+  },
+  {
+   "kind": "length",
+   "value": "1.5rem",
+   "ok": true
+  },
+  {
+   "kind": "length",
+   "value": "-4px",
+   "ok": true
+  },
+  {
+   "kind": "length",
+   "value": ".5em",
+   "ok": true
+  },
+  {
+   "kind": "length",
+   "value": "100%",
+   "ok": true
+  },
+  {
+   "kind": "length",
+   "value": "auto",
+   "ok": true
+  },
+  {
+   "kind": "length",
+   "value": "calc(100% - 2rem)",
+   "ok": true
+  },
+  {
+   "kind": "length",
+   "value": "clamp(1rem, 4vw, 3rem)",
+   "ok": true
+  },
+  {
+   "kind": "length",
+   "value": "min(100%, 60rem)",
+   "ok": true
+  },
+  {
+   "kind": "length",
+   "value": 12,
+   "ok": true
+  },
+  {
+   "kind": "length",
+   "value": 0.5,
+   "ok": true
+  },
+  {
+   "kind": "length",
+   "value": "12 px",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": "px",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": "big",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": "calc(url(x))",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": "calc(1px + var(--a))",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": "rotate(3deg)",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": "1e9",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": "url(https://evil.test/x.png)",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": "@import url(x)",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": "1px/*x*/",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": "1px\\",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": "1px !important",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": "1px\n2px",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": "expression(alert(1))",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": "javascript:alert(1)",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": "red;}</style><script>alert(1)</script>",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": "1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
+   "ok": false
+  },
+  {
+   "kind": "length",
+   "value": 1000000000,
+   "ok": false
+  },
+  {
+   "kind": "lengthOrToken",
+   "value": "8px",
+   "ok": true
+  },
+  {
+   "kind": "lengthOrToken",
+   "value": "8px 4px",
+   "ok": true
+  },
+  {
+   "kind": "lengthOrToken",
+   "value": "1rem 2rem 1rem 2rem",
+   "ok": true
+  },
+  {
+   "kind": "lengthOrToken",
+   "value": "space.4",
+   "ok": true
+  },
+  {
+   "kind": "lengthOrToken",
+   "value": "1px 2px 3px 4px 5px",
+   "ok": false
+  },
+  {
+   "kind": "lengthOrToken",
+   "value": "1px url(x)",
+   "ok": false
+  },
+  {
+   "kind": "lengthOrToken",
+   "value": "red",
+   "ok": false
+  },
+  {
+   "kind": "lineHeight",
+   "value": "1.5",
+   "ok": true
+  },
+  {
+   "kind": "lineHeight",
+   "value": "normal",
+   "ok": true
+  },
+  {
+   "kind": "lineHeight",
+   "value": "24px",
+   "ok": true
+  },
+  {
+   "kind": "lineHeight",
+   "value": "var(--x)",
+   "ok": false
+  },
+  {
+   "kind": "lineHeight",
+   "value": "tall",
+   "ok": false
+  },
+  {
+   "kind": "letterSpacing",
+   "value": "-0.01em",
+   "ok": true
+  },
+  {
+   "kind": "letterSpacing",
+   "value": "normal",
+   "ok": true
+  },
+  {
+   "kind": "letterSpacing",
+   "value": "2px",
+   "ok": true
+  },
+  {
+   "kind": "letterSpacing",
+   "value": "url(x)",
+   "ok": false
+  },
+  {
+   "kind": "letterSpacing",
+   "value": "wide",
+   "ok": false
+  },
+  {
+   "kind": "borderWidth",
+   "value": "1px",
+   "ok": true
+  },
+  {
+   "kind": "borderWidth",
+   "value": "thin",
+   "ok": true
+  },
+  {
+   "kind": "borderWidth",
+   "value": "2px",
+   "ok": true
+  },
+  {
+   "kind": "borderWidth",
+   "value": "1px 2px",
+   "ok": true
+  },
+  {
+   "kind": "borderWidth",
+   "value": "url(x)",
+   "ok": false
+  },
+  {
+   "kind": "borderWidth",
+   "value": "heavy",
+   "ok": false
+  },
+  {
+   "kind": "lengthList",
+   "value": "8px",
+   "ok": true
+  },
+  {
+   "kind": "lengthList",
+   "value": "8px 4px",
+   "ok": true
+  },
+  {
+   "kind": "lengthList",
+   "value": "50%",
+   "ok": true
+  },
+  {
+   "kind": "lengthList",
+   "value": "1px 2px 3px 4px 5px",
+   "ok": false
+  },
+  {
+   "kind": "lengthList",
+   "value": "url(x)",
+   "ok": false
+  },
+  {
+   "kind": "color",
+   "value": "#fff",
+   "ok": true
+  },
+  {
+   "kind": "color",
+   "value": "#ffff",
+   "ok": true
+  },
+  {
+   "kind": "color",
+   "value": "#e8734a",
+   "ok": true
+  },
+  {
+   "kind": "color",
+   "value": "#e8734a80",
+   "ok": true
+  },
+  {
+   "kind": "color",
+   "value": "rgb(0,0,0)",
+   "ok": true
+  },
+  {
+   "kind": "color",
+   "value": "rgba(0, 0, 0, .15)",
+   "ok": true
+  },
+  {
+   "kind": "color",
+   "value": "hsl(210, 40%, 50%)",
+   "ok": true
+  },
+  {
+   "kind": "color",
+   "value": "transparent",
+   "ok": true
+  },
+  {
+   "kind": "color",
+   "value": "currentcolor",
+   "ok": true
+  },
+  {
+   "kind": "color",
+   "value": "text.primary",
+   "ok": true
+  },
+  {
+   "kind": "color",
+   "value": "surface.dark",
+   "ok": true
+  },
+  {
+   "kind": "color",
+   "value": "#ff",
+   "ok": false
+  },
+  {
+   "kind": "color",
+   "value": "#ggg",
+   "ok": false
+  },
+  {
+   "kind": "color",
+   "value": "rgb(url(x))",
+   "ok": false
+  },
+  {
+   "kind": "color",
+   "value": "rgb(0,0,0",
+   "ok": false
+  },
+  {
+   "kind": "color",
+   "value": "red blue",
+   "ok": false
+  },
+  {
+   "kind": "color",
+   "value": "color-mix(in srgb, red, blue)",
+   "ok": false
+  },
+  {
+   "kind": "color",
+   "value": "light-dark(red, blue)",
+   "ok": false
+  },
+  {
+   "kind": "color",
+   "value": "url(x)",
+   "ok": false
+  },
+  {
+   "kind": "color",
+   "value": "var(--c)",
+   "ok": false
+  },
+  {
+   "kind": "color",
+   "value": "red;}",
+   "ok": false
+  },
+  {
+   "kind": "gradient",
+   "value": "linear-gradient(135deg, #e8734a, #8a3d24)",
+   "ok": true
+  },
+  {
+   "kind": "gradient",
+   "value": "radial-gradient(circle, rgba(0,0,0,.2) 0%, #fff 100%)",
+   "ok": true
+  },
+  {
+   "kind": "gradient",
+   "value": "conic-gradient(red, blue)",
+   "ok": true
+  },
+  {
+   "kind": "gradient",
+   "value": "linear-gradient(url(x), red)",
+   "ok": false
+  },
+  {
+   "kind": "gradient",
+   "value": "linear-gradient(red, blue); color: red",
+   "ok": false
+  },
+  {
+   "kind": "gradient",
+   "value": "repeating-linear-gradient(red, blue)",
+   "ok": false
+  },
+  {
+   "kind": "gradient",
+   "value": "red",
+   "ok": false
+  },
+  {
+   "kind": "gradient",
+   "value": "linear-gradient(red, blue",
+   "ok": false
+  },
+  {
+   "kind": "gradient",
+   "value": "linear-gradient(var(--a), blue)",
+   "ok": false
+  },
+  {
+   "kind": "gradient",
+   "value": "url(x)",
+   "ok": false
+  },
+  {
+   "kind": "shadow",
+   "value": "0 10px 25px rgba(0,0,0,.15)",
+   "ok": true
+  },
+  {
+   "kind": "shadow",
+   "value": "0 1px 2px rgba(0,0,0,.2)",
+   "ok": true
+  },
+  {
+   "kind": "shadow",
+   "value": "inset 0 0 0 1px #fff",
+   "ok": true
+  },
+  {
+   "kind": "shadow",
+   "value": "0 0 4px red, 0 0 8px blue",
+   "ok": true
+  },
+  {
+   "kind": "shadow",
+   "value": "0 0 0 url(x)",
+   "ok": false
+  },
+  {
+   "kind": "shadow",
+   "value": "0 0 0 red,",
+   "ok": false
+  },
+  {
+   "kind": "shadow",
+   "value": "1px 1px red, 2px 2px red, 3px 3px red, 4px 4px red, 5px 5px red",
+   "ok": false
+  },
+  {
+   "kind": "shadow",
+   "value": "drop-shadow(0 0 1px red)",
+   "ok": false
+  },
+  {
+   "kind": "shadow",
+   "value": "@import url(x)",
+   "ok": false
+  },
+  {
+   "kind": "fontFamily",
+   "value": "Inter, sans-serif",
+   "ok": true
+  },
+  {
+   "kind": "fontFamily",
+   "value": "'Open Sans', Arial, sans-serif",
+   "ok": true
+  },
+  {
+   "kind": "fontFamily",
+   "value": "\"Playfair Display\", serif",
+   "ok": true
+  },
+  {
+   "kind": "fontFamily",
+   "value": "font.heading",
+   "ok": true
+  },
+  {
+   "kind": "fontFamily",
+   "value": "Inter; color: red",
+   "ok": false
+  },
+  {
+   "kind": "fontFamily",
+   "value": "Inter, url(x)",
+   "ok": false
+  },
+  {
+   "kind": "fontFamily",
+   "value": "Inter\\",
+   "ok": false
+  },
+  {
+   "kind": "fontFamily",
+   "value": "a{b}",
+   "ok": false
+  },
+  {
+   "kind": "fontFamily",
+   "value": "",
+   "ok": false
+  }
+ ]
+}

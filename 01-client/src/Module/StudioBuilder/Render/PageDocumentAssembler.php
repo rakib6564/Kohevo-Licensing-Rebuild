@@ -55,9 +55,10 @@ final class PageDocumentAssembler
 
         $signature = $this->signature();
 
-        // The guard is only meaningful when there IS a tenant stylesheet to
-        // out-rank, so a site that never uses the feature pays nothing.
-        $signatureGuard = ($tenantCss !== '' && $signature !== '')
+        // Emitted whenever a signature is shown. Tenant CSS is no longer the
+        // only way to restyle it: block styles (position, z-index, effects)
+        // reach the page too, and the guard is ~700 bytes.
+        $signatureGuard = $signature !== ''
             ? StudioCodePolicy::signatureProtectionCss()
             : '';
 

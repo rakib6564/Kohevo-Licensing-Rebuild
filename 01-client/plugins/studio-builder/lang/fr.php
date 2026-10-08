@@ -394,6 +394,7 @@ return [
     'studio_ui_border_color' => 'Couleur de bordure',
     'studio_ui_border_radius' => 'Rayon de bordure',
     'studio_ui_box_shadow' => 'Ombre portée',
+    'studio_ui_invalid_css_value' => 'Valeur non valide. Utilisez une longueur comme 1.5rem ou 12px, une couleur comme #e8734a, ou laissez vide pour hériter.',
     'studio_ui_shadow_custom_hint' => 'Une valeur CSS box-shadow, p. ex. 0 10px 25px rgba(0,0,0,.15).',
     'studio_ui_background_label' => 'Arrière-plan',
     'studio_ui_background_color' => 'Couleur d’arrière-plan',
