@@ -44,12 +44,14 @@ test('Elements are grouped by category with a rail; "View all" drills into one c
 test('one search covers sections, elements and components; clearing it brings the tabs back', async ({ page }) => {
   await openBuilder(page);
   await openTab(page, 'Sections');
+  await expect(panel(page).getByTestId('section-presets')).toBeVisible(); // the presets load after the page
   const search = panel(page).getByRole('searchbox');
   await search.fill('hero');
   const results = panel(page).getByTestId('add-search-results');
   await expect(results).toBeVisible();
   const headings = await results.locator('h3').allTextContents();
-  expect(headings.join('|')).toMatch(/Sections.*\|?.*Elements|Sections/s);
+  expect(headings[0]).toMatch(/^Sections/);
+  expect(headings.join('|')).toMatch(/Elements/);
   await expect(results.locator('[data-preset="system-section-hero-classic"]')).toBeVisible();
   await expect(results.locator('[data-block-type="core.hero"]')).toBeVisible();
   await search.fill('zzzz-nothing');

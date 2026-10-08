@@ -2,15 +2,17 @@
 // components, each under its own heading with a count. Typing in the search box shows this;
 // clearing it returns to the tabs.
 
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useRef } from 'react';
 import { useEditor } from './EditorContext.jsx';
-import { BlockCard, blockCategoryLabel, usePresetInsertState } from './AddPanelParts.jsx';
+import { BlockCard, blockCategoryLabel, usePresetInsertState, useWhenVisible } from './AddPanelParts.jsx';
 import { PresetCard, categoryLabel } from './SectionPresetsPanel.jsx';
 import { t } from '../core/messages.mjs';
 import { searchAll } from '../core/addPanel.mjs';
 
 export const AddSearchResults = memo(function AddSearchResults({ query, favorites, onToggleFavorite }) {
-  const { manifest, library = null, insertBlock, insertComponentRef } = useEditor();
+  const { manifest, library = null, ensurePresets, insertBlock, insertComponentRef } = useEditor();
+  const rootRef = useRef(null);
+  useWhenVisible(rootRef, () => { if (ensurePresets) ensurePresets(); });
   const presetState = usePresetInsertState();
   const found = useMemo(
     () => searchAll(
@@ -21,11 +23,11 @@ export const AddSearchResults = memo(function AddSearchResults({ query, favorite
     [manifest.blocks, library, query],
   );
 
-  if (found.total === 0) return <p className="sbx-palette__empty sbx-muted" role="status" data-testid="search-empty">{t('pal_no_results')}</p>;
+  if (found.total === 0) return <p ref={rootRef} className="sbx-palette__empty sbx-muted" role="status" data-testid="search-empty">{t('pal_no_results')}</p>;
 
   const heading = (key, count) => <h3 className="sbx-palette__category">{t(key)} <span className="sbx-chip__count" aria-hidden="true">{count}</span></h3>;
   return (
-    <div className="sbx-search-results" data-testid="add-search-results" role="region" aria-label={t('pal_search_results')}>
+    <div ref={rootRef} className="sbx-search-results" data-testid="add-search-results" role="region" aria-label={t('pal_search_results')}>
       {found.presets.length > 0 && (
         <section>
           {heading('pal_tab_sections', found.presets.length)}

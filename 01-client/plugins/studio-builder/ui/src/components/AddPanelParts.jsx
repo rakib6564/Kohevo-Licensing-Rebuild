@@ -1,7 +1,7 @@
 // Shared pieces of the Add panel: the block card (with a visible reason when it cannot be inserted
 // right now), the category chip rail, and the hook that reads what insertion rules need.
 
-import { useId } from 'react';
+import { useEffect, useId } from 'react';
 import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { IconPlus } from './Icons.jsx';
 import { renderBlockIcon, DRAG_TYPE_NEW } from './blockIcons.jsx';
@@ -25,6 +25,23 @@ export const usePresetInsertState = () => {
   const { doc, manifest } = useInsertContext();
   return doc ? presetInsertState(doc, manifest) : { ok: true };
 };
+
+/**
+ * Run `callback` once the element is really on screen (not display:none, not in a closed sheet or a
+ * hidden tab). The palette is always mounted, so "mounted" is not the same as "needed".
+ */
+export function useWhenVisible(ref, callback) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') { callback(); return undefined; }
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) { callback(); io.disconnect(); }
+    });
+    io.observe(el);
+    return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ref]);
+}
 
 export const blockCategoryLabel = (slug) => t(`block_cat_${slug}`);
 
