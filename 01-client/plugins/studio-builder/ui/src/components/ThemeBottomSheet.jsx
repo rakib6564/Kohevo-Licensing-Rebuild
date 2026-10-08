@@ -5,7 +5,8 @@
 
 import { memo, useEffect, useState } from 'react';
 import { useEditor, useEngineState } from './EditorContext.jsx';
-import { IconX, IconTrash, IconPalette } from './Icons.jsx';
+import { IconTrash, IconPalette } from './Icons.jsx';
+import { SheetPrimitive } from './sheets/SheetPrimitive.jsx';
 import { t, errorMessage } from '../core/messages.mjs';
 import { asList, asObject } from '../core/doc.mjs';
 
@@ -86,25 +87,7 @@ export const ThemeBottomSheet = memo(function ThemeBottomSheet({ onClose, onSave
   ];
 
   return (
-    <div className="sbx-bottom-sheet sbx-theme-sheet" role="dialog" aria-label="Theme Design System">
-      <div className="sbx-bottom-sheet__drag-handle" aria-hidden="true" />
-
-      {/* Header */}
-      <div className="sbx-bottom-sheet__header">
-        <div className="sbx-bottom-sheet__title-group">
-          <h2 className="sbx-bottom-sheet__title">Theme</h2>
-          <p className="sbx-bottom-sheet__subtitle">Manage your site&apos;s global design system</p>
-        </div>
-        <button
-          type="button"
-          className="sbx-bottom-sheet__close"
-          onClick={onClose}
-          aria-label="Close theme settings"
-        >
-          <IconX size={16} />
-        </button>
-      </div>
-
+    <SheetPrimitive title="Theme" subtitle="Manage your site's global design system" onClose={onClose} className="sbx-theme-sheet" label="Theme Design System" closeLabel="Close theme settings" testId="sheet-theme">
       {/* Horizontal Subtabs */}
       <div className="sbx-theme-sheet__tabs" role="tablist">
         {tabs.map((t) => (
@@ -259,6 +242,6 @@ export const ThemeBottomSheet = memo(function ThemeBottomSheet({ onClose, onSave
           {saving ? 'Saving...' : 'Apply changes'}
         </button>
       </div>
-    </div>
+    </SheetPrimitive>
   );
 });

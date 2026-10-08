@@ -39,21 +39,34 @@ test('the shell never scrolls horizontally', async ({ page }) => {
   expect(overflow, 'horizontal overflow in px').toBeLessThanOrEqual(0);
 });
 
-test('top bar controls do not overlap each other', async ({ page }, testInfo) => {
-  // Known B2-P1 defect: at 390px the status chip and Publish collide. Remove this line with the mobile-shell fix.
-  test.fixme(testInfo.project.name === 'mobile', 'two-row compact top bar not built yet (B2-P1 mobile shell)');
+test('top bar: no control overlaps another and nothing is clipped', async ({ page }) => {
   await openBuilder(page);
-  const boxes = await page.evaluate(() => [...document.querySelectorAll('header.sbx-topbar button, header.sbx-topbar [role="status"], header.sbx-topbar select')]
-    .map((el) => ({ name: (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().slice(0, 24), r: el.getBoundingClientRect() }))
-    .filter((b) => b.r.width > 0 && b.r.height > 0));
-  const clashes = [];
-  for (let i = 0; i < boxes.length; i++) {
-    for (let j = i + 1; j < boxes.length; j++) {
-      const a = boxes[i].r; const b = boxes[j].r;
-      const x = Math.min(a.right, b.right) - Math.max(a.left, b.left);
-      const y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
-      if (x > 2 && y > 2) clashes.push(`${boxes[i].name} × ${boxes[j].name}`);
+  const result = await page.evaluate(() => {
+    const header = document.querySelector('header.sbx-topbar');
+    const units = [...header.querySelectorAll([
+      '.sbx-brand-badge', '.sbx-topbar__back-btn', '.sbx-page-switcher__select', '.sbx-topbar__page-title',
+      '.sbx-status-pill', '.sbx-topbar__rev-badge', '.sbx-status', '.sbx-status-chip', '.sbx-badge',
+      '.sbx-view-mode-btn', '.sbx-viewport-group .sbx-btn', '.sbx-inspector-toggle', '.sbx-topbar__history-group .sbx-btn',
+      '.sbx-topbar__responsive-btn', '.sbx-topbar__tools > *', '.sbx-topbar__cta-group > *',
+    ].join(','))].map((el) => ({
+      name: (el.getAttribute('data-testid') || el.getAttribute('aria-label') || el.className || el.tagName).toString().slice(0, 40),
+      r: el.getBoundingClientRect(),
+    })).filter((u) => u.r.width > 0 && u.r.height > 0);
+    const clashes = [];
+    for (let i = 0; i < units.length; i++) {
+      for (let j = i + 1; j < units.length; j++) {
+        const a = units[i].r; const b = units[j].r;
+        const x = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+        const y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        if (x > 2 && y > 2) clashes.push(`${units[i].name} x ${units[j].name}`);
+      }
     }
-  }
-  expect(clashes).toEqual([]);
+    const h = header.getBoundingClientRect();
+    const outside = units.filter((u) => u.r.right > h.right + 1 || u.r.left < h.left - 1).map((u) => u.name);
+    const left = header.querySelector('.sbx-topbar__left');
+    return { clashes, outside, leftClipped: left.scrollWidth - left.clientWidth };
+  });
+  expect(result.clashes, 'overlapping controls').toEqual([]);
+  expect(result.outside, 'controls outside the bar').toEqual([]);
+  expect(result.leftClipped, 'the left group clips its content by this many px').toBeLessThanOrEqual(1);
 });

@@ -11,7 +11,7 @@
 // every change is a canonical operation sent through the command API.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { EditorContext, SelectionContext, useSelection } from './EditorContext.jsx';
+import { EditorContext, SelectionContext, useEditor, useSelection } from './EditorContext.jsx';
 import { TopBar } from './TopBar.jsx';
 import { LeftPanel } from './LeftPanel.jsx';
 import { CanvasArea } from './CanvasArea.jsx';
@@ -27,6 +27,7 @@ import { ThemeDialog } from './ThemeDialog.jsx';
 import { ThemeBottomSheet } from './ThemeBottomSheet.jsx';
 import { MoreBottomSheet } from './MoreBottomSheet.jsx';
 import { PackageDialog } from './PackageDialog.jsx';
+import { ResponsiveViewSheet } from './sheets/ResponsiveViewSheet.jsx';
 import { AiReviewDialog } from './AiReviewDialog.jsx';
 import { createTransport } from '../core/api.mjs';
 import { SyncEngine, STATUS } from '../core/sync.mjs';
@@ -41,7 +42,9 @@ import { insertTargetFor, referenceIndexFor, slugify } from '../core/library.mjs
 import * as ops from '../core/operations.mjs';
 import { lockViolation } from '../core/layerLock.mjs';
 import { viewportByKey } from '../core/viewport.mjs';
+import { useIsMobileShell, isMobileShellNow } from '../hooks/useIsMobileShell.mjs';
 import { isEditing, keyboardInset, normalizeViewMode } from '../core/shellState.mjs';
+import { zoomPercent } from '../core/zoom.mjs';
 
 export function StudioShell({ boot, transport: injectedTransport = null, lockEnabled = true }) {
   const transport = useMemo(
@@ -58,7 +61,11 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   selectionRef.current = selection;
   const setSelection = useCallback((id) => setSel((s) => selectOnly(s, id)), []);
   const [announcement, setAnnouncement] = useState('');
-  const [viewportKey, setViewportKey] = useState('desktop');
+  // A phone starts on the Mobile device so the canvas is not a shrunken desktop page.
+  const [viewportKey, setViewportKey] = useState(() => (isMobileShellNow() ? 'mobile' : 'desktop'));
+  // Canvas view aids shared by the bottom bar and the mobile Responsive-view sheet.
+  const [canvasView, setCanvasViewState] = useState({ zoom: 'fit', grid: false, outlines: false, labels: false, fitPercent: 100 });
+  const setCanvasView = useCallback((patch) => setCanvasViewState((v) => ({ ...v, ...patch })), []);
   const [manifest, setManifest] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [pendingInsert, setPendingInsert] = useState(null);
@@ -460,7 +467,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   }, [engine, save, undo, redo, duplicateNode]);
 
   const ctx = useMemo(() => ({
-    boot, engine, manifest, transport, announce, applyOp,
+    boot, engine, manifest, transport, announce, applyOp, canvasView, setCanvasView,
     insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf,
     viewport: viewportByKey(viewportKey),
     library, refreshLibrary, applyTemplate, insertTemplate, deleteTemplate,
@@ -468,7 +475,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     openSaveTemplate: () => setDialog('save_template'),
     openComponentDialog: () => setDialog('component'),
     openAiReview: () => setDialog('ai_review'),
-  }), [boot, engine, manifest, transport, announce, applyOp, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey,
+  }), [boot, engine, manifest, transport, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey,
     library, refreshLibrary, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
 
   const selectionCtx = useMemo(() => ({
@@ -541,6 +548,9 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   );
 }
 
+/** Dock tabs that open their own sheet; the Add/Layers/Style panel must stay closed behind them. */
+const SHEET_TABS = ['theme', 'more'];
+
 /** The unified one-sided builder shell (rendered inside an EditorContext). */
 export function ShellLayout({
   viewportKey, onViewport, onSave, onUndo, onRedo, onPublish, onReload, announcement, lockState,
@@ -548,8 +558,11 @@ export function ShellLayout({
   onTheme = null, dialogs = null, onAiReview = null, onPackages = null,
 }) {
   const { selection, select } = useSelection();
+  const { canvasView } = useEditor();
   const [activeTab, setActiveTab] = useState(() => (selection ? 'inspector' : 'structure'));
+  const isMobile = useIsMobileShell();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [responsiveOpen, setResponsiveOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [viewMode, setViewModeRaw] = useState('edit');
   const shellRef = useRef(null);
@@ -566,19 +579,16 @@ export function ShellLayout({
     }
   }, [select]);
 
+  // Selecting a node points the panel at Style; on a phone it does NOT open the sheet:
+  // the canvas stays visible with the contextual bar, and Edit (dock) opens the sheet.
   useEffect(() => {
-    if (selection && editing) {
-      setActiveTab('inspector');
-      if (typeof window !== 'undefined' && window.innerWidth <= 860) {
-        setMobileOpen(true);
-      }
-    }
+    if (selection && editing) setActiveTab('inspector');
   }, [selection, editing]);
 
   // Inspector toggle: open the docked panel on Style; a second press collapses it for a full-width canvas.
   const inspectorOpen = !collapsed && activeTab === 'inspector';
   const toggleInspector = useCallback(() => {
-    if (typeof window !== 'undefined' && window.innerWidth <= 860) {
+    if (isMobile) {
       setActiveTab('inspector');
       setMobileOpen((open) => !(open && activeTab === 'inspector'));
       return;
@@ -589,7 +599,26 @@ export function ShellLayout({
       setCollapsed(false);
       setActiveTab('inspector');
     }
-  }, [inspectorOpen, activeTab]);
+  }, [inspectorOpen, activeTab, isMobile]);
+
+  // Cmd/Ctrl+K: open Add and focus its search (the "⌘ K" badge in the palette promises this).
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'k' || !editing) return;
+      e.preventDefault();
+      setCollapsed(false);
+      setActiveTab('blocks');
+      if (isMobile) setMobileOpen(true);
+      requestAnimationFrame(() => {
+        // The palette renders twice (Add tab and under Layers): focus the one on screen.
+        const inputs = [...document.querySelectorAll('.sbx-palette__search-input')];
+        const input = inputs.find((el) => el.offsetParent !== null) || inputs[0];
+        if (input) input.focus();
+      });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [editing, isMobile]);
 
   // Keyboard-safe sheets: publish how much of the screen the on-screen keyboard covers.
   useEffect(() => {
@@ -624,6 +653,7 @@ export function ShellLayout({
         onRedo={onRedo}
         onPublish={onPublish}
         onHistory={() => setHistoryOpen(true)}
+        onResponsiveView={isMobile ? () => setResponsiveOpen(true) : null}
         onTheme={onTheme}
         onAiReview={onAiReview}
         onPackages={onPackages}
@@ -639,7 +669,7 @@ export function ShellLayout({
           onTabChange={setActiveTab}
           collapsed={collapsed}
           onToggleCollapse={() => setCollapsed((c) => !c)}
-          mobileOpen={mobileOpen}
+          mobileOpen={mobileOpen && !SHEET_TABS.includes(activeTab)}
           onCloseMobile={() => setMobileOpen(false)}
         />
         <CanvasArea
@@ -681,6 +711,14 @@ export function ShellLayout({
         <ThemeBottomSheet
           onClose={() => setMobileOpen(false)}
           onSaved={() => onReload && onReload()}
+        />
+      )}
+      {isMobile && responsiveOpen && (
+        <ResponsiveViewSheet
+          viewportKey={viewportKey}
+          onViewport={onViewport}
+          percent={zoomPercent(canvasView.zoom, canvasView.fitPercent / 100)}
+          onClose={() => setResponsiveOpen(false)}
         />
       )}
       {mobileOpen && activeTab === 'more' && (

@@ -18,6 +18,7 @@ import { DRAG_TYPE_NEW } from './BlockPalette.jsx';
 import { CanvasOverlay } from './CanvasOverlay.jsx';
 import { BottomBar } from './BottomBar.jsx';
 import { stepZoom, zoomPercent } from '../core/zoom.mjs';
+import { useIsMobileShell } from '../hooks/useIsMobileShell.mjs';
 
 const RELOAD_DEBOUNCE_MS = 250;
 
@@ -36,7 +37,8 @@ function blockNavigation(doc) {
 }
 
 export const CanvasArea = memo(function CanvasArea({ interactive = true, collapsed = false, onToggleCollapse = null, onReloadCanvas = null }) {
-  const { boot, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode, applyOp } = useEditor();
+  const { boot, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode, applyOp, canvasView, setCanvasView } = useEditor();
+  const isMobile = useIsMobileShell();
   const { selection, selectedIds, select, pick } = useSelection();
   const working = useEngineState((s) => s.working);
   const base = useEngineState((s) => s.base);
@@ -48,8 +50,10 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   const canvasSrc = `${boot.canvasUrl}?page=${boot.pageId}&v=${revisionId}${canvasVersion ? `-${canvasVersion}` : ''}`;
   const [src, setSrc] = useState(() => canvasSrc);
   const [loading, setLoading] = useState(true);
-  const [zoomMode, setZoomMode] = useState('fit'); // 'fit' | 25 | 50 | 75 | 100
-  const [showGrid, setShowGrid] = useState(false);
+  // Zoom, grid and the layout aids live in the shell so the bottom bar and the mobile
+  // Responsive-view sheet drive the same state.
+  const zoomMode = canvasView.zoom;
+  const showGrid = canvasView.grid;
   const loadedRef = useRef(false);
   const interactiveRef = useRef(interactive);
   interactiveRef.current = interactive;
@@ -80,9 +84,14 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     return () => ro.disconnect();
   }, []);
 
-  const fitScale = stage.width > 0 ? Math.min(1, Math.max(0.35, (stage.width - 48) / viewport.width)) : 1;
+  // Stage padding is 24px a side on desktop and 2px on the phone shell; never clamp a phone up past its width.
+  const fitScale = stage.width > 0 ? Math.min(1, Math.max(isMobile ? 0.2 : 0.35, (stage.width - (isMobile ? 4 : 48)) / viewport.width)) : 1;
   const scale = useMemo(() => (zoomMode === 'fit' ? fitScale : zoomPercent(zoomMode, fitScale) / 100), [zoomMode, fitScale]);
   const percent = Math.round(scale * 100);
+  const fitPercent = Math.round(fitScale * 100);
+  useEffect(() => {
+    if (canvasView.fitPercent !== fitPercent) setCanvasView({ fitPercent });
+  }, [fitPercent, canvasView.fitPercent, setCanvasView]);
 
   const frameHeight = stage.height > 0 ? Math.max(640, (stage.height - 48) / scale) : 900;
 
@@ -365,6 +374,8 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
         stageRef={stageRef}
         scale={scale}
         enabled={interactive}
+        outlines={canvasView.outlines}
+        labels={canvasView.labels}
         onAction={(action, id) => actionRef.current(action, id)}
       />
       </div>
@@ -374,11 +385,11 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
         onSelectPath={select}
         percent={percent}
         fitActive={zoomMode === 'fit'}
-        onFit={() => setZoomMode('fit')}
-        onZoomIn={() => setZoomMode(stepZoom(percent, 1))}
-        onZoomOut={() => setZoomMode(stepZoom(percent, -1))}
+        onFit={() => setCanvasView({ zoom: 'fit' })}
+        onZoomIn={() => setCanvasView({ zoom: stepZoom(percent, 1) })}
+        onZoomOut={() => setCanvasView({ zoom: stepZoom(percent, -1) })}
         showGrid={showGrid}
-        onToggleGrid={() => setShowGrid((g) => !g)}
+        onToggleGrid={() => setCanvasView({ grid: !showGrid })}
       />
     </main>
   );

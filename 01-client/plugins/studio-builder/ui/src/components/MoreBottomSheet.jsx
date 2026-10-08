@@ -4,8 +4,8 @@
 // Media library, Version history, Custom code, and more.
 
 import { memo } from 'react';
+import { SheetPrimitive } from './sheets/SheetPrimitive.jsx';
 import {
-  IconX,
   IconSettings,
   IconSearch,
   IconImage,
@@ -170,25 +170,7 @@ export const MoreBottomSheet = memo(function MoreBottomSheet({
   ];
 
   return (
-    <div className="sbx-bottom-sheet sbx-more-sheet" role="dialog" aria-label="More Settings">
-      <div className="sbx-bottom-sheet__drag-handle" aria-hidden="true" />
-
-      {/* Header */}
-      <div className="sbx-bottom-sheet__header">
-        <div className="sbx-bottom-sheet__title-group">
-          <h2 className="sbx-bottom-sheet__title">More</h2>
-          <p className="sbx-bottom-sheet__subtitle">Additional tools and settings for your page</p>
-        </div>
-        <button
-          type="button"
-          className="sbx-bottom-sheet__close"
-          onClick={onClose}
-          aria-label="Close settings"
-        >
-          <IconX size={16} />
-        </button>
-      </div>
-
+    <SheetPrimitive title="More" subtitle="Additional tools and settings for your page" onClose={onClose} className="sbx-more-sheet" label="More Settings" closeLabel="Close settings" testId="sheet-more">
       {/* Categorized Action Grid */}
       <div className="sbx-bottom-sheet__body">
         {sections.map((sec) => (
@@ -218,6 +200,6 @@ export const MoreBottomSheet = memo(function MoreBottomSheet({
           </div>
         ))}
       </div>
-    </div>
+    </SheetPrimitive>
   );
 });

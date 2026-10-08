@@ -4,8 +4,9 @@
 // Layers (structure tree), Style (inspector), Library, and Settings.
 // Mobile: Responsive slide-up bottom sheet with native-app touch workflow.
 
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
+import { useSheetDrag } from './sheets/SheetPrimitive.jsx';
 import { BlockPalette } from './BlockPalette.jsx';
 import { Outline } from './Outline.jsx';
 import { LibraryPanel } from './LibraryPanel.jsx';
@@ -43,6 +44,12 @@ export const LeftPanel = memo(function LeftPanel({
   const inspected = multi ? null : info;
   const locked = !!info && effectivelyLocked(lockIndex(working), info.node.id);
   const ownLock = !!info && isLocked(info.node);
+
+  const asideRef = useRef(null);
+  const sheet = useSheetDrag(asideRef, onCloseMobile);
+  const resetSheet = sheet.reset;
+  // Each time the sheet closes it forgets how far it was dragged.
+  useEffect(() => { if (!mobileOpen) resetSheet(); }, [mobileOpen, resetSheet]);
 
   const [localTab, setLocalTab] = useState(() => (selection ? 'inspector' : 'blocks'));
   const [localCollapsed, setLocalCollapsed] = useState(false);
@@ -93,11 +100,13 @@ export const LeftPanel = memo(function LeftPanel({
       />
 
       <aside
-        className={`sbx-left${collapsed ? ' is-collapsed' : ''}${mobileOpen ? ' is-mobile-open' : ''}`}
+        ref={asideRef}
+        className={`sbx-left${collapsed ? ' is-collapsed' : ''}${mobileOpen ? ' is-mobile-open' : ''}${sheet.dragging ? ' is-dragging' : ''}`}
+        style={mobileOpen && sheet.height !== null ? { '--sbx-sheet-h': `${sheet.height}px` } : undefined}
         aria-label={t('panel_structure')}
       >
-        {/* Mobile drag handle */}
-        <div className="sbx-sheet-handle" onClick={onCloseMobile} aria-hidden="true" />
+        {/* Mobile drag handle: drag to resize, pull down to close */}
+        <div className="sbx-sheet-handle" data-testid="left-sheet-handle" {...sheet.handlers} aria-hidden="true" />
 
         {/* Mobile Sheet Top Bar */}
         <div className="sbx-sheet-header">

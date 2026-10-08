@@ -14,6 +14,7 @@ import { t } from '../core/messages.mjs';
 
 const NODE_ATTR = 'data-sb-node';
 const FALLBACK_BAR = { width: 280, height: 30 };
+const MAX_AID_NODES = 300;
 
 const cssEscape = (id) => (typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(id) : String(id).replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`));
 
@@ -53,14 +54,16 @@ function ToolbarButton({ action, label, disabled, tabIndex, onClick, onFocus, re
  * @param {boolean} props.enabled               false in preview modes: nothing is drawn
  * @param {(action: string, id: string) => void} props.onAction
  */
-export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, scale, enabled, onAction }) {
+export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, scale, enabled, outlines = false, labels = false, onAction }) {
   const { labelOf } = useEditor();
   const { selection, selectedIds } = useSelection();
   const working = useEngineState((s) => s.working);
   const rootRef = useRef(null);
   const barRef = useRef(null);
   const buttonRefs = useRef([]);
-  const [geo, setGeo] = useState({ items: [], bounds: rect(0, 0, 0, 0) });
+  const [geo, setGeo] = useState({ items: [], bounds: rect(0, 0, 0, 0), outlines: [], labels: [] });
+  const workingRef = useRef(null);
+  workingRef.current = working;
   const [barSize, setBarSize] = useState(FALLBACK_BAR);
   const [activeIdx, setActiveIdx] = useState(0);
   const lastKey = useRef('');
@@ -69,8 +72,8 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
   const measure = useCallback(() => {
     const root = rootRef.current;
     const frame = frameRef.current;
-    if (!root || !frame || !enabled || !selectedIds.length) {
-      if (lastKey.current !== '') { lastKey.current = ''; setGeo({ items: [], bounds: rect(0, 0, 0, 0) }); }
+    if (!root || !frame || !enabled || (!selectedIds.length && !outlines && !labels)) {
+      if (lastKey.current !== '') { lastKey.current = ''; setGeo({ items: [], bounds: rect(0, 0, 0, 0), outlines: [], labels: [] }); }
       return;
     }
     let doc = null;
@@ -89,11 +92,37 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
       const visible = clipTo(full, bounds);
       if (visible) items.push({ id, rect: full, visible });
     }
-    const key = JSON.stringify([items.map((i) => [i.id, i.visible]), bounds]);
+    // Layout aids (phone Responsive view): thin outlines for every node, name tags for sections.
+    const place = (id) => {
+      const el = doc.querySelector(`[${NODE_ATTR}="${cssEscape(id)}"]`);
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      const full = toOverlayRect({ left: r.left, top: r.top, width: r.width, height: r.height }, fr, container, s);
+      return clipTo(full, bounds) ? { id, rect: full, visible: clipTo(full, bounds) } : null;
+    };
+    const picked = new Set(selectedIds);
+    const outlineBoxes = [];
+    if (outlines) {
+      let n = 0;
+      doc.querySelectorAll(`[${NODE_ATTR}]`).forEach((el) => {
+        const id = el.getAttribute(NODE_ATTR);
+        if (n >= MAX_AID_NODES || !id || picked.has(id)) return;
+        const hit = place(id);
+        if (hit) { outlineBoxes.push(hit); n += 1; }
+      });
+    }
+    const labelTags = [];
+    if (labels) {
+      for (const section of sectionsOf(workingRef.current)) {
+        const hit = place(section.id);
+        if (hit) labelTags.push({ ...hit, text: section.label || t('section') });
+      }
+    }
+    const key = JSON.stringify([items.map((i) => [i.id, i.visible]), outlineBoxes.map((i) => [i.id, i.visible]), labelTags.map((i) => [i.id, i.text, i.visible]), bounds]);
     if (key === lastKey.current) return;
     lastKey.current = key;
-    setGeo({ items, bounds });
-  }, [frameRef, enabled, selectedIds]);
+    setGeo({ items, bounds, outlines: outlineBoxes, labels: labelTags });
+  }, [frameRef, enabled, selectedIds, outlines, labels]);
 
   const schedule = useCallback(() => {
     if (frameRaf.current) return;
@@ -101,7 +130,7 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
   }, [measure]);
 
   // Re-measure whenever what we draw from can have changed.
-  useEffect(() => { lastKey.current = ''; schedule(); }, [schedule, working, scale, selectedIds]);
+  useEffect(() => { lastKey.current = ''; schedule(); }, [schedule, working, scale, selectedIds, outlines, labels]);
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -198,6 +227,25 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
 
   return (
     <div className="sbx-overlay" ref={rootRef} data-testid="canvas-overlay" data-active={enabled && selectedIds.length ? 'true' : 'false'}>
+      {enabled && outlines && geo.outlines.map((o) => (
+        <div
+          key={`o-${o.id}`}
+          className="sbx-overlay__outline"
+          style={{ left: o.visible.left, top: o.visible.top, width: o.visible.width, height: o.visible.height }}
+          aria-hidden="true"
+        />
+      ))}
+      {enabled && labels && geo.labels.map((l) => (
+        <span
+          key={`l-${l.id}`}
+          className="sbx-overlay__label"
+          data-testid="overlay-section-label"
+          style={{ left: l.visible.left + 4, top: l.visible.top + 4 }}
+          aria-hidden="true"
+        >
+          {l.text}
+        </span>
+      ))}
       {enabled && geo.items.map((item) => (
         <div
           key={item.id}

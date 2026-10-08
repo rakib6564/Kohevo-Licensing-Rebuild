@@ -46,14 +46,32 @@ const VIEWPORT_ICONS = {
 export const SaveStatus = memo(function SaveStatus() {
   const status = useEngineState((s) => s.status);
   const error = useEngineState((s) => s.error);
+  const label = t(STATUS_KEY[status] || 'status_idle');
   return (
     <span
       className={`sbx-status sbx-status--${status}`}
       data-status={status}
-      title={status === STATUS.ERROR && error ? errorMessage(error) : undefined}
+      role="status"
+      aria-label={label}
+      title={status === STATUS.ERROR && error ? errorMessage(error) : label}
     >
       <span className="sbx-status__dot" aria-hidden="true" />
       <span className="sbx-status__text">{t(STATUS_KEY[status] || 'status_idle')}</span>
+    </span>
+  );
+});
+
+/** Phone status chip: Unsaved · Saved · Published (everything else falls back to the full status). */
+const StatusChip = memo(function StatusChip() {
+  const status = useEngineState((s) => s.status);
+  const page = useEngineState((s) => s.page);
+  let key = STATUS_KEY[status] || 'status_idle';
+  if (status === STATUS.DIRTY || status === STATUS.SAVING) key = 'chip_unsaved';
+  else if (status === STATUS.SAVED || status === STATUS.IDLE) key = page && page.is_published && !page.has_unpublished_changes ? 'chip_published' : 'chip_saved';
+  return (
+    <span className={`sbx-status-chip sbx-status--${status}`} data-status={status} data-testid="status-chip" role="status">
+      <span className="sbx-status__dot" aria-hidden="true" />
+      <span>{t(key)}</span>
     </span>
   );
 });
@@ -74,6 +92,7 @@ export const TopBar = memo(function TopBar({
   onAiReview = null,
   onPackages = null,
   onOpenMobileDock = null,
+  onResponsiveView = null,
 }) {
   const { boot, engine, manifest } = useEditor();
   const page = useEngineState((s) => s.page);
@@ -180,6 +199,7 @@ export const TopBar = memo(function TopBar({
           </span>
 
           <SaveStatus />
+          <StatusChip />
 
           {aiDraft && (
             <span
@@ -193,7 +213,7 @@ export const TopBar = memo(function TopBar({
         </div>
       </div>
 
-      {/* ── Center Area: View Mode, Viewport Switchers, Undo/Redo ── */}
+      {/* ── Center Area: View Mode, Viewport Switchers, Undo/Redo (second row on a phone) ── */}
       <div className="sbx-topbar__center">
         <div className="sbx-view-mode-toggle" role="group" aria-label={t('view_mode')}>
           <button
@@ -263,6 +283,7 @@ export const TopBar = memo(function TopBar({
           <button
             type="button"
             className="sbx-btn sbx-btn--icon"
+            data-testid="undo"
             onClick={onUndo}
             disabled={conflict || busy || undoCount === 0}
             aria-keyshortcuts="Control+Z Meta+Z"
@@ -283,6 +304,21 @@ export const TopBar = memo(function TopBar({
             <IconRedo size={13} />
           </button>
         </div>
+
+        {onResponsiveView && (
+          <button
+            type="button"
+            className="sbx-btn sbx-btn--action sbx-topbar__responsive-btn"
+            data-testid="open-responsive-view"
+            onClick={onResponsiveView}
+            title={t('responsive_view')}
+            aria-label={t('responsive_view')}
+            aria-haspopup="dialog"
+          >
+            <IconSliders size={13} />
+            <span className="sbx-btn__text">{t('responsive_view')}</span>
+          </button>
+        )}
       </div>
 
       {/* ── Right Area: Tools & Actions ── */}

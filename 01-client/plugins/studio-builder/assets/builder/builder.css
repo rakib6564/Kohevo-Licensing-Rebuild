@@ -1478,8 +1478,8 @@ html, body.sbx-body {
     right: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    height: auto !important;
-    max-height: 84vh !important;
+    height: var(--sbx-sheet-h, auto) !important;
+    max-height: var(--sbx-sheet-h, min(84vh, calc(100dvh - var(--sbx-kb-inset, 0px) - 16px))) !important;
     border-radius: 22px 22px 0 0 !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     border-bottom: 0 !important;
@@ -1514,13 +1514,26 @@ html, body.sbx-body {
 
   .sbx-sheet-handle {
     display: block !important;
-    width: 38px !important;
-    height: 4px !important;
-    border-radius: 999px !important;
-    background: rgba(255, 255, 255, 0.25) !important;
-    margin: 8px auto 4px auto !important;
-    cursor: pointer !important;
+    position: relative !important;
+    width: 100% !important;
+    height: 28px !important;
+    margin: 0 !important;
+    background: none !important;
+    cursor: grab !important;
+    touch-action: none !important;
   }
+  .sbx-sheet-handle::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 10px;
+    width: 38px;
+    height: 4px;
+    margin-left: -19px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.25);
+  }
+  .sbx-left.is-dragging { transition: none !important; user-select: none; }
 
   .sbx-sheet-header {
     display: flex !important;
@@ -1567,7 +1580,7 @@ html, body.sbx-body {
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    height: 56px !important;
+    height: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
     background: rgba(15, 23, 42, 0.94) !important;
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
@@ -1619,18 +1632,15 @@ html, body.sbx-body {
 
   /* Full screen canvas on mobile */
   .sbx-canvas {
-    padding-bottom: 58px !important;
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
   }
   .sbx-canvas__stage {
     padding: 2px !important;
   }
   .sbx-canvas__fit {
-    width: 100% !important;
     max-width: 100% !important;
   }
   .sbx-canvas__device {
-    width: 100% !important;
-    max-width: 100% !important;
     border-radius: 0 !important;
     box-shadow: none !important;
   }
@@ -1738,8 +1748,8 @@ html, body.sbx-body {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 56px;
-  max-height: 75vh;
+  bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  max-height: min(75vh, calc(100dvh - var(--sbx-kb-inset, 0px) - 120px));
   height: 70vh;
   background: #141417;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
@@ -2428,4 +2438,118 @@ html, body.sbx-body {
 }
 @media (max-width: 860px) {
   .sbx-bottombar__right .sbx-bottombar__btn--text { display: none; }
+}
+
+/* ── Layout aids drawn by the overlay (phone Responsive view) ── */
+.sbx-overlay__outline {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px dashed rgba(167, 139, 250, 0.55);
+  pointer-events: none;
+}
+.sbx-overlay__label {
+  position: absolute;
+  max-width: 60%;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #ddd6fe;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Top bar: nothing overlaps at any width; two rows on a phone ── */
+.sbx-topbar { position: relative; }
+.sbx-topbar__left { flex: 1 1 0%; min-width: 0; overflow: hidden; }
+.sbx-topbar__title-group { flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.sbx-page-switcher { flex: 0 1 150px; min-width: 0; }
+.sbx-page-switcher__select { min-width: 0; width: 100%; text-overflow: ellipsis; }
+.sbx-topbar__center, .sbx-topbar__right { flex: none; }
+.sbx-status-chip { display: none; }
+@media (max-width: 1440px) {
+  .sbx-brand-badge__info { display: none; }
+  .sbx-topbar__rev-badge { display: none; }
+  .sbx-topbar .sbx-status__text { display: none; }
+}
+@media (max-width: 860px) {
+  .sbx-topbar {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    flex-wrap: wrap;
+    row-gap: 6px;
+    padding: calc(6px + env(safe-area-inset-top, 0px)) 8px 6px;
+  }
+  .sbx-topbar__left { order: 1; flex: 1 1 0%; }
+  .sbx-topbar__right { order: 2; }
+  .sbx-topbar__center { order: 3; display: flex !important; flex: 1 0 100%; justify-content: space-between; gap: 6px; }
+  .sbx-topbar__history-group { display: inline-flex !important; }
+  .sbx-view-mode-toggle, .sbx-inspector-toggle { display: none; }
+  .sbx-topbar .sbx-status, .sbx-status-pill { display: none; }
+  .sbx-status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: none;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--sbx-text);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .sbx-btn--save-draft span { display: none; }
+  .sbx-topbar__mobile-menu { top: 100%; }
+  .sbx-topbar__responsive-btn .sbx-btn__text { display: none; }
+  .sbx-viewport-group .sbx-btn { padding: 0 8px; min-height: 32px; }
+}
+@media (min-width: 861px) {
+  .sbx-topbar__responsive-btn { display: none; }
+}
+
+/* ── Sheets: scrim, drag zone, safe area, keyboard ── */
+.sbx-sheet-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 939;
+  background: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+.sbx-bottom-sheet { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.sbx-bottom-sheet__drag-zone { touch-action: none; cursor: grab; flex: none; }
+.sbx-bottom-sheet.is-dragging { animation: none; transition: none; user-select: none; }
+.sbx-bottom-sheet.is-dragging .sbx-bottom-sheet__drag-zone { cursor: grabbing; }
+.sbx-bottom-sheet__drag-zone .sbx-bottom-sheet__drag-handle { padding: 0; }
+.sbx-shell[data-keyboard='open'] .sbx-bottom-sheet { bottom: var(--sbx-kb-inset, 0px); }
+.sbx-shell[data-keyboard='open'] .sbx-sheet-scrim { bottom: var(--sbx-kb-inset, 0px); }
+
+/* ── Responsive-view sheet ── */
+.sbx-rv-devices, .sbx-rv-zoom { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sbx-rv-devices .sbx-btn { flex: 1 1 0%; min-height: 40px; }
+.sbx-rv-devices small { opacity: 0.7; margin-left: 4px; }
+.sbx-rv-zoom .sbx-btn { min-width: 44px; min-height: 40px; }
+.sbx-rv-zoom__value { min-width: 3.5em; text-align: center; font-variant-numeric: tabular-nums; }
+.sbx-aid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px 2px;
+  border-bottom: 1px solid var(--sbx-border);
+}
+.sbx-aid__text { display: flex; flex-direction: column; }
+.sbx-aid__note { font-size: 11px; color: #94a3b8; }
+.sbx-aid.is-disabled { opacity: 0.55; }
+.sbx-aid input[type='checkbox'] { width: 40px; height: 22px; accent-color: var(--sbx-accent); }
+
+/* Touch targets: 44px on a phone */
+@media (max-width: 860px) {
+  .sbx-dock-btn, .sbx-bottom-sheet__close, .sbx-sheet-close { min-height: 44px; }
+  .sbx-bottom-sheet__close { min-width: 44px; }
+  .sbx-topbar .sbx-btn--icon, .sbx-topbar__back-btn { min-width: 36px; min-height: 36px; }
 }

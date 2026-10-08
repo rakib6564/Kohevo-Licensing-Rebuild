@@ -154,3 +154,10 @@ test('the breadcrumb lives in the bottom bar and selects its segment', async ({ 
   await page.locator(`${ROWS}[data-row="${id}"]`).click();
   await expect(page.getByTestId('overlay-toolbar')).toBeVisible();
 });
+
+test('Cmd/Ctrl+K opens Add and focuses its search', async ({ page }) => {
+  await openBuilder(page);
+  await page.getByRole('tab', { name: /Layers/ }).click();
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(page.locator('.sbx-palette__search-input:visible')).toBeFocused();
+});

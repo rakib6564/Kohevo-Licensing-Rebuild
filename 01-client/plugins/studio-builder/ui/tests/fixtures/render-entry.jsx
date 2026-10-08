@@ -20,6 +20,7 @@ export function render({ manifest, document, revisionId = 42, revisionKind = 'ma
     boot: { pageId: 1, canvasUrl: '/plugins/studio-builder/admin/canvas.php', previewUrl: '/plugins/studio-builder/admin/preview.php', pagesUrl: '/plugins/studio-builder/admin/index.php', canvasSandbox: 'allow-same-origin', mediaPicker: false, assistantUrl },
     engine, manifest, transport: {}, announce: noop, applyOp: noop,
     insertBlock: noop, insertSection: noop, removeNode: noop, moveBlockTo: noop, moveSectionTo: noop, labelOf: () => '',
+    canvasView: { zoom: 'fit', grid: false, outlines: false, labels: false, fitPercent: 100 }, setCanvasView: noop,
     viewport: viewportByKey(viewportKey),
   };
   // React separates adjacent text nodes with <!-- --> in static markup; drop them for readable assertions.
@@ -42,6 +43,7 @@ export function renderPackages({ manifest, permissions, report = null, tab = 'im
     boot: { pageId: 1, canvasUrl: '/c', previewUrl: '/p', pagesUrl: '/i', builderUrl: '/b', canvasSandbox: 'allow-same-origin', mediaPicker: false },
     engine, manifest: m, transport: {}, announce: noop, applyOp: noop,
     insertBlock: noop, insertSection: noop, removeNode: noop, moveBlockTo: noop, moveSectionTo: noop, labelOf: () => '',
+    canvasView: { zoom: 'fit', grid: false, outlines: false, labels: false, fitPercent: 100 }, setCanvasView: noop,
     viewport: viewportByKey('desktop'),
   };
   const body = withShell
