@@ -122,9 +122,14 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   // ── Library (templates + global components): server data, refreshed on demand ─
   const refreshLibrary = useCallback(async () => {
     if (typeof transport.templates !== 'function') return;
-    const [tpl, cmp] = await Promise.all([transport.templates(), transport.components()]);
+    const [tpl, cmp, pre] = await Promise.all([
+      transport.templates(),
+      transport.components(),
+      typeof transport.sectionPresets === 'function' ? transport.sectionPresets() : Promise.resolve({ ok: false }),
+    ]);
     setLibrary({
       templates: tpl.ok ? tpl.data.templates : [],
+      presets: pre.ok ? pre.data.presets : [],
       components: cmp.ok ? cmp.data.components : [],
       error: tpl.ok && cmp.ok ? null : errorMessage((tpl.ok ? cmp : tpl).error),
     });

@@ -7,6 +7,7 @@ import { useEditor, useEngineState } from './EditorContext.jsx';
 import { t } from '../core/messages.mjs';
 import { asList } from '../core/doc.mjs';
 import { isAiRevision } from '../core/review.mjs';
+import { SectionPresetsPanel } from './SectionPresetsPanel.jsx';
 import {
   IconPlus,
   IconRocket,
@@ -77,56 +78,6 @@ function renderBlockIcon(type, icon, label) {
   return <IconBox size={18} />;
 }
 
-const PRESET_SECTIONS = [
-  {
-    key: 'hero',
-    type: 'core.hero',
-    get title() { return t('pal_hero_section'); },
-    get desc() { return t('pal_high_impact_intro_with_image_copy_and_cta'); },
-  },
-  {
-    key: 'features',
-    type: 'core.feature_list',
-    get title() { return t('pal_feature_grid'); },
-    get desc() { return t('pal_showcase_key_benefits_with_clear_layout'); },
-  },
-  {
-    key: 'services',
-    type: 'core.query_loop',
-    get title() { return t('pal_services_overview'); },
-    get desc() { return t('pal_display_services_or_features_with_icons'); },
-  },
-  {
-    key: 'image_text',
-    type: 'layout.container',
-    get title() { return t('pal_image_text'); },
-    get desc() { return t('pal_side_by_side_image_and_content'); },
-  },
-  {
-    key: 'testimonials',
-    type: 'core.text',
-    get title() { return t('pal_testimonials'); },
-    get desc() { return t('pal_build_trust_with_customer_reviews'); },
-  },
-  {
-    key: 'pricing',
-    type: 'core.feature_list',
-    get title() { return t('pal_pricing_plans'); },
-    get desc() { return t('pal_compare_plans_with_features_and_cta'); },
-  },
-  {
-    key: 'faq',
-    type: 'core.rich_text',
-    get title() { return t('pal_faq_section'); },
-    get desc() { return t('pal_expandable_questions_and_answers'); },
-  },
-  {
-    key: 'gallery',
-    type: 'core.gallery',
-    get title() { return t('pal_gallery'); },
-    get desc() { return t('pal_image_grid_for_visual_media'); },
-  },
-];
 
 /** Blocks fed by a tenant-scoped data provider, or by the current post/archive context. */
 export function isDynamicBlock(def) {
@@ -261,12 +212,6 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
     return result;
   }, [manifest.blocks, query]);
 
-  const sectionItems = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return PRESET_SECTIONS;
-    return PRESET_SECTIONS.filter((s) => `${s.title} ${s.desc}`.toLowerCase().includes(q));
-  }, [query]);
-
   return (
     <div className={`sbx-palette${compact ? ' sbx-palette--compact' : ''}`}>
       {/* Search Header */}
@@ -308,39 +253,7 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
       </div>
 
       {/* Sections Tab Content */}
-      {categoryTab === 'sections' && (
-        <div className="sbx-palette__cards">
-          {sectionItems.map((sec) => {
-            const isFav = favorites.has(sec.key);
-            return (
-              <button
-                key={sec.key}
-                type="button"
-                className="sbx-palette-card sbx-section-card"
-                onClick={() => insertBlock(sec.type)}
-                aria-label={`Insert ${sec.title}`}
-              >
-                <div className="sbx-palette-card__icon-badge" aria-hidden="true">
-                  {renderBlockIcon(sec.type, sec.key, sec.title)}
-                </div>
-                <div className="sbx-palette-card__content">
-                  <span className="sbx-palette-card__title">{sec.title}</span>
-                  <span className="sbx-palette-card__desc">{sec.desc}</span>
-                </div>
-                <button
-                  type="button"
-                  className={`sbx-star-btn${isFav ? ' is-favorited' : ''}`}
-                  onClick={(e) => toggleFavorite(e, sec.key)}
-                  title={isFav ? t('pal_unfavorite') : t('pal_favorite_add')}
-                  aria-label={t('pal_favorite')}
-                >
-                  {isFav ? '★' : '☆'}
-                </button>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {categoryTab === 'sections' && <SectionPresetsPanel query={query} favorites={favorites} onToggleFavorite={toggleFavorite} />}
 
       {/* Elements Tab Content */}
       {categoryTab === 'elements' && (

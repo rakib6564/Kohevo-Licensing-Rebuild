@@ -1,0 +1,545 @@
+{
+    "system-section-hero-classic": [
+        {
+            "bg": "surface.primary",
+            "nodes": [
+                {
+                    "t": "core.hero"
+                }
+            ]
+        }
+    ],
+    "system-section-hero-centered": [
+        {
+            "bg": "surface.primary",
+            "nodes": [
+                {
+                    "t": "layout.container",
+                    "k": [
+                        {
+                            "t": "core.text",
+                            "a": "center"
+                        },
+                        {
+                            "t": "core.heading",
+                            "l": "h1",
+                            "a": "center"
+                        },
+                        {
+                            "t": "core.text",
+                            "a": "center"
+                        },
+                        {
+                            "t": "layout.flex",
+                            "k": [
+                                {
+                                    "t": "core.button"
+                                },
+                                {
+                                    "t": "core.button"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "system-section-hero-split": [
+        {
+            "bg": "surface.primary",
+            "nodes": [
+                {
+                    "t": "layout.grid",
+                    "c": 2,
+                    "k": [
+                        {
+                            "t": "layout.container",
+                            "k": [
+                                {
+                                    "t": "core.heading",
+                                    "l": "h1"
+                                },
+                                {
+                                    "t": "core.text"
+                                },
+                                {
+                                    "t": "core.button"
+                                }
+                            ]
+                        },
+                        {
+                            "t": "layout.container",
+                            "s": 1,
+                            "k": [
+                                {
+                                    "t": "core.heading",
+                                    "l": "h3"
+                                },
+                                {
+                                    "t": "core.rich_text"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "system-section-features-grid": [
+        {
+            "bg": "surface.primary",
+            "nodes": [
+                {
+                    "t": "core.heading",
+                    "l": "h2",
+                    "a": "center"
+                },
+                {
+                    "t": "core.text",
+                    "a": "center"
+                },
+                {
+                    "t": "core.feature_list",
+                    "n": 3,
+                    "c": 3
+                }
+            ]
+        }
+    ],
+    "system-section-features-split": [
+        {
+            "bg": "surface.primary",
+            "nodes": [
+                {
+                    "t": "layout.grid",
+                    "c": 2,
+                    "k": [
+                        {
+                            "t": "layout.container",
+                            "k": [
+                                {
+                                    "t": "core.heading",
+                                    "l": "h2"
+                                },
+                                {
+                                    "t": "core.text"
+                                },
+                                {
+                                    "t": "core.button"
+                                }
+                            ]
+                        },
+                        {
+                            "t": "core.feature_list",
+                            "n": 3,
+                            "c": 1
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "system-section-features-list": [
+        {
+            "bg": "surface.primary",
+            "nodes": [
+                {
+                    "t": "core.heading",
+                    "l": "h2"
+                },
+                {
+                    "t": "core.rich_text"
+                }
+            ]
+        }
+    ],
+    "system-section-services-overview": [
+        {
+            "bg": "surface.primary",
+            "nodes": [
+                {
+                    "t": "core.heading",
+                    "l": "h2",
+                    "a": "center"
+                },
+                {
+                    "t": "core.text",
+                    "a": "center"
+                },
+                {
+                    "t": "core.feature_list",
+                    "n": 3,
+                    "u": 1,
+                    "c": 3
+                }
+            ]
+        }
+    ],
+    "system-section-stats": [
+        {
+            "bg": "surface.secondary",
+            "nodes": [
+                {
+                    "t": "core.stats",
+                    "n": 4
+                }
+            ]
+        }
+    ],
+    "system-section-about": [
+        {
+            "bg": "surface.primary",
+            "nodes": [
+                {
+                    "t": "layout.grid",
+                    "c": 2,
+                    "k": [
+                        {
+                            "t": "layout.container",
+                            "k": [
+                                {
+                                    "t": "core.heading",
+                                    "l": "h2"
+                                },
+                                {
+                                    "t": "core.text"
+                                },
+                                {
+                                    "t": "core.text"
+                                }
+                            ]
+                        },
+                        {
+                            "t": "core.stats",
+                            "n": 2
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "system-section-faq": [
+        {
+            "bg": "surface.primary",
+            "nodes": [
+                {
+                    "t": "core.heading",
+                    "l": "h2",
+                    "a": "center"
+                },
+                {
+                    "t": "core.accordion",
+                    "n": 4
+                }
+            ]
+        }
+    ],
+    "system-section-gallery": [
+        {
+            "bg": "surface.primary",
+            "nodes": [
+                {
+                    "t": "core.heading",
+                    "l": "h2",
+                    "a": "center"
+                },
+                {
+                    "t": "core.text",
+                    "a": "center"
+                },
+                {
+                    "t": "core.gallery",
+                    "n": 0,
+                    "c": 3
+                }
+            ]
+        }
+    ],
+    "system-section-testimonials": [
+        {
+            "bg": "surface.secondary",
+            "nodes": [
+                {
+                    "t": "core.heading",
+                    "l": "h2",
+                    "a": "center"
+                },
+                {
+                    "t": "core.carousel",
+                    "n": 3
+                }
+            ]
+        }
+    ],
+    "system-section-pricing": [
+        {
+            "bg": "surface.primary",
+            "nodes": [
+                {
+                    "t": "core.heading",
+                    "l": "h2",
+                    "a": "center"
+                },
+                {
+                    "t": "core.text",
+                    "a": "center"
+                },
+                {
+                    "t": "layout.grid",
+                    "c": 3,
+                    "k": [
+                        {
+                            "t": "layout.container",
+                            "s": 1,
+                            "k": [
+                                {
+                                    "t": "core.heading",
+                                    "l": "h3"
+                                },
+                                {
+                                    "t": "core.heading",
+                                    "l": "h2"
+                                },
+                                {
+                                    "t": "core.rich_text"
+                                },
+                                {
+                                    "t": "core.button"
+                                }
+                            ]
+                        },
+                        {
+                            "t": "layout.container",
+                            "s": 1,
+                            "k": [
+                                {
+                                    "t": "core.heading",
+                                    "l": "h3"
+                                },
+                                {
+                                    "t": "core.heading",
+                                    "l": "h2"
+                                },
+                                {
+                                    "t": "core.rich_text"
+                                },
+                                {
+                                    "t": "core.button"
+                                }
+                            ]
+                        },
+                        {
+                            "t": "layout.container",
+                            "s": 1,
+                            "k": [
+                                {
+                                    "t": "core.heading",
+                                    "l": "h3"
+                                },
+                                {
+                                    "t": "core.heading",
+                                    "l": "h2"
+                                },
+                                {
+                                    "t": "core.rich_text"
+                                },
+                                {
+                                    "t": "core.button"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "system-section-cta": [
+        {
+            "bg": "surface.inverse",
+            "nodes": [
+                {
+                    "t": "layout.container",
+                    "k": [
+                        {
+                            "t": "core.heading",
+                            "l": "h2",
+                            "a": "center"
+                        },
+                        {
+                            "t": "core.text",
+                            "a": "center"
+                        },
+                        {
+                            "t": "core.button"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "system-section-team": [
+        {
+            "bg": "surface.primary",
+            "nodes": [
+                {
+                    "t": "core.heading",
+                    "l": "h2",
+                    "a": "center"
+                },
+                {
+                    "t": "layout.grid",
+                    "c": 3,
+                    "k": [
+                        {
+                            "t": "layout.container",
+                            "s": 1,
+                            "k": [
+                                {
+                                    "t": "core.heading",
+                                    "l": "h3"
+                                },
+                                {
+                                    "t": "core.text"
+                                },
+                                {
+                                    "t": "core.text"
+                                }
+                            ]
+                        },
+                        {
+                            "t": "layout.container",
+                            "s": 1,
+                            "k": [
+                                {
+                                    "t": "core.heading",
+                                    "l": "h3"
+                                },
+                                {
+                                    "t": "core.text"
+                                },
+                                {
+                                    "t": "core.text"
+                                }
+                            ]
+                        },
+                        {
+                            "t": "layout.container",
+                            "s": 1,
+                            "k": [
+                                {
+                                    "t": "core.heading",
+                                    "l": "h3"
+                                },
+                                {
+                                    "t": "core.text"
+                                },
+                                {
+                                    "t": "core.text"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "system-section-contact": [
+        {
+            "bg": "surface.primary",
+            "nodes": [
+                {
+                    "t": "layout.grid",
+                    "c": 2,
+                    "k": [
+                        {
+                            "t": "layout.container",
+                            "k": [
+                                {
+                                    "t": "core.heading",
+                                    "l": "h2"
+                                },
+                                {
+                                    "t": "core.text"
+                                },
+                                {
+                                    "t": "core.rich_text"
+                                }
+                            ]
+                        },
+                        {
+                            "t": "core.form",
+                            "k": [
+                                {
+                                    "t": "core.form_field",
+                                    "f": "text"
+                                },
+                                {
+                                    "t": "core.form_field",
+                                    "f": "email"
+                                },
+                                {
+                                    "t": "core.form_field",
+                                    "f": "textarea"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "system-section-footer": [
+        {
+            "bg": "surface.secondary",
+            "nodes": [
+                {
+                    "t": "layout.grid",
+                    "c": 3,
+                    "k": [
+                        {
+                            "t": "layout.container",
+                            "k": [
+                                {
+                                    "t": "core.heading",
+                                    "l": "h3"
+                                },
+                                {
+                                    "t": "core.text"
+                                }
+                            ]
+                        },
+                        {
+                            "t": "layout.container",
+                            "k": [
+                                {
+                                    "t": "core.heading",
+                                    "l": "h4"
+                                },
+                                {
+                                    "t": "core.rich_text"
+                                }
+                            ]
+                        },
+                        {
+                            "t": "layout.container",
+                            "k": [
+                                {
+                                    "t": "core.heading",
+                                    "l": "h4"
+                                },
+                                {
+                                    "t": "core.rich_text"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "t": "core.text",
+                    "a": "center"
+                }
+            ]
+        }
+    ]
+}

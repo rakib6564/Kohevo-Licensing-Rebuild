@@ -104,3 +104,19 @@ export const COLOR_CATEGORIES = Object.freeze(['color', 'surface', 'text', 'bord
 export function isHexColor(value) {
   return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.trim());
 }
+
+/** Display order of the built-in section preset categories (mirrors SectionPresetCatalog::CATEGORIES). */
+export const PRESET_CATEGORIES = ['hero', 'features', 'content', 'social-proof', 'pricing', 'cta', 'team', 'contact', 'footer'];
+
+/** Filter presets by query and group them by category in display order (unknown categories last). Pure. */
+export function groupPresets(presets, query, labelOf = (c) => c) {
+  const q = String(query || '').trim().toLowerCase();
+  const list = asList(presets).filter((p) => !q || `${p.name} ${p.description || ''} ${labelOf(p.category)}`.toLowerCase().includes(q));
+  const order = (c) => { const i = PRESET_CATEGORIES.indexOf(c); return i === -1 ? PRESET_CATEGORIES.length : i; };
+  const groups = new Map();
+  for (const p of [...list].sort((a, b) => order(a.category) - order(b.category))) {
+    if (!groups.has(p.category)) groups.set(p.category, []);
+    groups.get(p.category).push(p);
+  }
+  return [...groups.entries()].map(([category, items]) => ({ category, items }));
+}
