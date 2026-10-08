@@ -247,7 +247,20 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     markSelected(doc, selectionRef.current, { scroll: false, ids: selectedIdsRef.current });
   };
 
+  // The canvas scrolls, but its bar stays out of the way (the frame's document is same-origin, so a style tag reaches it).
+  const hideFrameScrollbar = () => {
+    try {
+      const doc = frameRef.current && frameRef.current.contentDocument;
+      if (!doc || !doc.head || doc.getElementById('sbx-hide-scrollbar')) return;
+      const style = doc.createElement('style');
+      style.id = 'sbx-hide-scrollbar';
+      style.textContent = 'html{scrollbar-width:none}html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;width:0;height:0}';
+      doc.head.appendChild(style);
+    } catch { /* ignore */ }
+  };
+
   const onLoad = () => {
+    hideFrameScrollbar();
     setLoading(false);
     loadedRef.current = true;
     paintedRef.current = baseRef.current;
