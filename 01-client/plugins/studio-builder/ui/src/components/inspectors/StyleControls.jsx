@@ -238,7 +238,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
     <>
       {has('typography') && (
         <fieldset className="sbx-fieldset">
-          <legend>{t('typography')}</legend>
+          {!only && <legend>{t('typography')}</legend>}
           <DraftText
             id={`${id}-size`}
             kind="length"
@@ -291,7 +291,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
 
       {has('background') && (
         <fieldset className="sbx-fieldset sbx-bg-controls">
-          <legend>{t('background_label')}</legend>
+          {!only && <legend>{t('background_label')}</legend>}
           <div className="sbx-segmented-pills" role="radiogroup" aria-label={t('bg_type')}>
             {['image', 'color', 'gradient'].map((m) => (
               <button
@@ -357,7 +357,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
 
       {has('border') && (
         <fieldset className="sbx-fieldset">
-          <legend>{t('border')}</legend>
+          {!only && <legend>{t('border')}</legend>}
           <div className="sbx-field">
             <label className="sbx-field__label" htmlFor={`${id}-border-style`}>{t('border_style')}</label>
             <select
@@ -407,7 +407,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
 
       {has('shadow') && (
         <fieldset className="sbx-fieldset">
-          <legend>{t('box_shadow')}</legend>
+          {!only && <legend>{t('box_shadow')}</legend>}
           <div className="sbx-field">
             <label className="sbx-field__label" htmlFor={`${id}-shadow-preset`}>{t('box_shadow')}</label>
             <select
@@ -441,7 +441,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
 
       {has('dimensions') && (
         <fieldset className="sbx-fieldset">
-          <legend>{t('dimensions_label')}</legend>
+          {!only && <legend>{t('dimensions_label')}</legend>}
           <DraftText
             id={`${id}-width`}
             kind="length"
