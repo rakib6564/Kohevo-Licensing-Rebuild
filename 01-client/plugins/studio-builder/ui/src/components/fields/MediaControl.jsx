@@ -10,7 +10,8 @@ import { useId, useState } from 'react';
 import { asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
 
-export function MediaControl({ field, value, onChange, problem, mediaPicker }) {
+/** `hideFocal`: the caller draws its own focal-point control (the Background pad), so the two sliders are left out. */
+export function MediaControl({ field, value, onChange, problem, mediaPicker, hideFocal = false }) {
   const id = useId();
   const ref = asObject(value);
   const [preview, setPreview] = useState(null);
@@ -70,11 +71,13 @@ export function MediaControl({ field, value, onChange, problem, mediaPicker }) {
         <span className="sbx-field__label">{t('alt_text')}</span>
         <input type="text" maxLength={500} value={ref.alt ?? ''} onChange={(e) => set({ alt: e.target.value })} />
       </label>
-      <div className="sbx-media__focal" role="group" aria-label={t('focal_point')}>
-        <span className="sbx-field__label">{t('focal_point')}</span>
-        <input type="range" min={0} max={100} value={Math.round(fp[0] * 100)} aria-label="X" onChange={(e) => set({ focal_point: [Number(e.target.value) / 100, fp[1]] })} />
-        <input type="range" min={0} max={100} value={Math.round(fp[1] * 100)} aria-label="Y" onChange={(e) => set({ focal_point: [fp[0], Number(e.target.value) / 100] })} />
-      </div>
+      {!hideFocal && (
+        <div className="sbx-media__focal" role="group" aria-label={t('focal_point')}>
+          <span className="sbx-field__label">{t('focal_point')}</span>
+          <input type="range" min={0} max={100} value={Math.round(fp[0] * 100)} aria-label="X" onChange={(e) => set({ focal_point: [Number(e.target.value) / 100, fp[1]] })} />
+          <input type="range" min={0} max={100} value={Math.round(fp[1] * 100)} aria-label="Y" onChange={(e) => set({ focal_point: [fp[0], Number(e.target.value) / 100] })} />
+        </div>
+      )}
       {problem ? <p className="sbx-field__problem" id={`${id}-problem`} role="alert">{t(problem)}</p> : null}
     </fieldset>
   );
