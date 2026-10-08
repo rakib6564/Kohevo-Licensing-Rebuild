@@ -170,8 +170,13 @@ test('Effects sliders write only values the server accepts, and the custom shado
     await expect(page.getByRole('alert')).toHaveCount(0);
     await expect(page.getByRole('status').filter({ hasText: /saved/i }).first()).toBeVisible({ timeout: 15_000 });
 
-    const w = await wrapper(page);
-    await expect.poll(async () => w.evaluate((el) => `${getComputedStyle(el).transform !== 'none'}/${getComputedStyle(el).boxShadow !== 'none'}`), { timeout: 20_000 }).toBe('true/true');
+    // The canvas frame can reload while the repaint lands, so look the wrapper up again on every poll.
+    await expect.poll(async () => {
+      try {
+        const w = await wrapper(page);
+        return await w.evaluate((el) => `${getComputedStyle(el).transform !== 'none'}/${getComputedStyle(el).boxShadow !== 'none'}`);
+      } catch { return 'retry'; }
+    }, { timeout: 20_000 }).toBe('true/true');
   } finally {
     await restore(page, before);
   }

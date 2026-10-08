@@ -2950,3 +2950,12 @@ html, body.sbx-body {
   .sbx-tree__caret { width: 16px; height: 16px; }
   .sbx-tree__more { height: 20px; }
 }
+
+/* Canvas scrollbars are hidden everywhere (the page inside the frame is handled in CanvasArea). */
+.sbx-canvas__stage { scrollbar-width: none; -ms-overflow-style: none; }
+.sbx-canvas__stage::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+/* Phone: no "Mobile · 390px · 100%" strip and no zoom row; the canvas gets the whole height above the dock. */
+@media (max-width: 860px) {
+  .sbx-canvas__meta, .sbx-canvas .sbx-bottombar { display: none; }
+}
