@@ -2970,3 +2970,10 @@ html, body.sbx-body {
   .sbx-inspector .sbx-spacing__grid .sbx-field:has(> input.sbx-input), .sbx-inspector .sbx-attr-row .sbx-field:has(> input.sbx-input) { display: block; }
   .sbx-inspector .sbx-spacing__grid .sbx-field > .sbx-field__label { margin-bottom: 0.25rem; }
 }
+
+/* Focal-point pad: a 3×3 guide grid with a draggable dot (reference D01, Background > Image). */
+.sbx-focal { position: relative; height: 84px; border: 1px solid var(--sbx-border); border-radius: 9px; background: rgba(0, 0, 0, 0.25); cursor: crosshair; touch-action: none; overflow: hidden;
+  background-image: linear-gradient(var(--sbx-border) 1px, transparent 1px), linear-gradient(90deg, var(--sbx-border) 1px, transparent 1px); background-size: 33.333% 33.333%; }
+.sbx-focal:focus-visible { box-shadow: var(--sbx-focus); outline: none; }
+.sbx-focal__dot { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--sbx-accent); border: 2px solid #fff; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5); pointer-events: none; }
+@media (max-width: 860px) { .sbx-focal { height: 120px; } .sbx-focal__dot { width: 22px; height: 22px; margin: -11px 0 0 -11px; } }

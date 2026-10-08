@@ -26,6 +26,7 @@ import { t } from '../../core/messages.mjs';
 import { acceptsDraft } from '../../core/styleValues.mjs';
 import { acceptsSurfaceDraft } from '../../core/styleSurface.mjs';
 import { MediaControl } from '../fields/MediaControl.jsx';
+import { FocalPad, OverlayField } from './BackgroundWidgets.jsx';
 /**
  * A colour control that accepts a token reference or a literal hex.
  *
@@ -311,6 +312,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
                 field={{ key: 'bg-image', label: t('bg_image'), required: false }}
                 value={isMediaRef(bg.image) ? bg.image : null}
                 mediaPicker={mediaPicker}
+                hideFocal
                 onChange={(ref) => patchBackground({ image: ref ?? undefined })}
               />
               {isMediaRef(bg.image) && (
@@ -329,9 +331,13 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
                       {BG_REPEAT.map((r) => <option key={r} value={r}>{t(`repeat_${r.replace('-', '_')}`)}</option>)}
                     </select>
                   </div>
-                  <ColorField
-                    id={`${id}-bg-overlay`}
-                    label={t('bg_overlay')}
+                  <FocalPad
+                    id={`${id}-bg`}
+                    value={bg.image.focal_point}
+                    onChange={(fp) => patchBackground({ image: { ...bg.image, focal_point: fp } })}
+                  />
+                  <OverlayField
+                    id={`${id}-bg`}
                     value={asObject(bg.overlay).color}
                     onChange={(v) => patchBackground({ overlay: v ? { color: v } : undefined })}
                   />
