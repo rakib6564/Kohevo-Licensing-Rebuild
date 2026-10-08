@@ -4,7 +4,7 @@
 // used by the UI but missing from the boot list silently shows English to French users.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { t } from '../src/core/messages.mjs';
@@ -60,6 +60,27 @@ test('every key used by the touched components exists in English and ships in bo
     else if (!frKeys.has(key)) problems.push(`${file}: '${key}' has no French entry`);
   }
   assert.deepEqual(problems, []);
+});
+
+test('every English message in the JS table ships in boot.messages with a French translation', () => {
+  const src = readFileSync(join(here, '..', 'src', 'core', 'messages.mjs'), 'utf8');
+  const all = [...src.matchAll(/^\s{2}([a-z0-9_]+):/gm)].map((m) => m[1]);
+  const notBooted = all.filter((k) => !boot.has(k));
+  assert.deepEqual(notBooted, [], 'add these to admin/builder.php boot.messages and lang/fr.php');
+});
+
+test('boot message defaults match the JS English text for every key', () => {
+  const drift = [...boot].filter(([k, text]) => t(k) !== k && t(k) !== text).map(([k]) => k);
+  assert.deepEqual(drift, []);
+});
+
+test('every t() key used anywhere in the UI has English text', () => {
+  const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
+  const missing = [];
+  for (const f of walk(join(here, '..', 'src')).filter((x) => /\.(jsx|mjs)$/.test(x))) {
+    for (const m of readFileSync(f, 'utf8').matchAll(/\bt\('([a-z0-9_]+)'/g)) if (t(m[1]) === m[1]) missing.push(`${f.split('/src/')[1]}: ${m[1]}`);
+  }
+  assert.deepEqual(missing, []);
 });
 
 test('dynamic key families used by the touched components are complete (EN + boot + FR)', () => {

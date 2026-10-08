@@ -30,6 +30,14 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
   so they bind the builder, the MCP/AI path and any other caller, and are mirrored client-side to refuse an edit up front.
   Assistants may rename layers but cannot lock or unlock them. Documents without locks or names are byte-identical to before.
 
+### Fixed
+
+- **Studio builder in French.** The 259 remaining builder messages (Save, Preview, the inspectors, Library, Theme, History,
+  AI review, Import/Export, validation and server error messages) were defined in English but never shipped to the browser,
+  so French users saw English. All now ship through `boot.messages` with French. The parity test now covers every message in
+  the table, checks the PHP default matches the English text, and fails on any `t()` key with no English text.
+  Block inspector device labels and the media "Change" button used keys that did not exist and showed the raw key name.
+
 ### Security
 
 - **Studio builder: block `attributes` are now a closed allow-list.** Block attributes were written into the wrapper tag
