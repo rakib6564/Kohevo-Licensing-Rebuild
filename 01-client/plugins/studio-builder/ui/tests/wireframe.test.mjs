@@ -57,3 +57,14 @@ test('columns and item counts drive the drawing; hostile or empty input is safe'
   for (let i = 0; i < 40; i++) { const next = { t: 'layout.container', k: [] }; deep.k.push(next); deep = next; }
   assert.ok(Number.isFinite(layoutOutline([{ bg: '', nodes: [root] }]).height), 'depth is capped');
 });
+
+test('the new elements draw shapes that stay inside the box', () => {
+  for (const t of ['core.icon', 'core.list', 'core.quote', 'core.link']) {
+    const wf = layoutOutline([{ bg: 'surface.primary', nodes: [{ t, n: 4 }, { t, a: 'center' }, { t, a: 'right' }] }]);
+    assert.ok(wf.shapes.length > 0, `${t} draws something`);
+    for (const sh of wf.shapes) {
+      assert.ok(sh.x >= -0.01 && sh.x + sh.w <= WF_WIDTH + 0.01, `${t}: ${sh.k} x-range ${sh.x}..${sh.x + sh.w}`);
+      assert.ok(sh.y >= -0.01 && sh.y + sh.h <= wf.height + 0.01, `${t}: ${sh.k} y-range`);
+    }
+  }
+});

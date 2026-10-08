@@ -10,6 +10,12 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
 ## [Unreleased]
 
 ### Added
+- **Studio builder (Builder 2.0, phase 2b, part 1): Icon, List, Quote and Link elements, and nesting to six levels.** Four new
+  blocks (`core.icon`, `core.list`, `core.quote`, `core.link`) with server renderers, escaping, French titles and Add-panel
+  cards. Icons come from a built-in set of 25 (`IconLibrary`); only constant markup reaches a page, never author SVG.
+  Blocks can now nest six levels deep (was four); measured at about 4% more compile time and 8% more HTML for a 250-block
+  page. The HTML importer keeps its own limit of four. On the canvas, a property edit on these elements repaints from the
+  server, and changes below the second nesting level are now detected as structural (they were missed before).
 - **Studio builder (Builder 2.0, phase 1): workspace foundation.** Selection is now a shared model (primary, picked nodes,
   hover, focus): Cmd/Ctrl-click and Shift-click multi-select on the canvas and in Layers stay in sync, the Inspector shows
   "N selected", and Cmd/Ctrl+D duplicates the top-level picked nodes. The selection box, name chip and a keyboard-reachable

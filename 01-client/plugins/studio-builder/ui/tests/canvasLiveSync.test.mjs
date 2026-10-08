@@ -68,3 +68,28 @@ test('syncLiveDOM updates block text and style immediately', () => {
   assert.equal(headingEl.textContent, 'New Title');
   assert.equal(wrapperEl.style.color, '#10b981');
 });
+
+const sec = (blocks) => ({ id: 's1', blocks });
+const blk = (id, type, props = {}, children = []) => ({ id, type, props, children });
+
+test('isStructuralChange sees a block added or removed at any depth (nesting goes to 6)', () => {
+  const deep = (extra) => ({ sections: [sec([blk('a', 'core.container', {}, [blk('b', 'core.container', {}, [blk('c', 'core.container', {}, [blk('d', 'core.container', {}, extra)])])])])] });
+  assert.equal(isStructuralChange(deep([]), deep([blk('e', 'core.heading')])), true, 'a child added four levels down');
+  assert.equal(isStructuralChange(deep([blk('e', 'core.heading')]), deep([blk('e', 'core.text')])), true, 'a type changed four levels down');
+  assert.equal(isStructuralChange(deep([blk('e', 'core.heading')]), deep([blk('e', 'core.heading', { text: 'x' })])), false, 'a prop edit on a patched type is still live');
+});
+
+test('server-rendered elements repaint from the server on a prop edit, and are never heuristically patched', () => {
+  for (const type of ['core.icon', 'core.list', 'core.quote', 'core.link']) {
+    const a = { sections: [sec([blk('x', type, { name: 'star', text: 'One' })])] };
+    const b = { sections: [sec([blk('x', type, { name: 'heart', text: 'Two' })])] };
+    assert.equal(isStructuralChange(a, b), true, `${type}: a prop edit repaints`);
+    assert.equal(isStructuralChange(a, { sections: [sec([blk('x', type, { name: 'star', text: 'One' })])] }), false, `${type}: identical props do not`);
+  }
+  const el = fakeEl('figure', [], 'untouched');
+  const canvasDoc = { querySelector: () => el };
+  const a = { sections: [sec([blk('x', 'core.quote', { text: 'One' })])] };
+  const b = { sections: [sec([blk('x', 'core.quote', { text: 'Two' })])] };
+  assert.equal(syncLiveDOM(canvasDoc, a, b), 0, 'nothing patched');
+  assert.equal(el.textContent, 'untouched');
+});

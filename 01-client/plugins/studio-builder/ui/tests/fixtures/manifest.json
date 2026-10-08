@@ -1083,6 +1083,122 @@
             "version": 1
         },
         {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "media",
+            "default_props": {
+                "align": "left",
+                "color_token": null,
+                "label": "",
+                "name": "star",
+                "size": "md"
+            },
+            "description": "A single icon, sized and tinted",
+            "field_schema": [
+                {
+                    "key": "name",
+                    "type": "enum",
+                    "label": "Icon",
+                    "required": false,
+                    "default": "star",
+                    "allowed_values": [
+                        "check",
+                        "check-circle",
+                        "star",
+                        "heart",
+                        "arrow-right",
+                        "mail",
+                        "phone",
+                        "map-pin",
+                        "clock",
+                        "calendar",
+                        "user",
+                        "users",
+                        "shield",
+                        "zap",
+                        "globe",
+                        "message",
+                        "gift",
+                        "award",
+                        "camera",
+                        "home",
+                        "search",
+                        "sparkle",
+                        "play",
+                        "leaf",
+                        "dollar"
+                    ]
+                },
+                {
+                    "key": "size",
+                    "type": "enum",
+                    "label": "Size",
+                    "required": false,
+                    "default": "md",
+                    "allowed_values": [
+                        "sm",
+                        "md",
+                        "lg",
+                        "xl"
+                    ]
+                },
+                {
+                    "key": "align",
+                    "type": "enum",
+                    "label": "Alignment",
+                    "required": false,
+                    "default": "left",
+                    "allowed_values": [
+                        "left",
+                        "center",
+                        "right"
+                    ]
+                },
+                {
+                    "key": "color_token",
+                    "type": "token_ref",
+                    "label": "Colour",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "label",
+                    "type": "string",
+                    "label": "Accessible label (leave empty if decorative)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 120
+                }
+            ],
+            "icon": "star",
+            "label": "Icon",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "title": "Icon",
+            "type": "core.icon",
+            "version": 1
+        },
+        {
             "allowed_binding_providers": [
                 "content.posts"
             ],
@@ -1159,6 +1275,167 @@
             ],
             "title": "Image",
             "type": "core.image",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "align": "left",
+                "link": null,
+                "style": "underline"
+            },
+            "description": "A plain text link",
+            "field_schema": [
+                {
+                    "key": "link",
+                    "type": "link",
+                    "label": "Link",
+                    "required": true,
+                    "default": null
+                },
+                {
+                    "key": "style",
+                    "type": "enum",
+                    "label": "Style",
+                    "required": false,
+                    "default": "underline",
+                    "allowed_values": [
+                        "underline",
+                        "plain",
+                        "arrow"
+                    ]
+                },
+                {
+                    "key": "align",
+                    "type": "enum",
+                    "label": "Alignment",
+                    "required": false,
+                    "default": "left",
+                    "allowed_values": [
+                        "left",
+                        "center",
+                        "right"
+                    ]
+                }
+            ],
+            "icon": "link",
+            "label": "Link",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "title": "Link",
+            "type": "core.link",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "items": [
+                    {
+                        "text": "First item"
+                    },
+                    {
+                        "text": "Second item"
+                    },
+                    {
+                        "text": "Third item"
+                    }
+                ],
+                "style": "bullet"
+            },
+            "description": "Bulleted, numbered or ticked items",
+            "field_schema": [
+                {
+                    "key": "style",
+                    "type": "enum",
+                    "label": "Style",
+                    "required": false,
+                    "default": "bullet",
+                    "allowed_values": [
+                        "bullet",
+                        "number",
+                        "check",
+                        "none"
+                    ]
+                },
+                {
+                    "key": "items",
+                    "type": "repeater",
+                    "label": "Items",
+                    "required": false,
+                    "default": [
+                        {
+                            "text": "First item"
+                        },
+                        {
+                            "text": "Second item"
+                        },
+                        {
+                            "text": "Third item"
+                        }
+                    ],
+                    "max_items": 30,
+                    "item_schema": [
+                        {
+                            "key": "text",
+                            "type": "string",
+                            "label": "Text",
+                            "required": true,
+                            "default": "",
+                            "max_length": 300
+                        }
+                    ]
+                }
+            ],
+            "icon": "list",
+            "label": "List",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "title": "List",
+            "type": "core.list",
             "version": 1
         },
         {
@@ -1480,6 +1757,82 @@
             ],
             "title": "Services grid",
             "type": "core.query_loop",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "align": "left",
+                "author": "",
+                "role": "",
+                "text": "A short, memorable line from someone who matters."
+            },
+            "description": "A pull quote with its author",
+            "field_schema": [
+                {
+                    "key": "text",
+                    "type": "text",
+                    "label": "Quote",
+                    "required": true,
+                    "default": "A short, memorable line from someone who matters.",
+                    "max_length": 1000
+                },
+                {
+                    "key": "author",
+                    "type": "string",
+                    "label": "Author",
+                    "required": false,
+                    "default": "",
+                    "max_length": 120
+                },
+                {
+                    "key": "role",
+                    "type": "string",
+                    "label": "Role or company",
+                    "required": false,
+                    "default": "",
+                    "max_length": 120
+                },
+                {
+                    "key": "align",
+                    "type": "enum",
+                    "label": "Alignment",
+                    "required": false,
+                    "default": "left",
+                    "allowed_values": [
+                        "left",
+                        "center"
+                    ]
+                }
+            ],
+            "icon": "quotes",
+            "label": "Quote",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "title": "Quote",
+            "type": "core.quote",
             "version": 1
         },
         {

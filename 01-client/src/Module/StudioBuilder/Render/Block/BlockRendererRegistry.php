@@ -86,6 +86,10 @@ final class BlockRendererRegistry
         $registry->register(new CoreRenderers\AccordionRenderer());
         $registry->register(new CoreRenderers\CarouselRenderer());
         $registry->register(new CoreRenderers\StatsRenderer());
+        $registry->register(new CoreRenderers\IconRenderer());
+        $registry->register(new CoreRenderers\ListRenderer());
+        $registry->register(new CoreRenderers\QuoteRenderer());
+        $registry->register(new CoreRenderers\LinkRenderer());
         return $registry;
     }
 

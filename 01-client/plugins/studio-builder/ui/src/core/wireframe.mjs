@@ -84,6 +84,30 @@ function place(node, x, y, w, shapes, depth) {
       return lines(2, x, y, w, align, shapes);
     case 'core.rich_text':
       return lines(3, x, y, w, align, shapes);
+    case 'core.icon': {
+      const d = 8;
+      shapes.push({ k: 'pill', x: alignedX(align, x, w, d), y, w: d, h: d });
+      return d;
+    }
+    case 'core.list': {
+      const rows = Math.min(n || 3, 6);
+      for (let i = 0; i < rows; i += 1) {
+        shapes.push({ k: 'pill', x, y: y + i * 6 + 0.5, w: 2, h: 2 });
+        shapes.push({ k: 'line', x: x + 5, y: y + i * 6, w: w * (i % 2 ? 0.6 : 0.75), h: 3 });
+      }
+      return rows * 6 - 3;
+    }
+    case 'core.quote': {
+      shapes.push({ k: 'line', x, y, w: 2, h: 14 });
+      const t = lines(2, x + 6, y, w - 6, 'left', shapes);
+      shapes.push({ k: 'line', x: x + 6, y: y + t + 3, w: w * 0.3, h: 3 });
+      return t + 6;
+    }
+    case 'core.link': {
+      const lw = 28;
+      shapes.push({ k: 'line', x: alignedX(align, x, w, lw), y: y + 1, w: lw, h: 3 });
+      return 5;
+    }
     case 'core.button': {
       shapes.push({ k: 'pill', x: alignedX(align, x, w, 34), y, w: 34, h: 9 });
       return 9;
