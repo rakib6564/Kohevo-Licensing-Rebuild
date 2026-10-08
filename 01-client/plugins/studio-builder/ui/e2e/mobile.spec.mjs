@@ -61,7 +61,7 @@ test('selecting a node does not open the sheet; the contextual bar shows and Edi
 
   await dock(page, 'inspector').click();
   await expect(page.locator('.sbx-left.is-mobile-open')).toHaveCount(1);
-  await expect(page.getByRole('tab', { name: /Style/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#sbx-lefttab-inspector')).toHaveAttribute('aria-selected', 'true');
 });
 
 test('the Blocks sheet can be dragged and pulled down to close', async ({ page }) => {

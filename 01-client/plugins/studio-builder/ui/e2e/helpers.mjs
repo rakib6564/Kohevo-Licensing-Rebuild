@@ -36,3 +36,12 @@ export async function settled(page) {
   const frame = page.frameLocator('iframe.sbx-canvas__frame');
   await expect.poll(async () => (await frame.locator('[data-sb-node^="tmp_"]').count()) + (await page.locator('[data-row^="tmp_"]').count()), { timeout: 20_000 }).toBe(0);
 }
+
+/** Open one Inspector section (`data-section` = its registry id) if it is closed; returns its body. */
+export async function openSection(page, id) {
+  const section = page.locator(`[data-section="${id}"]`);
+  const toggle = section.locator('.sbx-isec__toggle');
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  return section.locator('.sbx-isec__body');
+}

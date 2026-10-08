@@ -24,7 +24,8 @@ import { useId, useState } from 'react';
 import { asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
 import { acceptsDraft } from '../../core/styleValues.mjs';
-import { FocalPointControl } from '../fields/FocalPointControl.jsx';
+import { acceptsSurfaceDraft } from '../../core/styleSurface.mjs';
+import { MediaControl } from '../fields/MediaControl.jsx';
 /**
  * A colour control that accepts a token reference or a literal hex.
  *
@@ -32,7 +33,7 @@ import { FocalPointControl } from '../fields/FocalPointControl.jsx';
  * input is the source of truth and the swatch is a convenience that writes back
  * into it. An empty text field means "inherit".
  */
-function ColorField({ id, label, value, onChange }) {
+export function ColorField({ id, label, value, onChange }) {
   const literal = typeof value === 'string' && /^#[0-9a-f]{3,8}$/i.test(value) ? value.slice(0, 7) : '';
   // Typing `#e8` is not yet a colour: keep the draft locally and commit only
   // once it is one (or empty), so a half-typed value never reaches the document.
@@ -79,7 +80,7 @@ function ColorField({ id, label, value, onChange }) {
  * document. `key` resets the field when the value changes from elsewhere
  * (undo, responsive switch) so the DOM never disagrees with the document.
  */
-function DraftText({ id, label, value, placeholder, onCommit, hint, kind }) {
+export function DraftText({ id, label, value, placeholder, onCommit, hint, kind, path }) {
   const [error, setError] = useState(false);
   return (
     <div className="sbx-field">
@@ -98,7 +99,8 @@ function DraftText({ id, label, value, placeholder, onCommit, hint, kind }) {
           const next = e.target.value.trim();
           // `kind` names the grammar the server enforces (core/styleValues.mjs);
           // an invalid draft stays in the box with an error and is never committed.
-          if (kind && !acceptsDraft(kind, next)) {
+          // `path` names a field of the closed style surface (core/styleSurface.mjs), which is stricter than `kind`.
+          if (path ? !acceptsSurfaceDraft(path, next) : (kind && !acceptsDraft(kind, next))) {
             setError(true);
             return;
           }
@@ -118,6 +120,14 @@ const SHADOW_PRESETS = ['none', 'sm', 'md', 'lg', 'xl', '2xl', 'inner'];
 
 /** Mirrors CanonicalDocumentSchema::ALLOWED_RADIUS_PRESETS. */
 const RADIUS_PRESETS = ['none', 'sm', 'md', 'lg', 'xl', '2xl', 'full'];
+
+/** Mirrors StyleSurface (server): the only background vocabulary the document accepts. */
+const BG_FIT = ['cover', 'contain', 'auto'];
+const BG_REPEAT = ['no-repeat', 'repeat', 'repeat-x', 'repeat-y'];
+const BG_POSITIONS = ['center', 'top', 'bottom', 'left', 'right', 'top-left', 'top-right', 'bottom-left', 'bottom-right'];
+
+/** A stored background image is a media reference ({media_id, alt, focal_point}); an older typed URL string is not. */
+const isMediaRef = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 
 /**
  * Gradient builder. Composes `linear-gradient(...)` from two colour inputs and
@@ -171,15 +181,19 @@ function GradientField({ value, onChange }) {
  * @param {Record<string, unknown>} props.style      current block style
  * @param {string[]} props.capabilities             the block's declared style keys
  * @param {(next: Record<string, unknown>) => void} props.onChange
+ * @param {string} [props.only]                  render just this section (typography, background, border, shadow, dimensions, opacity)
+ * @param {boolean} [props.mediaPicker]            whether the media library picker is available to this user
  */
-export function StyleControls({ style, capabilities, onChange }) {
+export function StyleControls({ style, capabilities, onChange, mediaPicker, only }) {
   const id = useId();
-  const has = (k) => capabilities.includes(k);
+  // `only` renders a single section of the stack (the Inspector shows each in its own collapsible section);
+  // the text colour belongs with Typography.
+  const has = (k) => capabilities.includes(k) && (!only || only === k || (only === 'typography' && k === 'color'));
   const typo = asObject(style.typography);
   const bg = asObject(style.background);
   const border = asObject(style.border);
   const dims = asObject(style.dimensions);
-  const [bgMode, setBgMode] = useState(() => (bg.image ? 'image' : (bg.gradient ? 'gradient' : 'color')));
+  const [bgMode, setBgMode] = useState(() => (isMediaRef(bg.image) ? 'image' : (bg.gradient ? 'gradient' : 'color')));
 
   /**
    * Merge one field into a nested style object. A field cleared to undefined
@@ -197,15 +211,24 @@ export function StyleControls({ style, capabilities, onChange }) {
     onChange(merged);
   };
 
-  /** `background` may be a bare string (legacy) or `{color, gradient}`. */
-  const patchBackground = (field, value) => {
-    const next = { ...bg };
-    if (value === undefined) delete next[field];
-    else next[field] = value;
+  /**
+   * Change one or more fields of `background` (a field set to undefined is removed). The server accepts an
+   * image OR a gradient, and only the vocabulary in BG_FIT / BG_REPEAT, so this also drops the values older
+   * editors wrote that it now refuses (`focal_point`, `fit: fill`, a two-word `position`) the next time the
+   * author touches the background.
+   */
+  const patchBackground = (changes) => {
+    const next = { ...bg, ...changes };
+    for (const key of Object.keys(next)) if (next[key] === undefined) delete next[key];
+    delete next.focal_point;
+    if (!BG_FIT.includes(next.fit)) delete next.fit;
+    if (typeof next.position === 'string' && !BG_POSITIONS.includes(next.position)) delete next.position;
+    if (isMediaRef(next.image) && next.gradient) {
+      if ('gradient' in changes) delete next.image; else delete next.gradient;
+    }
     const merged = { ...style };
     delete merged.background;
-    if (Object.keys(next).length === 0) delete merged.background;
-    else merged.background = next;
+    if (Object.keys(next).length > 0) merged.background = next;
     onChange(merged);
   };
 
@@ -270,7 +293,7 @@ export function StyleControls({ style, capabilities, onChange }) {
         <fieldset className="sbx-fieldset sbx-bg-controls">
           <legend>{t('background_label')}</legend>
           <div className="sbx-segmented-pills" role="radiogroup" aria-label={t('bg_type')}>
-            {['image', 'color', 'gradient', 'video'].map((m) => (
+            {['image', 'color', 'gradient'].map((m) => (
               <button
                 key={m}
                 type="button"
@@ -284,45 +307,36 @@ export function StyleControls({ style, capabilities, onChange }) {
 
           {bgMode === 'image' && (
             <div className="sbx-bg-image-pane">
-              <DraftText
-                id={`${id}-bg-img`}
-                label={t('bg_image_url')}
-                value={bg.image}
-                placeholder={t('url_placeholder_assets')}
-                onCommit={(v) => patchBackground('image', v)}
+              <MediaControl
+                field={{ key: 'bg-image', label: t('bg_image'), required: false }}
+                value={isMediaRef(bg.image) ? bg.image : null}
+                mediaPicker={mediaPicker}
+                onChange={(ref) => patchBackground({ image: ref ?? undefined })}
               />
-              <FocalPointControl
-                imageUrl={bg.image}
-                value={bg.focal_point || { x: 50, y: 50 }}
-                onChange={(coords) => patchBackground('focal_point', coords)}
-              />
-              <div className="sbx-field">
-                <label className="sbx-field__label" htmlFor={`${id}-bg-fit`}>{t('bg_fit')}</label>
-                <select
-                  id={`${id}-bg-fit`}
-                  value={bg.fit || 'cover'}
-                  onChange={(e) => patchBackground('fit', e.target.value)}
-                >
-                  <option value="cover">{t('fit_cover')}</option>
-                  <option value="contain">{t('fit_contain')}</option>
-                  <option value="fill">{t('fit_fill')}</option>
-                  <option value="auto">{t('fit_auto')}</option>
-                </select>
-              </div>
-              <div className="sbx-field">
-                <label className="sbx-field__label" htmlFor={`${id}-bg-pos`}>{t('bg_position')}</label>
-                <select
-                  id={`${id}-bg-pos`}
-                  value={bg.position || 'center center'}
-                  onChange={(e) => patchBackground('position', e.target.value)}
-                >
-                  <option value="center center">{t('pos_center_center')}</option>
-                  <option value="top center">{t('pos_top_center')}</option>
-                  <option value="bottom center">{t('pos_bottom_center')}</option>
-                  <option value="center left">{t('pos_center_left')}</option>
-                  <option value="center right">{t('pos_center_right')}</option>
-                </select>
-              </div>
+              {isMediaRef(bg.image) && (
+                <>
+                  <div className="sbx-field">
+                    <label className="sbx-field__label" htmlFor={`${id}-bg-fit`}>{t('bg_fit')}</label>
+                    <select id={`${id}-bg-fit`} value={BG_FIT.includes(bg.fit) ? bg.fit : 'cover'} onChange={(e) => patchBackground({ fit: e.target.value })}>
+                      <option value="cover">{t('fit_cover')}</option>
+                      <option value="contain">{t('fit_contain')}</option>
+                      <option value="auto">{t('fit_auto')}</option>
+                    </select>
+                  </div>
+                  <div className="sbx-field">
+                    <label className="sbx-field__label" htmlFor={`${id}-bg-repeat`}>{t('bg_repeat')}</label>
+                    <select id={`${id}-bg-repeat`} value={BG_REPEAT.includes(bg.repeat) ? bg.repeat : 'no-repeat'} onChange={(e) => patchBackground({ repeat: e.target.value })}>
+                      {BG_REPEAT.map((r) => <option key={r} value={r}>{t(`repeat_${r.replace('-', '_')}`)}</option>)}
+                    </select>
+                  </div>
+                  <ColorField
+                    id={`${id}-bg-overlay`}
+                    label={t('bg_overlay')}
+                    value={asObject(bg.overlay).color}
+                    onChange={(v) => patchBackground({ overlay: v ? { color: v } : undefined })}
+                  />
+                </>
+              )}
             </div>
           )}
 
@@ -331,22 +345,12 @@ export function StyleControls({ style, capabilities, onChange }) {
               id={`${id}-bg`}
               label={t('background_color')}
               value={bgColor}
-              onChange={(v) => patchBackground('color', v)}
+              onChange={(v) => patchBackground({ color: v })}
             />
           )}
 
           {bgMode === 'gradient' && (
-            <GradientField value={bg.gradient} onChange={(v) => patchBackground('gradient', v)} />
-          )}
-
-          {bgMode === 'video' && (
-            <DraftText
-              id={`${id}-bg-vid`}
-              label={t('bg_video_url')}
-              value={bg.video}
-              placeholder="https://...mp4"
-              onCommit={(v) => patchBackground('video', v)}
-            />
+            <GradientField value={bg.gradient} onChange={(v) => patchBackground({ gradient: v })} />
           )}
         </fieldset>
       )}

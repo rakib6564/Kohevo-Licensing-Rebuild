@@ -1,12 +1,12 @@
 <?php
 /**
- * Kohevo Studio — audit stored documents for style values the typed guard refuses.
+ * Kohevo Studio — audit stored documents for styling the current rules refuse.
  *
- * Read-only. Lists every block whose `style` carries a free-form value
- * (`url(...)`, `@import`, `var(...)`, an unknown function, ...) that
- * `StyleValueGuard` no longer accepts. Such a value is already NOT written to
- * the page (the renderer re-checks), but saving the document fails validation
- * until the value is reset, so run this before deploying B2-P3a.
+ * Read-only. Runs the real document validator over stored revisions and lists every STYLING error
+ * (`style`, `style_states`, `tag`): a typed value the guard refuses (`url(...)`, `@import`, `var(...)`),
+ * a z-index above 999, a background `fit`/`position` outside the allowed vocabulary, and so on.
+ * A block that fails validation is rendered as "unavailable" (nothing, on a public page) and the
+ * document cannot be saved until it is fixed, so run this before deploying B2-P3a/P3b.
  *
  * Usage:
  *   php bin/audit-style-values.php [--tenant=ID] [--all-revisions]
@@ -25,7 +25,8 @@ define('SLATE_ALLOW_LIVE_DB', 1);
 require_once __DIR__ . '/../config.php';
 
 use Slate\Data\Database;
-use Slate\Module\StudioBuilder\Document\StyleValueGuard;
+use Slate\Module\StudioBuilder\Document\StyleAudit;
+use Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions;
 
 $tenant = null;
 $all    = false;
@@ -53,22 +54,7 @@ if ($where !== []) {
 }
 $sql .= ' ORDER BY r.tenant_id, r.page_id, r.revision_number';
 
-/** @param array<string,mixed> $node */
-$walk = static function (array $node, string $path, array &$found) use (&$walk): void {
-    if (isset($node['style']) && is_array($node['style'])) {
-        foreach (StyleValueGuard::styleIssues($node['style']) as $prop => $value) {
-            $found[] = [$path . '.style.' . $prop, $value];
-        }
-    }
-    foreach (['blocks', 'children'] as $key) {
-        foreach (is_array($node[$key] ?? null) ? $node[$key] : [] as $i => $child) {
-            if (is_array($child)) {
-                $walk($child, $path . '.' . $key . '[' . $i . ']' . (isset($child['id']) ? '(' . $child['id'] . ')' : ''), $found);
-            }
-        }
-    }
-};
-
+$registry = ModuleBlockDefinitions::studioRegistry();
 $scanned = 0;
 $flagged = 0;
 foreach (Database::rows($sql, $params) as $row) {
@@ -78,10 +64,8 @@ foreach (Database::rows($sql, $params) as $row) {
         continue;
     }
     $found = [];
-    foreach (is_array($doc['sections'] ?? null) ? $doc['sections'] : [] as $i => $section) {
-        if (is_array($section)) {
-            $walk($section, 'sections[' . $i . ']', $found);
-        }
+    foreach (StyleAudit::issues($doc, $registry) as $issue) {
+        $found[] = [$issue['path'], $issue['code'] . ': ' . $issue['message']];
     }
     if ($found === []) {
         continue;
@@ -93,5 +77,5 @@ foreach (Database::rows($sql, $params) as $row) {
     }
 }
 
-printf("\nScanned %d revision(s); %d with refused style values.\n", $scanned, $flagged);
+printf("\nScanned %d revision(s); %d with styling the current rules refuse.\n", $scanned, $flagged);
 exit($flagged > 0 ? 2 : 0);

@@ -11,11 +11,16 @@
 import { useState } from 'react';
 import { useEditor, useEngineState } from '../EditorContext.jsx';
 import { FieldControl, ObjectFields, TokenSelect } from '../fields/FieldControl.jsx';
-import { ResponsiveSelect, Tabs, VisibilityControls } from './controls.jsx';
+import { ResponsiveSelect, VisibilityControls } from './controls.jsx';
 import { StyleControls } from './StyleControls.jsx';
+import { BorderExtras, DimensionsExtras, EffectsPane, LayoutPane, PositionPane, ShadowExtras, SpacingPane, StatesPane, TypographyExtras } from './SurfaceControls.jsx';
+import { OPTIONS } from '../../core/styleSurface.mjs';
 import { MotionInspector } from './MotionInspector.jsx';
+import { InspectorShell } from './InspectorShell.jsx';
+import { InspectorHeader } from './InspectorHeader.jsx';
 import { asList, asObject, blockDefinition, blockIndentTarget, blockMoveTarget, blockOutdentTarget } from '../../core/doc.mjs';
 import { STYLE_TOKEN_CATEGORIES, tokensFor } from '../../core/fields.mjs';
+import { MEDIA_TYPES } from '../../core/inspectorSections.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
 
@@ -26,7 +31,6 @@ const Z_INDEX_MAX = 999;
 export function BlockInspector({ info }) {
   const { manifest, boot, applyOp, removeNode, moveBlockTo, viewport } = useEditor();
   const working = useEngineState((s) => s.working);
-  const [tab, setTab] = useState('content');
   const block = info.node;
   const def = blockDefinition(manifest, block.type);
   const idPrefix = `sbx-blk-${block.id}`;
@@ -46,231 +50,227 @@ export function BlockInspector({ info }) {
   const responsive = asObject(block.responsive);
   const classNames = asList(block.classNames);
   const attributes = asObject(block.attributes);
-  const slots = asList(def.binding_slots);
-  const tabs = [
-    { key: 'content', label: t('tab_content') },
-    { key: 'style', label: t('tab_style') },
-    { key: 'motion', label: t('tab_motion') },
-    { key: 'advanced', label: t('tab_advanced') },
-    { key: 'responsive', label: t('tab_responsive') },
-    { key: 'visibility', label: t('tab_visibility') },
-    ...(slots.length ? [{ key: 'data', label: t('tab_data') }] : []),
-  ];
   const up = blockMoveTarget(working, manifest, block.id, 'up');
   const down = blockMoveTarget(working, manifest, block.id, 'down');
   const indent = blockIndentTarget(working, manifest, block.id);
   const outdent = blockOutdentTarget(working, manifest, block.id);
   const capabilities = asList(def.style_capabilities);
+  const save = (op) => applyOp(op, { label: def.label });
+  const saveStyle = (next) => save(ops.updateBlockStyle(block.id, next));
+  const patchTypography = (patch) => saveStyle({ ...style, typography: { ...asObject(style.typography), ...patch } });
+
+  const sections = {
+    content: () => (
+      <ObjectFields
+        schema={def.field_schema}
+        value={props}
+        manifest={manifest}
+        mediaPicker={boot.mediaPicker}
+        onChange={(next) => save(ops.updateBlockProps(block.id, next))}
+      />
+    ),
+    data: () => (
+      <>
+        <p className="sbx-hint">{t('bindings_hint')}</p>
+        <BindingsEditor block={block} def={def} manifest={manifest} applyOp={applyOp} />
+      </>
+    ),
+    align: () => (
+      <ResponsiveSelect
+        label={t('align')}
+        value={style.align ?? null}
+        options={asList(manifest.vocabulary.alignments)}
+        activeBreakpoint={viewport.breakpoint}
+        onChange={(align) => saveStyle({ ...style, align: Object.keys(align).length ? align : null })}
+      />
+    ),
+    typography: () => (
+      <>
+        {capabilities.includes('typography') && (
+          <>
+            <div className="sbx-field">
+              <label className="sbx-field__label" htmlFor={`${idPrefix}-typo-weight`}>{t('font_weight')}</label>
+              <select
+                id={`${idPrefix}-typo-weight`}
+                value={asObject(style.typography).weight || ''}
+                onChange={(e) => patchTypography({ weight: e.target.value || undefined })}
+              >
+                <option value="">{t('inherit')}</option>
+                <option value="normal">{t('fw_normal')}</option>
+                <option value="medium">{t('fw_medium')}</option>
+                <option value="semibold">{t('fw_semibold')}</option>
+                <option value="bold">{t('fw_bold')}</option>
+                <option value="extrabold">{t('fw_extrabold')}</option>
+              </select>
+            </div>
+            <div className="sbx-field">
+              <label className="sbx-field__label" htmlFor={`${idPrefix}-typo-transform`}>{t('text_transform')}</label>
+              <select
+                id={`${idPrefix}-typo-transform`}
+                value={asObject(style.typography).transform || ''}
+                onChange={(e) => patchTypography({ transform: e.target.value || undefined })}
+              >
+                <option value="">{t('none')}</option>
+                <option value="uppercase">{t('tt_uppercase')}</option>
+                <option value="lowercase">{t('tt_lowercase')}</option>
+                <option value="capitalize">{t('tt_capitalize')}</option>
+              </select>
+            </div>
+          </>
+        )}
+        <StyleControls style={style} capabilities={capabilities} only="typography" mediaPicker={boot.mediaPicker} onChange={saveStyle} />
+        <TypographyExtras style={style} onChange={saveStyle} />
+      </>
+    ),
+    background: () => <StyleControls style={style} capabilities={capabilities} only="background" mediaPicker={boot.mediaPicker} onChange={saveStyle} />,
+    border: () => (
+      <>
+        <StyleControls style={style} capabilities={capabilities} only="border" onChange={saveStyle} />
+        <BorderExtras style={style} onChange={saveStyle} />
+      </>
+    ),
+    shadow: () => (
+      <>
+        {!(style.shadow && typeof style.shadow === 'object') && <StyleControls style={style} capabilities={capabilities} only="shadow" onChange={saveStyle} />}
+        <ShadowExtras style={style} onChange={saveStyle} />
+      </>
+    ),
+    dimensions: () => (
+      <>
+        <StyleControls style={style} capabilities={capabilities} only="dimensions" onChange={saveStyle} />
+        <DimensionsExtras style={style} media={MEDIA_TYPES.has(block.type)} onChange={saveStyle} />
+      </>
+    ),
+    layout: () => <LayoutPane style={style} onChange={saveStyle} />,
+    spacing: () => <SpacingPane style={style} onChange={saveStyle} />,
+    position: () => <PositionPane style={style} onChange={saveStyle} />,
+    effects: () => <EffectsPane style={style} onChange={saveStyle} />,
+    states: () => <StatesPane states={block.style_states} onChange={(next) => save(ops.updateBlockStyleStates(block.id, next))} />,
+    tag: () => (
+      <div className="sbx-field">
+        <label className="sbx-field__label" htmlFor={`${idPrefix}-tag`}>{t('wrapper_tag')}</label>
+        <select id={`${idPrefix}-tag`} value={block.tag || 'div'} onChange={(e) => save(ops.updateBlockTag(block.id, e.target.value === 'div' ? null : e.target.value))}>
+          {OPTIONS.tags.map((tag) => <option key={tag} value={tag}>{`<${tag}>`}</option>)}
+        </select>
+        <p className="sbx-hint">{t('wrapper_tag_hint')}</p>
+      </div>
+    ),
+    opacity: () => <StyleControls style={style} capabilities={capabilities} only="opacity" onChange={saveStyle} />,
+    tokens: () => Object.keys(STYLE_TOKEN_CATEGORIES).filter((k) => capabilities.includes(k)).map((key) => (
+      <div className="sbx-field" key={key}>
+        <label className="sbx-field__label" htmlFor={`${idPrefix}-${key}`}>{key.replace('_token', '').replace('_', ' ')}</label>
+        <TokenSelect
+          id={`${idPrefix}-${key}`}
+          value={style[key] ?? null}
+          tokens={tokensFor(manifest, STYLE_TOKEN_CATEGORIES[key])}
+          onChange={(v) => saveStyle({ ...style, [key]: v })}
+        />
+      </div>
+    )),
+    motion: () => <MotionInspector block={block} applyOp={applyOp} label={def.label} />,
+    visibility: () => (
+      <VisibilityControls value={block.visibility} manifest={manifest} onChange={(v) => save(ops.updateBlockVisibility(block.id, v))} />
+    ),
+    responsive: () => (
+      <fieldset className="sbx-fieldset">
+        <legend>{t('device_overrides')}</legend>
+        {['desktop', 'tablet', 'mobile'].map((device) => {
+          const devOverride = asObject(responsive[device]);
+          return (
+            <div key={device} className="sbx-field" style={{ marginBottom: '12px' }}>
+              <label className="sbx-field__label" style={{ fontWeight: 'bold' }}>{t(device)}</label>
+              <label className="sbx-field sbx-field--check">
+                <input
+                  type="checkbox"
+                  checked={Boolean(devOverride.hide)}
+                  onChange={(e) => {
+                    const nextDev = { ...devOverride, hide: e.target.checked };
+                    if (!e.target.checked) delete nextDev.hide;
+                    const nextResp = { ...responsive, [device]: nextDev };
+                    if (Object.keys(nextDev).length === 0) delete nextResp[device];
+                    save(ops.updateBlockResponsive(block.id, nextResp));
+                  }}
+                />
+                <span>{t(`hide_on_${device}`)}</span>
+              </label>
+            </div>
+          );
+        })}
+      </fieldset>
+    ),
+    classes: () => (
+      <div className="sbx-field">
+        <label className="sbx-field__label" htmlFor={`${idPrefix}-classes`}>{t('classes_label')}</label>
+        <input
+          id={`${idPrefix}-classes`}
+          type="text"
+          className="sbx-input"
+          value={classNames.join(' ')}
+          placeholder={t('classes_placeholder')}
+          onChange={(e) => save(ops.updateBlockClassNames(block.id, e.target.value.trim().split(/\s+/).filter(Boolean)))}
+        />
+        <p className="sbx-hint">{t('classes_hint')}</p>
+      </div>
+    ),
+    stacking: () => (
+      <div className="sbx-field">
+        <label className="sbx-field__label" htmlFor={`${idPrefix}-z-index`}>{t('z_index_label')}</label>
+        <input
+          id={`${idPrefix}-z-index`}
+          type="number"
+          className="sbx-input"
+          min={Z_INDEX_MIN}
+          max={Z_INDEX_MAX}
+          value={style.z_index !== undefined && style.z_index !== null ? style.z_index : ''}
+          placeholder="0"
+          onChange={(e) => {
+            // Same range the server enforces (CanonicalDocumentSchema::Z_INDEX_*): authors cannot stack above the platform signature.
+            const raw = e.target.value === '' ? null : parseInt(e.target.value, 10);
+            const val = raw === null || Number.isNaN(raw) ? null : Math.max(Z_INDEX_MIN, Math.min(Z_INDEX_MAX, raw));
+            saveStyle({ ...style, z_index: val });
+          }}
+        />
+      </div>
+    ),
+    attributes: () => (
+      <div className="sbx-field">
+        <label className="sbx-field__label" htmlFor={`${idPrefix}-attributes`}>{t('attributes_label')}</label>
+        <input
+          id={`${idPrefix}-attributes`}
+          type="text"
+          className="sbx-input"
+          value={Object.entries(attributes).map(([k, v]) => `${k}=${v}`).join(' ')}
+          placeholder="data-custom=value aria-role=article"
+          onChange={(e) => {
+            const nextAttrs = {};
+            for (const pair of e.target.value.trim().split(/\s+/).filter(Boolean)) {
+              const [k, v] = pair.split('=');
+              if (k) nextAttrs[k] = v || '';
+            }
+            save(ops.updateBlockAttributes(block.id, nextAttrs));
+          }}
+        />
+        <p className="sbx-hint">{t('attributes_hint')}</p>
+      </div>
+    ),
+  };
 
   return (
-    <div className="sbx-inspector">
-      <h2 className="sbx-inspector__title">{def.label}</h2>
-      <div className="sbx-inspector__actions" role="group" aria-label={def.label}>
-        <button type="button" className="sbx-btn sbx-btn--xs" disabled={!up} onClick={() => moveBlockTo(block.id, up)}>↑ {t('move_up')}</button>
-        <button type="button" className="sbx-btn sbx-btn--xs" disabled={!down} onClick={() => moveBlockTo(block.id, down)}>↓ {t('move_down')}</button>
-        <button type="button" className="sbx-btn sbx-btn--xs" disabled={!indent} onClick={() => moveBlockTo(block.id, indent)}>→ {t('indent')}</button>
-        <button type="button" className="sbx-btn sbx-btn--xs" disabled={!outdent} onClick={() => moveBlockTo(block.id, outdent)}>← {t('outdent')}</button>
-        <button type="button" className="sbx-btn sbx-btn--xs sbx-btn--danger" onClick={() => removeNode(block.id)}>{t('remove')}</button>
-      </div>
-      <Tabs tabs={tabs} active={tab} onChange={setTab} idPrefix={idPrefix} />
-
-      {tab === 'content' && (
-        <div role="tabpanel" id={`${idPrefix}-panel-content`} aria-labelledby={`${idPrefix}-tab-content`}>
-          <ObjectFields
-            schema={def.field_schema}
-            value={props}
-            manifest={manifest}
-            mediaPicker={boot.mediaPicker}
-            onChange={(next) => applyOp(ops.updateBlockProps(block.id, next), { label: def.label })}
-          />
+    <InspectorShell
+      idPrefix={idPrefix}
+      node={block}
+      def={def}
+      header={<InspectorHeader node={block} def={def} />}
+      actions={(
+        <div className="sbx-inspector__actions" role="group" aria-label={def.label}>
+          <button type="button" className="sbx-btn sbx-btn--xs" disabled={!up} onClick={() => moveBlockTo(block.id, up)}>↑ {t('move_up')}</button>
+          <button type="button" className="sbx-btn sbx-btn--xs" disabled={!down} onClick={() => moveBlockTo(block.id, down)}>↓ {t('move_down')}</button>
+          <button type="button" className="sbx-btn sbx-btn--xs" disabled={!indent} onClick={() => moveBlockTo(block.id, indent)}>→ {t('indent')}</button>
+          <button type="button" className="sbx-btn sbx-btn--xs" disabled={!outdent} onClick={() => moveBlockTo(block.id, outdent)}>← {t('outdent')}</button>
         </div>
       )}
-
-      {tab === 'style' && (
-        <div role="tabpanel" id={`${idPrefix}-panel-style`} aria-labelledby={`${idPrefix}-tab-style`}>
-          {capabilities.includes('align') && (
-            <ResponsiveSelect
-              label={t('align')}
-              value={style.align ?? null}
-              options={asList(manifest.vocabulary.alignments)}
-              activeBreakpoint={viewport.breakpoint}
-              onChange={(align) => applyOp(ops.updateBlockStyle(block.id, { ...style, align: Object.keys(align).length ? align : null }), { label: def.label })}
-            />
-          )}
-          {capabilities.includes('typography') && (
-            <fieldset className="sbx-fieldset">
-              <legend>{t('typography')}</legend>
-              <div className="sbx-field">
-                <label className="sbx-field__label" htmlFor={`${idPrefix}-typo-weight`}>{t('font_weight')}</label>
-                <select
-                  id={`${idPrefix}-typo-weight`}
-                  value={asObject(style.typography).weight || ''}
-                  onChange={(e) => applyOp(ops.updateBlockStyle(block.id, {
-                    ...style,
-                    typography: { ...asObject(style.typography), weight: e.target.value || undefined },
-                  }), { label: def.label })}
-                >
-                  <option value="">{t('inherit')}</option>
-                  <option value="normal">{t('fw_normal')}</option>
-                  <option value="medium">{t('fw_medium')}</option>
-                  <option value="semibold">{t('fw_semibold')}</option>
-                  <option value="bold">{t('fw_bold')}</option>
-                  <option value="extrabold">{t('fw_extrabold')}</option>
-                </select>
-              </div>
-              <div className="sbx-field">
-                <label className="sbx-field__label" htmlFor={`${idPrefix}-typo-transform`}>{t('text_transform')}</label>
-                <select
-                  id={`${idPrefix}-typo-transform`}
-                  value={asObject(style.typography).transform || ''}
-                  onChange={(e) => applyOp(ops.updateBlockStyle(block.id, {
-                    ...style,
-                    typography: { ...asObject(style.typography), transform: e.target.value || undefined },
-                  }), { label: def.label })}
-                >
-                  <option value="">{t('none')}</option>
-                  <option value="uppercase">{t('tt_uppercase')}</option>
-                  <option value="lowercase">{t('tt_lowercase')}</option>
-                  <option value="capitalize">{t('tt_capitalize')}</option>
-                </select>
-              </div>
-            </fieldset>
-          )}
-          {/* Phase 5: typography / colour / background / border / shadow /
-              dimensions / opacity. All of these were already validated and
-              compiled server-side; this is the authoring surface for them. */}
-          <StyleControls
-            style={style}
-            capabilities={capabilities}
-            onChange={(next) => applyOp(ops.updateBlockStyle(block.id, next), { label: def.label })}
-          />
-          {Object.keys(STYLE_TOKEN_CATEGORIES).filter((k) => capabilities.includes(k)).map((key) => (
-            <div className="sbx-field" key={key}>
-              <label className="sbx-field__label" htmlFor={`${idPrefix}-${key}`}>{key.replace('_token', '').replace('_', ' ')}</label>
-              <TokenSelect
-                id={`${idPrefix}-${key}`}
-                value={style[key] ?? null}
-                tokens={tokensFor(manifest, STYLE_TOKEN_CATEGORIES[key])}
-                onChange={(v) => applyOp(ops.updateBlockStyle(block.id, { ...style, [key]: v }), { label: def.label })}
-              />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {tab === 'motion' && (
-        <div role="tabpanel" id={`${idPrefix}-panel-motion`} aria-labelledby={`${idPrefix}-tab-motion`}>
-          <MotionInspector block={block} applyOp={applyOp} label={def.label} />
-        </div>
-      )}
-
-      {tab === 'advanced' && (
-        <div role="tabpanel" id={`${idPrefix}-panel-advanced`} aria-labelledby={`${idPrefix}-tab-advanced`}>
-          <div className="sbx-field">
-            <label className="sbx-field__label" htmlFor={`${idPrefix}-classes`}>{t('classes_label')}</label>
-            <input
-              id={`${idPrefix}-classes`}
-              type="text"
-              className="sbx-input"
-              value={classNames.join(' ')}
-              placeholder={t('classes_placeholder')}
-              onChange={(e) => {
-                const names = e.target.value.trim().split(/\s+/).filter(Boolean);
-                applyOp(ops.updateBlockClassNames(block.id, names), { label: def.label });
-              }}
-            />
-            <p className="sbx-hint">{t('classes_hint')}</p>
-          </div>
-          <div className="sbx-field">
-            <label className="sbx-field__label" htmlFor={`${idPrefix}-z-index`}>{t('z_index_label')}</label>
-            <input
-              id={`${idPrefix}-z-index`}
-              type="number"
-              className="sbx-input"
-              min={Z_INDEX_MIN}
-              max={Z_INDEX_MAX}
-              value={style.z_index !== undefined && style.z_index !== null ? style.z_index : ''}
-              placeholder="0"
-              onChange={(e) => {
-                // Same range the server enforces (CanonicalDocumentSchema::Z_INDEX_*): authors cannot stack above the platform signature.
-                const raw = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                const val = raw === null || Number.isNaN(raw) ? null : Math.max(Z_INDEX_MIN, Math.min(Z_INDEX_MAX, raw));
-                applyOp(ops.updateBlockStyle(block.id, { ...style, z_index: val }), { label: def.label });
-              }}
-            />
-          </div>
-          <div className="sbx-field">
-            <label className="sbx-field__label" htmlFor={`${idPrefix}-attributes`}>{t('attributes_label')}</label>
-            <input
-              id={`${idPrefix}-attributes`}
-              type="text"
-              className="sbx-input"
-              value={Object.entries(attributes).map(([k, v]) => `${k}=${v}`).join(' ')}
-              placeholder="data-custom=value aria-role=article"
-              onChange={(e) => {
-                const pairs = e.target.value.trim().split(/\s+/).filter(Boolean);
-                const nextAttrs = {};
-                for (const pair of pairs) {
-                  const [k, v] = pair.split('=');
-                  if (k) nextAttrs[k] = v || '';
-                }
-                applyOp(ops.updateBlockAttributes(block.id, nextAttrs), { label: def.label });
-              }}
-            />
-            <p className="sbx-hint">{t('attributes_hint')}</p>
-          </div>
-        </div>
-      )}
-
-      {tab === 'responsive' && (
-        <div role="tabpanel" id={`${idPrefix}-panel-responsive`} aria-labelledby={`${idPrefix}-tab-responsive`}>
-          <fieldset className="sbx-fieldset">
-            <legend>{t('device_overrides')}</legend>
-            {['desktop', 'tablet', 'mobile'].map((device) => {
-              const devOverride = asObject(responsive[device]);
-              return (
-                <div key={device} className="sbx-field" style={{ marginBottom: '12px' }}>
-                  <label className="sbx-field__label" style={{ fontWeight: 'bold' }}>
-                    {t(device)}
-                  </label>
-                  <label className="sbx-field sbx-field--check">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(devOverride.hide)}
-                      onChange={(e) => {
-                        const nextDev = { ...devOverride, hide: e.target.checked };
-                        if (!e.target.checked) delete nextDev.hide;
-                        const nextResp = { ...responsive, [device]: nextDev };
-                        if (Object.keys(nextDev).length === 0) delete nextResp[device];
-                        applyOp(ops.updateBlockResponsive(block.id, nextResp), { label: def.label });
-                      }}
-                    />
-                    <span>{t(`hide_on_${device}`)}</span>
-                  </label>
-                </div>
-              );
-            })}
-          </fieldset>
-        </div>
-      )}
-
-      {tab === 'visibility' && (
-        <div role="tabpanel" id={`${idPrefix}-panel-visibility`} aria-labelledby={`${idPrefix}-tab-visibility`}>
-          <VisibilityControls
-            value={block.visibility}
-            manifest={manifest}
-            onChange={(v) => applyOp(ops.updateBlockVisibility(block.id, v), { label: def.label })}
-          />
-        </div>
-      )}
-
-      {tab === 'data' && (
-        <div role="tabpanel" id={`${idPrefix}-panel-data`} aria-labelledby={`${idPrefix}-tab-data`}>
-          <p className="sbx-hint">{t('bindings_hint')}</p>
-          <BindingsEditor block={block} def={def} manifest={manifest} applyOp={applyOp} />
-        </div>
-      )}
-    </div>
+      renderSection={(id) => (sections[id] ? sections[id]() : null)}
+    />
   );
 }
 

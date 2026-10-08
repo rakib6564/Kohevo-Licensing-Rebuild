@@ -10,6 +10,10 @@ import { useState } from 'react';
 import { useEditor, useEngineState } from '../EditorContext.jsx';
 import { ResponsiveSelect, Tabs, VisibilityControls } from './controls.jsx';
 import { TokenSelect } from '../fields/FieldControl.jsx';
+import { MediaControl } from '../fields/MediaControl.jsx';
+import { ColorField } from './StyleControls.jsx';
+import { SpacingBox } from './SurfaceControls.jsx';
+import { getPath, setPath, setPaths } from '../../core/styleSurface.mjs';
 import { asList, asObject, isGlobalSection, sectionsOf } from '../../core/doc.mjs';
 import { tokensFor } from '../../core/fields.mjs';
 import { componentByRef } from '../../core/library.mjs';
@@ -48,7 +52,7 @@ function GlobalSectionPanel({ section, label }) {
 }
 
 export function SectionInspector({ info }) {
-  const { manifest, applyOp, removeNode, moveSectionTo, insertSection, viewport, openSaveTemplate, openComponentDialog } = useEditor();
+  const { manifest, applyOp, removeNode, moveSectionTo, insertSection, viewport, openSaveTemplate, openComponentDialog, boot } = useEditor();
   const working = useEngineState((s) => s.working);
   const page = useEngineState((s) => s.page);
   const perms = (manifest && manifest.permissions) || {};
@@ -63,6 +67,9 @@ export function SectionInspector({ info }) {
   const label = section.label || t('section');
   const setLayout = (patch) => applyOp(ops.updateSectionLayout(section.id, { ...layout, ...patch }), { label });
   const global = isGlobalSection(section);
+  const style = asObject(section.style);
+  const putStyle = (path, value) => applyOp(ops.updateSectionStyle(section.id, setPath(style, path, value)), { label });
+  const putStyleAll = (pairs) => applyOp(ops.updateSectionStyle(section.id, setPaths(style, pairs)), { label });
 
   return (
     <div className="sbx-inspector">
@@ -80,7 +87,7 @@ export function SectionInspector({ info }) {
         <button type="button" className="sbx-btn sbx-btn--xs sbx-btn--danger" onClick={() => removeNode(section.id)}>{t('remove')}</button>
       </div>
       {global && <GlobalSectionPanel section={section} label={label} />}
-      {!global && <Tabs tabs={[{ key: 'layout', label: t('tab_layout') }, { key: 'visibility', label: t('tab_visibility') }]} active={tab} onChange={setTab} idPrefix={idPrefix} />}
+      {!global && <Tabs tabs={[{ key: 'layout', label: t('tab_layout') }, { key: 'style', label: t('tab_style') }, { key: 'visibility', label: t('tab_visibility') }]} active={tab} onChange={setTab} idPrefix={idPrefix} />}
 
       {!global && tab === 'layout' && (
         <div role="tabpanel" id={`${idPrefix}-panel-layout`} aria-labelledby={`${idPrefix}-tab-layout`}>
@@ -117,6 +124,23 @@ export function SectionInspector({ info }) {
             <label className="sbx-field__label" htmlFor={`${idPrefix}-bg`}>{t('background')}</label>
             <TokenSelect id={`${idPrefix}-bg`} value={layout.background_token ?? null} tokens={tokensFor(manifest, ['surface', 'color'])} onChange={(v) => setLayout({ background_token: v })} />
           </div>
+        </div>
+      )}
+
+      {!global && tab === 'style' && (
+        <div role="tabpanel" id={`${idPrefix}-panel-style`} aria-labelledby={`${idPrefix}-tab-style`}>
+          <p className="sbx-hint">{t('section_style_hint')}</p>
+          <fieldset className="sbx-fieldset">
+            <legend>{t('section_style_bg')}</legend>
+            <ColorField id={`${idPrefix}-style-bg`} label={t('background_color')} value={getPath(style, 'background.color')} onChange={(v) => putStyle('background.color', v)} />
+            <MediaControl
+              field={{ key: 'section-bg-image', label: t('bg_image'), required: false }}
+              value={getPath(style, 'background.image') ?? null}
+              mediaPicker={boot.mediaPicker}
+              onChange={(ref) => putStyle('background.image', ref ?? undefined)}
+            />
+          </fieldset>
+          <SpacingBox id={`${idPrefix}-style`} group="padding" label={t('section_style_padding')} get={(path) => getPath(style, path)} putAll={putStyleAll} />
         </div>
       )}
 

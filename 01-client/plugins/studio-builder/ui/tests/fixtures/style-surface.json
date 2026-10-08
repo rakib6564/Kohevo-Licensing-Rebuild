@@ -1,0 +1,389 @@
+{
+ "cases": [
+  {
+   "path": "layout.gap",
+   "value": "1rem",
+   "ok": true
+  },
+  {
+   "path": "layout.gap",
+   "value": "0",
+   "ok": true
+  },
+  {
+   "path": "layout.gap",
+   "value": "12",
+   "ok": false
+  },
+  {
+   "path": "layout.gap",
+   "value": "12px",
+   "ok": true
+  },
+  {
+   "path": "layout.gap",
+   "value": "auto",
+   "ok": false
+  },
+  {
+   "path": "layout.gap",
+   "value": "none",
+   "ok": false
+  },
+  {
+   "path": "layout.gap",
+   "value": "calc(1rem + 2px)",
+   "ok": true
+  },
+  {
+   "path": "layout.gap",
+   "value": "url(x)",
+   "ok": false
+  },
+  {
+   "path": "layout.gap",
+   "value": "-2px",
+   "ok": true
+  },
+  {
+   "path": "layout.gap",
+   "value": "",
+   "ok": false
+  },
+  {
+   "path": "layout.gap",
+   "value": 12,
+   "ok": false
+  },
+  {
+   "path": "margin.left",
+   "value": "auto",
+   "ok": true
+  },
+  {
+   "path": "margin.left",
+   "value": "12",
+   "ok": false
+  },
+  {
+   "path": "margin.left",
+   "value": "-1rem",
+   "ok": true
+  },
+  {
+   "path": "margin.left",
+   "value": "2%",
+   "ok": true
+  },
+  {
+   "path": "margin.left",
+   "value": "fit-content",
+   "ok": false
+  },
+  {
+   "path": "padding.top",
+   "value": "1rem",
+   "ok": true
+  },
+  {
+   "path": "padding.top",
+   "value": "-1rem",
+   "ok": false
+  },
+  {
+   "path": "padding.top",
+   "value": "auto",
+   "ok": false
+  },
+  {
+   "path": "layout.display",
+   "value": "flex",
+   "ok": true
+  },
+  {
+   "path": "layout.display",
+   "value": "none",
+   "ok": false
+  },
+  {
+   "path": "layout.display",
+   "value": "inline-grid",
+   "ok": false
+  },
+  {
+   "path": "layout.justify",
+   "value": "between",
+   "ok": true
+  },
+  {
+   "path": "layout.justify",
+   "value": "space-between",
+   "ok": false
+  },
+  {
+   "path": "layout.columns",
+   "value": 3,
+   "ok": true
+  },
+  {
+   "path": "layout.columns",
+   "value": 0,
+   "ok": false
+  },
+  {
+   "path": "layout.columns",
+   "value": 13,
+   "ok": false
+  },
+  {
+   "path": "layout.columns",
+   "value": "3",
+   "ok": false
+  },
+  {
+   "path": "layout.columns",
+   "value": 2.5,
+   "ok": false
+  },
+  {
+   "path": "layout.order",
+   "value": -99,
+   "ok": true
+  },
+  {
+   "path": "layout.order",
+   "value": 99,
+   "ok": true
+  },
+  {
+   "path": "layout.order",
+   "value": 100,
+   "ok": false
+  },
+  {
+   "path": "position.mode",
+   "value": "absolute",
+   "ok": true
+  },
+  {
+   "path": "position.mode",
+   "value": "fixed",
+   "ok": false
+  },
+  {
+   "path": "position.mode",
+   "value": "sticky",
+   "ok": true
+  },
+  {
+   "path": "dimensions.aspect_ratio",
+   "value": "16/9",
+   "ok": true
+  },
+  {
+   "path": "dimensions.aspect_ratio",
+   "value": "0/9",
+   "ok": false
+  },
+  {
+   "path": "dimensions.aspect_ratio",
+   "value": "16:9",
+   "ok": false
+  },
+  {
+   "path": "dimensions.aspect_ratio",
+   "value": "1000/9",
+   "ok": false
+  },
+  {
+   "path": "border.top.color",
+   "value": "#e8734a",
+   "ok": true
+  },
+  {
+   "path": "border.top.color",
+   "value": "rgb(1,2,3)",
+   "ok": true
+  },
+  {
+   "path": "border.top.color",
+   "value": "surface.page",
+   "ok": false
+  },
+  {
+   "path": "border.top.color",
+   "value": "url(x)",
+   "ok": false
+  },
+  {
+   "path": "border.left.width",
+   "value": "2px",
+   "ok": true
+  },
+  {
+   "path": "border.left.width",
+   "value": "2",
+   "ok": false
+  },
+  {
+   "path": "border.radius_corners.tl",
+   "value": "1rem",
+   "ok": true
+  },
+  {
+   "path": "border.radius_corners.tl",
+   "value": "50%",
+   "ok": true
+  },
+  {
+   "path": "effects.transform.rotate",
+   "value": 45,
+   "ok": true
+  },
+  {
+   "path": "effects.transform.rotate",
+   "value": 361,
+   "ok": false
+  },
+  {
+   "path": "effects.transform.rotate",
+   "value": "45",
+   "ok": false
+  },
+  {
+   "path": "effects.transform.scale",
+   "value": 1.5,
+   "ok": true
+  },
+  {
+   "path": "effects.transform.scale",
+   "value": 5.1,
+   "ok": false
+  },
+  {
+   "path": "effects.transform.scale",
+   "value": 0,
+   "ok": true
+  },
+  {
+   "path": "effects.backdrop_blur",
+   "value": 25,
+   "ok": true
+  },
+  {
+   "path": "effects.backdrop_blur",
+   "value": 51,
+   "ok": false
+  },
+  {
+   "path": "effects.filter.contrast",
+   "value": 200,
+   "ok": true
+  },
+  {
+   "path": "effects.filter.contrast",
+   "value": 301,
+   "ok": false
+  },
+  {
+   "path": "effects.blend",
+   "value": "multiply",
+   "ok": true
+  },
+  {
+   "path": "effects.blend",
+   "value": "hue",
+   "ok": false
+  },
+  {
+   "path": "effects.cursor",
+   "value": "pointer",
+   "ok": true
+  },
+  {
+   "path": "effects.cursor",
+   "value": "crosshair",
+   "ok": false
+  },
+  {
+   "path": "effects.transition.duration_ms",
+   "value": 300,
+   "ok": true
+  },
+  {
+   "path": "effects.transition.duration_ms",
+   "value": 4001,
+   "ok": false
+  },
+  {
+   "path": "effects.transition.duration_ms",
+   "value": 1.5,
+   "ok": false
+  },
+  {
+   "path": "effects.transition.easing",
+   "value": "ease-in-out",
+   "ok": true
+  },
+  {
+   "path": "effects.transition.easing",
+   "value": "bounce",
+   "ok": false
+  },
+  {
+   "path": "typography.style",
+   "value": "italic",
+   "ok": true
+  },
+  {
+   "path": "typography.style",
+   "value": "oblique",
+   "ok": false
+  },
+  {
+   "path": "typography.decoration_thickness",
+   "value": "1px",
+   "ok": true
+  },
+  {
+   "path": "typography.decoration_thickness",
+   "value": "thin",
+   "ok": false
+  },
+  {
+   "path": "shadow.blur",
+   "value": "4px",
+   "ok": true
+  },
+  {
+   "path": "shadow.blur",
+   "value": "4",
+   "ok": false
+  },
+  {
+   "path": "dimensions.object_fit",
+   "value": "cover",
+   "ok": true
+  },
+  {
+   "path": "dimensions.object_fit",
+   "value": "fill",
+   "ok": true
+  },
+  {
+   "path": "dimensions.object_fit",
+   "value": "stretch",
+   "ok": false
+  },
+  {
+   "path": "dimensions.object_position",
+   "value": "top-left",
+   "ok": true
+  },
+  {
+   "path": "dimensions.object_position",
+   "value": "top left",
+   "ok": false
+  }
+ ]
+}
