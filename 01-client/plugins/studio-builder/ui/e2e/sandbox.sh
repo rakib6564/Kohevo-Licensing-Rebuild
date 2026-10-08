@@ -11,6 +11,9 @@
 #   php -S localhost:<port> -t <sandbox-dir>/site <sandbox-dir>/site/dev-server.php
 #
 # (or let `npm run test:e2e` start it: set SBX_DIR=<sandbox-dir>/site.)
+#
+# The database defaults to a local root account with no password; override with
+# SBX_DB_HOST / SBX_DB_PORT / SBX_DB_USER / SBX_DB_PASS (CI uses a MySQL service).
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -32,11 +35,11 @@ APP_URL=http://localhost:$PORT
 TENANT_ID=1
 APP_SECRET=sandbox-secret-not-for-production
 CRON_SECRET=sandbox-cron-secret
-DB_HOST=127.0.0.1
-DB_PORT=
+DB_HOST=${SBX_DB_HOST:-127.0.0.1}
+DB_PORT=${SBX_DB_PORT:-}
 DB_NAME=slate_sbx_e2e
-DB_USER=root
-DB_PASS=
+DB_USER=${SBX_DB_USER:-root}
+DB_PASS=${SBX_DB_PASS:-}
 DB_CHARSET=utf8mb4
 LICENSE_SERVER_URL=https://license.test
 LICENSE_SERVER_PUBLIC_KEY=$PUBLIC_KEY

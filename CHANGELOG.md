@@ -21,7 +21,8 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
   longer covers the canvas (the Edit tab opens the Style sheet). No document, schema or API change.
 - **Studio builder: developer test harness.** `plugins/studio-builder/ui/e2e` adds a Playwright DOM/e2e suite
   (desktop 1280, tablet 820, phone 390) and `e2e/sandbox.sh`, which builds a disposable local sandbox. Dev-only (`npm run
-  test:e2e`); nothing in it runs on customer installs.
+  test:e2e`); nothing in it runs on customer installs. CI now runs it as its own job ("Studio builder e2e (Playwright)")
+  against a MySQL 8.0 service and uploads traces on failure.
 - **Studio builder: layer lock and block rename.** Layers can be locked (sections: `locked`; blocks: `metadata.locked`) and
   blocks can carry a display name (`metadata.label`, max 80 characters, shown in Layers and the breadcrumb). Two new
   document operations, `update_block_meta` and `update_section_locked`, set them. A locked layer and everything inside it
