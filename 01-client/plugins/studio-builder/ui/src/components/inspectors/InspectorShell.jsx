@@ -8,7 +8,7 @@
 import { useId, useMemo, useState, useSyncExternalStore } from 'react';
 import { t } from '../../core/messages.mjs';
 import {
-  SECTIONS, applicableSections, defaultOpenIds, inspectorContext, isSectionOpen, searchSections, setSectionOpen, subscribeSections,
+  SECTIONS, applicableSections, defaultOpenIds, inspectorContext, isSectionOpen, searchSections, setSectionOpen, subscribeSections, titleKeyOf,
 } from '../../core/inspectorSections.mjs';
 import { Tabs } from './controls.jsx';
 import { Icon, SectionIcon } from './InspectorIcons.jsx';
@@ -36,7 +36,7 @@ function Section({ typeKey, section, ctx, open, idPrefix, render, forceOpen, reg
           onClick={() => setSectionOpen(typeKey, section.id, !isOpen)}
         >
           <SectionIcon name={section.id} />
-          <span className="sbx-isec__title">{t(section.titleKey)}</span>
+          <span className="sbx-isec__title">{t(titleKeyOf(section, ctx))}</span>
           {summary ? <span className="sbx-isec__summary">{summary}</span> : null}
           <span className="sbx-isec__chevron" aria-hidden="true"><Icon name="chevron" size={14} /></span>
         </button>
@@ -67,7 +67,7 @@ export function InspectorShell({ idPrefix, node, def, header, actions, renderSec
 
   const activeTab = groups.some((g) => g.tab === tab) ? tab : (groups[0] ? groups[0].tab : 'content');
   const tabs = groups.map((g) => ({ key: g.tab, label: t(TAB_LABEL[g.tab]), icon: <Icon name={`tab_${g.tab}`} size={16} className="sbx-tab__icon" /> }));
-  const matches = useMemo(() => searchSections(ctx, query, (s) => t(s.titleKey), registry), [ctx, query, registry]);
+  const matches = useMemo(() => searchSections(ctx, query, (s) => t(titleKeyOf(s, ctx)), registry), [ctx, query, registry]);
   const searching = query.trim() !== '';
 
   return (

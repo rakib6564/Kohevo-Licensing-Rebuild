@@ -45,18 +45,18 @@ const surfaceTab = (ctx) => (isContainer(ctx) || SURFACE_TYPES.has(ctx.node.type
  * collapsed header (empty when the section holds nothing). `openFor(ctx)` marks the sections that start open.
  */
 export const SECTIONS = Object.freeze([
-  { id: 'content', tab: 'content', titleKey: 'section_content', appliesTo: () => true, summary: () => '', openFor: () => true },
+  { id: 'content', tab: 'content', titleKey: 'section_content', titleFor: (ctx) => (isContainer(ctx) ? 'section_layout' : 'section_content'), appliesTo: () => true, summary: () => '', openFor: () => true },
   { id: 'data', tab: 'content', titleKey: 'tab_data', appliesTo: (ctx) => asList(ctx.def.binding_slots).length > 0, summary: (ctx) => (count(ctx.node.bindings) ? String(count(ctx.node.bindings)) : ''), openFor: () => false },
   // One group with what every element needs: margin, padding, z-index, entrance animation, CSS ID and classes.
   { id: 'advanced', tab: 'advanced', titleKey: 'section_advanced', keywords: ['margin', 'padding', 'spacing', 'z-index', 'stacking', 'entrance', 'animation', 'css id', 'class'], appliesTo: () => true, summary: (ctx) => advancedSummary(ctx), openFor: () => true },
-  { id: 'layout', tab: (ctx) => (isContainer(ctx) ? 'content' : 'advanced'), titleKey: 'section_layout', appliesTo: (ctx) => has(ctx, 'layout'), summary: (ctx) => layoutSummary(ctx.style.layout), openFor: isContainer },
+  { id: 'layout', tab: (ctx) => (isContainer(ctx) ? 'content' : 'advanced'), titleKey: 'section_layout', titleFor: (ctx) => (isContainer(ctx) ? 'section_flex_grid' : 'section_layout'), keywords: ['flex', 'grid', 'display', 'order', 'grow', 'shrink', 'basis'], appliesTo: (ctx) => has(ctx, 'layout'), summary: (ctx) => layoutSummary(ctx.style.layout), openFor: () => false },
 
   { id: 'align', tab: 'style', titleKey: 'align', appliesTo: (ctx) => has(ctx, 'align'), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
   { id: 'typography', tab: 'style', titleKey: 'typography', appliesTo: (ctx) => (has(ctx, 'typography') || has(ctx, 'color')) && !MEDIA_TYPES.has(ctx.node.type), summary: (ctx) => typographySummary(ctx.style), openFor: (ctx) => TEXT_TYPES.has(ctx.node.type) },
   { id: 'background', tab: surfaceTab, titleKey: 'background_label', appliesTo: (ctx) => has(ctx, 'background'), summary: (ctx) => backgroundSummary(ctx.style.background), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
   { id: 'border', tab: surfaceTab, titleKey: 'border', appliesTo: (ctx) => has(ctx, 'border'), summary: (ctx) => borderSummary(ctx.style.border), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
   { id: 'shadow', tab: 'style', titleKey: 'box_shadow', appliesTo: (ctx) => has(ctx, 'shadow'), summary: (ctx) => (typeof ctx.style.shadow === 'string' ? ctx.style.shadow : (ctx.style.shadow ? '…' : '')), openFor: () => false },
-  { id: 'dimensions', tab: (ctx) => (MEDIA_TYPES.has(ctx.node.type) ? 'style' : 'advanced'), titleKey: 'dimensions_label', appliesTo: (ctx) => has(ctx, 'dimensions'), summary: (ctx) => dimensionsSummary(ctx.style.dimensions), openFor: (ctx) => ctx.node.type === 'core.image' },
+  { id: 'dimensions', tab: (ctx) => (MEDIA_TYPES.has(ctx.node.type) || isContainer(ctx) ? 'style' : 'advanced'), titleKey: 'dimensions_label', appliesTo: (ctx) => has(ctx, 'dimensions'), summary: (ctx) => dimensionsSummary(ctx.style.dimensions), openFor: (ctx) => ctx.node.type === 'core.image' || isContainer(ctx) },
   { id: 'opacity', tab: 'style', titleKey: 'opacity_label', appliesTo: (ctx) => has(ctx, 'opacity'), summary: (ctx) => (typeof ctx.style.opacity === 'number' ? `${Math.round(ctx.style.opacity * 100)}%` : ''), openFor: () => false },
   { id: 'states', tab: 'style', titleKey: 'section_states', appliesTo: () => true, summary: (ctx) => Object.keys(asObject(ctx.node.style_states)).join(' · '), openFor: () => false },
   { id: 'tokens', tab: 'style', titleKey: 'section_tokens', appliesTo: (ctx) => Object.keys(STYLE_TOKEN_CATEGORIES).some((k) => has(ctx, k)), summary: (ctx) => String(Object.keys(STYLE_TOKEN_CATEGORIES).filter((k) => ctx.style[k]).length || ''), openFor: () => false },
@@ -208,6 +208,9 @@ export function defaultOpenIds(tab, ctx, registry = SECTIONS) {
  * Sections whose title (or summary) contains the query, across all tabs. An empty query returns [].
  * `title(s)` turns a section into its displayed title (the caller owns translation).
  */
+/** The message key a section's header shows: a section may title itself differently for a container. */
+export const titleKeyOf = (section, ctx) => (section.titleFor ? section.titleFor(ctx) : section.titleKey);
+
 export function searchSections(ctx, query, title, registry = SECTIONS) {
   const q = String(query || '').trim().toLowerCase();
   if (!q) return [];

@@ -11,6 +11,7 @@
 import { useState } from 'react';
 import { useEditor, useEngineState } from '../EditorContext.jsx';
 import { FieldControl, ObjectFields, TokenSelect } from '../fields/FieldControl.jsx';
+import { presentersFor } from '../../core/propPresenters.mjs';
 import { ResponsiveSelect, VisibilityControls } from './controls.jsx';
 import { StyleControls } from './StyleControls.jsx';
 import { BorderExtras, DimensionsExtras, EffectsPane, LayoutPane, PositionPane, ShadowExtras, SpacingPane, StatesPane, TypographyExtras } from './SurfaceControls.jsx';
@@ -67,6 +68,7 @@ export function BlockInspector({ info }) {
         value={props}
         manifest={manifest}
         mediaPicker={boot.mediaPicker}
+        presenters={presentersFor(block.type)}
         onChange={(next) => save(ops.updateBlockProps(block.id, next))}
       />
     ),

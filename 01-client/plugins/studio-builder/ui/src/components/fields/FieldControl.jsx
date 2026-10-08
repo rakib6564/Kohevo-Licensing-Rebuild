@@ -13,6 +13,7 @@ import { asList, asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
 import { MediaControl } from './MediaControl.jsx';
 import { UrlControl } from './UrlControl.jsx';
+import { PropChoice, PropTiles } from './PropPresenters.jsx';
 
 const RichTextEditor = lazy(() => import('./RichTextEditor.jsx'));
 
@@ -146,17 +147,23 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
 });
 
 /** Controls for a map of fields (object properties, repeater items, block props). */
-export function ObjectFields({ schema, value, onChange, manifest, mediaPicker }) {
-  return asList(schema).map((f) => (
-    <FieldControl
-      key={f.key}
-      field={f}
-      value={value[f.key] ?? null}
-      manifest={manifest}
-      mediaPicker={mediaPicker}
-      onChange={(v) => onChange({ ...value, [f.key]: v })}
-    />
-  ));
+export function ObjectFields({ schema, value, onChange, manifest, mediaPicker, presenters = null }) {
+  return asList(schema).map((f) => {
+    const set = (v) => onChange({ ...value, [f.key]: v });
+    const presenter = presenters && presenters[f.key];
+    if (presenter && presenter.tiles && f.type === 'number') return <PropTiles key={f.key} field={f} value={value[f.key] ?? null} presenter={presenter} onChange={set} />;
+    if (presenter && (presenter.icons || presenter.pills) && f.type === 'enum') return <PropChoice key={f.key} field={f} value={value[f.key] ?? null} presenter={presenter} onChange={set} />;
+    return (
+      <FieldControl
+        key={f.key}
+        field={f}
+        value={value[f.key] ?? null}
+        manifest={manifest}
+        mediaPicker={mediaPicker}
+        onChange={set}
+      />
+    );
+  });
 }
 
 export function TokenSelect({ id, value, tokens, onChange, allowNone = true, noneLabel }) {

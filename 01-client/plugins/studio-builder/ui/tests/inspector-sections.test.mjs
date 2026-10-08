@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   SECTIONS, TABS, applicableSections, defaultOpenIds, inspectorContext, isSectionOpen, resetSectionState,
-  searchSections, sectionsFor, setSectionOpen, subscribeSections, PAGE_SECTION_SECTIONS, SECTION_DEF,
+  searchSections, sectionsFor, setSectionOpen, subscribeSections, PAGE_SECTION_SECTIONS, SECTION_DEF, titleKeyOf,
 } from '../src/core/inspectorSections.mjs';
 
 const manifest = JSON.parse(readFileSync(new URL('./fixtures/manifest.json', import.meta.url), 'utf8'));
@@ -63,7 +63,7 @@ test('sections start open where they matter: content always; typography for text
 
 test('a tab with nothing flagged opens its first section, never a wall of closed headers', () => {
   const ctx = ctxOf('core.container');
-  assert.deepEqual(defaultOpenIds('content', ctx), ['content', 'layout']); // a container opens how it arranges its children
+  assert.deepEqual(defaultOpenIds('content', ctx), ['content']); // a container's own Layout props; flex/grid options stay closed
   assert.deepEqual(defaultOpenIds('style', inspectorContext({ id: 'b', type: 'x.y', style: {} }, { style_capabilities: [] })), ['states']);
 });
 
@@ -122,11 +122,11 @@ test('applicableSections groups the non-empty tabs', () => {
 
 test('each kind of block opens the sections an author reaches for first', () => {
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.button')), ['typography', 'background', 'border']);
-  assert.deepEqual(defaultOpenIds('content', ctxOf('layout.grid')), ['content', 'layout']);
+  assert.deepEqual(defaultOpenIds('content', ctxOf('layout.grid')), ['content']);
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.image')), ['dimensions']);
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.heading')), ['typography']);
-  assert.deepEqual(defaultOpenIds('content', ctxOf('core.card')), ['content', 'layout']);
-  assert.deepEqual(defaultOpenIds('style', ctxOf('core.card')), ['background', 'border']);
+  assert.deepEqual(defaultOpenIds('content', ctxOf('core.card')), ['content']);
+  assert.deepEqual(defaultOpenIds('style', ctxOf('core.card')), ['background', 'border', 'dimensions']);
 });
 
 test('a page section has the same three tabs, with its own smaller list of groups', () => {
@@ -140,10 +140,13 @@ test('a page section has the same three tabs, with its own smaller list of group
   assert.deepEqual(searchSections(ctx, 'padding', (s) => s.titleKey, PAGE_SECTION_SECTIONS).map((s) => s.id), ['advanced']);
 });
 
-test('a container shows Layout under Content and opens it; a leaf block keeps it under Advanced', () => {
+test('a container shows its flex and grid options under Content (closed) and titles its props Layout; a leaf block keeps Layout under Advanced', () => {
   const container = ctxOf('core.container');
   assert.ok(ids('content', container).includes('layout'));
-  assert.ok(defaultOpenIds('content', container).includes('layout'));
+  assert.ok(!defaultOpenIds('content', container).includes('layout'));
+  assert.equal(titleKeyOf(SECTIONS.find((x) => x.id === 'content'), container), 'section_layout');
+  assert.equal(titleKeyOf(SECTIONS.find((x) => x.id === 'layout'), container), 'section_flex_grid');
+  assert.equal(titleKeyOf(SECTIONS.find((x) => x.id === 'layout'), ctxOf('core.heading')), 'section_layout');
   assert.ok(!ids('advanced', container).includes('layout'));
   assert.ok(ids('advanced', ctxOf('core.heading')).includes('layout'));
 });

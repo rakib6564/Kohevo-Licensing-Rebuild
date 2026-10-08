@@ -701,6 +701,7 @@ $sbBoot = [
         'field_value' => __('studio_ui_field_value', 'value'),
         'bg_overlay' => __('studio_ui_bg_overlay', 'Overlay colour'),
         'section_layout' => __('studio_ui_section_layout', 'Layout'),
+        'section_flex_grid' => __('studio_ui_section_flex_grid', 'Flex & grid options'),
         'section_spacing' => __('studio_ui_section_spacing', 'Spacing'),
         'section_position' => __('studio_ui_section_position', 'Position'),
         'section_effects' => __('studio_ui_section_effects', 'Effects'),

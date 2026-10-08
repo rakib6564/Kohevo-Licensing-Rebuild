@@ -336,6 +336,7 @@ const EN = {
   field_value: 'value',
   bg_overlay: 'Overlay colour',
   section_layout: 'Layout',
+  section_flex_grid: 'Flex & grid options',
   section_spacing: 'Spacing',
   section_position: 'Position',
   section_effects: 'Effects',

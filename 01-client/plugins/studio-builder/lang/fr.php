@@ -662,6 +662,7 @@ return [
     'studio_ui_field_value' => 'valeur',
     'studio_ui_bg_overlay' => 'Couleur de superposition',
     'studio_ui_section_layout' => 'Disposition',
+    'studio_ui_section_flex_grid' => 'Options flex et grille',
     'studio_ui_section_spacing' => 'Espacement',
     'studio_ui_section_position' => 'Position',
     'studio_ui_section_effects' => 'Effets',

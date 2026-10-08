@@ -3061,3 +3061,12 @@ html, body.sbx-body {
 .sbx-responsive__more > summary { cursor: pointer; opacity: 0.7; }
 .sbx-inspector .sbx-responsive .sbx-responsive__cell { margin: 0.3rem 0 0; }
 .sbx-iconchoice__btn.is-inherited { opacity: 0.55; }
+
+/* ── Container props: column picker ── */
+.sbx-coltiles { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.sbx-coltile { width: 34px; height: 30px; padding: 4px; border: 1px solid var(--sbx-border); border-radius: 5px; background: var(--sbx-panel); cursor: pointer; }
+.sbx-coltile.is-active { border-color: var(--sbx-accent); background: color-mix(in srgb, var(--sbx-accent) 25%, transparent); }
+.sbx-coltile__cols { display: grid; gap: 2px; height: 100%; }
+.sbx-coltile__cols i { display: block; background: currentColor; opacity: 0.55; border-radius: 1px; }
+.sbx-coltile.is-active .sbx-coltile__cols i { opacity: 1; }
+.sbx-coltiles__num { width: 3.4rem; }
