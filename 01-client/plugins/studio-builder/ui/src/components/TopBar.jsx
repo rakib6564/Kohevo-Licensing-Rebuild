@@ -155,16 +155,16 @@ export const TopBar = memo(function TopBar({
                     window.location.href = `${boot.builderUrl}?page=${targetId}`;
                   }
                 }}
-                title="Switch page in builder"
-                aria-label="Switch page"
+                title={t('switch_page_title')}
+                aria-label={t('switch_page')}
               >
                 {boot.allPages.map((p) => {
                   const label = {
-                    home: 'Home',
-                    work: 'Projects',
-                    services: 'Services',
-                    about: 'About',
-                    contact: 'Contact',
+                    home: t('page_home'),
+                    work: t('page_work'),
+                    services: t('page_services'),
+                    about: t('page_about'),
+                    contact: t('page_contact'),
                   }[p.slug] || p.title;
                   return (
                     <option key={p.id} value={p.id}>
@@ -177,9 +177,9 @@ export const TopBar = memo(function TopBar({
           ) : (
             <strong
               className="sbx-topbar__page-title"
-              title={`${page ? page.title : 'Page'} (/${slugText})`}
+              title={`${page ? page.title : t('page')} (/${slugText})`}
             >
-              {page ? page.title : 'Page'}
+              {page ? page.title : t('page')}
             </strong>
           )}
 
@@ -287,7 +287,7 @@ export const TopBar = memo(function TopBar({
             onClick={onUndo}
             disabled={conflict || busy || undoCount === 0}
             aria-keyshortcuts="Control+Z Meta+Z"
-            title="Undo (Ctrl+Z)"
+            title={t('undo_title')}
             aria-label={t('undo')}
           >
             <IconUndo size={13} />
@@ -298,7 +298,7 @@ export const TopBar = memo(function TopBar({
             onClick={onRedo}
             disabled={conflict || busy || redoCount === 0}
             aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z"
-            title="Redo (Ctrl+Y)"
+            title={t('redo_title')}
             aria-label={t('redo')}
           >
             <IconRedo size={13} />
@@ -330,7 +330,7 @@ export const TopBar = memo(function TopBar({
             className="sbx-btn sbx-btn--action"
             onClick={onHistory}
             disabled={conflict}
-            title="Revision history"
+            title={t('history_title')}
           >
             <IconClock size={13} />
             <span className="sbx-btn__text">{t('history')}</span>
@@ -343,7 +343,7 @@ export const TopBar = memo(function TopBar({
               data-testid="open-packages"
               onClick={onPackages}
               disabled={conflict}
-              title="Import or export packages"
+              title={t('packages_title')}
             >
               {t('packages')}
             </button>
@@ -354,7 +354,7 @@ export const TopBar = memo(function TopBar({
               type="button"
               className="sbx-btn sbx-btn--action"
               onClick={onTheme}
-              title="Theme tokens"
+              title={t('theme_title')}
             >
               <IconPalette size={13} />
               <span className="sbx-btn__text">{t('theme')}</span>
@@ -404,10 +404,10 @@ export const TopBar = memo(function TopBar({
             onClick={onSave}
             disabled={conflict || pendingCount === 0}
             aria-keyshortcuts="Control+S Meta+S"
-            title="Save draft (Ctrl+S)"
+            title={t('save_draft_title')}
           >
             <IconSaveDisk size={13} />
-            <span>Save draft</span>
+            <span>{t('save_draft')}</span>
           </button>
 
           {canPublish && (
@@ -416,12 +416,12 @@ export const TopBar = memo(function TopBar({
               className="sbx-btn sbx-btn--publish"
               onClick={onPublish}
               disabled={conflict || busy || !engine}
-              title={page && page.is_published ? 'Update live page' : 'Publish page'}
+              title={page && page.is_published ? t('update_live_page') : t('publish_page_title')}
             >
               {page && page.is_published ? (
                 <>
                   <IconSendPlane size={13} />
-                  <span>Update live page</span>
+                  <span>{t('update_live_page')}</span>
                 </>
               ) : (
                 t('publish')
@@ -434,8 +434,8 @@ export const TopBar = memo(function TopBar({
             type="button"
             className="sbx-btn sbx-btn--icon sbx-mobile-more-btn"
             onClick={() => setMobileMenuOpen((o) => !o)}
-            aria-label="More actions"
-            title="More actions"
+            aria-label={t('more_actions')}
+            title={t('more_actions')}
           >
             <IconMenu size={15} />
           </button>
@@ -470,7 +470,7 @@ export const TopBar = memo(function TopBar({
               onClick={() => { setMobileMenuOpen(false); onPackages(); }}
             >
               <IconExport size={15} />
-              <span>Import / Export</span>
+              <span>{t('import_export')}</span>
             </button>
           )}
           <a
@@ -481,7 +481,7 @@ export const TopBar = memo(function TopBar({
             onClick={() => setMobileMenuOpen(false)}
           >
             <IconExternalLink size={15} />
-            <span>Preview link</span>
+            <span>{t('preview_link')}</span>
           </a>
         </div>
       )}

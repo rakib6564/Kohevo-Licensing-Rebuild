@@ -10,6 +10,18 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
 ## [Unreleased]
 
 ### Added
+- **Studio builder (Builder 2.0, phase 1): workspace foundation.** Selection is now a shared model (primary, picked nodes,
+  hover, focus): Cmd/Ctrl-click and Shift-click multi-select on the canvas and in Layers stay in sync, the Inspector shows
+  "N selected", and Cmd/Ctrl+D duplicates the top-level picked nodes. The selection box, name chip and a keyboard-reachable
+  action toolbar are now drawn by the builder page above the canvas instead of being written into the canvas frame, so a
+  node's `overflow` can no longer clip them (locked layers disable move, edit and delete). New bottom bar: breadcrumb,
+  zoom − / % / + and Fit, column grid, and a keyboard-shortcut help; Cmd/Ctrl+K now opens Add and focuses its search. On a
+  phone the shell has a two-row top bar with an Unsaved / Saved / Published chip, a Responsive-view sheet (device preset,
+  zoom, element outlines, section labels, column grid), draggable bottom sheets with snap points, and selecting a node no
+  longer covers the canvas (the Edit tab opens the Style sheet). No document, schema or API change.
+- **Studio builder: developer test harness.** `plugins/studio-builder/ui/e2e` adds a Playwright DOM/e2e suite
+  (desktop 1280, tablet 820, phone 390) and `e2e/sandbox.sh`, which builds a disposable local sandbox. Dev-only (`npm run
+  test:e2e`); nothing in it runs on customer installs.
 - **Studio builder: layer lock and block rename.** Layers can be locked (sections: `locked`; blocks: `metadata.locked`) and
   blocks can carry a display name (`metadata.label`, max 80 characters, shown in Layers and the breadcrumb). Two new
   document operations, `update_block_meta` and `update_section_locked`, set them. A locked layer and everything inside it
@@ -40,6 +52,16 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
 ## [1.6.2] — 2026-09-28
 
 ### Fixed
+- **Studio builder: top bar, phone canvas and sheets.** At 1280 px the Edit / Preview / Visitor group overlapped the Draft
+  chip and save status; the bar now shrinks and hides lower-priority items instead (nothing overlaps or clips at 1280, 820
+  or 390 px). On a phone the canvas was forced to full width and then scaled down to 35%, showing a narrow strip; Theme and
+  More also opened the Layers sheet behind them with a blur over the sheet. Sheets now respect the bottom safe area and the
+  on-screen keyboard, and use 44 px touch targets.
+- **Studio builder in French.** About 290 builder labels (shell, Layers, top bar, dock, sheets, block palette, conflict
+  banner and the announcements read to screen readers) were hard-coded in English, or missing from the French pack or from
+  `boot.messages`; they are translated now, and a parity test (`ui/tests/i18n-parity.test.mjs`) keeps the touched components complete. The builder
+  page also declares the active language (`<html lang>` was fixed to `en`), and with `multilang-translate` active its floating
+  language switcher no longer sits on top of the builder's controls or appears inside the editing canvas.
 - **Client did not pick up license changes made on the Central Server** (for example a renewed or extended expiry kept
   showing the old date). The client only refreshed its license through an optional cron job, so an install without that
   cron never updated. It now refreshes itself automatically — about every 15 minutes, after the response is sent so

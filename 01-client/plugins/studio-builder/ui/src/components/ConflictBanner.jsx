@@ -39,8 +39,8 @@ export const ConflictBanner = memo(function ConflictBanner({ onReload, lockState
               engine.clearError();
             }
           }}
-          aria-label="Dismiss error"
-          title="Dismiss"
+          aria-label={t('dismiss_error')}
+          title={t('dismiss')}
         >
           ✕
         </button>

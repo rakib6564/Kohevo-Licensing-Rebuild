@@ -4,6 +4,7 @@
 // Page Settings, and Canvas Full-View directly on mobile phones or small devices.
 
 import { memo } from 'react';
+import { t } from '../core/messages.mjs';
 import {
   IconPlus,
   IconSliders,
@@ -19,15 +20,15 @@ export const MobileDock = memo(function MobileDock({
   hasSelection = false,
 }) {
   const items = [
-    { key: 'blocks',    label: 'Blocks',   Icon: IconPlus },
-    { key: 'inspector', label: 'Edit',     Icon: IconSliders, hasDot: hasSelection },
-    { key: 'theme',     label: 'Theme',    Icon: IconPalette },
-    { key: 'preview',   label: 'Preview',  Icon: IconEye },
-    { key: 'more',      label: 'More',     Icon: IconMoreHorizontal },
+    { key: 'blocks',    label: t('dock_blocks'),   Icon: IconPlus },
+    { key: 'inspector', label: t('dock_edit'),     Icon: IconSliders, hasDot: hasSelection },
+    { key: 'theme',     label: t('dock_theme'),    Icon: IconPalette },
+    { key: 'preview',   label: t('dock_preview'),  Icon: IconEye },
+    { key: 'more',      label: t('dock_more'),     Icon: IconMoreHorizontal },
   ];
 
   return (
-    <nav className="sbx-mobile-dock" aria-label="Mobile Navigation">
+    <nav className="sbx-mobile-dock" aria-label={t('mobile_nav')}>
       {items.map((item) => {
         const isActive = mobileSheetOpen && activeTab === item.key;
         return (

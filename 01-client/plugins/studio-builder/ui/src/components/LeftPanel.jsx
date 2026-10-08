@@ -68,27 +68,27 @@ export const LeftPanel = memo(function LeftPanel({
   }, [selection, setTab]);
 
   const tabs = [
-    { key: 'blocks',    label: 'Add',       Icon: IconPlus,     title: 'Add Blocks & Elements' },
-    { key: 'structure', label: 'Layers',    Icon: IconLayers,   title: t('panel_structure') },
-    { key: 'inspector', label: 'Style',     Icon: IconSliders,  title: t('inspector') },
-    { key: 'library',   label: 'Library',   Icon: IconPalette,  title: t('panel_library') },
-    { key: 'settings',  label: 'Settings',  Icon: IconSettings, title: 'Page Settings & SEO' },
+    { key: 'blocks',    label: t('tab_add'),       Icon: IconPlus,     title: t('tab_add_title') },
+    { key: 'structure', label: t('tab_layers'),    Icon: IconLayers,   title: t('panel_structure') },
+    { key: 'inspector', label: t('tab_style'),     Icon: IconSliders,  title: t('inspector') },
+    { key: 'library',   label: t('tab_library'),   Icon: IconPalette,  title: t('panel_library') },
+    { key: 'settings',  label: t('tab_settings'),  Icon: IconSettings, title: t('tab_settings_title') },
   ];
 
-  let sheetTitle = 'Panel';
-  if (tab === 'blocks') sheetTitle = 'Add Element';
-  else if (tab === 'structure') sheetTitle = 'Page Layers';
+  let sheetTitle = t('panel_word');
+  if (tab === 'blocks') sheetTitle = t('sheet_add');
+  else if (tab === 'structure') sheetTitle = t('sheet_layers');
   else if (tab === 'inspector') {
     if (info && info.kind === 'block') {
       const def = blockDefinition(manifest, info.node.type);
-      sheetTitle = def ? `Edit ${def.label}` : 'Edit Block';
+      sheetTitle = def ? t('sheet_edit_named', { label: def.label }) : t('sheet_edit_block');
     } else if (info && info.kind === 'section') {
-      sheetTitle = 'Edit Section';
+      sheetTitle = t('sheet_edit_section');
     } else {
-      sheetTitle = 'Page Settings';
+      sheetTitle = t('sheet_page_settings');
     }
-  } else if (tab === 'library') sheetTitle = 'Templates & Presets';
-  else if (tab === 'settings') sheetTitle = 'Page Settings';
+  } else if (tab === 'library') sheetTitle = t('sheet_library');
+  else if (tab === 'settings') sheetTitle = t('sheet_page_settings');
 
   return (
     <>
@@ -118,8 +118,8 @@ export const LeftPanel = memo(function LeftPanel({
             type="button"
             className="sbx-sheet-close"
             onClick={onCloseMobile}
-            aria-label="Close panel"
-            title="Close"
+            aria-label={t('close_panel')}
+            title={t('close')}
           >
             <IconX size={18} />
           </button>
@@ -155,8 +155,8 @@ export const LeftPanel = memo(function LeftPanel({
             type="button"
             className="sbx-collapse-btn"
             onClick={toggleCollapse}
-            title={collapsed ? 'Expand panel' : 'Collapse panel'}
-            aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
+            title={collapsed ? t('expand_panel') : t('collapse_panel')}
+            aria-label={collapsed ? t('expand_panel') : t('collapse_panel')}
           >
             {collapsed ? <IconChevronRight size={14} /> : <IconChevronLeft size={14} />}
           </button>
@@ -219,7 +219,7 @@ export const LeftPanel = memo(function LeftPanel({
                 </div>
                 <h3 className="sbx-inspector-empty__title">{t('nothing_selected')}</h3>
                 <p className="sbx-inspector-empty__desc">
-                  Select any section or block on the canvas or from the Layers tab to customize typography, layout, spacing, colors, and styling.
+                  {t('inspector_empty_desc')}
                 </p>
                 <div className="sbx-inspector-empty__actions">
                   <button
@@ -228,7 +228,7 @@ export const LeftPanel = memo(function LeftPanel({
                     onClick={() => setTab('structure')}
                   >
                     <IconLayers size={14} />
-                    <span>View Layers</span>
+                    <span>{t('view_layers')}</span>
                   </button>
                   <button
                     type="button"
@@ -236,7 +236,7 @@ export const LeftPanel = memo(function LeftPanel({
                     onClick={() => setTab('blocks')}
                   >
                     <IconPlus size={14} />
-                    <span>Add Elements</span>
+                    <span>{t('add_elements')}</span>
                   </button>
                   <button
                     type="button"
@@ -244,7 +244,7 @@ export const LeftPanel = memo(function LeftPanel({
                     onClick={() => setTab('settings')}
                   >
                     <IconSettings size={14} />
-                    <span>Page Settings</span>
+                    <span>{t('sheet_page_settings')}</span>
                   </button>
                 </div>
               </div>
@@ -281,10 +281,10 @@ export const LeftPanel = memo(function LeftPanel({
           type="button"
           className="sbx-floating-expand-btn"
           onClick={() => toggleCollapse()}
-          title="Open Editor Panel"
+          title={t('open_editor_panel')}
         >
           <IconSliders size={15} />
-          <span>Panel</span>
+          <span>{t('panel_word')}</span>
         </button>
       )}
     </>

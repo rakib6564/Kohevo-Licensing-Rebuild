@@ -101,7 +101,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     if (!info) return;
     const node = info.node;
     if (info.kind === 'section') {
-      applyOp && applyOp(ops.updateSectionLabel(nodeId, newText), { label: 'Update section' });
+      applyOp && applyOp(ops.updateSectionLabel(nodeId, newText), { label: t('op_update_section') });
     } else {
       const props = { ...(node.props || {}) };
       if ('text' in props || ['core.heading', 'core.paragraph', 'core.button', 'core.text'].includes(node.type)) {
@@ -117,7 +117,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       } else {
         props.text = newText;
       }
-      applyOp && applyOp(ops.updateBlockProps(nodeId, props), { label: `Edit ${node.type}` });
+      applyOp && applyOp(ops.updateBlockProps(nodeId, props), { label: t('op_edit_block', { type: node.type }) });
     }
   }, [working, applyOp]);
 
@@ -284,7 +284,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   const unsaved = status === STATUS.DIRTY || status === STATUS.SAVING;
 
   return (
-    <main className="sbx-canvas" aria-label="Canvas">
+    <main className="sbx-canvas" aria-label={t('canvas_label')}>
       <div className="sbx-canvas__meta">
         <div className="sbx-canvas__meta-left">
           <span className="sbx-canvas__meta-pill">
@@ -294,9 +294,9 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
             <span className="sbx-canvas__meta-pill sbx-canvas__preview-pill">{t('mode_preview')}</span>
           )}
           {unsaved && (
-            <span className="sbx-canvas__save-hint" title="canvas updates after save">
+            <span className="sbx-canvas__save-hint" title={t('canvas_after_save')}>
               <span className="sbx-status__dot" aria-hidden="true" />
-              <span>canvas updates after save</span>
+              <span>{t('canvas_after_save')}</span>
             </span>
           )}
         </div>
@@ -307,10 +307,10 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
               type="button"
               className="sbx-canvas__tool-btn"
               onClick={onToggleCollapse}
-              title={collapsed ? 'Show editor sidebar' : 'Hide editor sidebar for full-width canvas'}
+              title={collapsed ? t('show_sidebar') : t('hide_sidebar')}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-              <span>{collapsed ? 'Show Panel' : 'Full Canvas'}</span>
+              <span>{collapsed ? t('show_panel') : t('full_canvas')}</span>
             </button>
           )}
           <button
@@ -321,10 +321,10 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
               setSrc(`${boot.canvasUrl}?page=${boot.pageId}&v=${Date.now()}`);
               onReloadCanvas && onReloadCanvas();
             }}
-            title="Reload canvas"
+            title={t('reload_canvas')}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-            <span>Reload</span>
+            <span>{t('reload')}</span>
           </button>
         </div>
       </div>
