@@ -122,6 +122,7 @@ RSYNC_ARGS=(
     --exclude '.installed'     --exclude 'uploads/'
     --exclude 'data/'          --exclude '.claude/'
     --exclude 'scratchpad/'    --exclude 'Claude/'
+    --exclude 'scratch/'       --exclude 'storage/'
     --exclude 'audit/'         --exclude 'tests/.out/'
     --exclude '*.log'          --exclude 'error_log'
     --exclude 'deploy-package/'  # carries a live .env and a DB dump

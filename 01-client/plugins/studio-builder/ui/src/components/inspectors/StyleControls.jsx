@@ -20,9 +20,10 @@
 // overwritten — the renderer already skips emitting a literal when a token ref
 // is present, so a literal and a ref never both reach the page.
 
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
+import { FocalPointControl } from '../fields/FocalPointControl.jsx';
 /**
  * A colour control that accepts a token reference or a literal hex.
  *
@@ -152,6 +153,7 @@ export function StyleControls({ style, capabilities, onChange }) {
   const bg = asObject(style.background);
   const border = asObject(style.border);
   const dims = asObject(style.dimensions);
+  const [bgMode, setBgMode] = useState(() => (bg.image ? 'image' : (bg.gradient ? 'gradient' : 'color')));
 
   /**
    * Merge one field into a nested style object. A field cleared to undefined
@@ -235,15 +237,87 @@ export function StyleControls({ style, capabilities, onChange }) {
       )}
 
       {has('background') && (
-        <fieldset className="sbx-fieldset">
+        <fieldset className="sbx-fieldset sbx-bg-controls">
           <legend>{t('background_label')}</legend>
-          <ColorField
-            id={`${id}-bg`}
-            label={t('background_color')}
-            value={bgColor}
-            onChange={(v) => patchBackground('color', v)}
-          />
-          <GradientField value={bg.gradient} onChange={(v) => patchBackground('gradient', v)} />
+          <div className="sbx-segmented-pills" role="radiogroup" aria-label="Background type">
+            {['image', 'color', 'gradient', 'video'].map((m) => (
+              <button
+                key={m}
+                type="button"
+                className={`sbx-segmented-pill${bgMode === m ? ' is-active' : ''}`}
+                onClick={() => setBgMode(m)}
+              >
+                {m.charAt(0).toUpperCase() + m.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {bgMode === 'image' && (
+            <div className="sbx-bg-image-pane">
+              <DraftText
+                id={`${id}-bg-img`}
+                label="Image URL"
+                value={bg.image}
+                placeholder="https://... or /assets/..."
+                onCommit={(v) => patchBackground('image', v)}
+              />
+              <FocalPointControl
+                imageUrl={bg.image}
+                value={bg.focal_point || { x: 50, y: 50 }}
+                onChange={(coords) => patchBackground('focal_point', coords)}
+              />
+              <div className="sbx-field">
+                <label className="sbx-field__label" htmlFor={`${id}-bg-fit`}>Fit</label>
+                <select
+                  id={`${id}-bg-fit`}
+                  value={bg.fit || 'cover'}
+                  onChange={(e) => patchBackground('fit', e.target.value)}
+                >
+                  <option value="cover">Cover</option>
+                  <option value="contain">Contain</option>
+                  <option value="fill">Fill</option>
+                  <option value="auto">Original</option>
+                </select>
+              </div>
+              <div className="sbx-field">
+                <label className="sbx-field__label" htmlFor={`${id}-bg-pos`}>Position</label>
+                <select
+                  id={`${id}-bg-pos`}
+                  value={bg.position || 'center center'}
+                  onChange={(e) => patchBackground('position', e.target.value)}
+                >
+                  <option value="center center">Center center</option>
+                  <option value="top center">Top center</option>
+                  <option value="bottom center">Bottom center</option>
+                  <option value="center left">Center left</option>
+                  <option value="center right">Center right</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {bgMode === 'color' && (
+            <ColorField
+              id={`${id}-bg`}
+              label={t('background_color')}
+              value={bgColor}
+              onChange={(v) => patchBackground('color', v)}
+            />
+          )}
+
+          {bgMode === 'gradient' && (
+            <GradientField value={bg.gradient} onChange={(v) => patchBackground('gradient', v)} />
+          )}
+
+          {bgMode === 'video' && (
+            <DraftText
+              id={`${id}-bg-vid`}
+              label="Video URL (MP4 / WebM)"
+              value={bg.video}
+              placeholder="https://...mp4"
+              onCommit={(v) => patchBackground('video', v)}
+            />
+          )}
         </fieldset>
       )}
 

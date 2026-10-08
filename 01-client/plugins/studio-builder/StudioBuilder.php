@@ -65,6 +65,10 @@ class StudioBuilder extends Plugin
         // module guard and the application layer refuse unlicensed tenants.
         require_once __DIR__ . '/StudioBuilderMcpHandler.php';
         StudioBuilderMcpHandler::register();
+
+        // Custom Portfolio Widgets
+        require_once __DIR__ . '/StudioBuilderPortfolioWidgets.php';
+        \Slate\Module\StudioBuilder\StudioBuilderPortfolioWidgets::register();
     }
 
     /**

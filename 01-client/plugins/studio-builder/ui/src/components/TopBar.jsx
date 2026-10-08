@@ -24,6 +24,7 @@ import {
   IconExport,
   IconSparkles,
   IconMenu,
+  IconSliders,
 } from './Icons.jsx';
 
 const STATUS_KEY = {
@@ -58,6 +59,10 @@ export const SaveStatus = memo(function SaveStatus() {
 });
 
 export const TopBar = memo(function TopBar({
+  viewMode = 'edit',
+  onViewMode = () => {},
+  inspectorOpen = false,
+  onToggleInspector = null,
   viewportKey,
   onViewport,
   onSave,
@@ -81,7 +86,6 @@ export const TopBar = memo(function TopBar({
   const conflict = status === STATUS.CONFLICT;
   const busy = status === STATUS.SAVING;
   const canPublish = !!(manifest.permissions && manifest.permissions.publish);
-  const [viewMode, setViewMode] = useState('edit');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const slugText = page
@@ -97,6 +101,14 @@ export const TopBar = memo(function TopBar({
     <header className="sbx-topbar" role="banner">
       {/* ── Left Area: Brand & Document Identity ── */}
       <div className="sbx-topbar__left">
+        <div className="sbx-brand-badge" title="KOHEVO STUDIO BUILDER 2.0">
+          <span className="sbx-brand-badge__logo">K</span>
+          <div className="sbx-brand-badge__info">
+            <span className="sbx-brand-badge__title">KOHEVO STUDIO</span>
+            <span className="sbx-brand-badge__sub">BUILDER 2.0</span>
+          </div>
+        </div>
+
         <a
           className="sbx-topbar__back-btn"
           href={boot.pagesUrl}
@@ -107,12 +119,50 @@ export const TopBar = memo(function TopBar({
         </a>
 
         <div className="sbx-topbar__title-group">
-          <strong
-            className="sbx-topbar__page-title"
-            title={`${page ? page.title : 'Page'} (/${slugText})`}
-          >
-            {page ? page.title : 'Page'}
-          </strong>
+          {Array.isArray(boot.allPages) && boot.allPages.length > 1 ? (
+            <div className="sbx-page-switcher">
+              <select
+                className="sbx-page-switcher__select"
+                value={boot.pageId}
+                onChange={(e) => {
+                  const targetId = e.target.value;
+                  if (targetId && Number(targetId) !== Number(boot.pageId)) {
+                    if (pendingCount > 0) {
+                      if (!window.confirm('You have unsaved changes. Switch page anyway?')) {
+                        e.target.value = boot.pageId;
+                        return;
+                      }
+                    }
+                    window.location.href = `${boot.builderUrl}?page=${targetId}`;
+                  }
+                }}
+                title="Switch page in builder"
+                aria-label="Switch page"
+              >
+                {boot.allPages.map((p) => {
+                  const label = {
+                    home: 'Home',
+                    work: 'Projects',
+                    services: 'Services',
+                    about: 'About',
+                    contact: 'Contact',
+                  }[p.slug] || p.title;
+                  return (
+                    <option key={p.id} value={p.id}>
+                      {label} (/{p.slug})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          ) : (
+            <strong
+              className="sbx-topbar__page-title"
+              title={`${page ? page.title : 'Page'} (/${slugText})`}
+            >
+              {page ? page.title : 'Page'}
+            </strong>
+          )}
 
           <span
             className={`sbx-status-pill ${
@@ -145,27 +195,38 @@ export const TopBar = memo(function TopBar({
 
       {/* ── Center Area: View Mode, Viewport Switchers, Undo/Redo ── */}
       <div className="sbx-topbar__center">
-        <div className="sbx-view-mode-toggle" role="group" aria-label="Editor Mode">
+        <div className="sbx-view-mode-toggle" role="group" aria-label={t('view_mode')}>
           <button
             type="button"
             className={`sbx-view-mode-btn${viewMode === 'edit' ? ' is-active' : ''}`}
-            onClick={() => setViewMode('edit')}
-            title="Edit mode"
+            aria-pressed={viewMode === 'edit'}
+            onClick={() => onViewMode('edit')}
+            title={t('mode_edit_hint')}
           >
             <IconEdit size={12} />
-            <span>Edit</span>
+            <span>{t('mode_edit')}</span>
           </button>
           <button
             type="button"
             className={`sbx-view-mode-btn${viewMode === 'preview' ? ' is-active' : ''}`}
-            onClick={() => {
-              setViewMode('preview');
-              if (boot.previewUrl) window.open(`${boot.previewUrl}?page=${boot.pageId}`, '_blank', 'noopener');
-            }}
-            title="Preview mode"
+            aria-pressed={viewMode === 'preview'}
+            data-testid="mode-preview"
+            onClick={() => onViewMode('preview')}
+            title={t('mode_preview_hint')}
           >
             <IconEye size={12} />
-            <span>Preview</span>
+            <span>{t('mode_preview')}</span>
+          </button>
+          <button
+            type="button"
+            className={`sbx-view-mode-btn${viewMode === 'visitor' ? ' is-active' : ''}`}
+            aria-pressed={viewMode === 'visitor'}
+            data-testid="mode-visitor"
+            onClick={() => onViewMode('visitor')}
+            title={t('mode_visitor_hint')}
+          >
+            <IconExternalLink size={12} />
+            <span>{t('mode_visitor')}</span>
           </button>
         </div>
 
@@ -183,6 +244,20 @@ export const TopBar = memo(function TopBar({
             </button>
           ))}
         </div>
+
+        {onToggleInspector && (
+          <button
+            type="button"
+            className={`sbx-btn sbx-btn--icon sbx-inspector-toggle${inspectorOpen ? ' is-active' : ''}`}
+            onClick={onToggleInspector}
+            aria-pressed={inspectorOpen}
+            data-testid="inspector-toggle"
+            title={inspectorOpen ? t('inspector_hide') : t('inspector_show')}
+            aria-label={inspectorOpen ? t('inspector_hide') : t('inspector_show')}
+          >
+            <IconSliders size={13} />
+          </button>
+        )}
 
         <div className="sbx-topbar__history-group">
           <button
@@ -278,10 +353,10 @@ export const TopBar = memo(function TopBar({
             href={`${boot.previewUrl}?page=${boot.pageId}`}
             target="_blank"
             rel="noopener"
-            title="Open preview in new tab"
+            title={t('open_new_tab')}
+            aria-label={t('open_new_tab')}
           >
             <IconExternalLink size={13} />
-            <span className="sbx-btn__text">Preview</span>
           </a>
         </div>
 

@@ -6,10 +6,10 @@
 import { memo } from 'react';
 import {
   IconPlus,
-  IconLayers,
   IconSliders,
-  IconSettings,
+  IconPalette,
   IconEye,
+  IconMoreHorizontal,
 } from './Icons.jsx';
 
 export const MobileDock = memo(function MobileDock({
@@ -19,11 +19,11 @@ export const MobileDock = memo(function MobileDock({
   hasSelection = false,
 }) {
   const items = [
-    { key: 'blocks',    label: 'Add',     Icon: IconPlus },
-    { key: 'structure', label: 'Layers',  Icon: IconLayers },
-    { key: 'inspector', label: 'Style',   Icon: IconSliders, hasDot: hasSelection },
-    { key: 'settings',  label: 'Page',    Icon: IconSettings },
-    { key: 'preview',   label: 'View',    Icon: IconEye },
+    { key: 'blocks',    label: 'Blocks',   Icon: IconPlus },
+    { key: 'inspector', label: 'Edit',     Icon: IconSliders, hasDot: hasSelection },
+    { key: 'theme',     label: 'Theme',    Icon: IconPalette },
+    { key: 'preview',   label: 'Preview',  Icon: IconEye },
+    { key: 'more',      label: 'More',     Icon: IconMoreHorizontal },
   ];
 
   return (

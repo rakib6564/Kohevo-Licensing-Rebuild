@@ -16,6 +16,7 @@ import {
   canInsertBlock, canInsertSection, canMoveBlock, nodeLabel,
 } from '../core/doc.mjs';
 import { isProvisionalId, updateBlockVisibility, updateSectionVisibility } from '../core/operations.mjs';
+import { nextPicked, topLevelIds } from '../core/shellState.mjs';
 
 const DRAG_TYPE_NODE = 'application/x-kohevo-studio-node';
 
@@ -93,6 +94,8 @@ export const Outline = memo(function Outline() {
   const [searchQuery, setSearchQuery] = useState('');
   const [focusId, setFocusId] = useState(null);
   const [dropHint, setDropHint] = useState(null);
+  const [picked, setPicked] = useState(() => new Set());
+  const anchorRef = useRef(null);
   const dragRef = useRef(null);
   const listRef = useRef(null);
 
@@ -238,6 +241,17 @@ export const Outline = memo(function Outline() {
   }
 
   const allCollapsed = collapsed.size > 0;
+  const bulkIds = picked.size > 1 ? topLevelIds(allRows, picked) : [];
+
+  const bulkDuplicate = () => {
+    bulkIds.forEach((id) => duplicateNode(id));
+    setPicked(new Set());
+  };
+  const bulkRemove = () => {
+    if (!window.confirm(t('bulk_remove_confirm', { count: bulkIds.length }))) return;
+    bulkIds.forEach((id) => removeNode(id, { confirmed: true }));
+    setPicked(new Set());
+  };
 
   return (
     <div className="sbx-outline">
@@ -267,6 +281,15 @@ export const Outline = memo(function Outline() {
         </button>
       </div>
 
+      {bulkIds.length > 1 && (
+        <div className="sbx-tree__bulk" role="toolbar" aria-label={t('bulk_actions')} data-testid="outline-bulk">
+          <span className="sbx-tree__bulk-count">{t('bulk_selected', { count: bulkIds.length })}</span>
+          <button type="button" className="sbx-btn sbx-btn--seg" onClick={bulkDuplicate}>{t('duplicate')}</button>
+          <button type="button" className="sbx-btn sbx-btn--seg sbx-btn--danger" onClick={bulkRemove}>{t('remove_item')}</button>
+          <button type="button" className="sbx-btn sbx-btn--seg" onClick={() => setPicked(new Set())}>{t('clear_selection')}</button>
+        </div>
+      )}
+
       <ul className="sbx-tree" role="tree" aria-label={t('outline_label')} ref={listRef}>
         {visibleRows.map((row, i) => {
           const label = row.kind === 'section' ? (row.node.label || t('section')) : nodeLabel(row.node, manifest, 'block');
@@ -283,11 +306,11 @@ export const Outline = memo(function Outline() {
               aria-level={row.level}
               aria-setsize={row.setSize}
               aria-posinset={row.index + 1}
-              aria-selected={selection === row.id}
+              aria-selected={selection === row.id || picked.has(row.id)}
               aria-expanded={row.container ? !isRowCollapsed : undefined}
               aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight Delete"
               tabIndex={row.id === activeId ? 0 : -1}
-              className={`sbx-tree__row sbx-tree__row--${row.kind}${selection === row.id ? ' is-selected' : ''}${isProvisionalId(row.id) ? ' is-pending' : ''}${isHidden ? ' is-hidden' : ''}${hint}`}
+              className={`sbx-tree__row sbx-tree__row--${row.kind}${selection === row.id || picked.has(row.id) ? ' is-selected' : ''}${picked.has(row.id) ? ' is-picked' : ''}${isProvisionalId(row.id) ? ' is-pending' : ''}${isHidden ? ' is-hidden' : ''}${hint}`}
               style={{ paddingLeft: `${(row.level - 1) * 14 + 6}px` }}
               draggable
               onDragStart={(e) => {
@@ -299,7 +322,19 @@ export const Outline = memo(function Outline() {
               onDragOver={(e) => onDragOver(e, row)}
               onDragLeave={() => setDropHint((h) => (h && h.id === row.id ? null : h))}
               onDrop={(e) => onDrop(e, row)}
-              onClick={() => { setFocusId(row.id); select(row.id); }}
+              onClick={(e) => {
+                setFocusId(row.id);
+                if (e.shiftKey || e.metaKey || e.ctrlKey) {
+                  e.preventDefault();
+                  setPicked((prev) => nextPicked(prev, visibleRows, anchorRef.current || selection, row.id, { shift: e.shiftKey, toggle: e.metaKey || e.ctrlKey }));
+                  if (!e.shiftKey) anchorRef.current = row.id;
+                  select(row.id);
+                  return;
+                }
+                anchorRef.current = row.id;
+                setPicked(new Set());
+                select(row.id);
+              }}
               onFocus={() => setFocusId(row.id)}
               onKeyDown={(e) => onKeyDown(e, row, i)}
             >
