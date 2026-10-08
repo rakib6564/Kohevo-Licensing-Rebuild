@@ -1,6 +1,6 @@
 // The French pack reaches the browser: labels in the touched components are French, not English.
 import { test, expect } from '@playwright/test';
-import { sandboxPageId } from './helpers.mjs';
+import { sandboxPageId, settled } from './helpers.mjs';
 
 // `?lang=fr` is stored in the (shared) admin session, so always put English back for the other suites.
 test.afterEach(async ({ page }) => {
@@ -56,6 +56,7 @@ test('block inspector controls are French (tabs, placeholders, select options)',
   await page.getByRole('tab', { name: /Éléments/ }).click();
   await page.locator('.sbx-palette-card').first().click();
   await expect(page.getByRole('tab', { name: 'Avancé' })).toBeVisible();
+  await settled(page); // the inspector re-renders when the server swaps the temporary id
   try {
   await page.getByRole('tab', { name: 'Avancé' }).click();
   await expect(page.getByPlaceholder('p. ex. ma-classe hero-banner')).toBeVisible();

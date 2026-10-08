@@ -197,3 +197,68 @@ jobs:
           php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/Phase10CheckInSyncTest.php'; exit(unit_summary());"
           php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/Phase13LegacyAdminTest.php'; exit(unit_summary());"
           php 02-licensing/tests/run-phase2-race.php
+
+  studio-e2e:
+    name: Studio builder e2e (Playwright)
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, mbstring, sodium, curl, json, openssl, dom, xml
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: 01-client/plugins/studio-builder/ui/package-lock.json
+
+      - name: Install UI dependencies and Chromium
+        working-directory: 01-client/plugins/studio-builder/ui
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Build and provision the local sandbox
+        working-directory: 01-client/plugins/studio-builder/ui
+        env:
+          SBX_DB_HOST: 127.0.0.1
+          SBX_DB_PORT: '3306'
+          SBX_DB_USER: root
+          SBX_DB_PASS: root
+        run: bash e2e/sandbox.sh "$RUNNER_TEMP/kohevo-studio-sandbox"
+
+      - name: Run the Studio builder Playwright suites
+        working-directory: 01-client/plugins/studio-builder/ui
+        env:
+          SBX_DIR: ${{ runner.temp }}/kohevo-studio-sandbox/site
+        run: npm run test:e2e
+
+      - name: Upload Playwright traces and screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-e2e-test-results
+          path: 01-client/plugins/studio-builder/ui/test-results
+          if-no-files-found: ignore
+          retention-days: 7

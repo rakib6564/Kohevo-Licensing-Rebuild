@@ -1,6 +1,6 @@
 // Canvas overlay (selection box, name chip, keyboard-reachable toolbar) and the bottom bar (B2-P1).
 import { test, expect } from '@playwright/test';
-import { openBuilder, frameDocument } from './helpers.mjs';
+import { openBuilder, frameDocument, settled } from './helpers.mjs';
 
 const ROWS = '[role="treeitem"]';
 
@@ -12,6 +12,7 @@ async function ensureSections(page, n) {
     await page.getByRole('button', { name: /Add section/ }).first().click();
     await expect.poll(() => page.locator(ROWS).count(), { timeout: 15_000 }).toBeGreaterThan(count);
   }
+  await settled(page);
 }
 
 async function firstSectionId(page) {
