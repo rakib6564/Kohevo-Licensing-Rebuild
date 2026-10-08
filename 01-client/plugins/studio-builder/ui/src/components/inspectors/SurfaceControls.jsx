@@ -7,6 +7,7 @@
 
 import { useId, useState } from 'react';
 import { ColorField, DraftText } from './StyleControls.jsx';
+import { Icon } from './InspectorIcons.jsx';
 import { asObject } from '../../core/doc.mjs';
 import { CORNERS, FILTER, OPTIONS, SIDES, TRANSFORM, getPath, setPath, setPaths } from '../../core/styleSurface.mjs';
 import { t } from '../../core/messages.mjs';
@@ -117,16 +118,8 @@ export function SpacingBox({ id, group, label, get, putAll, placeholder = '0' })
   const values = SIDES.map((s) => get(`${group}.${s}`));
   const [linked, setLinked] = useState(() => values.every((v) => v === values[0]));
   return (
-    <fieldset className="sbx-fieldset sbx-spacing">
+    <fieldset className="sbx-fieldset sbx-spacing sbx-spacing--box">
       <legend>{label}</legend>
-      <button
-        type="button"
-        className="sbx-btn sbx-btn--xs sbx-spacing__link"
-        aria-pressed={linked}
-        onClick={() => setLinked((v) => !v)}
-      >
-        {linked ? t('sides_linked') : t('sides_unlinked')}
-      </button>
       <div className="sbx-spacing__grid">
         {SIDES.map((side) => (
           <DraftText
@@ -139,6 +132,15 @@ export function SpacingBox({ id, group, label, get, putAll, placeholder = '0' })
             onCommit={(v) => putAll((linked ? SIDES : [side]).map((s) => [`${group}.${s}`, v]))}
           />
         ))}
+        <button
+          type="button"
+          className="sbx-iconbtn sbx-spacing__link"
+          aria-pressed={linked}
+          onClick={() => setLinked((v) => !v)}
+        >
+          <Icon name="link" size={14} />
+          <span className="sbx-sr-only">{linked ? t('sides_linked') : t('sides_unlinked')}</span>
+        </button>
       </div>
     </fieldset>
   );

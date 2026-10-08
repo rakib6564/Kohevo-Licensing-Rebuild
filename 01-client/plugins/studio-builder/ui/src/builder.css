@@ -2757,6 +2757,8 @@ html, body.sbx-body {
   .sbx-left .sbx-spacing__grid { gap: 8px 12px; }
   .sbx-left .sbx-inspector__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .sbx-left .sbx-inspector__actions .sbx-btn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 10px; font-size: 13px; }
+  .sbx-left .sbx-iconbtn { width: 44px; height: 44px; }
+  .sbx-left .sbx-inspector__tools { gap: 8px; }
   .sbx-left .sbx-sheet-close { min-width: 44px; }
   .sbx-left .sbx-inspector .sbx-tree__action { min-width: 44px; min-height: 44px; }
 }
@@ -2785,3 +2787,67 @@ html, body.sbx-body {
 :where(.sbx-shell, .sbx-dialog) select { color-scheme: dark; }
 :where(.sbx-dialog, .sbx-inspector-host, .sbx-left) :where(a:not([class])) { color: var(--sbx-accent-text); text-decoration: underline; text-underline-offset: 2px; }
 :where(.sbx-dialog, .sbx-inspector-host, .sbx-left) :where(a:not([class])):hover { color: var(--sbx-text-bright); }
+
+/* ── Inspector restyle (reference D01/D9): icon-tile header, pill tabs, icon + chevron rows, padding box ─────────── */
+.sbx-ihead { gap: 12px; margin: 0 0 12px; }
+.sbx-ihead__icon { width: 36px; height: 36px; align-items: center; justify-content: center; border-radius: 9px; background: var(--sbx-accent-tint); border: 1px solid var(--sbx-accent-border); color: var(--sbx-accent-text); }
+.sbx-ihead .sbx-inspector__title { font-size: 14px; font-weight: 600; line-height: 1.25; }
+.sbx-ihead__type { font-size: 12px; color: var(--sbx-muted); line-height: 1.3; }
+
+.sbx-iconbtn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 1px solid var(--sbx-border); border-radius: 7px; background: rgba(255, 255, 255, 0.03); color: var(--sbx-muted); cursor: pointer; font: inherit; }
+.sbx-iconbtn:hover:not(:disabled) { color: var(--sbx-text-bright); border-color: var(--sbx-border-strong); background: rgba(255, 255, 255, 0.07); }
+.sbx-iconbtn:disabled { opacity: 0.35; cursor: default; }
+.sbx-iconbtn[aria-pressed='true'] { color: var(--sbx-accent-text); border-color: var(--sbx-accent-border); background: var(--sbx-accent-tint); }
+.sbx-iconbtn.is-danger:hover:not(:disabled) { color: var(--sbx-danger); border-color: var(--sbx-error-border); background: var(--sbx-error-bg); }
+.sbx-inspector__tools { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+
+.sbx-isearch { margin: 0 0 10px; }
+.sbx-isearch .sbx-input { background: rgba(255, 255, 255, 0.03); }
+
+/* Content · Style · Advanced as a segmented pill, not an underlined strip. */
+.sbx-inspector .sbx-tabs { gap: 3px; padding: 3px; margin: 0 0 8px; border: 1px solid var(--sbx-border); border-radius: 9px; background: rgba(0, 0, 0, 0.25); }
+.sbx-inspector .sbx-tab { flex-direction: row; padding: 6px 8px; border: 0; border-radius: 7px; font-size: 12px; font-weight: 500; background: transparent; }
+.sbx-inspector .sbx-tab:hover { background: rgba(255, 255, 255, 0.05); color: var(--sbx-text-bright); }
+.sbx-inspector .sbx-tab.is-active { background: var(--sbx-accent); color: var(--sbx-accent-ink); font-weight: 600; border: 0; }
+
+.sbx-isec { border-top: 0; border-bottom: 1px solid var(--sbx-border); }
+.sbx-isec:last-child { border-bottom: 0; }
+.sbx-isec__toggle { gap: 10px; padding: 11px 4px; font-weight: 500; font-size: 13px; border-radius: 7px; color: var(--sbx-text); }
+.sbx-isec__toggle:hover { background: rgba(255, 255, 255, 0.04); }
+.sbx-isec__icon { flex: none; color: var(--sbx-muted); }
+.sbx-isec.is-open > .sbx-isec__heading .sbx-isec__icon { color: var(--sbx-accent-text); }
+.sbx-isec__chevron { display: inline-flex; width: 14px; margin-left: 4px; transition: transform 0.15s ease; }
+.sbx-isec.is-open > .sbx-isec__heading .sbx-isec__chevron { transform: rotate(90deg); }
+.sbx-isec__summary { max-width: 45%; }
+.sbx-isec__body { padding: 4px 4px 14px; }
+
+/* Controls inside the Inspector: quieter group borders, tighter labels. */
+.sbx-inspector .sbx-fieldset { border: 0; border-top: 1px solid var(--sbx-border); border-radius: 0; padding: 8px 0 0; margin: 0 0 10px; }
+.sbx-inspector .sbx-fieldset legend { padding: 0 8px 0 0; font-size: 11.5px; font-weight: 500; color: var(--sbx-muted); }
+.sbx-inspector .sbx-field__label { font-weight: 500; color: var(--sbx-muted); font-size: 11.5px; }
+.sbx-segmented-pills { padding: 3px; gap: 3px; border: 1px solid var(--sbx-border); border-radius: 9px; background: rgba(0, 0, 0, 0.25); }
+.sbx-segmented-pill { flex: 1 1 auto; border: 0; border-radius: 7px; padding: 5px 10px; color: var(--sbx-muted); }
+.sbx-segmented-pill:hover { background: rgba(255, 255, 255, 0.06); color: var(--sbx-text-bright); border: 0; }
+.sbx-segmented-pill.is-active { background: var(--sbx-accent); color: var(--sbx-accent-ink); border: 0; }
+
+/* Margin and padding as the box in the reference: top over, left · link · right across, bottom under. */
+.sbx-spacing--box .sbx-spacing__grid { grid-template-columns: 1fr 34px 1fr; grid-template-areas: '. top .' 'left link right' '. bottom .'; gap: 6px; align-items: center; justify-items: stretch; padding: 8px; border: 1px solid var(--sbx-border); border-radius: 9px; background: rgba(0, 0, 0, 0.2); }
+.sbx-spacing--box .sbx-spacing__grid > .sbx-field { margin: 0; }
+.sbx-spacing--box .sbx-spacing__grid > .sbx-field:nth-child(1) { grid-area: top; }
+.sbx-spacing--box .sbx-spacing__grid > .sbx-field:nth-child(2) { grid-area: right; }
+.sbx-spacing--box .sbx-spacing__grid > .sbx-field:nth-child(3) { grid-area: bottom; }
+.sbx-spacing--box .sbx-spacing__grid > .sbx-field:nth-child(4) { grid-area: left; }
+.sbx-spacing--box .sbx-field__label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.sbx-spacing--box .sbx-spacing__grid input { text-align: center; padding-left: 4px; padding-right: 4px; }
+.sbx-spacing--box .sbx-spacing__link { grid-area: link; justify-self: center; margin: 0; }
+.sbx-isec__title { flex: 1 1 auto; min-width: 0; }
+.sbx-isec__summary { margin-left: 0; flex: 0 1 auto; }
+.sbx-spacing--box .sbx-spacing__grid { grid-template-columns: 1fr 64px 1fr; }
+:where(.sbx-shell, .sbx-dialog) select:not([multiple]) {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 26px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+}

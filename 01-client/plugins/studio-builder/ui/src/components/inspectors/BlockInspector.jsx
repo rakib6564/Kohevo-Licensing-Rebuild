@@ -24,6 +24,7 @@ import { STYLE_TOKEN_CATEGORIES, tokensFor } from '../../core/fields.mjs';
 import { MEDIA_TYPES } from '../../core/inspectorSections.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
+import { IconButton } from './InspectorIcons.jsx';
 
 /** Mirrors CanonicalDocumentSchema::Z_INDEX_MIN / Z_INDEX_MAX. */
 const Z_INDEX_MIN = -999;
@@ -230,11 +231,11 @@ export function BlockInspector({ info }) {
       def={def}
       header={<InspectorHeader node={block} def={def} />}
       actions={(
-        <div className="sbx-inspector__actions" role="group" aria-label={def.label}>
-          <button type="button" className="sbx-btn sbx-btn--xs" disabled={!up} onClick={() => moveBlockTo(block.id, up)}>↑ {t('move_up')}</button>
-          <button type="button" className="sbx-btn sbx-btn--xs" disabled={!down} onClick={() => moveBlockTo(block.id, down)}>↓ {t('move_down')}</button>
-          <button type="button" className="sbx-btn sbx-btn--xs" disabled={!indent} onClick={() => moveBlockTo(block.id, indent)}>→ {t('indent')}</button>
-          <button type="button" className="sbx-btn sbx-btn--xs" disabled={!outdent} onClick={() => moveBlockTo(block.id, outdent)}>← {t('outdent')}</button>
+        <div className="sbx-inspector__tools" role="group" aria-label={def.label}>
+          <IconButton icon="up" label={t('move_up')} disabled={!up} onClick={() => moveBlockTo(block.id, up)} />
+          <IconButton icon="down" label={t('move_down')} disabled={!down} onClick={() => moveBlockTo(block.id, down)} />
+          <IconButton icon="indent" label={t('indent')} disabled={!indent} onClick={() => moveBlockTo(block.id, indent)} />
+          <IconButton icon="outdent" label={t('outdent')} disabled={!outdent} onClick={() => moveBlockTo(block.id, outdent)} />
         </div>
       )}
       renderSection={(id) => (sections[id] ? sections[id]() : null)}
