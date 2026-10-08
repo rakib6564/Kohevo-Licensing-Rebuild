@@ -958,6 +958,32 @@ final class StudioApplicationService
     }
 
     /**
+     * Translate the Add-panel copy of one block manifest. The registry stays locale-neutral
+     * (its manifest is pinned by a fixture); the active admin locale is applied here. Keys are
+     * `studio_block_<type with dots as underscores>_title|desc`; the English default is used
+     * when the i18n layer is down or a block has no translation.
+     *
+     * @param array<string, mixed> $block
+     * @return array<string, mixed>
+     */
+    private static function translateBlockCopy(array $block): array
+    {
+        $slug = str_replace('.', '_', (string) ($block['type'] ?? ''));
+        foreach (['title' => 'title', 'description' => 'desc'] as $field => $suffix) {
+            $default = (string) ($block[$field] ?? '');
+            if ($default === '' || !\function_exists('__')) {
+                continue;
+            }
+            try {
+                $block[$field] = (string) \__("studio_block_{$slug}_{$suffix}", $default);
+            } catch (\Throwable $ignored) {
+                $block[$field] = $default;
+            }
+        }
+        return $block;
+    }
+
+    /**
      * Everything the builder needs to generate its palette and property panels,
      * as transport-safe DATA: block manifests (filtered by this tenant's
      * entitlements and this actor's permissions), the parameter schemas of the
@@ -991,7 +1017,10 @@ final class StudioApplicationService
         }
 
         return [
-            'blocks'      => $this->registry->editorManifests($entitled, static fn(string $perm): bool => $actor->can($perm)),
+            'blocks'      => array_map(
+                static fn(array $block): array => self::translateBlockCopy($block),
+                $this->registry->editorManifests($entitled, static fn(string $perm): bool => $actor->can($perm)),
+            ),
             'providers'   => $providers,
             'tokens'      => $tokens,
             'vocabulary'  => [

@@ -30,158 +30,33 @@ import {
 
 export const DRAG_TYPE_NEW = 'application/x-kohevo-studio-block-type';
 
-const BLOCK_META = {
-  'core.hero': {
-    get title() { return t('pal_hero'); },
-    get desc() { return t('pal_lead_with_a_clear_proposition'); },
-    icon: (s) => <IconRocket size={s} />,
-  },
-  'core.heading': {
-    get title() { return t('pal_heading'); },
-    get desc() { return t('pal_create_hierarchy'); },
-    icon: (s) => <IconHeading size={s} />,
-  },
-  'core.text': {
-    get title() { return t('pal_text'); },
-    get desc() { return t('pal_plain_text_body_copy'); },
-    icon: (s) => <IconPilcrow size={s} />,
-  },
-  'core.rich_text': {
-    get title() { return t('pal_rich_text'); },
-    get desc() { return t('pal_formatted_copy_body_content'); },
-    icon: (s) => <IconPilcrow size={s} />,
-  },
-  'core.image': {
-    get title() { return t('pal_image'); },
-    get desc() { return t('pal_media_library_asset'); },
-    icon: (s) => <IconImage size={s} />,
-  },
-  'core.button': {
-    get title() { return t('pal_cta_banner'); },
-    get desc() { return t('pal_close_with_an_action'); },
-    icon: (s) => <IconArrowUpRight size={s} />,
-  },
-  'core.query_loop': {
-    get title() { return t('pal_services_grid'); },
-    get desc() { return t('pal_live_service_dynamic_posts'); },
-    icon: (s) => <IconGridPanes size={s} />,
-  },
-  'core.feature_list': {
-    get title() { return t('pal_feature_list'); },
-    get desc() { return t('pal_highlights_feature_cards'); },
-    icon: (s) => <IconListCheck size={s} />,
-  },
-  'core.container': {
-    get title() { return t('pal_container'); },
-    get desc() { return t('pal_inner_constraint_container'); },
-    icon: (s) => <IconBox size={s} />,
-  },
-  'layout.section': {
-    get title() { return t('pal_section'); },
-    get desc() { return t('pal_full_width_layout_section'); },
-    icon: (s) => <IconLayoutSection size={s} />,
-  },
-  'layout.container': {
-    get title() { return t('pal_container'); },
-    get desc() { return t('pal_constrained_width_container'); },
-    icon: (s) => <IconBox size={s} />,
-  },
-  'layout.flex': {
-    get title() { return t('pal_flex'); },
-    get desc() { return t('pal_flexible_row_or_column_layout'); },
-    icon: (s) => <IconBox size={s} />,
-  },
-  'layout.grid': {
-    get title() { return t('pal_grid'); },
-    get desc() { return t('pal_multi_column_responsive_grid'); },
-    icon: (s) => <IconGridPanes size={s} />,
-  },
-  'core.gallery': {
-    get title() { return t('pal_gallery'); },
-    get desc() { return t('pal_media_image_gallery'); },
-    icon: (s) => <IconGallery size={s} />,
-  },
-  'core.video': {
-    get title() { return t('pal_video'); },
-    get desc() { return t('pal_responsive_video_player'); },
-    icon: (s) => <IconVideo size={s} />,
-  },
-  'core.form': {
-    get title() { return t('pal_form'); },
-    get desc() { return t('pal_interactive_form_builder'); },
-    icon: (s) => <IconForm size={s} />,
-  },
-  'core.modal': {
-    get title() { return t('pal_modal'); },
-    get desc() { return t('pal_pop_up_modal_dialog'); },
-    icon: (s) => <IconBox size={s} />,
-  },
-  'layout.offcanvas': {
-    get title() { return t('pal_offcanvas'); },
-    get desc() { return t('pal_slide_out_navigation_drawer'); },
-    icon: (s) => <IconLayoutSection size={s} />,
-  },
-  'theme.post_title': {
-    get title() { return t('pal_post_title'); },
-    get desc() { return t('pal_dynamic_article_heading'); },
-    icon: (s) => <IconHeading size={s} />,
-  },
-  'theme.post_content': {
-    get title() { return t('pal_post_content'); },
-    get desc() { return t('pal_dynamic_post_body_copy'); },
-    icon: (s) => <IconPilcrow size={s} />,
-  },
-  'theme.post_meta': {
-    get title() { return t('pal_post_meta'); },
-    get desc() { return t('pal_author_date_category_info'); },
-    icon: (s) => <IconListCheck size={s} />,
-  },
-  'theme.archive_title': {
-    get title() { return t('pal_archive_title'); },
-    get desc() { return t('pal_taxonomy_archive_heading'); },
-    icon: (s) => <IconHeading size={s} />,
-  },
-  'theme.search_box': {
-    get title() { return t('pal_search_box'); },
-    get desc() { return t('pal_site_search_input_box'); },
-    icon: (s) => <IconSearch size={s} />,
-  },
-  'core.spacer': {
-    get title() { return t('pal_spacer'); },
-    get desc() { return t('pal_tune_vertical_rhythm'); },
-    icon: (s) => <IconSpacer size={s} />,
-  },
-  'core.divider': {
-    get title() { return t('pal_divider'); },
-    get desc() { return t('pal_a_horizontal_rule'); },
-    icon: (s) => <IconDivider size={s} />,
-  },
-  'core.tabs': {
-    get title() { return t('pal_tabs'); },
-    get desc() { return t('pal_switch_between_panels_in_place'); },
-    icon: (s) => <IconGridPanes size={s} />,
-  },
-  'core.accordion': {
-    get title() { return t('pal_accordion'); },
-    get desc() { return t('pal_stacked_rows_that_expand_ideal_for_faqs'); },
-    icon: (s) => <IconListCheck size={s} />,
-  },
-  'core.carousel': {
-    get title() { return t('pal_carousel'); },
-    get desc() { return t('pal_image_and_testimonial_slides_with_dots'); },
-    icon: (s) => <IconGallery size={s} />,
-  },
-  'core.stats': {
-    get title() { return t('pal_stats'); },
-    get desc() { return t('pal_animated_figures_that_count_up'); },
-    icon: (s) => <IconGridDots size={s} />,
-  },
+/**
+ * Add-panel icons by the manifest's `icon` name (the server owns title, description, category and
+ * icon for every block, so a new or third-party block never falls back to a generic card).
+ */
+const ICON_BY_NAME = {
+  rocket: IconRocket,
+  heading: IconHeading,
+  pilcrow: IconPilcrow,
+  image: IconImage,
+  'arrow-up-right': IconArrowUpRight,
+  'grid-panes': IconGridPanes,
+  'grid-dots': IconGridDots,
+  spacer: IconSpacer,
+  divider: IconDivider,
+  box: IconBox,
+  'layout-section': IconLayoutSection,
+  video: IconVideo,
+  gallery: IconGallery,
+  form: IconForm,
+  search: IconSearch,
+  'list-check': IconListCheck,
+  quotes: IconQuotes,
 };
 
 function renderBlockIcon(type, icon, label) {
-  if (BLOCK_META[type] && BLOCK_META[type].icon) {
-    return BLOCK_META[type].icon(18);
-  }
+  const Named = ICON_BY_NAME[String(icon || '')];
+  if (Named) return <Named size={18} />;
   const i = (icon || '').toLowerCase();
   if (i.includes('hero') || i.includes('rocket')) return <IconRocket size={18} />;
   if (i.includes('heading') || i.includes('title')) return <IconHeading size={18} />;
@@ -264,7 +139,6 @@ function providerNote(def) {
 }
 
 function PaletteCard({ def, query, onInsert }) {
-  const meta = BLOCK_META[def.type] || {};
   return (
     <button
       type="button"
@@ -272,13 +146,13 @@ function PaletteCard({ def, query, onInsert }) {
       draggable
       onDragStart={(e) => { e.dataTransfer.setData(DRAG_TYPE_NEW, def.type); e.dataTransfer.effectAllowed = 'copy'; }}
       onClick={() => onInsert(def.type)}
-      aria-label={`${t('insert')} ${meta.title || def.label}`}
+      aria-label={`${t('insert')} ${def.title || def.label}`}
       data-query={query}
     >
       <div className="sbx-palette-card__icon-badge" aria-hidden="true">{renderBlockIcon(def.type, def.icon, def.label)}</div>
       <div className="sbx-palette-card__content">
-        <span className="sbx-palette-card__title">{meta.title || def.label}</span>
-        <span className="sbx-palette-card__desc">{isDynamicBlock(def) ? providerNote(def) : (meta.desc || def.description || '')}</span>
+        <span className="sbx-palette-card__title">{def.title || def.label}</span>
+        <span className="sbx-palette-card__desc">{isDynamicBlock(def) ? providerNote(def) : (def.description || '')}</span>
       </div>
       <span className="sbx-palette-card__plus-btn" aria-hidden="true"><IconPlus size={14} /></span>
     </button>
@@ -373,9 +247,8 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
     const list = asList(manifest.blocks);
     const result = [];
     for (const b of list) {
-      const meta = BLOCK_META[b.type] || {};
-      const title = meta.title || b.label;
-      const desc = meta.desc || b.description || t('pal_block_component_fallback');
+      const title = b.title || b.label;
+      const desc = b.description || t('pal_block_component_fallback');
       if (q && !`${title} ${desc} ${b.category} ${b.type}`.toLowerCase().includes(q)) {
         continue;
       }

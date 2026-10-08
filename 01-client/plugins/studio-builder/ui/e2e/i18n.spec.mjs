@@ -73,3 +73,15 @@ test('block inspector controls are French (tabs, placeholders, select options)',
     }
   }
 });
+
+test('Add panel cards come from the manifest and are French', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'desktop Add panel');
+  await openFrench(page);
+  await page.getByRole('tab', { name: 'Ajouter' }).click();
+  await page.getByRole('tab', { name: /Éléments/ }).click();
+  const titles = await page.locator('.sbx-palette-card__title').allTextContents();
+  expect(titles).toEqual(expect.arrayContaining(['Héros', 'Titre', 'Bouton', 'Grille']));
+  expect(titles.join('|')).not.toMatch(/\b(Hero|Heading|Button|Grid)\b/);
+  const descs = (await page.locator('.sbx-palette-card__desc').allTextContents()).join('|');
+  expect(descs).toContain('Une proposition claire en tête');
+});
