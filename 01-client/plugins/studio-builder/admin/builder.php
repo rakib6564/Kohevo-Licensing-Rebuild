@@ -161,6 +161,7 @@ $sbBoot = [
         'grid_toggle' => __('studio_ui_grid_toggle', 'Show or hide the column grid'),
         'bulk_actions' => __('studio_ui_bulk_actions', 'Actions for the selected layers'),
         'bulk_selected' => __('studio_ui_bulk_selected', '{count} selected'),
+        'multi_select_hint' => __('studio_ui_multi_select_hint', 'Select a single layer to edit its properties. Use the Layers panel to lock, duplicate or remove the selection.'),
         'bulk_remove_confirm' => __('studio_ui_bulk_remove_confirm', 'Remove {count} selected items?'),
         'clear_selection' => __('studio_ui_clear_selection', 'Clear'),
         'palette_dynamic' => __('studio_ui_palette_dynamic', 'Dynamic'),

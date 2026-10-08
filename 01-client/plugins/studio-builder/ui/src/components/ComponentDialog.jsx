@@ -5,13 +5,13 @@
 
 import { useMemo, useState } from 'react';
 import { Dialog } from './Dialog.jsx';
-import { useEditor, useEngineState } from './EditorContext.jsx';
+import { useEngineState, useSelection } from './EditorContext.jsx';
 import { t } from '../core/messages.mjs';
 import { findNode, isGlobalSection } from '../core/doc.mjs';
 import { slugify } from '../core/library.mjs';
 
 export function ComponentDialog({ onClose, onCreate }) {
-  const { selection } = useEditor();
+  const { selection } = useSelection();
   const working = useEngineState((s) => s.working);
   const selectedSection = useMemo(() => {
     const info = selection ? findNode(working, selection) : null;

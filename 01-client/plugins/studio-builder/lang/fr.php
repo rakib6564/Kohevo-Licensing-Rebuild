@@ -123,6 +123,7 @@ return [
     'studio_ui_grid_toggle' => 'Afficher ou masquer la grille de colonnes',
     'studio_ui_bulk_actions' => 'Actions pour les calques sélectionnés',
     'studio_ui_bulk_selected' => '{count} sélectionnés',
+    'studio_ui_multi_select_hint' => 'Sélectionnez un seul calque pour modifier ses propriétés. Utilisez le panneau Calques pour verrouiller, dupliquer ou supprimer la sélection.',
     'studio_ui_bulk_remove_confirm' => 'Supprimer les {count} éléments sélectionnés ?',
     'studio_ui_clear_selection' => 'Effacer',
     'studio_ui_palette_dynamic' => 'Dynamique',

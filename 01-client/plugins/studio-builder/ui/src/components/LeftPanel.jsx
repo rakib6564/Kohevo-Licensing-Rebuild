@@ -5,7 +5,7 @@
 // Mobile: Responsive slide-up bottom sheet with native-app touch workflow.
 
 import { memo, useEffect, useState } from 'react';
-import { useEditor, useEngineState } from './EditorContext.jsx';
+import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { BlockPalette } from './BlockPalette.jsx';
 import { Outline } from './Outline.jsx';
 import { LibraryPanel } from './LibraryPanel.jsx';
@@ -34,9 +34,13 @@ export const LeftPanel = memo(function LeftPanel({
   mobileOpen = false,
   onCloseMobile = () => {},
 }) {
-  const { selection, manifest, setLocked } = useEditor();
+  const { manifest, setLocked } = useEditor();
+  const { selection, selectedIds } = useSelection();
   const working = useEngineState((s) => s.working);
   const info = selection ? findNode(working, selection) : null;
+  // Several nodes selected: the Inspector shows the count, not one node's properties.
+  const multi = selectedIds.length > 1;
+  const inspected = multi ? null : info;
   const locked = !!info && effectivelyLocked(lockIndex(working), info.node.id);
   const ownLock = !!info && isLocked(info.node);
 
@@ -181,7 +185,7 @@ export const LeftPanel = memo(function LeftPanel({
           className="sbx-left__body sbx-left__body--inspector"
         >
           <aside className="sbx-inspector-host" aria-label={t('inspector')}>
-            {info && locked && (
+            {inspected && locked && (
               <div className="sbx-lock-banner" role="status" data-testid="lock-banner">
                 <span>{ownLock ? t('layer_locked_note') : t('layer_locked_by_parent')}</span>
                 {ownLock && (
@@ -190,10 +194,16 @@ export const LeftPanel = memo(function LeftPanel({
               </div>
             )}
             <fieldset className="sbx-lock-fieldset" disabled={locked}>
-              {info && info.kind === 'block' && <BlockInspector key={info.node.id} info={info} />}
-              {info && info.kind === 'section' && <SectionInspector key={info.node.id} info={info} />}
+              {inspected && inspected.kind === 'block' && <BlockInspector key={inspected.node.id} info={inspected} />}
+              {inspected && inspected.kind === 'section' && <SectionInspector key={inspected.node.id} info={inspected} />}
             </fieldset>
-            {!info && (
+            {multi && (
+              <div className="sbx-inspector-empty" data-testid="inspector-multi" role="status">
+                <h3 className="sbx-inspector-empty__title">{t('bulk_selected', { count: selectedIds.length })}</h3>
+                <p className="sbx-inspector-empty__desc">{t('multi_select_hint')}</p>
+              </div>
+            )}
+            {!info && !multi && (
               <div className="sbx-inspector-empty">
                 <div className="sbx-inspector-empty__icon">
                   <IconSliders size={28} />

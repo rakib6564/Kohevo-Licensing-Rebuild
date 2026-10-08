@@ -5,7 +5,7 @@
 // action toolbar, responsive viewport scaling, and multi-mode zoom controls.
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useEditor, useEngineState } from './EditorContext.jsx';
+import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { attachCanvas, markSelected } from '../core/canvas.mjs';
 import { patchCanvas } from '../core/canvasPatch.mjs';
 import { isStructuralChange, syncLiveDOM } from '../core/canvasLiveSync.mjs';
@@ -33,7 +33,8 @@ function blockNavigation(doc) {
 }
 
 export const CanvasArea = memo(function CanvasArea({ interactive = true, collapsed = false, onToggleCollapse = null, onReloadCanvas = null }) {
-  const { boot, selection, select, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode, applyOp } = useEditor();
+  const { boot, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode, applyOp } = useEditor();
+  const { selection, selectedIds, select, pick } = useSelection();
   const working = useEngineState((s) => s.working);
   const base = useEngineState((s) => s.base);
   const baseRef = useRef(null);
@@ -56,6 +57,10 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   selectionRef.current = selection;
   const selectRef = useRef(select);
   selectRef.current = select;
+  const pickRef = useRef(pick);
+  pickRef.current = pick;
+  const selectedIdsRef = useRef(selectedIds);
+  selectedIdsRef.current = selectedIds;
   const stageRef = useRef(null);
   const [stage, setStage] = useState({ width: 0, height: 0 });
   const paintedRef = useRef(null);
@@ -237,13 +242,13 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       return;
     }
     detachRef.current = attachCanvas(doc, {
-      onSelect: (id) => selectRef.current(id),
+      onSelect: (id, _type, mods) => pickRef.current(id, mods || {}),
       onDrop: (drop) => onCanvasDropRef.current(drop),
       onAction: (action, id) => actionRef.current(action, id),
       onInlineText: (id, text) => onInlineTextRef.current(id, text),
       isLocked: (id) => effectivelyLocked(lockIndex(workingRef.current), id),
     });
-    markSelected(doc, selectionRef.current, { scroll: false });
+    markSelected(doc, selectionRef.current, { scroll: false, ids: selectedIdsRef.current });
   };
 
   const onLoad = () => {
@@ -265,8 +270,8 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   useEffect(() => {
     let doc = null;
     try { doc = frameRef.current && frameRef.current.contentDocument; } catch { doc = null; }
-    if (doc && doc.readyState !== 'loading') markSelected(doc, selection);
-  }, [selection]);
+    if (doc && doc.readyState !== 'loading') markSelected(doc, selection, { ids: selectedIds });
+  }, [selection, selectedIds]);
 
   const unsaved = status === STATUS.DIRTY || status === STATUS.SAVING;
 

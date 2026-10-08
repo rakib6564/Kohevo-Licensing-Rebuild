@@ -11,7 +11,7 @@
 // every change is a canonical operation sent through the command API.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { EditorContext, useEditor } from './EditorContext.jsx';
+import { EditorContext, SelectionContext, useSelection } from './EditorContext.jsx';
 import { TopBar } from './TopBar.jsx';
 import { LeftPanel } from './LeftPanel.jsx';
 import { CanvasArea } from './CanvasArea.jsx';
@@ -32,7 +32,10 @@ import { createTransport } from '../core/api.mjs';
 import { SyncEngine, STATUS } from '../core/sync.mjs';
 import { EditLock } from '../core/lock.mjs';
 import { t, errorMessage } from '../core/messages.mjs';
-import { blockDefinition, findNode, insertionPoint, nodeLabel, sectionsOf } from '../core/doc.mjs';
+import { blockDefinition, documentRows, findNode, insertionPoint, nodeLabel, sectionsOf } from '../core/doc.mjs';
+import {
+  EMPTY_SELECTION, actionIds, clickSelect, pruneSelection, remapSelection, selectOnly, selectionCount, setFocus as focusNode, setHover as hoverNode,
+} from '../core/selection.mjs';
 import { defaultBindings, setupFields } from '../core/fields.mjs';
 import { insertTargetFor, referenceIndexFor, slugify } from '../core/library.mjs';
 import * as ops from '../core/operations.mjs';
@@ -45,9 +48,15 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     () => injectedTransport || createTransport({ apiUrl: boot.apiUrl, csrfToken: boot.csrfToken }),
     [boot.apiUrl, boot.csrfToken, injectedTransport],
   );
-  const [selection, setSelection] = useState(null);
+  // The selection model (primary, ids, hover, focus). `selection` stays the primary id for
+  // every caller that only cares about "the" selected node.
+  const [sel, setSel] = useState(EMPTY_SELECTION);
+  const selModelRef = useRef(sel);
+  selModelRef.current = sel;
+  const selection = sel.primary;
   const selectionRef = useRef(null);
   selectionRef.current = selection;
+  const setSelection = useCallback((id) => setSel((s) => selectOnly(s, id)), []);
   const [announcement, setAnnouncement] = useState('');
   const [viewportKey, setViewportKey] = useState('desktop');
   const [manifest, setManifest] = useState(null);
@@ -71,7 +80,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     transport,
     pageId: boot.pageId,
     onRemap: (tmp, real) => {
-      if (selectionRef.current === tmp) setSelection(real);
+      setSel((s) => remapSelection(s, new Map([[tmp, real]])));
     },
     onEvent: (e) => {
       switch (e.type) {
@@ -153,6 +162,25 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     setSelection(id);
     if (id && announceIt) announce(t('announce_selected', { label: labelOf(id) }));
   }, [announce, labelOf]);
+
+  /** A click with modifiers: plain replaces, Ctrl/Cmd toggles, Shift selects the range from the primary. */
+  const pick = useCallback((id, mods = {}, rows = null) => {
+    const next = clickSelect(selModelRef.current, rows || documentRows(engine.getSnapshot().working), id, mods);
+    selModelRef.current = next;
+    setSel(next);
+    if (!id) return;
+    if (selectionCount(next) > 1) announce(t('bulk_selected', { count: selectionCount(next) }));
+    else announce(t('announce_selected', { label: labelOf(id) }));
+  }, [engine, announce, labelOf]);
+
+  const setHover = useCallback((id) => setSel((s) => hoverNode(s, id)), []);
+  const setFocus = useCallback((id) => setSel((s) => focusNode(s, id)), []);
+
+  // Undo, a server rollback or a reload can remove nodes that are selected: drop them.
+  useEffect(() => engine.subscribe(() => {
+    const working = engine.getSnapshot().working;
+    setSel((s) => pruneSelection(s, (id) => !!findNode(working, id)));
+  }), [engine]);
 
   const applyOp = useCallback((operation, options = {}) => engine.apply(operation, options), [engine]);
 
@@ -418,17 +446,21 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
       const typing = e.target && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName));
       if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); save(); return; }
       if (typing) return;
-      if (mod && e.key.toLowerCase() === 'd' && selectionRef.current) { e.preventDefault(); duplicateNode(selectionRef.current); return; }
+      if (mod && e.key.toLowerCase() === 'd' && selectionRef.current) {
+        e.preventDefault();
+        actionIds(selModelRef.current, documentRows(engine.getSnapshot().working)).forEach((id) => duplicateNode(id));
+        return;
+      }
       if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
       if (mod && ((e.key.toLowerCase() === 'z' && e.shiftKey) || e.key.toLowerCase() === 'y')) { e.preventDefault(); redo(); return; }
       if (e.key === 'Escape' && selectionRef.current) { setSelection(null); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [save, undo, redo, duplicateNode]);
+  }, [engine, save, undo, redo, duplicateNode]);
 
   const ctx = useMemo(() => ({
-    boot, engine, manifest, transport, selection, select, announce, applyOp,
+    boot, engine, manifest, transport, announce, applyOp,
     insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf,
     viewport: viewportByKey(viewportKey),
     library, refreshLibrary, applyTemplate, insertTemplate, deleteTemplate,
@@ -436,8 +468,12 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     openSaveTemplate: () => setDialog('save_template'),
     openComponentDialog: () => setDialog('component'),
     openAiReview: () => setDialog('ai_review'),
-  }), [boot, engine, manifest, transport, selection, select, announce, applyOp, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey,
+  }), [boot, engine, manifest, transport, announce, applyOp, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey,
     library, refreshLibrary, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
+
+  const selectionCtx = useMemo(() => ({
+    sel, selection: sel.primary, selectedIds: sel.ids, select, pick, setHover, setFocus,
+  }), [sel, select, pick, setHover, setFocus]);
 
   if (loadError) {
     return (
@@ -457,6 +493,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
 
   return (
     <EditorContext.Provider value={ctx}>
+      <SelectionContext.Provider value={selectionCtx}>
       <ShellLayout
         viewportKey={viewportKey}
         onViewport={changeViewport}
@@ -499,6 +536,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
           </>
         )}
       />
+      </SelectionContext.Provider>
     </EditorContext.Provider>
   );
 }
@@ -509,7 +547,7 @@ export function ShellLayout({
   historyOpen = false, setHistoryOpen = () => {}, pendingInsert = null, onCancelInsert = () => {}, onConfirmInsert = () => {},
   onTheme = null, dialogs = null, onAiReview = null, onPackages = null,
 }) {
-  const { selection, select } = useEditor();
+  const { selection, select } = useSelection();
   const [activeTab, setActiveTab] = useState(() => (selection ? 'inspector' : 'structure'));
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);

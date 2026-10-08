@@ -360,7 +360,7 @@ export function attachCanvas(doc, handlers) {
     e.preventDefault();
     e.stopPropagation();
     const el = nodeElementFrom(e.target);
-    if (el) onSelect(el.getAttribute(NODE_ATTR), el.getAttribute(TYPE_ATTR));
+    if (el) onSelect(el.getAttribute(NODE_ATTR), el.getAttribute(TYPE_ATTR), { shift: !!e.shiftKey, toggle: !!(e.metaKey || e.ctrlKey) });
   };
 
   const dblclick = (e) => {
@@ -456,7 +456,7 @@ export function attachCanvas(doc, handlers) {
 }
 
 /** Paint the selection outline, show action bar for any block or section, and bring node into view. */
-export function markSelected(doc, nodeId, { scroll = true } = {}) {
+export function markSelected(doc, nodeId, { scroll = true, ids = null } = {}) {
   if (!doc || !doc.querySelectorAll) return;
   doc.querySelectorAll('.sbx-selected').forEach((el) => {
     if (el.classList) {
@@ -467,6 +467,14 @@ export function markSelected(doc, nodeId, { scroll = true } = {}) {
   doc.querySelectorAll(`.${BAR_CLASS}`).forEach((b) => {
     if (typeof b.remove === 'function') b.remove();
   });
+  // Several nodes selected: outline them all; the action bar belongs to the single selection only.
+  if (Array.isArray(ids) && ids.length > 1) {
+    ids.forEach((id) => {
+      const picked = doc.querySelector(`[${NODE_ATTR}="${cssEscape(id)}"]`);
+      if (picked && picked.classList && typeof picked.classList.add === 'function') picked.classList.add('sbx-selected');
+    });
+    return;
+  }
   if (!nodeId) return;
 
   const el = doc.querySelector(`[${NODE_ATTR}="${cssEscape(nodeId)}"]`);

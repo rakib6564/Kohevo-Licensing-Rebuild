@@ -147,3 +147,13 @@ test('the review dialog shows the structured diff as text, the exact-revision pr
   assert.match(stale, /Reload to review the latest revision/, 'a moved-on draft cannot be published from a stale review');
   assert.ok(!/data-testid="ai-publish"/.test(stale));
 });
+
+test('several selected nodes: the Inspector shows the count, Layers marks every row, no single-node panel', { skip: skipReason || false }, () => {
+  const html = entry.render({ manifest, document: pageDoc, selectedIds: [feature.id, hero.id] });
+  assert.match(html, /data-testid="inspector-multi"/);
+  assert.match(html, /2 selected/);
+  assert.equal((html.match(/role="treeitem"[^>]*aria-selected="true"/g) || []).length, 2, 'both rows are selected in Layers');
+  assert.ok(!/aria-label="Properties"[^>]*>[^]*sbx-field/.test(html.slice(html.indexOf('inspector-multi') - 200, html.indexOf('inspector-multi') + 200)), 'no property fields next to the multi-select note');
+  const one = entry.render({ manifest, document: pageDoc, selection: feature.id });
+  assert.ok(!/data-testid="inspector-multi"/.test(one), 'a single selection shows the normal Inspector');
+});
