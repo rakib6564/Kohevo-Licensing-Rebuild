@@ -52,6 +52,11 @@ const EN = {
   announce_renamed: '{label} renamed',
 
   inspector: 'Properties',
+  section_content: 'Content',
+  section_tokens: 'Theme tokens',
+  inspector_search: 'Search settings',
+  inspector_matches: '{n} matching sections',
+  inspector_no_match: 'No setting matches that search.',
   tab_content: 'Content',
   tab_style: 'Style',
   tab_advanced: 'Advanced',

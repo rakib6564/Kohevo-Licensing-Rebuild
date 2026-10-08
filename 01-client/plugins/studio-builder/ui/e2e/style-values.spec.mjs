@@ -1,7 +1,7 @@
 // Free-form style controls validate like the server does (B2-P3a): an invalid draft shows an inline error and is
 // never committed; a valid one commits and reaches the canvas.
 import { test, expect } from '@playwright/test';
-import { openBuilder, frameDocument, settled, sandboxPageId } from './helpers.mjs';
+import { openBuilder, frameDocument, settled, sandboxPageId, openSection } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
@@ -77,6 +77,7 @@ test('the Z-Index field cannot be set above the ceiling that keeps the platform 
     await panel.locator('[data-block-type="core.quote"]').click();
     await settled(page);
     await page.locator('[id^="sbx-blk-"][id$="-tab-advanced"]').click();
+    await openSection(page, 'stacking');
     const z = page.getByLabel('Z-Index', { exact: true });
     await expect(z).toHaveAttribute('max', '999');
     await z.fill('9999');
@@ -99,6 +100,7 @@ test('the Background controls offer only what the server accepts, and what they 
     await settled(page);
     await page.locator('[id^="sbx-blk-"][id$="-tab-style"]').click();
 
+    await openSection(page, 'background');
     const pills = page.getByRole('radiogroup', { name: 'Background type' }).getByRole('button');
     await expect(pills).toHaveText(['Image', 'Color', 'Gradient']); // no video: the server has no background video
 

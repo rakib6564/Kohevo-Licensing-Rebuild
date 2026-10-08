@@ -179,11 +179,14 @@ function GradientField({ value, onChange }) {
  * @param {Record<string, unknown>} props.style      current block style
  * @param {string[]} props.capabilities             the block's declared style keys
  * @param {(next: Record<string, unknown>) => void} props.onChange
+ * @param {string} [props.only]                  render just this section (typography, background, border, shadow, dimensions, opacity)
  * @param {boolean} [props.mediaPicker]            whether the media library picker is available to this user
  */
-export function StyleControls({ style, capabilities, onChange, mediaPicker }) {
+export function StyleControls({ style, capabilities, onChange, mediaPicker, only }) {
   const id = useId();
-  const has = (k) => capabilities.includes(k);
+  // `only` renders a single section of the stack (the Inspector shows each in its own collapsible section);
+  // the text colour belongs with Typography.
+  const has = (k) => capabilities.includes(k) && (!only || only === k || (only === 'typography' && k === 'color'));
   const typo = asObject(style.typography);
   const bg = asObject(style.background);
   const border = asObject(style.border);
