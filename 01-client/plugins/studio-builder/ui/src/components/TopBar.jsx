@@ -121,7 +121,9 @@ export const TopBar = memo(function TopBar({
       {/* ── Left Area: Brand & Document Identity ── */}
       <div className="sbx-topbar__left">
         <div className="sbx-brand-badge" title="KOHEVO STUDIO BUILDER 2.0">
-          <span className="sbx-brand-badge__logo">K</span>
+          <span className="sbx-brand-badge__logo" aria-hidden="true">
+            <svg viewBox="90 45 202 295" width="16" height="22" fill="currentColor" focusable="false"><polygon points="100,330 100,168 133,140 178,55 235,55 183,147 282,330 227,330 150,196 150,330" /></svg>
+          </span>
           <div className="sbx-brand-badge__info">
             <span className="sbx-brand-badge__title">Kohevo Studio</span>
             <span className="sbx-brand-badge__sub">Builder 2.0</span>

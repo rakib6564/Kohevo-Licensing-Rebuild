@@ -2908,3 +2908,23 @@ html, body.sbx-body {
   .sbx-preset-card__desc { grid-column: 2; grid-row: 2; font-size: 11.5px; padding-right: 22px; }
   .sbx-preset-card__insert > .sbx-palette-card__reason { grid-column: 2; grid-row: 3; }
 }
+
+/* ── Polish round: monogram, hidden scrollbars, edge-to-edge canvas, inline select rows ───────────────────── */
+.sbx-brand-badge__logo { width: 32px; height: 32px; border-radius: 9px; }
+.sbx-brand-badge__logo svg { display: block; }
+
+/* Panels still scroll; the bar is hidden. */
+.sbx-left, .sbx-left *, .sbx-right, .sbx-right *, .sbx-dialog__body, .sbx-bottombar__left { scrollbar-width: none; -ms-overflow-style: none; }
+.sbx-left::-webkit-scrollbar, .sbx-left *::-webkit-scrollbar, .sbx-right::-webkit-scrollbar, .sbx-right *::-webkit-scrollbar, .sbx-dialog__body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+/* The desktop canvas runs edge to edge: no stage gutter, no frame rounding or shadow. */
+@media (min-width: 861px) {
+  .sbx-canvas__stage { padding: 0; }
+  .sbx-canvas__fit, .sbx-canvas__device { border-radius: 0; box-shadow: none; }
+}
+
+/* Single selects read as one row: label on the left, control on the right (reference: "Container  Wide"). */
+.sbx-inspector .sbx-field:has(> select):not(.sbx-field--stacked) { display: grid; grid-template-columns: minmax(70px, 38%) minmax(0, 1fr); align-items: center; column-gap: 10px; }
+.sbx-inspector .sbx-field:has(> select) > .sbx-field__label { margin: 0; }
+.sbx-inspector .sbx-responsive .sbx-field:has(> select) { display: block; }
+@media (max-width: 860px) { .sbx-inspector .sbx-field:has(> select):not(.sbx-field--stacked) { display: block; } }

@@ -85,8 +85,8 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     return () => ro.disconnect();
   }, []);
 
-  // Stage padding is 24px a side on desktop and 2px on the phone shell; never clamp a phone up past its width.
-  const fitScale = stage.width > 0 ? Math.min(1, Math.max(isMobile ? 0.2 : 0.35, (stage.width - (isMobile ? 4 : 48)) / viewport.width)) : 1;
+  // The desktop stage has no padding (the canvas runs edge to edge); the phone shell keeps 2px a side; never clamp a phone up past its width.
+  const fitScale = stage.width > 0 ? Math.min(1, Math.max(isMobile ? 0.2 : 0.35, (stage.width - (isMobile ? 4 : 0)) / viewport.width)) : 1;
   const scale = useMemo(() => (zoomMode === 'fit' ? fitScale : zoomPercent(zoomMode, fitScale) / 100), [zoomMode, fitScale]);
   const percent = Math.round(scale * 100);
   const fitPercent = Math.round(fitScale * 100);
@@ -94,7 +94,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     if (canvasView.fitPercent !== fitPercent) setCanvasView({ fitPercent });
   }, [fitPercent, canvasView.fitPercent, setCanvasView]);
 
-  const frameHeight = stage.height > 0 ? Math.max(640, (stage.height - 48) / scale) : 900;
+  const frameHeight = stage.height > 0 ? Math.max(640, (stage.height - (isMobile ? 48 : 0)) / scale) : 900;
 
   // Direct inline text update: the canvas names the declared prop it edited (core/inlineText.mjs).
   const onInlineText = useCallback((nodeId, newText, prop) => {
