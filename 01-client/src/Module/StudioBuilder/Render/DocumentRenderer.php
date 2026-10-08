@@ -214,7 +214,8 @@ final class DocumentRenderer
             foreach ($block['attributes'] as $attrKey => $attrVal) {
                 // Same allow-list the validator enforces; re-checked here so a
                 // document stored before the rule existed can never emit a handler.
-                if (CanonicalDocumentSchema::blockAttributeIssue($attrKey, $attrVal) === null) {
+                if (CanonicalDocumentSchema::blockAttributeIssue($attrKey, $attrVal) === null
+                    && ($attrKey !== 'id' || $collector->claimId((string) $attrVal))) {
                     $attrs .= ' ' . $attrKey . '="' . Html::e((string) $attrVal) . '"';
                 }
             }

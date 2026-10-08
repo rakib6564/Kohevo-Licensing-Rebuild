@@ -61,6 +61,22 @@ final class RenderCollector
         return $class;
     }
 
+    /** @var array<string, true> */
+    private array $claimedIds = [];
+
+    /**
+     * Claim an HTML `id` for this page. The first block to ask gets it; a later block with the same id is told no,
+     * so a page never carries two elements with one id (the later one simply renders without it).
+     */
+    public function claimId(string $id): bool
+    {
+        if (isset($this->claimedIds[$id])) {
+            return false;
+        }
+        $this->claimedIds[$id] = true;
+        return true;
+    }
+
     /**
      * Register the generated rules for one block or section and return the class to put on its
      * element. `$declarations` and `$states` must come from `StyleSurface` (never from authored text).

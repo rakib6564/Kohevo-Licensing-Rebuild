@@ -2708,3 +2708,8 @@ html, body.sbx-body {
 .sbx-more { margin: 8px 0; }
 .sbx-more > summary { cursor: pointer; font-size: 12px; opacity: 0.85; padding: 4px 0; }
 .sbx-rt-hl { background: rgba(232, 115, 74, 0.28); border-radius: 2px; }
+.sbx-attr-list { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.sbx-attr-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 6px; align-items: center; }
+.sbx-attr-row code { overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+.sbx-attr-add { display: grid; gap: 6px; }
+.sbx-attr-add__name { display: flex; align-items: center; gap: 4px; font-size: 12px; }
