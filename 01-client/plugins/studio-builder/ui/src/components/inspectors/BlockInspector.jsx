@@ -13,11 +13,14 @@ import { useEditor, useEngineState } from '../EditorContext.jsx';
 import { FieldControl, ObjectFields, TokenSelect } from '../fields/FieldControl.jsx';
 import { ResponsiveSelect, VisibilityControls } from './controls.jsx';
 import { StyleControls } from './StyleControls.jsx';
+import { BorderExtras, DimensionsExtras, EffectsPane, LayoutPane, PositionPane, ShadowExtras, SpacingPane, StatesPane, TypographyExtras } from './SurfaceControls.jsx';
+import { OPTIONS } from '../../core/styleSurface.mjs';
 import { MotionInspector } from './MotionInspector.jsx';
 import { InspectorShell } from './InspectorShell.jsx';
 import { InspectorHeader } from './InspectorHeader.jsx';
 import { asList, asObject, blockDefinition, blockIndentTarget, blockMoveTarget, blockOutdentTarget } from '../../core/doc.mjs';
 import { STYLE_TOKEN_CATEGORIES, tokensFor } from '../../core/fields.mjs';
+import { MEDIA_TYPES } from '../../core/inspectorSections.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
 
@@ -116,12 +119,42 @@ export function BlockInspector({ info }) {
           </>
         )}
         <StyleControls style={style} capabilities={capabilities} only="typography" mediaPicker={boot.mediaPicker} onChange={saveStyle} />
+        <TypographyExtras style={style} onChange={saveStyle} />
       </>
     ),
     background: () => <StyleControls style={style} capabilities={capabilities} only="background" mediaPicker={boot.mediaPicker} onChange={saveStyle} />,
-    border: () => <StyleControls style={style} capabilities={capabilities} only="border" onChange={saveStyle} />,
-    shadow: () => <StyleControls style={style} capabilities={capabilities} only="shadow" onChange={saveStyle} />,
-    dimensions: () => <StyleControls style={style} capabilities={capabilities} only="dimensions" onChange={saveStyle} />,
+    border: () => (
+      <>
+        <StyleControls style={style} capabilities={capabilities} only="border" onChange={saveStyle} />
+        <BorderExtras style={style} onChange={saveStyle} />
+      </>
+    ),
+    shadow: () => (
+      <>
+        {!(style.shadow && typeof style.shadow === 'object') && <StyleControls style={style} capabilities={capabilities} only="shadow" onChange={saveStyle} />}
+        <ShadowExtras style={style} onChange={saveStyle} />
+      </>
+    ),
+    dimensions: () => (
+      <>
+        <StyleControls style={style} capabilities={capabilities} only="dimensions" onChange={saveStyle} />
+        <DimensionsExtras style={style} media={MEDIA_TYPES.has(block.type)} onChange={saveStyle} />
+      </>
+    ),
+    layout: () => <LayoutPane style={style} onChange={saveStyle} />,
+    spacing: () => <SpacingPane style={style} onChange={saveStyle} />,
+    position: () => <PositionPane style={style} onChange={saveStyle} />,
+    effects: () => <EffectsPane style={style} onChange={saveStyle} />,
+    states: () => <StatesPane states={block.style_states} onChange={(next) => save(ops.updateBlockStyleStates(block.id, next))} />,
+    tag: () => (
+      <div className="sbx-field">
+        <label className="sbx-field__label" htmlFor={`${idPrefix}-tag`}>{t('wrapper_tag')}</label>
+        <select id={`${idPrefix}-tag`} value={block.tag || 'div'} onChange={(e) => save(ops.updateBlockTag(block.id, e.target.value === 'div' ? null : e.target.value))}>
+          {OPTIONS.tags.map((tag) => <option key={tag} value={tag}>{`<${tag}>`}</option>)}
+        </select>
+        <p className="sbx-hint">{t('wrapper_tag_hint')}</p>
+      </div>
+    ),
     opacity: () => <StyleControls style={style} capabilities={capabilities} only="opacity" onChange={saveStyle} />,
     tokens: () => Object.keys(STYLE_TOKEN_CATEGORIES).filter((k) => capabilities.includes(k)).map((key) => (
       <div className="sbx-field" key={key}>

@@ -25,8 +25,8 @@ test('the registry has unique ids, known tabs and a title key for every section'
 test('a heading shows content, the full style stack and the advanced fields, in order', () => {
   const ctx = ctxOf('core.heading');
   assert.deepEqual(ids('content', ctx), ['content']);
-  assert.deepEqual(ids('style', ctx), ['align', 'typography', 'background', 'border', 'shadow', 'dimensions', 'opacity', 'tokens', 'motion', 'visibility', 'responsive']);
-  assert.deepEqual(ids('advanced', ctx), ['classes', 'stacking', 'attributes']);
+  assert.deepEqual(ids('style', ctx), ['align', 'layout', 'spacing', 'typography', 'background', 'border', 'shadow', 'dimensions', 'position', 'effects', 'opacity', 'states', 'tokens', 'motion', 'visibility', 'responsive']);
+  assert.deepEqual(ids('advanced', ctx), ['classes', 'stacking', 'tag', 'attributes']);
 });
 
 test('a media block has no Typography section, a text block does', () => {
@@ -40,9 +40,9 @@ test('a media block has no Typography section, a text block does', () => {
 
 test('a block whose definition narrows style_capabilities hides the sections it cannot take', () => {
   const narrow = inspectorContext({ id: 'blk_1', type: 'x.y', style: {} }, { style_capabilities: ['align', 'opacity'], binding_slots: [] });
-  assert.deepEqual(ids('style', narrow), ['align', 'opacity', 'motion', 'visibility', 'responsive']);
+  assert.deepEqual(ids('style', narrow), ['align', 'opacity', 'states', 'motion', 'visibility', 'responsive']);
   const bare = inspectorContext({ id: 'blk_1', type: 'x.y', style: {} }, { style_capabilities: [], binding_slots: [] });
-  assert.deepEqual(ids('style', bare), ['motion', 'visibility', 'responsive']);
+  assert.deepEqual(ids('style', bare), ['states', 'motion', 'visibility', 'responsive']); // states and motion need no capability
 });
 
 test('the Data section appears only for a block with binding slots', () => {
@@ -62,7 +62,7 @@ test('sections start open where they matter: content always; typography for text
 test('a tab with nothing flagged opens its first section, never a wall of closed headers', () => {
   const ctx = ctxOf('core.container');
   assert.deepEqual(defaultOpenIds('style', ctx), ['align']);
-  assert.deepEqual(defaultOpenIds('style', inspectorContext({ id: 'b', type: 'x.y', style: {} }, { style_capabilities: [] })), ['motion']);
+  assert.deepEqual(defaultOpenIds('style', inspectorContext({ id: 'b', type: 'x.y', style: {} }, { style_capabilities: [] })), ['states']);
 });
 
 test('summaries describe what is set, and are empty when nothing is', () => {

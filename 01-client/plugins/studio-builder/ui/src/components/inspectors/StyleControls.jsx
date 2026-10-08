@@ -24,6 +24,7 @@ import { useId, useState } from 'react';
 import { asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
 import { acceptsDraft } from '../../core/styleValues.mjs';
+import { acceptsSurfaceDraft } from '../../core/styleSurface.mjs';
 import { MediaControl } from '../fields/MediaControl.jsx';
 /**
  * A colour control that accepts a token reference or a literal hex.
@@ -32,7 +33,7 @@ import { MediaControl } from '../fields/MediaControl.jsx';
  * input is the source of truth and the swatch is a convenience that writes back
  * into it. An empty text field means "inherit".
  */
-function ColorField({ id, label, value, onChange }) {
+export function ColorField({ id, label, value, onChange }) {
   const literal = typeof value === 'string' && /^#[0-9a-f]{3,8}$/i.test(value) ? value.slice(0, 7) : '';
   // Typing `#e8` is not yet a colour: keep the draft locally and commit only
   // once it is one (or empty), so a half-typed value never reaches the document.
@@ -79,7 +80,7 @@ function ColorField({ id, label, value, onChange }) {
  * document. `key` resets the field when the value changes from elsewhere
  * (undo, responsive switch) so the DOM never disagrees with the document.
  */
-function DraftText({ id, label, value, placeholder, onCommit, hint, kind }) {
+export function DraftText({ id, label, value, placeholder, onCommit, hint, kind, path }) {
   const [error, setError] = useState(false);
   return (
     <div className="sbx-field">
@@ -98,7 +99,8 @@ function DraftText({ id, label, value, placeholder, onCommit, hint, kind }) {
           const next = e.target.value.trim();
           // `kind` names the grammar the server enforces (core/styleValues.mjs);
           // an invalid draft stays in the box with an error and is never committed.
-          if (kind && !acceptsDraft(kind, next)) {
+          // `path` names a field of the closed style surface (core/styleSurface.mjs), which is stricter than `kind`.
+          if (path ? !acceptsSurfaceDraft(path, next) : (kind && !acceptsDraft(kind, next))) {
             setError(true);
             return;
           }
