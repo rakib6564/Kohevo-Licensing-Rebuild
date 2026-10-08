@@ -2977,3 +2977,14 @@ html, body.sbx-body {
 .sbx-focal:focus-visible { box-shadow: var(--sbx-focus); outline: none; }
 .sbx-focal__dot { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--sbx-accent); border: 2px solid #fff; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5); pointer-events: none; }
 @media (max-width: 860px) { .sbx-focal { height: 120px; } .sbx-focal__dot { width: 22px; height: 22px; margin: -11px 0 0 -11px; } }
+
+/* Layers header: Layers | Pages as one segmented control, with the search and collapse button on a single compact row. */
+@media (min-width: 861px) {
+  .sbx-nav-switch { gap: 2px; padding: 3px; margin: 8px 8px 6px; border: 1px solid var(--sbx-border); border-radius: 9px; background: rgba(0, 0, 0, 0.25); }
+  .sbx-nav-switch .sbx-chip { flex: 1 1 0; justify-content: center; height: 26px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--sbx-muted); font-size: 12px; }
+  .sbx-nav-switch .sbx-chip:hover { color: var(--sbx-text-bright); background: rgba(255, 255, 255, 0.05); }
+  .sbx-nav-switch .sbx-chip.is-active { background: var(--sbx-accent); color: var(--sbx-accent-ink); }
+  .sbx-tree__nav-header { margin-bottom: 6px; gap: 6px; }
+  .sbx-tree__search { height: 28px; box-sizing: border-box; padding: 0 0.6rem; border-radius: 8px; }
+  .sbx-tree__collapse-btn { height: 28px; width: 28px; padding: 0; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; }
+}

@@ -275,13 +275,22 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
           <ColorField
             id={`${id}-tcolor`}
             label={t('text_color')}
-            value={typo.color}
-            onChange={(v) => patchNested('typography', 'color', v)}
+            value={typo.color ?? style.color}
+            onChange={(v) => {
+              // One text colour: it lives in typography.color, and an older flat `color` is folded into it
+              // (the server writes the flat one last, so leaving both would let it silently win).
+              const merged = { ...style };
+              delete merged.color;
+              const nextTypo = { ...typo };
+              if (v === undefined) delete nextTypo.color; else nextTypo.color = v;
+              if (Object.keys(nextTypo).length === 0) delete merged.typography; else merged.typography = nextTypo;
+              onChange(merged);
+            }}
           />
         </fieldset>
       )}
 
-      {has('color') && (
+      {has('color') && !capabilities.includes('typography') && (
         <ColorField
           id={`${id}-color`}
           label={t('text_color')}
