@@ -88,3 +88,40 @@ Same as P1: UI unit tests (`node --test`), Studio PHP unit and integration suite
 | 6 | 246 | 83 162 B | 31 986 B | 15.3 ms |
 
 Going from 4 to 6 costs about 3% render time and 8% HTML, with the document size unchanged, so the limit is **6** (no fallback to 5). The HTML importer keeps its own limit of 4 (`HtmlStructureMapper::MAX_CANONICAL_DEPTH`), so imports are unchanged.
+
+## 7. Outcome (as built, 2026-10-08)
+
+All three PRs are merged and deployed to `solaya` staging (each deploy backed up first).
+
+| PR | Merge | Delivered |
+|---|---|---|
+| P2a, #9 | `50b628f` | Manifest metadata (title, description, category, icon) for every block and `BLOCK_META` removed; 17 composed section presets seeded as `is_system = 1` per tenant on first use, each with a generated SVG wireframe; Add panel with category rail, "View all", cross-tab search, session-only favourites and cards that are disabled with a visible reason; the same on a phone. |
+| P2b, #10 | `cffb12a` | Nesting limit 6 (see section 4 measurement); new blocks `core.icon`, `core.list`, `core.quote`, `core.link`, `core.card`, `core.table`, `core.countdown`; element variants (Two/Three/Four columns, Stack, Row, Text area, Dropdown) as ready-set configurations of `layout.grid`, `layout.flex` and `core.form_field`; countdown runtime reveals live units and restores markup on disable. |
+| P2c, #11 | `2b93fb8` | `update_page`, `duplicate_page`, `archive_page` API actions; Layers \| Pages view with status chips and quick tools; row ⋯ menu; header and footer shown as references; pointer-event drag handle (mouse, pen, touch). |
+
+Final baselines: Studio UI node tests 177, Playwright 85 (desktop, tablet and phone projects; a CI job of its own), Studio PHP unit and integration suites green apart from the unrelated failures listed below, `check-i18n` OK.
+
+### Where it differs from the plan above
+
+- **Presets:** 17, not the spec's 16 names. Hero — Video is omitted (no video asset to show), Gallery ships empty, and no preset carries images (imagery is a design deliverable).
+- **Components tab:** Booking, Membership and Forms components only. "Testimonials" exists as a section preset (the carousel), not as a component block.
+- **Columns and Stack** are variants (cards that insert a configured grid or flex), not new types and not section presets. Variants carry properties only: no pre-filled cells, and they insert by click (a drag carries only the type).
+- **Countdown** takes its date as text with an explicit zone (`2030-01-01T00:00:00Z`), not a date picker (that needs a new field type). **Table** cells are split on `|`.
+- **Add panel "slice 4"** (drag-to-place indicators on the canvas) was never defined and was not built.
+- **Pages:** rename, duplicate and archive are in; "set homepage" stays dropped. Creating a page from a template is supported by the API but the UI offers blank pages only. Header and footer references are read-only (edited in their own page).
+- **Not given to AI/MCP:** the new page commands are builder-only.
+
+### Fixed along the way (not in the plan)
+
+- The canvas's live DOM patch skipped changes below the second nesting level and never repainted server-only elements; change detection is now recursive and those elements repaint from the server.
+- "Create header/footer" in the page inspector called a transport method that did not exist.
+- Empty grid/flex/stack/card collapsed to a hairline in the editor; they now show a dashed drop area (editor only).
+
+### Known and deliberately left
+
+- Two Layout cards are both titled "Container" (`core.container` and `layout.container`).
+- Dark-section wireframe styling relies on a sibling CSS selector and is right only for single-section presets.
+- The `not_allowed` insertion reason is currently unreachable.
+- The Playwright job is not a required check in branch protection (a GitHub setting for the owner).
+- Unrelated pre-existing failures, not Studio: 5 in the PHP unit run (Phase 3 remote client, ReactSiteBridge wording, plugin.json descriptions, the "no unrelated file touched" check, session-handler timing) and 24 in the integration run (licensing, entitlement, plugin activation, `archive/.htaccess`, `SmtpOAuth`).
+- Still to do on a real device: the drag reorder, the row menu and the Add sheet on an actual phone (the e2e uses emulated touch events).
