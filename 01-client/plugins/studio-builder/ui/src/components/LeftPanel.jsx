@@ -15,6 +15,7 @@ import { InspectorHost } from './InspectorHost.jsx';
 import { useIsMobileShell } from '../hooks/useIsMobileShell.mjs';
 import { PageInspector } from './inspectors/PageInspector.jsx';
 import { SiteSettingsForm } from './SiteSettings.jsx';
+import { ElementManager } from './ElementManager.jsx';
 import { blockDefinition, findNode } from '../core/doc.mjs';
 import { t } from '../core/messages.mjs';
 import {
@@ -58,6 +59,7 @@ export const LeftPanel = memo(function LeftPanel({
   // The Layers tab holds two views: this page's structure, and the site's pages.
   const [navView, setNavView] = useState('layers');
   const [settingsView, setSettingsView] = useState('page');
+  const elementsAllowed = !!(manifest && manifest.permissions && manifest.permissions.admin);
   const siteAllowed = !!(manifest && manifest.permissions && (manifest.permissions.tokens || manifest.permissions.view));
 
   const setTab = onTabChange || setLocalTab;
@@ -244,16 +246,16 @@ export const LeftPanel = memo(function LeftPanel({
           hidden={tab !== 'settings'}
           className="sbx-left__body sbx-left__body--settings"
         >
-          {siteAllowed && (
+          {(siteAllowed || elementsAllowed) && (
             <div className="sbx-segmented-pills sbx-ss__views" role="group" aria-label={t('site_settings_title')}>
-              {['page', 'site'].map((v) => (
+              {['page', siteAllowed && 'site', elementsAllowed && 'elements'].filter(Boolean).map((v) => (
                 <button key={v} type="button" className={`sbx-segmented-pill${settingsView === v ? ' is-active' : ''}`} aria-pressed={settingsView === v} data-settings-view={v} onClick={() => setSettingsView(v)}>
                   {t(`ss_view_${v}`)}
                 </button>
               ))}
             </div>
           )}
-          {siteAllowed && settingsView === 'site' ? <SiteSettingsForm onSaved={tokensSaved} /> : <PageInspector />}
+          {siteAllowed && settingsView === 'site' ? <SiteSettingsForm onSaved={tokensSaved} /> : elementsAllowed && settingsView === 'elements' ? <ElementManager /> : <PageInspector />}
         </div>
       </aside>
 

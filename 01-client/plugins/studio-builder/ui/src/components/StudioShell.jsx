@@ -449,6 +449,12 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     return true;
   }, [engine, transport, announce, boot.builderUrl]);
 
+  const refreshManifest = useCallback(async () => {
+    if (typeof transport.manifest !== 'function') return;
+    const res = await transport.manifest();
+    if (res.ok) { setManifest(res.data.manifest); engine.manifest = res.data.manifest; }
+  }, [transport, engine]);
+
   const onTokensSaved = useCallback(async () => {
     announce(t('announce_tokens_saved'));
     setCanvasVersion((v) => v + 1);
@@ -483,7 +489,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   const ctx = useMemo(() => ({
     boot, engine, manifest, transport, announce, applyOp, canvasView, setCanvasView,
     insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf,
-    viewport: viewportByKey(viewportKey), setViewport: changeViewport, tokensSaved: onTokensSaved,
+    viewport: viewportByKey(viewportKey), setViewport: changeViewport, tokensSaved: onTokensSaved, refreshManifest,
     library: libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate,
     insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion,
     openSaveTemplate: () => setDialog('save_template'),
@@ -493,7 +499,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     openHistory: () => setHistoryOpen(true),
     openTheme: manifest && manifest.permissions && (manifest.permissions.tokens || manifest.permissions.view) ? () => setDialog('theme') : null,
     openPackages: manifest && manifest.permissions && manifest.permissions.view ? () => setDialog('package') : null,
-  }), [boot, engine, manifest, transport, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey, changeViewport, onTokensSaved,
+  }), [boot, engine, manifest, transport, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey, changeViewport, onTokensSaved, refreshManifest,
     libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
 
   const selectionCtx = useMemo(() => ({

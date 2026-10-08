@@ -68,6 +68,8 @@ final class StudioAuthoringApi
         'components'   => ['GET', []],
         'chrome'       => ['GET', ['page']],
         'tokens'       => ['GET', ['group']],
+        // Element Manager (administrators): which blocks the site offers, and where each is used
+        'elements'     => ['GET', []],
         // Phase 7 query: structured diff between two revisions of one page (review of AI drafts)
         'diff'         => ['GET', ['page', 'base', 'proposed']],
         // Commands
@@ -90,6 +92,7 @@ final class StudioAuthoringApi
         'create_component' => ['POST', ['title', 'slug', 'page_id', 'section_id', 'expected_revision_id']],
         'detach_component' => ['POST', ['page_id', 'section_id', 'expected_revision_id']],
         'save_tokens'      => ['POST', ['group', 'tokens']],
+        'save_elements'    => ['POST', ['disabled']],
         // Phase 8A JSON packages: export is a query (studio-builder.view); import is ONE command
         // whose `dry_run` decides between analysis (no write) and import into drafts.
         'export_package'   => ['GET', ['page', 'include_components', 'include_template', 'include_tokens']],
@@ -251,6 +254,7 @@ final class StudioAuthoringApi
             'lock_release' => StudioApiResponse::ok(['released' => $this->app->releaseEditLock($actor, self::id($input, 'page_id'), self::string($input, 'lock_token', 64))]),
             'components'   => StudioApiResponse::ok(['components' => $this->app->listGlobalComponents($actor)]),
             'chrome'       => StudioApiResponse::ok(['chrome' => $this->app->chromeBindings($actor, self::id($input, 'page'))]),
+            'elements'     => StudioApiResponse::ok($this->app->elementManager($actor)),
             'tokens'       => StudioApiResponse::ok(['tokens' => $this->app->designTokens($actor, self::tokenGroup($input))]),
             'diff'         => StudioApiResponse::ok(['review' => $this->app->diffRevisions($actor, self::id($input, 'page'), self::optionalInt($input, 'base'), self::optionalInt($input, 'proposed'))]),
             'apply_template'   => $this->applyTemplate($actor, $input),
@@ -260,6 +264,7 @@ final class StudioAuthoringApi
             'create_component' => $this->createComponent($actor, $input),
             'detach_component' => StudioApiResponse::ok(self::mutationResult($this->app->detachGlobalSection($actor, self::id($input, 'page_id'), self::nodeId($input, 'section_id'), self::expectedRevision($input)))),
             'save_tokens'      => $this->saveTokens($actor, $input),
+            'save_elements'    => $this->saveElements($actor, $input),
             'export_package'   => $this->exportPackage($actor, $input),
             'import_package'   => $this->importPackage($actor, $input),
             'import_html'      => $this->importHtml($actor, $input),
@@ -373,6 +378,16 @@ final class StudioAuthoringApi
             $out['document'] = isset($result['revision']['document_json']) ? CanonicalJson::decode((string) $result['revision']['document_json']) : null;
         }
         return StudioApiResponse::ok($out, 201);
+    }
+
+    /** @param array<string, mixed> $input */
+    private function saveElements(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $disabled = $input['disabled'] ?? null;
+        if (!is_array($disabled) || !array_is_list($disabled)) {
+            throw self::invalid('disabled', 'invalid_field', 'disabled must be a list of block types.');
+        }
+        return StudioApiResponse::ok($this->app->saveElementManager($actor, $disabled));
     }
 
     /** @param array<string, mixed> $input */

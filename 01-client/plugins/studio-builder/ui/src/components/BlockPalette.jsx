@@ -9,6 +9,7 @@ import { asList } from '../core/doc.mjs';
 import { isAiRevision } from '../core/review.mjs';
 import { SectionPresetsPanel } from './SectionPresetsPanel.jsx';
 import { isDynamicBlock } from './blockKinds.mjs';
+import { isOffered } from '../core/addPanel.mjs';
 import { ElementsPanel } from './ElementsPanel.jsx';
 import { ComponentsPanel } from './ComponentsPanel.jsx';
 import { AddSearchResults } from './AddSearchResults.jsx';
@@ -47,7 +48,7 @@ function PaletteCard({ def, query, onInsert }) {
 /** Dynamic tab: only the data-bound and page-context blocks, with where their data comes from. */
 function DynamicPanel({ manifest, query, insertBlock }) {
   const q = query.trim().toLowerCase();
-  const items = asList(manifest.blocks).filter((b) => isDynamicBlock(b)
+  const items = asList(manifest.blocks).filter((b) => isOffered(b) && isDynamicBlock(b)
     && (!q || `${b.label} ${b.type} ${providerNote(b)}`.toLowerCase().includes(q)));
   return (
     <div className="sbx-palette__cards" data-testid="palette-dynamic">
@@ -62,7 +63,7 @@ function DynamicPanel({ manifest, query, insertBlock }) {
 function MediaPanel({ manifest, query, insertBlock, insertBlockWithProps, mediaPicker }) {
   const pickerAvailable = mediaPicker && typeof window !== 'undefined' && window.SlateMedia && typeof window.SlateMedia.open === 'function';
   const q = query.trim().toLowerCase();
-  const items = asList(manifest.blocks).filter((b) => ['core.image', 'core.gallery', 'core.video'].includes(b.type)
+  const items = asList(manifest.blocks).filter((b) => isOffered(b) && ['core.image', 'core.gallery', 'core.video'].includes(b.type)
     && (!q || `${b.label} ${b.type}`.toLowerCase().includes(q)));
 
   const addImage = () => {

@@ -130,6 +130,8 @@ final class StudioRuntimeFactory
             new StudioPackageService($pages, $revisions, $templates, $pageService, $revisionService, $templateService, $themeService, $registry, $reserved),
             // Phase 8B HTML/CSS import converter (pure; its DOM/libxml capability check defaults to this runtime's).
             new HtmlImportConverter($overrides['html_capability'] ?? null),
+            // Element Manager: the tenant's switched-off block types.
+            $overrides['availability'] ?? new \Slate\Module\StudioBuilder\Registry\BlockAvailability(),
         );
 
         $publicRuntime = new StudioPublicRuntime(
