@@ -15,6 +15,7 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Render;
 
+use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme;
 
 final class RenderCollector
@@ -56,6 +57,25 @@ final class RenderCollector
         }
         $class = 'sb-' . $kind . '--' . str_replace('.', '-', $ref);
         $this->cssRules[$class] = '.' . $class . '{' . self::TOKEN_UTILITIES[$kind] . ':var(' . ResolvedTheme::cssVarName($ref) . ')}';
+        return $class;
+    }
+
+    /**
+     * Register the generated rules for one block, scoped to a class derived
+     * from its id. `$declarations` must come from `StyleSurface` (never from
+     * authored text). Returns the class to put on the block wrapper.
+     */
+    public function scopedRule(string $blockId, string $declarations, bool $reduceMotion = false): string
+    {
+        if ($declarations === '' || preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $blockId) !== 1) {
+            return '';
+        }
+        $class = 'sb-b-' . substr($blockId, 4);
+        $rule = '.' . $class . '{' . $declarations . '}';
+        if ($reduceMotion) {
+            $rule .= '@media (prefers-reduced-motion:reduce){.' . $class . '{transition:none}}';
+        }
+        $this->cssRules['~' . $class] = $rule;
         return $class;
     }
 

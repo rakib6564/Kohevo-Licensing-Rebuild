@@ -34,6 +34,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Render;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\StyleSurface;
 use Slate\Module\StudioBuilder\Document\StyleValueGuard;
 use Slate\Module\StudioBuilder\Registry\BlockDefinitionInterface;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
@@ -189,8 +190,16 @@ final class DocumentRenderer
             $motionVars .= ';';
         }
 
+        // B2-P3b surface: layout, position, size extras and effects become one
+        // block-scoped rule in the page stylesheet. A block without any adds
+        // nothing, so documents that never use them render exactly as before.
+        $blockStyle   = is_array($block['style'] ?? null) ? $block['style'] : [];
+        $scopedClass  = $collector->scopedRule((string) ($block['id'] ?? ''), StyleSurface::declarations($blockStyle), StyleSurface::hasTransition($blockStyle));
+        $scopedClasses = $scopedClass !== '' ? [$scopedClass] : [];
+
         $classes = array_merge(
             ['sb-block', 'sb-block--' . str_replace(['.', '_'], '-', $type)],
+            $scopedClasses,
             $this->styleClasses(is_array($block['style'] ?? null) ? $block['style'] : [], $theme, $collector),
             self::hideClasses($visibility),
             $customClasses,

@@ -949,6 +949,9 @@ final class DocumentValidator
         }
 
         self::validateVisualStyles($style, $path, $errors);
+        foreach (StyleSurface::issues($style, $path) as $issue) {
+            $errors[] = ValidationResult::issue($issue['path'], $issue['code'], $issue['message']);
+        }
     }
 
     /**
