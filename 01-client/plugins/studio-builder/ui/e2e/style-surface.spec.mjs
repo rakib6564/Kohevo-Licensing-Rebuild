@@ -84,7 +84,7 @@ test('Spacing links the four sides by default, so one value sets them all', asyn
   try {
     await insertQuote(page);
     await styleTab(page);
-    await openSection(page, 'spacing');
+    await openSection(page, 'advanced');
     const margin = page.getByRole('group', { name: 'Margin' });
     await margin.getByLabel('Top', { exact: true }).fill('24px');
     await margin.getByLabel('Top', { exact: true }).blur();

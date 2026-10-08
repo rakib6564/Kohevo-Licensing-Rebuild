@@ -115,7 +115,7 @@ test('class names accept letters, digits, - and _ only', async ({ page }) => {
   try {
     await insertBlock(page, 'core.heading');
     await advancedTab(page);
-    await openSection(page, 'classes');
+    await openSection(page, 'advanced');
     const field = page.getByRole('textbox', { name: 'CSS Classes', exact: true });
     await field.fill('good a.b');
     await field.blur();

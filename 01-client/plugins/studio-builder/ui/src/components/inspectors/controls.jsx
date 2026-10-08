@@ -82,7 +82,8 @@ export function Tabs({ tabs, active, onChange, idPrefix }) {
           className={`sbx-tab${active === x.key ? ' is-active' : ''}`}
           onClick={() => onChange(x.key)}
         >
-          {x.label}
+          {x.icon || null}
+          <span className="sbx-tab__text">{x.label}</span>
         </button>
       ))}
     </div>

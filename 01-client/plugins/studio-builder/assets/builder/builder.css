@@ -2988,3 +2988,33 @@ html, body.sbx-body {
   .sbx-tree__search { height: 28px; box-sizing: border-box; padding: 0 0.6rem; border-radius: 8px; }
   .sbx-tree__collapse-btn { height: 28px; width: 28px; padding: 0; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; }
 }
+
+/* ── Inspector, second pass (Elementor-style structure, Kohevo colours) ──────────────────────────────────────
+   Tabs are icon over label with an accent underline; each group is a caret + bold title on its own band, with a
+   darker gap between groups, so a long panel reads as a short list of headings. */
+.sbx-inspector .sbx-tabs { gap: 0; padding: 0; margin: 0 -14px 4px; border: 0; border-bottom: 1px solid var(--sbx-border); border-radius: 0; background: transparent; }
+.sbx-inspector .sbx-tab { flex: 1 1 0; flex-direction: column; gap: 4px; padding: 10px 4px 9px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--sbx-muted); font-size: 11.5px; font-weight: 500; }
+.sbx-inspector .sbx-tab:hover { background: rgba(255, 255, 255, 0.04); color: var(--sbx-text-bright); }
+.sbx-inspector .sbx-tab.is-active { background: transparent; color: var(--sbx-accent-text); border: 0; border-bottom: 2px solid var(--sbx-accent); font-weight: 600; }
+.sbx-inspector .sbx-tab .sbx-tab__icon { display: block; }
+
+.sbx-isec-list { margin: 0 -14px; }
+.sbx-isec { border: 0; margin-bottom: 8px; background: rgba(255, 255, 255, 0.015); }
+.sbx-isec:last-child { border: 0; }
+.sbx-isec__toggle { flex-direction: row; gap: 8px; padding: 11px 14px; border-radius: 0; font-weight: 600; font-size: 13px; color: var(--sbx-text-bright); }
+.sbx-isec__toggle .sbx-isec__icon { display: none; }
+.sbx-isec__toggle .sbx-isec__chevron { order: -1; margin: 0; width: 12px; color: var(--sbx-muted); }
+.sbx-isec__toggle .sbx-isec__chevron svg { width: 10px; height: 10px; }
+.sbx-isec.is-open > .sbx-isec__heading .sbx-isec__chevron { transform: rotate(90deg); color: var(--sbx-accent-text); }
+.sbx-isec__summary { max-width: 40%; }
+.sbx-isec__body { padding: 4px 14px 16px; }
+.sbx-isec.is-open { background: transparent; }
+
+/* Margin and padding as one compact row (TOP · RIGHT · BOTTOM · LEFT · link), the label under each box. */
+@media (min-width: 861px) {
+  .sbx-spacing--box .sbx-spacing__grid { grid-template-columns: repeat(4, minmax(0, 1fr)) 34px; grid-template-areas: none; gap: 0 4px; padding: 0; border: 0; background: transparent; align-items: start; }
+  .sbx-spacing--box .sbx-spacing__grid > .sbx-field:nth-child(n) { grid-area: auto; display: flex; flex-direction: column-reverse; }
+  .sbx-spacing--box .sbx-spacing__grid > .sbx-field .sbx-field__label { position: static; width: auto; height: auto; margin: 3px 0 0; overflow: visible; clip: auto; text-align: center; font-size: 9.5px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sbx-muted); }
+  .sbx-spacing--box .sbx-spacing__grid input { height: 32px; padding: 0 2px; }
+  .sbx-spacing--box .sbx-spacing__link { grid-area: auto; justify-self: stretch; width: 34px; height: 32px; }
+}

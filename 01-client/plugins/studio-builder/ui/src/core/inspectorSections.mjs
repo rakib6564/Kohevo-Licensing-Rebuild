@@ -34,37 +34,66 @@ const SURFACE_TYPES = new Set(['core.button', 'core.card']);
 /** A block that holds other blocks: how it arranges and spaces them is what an author edits first. */
 const isContainer = (ctx) => !!ctx.def && ctx.def.allows_children === true;
 
+/** Where a surface-type section lives: Style for a container or surface block, Advanced for everything else. */
+const surfaceTab = (ctx) => (isContainer(ctx) || SURFACE_TYPES.has(ctx.node.type) ? 'style' : 'advanced');
+
 /**
- * Sections in display order. `titleKey` is a UI message key. `summary(ctx)` is a short string for the collapsed
- * header (empty when the section holds nothing). `openFor(ctx)` marks the sections that start open for this block.
+ * Sections in display order, laid out like the reference editors: Content (what it says, and how a container
+ * arranges its children), Style (how it looks), Advanced (spacing, stacking, entrance, identifiers, then the
+ * rest, collapsed). `tab` is a name or a function of the block, so a container shows Layout under Content while
+ * a leaf block keeps it under Advanced. `titleKey` is a UI message key. `summary(ctx)` is a short string for the
+ * collapsed header (empty when the section holds nothing). `openFor(ctx)` marks the sections that start open.
  */
 export const SECTIONS = Object.freeze([
   { id: 'content', tab: 'content', titleKey: 'section_content', appliesTo: () => true, summary: () => '', openFor: () => true },
   { id: 'data', tab: 'content', titleKey: 'tab_data', appliesTo: (ctx) => asList(ctx.def.binding_slots).length > 0, summary: (ctx) => (count(ctx.node.bindings) ? String(count(ctx.node.bindings)) : ''), openFor: () => false },
+  // One group with what every element needs: margin, padding, z-index, entrance animation, CSS ID and classes.
+  { id: 'advanced', tab: 'advanced', titleKey: 'section_advanced', keywords: ['margin', 'padding', 'spacing', 'z-index', 'stacking', 'entrance', 'animation', 'css id', 'class'], appliesTo: () => true, summary: (ctx) => advancedSummary(ctx), openFor: () => true },
+  { id: 'layout', tab: (ctx) => (isContainer(ctx) ? 'content' : 'advanced'), titleKey: 'section_layout', appliesTo: (ctx) => has(ctx, 'layout'), summary: (ctx) => layoutSummary(ctx.style.layout), openFor: isContainer },
 
   { id: 'align', tab: 'style', titleKey: 'align', appliesTo: (ctx) => has(ctx, 'align'), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
-  { id: 'layout', tab: 'style', titleKey: 'section_layout', appliesTo: (ctx) => has(ctx, 'layout'), summary: (ctx) => layoutSummary(ctx.style.layout), openFor: isContainer },
-  { id: 'spacing', tab: 'style', titleKey: 'section_spacing', appliesTo: (ctx) => has(ctx, 'margin') || has(ctx, 'padding'), summary: (ctx) => spacingSummary(ctx.style), openFor: isContainer },
   { id: 'typography', tab: 'style', titleKey: 'typography', appliesTo: (ctx) => (has(ctx, 'typography') || has(ctx, 'color')) && !MEDIA_TYPES.has(ctx.node.type), summary: (ctx) => typographySummary(ctx.style), openFor: (ctx) => TEXT_TYPES.has(ctx.node.type) },
-  { id: 'background', tab: 'style', titleKey: 'background_label', appliesTo: (ctx) => has(ctx, 'background'), summary: (ctx) => backgroundSummary(ctx.style.background), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
-  { id: 'border', tab: 'style', titleKey: 'border', appliesTo: (ctx) => has(ctx, 'border'), summary: (ctx) => borderSummary(ctx.style.border), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
+  { id: 'background', tab: surfaceTab, titleKey: 'background_label', appliesTo: (ctx) => has(ctx, 'background'), summary: (ctx) => backgroundSummary(ctx.style.background), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
+  { id: 'border', tab: surfaceTab, titleKey: 'border', appliesTo: (ctx) => has(ctx, 'border'), summary: (ctx) => borderSummary(ctx.style.border), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
   { id: 'shadow', tab: 'style', titleKey: 'box_shadow', appliesTo: (ctx) => has(ctx, 'shadow'), summary: (ctx) => (typeof ctx.style.shadow === 'string' ? ctx.style.shadow : (ctx.style.shadow ? '…' : '')), openFor: () => false },
-  { id: 'dimensions', tab: 'style', titleKey: 'dimensions_label', appliesTo: (ctx) => has(ctx, 'dimensions'), summary: (ctx) => dimensionsSummary(ctx.style.dimensions), openFor: (ctx) => ctx.node.type === 'core.image' },
-  { id: 'position', tab: 'style', titleKey: 'section_position', appliesTo: (ctx) => has(ctx, 'position'), summary: (ctx) => asObject(ctx.style.position).mode || '', openFor: () => false },
-  { id: 'effects', tab: 'style', titleKey: 'section_effects', appliesTo: (ctx) => has(ctx, 'effects'), summary: (ctx) => Object.keys(asObject(ctx.style.effects)).join(' · '), openFor: () => false },
+  { id: 'dimensions', tab: (ctx) => (MEDIA_TYPES.has(ctx.node.type) ? 'style' : 'advanced'), titleKey: 'dimensions_label', appliesTo: (ctx) => has(ctx, 'dimensions'), summary: (ctx) => dimensionsSummary(ctx.style.dimensions), openFor: (ctx) => ctx.node.type === 'core.image' },
   { id: 'opacity', tab: 'style', titleKey: 'opacity_label', appliesTo: (ctx) => has(ctx, 'opacity'), summary: (ctx) => (typeof ctx.style.opacity === 'number' ? `${Math.round(ctx.style.opacity * 100)}%` : ''), openFor: () => false },
   { id: 'states', tab: 'style', titleKey: 'section_states', appliesTo: () => true, summary: (ctx) => Object.keys(asObject(ctx.node.style_states)).join(' · '), openFor: () => false },
   { id: 'tokens', tab: 'style', titleKey: 'section_tokens', appliesTo: (ctx) => Object.keys(STYLE_TOKEN_CATEGORIES).some((k) => has(ctx, k)), summary: (ctx) => String(Object.keys(STYLE_TOKEN_CATEGORIES).filter((k) => ctx.style[k]).length || ''), openFor: () => false },
-  { id: 'motion', tab: 'style', titleKey: 'tab_motion', appliesTo: () => true, summary: (ctx) => motionSummary(ctx.node), openFor: () => false },
-  { id: 'visibility', tab: 'style', titleKey: 'tab_visibility', appliesTo: () => true, summary: (ctx) => visibilitySummary(ctx.node.visibility), openFor: () => false },
-  { id: 'responsive', tab: 'style', titleKey: 'tab_responsive', appliesTo: () => true, summary: (ctx) => (count(ctx.node.responsive) ? String(count(ctx.node.responsive)) : ''), openFor: () => false },
 
-  { id: 'classes', tab: 'advanced', titleKey: 'classes_label', appliesTo: () => true, summary: (ctx) => (asList(ctx.node.classNames).length ? String(asList(ctx.node.classNames).length) : ''), openFor: () => true },
-  { id: 'identity', tab: 'advanced', titleKey: 'section_identity', appliesTo: () => true, summary: (ctx) => identitySummary(ctx.node.attributes), openFor: () => false },
-  { id: 'stacking', tab: 'advanced', titleKey: 'z_index_label', appliesTo: () => true, summary: (ctx) => (Number.isInteger(ctx.style.z_index) ? String(ctx.style.z_index) : ''), openFor: () => false },
+  { id: 'position', tab: 'advanced', titleKey: 'section_position', appliesTo: (ctx) => has(ctx, 'position'), summary: (ctx) => asObject(ctx.style.position).mode || '', openFor: () => false },
+  { id: 'effects', tab: 'advanced', titleKey: 'section_effects', appliesTo: (ctx) => has(ctx, 'effects'), summary: (ctx) => Object.keys(asObject(ctx.style.effects)).join(' · '), openFor: () => false },
+  { id: 'motion', tab: 'advanced', titleKey: 'section_motion_effects', appliesTo: () => true, summary: (ctx) => motionSummary(ctx.node), openFor: () => false },
+  { id: 'responsive', tab: 'advanced', titleKey: 'tab_responsive', appliesTo: () => true, summary: (ctx) => responsiveSummary(ctx.node), openFor: () => false },
+  { id: 'identity', tab: 'advanced', titleKey: 'section_a11y', appliesTo: () => true, summary: (ctx) => a11ySummary(ctx.node.attributes), openFor: () => false },
   { id: 'tag', tab: 'advanced', titleKey: 'wrapper_tag', appliesTo: () => true, summary: (ctx) => (typeof ctx.node.tag === 'string' ? ctx.node.tag : ''), openFor: () => false },
   { id: 'attributes', tab: 'advanced', titleKey: 'section_data_attributes', appliesTo: () => true, summary: (ctx) => dataAttributeSummary(ctx.node.attributes), openFor: () => false },
 ]);
+
+/** The tab a section sits under for this block. */
+export function tabOf(section, ctx) {
+  return typeof section.tab === 'function' ? section.tab(ctx) : section.tab;
+}
+
+function advancedSummary(ctx) {
+  const bits = [spacingSummary(ctx.style)];
+  if (Number.isInteger(ctx.style.z_index)) bits.push(`z ${ctx.style.z_index}`);
+  const id = asObject(ctx.node.attributes).id;
+  if (id) bits.push(`#${id}`);
+  const n = asList(ctx.node.classNames).length;
+  if (n) bits.push(`.${n}`);
+  return bits.filter(Boolean).join(' · ');
+}
+function responsiveSummary(node) {
+  const bits = [visibilitySummary(node.visibility)];
+  const n = count(node.responsive);
+  if (n) bits.push(String(n));
+  return bits.filter(Boolean).join(' · ');
+}
+function a11ySummary(attrs) {
+  const a = asObject(attrs);
+  return [a.role, a['aria-label'] ? 'aria-label' : ''].filter(Boolean).join(' · ');
+}
 
 function layoutSummary(layout) {
   const l = asObject(layout);
@@ -136,7 +165,7 @@ export function inspectorContext(node, def) {
 
 /** The sections of one tab that apply to this block, in display order. */
 export function sectionsFor(tab, ctx) {
-  return SECTIONS.filter((s) => s.tab === tab && s.appliesTo(ctx));
+  return SECTIONS.filter((s) => tabOf(s, ctx) === tab && s.appliesTo(ctx));
 }
 
 /** Every applicable section across the tabs, grouped. */
@@ -165,7 +194,7 @@ export function searchSections(ctx, query, title) {
   const out = [];
   for (const { sections } of applicableSections(ctx)) {
     for (const s of sections) {
-      if (title(s).toLowerCase().includes(q) || s.summary(ctx).toLowerCase().includes(q)) out.push(s);
+      if (title(s).toLowerCase().includes(q) || s.summary(ctx).toLowerCase().includes(q) || (s.keywords || []).some((k) => k.includes(q))) out.push(s);
     }
   }
   return out;

@@ -65,7 +65,7 @@ export function InspectorShell({ idPrefix, node, def, header, actions, renderSec
   const typeKey = node.type;
 
   const activeTab = groups.some((g) => g.tab === tab) ? tab : (groups[0] ? groups[0].tab : 'content');
-  const tabs = groups.map((g) => ({ key: g.tab, label: t(TAB_LABEL[g.tab]) }));
+  const tabs = groups.map((g) => ({ key: g.tab, label: t(TAB_LABEL[g.tab]), icon: <Icon name={`tab_${g.tab}`} size={16} className="sbx-tab__icon" /> }));
   const matches = useMemo(() => searchSections(ctx, query, (s) => t(s.titleKey)), [ctx, query]);
   const searching = query.trim() !== '';
 
