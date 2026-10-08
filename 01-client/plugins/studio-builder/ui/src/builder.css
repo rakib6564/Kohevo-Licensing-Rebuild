@@ -2891,3 +2891,20 @@ html, body.sbx-body {
 .sbx-bottombar__center { padding: 3px; border: 1px solid var(--sbx-border); border-radius: 10px; background: rgba(255, 255, 255, 0.03); gap: 2px; }
 .sbx-bottombar__btn { border-radius: 7px; border-color: transparent; background: transparent; color: var(--sbx-text); }
 .sbx-bottombar__btn.is-active { background: var(--sbx-accent-tint); border-color: var(--sbx-accent-border); color: var(--sbx-accent-text); }
+
+/* ── Add panel (reference D01): pill tabs, thumbnail-left cards ──────────────────────────────────────────── */
+.sbx-palette__category-tabs { gap: 3px; padding: 3px; border: 1px solid var(--sbx-border); border-radius: 10px; background: rgba(0, 0, 0, 0.25); margin-bottom: 12px; }
+.sbx-palette__category-tab { padding: 6px 12px; border: 0; border-radius: 7px; color: var(--sbx-muted); }
+.sbx-palette__category-tab:hover { background: rgba(255, 255, 255, 0.05); color: var(--sbx-text-bright); }
+.sbx-palette__category-tab.is-active { background: var(--sbx-accent); color: var(--sbx-accent-ink); border: 0; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3); }
+.sbx-palette__search-input { background: rgba(255, 255, 255, 0.03); border-radius: 9px; padding-top: 8px; padding-bottom: 8px; }
+.sbx-palette__category { font-size: 12px; font-weight: 600; letter-spacing: 0.02em; color: var(--sbx-muted); margin: 4px 0 2px; }
+
+.sbx-preset-card__insert:hover, .sbx-preset-card__insert:focus-visible { border-color: var(--sbx-accent); box-shadow: 0 0 0 1px var(--sbx-accent), 0 4px 16px rgba(139, 92, 246, 0.22); }
+@media (min-width: 861px) {
+  .sbx-preset-card__insert { display: grid; grid-template-columns: 104px minmax(0, 1fr); grid-template-rows: auto auto 1fr; column-gap: 12px; row-gap: 2px; align-items: start; padding: 10px; border-radius: 10px; min-height: 76px; }
+  .sbx-preset-card__insert > .sbx-wf { grid-column: 1; grid-row: 1 / span 3; width: 104px; max-height: 62px; border-radius: 6px; align-self: center; }
+  .sbx-preset-card__name { grid-column: 2; grid-row: 1; padding-top: 2px; font-size: 13px; }
+  .sbx-preset-card__desc { grid-column: 2; grid-row: 2; font-size: 11.5px; padding-right: 22px; }
+  .sbx-preset-card__insert > .sbx-palette-card__reason { grid-column: 2; grid-row: 3; }
+}
