@@ -141,7 +141,6 @@ test('the header ⋯ menu renames, duplicates and locks the selected block', asy
     await settled(page);
 
     const layers = await layerCount(page);
-    await page.locator('#sbx-lefttab-inspector').click(); // counting the layers moved the panel to Layers
     await page.getByTestId('inspector-menu').click();
     await item('duplicate').click();
     await settled(page);

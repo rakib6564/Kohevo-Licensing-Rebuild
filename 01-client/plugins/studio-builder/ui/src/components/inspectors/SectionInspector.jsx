@@ -11,6 +11,8 @@ import { useEditor, useEngineState } from '../EditorContext.jsx';
 import { ResponsiveSelect, Tabs, VisibilityControls } from './controls.jsx';
 import { TokenSelect } from '../fields/FieldControl.jsx';
 import { MediaControl } from '../fields/MediaControl.jsx';
+import { IconLayoutSection } from '../Icons.jsx';
+import { IconButton } from './InspectorIcons.jsx';
 import { MotionInspector } from './MotionInspector.jsx';
 import { ColorField } from './StyleControls.jsx';
 import { SpacingBox } from './SurfaceControls.jsx';
@@ -74,18 +76,20 @@ export function SectionInspector({ info }) {
 
   return (
     <div className="sbx-inspector">
-      <h2 className="sbx-inspector__title">{label}</h2>
-      <div className="sbx-inspector__actions" role="group" aria-label={label}>
-        <button type="button" className="sbx-btn sbx-btn--xs" disabled={info.index === 0} onClick={() => moveSectionTo(section.id, info.index - 1)}>↑ {t('move_up')}</button>
-        <button type="button" className="sbx-btn sbx-btn--xs" disabled={info.index >= total - 1} onClick={() => moveSectionTo(section.id, info.index + 1)}>↓ {t('move_down')}</button>
-        <button type="button" className="sbx-btn sbx-btn--xs" onClick={() => insertSection(info.index + 1)}>+ {t('add_section')}</button>
-        {!global && perms.admin && openSaveTemplate && (
-          <button type="button" className="sbx-btn sbx-btn--xs" title={t('library_save_template')} onClick={openSaveTemplate}>💾 {t('library_save_template')}</button>
-        )}
-        {!global && perms.edit && canReference && openComponentDialog && (
-          <button type="button" className="sbx-btn sbx-btn--xs" title={t('library_new_component')} onClick={openComponentDialog}>❖ {t('library_new_component')}</button>
-        )}
-        <button type="button" className="sbx-btn sbx-btn--xs sbx-btn--danger" onClick={() => removeNode(section.id)}>{t('remove')}</button>
+      <header className="sbx-ihead">
+        <span className="sbx-ihead__icon" aria-hidden="true"><IconLayoutSection size={18} /></span>
+        <div className="sbx-ihead__names">
+          <h2 className="sbx-inspector__title">{label}</h2>
+          {section.label ? <span className="sbx-ihead__type">{t('section')}</span> : null}
+        </div>
+      </header>
+      <div className="sbx-inspector__tools" role="group" aria-label={label}>
+        <IconButton icon="up" label={t('move_up')} disabled={info.index === 0} onClick={() => moveSectionTo(section.id, info.index - 1)} />
+        <IconButton icon="down" label={t('move_down')} disabled={info.index >= total - 1} onClick={() => moveSectionTo(section.id, info.index + 1)} />
+        <IconButton icon="plus" label={t('add_section')} onClick={() => insertSection(info.index + 1)} />
+        {!global && perms.admin && openSaveTemplate && <IconButton icon="save" label={t('library_save_template')} onClick={openSaveTemplate} />}
+        {!global && perms.edit && canReference && openComponentDialog && <IconButton icon="component" label={t('library_new_component')} onClick={openComponentDialog} />}
+        <IconButton icon="trash" label={t('remove')} danger onClick={() => removeNode(section.id)} />
       </div>
       {global && <GlobalSectionPanel section={section} label={label} />}
       {!global && <Tabs tabs={[{ key: 'layout', label: t('tab_layout') }, { key: 'style', label: t('tab_style') }, { key: 'motion', label: t('tab_motion') }, { key: 'visibility', label: t('tab_visibility') }]} active={tab} onChange={setTab} idPrefix={idPrefix} />}

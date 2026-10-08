@@ -78,7 +78,7 @@ test('the Z-Index field cannot be set above the ceiling that keeps the platform 
     await settled(page);
     await page.locator('[id^="sbx-blk-"][id$="-tab-advanced"]').click();
     await openSection(page, 'stacking');
-    const z = page.getByLabel('Z-Index', { exact: true });
+    const z = page.getByRole('spinbutton', { name: 'Z-Index', exact: true });
     await expect(z).toHaveAttribute('max', '999');
     await z.fill('9999');
     await expect(z).toHaveValue('999');

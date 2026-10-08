@@ -11,11 +11,10 @@ import { BlockPalette } from './BlockPalette.jsx';
 import { Outline } from './Outline.jsx';
 import { PagesPanel } from './PagesPanel.jsx';
 import { LibraryPanel } from './LibraryPanel.jsx';
-import { BlockInspector } from './inspectors/BlockInspector.jsx';
-import { SectionInspector } from './inspectors/SectionInspector.jsx';
+import { InspectorHost } from './InspectorHost.jsx';
+import { useIsMobileShell } from '../hooks/useIsMobileShell.mjs';
 import { PageInspector } from './inspectors/PageInspector.jsx';
 import { blockDefinition, findNode } from '../core/doc.mjs';
-import { effectivelyLocked, isLocked, lockIndex } from '../core/layerLock.mjs';
 import { t } from '../core/messages.mjs';
 import {
   IconPlus,
@@ -42,16 +41,11 @@ export const LeftPanel = memo(function LeftPanel({
   mobileOpen = false,
   onCloseMobile = () => {},
 }) {
-  const { manifest, setLocked } = useEditor();
-  const { selection, selectedIds } = useSelection();
+  const { manifest } = useEditor();
+  const isMobile = useIsMobileShell();
+  const { selection } = useSelection();
   const working = useEngineState((s) => s.working);
   const info = selection ? findNode(working, selection) : null;
-  // Several nodes selected: the Inspector shows the count, not one node's properties.
-  const multi = selectedIds.length > 1;
-  const inspected = multi ? null : info;
-  const locked = !!info && effectivelyLocked(lockIndex(working), info.node.id);
-  const ownLock = !!info && isLocked(info.node);
-
   const asideRef = useRef(null);
   const sheet = useSheetDrag(asideRef, onCloseMobile);
   const resetSheet = sheet.reset;
@@ -63,18 +57,20 @@ export const LeftPanel = memo(function LeftPanel({
   // The Layers tab holds two views: this page's structure, and the site's pages.
   const [navView, setNavView] = useState('layers');
 
-  const tab = controlledTab !== undefined ? controlledTab : localTab;
   const setTab = onTabChange || setLocalTab;
+  // On a desktop the Inspector has its own docked panel (right); only the phone sheet keeps it as a tab here.
+  const requestedTab = controlledTab !== undefined ? controlledTab : localTab;
+  const tab = !isMobile && requestedTab === 'inspector' ? 'structure' : requestedTab;
 
   const collapsed = controlledCollapsed !== undefined ? controlledCollapsed : localCollapsed;
   const toggleCollapse = onToggleCollapse || (() => setLocalCollapsed((c) => !c));
 
-  // Contextual activation: when a block/section is selected, seamlessly switch to inspector
+  // On a phone, selecting a node points the sheet at its Inspector (the sheet itself stays closed).
   useEffect(() => {
-    if (selection) {
+    if (selection && isMobile) {
       setTab('inspector');
     }
-  }, [selection, setTab]);
+  }, [selection, isMobile, setTab]);
 
   const tabs = [
     { key: 'blocks',    label: t('tab_add'),       Icon: IconPlus,     title: t('tab_add_title') },
@@ -82,7 +78,7 @@ export const LeftPanel = memo(function LeftPanel({
     { key: 'inspector', label: t('tab_style'),     Icon: IconSliders,  title: t('inspector') },
     { key: 'library',   label: t('tab_library'),   Icon: IconPalette,  title: t('panel_library') },
     { key: 'settings',  label: t('tab_settings'),  Icon: IconSettings, title: t('tab_settings_title') },
-  ];
+  ].filter((x) => isMobile || x.key !== 'inspector');
 
   const sheetFull = sheet.height !== null && sheet.height >= fullSheetHeight() - 8;
   let sheetTitle = t('panel_word');
@@ -213,7 +209,8 @@ export const LeftPanel = memo(function LeftPanel({
           {navView === 'pages' && <PagesPanel onOpenSettings={() => setTab('settings')} />}
         </div>
 
-        {/* 3. Style / Inspector Tab — Metadata-driven property inspector */}
+        {/* 3. Style / Inspector Tab (phone sheet only; a desktop has the docked right panel) */}
+        {isMobile && (
         <div
           id="sbx-leftpanel-inspector"
           role="tabpanel"
@@ -221,64 +218,9 @@ export const LeftPanel = memo(function LeftPanel({
           hidden={tab !== 'inspector'}
           className="sbx-left__body sbx-left__body--inspector"
         >
-          <aside className="sbx-inspector-host" aria-label={t('inspector')}>
-            {inspected && locked && (
-              <div className="sbx-lock-banner" role="status" data-testid="lock-banner">
-                <span>{ownLock ? t('layer_locked_note') : t('layer_locked_by_parent')}</span>
-                {ownLock && (
-                  <button type="button" className="sbx-btn sbx-btn--seg" onClick={() => setLocked(info.node.id, false)}>{t('unlock_layer')}</button>
-                )}
-              </div>
-            )}
-            <fieldset className="sbx-lock-fieldset" disabled={locked}>
-              {inspected && inspected.kind === 'block' && <BlockInspector key={inspected.node.id} info={inspected} />}
-              {inspected && inspected.kind === 'section' && <SectionInspector key={inspected.node.id} info={inspected} />}
-            </fieldset>
-            {multi && (
-              <div className="sbx-inspector-empty" data-testid="inspector-multi" role="status">
-                <h3 className="sbx-inspector-empty__title">{t('bulk_selected', { count: selectedIds.length })}</h3>
-                <p className="sbx-inspector-empty__desc">{t('multi_select_hint')}</p>
-              </div>
-            )}
-            {!info && !multi && (
-              <div className="sbx-inspector-empty">
-                <div className="sbx-inspector-empty__icon">
-                  <IconSliders size={28} />
-                </div>
-                <h3 className="sbx-inspector-empty__title">{t('nothing_selected')}</h3>
-                <p className="sbx-inspector-empty__desc">
-                  {t('inspector_empty_desc')}
-                </p>
-                <div className="sbx-inspector-empty__actions">
-                  <button
-                    type="button"
-                    className="sbx-btn sbx-btn--secondary"
-                    onClick={() => setTab('structure')}
-                  >
-                    <IconLayers size={14} />
-                    <span>{t('view_layers')}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="sbx-btn sbx-btn--secondary"
-                    onClick={() => setTab('blocks')}
-                  >
-                    <IconPlus size={14} />
-                    <span>{t('add_elements')}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="sbx-btn sbx-btn--ghost"
-                    onClick={() => setTab('settings')}
-                  >
-                    <IconSettings size={14} />
-                    <span>{t('sheet_page_settings')}</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </aside>
+          <InspectorHost onNavigate={setTab} />
         </div>
+        )}
 
         {/* 4. Library Tab — Templates & Saved Components */}
         <div

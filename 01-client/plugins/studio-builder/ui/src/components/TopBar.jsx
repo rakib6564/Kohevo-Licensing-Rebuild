@@ -123,8 +123,8 @@ export const TopBar = memo(function TopBar({
         <div className="sbx-brand-badge" title="KOHEVO STUDIO BUILDER 2.0">
           <span className="sbx-brand-badge__logo">K</span>
           <div className="sbx-brand-badge__info">
-            <span className="sbx-brand-badge__title">KOHEVO STUDIO</span>
-            <span className="sbx-brand-badge__sub">BUILDER 2.0</span>
+            <span className="sbx-brand-badge__title">Kohevo Studio</span>
+            <span className="sbx-brand-badge__sub">Builder 2.0</span>
           </div>
         </div>
 
@@ -259,8 +259,9 @@ export const TopBar = memo(function TopBar({
               aria-pressed={viewportKey === v.key}
               onClick={() => onViewport(v.key)}
               title={`${t(v.key)} (${v.breakpoint}, ${v.width}px)`}
+              aria-label={t(v.key)}
             >
-              {t(v.key)}
+              {v.key === 'desktop' ? <IconMonitor size={15} /> : v.key === 'tablet' ? <IconTablet size={15} /> : <IconSmartphone size={15} />}
             </button>
           ))}
         </div>

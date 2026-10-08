@@ -97,7 +97,7 @@ test('dynamic key families used by the touched components are complete (EN + boo
 test('no hard-coded English labels slipped into the touched components', () => {
   // Attribute strings and plain text nodes that look like prose must go through t(). Product names,
   // key identifiers and font names are not translated.
-  const allowed = new Set(['KOHEVO STUDIO', 'BUILDER 2.0', 'KOHEVO STUDIO BUILDER 2.0']);
+  const allowed = new Set(['Kohevo Studio', 'Builder 2.0', 'KOHEVO STUDIO', 'BUILDER 2.0', 'KOHEVO STUDIO BUILDER 2.0']);
   const offenders = [];
   for (const name of TOUCHED) {
     const file = join(here, '..', 'src', 'components', `${name}.jsx`);
@@ -115,7 +115,7 @@ test('no hard-coded English labels slipped into the touched components', () => {
 
 test('no hard-coded prose in attributes or <option> text anywhere in the UI', () => {
   // Product/brand names, font stacks, URL/code examples and the focal-point axis letters are not translated.
-  const allowed = new Set(['KOHEVO STUDIO', 'KOHEVO STUDIO BUILDER 2.0', 'Inter, sans-serif', 'https://...mp4', 'data-custom=value aria-role=article', 'X', 'Y']);
+  const allowed = new Set(['Kohevo Studio', 'KOHEVO STUDIO', 'KOHEVO STUDIO BUILDER 2.0', 'Inter, sans-serif', 'https://...mp4', 'data-custom=value aria-role=article', 'X', 'Y']);
   const fontOption = /^(Inter|System Sans|Playfair Display|Geist|Open Sans)$/;
   const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
   const offenders = [];

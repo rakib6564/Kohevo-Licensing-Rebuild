@@ -11,6 +11,7 @@ import {
   applicableSections, defaultOpenIds, inspectorContext, isSectionOpen, searchSections, setSectionOpen, subscribeSections,
 } from '../../core/inspectorSections.mjs';
 import { Tabs } from './controls.jsx';
+import { Icon, SectionIcon } from './InspectorIcons.jsx';
 
 const TAB_LABEL = { content: 'tab_content', style: 'tab_style', advanced: 'tab_advanced' };
 
@@ -33,9 +34,10 @@ function Section({ typeKey, section, ctx, open, idPrefix, render, forceOpen }) {
           aria-controls={bodyId}
           onClick={() => setSectionOpen(typeKey, section.id, !isOpen)}
         >
-          <span className="sbx-isec__chevron" aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
+          <SectionIcon name={section.id} />
           <span className="sbx-isec__title">{t(section.titleKey)}</span>
           {summary ? <span className="sbx-isec__summary">{summary}</span> : null}
+          <span className="sbx-isec__chevron" aria-hidden="true"><Icon name="chevron" size={14} /></span>
         </button>
       </h3>
       <div id={bodyId} role="region" aria-labelledby={headId} className="sbx-isec__body" hidden={!isOpen}>

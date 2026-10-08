@@ -516,3 +516,12 @@ export function IconHelp({ size = 16, className = '' }) {
 }
 
 
+
+export function IconHome({ size = 16, className = '' }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 11l9-8 9 8" />
+      <path d="M5 10v10h5v-6h4v6h5V10" />
+    </svg>
+  );
+}
