@@ -62,29 +62,36 @@ final class RenderCollector
     }
 
     /**
-     * Register the generated rules for one block, scoped to a class derived
-     * from its id. `$declarations` must come from `StyleSurface` (never from
-     * authored text). Returns the class to put on the block wrapper.
+     * Register the generated rules for one block or section and return the class to put on its
+     * element. `$declarations` and `$states` must come from `StyleSurface` (never from authored text).
+     *
+     * The class is derived from the RULES, not from the node id: two nodes that look the same share one
+     * class and one rule, which is what keeps the stylesheet small on a real page (many cards, one look).
+     * `$nodeId` only gates the call: a malformed id never produces a rule.
+     *
+     * @param array<string, string> $states state name => declarations
      */
-    public function scopedRule(string $blockId, string $declarations, bool $reduceMotion = false, array $states = []): string
+    public function scopedRule(string $nodeId, string $declarations, bool $reduceMotion = false, array $states = []): string
     {
-        $isSection = str_starts_with($blockId, 'sec_');
-        $valid = preg_match($isSection ? CanonicalDocumentSchema::SECTION_ID_PATTERN : CanonicalDocumentSchema::BLOCK_ID_PATTERN, $blockId) === 1;
+        $isSection = str_starts_with($nodeId, 'sec_');
+        $valid = preg_match($isSection ? CanonicalDocumentSchema::SECTION_ID_PATTERN : CanonicalDocumentSchema::BLOCK_ID_PATTERN, $nodeId) === 1;
         if (($declarations === '' && $states === []) || !$valid) {
             return '';
         }
-        $class = ($isSection ? 'sb-s-' : 'sb-b-') . substr($blockId, 4);
-        $rule = $declarations !== '' ? '.' . $class . '{' . $declarations . '}' : '';
+        // NUL stands for the class until it is known; no declaration can contain it (the typed guard
+        // refuses control characters), so the substitution below cannot touch a value.
+        $template = $declarations !== '' ? ".\0{" . $declarations . '}' : '';
+        if ($reduceMotion) {
+            $template .= "@media (prefers-reduced-motion:reduce){.\0{transition:none}}";
+        }
         // `$states` is name => declarations from StyleSurface::stateRules(); the pseudo-class comes from its fixed map.
         foreach (StyleSurface::STATE_SELECTORS as $name => $selector) {
             if (isset($states[$name]) && $states[$name] !== '') {
-                $rule .= '.' . $class . $selector . '{' . $states[$name] . '}';
+                $template .= ".\0" . $selector . '{' . $states[$name] . '}';
             }
         }
-        if ($reduceMotion) {
-            $rule .= '@media (prefers-reduced-motion:reduce){.' . $class . '{transition:none}}';
-        }
-        $this->cssRules['~' . $class] = $rule;
+        $class = 'sb-x-' . substr(hash('sha256', $template), 0, 16);
+        $this->cssRules['~' . $class] = str_replace("\0", $class, $template);
         return $class;
     }
 

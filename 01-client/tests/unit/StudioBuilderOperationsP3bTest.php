@@ -217,16 +217,14 @@ unit('p3b render: tag, section style and states reach the page through the real 
         ['tag' => 'article', 'style_states' => ['hover' => ['opacity' => 0.8]]],
         ['effects' => ['cursor' => 'pointer'], 'background' => ['image' => ['media_id' => 7, 'alt' => '']]],
     );
-    $sectionId = $doc['sections'][0]['id'];
-    $blockId   = $doc['sections'][0]['blocks'][0]['id'];
     $out = $tenants->runAs(101, static fn () => $comp->compile($page, ['id' => 9, 'page_id' => 5, 'document_json' => CanonicalJson::encode($doc)], $ctx));
 
-    $sClass = 'sb-s-' . substr($sectionId, 4);
-    $bClass = 'sb-b-' . substr($blockId, 4);
+    assert_true(preg_match('/<section class="sb-section (sb-x-[0-9a-f]{16})/', $out->html, $sm) === 1, 'scoped section class: ' . $out->html);
+    assert_true(preg_match('/<article class="sb-block[^"]*(sb-x-[0-9a-f]{16})/', $out->html, $bm) === 1, 'scoped block class: ' . $out->html);
+    $sClass = $sm[1];
+    $bClass = $bm[1];
     assert_true(str_contains($out->html, '<article class="sb-block'), 'the block wrapper is an <article>: ' . $out->html);
     assert_true(str_contains($out->html, '</article>'), 'and closes as one');
-    assert_true(str_contains($out->html, $bClass), 'scoped block class');
-    assert_true(str_contains($out->html, '<section class="sb-section ' . $sClass), 'scoped section class: ' . $out->html);
     assert_true(str_contains($out->css, '.' . $sClass . '{background-image:linear-gradient(rgba(0,0,0,.4),rgba(0,0,0,.4)),url("/uploads/t101/hero.jpg");background-size:cover;background-repeat:no-repeat;background-position:center;padding-top:2rem}'), $out->css);
     assert_true(str_contains($out->css, '.' . $bClass . ':hover{opacity:0.8}'), 'the state rule survives normalization: ' . substr($out->css, -400));
     assert_true(str_contains($out->css, 'cursor:pointer'), 'the base rule survives normalization');

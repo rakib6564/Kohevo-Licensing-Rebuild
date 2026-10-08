@@ -42,6 +42,13 @@ function sbss_render(array $style, ?string $id = null): array
     return ['html' => $html, 'css' => $collector->css()];
 }
 
+/** The content-addressed class a styled element carries (identical looks share it). */
+function sbss_class(string $html): string
+{
+    assert_true(preg_match('/\bsb-x-[0-9a-f]{16}\b/', $html, $m) === 1, 'the element carries a scoped class: ' . $html);
+    return $m[0];
+}
+
 // ── The surface is wired into the schema ──────────────────────────────────
 
 unit('surface: the new keys are style keys, and the unknown ones still are not', function (): void {
@@ -146,8 +153,8 @@ unit('surface: numbers are formatted by the server, never echoed', function (): 
 
 unit('surface: the rule is scoped to the block\'s own class and lives in the stylesheet, not the markup', function (): void {
     $out = sbss_render(['layout' => ['display' => 'flex', 'gap' => '1rem'], 'position' => ['mode' => 'relative']]);
-    assert_true(str_contains($out['html'], 'sb-b-aaaaaaaaaaaaaaaaaaaaaaaa'), 'the block carries its scoped class: ' . $out['html']);
-    assert_true(str_contains($out['css'], '.sb-b-aaaaaaaaaaaaaaaaaaaaaaaa{display:flex;gap:1rem;position:relative}'), $out['css']);
+    $cls = sbss_class($out['html']);
+    assert_true(str_contains($out['css'], '.' . $cls . '{display:flex;gap:1rem;position:relative}'), $out['css']);
     assert_false(str_contains($out['html'], 'display:flex'), 'nothing generated is inlined into the markup');
     assert_false(str_contains($out['html'], 'style='), 'no style attribute is added for the surface');
 });
@@ -155,29 +162,48 @@ unit('surface: the rule is scoped to the block\'s own class and lives in the sty
 unit('surface: reduced motion switches transitions off', function (): void {
     $out = sbss_render(['effects' => ['transition' => ['duration_ms' => 300]]]);
     assert_true(str_contains($out['css'], 'transition:all 300ms ease'), $out['css']);
-    assert_true(str_contains($out['css'], '@media (prefers-reduced-motion:reduce){.sb-b-aaaaaaaaaaaaaaaaaaaaaaaa{transition:none}}'), $out['css']);
+    assert_true(str_contains($out['css'], '@media (prefers-reduced-motion:reduce){.' . sbss_class($out['html']) . '{transition:none}}'), $out['css']);
     $none = sbss_render(['effects' => ['cursor' => 'pointer']]);
     assert_false(str_contains($none['css'], 'prefers-reduced-motion'), 'no transition, no media rule');
 });
 
 unit('surface: a block that does not use the surface renders exactly as before', function (): void {
     $plain = sbss_render(['typography' => ['size' => '2rem'], 'opacity' => 0.9]);
-    assert_false(str_contains($plain['html'], 'sb-b-'), 'no scoped class: ' . $plain['html']);
+    assert_false(str_contains($plain['html'], 'sb-x-'), 'no scoped class: ' . $plain['html']);
     assert_eq('', $plain['css'], 'and no rule');
 });
 
-unit('surface: two blocks get two independent rules, sorted deterministically', function (): void {
+unit('surface: different looks get different rules; identical looks share one class and one rule', function (): void {
     $tenants   = new TenantContext();
     $renderer  = new DocumentRenderer(BlockRegistry::withAllCoreBlocks(), BlockRendererRegistry::withCoreRenderers(), new CoreMediaResolver($tenants), new ProviderBindingResolver(new DataProviderRegistry(), $tenants));
     $collector = new RenderCollector();
-    foreach (['blk_bbbbbbbbbbbbbbbbbbbbbbbb' => 'pointer', 'blk_aaaaaaaaaaaaaaaaaaaaaaaa' => 'grab'] as $id => $cursor) {
-        $renderer->renderBlock([
+    $classes = [];
+    foreach (['blk_bbbbbbbbbbbbbbbbbbbbbbbb' => 'pointer', 'blk_aaaaaaaaaaaaaaaaaaaaaaaa' => 'grab', 'blk_cccccccccccccccccccccccc' => 'pointer'] as $id => $cursor) {
+        $html = $renderer->renderBlock([
             'id' => $id, 'type' => 'core.heading', 'version' => 1, 'props' => ['text' => 'x', 'level' => 'h2'],
             'style' => ['effects' => ['cursor' => $cursor]] + CanonicalDocumentSchema::defaultBlockStyle(),
             'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [], 'animation' => [], 'interactions' => [],
         ], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), $collector, false);
+        $classes[$id] = sbss_class($html);
     }
-    assert_eq('.sb-b-aaaaaaaaaaaaaaaaaaaaaaaa{cursor:grab}.sb-b-bbbbbbbbbbbbbbbbbbbbbbbb{cursor:pointer}', $collector->css());
+    assert_eq($classes['blk_bbbbbbbbbbbbbbbbbbbbbbbb'], $classes['blk_cccccccccccccccccccccccc'], 'same look, same class');
+    assert_true($classes['blk_aaaaaaaaaaaaaaaaaaaaaaaa'] !== $classes['blk_bbbbbbbbbbbbbbbbbbbbbbbb'], 'different look, different class');
+    $css = $collector->css();
+    assert_eq(2, substr_count($css, '{cursor:'), 'two rules, not three: ' . $css);
+    // Deterministic order: sorted by class, whatever order the blocks were rendered in.
+    $expected = [];
+    foreach (['grab' => $classes['blk_aaaaaaaaaaaaaaaaaaaaaaaa'], 'pointer' => $classes['blk_bbbbbbbbbbbbbbbbbbbbbbbb']] as $cursor => $class) {
+        $expected[$class] = '.' . $class . '{cursor:' . $cursor . '}';
+    }
+    ksort($expected, SORT_STRING);
+    assert_eq(implode('', $expected), $css);
+});
+
+unit('surface: the class depends only on the rules, so the same look is the same class on every page', function (): void {
+    $a = sbss_render(['effects' => ['cursor' => 'pointer']], 'blk_aaaaaaaaaaaaaaaaaaaaaaaa');
+    $b = sbss_render(['effects' => ['cursor' => 'pointer']], 'blk_zzzzzzzzzzzzzzzzzzzzzzzz');
+    assert_eq(sbss_class($a['html']), sbss_class($b['html']));
+    assert_eq($a['css'], $b['css']);
 });
 
 unit('surface: a malformed block id never produces a rule', function (): void {
@@ -334,10 +360,11 @@ unit('states: they render as pseudo-class rules scoped to the block, with the ba
         'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [], 'animation' => [], 'interactions' => [],
     ], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), $collector, false);
     $css = $collector->css();
-    assert_true(str_contains($css, '.sb-b-aaaaaaaaaaaaaaaaaaaaaaaa{transition:all 200ms ease;cursor:pointer}'), $css);
-    assert_true(str_contains($css, '.sb-b-aaaaaaaaaaaaaaaaaaaaaaaa:hover{background-color:#e8734a;transform:scale(1.05)}'), $css);
-    assert_true(str_contains($css, '.sb-b-aaaaaaaaaaaaaaaaaaaaaaaa:focus{box-shadow:0 0 0 3px #e8734a}'), 'a spread without a blur keeps the blur slot: ' . $css);
-    assert_true(str_contains($css, '.sb-b-aaaaaaaaaaaaaaaaaaaaaaaa:disabled{opacity:0.5}'), 'the bad colour is dropped, the opacity stays: ' . $css);
+    $c = '.' . sbss_class($html);
+    assert_true(str_contains($css, $c . '{transition:all 200ms ease;cursor:pointer}'), $css);
+    assert_true(str_contains($css, $c . ':hover{background-color:#e8734a;transform:scale(1.05)}'), $css);
+    assert_true(str_contains($css, $c . ':focus{box-shadow:0 0 0 3px #e8734a}'), 'a spread without a blur keeps the blur slot: ' . $css);
+    assert_true(str_contains($css, $c . ':disabled{opacity:0.5}'), 'the bad colour is dropped, the opacity stays: ' . $css);
     assert_false(str_contains($css, 'url('), 'no url() anywhere: ' . $css);
     assert_true(str_contains($css, '@media (prefers-reduced-motion:reduce)'), 'transitions respect reduced motion');
     assert_false(str_contains($html, 'hover'), 'states never touch the markup');
