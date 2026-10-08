@@ -117,3 +117,29 @@ test('the Background controls offer only what the server accepts, and what they 
     await restore(page, before);
   }
 });
+
+test('a style edit reaches the canvas without a manual reload', async ({ page }) => {
+  await openBuilder(page);
+  await settled(page);
+  const before = await layerCount(page);
+  try {
+    await page.getByRole('tab', { name: /^(Add|Ajouter)$/ }).click();
+    const panel = page.locator('#sbx-leftpanel-blocks');
+    await panel.getByRole('tab', { name: 'Elements' }).click();
+    await panel.locator('[data-chip="content"]').click();
+    await panel.locator('[data-block-type="core.quote"]').click();
+    await settled(page);
+    await page.locator('[id^="sbx-blk-"][id$="-tab-style"]').click();
+    const size = page.getByLabel('Font Size', { exact: true });
+    await size.fill('37px');
+    await size.blur();
+    await settled(page);
+
+    // The server writes the style on the block's wrapper; the editor no longer paints it itself.
+    const frame = await frameDocument(page);
+    const wrapper = frame.locator('[data-sb-type="core.quote"]').last();
+    await expect.poll(async () => wrapper.evaluate((el) => getComputedStyle(el).fontSize), { timeout: 20_000 }).toBe('37px');
+  } finally {
+    await restore(page, before);
+  }
+});

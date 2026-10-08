@@ -8,7 +8,8 @@
 //   1. Section surfaces, padding tokens, and colors.
 //   2. Block text props (heading, title, subtitle, eyebrow, text, content, buttonText, label, etc.)
 //   3. Complex block items (feature lists, cards, columns, portfolio items)
-//   4. Block styles (textAlign, typography, colors, padding, margin)
+//   4. Block alignment (classes). Every other style key is CSS the server writes (scoped, content-addressed
+//      rules), so a change to it repaints the canvas from the server instead of being patched here.
 //   5. Breakpoint visibility tokens and animation variables
 //
 // When changes are non-structural (only props or styles changed), iframe reloads
@@ -53,10 +54,25 @@ export function isStructuralChange(prevDoc, nextDoc) {
     const prevSec = prevSections[s];
     const nextSec = nextSections[s];
     if (!prevSec || !nextSec || prevSec.id !== nextSec.id) return true;
+    if (differs(prevSec.style, nextSec.style)) return true; // section background/padding: scoped CSS from the server
     if (blocksChanged(prevSec.blocks, nextSec.blocks)) return true;
   }
   return false;
 }
+
+function differs(a, b) {
+  return a !== b && JSON.stringify(a === undefined ? null : a) !== JSON.stringify(b === undefined ? null : b);
+}
+
+/** A block's style minus `align`, the one style key the live patch applies as classes (everything else is server CSS). */
+function styleWithoutAlign(style) {
+  if (!isPlainObject(style)) return null;
+  const { align, ...rest } = style; // eslint-disable-line no-unused-vars
+  return Object.keys(rest).length ? rest : null;
+}
+
+/** Block fields whose effect is CSS, a wrapper tag or attributes written only by the server's renderer. */
+const SERVER_PAINTED_FIELDS = ['style_states', 'tag', 'classNames', 'attributes'];
 
 /**
  * Blocks whose markup is built only on the server (no heuristic live patch exists for them): any
@@ -73,6 +89,8 @@ function blocksChanged(prev, next) {
     const pb = prevBlocks[i];
     const nb = nextBlocks[i];
     if (!pb || !nb || pb.id !== nb.id || pb.type !== nb.type) return true;
+    if (differs(styleWithoutAlign(pb.style), styleWithoutAlign(nb.style))) return true;
+    if (SERVER_PAINTED_FIELDS.some((f) => differs(pb[f], nb[f]))) return true;
     if (SERVER_RENDERED_TYPES.has(nb.type) && pb.props !== nb.props && JSON.stringify(pb.props) !== JSON.stringify(nb.props)) return true;
     if (blocksChanged(pb.children, nb.children)) return true;
   }
@@ -157,16 +175,6 @@ export function syncLiveDOM(canvasDoc, prevDoc, nextDoc, activeBreakpoint = 'bas
           secEl.classList.add(`sb-pt-${padTop}`, `sb-pb-${padBottom}`);
         }
         updateCount += 1;
-      }
-
-      // Inline styles for section
-      if (sec.style && typeof sec.style === 'object') {
-        if (sec.style.backgroundColor !== undefined) {
-          secEl.style.backgroundColor = sec.style.backgroundColor || '';
-        }
-        if (sec.style.textColor !== undefined || sec.style.color !== undefined) {
-          secEl.style.color = sec.style.textColor || sec.style.color || '';
-        }
       }
     });
 
@@ -368,37 +376,6 @@ export function syncLiveDOM(canvasDoc, prevDoc, nextDoc, activeBreakpoint = 'bas
         el.style.textAlign = activeVal;
         updateCount += 1;
       }
-
-      // Typography
-      const typo = nextStyle.typography;
-      if (typo && typeof typo === 'object') {
-        if (typo.fontSize !== undefined) el.style.fontSize = typo.fontSize || '';
-        if (typo.fontWeight !== undefined) el.style.fontWeight = typo.fontWeight ? String(typo.fontWeight) : '';
-        if (typo.lineHeight !== undefined) el.style.lineHeight = typo.lineHeight ? String(typo.lineHeight) : '';
-        if (typo.letterSpacing !== undefined) el.style.letterSpacing = typo.letterSpacing || '';
-        if (typo.textTransform !== undefined) el.style.textTransform = typo.textTransform || '';
-        updateCount += 1;
-      }
-
-      // Colors
-      if (nextStyle.textColor !== undefined || nextStyle.color !== undefined) {
-        el.style.color = nextStyle.textColor || nextStyle.color || '';
-        updateCount += 1;
-      }
-      if (nextStyle.backgroundColor !== undefined) {
-        el.style.backgroundColor = nextStyle.backgroundColor || '';
-        updateCount += 1;
-      }
-      if (nextStyle.borderColor !== undefined) {
-        el.style.borderColor = nextStyle.borderColor || '';
-        updateCount += 1;
-      }
-
-      // Spacing & Box Model
-      if (nextStyle.padding !== undefined) el.style.padding = nextStyle.padding || '';
-      if (nextStyle.margin !== undefined) el.style.margin = nextStyle.margin || '';
-      if (nextStyle.gap !== undefined) el.style.gap = nextStyle.gap || '';
-      if (nextStyle.borderRadius !== undefined) el.style.borderRadius = nextStyle.borderRadius || '';
 
       // Visibility devices
       if (nextBlock.visibility && Array.isArray(nextBlock.visibility.devices)) {

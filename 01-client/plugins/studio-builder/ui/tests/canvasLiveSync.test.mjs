@@ -44,7 +44,7 @@ test('isStructuralChange detects section additions and deletions', () => {
 
 test('isStructuralChange returns false for prop and style edits', () => {
   const doc1 = { sections: [{ id: 's1', blocks: [{ id: 'b1', type: 'core.heading', props: { text: 'Old' }, style: {} }] }] };
-  const doc2 = { sections: [{ id: 's1', blocks: [{ id: 'b1', type: 'core.heading', props: { text: 'New' }, style: { textColor: '#ff0000' } }] }] };
+  const doc2 = { sections: [{ id: 's1', blocks: [{ id: 'b1', type: 'core.heading', props: { text: 'New' }, style: { align: { base: 'center' } } }] }] };
   assert.equal(isStructuralChange(doc1, doc2), false);
 });
 
@@ -61,12 +61,38 @@ test('syncLiveDOM updates block text and style immediately', () => {
   };
 
   const doc1 = { sections: [{ id: 's1', blocks: [{ id: 'b1', type: 'core.heading', props: { text: 'Old Title' } }] }] };
-  const doc2 = { sections: [{ id: 's1', blocks: [{ id: 'b1', type: 'core.heading', props: { text: 'New Title' }, style: { textColor: '#10b981' } }] }] };
+  const doc2 = { sections: [{ id: 's1', blocks: [{ id: 'b1', type: 'core.heading', props: { text: 'New Title' }, style: { align: { base: 'center' } } }] }] };
 
   const count = syncLiveDOM(fakeDoc, doc1, doc2);
   assert.equal(count > 0, true);
   assert.equal(headingEl.textContent, 'New Title');
-  assert.equal(wrapperEl.style.color, '#10b981');
+  assert.equal(wrapperEl.style.textAlign, 'center');
+});
+
+test('every other style edit repaints from the server, because its CSS is written there', () => {
+  const doc = (block) => ({ sections: [sec([{ id: 'b', type: 'core.heading', props: { text: 'x' }, ...block }])] });
+  const base = doc({ style: { typography: { font_size: '2rem' } } });
+  for (const [what, next] of [
+    ['typography', doc({ style: { typography: { font_size: '3rem' } } })],
+    ['a new style group', doc({ style: { typography: { font_size: '2rem' }, effects: { opacity: 0.5 } } })],
+    ['a style state', doc({ style: { typography: { font_size: '2rem' } }, style_states: { hover: { effects: { opacity: 0.5 } } } })],
+    ['the wrapper tag', doc({ style: { typography: { font_size: '2rem' } }, tag: 'section' })],
+    ['class names', doc({ style: { typography: { font_size: '2rem' } }, classNames: ['x'] })],
+  ]) {
+    assert.equal(isStructuralChange(base, next), true, what);
+  }
+  assert.equal(isStructuralChange(base, doc({ style: { typography: { font_size: '2rem' } } })), false, 'an equal copy is not a change');
+  const withSecStyle = (style) => ({ sections: [{ id: 's1', style, blocks: [] }] });
+  assert.equal(isStructuralChange(withSecStyle({ padding: '1rem' }), withSecStyle({ padding: '2rem' })), true, 'section style');
+});
+
+test('the live patch no longer writes inline styles the schema does not have', () => {
+  const el = fakeEl('div');
+  const canvasDoc = { querySelector: () => el };
+  const a = { sections: [{ id: 's1', blocks: [{ id: 'b1', type: 'core.heading', props: {}, style: {} }] }] };
+  const b = { sections: [{ id: 's1', blocks: [{ id: 'b1', type: 'core.heading', props: {}, style: { typography: { fontSize: '9px' }, textColor: 'red' } }] }] };
+  syncLiveDOM(canvasDoc, a, b);
+  assert.deepEqual(el.style, {});
 });
 
 const sec = (blocks) => ({ id: 's1', blocks });
