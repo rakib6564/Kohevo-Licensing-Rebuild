@@ -7,6 +7,7 @@
 // below that overlay, and provides modality itself: backdrop, focus trapped
 // inside, Escape closes, focus restored to the opener.
 
+import { t } from '../core/messages.mjs';
 import { useEffect, useId, useRef } from 'react';
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
@@ -56,7 +57,7 @@ export function Dialog({ title, onClose, children, footer }) {
       >
         <div className="sbx-dialog__head">
           <h2 id={titleId}>{title}</h2>
-          <button type="button" className="sbx-btn sbx-btn--ghost" onClick={() => onCloseRef.current()} aria-label="Close">✕</button>
+          <button type="button" className="sbx-btn sbx-btn--ghost" onClick={() => onCloseRef.current()} aria-label={t('close')}>✕</button>
         </div>
         <div className="sbx-dialog__body">{children}</div>
         {footer ? <div className="sbx-dialog__foot">{footer}</div> : null}

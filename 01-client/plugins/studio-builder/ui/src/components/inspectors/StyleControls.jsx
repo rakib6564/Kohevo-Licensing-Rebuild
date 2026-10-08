@@ -239,7 +239,7 @@ export function StyleControls({ style, capabilities, onChange }) {
       {has('background') && (
         <fieldset className="sbx-fieldset sbx-bg-controls">
           <legend>{t('background_label')}</legend>
-          <div className="sbx-segmented-pills" role="radiogroup" aria-label="Background type">
+          <div className="sbx-segmented-pills" role="radiogroup" aria-label={t('bg_type')}>
             {['image', 'color', 'gradient', 'video'].map((m) => (
               <button
                 key={m}
@@ -247,7 +247,7 @@ export function StyleControls({ style, capabilities, onChange }) {
                 className={`sbx-segmented-pill${bgMode === m ? ' is-active' : ''}`}
                 onClick={() => setBgMode(m)}
               >
-                {m.charAt(0).toUpperCase() + m.slice(1)}
+                {t(`bg_mode_${m}`)}
               </button>
             ))}
           </div>
@@ -256,9 +256,9 @@ export function StyleControls({ style, capabilities, onChange }) {
             <div className="sbx-bg-image-pane">
               <DraftText
                 id={`${id}-bg-img`}
-                label="Image URL"
+                label={t('bg_image_url')}
                 value={bg.image}
-                placeholder="https://... or /assets/..."
+                placeholder={t('url_placeholder_assets')}
                 onCommit={(v) => patchBackground('image', v)}
               />
               <FocalPointControl
@@ -267,30 +267,30 @@ export function StyleControls({ style, capabilities, onChange }) {
                 onChange={(coords) => patchBackground('focal_point', coords)}
               />
               <div className="sbx-field">
-                <label className="sbx-field__label" htmlFor={`${id}-bg-fit`}>Fit</label>
+                <label className="sbx-field__label" htmlFor={`${id}-bg-fit`}>{t('bg_fit')}</label>
                 <select
                   id={`${id}-bg-fit`}
                   value={bg.fit || 'cover'}
                   onChange={(e) => patchBackground('fit', e.target.value)}
                 >
-                  <option value="cover">Cover</option>
-                  <option value="contain">Contain</option>
-                  <option value="fill">Fill</option>
-                  <option value="auto">Original</option>
+                  <option value="cover">{t('fit_cover')}</option>
+                  <option value="contain">{t('fit_contain')}</option>
+                  <option value="fill">{t('fit_fill')}</option>
+                  <option value="auto">{t('fit_auto')}</option>
                 </select>
               </div>
               <div className="sbx-field">
-                <label className="sbx-field__label" htmlFor={`${id}-bg-pos`}>Position</label>
+                <label className="sbx-field__label" htmlFor={`${id}-bg-pos`}>{t('bg_position')}</label>
                 <select
                   id={`${id}-bg-pos`}
                   value={bg.position || 'center center'}
                   onChange={(e) => patchBackground('position', e.target.value)}
                 >
-                  <option value="center center">Center center</option>
-                  <option value="top center">Top center</option>
-                  <option value="bottom center">Bottom center</option>
-                  <option value="center left">Center left</option>
-                  <option value="center right">Center right</option>
+                  <option value="center center">{t('pos_center_center')}</option>
+                  <option value="top center">{t('pos_top_center')}</option>
+                  <option value="bottom center">{t('pos_bottom_center')}</option>
+                  <option value="center left">{t('pos_center_left')}</option>
+                  <option value="center right">{t('pos_center_right')}</option>
                 </select>
               </div>
             </div>
@@ -312,7 +312,7 @@ export function StyleControls({ style, capabilities, onChange }) {
           {bgMode === 'video' && (
             <DraftText
               id={`${id}-bg-vid`}
-              label="Video URL (MP4 / WebM)"
+              label={t('bg_video_url')}
               value={bg.video}
               placeholder="https://...mp4"
               onCommit={(v) => patchBackground('video', v)}
@@ -332,10 +332,10 @@ export function StyleControls({ style, capabilities, onChange }) {
               onChange={(e) => patchNested('border', 'style', e.target.value || undefined)}
             >
               <option value="">{t('none')}</option>
-              <option value="solid">Solid</option>
-              <option value="dashed">Dashed</option>
-              <option value="dotted">Dotted</option>
-              <option value="double">Double</option>
+              <option value="solid">{t('bs_solid')}</option>
+              <option value="dashed">{t('bs_dashed')}</option>
+              <option value="dotted">{t('bs_dotted')}</option>
+              <option value="double">{t('bs_double')}</option>
             </select>
           </div>
           <div className="sbx-field">
@@ -346,12 +346,12 @@ export function StyleControls({ style, capabilities, onChange }) {
               onChange={(e) => patchNested('border', 'radius', e.target.value || undefined)}
             >
               <option value="">{t('none')}</option>
-              <option value="sm">Small</option>
-              <option value="md">Medium</option>
-              <option value="lg">Large</option>
-              <option value="xl">XL</option>
-              <option value="2xl">2XL</option>
-              <option value="full">Full (Pill)</option>
+              <option value="sm">{t('size_sm')}</option>
+              <option value="md">{t('size_md')}</option>
+              <option value="lg">{t('size_lg')}</option>
+              <option value="xl">{t('size_xl')}</option>
+              <option value="2xl">{t('size_2xl')}</option>
+              <option value="full">{t('size_full_pill')}</option>
             </select>
           </div>
           <DraftText
@@ -381,11 +381,11 @@ export function StyleControls({ style, capabilities, onChange }) {
               onChange={(e) => onChange({ ...style, shadow: e.target.value || undefined })}
             >
               <option value="">{t('none')}</option>
-              <option value="sm">Small</option>
-              <option value="md">Medium</option>
-              <option value="lg">Large</option>
-              <option value="xl">XL</option>
-              <option value="2xl">2XL</option>
+              <option value="sm">{t('size_sm')}</option>
+              <option value="md">{t('size_md')}</option>
+              <option value="lg">{t('size_lg')}</option>
+              <option value="xl">{t('size_xl')}</option>
+              <option value="2xl">{t('size_2xl')}</option>
             </select>
           </div>
           {/* Once the author leaves the preset list the value is a custom CSS

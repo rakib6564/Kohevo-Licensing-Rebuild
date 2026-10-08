@@ -193,7 +193,7 @@ function LinkControl({ field, value, onChange, problem }) {
       </label>
       <label className="sbx-field">
         <span className="sbx-field__label">{t('link_href')}</span>
-        <input type="text" inputMode="url" value={link.href ?? ''} placeholder="https://… or /path" onChange={(e) => set({ href: e.target.value.trim() })} />
+        <input type="text" inputMode="url" value={link.href ?? ''} placeholder={t('url_placeholder_path')} onChange={(e) => set({ href: e.target.value.trim() })} />
       </label>
       <label className="sbx-field sbx-field--check">
         <input type="checkbox" checked={link.target === '_blank'} onChange={(e) => set({ target: e.target.checked ? '_blank' : '_self' })} />
