@@ -18,6 +18,7 @@
                 "heading": "",
                 "show_prices": true
             },
+            "description": "Bookable services from your catalogue",
             "field_schema": [
                 {
                     "key": "heading",
@@ -43,7 +44,7 @@
                     "max_length": 80
                 }
             ],
-            "icon": "calendar",
+            "icon": "list-check",
             "label": "Booking Services",
             "required_entitlement": "booking",
             "required_permission": "studio-builder.edit",
@@ -65,6 +66,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Booking Services",
             "type": "booking.services",
             "version": 1
         },
@@ -82,7 +84,7 @@
                         "heading": "How do I get started?"
                     },
                     {
-                        "body": "Yes \u2014 freeze for up to three months, in one go or in slices.",
+                        "body": "Yes — freeze for up to three months, in one go or in slices.",
                         "heading": "Can I freeze my membership?"
                     },
                     {
@@ -91,6 +93,7 @@
                     }
                 ]
             },
+            "description": "Stacked rows that expand, ideal for FAQs",
             "field_schema": [
                 {
                     "key": "items",
@@ -104,7 +107,7 @@
                         },
                         {
                             "heading": "Can I freeze my membership?",
-                            "body": "Yes \u2014 freeze for up to three months, in one go or in slices."
+                            "body": "Yes — freeze for up to three months, in one go or in slices."
                         },
                         {
                             "heading": "What should I bring?",
@@ -161,6 +164,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Accordion",
             "type": "core.accordion",
             "version": 1
         },
@@ -183,6 +187,7 @@
                 "size": "md",
                 "variant": "primary"
             },
+            "description": "A link styled as a call to action",
             "field_schema": [
                 {
                     "key": "link",
@@ -224,7 +229,7 @@
                     "default": false
                 }
             ],
-            "icon": "cursor-click",
+            "icon": "arrow-up-right",
             "label": "Button",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -246,6 +251,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Button",
             "type": "core.button",
             "version": 1
         },
@@ -282,6 +288,7 @@
                     }
                 ]
             },
+            "description": "Image and testimonial slides with dots",
             "field_schema": [
                 {
                     "key": "slides",
@@ -384,7 +391,7 @@
                     ]
                 }
             ],
-            "icon": "images",
+            "icon": "gallery",
             "label": "Carousel",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -406,6 +413,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Carousel",
             "type": "core.carousel",
             "version": 1
         },
@@ -419,6 +427,7 @@
                 "direction": "vertical",
                 "gap": "md"
             },
+            "description": "Inner constraint container",
             "field_schema": [
                 {
                     "key": "gap",
@@ -470,6 +479,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Container",
             "type": "core.container",
             "version": 1
         },
@@ -488,6 +498,7 @@
                 "items": [],
                 "title": ""
             },
+            "description": "Highlights & feature cards",
             "field_schema": [
                 {
                     "key": "title",
@@ -589,6 +600,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Feature list",
             "type": "core.feature_list",
             "version": 1
         },
@@ -605,6 +617,7 @@
                 "submit_text": "Submit",
                 "submit_variant": "primary"
             },
+            "description": "Interactive form builder",
             "field_schema": [
                 {
                     "key": "action",
@@ -654,7 +667,7 @@
                     ]
                 }
             ],
-            "icon": "clipboard",
+            "icon": "form",
             "label": "Form",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -676,6 +689,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Form",
             "type": "core.form",
             "version": 1
         },
@@ -694,6 +708,7 @@
                 "placeholder": "",
                 "required": false
             },
+            "description": "A single input for a form",
             "field_schema": [
                 {
                     "key": "name",
@@ -761,7 +776,7 @@
                     "max_length": 500
                 }
             ],
-            "icon": "input",
+            "icon": "form",
             "label": "Form Field",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -783,6 +798,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Form Field",
             "type": "core.form_field",
             "version": 1
         },
@@ -799,6 +815,7 @@
                 "images": [],
                 "rounded": true
             },
+            "description": "Media image gallery",
             "field_schema": [
                 {
                     "key": "columns",
@@ -882,7 +899,7 @@
                     ]
                 }
             ],
-            "icon": "images",
+            "icon": "gallery",
             "label": "Gallery",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -904,6 +921,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Gallery",
             "type": "core.gallery",
             "version": 1
         },
@@ -924,6 +942,7 @@
                 "level": "h2",
                 "text": "Section Heading"
             },
+            "description": "Create hierarchy",
             "field_schema": [
                 {
                     "key": "text",
@@ -949,7 +968,7 @@
                     ]
                 }
             ],
-            "icon": "type-heading",
+            "icon": "heading",
             "label": "Heading",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -971,6 +990,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Heading",
             "type": "core.heading",
             "version": 1
         },
@@ -988,6 +1008,7 @@
                 "primary_cta": null,
                 "subheading": ""
             },
+            "description": "Lead with a clear proposition",
             "field_schema": [
                 {
                     "key": "eyebrow",
@@ -1035,7 +1056,7 @@
                     "default": null
                 }
             ],
-            "icon": "layout-hero",
+            "icon": "rocket",
             "label": "Hero Banner",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -1057,6 +1078,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Hero",
             "type": "core.hero",
             "version": 1
         },
@@ -1074,6 +1096,7 @@
                 "media": null,
                 "rounded": true
             },
+            "description": "Media library asset",
             "field_schema": [
                 {
                     "key": "media",
@@ -1134,6 +1157,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Image",
             "type": "core.image",
             "version": 1
         },
@@ -1150,6 +1174,7 @@
                 "trigger_text": "Open Modal",
                 "trigger_variant": "primary"
             },
+            "description": "Pop-up modal dialog",
             "field_schema": [
                 {
                     "key": "modal_id",
@@ -1202,7 +1227,7 @@
                     ]
                 }
             ],
-            "icon": "window",
+            "icon": "box",
             "label": "Modal Popup",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -1224,6 +1249,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Modal",
             "type": "core.modal",
             "version": 1
         },
@@ -1262,6 +1288,7 @@
                 "source": "posts",
                 "tag": ""
             },
+            "description": "Live Service & dynamic posts",
             "field_schema": [
                 {
                     "key": "source",
@@ -1429,7 +1456,7 @@
                     "max_length": 200
                 }
             ],
-            "icon": "layout-grid",
+            "icon": "grid-panes",
             "label": "Query Loop",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -1451,6 +1478,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Services grid",
             "type": "core.query_loop",
             "version": 1
         },
@@ -1467,6 +1495,7 @@
             "default_props": {
                 "content": "<p></p>"
             },
+            "description": "Formatted copy & body content",
             "field_schema": [
                 {
                     "key": "content",
@@ -1476,7 +1505,7 @@
                     "default": "<p></p>"
                 }
             ],
-            "icon": "type-rich-text",
+            "icon": "pilcrow",
             "label": "Rich Text",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -1498,6 +1527,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Rich text",
             "type": "core.rich_text",
             "version": 1
         },
@@ -1539,6 +1569,7 @@
                     }
                 ]
             },
+            "description": "Animated figures that count up",
             "field_schema": [
                 {
                     "key": "items",
@@ -1623,7 +1654,7 @@
                     ]
                 }
             ],
-            "icon": "layout-grid",
+            "icon": "grid-dots",
             "label": "Stats",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -1645,6 +1676,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Stats",
             "type": "core.stats",
             "version": 1
         },
@@ -1673,6 +1705,7 @@
                     "position": "top"
                 }
             },
+            "description": "Switch between panels in place",
             "field_schema": [
                 {
                     "key": "items",
@@ -1736,7 +1769,7 @@
                     ]
                 }
             ],
-            "icon": "window",
+            "icon": "grid-panes",
             "label": "Tabs",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -1758,6 +1791,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Tabs",
             "type": "core.tabs",
             "version": 1
         },
@@ -1780,6 +1814,7 @@
                 "content": "",
                 "size": "base"
             },
+            "description": "Plain-text body copy",
             "field_schema": [
                 {
                     "key": "content",
@@ -1825,7 +1860,7 @@
                     "default": null
                 }
             ],
-            "icon": "type",
+            "icon": "pilcrow",
             "label": "Text",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -1847,6 +1882,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Text",
             "type": "core.text",
             "version": 1
         },
@@ -1864,6 +1900,7 @@
                 "muted": false,
                 "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
             },
+            "description": "Responsive video player",
             "field_schema": [
                 {
                     "key": "url",
@@ -1936,6 +1973,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Video",
             "type": "core.video",
             "version": 1
         },
@@ -1956,6 +1994,7 @@
                 "button_label": "",
                 "show_description": true
             },
+            "description": "A contact or enquiry form in a card",
             "field_schema": [
                 {
                     "key": "button_label",
@@ -1973,7 +2012,7 @@
                     "default": true
                 }
             ],
-            "icon": "clipboard",
+            "icon": "form",
             "label": "Form Card",
             "required_entitlement": "forms",
             "required_permission": "studio-builder.edit",
@@ -1995,6 +2034,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Form Card",
             "type": "forms.form_card",
             "version": 1
         },
@@ -2009,6 +2049,7 @@
                 "padding": "none",
                 "width": "constrained"
             },
+            "description": "Constrained width container",
             "field_schema": [
                 {
                     "key": "width",
@@ -2051,7 +2092,7 @@
                     ]
                 }
             ],
-            "icon": "layout-container",
+            "icon": "box",
             "label": "Container",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2073,6 +2114,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Container",
             "type": "layout.container",
             "version": 1
         },
@@ -2089,6 +2131,7 @@
                 "justify": "start",
                 "wrap": "nowrap"
             },
+            "description": "Flexible row or column layout",
             "field_schema": [
                 {
                     "key": "direction",
@@ -2161,7 +2204,7 @@
                     ]
                 }
             ],
-            "icon": "layout-flex",
+            "icon": "box",
             "label": "Flex",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2183,6 +2226,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Flex",
             "type": "layout.flex",
             "version": 1
         },
@@ -2197,6 +2241,7 @@
                 "columns": 2,
                 "gap": "md"
             },
+            "description": "Multi-column responsive grid",
             "field_schema": [
                 {
                     "key": "columns",
@@ -2238,7 +2283,7 @@
                     ]
                 }
             ],
-            "icon": "layout-grid",
+            "icon": "grid-panes",
             "label": "Grid",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2260,6 +2305,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Grid",
             "type": "layout.grid",
             "version": 1
         },
@@ -2276,6 +2322,7 @@
                 "trigger_text": "Open Menu",
                 "trigger_variant": "outline"
             },
+            "description": "Slide-out navigation drawer",
             "field_schema": [
                 {
                     "key": "drawer_id",
@@ -2328,7 +2375,7 @@
                     ]
                 }
             ],
-            "icon": "sidebar",
+            "icon": "layout-section",
             "label": "Offcanvas Drawer",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2350,6 +2397,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Offcanvas",
             "type": "layout.offcanvas",
             "version": 1
         },
@@ -2366,6 +2414,7 @@
                 "padding_y": "md",
                 "tag": "section"
             },
+            "description": "Full-width layout section",
             "field_schema": [
                 {
                     "key": "tag",
@@ -2456,6 +2505,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Section",
             "type": "layout.section",
             "version": 1
         },
@@ -2477,6 +2527,7 @@
                 "heading": "",
                 "show_prices": true
             },
+            "description": "Plans and pricing from your membership module",
             "field_schema": [
                 {
                     "key": "heading",
@@ -2502,7 +2553,7 @@
                     "max_length": 80
                 }
             ],
-            "icon": "id-card",
+            "icon": "grid-panes",
             "label": "Membership Plans",
             "required_entitlement": "membership",
             "required_permission": "studio-builder.edit",
@@ -2524,6 +2575,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Membership Plans",
             "type": "membership.plans",
             "version": 1
         },
@@ -2539,6 +2591,7 @@
                 "level": "h1",
                 "title": ""
             },
+            "description": "Taxonomy & archive heading",
             "field_schema": [
                 {
                     "key": "level",
@@ -2561,7 +2614,7 @@
                     "max_length": 255
                 }
             ],
-            "icon": "folder",
+            "icon": "heading",
             "label": "Archive Title",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2583,6 +2636,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Archive title",
             "type": "theme.archive_title",
             "version": 1
         },
@@ -2597,6 +2651,7 @@
             "default_props": {
                 "content": ""
             },
+            "description": "Dynamic post body copy",
             "field_schema": [
                 {
                     "key": "content",
@@ -2607,7 +2662,7 @@
                     "max_length": 50000
                 }
             ],
-            "icon": "file-text",
+            "icon": "pilcrow",
             "label": "Post Content",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2629,6 +2684,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Post content",
             "type": "theme.post_content",
             "version": 1
         },
@@ -2642,11 +2698,12 @@
             "binding_slots": [],
             "category": "theme",
             "default_props": {
-                "separator": " \u2022 ",
+                "separator": " • ",
                 "show_author": true,
                 "show_category": true,
                 "show_date": true
             },
+            "description": "Author, date & category info",
             "field_schema": [
                 {
                     "key": "show_author",
@@ -2674,11 +2731,11 @@
                     "type": "string",
                     "label": "Separator",
                     "required": false,
-                    "default": " \u2022 ",
+                    "default": " • ",
                     "max_length": 10
                 }
             ],
-            "icon": "info",
+            "icon": "list-check",
             "label": "Post Meta",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2700,6 +2757,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Post meta",
             "type": "theme.post_meta",
             "version": 1
         },
@@ -2716,6 +2774,7 @@
                 "level": "h1",
                 "text": ""
             },
+            "description": "Dynamic article heading",
             "field_schema": [
                 {
                     "key": "level",
@@ -2775,6 +2834,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Post title",
             "type": "theme.post_title",
             "version": 1
         },
@@ -2788,6 +2848,7 @@
                 "button_text": "Search",
                 "placeholder": "Search articles..."
             },
+            "description": "Site search input box",
             "field_schema": [
                 {
                     "key": "placeholder",
@@ -2828,6 +2889,7 @@
                 "opacity",
                 "z_index"
             ],
+            "title": "Search box",
             "type": "theme.search_box",
             "version": 1
         }

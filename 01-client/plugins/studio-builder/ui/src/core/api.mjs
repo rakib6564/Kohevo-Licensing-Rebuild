@@ -74,6 +74,7 @@ export function createTransport({ apiUrl, csrfToken, fetchImpl, timeoutMs = TIME
     // Phase 6 — template library, global components, chrome bindings, design tokens.
     manifest: () => call('GET', 'manifest'),
     templates: (type = null) => call('GET', 'templates', { query: type ? { type } : {} }),
+    sectionPresets: () => call('GET', 'section_presets'),
     components: () => call('GET', 'components'),
     chrome: (pageId) => call('GET', 'chrome', { query: { page: pageId } }),
     tokens: (group = 'default') => call('GET', 'tokens', { query: { group } }),

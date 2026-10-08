@@ -50,10 +50,12 @@ test('a phone starts on the Mobile device and the canvas fills the width instead
 test('selecting a node does not open the sheet; the contextual bar shows and Edit opens the sheet', async ({ page }) => {
   await openBuilder(page);
   await ensureSection(page);
-  const frame = await frameDocument(page);
-  await frame.locator('[data-sb-node]').first().click({ position: { x: 6, y: 6 } });
-
-  await expect(page.getByTestId('overlay-toolbar')).toBeVisible();
+  // The canvas re-renders after load/save; retry the tap until the shell has picked it up.
+  await expect(async () => {
+    const frame = await frameDocument(page);
+    await frame.locator('[data-sb-node]').first().click({ position: { x: 6, y: 6 }, timeout: 5_000 });
+    await expect(page.getByTestId('overlay-toolbar')).toBeVisible({ timeout: 3_000 });
+  }).toPass({ timeout: 25_000 });
   await expect(page.locator('.sbx-left.is-mobile-open')).toHaveCount(0);
   await expect(dock(page, 'inspector')).toBeVisible();
 

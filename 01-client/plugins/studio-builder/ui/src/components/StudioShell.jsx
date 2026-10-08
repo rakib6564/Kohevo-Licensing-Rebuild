@@ -132,6 +132,17 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
 
   useEffect(() => { if (manifest) refreshLibrary(); }, [manifest, refreshLibrary]);
 
+  // Built-in section presets load the first time the Add panel needs them (the first call also seeds them
+  // for this tenant), not on every page load: a phone with the Add sheet closed never pays for it.
+  const [presets, setPresets] = useState(null);
+  const presetsRequested = useRef(false);
+  const ensurePresets = useCallback(async () => {
+    if (presetsRequested.current || typeof transport.sectionPresets !== 'function') return;
+    presetsRequested.current = true;
+    const res = await transport.sectionPresets();
+    setPresets(res.ok ? res.data.presets : []);
+  }, [transport]);
+
   // ── Advisory edit lock ─────────────────────────────────────────────────
   useEffect(() => {
     if (!lockEnabled || !manifest) return undefined;
@@ -466,17 +477,19 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     return () => window.removeEventListener('keydown', onKey);
   }, [engine, save, undo, redo, duplicateNode]);
 
+  const libraryWithPresets = useMemo(() => (library ? { ...library, presets: presets === null ? undefined : presets } : library), [library, presets]);
+
   const ctx = useMemo(() => ({
     boot, engine, manifest, transport, announce, applyOp, canvasView, setCanvasView,
     insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf,
     viewport: viewportByKey(viewportKey),
-    library, refreshLibrary, applyTemplate, insertTemplate, deleteTemplate,
+    library: libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate,
     insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion,
     openSaveTemplate: () => setDialog('save_template'),
     openComponentDialog: () => setDialog('component'),
     openAiReview: () => setDialog('ai_review'),
   }), [boot, engine, manifest, transport, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey,
-    library, refreshLibrary, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
+    libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
 
   const selectionCtx = useMemo(() => ({
     sel, selection: sel.primary, selectedIds: sel.ids, select, pick, setHover, setFocus,

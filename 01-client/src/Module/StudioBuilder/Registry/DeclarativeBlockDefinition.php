@@ -31,6 +31,8 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
      * @param list<string> $styleCapabilities
      * @param array<string, string> $bindingSlots Editor metadata: renderer slot key => the allowlisted
      *                                            provider that feeds it (e.g. ['items' => 'booking.services']).
+     * @param ?string $title       Add-panel card title (defaults to the label); translated at the application boundary.
+     * @param string $description  One-line Add-panel card description; translated at the application boundary.
      */
     public function __construct(
         private readonly string $type,
@@ -46,6 +48,8 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
         private readonly array $allowedBindingProviders = [],
         private readonly array $styleCapabilities = CanonicalDocumentSchema::ALLOWED_STYLE_KEYS,
         private readonly array $bindingSlots = [],
+        private readonly ?string $title = null,
+        private readonly string $description = '',
     ) {
         if (preg_match(CanonicalDocumentSchema::BLOCK_TYPE_PATTERN, $this->type) !== 1) {
             throw new \InvalidArgumentException("Invalid namespaced block type '{$this->type}'. Expected 'namespace.name'.");
@@ -192,12 +196,14 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
             ),
             'category'                  => $this->category,
             'default_props'             => $this->schema->defaults(),
+            'description'               => $this->description,
             'field_schema'              => $this->schema->toEditorManifest(),
             'icon'                      => $this->icon,
             'label'                     => $this->label,
             'required_entitlement'      => $this->requiredEntitlement,
             'required_permission'       => $this->requiredPermission,
             'style_capabilities'        => $this->styleCapabilities,
+            'title'                     => $this->title !== null && trim($this->title) !== '' ? $this->title : $this->label,
             'type'                      => $this->type,
             'version'                   => $this->version,
         ];

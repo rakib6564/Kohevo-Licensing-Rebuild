@@ -126,6 +126,59 @@ final class StudioTemplateService
     }
 
     /**
+     * Create or refresh built-in (system) presets for the active tenant, idempotently.
+     *
+     * Each preset is validated exactly like a tenant template, stored with `is_system = 1`
+     * (so tenants can copy but never overwrite or delete it) and rewritten only when its
+     * normalized document, name, category or description changed. A tenant template that
+     * already uses a preset's key is never touched.
+     *
+     * @param list<array{key: string, category: string, name: string, description: string, document: array<string, mixed>}> $presets
+     * @return array{inserted: int, updated: int, unchanged: int, skipped: int}
+     */
+    public function syncSystemTemplates(string $templateType, array $presets): array
+    {
+        $this->requireTenantId();
+        $counts = ['inserted' => 0, 'updated' => 0, 'unchanged' => 0, 'skipped' => 0];
+        foreach ($presets as $preset) {
+            $clean = $this->validateTemplate($preset['key'], $templateType, $preset['category'], $preset['name'], $preset['description'], $preset['document']);
+            $data = [
+                'template_key'       => $preset['key'],
+                'template_type'      => $templateType,
+                'category'           => $clean['category'],
+                'name'               => $clean['name'],
+                'description'        => $clean['description'],
+                'thumbnail_media_id' => null,
+                'schema_version'     => CanonicalDocumentSchema::SCHEMA_VERSION,
+                'document_json'      => CanonicalJson::encode($clean['document']),
+                'is_system'          => 1,
+            ];
+            $existing = $this->templates->findByKey($preset['key']);
+            if ($existing === null) {
+                $data['uuid'] = self::newUuidV4();
+                $this->templates->insert($data);
+                $counts['inserted']++;
+                continue;
+            }
+            if (!(bool) $existing['is_system']) {
+                $counts['skipped']++;
+                continue;
+            }
+            $same = (string) $existing['document_json'] === $data['document_json']
+                && (string) $existing['name'] === $data['name']
+                && (string) $existing['category'] === $data['category']
+                && (string) ($existing['description'] ?? '') === (string) ($data['description'] ?? '');
+            if ($same) {
+                $counts['unchanged']++;
+                continue;
+            }
+            $this->templates->update((int) $existing['id'], $data);
+            $counts['updated']++;
+        }
+        return $counts;
+    }
+
+    /**
      * Every rule `saveTemplate()` applies BEFORE it touches storage — field
      * checks, full canonical validation/normalization of the document, and the
      * preset shape rules — without writing anything. Returns the cleaned

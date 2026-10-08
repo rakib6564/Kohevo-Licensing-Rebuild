@@ -61,6 +61,8 @@ final class StudioAuthoringApi
         'manifest'     => ['GET', []],
         'revisions'    => ['GET', ['page', 'limit']],
         'templates'    => ['GET', ['type']],
+        // B2-P2a: the built-in section presets (seeded as system templates on first use)
+        'section_presets' => ['GET', []],
         'pages'        => ['GET', []],
         // Phase 6 queries
         'components'   => ['GET', []],
@@ -231,6 +233,7 @@ final class StudioAuthoringApi
             'manifest'     => StudioApiResponse::ok(['manifest' => $this->app->editorManifest($actor)]),
             'revisions'    => StudioApiResponse::ok(['revisions' => $this->app->listRevisions($actor, self::id($input, 'page'), self::optionalInt($input, 'limit') ?? 30)]),
             'templates'    => $this->templates($actor, $input),
+            'section_presets' => StudioApiResponse::ok(['presets' => $this->app->sectionPresets($actor)]),
             'pages'        => StudioApiResponse::ok(['pages' => $this->app->listPages($actor)]),
             'operations'   => $this->operations($actor, $input),
             'save_draft'   => $this->saveDraft($actor, $input),

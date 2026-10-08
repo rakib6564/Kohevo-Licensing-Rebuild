@@ -105,6 +105,9 @@ use Slate\Module\StudioBuilder\Render\Theme\ThemeResolver;
 use Slate\Module\StudioBuilder\Repository\PageRepository;
 use Slate\Module\StudioBuilder\Repository\RevisionRepository;
 use Slate\Module\StudioBuilder\Repository\TemplateRepository;
+use Slate\Module\StudioBuilder\Presets\SectionPresetCatalog;
+use Slate\Module\StudioBuilder\Presets\WireframeOutline;
+use Slate\Module\StudioBuilder\Runtime\StudioLog;
 use Slate\Module\StudioBuilder\Runtime\StudioPublicLocale;
 use Slate\Module\StudioBuilder\Runtime\StudioReservedRoutes;
 use Slate\Module\StudioBuilder\Service\StudioEditLockService;
@@ -401,6 +404,26 @@ final class StudioApplicationService
     }
 
     /**
+     * The built-in section presets (system templates) for the Add panel. The first call for a
+     * tenant seeds them; later calls only read. Same transport-safe views as the library.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function sectionPresets(StudioActor $actor): array
+    {
+        $this->authorize($actor, StudioPermissions::VIEW);
+        $this->ensureSystemPresets();
+        $order = array_flip(array_column(SectionPresetCatalog::all(), 'key'));
+        $presets = array_values(array_filter(
+            $this->templateLibrary($actor, 'section_preset', true),
+            static fn(array $t): bool => !empty($t['is_system']) && isset($order[(string) $t['template_key']]),
+        ));
+        // Catalogue order (the author's order), not the storage/alphabetical order.
+        usort($presets, static fn(array $a, array $b): int => $order[(string) $a['template_key']] <=> $order[(string) $b['template_key']]);
+        return $presets;
+    }
+
+    /**
      * Template library listing: transport-safe rows plus a structural summary
      * and the tenant-scoped thumbnail URL (never a document body).
      *
@@ -420,19 +443,75 @@ final class StudioApplicationService
      *
      * @return list<array<string, mixed>>
      */
-    public function templateLibrary(StudioActor $actor, ?string $templateType = null): array
+    public function templateLibrary(StudioActor $actor, ?string $templateType = null, bool $withOutline = false): array
     {
         $out = [];
         foreach ($this->listTemplates($actor, $templateType) as $row) {
             $summary = null;
+            $outline = null;
             try {
-                $summary = $this->templates->summarize(CanonicalJson::decode((string) $row['document_json']));
+                $document = CanonicalJson::decode((string) $row['document_json']);
+                $summary = $this->templates->summarize($document);
+                $outline = $withOutline ? WireframeOutline::fromDocument($document) : null;
             } catch (\Throwable $ignored) {
                 $summary = null;
             }
-            $out[] = StudioEditorViews::template($row, $this->thumbnailUrl($row), $summary);
+            $view = self::translatePresetCopy(StudioEditorViews::template($row, $this->thumbnailUrl($row), $summary));
+            if ($withOutline) {
+                $view['outline'] = $outline ?? [];
+            }
+            $out[] = $view;
         }
         return $out;
+    }
+
+    /**
+     * Translate the name and description of a built-in preset for the active admin locale
+     * (`studio_preset_<slug>_name|desc`). Tenant templates are left exactly as written.
+     *
+     * @param array<string, mixed> $view
+     * @return array<string, mixed>
+     */
+    private static function translatePresetCopy(array $view): array
+    {
+        $key = (string) ($view['template_key'] ?? '');
+        if (empty($view['is_system']) || !str_starts_with($key, SectionPresetCatalog::KEY_PREFIX) || !\function_exists('__')) {
+            return $view;
+        }
+        $slug = str_replace('-', '_', substr($key, strlen(SectionPresetCatalog::KEY_PREFIX)));
+        foreach (['name' => 'name', 'description' => 'desc'] as $field => $suffix) {
+            $default = (string) ($view[$field] ?? '');
+            if ($default === '') {
+                continue;
+            }
+            try {
+                $view[$field] = (string) \__("studio_preset_{$slug}_{$suffix}", $default);
+            } catch (\Throwable $ignored) {
+                $view[$field] = $default;
+            }
+        }
+        return $view;
+    }
+
+    /** Tenant ids whose built-in presets were already synced during this request. */
+    private static array $presetsSynced = [];
+
+    /**
+     * Make sure the active tenant has the built-in section presets (system templates).
+     * Idempotent and cheap after the first call; a failure never blocks the library.
+     */
+    private function ensureSystemPresets(): void
+    {
+        $tenant = $this->tenants->id();
+        if ($tenant <= 0 || isset(self::$presetsSynced[$tenant])) {
+            return;
+        }
+        self::$presetsSynced[$tenant] = true;
+        try {
+            $this->templates->syncSystemTemplates('section_preset', SectionPresetCatalog::all());
+        } catch (\Throwable $e) {
+            StudioLog::failure('presets', 'sync_system_templates', $e, 'warning');
+        }
     }
 
     // ── Global Component commands (LIVE reference semantics) ────────────────
@@ -958,6 +1037,32 @@ final class StudioApplicationService
     }
 
     /**
+     * Translate the Add-panel copy of one block manifest. The registry stays locale-neutral
+     * (its manifest is pinned by a fixture); the active admin locale is applied here. Keys are
+     * `studio_block_<type with dots as underscores>_title|desc`; the English default is used
+     * when the i18n layer is down or a block has no translation.
+     *
+     * @param array<string, mixed> $block
+     * @return array<string, mixed>
+     */
+    private static function translateBlockCopy(array $block): array
+    {
+        $slug = str_replace('.', '_', (string) ($block['type'] ?? ''));
+        foreach (['title' => 'title', 'description' => 'desc'] as $field => $suffix) {
+            $default = (string) ($block[$field] ?? '');
+            if ($default === '' || !\function_exists('__')) {
+                continue;
+            }
+            try {
+                $block[$field] = (string) \__("studio_block_{$slug}_{$suffix}", $default);
+            } catch (\Throwable $ignored) {
+                $block[$field] = $default;
+            }
+        }
+        return $block;
+    }
+
+    /**
      * Everything the builder needs to generate its palette and property panels,
      * as transport-safe DATA: block manifests (filtered by this tenant's
      * entitlements and this actor's permissions), the parameter schemas of the
@@ -991,7 +1096,10 @@ final class StudioApplicationService
         }
 
         return [
-            'blocks'      => $this->registry->editorManifests($entitled, static fn(string $perm): bool => $actor->can($perm)),
+            'blocks'      => array_map(
+                static fn(array $block): array => self::translateBlockCopy($block),
+                $this->registry->editorManifests($entitled, static fn(string $perm): bool => $actor->can($perm)),
+            ),
             'providers'   => $providers,
             'tokens'      => $tokens,
             'vocabulary'  => [
