@@ -6,14 +6,15 @@
 // to edit the component, "Detach" (server command → local copy), and only the
 // visibility controls (where THIS page shows it).
 
-import { useState } from 'react';
 import { useEditor, useEngineState } from '../EditorContext.jsx';
-import { ResponsiveSelect, Tabs, VisibilityControls } from './controls.jsx';
+import { ResponsiveSelect, VisibilityControls } from './controls.jsx';
 import { TokenSelect } from '../fields/FieldControl.jsx';
 import { MediaControl } from '../fields/MediaControl.jsx';
 import { IconLayoutSection } from '../Icons.jsx';
 import { IconButton } from './InspectorIcons.jsx';
-import { MotionInspector } from './MotionInspector.jsx';
+import { EntranceSelect, MotionInspector } from './MotionInspector.jsx';
+import { InspectorShell } from './InspectorShell.jsx';
+import { PAGE_SECTION_SECTIONS, SECTION_DEF } from '../../core/inspectorSections.mjs';
 import { ColorField } from './StyleControls.jsx';
 import { SpacingBox } from './SurfaceControls.jsx';
 import { getPath, setPath, setPaths } from '../../core/styleSurface.mjs';
@@ -61,7 +62,6 @@ export function SectionInspector({ info }) {
   const perms = (manifest && manifest.permissions) || {};
   const pageType = page ? page.page_type : 'page';
   const canReference = asList(manifest && manifest.components && manifest.components.referencing_types).includes(pageType);
-  const [tab, setTab] = useState('layout');
   const section = info.node;
   const layout = asObject(section.layout);
   const total = sectionsOf(working).length;
@@ -74,8 +74,7 @@ export function SectionInspector({ info }) {
   const putStyle = (path, value) => applyOp(ops.updateSectionStyle(section.id, setPath(style, path, value)), { label });
   const putStyleAll = (pairs) => applyOp(ops.updateSectionStyle(section.id, setPaths(style, pairs)), { label });
 
-  return (
-    <div className="sbx-inspector">
+  const headerNode = (
       <header className="sbx-ihead">
         <span className="sbx-ihead__icon" aria-hidden="true"><IconLayoutSection size={18} /></span>
         <div className="sbx-ihead__names">
@@ -83,6 +82,8 @@ export function SectionInspector({ info }) {
           {section.label ? <span className="sbx-ihead__type">{t('section')}</span> : null}
         </div>
       </header>
+  );
+  const toolsNode = (
       <div className="sbx-inspector__tools" role="group" aria-label={label}>
         <IconButton icon="up" label={t('move_up')} disabled={info.index === 0} onClick={() => moveSectionTo(section.id, info.index - 1)} />
         <IconButton icon="down" label={t('move_down')} disabled={info.index >= total - 1} onClick={() => moveSectionTo(section.id, info.index + 1)} />
@@ -91,75 +92,90 @@ export function SectionInspector({ info }) {
         {!global && perms.edit && canReference && openComponentDialog && <IconButton icon="component" label={t('library_new_component')} onClick={openComponentDialog} />}
         <IconButton icon="trash" label={t('remove')} danger onClick={() => removeNode(section.id)} />
       </div>
-      {global && <GlobalSectionPanel section={section} label={label} />}
-      {!global && <Tabs tabs={[{ key: 'layout', label: t('tab_layout') }, { key: 'style', label: t('tab_style') }, { key: 'motion', label: t('tab_motion') }, { key: 'visibility', label: t('tab_visibility') }]} active={tab} onChange={setTab} idPrefix={idPrefix} />}
+  );
 
-      {!global && tab === 'layout' && (
-        <div role="tabpanel" id={`${idPrefix}-panel-layout`} aria-labelledby={`${idPrefix}-tab-layout`}>
-          <div className="sbx-field">
-            <label className="sbx-field__label" htmlFor={`${idPrefix}-width`}>{t('width')}</label>
-            <select id={`${idPrefix}-width`} value={layout.width || 'wide'} onChange={(e) => setLayout({ width: e.target.value })}>
-              {asList(vocab.container_widths).map((w) => <option key={w} value={w}>{w}</option>)}
-            </select>
-          </div>
-          <div className="sbx-field">
-            <label className="sbx-field__label" htmlFor={`${idPrefix}-gap`}>{t('gap')}</label>
-            <select id={`${idPrefix}-gap`} value={layout.gap || 'md'} onChange={(e) => setLayout({ gap: e.target.value })}>
-              {asList(vocab.spacing_scale).map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <ResponsiveSelect
-            label={t('columns')}
-            value={layout.columns ?? { base: 1 }}
-            options={COLUMN_OPTIONS}
-            numeric
-            requireBase
-            activeBreakpoint={viewport.breakpoint}
-            onChange={(columns) => setLayout({ columns })}
-          />
-          <ResponsiveSelect
-            label={t('padding_y')}
-            value={layout.padding_y ?? { base: 'md' }}
-            options={asList(vocab.spacing_scale)}
-            requireBase
-            activeBreakpoint={viewport.breakpoint}
-            onChange={(padding) => setLayout({ padding_y: padding })}
-          />
-          <div className="sbx-field">
-            <label className="sbx-field__label" htmlFor={`${idPrefix}-bg`}>{t('background')}</label>
-            <TokenSelect id={`${idPrefix}-bg`} value={layout.background_token ?? null} tokens={tokensFor(manifest, ['surface', 'color'])} onChange={(v) => setLayout({ background_token: v })} />
-          </div>
-        </div>
-      )}
+  if (global) {
+    return (
+      <div className="sbx-inspector">
+        {headerNode}
+        {toolsNode}
+        <GlobalSectionPanel section={section} label={label} />
+      </div>
+    );
+  }
 
-      {!global && tab === 'style' && (
-        <div role="tabpanel" id={`${idPrefix}-panel-style`} aria-labelledby={`${idPrefix}-tab-style`}>
-          <p className="sbx-hint">{t('section_style_hint')}</p>
-          <fieldset className="sbx-fieldset">
-            <legend>{t('section_style_bg')}</legend>
-            <ColorField id={`${idPrefix}-style-bg`} label={t('background_color')} value={getPath(style, 'background.color')} onChange={(v) => putStyle('background.color', v)} />
-            <MediaControl
-              field={{ key: 'section-bg-image', label: t('bg_image'), required: false }}
-              value={getPath(style, 'background.image') ?? null}
-              mediaPicker={boot.mediaPicker}
-              onChange={(ref) => putStyle('background.image', ref ?? undefined)}
-            />
-          </fieldset>
-          <SpacingBox id={`${idPrefix}-style`} group="padding" label={t('section_style_padding')} get={(path) => getPath(style, path)} putAll={putStyleAll} />
-        </div>
-      )}
+  const sectionBodies = {
+    layout: () => (
+      <>
+      <div className="sbx-field">
+                <label className="sbx-field__label" htmlFor={`${idPrefix}-width`}>{t('width')}</label>
+                <select id={`${idPrefix}-width`} value={layout.width || 'wide'} onChange={(e) => setLayout({ width: e.target.value })}>
+                  {asList(vocab.container_widths).map((w) => <option key={w} value={w}>{w}</option>)}
+                </select>
+              </div>
+              <div className="sbx-field">
+                <label className="sbx-field__label" htmlFor={`${idPrefix}-gap`}>{t('gap')}</label>
+                <select id={`${idPrefix}-gap`} value={layout.gap || 'md'} onChange={(e) => setLayout({ gap: e.target.value })}>
+                  {asList(vocab.spacing_scale).map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <ResponsiveSelect
+                label={t('columns')}
+                value={layout.columns ?? { base: 1 }}
+                options={COLUMN_OPTIONS}
+                numeric
+                requireBase
+                activeBreakpoint={viewport.breakpoint}
+                onChange={(columns) => setLayout({ columns })}
+              />
+              <ResponsiveSelect
+                label={t('padding_y')}
+                value={layout.padding_y ?? { base: 'md' }}
+                options={asList(vocab.spacing_scale)}
+                requireBase
+                activeBreakpoint={viewport.breakpoint}
+                onChange={(padding) => setLayout({ padding_y: padding })}
+              />
+              <div className="sbx-field">
+                <label className="sbx-field__label" htmlFor={`${idPrefix}-bg`}>{t('background')}</label>
+                <TokenSelect id={`${idPrefix}-bg`} value={layout.background_token ?? null} tokens={tokensFor(manifest, ['surface', 'color'])} onChange={(v) => setLayout({ background_token: v })} />
+              </div>
+      </>
+    ),
+    background: () => (
+      <>
+      <fieldset className="sbx-fieldset">
+                <legend>{t('section_style_bg')}</legend>
+                <ColorField id={`${idPrefix}-style-bg`} label={t('background_color')} value={getPath(style, 'background.color')} onChange={(v) => putStyle('background.color', v)} />
+                <MediaControl
+                  field={{ key: 'section-bg-image', label: t('bg_image'), required: false }}
+                  value={getPath(style, 'background.image') ?? null}
+                  mediaPicker={boot.mediaPicker}
+                  onChange={(ref) => putStyle('background.image', ref ?? undefined)}
+                />
+              </fieldset>
+      </>
+    ),
+    advanced: () => (
+      <>
+        <SpacingBox id={`${idPrefix}-style`} group="padding" label={t('section_style_padding')} get={(path) => getPath(style, path)} putAll={putStyleAll} />
+        <EntranceSelect block={section} applyOp={applyOp} label={label} section />
+      </>
+    ),
+    motion: () => <MotionInspector block={section} applyOp={applyOp} label={label} section />,
+    responsive: () => <VisibilityControls value={section.visibility} manifest={manifest} onChange={(v) => applyOp(ops.updateSectionVisibility(section.id, v), { label })} />,
+  };
 
-      {!global && tab === 'motion' && (
-        <div role="tabpanel" id={`${idPrefix}-panel-motion`} aria-labelledby={`${idPrefix}-tab-motion`}>
-          <MotionInspector block={section} applyOp={applyOp} label={label} section />
-        </div>
-      )}
-
-      {!global && tab === 'visibility' && (
-        <div role="tabpanel" id={`${idPrefix}-panel-visibility`} aria-labelledby={`${idPrefix}-tab-visibility`}>
-          <VisibilityControls value={section.visibility} manifest={manifest} onChange={(v) => applyOp(ops.updateSectionVisibility(section.id, v), { label })} />
-        </div>
-      )}
-    </div>
+  return (
+    <InspectorShell
+      idPrefix={idPrefix}
+      node={section}
+      def={SECTION_DEF}
+      typeKey="section"
+      registry={PAGE_SECTION_SECTIONS}
+      header={headerNode}
+      actions={toolsNode}
+      renderSection={(id) => (sectionBodies[id] ? sectionBodies[id]() : null)}
+    />
   );
 }

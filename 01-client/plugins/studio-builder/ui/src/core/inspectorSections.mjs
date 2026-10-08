@@ -95,6 +95,26 @@ function a11ySummary(attrs) {
   return [a.role, a['aria-label'] ? 'aria-label' : ''].filter(Boolean).join(' · ');
 }
 
+/**
+ * A page section has its own, smaller model than a block (a vocabulary `layout`, a `style` of background and padding, motion
+ * and visibility), so it has its own list, shaped the same way: Content (how it arranges), Style (its background) and Advanced
+ * (padding, entrance, motion, responsive).
+ */
+export const SECTION_DEF = Object.freeze({ style_capabilities: Object.freeze(['background', 'padding']), allows_children: true, binding_slots: Object.freeze([]) });
+
+export const PAGE_SECTION_SECTIONS = Object.freeze([
+  { id: 'layout', tab: 'content', titleKey: 'section_layout', appliesTo: () => true, summary: (ctx) => pageLayoutSummary(ctx.node.layout), openFor: () => true },
+  { id: 'background', tab: 'style', titleKey: 'background_label', appliesTo: () => true, summary: (ctx) => backgroundSummary(ctx.style.background), openFor: () => true },
+  { id: 'advanced', tab: 'advanced', titleKey: 'section_advanced', keywords: ['padding', 'spacing', 'entrance', 'animation'], appliesTo: () => true, summary: (ctx) => spacingSummary({ padding: asObject(ctx.style).padding }), openFor: () => true },
+  { id: 'motion', tab: 'advanced', titleKey: 'section_motion_effects', appliesTo: () => true, summary: (ctx) => motionSummary(ctx.node), openFor: () => false },
+  { id: 'responsive', tab: 'advanced', titleKey: 'tab_responsive', appliesTo: () => true, summary: (ctx) => visibilitySummary(ctx.node.visibility), openFor: () => false },
+]);
+
+function pageLayoutSummary(layout) {
+  const l = asObject(layout);
+  return [l.width, l.gap].filter(Boolean).join(' · ');
+}
+
 function layoutSummary(layout) {
   const l = asObject(layout);
   return [l.display, l.direction, l.gap].filter(Boolean).join(' · ');
@@ -164,21 +184,21 @@ export function inspectorContext(node, def) {
 }
 
 /** The sections of one tab that apply to this block, in display order. */
-export function sectionsFor(tab, ctx) {
-  return SECTIONS.filter((s) => tabOf(s, ctx) === tab && s.appliesTo(ctx));
+export function sectionsFor(tab, ctx, list = SECTIONS) {
+  return list.filter((s) => tabOf(s, ctx) === tab && s.appliesTo(ctx));
 }
 
 /** Every applicable section across the tabs, grouped. */
-export function applicableSections(ctx) {
-  return TABS.map((tab) => ({ tab, sections: sectionsFor(tab, ctx) })).filter((g) => g.sections.length > 0);
+export function applicableSections(ctx, list = SECTIONS) {
+  return TABS.map((tab) => ({ tab, sections: sectionsFor(tab, ctx, list) })).filter((g) => g.sections.length > 0);
 }
 
 /**
  * The ids that start open for a tab: the ones the registry marks relevant for this block, or - when none is -
  * the first section, so a tab never opens as a wall of closed headers.
  */
-export function defaultOpenIds(tab, ctx) {
-  const list = sectionsFor(tab, ctx);
+export function defaultOpenIds(tab, ctx, registry = SECTIONS) {
+  const list = sectionsFor(tab, ctx, registry);
   const flagged = list.filter((s) => s.openFor(ctx)).map((s) => s.id);
   if (flagged.length || list.length === 0) return flagged;
   return [list[0].id];
@@ -188,11 +208,11 @@ export function defaultOpenIds(tab, ctx) {
  * Sections whose title (or summary) contains the query, across all tabs. An empty query returns [].
  * `title(s)` turns a section into its displayed title (the caller owns translation).
  */
-export function searchSections(ctx, query, title) {
+export function searchSections(ctx, query, title, registry = SECTIONS) {
   const q = String(query || '').trim().toLowerCase();
   if (!q) return [];
   const out = [];
-  for (const { sections } of applicableSections(ctx)) {
+  for (const { sections } of applicableSections(ctx, registry)) {
     for (const s of sections) {
       if (title(s).toLowerCase().includes(q) || s.summary(ctx).toLowerCase().includes(q) || (s.keywords || []).some((k) => k.includes(q))) out.push(s);
     }

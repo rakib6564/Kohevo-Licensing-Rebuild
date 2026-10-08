@@ -187,10 +187,10 @@ test('a section takes its own background and padding', async ({ page }) => {
     await insertQuote(page); // the sandbox page starts empty; adding a block creates its section
     await page.getByRole('tab', { name: /^Layers$/ }).click();
     await page.locator('[role="treeitem"]').first().click();
-    const tab = page.locator('[id^="sbx-sec-"][id$="-tab-style"]');
-    await expect(tab).toBeVisible();
-    await tab.click();
+    await expect(page.locator('[id^="sbx-sec-"][id$="-tab-style"]')).toBeVisible(); // a section has the same three tabs as a block
+    await openSection(page, 'background');
     await page.locator('input[id$="-style-bg-text"]').fill('#123456');
+    await openSection(page, 'advanced');
     const padding = page.getByRole('group', { name: 'Section padding' });
     await padding.getByLabel('Top', { exact: true }).fill('48px');
     await padding.getByLabel('Top', { exact: true }).blur();

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   SECTIONS, TABS, applicableSections, defaultOpenIds, inspectorContext, isSectionOpen, resetSectionState,
-  searchSections, sectionsFor, setSectionOpen, subscribeSections,
+  searchSections, sectionsFor, setSectionOpen, subscribeSections, PAGE_SECTION_SECTIONS, SECTION_DEF,
 } from '../src/core/inspectorSections.mjs';
 
 const manifest = JSON.parse(readFileSync(new URL('./fixtures/manifest.json', import.meta.url), 'utf8'));
@@ -127,4 +127,23 @@ test('each kind of block opens the sections an author reaches for first', () => 
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.heading')), ['typography']);
   assert.deepEqual(defaultOpenIds('content', ctxOf('core.card')), ['content', 'layout']);
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.card')), ['background', 'border']);
+});
+
+test('a page section has the same three tabs, with its own smaller list of groups', () => {
+  const ctx = inspectorContext({ id: 'sec_1', style: {}, layout: { width: 'wide', gap: 'md' } }, SECTION_DEF);
+  const idsOf = (tab) => sectionsFor(tab, ctx, PAGE_SECTION_SECTIONS).map((s) => s.id);
+  assert.deepEqual(idsOf('content'), ['layout']);
+  assert.deepEqual(idsOf('style'), ['background']);
+  assert.deepEqual(idsOf('advanced'), ['advanced', 'motion', 'responsive']);
+  assert.deepEqual(defaultOpenIds('advanced', ctx, PAGE_SECTION_SECTIONS), ['advanced']);
+  assert.equal(PAGE_SECTION_SECTIONS.find((s) => s.id === 'layout').summary(ctx), 'wide · md');
+  assert.deepEqual(searchSections(ctx, 'padding', (s) => s.titleKey, PAGE_SECTION_SECTIONS).map((s) => s.id), ['advanced']);
+});
+
+test('a container shows Layout under Content and opens it; a leaf block keeps it under Advanced', () => {
+  const container = ctxOf('core.container');
+  assert.ok(ids('content', container).includes('layout'));
+  assert.ok(defaultOpenIds('content', container).includes('layout'));
+  assert.ok(!ids('advanced', container).includes('layout'));
+  assert.ok(ids('advanced', ctxOf('core.heading')).includes('layout'));
 });
