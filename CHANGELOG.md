@@ -19,6 +19,13 @@ Deployment packages are named `KOHEVO-<CLIENT|CENTRAL>-V<MAJOR.MINOR>-DEPLOYMENT
   Assistants may rename layers but cannot lock or unlock them. Documents without locks or names are byte-identical to before.
 
 ### Security
+
+- **Studio builder: block `attributes` are now a closed allow-list.** Block attributes were written into the wrapper tag
+  with only a name-shape check, so a user with edit permission (or an AI/MCP `update_block_attributes` call) could store an
+  event handler such as `onclick` that ran for every visitor. Only `aria-*`, `data-*`, `id`, `role`, `tabindex`, `title`
+  and `lang` are accepted now (string or number values, at most 32 per block; `data-sb-*` is reserved). The validator
+  rejects anything else with `invalid_attribute`, and the renderer drops it too, so pages stored before this fix stop
+  emitting handlers after the next compile.
 - **Licence signatures can no longer be forged from the public key (P0).** The client verifier accepted `hmac:`-prefixed
   signatures — and, without `ext-sodium`, bare keyed hashes — computed with the *public* key as the HMAC key, so anyone
   holding the public key could mint a licence the client would trust, even with sodium installed. Central could also

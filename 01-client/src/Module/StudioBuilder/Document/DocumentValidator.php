@@ -655,6 +655,16 @@ final class DocumentValidator
             $attrs = $block['attributes'];
             if (!is_array($attrs) || ($attrs !== [] && array_is_list($attrs))) {
                 $errors[] = ValidationResult::issue("{$path}.attributes", 'invalid_attributes', 'block.attributes must be a JSON object.');
+            } else {
+                if (count($attrs) > CanonicalDocumentSchema::MAX_BLOCK_ATTRIBUTES) {
+                    $errors[] = ValidationResult::issue("{$path}.attributes", 'too_many_attributes', 'block.attributes allows at most ' . CanonicalDocumentSchema::MAX_BLOCK_ATTRIBUTES . ' entries.');
+                }
+                foreach ($attrs as $attrName => $attrValue) {
+                    $issue = CanonicalDocumentSchema::blockAttributeIssue($attrName, $attrValue);
+                    if ($issue !== null) {
+                        $errors[] = ValidationResult::issue("{$path}.attributes." . (string) $attrName, 'invalid_attribute', $issue);
+                    }
+                }
             }
         }
 
