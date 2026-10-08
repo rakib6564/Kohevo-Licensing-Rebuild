@@ -3,9 +3,10 @@
 // drag & drop support, and single-click insertion.
 
 import { memo, useMemo, useState } from 'react';
-import { useEditor } from './EditorContext.jsx';
+import { useEditor, useEngineState } from './EditorContext.jsx';
 import { t } from '../core/messages.mjs';
 import { asList } from '../core/doc.mjs';
+import { isAiRevision } from '../core/review.mjs';
 import {
   IconPlus,
   IconRocket,
@@ -201,9 +202,171 @@ function renderBlockIcon(type, icon, label) {
   return <IconBox size={18} />;
 }
 
+const PRESET_SECTIONS = [
+  {
+    key: 'hero',
+    type: 'core.hero',
+    title: 'Hero Section',
+    desc: 'High-impact intro with image, copy and CTA',
+  },
+  {
+    key: 'features',
+    type: 'core.feature_list',
+    title: 'Feature Grid',
+    desc: 'Showcase key benefits with clear layout',
+  },
+  {
+    key: 'services',
+    type: 'core.query_loop',
+    title: 'Services Overview',
+    desc: 'Display services or features with icons',
+  },
+  {
+    key: 'image_text',
+    type: 'layout.container',
+    title: 'Image + Text',
+    desc: 'Side-by-side image and content',
+  },
+  {
+    key: 'testimonials',
+    type: 'core.text',
+    title: 'Testimonials',
+    desc: 'Build trust with customer reviews',
+  },
+  {
+    key: 'pricing',
+    type: 'core.feature_list',
+    title: 'Pricing Plans',
+    desc: 'Compare plans with features and CTA',
+  },
+  {
+    key: 'faq',
+    type: 'core.rich_text',
+    title: 'FAQ Section',
+    desc: 'Expandable questions and answers',
+  },
+  {
+    key: 'gallery',
+    type: 'core.gallery',
+    title: 'Gallery',
+    desc: 'Image grid for visual media',
+  },
+];
+
+/** Blocks fed by a tenant-scoped data provider, or by the current post/archive context. */
+export function isDynamicBlock(def) {
+  return !!def && (asList(def.binding_slots).length > 0 || String(def.type).startsWith('theme.'));
+}
+
+function providerNote(def) {
+  const providers = asList(def.binding_slots).map((b) => b.provider);
+  return providers.length ? `${t('dynamic_data_from')} ${providers.join(', ')}` : t('dynamic_page_context');
+}
+
+function PaletteCard({ def, query, onInsert }) {
+  const meta = BLOCK_META[def.type] || {};
+  return (
+    <button
+      type="button"
+      className="sbx-palette-card"
+      draggable
+      onDragStart={(e) => { e.dataTransfer.setData(DRAG_TYPE_NEW, def.type); e.dataTransfer.effectAllowed = 'copy'; }}
+      onClick={() => onInsert(def.type)}
+      aria-label={`${t('insert')} ${meta.title || def.label}`}
+      data-query={query}
+    >
+      <div className="sbx-palette-card__icon-badge" aria-hidden="true">{renderBlockIcon(def.type, def.icon, def.label)}</div>
+      <div className="sbx-palette-card__content">
+        <span className="sbx-palette-card__title">{meta.title || def.label}</span>
+        <span className="sbx-palette-card__desc">{isDynamicBlock(def) ? providerNote(def) : (meta.desc || def.description || '')}</span>
+      </div>
+      <span className="sbx-palette-card__plus-btn" aria-hidden="true"><IconPlus size={14} /></span>
+    </button>
+  );
+}
+
+/** Dynamic tab: only the data-bound and page-context blocks, with where their data comes from. */
+function DynamicPanel({ manifest, query, insertBlock }) {
+  const q = query.trim().toLowerCase();
+  const items = asList(manifest.blocks).filter((b) => isDynamicBlock(b)
+    && (!q || `${b.label} ${b.type} ${providerNote(b)}`.toLowerCase().includes(q)));
+  return (
+    <div className="sbx-palette__cards" data-testid="palette-dynamic">
+      <p className="sbx-palette__note">{t('dynamic_note')}</p>
+      {items.length === 0 && <p className="sbx-muted">{t('no_blocks_match')}</p>}
+      {items.map((b) => <PaletteCard key={b.type} def={b} query={q} onInsert={insertBlock} />)}
+    </div>
+  );
+}
+
+/** Media tab: pick from the tenant media library straight into a new Image block, or insert a media block. */
+function MediaPanel({ manifest, query, insertBlock, insertBlockWithProps, mediaPicker }) {
+  const pickerAvailable = mediaPicker && typeof window !== 'undefined' && window.SlateMedia && typeof window.SlateMedia.open === 'function';
+  const q = query.trim().toLowerCase();
+  const items = asList(manifest.blocks).filter((b) => ['core.image', 'core.gallery', 'core.video'].includes(b.type)
+    && (!q || `${b.label} ${b.type}`.toLowerCase().includes(q)));
+
+  const addImage = () => {
+    window.SlateMedia.open({
+      types: 'image',
+      onPick: (record) => {
+        const mediaId = record && Number.parseInt(record.id, 10);
+        if (!Number.isInteger(mediaId) || mediaId <= 0) return;
+        const alt = record.alt_text || record.alt || String(record.original_name || '').replace(/\.[a-z0-9]+$/i, '').slice(0, 200);
+        insertBlockWithProps('core.image', { media: { media_id: mediaId, alt, focal_point: [0.5, 0.5] } });
+      },
+    });
+  };
+
+  return (
+    <div className="sbx-palette__cards" data-testid="palette-media">
+      {pickerAvailable ? (
+        <button type="button" className="sbx-btn sbx-btn--primary sbx-palette__cta" onClick={addImage}>
+          <IconImage size={14} /> <span>{t('media_add_image')}</span>
+        </button>
+      ) : (
+        <p className="sbx-palette__note">{t('media_unavailable')}</p>
+      )}
+      <p className="sbx-palette__note">{t('media_note')}</p>
+      {items.map((b) => <PaletteCard key={b.type} def={b} query={q} onInsert={insertBlock} />)}
+    </div>
+  );
+}
+
+/** AI tab: AI works through the assistant and always lands as a draft you review; no in-builder modes yet. */
+function AiPanel({ boot, onReview }) {
+  const revision = useEngineState((s) => s.revision);
+  const aiDraft = isAiRevision(revision);
+  return (
+    <div className="sbx-palette__cards" data-testid="palette-ai">
+      <p className="sbx-palette__note">{t('ai_panel_note')}</p>
+      {aiDraft && onReview && (
+        <button type="button" className="sbx-btn sbx-btn--primary sbx-palette__cta" onClick={onReview}>{t('ai_review')}</button>
+      )}
+      {boot.assistantUrl ? (
+        <a className="sbx-btn sbx-palette__cta" href={boot.assistantUrl} target="_blank" rel="noopener">{t('ai_assistant')}</a>
+      ) : (
+        <p className="sbx-muted">{t('ai_unavailable')}</p>
+      )}
+    </div>
+  );
+}
+
 export const BlockPalette = memo(function BlockPalette({ compact = false }) {
-  const { manifest, insertBlock } = useEditor();
+  const { boot, manifest, insertBlock, insertSection, insertBlockWithProps, openAiReview } = useEditor();
   const [query, setQuery] = useState('');
+  const [categoryTab, setCategoryTab] = useState('sections');
+  const [favorites, setFavorites] = useState(new Set());
+
+  const toggleFavorite = (e, key) => {
+    e.stopPropagation();
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const blockItems = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -225,25 +388,89 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
     return result;
   }, [manifest.blocks, query]);
 
+  const sectionItems = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return PRESET_SECTIONS;
+    return PRESET_SECTIONS.filter((s) => `${s.title} ${s.desc}`.toLowerCase().includes(q));
+  }, [query]);
+
   return (
     <div className={`sbx-palette${compact ? ' sbx-palette--compact' : ''}`}>
-      <div className="sbx-palette__breadcrumb">INSERT / BLOCK</div>
-
+      {/* Search Header */}
       <div className="sbx-palette__search">
-        <IconSearch size={13} className="sbx-palette__search-icon" />
+        <IconSearch size={14} className="sbx-palette__search-icon" />
         <input
           type="search"
           className="sbx-palette__search-input"
-          placeholder={t('search_blocks')}
+          placeholder="Search sections, elements..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          aria-label={t('search_blocks')}
+          aria-label="Search sections and elements"
         />
+        <span className="sbx-search-badge" aria-hidden="true">⌘ K</span>
       </div>
 
-      {blockItems.length === 0 ? (
-        <p className="sbx-muted sbx-palette__empty">{t('no_blocks_match')}</p>
-      ) : (
+      {/* Category Tabs: Sections, Elements, Components */}
+      <div className="sbx-palette__category-tabs" role="tablist">
+        {[
+          { key: 'sections', label: 'Sections' },
+          { key: 'elements', label: 'Elements' },
+          { key: 'components', label: 'Components' },
+          { key: 'dynamic', label: t('palette_dynamic') },
+          { key: 'media', label: t('palette_media') },
+          { key: 'ai', label: t('palette_ai') },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            role="tab"
+            aria-selected={categoryTab === tab.key}
+            data-tab={tab.key}
+            className={`sbx-palette__category-tab${categoryTab === tab.key ? ' is-active' : ''}`}
+            onClick={() => setCategoryTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Sections Tab Content */}
+      {categoryTab === 'sections' && (
+        <div className="sbx-palette__cards">
+          {sectionItems.map((sec) => {
+            const isFav = favorites.has(sec.key);
+            return (
+              <button
+                key={sec.key}
+                type="button"
+                className="sbx-palette-card sbx-section-card"
+                onClick={() => insertBlock(sec.type)}
+                aria-label={`Insert ${sec.title}`}
+              >
+                <div className="sbx-palette-card__icon-badge" aria-hidden="true">
+                  {renderBlockIcon(sec.type, sec.key, sec.title)}
+                </div>
+                <div className="sbx-palette-card__content">
+                  <span className="sbx-palette-card__title">{sec.title}</span>
+                  <span className="sbx-palette-card__desc">{sec.desc}</span>
+                </div>
+                <button
+                  type="button"
+                  className={`sbx-star-btn${isFav ? ' is-favorited' : ''}`}
+                  onClick={(e) => toggleFavorite(e, sec.key)}
+                  title={isFav ? 'Remove favorite' : 'Add to favorites'}
+                  aria-label="Favorite"
+                >
+                  {isFav ? '★' : '☆'}
+                </button>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Elements Tab Content */}
+      {categoryTab === 'elements' && (
         <div className="sbx-palette__cards">
           {blockItems.map((b) => (
             <button
@@ -270,6 +497,44 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
               </span>
             </button>
           ))}
+        </div>
+      )}
+
+      {categoryTab === 'dynamic' && <DynamicPanel manifest={manifest} query={query} insertBlock={insertBlock} />}
+      {categoryTab === 'media' && (
+        <MediaPanel manifest={manifest} query={query} insertBlock={insertBlock} insertBlockWithProps={insertBlockWithProps} mediaPicker={boot.mediaPicker} />
+      )}
+      {categoryTab === 'ai' && <AiPanel boot={boot} onReview={openAiReview} />}
+
+      {/* Components Tab Content */}
+      {categoryTab === 'components' && (
+        <div className="sbx-palette__cards">
+          <button
+            type="button"
+            className="sbx-palette-card"
+            onClick={() => insertBlock('core.container')}
+          >
+            <div className="sbx-palette-card__icon-badge">
+              <IconBox size={18} />
+            </div>
+            <div className="sbx-palette-card__content">
+              <span className="sbx-palette-card__title">Global Header</span>
+              <span className="sbx-palette-card__desc">Site-wide synchronized header</span>
+            </div>
+          </button>
+          <button
+            type="button"
+            className="sbx-palette-card"
+            onClick={() => insertBlock('core.container')}
+          >
+            <div className="sbx-palette-card__icon-badge">
+              <IconBox size={18} />
+            </div>
+            <div className="sbx-palette-card__content">
+              <span className="sbx-palette-card__title">Global Footer</span>
+              <span className="sbx-palette-card__desc">Site-wide synchronized footer</span>
+            </div>
+          </button>
         </div>
       )}
     </div>

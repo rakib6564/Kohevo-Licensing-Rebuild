@@ -124,7 +124,7 @@ final class StudioCodePolicy
         $css = preg_replace('~(?<![-\w])(?:-ms-)?behaviou?r\s*:~i', 'blocked:', $css) ?? $css;
 
         // Remote fetch from a page that should be self-contained.
-        $css = preg_replace('~@import\b[^;]*;?~i', '', $css) ?? $css;
+        $css = preg_replace('~@import\s+url\([^)]+\)\s*;?|@import\b[^;]*;?~i', '', $css) ?? $css;
 
         // Script-bearing URL schemes, in url() and bare.
         $css = preg_replace('~\b(?:javascript|vbscript)\s*:~i', 'blocked:', $css) ?? $css;

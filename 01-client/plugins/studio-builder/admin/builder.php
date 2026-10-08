@@ -75,7 +75,11 @@ if ($sbStatus !== 200) {
 }
 
 $sbAssetDir = dirname(__DIR__) . '/assets/builder';
-$sbVersion  = (string) (@filemtime($sbAssetDir . '/builder.js') ?: '0');
+$sbVersion  = (string) max(
+    (int) (@filemtime($sbAssetDir . '/builder.js') ?: 0),
+    (int) (@filemtime($sbAssetDir . '/builder.css') ?: 0),
+    (int) (@filemtime(__FILE__) ?: 0)
+);
 $sbMediaPicker = class_exists('PluginLoader') && PluginLoader::isActive('media-library') && Auth::can('media.view');
 // Phase 7: the AI assistant entry point (the MCP gateway's admin chat) is offered only
 // when that module is active and the signed-in admin may open it. The chat prepares
@@ -84,8 +88,24 @@ $sbAssistantUrl = class_exists('PluginLoader') && PluginLoader::isActive('mcp-ga
     ? plugin_url('mcp-gateway', 'admin/chat.php')
     : null;
 
+$sbAllPages = [];
+try {
+    $sbAllPagesList = StudioRuntimeFactory::build()->app->listPages(StudioActor::fromCurrentSession());
+    foreach ($sbAllPagesList as $p) {
+        $sbAllPages[] = [
+            'id'           => (int) $p['id'],
+            'title'        => (string) $p['title'],
+            'slug'         => (string) ($p['slug'] ?? ''),
+            'is_published' => !empty($p['is_published']),
+        ];
+    }
+} catch (\Throwable $e) {
+    // Graceful fallback
+}
+
 $sbBoot = [
     'pageId'     => $sbPageId,
+    'allPages'   => $sbAllPages,
     'apiUrl'     => plugin_url('studio-builder', 'admin/api.php'),
     'canvasUrl'  => plugin_url('studio-builder', 'admin/canvas.php'),
     'previewUrl' => plugin_url('studio-builder', 'admin/preview.php'),
@@ -120,6 +140,40 @@ $sbBoot = [
         'seo_robots_label' => __('studio_ui_seo_robots_label', 'Search engine visibility'),
         'seo_draft_note' => __('studio_ui_seo_draft_note', 'Search settings belong to the draft. They go live only when you publish.'),
         'seo_remove_image' => __('studio_ui_seo_remove_image', 'Remove image'),
+        'view_mode' => __('studio_ui_view_mode', 'View mode'),
+        'mode_edit' => __('studio_ui_mode_edit', 'Edit'),
+        'mode_edit_hint' => __('studio_ui_mode_edit_hint', 'Edit mode: select, drag and edit on the canvas'),
+        'mode_preview' => __('studio_ui_mode_preview', 'Preview'),
+        'mode_preview_hint' => __('studio_ui_mode_preview_hint', 'Editor preview: the canvas becomes read-only and the builder stays open'),
+        'mode_visitor' => __('studio_ui_mode_visitor', 'Visitor'),
+        'mode_visitor_hint' => __('studio_ui_mode_visitor_hint', 'Visitor preview: the page as a visitor sees it, with minimal editor chrome'),
+        'inspector_show' => __('studio_ui_inspector_show', 'Show the editor panel'),
+        'inspector_hide' => __('studio_ui_inspector_hide', 'Hide the editor panel for a full-width canvas'),
+        'open_new_tab' => __('studio_ui_open_new_tab', 'Open in a new tab'),
+        'visitor_preview' => __('studio_ui_visitor_preview', 'Visitor preview'),
+        'back_to_editing' => __('studio_ui_back_to_editing', 'Back to editing'),
+        'reload' => __('studio_ui_reload', 'Reload'),
+        'visitor_preview_stale' => __('studio_ui_visitor_preview_stale', 'The preview shows the last saved draft. Save to see your latest edits.'),
+        'save_draft' => __('studio_ui_save_draft', 'Save draft'),
+        'breadcrumb' => __('studio_ui_breadcrumb', 'Selection path'),
+        'page' => __('studio_ui_page', 'Page'),
+        'grid' => __('studio_ui_grid', 'Grid'),
+        'grid_toggle' => __('studio_ui_grid_toggle', 'Show or hide the column grid'),
+        'bulk_actions' => __('studio_ui_bulk_actions', 'Actions for the selected layers'),
+        'bulk_selected' => __('studio_ui_bulk_selected', '{count} selected'),
+        'bulk_remove_confirm' => __('studio_ui_bulk_remove_confirm', 'Remove {count} selected items?'),
+        'clear_selection' => __('studio_ui_clear_selection', 'Clear'),
+        'palette_dynamic' => __('studio_ui_palette_dynamic', 'Dynamic'),
+        'palette_media' => __('studio_ui_palette_media', 'Media'),
+        'palette_ai' => __('studio_ui_palette_ai', 'AI'),
+        'dynamic_data_from' => __('studio_ui_dynamic_data_from', 'Data from'),
+        'dynamic_page_context' => __('studio_ui_dynamic_page_context', 'Uses the current page or post'),
+        'dynamic_note' => __('studio_ui_dynamic_note', 'These blocks read live data from your site. Studio only stores the connection; each module keeps its own data and your tenant boundary.'),
+        'media_add_image' => __('studio_ui_media_add_image', 'Add an image from the media library'),
+        'media_unavailable' => __('studio_ui_media_unavailable', 'The media library is not available to your account. Insert a media block and enter an image id.'),
+        'media_note' => __('studio_ui_media_note', 'Only the image id is stored on the page, never a file path.'),
+        'ai_panel_note' => __('studio_ui_ai_panel_note', 'The AI assistant prepares changes as a draft revision. Nothing goes live until you review and publish it yourself.'),
+        'ai_unavailable' => __('studio_ui_ai_unavailable', 'The AI assistant is not enabled for your account.'),
     ],
 ];
 ?><!DOCTYPE html>

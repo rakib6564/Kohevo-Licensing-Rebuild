@@ -16,6 +16,7 @@ import { TopBar } from './TopBar.jsx';
 import { LeftPanel } from './LeftPanel.jsx';
 import { CanvasArea } from './CanvasArea.jsx';
 import { MobileDock } from './MobileDock.jsx';
+import { VisitorPreview } from './VisitorPreview.jsx';
 import { LiveRegion } from './LiveRegion.jsx';
 import { ConflictBanner } from './ConflictBanner.jsx';
 import { InsertDialog } from './InsertDialog.jsx';
@@ -23,6 +24,8 @@ import { HistoryDialog } from './HistoryDialog.jsx';
 import { SaveTemplateDialog } from './SaveTemplateDialog.jsx';
 import { ComponentDialog } from './ComponentDialog.jsx';
 import { ThemeDialog } from './ThemeDialog.jsx';
+import { ThemeBottomSheet } from './ThemeBottomSheet.jsx';
+import { MoreBottomSheet } from './MoreBottomSheet.jsx';
 import { PackageDialog } from './PackageDialog.jsx';
 import { AiReviewDialog } from './AiReviewDialog.jsx';
 import { createTransport } from '../core/api.mjs';
@@ -34,6 +37,7 @@ import { defaultBindings, setupFields } from '../core/fields.mjs';
 import { insertTargetFor, referenceIndexFor, slugify } from '../core/library.mjs';
 import * as ops from '../core/operations.mjs';
 import { viewportByKey } from '../core/viewport.mjs';
+import { isEditing, keyboardInset, normalizeViewMode } from '../core/shellState.mjs';
 
 export function StudioShell({ boot, transport: injectedTransport = null, lockEnabled = true }) {
   const transport = useMemo(
@@ -191,11 +195,23 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     commitInsert(type, where, null, bindings);
   }, [engine, manifest, insertSection, commitInsert]);
 
-  const removeNode = useCallback((id) => {
+  /** Insert a block pre-filled with props (e.g. an Image picked from the media library). */
+  const insertBlockWithProps = useCallback((type, props) => {
+    const def = blockDefinition(manifest, type);
+    if (!def) return;
+    let where = insertionPoint(engine.getSnapshot().working, manifest, selectionRef.current, type);
+    if (!where) {
+      const sectionId = insertSection();
+      where = { parentId: sectionId, index: 0 };
+    }
+    commitInsert(type, where, props, defaultBindings(def, manifest).bindings);
+  }, [engine, manifest, insertSection, commitInsert]);
+
+  const removeNode = useCallback((id, { confirmed = false } = {}) => {
     const info = findNode(engine.getSnapshot().working, id);
     if (!info) return;
     const label = nodeLabel(info.node, manifest, info.kind);
-    if (info.kind === 'section' && info.node.blocks && info.node.blocks.length && !window.confirm(t('confirm_remove_section'))) return;
+    if (!confirmed && info.kind === 'section' && info.node.blocks && info.node.blocks.length && !window.confirm(t('confirm_remove_section'))) return;
     const operation = info.kind === 'section' ? ops.removeSection(id) : ops.removeBlock(id);
     if (engine.apply(operation, { label })) {
       if (selectionRef.current === id) setSelection(info.kind === 'block' ? info.parentId : null);
@@ -385,13 +401,14 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
 
   const ctx = useMemo(() => ({
     boot, engine, manifest, transport, selection, select, announce, applyOp,
-    insertBlock, insertSection, duplicateNode, updateSectionLabel, removeNode, moveBlockTo, moveSectionTo, labelOf,
+    insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, removeNode, moveBlockTo, moveSectionTo, labelOf,
     viewport: viewportByKey(viewportKey),
     library, refreshLibrary, applyTemplate, insertTemplate, deleteTemplate,
     insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion,
     openSaveTemplate: () => setDialog('save_template'),
     openComponentDialog: () => setDialog('component'),
-  }), [boot, engine, manifest, transport, selection, select, announce, applyOp, insertBlock, insertSection, duplicateNode, updateSectionLabel, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey,
+    openAiReview: () => setDialog('ai_review'),
+  }), [boot, engine, manifest, transport, selection, select, announce, applyOp, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey,
     library, refreshLibrary, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
 
   if (loadError) {
@@ -464,23 +481,76 @@ export function ShellLayout({
   historyOpen = false, setHistoryOpen = () => {}, pendingInsert = null, onCancelInsert = () => {}, onConfirmInsert = () => {},
   onTheme = null, dialogs = null, onAiReview = null, onPackages = null,
 }) {
-  const { selection } = useEditor();
+  const { selection, select } = useEditor();
   const [activeTab, setActiveTab] = useState(() => (selection ? 'inspector' : 'structure'));
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [viewMode, setViewModeRaw] = useState('edit');
+  const shellRef = useRef(null);
+  const editing = isEditing(viewMode);
+  const visitor = viewMode === 'visitor';
+
+  const setViewMode = useCallback((mode) => {
+    const next = normalizeViewMode(mode);
+    setViewModeRaw(next);
+    if (next !== 'edit') {
+      // Nothing is selectable while previewing; leaving the sheet open would cover the page.
+      select(null, { announceIt: false });
+      setMobileOpen(false);
+    }
+  }, [select]);
 
   useEffect(() => {
-    if (selection) {
+    if (selection && editing) {
       setActiveTab('inspector');
       if (typeof window !== 'undefined' && window.innerWidth <= 860) {
         setMobileOpen(true);
       }
     }
-  }, [selection]);
+  }, [selection, editing]);
+
+  // Inspector toggle: open the docked panel on Style; a second press collapses it for a full-width canvas.
+  const inspectorOpen = !collapsed && activeTab === 'inspector';
+  const toggleInspector = useCallback(() => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 860) {
+      setActiveTab('inspector');
+      setMobileOpen((open) => !(open && activeTab === 'inspector'));
+      return;
+    }
+    if (inspectorOpen) {
+      setCollapsed(true);
+    } else {
+      setCollapsed(false);
+      setActiveTab('inspector');
+    }
+  }, [inspectorOpen, activeTab]);
+
+  // Keyboard-safe sheets: publish how much of the screen the on-screen keyboard covers.
+  useEffect(() => {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    const el = shellRef.current;
+    if (!vv || !el) return undefined;
+    const update = () => {
+      const inset = keyboardInset(window.innerHeight, vv);
+      el.style.setProperty('--sbx-kb-inset', `${inset}px`);
+      el.dataset.keyboard = inset > 0 ? 'open' : 'closed';
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, []);
 
   return (
-    <div className="sbx-shell" data-viewport={viewportKey}>
+    <div className="sbx-shell" data-viewport={viewportKey} data-view-mode={viewMode} ref={shellRef}>
       <TopBar
+        viewMode={viewMode}
+        onViewMode={setViewMode}
+        inspectorOpen={inspectorOpen}
+        onToggleInspector={toggleInspector}
         viewportKey={viewportKey}
         onViewport={onViewport}
         onSave={onSave}
@@ -506,14 +576,27 @@ export function ShellLayout({
           mobileOpen={mobileOpen}
           onCloseMobile={() => setMobileOpen(false)}
         />
-        <CanvasArea />
+        <CanvasArea
+          interactive={editing}
+          collapsed={collapsed}
+          onToggleCollapse={() => setCollapsed((c) => !c)}
+          onReloadCanvas={onReload}
+        />
       </div>
+      {visitor && (
+        <VisitorPreview
+          viewportKey={viewportKey}
+          onViewport={onViewport}
+          onExit={() => setViewMode('edit')}
+          onSave={onSave}
+        />
+      )}
       <MobileDock
         activeTab={activeTab}
         mobileSheetOpen={mobileOpen}
         onSelectTab={(key) => {
           if (key === 'preview') {
-            setMobileOpen(false);
+            setViewMode('visitor');
             return;
           }
           if (mobileOpen && activeTab === key) {
@@ -528,6 +611,27 @@ export function ShellLayout({
       <LiveRegion text={announcement} />
       {pendingInsert && <InsertDialog request={pendingInsert} onCancel={onCancelInsert} onConfirm={onConfirmInsert} />}
       {historyOpen && <HistoryDialog onClose={() => setHistoryOpen(false)} />}
+      {mobileOpen && activeTab === 'theme' && (
+        <ThemeBottomSheet
+          onClose={() => setMobileOpen(false)}
+          onSaved={() => onReload && onReload()}
+        />
+      )}
+      {mobileOpen && activeTab === 'more' && (
+        <MoreBottomSheet
+          onClose={() => setMobileOpen(false)}
+          onOpenLayers={() => {
+            setActiveTab('structure');
+            setMobileOpen(true);
+          }}
+          onOpenSettings={() => {
+            setActiveTab('settings');
+            setMobileOpen(true);
+          }}
+          onOpenHistory={() => setHistoryOpen(true)}
+          onOpenPackages={onPackages}
+        />
+      )}
       {dialogs}
     </div>
   );

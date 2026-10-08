@@ -11,107 +11,175 @@ export const NODE_ATTR = 'data-sb-node';
 export const TYPE_ATTR = 'data-sb-type';
 const STYLE_ID = 'sbx-canvas-overlay';
 const BAR_CLASS = 'sbx-canvas-action-bar';
+const BUBBLE_CLASS = 'sbx-text-bubble';
 
 const OVERLAY_CSS = `
 [${NODE_ATTR}] { cursor: default; transition: outline 0.08s ease; }
 [${NODE_ATTR}].sbx-hover:not(.sbx-selected) {
-  outline: 1px dashed rgba(74, 222, 128, 0.45) !important;
+  outline: 1.5px dashed rgba(139, 92, 246, 0.7) !important;
   outline-offset: -1px;
+  cursor: pointer;
 }
 [${NODE_ATTR}].sbx-selected {
   position: relative !important;
-  outline: 1px dashed #86efac !important;
+  outline: 2px solid #8b5cf6 !important;
   outline-offset: -1px;
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.4), 0 0 16px rgba(139, 92, 246, 0.3) !important;
 }
-[${NODE_ATTR}].sbx-drop-before { box-shadow: inset 0 3px 0 #22c55e !important; }
-[${NODE_ATTR}].sbx-drop-after { box-shadow: inset 0 -3px 0 #22c55e !important; }
+[${NODE_ATTR}].sbx-selected::before,
+[${NODE_ATTR}].sbx-selected::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #ffffff;
+  border: 1.5px solid #8b5cf6;
+  border-radius: 1px;
+  z-index: 99998;
+  pointer-events: none;
+}
+[${NODE_ATTR}].sbx-selected::before { top: -3px; left: -3px; }
+[${NODE_ATTR}].sbx-selected::after { bottom: -3px; right: -3px; }
+
+[${NODE_ATTR}].sbx-drop-before { box-shadow: inset 0 3px 0 #8b5cf6 !important; }
+[${NODE_ATTR}].sbx-drop-after { box-shadow: inset 0 -3px 0 #8b5cf6 !important; }
 [${NODE_ATTR}].sbx-drop-inside {
-  outline: 2px dashed #22c55e !important;
+  outline: 2px dashed #8b5cf6 !important;
   outline-offset: -2px;
-  background: rgba(34, 197, 94, 0.06) !important;
+  background: rgba(139, 92, 246, 0.08) !important;
 }
 a, button { cursor: default; }
 
 .${BAR_CLASS} {
   position: absolute;
-  bottom: 0;
+  top: -28px;
   left: 0;
-  right: 0;
-  height: 32px;
-  background: #141722;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  display: flex;
+  height: 25px;
+  background: #7c3aed;
+  border-radius: 4px;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
+  gap: 4px;
+  padding: 0 4px 0 8px;
   z-index: 99999;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 11px;
-  letter-spacing: 0.08em;
-  color: #cbd5e1;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #ffffff;
   user-select: none;
   box-sizing: border-box;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.45);
+  pointer-events: auto;
 }
 
 .${BAR_CLASS}__left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   min-width: 0;
 }
 
-.${BAR_CLASS}__grip {
-  color: #64748b;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  cursor: grab;
-}
-
 .${BAR_CLASS}__label {
-  color: #cbd5e1;
+  color: #ffffff;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-transform: uppercase;
+  max-width: 160px;
 }
 
 .${BAR_CLASS}__actions {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   flex: none;
+  margin-left: 2px;
+  padding-left: 4px;
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .${BAR_CLASS}__btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  color: #94a3b8;
+  border: none;
+  border-radius: 3px;
+  color: rgba(255, 255, 255, 0.9);
   cursor: pointer;
   padding: 0;
   transition: all 0.1s ease;
 }
 
 .${BAR_CLASS}__btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.22);
   color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .${BAR_CLASS}__btn svg {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
   stroke: currentColor;
   stroke-width: 2;
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+/* Inline text editing */
+.sbx-inline-editing {
+  outline: 2px solid #38bdf8 !important;
+  outline-offset: 2px;
+  background: rgba(56, 189, 248, 0.08) !important;
+  border-radius: 2px;
+  cursor: text !important;
+  user-select: text !important;
+}
+
+.${BUBBLE_CLASS} {
+  position: absolute;
+  top: -34px;
+  left: 0;
+  height: 26px;
+  background: #18181b;
+  border: 1px solid #3f3f46;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  z-index: 100000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  user-select: none;
+}
+
+.${BUBBLE_CLASS}__btn {
+  height: 20px;
+  min-width: 20px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: #e4e4e7;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.${BUBBLE_CLASS}__btn:hover {
+  background: #27272a;
+  color: #ffffff;
+}
+
+.${BUBBLE_CLASS}__btn--done {
+  color: #4ade80;
+  font-weight: 600;
 }
 `;
 
@@ -120,6 +188,7 @@ export function nodeElementFrom(target) {
   let el = target;
   while (el && el.nodeType === 1) {
     if (el.classList && (typeof el.classList.contains === 'function' ? el.classList.contains(BAR_CLASS) : el.classList.has?.(BAR_CLASS))) return null;
+    if (el.classList && (typeof el.classList.contains === 'function' ? el.classList.contains(BUBBLE_CLASS) : el.classList.has?.(BUBBLE_CLASS))) return null;
     if (el.getAttribute && el.getAttribute(NODE_ATTR)) return el;
     el = el.parentElement;
   }
@@ -129,10 +198,10 @@ export function nodeElementFrom(target) {
 /**
  * Wire a loaded canvas document. Returns a detach function.
  * @param {Document} doc
- * @param {{onSelect: Function, onHover?: Function, onDrop?: Function, onAction?: Function}} handlers
+ * @param {{onSelect: Function, onHover?: Function, onDrop?: Function, onAction?: Function, onInlineText?: Function}} handlers
  */
 export function attachCanvas(doc, handlers) {
-  const { onSelect, onHover, onDrop, onAction } = handlers || {};
+  const { onSelect, onHover, onDrop, onAction, onInlineText } = handlers || {};
   if (!doc || !doc.body) return () => {};
   if (!doc.getElementById(STYLE_ID)) {
     const style = doc.createElement('style');
@@ -144,6 +213,120 @@ export function attachCanvas(doc, handlers) {
   let dropTarget = null;
   let dropPos = null;
 
+  let activeEditingEl = null;
+  let activeOriginalText = '';
+
+  function finishInlineEdit(commit = true) {
+    if (!activeEditingEl) return;
+    const el = activeEditingEl;
+    activeEditingEl = null;
+
+    if (typeof el.removeAttribute === 'function') el.removeAttribute('contenteditable');
+    if (el.classList) {
+      if (typeof el.classList.remove === 'function') el.classList.remove('sbx-inline-editing');
+      else if (typeof el.classList.delete === 'function') el.classList.delete('sbx-inline-editing');
+    }
+    if (el._sbxKeyHandler) {
+      el.removeEventListener('keydown', el._sbxKeyHandler);
+      delete el._sbxKeyHandler;
+    }
+    const bubble = doc.querySelector(`.${BUBBLE_CLASS}`);
+    if (bubble && typeof bubble.remove === 'function') bubble.remove();
+
+    const nodeEl = nodeElementFrom(el);
+    const nodeId = nodeEl ? nodeEl.getAttribute(NODE_ATTR) : null;
+    const newText = (el.textContent || '').trim();
+
+    if (commit && nodeId && newText !== activeOriginalText.trim() && onInlineText) {
+      onInlineText(nodeId, newText);
+    }
+  }
+
+  function startInlineEdit(textEl, nodeEl, nodeId) {
+    if (!textEl || typeof textEl.setAttribute !== 'function') return;
+    if (activeEditingEl && activeEditingEl !== textEl) {
+      finishInlineEdit(true);
+    }
+    activeEditingEl = textEl;
+    activeOriginalText = textEl.textContent || '';
+
+    textEl.setAttribute('contenteditable', 'true');
+    textEl.setAttribute('spellcheck', 'false');
+    if (textEl.classList) {
+      if (typeof textEl.classList.add === 'function') textEl.classList.add('sbx-inline-editing');
+    }
+
+    try {
+      textEl.focus();
+      const range = doc.createRange();
+      range.selectNodeContents(textEl);
+      range.collapse(false);
+      const sel = doc.defaultView ? doc.defaultView.getSelection() : null;
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    } catch (_) {}
+
+    // Inline formatting bubble
+    const existingBubble = doc.querySelector(`.${BUBBLE_CLASS}`);
+    if (existingBubble && typeof existingBubble.remove === 'function') existingBubble.remove();
+
+    const bubble = doc.createElement('div');
+    bubble.className = BUBBLE_CLASS;
+    bubble.setAttribute('contenteditable', 'false');
+    bubble.innerHTML = `
+      <button type="button" class="${BUBBLE_CLASS}__btn" data-fmt="bold" title="Bold (Ctrl+B)">B</button>
+      <button type="button" class="${BUBBLE_CLASS}__btn" data-fmt="italic" title="Italic (Ctrl+I)"><em>I</em></button>
+      <button type="button" class="${BUBBLE_CLASS}__btn ${BUBBLE_CLASS}__btn--done" data-fmt="done" title="Done">✓ Done</button>
+    `;
+
+    bubble.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const btn = ev.target && ev.target.closest && ev.target.closest(`.${BUBBLE_CLASS}__btn`);
+      if (!btn) return;
+      const fmt = btn.getAttribute('data-fmt');
+      if (fmt === 'done') {
+        finishInlineEdit(true);
+      } else if (fmt === 'bold') {
+        doc.execCommand('bold', false, null);
+      } else if (fmt === 'italic') {
+        doc.execCommand('italic', false, null);
+      }
+    });
+
+    if (typeof nodeEl.appendChild === 'function') {
+      nodeEl.appendChild(bubble);
+    }
+
+    const onKey = (ev) => {
+      if (ev.key === 'Escape') {
+        ev.preventDefault();
+        ev.stopPropagation();
+        textEl.textContent = activeOriginalText;
+        finishInlineEdit(false);
+      } else if (ev.key === 'Enter') {
+        const t = (textEl.tagName || '').toLowerCase();
+        if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'button', 'a'].includes(t) || !ev.shiftKey) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          finishInlineEdit(true);
+        }
+      }
+    };
+
+    textEl.addEventListener('keydown', onKey);
+    textEl._sbxKeyHandler = onKey;
+  }
+
+  // Expose on doc.defaultView so parent can start inline editing via action toolbar
+  if (doc.defaultView) {
+    doc.defaultView.sbxStartInlineEdit = (textEl, nodeEl, nodeId) => {
+      startInlineEdit(textEl, nodeEl, nodeId);
+    };
+  }
+
   const click = (e) => {
     // Check if an action button inside the floating bar was clicked
     const actionBtn = e.target && e.target.closest && e.target.closest(`.${BAR_CLASS}__btn`);
@@ -152,8 +335,24 @@ export function attachCanvas(doc, handlers) {
       e.stopPropagation();
       const action = actionBtn.getAttribute('data-action');
       const nodeId = actionBtn.getAttribute('data-node-id');
+      if (action === 'edit') {
+        const nodeEl = nodeElementFrom(actionBtn) || doc.querySelector(`[${NODE_ATTR}="${nodeId}"]`);
+        if (nodeEl) {
+          const textEl = nodeEl.querySelector('h1, h2, h3, h4, h5, h6, p, a, button, span') || nodeEl;
+          startInlineEdit(textEl, nodeEl, nodeId);
+          return;
+        }
+      }
       if (onAction) onAction(action, nodeId);
       return;
+    }
+
+    // If currently editing inline and clicked inside editing element or bubble, don't stop
+    if (activeEditingEl && (activeEditingEl.contains(e.target) || (e.target.closest && e.target.closest(`.${BUBBLE_CLASS}`)))) {
+      return;
+    }
+    if (activeEditingEl) {
+      finishInlineEdit(true);
     }
 
     // The canvas is for selection only: links and buttons never navigate.
@@ -161,6 +360,15 @@ export function attachCanvas(doc, handlers) {
     e.stopPropagation();
     const el = nodeElementFrom(e.target);
     if (el) onSelect(el.getAttribute(NODE_ATTR), el.getAttribute(TYPE_ATTR));
+  };
+
+  const dblclick = (e) => {
+    if (e.target && e.target.closest && e.target.closest(`.${BAR_CLASS}, .${BUBBLE_CLASS}`)) return;
+    const nodeEl = nodeElementFrom(e.target);
+    if (!nodeEl) return;
+    const nodeId = nodeEl.getAttribute(NODE_ATTR);
+    const textEl = e.target.closest ? (e.target.closest('h1, h2, h3, h4, h5, h6, p, a, button, span') || e.target) : e.target;
+    startInlineEdit(textEl, nodeEl, nodeId);
   };
 
   const over = (e) => {
@@ -224,6 +432,7 @@ export function attachCanvas(doc, handlers) {
 
   const block = (e) => e.preventDefault();
   doc.addEventListener('click', click, true);
+  doc.addEventListener('dblclick', dblclick, true);
   doc.addEventListener('mouseover', over, true);
   doc.addEventListener('dragover', dragover, true);
   doc.addEventListener('dragleave', dragleave, true);
@@ -232,7 +441,9 @@ export function attachCanvas(doc, handlers) {
   doc.addEventListener('auxclick', block, true);
   doc.addEventListener('dragstart', block, true);
   return () => {
+    finishInlineEdit(true);
     doc.removeEventListener('click', click, true);
+    doc.removeEventListener('dblclick', dblclick, true);
     doc.removeEventListener('mouseover', over, true);
     doc.removeEventListener('dragover', dragover, true);
     doc.removeEventListener('dragleave', dragleave, true);
@@ -243,7 +454,7 @@ export function attachCanvas(doc, handlers) {
   };
 }
 
-/** Paint the selection outline, show section action bar, and bring the node into view. */
+/** Paint the selection outline, show action bar for any block or section, and bring node into view. */
 export function markSelected(doc, nodeId, { scroll = true } = {}) {
   if (!doc || !doc.querySelectorAll) return;
   doc.querySelectorAll('.sbx-selected').forEach((el) => {
@@ -264,36 +475,52 @@ export function markSelected(doc, nodeId, { scroll = true } = {}) {
     if (typeof el.classList.add === 'function') el.classList.add('sbx-selected');
   }
 
-  // If selected element is a section or contains blocks, attach the floating action toolbar
-  const isSection = (el.tagName && el.tagName.toLowerCase() === 'section') || ((el.getAttribute && el.getAttribute(TYPE_ATTR)) || '').startsWith('layout.section');
-  if (isSection && typeof doc.createElement === 'function' && typeof el.appendChild === 'function') {
-    const sections = Array.from(doc.querySelectorAll(`section[${NODE_ATTR}], [${NODE_ATTR}][${TYPE_ATTR}="layout.section"]`));
-    const idx = sections.indexOf(el);
-    const num = idx >= 0 ? String(idx + 1).padStart(2, '0') : '01';
+  // Attach floating action toolbar for ANY selected element (block or section)
+  if (typeof doc.createElement === 'function' && typeof el.appendChild === 'function') {
+    const type = (el.getAttribute && el.getAttribute(TYPE_ATTR)) || '';
+    const isSection = (el.tagName && el.tagName.toLowerCase() === 'section') || type.startsWith('layout.section');
 
-    const heading = el.querySelector('h1, h2, h3, h4, [data-sb-type="core.heading"]');
-    const labelText = (heading ? heading.textContent.trim() : '') || el.getAttribute('data-sb-label') || el.getAttribute(NODE_ATTR);
-    const cleanLabel = (labelText || 'SECTION').replace(/\s+/g, ' ').slice(0, 36).toUpperCase();
+    let cleanLabel = '';
+    if (isSection) {
+      const heading = el.querySelector('h1, h2, h3, h4, [data-sb-type="core.heading"]');
+      const labelText = (heading ? heading.textContent.trim() : '') || el.getAttribute('data-sb-label') || 'Section';
+      cleanLabel = labelText.replace(/\s+/g, ' ').slice(0, 20);
+    } else {
+      const parts = type.split('.');
+      const rawKind = parts[parts.length - 1] || 'Block';
+      const kindName = rawKind.charAt(0).toUpperCase() + rawKind.slice(1);
+      const snippet = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 14);
+      cleanLabel = snippet ? `${kindName}: "${snippet}"` : kindName;
+    }
 
     const bar = doc.createElement('div');
     bar.className = BAR_CLASS;
     bar.setAttribute('contenteditable', 'false');
+
+    // If near the top edge of viewport, flip bar inside element
+    const rect = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+    if (rect && rect.top < 32) {
+      bar.style.top = '2px';
+    }
+
     bar.innerHTML = `
       <div class="${BAR_CLASS}__left">
-        <span class="${BAR_CLASS}__grip">::</span>
-        <span class="${BAR_CLASS}__label">${num} / ${escapeHtml(cleanLabel)}</span>
+        <span class="${BAR_CLASS}__label">${escapeHtml(cleanLabel)}</span>
       </div>
       <div class="${BAR_CLASS}__actions">
         <button type="button" class="${BAR_CLASS}__btn" data-action="up" data-node-id="${escapeHtml(nodeId)}" title="Move up">
-          <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
         </button>
         <button type="button" class="${BAR_CLASS}__btn" data-action="down" data-node-id="${escapeHtml(nodeId)}" title="Move down">
-          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+        </button>
+        <button type="button" class="${BAR_CLASS}__btn" data-action="edit" data-node-id="${escapeHtml(nodeId)}" title="Edit inline (or Double Click)">
+          <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
         </button>
         <button type="button" class="${BAR_CLASS}__btn" data-action="duplicate" data-node-id="${escapeHtml(nodeId)}" title="Duplicate">
           <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>
-        <button type="button" class="${BAR_CLASS}__btn" data-action="remove" data-node-id="${escapeHtml(nodeId)}" title="Remove">
+        <button type="button" class="${BAR_CLASS}__btn" data-action="remove" data-node-id="${escapeHtml(nodeId)}" title="Delete">
           <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
         </button>
       </div>
