@@ -6,6 +6,7 @@
 import { memo, useEffect, useId, useRef, useState } from 'react';
 import { canZoomIn, canZoomOut } from '../core/zoom.mjs';
 import { t } from '../core/messages.mjs';
+import { IconHome } from './Icons.jsx';
 
 const MOD = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘' : 'Ctrl';
 
@@ -77,7 +78,7 @@ export const BottomBar = memo(function BottomBar({
       <div className="sbx-bottombar__left">
         {showPath && (
           <nav className="sbx-breadcrumb" aria-label={t('breadcrumb')}>
-            <button type="button" className="sbx-breadcrumb__item" onClick={() => onSelectPath(null)}>{t('page')}</button>
+            <button type="button" className="sbx-breadcrumb__item" onClick={() => onSelectPath(null)}><IconHome size={14} /><span>{t('page')}</span></button>
             {path.map((p, i) => (
               <span key={p.id} className="sbx-breadcrumb__seg">
                 <span className="sbx-breadcrumb__sep" aria-hidden="true">›</span>

@@ -74,7 +74,7 @@ test('section selection shows responsive layout controls in the canonical breakp
   for (const bp of ['base', 'sm', 'md', 'lg']) assert.ok(html.includes(`>${bp}`), `breakpoint ${bp}`);
   assert.match(html, />md ●</, 'the active viewport breakpoint is marked');
   assert.match(html, /width:820px/, 'tablet viewport = 820px frame (md)');
-  assert.match(html, /aria-pressed="true"[^>]*>Tablet</);
+  assert.match(html, /aria-pressed="true"[^>]*aria-label="Tablet"/);
 });
 
 test('save state and conflict state are visible and blocking', { skip: skipReason || false }, () => {
