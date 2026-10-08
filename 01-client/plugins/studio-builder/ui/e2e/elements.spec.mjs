@@ -22,13 +22,23 @@ async function openElements(page, type = 'core.quote') {
   await panel(page).locator(`[data-chip="${CATEGORY[type]}"]`).click();
 }
 
-/** Undo until the canvas holds as many nodes as before (an insert may also have created a section). */
-async function restore(page, nodeCount) {
+/**
+ * How many layers the page has, read from the Layers tree (the editor's own model). The canvas frame is not a safe
+ * source: right after load it can still be an empty document, which would make "restore" chase a count it can never reach.
+ */
+async function layerCount(page) {
+  await page.getByRole('tab', { name: /^Layers$/ }).click();
+  return page.locator('[role="treeitem"]').count();
+}
+
+/** Undo until the page has no more layers than before (an insert may also have created a section). */
+async function restore(page, layers) {
   for (let i = 0; i < 16; i++) {
     await settled(page);
-    const frame = await frameDocument(page);
-    if ((await frame.locator('[data-sb-node]').count()) <= nodeCount) return;
-    await page.getByTestId('undo').click();
+    if ((await layerCount(page)) <= layers) return;
+    const undo = page.getByTestId('undo');
+    await expect(undo).toBeEnabled({ timeout: 5_000 });
+    await undo.click();
     await page.waitForTimeout(500);
   }
   throw new Error('could not restore the shared sandbox page');
@@ -47,8 +57,8 @@ test('the four new elements are in the Elements tab with titles and icons', asyn
 
 test('each element inserts and renders its own markup in the canvas', async ({ page }) => {
   await openBuilder(page);
-  const frame0 = await frameDocument(page);
-  const before = await frame0.locator('[data-sb-node]').count();
+  await settled(page);
+  const before = await layerCount(page);
   try {
     for (const [type, selector] of [['core.icon', '.sb-icon svg'], ['core.list', 'ul.sb-list li'], ['core.quote', 'figure.sb-quote blockquote'], ['core.card', 'div.sb-card'], ['core.table', 'table.sb-table tbody tr'], ['core.countdown', '.sb-countdown time']]) {
       await openElements(page, type);
@@ -64,8 +74,8 @@ test('each element inserts and renders its own markup in the canvas', async ({ p
 
 test('editing a quote repaints the canvas from the server', async ({ page }) => {
   await openBuilder(page);
-  const frame0 = await frameDocument(page);
-  const before = await frame0.locator('[data-sb-node]').count();
+  await settled(page);
+  const before = await layerCount(page);
   try {
     await openElements(page);
     await panel(page).locator('[data-block-type="core.quote"]').click();
@@ -82,8 +92,8 @@ test('editing a quote repaints the canvas from the server', async ({ page }) => 
 
 test('Columns and form-field variants insert ready-set blocks; content added next lands inside the columns', async ({ page }) => {
   await openBuilder(page);
-  const frame0 = await frameDocument(page);
-  const before = await frame0.locator('[data-sb-node]').count();
+  await settled(page);
+  const before = await layerCount(page);
   try {
     await page.getByRole('tab', { name: /^(Add|Ajouter)$/ }).click();
     await panel(page).getByRole('tab', { name: 'Elements' }).click();
