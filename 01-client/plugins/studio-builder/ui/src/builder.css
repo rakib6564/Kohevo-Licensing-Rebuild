@@ -519,7 +519,20 @@ html, body.sbx-body {
 }
 
 .sbx-right {
-  display: none;
+  /* The docked Inspector (desktop). On a phone the shell does not render it: the sheet holds the Inspector. */
+  width: 340px;
+  min-width: 300px;
+  max-width: 420px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 12px 14px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--sbx-panel);
+  border-left: 1px solid var(--sbx-border);
+  z-index: 24;
 }
 
 .sbx-left__body {
@@ -1400,7 +1413,8 @@ html, body.sbx-body {
 }
 
 @media (max-width: 1100px) {
-  .sbx-left { width: 340px; }
+  .sbx-left { width: 300px; min-width: 280px; }
+  .sbx-right { width: 300px; min-width: 280px; }
 }
 
 @media (max-width: 960px) {

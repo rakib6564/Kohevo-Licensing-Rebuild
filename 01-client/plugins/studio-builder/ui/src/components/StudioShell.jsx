@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { EditorContext, SelectionContext, useEditor, useSelection } from './EditorContext.jsx';
 import { TopBar } from './TopBar.jsx';
 import { LeftPanel } from './LeftPanel.jsx';
+import { RightPanel } from './RightPanel.jsx';
 import { CanvasArea } from './CanvasArea.jsx';
 import { MobileDock } from './MobileDock.jsx';
 import { VisitorPreview } from './VisitorPreview.jsx';
@@ -581,6 +582,9 @@ export function ShellLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [responsiveOpen, setResponsiveOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  // Desktop: the docked Inspector on the right, shown unless the author hides it for a wider canvas. A narrow
+  // desktop window starts with it hidden, so the canvas keeps a usable width next to the left panel.
+  const [inspectorShown, setInspectorShown] = useState(() => typeof window === 'undefined' || window.innerWidth > 1000);
   const [viewMode, setViewModeRaw] = useState('edit');
   const shellRef = useRef(null);
   const editing = isEditing(viewMode);
@@ -599,24 +603,19 @@ export function ShellLayout({
   // Selecting a node points the panel at Style; on a phone it does NOT open the sheet:
   // the canvas stays visible with the contextual bar, and Edit (dock) opens the sheet.
   useEffect(() => {
-    if (selection && editing) setActiveTab('inspector');
-  }, [selection, editing]);
+    if (selection && editing && isMobile) setActiveTab('inspector');
+  }, [selection, editing, isMobile]);
 
   // Inspector toggle: open the docked panel on Style; a second press collapses it for a full-width canvas.
-  const inspectorOpen = !collapsed && activeTab === 'inspector';
+  const inspectorOpen = isMobile ? (mobileOpen && activeTab === 'inspector') : inspectorShown;
   const toggleInspector = useCallback(() => {
     if (isMobile) {
       setActiveTab('inspector');
       setMobileOpen((open) => !(open && activeTab === 'inspector'));
       return;
     }
-    if (inspectorOpen) {
-      setCollapsed(true);
-    } else {
-      setCollapsed(false);
-      setActiveTab('inspector');
-    }
-  }, [inspectorOpen, activeTab, isMobile]);
+    setInspectorShown((shown) => !shown);
+  }, [activeTab, isMobile]);
 
   // Cmd/Ctrl+K: open Add and focus its search (the "⌘ K" badge in the palette promises this).
   useEffect(() => {
@@ -695,6 +694,7 @@ export function ShellLayout({
           onToggleCollapse={() => setCollapsed((c) => !c)}
           onReloadCanvas={onReload}
         />
+        {!isMobile && inspectorShown && editing && <RightPanel onNavigate={(tab) => { setCollapsed(false); setActiveTab(tab); }} />}
       </div>
       {visitor && (
         <VisitorPreview
