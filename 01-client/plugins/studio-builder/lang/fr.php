@@ -426,6 +426,8 @@ return [
     'studio_ui_remove' => 'Supprimer',
     'studio_ui_none' => 'Aucun',
     'studio_ui_inherit' => 'Hériter',
+    'studio_ui_responsive_sm' => 'Ajustement petit écran',
+    'studio_ui_responsive_sm_label' => 'Petit (640 px et plus)',
     'studio_ui_choose_image' => 'Choisir une image',
     'studio_ui_media_id' => 'ID du média',
     'studio_ui_alt_text' => 'Texte alternatif',

@@ -3051,3 +3051,13 @@ html, body.sbx-body {
   .sbx-unitfield__unit { width: 76px; }
   .sbx-slider__num input[type='number'] { width: 76px; }
 }
+
+/* ── Device switcher (Desktop / Tablet / Mobile edit one value at a time) ── */
+.sbx-responsive__devices { display: inline-flex; gap: 2px; margin: 0 0 0.4rem; padding: 2px; border: 1px solid var(--sbx-border); border-radius: 6px; background: var(--sbx-panel); }
+.sbx-responsive__device { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 24px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--sbx-text-muted, inherit); cursor: pointer; position: relative; }
+.sbx-responsive__device.is-active { background: var(--sbx-accent); color: #fff; }
+.sbx-responsive__device.is-set:not(.is-active)::after { content: ''; position: absolute; top: 3px; right: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--sbx-accent); }
+.sbx-responsive__more { margin-top: 0.4rem; font-size: 0.75rem; }
+.sbx-responsive__more > summary { cursor: pointer; opacity: 0.7; }
+.sbx-inspector .sbx-responsive .sbx-responsive__cell { margin: 0.3rem 0 0; }
+.sbx-iconchoice__btn.is-inherited { opacity: 0.55; }

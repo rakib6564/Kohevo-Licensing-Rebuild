@@ -677,6 +677,8 @@ const EN = {
   confirm_remove_section: 'Delete this section and all of its blocks?',
   none: 'None',
   inherit: 'Inherit',
+  responsive_sm: 'Small-screen override',
+  responsive_sm_label: 'Small (640px and up)',
   choose_image: 'Choose image',
   media_id: 'Media ID',
   alt_text: 'Alternative text',

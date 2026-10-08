@@ -71,8 +71,8 @@ test('selection highlights the node and generates the property panel from the ma
 test('section selection shows responsive layout controls in the canonical breakpoints', { skip: skipReason || false }, () => {
   const html = entry.render({ manifest, document: pageDoc, selection: pageDoc.sections[0].id, viewportKey: 'tablet' });
   assert.match(html, /<legend>Columns<\/legend>/);
-  for (const bp of ['base', 'sm', 'md', 'lg']) assert.ok(html.includes(`>${bp}`), `breakpoint ${bp}`);
-  assert.match(html, />md ●</, 'the active viewport breakpoint is marked');
+  for (const d of ['Desktop', 'Tablet', 'Mobile']) assert.ok(html.includes(`aria-label="${d}"`), `device ${d}`);
+  assert.match(html, /aria-pressed="true"[^>]*aria-label="Tablet"[^>]*title="Tablet \(md\)"|title="Tablet \(md\)"/, 'the active viewport device is marked');
   assert.match(html, /width:820px/, 'tablet viewport = 820px frame (md)');
   assert.match(html, /aria-pressed="true"[^>]*aria-label="Tablet"/);
 });

@@ -79,6 +79,7 @@ export function BlockInspector({ info }) {
     align: () => (
       <ResponsiveSelect
         label={t('align')}
+        icons="text"
         value={style.align ?? null}
         options={asList(manifest.vocabulary.alignments)}
         activeBreakpoint={viewport.breakpoint}
