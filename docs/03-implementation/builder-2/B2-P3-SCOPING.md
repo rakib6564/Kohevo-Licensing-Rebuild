@@ -82,3 +82,7 @@ Same list as the spec: canonical JSON encoder, id patterns, `schema_version "1.0
 ## 6. Verification approach
 
 UI unit tests (`node --test`), Studio PHP unit and integration suites, Playwright e2e (CI job), `check-i18n`, golden renders for every property and state, a hostile-input suite (`url(`, `@import`, `</style`, `javascript:`, `onclick`, `srcdoc`, huge numbers, NaN), then deploy to `solaya` with backup and a real-device pass. Baselines to keep: UI node tests 177, Playwright 85, Studio PHP unit 799/804 and integration 602/626 (known unrelated failures).
+
+## 7. Decided 2026-10-08
+
+All recommendations in section 3 stand: D-split (four PRs P3a–P3d), D-emitter (block-scoped stylesheet), D-literals (tokens first, typed literals only), D-legacy (not emitted, still loadable, audit script), D-fixed and D-video (deferred), D-signature (z-index ceiling plus guard), D-recompile (lazy, staged on solaya; confirm the invalidation path in P3b), D-tabs (Content · Style · Advanced).
