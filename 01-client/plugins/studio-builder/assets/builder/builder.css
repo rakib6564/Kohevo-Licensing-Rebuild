@@ -2713,3 +2713,38 @@ html, body.sbx-body {
 .sbx-attr-row code { overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
 .sbx-attr-add { display: grid; gap: 6px; }
 .sbx-attr-add__name { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+
+/* ── B2-P3d: the Inspector on a phone ───────────────────────────────────────
+   Inputs outside a .sbx-field (search, attribute rows) had no style at all. On a phone every control is a
+   touch target (44px) and every text field is 16px, so iOS does not zoom the page when one is focused. */
+.sbx-inspector .sbx-input { width: 100%; box-sizing: border-box; padding: 0.4rem 0.5rem; border: 1px solid var(--sbx-border); border-radius: 6px; background: rgba(0, 0, 0, 0.25); color: var(--sbx-text); font: inherit; font-size: 12.5px; }
+.sbx-inspector .sbx-input:focus { border-color: #22c55e; outline: none; box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2); }
+.sbx-sheet-expand { display: none; }
+@media (max-width: 860px) {
+  .sbx-sheet-expand { display: inline-flex; align-items: center; min-height: 44px; margin-left: auto; margin-right: 8px; padding: 0 14px; border: 1px solid var(--sbx-border); border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
+  .sbx-sheet-expand[aria-pressed='true'] { border-color: var(--sbx-accent, #22c55e); }
+  .sbx-left .sbx-inspector .sbx-input,
+  .sbx-left .sbx-field input[type='text'], .sbx-left .sbx-field input[type='number'], .sbx-left .sbx-field input[type='search'],
+  .sbx-left .sbx-field input:not([type]), .sbx-left .sbx-field textarea, .sbx-left .sbx-field select { min-height: 44px; font-size: 16px; }
+  .sbx-left .sbx-inspector .sbx-btn { min-height: 44px; padding: 0 14px; font-size: 14px; }
+  .sbx-left .sbx-inspector .sbx-tab { min-height: 44px; }
+  .sbx-left .sbx-isec__toggle { min-height: 48px; font-size: 15px; }
+  .sbx-left .sbx-segmented-pill { min-height: 44px; padding: 0 16px; font-size: 14px; }
+  .sbx-left .sbx-color__swatch { width: 44px; height: 44px; flex: none; }
+  .sbx-left .sbx-field input[type='range'] { height: 44px; }
+  .sbx-left .sbx-field input[type='range']::-webkit-slider-thumb { width: 28px; height: 28px; }
+  .sbx-left .sbx-field input[type='range']::-moz-range-thumb { width: 28px; height: 28px; }
+  .sbx-left .sbx-field input[type='checkbox'] { width: 24px; height: 24px; }
+  .sbx-left .sbx-field--check { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+  .sbx-left .sbx-attr-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .sbx-left .sbx-attr-row .sbx-input { grid-column: 1 / -1; order: 3; }
+  .sbx-left .sbx-spacing__grid { gap: 8px 12px; }
+  .sbx-left .sbx-inspector__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .sbx-left .sbx-inspector__actions .sbx-btn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 10px; font-size: 13px; }
+  .sbx-left .sbx-sheet-close { min-width: 44px; }
+  .sbx-left .sbx-inspector .sbx-tree__action { min-width: 44px; min-height: 44px; }
+}
+@media (max-width: 860px) {
+  /* "Full panel": the 84vh cap above is for the half sheet; full runs to the top of the visible screen. */
+  .sbx-left.is-sheet-full { height: calc(100dvh - var(--sbx-kb-inset, 0px) - 24px) !important; max-height: calc(100dvh - var(--sbx-kb-inset, 0px) - 24px) !important; }
+}

@@ -500,6 +500,8 @@ const EN = {
   attr_remove: 'Remove',
   attr_other: 'Other attributes',
   class_invalid: 'Class names may only use letters, digits, - and _.',
+  sheet_full_panel: 'Full panel',
+  sheet_half_panel: 'Half panel',
   fit_auto: 'Original',
   pos_center_center: 'Center center',
   pos_top_center: 'Top center',

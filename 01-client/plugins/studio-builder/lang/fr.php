@@ -824,6 +824,8 @@ return [
     'studio_ui_attr_remove' => 'Retirer',
     'studio_ui_attr_other' => 'Autres attributs',
     'studio_ui_class_invalid' => 'Les noms de classe ne peuvent contenir que des lettres, des chiffres, - et _.',
+    'studio_ui_sheet_full_panel' => 'Panneau complet',
+    'studio_ui_sheet_half_panel' => 'Demi-panneau',
     'studio_ui_fit_auto' => 'Original',
     'studio_ui_pos_center_center' => 'Centre',
     'studio_ui_pos_top_center' => 'Haut centre',

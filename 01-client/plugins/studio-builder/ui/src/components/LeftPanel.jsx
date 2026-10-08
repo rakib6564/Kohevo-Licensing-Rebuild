@@ -28,6 +28,12 @@ import {
   IconX,
 } from './Icons.jsx';
 
+/** The tallest a sheet may be: the visible viewport (the keyboard shrinks it) less a small gap at the top. */
+function fullSheetHeight() {
+  if (typeof window === 'undefined') return 800;
+  return Math.round((window.visualViewport ? window.visualViewport.height : window.innerHeight) - 24);
+}
+
 export const LeftPanel = memo(function LeftPanel({
   tab: controlledTab,
   onTabChange,
@@ -78,6 +84,7 @@ export const LeftPanel = memo(function LeftPanel({
     { key: 'settings',  label: t('tab_settings'),  Icon: IconSettings, title: t('tab_settings_title') },
   ];
 
+  const sheetFull = sheet.height !== null && sheet.height >= fullSheetHeight() - 8;
   let sheetTitle = t('panel_word');
   if (tab === 'blocks') sheetTitle = t('sheet_add');
   else if (tab === 'structure') sheetTitle = t('sheet_layers');
@@ -104,7 +111,7 @@ export const LeftPanel = memo(function LeftPanel({
 
       <aside
         ref={asideRef}
-        className={`sbx-left${collapsed ? ' is-collapsed' : ''}${mobileOpen ? ' is-mobile-open' : ''}${sheet.dragging ? ' is-dragging' : ''}`}
+        className={`sbx-left${collapsed ? ' is-collapsed' : ''}${mobileOpen ? ' is-mobile-open' : ''}${mobileOpen && sheetFull ? ' is-sheet-full' : ''}${sheet.dragging ? ' is-dragging' : ''}`}
         style={mobileOpen && sheet.height !== null ? { '--sbx-sheet-h': `${sheet.height}px` } : undefined}
         aria-label={t('panel_structure')}
       >
@@ -117,6 +124,17 @@ export const LeftPanel = memo(function LeftPanel({
             <span className="sbx-sheet-badge">{tab.toUpperCase()}</span>
             <strong className="sbx-sheet-title">{sheetTitle}</strong>
           </div>
+          {tab === 'inspector' && (
+            <button
+              type="button"
+              className="sbx-sheet-expand"
+              data-testid="sheet-expand"
+              aria-pressed={sheetFull}
+              onClick={() => (sheetFull ? sheet.reset() : sheet.setHeight(fullSheetHeight()))}
+            >
+              {sheetFull ? t('sheet_half_panel') : t('sheet_full_panel')}
+            </button>
+          )}
           <button
             type="button"
             className="sbx-sheet-close"
