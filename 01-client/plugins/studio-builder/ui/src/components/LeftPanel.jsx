@@ -192,7 +192,7 @@ export const LeftPanel = memo(function LeftPanel({
             <Outline />
             <BlockPalette compact />
           </div>
-          {navView === 'pages' && <PagesPanel />}
+          {navView === 'pages' && <PagesPanel onOpenSettings={() => setTab('settings')} />}
         </div>
 
         {/* 3. Style / Inspector Tab — Metadata-driven property inspector */}

@@ -2658,3 +2658,15 @@ html, body.sbx-body {
   .sbx-row-menu__item { min-height: 44px; font-size: 14px; }
   .sbx-partial__edit { padding: 10px 6px; }
 }
+
+/* ── Layers: drag handle (pointer events) and the Pages quick tools ───── */
+.sbx-tree__handle { border: none; background: transparent; color: var(--sbx-muted); cursor: grab; font-size: 14px; line-height: 14px; height: 18px; padding: 0 5px; border-radius: 3px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.sbx-tree__handle:hover:not(:disabled), .sbx-tree__handle:focus-visible { color: #fff; background: rgba(255, 255, 255, 0.08); }
+.sbx-tree__handle:disabled { opacity: 0.3; cursor: not-allowed; }
+.sbx-tree.is-sorting, .sbx-tree.is-sorting * { cursor: grabbing; user-select: none; -webkit-user-select: none; }
+.sbx-tree__row.is-dragging { opacity: 0.45; }
+.sbx-page-tools { display: flex; flex-wrap: wrap; gap: 0; }
+@media (hover: none), (max-width: 860px) {
+  .sbx-tree__handle { min-width: 40px; min-height: 40px; font-size: 18px; }
+  .sbx-page-tools .sbx-btn { min-height: 40px; flex: 1 1 auto; }
+}

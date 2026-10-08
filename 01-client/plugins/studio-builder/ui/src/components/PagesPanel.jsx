@@ -54,7 +54,24 @@ function PageForm({ heading, hint, warn, initial, submitLabel, onSubmit, onClose
   );
 }
 
-export const PagesPanel = memo(function PagesPanel() {
+/** Quick page tools: one-tap entry points into dialogs that already exist (nothing here is new behaviour). */
+function PageTools({ onOpenSettings }) {
+  const { openHistory = null, openTheme = null, openPackages = null } = useEditor();
+  const tools = [
+    onOpenSettings && { key: 'settings', label: t('tab_settings'), run: onOpenSettings },
+    openHistory && { key: 'history', label: t('history'), run: openHistory },
+    openPackages && { key: 'packages', label: t('packages'), run: openPackages },
+    openTheme && { key: 'theme', label: t('theme'), run: openTheme },
+  ].filter(Boolean);
+  if (!tools.length) return null;
+  return (
+    <div className="sbx-page-tools" role="group" aria-label={t('nav_tools_label')} data-testid="page-tools">
+      {tools.map((x) => <button key={x.key} type="button" className="sbx-btn sbx-btn--seg" data-tool={x.key} onClick={x.run}>{x.label}</button>)}
+    </div>
+  );
+}
+
+export const PagesPanel = memo(function PagesPanel({ onOpenSettings = null }) {
   const { boot, transport, announce } = useEditor();
   const pendingCount = useEngineState((s) => s.pending.length);
   const [pages, setPages] = useState(null);
@@ -120,6 +137,7 @@ export const PagesPanel = memo(function PagesPanel() {
 
   return (
     <div className="sbx-pages" data-testid="pages-panel">
+      <PageTools onOpenSettings={onOpenSettings} />
       <div className="sbx-pages__head">
         <button type="button" className="sbx-btn sbx-btn--primary sbx-btn--block" data-testid="page-new" onClick={() => setForm({ kind: 'new' })}>+ {t('nav_page_new')}</button>
       </div>

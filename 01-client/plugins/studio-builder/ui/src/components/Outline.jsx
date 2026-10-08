@@ -7,12 +7,13 @@
 // a keyboard equivalent (Alt+↑/↓ move, Alt+→ into the container above,
 // Alt+← out of the container, Delete removes).
 
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { DRAG_TYPE_NEW } from './BlockPalette.jsx';
 import { RowMenu } from './RowMenu.jsx';
 import { PartialRows, useChromeBindings } from './PartialRows.jsx';
 import { rowMenuItems } from '../core/rowMenu.mjs';
+import { autoScrollDelta, dropPositionAt, isSelfOrDescendant } from '../core/outlineDrag.mjs';
 import { t } from '../core/messages.mjs';
 import {
   asList, blockDefinition, blockIndentTarget, blockMoveTarget, blockOutdentTarget,
@@ -223,10 +224,7 @@ export const Outline = memo(function Outline() {
   // ── Drag & drop ─────────────────────────────────────────────────────────
   const positionFor = (e, row, dragged) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const y = (e.clientY - rect.top) / Math.max(1, rect.height);
-    if (dragged.kind === 'section' || row.kind === 'section') return row.kind === 'section' && dragged.kind !== 'section' ? 'inside' : (y < 0.5 ? 'before' : 'after');
-    if (row.container && y > 0.3 && y < 0.7) return 'inside';
-    return y < 0.5 ? 'before' : 'after';
+    return dropPositionAt((e.clientY - rect.top) / Math.max(1, rect.height), row, dragged);
   };
 
   const isValidDrop = (dragged, dest) => {
@@ -235,6 +233,98 @@ export const Outline = memo(function Outline() {
     if (dragged.type) return canInsertBlock(working, manifest, dest.parentId, dragged.type);
     return canMoveBlock(working, manifest, dragged.id, dest.parentId);
   };
+
+  // ── Handle drag (pointer events: mouse, pen and touch) ────────────────────
+  // HTML5 drag & drop does not exist on touch screens, so each row has a handle that drives the same
+  // drop rules with pointer events. Arrow keys on the handle, Alt+arrows on the row and the row menu are the
+  // keyboard routes; none of them depends on dragging.
+  const [dragId, setDragId] = useState(null);
+  const sessionRef = useRef(null);
+  const latest = useRef({});
+  latest.current = { visibleRows, working, manifest, isValidDrop: null };
+
+  const scrollParent = () => {
+    let el = listRef.current;
+    while (el && el !== document.body) {
+      const oy = window.getComputedStyle(el).overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight) return el;
+      el = el.parentElement;
+    }
+    return null;
+  };
+
+  const updatePointerTarget = (session) => {
+    const { visibleRows: rows } = latest.current;
+    const hit = document.elementFromPoint(session.x, session.y);
+    const li = hit && hit.closest ? hit.closest('[data-row]') : null;
+    const target = li ? rows.find((r) => r.id === li.getAttribute('data-row')) : null;
+    let hint = null;
+    if (target && !isSelfOrDescendant(rows, session.dragged.id, target.id)) {
+      const rect = li.getBoundingClientRect();
+      const position = dropPositionAt((session.y - rect.top) / Math.max(1, rect.height), target, session.dragged);
+      const dest = dropDestination(latest.current.working, rows, session.dragged, target, position);
+      if (isValidDrop(session.dragged, dest)) hint = { id: target.id, position };
+    }
+    session.hint = hint;
+    setDropHint((h) => (h && hint && h.id === hint.id && h.position === hint.position ? h : hint));
+  };
+
+  const endPointerDrag = (commit) => {
+    const session = sessionRef.current;
+    if (!session) return;
+    sessionRef.current = null;
+    cancelAnimationFrame(session.raf);
+    setDragId(null);
+    setDropHint(null);
+    try { session.handle.releasePointerCapture(session.pointerId); } catch { /* already released */ }
+    if (!commit || !session.hint) return;
+    const { visibleRows: rows } = latest.current;
+    const target = rows.find((r) => r.id === session.hint.id);
+    if (!target) return;
+    const dest = dropDestination(latest.current.working, rows, session.dragged, target, session.hint.position);
+    if (!isValidDrop(session.dragged, dest)) return;
+    if (dest.kind === 'section') moveSectionTo(session.dragged.id, dest.toIndex);
+    else moveBlockTo(session.dragged.id, { parentId: dest.parentId, index: dest.index });
+  };
+
+  const startPointerDrag = (e, row) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (effectivelyLocked(locks, row.id) || sessionRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const session = { dragged: { kind: row.kind, id: row.id, type: null }, handle: e.currentTarget, pointerId: e.pointerId, x: e.clientX, y: e.clientY, hint: null, raf: 0 };
+    sessionRef.current = session;
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* synthetic pointer */ }
+    setDragId(row.id);
+    const container = scrollParent();
+    const tick = () => {
+      if (sessionRef.current !== session) return;
+      if (container) {
+        const box = container.getBoundingClientRect();
+        const dy = autoScrollDelta(session.y, box.top, box.bottom);
+        if (dy) { container.scrollTop += dy; updatePointerTarget(session); }
+      }
+      session.raf = requestAnimationFrame(tick);
+    };
+    session.raf = requestAnimationFrame(tick);
+  };
+
+  const movePointerDrag = (e) => {
+    const session = sessionRef.current;
+    if (!session || e.pointerId !== session.pointerId) return;
+    session.x = e.clientX;
+    session.y = e.clientY;
+    updatePointerTarget(session);
+  };
+
+  useEffect(() => {
+    if (dragId === null) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); endPointerDrag(false); } };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragId]);
+  useEffect(() => () => { if (sessionRef.current) { cancelAnimationFrame(sessionRef.current.raf); sessionRef.current = null; } }, []);
 
   const onDragOver = (e, row) => {
     const dragged = dragRef.current || (e.dataTransfer.types.includes(DRAG_TYPE_NEW) ? { kind: 'block', type: null } : null);
@@ -327,7 +417,7 @@ export const Outline = memo(function Outline() {
       )}
 
       <PartialRows region="header" chrome={chrome} />
-      <ul className="sbx-tree" role="tree" aria-label={t('outline_label')} ref={listRef}>
+      <ul className={`sbx-tree${dragId !== null ? ' is-sorting' : ''}`} role="tree" aria-label={t('outline_label')} ref={listRef}>
         {visibleRows.map((row, i) => {
           const label = row.kind === 'section' ? (row.node.label || t('section')) : nodeLabel(row.node, manifest, 'block');
           const hint = dropHint && dropHint.id === row.id ? ` is-drop-${dropHint.position}` : '';
@@ -349,9 +439,9 @@ export const Outline = memo(function Outline() {
               aria-expanded={row.container ? !isRowCollapsed : undefined}
               aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight Delete F2 Shift+F10"
               tabIndex={row.id === activeId ? 0 : -1}
-              className={`sbx-tree__row sbx-tree__row--${row.kind}${selection === row.id || picked.has(row.id) ? ' is-selected' : ''}${picked.size > 1 && picked.has(row.id) ? ' is-picked' : ''}${isProvisionalId(row.id) ? ' is-pending' : ''}${isHidden ? ' is-hidden' : ''}${ownLock ? ' is-locked' : ''}${lockedByAncestor ? ' is-locked-inherited' : ''}${hint}`}
+              className={`sbx-tree__row sbx-tree__row--${row.kind}${selection === row.id || picked.has(row.id) ? ' is-selected' : ''}${picked.size > 1 && picked.has(row.id) ? ' is-picked' : ''}${isProvisionalId(row.id) ? ' is-pending' : ''}${isHidden ? ' is-hidden' : ''}${dragId === row.id ? ' is-dragging' : ''}${ownLock ? ' is-locked' : ''}${lockedByAncestor ? ' is-locked-inherited' : ''}${hint}`}
               style={{ paddingLeft: `${(row.level - 1) * 14 + 6}px` }}
-              draggable
+              draggable={dragId === null}
               onDragStart={(e) => {
                 dragRef.current = { kind: row.kind, id: row.id, type: null };
                 e.dataTransfer.setData(DRAG_TYPE_NODE, row.id);
@@ -419,6 +509,24 @@ export const Outline = memo(function Outline() {
 
               <div className="sbx-tree__actions">
                 {isHidden && <span className="sbx-tree__badge" title={t('show')} aria-hidden="true">⊘</span>}
+                <button
+                  type="button"
+                  className="sbx-tree__handle"
+                  aria-label={t('row_drag_handle', { label })}
+                  title={t('row_drag_hint')}
+                  disabled={ownLock || lockedByAncestor}
+                  data-testid={`row-handle-${row.id}`}
+                  onPointerDown={(e) => startPointerDrag(e, row)}
+                  onPointerMove={movePointerDrag}
+                  onPointerUp={() => endPointerDrag(true)}
+                  onPointerCancel={() => endPointerDrag(false)}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); keyboardMove(row, e.key); } else if (e.key === 'Enter' || e.key === ' ') e.stopPropagation();
+                  }}
+                >
+                  ⠿
+                </button>
                 <RowMenu
                   label={label}
                   testId={`row-menu-${row.id}`}
