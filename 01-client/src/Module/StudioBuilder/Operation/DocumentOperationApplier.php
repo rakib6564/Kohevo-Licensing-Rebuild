@@ -27,6 +27,7 @@ namespace Slate\Module\StudioBuilder\Operation;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\DocumentCopier;
+use Slate\Module\StudioBuilder\Document\LayerLock;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
@@ -56,6 +57,9 @@ final class DocumentOperationApplier
     {
         $payload = $operation->payload;
 
+        // The layer lock is enforced here, on the one mutation path (builder UI, AI/MCP, imports of operations).
+        LayerLock::assertAllowed($document, $operation);
+
         return match ($operation->op) {
             DocumentOperation::OP_UPDATE_SETTINGS => self::updateSettings($document, $payload),
             DocumentOperation::OP_UPDATE_SEO => self::updateSeo($document, $payload),
@@ -67,6 +71,7 @@ final class DocumentOperationApplier
             DocumentOperation::OP_UPDATE_SECTION_LABEL => self::updateSectionLabel($document, $payload),
             DocumentOperation::OP_UPDATE_SECTION_LAYOUT => self::updateSectionField($document, $payload, 'layout'),
             DocumentOperation::OP_UPDATE_SECTION_VISIBILITY => self::updateSectionField($document, $payload, 'visibility'),
+            DocumentOperation::OP_UPDATE_SECTION_LOCKED => self::updateSectionLocked($document, $payload),
             DocumentOperation::OP_INSERT_BLOCK => self::insertBlock($document, $payload, $registry),
             DocumentOperation::OP_REMOVE_BLOCK => self::removeBlock($document, $payload),
             DocumentOperation::OP_MOVE_BLOCK => self::moveBlock($document, $payload, $registry),
@@ -80,6 +85,7 @@ final class DocumentOperationApplier
             DocumentOperation::OP_UPDATE_BLOCK_ATTRIBUTES => self::updateBlockField($document, $payload, 'attributes'),
             DocumentOperation::OP_UPDATE_BLOCK_INTERACTIONS => self::updateBlockField($document, $payload, 'interactions'),
             DocumentOperation::OP_UPDATE_BLOCK_ANIMATION => self::updateBlockField($document, $payload, 'animation'),
+            DocumentOperation::OP_UPDATE_BLOCK_META => self::updateBlockMeta($document, $payload),
             default => throw new StudioValidationException([
                 ['path' => '$.op', 'code' => 'unknown_operation', 'message' => "Unknown Studio document operation '{$operation->op}'."],
             ]),
@@ -727,6 +733,146 @@ final class DocumentOperationApplier
             }
         }
         return $result;
+    }
+
+    /**
+     * Lock or unlock a section. `locked: false` removes the key so unlocked
+     * documents stay byte-identical to ones that never used the feature.
+     *
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function updateSectionLocked(array $document, array $payload): array
+    {
+        $sectionId = self::requireString($payload, 'section_id', '$.payload.section_id');
+        if (!is_bool($payload['locked'] ?? null)) {
+            throw new StudioValidationException([
+                ['path' => '$.payload.locked', 'code' => 'invalid_payload_field', 'message' => 'payload.locked must be a boolean.'],
+            ]);
+        }
+
+        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
+        $found = false;
+        foreach ($sections as $idx => $section) {
+            if (is_array($section) && ($section['id'] ?? null) === $sectionId) {
+                if ($payload['locked']) {
+                    $sections[$idx]['locked'] = true;
+                } else {
+                    unset($sections[$idx]['locked']);
+                }
+                $found = true;
+                break;
+            }
+        }
+        self::assertFound($found, 'section_id', $sectionId, 'section');
+
+        $document['sections'] = $sections;
+        return $document;
+    }
+
+    /**
+     * Patch a block's `metadata`: `label` (editor display name; null or '' clears it)
+     * and `locked` (bool; false clears it). Keys not in the payload are untouched, and
+     * an emptied metadata object is removed.
+     *
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function updateBlockMeta(array $document, array $payload): array
+    {
+        $blockId = self::requireString($payload, 'block_id', '$.payload.block_id');
+
+        $unknown = array_diff(array_keys($payload), ['block_id', ...CanonicalDocumentSchema::ALLOWED_BLOCK_METADATA_KEYS]);
+        if ($unknown !== []) {
+            throw new StudioValidationException([
+                ['path' => '$.payload', 'code' => 'unknown_property', 'message' => 'Block metadata accepts only: ' . implode(', ', CanonicalDocumentSchema::ALLOWED_BLOCK_METADATA_KEYS) . '.'],
+            ]);
+        }
+
+        $patch = [];
+        if (array_key_exists('label', $payload)) {
+            $label = $payload['label'];
+            if ($label !== null && !is_string($label)) {
+                throw new StudioValidationException([
+                    ['path' => '$.payload.label', 'code' => 'invalid_block_label', 'message' => 'Block label must be a string or null.'],
+                ]);
+            }
+            $label = $label === null ? '' : trim($label);
+            if (mb_strlen($label, 'UTF-8') > CanonicalDocumentSchema::BLOCK_LABEL_MAX_LENGTH
+                || ($label !== '' && FieldSchema::containsExecutableOrSqlFragment($label))
+                || preg_match('/[\x00-\x1F\x7F]/', $label) === 1) {
+                throw new StudioValidationException([
+                    ['path' => '$.payload.label', 'code' => 'invalid_block_label', 'message' => 'Block label must be a safe string of at most ' . CanonicalDocumentSchema::BLOCK_LABEL_MAX_LENGTH . ' characters.'],
+                ]);
+            }
+            $patch['label'] = $label;
+        }
+        if (array_key_exists('locked', $payload)) {
+            if (!is_bool($payload['locked'])) {
+                throw new StudioValidationException([
+                    ['path' => '$.payload.locked', 'code' => 'invalid_payload_field', 'message' => 'payload.locked must be a boolean.'],
+                ]);
+            }
+            $patch['locked'] = $payload['locked'];
+        }
+
+        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
+        $found = false;
+        foreach ($sections as $sIdx => $section) {
+            if (!is_array($section)) {
+                continue;
+            }
+            $blocks = is_array($section['blocks'] ?? null) ? $section['blocks'] : [];
+            $sections[$sIdx]['blocks'] = self::patchBlockMetaRecursive($blocks, $blockId, $patch, $found);
+            if ($found) {
+                break;
+            }
+        }
+
+        self::assertFound($found, 'block_id', $blockId, 'block');
+        $document['sections'] = $sections;
+        return $document;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $blocks
+     * @param array<string, mixed> $patch
+     * @return list<array<string, mixed>>
+     */
+    private static function patchBlockMetaRecursive(array $blocks, string $blockId, array $patch, bool &$found): array
+    {
+        foreach ($blocks as $idx => $block) {
+            if (!is_array($block)) {
+                continue;
+            }
+            if (($block['id'] ?? null) === $blockId) {
+                $meta = is_array($block['metadata'] ?? null) ? $block['metadata'] : [];
+                foreach ($patch as $key => $value) {
+                    if ($value === '' || $value === false) {
+                        unset($meta[$key]);
+                    } else {
+                        $meta[$key] = $value;
+                    }
+                }
+                if ($meta === []) {
+                    unset($blocks[$idx]['metadata']);
+                } else {
+                    $blocks[$idx]['metadata'] = $meta;
+                }
+                $found = true;
+                return $blocks;
+            }
+            $children = is_array($block['children'] ?? null) ? $block['children'] : [];
+            if ($children !== []) {
+                $blocks[$idx]['children'] = self::patchBlockMetaRecursive($children, $blockId, $patch, $found);
+                if ($found) {
+                    return $blocks;
+                }
+            }
+        }
+        return $blocks;
     }
 
     // ── Payload guards ──────────────────────────────────────────────────────

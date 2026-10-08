@@ -89,7 +89,9 @@ test('operations use the canonical {op, payload} vocabulary', () => {
     // DocumentOperation::ALLOWED_OPS (DocumentOperation.php) — the motion
     // operations have been server-side since Sprint 7; only the builder UI
     // was missing them.
-    'update_block_animation', 'update_block_interactions'];
+    'update_block_animation', 'update_block_interactions',
+    // Layer lock and block rename (LayerLock.php; update_block_meta / update_section_locked).
+    'update_block_meta', 'update_section_locked'];
   for (const name of Object.values(ops.OPS)) assert.ok(serverOps.includes(name), `${name} is a server DocumentOperation`);
 });
 

@@ -174,6 +174,16 @@ $sbBoot = [
         'media_note' => __('studio_ui_media_note', 'Only the image id is stored on the page, never a file path.'),
         'ai_panel_note' => __('studio_ui_ai_panel_note', 'The AI assistant prepares changes as a draft revision. Nothing goes live until you review and publish it yourself.'),
         'ai_unavailable' => __('studio_ui_ai_unavailable', 'The AI assistant is not enabled for your account.'),
+        'lock_layer' => __('studio_ui_lock_layer', 'Lock'),
+        'unlock_layer' => __('studio_ui_unlock_layer', 'Unlock'),
+        'locked_by_parent' => __('studio_ui_locked_by_parent', 'Locked by a parent layer. Unlock the parent first.'),
+        'layer_locked_note' => __('studio_ui_layer_locked_note', 'This layer is locked. Unlock it to edit, move, rename or remove it.'),
+        'layer_locked_by_parent' => __('studio_ui_layer_locked_by_parent', 'A parent layer is locked, so this layer cannot be edited. Unlock the parent first.'),
+        'announce_locked' => __('studio_ui_announce_locked', 'This layer is locked. Unlock it first.'),
+        'announce_layer_locked' => __('studio_ui_announce_layer_locked', '{label} locked'),
+        'announce_layer_unlocked' => __('studio_ui_announce_layer_unlocked', '{label} unlocked'),
+        'announce_renamed' => __('studio_ui_announce_renamed', 'Renamed to {label}'),
+        'layer_name_cleared' => __('studio_ui_layer_name_cleared', 'Layer name cleared'),
     ],
 ];
 ?><!DOCTYPE html>

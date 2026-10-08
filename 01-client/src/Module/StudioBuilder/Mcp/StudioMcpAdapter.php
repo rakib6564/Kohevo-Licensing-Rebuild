@@ -558,6 +558,12 @@ final class StudioMcpAdapter
                 throw self::invalid("operations[{$i}]", 'invalid_operation', 'Each operation must be {op, payload}.');
             }
             $operation = DocumentOperation::fromArray($op);
+            // Layer locks are a human decision: an assistant may name layers but can never lock or unlock them
+            // (otherwise it could lift a lock and then edit the layer it protects).
+            if ($operation->op === DocumentOperation::OP_UPDATE_SECTION_LOCKED
+                || ($operation->op === DocumentOperation::OP_UPDATE_BLOCK_META && array_key_exists('locked', $operation->payload))) {
+                throw self::invalid("operations[{$i}]", 'lock_not_permitted', 'Layer locks are set by people in the builder; an assistant cannot lock or unlock layers.');
+            }
             self::assertIdShapes($operation, $i);
             $operations[] = $operation;
         }

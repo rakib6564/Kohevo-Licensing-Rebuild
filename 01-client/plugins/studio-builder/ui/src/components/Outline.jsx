@@ -17,6 +17,7 @@ import {
 } from '../core/doc.mjs';
 import { isProvisionalId, updateBlockVisibility, updateSectionVisibility } from '../core/operations.mjs';
 import { nextPicked, topLevelIds } from '../core/shellState.mjs';
+import { effectivelyLocked, isLocked, lockIndex } from '../core/layerLock.mjs';
 
 const DRAG_TYPE_NODE = 'application/x-kohevo-studio-node';
 
@@ -84,10 +85,11 @@ export function dropDestination(doc, rows, dragged, row, position) {
 export const Outline = memo(function Outline() {
   const {
     manifest, selection, select, insertBlock, insertSection,
-    duplicateNode, updateSectionLabel, removeNode, moveBlockTo, moveSectionTo, applyOp,
+    duplicateNode, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, applyOp,
   } = useEditor();
   const working = useEngineState((s) => s.working);
   const allRows = useMemo(() => outlineRows(working, manifest), [working, manifest]);
+  const locks = useMemo(() => lockIndex(working), [working]);
   const [collapsed, setCollapsed] = useState(() => new Set());
   const [editingId, setEditingId] = useState(null);
   const [editLabel, setEditLabel] = useState('');
@@ -152,11 +154,15 @@ export const Outline = memo(function Outline() {
   }, [applyOp]);
 
   const finishRename = useCallback((id) => {
-    if (editLabel.trim() && updateSectionLabel) {
-      updateSectionLabel(id, editLabel.trim());
-    }
+    if (renameNode) renameNode(id, editLabel);
     setEditingId(null);
-  }, [editLabel, updateSectionLabel]);
+  }, [editLabel, renameNode]);
+
+  const startRename = useCallback((row) => {
+    if (effectivelyLocked(locks, row.id)) return; // a locked layer cannot be renamed
+    setEditingId(row.id);
+    setEditLabel(row.kind === 'section' ? (row.node.label || '') : ((row.node.metadata && row.node.metadata.label) || ''));
+  }, [locks]);
 
   const keyboardMove = useCallback((row, key) => {
     if (row.kind === 'section') {
@@ -185,6 +191,7 @@ export const Outline = memo(function Outline() {
       case 'End': e.preventDefault(); if (visibleRows.length) focusRow(visibleRows[visibleRows.length - 1].id); break;
       case 'Enter': case ' ': e.preventDefault(); select(row.id); break;
       case 'Delete': case 'Backspace': e.preventDefault(); removeNode(row.id); break;
+      case 'F2': e.preventDefault(); startRename(row); break;
       default: break;
     }
   };
@@ -243,6 +250,9 @@ export const Outline = memo(function Outline() {
   const allCollapsed = collapsed.size > 0;
   const bulkIds = picked.size > 1 ? topLevelIds(allRows, picked) : [];
 
+  const bulkLock = (locked) => {
+    bulkIds.forEach((id) => { if (isLocked(allRows.find((r) => r.id === id).node) !== locked) setLocked(id, locked); });
+  };
   const bulkDuplicate = () => {
     bulkIds.forEach((id) => duplicateNode(id));
     setPicked(new Set());
@@ -284,6 +294,8 @@ export const Outline = memo(function Outline() {
       {bulkIds.length > 1 && (
         <div className="sbx-tree__bulk" role="toolbar" aria-label={t('bulk_actions')} data-testid="outline-bulk">
           <span className="sbx-tree__bulk-count">{t('bulk_selected', { count: bulkIds.length })}</span>
+          <button type="button" className="sbx-btn sbx-btn--seg" onClick={() => bulkLock(true)}>{t('lock_layer')}</button>
+          <button type="button" className="sbx-btn sbx-btn--seg" onClick={() => bulkLock(false)}>{t('unlock_layer')}</button>
           <button type="button" className="sbx-btn sbx-btn--seg" onClick={bulkDuplicate}>{t('duplicate')}</button>
           <button type="button" className="sbx-btn sbx-btn--seg sbx-btn--danger" onClick={bulkRemove}>{t('remove_item')}</button>
           <button type="button" className="sbx-btn sbx-btn--seg" onClick={() => setPicked(new Set())}>{t('clear_selection')}</button>
@@ -296,6 +308,8 @@ export const Outline = memo(function Outline() {
           const hint = dropHint && dropHint.id === row.id ? ` is-drop-${dropHint.position}` : '';
           const isRowCollapsed = collapsed.has(row.id);
           const isHidden = row.node.visibility && Array.isArray(row.node.visibility.devices) && row.node.visibility.devices.length === 0;
+          const ownLock = isLocked(row.node);
+          const lockedByAncestor = !ownLock && effectivelyLocked(locks, row.id);
 
           return (
             <li
@@ -308,9 +322,9 @@ export const Outline = memo(function Outline() {
               aria-posinset={row.index + 1}
               aria-selected={selection === row.id || picked.has(row.id)}
               aria-expanded={row.container ? !isRowCollapsed : undefined}
-              aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight Delete"
+              aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight Delete F2"
               tabIndex={row.id === activeId ? 0 : -1}
-              className={`sbx-tree__row sbx-tree__row--${row.kind}${selection === row.id || picked.has(row.id) ? ' is-selected' : ''}${picked.has(row.id) ? ' is-picked' : ''}${isProvisionalId(row.id) ? ' is-pending' : ''}${isHidden ? ' is-hidden' : ''}${hint}`}
+              className={`sbx-tree__row sbx-tree__row--${row.kind}${selection === row.id || picked.has(row.id) ? ' is-selected' : ''}${picked.has(row.id) ? ' is-picked' : ''}${isProvisionalId(row.id) ? ' is-pending' : ''}${isHidden ? ' is-hidden' : ''}${ownLock ? ' is-locked' : ''}${lockedByAncestor ? ' is-locked-inherited' : ''}${hint}`}
               style={{ paddingLeft: `${(row.level - 1) * 14 + 6}px` }}
               draggable
               onDragStart={(e) => {
@@ -376,18 +390,31 @@ export const Outline = memo(function Outline() {
                 <span
                   className="sbx-tree__label"
                   onDoubleClick={(e) => {
-                    if (row.kind === 'section') {
-                      e.stopPropagation();
-                      setEditingId(row.id);
-                      setEditLabel(row.node.label || '');
-                    }
+                    e.stopPropagation();
+                    startRename(row);
                   }}
                 >
+                  {ownLock && <span className="sbx-tree__lock-badge" aria-hidden="true">🔒</span>}
                   {label}
                 </span>
               )}
 
               <div className="sbx-tree__actions">
+                <button
+                  type="button"
+                  className={`sbx-tree__action${ownLock ? ' is-on' : ''}`}
+                  title={ownLock ? t('unlock_layer') : lockedByAncestor ? t('locked_by_parent') : t('lock_layer')}
+                  aria-label={ownLock ? t('unlock_layer') : t('lock_layer')}
+                  aria-pressed={ownLock}
+                  disabled={lockedByAncestor}
+                  data-testid={`lock-${row.id}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLocked(row.id, !ownLock);
+                  }}
+                >
+                  {ownLock ? '🔒' : '🔓'}
+                </button>
                 <button
                   type="button"
                   className="sbx-tree__action"

@@ -90,7 +90,8 @@ final class CanonicalDocumentSchema
         'noindex,nofollow',
     ];
 
-    public const ALLOWED_SECTION_KEYS = [
+    /** Keys every section must carry. */
+    public const REQUIRED_SECTION_KEYS = [
         'id',
         'label',
         'global_ref',
@@ -98,6 +99,22 @@ final class CanonicalDocumentSchema
         'visibility',
         'blocks',
     ];
+
+    /** Required keys plus the optional layer lock (`locked`, present only while true). */
+    public const ALLOWED_SECTION_KEYS = [
+        ...self::REQUIRED_SECTION_KEYS,
+        'locked',
+    ];
+
+    /**
+     * The only keys a block's optional `metadata` object may carry: an editor
+     * display name (Layers panel) and the layer lock. Both are authoring aids;
+     * neither reaches rendered output.
+     */
+    public const ALLOWED_BLOCK_METADATA_KEYS = ['label', 'locked'];
+
+    /** Max length of a block's `metadata.label` (sections keep their own 120-char label). */
+    public const BLOCK_LABEL_MAX_LENGTH = 80;
 
     public const ALLOWED_LAYOUT_KEYS = [
         'columns',

@@ -33,6 +33,7 @@ final class DocumentOperation
     public const OP_UPDATE_SECTION_LABEL    = 'update_section_label';
     public const OP_UPDATE_SECTION_LAYOUT   = 'update_section_layout';
     public const OP_UPDATE_SECTION_VISIBILITY = 'update_section_visibility';
+    public const OP_UPDATE_SECTION_LOCKED   = 'update_section_locked';
     public const OP_INSERT_BLOCK            = 'insert_block';
     public const OP_REMOVE_BLOCK            = 'remove_block';
     public const OP_MOVE_BLOCK              = 'move_block';
@@ -46,6 +47,7 @@ final class DocumentOperation
     public const OP_UPDATE_BLOCK_ATTRIBUTES    = 'update_block_attributes';
     public const OP_UPDATE_BLOCK_INTERACTIONS  = 'update_block_interactions';
     public const OP_UPDATE_BLOCK_ANIMATION     = 'update_block_animation';
+    public const OP_UPDATE_BLOCK_META          = 'update_block_meta';
 
     public const ALLOWED_OPS = [
         self::OP_UPDATE_SETTINGS,
@@ -58,6 +60,7 @@ final class DocumentOperation
         self::OP_UPDATE_SECTION_LABEL,
         self::OP_UPDATE_SECTION_LAYOUT,
         self::OP_UPDATE_SECTION_VISIBILITY,
+        self::OP_UPDATE_SECTION_LOCKED,
         self::OP_INSERT_BLOCK,
         self::OP_REMOVE_BLOCK,
         self::OP_MOVE_BLOCK,
@@ -71,6 +74,7 @@ final class DocumentOperation
         self::OP_UPDATE_BLOCK_ATTRIBUTES,
         self::OP_UPDATE_BLOCK_INTERACTIONS,
         self::OP_UPDATE_BLOCK_ANIMATION,
+        self::OP_UPDATE_BLOCK_META,
     ];
 
     /**
@@ -88,6 +92,7 @@ final class DocumentOperation
         self::OP_UPDATE_SECTION_LABEL      => ['section_id', 'label'],
         self::OP_UPDATE_SECTION_LAYOUT     => ['section_id', 'layout'],
         self::OP_UPDATE_SECTION_VISIBILITY => ['section_id', 'visibility'],
+        self::OP_UPDATE_SECTION_LOCKED     => ['section_id', 'locked'],
         self::OP_INSERT_BLOCK              => ['parent_id', 'index', 'block'],
         self::OP_REMOVE_BLOCK              => ['block_id'],
         self::OP_MOVE_BLOCK                => ['block_id', 'parent_id', 'index'],
@@ -101,6 +106,7 @@ final class DocumentOperation
         self::OP_UPDATE_BLOCK_ATTRIBUTES   => ['block_id', 'attributes'],
         self::OP_UPDATE_BLOCK_INTERACTIONS => ['block_id', 'interactions'],
         self::OP_UPDATE_BLOCK_ANIMATION    => ['block_id', 'animation'],
+        self::OP_UPDATE_BLOCK_META         => ['block_id'],
     ];
 
     /**
@@ -200,5 +206,21 @@ final class DocumentOperation
     public static function updateSectionLabel(string $sectionId, string $label): self
     {
         return new self(self::OP_UPDATE_SECTION_LABEL, ['section_id' => $sectionId, 'label' => $label]);
+    }
+
+    public static function updateSectionLocked(string $sectionId, bool $locked): self
+    {
+        return new self(self::OP_UPDATE_SECTION_LOCKED, ['section_id' => $sectionId, 'locked' => $locked]);
+    }
+
+    /**
+     * Patch a block's editor metadata: `label` (string, or null to clear) and/or
+     * `locked` (bool). Keys left out are untouched.
+     *
+     * @param array<string, mixed> $meta
+     */
+    public static function updateBlockMeta(string $blockId, array $meta): self
+    {
+        return new self(self::OP_UPDATE_BLOCK_META, ['block_id' => $blockId] + $meta);
     }
 }
