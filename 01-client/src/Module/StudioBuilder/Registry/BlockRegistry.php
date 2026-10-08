@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Registry;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\CountdownRenderer;
 use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 
@@ -820,6 +821,68 @@ final class BlockRegistry
             ]),
             allowsChildren: false,
             allowedBindingProviders: [],
+        ));
+
+        // 33. core.card — a padded surface that holds other blocks.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.card',
+            version: 1,
+            label: 'Card',
+            title: 'Card',
+            description: 'A padded surface that holds other elements',
+            category: 'layout',
+            icon: 'box',
+            schema: FieldSchema::define([
+                ['key' => 'variant', 'type' => 'enum', 'label' => 'Style', 'required' => false, 'allowed_values' => ['outlined', 'filled', 'shadow'], 'default' => 'outlined'],
+                ['key' => 'padding', 'type' => 'enum', 'label' => 'Padding', 'required' => false, 'allowed_values' => ['sm', 'md', 'lg'], 'default' => 'md'],
+                ['key' => 'surface_token', 'type' => 'token_ref', 'label' => 'Surface colour', 'required' => false, 'default' => null],
+            ]),
+            allowsChildren: true,
+        ));
+
+        // 34. core.table — header line plus one line per row, cells separated by "|".
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.table',
+            version: 1,
+            label: 'Table',
+            title: 'Table',
+            description: 'Rows and columns of plain data',
+            category: 'content',
+            icon: 'table',
+            schema: FieldSchema::define([
+                ['key' => 'caption', 'type' => 'string', 'label' => 'Caption', 'required' => false, 'default' => '', 'max_length' => 160],
+                ['key' => 'header', 'type' => 'string', 'label' => 'Header (separate columns with |)', 'required' => false, 'default' => 'Plan | Price | Seats', 'max_length' => 400],
+                ['key' => 'striped', 'type' => 'boolean', 'label' => 'Striped rows', 'required' => false, 'default' => true],
+                [
+                    'key'         => 'rows',
+                    'type'        => 'repeater',
+                    'label'       => 'Rows',
+                    'required'    => false,
+                    'default'     => [['cells' => 'Starter | $9 | 1'], ['cells' => 'Team | $29 | 5'], ['cells' => 'Business | $99 | 25']],
+                    'max_items'   => 50,
+                    'item_schema' => FieldSchema::define([
+                        ['key' => 'cells', 'type' => 'string', 'label' => 'Cells (separate with |)', 'required' => true, 'max_length' => 600],
+                    ]),
+                ],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 35. core.countdown — counts down to a moment; the runtime drives it (core.stats-style progressive enhancement).
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.countdown',
+            version: 1,
+            label: 'Countdown',
+            title: 'Countdown',
+            description: 'Days, hours, minutes and seconds to a date',
+            category: 'content',
+            icon: 'timer',
+            schema: FieldSchema::define([
+                ['key' => 'target', 'type' => 'string', 'label' => 'Ends at (UTC, e.g. 2030-01-01T00:00:00Z)', 'required' => true, 'default' => '2030-01-01T00:00:00Z', 'max_length' => 40, 'pattern' => CountdownRenderer::TARGET_PATTERN],
+                ['key' => 'label', 'type' => 'string', 'label' => 'Label', 'required' => false, 'default' => 'Starts in', 'max_length' => 120],
+                ['key' => 'done_text', 'type' => 'string', 'label' => 'Text when it ends', 'required' => false, 'default' => '', 'max_length' => 160],
+            ]),
+            allowsChildren: false,
         ));
     }
 

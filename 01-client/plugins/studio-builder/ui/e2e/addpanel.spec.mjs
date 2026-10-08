@@ -85,6 +85,7 @@ test('at the block limit, cards are disabled and say why (and insert nothing)', 
   await openBuilder(page);
   await page.unroute(pattern); // the manifest is already loaded; later navigations must not be intercepted
   await openTab(page, 'Elements');
+  await panel(page).locator('[data-chip="content"]').click(); // each group only previews four cards; the catalogue grows
   let inserted = 0;
   try {
     const heading = panel(page).locator('[data-block-type="core.heading"]').first();

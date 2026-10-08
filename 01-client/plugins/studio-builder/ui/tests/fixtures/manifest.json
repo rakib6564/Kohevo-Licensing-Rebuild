@@ -258,6 +258,77 @@
         {
             "allowed_binding_providers": [],
             "allowed_child_types": [],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "padding": "md",
+                "surface_token": null,
+                "variant": "outlined"
+            },
+            "description": "A padded surface that holds other elements",
+            "field_schema": [
+                {
+                    "key": "variant",
+                    "type": "enum",
+                    "label": "Style",
+                    "required": false,
+                    "default": "outlined",
+                    "allowed_values": [
+                        "outlined",
+                        "filled",
+                        "shadow"
+                    ]
+                },
+                {
+                    "key": "padding",
+                    "type": "enum",
+                    "label": "Padding",
+                    "required": false,
+                    "default": "md",
+                    "allowed_values": [
+                        "sm",
+                        "md",
+                        "lg"
+                    ]
+                },
+                {
+                    "key": "surface_token",
+                    "type": "token_ref",
+                    "label": "Surface colour",
+                    "required": false,
+                    "default": null
+                }
+            ],
+            "icon": "box",
+            "label": "Card",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "title": "Card",
+            "type": "core.card",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
             "allows_children": false,
             "binding_slots": [],
             "category": "media",
@@ -481,6 +552,70 @@
             ],
             "title": "Container",
             "type": "core.container",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "done_text": "",
+                "label": "Starts in",
+                "target": "2030-01-01T00:00:00Z"
+            },
+            "description": "Days, hours, minutes and seconds to a date",
+            "field_schema": [
+                {
+                    "key": "target",
+                    "type": "string",
+                    "label": "Ends at (UTC, e.g. 2030-01-01T00:00:00Z)",
+                    "required": true,
+                    "default": "2030-01-01T00:00:00Z",
+                    "max_length": 40
+                },
+                {
+                    "key": "label",
+                    "type": "string",
+                    "label": "Label",
+                    "required": false,
+                    "default": "Starts in",
+                    "max_length": 120
+                },
+                {
+                    "key": "done_text",
+                    "type": "string",
+                    "label": "Text when it ends",
+                    "required": false,
+                    "default": "",
+                    "max_length": 160
+                }
+            ],
+            "icon": "timer",
+            "label": "Countdown",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "title": "Countdown",
+            "type": "core.countdown",
             "version": 1
         },
         {
@@ -2031,6 +2166,108 @@
             ],
             "title": "Stats",
             "type": "core.stats",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "caption": "",
+                "header": "Plan | Price | Seats",
+                "rows": [
+                    {
+                        "cells": "Starter | $9 | 1"
+                    },
+                    {
+                        "cells": "Team | $29 | 5"
+                    },
+                    {
+                        "cells": "Business | $99 | 25"
+                    }
+                ],
+                "striped": true
+            },
+            "description": "Rows and columns of plain data",
+            "field_schema": [
+                {
+                    "key": "caption",
+                    "type": "string",
+                    "label": "Caption",
+                    "required": false,
+                    "default": "",
+                    "max_length": 160
+                },
+                {
+                    "key": "header",
+                    "type": "string",
+                    "label": "Header (separate columns with |)",
+                    "required": false,
+                    "default": "Plan | Price | Seats",
+                    "max_length": 400
+                },
+                {
+                    "key": "striped",
+                    "type": "boolean",
+                    "label": "Striped rows",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "rows",
+                    "type": "repeater",
+                    "label": "Rows",
+                    "required": false,
+                    "default": [
+                        {
+                            "cells": "Starter | $9 | 1"
+                        },
+                        {
+                            "cells": "Team | $29 | 5"
+                        },
+                        {
+                            "cells": "Business | $99 | 25"
+                        }
+                    ],
+                    "max_items": 50,
+                    "item_schema": [
+                        {
+                            "key": "cells",
+                            "type": "string",
+                            "label": "Cells (separate with |)",
+                            "required": true,
+                            "default": "",
+                            "max_length": 600
+                        }
+                    ]
+                }
+            ],
+            "icon": "table",
+            "label": "Table",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index"
+            ],
+            "title": "Table",
+            "type": "core.table",
             "version": 1
         },
         {

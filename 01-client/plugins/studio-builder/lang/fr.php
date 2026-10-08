@@ -92,6 +92,10 @@ return [
     // Phase 9A — strings Studio itself writes into PUBLIC pages (Html::t()). A
     // public page follows the tenant's site language, so a French site gets these.
     'studio_learn_more' => 'En savoir plus',
+    'studio_countdown_days' => 'Jours',
+    'studio_countdown_hours' => 'Heures',
+    'studio_countdown_minutes' => 'Minutes',
+    'studio_countdown_seconds' => 'Secondes',
     'studio_book_now' => 'Réserver',
     'studio_join_now' => 'Adhérer',
     'studio_open_form' => 'Ouvrir le formulaire',
@@ -687,6 +691,12 @@ return [
     'studio_block_core_quote_desc' => 'Une citation avec son auteur',
     'studio_block_core_link_title' => 'Lien',
     'studio_block_core_link_desc' => 'Un simple lien texte',
+    'studio_block_core_card_title' => 'Carte',
+    'studio_block_core_card_desc' => 'Une surface qui contient d’autres éléments',
+    'studio_block_core_table_title' => 'Tableau',
+    'studio_block_core_table_desc' => 'Lignes et colonnes de données simples',
+    'studio_block_core_countdown_title' => 'Compte à rebours',
+    'studio_block_core_countdown_desc' => 'Jours, heures, minutes et secondes avant une date',
     'studio_block_core_stats_title' => 'Statistiques',
     'studio_block_core_stats_desc' => 'Chiffres animés qui s’incrémentent',
     'studio_block_core_tabs_title' => 'Onglets',

@@ -108,6 +108,17 @@ function place(node, x, y, w, shapes, depth) {
       shapes.push({ k: 'line', x: alignedX(align, x, w, lw), y: y + 1, w: lw, h: 3 });
       return 5;
     }
+    case 'core.table': {
+      const rows = Math.min((n || 3) + 1, 6);
+      shapes.push({ k: 'bar', x, y, w, h: 5 });
+      for (let i = 1; i < rows; i += 1) shapes.push({ k: 'line', x, y: y + i * 6 + 1, w, h: 2 });
+      return rows * 6 - 1;
+    }
+    case 'core.countdown': {
+      const cw = (w - 12) / 4;
+      for (let i = 0; i < 4; i += 1) shapes.push({ k: 'card', x: x + i * (cw + 4), y, w: cw, h: 12 });
+      return 12;
+    }
     case 'core.button': {
       shapes.push({ k: 'pill', x: alignedX(align, x, w, 34), y, w: 34, h: 9 });
       return 9;
@@ -120,9 +131,10 @@ function place(node, x, y, w, shapes, depth) {
       shapes.push({ k: 'pill', x, y: y + 31 + t + 6, w: 34, h: 9 });
       return 31 + t + 6 + 9;
     }
+    case 'core.card':
     case 'layout.container':
     case 'core.container': {
-      if (node.s) {
+      if (node.s || node.t === 'core.card') {
         const idx = shapes.length;
         shapes.push({ k: 'card', x, y, w, h: 0 });
         const inner = stack(kids, x + 6, y + 6, w - 12, shapes, depth + 1);

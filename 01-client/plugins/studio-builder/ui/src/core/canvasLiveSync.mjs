@@ -62,7 +62,7 @@ export function isStructuralChange(prevDoc, nextDoc) {
  * Blocks whose markup is built only on the server (no heuristic live patch exists for them): any
  * property edit repaints the canvas from the server instead of being patched in place.
  */
-export const SERVER_RENDERED_TYPES = new Set(['core.icon', 'core.list', 'core.quote', 'core.link']);
+export const SERVER_RENDERED_TYPES = new Set(['core.icon', 'core.list', 'core.quote', 'core.link', 'core.card', 'core.table', 'core.countdown']);
 
 /** Compare two block lists to any depth: ids, types, child counts and the props of server-rendered types. */
 function blocksChanged(prev, next) {

@@ -90,6 +90,9 @@ final class BlockRendererRegistry
         $registry->register(new CoreRenderers\ListRenderer());
         $registry->register(new CoreRenderers\QuoteRenderer());
         $registry->register(new CoreRenderers\LinkRenderer());
+        $registry->register(new CoreRenderers\CardRenderer());
+        $registry->register(new CoreRenderers\TableRenderer());
+        $registry->register(new CoreRenderers\CountdownRenderer());
         return $registry;
     }
 
