@@ -28,10 +28,11 @@ export function PresetCard({ preset: p, fav, onToggleFavorite }) {
         aria-describedby={disabled ? reasonId : undefined}
         onClick={disabled ? undefined : () => insertTemplate(p)}
         aria-label={t('pal_insert_section', { name: p.name })}
+        title={p.description || undefined}
       >
         <Wireframe outline={p.outline} />
         <span className="sbx-preset-card__name">{p.name}</span>
-        <span className="sbx-preset-card__desc">{p.description}</span>
+        <span className="sbx-preset-card__desc sbx-sr-only">{p.description}</span>
         {disabled && <span id={reasonId} className="sbx-palette-card__reason" data-testid="insert-reason">{t(reasonKey(state.reason))}</span>}
       </button>
       <button

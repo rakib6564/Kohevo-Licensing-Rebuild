@@ -3177,3 +3177,16 @@ html, body.sbx-body {
 .sbx-isec.is-open > .sbx-isec__heading .sbx-isec__chevron { transform: rotate(90deg); color: var(--sbx-accent-text); }
 .sbx-isec.is-open > .sbx-isec__heading .sbx-isec__title { color: var(--sbx-text-bright, #f1f5f9); }
 .sbx-isec__body { padding: 2px 14px 16px; border-top: 0; }
+
+/* ── Add panel: section presets as compact tiles (wireframe over name, like the Elements tiles) ── */
+.sbx-presets__list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.sbx-preset-card__insert { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 6px 6px 8px; border-radius: 8px; min-height: 0; height: 100%; justify-content: flex-start; text-align: center; }
+.sbx-preset-card__name { margin-top: auto; }
+.sbx-preset-card__insert > .sbx-wf { grid-column: auto; grid-row: auto; width: 100%; height: auto; max-height: 80px; align-self: stretch; }
+.sbx-preset-card__name { grid-column: auto; grid-row: auto; padding: 0 2px; font-size: 11.5px; line-height: 1.2; overflow-wrap: anywhere; }
+.sbx-preset-card__insert > .sbx-palette-card__reason { grid-column: auto; grid-row: auto; font-size: 10px; }
+.sbx-preset-card__star { right: 4px; top: 4px; bottom: auto; min-width: 22px; min-height: 22px; font-size: 12px; background: rgba(15, 23, 42, 0.7); border-radius: 6px; }
+@media (hover: hover) {
+  .sbx-preset-card__star { opacity: 0; }
+  .sbx-preset-card:hover .sbx-preset-card__star, .sbx-preset-card__star:focus-visible, .sbx-preset-card__star.is-favorited { opacity: 1; }
+}
