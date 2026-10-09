@@ -146,7 +146,8 @@ body.sb-body a:hover {
 }
 body.sb-body h1, body.sb-body h2, body.sb-body h3, body.sb-body h4 {
     font-family: 'Outfit', 'Helvetica Neue', Arial, sans-serif !important;
-    color: var(--ink) !important;
+    /* No colour here: a heading inherits the text colour of its block or section (the page default is --ink on body),
+       so a colour the author sets in the Inspector is not overridden. */
 }
 .sb-main--full {
     display: block !important;
@@ -171,7 +172,7 @@ body.sb-body h1, body.sb-body h2, body.sb-body h3, body.sb-body h4 {
     display: block;
     width: 100%;
     max-width: 100%;
-    padding: 3rem 1.5rem 6rem;
+    padding: 0;
     box-sizing: border-box;
 }
 .sb-main--normal .sb-section {
@@ -188,7 +189,6 @@ body.sb-body h1, body.sb-body h2, body.sb-body h3, body.sb-body h4 {
 .sb-main--normal h1.sb-heading,
 .sb-main--normal h2.sb-heading {
     font-family: 'Outfit', 'Helvetica Neue', Arial, sans-serif !important;
-    color: var(--ink, #33312e) !important;
     letter-spacing: -0.01em;
     margin-bottom: 1rem;
 }

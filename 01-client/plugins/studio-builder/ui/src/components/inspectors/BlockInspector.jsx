@@ -11,11 +11,12 @@
 import { useState } from 'react';
 import { useEditor, useEngineState } from '../EditorContext.jsx';
 import { FieldControl, ObjectFields, TokenSelect } from '../fields/FieldControl.jsx';
+import { presentersFor } from '../../core/propPresenters.mjs';
 import { ResponsiveSelect, VisibilityControls } from './controls.jsx';
 import { StyleControls } from './StyleControls.jsx';
 import { BorderExtras, DimensionsExtras, EffectsPane, LayoutPane, PositionPane, ShadowExtras, SpacingPane, StatesPane, TypographyExtras } from './SurfaceControls.jsx';
 import { OPTIONS } from '../../core/styleSurface.mjs';
-import { MotionInspector } from './MotionInspector.jsx';
+import { EntranceSelect, MotionInspector } from './MotionInspector.jsx';
 import { ClassNamesField, DataAttributes, IdentityFields } from './AdvancedControls.jsx';
 import { InspectorShell } from './InspectorShell.jsx';
 import { InspectorHeader } from './InspectorHeader.jsx';
@@ -67,6 +68,7 @@ export function BlockInspector({ info }) {
         value={props}
         manifest={manifest}
         mediaPicker={boot.mediaPicker}
+        presenters={presentersFor(block.type)}
         onChange={(next) => save(ops.updateBlockProps(block.id, next))}
       />
     ),
@@ -79,6 +81,7 @@ export function BlockInspector({ info }) {
     align: () => (
       <ResponsiveSelect
         label={t('align')}
+        icons="text"
         value={style.align ?? null}
         options={asList(manifest.vocabulary.alignments)}
         activeBreakpoint={viewport.breakpoint}
@@ -143,7 +146,6 @@ export function BlockInspector({ info }) {
       </>
     ),
     layout: () => <LayoutPane style={style} onChange={saveStyle} />,
-    spacing: () => <SpacingPane style={style} onChange={saveStyle} />,
     position: () => <PositionPane style={style} onChange={saveStyle} />,
     effects: () => <EffectsPane style={style} onChange={saveStyle} />,
     states: () => <StatesPane states={block.style_states} onChange={(next) => save(ops.updateBlockStyleStates(block.id, next))} />,
@@ -169,10 +171,9 @@ export function BlockInspector({ info }) {
       </div>
     )),
     motion: () => <MotionInspector block={block} applyOp={applyOp} label={def.label} />,
-    visibility: () => (
-      <VisibilityControls value={block.visibility} manifest={manifest} onChange={(v) => save(ops.updateBlockVisibility(block.id, v))} />
-    ),
     responsive: () => (
+      <>
+      <VisibilityControls value={block.visibility} manifest={manifest} onChange={(v) => save(ops.updateBlockVisibility(block.id, v))} />
       <fieldset className="sbx-fieldset">
         <legend>{t('device_overrides')}</legend>
         {['desktop', 'tablet', 'mobile'].map((device) => {
@@ -198,29 +199,35 @@ export function BlockInspector({ info }) {
           );
         })}
       </fieldset>
+      </>
     ),
-    classes: () => <ClassNamesField id={`${idPrefix}-classes`} value={classNames} onChange={(list) => save(ops.updateBlockClassNames(block.id, list))} />,
-    identity: () => <IdentityFields block={block} doc={working} onChange={(attrs) => save(ops.updateBlockAttributes(block.id, attrs))} />,
-    stacking: () => (
-      <div className="sbx-field">
-        <label className="sbx-field__label" htmlFor={`${idPrefix}-z-index`}>{t('z_index_label')}</label>
-        <input
-          id={`${idPrefix}-z-index`}
-          type="number"
-          className="sbx-input"
-          min={Z_INDEX_MIN}
-          max={Z_INDEX_MAX}
-          value={style.z_index !== undefined && style.z_index !== null ? style.z_index : ''}
-          placeholder="0"
-          onChange={(e) => {
-            // Same range the server enforces (CanonicalDocumentSchema::Z_INDEX_*): authors cannot stack above the platform signature.
-            const raw = e.target.value === '' ? null : parseInt(e.target.value, 10);
-            const val = raw === null || Number.isNaN(raw) ? null : Math.max(Z_INDEX_MIN, Math.min(Z_INDEX_MAX, raw));
-            saveStyle({ ...style, z_index: val });
-          }}
-        />
-      </div>
+    advanced: () => (
+      <>
+        <SpacingPane style={style} onChange={saveStyle} />
+        <div className="sbx-field">
+          <label className="sbx-field__label" htmlFor={`${idPrefix}-z-index`}>{t('z_index_label')}</label>
+          <input
+            id={`${idPrefix}-z-index`}
+            type="number"
+            className="sbx-input"
+            min={Z_INDEX_MIN}
+            max={Z_INDEX_MAX}
+            value={style.z_index !== undefined && style.z_index !== null ? style.z_index : ''}
+            placeholder="0"
+            onChange={(e) => {
+              // Same range the server enforces (CanonicalDocumentSchema::Z_INDEX_*): authors cannot stack above the platform signature.
+              const raw = e.target.value === '' ? null : parseInt(e.target.value, 10);
+              const val = raw === null || Number.isNaN(raw) ? null : Math.max(Z_INDEX_MIN, Math.min(Z_INDEX_MAX, raw));
+              saveStyle({ ...style, z_index: val });
+            }}
+          />
+        </div>
+        <EntranceSelect block={block} applyOp={applyOp} label={def.label} />
+        <IdentityFields block={block} doc={working} part="id" onChange={(attrs) => save(ops.updateBlockAttributes(block.id, attrs))} />
+        <ClassNamesField id={`${idPrefix}-classes`} value={classNames} onChange={(list) => save(ops.updateBlockClassNames(block.id, list))} />
+      </>
     ),
+    identity: () => <IdentityFields block={block} doc={working} part="a11y" onChange={(attrs) => save(ops.updateBlockAttributes(block.id, attrs))} />,
     attributes: () => <DataAttributes block={block} onChange={(attrs) => save(ops.updateBlockAttributes(block.id, attrs))} />,
   };
 

@@ -35,6 +35,31 @@ const PATHS = {
   tag: 'M9 6L3 12l6 6M15 6l6 6-6 6',
   attributes: 'M4 6h16M4 12h10M4 18h16M18 10l3 2-3 2',
   link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
+  tab_content: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',
+  tab_style: 'M12 3a9 9 0 1 0 0 18zM12 3v18',
+  tab_advanced: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
+  dir_row: 'M5 12h14M13 6l6 6-6 6',
+  dir_row_reverse: 'M19 12H5M11 6l-6 6 6 6',
+  dir_column: 'M12 5v14M6 13l6 6 6-6',
+  dir_column_reverse: 'M12 19V5M6 11l6-6 6 6',
+  wrap_nowrap: 'M4 12h14M14 8l4 4-4 4',
+  wrap_wrap: 'M4 6h16M4 12h16M4 18h9',
+  wrap_wrap_reverse: 'M4 18h16M4 12h16M4 6h9',
+  justify_start: 'M3 4v16M7 8h4v8H7zM13 8h4v8h-4z',
+  justify_center: 'M12 4v16M5 8h4v8H5zM15 8h4v8h-4z',
+  justify_end: 'M21 4v16M7 8h4v8H7zM13 8h4v8h-4z',
+  justify_between: 'M3 4v16M21 4v16M6 8h4v8H6zM14 8h4v8h-4z',
+  justify_around: 'M5 4v16M19 4v16M9 9h2.5v6H9zM12.5 9H15v6h-2.5z',
+  justify_evenly: 'M3 4v16M21 4v16M7.5 9H10v6H7.5zM14 9h2.5v6H14z',
+  items_start: 'M4 3h16M8 6v8M15 6v11',
+  items_center: 'M4 12h16M8 7v10M15 5v14',
+  items_end: 'M4 21h16M8 10v8M15 7v11',
+  items_stretch: 'M4 3h16M4 21h16M9 6v12M15 6v12',
+  items_baseline: 'M4 13h16M8 7v10M15 9v8',
+  text_left: 'M4 6h16M4 10h10M4 14h16M4 18h10',
+  text_center: 'M4 6h16M7 10h10M4 14h16M7 18h10',
+  text_right: 'M4 6h16M10 10h10M4 14h16M10 18h10',
+  text_justify: 'M4 6h16M4 10h16M4 14h16M4 18h16',
   fallback: 'M5 6h14M5 12h14M5 18h14',
 };
 
@@ -57,4 +82,9 @@ export function IconButton({ icon, label, danger = false, ...rest }) {
       <Icon name={icon} size={15} />
     </button>
   );
+}
+
+/** The icon name for one option of a choice group (`kind` is direction, wrap, justify, items or text). */
+export function choiceIcon(kind, value) {
+  return `${kind}_${String(value).replace(/-/g, '_')}`;
 }

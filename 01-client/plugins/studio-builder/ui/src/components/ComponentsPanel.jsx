@@ -7,7 +7,7 @@ import { useEditor, useEngineState } from './EditorContext.jsx';
 import { BlockCard, usePresetInsertState } from './AddPanelParts.jsx';
 import { t } from '../core/messages.mjs';
 import { asList } from '../core/doc.mjs';
-import { isComponentBlock } from '../core/addPanel.mjs';
+import { isComponentBlock, isOffered } from '../core/addPanel.mjs';
 import { STATUS } from '../core/sync.mjs';
 
 export const ComponentsPanel = memo(function ComponentsPanel() {
@@ -18,7 +18,7 @@ export const ComponentsPanel = memo(function ComponentsPanel() {
   const pageType = page ? page.page_type : 'page';
   const canReference = asList(manifest && manifest.components && manifest.components.referencing_types).includes(pageType);
   const blocked = status === STATUS.CONFLICT || status === STATUS.LOADING;
-  const kohevo = asList(manifest.blocks).filter(isComponentBlock);
+  const kohevo = asList(manifest.blocks).filter((b) => isOffered(b) && isComponentBlock(b));
   const components = asList(library && library.components);
 
   return (

@@ -91,6 +91,12 @@ export function createTransport({ apiUrl, csrfToken, fetchImpl, timeoutMs = TIME
     createComponent: (body) => call('POST', 'create_component', { body }),
     detachComponent: (body) => call('POST', 'detach_component', { body }),
     saveTokens: (body) => call('POST', 'save_tokens', { body }),
+    // Element Manager (administrators): the blocks a site offers and where each is used; switch types off or on.
+    elements: () => call('GET', 'elements'),
+    saveElements: (body) => call('POST', 'save_elements', { body }),
+    // Site-wide custom CSS (administrators).
+    customCss: () => call('GET', 'custom_css'),
+    saveCustomCss: (body) => call('POST', 'save_custom_css', { body }),
     // Phase 7 — structured diff for reviewing an AI-proposed draft.
     diff: (pageId, base = null, proposed = null) => call('GET', 'diff', { query: { page: pageId, base, proposed } }),
     // Phase 8A — JSON package export (query) and import (one command; `dry_run` = analysis only).

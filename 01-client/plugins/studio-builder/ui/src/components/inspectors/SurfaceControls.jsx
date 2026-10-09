@@ -6,8 +6,8 @@
 // "unavailable". A cleared field is removed, and a group left empty is removed with it.
 
 import { useId, useState } from 'react';
-import { ColorField, DraftText } from './StyleControls.jsx';
-import { Icon } from './InspectorIcons.jsx';
+import { ColorField, DraftText, unitOf } from './StyleControls.jsx';
+import { Icon, choiceIcon } from './InspectorIcons.jsx';
 import { asObject } from '../../core/doc.mjs';
 import { CORNERS, FILTER, OPTIONS, SIDES, TRANSFORM, getPath, setPath, setPaths } from '../../core/styleSurface.mjs';
 import { t } from '../../core/messages.mjs';
@@ -48,6 +48,33 @@ export function Segmented({ label, value, options, onChange }) {
   );
 }
 
+/**
+ * A row of icon-only toggles (direction, justify, align…): the name of each option is its tooltip and accessible
+ * name, so a screen reader hears "Column" while a sighted author sees an arrow. Pressing the active one clears it.
+ */
+export function IconChoice({ label, kind, value, options, onChange }) {
+  return (
+    <div className="sbx-field sbx-field--choice">
+      <span className="sbx-field__label">{label}</span>
+      <div className="sbx-iconchoice" role="group" aria-label={label}>
+        {options.map((o) => (
+          <button
+            key={o}
+            type="button"
+            className={`sbx-iconchoice__btn${value === o ? ' is-active' : ''}`}
+            aria-pressed={value === o}
+            aria-label={optLabel(o)}
+            title={optLabel(o)}
+            onClick={() => onChange(value === o ? undefined : o)}
+          >
+            <Icon name={choiceIcon(kind, o)} size={16} />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function SelectField({ id, label, value, options, onChange, emptyLabel }) {
   return (
     <div className="sbx-field">
@@ -63,23 +90,28 @@ export function SelectField({ id, label, value, options, onChange, emptyLabel })
 /** A range with a readout. The value equal to `neutral` means "not set" and is removed from the style. */
 export function SliderField({ id, label, value, min, max, step = 1, unit = '', neutral, onChange }) {
   const shown = value ?? neutral;
+  const commit = (raw) => {
+    const v = Math.max(min, Math.min(max, Number(raw)));
+    if (Number.isFinite(v)) onChange(v === neutral ? undefined : v);
+  };
   return (
     <div className="sbx-field">
       <label className="sbx-field__label" htmlFor={id}>{label}</label>
       <div className="sbx-slider">
-        <input
-          id={id}
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={shown}
-          onChange={(e) => {
-            const v = Number(e.target.value);
-            onChange(v === neutral ? undefined : v);
-          }}
-        />
-        <output htmlFor={id}>{shown}{unit}</output>
+        <input id={id} type="range" min={min} max={max} step={step} value={shown} onChange={(e) => commit(e.target.value)} />
+        <span className="sbx-slider__num">
+          <input
+            type="number"
+            className="sbx-input"
+            aria-label={`${label} (${t('field_value')})`}
+            min={min}
+            max={max}
+            step={step}
+            value={shown}
+            onChange={(e) => { if (e.target.value !== '') commit(e.target.value); }}
+          />
+          {unit ? <span className="sbx-slider__unit" aria-hidden="true">{unit}</span> : null}
+        </span>
       </div>
     </div>
   );
@@ -109,17 +141,33 @@ export function IntField({ id, label, value, min, max, onChange }) {
 }
 
 /** A length typed by the author and checked against the server's table for `path`. */
-function Length({ id, path, label, get, put, placeholder }) {
-  return <DraftText id={pathId(id, path)} path={path} label={label} value={get(path)} placeholder={placeholder} onCommit={(v) => put(path, v)} />;
+/** Units offered next to a length: the ones a layout gap or size is normally written in. */
+const LENGTH_UNITS = ['px', 'rem', 'em', '%'];
+
+function Length({ id, path, label, get, put, placeholder, units }) {
+  return <DraftText id={pathId(id, path)} path={path} label={label} value={get(path)} placeholder={placeholder} units={units} onCommit={(v) => put(path, v)} />;
 }
 
 /** Four sides of margin or padding, optionally linked so one value sets all four. */
 export function SpacingBox({ id, group, label, get, putAll, placeholder = '0' }) {
   const values = SIDES.map((s) => get(`${group}.${s}`));
   const [linked, setLinked] = useState(() => values.every((v) => v === values[0]));
+  const shown = values.map(unitOf).find(Boolean);
+  const [unit, setUnit] = useState(shown || 'px');
+  // One unit for all four sides, like the reference: a bare number takes it, and choosing another converts what is set.
+  const chooseUnit = (next) => {
+    setUnit(next);
+    const converted = SIDES.map((side, i) => [`${group}.${side}`, unitOf(values[i]) ? values[i].replace(/[a-z%]+$/i, next) : values[i]]);
+    if (converted.some(([, v], i) => v !== values[i])) putAll(converted);
+  };
   return (
     <fieldset className="sbx-fieldset sbx-spacing sbx-spacing--box">
       <legend>{label}</legend>
+      <div className="sbx-spacing__units" role="group" aria-label={`${label} (${t('unit')})`}>
+        {['px', '%', 'em', 'rem'].map((u) => (
+          <button key={u} type="button" className={`sbx-spacing__unit${unit === u ? ' is-active' : ''}`} aria-pressed={unit === u} onClick={() => chooseUnit(u)}>{u}</button>
+        ))}
+      </div>
       <div className="sbx-spacing__grid">
         {SIDES.map((side) => (
           <DraftText
@@ -129,6 +177,7 @@ export function SpacingBox({ id, group, label, get, putAll, placeholder = '0' })
             label={t(`side_${side}`)}
             value={get(`${group}.${side}`)}
             placeholder={placeholder}
+            bareUnit={unit}
             onCommit={(v) => putAll((linked ? SIDES : [side]).map((s) => [`${group}.${s}`, v]))}
           />
         ))}
@@ -159,24 +208,24 @@ export function LayoutPane({ style, onChange }) {
       <Segmented label={t('layout_display')} value={display} options={OPTIONS.display} onChange={(v) => f.put('layout.display', v)} />
       {flex && (
         <>
-          <Segmented label={t('layout_direction')} value={f.get('layout.direction')} options={OPTIONS.direction} onChange={(v) => f.put('layout.direction', v)} />
-          <Segmented label={t('layout_wrap')} value={f.get('layout.wrap')} options={OPTIONS.wrap} onChange={(v) => f.put('layout.wrap', v)} />
-          <SelectField id={pathId(id, 'layout.justify')} label={t('layout_justify')} value={f.get('layout.justify')} options={OPTIONS.justify} onChange={(v) => f.put('layout.justify', v)} />
-          <SelectField id={pathId(id, 'layout.align')} label={t('layout_align')} value={f.get('layout.align')} options={OPTIONS.align} onChange={(v) => f.put('layout.align', v)} />
+          <IconChoice label={t('layout_direction')} kind="dir" value={f.get('layout.direction')} options={OPTIONS.direction} onChange={(v) => f.put('layout.direction', v)} />
+          <IconChoice label={t('layout_wrap')} kind="wrap" value={f.get('layout.wrap')} options={OPTIONS.wrap} onChange={(v) => f.put('layout.wrap', v)} />
+          <IconChoice label={t('layout_justify')} kind="justify" value={f.get('layout.justify')} options={OPTIONS.justify} onChange={(v) => f.put('layout.justify', v)} />
+          <IconChoice label={t('layout_align')} kind="items" value={f.get('layout.align')} options={OPTIONS.align} onChange={(v) => f.put('layout.align', v)} />
         </>
       )}
       {grid && (
         <>
           <IntField id={pathId(id, 'layout.columns')} label={t('layout_columns')} value={f.get('layout.columns')} min={1} max={12} onChange={(v) => f.put('layout.columns', v)} />
           <IntField id={pathId(id, 'layout.rows')} label={t('layout_rows')} value={f.get('layout.rows')} min={1} max={12} onChange={(v) => f.put('layout.rows', v)} />
-          <SelectField id={pathId(id, 'layout.align')} label={t('layout_align')} value={f.get('layout.align')} options={OPTIONS.align} onChange={(v) => f.put('layout.align', v)} />
+          <IconChoice label={t('layout_align')} kind="items" value={f.get('layout.align')} options={OPTIONS.align} onChange={(v) => f.put('layout.align', v)} />
         </>
       )}
       {(flex || grid) && (
         <>
-          <Length id={id} path="layout.gap" label={t('layout_gap')} get={f.get} put={f.put} placeholder="1rem" />
-          <Length id={id} path="layout.row_gap" label={t('layout_row_gap')} get={f.get} put={f.put} placeholder="1rem" />
-          <Length id={id} path="layout.column_gap" label={t('layout_column_gap')} get={f.get} put={f.put} placeholder="1rem" />
+          <Length id={id} units={LENGTH_UNITS} path="layout.gap" label={t('layout_gap')} get={f.get} put={f.put} placeholder="1rem" />
+          <Length id={id} units={LENGTH_UNITS} path="layout.row_gap" label={t('layout_row_gap')} get={f.get} put={f.put} placeholder="1rem" />
+          <Length id={id} units={LENGTH_UNITS} path="layout.column_gap" label={t('layout_column_gap')} get={f.get} put={f.put} placeholder="1rem" />
         </>
       )}
       <fieldset className="sbx-fieldset">
@@ -184,7 +233,7 @@ export function LayoutPane({ style, onChange }) {
         <IntField id={pathId(id, 'layout.order')} label={t('layout_order')} value={f.get('layout.order')} min={-99} max={99} onChange={(v) => f.put('layout.order', v)} />
         <IntField id={pathId(id, 'layout.grow')} label={t('layout_grow')} value={f.get('layout.grow')} min={0} max={10} onChange={(v) => f.put('layout.grow', v)} />
         <IntField id={pathId(id, 'layout.shrink')} label={t('layout_shrink')} value={f.get('layout.shrink')} min={0} max={10} onChange={(v) => f.put('layout.shrink', v)} />
-        <Length id={id} path="layout.basis" label={t('layout_basis')} get={f.get} put={f.put} placeholder={'auto'} />
+        <Length id={id} units={LENGTH_UNITS} path="layout.basis" label={t('layout_basis')} get={f.get} put={f.put} placeholder={'auto'} />
       </fieldset>
     </>
   );

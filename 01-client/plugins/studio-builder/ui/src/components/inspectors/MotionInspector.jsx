@@ -201,3 +201,29 @@ function InteractionSection({ idPrefix, interactions, onChange }) {
     </section>
   );
 }
+/** The entrance preset as one select (the reference's "Entrance Animation"); the Motion group keeps timing and triggers. */
+export function EntranceSelect({ block, applyOp, label, section = false }) {
+  const id = `sbx-entrance-${block.id}`;
+  const animation = normalizeAnimation(block.animation);
+  const commit = (next) => applyOp((section ? ops.updateSectionAnimation : ops.updateBlockAnimation)(block.id, next), { label });
+  return (
+    <div className="sbx-field">
+      <label className="sbx-field__label" htmlFor={id}>{t('entrance_animation')}</label>
+      <select
+        id={id}
+        value={animation.type}
+        onChange={(e) => {
+          const type = e.target.value;
+          if (type === 'none') { commit({ type: 'none' }); return; }
+          const next = { type };
+          if (animation.duration_ms !== undefined) next.duration_ms = animation.duration_ms;
+          if (animation.delay_ms !== undefined) next.delay_ms = animation.delay_ms;
+          if (animation.easing) next.easing = animation.easing;
+          commit(next);
+        }}
+      >
+        {MOTION_PRESETS.map((preset) => <option key={preset.value} value={preset.value}>{preset.label}</option>)}
+      </select>
+    </div>
+  );
+}

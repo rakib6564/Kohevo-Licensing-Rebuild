@@ -55,13 +55,17 @@ export function ClassNamesField({ id, value, onChange }) {
 }
 
 /** ID, ARIA label and role. `doc` is the working document, for the duplicate-id check. */
-export function IdentityFields({ block, doc, onChange }) {
+/** `part`: 'id' shows only the CSS ID; 'a11y' only the aria-label and role; omitted shows all three. */
+export function IdentityFields({ block, doc, onChange, part }) {
   const id = useId();
   const g = groupAttributes(block.attributes);
   const roleKnown = g.role === '' || ROLES.includes(g.role);
   const set = (name, value) => onChange(withAttribute(block.attributes, name, value));
+  const showId = part !== 'a11y';
+  const showA11y = part !== 'id';
   return (
     <>
+      {showId && (
       <CommitInput
         id={`${id}-id`}
         label={t('attr_id')}
@@ -74,6 +78,9 @@ export function IdentityFields({ block, doc, onChange }) {
         }}
         onCommit={(text) => set('id', text)}
       />
+      )}
+      {showA11y && (
+      <>
       <CommitInput
         id={`${id}-label`}
         label={t('attr_aria_label')}
@@ -90,6 +97,8 @@ export function IdentityFields({ block, doc, onChange }) {
           {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
       </div>
+      </>
+      )}
     </>
   );
 }

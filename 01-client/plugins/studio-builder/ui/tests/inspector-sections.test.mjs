@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   SECTIONS, TABS, applicableSections, defaultOpenIds, inspectorContext, isSectionOpen, resetSectionState,
-  searchSections, sectionsFor, setSectionOpen, subscribeSections,
+  searchSections, sectionsFor, setSectionOpen, subscribeSections, PAGE_SECTION_SECTIONS, SECTION_DEF, titleKeyOf,
 } from '../src/core/inspectorSections.mjs';
 
 const manifest = JSON.parse(readFileSync(new URL('./fixtures/manifest.json', import.meta.url), 'utf8'));
@@ -14,7 +14,7 @@ const ids = (tab, ctx) => sectionsFor(tab, ctx).map((s) => s.id);
 test('the registry has unique ids, known tabs and a title key for every section', () => {
   assert.equal(new Set(SECTIONS.map((s) => s.id)).size, SECTIONS.length);
   for (const s of SECTIONS) {
-    assert.ok(TABS.includes(s.tab), s.id);
+    assert.ok(typeof s.tab === 'function' || TABS.includes(s.tab), s.id);
     assert.ok(s.titleKey, s.id);
     assert.equal(typeof s.appliesTo, 'function');
     assert.equal(typeof s.summary, 'function');
@@ -25,8 +25,9 @@ test('the registry has unique ids, known tabs and a title key for every section'
 test('a heading shows content, the full style stack and the advanced fields, in order', () => {
   const ctx = ctxOf('core.heading');
   assert.deepEqual(ids('content', ctx), ['content']);
-  assert.deepEqual(ids('style', ctx), ['align', 'layout', 'spacing', 'typography', 'background', 'border', 'shadow', 'dimensions', 'position', 'effects', 'opacity', 'states', 'tokens', 'motion', 'visibility', 'responsive']);
-  assert.deepEqual(ids('advanced', ctx), ['classes', 'identity', 'stacking', 'tag', 'attributes']);
+  assert.deepEqual(ids('style', ctx), ['align', 'typography', 'shadow', 'opacity', 'states', 'tokens']);
+  // A leaf block keeps Layout, Background, Border and Dimensions under Advanced, after the one group of everyday fields.
+  assert.deepEqual(ids('advanced', ctx), ['advanced', 'layout', 'background', 'border', 'dimensions', 'position', 'effects', 'motion', 'responsive', 'identity', 'tag', 'attributes']);
 });
 
 test('a media block has no Typography section, a text block does', () => {
@@ -40,9 +41,10 @@ test('a media block has no Typography section, a text block does', () => {
 
 test('a block whose definition narrows style_capabilities hides the sections it cannot take', () => {
   const narrow = inspectorContext({ id: 'blk_1', type: 'x.y', style: {} }, { style_capabilities: ['align', 'opacity'], binding_slots: [] });
-  assert.deepEqual(ids('style', narrow), ['align', 'opacity', 'states', 'motion', 'visibility', 'responsive']);
+  assert.deepEqual(ids('style', narrow), ['align', 'opacity', 'states']);
   const bare = inspectorContext({ id: 'blk_1', type: 'x.y', style: {} }, { style_capabilities: [], binding_slots: [] });
-  assert.deepEqual(ids('style', bare), ['states', 'motion', 'visibility', 'responsive']); // states and motion need no capability
+  assert.deepEqual(ids('style', bare), ['states']); // states needs no capability
+  assert.deepEqual(ids('advanced', bare), ['advanced', 'motion', 'responsive', 'identity', 'tag', 'attributes']); // nor do the everyday fields
 });
 
 test('the Data section appears only for a block with binding slots', () => {
@@ -56,12 +58,12 @@ test('sections start open where they matter: content always; typography for text
   assert.deepEqual(defaultOpenIds('content', ctxOf('core.heading')), ['content']);
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.heading')), ['typography']);
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.image')), ['dimensions']);
-  assert.deepEqual(defaultOpenIds('advanced', ctxOf('core.heading')), ['classes']);
+  assert.deepEqual(defaultOpenIds('advanced', ctxOf('core.heading')), ['advanced']);
 });
 
 test('a tab with nothing flagged opens its first section, never a wall of closed headers', () => {
   const ctx = ctxOf('core.container');
-  assert.deepEqual(defaultOpenIds('style', ctx), ['layout', 'spacing']); // a container opens how it arranges its children
+  assert.deepEqual(defaultOpenIds('content', ctx), ['content']); // a container's own Layout props; flex/grid options stay closed
   assert.deepEqual(defaultOpenIds('style', inspectorContext({ id: 'b', type: 'x.y', style: {} }, { style_capabilities: [] })), ['states']);
 });
 
@@ -78,22 +80,21 @@ test('summaries describe what is set, and are empty when nothing is', () => {
   assert.equal(summary('background'), 'gradient');
   assert.equal(summary('border'), '2px · solid');
   assert.equal(summary('opacity'), '90%');
-  assert.equal(summary('stacking'), '5');
+  assert.equal(summary('advanced'), 'z 5 · .2');
   assert.equal(summary('dimensions'), '100%');
   assert.equal(summary('align'), 'center');
   assert.equal(summary('motion'), 'fade up · hover');
-  assert.equal(summary('classes'), '2');
   assert.equal(summary('attributes'), '1');
-  assert.equal(summary('visibility'), 'base md');
+  assert.equal(summary('responsive'), 'base md');
 });
 
 test('search finds sections by title or summary across tabs, case-insensitively, and an empty query finds none', () => {
   const ctx = ctxOf('core.heading', { classNames: ['hero-title'] });
-  const title = (s) => ({ typography: 'Typography', classes_label: 'Classes' }[s.titleKey] || s.titleKey);
+  const title = (s) => ({ typography: 'Typography', section_advanced: 'Advanced' }[s.titleKey] || s.titleKey);
   assert.deepEqual(searchSections(ctx, '', title), []);
   assert.deepEqual(searchSections(ctx, '   ', title), []);
   assert.deepEqual(searchSections(ctx, 'TYPO', title).map((s) => s.id), ['typography']);
-  assert.ok(searchSections(ctx, 'class', title).map((s) => s.id).includes('classes'));
+  assert.ok(searchSections(ctx, 'adv', title).map((s) => s.id).includes('advanced'));
   assert.deepEqual(searchSections(ctx, 'zzz', title), []);
 });
 
@@ -121,8 +122,31 @@ test('applicableSections groups the non-empty tabs', () => {
 
 test('each kind of block opens the sections an author reaches for first', () => {
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.button')), ['typography', 'background', 'border']);
-  assert.deepEqual(defaultOpenIds('style', ctxOf('layout.grid')), ['layout', 'spacing']);
+  assert.deepEqual(defaultOpenIds('content', ctxOf('layout.grid')), ['content']);
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.image')), ['dimensions']);
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.heading')), ['typography']);
-  assert.deepEqual(defaultOpenIds('style', ctxOf('core.card')), ['layout', 'spacing', 'background', 'border']);
+  assert.deepEqual(defaultOpenIds('content', ctxOf('core.card')), ['content']);
+  assert.deepEqual(defaultOpenIds('style', ctxOf('core.card')), ['background', 'border', 'dimensions']);
+});
+
+test('a page section has the same three tabs, with its own smaller list of groups', () => {
+  const ctx = inspectorContext({ id: 'sec_1', style: {}, layout: { width: 'wide', gap: 'md' } }, SECTION_DEF);
+  const idsOf = (tab) => sectionsFor(tab, ctx, PAGE_SECTION_SECTIONS).map((s) => s.id);
+  assert.deepEqual(idsOf('content'), ['layout']);
+  assert.deepEqual(idsOf('style'), ['background']);
+  assert.deepEqual(idsOf('advanced'), ['advanced', 'motion', 'responsive']);
+  assert.deepEqual(defaultOpenIds('advanced', ctx, PAGE_SECTION_SECTIONS), ['advanced']);
+  assert.equal(PAGE_SECTION_SECTIONS.find((s) => s.id === 'layout').summary(ctx), 'wide · md');
+  assert.deepEqual(searchSections(ctx, 'padding', (s) => s.titleKey, PAGE_SECTION_SECTIONS).map((s) => s.id), ['advanced']);
+});
+
+test('a container shows its flex and grid options under Content (closed) and titles its props Layout; a leaf block keeps Layout under Advanced', () => {
+  const container = ctxOf('core.container');
+  assert.ok(ids('content', container).includes('layout'));
+  assert.ok(!defaultOpenIds('content', container).includes('layout'));
+  assert.equal(titleKeyOf(SECTIONS.find((x) => x.id === 'content'), container), 'section_layout');
+  assert.equal(titleKeyOf(SECTIONS.find((x) => x.id === 'layout'), container), 'section_flex_grid');
+  assert.equal(titleKeyOf(SECTIONS.find((x) => x.id === 'layout'), ctxOf('core.heading')), 'section_layout');
+  assert.ok(!ids('advanced', container).includes('layout'));
+  assert.ok(ids('advanced', ctxOf('core.heading')).includes('layout'));
 });

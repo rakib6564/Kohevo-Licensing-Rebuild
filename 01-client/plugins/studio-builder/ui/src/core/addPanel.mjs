@@ -11,9 +11,12 @@ import { isDynamicBlock } from '../components/blockKinds.mjs';
 export const BLOCK_CATEGORY_ORDER = ['layout', 'content', 'media', 'forms', 'business', 'advanced', 'theme'];
 
 /** Cards shown per category before "View all". */
-export const GROUP_PREVIEW = 4;
+export const GROUP_PREVIEW = 6;
 
 export const categoryRank = (c) => { const i = BLOCK_CATEGORY_ORDER.indexOf(c); return i === -1 ? BLOCK_CATEGORY_ORDER.length : i; };
+
+/** A block this site has not switched off (Element Manager). A disabled block stays in the manifest so existing blocks still edit. */
+export const isOffered = (def) => !!def && def.disabled !== true;
 
 /** Kohevo component blocks (module-backed): the Components tab. */
 export const isComponentBlock = (def) => !!def && def.category === 'business';
@@ -29,12 +32,12 @@ export const isElementBlock = (def) => !!def && !isDynamicBlock(def) && !isCompo
 export function variantCards(manifest) {
   const defs = new Map(asList(manifest && manifest.blocks).map((b) => [b.type, b]));
   return asList(manifest && manifest.variants)
-    .filter((v) => defs.has(v.type))
+    .filter((v) => defs.has(v.type) && isOffered(defs.get(v.type)))
     .map((v) => ({ ...defs.get(v.type), title: v.title, label: v.title, description: v.description, icon: v.icon, category: v.category, variantKey: v.key, variantProps: v.props }));
 }
 
 /** Blocks plus their variants: what the Elements tab and the cross-tab search list. */
-export const blocksWithVariants = (manifest) => [...asList(manifest && manifest.blocks), ...variantCards(manifest)];
+export const blocksWithVariants = (manifest) => [...asList(manifest && manifest.blocks).filter(isOffered), ...variantCards(manifest)];
 
 const titleOf = (b) => b.title || b.label || b.type;
 
@@ -58,6 +61,8 @@ export function groupBlocks(blocks, query = '', categoryLabel = (c) => c) {
  * @returns {{ok:true}|{ok:false,reason:'blocks_limit'|'sections_limit'|'not_allowed'}}
  */
 export function blockInsertState(doc, manifest, selectedId, type) {
+  const def = asList(manifest.blocks).find((b) => b.type === type);
+  if (def && def.disabled === true) return { ok: false, reason: 'disabled' };
   const maxBlocks = (manifest.limits && manifest.limits.max_blocks) || 250;
   if (countBlocks(doc) >= maxBlocks) return { ok: false, reason: 'blocks_limit' };
   const where = insertionPoint(doc, manifest, selectedId, type);
@@ -76,7 +81,8 @@ export const reasonKey = (reason) => `pal_reason_${reason}`;
  * Search every tab at once. Elements and components come from the manifest blocks; presets and
  * global components come from the library. Empty query returns empty lists (tabs show instead).
  */
-export function searchAll({ blocks, presets, components }, query, labels = {}) {
+export function searchAll({ blocks: allBlocks, presets, components }, query, labels = {}) {
+  const blocks = asList(allBlocks).filter(isOffered);
   const q = String(query || '').trim().toLowerCase();
   if (!q) return { presets: [], elements: [], dynamic: [], components: [], total: 0 };
   const catLabel = labels.blockCategory || ((c) => c);

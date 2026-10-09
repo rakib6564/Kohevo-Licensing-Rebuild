@@ -40,6 +40,15 @@ export async function settled(page) {
 /** Open one Inspector section (`data-section` = its registry id) if it is closed; returns its body. */
 export async function openSection(page, id) {
   const section = page.locator(`[data-section="${id}"]`);
+  // Sections live under Content, Style or Advanced depending on the block: switch to the tab that has this one.
+  if ((await section.count()) === 0) {
+    for (const name of ['Content', 'Style', 'Advanced']) {
+      const tab = page.getByRole('tab', { name, exact: true });
+      if ((await tab.count()) === 0) continue;
+      await tab.first().click();
+      if (await section.first().waitFor({ state: 'attached', timeout: 1500 }).then(() => true, () => false)) break;
+    }
+  }
   const toggle = section.locator('.sbx-isec__toggle');
   if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');

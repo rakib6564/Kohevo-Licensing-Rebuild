@@ -8,15 +8,16 @@
 import { useId, useMemo, useState, useSyncExternalStore } from 'react';
 import { t } from '../../core/messages.mjs';
 import {
-  applicableSections, defaultOpenIds, inspectorContext, isSectionOpen, searchSections, setSectionOpen, subscribeSections,
+  SECTIONS, applicableSections, defaultOpenIds, inspectorContext, isSectionOpen, searchSections, setSectionOpen, subscribeSections, titleKeyOf,
 } from '../../core/inspectorSections.mjs';
 import { Tabs } from './controls.jsx';
 import { Icon, SectionIcon } from './InspectorIcons.jsx';
 
 const TAB_LABEL = { content: 'tab_content', style: 'tab_style', advanced: 'tab_advanced' };
 
-function Section({ typeKey, section, ctx, open, idPrefix, render, forceOpen }) {
-  const fallback = defaultOpenIds(section.tab, ctx).includes(section.id);
+function Section({ typeKey, section, ctx, open, idPrefix, render, forceOpen, registry }) {
+  const tab = typeof section.tab === 'function' ? section.tab(ctx) : section.tab;
+  const fallback = defaultOpenIds(tab, ctx, registry).includes(section.id);
   const read = () => isSectionOpen(typeKey, section.id, fallback);
   const stored = useSyncExternalStore(subscribeSections, read, read);
   const isOpen = forceOpen || stored;
@@ -35,7 +36,7 @@ function Section({ typeKey, section, ctx, open, idPrefix, render, forceOpen }) {
           onClick={() => setSectionOpen(typeKey, section.id, !isOpen)}
         >
           <SectionIcon name={section.id} />
-          <span className="sbx-isec__title">{t(section.titleKey)}</span>
+          <span className="sbx-isec__title">{t(titleKeyOf(section, ctx))}</span>
           {summary ? <span className="sbx-isec__summary">{summary}</span> : null}
           <span className="sbx-isec__chevron" aria-hidden="true"><Icon name="chevron" size={14} /></span>
         </button>
@@ -56,17 +57,17 @@ function Section({ typeKey, section, ctx, open, idPrefix, render, forceOpen }) {
  * @param {React.ReactNode} [props.actions] extra controls under the header
  * @param {(id: string) => React.ReactNode} props.renderSection renders the controls of one section
  */
-export function InspectorShell({ idPrefix, node, def, header, actions, renderSection }) {
+export function InspectorShell({ idPrefix, node, def, header, actions, renderSection, registry = SECTIONS, typeKey: typeKeyProp }) {
   const ctx = useMemo(() => inspectorContext(node, def), [node, def]);
-  const groups = useMemo(() => applicableSections(ctx), [ctx]);
+  const groups = useMemo(() => applicableSections(ctx, registry), [ctx, registry]);
   const [tab, setTab] = useState('content');
   const [query, setQuery] = useState('');
   const searchId = useId();
-  const typeKey = node.type;
+  const typeKey = typeKeyProp || node.type;
 
   const activeTab = groups.some((g) => g.tab === tab) ? tab : (groups[0] ? groups[0].tab : 'content');
-  const tabs = groups.map((g) => ({ key: g.tab, label: t(TAB_LABEL[g.tab]) }));
-  const matches = useMemo(() => searchSections(ctx, query, (s) => t(s.titleKey)), [ctx, query]);
+  const tabs = groups.map((g) => ({ key: g.tab, label: t(TAB_LABEL[g.tab]), icon: <Icon name={`tab_${g.tab}`} size={16} className="sbx-tab__icon" /> }));
+  const matches = useMemo(() => searchSections(ctx, query, (s) => t(titleKeyOf(s, ctx)), registry), [ctx, query, registry]);
   const searching = query.trim() !== '';
 
   return (
@@ -91,7 +92,7 @@ export function InspectorShell({ idPrefix, node, def, header, actions, renderSec
         <div className="sbx-isec-list" data-searching="true">
           {matches.length === 0 && <p className="sbx-hint">{t('inspector_no_match')}</p>}
           {matches.map((s) => (
-            <Section key={s.id} typeKey={typeKey} section={s} ctx={ctx} idPrefix={idPrefix} render={renderSection} forceOpen />
+            <Section key={s.id} typeKey={typeKey} section={s} ctx={ctx} idPrefix={idPrefix} render={renderSection} registry={registry} forceOpen />
           ))}
         </div>
       ) : (
@@ -100,7 +101,7 @@ export function InspectorShell({ idPrefix, node, def, header, actions, renderSec
           {groups.filter((g) => g.tab === activeTab).map((g) => (
             <div key={g.tab} role="tabpanel" id={`${idPrefix}-panel-${g.tab}`} aria-labelledby={`${idPrefix}-tab-${g.tab}`} className="sbx-isec-list">
               {g.sections.map((s) => (
-                <Section key={s.id} typeKey={typeKey} section={s} ctx={ctx} idPrefix={idPrefix} render={renderSection} />
+                <Section key={s.id} typeKey={typeKey} section={s} ctx={ctx} idPrefix={idPrefix} render={renderSection} registry={registry} />
               ))}
             </div>
           ))}

@@ -169,16 +169,17 @@ unit('signature guard: tenant css targeting the signature is not blocked, but lo
 
 // ── The deferred surface ─────────────────────────────────────────────────
 
-unit('deferred settings: raw tenant script storage is declared, not rendered', function (): void {
+unit('legacy settings: the old, never-rendered head/footer values are still never read', function (): void {
     assert_true(in_array('studio_code_head', StudioCodePolicy::DEFERRED_SETTINGS, true));
     assert_true(in_array('studio_code_footer', StudioCodePolicy::DEFERRED_SETTINGS, true));
-    // And the policy itself has no reader for them.
+    // Whatever a tenant once typed into those boxes was never executed; it must not start to run now.
     $src = file_get_contents(dirname(__DIR__, 2) . '/src/Module/StudioBuilder/Http/StudioCodePolicy.php');
     assert_true($src !== false, 'policy source must be readable');
     assert_false(
         str_contains($src, "setting(self::DEFERRED"),
-        'the policy must never read a deferred setting'
+        'the policy must never read a legacy setting'
     );
+    assert_false(in_array(StudioCodePolicy::SETTING_HEAD_SNIPPET, StudioCodePolicy::DEFERRED_SETTINGS, true), 'the new keys are separate');
 });
 });
 

@@ -33,8 +33,8 @@ test('every control in the Inspector sheet is a touch target, and text fields ar
     await insertHeading(page);
     for (const tab of ['content', 'style', 'advanced']) {
       await page.locator(`[id^="sbx-blk-"][id$="-tab-${tab}"]`).click();
-      if (tab === 'style') { await openSection(page, 'layout'); await openSection(page, 'spacing'); await openSection(page, 'effects'); }
-      if (tab === 'advanced') { await openSection(page, 'identity'); await openSection(page, 'attributes'); }
+      if (tab === 'style') { await openSection(page, 'opacity'); await openSection(page, 'states'); }
+      if (tab === 'advanced') { await openSection(page, 'layout'); await openSection(page, 'effects'); await openSection(page, 'identity'); await openSection(page, 'attributes'); }
       const small = await page.evaluate(() => {
         const out = [];
         for (const el of document.querySelectorAll('.sbx-left .sbx-inspector button, .sbx-left .sbx-inspector input:not([type="color"]):not([type="hidden"]), .sbx-left .sbx-inspector select, .sbx-left .sbx-inspector textarea')) {
@@ -85,7 +85,7 @@ test('the Inspector works on a phone: the search box is styled, and an edit save
     const search = page.getByRole('searchbox', { name: 'Search settings' });
     expect(await search.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe('rgb(255, 255, 255)'); // it was an unstyled white box
     await search.fill('spacing');
-    await expect(page.locator('[data-section="spacing"]')).toBeVisible();
+    await expect(page.locator('[data-section="advanced"]')).toBeVisible(); // margin and padding live in the Advanced group
     await search.fill('');
 
     const text = page.getByLabel('Heading Text', { exact: false }).first();

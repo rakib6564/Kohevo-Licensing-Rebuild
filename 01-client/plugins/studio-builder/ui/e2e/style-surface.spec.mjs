@@ -47,7 +47,7 @@ async function wrapper(page) {
   return frame.locator('[data-sb-type="core.quote"]').last();
 }
 
-test('Layout offers flex controls only for flex, refuses a bare number, and the canvas shows what is kept', async ({ page }) => {
+test('Layout offers flex controls only for flex, a bare number takes the unit, junk is refused, and the canvas shows what is kept', async ({ page }) => {
   await openBuilder(page);
   await settled(page);
   const before = await layerCount(page);
@@ -64,10 +64,24 @@ test('Layout offers flex controls only for flex, refuses a bare number, and the 
     const gap = section.getByLabel('Gap', { exact: true });
     await gap.fill('12');
     await gap.blur();
-    await expect(errors(page)).toBeVisible(); // a length needs a unit
+    await expect(errors(page)).toHaveCount(0);
+    await expect(gap).toHaveValue('12px'); // a bare number takes the unit chosen beside it
+    await gap.fill('twelve');
+    await gap.blur();
+    await expect(errors(page)).toBeVisible(); // anything that is not a length is refused, and not written
     await gap.fill('18px');
     await gap.blur();
     await expect(errors(page)).toHaveCount(0);
+    const unit = section.getByRole('combobox', { name: 'Gap (Unit)', exact: true });
+    await expect(unit).toHaveValue('px');
+    await unit.selectOption('rem');
+    await expect(gap).toHaveValue('18rem'); // switching the unit rewrites the number
+    await unit.selectOption('px');
+    await expect(gap).toHaveValue('18px');
+    // Icon-only choice groups keep their option names for assistive technology.
+    await section.getByRole('group', { name: 'Direction' }).getByRole('button', { name: 'Row', exact: true }).click();
+    await expect(section.getByRole('group', { name: 'Direction' }).getByRole('button', { name: 'Row', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await section.getByRole('group', { name: 'Direction' }).getByRole('button', { name: 'Column', exact: true }).click();
     await settled(page);
     await expect(page.locator('[data-section="layout"] .sbx-isec__toggle')).toContainText('flex · column · 18px');
 
@@ -84,7 +98,7 @@ test('Spacing links the four sides by default, so one value sets them all', asyn
   try {
     await insertQuote(page);
     await styleTab(page);
-    await openSection(page, 'spacing');
+    await openSection(page, 'advanced');
     const margin = page.getByRole('group', { name: 'Margin' });
     await margin.getByLabel('Top', { exact: true }).fill('24px');
     await margin.getByLabel('Top', { exact: true }).blur();
@@ -187,10 +201,10 @@ test('a section takes its own background and padding', async ({ page }) => {
     await insertQuote(page); // the sandbox page starts empty; adding a block creates its section
     await page.getByRole('tab', { name: /^Layers$/ }).click();
     await page.locator('[role="treeitem"]').first().click();
-    const tab = page.locator('[id^="sbx-sec-"][id$="-tab-style"]');
-    await expect(tab).toBeVisible();
-    await tab.click();
+    await expect(page.locator('[id^="sbx-sec-"][id$="-tab-style"]')).toBeVisible(); // a section has the same three tabs as a block
+    await openSection(page, 'background');
     await page.locator('input[id$="-style-bg-text"]').fill('#123456');
+    await openSection(page, 'advanced');
     const padding = page.getByRole('group', { name: 'Section padding' });
     await padding.getByLabel('Top', { exact: true }).fill('48px');
     await padding.getByLabel('Top', { exact: true }).blur();

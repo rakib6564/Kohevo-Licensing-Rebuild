@@ -51,13 +51,15 @@ test('a block shows Content, Style and Advanced, with only the relevant sections
     await expect(toggleOf(page, 'content')).toHaveAttribute('aria-expanded', 'true');
     await page.locator('[id^="sbx-blk-"][id$="-tab-style"]').click();
     await expect(toggleOf(page, 'typography')).toHaveAttribute('aria-expanded', 'true'); // a quote is text
-    for (const closed of ['background', 'border', 'shadow', 'dimensions', 'opacity']) {
+    for (const closed of ['shadow', 'opacity']) {
       await expect(toggleOf(page, closed)).toHaveAttribute('aria-expanded', 'false');
       await expect(page.locator(`[data-section="${closed}"] .sbx-isec__body`)).toBeHidden();
     }
     await page.locator('[id^="sbx-blk-"][id$="-tab-advanced"]').click();
-    await expect(toggleOf(page, 'classes')).toHaveAttribute('aria-expanded', 'true');
-    await expect(toggleOf(page, 'stacking')).toHaveAttribute('aria-expanded', 'false');
+    await expect(toggleOf(page, 'advanced')).toHaveAttribute('aria-expanded', 'true'); // margin, padding, z-index, entrance, CSS ID and classes
+    for (const closed of ['background', 'border', 'dimensions', 'effects', 'motion', 'responsive']) {
+      await expect(toggleOf(page, closed)).toHaveAttribute('aria-expanded', 'false');
+    }
   } finally {
     await restore(page, before);
   }
@@ -98,7 +100,7 @@ test('search lists the matching sections from every tab, opened, and Escape clea
     await expect(page.getByRole('status').filter({ hasText: '1 matching sections' })).toHaveCount(1);
 
     await search.fill('z-index');
-    await expect(page.locator('[data-searching="true"] [data-section="stacking"]')).toHaveCount(1); // found on the Advanced tab
+    await expect(page.locator('[data-searching="true"] [data-section="advanced"]')).toHaveCount(1); // found on the Advanced tab
 
     await search.fill('zzzz');
     await expect(page.getByText('No setting matches that search.')).toBeVisible();

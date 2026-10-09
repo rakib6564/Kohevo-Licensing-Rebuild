@@ -94,7 +94,10 @@ use Slate\Module\StudioBuilder\Operation\DocumentOperationApplier;
 use Slate\Module\StudioBuilder\Package\Html\HtmlImportConverter;
 use Slate\Module\StudioBuilder\Package\StudioImportReport;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
+use Slate\Module\StudioBuilder\Http\StudioCodePolicy;
+use Slate\Module\StudioBuilder\Registry\BlockAvailability;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
+use Slate\Module\StudioBuilder\Registry\BlockUsage;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeResolver;
 use Slate\Module\StudioBuilder\Render\Compile\StudioCompilationInvalidator;
 use Slate\Module\StudioBuilder\Render\Media\MediaResolverInterface;
@@ -147,11 +150,15 @@ final class StudioApplicationService
         private readonly ?MediaResolverInterface $media = null,
         private ?StudioPackageService $packages = null,
         private readonly ?HtmlImportConverter $htmlImporter = null,
+        private readonly ?BlockAvailability $availability = null,
     ) {}
 
     /** Builder queries return at most this many pages / revisions per call. */
     public const MAX_LISTED_PAGES     = 200;
     public const MAX_LISTED_REVISIONS = 50;
+
+    /** The Element Manager's usage scan reads at most this many pages' drafts. */
+    public const MAX_SCANNED_PAGES = 500;
 
     /** Revision kinds a builder session may write through `applyDocumentOperation()`. */
     public const EDITOR_REVISION_KINDS = ['autosave', 'manual'];
@@ -321,6 +328,7 @@ final class StudioApplicationService
     {
         $revisionKind = $this->draftKind($actor, $revisionKind);
 
+        $this->assertBlocksAvailable($operations);
         [$page, $currentDocument] = $this->currentDocument($pageId);
         $mutatedDocument = DocumentOperationApplier::apply($currentDocument, $operations, $this->registry);
         $validated = ValidatedDocument::from($mutatedDocument, $this->registry, $this->buildValidationOptions($actor));
@@ -750,6 +758,119 @@ final class StudioApplicationService
         return $result;
     }
 
+    // ── Element Manager (per-site block availability) ───────────────────────
+
+    /**
+     * Every block this site may use, with whether it is switched off and where it is used (the working draft
+     * of each non-archived page). Administrators only: it reads every page's document.
+     *
+     * @return array{elements: list<array<string, mixed>>, scanned_pages: int, truncated: bool}
+     */
+    public function elementManager(StudioActor $actor): array
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::ADMIN);
+        $entitled = static fn(?string $moduleKey): bool => $moduleKey === null || $moduleKey === '' || EntitlementService::canAccess($tenantId, $moduleKey);
+        $disabled = $this->availability?->disabled($tenantId) ?? [];
+
+        $documents = [];
+        $rows = $this->pageRepo->all([], 'updated_at DESC', self::MAX_SCANNED_PAGES + 1);
+        $truncated = count($rows) > self::MAX_SCANNED_PAGES;
+        foreach (array_slice($rows, 0, self::MAX_SCANNED_PAGES) as $row) {
+            if (($row['status'] ?? '') === 'archived') {
+                continue;
+            }
+            $draftId = isset($row['active_draft_revision_id']) ? (int) $row['active_draft_revision_id'] : 0;
+            $revision = $draftId > 0 ? $this->revisionRepo->findByIdForPage((int) $row['id'], $draftId) : null;
+            if ($revision === null) {
+                continue;
+            }
+            $documents[] = ['title' => (string) ($row['title'] ?? ''), 'document' => CanonicalJson::decode((string) $revision['document_json'])];
+        }
+        $usage = BlockUsage::count($documents);
+
+        $elements = [];
+        foreach ($this->registry->editorManifests($entitled, static fn(string $perm): bool => $actor->can($perm)) as $block) {
+            $block = self::translateBlockCopy($block);
+            $type = (string) $block['type'];
+            $elements[] = [
+                'type'        => $type,
+                'title'       => (string) ($block['title'] ?? $block['label'] ?? $type),
+                'description' => (string) ($block['description'] ?? ''),
+                'category'    => (string) ($block['category'] ?? ''),
+                'icon'        => $block['icon'] ?? null,
+                'disabled'    => in_array($type, $disabled, true),
+                'usage'       => $usage[$type] ?? ['blocks' => 0, 'pages' => 0, 'sample' => []],
+            ];
+        }
+        return ['elements' => $elements, 'scanned_pages' => count($documents), 'truncated' => $truncated];
+    }
+
+    /**
+     * Replace the list of switched-off block types. Existing blocks of those types are untouched.
+     *
+     * @param array<mixed> $disabled
+     * @return array{disabled: list<string>}
+     */
+    public function saveElementManager(StudioActor $actor, array $disabled): array
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::ADMIN);
+        if ($this->availability === null) {
+            throw new \LogicException('StudioApplicationService was built without a BlockAvailability.');
+        }
+        $saved = $this->availability->save($tenantId, $disabled, $this->registry);
+        $this->audit($actor, 'studio.elements.saved', 'blocks', ['disabled_count' => count($saved)]);
+        return ['disabled' => $saved];
+    }
+
+    /** Refuse an operation list that would insert a block type this site switched off. @param list<DocumentOperation> $operations */
+    private function assertBlocksAvailable(array $operations): void
+    {
+        if ($this->availability === null) {
+            return;
+        }
+        $blocked = BlockAvailability::blockedBy($operations, $this->availability->disabled($this->requireTenantId()));
+        if ($blocked !== []) {
+            throw new StudioValidationException(array_map(
+                static fn(string $type): array => ['path' => '$.payload.block.type', 'code' => 'block_disabled', 'message' => "The block type '{$type}' is switched off on this site."],
+                $blocked,
+            ));
+        }
+    }
+
+    // ── Site-wide custom CSS (administrators) ───────────────────────────────
+
+    /**
+     * The stored site stylesheet and its ceiling. It is the same setting the Code & tracking admin screen edits
+     * (`studio_code_custom_css`), emitted at serve time in the public site and in Preview, never in the canvas.
+     *
+     * @return array{css: string, bytes: int, max_bytes: int}
+     */
+    public function customCss(StudioActor $actor): array
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::ADMIN);
+        $css = StudioCodePolicy::customCss($tenantId);
+        return ['css' => $css, 'bytes' => strlen($css), 'max_bytes' => StudioCodePolicy::MAX_CUSTOM_CSS_BYTES];
+    }
+
+    /**
+     * Replace the site stylesheet. Oversized input is refused; anything else is reduced by the code policy and
+     * the stylesheet that was really stored is returned. No page recompiles: tenant CSS is added at render time.
+     *
+     * @return array{css: string, bytes: int, max_bytes: int, changed: bool}
+     */
+    public function saveCustomCss(StudioActor $actor, string $css): array
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::ADMIN);
+        try {
+            $prepared = StudioCodePolicy::prepareCustomCss($css);
+        } catch (\InvalidArgumentException) {
+            throw new StudioValidationException([['path' => '$.css', 'code' => 'css_too_large', 'message' => 'The stylesheet is too large.']]);
+        }
+        Database::setSetting(StudioCodePolicy::SETTING_CUSTOM_CSS, $prepared['css'], $tenantId);
+        $this->audit($actor, 'studio.custom_css.saved', (string) $tenantId, ['css_bytes' => $prepared['bytes'], 'sanitized' => $prepared['changed']]);
+        return $prepared + ['max_bytes' => StudioCodePolicy::MAX_CUSTOM_CSS_BYTES];
+    }
+
     // ── Publish / rollback commands ─────────────────────────────────────────
 
     /**
@@ -1149,8 +1270,9 @@ final class StudioApplicationService
             $tokens[] = ['category' => explode('.', (string) $ref, 2)[0], 'ref' => (string) $ref, 'value' => (string) $value];
         }
 
+        $disabledTypes = $this->availability?->disabled($tenantId) ?? [];
         $blocks = array_map(
-            static fn(array $block): array => self::translateBlockCopy($block),
+            static fn(array $block): array => self::translateBlockCopy($block) + (in_array($block['type'] ?? '', $disabledTypes, true) ? ['disabled' => true] : []),
             $this->registry->editorManifests($entitled, static fn(string $perm): bool => $actor->can($perm)),
         );
         $offered = array_column($blocks, 'type');

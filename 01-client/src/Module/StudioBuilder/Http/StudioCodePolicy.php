@@ -10,12 +10,21 @@
  *      snippets. The tenant never supplies the snippet, only a validated ID,
  *      so no tenant-authored markup reaches the page through these fields.
  *
- * Raw `<script>` injection (head/footer) is DELIBERATELY NOT IMPLEMENTED.
- * The admin screen stores `studio_code_head` / `studio_code_footer`, but this
- * policy never reads them: executing tenant-authored JavaScript inside a
- * licensed commercial product is a privilege escalation that needs its own
- * permission, its own audit trail, and a sandbox story. Until that exists the
- * fields are inert by construction rather than by a flag someone can flip.
+ * Head and footer snippets (Search Console / Bing / Meta verification, ad pixels, any vendor tag) ARE
+ * supported, under conditions that came with the decision to ship them:
+ *
+ *   - They live in NEW settings (`studio_code_head_snippet`, `studio_code_footer_snippet`). The legacy
+ *     `studio_code_head` / `studio_code_footer` values were stored by an old screen that no renderer ever read;
+ *     they are still never read, so nothing a tenant once typed there can suddenly start to run.
+ *   - Only administrators (`studio-builder.admin`) may change them, and every save is audited with sizes and a
+ *     SHA-256 of each snippet (never its content).
+ *   - Public pages only: never the canvas, never Preview, like analytics.
+ *   - A snippet is a short list of vendor tags, not a page: only `script`, `noscript`, `style`, `link`, `meta`
+ *     (head) and those plus `img` / `iframe` (footer) are accepted, script and style bodies are scanned as raw
+ *     text, and anything that could close or reshape the document (`</head>`, `<body>`, `<base>`, `<form>` …)
+ *     is refused with a reason. This is a guard against accidents, not a boundary against an administrator.
+ *   - Verification meta tags (Google, Bing, Meta, Pinterest) are structured fields: only the token is stored,
+ *     so no markup at all comes from them.
  *
  * ── The three rules that make this safe ──────────────────────────────────
  *
@@ -50,11 +59,35 @@ final class StudioCodePolicy
     public const SETTING_GA4        = 'studio_code_ga4_id';
     public const SETTING_GTM        = 'studio_code_gtm_id';
 
-    /** Stored by the admin screen, deliberately never rendered. */
+    /** Legacy values of a screen that no renderer ever read. Still never read, so old content cannot start to run. */
     public const DEFERRED_SETTINGS = ['studio_code_head', 'studio_code_footer'];
 
     /** Tenant stylesheet ceiling (64 KiB) — a stylesheet is not a file host. */
     public const MAX_CUSTOM_CSS_BYTES = 65536;
+
+    public const SETTING_HEAD_SNIPPET   = 'studio_code_head_snippet';
+    public const SETTING_FOOTER_SNIPPET = 'studio_code_footer_snippet';
+    public const SETTING_VERIFICATION   = 'studio_code_site_verification';
+
+    /** Search-engine and platform ownership meta tags: service key => meta name. */
+    public const VERIFICATION_SERVICES = [
+        'google'    => 'google-site-verification',
+        'bing'      => 'msvalidate.01',
+        'facebook'  => 'facebook-domain-verification',
+        'pinterest' => 'p:domain_verify',
+    ];
+
+    /** One snippet (32 KiB) is far more than any vendor tag; a larger one is a file, not a snippet. */
+    public const MAX_SNIPPET_BYTES = 32768;
+
+    private const VERIFICATION_TOKEN_PATTERN = '/^[A-Za-z0-9_\-]{8,128}$/';
+
+    /** Tags a snippet may contain, by placement. */
+    private const HEAD_TAGS   = ['script', 'noscript', 'style', 'link', 'meta'];
+    private const FOOTER_TAGS = ['script', 'noscript', 'style', 'link', 'meta', 'img', 'iframe'];
+    /** Elements whose content is raw text (not scanned for tags) and which must be closed. */
+    private const RAW_TEXT_TAGS = ['script', 'style'];
+    private const VOID_TAGS = ['link', 'meta', 'img'];
 
     private const GA4_PATTERN = '/^G-[A-Z0-9]{4,24}$/';
     private const GTM_PATTERN = '/^GTM-[A-Z0-9]{4,12}$/';
@@ -143,6 +176,153 @@ final class StudioCodePolicy
     }
 
     /**
+     * Prepare a stylesheet an administrator typed in the builder: refuse one over the ceiling (cutting it at a byte
+     * boundary could leave a half rule, so it is rejected instead) and otherwise reduce it. `changed` tells the
+     * author that something was removed, so the editor can show the stylesheet that was really stored.
+     *
+     * @return array{css: string, bytes: int, changed: bool}
+     * @throws \InvalidArgumentException when the input is longer than MAX_CUSTOM_CSS_BYTES
+     */
+    public static function prepareCustomCss(string $raw): array
+    {
+        if (strlen($raw) > self::MAX_CUSTOM_CSS_BYTES) {
+            throw new \InvalidArgumentException('The stylesheet is larger than ' . self::MAX_CUSTOM_CSS_BYTES . ' bytes.');
+        }
+        $css = self::sanitizeCustomCss($raw);
+        return ['css' => $css, 'bytes' => strlen($css), 'changed' => $css !== trim($raw)];
+    }
+
+    /**
+     * The ownership token from what an administrator pasted: the bare token or the whole `<meta ...>` tag the
+     * service shows. '' means "nothing"; null means "not a token" (the screen then refuses the save).
+     */
+    public static function verificationToken(string $raw): ?string
+    {
+        $raw = trim($raw);
+        if ($raw === '') {
+            return '';
+        }
+        if (preg_match('~content\s*=\s*(?:"([^"]*)"|\'([^\']*)\')~i', $raw, $m) === 1) {
+            $raw = trim($m[1] !== '' ? $m[1] : ($m[2] ?? ''));
+        }
+        return preg_match(self::VERIFICATION_TOKEN_PATTERN, $raw) === 1 ? $raw : null;
+    }
+
+    /**
+     * Why a snippet is refused, or null when it is acceptable. `$placement` is 'head' or 'footer'.
+     * Reasons: too_large, control_characters, tag:NAME (a tag outside the allowed list), unclosed:NAME, stray_close:NAME.
+     */
+    public static function snippetProblem(string $html, string $placement): ?string
+    {
+        if (strlen($html) > self::MAX_SNIPPET_BYTES) {
+            return 'too_large';
+        }
+        if (preg_match('~[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]~', $html) === 1) {
+            return 'control_characters';
+        }
+        $allowed = $placement === 'footer' ? self::FOOTER_TAGS : self::HEAD_TAGS;
+        $pos = 0;
+        $len = strlen($html);
+        $open = [];
+        while ($pos < $len && ($lt = strpos($html, '<', $pos)) !== false) {
+            if (substr($html, $lt, 4) === '<!--') {
+                $end = strpos($html, '-->', $lt + 4);
+                if ($end === false) {
+                    return 'unclosed:comment';
+                }
+                $pos = $end + 3;
+                continue;
+            }
+            if (preg_match('~\G<(/?)([A-Za-z][A-Za-z0-9-]*)~', $html, $m, 0, $lt) !== 1) {
+                // A bare `<` that is not a tag (text such as "a < b", or `<!doctype`, `<?php`).
+                if (preg_match('~\G<[!?]~', $html, $m2, 0, $lt) === 1) {
+                    return 'tag:' . substr($html, $lt, 2);
+                }
+                $pos = $lt + 1;
+                continue;
+            }
+            $closing = $m[1] === '/';
+            $name = strtolower($m[2]);
+            if (!in_array($name, $allowed, true)) {
+                return 'tag:' . $name;
+            }
+            // Find the end of the tag, honouring quoted attribute values.
+            if (preg_match('~\G(?:[^>"\']|"[^"]*"|\'[^\']*\')*>~', $html, $tag, 0, $lt + strlen($m[0])) !== 1) {
+                return 'unclosed:' . $name;
+            }
+            $after = $lt + strlen($m[0]) + strlen($tag[0]);
+            if ($closing) {
+                $last = array_pop($open);
+                if ($last !== $name) {
+                    return 'stray_close:' . $name;
+                }
+                $pos = $after;
+                continue;
+            }
+            $selfClosed = str_ends_with($tag[0], '/>');
+            if (in_array($name, self::RAW_TEXT_TAGS, true) && !$selfClosed) {
+                if (preg_match('~</' . $name . '\s*>~i', $html, $c, PREG_OFFSET_CAPTURE, $after) !== 1) {
+                    return 'unclosed:' . $name;
+                }
+                $pos = $c[0][1] + strlen($c[0][0]);
+                continue;
+            }
+            if (!in_array($name, self::VOID_TAGS, true) && !$selfClosed) {
+                $open[] = $name;
+            }
+            $pos = $after;
+        }
+        return $open === [] ? null : 'unclosed:' . end($open);
+    }
+
+    /**
+     * A snippet ready to store: trimmed, or a refusal with the reason as the exception message.
+     *
+     * @throws \InvalidArgumentException
+     */
+    public static function prepareSnippet(string $raw, string $placement): string
+    {
+        $html = trim($raw);
+        $problem = self::snippetProblem($html, $placement);
+        if ($problem !== null) {
+            throw new \InvalidArgumentException($problem);
+        }
+        return $html;
+    }
+
+    /** `<meta>` ownership tags for the services this tenant verified. Public only; tokens are re-validated here. */
+    public static function verificationMarkup(int $tenantId, RenderMode $mode): string
+    {
+        if ($mode !== RenderMode::Public) {
+            return '';
+        }
+        $raw = self::setting(self::SETTING_VERIFICATION, $tenantId);
+        $stored = is_string($raw) && $raw !== '' ? json_decode($raw, true) : null;
+        if (!is_array($stored)) {
+            return '';
+        }
+        $out = '';
+        foreach (self::VERIFICATION_SERVICES as $service => $metaName) {
+            $token = is_string($stored[$service] ?? null) ? $stored[$service] : '';
+            if ($token !== '' && preg_match(self::VERIFICATION_TOKEN_PATTERN, $token) === 1) {
+                $out .= '<meta name="' . $metaName . '" content="' . $token . '">';
+            }
+        }
+        return $out;
+    }
+
+    /** A stored snippet, re-checked at render time: one that fails (edited in the database) is simply not emitted. */
+    private static function snippet(int $tenantId, string $key, string $placement): string
+    {
+        $raw = self::setting($key, $tenantId);
+        if (!is_string($raw) || trim($raw) === '') {
+            return '';
+        }
+        $html = trim($raw);
+        return self::snippetProblem($html, $placement) === null ? $html : '';
+    }
+
+    /**
      * The tenant stylesheet for this tenant, sanitized. Never throws.
      */
     public static function customCss(int $tenantId): string
@@ -170,7 +350,7 @@ final class StudioCodePolicy
             $out .= self::gtmHeadSnippet($gtm);
         }
 
-        return $out;
+        return $out . self::verificationMarkup($tenantId, $mode) . self::snippet($tenantId, self::SETTING_HEAD_SNIPPET, 'head');
     }
 
     /** Markup for the end of <body> — the GTM container iframe, Public only. */
@@ -180,7 +360,7 @@ final class StudioCodePolicy
             return '';
         }
         $gtm = self::gtmId(self::setting(self::SETTING_GTM, $tenantId));
-        return $gtm !== null ? self::gtmBodySnippet($gtm) : '';
+        return ($gtm !== null ? self::gtmBodySnippet($gtm) : '') . self::snippet($tenantId, self::SETTING_FOOTER_SNIPPET, 'footer');
     }
 
     /**
