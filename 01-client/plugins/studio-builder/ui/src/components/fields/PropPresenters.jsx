@@ -5,7 +5,7 @@ import { useId } from 'react';
 import { Icon, choiceIcon } from '../inspectors/InspectorIcons.jsx';
 import { t } from '../../core/messages.mjs';
 
-const labelOf = (value) => {
+const labelOfDefault = (value) => {
   const key = `opt_${String(value).replace(/-/g, '_')}`;
   const text = t(key);
   return text && text !== key ? text : String(value).replace(/_/g, ' ');
@@ -19,7 +19,8 @@ function useChoice(field, value, onChange) {
   return { options, current, pick };
 }
 
-export function PropChoice({ field, value, onChange, presenter }) {
+export function PropChoice({ field, value, onChange, presenter, labelOf = null }) {
+  const nameOf = labelOf || labelOfDefault;
   const { options, current, pick } = useChoice(field, value, onChange);
   const asIcons = !!presenter.icons;
   return (
@@ -32,11 +33,11 @@ export function PropChoice({ field, value, onChange, presenter }) {
             type="button"
             className={`${asIcons ? 'sbx-iconchoice__btn' : 'sbx-segmented-pill'}${current === o ? ' is-active' : ''}`}
             aria-pressed={current === o}
-            aria-label={asIcons ? labelOf(o) : undefined}
-            title={labelOf(o)}
+            aria-label={asIcons ? nameOf(o) : undefined}
+            title={nameOf(o)}
             onClick={() => pick(o)}
           >
-            {asIcons ? <Icon name={choiceIcon(presenter.icons, presenter.map?.[o] ?? o)} size={16} /> : labelOf(o)}
+            {asIcons ? <Icon name={choiceIcon(presenter.icons, presenter.map?.[o] ?? o)} size={16} /> : nameOf(o)}
           </button>
         ))}
       </div>

@@ -37,8 +37,8 @@ test('the token picker lists named tokens under readable headings and stores the
     await expect(list.getByText('Accent', { exact: true }).first()).toBeVisible();
     await expect(list).not.toContainText('surface.primary');
     await expect(list).not.toContainText('color.accent');
-    await list.getByRole('option', { name: /^Primary/ }).click();
-    await expect(surface).toContainText('Primary');
+    await list.getByRole('option', { name: /^Main surface/ }).click();
+    await expect(surface).toContainText('Main surface');
     await expect(surface).toHaveAttribute('title', 'surface.primary');
 
     // keyboard: reopen, move, choose, and Escape closes without changing

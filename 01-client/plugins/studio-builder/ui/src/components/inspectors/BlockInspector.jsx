@@ -70,6 +70,7 @@ export function BlockInspector({ info }) {
         manifest={manifest}
         mediaPicker={boot.mediaPicker}
         presenters={presentersFor(block.type)}
+        blockType={block.type}
         onChange={(next) => save(ops.updateBlockProps(block.id, next))}
       />
     ),

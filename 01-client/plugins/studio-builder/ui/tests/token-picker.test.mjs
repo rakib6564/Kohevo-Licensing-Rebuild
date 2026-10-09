@@ -11,14 +11,14 @@ test('every manifest token has a friendly name, never its ref', () => {
     assert.notEqual(label, tk.ref);
     assert.doesNotMatch(label, /\./, tk.ref);
   }
-  assert.equal(tokenLabel('surface.primary'), 'Primary');
+  assert.equal(tokenLabel('surface.primary'), 'Main surface');
   assert.equal(tokenLabel('vendor.brand_blue'), 'Brand blue');
 });
 
 test('tokens group under translated headings, in first-seen order', () => {
   const surface = manifest.tokens.filter((tk) => ['surface', 'color'].includes(tk.category));
   const groups = groupForPicker(surface);
-  assert.deepEqual(groups.map((g) => g.heading), ['Accent', 'Surfaces'].sort((a, b) => groups.map((g) => g.heading).indexOf(a) - groups.map((g) => g.heading).indexOf(b)));
+  assert.deepEqual(groups.map((g) => g.heading).sort(), ['Accent', 'Surfaces']);
   assert.ok(groups.every((g) => g.items.length > 0));
   assert.equal(categoryHeading('radius'), 'Corner radius');
   assert.equal(categoryHeading('odd_kind'), 'Odd kind');

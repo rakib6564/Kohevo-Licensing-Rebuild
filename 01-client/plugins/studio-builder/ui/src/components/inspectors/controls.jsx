@@ -19,7 +19,7 @@ const DEVICE_ICONS = { desktop: IconMonitor, tablet: IconTablet, mobile: IconSma
  * mobile-first; the inherited value is shown as the placeholder. `base` is
  * required when `requireBase`.
  */
-export function ResponsiveSelect({ label, value, options, onChange, activeBreakpoint, requireBase = false, numeric = false, icons = null }) {
+export function ResponsiveSelect({ label, value, options, onChange, activeBreakpoint, requireBase = false, numeric = false, icons = null, labelOf = null }) {
   const id = useId();
   const { viewport, setViewport } = useEditor();
   const map = typeof value === 'object' && value !== null && !Array.isArray(value) ? value : (value === null || value === undefined ? {} : { base: value });
@@ -41,8 +41,8 @@ export function ResponsiveSelect({ label, value, options, onChange, activeBreakp
       <div className="sbx-field sbx-responsive__cell" key={bp}>
         {cellLabel && <label className="sbx-field__label" htmlFor={`${id}-${bp}`}>{cellLabel}</label>}
         <select id={`${id}-${bp}`} aria-label={cellLabel ? undefined : `${label} (${t(VIEWPORTS.find((v) => v.breakpoint === bp)?.key || bp)})`} value={map[bp] === undefined ? '' : String(map[bp])} onChange={(e) => set(bp, e.target.value)}>
-          {!(requireBase && bp === 'base') && <option value="">{inh === undefined ? t('inherit') : `${t('inherit')} · ${String(inh)}`}</option>}
-          {options.map((o) => <option key={String(o)} value={String(o)}>{optionLabel(o)}</option>)}
+          {!(requireBase && bp === 'base') && <option value="">{inh === undefined ? t('inherit') : `${t('inherit')} · ${labelOf ? labelOf(inh) : optionLabel(inh)}`}</option>}
+          {options.map((o) => <option key={String(o)} value={String(o)}>{labelOf ? labelOf(o) : optionLabel(o)}</option>)}
         </select>
       </div>
     );

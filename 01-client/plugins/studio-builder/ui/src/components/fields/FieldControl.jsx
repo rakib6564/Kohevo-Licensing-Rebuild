@@ -16,6 +16,7 @@ import { UrlControl } from './UrlControl.jsx';
 import { PropChoice, PropTiles } from './PropPresenters.jsx';
 import { TokenPicker } from './TokenPicker.jsx';
 import { optionLabel } from '../../core/optionLabels.mjs';
+import { sizedLabeller, tableFor } from '../../core/optionValues.mjs';
 
 const RichTextEditor = lazy(() => import('./RichTextEditor.jsx'));
 
@@ -58,7 +59,7 @@ export const FieldRow = ({ id, label, required, problem, children, wide = false 
   </div>
 );
 
-export const FieldControl = memo(function FieldControl({ field, value, onChange, manifest, mediaPicker }) {
+export const FieldControl = memo(function FieldControl({ field, value, onChange, manifest, mediaPicker, labelOf = null }) {
   const id = useId();
   const kind = controlFor(field);
   const [draft, update, problem, external] = useDraft(value, field, onChange);
@@ -100,7 +101,7 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
       return (
         <FieldRow id={id} label={field.label} required={field.required} problem={problem}>
           <select {...common} value={draft ?? ''} onChange={(e) => update(e.target.value)}>
-            {asList(field.allowed_values).map((v) => <option key={String(v)} value={v}>{optionLabel(v)}</option>)}
+            {asList(field.allowed_values).map((v) => <option key={String(v)} value={v}>{labelOf ? labelOf(v) : optionLabel(v)}</option>)}
           </select>
         </FieldRow>
       );
@@ -149,12 +150,14 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
 });
 
 /** Controls for a map of fields (object properties, repeater items, block props). */
-export function ObjectFields({ schema, value, onChange, manifest, mediaPicker, presenters = null }) {
+export function ObjectFields({ schema, value, onChange, manifest, mediaPicker, presenters = null, blockType = null }) {
   return asList(schema).map((f) => {
     const set = (v) => onChange({ ...value, [f.key]: v });
     const presenter = presenters && presenters[f.key];
+    const fieldId = blockType ? `${blockType}.${f.key}` : null;
+    const labelOf = fieldId && tableFor(fieldId) ? sizedLabeller(fieldId) : null;
     if (presenter && presenter.tiles && f.type === 'number') return <PropTiles key={f.key} field={f} value={value[f.key] ?? null} presenter={presenter} onChange={set} />;
-    if (presenter && (presenter.icons || presenter.pills) && f.type === 'enum') return <PropChoice key={f.key} field={f} value={value[f.key] ?? null} presenter={presenter} onChange={set} />;
+    if (presenter && (presenter.icons || presenter.pills) && f.type === 'enum') return <PropChoice key={f.key} field={f} value={value[f.key] ?? null} presenter={presenter} labelOf={labelOf} onChange={set} />;
     return (
       <FieldControl
         key={f.key}
@@ -162,6 +165,7 @@ export function ObjectFields({ schema, value, onChange, manifest, mediaPicker, p
         value={value[f.key] ?? null}
         manifest={manifest}
         mediaPicker={mediaPicker}
+        labelOf={labelOf}
         onChange={set}
       />
     );

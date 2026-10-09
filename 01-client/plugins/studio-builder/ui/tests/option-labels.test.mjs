@@ -8,7 +8,7 @@ const manifest = JSON.parse(readFileSync(new URL('./fixtures/manifest.json', imp
 test('known values use their message, unknown values are humanised, never shown raw', () => {
   assert.equal(optionLabel('md'), 'Medium');
   assert.equal(optionLabel('2xl'), '2× large');
-  assert.equal(optionLabel('half_screen'), 'Half screen');
+  assert.equal(optionLabel('half_screen'), 'Half screen height');
   assert.equal(optionLabel('index,follow'), 'Index, follow');
   assert.equal(optionLabel('arrow-right'), 'Arrow right');
   assert.equal(optionLabel('16:9'), '16:9');
