@@ -415,7 +415,7 @@ const EN = {
   opt_index_nofollow: 'Index, don’t follow links',
   opt_noindex_nofollow: 'Don’t index, don’t follow links',
   opt_half_screen: 'Half screen',
-  opt_base: 'Mobile (base)',
+  opt_base: 'Base (normal)',
   cc_title: 'Custom CSS',
   cc_label: 'Custom CSS code',
   cc_hint: 'A site-wide stylesheet for the published site and Preview. It is not shown in the editing canvas. Block styles are generated first, so your rules win; the platform signature cannot be restyled.',

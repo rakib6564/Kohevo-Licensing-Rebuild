@@ -741,7 +741,7 @@ return [
     'studio_ui_opt_index_nofollow' => 'Indexer, ne pas suivre les liens',
     'studio_ui_opt_noindex_nofollow' => 'Ne pas indexer, ne pas suivre les liens',
     'studio_ui_opt_half_screen' => 'Demi-écran',
-    'studio_ui_opt_base' => 'Mobile (base)',
+    'studio_ui_opt_base' => 'De base (normal)',
     'studio_ui_cc_title' => 'CSS personnalisé',
     'studio_ui_cc_label' => 'Code CSS personnalisé',
     'studio_ui_cc_hint' => 'Une feuille de style pour tout le site publié et l’aperçu. Elle n’apparaît pas dans le canevas d’édition. Les styles des blocs sont générés avant, donc vos règles l’emportent ; la signature de la plateforme ne peut pas être restylée.',
