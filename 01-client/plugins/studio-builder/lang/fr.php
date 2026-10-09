@@ -280,6 +280,7 @@ return [
     'studio_ui_announce_removed' => '{label} supprimé',
     'studio_ui_announce_saved' => 'Toutes les modifications sont enregistrées',
     'studio_ui_announce_selected' => '{label} sélectionné',
+    'studio_ui_selection_stale' => "Cet élément n'était plus à jour : le canevas a été actualisé. Cliquez de nouveau dessus.",
     'studio_ui_announce_template_applied' => 'Modèle appliqué',
     'studio_ui_announce_template_deleted' => 'Modèle supprimé',
     'studio_ui_announce_template_inserted' => 'Modèle inséré',

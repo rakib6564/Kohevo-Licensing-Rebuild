@@ -81,3 +81,29 @@ test('Escape clears the whole selection', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(page.locator(`${ROWS}[aria-selected="true"]`)).toHaveCount(0);
 });
+
+test('a canvas node the editor no longer has is not selected: no empty Inspector, the canvas refreshes', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
+  await openBuilder(page);
+  await settled(page);
+  await page.getByRole('tab', { name: /^Add$/ }).click();
+  await page.getByRole('tab', { name: 'Sections' }).click();
+  await page.locator('#sbx-leftpanel-blocks [data-preset="system-section-team"] .sbx-preset-card__insert').click();
+  await settled(page);
+  await expect(page.frameLocator('iframe.sbx-canvas__frame').locator('[data-sb-node^="blk_"]').first()).toBeVisible();
+  const frame = await frameDocument(page);
+  await frame.evaluate(() => {
+    const el = document.createElement('p');
+    el.setAttribute('data-sb-node', 'blk_stale_ghost');
+    el.setAttribute('data-sb-type', 'core.text');
+    el.textContent = 'ghost';
+    el.style.cssText = 'display:block;min-height:40px';
+    document.body.prepend(el);
+  });
+  await page.frameLocator('iframe.sbx-canvas__frame').locator('[data-sb-node="blk_stale_ghost"]').click();
+  await expect(page.getByRole('status').filter({ hasText: 'out of date' })).toHaveCount(1);
+  // The repaint drops the ghost node, and nothing is left selected (no empty Inspector with a selection box).
+  await expect(page.frameLocator('iframe.sbx-canvas__frame').locator('[data-sb-node="blk_stale_ghost"]')).toHaveCount(0, { timeout: 15_000 });
+  await expect(page.locator('.sbx-overlay__box.is-primary')).toHaveCount(0);
+  await expect(page.locator('.sbx-inspector-empty')).toHaveCount(1);
+});

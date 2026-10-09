@@ -184,6 +184,15 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
 
   /** A click with modifiers: plain replaces, Ctrl/Cmd toggles, Shift selects the range from the primary. */
   const pick = useCallback((id, mods = {}, rows = null) => {
+    // The canvas can show a node the editor no longer has (a repaint that lagged an undo or a reload): a selection
+    // nothing can edit would leave an empty Inspector, so drop it and repaint the canvas instead.
+    if (id && !findNode(engine.getSnapshot().working, id)) {
+      selModelRef.current = EMPTY_SELECTION;
+      setSel(EMPTY_SELECTION);
+      setCanvasVersion((v) => v + 1);
+      announce(t('selection_stale'));
+      return;
+    }
     const next = clickSelect(selModelRef.current, rows || documentRows(engine.getSnapshot().working), id, mods);
     selModelRef.current = next;
     setSel(next);
