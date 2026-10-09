@@ -2,6 +2,7 @@
 
 import { memo, useMemo, useState } from 'react';
 import { useEditor } from './EditorContext.jsx';
+import { TileGrid } from './ui/index.js';
 import { BlockCard, CategoryRail, blockCategoryLabel } from './AddPanelParts.jsx';
 import { t } from '../core/messages.mjs';
 import { GROUP_PREVIEW, blocksWithVariants, groupBlocks, isElementBlock } from '../core/addPanel.mjs';
@@ -29,9 +30,9 @@ export const ElementsPanel = memo(function ElementsPanel() {
                 </button>
               )}
             </div>
-            <div className="sbx-palette__cards">
+            <TileGrid>
               {items.map((b) => <BlockCard key={b.variantKey || b.type} def={b} onInsert={insertBlock} />)}
-            </div>
+            </TileGrid>
           </section>
         );
       })}

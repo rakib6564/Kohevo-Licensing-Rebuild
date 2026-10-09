@@ -8,6 +8,7 @@
 import { useId, useState } from 'react';
 import { ColorField, DraftText, unitOf } from './StyleControls.jsx';
 import { Icon, choiceIcon } from './InspectorIcons.jsx';
+import { Field, Pills } from '../ui/index.js';
 import { asObject } from '../../core/doc.mjs';
 import { CORNERS, FILTER, OPTIONS, SIDES, TRANSFORM, getPath, setPath, setPaths } from '../../core/styleSurface.mjs';
 import { t } from '../../core/messages.mjs';
@@ -30,22 +31,14 @@ function useFields(style, onChange) {
 /** A row of exclusive choices. Choosing the active one again clears it (back to the default). */
 export function Segmented({ label, value, options, onChange }) {
   return (
-    <div className="sbx-field">
-      <span className="sbx-field__label">{label}</span>
-      <div className="sbx-segmented-pills" role="group" aria-label={label}>
-        {options.map((o) => (
-          <button
-            key={o}
-            type="button"
-            className={`sbx-segmented-pill${value === o ? ' is-active' : ''}`}
-            aria-pressed={value === o}
-            onClick={() => onChange(value === o ? undefined : o)}
-          >
-            {optLabel(o)}
-          </button>
-        ))}
-      </div>
-    </div>
+    <Field label={label}>
+      <Pills
+        label={label}
+        value={value}
+        options={options.map((o) => ({ value: o, label: optLabel(o) }))}
+        onChange={(o) => onChange(value === o ? undefined : o)}
+      />
+    </Field>
   );
 }
 
@@ -434,20 +427,13 @@ export function StatesPane({ states, onChange }) {
   };
   return (
     <>
-      <div className="sbx-segmented-pills" role="tablist" aria-label={t('section_states')}>
-        {STATE_TABS.map((s) => (
-          <button
-            key={s}
-            type="button"
-            role="tab"
-            aria-selected={tab === s}
-            className={`sbx-segmented-pill${tab === s ? ' is-active' : ''}${s !== 'normal' && all[s] ? ' has-value' : ''}`}
-            onClick={() => setTab(s)}
-          >
-            {t(`state_${s}`)}
-          </button>
-        ))}
-      </div>
+      <Pills
+        role="tablist"
+        label={t('section_states')}
+        value={tab}
+        options={STATE_TABS.map((s) => ({ value: s, label: t(`state_${s}`), hasValue: s !== 'normal' && !!all[s] }))}
+        onChange={setTab}
+      />
       {tab === 'normal' ? (
         <p className="sbx-hint">{t('state_normal_hint')}</p>
       ) : (

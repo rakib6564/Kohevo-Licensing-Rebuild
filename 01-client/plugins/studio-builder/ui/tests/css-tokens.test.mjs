@@ -13,8 +13,8 @@ const chrome = rest.split('\n').filter((l) => !l.trimStart().startsWith('.sbx-wf
 const count = (re) => chrome.reduce((n, l) => n + (l.match(re) || []).length, 0);
 
 // Ratchet: the numbers only go down. When you replace a literal with a token, lower the ceiling.
-const HEX_CEILING = 123;
-const RGBA_CEILING = 126;
+const HEX_CEILING = 119;
+const RGBA_CEILING = 124;
 
 // Set at runtime by the mobile shell (visual viewport / sheet height), so they have no static definition.
 const RUNTIME = new Set(['--sbx-sheet-h', '--sbx-kb-inset']);

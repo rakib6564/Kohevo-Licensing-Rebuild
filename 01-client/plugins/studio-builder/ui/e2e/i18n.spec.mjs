@@ -57,10 +57,10 @@ test('block inspector controls are French (tabs, placeholders, select options)',
     await expect(async () => {
       await page.getByRole('tab', { name: 'Ajouter' }).click();
       await page.locator('#sbx-leftpanel-blocks').getByRole('tab', { name: /Éléments/ }).click();
-      await expect(page.locator('#sbx-leftpanel-blocks .sbx-palette-card').first()).toBeVisible({ timeout: 1500 });
+      await expect(page.locator('#sbx-leftpanel-blocks .sbx-tile').first()).toBeVisible({ timeout: 1500 });
     }).toPass({ timeout: 15_000 });
     steps++;
-    await page.locator('#sbx-leftpanel-blocks .sbx-palette-card').first().click();
+    await page.locator('#sbx-leftpanel-blocks .sbx-tile').first().click();
     await expect(page.getByRole('tab', { name: 'Avancé' })).toBeVisible();
     await settled(page); // the inspector re-renders when the server swaps the temporary id
     await page.getByRole('tab', { name: 'Avancé' }).click();
@@ -85,7 +85,7 @@ test('Add panel cards come from the manifest and are French', async ({ page }, i
   await page.getByRole('tab', { name: 'Ajouter' }).click();
   const panel = page.locator('#sbx-leftpanel-blocks');
   await panel.getByRole('tab', { name: /Éléments/ }).click();
-  const titles = async () => panel.locator('.sbx-palette-card__title').allTextContents();
+  const titles = async () => panel.locator('.sbx-tile__label').allTextContents();
   await panel.locator('[data-view-all="layout"]').click();
   const layout = await titles();
   expect(layout).toEqual(expect.arrayContaining(['Héros', 'Grille']));
@@ -94,6 +94,6 @@ test('Add panel cards come from the manifest and are French', async ({ page }, i
   const content = await titles();
   expect(content).toEqual(expect.arrayContaining(['Titre', 'Bouton']));
   expect([...layout, ...content].join('|')).not.toMatch(/\b(Hero|Heading|Button|Grid)\b/);
-  const descs = (await panel.locator('.sbx-palette-card__desc').allTextContents()).join('|');
+  const descs = (await panel.locator('.sbx-tile__desc').allTextContents()).join('|');
   expect(descs).toContain('Créer une hiérarchie');
 });
