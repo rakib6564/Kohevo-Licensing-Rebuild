@@ -9,6 +9,7 @@ import { Icon, choiceIcon } from './InspectorIcons.jsx';
 import { IconMonitor, IconTablet, IconSmartphone } from '../Icons.jsx';
 import { t } from '../../core/messages.mjs';
 import { optionLabel } from '../../core/optionLabels.mjs';
+import { Field, Check } from '../ui/index.js';
 
 const DEVICE_ICONS = { desktop: IconMonitor, tablet: IconTablet, mobile: IconSmartphone };
 
@@ -115,18 +116,14 @@ export function VisibilityControls({ value, onChange, manifest }) {
       <fieldset className="sbx-fieldset">
         <legend>{t('devices')}</legend>
         {BREAKPOINTS.map((bp) => (
-          <label key={bp} className="sbx-field sbx-field--check">
-            <input type="checkbox" checked={devices.includes(bp)} disabled={devices.length === 1 && devices.includes(bp)} onChange={(e) => toggle(bp, e.target.checked)} />
-            <span>{t(`vis_dev_${bp}`)}</span>
-          </label>
+          <Check key={bp} label={t(`vis_dev_${bp}`)} checked={devices.includes(bp)} disabled={devices.length === 1 && devices.includes(bp)} onChange={(e) => toggle(bp, e.target.checked)} />
         ))}
       </fieldset>
-      <div className="sbx-field">
-        <label className="sbx-field__label" htmlFor={id}>{t('audience')}</label>
+      <Field label={t('audience')} htmlFor={id}>
         <select id={id} value={vis.auth_state || 'any'} onChange={(e) => onChange({ auth_state: e.target.value, devices })}>
           {authStates.map((s) => <option key={s} value={s}>{optionLabel(s)}</option>)}
         </select>
-      </div>
+      </Field>
     </>
   );
 }

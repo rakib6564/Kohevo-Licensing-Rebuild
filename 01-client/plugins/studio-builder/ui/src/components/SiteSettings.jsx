@@ -44,7 +44,7 @@ function TokenRow({ tk, value, canEdit, problem, onChange, swatch, listId }) {
           <button type="button" className="sbx-ss__reset" aria-label={`${t('theme_reset')}: ${friendly(tk)}`} title={t('theme_reset')} onClick={() => onChange('')}>×</button>
         )}
       </div>
-      {problem && <p className="sbx-field__problem" role="alert">{problem}</p>}
+      {problem && <p className="sbx-field__error" role="alert">{problem}</p>}
     </div>
   );
 }
@@ -128,7 +128,7 @@ export function SiteSettingsForm({ onSaved, footer = null }) {
         {boot.brandingUrl ? <> <a href={boot.brandingUrl} target="_blank" rel="noopener">{t('theme_branding_link')}</a></> : null}
       </p>
       {group !== 'default' && <p className="sbx-muted">{t('theme_group')}: <code>{group}</code></p>}
-      {error && <p role="alert" className="sbx-field__problem">{error}</p>}
+      {error && <p role="alert" className="sbx-field__error">{error}</p>}
       {!data && !error && <p className="sbx-muted">{t('loading')}</p>}
       <datalist id={listId} aria-label={t('ss_font_presets')}>
         {FONT_PRESETS.map((f) => <option key={f} value={f} />)}

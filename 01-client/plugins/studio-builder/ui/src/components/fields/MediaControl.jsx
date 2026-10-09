@@ -78,7 +78,7 @@ export function MediaControl({ field, value, onChange, problem, mediaPicker, hid
           <input type="range" min={0} max={100} value={Math.round(fp[1] * 100)} aria-label="Y" onChange={(e) => set({ focal_point: [fp[0], Number(e.target.value) / 100] })} />
         </div>
       )}
-      {problem ? <p className="sbx-field__problem" id={`${id}-problem`} role="alert">{t(problem)}</p> : null}
+      {problem ? <p className="sbx-field__error" id={`${id}-problem`} role="alert">{t(problem)}</p> : null}
     </fieldset>
   );
 }

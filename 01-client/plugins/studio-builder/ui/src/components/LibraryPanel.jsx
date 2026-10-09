@@ -39,7 +39,7 @@ export const LibraryPanel = memo(function LibraryPanel() {
 
   return (
     <div className="sbx-library">
-      {library.error && <p role="alert" className="sbx-field__problem">{library.error}</p>}
+      {library.error && <p role="alert" className="sbx-field__error">{library.error}</p>}
 
       <section className="sbx-library__section" aria-labelledby="sbx-lib-templates">
         <div className="sbx-library__head">

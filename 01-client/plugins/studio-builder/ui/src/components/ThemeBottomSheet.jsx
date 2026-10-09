@@ -106,7 +106,7 @@ export const ThemeBottomSheet = memo(function ThemeBottomSheet({ onClose, onSave
 
       {/* Sheet Scroll Body */}
       <div className="sbx-bottom-sheet__body">
-        {error && <p className="sbx-field__problem" role="alert">{error}</p>}
+        {error && <p className="sbx-field__error" role="alert">{error}</p>}
 
         {/* ── Brand Tab ── */}
         {(activeTab === 'brand' || activeTab === 'colors') && (

@@ -7,13 +7,13 @@ import { useId, useState } from 'react';
 import { asList } from '../../core/doc.mjs';
 import { ROLES, attributeIssue, classTokenOk, groupAttributes, idFormatOk, idOwner, withAttribute } from '../../core/blockAttributes.mjs';
 import { t } from '../../core/messages.mjs';
+import { Field } from '../ui/index.js';
 
 /** A text input that commits on blur (or Enter) only when `check` returns null; otherwise it keeps the draft and shows the message. */
 function CommitInput({ id, label, value, placeholder, hint, check, onCommit }) {
   const [problem, setProblem] = useState(null);
   return (
-    <div className="sbx-field">
-      <label className="sbx-field__label" htmlFor={id}>{label}</label>
+    <Field label={label} htmlFor={id}>
       <input
         id={id}
         type="text"
@@ -35,7 +35,7 @@ function CommitInput({ id, label, value, placeholder, hint, check, onCommit }) {
       />
       {problem && <p className="sbx-field__error" id={`${id}-err`} role="alert">{problem}</p>}
       {hint && <p className="sbx-hint">{hint}</p>}
-    </div>
+    </Field>
   );
 }
 
@@ -89,14 +89,13 @@ export function IdentityFields({ block, doc, onChange, part }) {
         check={(text) => (attributeIssue('aria-label', text) ? t('attr_invalid') : null)}
         onCommit={(text) => set('aria-label', text)}
       />
-      <div className="sbx-field">
-        <label className="sbx-field__label" htmlFor={`${id}-role`}>{t('attr_role')}</label>
+      <Field label={t('attr_role')} htmlFor={`${id}-role`}>
         <select id={`${id}-role`} value={g.role} onChange={(e) => set('role', e.target.value)}>
           <option value="">{t('attr_role_none')}</option>
           {!roleKnown && <option value={g.role}>{g.role}</option>}
           {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
-      </div>
+      </Field>
       </>
       )}
     </>
@@ -141,14 +140,12 @@ export function DataAttributes({ block, onChange }) {
         ))}
       </ul>
       <div className="sbx-attr-add">
-        <div className="sbx-field">
-          <label className="sbx-field__label" htmlFor={`${id}-name`}>{t('attr_data_name')}</label>
+        <Field label={t('attr_data_name')} htmlFor={`${id}-name`}>
           <div className="sbx-attr-add__name"><span aria-hidden="true">data-</span><input id={`${id}-name`} type="text" className="sbx-input" value={name} placeholder={'track'} aria-invalid={problem ? true : undefined} onChange={(e) => { setName(e.target.value); setProblem(null); }} /></div>
-        </div>
-        <div className="sbx-field">
-          <label className="sbx-field__label" htmlFor={`${id}-value`}>{t('attr_value')}</label>
+        </Field>
+        <Field label={t('attr_value')} htmlFor={`${id}-value`}>
           <input id={`${id}-value`} type="text" className="sbx-input" value={value} onChange={(e) => { setValue(e.target.value); setProblem(null); }} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} />
-        </div>
+        </Field>
         <button type="button" className="sbx-btn sbx-btn--xs" onClick={add}>{t('attr_add')}</button>
         {problem && <p className="sbx-field__error" role="alert">{problem}</p>}
       </div>
