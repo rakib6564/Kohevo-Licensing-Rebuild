@@ -1,10 +1,11 @@
 // Shared pieces of the Add panel: the block card (with a visible reason when it cannot be inserted
 // right now), the category chip rail, and the hook that reads what insertion rules need.
 
-import { useEffect, useId } from 'react';
+import { useEffect } from 'react';
 import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { renderBlockIcon, DRAG_TYPE_NEW } from './blockIcons.jsx';
 import { t } from '../core/messages.mjs';
+import { Tile } from './ui/index.js';
 import { blockInsertState, presetInsertState, reasonKey } from '../core/addPanel.mjs';
 
 /** The working document, the manifest and the primary selection: what insertion rules depend on. */
@@ -44,32 +45,27 @@ export function useWhenVisible(ref, callback) {
 
 export const blockCategoryLabel = (slug) => t(`block_cat_${slug}`);
 
-/** A block card: click or drag to insert, or disabled with the reason shown (not hidden in a tooltip). */
+/** A block tile: click or drag to insert, or disabled with the reason shown (not hidden in a tooltip). */
 export function BlockCard({ def, onInsert }) {
   const { insertBlockWithProps } = useEditor();
   const state = useBlockInsertState(def.type);
-  const reasonId = useId();
   const disabled = !state.ok;
   const title = def.title || def.label;
   return (
-    <button
-      type="button"
-      className={`sbx-palette-card${disabled ? ' is-disabled' : ''}`}
+    <Tile
       draggable={!disabled && !def.variantKey}
-      aria-disabled={disabled || undefined}
-      aria-describedby={disabled ? reasonId : undefined}
+      disabled={disabled}
+      reason={disabled ? t(reasonKey(state.reason)) : null}
       data-block-type={def.type}
       data-variant={def.variantKey || undefined}
       onDragStart={disabled || def.variantKey ? undefined : (e) => { e.dataTransfer.setData(DRAG_TYPE_NEW, def.type); e.dataTransfer.effectAllowed = 'copy'; }}
       onClick={disabled ? undefined : () => (def.variantKey ? insertBlockWithProps(def.type, def.variantProps) : onInsert(def.type))}
       aria-label={`${t('insert')} ${title}`}
       title={def.description || undefined}
-    >
-      <div className="sbx-palette-card__icon-badge" aria-hidden="true">{renderBlockIcon(def.type, def.icon, def.label)}</div>
-      <span className="sbx-palette-card__title">{title}</span>
-      <span className="sbx-palette-card__desc sbx-sr-only">{def.description || t('pal_block_component_fallback')}</span>
-      {disabled && <span id={reasonId} className="sbx-palette-card__reason" data-testid="insert-reason">{t(reasonKey(state.reason))}</span>}
-    </button>
+      icon={renderBlockIcon(def.type, def.icon, def.label)}
+      label={title}
+      srText={def.description || t('pal_block_component_fallback')}
+    />
   );
 }
 

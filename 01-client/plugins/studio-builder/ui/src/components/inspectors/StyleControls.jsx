@@ -23,6 +23,7 @@
 import { useId, useRef, useState } from 'react';
 import { asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
+import { Pills } from '../ui/index.js';
 import { acceptsDraft } from '../../core/styleValues.mjs';
 import { acceptsSurfaceDraft } from '../../core/styleSurface.mjs';
 import { MediaControl } from '../fields/MediaControl.jsx';
@@ -350,18 +351,13 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
       {has('background') && (
         <fieldset className="sbx-fieldset sbx-bg-controls">
           {!only && <legend>{t('background_label')}</legend>}
-          <div className="sbx-segmented-pills" role="radiogroup" aria-label={t('bg_type')}>
-            {['image', 'color', 'gradient'].map((m) => (
-              <button
-                key={m}
-                type="button"
-                className={`sbx-segmented-pill${bgMode === m ? ' is-active' : ''}`}
-                onClick={() => setBgMode(m)}
-              >
-                {t(`bg_mode_${m}`)}
-              </button>
-            ))}
-          </div>
+          <Pills
+            role="radiogroup"
+            label={t('bg_type')}
+            value={bgMode}
+            options={['image', 'color', 'gradient'].map((m) => ({ value: m, label: t(`bg_mode_${m}`) }))}
+            onChange={setBgMode}
+          />
 
           {bgMode === 'image' && (
             <div className="sbx-bg-image-pane">

@@ -4,6 +4,7 @@
 import { useId } from 'react';
 import { Icon, choiceIcon } from '../inspectors/InspectorIcons.jsx';
 import { t } from '../../core/messages.mjs';
+import { Field, Pills } from '../ui/index.js';
 
 const labelOfDefault = (value) => {
   const key = `opt_${String(value).replace(/-/g, '_')}`;
@@ -24,24 +25,27 @@ export function PropChoice({ field, value, onChange, presenter, labelOf = null }
   const { options, current, pick } = useChoice(field, value, onChange);
   const asIcons = !!presenter.icons;
   return (
-    <div className="sbx-field sbx-field--choice">
-      <span className="sbx-field__label">{field.label}</span>
-      <div className={asIcons ? 'sbx-iconchoice' : 'sbx-segmented-pills'} role="group" aria-label={field.label}>
-        {options.map((o) => (
-          <button
-            key={o}
-            type="button"
-            className={`${asIcons ? 'sbx-iconchoice__btn' : 'sbx-segmented-pill'}${current === o ? ' is-active' : ''}`}
-            aria-pressed={current === o}
-            aria-label={asIcons ? nameOf(o) : undefined}
-            title={nameOf(o)}
-            onClick={() => pick(o)}
-          >
-            {asIcons ? <Icon name={choiceIcon(presenter.icons, presenter.map?.[o] ?? o)} size={16} /> : nameOf(o)}
-          </button>
-        ))}
-      </div>
-    </div>
+    <Field label={field.label} variant="choice">
+      {asIcons ? (
+        <div className="sbx-iconchoice" role="group" aria-label={field.label}>
+          {options.map((o) => (
+            <button
+              key={o}
+              type="button"
+              className={`sbx-iconchoice__btn${current === o ? ' is-active' : ''}`}
+              aria-pressed={current === o}
+              aria-label={nameOf(o)}
+              title={nameOf(o)}
+              onClick={() => pick(o)}
+            >
+              <Icon name={choiceIcon(presenter.icons, presenter.map?.[o] ?? o)} size={16} />
+            </button>
+          ))}
+        </div>
+      ) : (
+        <Pills label={field.label} value={current} onChange={pick} options={options.map((o) => ({ value: o, label: nameOf(o), title: nameOf(o) }))} />
+      )}
+    </Field>
   );
 }
 

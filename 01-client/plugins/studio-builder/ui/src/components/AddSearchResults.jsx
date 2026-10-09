@@ -4,6 +4,7 @@
 
 import { memo, useMemo, useRef } from 'react';
 import { useEditor } from './EditorContext.jsx';
+import { TileGrid } from './ui/index.js';
 import { BlockCard, blockCategoryLabel, usePresetInsertState, useWhenVisible } from './AddPanelParts.jsx';
 import { PresetCard, categoryLabel } from './SectionPresetsPanel.jsx';
 import { t } from '../core/messages.mjs';
@@ -39,13 +40,13 @@ export const AddSearchResults = memo(function AddSearchResults({ query, favorite
       {found.elements.length > 0 && (
         <section>
           {heading('pal_tab_elements', found.elements.length)}
-          <div className="sbx-palette__cards">{found.elements.map((b) => <BlockCard key={b.variantKey || b.type} def={b} onInsert={insertBlock} />)}</div>
+          <TileGrid>{found.elements.map((b) => <BlockCard key={b.variantKey || b.type} def={b} onInsert={insertBlock} />)}</TileGrid>
         </section>
       )}
       {found.dynamic.length > 0 && (
         <section>
           {heading('palette_dynamic', found.dynamic.length)}
-          <div className="sbx-palette__cards">{found.dynamic.map((b) => <BlockCard key={b.type} def={b} onInsert={insertBlock} />)}</div>
+          <TileGrid>{found.dynamic.map((b) => <BlockCard key={b.type} def={b} onInsert={insertBlock} />)}</TileGrid>
         </section>
       )}
       {found.components.length > 0 && (

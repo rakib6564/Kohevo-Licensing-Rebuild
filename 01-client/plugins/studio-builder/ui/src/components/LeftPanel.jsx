@@ -18,6 +18,7 @@ import { SiteSettingsForm } from './SiteSettings.jsx';
 import { ElementManager } from './ElementManager.jsx';
 import { blockDefinition, findNode } from '../core/doc.mjs';
 import { t } from '../core/messages.mjs';
+import { Pills } from './ui/index.js';
 import {
   IconPlus,
   IconLayers,
@@ -247,13 +248,13 @@ export const LeftPanel = memo(function LeftPanel({
           className="sbx-left__body sbx-left__body--settings"
         >
           {(siteAllowed || elementsAllowed) && (
-            <div className="sbx-segmented-pills sbx-ss__views" role="group" aria-label={t('site_settings_title')}>
-              {['page', siteAllowed && 'site', elementsAllowed && 'elements'].filter(Boolean).map((v) => (
-                <button key={v} type="button" className={`sbx-segmented-pill${settingsView === v ? ' is-active' : ''}`} aria-pressed={settingsView === v} data-settings-view={v} onClick={() => setSettingsView(v)}>
-                  {t(`ss_view_${v}`)}
-                </button>
-              ))}
-            </div>
+            <Pills
+              className="sbx-ss__views"
+              label={t('site_settings_title')}
+              value={settingsView}
+              options={['page', siteAllowed && 'site', elementsAllowed && 'elements'].filter(Boolean).map((v) => ({ value: v, label: t(`ss_view_${v}`), 'data-settings-view': v }))}
+              onChange={setSettingsView}
+            />
           )}
           {siteAllowed && settingsView === 'site' ? <SiteSettingsForm onSaved={tokensSaved} /> : elementsAllowed && settingsView === 'elements' ? <ElementManager /> : <PageInspector />}
         </div>
