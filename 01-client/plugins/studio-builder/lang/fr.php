@@ -1169,6 +1169,7 @@ return [
     'studio_ui_nav_partial_site' => 'Commun au site : {title}',
     'studio_ui_nav_partial_edit' => 'Modifier {region}',
     'studio_ui_nav_view_label' => 'Calques ou pages',
+    'studio_ui_pal_tab_label' => 'Que ajouter',
     'studio_ui_nav_layers' => 'Calques',
     'studio_ui_nav_pages' => 'Pages',
     'studio_ui_nav_pages_loading' => 'Chargement des pages…',

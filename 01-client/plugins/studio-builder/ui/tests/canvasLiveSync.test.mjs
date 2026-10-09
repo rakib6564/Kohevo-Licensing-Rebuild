@@ -137,3 +137,12 @@ test('a section animation or interaction change repaints from the server (the cl
   assert.equal(isStructuralChange(secDoc({ interactions: { trigger: 'hover' } }), secDoc({ interactions: { trigger: 'viewport-enter' } })), true);
   assert.equal(isStructuralChange(secDoc({ animation: { type: 'fade_in' } }), secDoc({ animation: { type: 'fade_in' } })), false, 'an equal copy is not a change');
 });
+
+test('ghostNodeIds: nodes the canvas shows that the document does not have', async () => {
+  const { ghostNodeIds } = await import('../src/core/canvasLiveSync.mjs');
+  const doc = { sections: [{ id: 'sec_1', blocks: [{ id: 'blk_1', children: [{ id: 'blk_2' }] }] }] };
+  assert.deepEqual(ghostNodeIds(['sec_1', 'blk_1', 'blk_2'], doc), []);
+  assert.deepEqual(ghostNodeIds(['sec_1', 'sec_gone', 'blk_2', 'blk_gone'], doc), ['sec_gone', 'blk_gone']);
+  assert.deepEqual(ghostNodeIds([null, '', 'sec_1'], doc), []);
+  assert.deepEqual(ghostNodeIds(['sec_1'], { sections: [] }), ['sec_1']);
+});

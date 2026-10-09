@@ -932,38 +932,6 @@ html, body.sbx-body {
   pointer-events: none;
 }
 
-.sbx-palette__category-tabs {
-  display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  border-bottom: 1px solid var(--sbx-border);
-  margin-bottom: 10px;
-}
-
-.sbx-palette__category-tab {
-  flex: none;
-  padding: 6px 10px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--sbx-text-dim);
-  font-size: var(--sbx-fs-sm);
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--sbx-trans);
-}
-
-.sbx-palette__category-tab:hover {
-  color: #ffffff;
-}
-
-.sbx-palette__category-tab.is-active {
-  color: #ffffff;
-  border-bottom-color: var(--sbx-accent);
-  font-weight: 600;
-}
-
 .sbx-star-btn {
   background: none;
   border: none;
@@ -2674,7 +2642,6 @@ html, body.sbx-body {
 }
 
 /* ── Navigator: Layers | Pages ─────────────────────────────────────────── */
-.sbx-nav-switch { display: flex; gap: 6px; padding: 8px 8px 4px; }
 .sbx-pages { display: flex; flex-direction: column; gap: 10px; padding: 8px; }
 .sbx-pages__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .sbx-page-row { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--sbx-border); border-radius: var(--sbx-r-xl); background: var(--sbx-card-bg); }
@@ -2694,7 +2661,6 @@ html, body.sbx-body {
 .sbx-error { color: var(--sbx-danger-text); font-size: 12.5px; margin: 6px 0 0; }
 @media (max-width: 860px) {
   .sbx-page-row__actions .sbx-btn { min-height: 40px; }
-  .sbx-nav-switch .sbx-chip { min-height: 40px; }
 }
 
 /* ── Layers row menu and header/footer references ─────────────────────── */
@@ -2938,10 +2904,6 @@ html, body.sbx-body {
 .sbx-bottombar__btn.is-active { background: var(--sbx-accent-tint); border-color: var(--sbx-accent-border); color: var(--sbx-accent-text); }
 
 /* ── Add panel (reference D01): pill tabs, thumbnail-left cards ──────────────────────────────────────────── */
-.sbx-palette__category-tabs { gap: 3px; padding: 3px; border: 1px solid var(--sbx-border); border-radius: var(--sbx-r-xl); background: rgba(0, 0, 0, 0.25); margin-bottom: 12px; }
-.sbx-palette__category-tab { padding: 6px 12px; border: 0; border-radius: 7px; color: var(--sbx-muted); }
-.sbx-palette__category-tab:hover { background: var(--sbx-fill-2); color: var(--sbx-text-bright); }
-.sbx-palette__category-tab.is-active { background: var(--sbx-accent); color: var(--sbx-accent-ink); border: 0; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3); }
 .sbx-palette__search-input { background: var(--sbx-fill-1); border-radius: 9px; padding-top: 8px; padding-bottom: 8px; }
 .sbx-palette__category { font-size: var(--sbx-fs-sm); font-weight: 600; letter-spacing: 0.02em; color: var(--sbx-muted); margin: 4px 0 2px; }
 
@@ -3025,10 +2987,6 @@ html, body.sbx-body {
 
 /* Layers header: Layers | Pages as one segmented control, with the search and collapse button on a single compact row. */
 @media (min-width: 861px) {
-  .sbx-nav-switch { gap: 2px; padding: 3px; margin: 8px 8px 6px; border: 1px solid var(--sbx-border); border-radius: 9px; background: rgba(0, 0, 0, 0.25); }
-  .sbx-nav-switch .sbx-chip { flex: 1 1 0; justify-content: center; height: 26px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--sbx-muted); font-size: var(--sbx-fs-sm); }
-  .sbx-nav-switch .sbx-chip:hover { color: var(--sbx-text-bright); background: var(--sbx-fill-2); }
-  .sbx-nav-switch .sbx-chip.is-active { background: var(--sbx-accent); color: var(--sbx-accent-ink); }
   .sbx-tree__nav-header { margin-bottom: 6px; gap: 6px; }
   .sbx-tree__search { height: 28px; box-sizing: border-box; padding: 0 0.6rem; border-radius: var(--sbx-r-lg); }
   .sbx-tree__collapse-btn { height: 28px; width: 28px; padding: 0; border-radius: var(--sbx-r-lg); display: inline-flex; align-items: center; justify-content: center; }
@@ -3263,3 +3221,10 @@ html, body.sbx-body {
 .sbx-tile__icon { width: 32px; height: 32px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: var(--sbx-r-md); background: var(--sbx-accent-tint); border: 1px solid var(--sbx-accent-border); color: var(--sbx-accent-text); }
 .sbx-tile__label { max-width: 100%; font-size: var(--sbx-fs-xs); font-weight: 600; line-height: 1.2; color: var(--sbx-text-strong); overflow-wrap: anywhere; }
 .sbx-tile__reason { font-size: var(--sbx-fs-2xs); line-height: 1.3; color: var(--sbx-warn-text); white-space: normal; }
+
+/* Pills, quiet size: a switcher between views of one panel (Layers | Pages, Sections | Elements, Page | Site). */
+.sbx-segmented-pills--sm { gap: 2px; padding: 2px; border-radius: var(--sbx-r-lg); }
+.sbx-segmented-pills--sm .sbx-segmented-pill { padding: 4px 8px; border-radius: var(--sbx-r-md); font-size: var(--sbx-fs-xs); font-weight: 500; text-align: center; }
+.sbx-segmented-pills--sm .sbx-segmented-pill.is-active { background: var(--sbx-accent-tint); color: var(--sbx-accent-text); box-shadow: inset 0 0 0 1px var(--sbx-accent-border); }
+.sbx-nav-switch, .sbx-palette__tabs { margin: 0 0 10px; }
+.sbx-nav-switch .sbx-segmented-pill { flex: 1 1 0; }

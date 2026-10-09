@@ -14,6 +14,7 @@ import { ElementsPanel } from './ElementsPanel.jsx';
 import { ComponentsPanel } from './ComponentsPanel.jsx';
 import { AddSearchResults } from './AddSearchResults.jsx';
 import { IconPlus, IconSearch } from './Icons.jsx';
+import { Pills } from './ui/index.js';
 import { DRAG_TYPE_NEW, renderBlockIcon } from './blockIcons.jsx';
 
 export { DRAG_TYPE_NEW };
@@ -146,29 +147,22 @@ export const BlockPalette = memo(function BlockPalette({ compact = false }) {
         <span className="sbx-search-badge" aria-hidden="true">⌘ K</span>
       </div>
 
-      {/* Category Tabs: Sections, Elements, Components */}
-      <div className="sbx-palette__category-tabs" role="tablist">
-        {[
-          { key: 'sections', label: t('pal_tab_sections') },
-          { key: 'elements', label: t('pal_tab_elements') },
-          { key: 'components', label: t('pal_tab_components') },
-          { key: 'dynamic', label: t('palette_dynamic') },
-          { key: 'media', label: t('palette_media') },
-          { key: 'ai', label: t('palette_ai') },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            role="tab"
-            aria-selected={categoryTab === tab.key}
-            data-tab={tab.key}
-            className={`sbx-palette__category-tab${categoryTab === tab.key ? ' is-active' : ''}`}
-            onClick={() => setCategoryTab(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Pills
+        role="tablist"
+        size="sm"
+        className="sbx-palette__tabs"
+        label={t('pal_tab_label')}
+        value={categoryTab}
+        onChange={setCategoryTab}
+        options={[
+          { value: 'sections', label: t('pal_tab_sections') },
+          { value: 'elements', label: t('pal_tab_elements') },
+          { value: 'components', label: t('pal_tab_components') },
+          { value: 'dynamic', label: t('palette_dynamic') },
+          { value: 'media', label: t('palette_media') },
+          { value: 'ai', label: t('palette_ai') },
+        ].map((o) => ({ ...o, 'data-tab': o.value }))}
+      />
 
       {searching ? (
         <AddSearchResults query={query} favorites={favorites} onToggleFavorite={toggleFavorite} />

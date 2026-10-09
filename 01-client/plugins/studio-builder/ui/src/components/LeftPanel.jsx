@@ -204,10 +204,14 @@ export const LeftPanel = memo(function LeftPanel({
           hidden={tab !== 'structure'}
           className="sbx-left__body sbx-left__body--structure"
         >
-          <div className="sbx-nav-switch" role="group" aria-label={t('nav_view_label')}>
-            <button type="button" className={`sbx-chip${navView === 'layers' ? ' is-active' : ''}`} aria-pressed={navView === 'layers'} data-nav="layers" onClick={() => setNavView('layers')}>{t('nav_layers')}</button>
-            <button type="button" className={`sbx-chip${navView === 'pages' ? ' is-active' : ''}`} aria-pressed={navView === 'pages'} data-nav="pages" onClick={() => setNavView('pages')}>{t('nav_pages')}</button>
-          </div>
+          <Pills
+            size="sm"
+            className="sbx-nav-switch"
+            label={t('nav_view_label')}
+            value={navView}
+            onChange={setNavView}
+            options={[{ value: 'layers', label: t('nav_layers'), 'data-nav': 'layers' }, { value: 'pages', label: t('nav_pages'), 'data-nav': 'pages' }]}
+          />
           <div hidden={navView !== 'layers'}>
             <Outline />
             <BlockPalette compact />
@@ -249,6 +253,7 @@ export const LeftPanel = memo(function LeftPanel({
         >
           {(siteAllowed || elementsAllowed) && (
             <Pills
+              size="sm"
               className="sbx-ss__views"
               label={t('site_settings_title')}
               value={settingsView}
