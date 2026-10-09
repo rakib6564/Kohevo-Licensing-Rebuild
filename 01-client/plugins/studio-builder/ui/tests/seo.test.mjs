@@ -77,7 +77,7 @@ test('the SEO section shows every canonical field with the server limits, the ex
   assert.match(html, /never declares another domain as canonical/i, 'external domains are not used');
   assert.match(html, /data-testid="seo-og-image"/);
   assert.match(html, /value="7"/, 'the current media id is shown');
-  assert.match(html, /<option value="noindex,follow" selected="">noindex,follow<\/option>/, 'robots keeps the canonical enum');
+  assert.match(html, /<option value="noindex,follow" selected="">Don’t index, follow links<\/option>/, 'robots keeps the canonical value, with a readable name');
   assert.match(html, /They go live only when you publish/);
   assert.ok(!/data-testid="seo-canonical-problem"/.test(html), 'a valid canonical shows no problem');
 });

@@ -26,6 +26,7 @@ import { MEDIA_TYPES } from '../../core/inspectorSections.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
 import { IconButton } from './InspectorIcons.jsx';
+import { optionLabel } from '../../core/optionLabels.mjs';
 
 /** Mirrors CanonicalDocumentSchema::Z_INDEX_MIN / Z_INDEX_MAX. */
 const Z_INDEX_MIN = -999;
@@ -153,7 +154,7 @@ export function BlockInspector({ info }) {
       <div className="sbx-field">
         <label className="sbx-field__label" htmlFor={`${idPrefix}-tag`}>{t('wrapper_tag')}</label>
         <select id={`${idPrefix}-tag`} value={block.tag || 'div'} onChange={(e) => save(ops.updateBlockTag(block.id, e.target.value === 'div' ? null : e.target.value))}>
-          {OPTIONS.tags.map((tag) => <option key={tag} value={tag}>{`<${tag}>`}</option>)}
+          {OPTIONS.tags.map((tag) => <option key={tag} value={tag}>{tag === 'div' ? optionLabel(tag) : `${optionLabel(tag)} · <${tag}>`}</option>)}
         </select>
         <p className="sbx-hint">{t('wrapper_tag_hint')}</p>
       </div>
@@ -161,9 +162,10 @@ export function BlockInspector({ info }) {
     opacity: () => <StyleControls style={style} capabilities={capabilities} only="opacity" onChange={saveStyle} />,
     tokens: () => Object.keys(STYLE_TOKEN_CATEGORIES).filter((k) => capabilities.includes(k)).map((key) => (
       <div className="sbx-field" key={key}>
-        <label className="sbx-field__label" htmlFor={`${idPrefix}-${key}`}>{key.replace('_token', '').replace('_', ' ')}</label>
+        <label className="sbx-field__label" htmlFor={`${idPrefix}-${key}`}>{t(`tok_field_${key}`)}</label>
         <TokenSelect
           id={`${idPrefix}-${key}`}
+          label={t(`tok_field_${key}`)}
           value={style[key] ?? null}
           tokens={tokensFor(manifest, STYLE_TOKEN_CATEGORIES[key])}
           onChange={(v) => saveStyle({ ...style, [key]: v })}

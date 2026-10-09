@@ -23,6 +23,7 @@ import { tokensFor } from '../../core/fields.mjs';
 import { componentByRef } from '../../core/library.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
+import { optionLabel } from '../../core/optionLabels.mjs';
 
 const COLUMN_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
@@ -110,13 +111,13 @@ export function SectionInspector({ info }) {
       <div className="sbx-field">
                 <label className="sbx-field__label" htmlFor={`${idPrefix}-width`}>{t('width')}</label>
                 <select id={`${idPrefix}-width`} value={layout.width || 'wide'} onChange={(e) => setLayout({ width: e.target.value })}>
-                  {asList(vocab.container_widths).map((w) => <option key={w} value={w}>{w}</option>)}
+                  {asList(vocab.container_widths).map((w) => <option key={w} value={w}>{optionLabel(w)}</option>)}
                 </select>
               </div>
               <div className="sbx-field">
                 <label className="sbx-field__label" htmlFor={`${idPrefix}-gap`}>{t('gap')}</label>
                 <select id={`${idPrefix}-gap`} value={layout.gap || 'md'} onChange={(e) => setLayout({ gap: e.target.value })}>
-                  {asList(vocab.spacing_scale).map((s) => <option key={s} value={s}>{s}</option>)}
+                  {asList(vocab.spacing_scale).map((s) => <option key={s} value={s}>{optionLabel(s)}</option>)}
                 </select>
               </div>
               <ResponsiveSelect

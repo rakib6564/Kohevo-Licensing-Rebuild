@@ -14,6 +14,8 @@ import { t } from '../../core/messages.mjs';
 import { MediaControl } from './MediaControl.jsx';
 import { UrlControl } from './UrlControl.jsx';
 import { PropChoice, PropTiles } from './PropPresenters.jsx';
+import { TokenPicker } from './TokenPicker.jsx';
+import { optionLabel } from '../../core/optionLabels.mjs';
 
 const RichTextEditor = lazy(() => import('./RichTextEditor.jsx'));
 
@@ -98,7 +100,7 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
       return (
         <FieldRow id={id} label={field.label} required={field.required} problem={problem}>
           <select {...common} value={draft ?? ''} onChange={(e) => update(e.target.value)}>
-            {asList(field.allowed_values).map((v) => <option key={String(v)} value={v}>{String(v)}</option>)}
+            {asList(field.allowed_values).map((v) => <option key={String(v)} value={v}>{optionLabel(v)}</option>)}
           </select>
         </FieldRow>
       );
@@ -166,20 +168,9 @@ export function ObjectFields({ schema, value, onChange, manifest, mediaPicker, p
   });
 }
 
-export function TokenSelect({ id, value, tokens, onChange, allowNone = true, noneLabel }) {
-  const groups = new Map();
-  tokens.forEach((tk) => { if (!groups.has(tk.category)) groups.set(tk.category, []); groups.get(tk.category).push(tk); });
-  return (
-    <select id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}>
-      {allowNone && <option value="">{noneLabel || t('none')}</option>}
-      {[...groups.entries()].map(([cat, list]) => (
-        <optgroup key={cat} label={cat}>
-          {list.map((tk) => <option key={tk.ref} value={tk.ref}>{tk.ref}</option>)}
-        </optgroup>
-      ))}
-      {value && !tokens.some((tk) => tk.ref === value) ? <option value={value}>{value}</option> : null}
-    </select>
-  );
+/** The token chooser: a named, sampled list (see TokenPicker). Kept under its old name for existing callers. */
+export function TokenSelect(props) {
+  return <TokenPicker {...props} />;
 }
 
 function LinkControl({ field, value, onChange, problem }) {

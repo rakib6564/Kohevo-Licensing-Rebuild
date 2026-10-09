@@ -18,6 +18,7 @@ import * as ops from '../../core/operations.mjs';
 import { t, errorMessage } from '../../core/messages.mjs';
 import { seoLimits, canonicalProblem, canonicalValue } from '../../core/seo.mjs';
 import { SeoImageControl } from './SeoImageControl.jsx';
+import { optionLabel } from '../../core/optionLabels.mjs';
 
 function TextSetting({ label, value, maxLength, multiline = false, onCommit, counter = false }) {
   const id = useId();
@@ -143,7 +144,7 @@ export function PageInspector() {
     <div className="sbx-field" key={key}>
       <label className="sbx-field__label" htmlFor={`sbx-page-${key}`}>{labelText}</label>
       <select id={`sbx-page-${key}`} value={settings[key] ?? ''} onChange={(e) => applyOp(ops.updateSettings({ [key]: e.target.value }), { label: labelText })}>
-        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+        {options.map((o) => <option key={o} value={o}>{optionLabel(o)}</option>)}
       </select>
     </div>
   );
@@ -179,7 +180,7 @@ export function PageInspector() {
       <div className="sbx-field">
         <label className="sbx-field__label" htmlFor="sbx-page-robots">{t('seo_robots_label')}</label>
         <select id="sbx-page-robots" value={seo.robots || 'index,follow'} onChange={(e) => applyOp(ops.updateSeo({ robots: e.target.value }), { label: t('seo') })}>
-          {asList(vocab.robots).map((r) => <option key={r} value={r}>{r}</option>)}
+          {asList(vocab.robots).map((r) => <option key={r} value={r}>{optionLabel(r)}</option>)}
         </select>
       </div>
     </div>

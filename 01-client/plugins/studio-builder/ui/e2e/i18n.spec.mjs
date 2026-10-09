@@ -69,7 +69,7 @@ test('block inspector controls are French (tabs, placeholders, select options)',
     const panel = page.locator('[role="tabpanel"]').filter({ has: page.locator('select') }).first();
     const optionTexts = (await panel.locator('option').allTextContents()).join('|');
     expect(optionTexts.length).toBeGreaterThan(20);
-    expect(optionTexts).not.toMatch(/\b(Solid|Dashed|Dotted|Small|Medium|Large|Capitalize|Bold \(700\)|Cover|Contain)\b/);
+    expect(optionTexts).not.toMatch(/\b(Solid|Dashed|Dotted|Small|Medium|Capitalize|Bold \(700\)|Cover|Contain)\b/);
   } finally {
     // the sandbox page is shared by every spec: put it back how we found it
     for (let i = 0; i < steps; i++) {

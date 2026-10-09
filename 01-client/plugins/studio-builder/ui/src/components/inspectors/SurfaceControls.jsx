@@ -11,8 +11,9 @@ import { Icon, choiceIcon } from './InspectorIcons.jsx';
 import { asObject } from '../../core/doc.mjs';
 import { CORNERS, FILTER, OPTIONS, SIDES, TRANSFORM, getPath, setPath, setPaths } from '../../core/styleSurface.mjs';
 import { t } from '../../core/messages.mjs';
+import { optionLabel } from '../../core/optionLabels.mjs';
 
-const optLabel = (value) => t(`opt_${String(value).replace(/-/g, '_')}`);
+const optLabel = optionLabel;
 const pathId = (id, path) => `${id}-${path.replace(/\./g, '-')}`;
 
 /** get / put helpers over one style (or state) object. */
