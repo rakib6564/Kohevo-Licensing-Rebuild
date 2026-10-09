@@ -112,6 +112,17 @@ a, button { cursor: default; }
 }
 `;
 
+/** Every node id from the target outward, nearest first (a click on content the editor does not own falls back to its owner). */
+export function nodeIdChain(target) {
+  const ids = [];
+  let el = nodeElementFrom(target);
+  while (el) {
+    ids.push(el.getAttribute(NODE_ATTR));
+    el = nodeElementFrom(el.parentElement);
+  }
+  return ids;
+}
+
 /** Nearest element (self or ancestor) carrying a node id. */
 export function nodeElementFrom(target) {
   let el = target;
@@ -293,7 +304,7 @@ export function attachCanvas(doc, handlers) {
     e.preventDefault();
     e.stopPropagation();
     const el = nodeElementFrom(e.target);
-    if (el) onSelect(el.getAttribute(NODE_ATTR), el.getAttribute(TYPE_ATTR), { shift: !!e.shiftKey, toggle: !!(e.metaKey || e.ctrlKey) });
+    if (el) onSelect(el.getAttribute(NODE_ATTR), el.getAttribute(TYPE_ATTR), { shift: !!e.shiftKey, toggle: !!(e.metaKey || e.ctrlKey) }, nodeIdChain(e.target));
   };
 
   const dblclick = (e) => {

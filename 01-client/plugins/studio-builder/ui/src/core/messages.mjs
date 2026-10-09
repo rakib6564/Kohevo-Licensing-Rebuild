@@ -873,7 +873,7 @@ const EN = {
   close: 'Close',
 
   announce_selected: '{label} selected',
-  selection_stale: 'That element was out of date, so the canvas was refreshed. Click it again.',
+  selection_stale: 'That part of the page belongs to a template or shared part, so it cannot be selected here.',
   announce_saved: 'All changes saved',
   announce_inserted: '{label} added',
   announce_removed: '{label} deleted',

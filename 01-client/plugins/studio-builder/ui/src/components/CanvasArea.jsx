@@ -157,8 +157,8 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   }, [working, loading, viewport.key]);
 
   // Integrity check: once the canvas has settled, any node on it that the document does not have means the live
-  // patch and the server's paint disagree. Repaint from the server (twice at most, so a node the server tags
-  // for some other reason cannot make it loop); a clean check resets the allowance.
+  // patch and the server's paint disagree. Repaint from the server once (a node the server tags for some other
+  // reason would otherwise reload the canvas forever); a clean check resets the allowance.
   const repaintsRef = useRef(0);
   useEffect(() => {
     if (!working || loading || !interactive) return undefined;
@@ -168,7 +168,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       if (!doc || doc.readyState === 'loading') return;
       const ids = Array.from(doc.querySelectorAll('[data-sb-node]'), (el) => el.getAttribute('data-sb-node'));
       if (!ghostNodeIds(ids, working).length) { repaintsRef.current = 0; return; }
-      if (repaintsRef.current >= 2) return;
+      if (repaintsRef.current >= 1) return;
       repaintsRef.current += 1;
       try {
         const win = frameRef.current && frameRef.current.contentWindow;
@@ -258,7 +258,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       return;
     }
     detachRef.current = attachCanvas(doc, {
-      onSelect: (id, _type, mods) => pickRef.current(id, mods || {}),
+      onSelect: (id, _type, mods, chain) => pickRef.current(id, mods || {}, null, chain),
       onDrop: (drop) => onCanvasDropRef.current(drop),
       onAction: (action, id) => actionRef.current(action, id),
       onInlineText: (id, text, prop) => onInlineTextRef.current(id, text, prop),
