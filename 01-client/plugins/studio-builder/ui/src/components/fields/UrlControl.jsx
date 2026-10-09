@@ -93,7 +93,7 @@ export function UrlControl({ field, draft, update, problem, common, id, mediaPic
           </button>
         ) : null}
       </div>
-      {problem ? <p className="sbx-field__problem" id={`${id}-problem`} role="alert">{t(problem)}</p> : null}
+      {problem ? <p className="sbx-field__error" id={`${id}-problem`} role="alert">{t(problem)}</p> : null}
     </div>
   );
 }

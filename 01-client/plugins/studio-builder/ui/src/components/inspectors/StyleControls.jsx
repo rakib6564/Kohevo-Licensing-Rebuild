@@ -23,7 +23,7 @@
 import { useId, useRef, useState } from 'react';
 import { asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
-import { Pills } from '../ui/index.js';
+import { Pills, Field } from '../ui/index.js';
 import { acceptsDraft } from '../../core/styleValues.mjs';
 import { acceptsSurfaceDraft } from '../../core/styleSurface.mjs';
 import { MediaControl } from '../fields/MediaControl.jsx';
@@ -43,8 +43,7 @@ export function ColorField({ id, label, value, onChange }) {
   const shown = draft ?? value ?? '';
   const invalid = draft !== null && !acceptsDraft('color', draft);
   return (
-    <div className="sbx-field">
-      <label className="sbx-field__label" htmlFor={`${id}-text`}>{label}</label>
+    <Field label={label} htmlFor={`${id}-text`}>
       <div className="sbx-color">
         <span className="sbx-color__swatch" style={literal ? { background: literal } : undefined}>
           <input
@@ -73,7 +72,7 @@ export function ColorField({ id, label, value, onChange }) {
         />
       </div>
       {invalid && <p className="sbx-field__error" id={`${id}-err`} role="alert">{t('invalid_css_value')}</p>}
-    </div>
+    </Field>
   );
 }
 
@@ -135,8 +134,7 @@ export function DraftText({ id, label, value, placeholder, onCommit, hint, kind,
   );
 
   return (
-    <div className="sbx-field">
-      <label className="sbx-field__label" htmlFor={id}>{label}</label>
+    <Field label={label} htmlFor={id}>
       {units ? (
         <div className="sbx-unitfield">
           {input}
@@ -159,7 +157,7 @@ export function DraftText({ id, label, value, placeholder, onCommit, hint, kind,
       ) : input}
       {error && <p className="sbx-field__error" id={`${id}-err`} role="alert">{t('invalid_css_value')}</p>}
       {hint && <p className="sbx-hint">{hint}</p>}
-    </div>
+    </Field>
   );
 }
 
@@ -204,8 +202,7 @@ function GradientField({ value, onChange }) {
         <label className="sbx-field__label" htmlFor={`${id}-to`}>{t('gradient_to')}</label>
         <input id={`${id}-to`} type="color" value={to} onChange={(e) => commit(angle, from, e.target.value)} />
       </div>
-      <div className="sbx-field">
-        <label className="sbx-field__label" htmlFor={`${id}-angle`}>{t('gradient_angle')}</label>
+      <Field label={t('gradient_angle')} htmlFor={`${id}-angle`}>
         <input
           id={`${id}-angle`}
           type="range"
@@ -216,7 +213,7 @@ function GradientField({ value, onChange }) {
           onChange={(e) => commit(e.target.value, from, to)}
         />
         <output htmlFor={`${id}-angle`}>{angle}°</output>
-      </div>
+      </Field>
       <p className="sbx-hint">{t('gradient_hint')}</p>
     </fieldset>
   );
@@ -370,20 +367,18 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
               />
               {isMediaRef(bg.image) && (
                 <>
-                  <div className="sbx-field">
-                    <label className="sbx-field__label" htmlFor={`${id}-bg-fit`}>{t('bg_fit')}</label>
+                  <Field label={t('bg_fit')} htmlFor={`${id}-bg-fit`}>
                     <select id={`${id}-bg-fit`} value={BG_FIT.includes(bg.fit) ? bg.fit : 'cover'} onChange={(e) => patchBackground({ fit: e.target.value })}>
                       <option value="cover">{t('fit_cover')}</option>
                       <option value="contain">{t('fit_contain')}</option>
                       <option value="auto">{t('fit_auto')}</option>
                     </select>
-                  </div>
-                  <div className="sbx-field">
-                    <label className="sbx-field__label" htmlFor={`${id}-bg-repeat`}>{t('bg_repeat')}</label>
+                  </Field>
+                  <Field label={t('bg_repeat')} htmlFor={`${id}-bg-repeat`}>
                     <select id={`${id}-bg-repeat`} value={BG_REPEAT.includes(bg.repeat) ? bg.repeat : 'no-repeat'} onChange={(e) => patchBackground({ repeat: e.target.value })}>
                       {BG_REPEAT.map((r) => <option key={r} value={r}>{t(`repeat_${r.replace('-', '_')}`)}</option>)}
                     </select>
-                  </div>
+                  </Field>
                   <FocalPad
                     id={`${id}-bg`}
                     value={bg.image.focal_point}
@@ -417,8 +412,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
       {has('border') && (
         <fieldset className="sbx-fieldset">
           {!only && <legend>{t('border')}</legend>}
-          <div className="sbx-field">
-            <label className="sbx-field__label" htmlFor={`${id}-border-style`}>{t('border_style')}</label>
+          <Field label={t('border_style')} htmlFor={`${id}-border-style`}>
             <select
               id={`${id}-border-style`}
               value={border.style ?? ''}
@@ -430,9 +424,8 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
               <option value="dotted">{t('bs_dotted')}</option>
               <option value="double">{t('bs_double')}</option>
             </select>
-          </div>
-          <div className="sbx-field">
-            <label className="sbx-field__label" htmlFor={`${id}-border-radius`}>{t('border_radius')}</label>
+          </Field>
+          <Field label={t('border_radius')} htmlFor={`${id}-border-radius`}>
             <select
               id={`${id}-border-radius`}
               value={RADIUS_PRESETS.includes(border.radius) ? border.radius : ''}
@@ -446,7 +439,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
               <option value="2xl">{t('size_2xl')}</option>
               <option value="full">{t('size_full_pill')}</option>
             </select>
-          </div>
+          </Field>
           <DraftText
             id={`${id}-border-width`}
             kind="borderWidth"
@@ -467,8 +460,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
       {has('shadow') && (
         <fieldset className="sbx-fieldset">
           {!only && <legend>{t('box_shadow')}</legend>}
-          <div className="sbx-field">
-            <label className="sbx-field__label" htmlFor={`${id}-shadow-preset`}>{t('box_shadow')}</label>
+          <Field label={t('box_shadow')} htmlFor={`${id}-shadow-preset`}>
             <select
               id={`${id}-shadow-preset`}
               value={SHADOW_PRESETS.includes(style.shadow) ? style.shadow : ''}
@@ -481,7 +473,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
               <option value="xl">{t('size_xl')}</option>
               <option value="2xl">{t('size_2xl')}</option>
             </select>
-          </div>
+          </Field>
           {/* Once the author leaves the preset list the value is a custom CSS
               box-shadow, so only then does the free-text field apply. */}
           {typeof style.shadow === 'string' && !SHADOW_PRESETS.includes(style.shadow) && (
@@ -529,8 +521,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
       )}
 
       {has('opacity') && (
-        <div className="sbx-field">
-          <label className="sbx-field__label" htmlFor={`${id}-opacity`}>{t('opacity_label')}</label>
+        <Field label={t('opacity_label')} htmlFor={`${id}-opacity`}>
           <input
             id={`${id}-opacity`}
             type="range"
@@ -544,7 +535,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
             }}
           />
           <output htmlFor={`${id}-opacity`}>{Math.round((style.opacity ?? 1) * 100)}%</output>
-        </div>
+        </Field>
       )}
     </>
   );

@@ -24,6 +24,7 @@ import { componentByRef } from '../../core/library.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
 import { sizedLabel, sizedLabeller } from '../../core/optionValues.mjs';
+import { Field } from '../ui/index.js';
 
 const COLUMN_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
@@ -35,7 +36,7 @@ function GlobalSectionPanel({ section, label }) {
     <div className="sbx-global" data-testid="global-section-panel">
       <h3 className="sbx-inspector__subtitle">{t('global_section_title')}</h3>
       <p className="sbx-hint">{t('global_section_body')}</p>
-      {library && !component && <p role="alert" className="sbx-field__problem">{t('global_section_missing')}</p>}
+      {library && !component && <p role="alert" className="sbx-field__error">{t('global_section_missing')}</p>}
       {component && (
         <p>
           <strong>{component.title}</strong>
@@ -108,18 +109,16 @@ export function SectionInspector({ info }) {
   const sectionBodies = {
     layout: () => (
       <>
-      <div className="sbx-field">
-                <label className="sbx-field__label" htmlFor={`${idPrefix}-width`}>{t('width')}</label>
+      <Field label={t('width')} htmlFor={`${idPrefix}-width`}>
                 <select id={`${idPrefix}-width`} value={layout.width || 'wide'} onChange={(e) => setLayout({ width: e.target.value })}>
                   {asList(vocab.container_widths).map((w) => <option key={w} value={w}>{sizedLabel('section.width', w)}</option>)}
                 </select>
-              </div>
-              <div className="sbx-field">
-                <label className="sbx-field__label" htmlFor={`${idPrefix}-gap`}>{t('gap')}</label>
+              </Field>
+              <Field label={t('gap')} htmlFor={`${idPrefix}-gap`}>
                 <select id={`${idPrefix}-gap`} value={layout.gap || 'md'} onChange={(e) => setLayout({ gap: e.target.value })}>
                   {asList(vocab.spacing_scale).map((s) => <option key={s} value={s}>{sizedLabel('section.gap', s)}</option>)}
                 </select>
-              </div>
+              </Field>
               <ResponsiveSelect
                 label={t('columns')}
                 value={layout.columns ?? { base: 1 }}
@@ -138,10 +137,9 @@ export function SectionInspector({ info }) {
                 activeBreakpoint={viewport.breakpoint}
                 onChange={(padding) => setLayout({ padding_y: padding })}
               />
-              <div className="sbx-field">
-                <label className="sbx-field__label" htmlFor={`${idPrefix}-bg`}>{t('background')}</label>
+              <Field label={t('background')} htmlFor={`${idPrefix}-bg`}>
                 <TokenSelect id={`${idPrefix}-bg`} value={layout.background_token ?? null} tokens={tokensFor(manifest, ['surface', 'color'])} onChange={(v) => setLayout({ background_token: v })} />
-              </div>
+              </Field>
       </>
     ),
     background: () => (

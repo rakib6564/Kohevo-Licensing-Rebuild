@@ -6,6 +6,7 @@ import { useRef } from 'react';
 import { t } from '../../core/messages.mjs';
 import { focalFromPoint, overlayWith, parseOverlay } from '../../core/overlayColor.mjs';
 import { ColorField } from './StyleControls.jsx';
+import { Field } from '../ui/index.js';
 
 export function OverlayField({ id, value, onChange }) {
   const parsed = parseOverlay(value);
@@ -22,8 +23,7 @@ export function OverlayField({ id, value, onChange }) {
         }}
       />
       {parsed.editable && (
-        <div className="sbx-field">
-          <label className="sbx-field__label" htmlFor={`${id}-overlay-opacity`}>{t('bg_overlay_opacity')}</label>
+        <Field label={t('bg_overlay_opacity')} htmlFor={`${id}-overlay-opacity`}>
           <div className="sbx-slider">
             <input
               id={`${id}-overlay-opacity`}
@@ -40,7 +40,7 @@ export function OverlayField({ id, value, onChange }) {
             />
             <output htmlFor={`${id}-overlay-opacity`}>{parsed.percent}%</output>
           </div>
-        </div>
+        </Field>
       )}
     </>
   );

@@ -17,6 +17,7 @@ import { PropChoice, PropTiles } from './PropPresenters.jsx';
 import { TokenPicker } from './TokenPicker.jsx';
 import { optionLabel } from '../../core/optionLabels.mjs';
 import { sizedLabeller, tableFor } from '../../core/optionValues.mjs';
+import { Check, Field } from '../ui/index.js';
 
 const RichTextEditor = lazy(() => import('./RichTextEditor.jsx'));
 
@@ -50,13 +51,9 @@ function useDraft(value, field, onChange) {
 }
 
 export const FieldRow = ({ id, label, required, problem, children, wide = false }) => (
-  <div className={`sbx-field${wide ? ' sbx-field--wide' : ''}`}>
-    <label className="sbx-field__label" htmlFor={id}>
-      {label}{required ? <span aria-hidden="true"> *</span> : null}
-    </label>
+  <Field label={label} htmlFor={id} required={required} variant={wide ? 'wide' : 'row'} error={problem ? t(problem) : null} errorId={`${id}-problem`}>
     {children}
-    {problem ? <p className="sbx-field__problem" id={`${id}-problem`} role="alert">{t(problem)}</p> : null}
-  </div>
+  </Field>
 );
 
 export const FieldControl = memo(function FieldControl({ field, value, onChange, manifest, mediaPicker, labelOf = null }) {
@@ -197,11 +194,8 @@ function LinkControl({ field, value, onChange, problem }) {
         <span className="sbx-field__label">{t('link_href')}</span>
         <input type="text" inputMode="url" value={link.href ?? ''} placeholder={t('url_placeholder_path')} onChange={(e) => set({ href: e.target.value.trim() })} />
       </label>
-      <label className="sbx-field sbx-field--check">
-        <input type="checkbox" checked={link.target === '_blank'} onChange={(e) => set({ target: e.target.checked ? '_blank' : '_self' })} />
-        <span>{t('link_new_tab')}</span>
-      </label>
-      {problem ? <p className="sbx-field__problem" id={`${id}-problem`} role="alert">{t(problem)}</p> : null}
+      <Check label={t('link_new_tab')} checked={link.target === '_blank'} onChange={(e) => set({ target: e.target.checked ? '_blank' : '_self' })} />
+      {problem ? <p className="sbx-field__error" id={`${id}-problem`} role="alert">{t(problem)}</p> : null}
     </fieldset>
   );
 }

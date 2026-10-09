@@ -45,7 +45,7 @@ export function CustomCss() {
       <summary><span>{t('cc_title')}</span><span className="sbx-ss__count">{stored ? `${stored.bytes} B` : ''}</span></summary>
       <div className="sbx-cc" data-testid="custom-css">
         <p className="sbx-hint">{t('cc_hint')}</p>
-        {error && <p role="alert" className="sbx-field__problem">{error}</p>}
+        {error && <p role="alert" className="sbx-field__error">{error}</p>}
         <label className="sbx-sr-only" htmlFor={id}>{t('cc_label')}</label>
         <textarea
           id={id}
@@ -61,7 +61,7 @@ export function CustomCss() {
           onChange={(e) => { setDraft(e.target.value); setNote(null); }}
         />
         <div className="sbx-cc__foot">
-          <span className={`sbx-muted${state.tooLarge ? ' sbx-field__problem' : ''}`}>{state.tooLarge ? t('cc_too_large') : t('cc_bytes', { n: state.bytes, max })}</span>
+          <span className={`sbx-muted${state.tooLarge ? ' sbx-field__error' : ''}`}>{state.tooLarge ? t('cc_too_large') : t('cc_bytes', { n: state.bytes, max })}</span>
           <button type="button" className="sbx-btn sbx-btn--primary" data-testid="custom-css-save" disabled={busy || !stored || !state.dirty || state.tooLarge} onClick={save}>{t('cc_save')}</button>
         </div>
         {note && !state.dirty && <p className="sbx-hint" role="status">{note === 'sanitized' ? t('cc_sanitized') : t('cc_saved')}</p>}

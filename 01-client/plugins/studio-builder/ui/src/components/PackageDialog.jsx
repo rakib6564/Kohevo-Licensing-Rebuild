@@ -290,7 +290,7 @@ export function PackageDialog({ onClose, onReplaced, initialTab = 'export', init
           )}
         </div>
       )}
-      {error && <p role="alert" className="sbx-field__problem">{error}</p>}
+      {error && <p role="alert" className="sbx-field__error">{error}</p>}
     </Dialog>
   );
 }

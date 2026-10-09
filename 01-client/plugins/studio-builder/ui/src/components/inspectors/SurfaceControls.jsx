@@ -8,7 +8,7 @@
 import { useId, useState } from 'react';
 import { ColorField, DraftText, unitOf } from './StyleControls.jsx';
 import { Icon, choiceIcon } from './InspectorIcons.jsx';
-import { Field, Pills } from '../ui/index.js';
+import { Field, Pills, Check } from '../ui/index.js';
 import { asObject } from '../../core/doc.mjs';
 import { CORNERS, FILTER, OPTIONS, SIDES, TRANSFORM, getPath, setPath, setPaths } from '../../core/styleSurface.mjs';
 import { t } from '../../core/messages.mjs';
@@ -48,8 +48,7 @@ export function Segmented({ label, value, options, onChange }) {
  */
 export function IconChoice({ label, kind, value, options, onChange }) {
   return (
-    <div className="sbx-field sbx-field--choice">
-      <span className="sbx-field__label">{label}</span>
+    <Field label={label} variant="choice">
       <div className="sbx-iconchoice" role="group" aria-label={label}>
         {options.map((o) => (
           <button
@@ -65,19 +64,18 @@ export function IconChoice({ label, kind, value, options, onChange }) {
           </button>
         ))}
       </div>
-    </div>
+    </Field>
   );
 }
 
 export function SelectField({ id, label, value, options, onChange, emptyLabel }) {
   return (
-    <div className="sbx-field">
-      <label className="sbx-field__label" htmlFor={id}>{label}</label>
+    <Field label={label} htmlFor={id}>
       <select id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value || undefined)}>
         <option value="">{emptyLabel ?? t('inherit')}</option>
         {options.map((o) => <option key={o} value={o}>{optLabel(o)}</option>)}
       </select>
-    </div>
+    </Field>
   );
 }
 
@@ -89,8 +87,7 @@ export function SliderField({ id, label, value, min, max, step = 1, unit = '', n
     if (Number.isFinite(v)) onChange(v === neutral ? undefined : v);
   };
   return (
-    <div className="sbx-field">
-      <label className="sbx-field__label" htmlFor={id}>{label}</label>
+    <Field label={label} htmlFor={id}>
       <div className="sbx-slider">
         <input id={id} type="range" min={min} max={max} step={step} value={shown} onChange={(e) => commit(e.target.value)} />
         <span className="sbx-slider__num">
@@ -107,15 +104,14 @@ export function SliderField({ id, label, value, min, max, step = 1, unit = '', n
           {unit ? <span className="sbx-slider__unit" aria-hidden="true">{unit}</span> : null}
         </span>
       </div>
-    </div>
+    </Field>
   );
 }
 
 /** A whole-number input within bounds; empty clears it. */
 export function IntField({ id, label, value, min, max, onChange }) {
   return (
-    <div className="sbx-field">
-      <label className="sbx-field__label" htmlFor={id}>{label}</label>
+    <Field label={label} htmlFor={id}>
       <input
         id={id}
         type="number"
@@ -130,7 +126,7 @@ export function IntField({ id, label, value, min, max, onChange }) {
           if (!Number.isNaN(n)) onChange(Math.max(min, Math.min(max, n)));
         }}
       />
-    </div>
+    </Field>
   );
 }
 
@@ -354,10 +350,7 @@ export function ShadowExtras({ style, onChange }) {
       <Length id={id} path="shadow.blur" label={t('shadow_blur')} get={f.get} put={f.put} />
       <Length id={id} path="shadow.spread" label={t('shadow_spread')} get={f.get} put={f.put} />
       <ColorField id={pathId(id, 'shadow.color')} label={t('shadow_color')} value={shadow.color} onChange={required('shadow.color', NEW_SHADOW.color)} />
-      <label className="sbx-field sbx-field--check">
-        <input type="checkbox" checked={shadow.inset === true} onChange={(e) => f.put('shadow.inset', e.target.checked ? true : undefined)} />
-        <span>{t('shadow_inset')}</span>
-      </label>
+      <Check label={t('shadow_inset')} checked={shadow.inset === true} onChange={(e) => f.put('shadow.inset', e.target.checked ? true : undefined)} />
       <button type="button" className="sbx-btn sbx-btn--xs" onClick={() => onChange(setPath(style, 'shadow', undefined))}>{t('shadow_back')}</button>
     </fieldset>
   );

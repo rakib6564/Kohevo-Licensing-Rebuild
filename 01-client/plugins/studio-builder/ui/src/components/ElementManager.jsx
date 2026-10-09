@@ -69,7 +69,7 @@ export function ElementManager() {
   return (
     <div className="sbx-em" data-testid="element-manager">
       <p className="sbx-hint">{t('em_intro')}</p>
-      {error && <p role="alert" className="sbx-field__problem">{error}</p>}
+      {error && <p role="alert" className="sbx-field__error">{error}</p>}
       {!data && !error && <p className="sbx-muted">{t('loading')}</p>}
       {data && (
         <>

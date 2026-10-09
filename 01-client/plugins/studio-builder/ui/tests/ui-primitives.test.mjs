@@ -79,3 +79,11 @@ test('Tile: an enabled tile has no disabled state or reason', { skip }, () => {
   assert.ok(!html.includes('aria-disabled'));
   assert.ok(!html.includes('sbx-tile__reason'));
 });
+
+test('Check: a labelled checkbox row; props go to the input', { skip }, () => {
+  const html = renderToStaticMarkup(React.createElement(ui.Check, { label: 'Open after', checked: true, disabled: true, onChange() {} }));
+  assert.match(html, /<label class="sbx-field sbx-field--check"><input type="checkbox"/);
+  assert.match(html, /checked=""/);
+  assert.match(html, /disabled=""/);
+  assert.match(html, /<span>Open after<\/span>/);
+});

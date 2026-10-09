@@ -18,6 +18,7 @@ import {
 } from '../../core/motion.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
+import { Field } from '../ui/index.js';
 
 /** `block` is the block (or, with `section`, the section) whose motion is edited. */
 export function MotionInspector({ block, applyOp, label, section = false }) {
@@ -77,8 +78,7 @@ export function MotionInspector({ block, applyOp, label, section = false }) {
 
         {/* The presets are a shortcut; this select is the authoritative
             control (and the only place 'none' is spelled out). */}
-        <div className="sbx-field">
-          <label className="sbx-field__label" htmlFor={`${idPrefix}-type`}>{t('motion_entrance')}</label>
+        <Field label={t('motion_entrance')} htmlFor={`${idPrefix}-type`}>
           <select
             id={`${idPrefix}-type`}
             value={animation.type}
@@ -86,7 +86,7 @@ export function MotionInspector({ block, applyOp, label, section = false }) {
           >
             {ANIMATION_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-        </div>
+        </Field>
 
         {entranceOn && (
           <fieldset className="sbx-fieldset">
@@ -107,8 +107,7 @@ export function MotionInspector({ block, applyOp, label, section = false }) {
               onChange={(ms) => commitAnimation({ ...animation, delay_ms: ms })}
             />
 
-            <div className="sbx-field">
-              <label className="sbx-field__label" htmlFor={`${idPrefix}-easing`}>{t('motion_easing')}</label>
+            <Field label={t('motion_easing')} htmlFor={`${idPrefix}-easing`}>
               <select
                 id={`${idPrefix}-easing`}
                 value={animation.easing || EASINGS[0].value}
@@ -116,7 +115,7 @@ export function MotionInspector({ block, applyOp, label, section = false }) {
               >
                 {EASINGS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
-            </div>
+            </Field>
           </fieldset>
         )}
       </section>
@@ -167,8 +166,7 @@ function InteractionSection({ idPrefix, interactions, onChange }) {
       <h3 className="sbx-fieldset-legend">{t('motion_interaction')}</h3>
       <p className="sbx-hint">{t('motion_interaction_hint')}</p>
 
-      <div className="sbx-field">
-        <label className="sbx-field__label" htmlFor={`${idPrefix}-trigger`}>{t('motion_interaction')}</label>
+      <Field label={t('motion_interaction')} htmlFor={`${idPrefix}-trigger`}>
         <select
           id={`${idPrefix}-trigger`}
           value={trigger}
@@ -179,11 +177,10 @@ function InteractionSection({ idPrefix, interactions, onChange }) {
           ))}
         </select>
         {trigger === 'scroll' && <p className="sbx-hint">{t('motion_scroll_hint')}</p>}
-      </div>
+      </Field>
 
       {(trigger === 'hover' || trigger === 'focus') && (
-        <div className="sbx-field">
-          <label className="sbx-field__label" htmlFor={`${idPrefix}-trigger-anim`}>{t('motion_entrance')}</label>
+        <Field label={t('motion_entrance')} htmlFor={`${idPrefix}-trigger-anim`}>
           <select
             id={`${idPrefix}-trigger-anim`}
             value={hoverAnim}
@@ -194,7 +191,7 @@ function InteractionSection({ idPrefix, interactions, onChange }) {
           >
             {ANIMATION_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-        </div>
+        </Field>
       )}
 
       <p className="sbx-hint">{t('motion_reduced_note')}</p>
@@ -207,8 +204,7 @@ export function EntranceSelect({ block, applyOp, label, section = false }) {
   const animation = normalizeAnimation(block.animation);
   const commit = (next) => applyOp((section ? ops.updateSectionAnimation : ops.updateBlockAnimation)(block.id, next), { label });
   return (
-    <div className="sbx-field">
-      <label className="sbx-field__label" htmlFor={id}>{t('entrance_animation')}</label>
+    <Field label={t('entrance_animation')} htmlFor={id}>
       <select
         id={id}
         value={animation.type}
@@ -224,6 +220,6 @@ export function EntranceSelect({ block, applyOp, label, section = false }) {
       >
         {MOTION_PRESETS.map((preset) => <option key={preset.value} value={preset.value}>{preset.label}</option>)}
       </select>
-    </div>
+    </Field>
   );
 }

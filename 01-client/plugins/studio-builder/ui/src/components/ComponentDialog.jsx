@@ -9,6 +9,7 @@ import { useEngineState, useSelection } from './EditorContext.jsx';
 import { t } from '../core/messages.mjs';
 import { findNode, isGlobalSection } from '../core/doc.mjs';
 import { slugify } from '../core/library.mjs';
+import { Check } from './ui/index.js';
 
 export function ComponentDialog({ onClose, onCreate }) {
   const { selection } = useSelection();
@@ -58,16 +59,10 @@ export function ComponentDialog({ onClose, onCreate }) {
         <input id="sbx-cmp-slug" type="text" maxLength={191} value={effectiveSlug} onChange={(e) => { setSlugTouched(true); setSlug(slugify(e.target.value, 191)); }} />
       </div>
       {selectedSection && (
-        <label className="sbx-field sbx-field--check">
-          <input type="checkbox" checked={fromSection} onChange={(e) => setFromSection(e.target.checked)} />
-          <span>{t('component_from_section')}</span>
-        </label>
+        <Check label={t('component_from_section')} checked={fromSection} onChange={(e) => setFromSection(e.target.checked)} />
       )}
-      <label className="sbx-field sbx-field--check">
-        <input type="checkbox" checked={openAfter} onChange={(e) => setOpenAfter(e.target.checked)} />
-        <span>{t('component_open_after')}</span>
-      </label>
-      {error && <p role="alert" className="sbx-field__problem">{error}</p>}
+      <Check label={t('component_open_after')} checked={openAfter} onChange={(e) => setOpenAfter(e.target.checked)} />
+      {error && <p role="alert" className="sbx-field__error">{error}</p>}
     </Dialog>
   );
 }

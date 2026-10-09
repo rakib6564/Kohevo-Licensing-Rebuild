@@ -27,6 +27,7 @@ import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
 import { IconButton } from './InspectorIcons.jsx';
 import { optionLabel } from '../../core/optionLabels.mjs';
+import { Field } from '../ui/index.js';
 
 /** Mirrors CanonicalDocumentSchema::Z_INDEX_MIN / Z_INDEX_MAX. */
 const Z_INDEX_MIN = -999;
@@ -94,8 +95,7 @@ export function BlockInspector({ info }) {
       <>
         {capabilities.includes('typography') && (
           <>
-            <div className="sbx-field">
-              <label className="sbx-field__label" htmlFor={`${idPrefix}-typo-weight`}>{t('font_weight')}</label>
+            <Field label={t('font_weight')} htmlFor={`${idPrefix}-typo-weight`}>
               <select
                 id={`${idPrefix}-typo-weight`}
                 value={asObject(style.typography).weight || ''}
@@ -108,9 +108,8 @@ export function BlockInspector({ info }) {
                 <option value="bold">{t('fw_bold')}</option>
                 <option value="extrabold">{t('fw_extrabold')}</option>
               </select>
-            </div>
-            <div className="sbx-field">
-              <label className="sbx-field__label" htmlFor={`${idPrefix}-typo-transform`}>{t('text_transform')}</label>
+            </Field>
+            <Field label={t('text_transform')} htmlFor={`${idPrefix}-typo-transform`}>
               <select
                 id={`${idPrefix}-typo-transform`}
                 value={asObject(style.typography).transform || ''}
@@ -121,7 +120,7 @@ export function BlockInspector({ info }) {
                 <option value="lowercase">{t('tt_lowercase')}</option>
                 <option value="capitalize">{t('tt_capitalize')}</option>
               </select>
-            </div>
+            </Field>
           </>
         )}
         <StyleControls style={style} capabilities={capabilities} only="typography" mediaPicker={boot.mediaPicker} onChange={saveStyle} />
@@ -152,18 +151,16 @@ export function BlockInspector({ info }) {
     effects: () => <EffectsPane style={style} onChange={saveStyle} />,
     states: () => <StatesPane states={block.style_states} onChange={(next) => save(ops.updateBlockStyleStates(block.id, next))} />,
     tag: () => (
-      <div className="sbx-field">
-        <label className="sbx-field__label" htmlFor={`${idPrefix}-tag`}>{t('wrapper_tag')}</label>
+      <Field label={t('wrapper_tag')} htmlFor={`${idPrefix}-tag`}>
         <select id={`${idPrefix}-tag`} value={block.tag || 'div'} onChange={(e) => save(ops.updateBlockTag(block.id, e.target.value === 'div' ? null : e.target.value))}>
           {OPTIONS.tags.map((tag) => <option key={tag} value={tag}>{tag === 'div' ? optionLabel(tag) : `${optionLabel(tag)} · <${tag}>`}</option>)}
         </select>
         <p className="sbx-hint">{t('wrapper_tag_hint')}</p>
-      </div>
+      </Field>
     ),
     opacity: () => <StyleControls style={style} capabilities={capabilities} only="opacity" onChange={saveStyle} />,
     tokens: () => Object.keys(STYLE_TOKEN_CATEGORIES).filter((k) => capabilities.includes(k)).map((key) => (
-      <div className="sbx-field" key={key}>
-        <label className="sbx-field__label" htmlFor={`${idPrefix}-${key}`}>{t(`tok_field_${key}`)}</label>
+      <Field label={t(`tok_field_${key}`)} htmlFor={`${idPrefix}-${key}`} key={key}>
         <TokenSelect
           id={`${idPrefix}-${key}`}
           label={t(`tok_field_${key}`)}
@@ -171,7 +168,7 @@ export function BlockInspector({ info }) {
           tokens={tokensFor(manifest, STYLE_TOKEN_CATEGORIES[key])}
           onChange={(v) => saveStyle({ ...style, [key]: v })}
         />
-      </div>
+      </Field>
     )),
     motion: () => <MotionInspector block={block} applyOp={applyOp} label={def.label} />,
     responsive: () => (
@@ -207,8 +204,7 @@ export function BlockInspector({ info }) {
     advanced: () => (
       <>
         <SpacingPane style={style} onChange={saveStyle} />
-        <div className="sbx-field">
-          <label className="sbx-field__label" htmlFor={`${idPrefix}-z-index`}>{t('z_index_label')}</label>
+        <Field label={t('z_index_label')} htmlFor={`${idPrefix}-z-index`}>
           <input
             id={`${idPrefix}-z-index`}
             type="number"
@@ -224,7 +220,7 @@ export function BlockInspector({ info }) {
               saveStyle({ ...style, z_index: val });
             }}
           />
-        </div>
+        </Field>
         <EntranceSelect block={block} applyOp={applyOp} label={def.label} />
         <IdentityFields block={block} doc={working} part="id" onChange={(attrs) => save(ops.updateBlockAttributes(block.id, attrs))} />
         <ClassNamesField id={`${idPrefix}-classes`} value={classNames} onChange={(list) => save(ops.updateBlockClassNames(block.id, list))} />

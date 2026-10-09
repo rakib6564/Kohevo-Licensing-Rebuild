@@ -1315,7 +1315,6 @@ html, body.sbx-body {
 .sbx-field--check { display: flex; align-items: center; gap: 0.45rem; color: var(--sbx-text-soft); }
 .sbx-field--inline { display: inline-block; margin: 0; }
 .sbx-field--inline input { width: 7rem !important; }
-.sbx-field__problem { color: #f87171; font-size: var(--sbx-fs-sm); margin: 0.25rem 0 0; }
 .sbx-fieldset { border: 1px solid var(--sbx-border); border-radius: var(--sbx-radius); padding: 0.5rem 0.65rem; margin: 0 0 0.75rem; }
 .sbx-fieldset legend { font-size: var(--sbx-fs-sm); font-weight: 600; padding: 0 0.25rem; color: var(--sbx-text-soft); }
 .sbx-responsive__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.35rem; }
@@ -2973,7 +2972,7 @@ html, body.sbx-body {
   .sbx-inspector .sbx-field:has(> .sbx-color):not(.sbx-field--stacked) { display: grid; grid-template-columns: minmax(70px, 38%) minmax(0, 1fr); align-items: center; column-gap: 10px; }
   .sbx-inspector .sbx-field:has(> input.sbx-input) > .sbx-field__label,
   .sbx-inspector .sbx-field:has(> .sbx-color) > .sbx-field__label { margin: 0; }
-  .sbx-inspector .sbx-field > .sbx-field__error, .sbx-inspector .sbx-field > .sbx-hint, .sbx-inspector .sbx-field > .sbx-field__problem { grid-column: 1 / -1; }
+  .sbx-inspector .sbx-field > .sbx-field__error, .sbx-inspector .sbx-field > .sbx-hint { grid-column: 1 / -1; }
   .sbx-inspector .sbx-spacing__grid .sbx-field:has(> input.sbx-input), .sbx-inspector .sbx-attr-row .sbx-field:has(> input.sbx-input) { display: block; }
   .sbx-inspector .sbx-spacing__grid .sbx-field > .sbx-field__label { margin-bottom: 0.25rem; }
 }
@@ -3095,7 +3094,7 @@ html, body.sbx-body {
 .sbx-ss__count { font-weight: 400; font-size: 0.7rem; opacity: 0.6; }
 .sbx-ss__cat { margin: 0.4rem 0 0.2rem; font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.6; }
 .sbx-ss__row { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr); align-items: center; gap: 0.5rem; padding: 0.15rem 0; }
-.sbx-ss__row > .sbx-field__problem { grid-column: 1 / -1; }
+.sbx-ss__row > .sbx-field__error { grid-column: 1 / -1; }
 .sbx-ss__name { font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sbx-ss__ctl { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .sbx-ss__swatch { flex: none; width: 24px; height: 24px; padding: 0; border: 1px solid var(--sbx-border); border-radius: 5px; background: none; cursor: pointer; }

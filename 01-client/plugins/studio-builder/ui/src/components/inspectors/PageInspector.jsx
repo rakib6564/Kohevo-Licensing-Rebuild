@@ -19,6 +19,7 @@ import { t, errorMessage } from '../../core/messages.mjs';
 import { seoLimits, canonicalProblem, canonicalValue } from '../../core/seo.mjs';
 import { SeoImageControl } from './SeoImageControl.jsx';
 import { optionLabel } from '../../core/optionLabels.mjs';
+import { Field } from '../ui/index.js';
 
 function TextSetting({ label, value, maxLength, multiline = false, onCommit, counter = false }) {
   const id = useId();
@@ -26,8 +27,7 @@ function TextSetting({ label, value, maxLength, multiline = false, onCommit, cou
   useEffect(() => { setDraft(value ?? ''); }, [value]);
   const Tag = multiline ? 'textarea' : 'input';
   return (
-    <div className="sbx-field">
-      <label className="sbx-field__label" htmlFor={id}>{label}</label>
+    <Field label={label} htmlFor={id}>
       <Tag
         id={id}
         value={draft}
@@ -41,7 +41,7 @@ function TextSetting({ label, value, maxLength, multiline = false, onCommit, cou
         }}
       />
       {counter && <p className="sbx-hint" id={`${id}-count`} data-testid={`${id}-count`}>{t('seo_count', { count: Array.from(draft).length, max: maxLength })}</p>}
-    </div>
+    </Field>
   );
 }
 
@@ -53,8 +53,7 @@ function CanonicalSetting({ value, onCommit }) {
   useEffect(() => { setDraft(value ?? ''); }, [value]);
   const problem = canonicalProblem(draft);
   return (
-    <div className="sbx-field">
-      <label className="sbx-field__label" htmlFor={id}>{t('seo_canonical_label')}</label>
+    <Field label={t('seo_canonical_label')} htmlFor={id}>
       <input
         id={id}
         type="text"
@@ -71,8 +70,8 @@ function CanonicalSetting({ value, onCommit }) {
         }}
       />
       <p className="sbx-hint" id={`${id}-hint`}>{t('seo_canonical_hint')}</p>
-      {problem && <p className="sbx-field__problem" role="alert" data-testid="seo-canonical-problem">{t(problem)}</p>}
-    </div>
+      {problem && <p className="sbx-field__error" role="alert" data-testid="seo-canonical-problem">{t(problem)}</p>}
+    </Field>
   );
 }
 
@@ -94,12 +93,11 @@ function ChromeRegion({ region, binding, settings, onMode, onCreatePartial, buil
   return (
     <fieldset className="sbx-fieldset sbx-chrome" data-region={region}>
       <legend>{t(region === 'header' ? 'chrome_header' : 'chrome_footer')}</legend>
-      <div className="sbx-field">
-        <label className="sbx-field__label" htmlFor={`sbx-page-${region}_mode`}>{t(region === 'header' ? 'chrome_header' : 'chrome_footer')}</label>
+      <Field label={t(region === 'header' ? 'chrome_header' : 'chrome_footer')} htmlFor={`sbx-page-${region}_mode`}>
         <select id={`sbx-page-${region}_mode`} value={mode} onChange={(e) => onMode(e.target.value)}>
           {['inherit', 'custom', 'hidden'].map((m) => <option key={m} value={m}>{t(MODE_LABEL[m])}</option>)}
         </select>
-      </div>
+      </Field>
       {resolved && <p className="sbx-hint" data-testid={`chrome-${region}-resolved`}>{resolved}</p>}
       {binding && mode === 'custom' && binding.resolved !== 'custom' && <p className="sbx-hint">{t('chrome_custom_missing', { region: regionLabel })}</p>}
       {binding && mode !== 'hidden' && (
@@ -141,12 +139,11 @@ export function PageInspector() {
   }, [transport, boot.pageId, revisionId, chromed]);
 
   const select = (key, options, labelText) => (
-    <div className="sbx-field" key={key}>
-      <label className="sbx-field__label" htmlFor={`sbx-page-${key}`}>{labelText}</label>
+    <Field label={labelText} htmlFor={`sbx-page-${key}`} key={key}>
       <select id={`sbx-page-${key}`} value={settings[key] ?? ''} onChange={(e) => applyOp(ops.updateSettings({ [key]: e.target.value }), { label: labelText })}>
         {options.map((o) => <option key={o} value={o}>{optionLabel(o)}</option>)}
       </select>
-    </div>
+    </Field>
   );
 
   const regionBinding = (region) => (chrome ? { ...chrome[region], site_slug: chrome.site_slug, page_slug: chrome.page_slug } : null);
@@ -177,12 +174,11 @@ export function PageInspector() {
       <TextSetting label={t('seo_description_label')} value={seo.description} maxLength={limits.description} multiline counter onCommit={(v) => applyOp(ops.updateSeo({ description: v }), { label: t('seo') })} />
       <CanonicalSetting value={seo.canonical_url} onCommit={(v) => applyOp(ops.updateSeo({ canonical_url: v }), { label: t('seo') })} />
       <SeoImageControl value={seo.og_image_media_id} mediaPicker={boot.mediaPicker} onChange={(v) => applyOp(ops.updateSeo({ og_image_media_id: v }), { label: t('seo') })} />
-      <div className="sbx-field">
-        <label className="sbx-field__label" htmlFor="sbx-page-robots">{t('seo_robots_label')}</label>
+      <Field label={t('seo_robots_label')} htmlFor="sbx-page-robots">
         <select id="sbx-page-robots" value={seo.robots || 'index,follow'} onChange={(e) => applyOp(ops.updateSeo({ robots: e.target.value }), { label: t('seo') })}>
           {asList(vocab.robots).map((r) => <option key={r} value={r}>{optionLabel(r)}</option>)}
         </select>
-      </div>
+      </Field>
     </div>
   );
 }

@@ -93,7 +93,7 @@ export function SaveTemplateDialog({ onClose, onSaved }) {
         <textarea id="sbx-tpl-desc" rows={3} maxLength={1000} value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
       <MediaControl field={{ ...THUMB_FIELD, label: t('template_thumbnail') }} value={thumb} onChange={setThumb} mediaPicker={boot.mediaPicker} problem={null} />
-      {error && <p role="alert" className="sbx-field__problem">{error}</p>}
+      {error && <p role="alert" className="sbx-field__error">{error}</p>}
     </Dialog>
   );
 }

@@ -3,19 +3,20 @@
 //   label     the visible label
 //   htmlFor   id of the control the label names (omit for a group: the label is then plain text, and the control
 //             should carry its own aria-label)
-//   variant   'row' (default) | 'choice' (label left, control right) | 'stack' (label over a wide control)
-//   hint, error   optional lines under the control
+//   variant   'row' (default) | 'choice' (label left, control right) | 'stack' (label over a wide control) | 'wide'
+//   required  adds the visual asterisk (the control carries aria-required)
+//   hint, error   optional lines under the control; errorId names the error for aria-describedby
 
-export function Field({ label, htmlFor, variant = 'row', hint, error, className = '', children, ...rest }) {
+export function Field({ label, htmlFor, variant = 'row', required = false, hint, error, errorId, className = '', children, ...rest }) {
   const mod = variant === 'row' ? '' : ` sbx-field--${variant}`;
   return (
     <div className={`sbx-field${mod}${className ? ` ${className}` : ''}`} {...rest}>
       {label != null && (htmlFor
-        ? <label className="sbx-field__label" htmlFor={htmlFor}>{label}</label>
-        : <span className="sbx-field__label">{label}</span>)}
+        ? <label className="sbx-field__label" htmlFor={htmlFor}>{label}{required ? <span aria-hidden="true"> *</span> : null}</label>
+        : <span className="sbx-field__label">{label}{required ? <span aria-hidden="true"> *</span> : null}</span>)}
       {children}
       {hint ? <p className="sbx-hint">{hint}</p> : null}
-      {error ? <p className="sbx-field__error" role="alert">{error}</p> : null}
+      {error ? <p className="sbx-field__error" id={errorId} role="alert">{error}</p> : null}
     </div>
   );
 }
