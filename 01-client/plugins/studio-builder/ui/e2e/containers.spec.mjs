@@ -76,3 +76,38 @@ test('a grid picks its column count from tiles or a number', async ({ page }) =>
     }
   }
 });
+
+test('size words show their real size, and the Responsive section speaks plainly', async ({ page }) => {
+  await openBuilder(page);
+  await settled(page);
+  await page.getByRole('tab', { name: /^Layers$/ }).click();
+  const layers = await page.locator('[role="treeitem"]').count();
+  try {
+    await insert(page, 'layout.flex');
+    const content = page.locator('[data-section="content"] .sbx-isec__body');
+    const gap = (await content.locator('select option').allTextContents()).join('|');
+    expect(gap).toContain('Medium · 16px');
+    expect(gap).toContain('Extra small · 4px');
+    expect(gap).not.toMatch(/(^|\|)(xs|sm|md|lg|xl|2xl)(\||$)/);
+
+    await page.locator('[id^="sbx-blk-"][id$="-tab-advanced"]').click();
+    await page.locator('[data-section="responsive"] .sbx-isec__toggle').click();
+    const body = page.locator('[data-section="responsive"] .sbx-isec__body');
+    for (const label of ['Mobile (up to 639px)', 'Large phone (640–767px)', 'Tablet (768–1023px)', 'Desktop (1024px and up)']) {
+      await expect(body.getByText(label, { exact: true })).toBeVisible();
+    }
+    const audience = (await body.locator('select option').allTextContents()).join('|');
+    expect(audience).toContain('Everyone');
+    expect(audience).toContain('Signed-in visitors');
+    expect(audience).not.toMatch(/(^|\|)(any|guest|authenticated)(\||$)/);
+  } finally {
+    for (let i = 0; i < 16; i++) {
+      await settled(page);
+      await page.getByRole('tab', { name: /^Layers$/ }).click();
+      if ((await page.locator('[role="treeitem"]').count()) <= layers) break;
+      await expect(page.getByTestId('undo')).toBeEnabled({ timeout: 15_000 });
+      await page.getByTestId('undo').click();
+      await page.waitForTimeout(500);
+    }
+  }
+});

@@ -64,7 +64,8 @@ test('selection highlights the node and generates the property panel from the ma
   const heroHtml = entry.render({ manifest, document: pageDoc, selection: hero.id });
   assert.match(heroHtml, /Primary Call to Action/, 'link control');
   assert.match(heroHtml, /Hero Image/, 'media control');
-  assert.match(heroHtml, /<optgroup label="color">/, 'token control fed by the manifest tokens');
+  assert.match(heroHtml, /role="combobox"[^>]*>.*?Default/s, 'token control is a named picker, not a raw ref dropdown');
+  assert.doesNotMatch(heroHtml, /<optgroup label="color">/, 'no raw token refs in a native select');
   assert.match(heroHtml, /Move out of container/, 'keyboard alternative to drag & drop');
 });
 

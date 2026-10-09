@@ -23,7 +23,7 @@ test('Site settings groups the tokens, saves an override, and resets it', async 
 
   const save = form.getByTestId('site-settings-save');
   await expect(save).toBeDisabled(); // nothing changed yet
-  const row = form.locator('.sbx-ss__row', { hasText: 'Primary' }).first();
+  const row = form.locator('.sbx-ss__row', { hasText: 'Main surface' }).first();
   const field = row.locator('input[type="text"]');
   try {
     await field.fill('#112233');
@@ -46,7 +46,7 @@ test('an invalid token value shows the problem beside it and is not stored', asy
   const panel = page.locator('#sbx-leftpanel-settings');
   await panel.locator('[data-settings-view="site"]').click();
   const form = panel.getByTestId('site-settings');
-  const field = form.locator('.sbx-ss__row', { hasText: 'Primary' }).first().locator('input[type="text"]');
+  const field = form.locator('.sbx-ss__row', { hasText: 'Main surface' }).first().locator('input[type="text"]');
   await field.fill('url(javascript:alert(1))');
   await form.getByTestId('site-settings-save').click();
   await expect(form.getByRole('alert').first()).toBeVisible();

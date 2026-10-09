@@ -1,0 +1,40 @@
+{
+  "_comment": "The real size behind each size word, read by core/optionValues.mjs and StudioBuilderOptionValuesParityTest.php (which checks every row against the generated stylesheet).",
+  "tables": {
+    "gap": { "rule": ".sb-gap-{v}", "prop": "gap", "values": { "none": "0", "xs": ".25rem", "sm": ".5rem", "md": "1rem", "lg": "1.5rem", "xl": "2rem", "2xl": "3rem" } },
+    "padding": { "rule": ".sb-pad-{v}", "prop": "padding", "values": { "none": "0", "xs": ".5rem", "sm": "1rem", "md": "2rem", "lg": "4rem", "xl": "6rem", "2xl": "8rem" } },
+    "page_width": { "rule": ".sb-w-{v}", "prop": "max-width", "values": { "narrow": "42rem", "normal": "64rem", "wide": "80rem", "full": "none" } },
+    "section_width": { "rule": ".sb-layout-section--{v}", "prop": "max-width", "values": { "boxed": "80rem", "narrow": "48rem", "full": "none" }, "noRule": ["full"] },
+    "container_width": { "rule": ".sb-container--{v}", "prop": "max-width", "values": { "compact": "48rem", "constrained": "75rem", "full": "none" }, "alias": { "full": "100%" } },
+    "card_padding": { "rule": ".sb-card--pad-{v}", "prop": "padding", "values": { "sm": ".75rem", "md": "1.25rem", "lg": "2rem" } },
+    "min_height": { "rule": ".sb-layout-section--min-{v}", "prop": "min-height", "values": { "screen": "100vh", "half_screen": "50vh", "sm": "16rem", "md": "24rem", "lg": "36rem", "xl": "48rem" }, "ruleName": { "half_screen": "half-screen" } },
+    "icon_size": { "rule": ".sb-icon--{v} .sb-icon__svg", "prop": "width", "values": { "sm": "1.25rem", "md": "2rem", "lg": "3rem", "xl": "4.5rem" }, "baseRule": { "md": ".sb-icon__svg" } },
+    "modal_size": { "rule": ".sb-modal--{v} .sb-modal__dialog", "prop": "max-width", "values": { "sm": "24rem", "md": "36rem", "lg": "48rem", "full": "95vw" }, "baseRule": { "md": ".sb-modal__dialog" } },
+    "text_size": { "rule": ".sb-text--{v}", "prop": "font-size", "values": { "xs": ".75rem", "sm": ".875rem", "base": "1rem", "lg": "1.125rem", "xl": "1.25rem", "lead": "1.25rem" } },
+    "button_size": { "rule": ".sb-button--{v}", "prop": "font-size", "values": { "sm": ".875rem", "md": "1rem", "lg": "1.125rem" } },
+    "gallery_gap": { "rule": ".sb-gallery--gap-{v}", "prop": "gap", "values": { "none": "0", "xs": ".25rem", "sm": ".5rem", "md": "1rem", "lg": "1.5rem" } }
+  },
+  "fields": {
+    "section.gap": "gap",
+    "core.container.gap": "gap",
+    "layout.flex.gap": "gap",
+    "layout.grid.gap": "gap",
+    "layout.container.padding": "padding",
+    "layout.section.padding_y": "padding",
+    "section.padding_y": "padding",
+    "section.width": "page_width",
+    "layout.section.content_width": "section_width",
+    "layout.container.width": "container_width",
+    "core.card.padding": "card_padding",
+    "layout.section.min_height": "min_height",
+    "core.icon.size": "icon_size",
+    "core.modal.size": "modal_size",
+    "core.text.size": "text_size",
+    "core.button.size": "button_size",
+    "core.gallery.gap": "gallery_gap"
+  },
+  "kinds": {
+    "text_size": "font",
+    "button_size": "font"
+  }
+}
