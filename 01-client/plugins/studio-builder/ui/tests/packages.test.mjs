@@ -142,7 +142,7 @@ if (esbuild) {
 
 test('packages UI: the top bar offers Import / Export; the import tab has Analyse and a DISABLED "Import into draft" until an analysis allows it', { skip: skipReason || false }, () => {
   const shell = entry.renderPackages({ manifest, permissions: { view: true, edit: true }, withShell: true });
-  assert.match(shell, /data-testid="open-packages"[^>]*>Import \/ Export</);
+  assert.match(shell, /data-testid="open-packages"[^>]*aria-label="Import \/ Export"/);
   const html = entry.renderPackages({ manifest, permissions: { view: true, edit: true, tokens: false } });
   assert.match(html, /data-testid="package-import"/);
   assert.match(html, /<button[^>]*disabled=""[^>]*data-testid="import-analyze"/, 'nothing to analyse before a file is chosen');

@@ -330,37 +330,40 @@ export const TopBar = memo(function TopBar({
         <div className="sbx-topbar__tools">
           <button
             type="button"
-            className="sbx-btn sbx-btn--action"
+            className="sbx-btn sbx-btn--icon"
+            data-testid="open-history"
             onClick={onHistory}
             disabled={conflict}
             title={t('history_title')}
+            aria-label={t('history')}
           >
-            <IconClock size={13} />
-            <span className="sbx-btn__text">{t('history')}</span>
+            <IconClock size={15} />
           </button>
 
           {onPackages && (
             <button
               type="button"
-              className="sbx-btn sbx-btn--action sbx-btn--export"
+              className="sbx-btn sbx-btn--icon"
               data-testid="open-packages"
               onClick={onPackages}
               disabled={conflict}
               title={t('packages_title')}
+              aria-label={t('packages')}
             >
-              {t('packages')}
+              <IconExport size={15} />
             </button>
           )}
 
           {onTheme && (
             <button
               type="button"
-              className="sbx-btn sbx-btn--action"
+              className="sbx-btn sbx-btn--icon"
+              data-testid="open-theme"
               onClick={onTheme}
-              title={t('theme_title')}
+              title={t('site_settings_title')}
+              aria-label={t('theme')}
             >
-              <IconPalette size={13} />
-              <span className="sbx-btn__text">{t('theme')}</span>
+              <IconPalette size={15} />
             </button>
           )}
 
@@ -388,14 +391,14 @@ export const TopBar = memo(function TopBar({
           )}
 
           <a
-            className="sbx-btn sbx-btn--action sbx-btn--preview-link"
+            className="sbx-btn sbx-btn--icon sbx-btn--preview-link"
             href={`${boot.previewUrl}?page=${boot.pageId}`}
             target="_blank"
             rel="noopener"
             title={t('open_new_tab')}
             aria-label={t('open_new_tab')}
           >
-            <IconExternalLink size={13} />
+            <IconExternalLink size={15} />
           </a>
         </div>
 

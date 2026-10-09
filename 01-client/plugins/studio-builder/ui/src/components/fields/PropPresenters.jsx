@@ -51,7 +51,7 @@ export function PropTiles({ field, value, onChange, presenter }) {
   const min = field.min ?? 1;
   const max = field.max ?? 12;
   return (
-    <div className="sbx-field sbx-field--choice">
+    <div className="sbx-field sbx-field--stack">
       <span className="sbx-field__label" id={`${id}-l`}>{field.label}</span>
       <div className="sbx-coltiles" role="group" aria-labelledby={`${id}-l`}>
         {presenter.tiles.filter((n) => n >= min && n <= max).map((n) => (

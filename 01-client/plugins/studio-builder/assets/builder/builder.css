@@ -3146,3 +3146,21 @@ html, body.sbx-body {
 .sbx-tp__opt.is-active { background: rgba(139, 92, 246, 0.18); }
 .sbx-tp__opt.is-selected .sbx-tp__label { font-weight: 700; color: var(--sbx-accent-text); }
 .sbx-tp__hint { flex: none; font-size: 0.68rem; opacity: 0.5; font-variant-numeric: tabular-nums; }
+
+/* ── Top bar tools are icon-only and always visible ── */
+.sbx-topbar__tools .sbx-btn--icon { width: 34px; height: 34px; color: var(--sbx-text); border: 1px solid var(--sbx-border); background: rgba(255, 255, 255, 0.03); border-radius: 9px; }
+.sbx-topbar__tools .sbx-btn--icon:hover:not(:disabled) { background: rgba(139, 92, 246, 0.16); border-color: rgba(167, 139, 250, 0.45); }
+.sbx-topbar__tools .sbx-btn--icon:disabled { color: var(--sbx-muted); opacity: 0.45; }
+.sbx-topbar__tools .sbx-btn--icon svg { stroke: currentColor; }
+
+/* ── A field whose control needs the full width (column picker): label on top, control below ── */
+.sbx-inspector .sbx-field--stack { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+.sbx-inspector .sbx-field--stack > .sbx-field__label { margin: 0; }
+.sbx-coltile { color: var(--sbx-text); flex: 1 1 0; min-width: 30px; max-width: 48px; }
+.sbx-coltile__cols i { opacity: 0.75; }
+.sbx-coltile.is-active { color: var(--sbx-accent-text); }
+.sbx-coltile.is-active .sbx-coltile__cols i { opacity: 1; }
+.sbx-coltiles { flex-wrap: nowrap; }
+.sbx-coltiles__num { flex: none; width: 3.2rem; }
+.sbx-inspector .sbx-coltiles .sbx-coltiles__num { flex: none; width: 3.4rem; min-width: 0; padding-left: 6px; padding-right: 6px; }
+.sbx-inspector .sbx-coltiles { width: 100%; }
