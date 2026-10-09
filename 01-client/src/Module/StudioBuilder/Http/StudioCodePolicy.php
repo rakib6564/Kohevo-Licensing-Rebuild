@@ -143,6 +143,23 @@ final class StudioCodePolicy
     }
 
     /**
+     * Prepare a stylesheet an administrator typed in the builder: refuse one over the ceiling (cutting it at a byte
+     * boundary could leave a half rule, so it is rejected instead) and otherwise reduce it. `changed` tells the
+     * author that something was removed, so the editor can show the stylesheet that was really stored.
+     *
+     * @return array{css: string, bytes: int, changed: bool}
+     * @throws \InvalidArgumentException when the input is longer than MAX_CUSTOM_CSS_BYTES
+     */
+    public static function prepareCustomCss(string $raw): array
+    {
+        if (strlen($raw) > self::MAX_CUSTOM_CSS_BYTES) {
+            throw new \InvalidArgumentException('The stylesheet is larger than ' . self::MAX_CUSTOM_CSS_BYTES . ' bytes.');
+        }
+        $css = self::sanitizeCustomCss($raw);
+        return ['css' => $css, 'bytes' => strlen($css), 'changed' => $css !== trim($raw)];
+    }
+
+    /**
      * The tenant stylesheet for this tenant, sanitized. Never throws.
      */
     public static function customCss(int $tenantId): string

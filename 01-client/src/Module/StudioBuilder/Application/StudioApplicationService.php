@@ -94,6 +94,7 @@ use Slate\Module\StudioBuilder\Operation\DocumentOperationApplier;
 use Slate\Module\StudioBuilder\Package\Html\HtmlImportConverter;
 use Slate\Module\StudioBuilder\Package\StudioImportReport;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
+use Slate\Module\StudioBuilder\Http\StudioCodePolicy;
 use Slate\Module\StudioBuilder\Registry\BlockAvailability;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Registry\BlockUsage;
@@ -834,6 +835,40 @@ final class StudioApplicationService
                 $blocked,
             ));
         }
+    }
+
+    // ── Site-wide custom CSS (administrators) ───────────────────────────────
+
+    /**
+     * The stored site stylesheet and its ceiling. It is the same setting the Code & tracking admin screen edits
+     * (`studio_code_custom_css`), emitted at serve time in the public site and in Preview, never in the canvas.
+     *
+     * @return array{css: string, bytes: int, max_bytes: int}
+     */
+    public function customCss(StudioActor $actor): array
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::ADMIN);
+        $css = StudioCodePolicy::customCss($tenantId);
+        return ['css' => $css, 'bytes' => strlen($css), 'max_bytes' => StudioCodePolicy::MAX_CUSTOM_CSS_BYTES];
+    }
+
+    /**
+     * Replace the site stylesheet. Oversized input is refused; anything else is reduced by the code policy and
+     * the stylesheet that was really stored is returned. No page recompiles: tenant CSS is added at render time.
+     *
+     * @return array{css: string, bytes: int, max_bytes: int, changed: bool}
+     */
+    public function saveCustomCss(StudioActor $actor, string $css): array
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::ADMIN);
+        try {
+            $prepared = StudioCodePolicy::prepareCustomCss($css);
+        } catch (\InvalidArgumentException) {
+            throw new StudioValidationException([['path' => '$.css', 'code' => 'css_too_large', 'message' => 'The stylesheet is too large.']]);
+        }
+        Database::setSetting(StudioCodePolicy::SETTING_CUSTOM_CSS, $prepared['css'], $tenantId);
+        $this->audit($actor, 'studio.custom_css.saved', (string) $tenantId, ['css_bytes' => $prepared['bytes'], 'sanitized' => $prepared['changed']]);
+        return $prepared + ['max_bytes' => StudioCodePolicy::MAX_CUSTOM_CSS_BYTES];
     }
 
     // ── Publish / rollback commands ─────────────────────────────────────────

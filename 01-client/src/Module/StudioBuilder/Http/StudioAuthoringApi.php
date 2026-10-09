@@ -70,6 +70,7 @@ final class StudioAuthoringApi
         'tokens'       => ['GET', ['group']],
         // Element Manager (administrators): which blocks the site offers, and where each is used
         'elements'     => ['GET', []],
+        'custom_css'   => ['GET', []],
         // Phase 7 query: structured diff between two revisions of one page (review of AI drafts)
         'diff'         => ['GET', ['page', 'base', 'proposed']],
         // Commands
@@ -93,6 +94,7 @@ final class StudioAuthoringApi
         'detach_component' => ['POST', ['page_id', 'section_id', 'expected_revision_id']],
         'save_tokens'      => ['POST', ['group', 'tokens']],
         'save_elements'    => ['POST', ['disabled']],
+        'save_custom_css'  => ['POST', ['css']],
         // Phase 8A JSON packages: export is a query (studio-builder.view); import is ONE command
         // whose `dry_run` decides between analysis (no write) and import into drafts.
         'export_package'   => ['GET', ['page', 'include_components', 'include_template', 'include_tokens']],
@@ -255,6 +257,7 @@ final class StudioAuthoringApi
             'components'   => StudioApiResponse::ok(['components' => $this->app->listGlobalComponents($actor)]),
             'chrome'       => StudioApiResponse::ok(['chrome' => $this->app->chromeBindings($actor, self::id($input, 'page'))]),
             'elements'     => StudioApiResponse::ok($this->app->elementManager($actor)),
+            'custom_css'   => StudioApiResponse::ok($this->app->customCss($actor)),
             'tokens'       => StudioApiResponse::ok(['tokens' => $this->app->designTokens($actor, self::tokenGroup($input))]),
             'diff'         => StudioApiResponse::ok(['review' => $this->app->diffRevisions($actor, self::id($input, 'page'), self::optionalInt($input, 'base'), self::optionalInt($input, 'proposed'))]),
             'apply_template'   => $this->applyTemplate($actor, $input),
@@ -265,6 +268,7 @@ final class StudioAuthoringApi
             'detach_component' => StudioApiResponse::ok(self::mutationResult($this->app->detachGlobalSection($actor, self::id($input, 'page_id'), self::nodeId($input, 'section_id'), self::expectedRevision($input)))),
             'save_tokens'      => $this->saveTokens($actor, $input),
             'save_elements'    => $this->saveElements($actor, $input),
+            'save_custom_css'  => StudioApiResponse::ok($this->app->saveCustomCss($actor, self::string($input, 'css', StudioCodePolicy::MAX_CUSTOM_CSS_BYTES))),
             'export_package'   => $this->exportPackage($actor, $input),
             'import_package'   => $this->importPackage($actor, $input),
             'import_html'      => $this->importHtml($actor, $input),

@@ -17,7 +17,7 @@ test('Site settings groups the tokens, saves an override, and resets it', async 
   const panel = page.locator('#sbx-leftpanel-settings');
   await panel.locator('[data-settings-view="site"]').click();
   const form = panel.getByTestId('site-settings');
-  await expect(form.locator('[data-ss-group]')).toHaveText([/Global colors/, /Global fonts/, /Corners/, /Shadows/, /Spacing/]);
+  await expect(form.locator('[data-ss-group]')).toHaveText([/Global colors/, /Global fonts/, /Corners/, /Shadows/, /Spacing/, /Custom CSS/]);
   await expect(form.locator('[data-ss-group="colors"]')).toHaveAttribute('open', '');
   await expect(form.locator('[data-ss-group="shape"]')).not.toHaveAttribute('open', '');
 

@@ -3119,3 +3119,9 @@ html, body.sbx-body {
 .sbx-switch__knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 0.15s; }
 .sbx-switch[aria-checked="true"] .sbx-switch__knob { transform: translateX(14px); }
 .sbx-switch:focus-visible { outline: 2px solid var(--sbx-accent-text); outline-offset: 2px; }
+
+/* ── Custom CSS ── */
+.sbx-cc { display: flex; flex-direction: column; gap: 0.4rem; padding-bottom: 0.4rem; }
+.sbx-cc__editor { width: 100%; box-sizing: border-box; min-height: 9rem; resize: vertical; padding: 0.5rem; border: 1px solid var(--sbx-border); border-radius: 6px; background: #0f172a; color: #cbd5e1; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; tab-size: 2; white-space: pre; overflow: auto; }
+.sbx-cc__editor:focus { outline: 2px solid var(--sbx-accent); outline-offset: 1px; }
+.sbx-cc__foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-size: 0.72rem; }

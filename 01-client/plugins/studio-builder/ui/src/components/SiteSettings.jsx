@@ -7,6 +7,7 @@ import { useEditor, useEngineState } from './EditorContext.jsx';
 import { t, errorMessage } from '../core/messages.mjs';
 import { asList, asObject } from '../core/doc.mjs';
 import { isHexColor } from '../core/library.mjs';
+import { CustomCss } from './CustomCss.jsx';
 import { FONT_PRESETS, groupTokens, tokenNameKey } from '../core/siteSettings.mjs';
 
 const friendly = (tk) => {
@@ -157,6 +158,7 @@ export function SiteSettingsForm({ onSaved, footer = null }) {
           </details>
         );
       })}
+      {manifest && manifest.permissions && manifest.permissions.admin && <CustomCss />}
       {footer ? footer(actions) : <div className="sbx-ss__bar">{actions}</div>}
     </div>
   );
