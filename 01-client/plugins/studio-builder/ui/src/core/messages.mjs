@@ -722,6 +722,7 @@ const EN = {
   nav_partial_site: 'Shared by the site: {title}',
   nav_partial_edit: 'Edit {region}',
   nav_view_label: 'Layers or pages',
+  pal_tab_label: 'What to add',
   nav_layers: 'Layers',
   nav_pages: 'Pages',
   nav_pages_loading: 'Loading pages…',

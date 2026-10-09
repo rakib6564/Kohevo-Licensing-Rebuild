@@ -15,6 +15,8 @@
 // When changes are non-structural (only props or styles changed), iframe reloads
 // are completely suppressed — guaranteeing instantaneous preview response.
 
+import { nodeIds } from './doc.mjs';
+
 const BREAKPOINTS = ['base', 'sm', 'md', 'lg'];
 const HIDE_PREFIX = 'sb-hide-';
 const ALIGN_PREFIX = 'sb-align-';
@@ -408,4 +410,14 @@ export function syncLiveDOM(canvasDoc, prevDoc, nextDoc, activeBreakpoint = 'bas
   }
 
   return updateCount;
+}
+
+/**
+ * Node ids the canvas shows that the document does not have. The live patch and the server's repaint can
+ * disagree (a change the patch cannot express, a patch that threw, a reload that never landed); a node the
+ * editor cannot find is the one sure sign, because the server only tags nodes that are in the document.
+ */
+export function ghostNodeIds(domIds, doc) {
+  const known = nodeIds(doc);
+  return domIds.filter((id) => id && !known.has(id));
 }

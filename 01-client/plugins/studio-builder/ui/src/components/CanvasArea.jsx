@@ -9,7 +9,7 @@ import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { attachCanvas, markSelected } from '../core/canvas.mjs';
 import { inlineSpecsFor, propsWithInlineText } from '../core/inlineText.mjs';
 import { patchCanvas } from '../core/canvasPatch.mjs';
-import { isStructuralChange, syncLiveDOM } from '../core/canvasLiveSync.mjs';
+import { ghostNodeIds, isStructuralChange, syncLiveDOM } from '../core/canvasLiveSync.mjs';
 import { STATUS } from '../core/sync.mjs';
 import { t } from '../core/messages.mjs';
 import { ancestorPath, asList, canInsertBlock, canMoveBlock, findNode } from '../core/doc.mjs';
@@ -155,6 +155,30 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     if (!isStructuralChange(prev, working)) paintedRef.current = working;
     markSelected(doc, selectionRef.current, { scroll: false });
   }, [working, loading, viewport.key]);
+
+  // Integrity check: once the canvas has settled, any node on it that the document does not have means the live
+  // patch and the server's paint disagree. Repaint from the server (twice at most, so a node the server tags
+  // for some other reason cannot make it loop); a clean check resets the allowance.
+  const repaintsRef = useRef(0);
+  useEffect(() => {
+    if (!working || loading || !interactive) return undefined;
+    const h = setTimeout(() => {
+      let doc = null;
+      try { doc = frameRef.current && frameRef.current.contentDocument; } catch { doc = null; }
+      if (!doc || doc.readyState === 'loading') return;
+      const ids = Array.from(doc.querySelectorAll('[data-sb-node]'), (el) => el.getAttribute('data-sb-node'));
+      if (!ghostNodeIds(ids, working).length) { repaintsRef.current = 0; return; }
+      if (repaintsRef.current >= 2) return;
+      repaintsRef.current += 1;
+      try {
+        const win = frameRef.current && frameRef.current.contentWindow;
+        scrollRef.current = win ? win.scrollY : 0;
+      } catch { scrollRef.current = 0; }
+      setLoading(true);
+      setSrc(`${boot.canvasUrl}?page=${boot.pageId}&v=${revisionId}-g${Date.now()}`);
+    }, 700);
+    return () => clearTimeout(h);
+  }, [working, loading, interactive, boot.canvasUrl, boot.pageId, revisionId]);
 
   const onCanvasDrop = useCallback(({ targetId, targetType, position, dataTransfer }) => {
     if (!dataTransfer) return;

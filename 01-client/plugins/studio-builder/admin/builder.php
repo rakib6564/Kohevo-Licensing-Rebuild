@@ -1084,6 +1084,7 @@ $sbBoot = [
         'nav_partial_site' => __('studio_ui_nav_partial_site', 'Shared by the site: {title}'),
         'nav_partial_edit' => __('studio_ui_nav_partial_edit', 'Edit {region}'),
         'nav_view_label' => __('studio_ui_nav_view_label', 'Layers or pages'),
+        'pal_tab_label' => __('studio_ui_pal_tab_label', 'What to add'),
         'nav_layers' => __('studio_ui_nav_layers', 'Layers'),
         'nav_pages' => __('studio_ui_nav_pages', 'Pages'),
         'nav_pages_loading' => __('studio_ui_nav_pages_loading', 'Loading pages…'),

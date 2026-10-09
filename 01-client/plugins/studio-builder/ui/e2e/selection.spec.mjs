@@ -107,3 +107,25 @@ test('a canvas node the editor no longer has is not selected: no empty Inspector
   await expect(page.locator('.sbx-overlay__box.is-primary')).toHaveCount(0);
   await expect(page.locator('.sbx-inspector-empty')).toHaveCount(1);
 });
+
+test('a canvas that drifted from the document repaints by itself', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'docked canvas (desktop)');
+  await openBuilder(page);
+  await settled(page);
+  await page.getByRole('tab', { name: /^Add$/ }).click();
+  await page.getByRole('tab', { name: 'Sections' }).click();
+  await page.locator('#sbx-leftpanel-blocks [data-preset="system-section-team"] .sbx-preset-card__insert').click();
+  await settled(page);
+  const frame = page.frameLocator('iframe.sbx-canvas__frame');
+  await expect(frame.locator('[data-sb-node^="blk_"]').first()).toBeVisible();
+  // A section the document does not have, as if a patch had been missed.
+  await (await frameDocument(page)).evaluate(() => {
+    const el = document.createElement('section');
+    el.setAttribute('data-sb-node', 'sec_stale_ghost');
+    el.setAttribute('data-sb-type', 'section');
+    el.textContent = 'ghost section';
+    document.body.prepend(el);
+  });
+  await expect(frame.locator('[data-sb-node="sec_stale_ghost"]')).toHaveCount(0, { timeout: 15_000 });
+  await expect(frame.locator('[data-sb-node^="blk_"]').first()).toBeVisible();
+});
