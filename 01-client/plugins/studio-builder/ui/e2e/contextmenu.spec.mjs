@@ -16,14 +16,17 @@ async function ensureSection(page) {
     await expect.poll(() => page.locator(`${ROWS}[aria-level="1"]`).count(), { timeout: 15_000 }).toBeGreaterThan(0);
   }
   await settled(page);
+  // The page this section lives on may show shared parts (header/footer) in the canvas; those are not ours to copy.
+  // Return the id of the page's own first section, from Layers.
+  return page.locator(`${ROWS}[aria-level="1"]`).first().getAttribute('data-row');
 }
 
 test('right-click opens the menu in the builder, Escape closes it and returns focus', async ({ page }) => {
   await openBuilder(page);
-  await ensureSection(page);
+  const own = await ensureSection(page);
   const start = await layerCount(page);
   const frame = page.frameLocator('iframe.sbx-canvas__frame');
-  await frame.locator('[data-sb-node]').first().click({ button: 'right' });
+  await frame.locator(`[data-sb-node="${own}"]`).click({ button: 'right' });
   const menu = page.getByTestId('canvas-context-menu');
   await expect(menu).toBeVisible();
   await expect(menu).toHaveAttribute('role', 'menu');
@@ -38,12 +41,13 @@ test('right-click opens the menu in the builder, Escape closes it and returns fo
 
 test('copy then paste a section from the menu adds one, and undo removes it', async ({ page }) => {
   await openBuilder(page);
-  await ensureSection(page);
+  const own = await ensureSection(page);
   const start = await layerCount(page);
   const frame = page.frameLocator('iframe.sbx-canvas__frame');
-  await frame.locator('section[data-sb-node]').first().click({ button: 'right' });
+  const section = frame.locator(`[data-sb-node="${own}"]`);
+  await section.click({ button: 'right' });
   await page.getByTestId('canvas-context-menu').getByRole('menuitem', { name: 'Copy' }).click();
-  await frame.locator('section[data-sb-node]').first().click({ button: 'right' });
+  await section.click({ button: 'right' });
   await page.getByTestId('canvas-context-menu').getByRole('menuitem', { name: 'Paste after' }).click();
   await expect.poll(() => layerCount(page), { timeout: 20_000 }).toBeGreaterThan(start);
   await restoreLayers(page, start);
