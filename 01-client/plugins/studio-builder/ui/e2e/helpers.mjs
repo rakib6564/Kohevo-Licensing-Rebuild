@@ -66,3 +66,21 @@ export async function frameEval(page, selector, fn, { last = true } = {}) {
     return await loc.evaluate(fn);
   } catch { return 'retry'; }
 }
+
+/** A 1x1 PNG, uploaded when the site has no image yet. */
+const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+
+/** Open the image dialog from `scope`'s "Choose image" button and use the first image (uploading one if the site has none). */
+export async function chooseImage(page, scope = page) {
+  await scope.getByTestId('media-choose').first().click();
+  const dialog = page.getByTestId('media-dialog');
+  await expect(dialog).toBeVisible();
+  await expect.poll(async () => (await dialog.locator('[data-media-id]').count()) + (await dialog.getByTestId('media-empty').count()), { timeout: 15_000 }).toBeGreaterThan(0);
+  if (await dialog.locator('[data-media-id]').count() === 0) {
+    await dialog.getByTestId('media-file').setInputFiles({ name: 'pixel.png', mimeType: 'image/png', buffer: PIXEL });
+    await expect(dialog.locator('[data-media-id]').first()).toBeVisible();
+  }
+  await dialog.locator('[data-media-id]').first().click();
+  await page.getByTestId('media-use').click();
+  await expect(dialog).toHaveCount(0);
+}

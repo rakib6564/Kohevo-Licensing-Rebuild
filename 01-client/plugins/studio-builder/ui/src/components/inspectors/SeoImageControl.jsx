@@ -1,23 +1,26 @@
 // SeoImageControl — the page's social share image (`seo.og_image_media_id`).
 //
-// The same adapter as the block media field: the core media library picker
-// (`window.SlateMedia.open`) when this user has it, otherwise a plain media-id
-// input. Only the integer id is stored; the server re-checks that it belongs
+// The same picker as the block media field (the builder's own MediaDialog); a
+// plain media-id input only when this user cannot pick images. Only the integer id is stored; the server re-checks that it belongs
 // to the active tenant when the draft is saved, and resolves it again when the
 // page is published. Nothing is uploaded, created or fetched from here.
 
 import { useId, useState } from 'react';
 import { t } from '../../core/messages.mjs';
+import { mediaPickerAvailable, openMediaPicker } from '../../core/mediaPicker.mjs';
+import { useMediaUrl } from '../fields/MediaControl.jsx';
 
 export function SeoImageControl({ value, onChange, mediaPicker }) {
   const id = useId();
   const [preview, setPreview] = useState(null);
   const mediaId = Number.isInteger(value) && value > 0 ? value : null;
-  const pickerAvailable = mediaPicker && typeof window !== 'undefined' && window.SlateMedia && typeof window.SlateMedia.open === 'function';
+  const pickerAvailable = mediaPickerAvailable(mediaPicker);
+  const shownUrl = useMediaUrl(mediaId);
 
   const pick = () => {
-    window.SlateMedia.open({
+    openMediaPicker({
       types: 'image',
+      selectedId: mediaId,
       onPick: (record) => {
         const picked = record && Number.parseInt(record.id, 10);
         if (!Number.isInteger(picked) || picked <= 0) return;
@@ -30,7 +33,7 @@ export function SeoImageControl({ value, onChange, mediaPicker }) {
   return (
     <fieldset className="sbx-fieldset sbx-media" data-testid="seo-og-image" aria-describedby={`${id}-hint`}>
       <legend>{t('seo_og_image_label')}</legend>
-      {preview && mediaId ? <img className="sbx-media__preview" src={preview} alt="" /> : null}
+      {(preview || shownUrl) && mediaId ? <img className="sbx-media__preview" src={preview || shownUrl} alt="" /> : null}
       <div className="sbx-media__row">
         {pickerAvailable ? (
           <button type="button" className="sbx-btn" onClick={pick} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>

@@ -3227,3 +3227,19 @@ html, body.sbx-body {
 .sbx-segmented-pills--sm .sbx-segmented-pill.is-active { background: var(--sbx-accent-tint); color: var(--sbx-accent-text); box-shadow: inset 0 0 0 1px var(--sbx-accent-border); }
 .sbx-nav-switch, .sbx-palette__tabs { margin: 0 0 10px; }
 .sbx-nav-switch .sbx-segmented-pill { flex: 1 1 0; }
+
+/* ── Media dialog (the builder's own image picker) ─────────────────────────── */
+.sbx-dialog:has(.sbx-media-dialog) { width: min(760px, 94vw); max-width: 94vw; }
+.sbx-media-dialog { display: flex; flex-direction: column; gap: var(--sbx-s-3); min-width: 0; }
+.sbx-media-dialog.is-over { outline: 2px dashed var(--sbx-accent-border); outline-offset: 4px; border-radius: var(--sbx-r-lg); }
+.sbx-media-dialog__bar { display: flex; gap: var(--sbx-s-2); align-items: center; }
+.sbx-media-dialog__search { flex: 1; min-width: 0; }
+.sbx-media-dialog__grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--sbx-s-2); max-height: 52vh; overflow: auto; }
+.sbx-media-dialog__item { display: flex; flex-direction: column; gap: var(--sbx-s-1); width: 100%; padding: var(--sbx-s-1); background: var(--sbx-fill-1); border: 1px solid var(--sbx-border); border-radius: var(--sbx-r-lg); color: var(--sbx-text-soft); cursor: pointer; text-align: left; transition: var(--sbx-trans); }
+.sbx-media-dialog__item:hover { background: var(--sbx-fill-2); border-color: var(--sbx-border-strong); }
+.sbx-media-dialog__item:focus-visible { outline: none; box-shadow: var(--sbx-focus); }
+.sbx-media-dialog__item.is-chosen { border-color: var(--sbx-accent); background: var(--sbx-accent-tint); }
+.sbx-media-dialog__item img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--sbx-r-md); background: var(--sbx-fill-2); display: block; }
+.sbx-media-dialog__name { font-size: var(--sbx-fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sbx-media-dialog__empty { padding: var(--sbx-s-5, 24px) 0; text-align: center; }
+.sbx-media-dialog__more { align-self: center; }

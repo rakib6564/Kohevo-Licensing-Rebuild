@@ -15,6 +15,7 @@ import { ComponentsPanel } from './ComponentsPanel.jsx';
 import { AddSearchResults } from './AddSearchResults.jsx';
 import { IconPlus, IconSearch } from './Icons.jsx';
 import { Pills } from './ui/index.js';
+import { mediaPickerAvailable, openMediaPicker } from '../core/mediaPicker.mjs';
 import { DRAG_TYPE_NEW, renderBlockIcon } from './blockIcons.jsx';
 
 export { DRAG_TYPE_NEW };
@@ -62,13 +63,13 @@ function DynamicPanel({ manifest, query, insertBlock }) {
 
 /** Media tab: pick from the tenant media library straight into a new Image block, or insert a media block. */
 function MediaPanel({ manifest, query, insertBlock, insertBlockWithProps, mediaPicker }) {
-  const pickerAvailable = mediaPicker && typeof window !== 'undefined' && window.SlateMedia && typeof window.SlateMedia.open === 'function';
+  const pickerAvailable = mediaPickerAvailable(mediaPicker);
   const q = query.trim().toLowerCase();
   const items = asList(manifest.blocks).filter((b) => isOffered(b) && ['core.image', 'core.gallery', 'core.video'].includes(b.type)
     && (!q || `${b.label} ${b.type}`.toLowerCase().includes(q)));
 
   const addImage = () => {
-    window.SlateMedia.open({
+    openMediaPicker({
       types: 'image',
       onPick: (record) => {
         const mediaId = record && Number.parseInt(record.id, 10);

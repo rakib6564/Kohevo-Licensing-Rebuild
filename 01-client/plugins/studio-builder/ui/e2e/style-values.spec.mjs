@@ -105,7 +105,7 @@ test('the Background controls offer only what the server accepts, and what they 
     await expect(pills).toHaveText(['Image', 'Color', 'Gradient']); // no video: the server has no background video
 
     await page.getByRole('radiogroup', { name: 'Background type' }).getByRole('button', { name: 'Image' }).click();
-        await expect(page.getByRole('group', { name: 'Background image' }).getByLabel('Media ID')).toBeVisible(); // a media reference, not a typed URL
+        await expect(page.getByRole('group', { name: 'Background image' }).getByTestId('media-choose')).toBeVisible(); // a picked media reference, not a typed URL
     await expect(page.getByLabel('Fit', { exact: true })).toHaveCount(0); // nothing to fit until an image is chosen
 
     await page.getByRole('radiogroup', { name: 'Background type' }).getByRole('button', { name: 'Gradient' }).click();

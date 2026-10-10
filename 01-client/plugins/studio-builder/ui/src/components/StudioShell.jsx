@@ -28,6 +28,8 @@ import { ThemeDialog } from './ThemeDialog.jsx';
 import { ThemeBottomSheet } from './ThemeBottomSheet.jsx';
 import { MoreBottomSheet } from './MoreBottomSheet.jsx';
 import { PackageDialog } from './PackageDialog.jsx';
+import { MediaHost } from './MediaDialog.jsx';
+import { createMediaApi } from '../core/mediaApi.mjs';
 import { ResponsiveViewSheet } from './sheets/ResponsiveViewSheet.jsx';
 import { AiReviewDialog } from './AiReviewDialog.jsx';
 import { createTransport } from '../core/api.mjs';
@@ -52,6 +54,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     () => injectedTransport || createTransport({ apiUrl: boot.apiUrl, csrfToken: boot.csrfToken }),
     [boot.apiUrl, boot.csrfToken, injectedTransport],
   );
+  const mediaApi = useMemo(() => createMediaApi({ url: boot.mediaApiUrl || '', csrfToken: boot.csrfToken }), [boot.mediaApiUrl, boot.csrfToken]);
   // The selection model (primary, ids, hover, focus). `selection` stays the primary id for
   // every caller that only cares about "the" selected node.
   const [sel, setSel] = useState(EMPTY_SELECTION);
@@ -242,7 +245,13 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     const block = { type };
     if (props) block.props = { ...(def ? def.default_props : {}), ...props };
     if (bindings && Object.keys(bindings).length) block.bindings = bindings;
-    if (engine.apply(ops.insertBlock(target.parentId, target.index, block), { provisionalId, label: def ? def.label : type })) {
+    // A setup dialog can stay open while a section made for this block is saved and given its real id; the parent
+    // remembered when it opened is then gone, so look for the insertion point again instead of dropping the block.
+    const working = engine.getSnapshot().working;
+    const where = target.parentId && !findNode(working, target.parentId)
+      ? (insertionPoint(working, manifest, selectionRef.current, type) || target)
+      : target;
+    if (engine.apply(ops.insertBlock(where.parentId, where.index, block), { provisionalId, label: def ? def.label : type })) {
       setSelection(provisionalId);
       announce(t('announce_inserted', { label: def ? def.label : type }));
     }
@@ -509,7 +518,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   const libraryWithPresets = useMemo(() => (library ? { ...library, presets: presets === null ? undefined : presets } : library), [library, presets]);
 
   const ctx = useMemo(() => ({
-    boot, engine, manifest, transport, announce, applyOp, canvasView, setCanvasView,
+    boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView,
     insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf,
     viewport: viewportByKey(viewportKey), setViewport: changeViewport, tokensSaved: onTokensSaved, refreshManifest,
     library: libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate,
@@ -521,7 +530,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     openHistory: () => setHistoryOpen(true),
     openTheme: manifest && manifest.permissions && (manifest.permissions.tokens || manifest.permissions.view) ? () => setDialog('theme') : null,
     openPackages: manifest && manifest.permissions && manifest.permissions.view ? () => setDialog('package') : null,
-  }), [boot, engine, manifest, transport, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey, changeViewport, onTokensSaved, refreshManifest,
+  }), [boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey, changeViewport, onTokensSaved, refreshManifest,
     libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
 
   const selectionCtx = useMemo(() => ({
@@ -577,6 +586,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
                 onSaved={() => { setDialog(null); announce(t('announce_template_saved')); refreshLibrary(); }}
               />
             )}
+            {boot.mediaPicker && boot.mediaApiUrl ? <MediaHost api={mediaApi} /> : null}
             {dialog === 'component' && <ComponentDialog onClose={() => setDialog(null)} onCreate={createComponent} />}
             {dialog === 'theme' && <ThemeDialog onClose={() => setDialog(null)} onSaved={onTokensSaved} />}
             {dialog === 'ai_review' && <AiReviewDialog onClose={() => setDialog(null)} onPublish={publishReviewed} />}
