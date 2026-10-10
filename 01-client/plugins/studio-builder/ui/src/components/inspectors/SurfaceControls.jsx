@@ -10,6 +10,8 @@ import { ColorField, DraftText, unitOf } from './StyleControls.jsx';
 import { Icon, choiceIcon } from './InspectorIcons.jsx';
 import { Field, Pills, Check } from '../ui/index.js';
 import { asObject } from '../../core/doc.mjs';
+import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
+import { DeviceStyle } from './DeviceStyle.jsx';
 import { CORNERS, FILTER, OPTIONS, SIDES, TRANSFORM, getPath, setPath, setPaths } from '../../core/styleSurface.mjs';
 import { t } from '../../core/messages.mjs';
 import { optionLabel } from '../../core/optionLabels.mjs';
@@ -187,7 +189,19 @@ export function SpacingBox({ id, group, label, get, putAll, placeholder = '0' })
 
 // ── Layout ──────────────────────────────────────────────────────────────────
 
-export function LayoutPane({ style, onChange }) {
+/** The three gap fields: the part of the layout that can differ per device. */
+function GapFields({ id, style, onChange }) {
+  const f = useFields(style, onChange);
+  return (
+    <>
+      <Length id={id} units={LENGTH_UNITS} path="layout.gap" label={t('layout_gap')} get={f.get} put={f.put} placeholder="1rem" />
+      <Length id={id} units={LENGTH_UNITS} path="layout.row_gap" label={t('layout_row_gap')} get={f.get} put={f.put} placeholder="1rem" />
+      <Length id={id} units={LENGTH_UNITS} path="layout.column_gap" label={t('layout_column_gap')} get={f.get} put={f.put} placeholder="1rem" />
+    </>
+  );
+}
+
+export function LayoutPane({ style, onChange, deviceScope }) {
   const id = useId();
   const f = useFields(style, onChange);
   const display = f.get('layout.display');
@@ -212,11 +226,11 @@ export function LayoutPane({ style, onChange }) {
         </>
       )}
       {(flex || grid) && (
-        <>
-          <Length id={id} units={LENGTH_UNITS} path="layout.gap" label={t('layout_gap')} get={f.get} put={f.put} placeholder="1rem" />
-          <Length id={id} units={LENGTH_UNITS} path="layout.row_gap" label={t('layout_row_gap')} get={f.get} put={f.put} placeholder="1rem" />
-          <Length id={id} units={LENGTH_UNITS} path="layout.column_gap" label={t('layout_column_gap')} get={f.get} put={f.put} placeholder="1rem" />
-        </>
+        deviceScope ? (
+          <DeviceStyle scope={deviceScope} paths={RESPONSIVE_SCOPES.gap} label={t('layout_gap')}>
+            {(view) => <GapFields id={id} style={view.style} onChange={view.onChange} />}
+          </DeviceStyle>
+        ) : <GapFields id={id} style={style} onChange={onChange} />
       )}
       <fieldset className="sbx-fieldset">
         <legend>{t('layout_as_item')}</legend>
