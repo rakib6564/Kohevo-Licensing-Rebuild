@@ -9,16 +9,17 @@ test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked layout (desktop)');
 });
 
+// The page's own sections: Layers also lists the shared header and footer as level-1 rows, which are not ours.
+const OWN = `${ROWS}[aria-level="1"][data-row^="sec_"]`;
+
 async function ensureSection(page) {
   await page.getByRole('tab', { name: /^Layers$/ }).click();
-  if ((await page.locator(`${ROWS}[aria-level="1"]`).count()) === 0) {
+  if ((await page.locator(OWN).count()) === 0) {
     await page.getByRole('button', { name: /Add section/ }).first().click();
-    await expect.poll(() => page.locator(`${ROWS}[aria-level="1"]`).count(), { timeout: 15_000 }).toBeGreaterThan(0);
+    await expect.poll(() => page.locator(OWN).count(), { timeout: 15_000 }).toBeGreaterThan(0);
   }
   await settled(page);
-  // The page this section lives on may show shared parts (header/footer) in the canvas; those are not ours to copy.
-  // Return the id of the page's own first section, from Layers.
-  return page.locator(`${ROWS}[aria-level="1"]`).first().getAttribute('data-row');
+  return page.locator(OWN).first().getAttribute('data-row');
 }
 
 test('right-click opens the menu in the builder, Escape closes it and returns focus', async ({ page }) => {
