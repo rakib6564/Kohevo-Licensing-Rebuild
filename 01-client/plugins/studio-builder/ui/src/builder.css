@@ -3256,3 +3256,7 @@ html, body.sbx-body {
 .sbx-devstyle { margin-bottom: var(--sbx-s-3); }
 .sbx-devstyle__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sbx-s-2); }
 .sbx-devstyle .sbx-hint { margin: 0 0 var(--sbx-s-2); }
+
+/* A theme colour or spacing picker sits under the literal field it can replace. */
+.sbx-color__theme { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.sbx-color__theme .sbx-field__label { font-size: var(--sbx-fs-sm); color: var(--sbx-text-dim); }

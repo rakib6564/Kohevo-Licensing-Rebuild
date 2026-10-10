@@ -127,11 +127,11 @@ export function BlockInspector({ info }) {
             </Field>
           </>
         )}
-        <StyleControls style={style} capabilities={capabilities} only="typography" mediaPicker={boot.mediaPicker} onChange={saveStyle} deviceScope={deviceScope} />
+        <StyleControls style={style} capabilities={capabilities} only="typography" mediaPicker={boot.mediaPicker} onChange={saveStyle} deviceScope={deviceScope} tokens={manifest && manifest.tokens} />
         <TypographyExtras style={style} onChange={saveStyle} />
       </>
     ),
-    background: () => <StyleControls style={style} capabilities={capabilities} only="background" mediaPicker={boot.mediaPicker} onChange={saveStyle} />,
+    background: () => <StyleControls style={style} capabilities={capabilities} only="background" mediaPicker={boot.mediaPicker} onChange={saveStyle} tokens={manifest && manifest.tokens} />,
     border: () => (
       <>
         <StyleControls style={style} capabilities={capabilities} only="border" onChange={saveStyle} />
@@ -208,7 +208,7 @@ export function BlockInspector({ info }) {
     advanced: () => (
       <>
         <DeviceStyle scope={deviceScope} paths={RESPONSIVE_SCOPES.spacing} label={t('section_spacing')}>
-          {(view) => <SpacingPane style={view.style} onChange={view.onChange} />}
+          {(view) => <SpacingPane style={view.style} onChange={view.onChange} tokens={capabilities.includes('spacing_token') ? tokensFor(manifest, STYLE_TOKEN_CATEGORIES.spacing_token) : null} />}
         </DeviceStyle>
         <Field label={t('z_index_label')} htmlFor={`${idPrefix}-z-index`}>
           <input
