@@ -14,6 +14,7 @@ import { IconLayoutSection } from '../Icons.jsx';
 import { IconButton } from './InspectorIcons.jsx';
 import { EntranceSelect, MotionInspector } from './MotionInspector.jsx';
 import { InspectorShell } from './InspectorShell.jsx';
+import { InspectorBar } from './InspectorBar.jsx';
 import { PAGE_SECTION_SECTIONS, SECTION_DEF } from '../../core/inspectorSections.mjs';
 import { ColorField } from './StyleControls.jsx';
 import { SpacingBox } from './SurfaceControls.jsx';
@@ -175,6 +176,7 @@ export function SectionInspector({ info }) {
       registry={PAGE_SECTION_SECTIONS}
       header={headerNode}
       actions={toolsNode}
+      footer={<InspectorBar block={section} label={label} kind="section" />}
       renderSection={(id) => (sectionBodies[id] ? sectionBodies[id]() : null)}
     />
   );

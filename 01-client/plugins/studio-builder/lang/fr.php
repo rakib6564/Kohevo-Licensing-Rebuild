@@ -684,6 +684,8 @@ return [
     'studio_ui_tok_default' => 'Par défaut',
     'studio_ui_inspector_bar' => 'Actions de l’inspecteur',
     'studio_ui_inspector_reset' => 'Réinitialiser',
+    'studio_ui_inspector_reset_section_hint' => 'Efface l’arrière-plan et les marges intérieures de cette section. Son contenu reste.',
+    'studio_ui_inspector_discard_section_hint' => 'Remet cette section comme elle était à sa sélection.',
     'studio_ui_inspector_reset_hint' => 'Efface le style, les réglages par appareil et les états de ce bloc. Son contenu reste.',
     'studio_ui_inspector_discard' => 'Annuler les changements',
     'studio_ui_inspector_discard_hint' => 'Remet ce bloc comme il était à sa sélection.',

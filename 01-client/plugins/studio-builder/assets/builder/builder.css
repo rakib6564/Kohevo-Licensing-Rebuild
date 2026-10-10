@@ -3276,3 +3276,12 @@ html, body.sbx-body {
 .sbx-pop__card { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 5; padding: 12px; border: 1px solid var(--sbx-border); border-radius: var(--sbx-r-lg); background: var(--sbx-panel); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); outline: none; }
 .sbx-pop__done { margin-top: 8px; }
 .sbx-pop.is-open .sbx-pop__row .sbx-iconbtn { border-color: var(--sbx-accent); }
+
+/* The bar sits at the bottom of the panel even when the controls are short: the host, its fieldset and the Inspector fill it. */
+.sbx-right > .sbx-inspector-host { flex: 1 0 auto; }
+.sbx-inspector-host > .sbx-lock-fieldset { flex: 1 0 auto; display: flex; flex-direction: column; }
+.sbx-lock-fieldset > .sbx-inspector { flex: 1 0 auto; display: flex; flex-direction: column; }
+.sbx-inspector > * { flex: none; }
+.sbx-inspector > .sbx-inspector__bar { margin-top: auto; }
+.sbx-left__body--inspector:not([hidden]) { display: flex; flex-direction: column; }
+.sbx-left__body--inspector > .sbx-inspector-host { flex: 1 0 auto; }

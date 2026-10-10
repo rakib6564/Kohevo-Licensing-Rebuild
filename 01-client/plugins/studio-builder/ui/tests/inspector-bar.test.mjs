@@ -49,3 +49,27 @@ test('the baseline is a copy, so later edits do not move it', () => {
   b.style.shadow = 'xl';
   assert.equal(base.style.shadow, 'md');
 });
+
+const section = () => ({ id: 'sec_1', label: '', layout: { width: 'wide', gap: 'md', background_token: 'surface.alt' }, style: { background: { color: '#fff' } }, visibility: {}, blocks: [] });
+
+test('a section reset clears its style and theme background, and keeps how it arranges', () => {
+  const sec = section();
+  assert.equal(hasStyle(sec, 'section'), true);
+  const ops = resetOps(sec, 'section');
+  assert.deepEqual(ops.map((o) => o.op), ['update_section_style', 'update_section_layout']);
+  assert.deepEqual(ops[0].payload.style, {});
+  assert.deepEqual(ops[1].payload.layout, { width: 'wide', gap: 'md' });
+  assert.equal(hasStyle({ id: 's', layout: { width: 'wide' }, style: {} }, 'section'), false);
+  assert.deepEqual(resetOps({ id: 's', layout: { width: 'wide' }, style: {} }, 'section'), []);
+});
+
+test('a section discard restores the layout, style and visibility that changed', () => {
+  const base = editableState(section(), 'section');
+  const edited = { ...section(), layout: { width: 'narrow', gap: 'md' }, style: {} };
+  assert.equal(hasChanged(edited, base, 'section'), true);
+  const ops = discardOps(edited, base, 'section');
+  assert.deepEqual(ops.map((o) => o.op), ['update_section_layout', 'update_section_style']);
+  assert.deepEqual(ops[0].payload.layout, section().layout);
+  assert.deepEqual(ops[1].payload.style, section().style);
+  assert.equal(hasChanged(section(), base, 'section'), false);
+});
