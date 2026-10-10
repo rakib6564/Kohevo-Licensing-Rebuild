@@ -55,6 +55,9 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   const base = useEngineState((s) => s.base);
   const baseRef = useRef(null);
   baseRef.current = base;
+  const settleRef = useRef(null);
+  const viewportKeyRef = useRef(viewport.key);
+  viewportKeyRef.current = viewport.key;
   const path = useMemo(() => ancestorPath(working, selection, manifest), [working, selection, manifest]);
   const revisionId = useEngineState((s) => (s.revision ? s.revision.id : 0));
   const status = useEngineState((s) => s.status);
@@ -141,7 +144,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
    * Repaint from the server without reloading the frame: fetch the render and morph it into the open document.
    * Resolves true when done, 'busy' while the author is typing in the canvas, false when it cannot be done.
    */
-  const repaintInPlace = useCallback(async (url) => {
+  const repaintInPlace = useCallback(async (url, renderedFrom = baseRef.current) => {
     let doc = null;
     try { doc = frameRef.current && frameRef.current.contentDocument; } catch { doc = null; }
     if (!doc || doc.readyState === 'loading') return false;
@@ -151,6 +154,9 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       const next = new DOMParser().parseFromString(await res.text(), 'text/html');
       if (isInlineEditing(doc)) return 'busy';
       morphDocument(doc, next);
+      // Whatever render this was, and whenever it was asked for, it is a picture of `renderedFrom`: what the author has
+      // done since is painted again on top of it.
+      if (settleRef.current) settleRef.current(doc, renderedFrom);
       return true;
     } catch { return false; }
   }, []);
@@ -178,6 +184,32 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     }
   }, [transport, boot.pageId]);
 
+  // The server's render of `renderedFrom` has just been merged into the canvas: the canvas is now painted to that document,
+  // and everything the author has done since (structure, text, classes, styles) is painted again on top of it.
+  settleRef.current = (doc, renderedFrom) => {
+    const working = workingRef.current;
+    paintedRef.current = renderedFrom;
+    serverBaseRef.current = renderedFrom;
+    // The render carries the styles the editor painted; end those overrides, then paint whatever the author has changed since.
+    releaseLive(doc, liveRef.current);
+    clearFragments(doc);
+    try {
+      const { pending } = syncLiveStructure(doc, renderedFrom, working);
+      if (pending && pending.length) showFragments(pending);
+    } catch (_) { /* the next render settles it */ }
+    structRef.current = working;
+    // Text, classes and attributes changed after that render was made: without this the canvas would keep the older text
+    // for a change that is already saved.
+    try {
+      patchCanvas(doc, renderedFrom, working);
+      syncLiveDOM(doc, renderedFrom, working, viewportKeyRef.current);
+    } catch (_) { /* the next render settles it */ }
+    const tokens = tokensOfDoc(doc);
+    syncLiveStyles(doc, renderedFrom, working, tokens, liveRef.current);
+    if (!isStructuralChange(renderedFrom, working, tokens)) paintedRef.current = working;
+    markSelected(doc, selectionRef.current, { scroll: false, ids: selectedIdsRef.current });
+  };
+
   // A confirmed revision: the live patch has usually painted it already; otherwise morph the server's render in.
   useEffect(() => {
     const next = canvasSrc;
@@ -203,32 +235,12 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     let tries = 0;
     const baseAtStart = baseRef.current;
     const run = async () => {
-      const done = await repaintInPlace(next);
+      const done = await repaintInPlace(next, baseAtStart);
       if (cancelled) return;
       if (done === 'busy' && tries < BUSY_RETRIES) { tries += 1; timer = setTimeout(run, BUSY_RETRY_MS); return; }
       shownRef.current = next;
       lastLoadedRevRef.current = revisionId;
-      if (done === true) {
-        paintedRef.current = baseRef.current;
-        serverBaseRef.current = baseAtStart;
-        let doc = null;
-        try { doc = frameRef.current && frameRef.current.contentDocument; } catch { doc = null; }
-        if (doc) {
-          // The render carries the styles the editor painted; end those overrides, then paint whatever the author has changed since.
-          releaseLive(doc, liveRef.current);
-          clearFragments(doc);
-          // The render is the structure of the revision it was made from; paint what the author has done since.
-          try {
-            const { pending } = syncLiveStructure(doc, baseAtStart, workingRef.current);
-            if (pending && pending.length) showFragments(pending);
-          } catch (_) { /* the next render settles it */ }
-          structRef.current = workingRef.current;
-          syncLiveStyles(doc, serverBaseRef.current, workingRef.current, tokensOfDoc(doc), liveRef.current);
-          markSelected(doc, selectionRef.current, { scroll: false, ids: selectedIdsRef.current });
-        }
-      } else {
-        reloadFrame(next);
-      }
+      if (done !== true) reloadFrame(next);
     };
     timer = setTimeout(run, REPAINT_DEBOUNCE_MS);
     return () => { cancelled = true; clearTimeout(timer); };
