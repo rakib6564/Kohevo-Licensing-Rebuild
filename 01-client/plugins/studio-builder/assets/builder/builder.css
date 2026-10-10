@@ -3265,3 +3265,5 @@ html, body.sbx-body {
 /* Reset · Discard · Apply: pinned under the Inspector's controls. */
 .sbx-inspector__bar { position: sticky; bottom: 0; display: flex; gap: 8px; padding: 10px 0; margin-top: 12px; background: var(--sbx-bg); border-top: 1px solid var(--sbx-border); z-index: 2; }
 .sbx-inspector__bar .sbx-btn { flex: 1 1 0; justify-content: center; }
+/* Keep a focused or scrolled-to control clear of the pinned bar. */
+.sbx-right, .sbx-left__body { scroll-padding-bottom: 72px; }
