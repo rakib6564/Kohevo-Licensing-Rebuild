@@ -93,6 +93,8 @@ final class BlockRendererRegistry
         $registry->register(new CoreRenderers\CardRenderer());
         $registry->register(new CoreRenderers\TableRenderer());
         $registry->register(new CoreRenderers\CountdownRenderer());
+        $registry->register(new CoreRenderers\DividerRenderer());
+        $registry->register(new CoreRenderers\SpacerRenderer());
         return $registry;
     }
 

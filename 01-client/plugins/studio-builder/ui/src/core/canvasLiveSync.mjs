@@ -88,7 +88,7 @@ const SERVER_PAINTED_FIELDS = ['style_states', 'tag', 'classNames', 'attributes'
  * Blocks whose markup is built only on the server (no heuristic live patch exists for them): any
  * property edit repaints the canvas from the server instead of being patched in place.
  */
-export const SERVER_RENDERED_TYPES = new Set(['core.icon', 'core.list', 'core.quote', 'core.link', 'core.card', 'core.table', 'core.countdown']);
+export const SERVER_RENDERED_TYPES = new Set(['core.icon', 'core.list', 'core.quote', 'core.link', 'core.card', 'core.table', 'core.countdown', 'core.divider', 'core.spacer']);
 
 /**
  * Types whose heading can carry a highlighted word: the server wraps it in a span, which the text patch

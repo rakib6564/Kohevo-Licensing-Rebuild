@@ -740,6 +740,103 @@
             "allowed_child_types": [],
             "allows_children": false,
             "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "align": "center",
+                "style": "solid",
+                "weight": "thin",
+                "width": "full"
+            },
+            "description": "A line that separates parts of a page",
+            "field_schema": [
+                {
+                    "key": "style",
+                    "type": "enum",
+                    "label": "Line style",
+                    "required": false,
+                    "default": "solid",
+                    "allowed_values": [
+                        "solid",
+                        "dashed",
+                        "dotted"
+                    ]
+                },
+                {
+                    "key": "weight",
+                    "type": "enum",
+                    "label": "Thickness",
+                    "required": false,
+                    "default": "thin",
+                    "allowed_values": [
+                        "thin",
+                        "medium",
+                        "thick"
+                    ]
+                },
+                {
+                    "key": "width",
+                    "type": "enum",
+                    "label": "Width",
+                    "required": false,
+                    "default": "full",
+                    "allowed_values": [
+                        "full",
+                        "wide",
+                        "narrow",
+                        "short"
+                    ]
+                },
+                {
+                    "key": "align",
+                    "type": "enum",
+                    "label": "Alignment",
+                    "required": false,
+                    "default": "center",
+                    "allowed_values": [
+                        "left",
+                        "center",
+                        "right"
+                    ]
+                }
+            ],
+            "icon": "divider",
+            "inline_text": [],
+            "label": "Divider",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
+            ],
+            "title": "Divider",
+            "type": "core.divider",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
             "category": "content",
             "default_props": {
                 "card_options": {
@@ -2284,6 +2381,66 @@
             ],
             "title": "Rich text",
             "type": "core.rich_text",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "size": "md"
+            },
+            "description": "Empty space between two parts of a page",
+            "field_schema": [
+                {
+                    "key": "size",
+                    "type": "enum",
+                    "label": "Height",
+                    "required": false,
+                    "default": "md",
+                    "allowed_values": [
+                        "xs",
+                        "sm",
+                        "md",
+                        "lg",
+                        "xl",
+                        "2xl"
+                    ]
+                }
+            ],
+            "icon": "spacer",
+            "inline_text": [],
+            "label": "Spacer",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
+            ],
+            "title": "Spacer",
+            "type": "core.spacer",
             "version": 1
         },
         {

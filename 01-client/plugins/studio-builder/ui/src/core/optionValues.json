@@ -12,7 +12,10 @@
     "modal_size": { "rule": ".sb-modal--{v} .sb-modal__dialog", "prop": "max-width", "values": { "sm": "24rem", "md": "36rem", "lg": "48rem", "full": "95vw" }, "baseRule": { "md": ".sb-modal__dialog" } },
     "text_size": { "rule": ".sb-text--{v}", "prop": "font-size", "values": { "xs": ".75rem", "sm": ".875rem", "base": "1rem", "lg": "1.125rem", "xl": "1.25rem", "lead": "1.25rem" } },
     "button_size": { "rule": ".sb-button--{v}", "prop": "font-size", "values": { "sm": ".875rem", "md": "1rem", "lg": "1.125rem" } },
-    "gallery_gap": { "rule": ".sb-gallery--gap-{v}", "prop": "gap", "values": { "none": "0", "xs": ".25rem", "sm": ".5rem", "md": "1rem", "lg": "1.5rem" } }
+    "gallery_gap": { "rule": ".sb-gallery--gap-{v}", "prop": "gap", "values": { "none": "0", "xs": ".25rem", "sm": ".5rem", "md": "1rem", "lg": "1.5rem" } },
+    "spacer_size": { "rule": ".sb-spacer--{v}", "prop": "height", "values": { "xs": ".5rem", "sm": "1rem", "md": "2rem", "lg": "3.5rem", "xl": "5.5rem", "2xl": "8rem" } },
+    "divider_width": { "rule": ".sb-divider--w-{v}", "prop": "width", "values": { "full": "100%", "wide": "75%", "narrow": "50%", "short": "25%" } },
+    "divider_weight": { "rule": ".sb-divider--{v}", "prop": "border-top-width", "values": { "thin": "1px", "medium": "2px", "thick": "4px" } }
   },
   "fields": {
     "section.gap": "gap",
@@ -31,7 +34,10 @@
     "core.modal.size": "modal_size",
     "core.text.size": "text_size",
     "core.button.size": "button_size",
-    "core.gallery.gap": "gallery_gap"
+    "core.gallery.gap": "gallery_gap",
+    "core.spacer.size": "spacer_size",
+    "core.divider.width": "divider_width",
+    "core.divider.weight": "divider_weight"
   },
   "kinds": {
     "text_size": "font",
