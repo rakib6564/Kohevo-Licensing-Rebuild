@@ -95,6 +95,7 @@ final class BlockRendererRegistry
         $registry->register(new CoreRenderers\CountdownRenderer());
         $registry->register(new CoreRenderers\DividerRenderer());
         $registry->register(new CoreRenderers\SpacerRenderer());
+        $registry->register(new CoreRenderers\NavMenuRenderer());
         return $registry;
     }
 

@@ -371,3 +371,37 @@ unit('divider and spacer: the stylesheet has a rule for every word, the spacer s
     assert_true(str_contains($css, ':where(.sb-block--core-divider){border-color:var(--sb-border-default)}'), 'zero-specificity default, so a border colour on the block wins');
     assert_true(str_contains($css, 'border-top-color:inherit'), 'the line takes the block\'s border colour');
 });
+
+unit('nav menu: registered as a layout leaf with a repeater of label and url, three starter links', function (): void {
+    $m = null;
+    foreach (ModuleBlockDefinitions::studioRegistry()->editorManifests() as $b) {
+        if ($b['type'] === 'core.nav_menu') {
+            $m = $b;
+        }
+    }
+    assert_true($m !== null, 'registered');
+    assert_eq('layout', $m['category']);
+    assert_false((bool) $m['allows_children'], 'a leaf');
+    $html = sbel_render([sbel_block('core.nav_menu', ['items' => [['label' => 'Home', 'url' => '/'], ['label' => 'About', 'url' => '/about/']]])]);
+    assert_true(str_contains($html, '<nav class="sb-nav sb-nav--horizontal sb-nav--left sb-nav--plain" aria-label="Menu"><ul class="sb-nav__list"><li class="sb-nav__item"><a class="sb-nav__link" href="/">Home</a></li><li class="sb-nav__item"><a class="sb-nav__link" href="/about/">About</a></li></ul></nav>'), 'exact markup');
+});
+
+unit('nav menu: every author string is escaped, unsafe URLs are not linked, an empty menu renders nothing, other words are refused', function (): void {
+    $html = sbel_render([sbel_block('core.nav_menu', ['aria_label' => 'A"><i>', 'items' => [['label' => '<b>x</b>', 'url' => '/ok/'], ['label' => 'Bad', 'url' => 'javascript:alert(1)']]])]);
+    assert_false(str_contains($html, '<b>x'), 'a label is escaped');
+    assert_false(str_contains($html, 'javascript:'), 'an unsafe URL never reaches the page');
+    assert_false(str_contains($html, '<i>'), 'the menu name is escaped');
+    assert_false(str_contains(sbel_render([sbel_block('core.nav_menu', ['items' => []])]), 'sb-nav'), 'no links, no menu');
+    $block = ModuleBlockDefinitions::studioRegistry()->get('core.nav_menu');
+    foreach ([['layout', 'grid'], ['align', 'justify'], ['style', 'neon']] as [$key, $bad]) {
+        assert_false($block->validateProps([$key => $bad])->isValid(), "{$key} = {$bad} is refused");
+    }
+    assert_true($block->validateProps(['layout' => 'vertical', 'align' => 'center', 'style' => 'pill'])->isValid(), 'valid choices pass');
+});
+
+unit('nav menu: the stylesheet styles the list, both layouts, alignment and every link style', function (): void {
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    foreach (['.sb-nav__list{', '.sb-nav--vertical .sb-nav__list{', '.sb-nav--center .sb-nav__list{', '.sb-nav--right .sb-nav__list{', '.sb-nav--underline .sb-nav__link{', '.sb-nav--pill .sb-nav__link{'] as $rule) {
+        assert_true(str_contains($css, $rule), $rule);
+    }
+});

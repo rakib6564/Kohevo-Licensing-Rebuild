@@ -118,6 +118,10 @@ function place(node, x, y, w, shapes, depth) {
       shapes.push({ k: 'line', x, y: y + 2, w, h: 1 });
       return 5;
     }
+    case 'core.nav_menu': {
+      for (let i = 0; i < 3; i += 1) shapes.push({ k: 'line', x: x + i * (w / 3), y: y + 1, w: w / 3 - 4, h: 3 });
+      return 6;
+    }
     case 'core.spacer':
       return 6;
     case 'core.countdown': {

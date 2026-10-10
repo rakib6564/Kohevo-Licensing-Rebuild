@@ -398,6 +398,7 @@ const EN = {
   opt_medium: 'Medium',
   opt_thick: 'Thick',
   opt_short: 'Short',
+  opt_pill: 'Pill',
   opt_boxed: 'Boxed',
   opt_compact: 'Compact',
   opt_constrained: 'Constrained',

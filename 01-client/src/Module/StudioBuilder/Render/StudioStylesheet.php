@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '5';
+    public const VERSION = '6';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -117,6 +117,14 @@ final class StudioStylesheet
             . '.sb-spacer{display:block;width:100%}'
             . '.sb-spacer--xs{height:.5rem}.sb-spacer--sm{height:1rem}.sb-spacer--md{height:2rem}.sb-spacer--lg{height:3.5rem}.sb-spacer--xl{height:5.5rem}.sb-spacer--2xl{height:8rem}'
             . '@media (max-width:767.98px){.sb-spacer--xs{height:.25rem}.sb-spacer--sm{height:.5rem}.sb-spacer--md{height:1rem}.sb-spacer--lg{height:2rem}.sb-spacer--xl{height:3rem}.sb-spacer--2xl{height:4.5rem}}'
+            . '.sb-nav{margin:0 0 1rem}.sb-nav__list{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:.25rem 1.5rem}'
+            . '.sb-nav--vertical .sb-nav__list{flex-direction:column;gap:.25rem}'
+            . '.sb-nav--center .sb-nav__list{justify-content:center}.sb-nav--right .sb-nav__list{justify-content:flex-end}'
+            . '.sb-nav--vertical.sb-nav--center{text-align:center}.sb-nav--vertical.sb-nav--right{text-align:right}'
+            . '.sb-nav__link{color:inherit;text-decoration:none;display:inline-block;padding:.35rem 0}'
+            . '.sb-nav__link:hover{color:var(--sb-color-accent)}'
+            . '.sb-nav--underline .sb-nav__link{text-decoration:underline;text-underline-offset:.25em}'
+            . '.sb-nav--pill .sb-nav__link{padding:.35rem .9rem;border-radius:999px}.sb-nav--pill .sb-nav__link:hover{background:var(--sb-border-default)}'
             . '.sb-link-row{margin:0 0 1rem}.sb-link-row--center{text-align:center}.sb-link-row--right{text-align:right}'
             . '.sb-link{color:var(--sb-color-accent);font-weight:600}.sb-link--plain{text-decoration:none}'
             . '.sb-link--arrow{text-decoration:none}.sb-link--arrow::after{content:" \\2192"}'

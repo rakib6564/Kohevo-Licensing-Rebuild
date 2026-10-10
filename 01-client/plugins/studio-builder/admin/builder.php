@@ -769,6 +769,7 @@ $sbBoot = [
         'opt_medium' => __('studio_ui_opt_medium', 'Medium'),
         'opt_thick' => __('studio_ui_opt_thick', 'Thick'),
         'opt_short' => __('studio_ui_opt_short', 'Short'),
+        'opt_pill' => __('studio_ui_opt_pill', 'Pill'),
         'opt_boxed' => __('studio_ui_opt_boxed', 'Boxed'),
         'opt_compact' => __('studio_ui_opt_compact', 'Compact'),
         'opt_constrained' => __('studio_ui_opt_constrained', 'Constrained'),
