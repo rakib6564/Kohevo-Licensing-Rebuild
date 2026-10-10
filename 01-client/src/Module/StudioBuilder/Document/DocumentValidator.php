@@ -659,6 +659,12 @@ final class DocumentValidator
                     if (!is_array($bpVal) && !is_scalar($bpVal) && $bpVal !== null) {
                         $errors[] = ValidationResult::issue("{$path}.responsive.{$bpKey}", 'invalid_responsive_value', "Responsive breakpoint '{$bpKey}' value must be an object, array, or scalar.");
                     }
+                    // A per-device style override (tablet / mobile only) goes through the closed style table.
+                    if (is_array($bpVal) && array_key_exists('style', $bpVal) && array_key_exists((string) $bpKey, StyleSurface::RESPONSIVE_DEVICES)) {
+                        foreach (StyleSurface::responsiveIssues($bpVal['style'], "{$path}.responsive.{$bpKey}.style") as $issue) {
+                            $errors[] = ValidationResult::issue($issue['path'], $issue['code'], $issue['message']);
+                        }
+                    }
                 }
             }
         }

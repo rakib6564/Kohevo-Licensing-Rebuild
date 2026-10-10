@@ -87,11 +87,11 @@ final class RenderCollector
      *
      * @param array<string, string> $states state name => declarations
      */
-    public function scopedRule(string $nodeId, string $declarations, bool $reduceMotion = false, array $states = []): string
+    public function scopedRule(string $nodeId, string $declarations, bool $reduceMotion = false, array $states = [], array $media = []): string
     {
         $isSection = str_starts_with($nodeId, 'sec_');
         $valid = preg_match($isSection ? CanonicalDocumentSchema::SECTION_ID_PATTERN : CanonicalDocumentSchema::BLOCK_ID_PATTERN, $nodeId) === 1;
-        if (($declarations === '' && $states === []) || !$valid) {
+        if (($declarations === '' && $states === [] && $media === []) || !$valid) {
             return '';
         }
         // NUL stands for the class until it is known; no declaration can contain it (the typed guard
@@ -104,6 +104,12 @@ final class RenderCollector
         foreach (StyleSurface::STATE_SELECTORS as $name => $selector) {
             if (isset($states[$name]) && $states[$name] !== '') {
                 $template .= ".\0" . $selector . '{' . $states[$name] . '}';
+            }
+        }
+        // `$media` is query => declarations from StyleSurface::responsiveRules(); it follows the base rule so it wins at equal weight.
+        foreach ($media as $query => $decl) {
+            if ($decl !== '') {
+                $template .= '@media ' . $query . "{.\0{" . $decl . '}}';
             }
         }
         $class = 'sb-x-' . substr(hash('sha256', $template), 0, 16);

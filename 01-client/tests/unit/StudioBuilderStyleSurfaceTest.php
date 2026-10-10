@@ -527,3 +527,79 @@ unit('background: the editor\'s tenant check refuses a media id the tenant does 
     $doc['sections'][0]['blocks'][0]['style']['background']['image']['media_id'] = 7;
     assert_true(DocumentValidator::validate($doc, BlockRegistry::withAllCoreBlocks(), ['media_exists' => $own])->isValid(), 'media 7 is');
 });
+
+// ── Per-device style overrides (block.responsive.<tablet|mobile>.style) ───
+
+/** Render one heading carrying `responsive`, through the real renderer. */
+function sbss_render_responsive(array $style, array $responsive): array
+{
+    $tenants   = new TenantContext();
+    $renderer  = new DocumentRenderer(BlockRegistry::withAllCoreBlocks(), BlockRendererRegistry::withCoreRenderers(), new CoreMediaResolver($tenants), new ProviderBindingResolver(new DataProviderRegistry(), $tenants));
+    $collector = new RenderCollector();
+    $html = $renderer->renderBlock([
+        'id' => 'blk_aaaaaaaaaaaaaaaaaaaaaaaa', 'type' => 'core.heading', 'version' => 1,
+        'props' => ['text' => 'Styled', 'level' => 'h2'],
+        'style' => $style + CanonicalDocumentSchema::defaultBlockStyle(),
+        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+        'bindings' => [], 'children' => [], 'animation' => [], 'interactions' => [], 'responsive' => $responsive,
+    ], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), $collector, false);
+    return ['html' => $html, 'css' => $collector->css()];
+}
+
+unit('responsive style: tablet and mobile overrides of size, padding, margin and gap validate', function (): void {
+    $ok = [
+        ['tablet' => ['style' => ['typography' => ['size' => '1.25rem']]]],
+        ['mobile' => ['style' => ['padding' => ['top' => '1rem', 'bottom' => '1rem'], 'margin' => ['top' => '-1rem', 'left' => 'auto'], 'layout' => ['gap' => '8px', 'row_gap' => '4px', 'column_gap' => '2rem']]]],
+        ['tablet' => ['hide' => true, 'style' => []], 'mobile' => ['align' => 'center']],
+    ];
+    foreach ($ok as $responsive) {
+        $r = sbss_validate_block([], ['responsive' => $responsive]);
+        assert_true($r->isValid(), 'must validate ' . json_encode($responsive) . ' → ' . json_encode($r->errors()));
+    }
+});
+
+unit('responsive style: values outside the closed table are refused', function (): void {
+    $bad = [
+        'a colour' => ['tablet' => ['style' => ['color' => '#fff']]],
+        'a free group' => ['mobile' => ['style' => ['custom_css' => 'x']]],
+        'a url in a size' => ['tablet' => ['style' => ['typography' => ['size' => 'url(x)']]]],
+        'a hostile padding' => ['mobile' => ['style' => ['padding' => ['top' => '1rem;color:red']]]],
+        'a negative padding' => ['mobile' => ['style' => ['padding' => ['top' => '-1rem']]]],
+        'an unknown typography field' => ['tablet' => ['style' => ['typography' => ['weight' => 'bold']]]],
+        'a unitless gap' => ['tablet' => ['style' => ['layout' => ['gap' => '12']]]],
+        'a layout field outside the gaps' => ['tablet' => ['style' => ['layout' => ['display' => 'flex']]]],
+        'a list' => ['tablet' => ['style' => ['padding']]],
+    ];
+    foreach ($bad as $label => $responsive) {
+        assert_false(sbss_validate_block([], ['responsive' => $responsive])->isValid(), "must refuse: {$label}");
+    }
+});
+
+unit('responsive style: overrides render as media rules after the base rule, tablet before mobile', function (): void {
+    $out = sbss_render_responsive(
+        ['padding' => ['top' => '4rem'], 'typography' => ['size' => '3rem']],
+        ['mobile' => ['style' => ['padding' => ['top' => '1rem'], 'typography' => ['size' => '1.25rem']]], 'tablet' => ['style' => ['padding' => ['top' => '2rem'], 'layout' => ['gap' => '12px']]]],
+    );
+    $class = sbss_class($out['html']);
+    $rule  = ".{$class}{padding-top:4rem}"
+        . "@media (max-width:1023.98px){.{$class}{padding-top:2rem !important;gap:12px !important}}"
+        . "@media (max-width:767.98px){.{$class}{font-size:1.25rem !important;padding-top:1rem !important}}";
+    assert_true(str_contains($out['css'], $rule), 'expected the rule in: ' . $out['css']);
+    assert_true(str_contains($out['html'], 'font-size:3rem'), 'the desktop size stays inline');
+});
+
+unit('responsive style: an override alone still renders, and a hostile stored value is dropped', function (): void {
+    $only = sbss_render_responsive([], ['tablet' => ['style' => ['padding' => ['left' => '2rem']]]]);
+    $class = sbss_class($only['html']);
+    assert_true(str_contains($only['css'], "@media (max-width:1023.98px){.{$class}{padding-left:2rem !important}}"), $only['css']);
+    $evil = sbss_render_responsive([], ['tablet' => ['style' => ['padding' => ['left' => '2rem;background:url(x)'], 'color' => 'red']]]);
+    assert_false(str_contains($evil['html'], 'sb-x-'), 'nothing valid, so no scoped class');
+    assert_eq('', $evil['css'], 'and no rule');
+});
+
+unit('responsive style: documents without overrides render exactly as before', function (): void {
+    $before = sbss_render(['padding' => ['top' => '4rem']]);
+    $after  = sbss_render_responsive(['padding' => ['top' => '4rem']], ['tablet' => ['hide' => true], 'mobile' => ['align' => 'center'], 'md' => ['style' => ['padding' => ['top' => '9rem']]]]);
+    assert_eq($before['css'], $after['css'], 'same stylesheet');
+    assert_true(str_contains($after['html'], 'sb-hide-tablet') && str_contains($after['html'], 'sb-align-mobile-center'), 'the existing hide/align classes still apply');
+});
