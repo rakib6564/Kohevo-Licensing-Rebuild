@@ -255,6 +255,13 @@ unit('phase2 document domain: BlockRegistry core foundation blocks, duplicate re
 
     $filtered = $registry->editorManifests(static fn(?string $ent): bool => $ent === null);
     assert_eq(7, count($filtered), 'entitlement filter must exclude the module-gated block when entitlement is absent');
+
+    $withLocked = $registry->editorManifests(static fn(?string $ent): bool => $ent === null, null, true);
+    assert_eq(8, count($withLocked), 'includeLocked keeps the module-gated block in the list');
+    $lockedRows = array_values(array_filter($withLocked, static fn(array $m): bool => !empty($m['locked'])));
+    assert_eq(1, count($lockedRows), 'only the unentitled block is marked locked');
+    assert_eq('forms.embed', $lockedRows[0]['type']);
+    assert_eq('forms', $lockedRows[0]['locked_module']);
 });
 
 // ── 5. DocumentValidator + DocumentNormalizer ───────────────────────────────

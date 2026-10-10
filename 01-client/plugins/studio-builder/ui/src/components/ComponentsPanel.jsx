@@ -7,7 +7,7 @@ import { useEditor, useEngineState } from './EditorContext.jsx';
 import { BlockCard, usePresetInsertState } from './AddPanelParts.jsx';
 import { t } from '../core/messages.mjs';
 import { asList } from '../core/doc.mjs';
-import { isComponentBlock, isOffered } from '../core/addPanel.mjs';
+import { isComponentBlock, isLocked, isOffered } from '../core/addPanel.mjs';
 import { STATUS } from '../core/sync.mjs';
 
 export const ComponentsPanel = memo(function ComponentsPanel() {
@@ -19,6 +19,7 @@ export const ComponentsPanel = memo(function ComponentsPanel() {
   const canReference = asList(manifest && manifest.components && manifest.components.referencing_types).includes(pageType);
   const blocked = status === STATUS.CONFLICT || status === STATUS.LOADING;
   const kohevo = asList(manifest.blocks).filter((b) => isOffered(b) && isComponentBlock(b));
+  const locked = asList(manifest.blocks).filter((b) => isLocked(b) && isComponentBlock(b));
   const components = asList(library && library.components);
 
   return (
@@ -29,6 +30,14 @@ export const ComponentsPanel = memo(function ComponentsPanel() {
         <div className="sbx-palette__cards">
           {kohevo.map((b) => <BlockCard key={b.type} def={b} onInsert={insertBlock} />)}
         </div>
+        {locked.length > 0 && (
+          <div data-testid="palette-components-locked">
+            <h4 className="sbx-palette__category sbx-muted">{t('pal_components_locked')}</h4>
+            <div className="sbx-palette__cards">
+              {locked.map((b) => <BlockCard key={b.type} def={b} onInsert={insertBlock} />)}
+            </div>
+          </div>
+        )}
       </section>
 
       <section aria-labelledby="sbx-comp-global">

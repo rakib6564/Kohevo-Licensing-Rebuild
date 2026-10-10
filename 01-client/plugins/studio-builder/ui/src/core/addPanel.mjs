@@ -16,7 +16,10 @@ export const GROUP_PREVIEW = 6;
 export const categoryRank = (c) => { const i = BLOCK_CATEGORY_ORDER.indexOf(c); return i === -1 ? BLOCK_CATEGORY_ORDER.length : i; };
 
 /** A block this site has not switched off (Element Manager). A disabled block stays in the manifest so existing blocks still edit. */
-export const isOffered = (def) => !!def && def.disabled !== true;
+export const isOffered = (def) => !!def && def.disabled !== true && def.locked !== true;
+
+/** A block whose module is not active or licensed here: listed (greyed, with the reason), never insertable. */
+export const isLocked = (def) => !!def && def.locked === true;
 
 /** Kohevo component blocks (module-backed): the Components tab. */
 export const isComponentBlock = (def) => !!def && def.category === 'business';
@@ -63,6 +66,7 @@ export function groupBlocks(blocks, query = '', categoryLabel = (c) => c) {
 export function blockInsertState(doc, manifest, selectedId, type) {
   const def = asList(manifest.blocks).find((b) => b.type === type);
   if (def && def.disabled === true) return { ok: false, reason: 'disabled' };
+  if (def && def.locked === true) return { ok: false, reason: 'locked' };
   const maxBlocks = (manifest.limits && manifest.limits.max_blocks) || 250;
   if (countBlocks(doc) >= maxBlocks) return { ok: false, reason: 'blocks_limit' };
   const where = insertionPoint(doc, manifest, selectedId, type);

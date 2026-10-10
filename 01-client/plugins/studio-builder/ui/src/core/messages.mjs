@@ -447,6 +447,8 @@ const EN = {
   em_truncated: 'Only the most recently edited pages were counted.',
   em_empty: 'No elements match.',
   pal_reason_disabled: 'Switched off for this site.',
+  pal_reason_locked: 'This needs a Kohevo module that is not active or licensed on this site.',
+  pal_components_locked: 'Not available on this site',
   site_settings_title: 'Site settings',
   ss_view_page: 'Page',
   ss_view_site: 'Site',

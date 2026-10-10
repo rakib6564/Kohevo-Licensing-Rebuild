@@ -1273,9 +1273,9 @@ final class StudioApplicationService
         $disabledTypes = $this->availability?->disabled($tenantId) ?? [];
         $blocks = array_map(
             static fn(array $block): array => self::translateBlockCopy($block) + (in_array($block['type'] ?? '', $disabledTypes, true) ? ['disabled' => true] : []),
-            $this->registry->editorManifests($entitled, static fn(string $perm): bool => $actor->can($perm)),
+            $this->registry->editorManifests($entitled, static fn(string $perm): bool => $actor->can($perm), true),
         );
-        $offered = array_column($blocks, 'type');
+        $offered = array_column(array_filter($blocks, static fn(array $b): bool => empty($b['locked'])), 'type');
 
         return [
             'blocks'      => $blocks,

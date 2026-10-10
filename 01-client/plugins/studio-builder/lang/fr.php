@@ -774,6 +774,8 @@ return [
     'studio_ui_em_truncated' => 'Seules les pages modifiées le plus récemment ont été comptées.',
     'studio_ui_em_empty' => 'Aucun élément ne correspond.',
     'studio_ui_pal_reason_disabled' => 'Désactivé pour ce site.',
+    'studio_ui_pal_reason_locked' => 'Nécessite un module Kohevo qui n’est ni actif ni sous licence sur ce site.',
+    'studio_ui_pal_components_locked' => 'Non disponibles sur ce site',
     'studio_ui_site_settings_title' => 'Réglages du site',
     'studio_ui_ss_view_page' => 'Page',
     'studio_ui_ss_view_site' => 'Site',

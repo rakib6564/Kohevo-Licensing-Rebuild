@@ -67,23 +67,33 @@ final class BlockRegistry
      * Return transport-safe editor manifests for registered blocks, optionally
      * filtered by entitlement and permission predicates.
      *
+     * With `$includeLocked`, a block the site is not entitled to is still listed, marked
+     * `locked` with the module it needs, so the editor can say WHY it is unavailable
+     * instead of silently omitting it. The server still refuses to save such a block.
+     *
      * @param null|callable(?string $entitlement): bool $entitlementCheck
      * @param null|callable(string $permission): bool   $permissionCheck
      * @return list<array<string, mixed>>
      */
-    public function editorManifests(?callable $entitlementCheck = null, ?callable $permissionCheck = null): array
+    public function editorManifests(?callable $entitlementCheck = null, ?callable $permissionCheck = null, bool $includeLocked = false): array
     {
         $manifests = [];
         foreach ($this->all() as $definition) {
             $ent = $definition->requiredEntitlement();
-            if ($entitlementCheck !== null && !$entitlementCheck($ent)) {
+            $locked = $entitlementCheck !== null && !$entitlementCheck($ent);
+            if ($locked && !$includeLocked) {
                 continue;
             }
             $perm = $definition->requiredPermission();
             if ($permissionCheck !== null && !$permissionCheck($perm)) {
                 continue;
             }
-            $manifests[] = $definition->toEditorManifest();
+            $manifest = $definition->toEditorManifest();
+            if ($locked) {
+                $manifest['locked'] = true;
+                $manifest['locked_module'] = (string) $ent;
+            }
+            $manifests[] = $manifest;
         }
         return $manifests;
     }

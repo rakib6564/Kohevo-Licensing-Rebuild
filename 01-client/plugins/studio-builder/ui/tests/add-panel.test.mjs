@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  BLOCK_CATEGORY_ORDER, blockInsertState, groupBlocks, isComponentBlock, isElementBlock, presetInsertState, reasonKey, searchAll, variantCards, blocksWithVariants,
+  BLOCK_CATEGORY_ORDER, blockInsertState, groupBlocks, isComponentBlock, isElementBlock, presetInsertState, reasonKey, searchAll, variantCards, blocksWithVariants, isLocked, isOffered,
 } from '../src/core/addPanel.mjs';
 import { isDynamicBlock } from '../src/components/blockKinds.mjs';
 
@@ -114,4 +114,14 @@ test('a variant obeys the same insertion rules as its block', () => {
   const tiny = { ...manifest, limits: { ...manifest.limits, max_blocks: 1 } };
   const full = { document_type: 'page', sections: [{ id: 'sec_a', layout: {}, blocks: [{ id: 'blk_a', type: 'core.text', props: {}, children: [] }] }] };
   assert.equal(blockInsertState(full, tiny, 'sec_a', card.type).reason, 'blocks_limit');
+});
+
+test('a locked module block is listed but never offered or insertable', () => {
+  const locked = { type: 'coaching.demo_locked', title: 'Locked demo', category: 'business', locked: true, locked_module: 'coaching' };
+  const m = { ...manifest, blocks: [...manifest.blocks, locked] };
+  assert.equal(isLocked(locked), true);
+  assert.equal(isOffered(locked), false);
+  assert.ok(!blocksWithVariants(m).some((b) => b.type === 'coaching.demo_locked'), 'locked blocks stay out of the Elements tab and search');
+  assert.deepEqual(blockInsertState(oneSection, m, 'sec_a', 'coaching.demo_locked'), { ok: false, reason: 'locked' });
+  assert.equal(reasonKey('locked'), 'pal_reason_locked');
 });
