@@ -110,6 +110,9 @@ const EN = {
   opacity_label: 'Opacity',
   font_family: 'Font Family',
   device_overrides: 'Device Overrides',
+  device_style_reset: 'Reset to the larger device value',
+  device_style_hint: 'Empty fields use the value of the larger device.',
+  device_style_overridden: 'Has its own value',
   hide_on_desktop: 'Hide on Desktop',
   hide_on_tablet: 'Hide on Tablet',
   hide_on_mobile: 'Hide on Mobile',
@@ -890,6 +893,8 @@ const EN = {
   background: 'Background',
   provider: 'Data source',
   bindings_hint: 'This block shows live data from an installed module.',
+  pick_none: 'None',
+  pick_empty: 'Nothing to choose from yet',
   editing_at: 'Editing at',
   unavailable_block: 'Unknown block',
 

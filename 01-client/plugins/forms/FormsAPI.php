@@ -2550,6 +2550,24 @@ class FormsAPI {
         return $out;
     }
 
+    /** Published forms with their ids, for pickers that store the id (Studio): [['id'=>int,'title'=>string], …]. */
+    public static function publishedChoices(): array {
+        try {
+            $rows = Database::rows(
+                "SELECT id, slug, title FROM forms_definitions
+                  WHERE tenant_id = ? AND status = 'published' ORDER BY title ASC",
+                [current_tenant_id()]
+            );
+        } catch (\Throwable $e) {
+            return [];
+        }
+        $out = [];
+        foreach ($rows as $r) {
+            $out[] = ['id' => (int)$r['id'], 'title' => ($r['title'] !== '' ? (string)$r['title'] : (string)$r['slug'])];
+        }
+        return $out;
+    }
+
     /** Render the Content Builder "Form" block (iframe embed + auto-resize). */
     /**
      * The `form` block, rendered INLINE into the host page (Phase D).

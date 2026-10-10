@@ -9,6 +9,7 @@ import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { attachCanvas, markSelected } from '../core/canvas.mjs';
 import { inlineSpecsFor, propsWithInlineText } from '../core/inlineText.mjs';
 import { patchCanvas } from '../core/canvasPatch.mjs';
+import { isInlineEditing, morphDocument } from '../core/canvasMorph.mjs';
 import { ghostNodeIds, isStructuralChange, syncLiveDOM } from '../core/canvasLiveSync.mjs';
 import { STATUS } from '../core/sync.mjs';
 import { t } from '../core/messages.mjs';
@@ -24,7 +25,10 @@ import { BottomBar } from './BottomBar.jsx';
 import { stepZoom, zoomPercent } from '../core/zoom.mjs';
 import { useIsMobileShell } from '../hooks/useIsMobileShell.mjs';
 
-const RELOAD_DEBOUNCE_MS = 250;
+/** A repaint is a fetch and a morph, not a navigation: it can follow the edit closely. */
+const REPAINT_DEBOUNCE_MS = 80;
+const BUSY_RETRY_MS = 300;
+const BUSY_RETRIES = 15;
 
 /** Read-only canvas: links and forms must not navigate the frame away from the page being edited. */
 function blockNavigation(doc) {
@@ -110,10 +114,43 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   const onInlineTextRef = useRef(onInlineText);
   onInlineTextRef.current = onInlineText;
 
-  // Smart iframe reload: skip expensive full reloads when DOM was already synced live!
+  // What the canvas shows, as the render it was last given: the page it loaded, or the render it was last morphed into.
+  const shownRef = useRef(canvasSrc);
+  const srcRef = useRef(src);
+  srcRef.current = src;
+
+  /** Navigate the frame to a fresh copy: the fallback when a render cannot be morphed in place. */
+  const reloadFrame = useCallback((url) => {
+    try {
+      const win = frameRef.current && frameRef.current.contentWindow;
+      scrollRef.current = win ? win.scrollY : 0;
+    } catch { scrollRef.current = 0; }
+    setLoading(true);
+    setSrc(url === srcRef.current ? `${url}-r${Date.now()}` : url);
+  }, []);
+
+  /**
+   * Repaint from the server without reloading the frame: fetch the render and morph it into the open document.
+   * Resolves true when done, 'busy' while the author is typing in the canvas, false when it cannot be done.
+   */
+  const repaintInPlace = useCallback(async (url) => {
+    let doc = null;
+    try { doc = frameRef.current && frameRef.current.contentDocument; } catch { doc = null; }
+    if (!doc || doc.readyState === 'loading') return false;
+    try {
+      const res = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'text/html' } });
+      if (!res.ok) return false;
+      const next = new DOMParser().parseFromString(await res.text(), 'text/html');
+      if (isInlineEditing(doc)) return 'busy';
+      morphDocument(doc, next);
+      return true;
+    } catch { return false; }
+  }, []);
+
+  // A confirmed revision: the live patch has usually painted it already; otherwise morph the server's render in.
   useEffect(() => {
     const next = canvasSrc;
-    if (next === src) return undefined;
+    if (next === shownRef.current) return undefined;
 
     const structural = isStructuralChange(paintedRef.current, working);
 
@@ -121,21 +158,32 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       // The canvas DOM is already updated in 0ms via syncLiveDOM!
       lastLoadedRevRef.current = revisionId;
       paintedRef.current = working;
+      shownRef.current = next;
       setLoading(false);
       return undefined;
     }
 
-    const h = setTimeout(() => {
-      try {
-        const win = frameRef.current && frameRef.current.contentWindow;
-        scrollRef.current = win ? win.scrollY : 0;
-      } catch { scrollRef.current = 0; }
-      setLoading(true);
-      setSrc(next);
+    let cancelled = false;
+    let timer = 0;
+    let tries = 0;
+    const run = async () => {
+      const done = await repaintInPlace(next);
+      if (cancelled) return;
+      if (done === 'busy' && tries < BUSY_RETRIES) { tries += 1; timer = setTimeout(run, BUSY_RETRY_MS); return; }
+      shownRef.current = next;
       lastLoadedRevRef.current = revisionId;
-    }, RELOAD_DEBOUNCE_MS);
-    return () => clearTimeout(h);
-  }, [canvasSrc, src, revisionId, working]);
+      if (done === true) {
+        paintedRef.current = baseRef.current;
+        let doc = null;
+        try { doc = frameRef.current && frameRef.current.contentDocument; } catch { doc = null; }
+        if (doc) markSelected(doc, selectionRef.current, { scroll: false, ids: selectedIdsRef.current });
+      } else {
+        reloadFrame(next);
+      }
+    };
+    timer = setTimeout(run, REPAINT_DEBOUNCE_MS);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [canvasSrc, revisionId, working, repaintInPlace, reloadFrame]);
 
   // 0ms Real-time live canvas DOM sync on every keystroke and property change!
   useEffect(() => {
@@ -173,15 +221,11 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       if (!ghostNodeIds(ids, working).length) { repaintsRef.current = 0; return; }
       if (repaintsRef.current >= 1) return;
       repaintsRef.current += 1;
-      try {
-        const win = frameRef.current && frameRef.current.contentWindow;
-        scrollRef.current = win ? win.scrollY : 0;
-      } catch { scrollRef.current = 0; }
-      setLoading(true);
-      setSrc(`${boot.canvasUrl}?page=${boot.pageId}&v=${revisionId}-g${Date.now()}`);
+      const url = `${boot.canvasUrl}?page=${boot.pageId}&v=${revisionId}-g${Date.now()}`;
+      repaintInPlace(url).then((done) => { if (done !== true && done !== 'busy') reloadFrame(url); });
     }, 700);
     return () => clearTimeout(h);
-  }, [working, loading, interactive, boot.canvasUrl, boot.pageId, revisionId]);
+  }, [working, loading, interactive, boot.canvasUrl, boot.pageId, revisionId, repaintInPlace, reloadFrame]);
 
   const onCanvasDrop = useCallback(({ targetId, targetType, position, dataTransfer }) => {
     if (!dataTransfer) return;

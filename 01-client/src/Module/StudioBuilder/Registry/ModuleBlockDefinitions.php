@@ -2,12 +2,14 @@
 /**
  * Kohevo Studio (studio-builder) — Business-module catalogue block definitions.
  *
- * Declarative metadata for the three dynamic blocks that surface existing
+ * Declarative metadata for the dynamic blocks that surface existing
  * business-module data through the Phase 3 provider boundary:
  *
- *   booking.services  -> provider booking.services  (entitlement: booking)
- *   membership.plans  -> provider membership.plans  (entitlement: membership)
- *   forms.form_card   -> provider forms.form        (entitlement: forms)
+ *   booking.services  -> provider booking.services     (entitlement: booking)
+ *   membership.plans  -> provider membership.plans     (entitlement: membership)
+ *   forms.form_card   -> provider forms.form           (entitlement: forms)
+ *   forms.embed       -> provider forms.form_embed     (entitlement: forms)
+ *   booking.embed     -> provider booking.embed_target (entitlement: booking)
  *
  * Each block declares its commercial entitlement (enforced at write time by
  * `DocumentValidator` and again, live, at every render) and allowlists exactly
@@ -75,6 +77,34 @@ final class ModuleBlockDefinitions
                 requiredEntitlement: 'forms',
                 allowedBindingProviders: ['forms.form'],
                 bindingSlots: ['form' => 'forms.form'],
+            ),
+            new DeclarativeBlockDefinition(
+                type: 'forms.embed',
+                version: 1,
+                label: 'Form',
+                title: 'Form',
+                description: 'One of your forms, working on the page',
+                category: 'business',
+                icon: 'form',
+                schema: FieldSchema::define([]),
+                requiredEntitlement: 'forms',
+                allowedBindingProviders: ['forms.form_embed'],
+                bindingSlots: ['form' => 'forms.form_embed'],
+            ),
+            new DeclarativeBlockDefinition(
+                type: 'booking.embed',
+                version: 1,
+                label: 'Booking',
+                title: 'Booking',
+                description: 'Your booking flow, or one service, on the page',
+                category: 'business',
+                icon: 'calendar',
+                schema: FieldSchema::define([
+                    ['key' => 'min_height', 'type' => 'number', 'label' => 'Minimum height (px)', 'required' => false, 'default' => 560, 'integer_only' => true, 'min' => 200, 'max' => 2400],
+                ]),
+                requiredEntitlement: 'booking',
+                allowedBindingProviders: ['booking.embed_target'],
+                bindingSlots: ['service' => 'booking.embed_target'],
             ),
         ];
     }

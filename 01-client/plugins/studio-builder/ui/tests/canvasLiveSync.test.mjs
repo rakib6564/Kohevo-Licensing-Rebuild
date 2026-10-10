@@ -146,3 +146,10 @@ test('ghostNodeIds: nodes the canvas shows that the document does not have', asy
   assert.deepEqual(ghostNodeIds([null, '', 'sec_1'], doc), []);
   assert.deepEqual(ghostNodeIds(['sec_1'], { sections: [] }), ['sec_1']);
 });
+
+test('a per-device style override repaints from the server, while hide and align stay live', () => {
+  const doc = (responsive) => ({ sections: [{ id: 's1', blocks: [{ id: 'b1', type: 'core.heading', props: {}, style: {}, responsive }] }] });
+  assert.equal(isStructuralChange(doc({}), doc({ tablet: { style: { padding: { top: '2rem' } } } })), true);
+  assert.equal(isStructuralChange(doc({ mobile: { style: { padding: { top: '1rem' } } } }), doc({})), true);
+  assert.equal(isStructuralChange(doc({}), doc({ tablet: { hide: true } })), false);
+});

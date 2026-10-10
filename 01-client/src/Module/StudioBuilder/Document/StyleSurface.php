@@ -875,6 +875,78 @@ final class StyleSurface
         return $rules;
     }
 
+    // ── per-device overrides ──────────────────────────────────────────────────
+
+    /**
+     * Devices that may carry a style override (`block.responsive.<device>.style`), with the media query each one
+     * applies under. Desktop is the block's own style, so tablet (and below) and mobile cascade downwards.
+     */
+    public const RESPONSIVE_DEVICES = ['tablet' => '(max-width:1023.98px)', 'mobile' => '(max-width:767.98px)'];
+
+    /** @return array<string, array<string, array<int, mixed>>> group => field => definition, for the per-device subset. */
+    private static function responsiveFields(): array
+    {
+        $more   = self::moreFields();
+        $layout = array_intersect_key(self::fields()['layout'], array_flip(['gap', 'row_gap', 'column_gap']));
+        return [
+            'typography' => ['size' => ['length', 'font-size']],
+            'padding'    => $more['padding'],
+            'margin'     => $more['margin'],
+            'layout'     => $layout,
+        ];
+    }
+
+    /**
+     * Issues for one device's style override: a partial style limited to font size, padding, margin and gaps.
+     *
+     * @return list<array{path: string, code: string, message: string}>
+     */
+    public static function responsiveIssues(mixed $style, string $path): array
+    {
+        if (!is_array($style) || ($style !== [] && array_is_list($style))) {
+            return [self::issue($path, 'A device style must be an object.')];
+        }
+        $errors = [];
+        $defs   = self::responsiveFields();
+        foreach ($style as $group => $value) {
+            if (!isset($defs[(string) $group])) {
+                $errors[] = self::issue("{$path}.{$group}", "A device style cannot set '{$group}'.");
+                continue;
+            }
+            self::checkObject($value, $defs[(string) $group], "{$path}.{$group}", $errors);
+        }
+        return $errors;
+    }
+
+    /**
+     * query => declarations for every device that produces something, in cascade order (tablet, then mobile).
+     * Each declaration is `!important` because the base font size is an inline style, which a class rule would lose to.
+     *
+     * @param array<string, mixed> $responsive block.responsive
+     * @return array<string, string>
+     */
+    public static function responsiveRules(array $responsive): array
+    {
+        $rules = [];
+        $defs  = self::responsiveFields();
+        foreach (self::RESPONSIVE_DEVICES as $device => $query) {
+            $style = $responsive[$device]['style'] ?? null;
+            if (!is_array($style)) {
+                continue;
+            }
+            $out = [];
+            foreach ($defs as $group => $fields) {
+                if (isset($style[$group]) && is_array($style[$group])) {
+                    self::emitFields($style[$group], $fields, $out);
+                }
+            }
+            if ($out !== []) {
+                $rules[$query] = implode(' !important;', $out) . ' !important';
+            }
+        }
+        return $rules;
+    }
+
     /** True when the block's style has a transition (so a reduced-motion override is needed). */
     public static function hasTransition(array $style): bool
     {

@@ -2775,6 +2775,7 @@ html, body.sbx-body {
   .sbx-left .sbx-inspector__tools { gap: 8px; }
   .sbx-left .sbx-sheet-close { min-width: 44px; }
   .sbx-left .sbx-inspector .sbx-tree__action { min-width: 44px; min-height: 44px; }
+  .sbx-left .sbx-inspector .sbx-responsive__device { min-width: 44px; min-height: 44px; }
 }
 @media (max-width: 860px) {
   /* "Full panel": the 84vh cap above is for the half sheet; full runs to the top of the visible screen. */
@@ -3250,3 +3251,8 @@ html, body.sbx-body {
   padding: var(--sbx-s-2) var(--sbx-s-4); border-radius: var(--sbx-r-lg); border: 1px solid var(--sbx-border-strong);
   background: var(--sbx-card-bg); color: var(--sbx-text-strong); font-size: var(--sbx-fs-md); box-shadow: var(--sbx-shadow-md); pointer-events: none;
 }
+
+/* Per-device style controls (DeviceStyle): the device switch sits above the group of controls it applies to. */
+.sbx-devstyle { margin-bottom: var(--sbx-s-3); }
+.sbx-devstyle__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sbx-s-2); }
+.sbx-devstyle .sbx-hint { margin: 0 0 var(--sbx-s-2); }

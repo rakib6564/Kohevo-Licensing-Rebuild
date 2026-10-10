@@ -125,6 +125,12 @@ final class BlockRenderScope
         return $this->media->resolveImage($mediaRef['media_id']);
     }
 
+    /** First asking wins: for the one `<link>`/`<script>` a plugin block needs per page, however many blocks use it. */
+    public function claimOnce(string $key): bool
+    {
+        return $this->collector->claimOnce($key);
+    }
+
     public function tokenClass(string $kind, mixed $ref): string
     {
         return $this->collector->tokenClass($kind, $ref, $this->theme);

@@ -2,6 +2,67 @@
     "blocks": [
         {
             "allowed_binding_providers": [
+                "booking.embed_target"
+            ],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [
+                {
+                    "provider": "booking.embed_target",
+                    "slot": "service"
+                }
+            ],
+            "category": "business",
+            "default_props": {
+                "min_height": 560
+            },
+            "description": "Your booking flow, or one service, on the page",
+            "field_schema": [
+                {
+                    "key": "min_height",
+                    "type": "number",
+                    "label": "Minimum height (px)",
+                    "required": false,
+                    "default": 560,
+                    "min": 200,
+                    "max": 2400,
+                    "integer_only": true
+                }
+            ],
+            "icon": "calendar",
+            "inline_text": [],
+            "label": "Booking",
+            "required_entitlement": "booking",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
+            ],
+            "title": "Booking",
+            "type": "booking.embed",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [
                 "booking.services"
             ],
             "allowed_child_types": [],
@@ -2789,6 +2850,54 @@
         },
         {
             "allowed_binding_providers": [
+                "forms.form_embed"
+            ],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [
+                {
+                    "provider": "forms.form_embed",
+                    "slot": "form"
+                }
+            ],
+            "category": "business",
+            "default_props": [],
+            "description": "One of your forms, working on the page",
+            "field_schema": [],
+            "icon": "form",
+            "inline_text": [],
+            "label": "Form",
+            "required_entitlement": "forms",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
+            ],
+            "title": "Form",
+            "type": "forms.embed",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [
                 "forms.form"
             ],
             "allowed_child_types": [],
@@ -3778,6 +3887,22 @@
     ],
     "providers": [
         {
+            "key": "booking.embed_target",
+            "max_results": 1,
+            "params": [
+                {
+                    "key": "id",
+                    "type": "number",
+                    "label": "Service (none: your whole booking page)",
+                    "required": false,
+                    "default": 0,
+                    "min": 1,
+                    "integer_only": true,
+                    "choices": []
+                }
+            ]
+        },
+        {
             "key": "booking.services",
             "max_results": 100,
             "params": []
@@ -3935,6 +4060,22 @@
                     "required": true,
                     "default": "",
                     "max_length": 80
+                }
+            ]
+        },
+        {
+            "key": "forms.form_embed",
+            "max_results": 1,
+            "params": [
+                {
+                    "key": "id",
+                    "type": "number",
+                    "label": "Form",
+                    "required": true,
+                    "default": 0,
+                    "min": 1,
+                    "integer_only": true,
+                    "choices": []
                 }
             ]
         },

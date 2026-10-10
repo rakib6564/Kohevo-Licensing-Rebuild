@@ -25,7 +25,9 @@ import { asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
 import { Pills, Field } from '../ui/index.js';
 import { acceptsDraft } from '../../core/styleValues.mjs';
-import { acceptsSurfaceDraft } from '../../core/styleSurface.mjs';
+import { acceptsSurfaceDraft, setPath } from '../../core/styleSurface.mjs';
+import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
+import { DeviceStyle } from './DeviceStyle.jsx';
 import { MediaControl } from '../fields/MediaControl.jsx';
 import { FocalPad, OverlayField } from './BackgroundWidgets.jsx';
 /**
@@ -229,7 +231,7 @@ function GradientField({ value, onChange }) {
  * @param {string} [props.only]                  render just this section (typography, background, border, shadow, dimensions, opacity)
  * @param {boolean} [props.mediaPicker]            whether the media library picker is available to this user
  */
-export function StyleControls({ style, capabilities, onChange, mediaPicker, only }) {
+export function StyleControls({ style, capabilities, onChange, mediaPicker, only, deviceScope }) {
   const id = useId();
   // `only` renders a single section of the stack (the Inspector shows each in its own collapsible section);
   // the text colour belongs with Typography.
@@ -284,15 +286,32 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
       {has('typography') && (
         <fieldset className="sbx-fieldset">
           {!only && <legend>{t('typography')}</legend>}
-          <DraftText
-            id={`${id}-size`}
-            kind="length"
-            label={t('font_size')}
-            value={typo.size}
-            units={['px', 'rem', 'em', '%']}
-            placeholder="1.5rem"
-            onCommit={(v) => patchNested('typography', 'size', v)}
-          />
+          {deviceScope ? (
+            // The font size is the one typography field that can differ per device (a plain string; a stored breakpoint map is left alone).
+            <DeviceStyle scope={deviceScope} paths={RESPONSIVE_SCOPES.size} label={t('font_size')}>
+              {(view) => (
+                <DraftText
+                  id={`${id}-size`}
+                  kind="length"
+                  label={t('font_size')}
+                  value={asObject(view.style.typography).size}
+                  units={['px', 'rem', 'em', '%']}
+                  placeholder="1.5rem"
+                  onCommit={(v) => view.onChange(setPath(view.style, 'typography.size', v))}
+                />
+              )}
+            </DeviceStyle>
+          ) : (
+            <DraftText
+              id={`${id}-size`}
+              kind="length"
+              label={t('font_size')}
+              value={typo.size}
+              units={['px', 'rem', 'em', '%']}
+              placeholder="1.5rem"
+              onCommit={(v) => patchNested('typography', 'size', v)}
+            />
+          )}
           <DraftText
             id={`${id}-lh`}
             kind="lineHeight"

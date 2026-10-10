@@ -28,6 +28,8 @@ import { t } from '../../core/messages.mjs';
 import { IconButton } from './InspectorIcons.jsx';
 import { optionLabel } from '../../core/optionLabels.mjs';
 import { Field } from '../ui/index.js';
+import { DeviceStyle } from './DeviceStyle.jsx';
+import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
 
 /** Mirrors CanonicalDocumentSchema::Z_INDEX_MIN / Z_INDEX_MAX. */
 const Z_INDEX_MIN = -999;
@@ -61,6 +63,8 @@ export function BlockInspector({ info }) {
   const capabilities = asList(def.style_capabilities);
   const save = (op) => applyOp(op, { label: def.label });
   const saveStyle = (next) => save(ops.updateBlockStyle(block.id, next));
+  // The controls that can differ per device edit through this (desktop = the style, tablet/mobile = block.responsive).
+  const deviceScope = { style, responsive, saveStyle, saveResponsive: (next) => save(ops.updateBlockResponsive(block.id, next)) };
   const patchTypography = (patch) => saveStyle({ ...style, typography: { ...asObject(style.typography), ...patch } });
 
   const sections = {
@@ -123,7 +127,7 @@ export function BlockInspector({ info }) {
             </Field>
           </>
         )}
-        <StyleControls style={style} capabilities={capabilities} only="typography" mediaPicker={boot.mediaPicker} onChange={saveStyle} />
+        <StyleControls style={style} capabilities={capabilities} only="typography" mediaPicker={boot.mediaPicker} onChange={saveStyle} deviceScope={deviceScope} />
         <TypographyExtras style={style} onChange={saveStyle} />
       </>
     ),
@@ -146,7 +150,7 @@ export function BlockInspector({ info }) {
         <DimensionsExtras style={style} media={MEDIA_TYPES.has(block.type)} onChange={saveStyle} />
       </>
     ),
-    layout: () => <LayoutPane style={style} onChange={saveStyle} />,
+    layout: () => <LayoutPane style={style} onChange={saveStyle} deviceScope={deviceScope} />,
     position: () => <PositionPane style={style} onChange={saveStyle} />,
     effects: () => <EffectsPane style={style} onChange={saveStyle} />,
     states: () => <StatesPane states={block.style_states} onChange={(next) => save(ops.updateBlockStyleStates(block.id, next))} />,
@@ -203,7 +207,9 @@ export function BlockInspector({ info }) {
     ),
     advanced: () => (
       <>
-        <SpacingPane style={style} onChange={saveStyle} />
+        <DeviceStyle scope={deviceScope} paths={RESPONSIVE_SCOPES.spacing} label={t('section_spacing')}>
+          {(view) => <SpacingPane style={view.style} onChange={view.onChange} />}
+        </DeviceStyle>
         <Field label={t('z_index_label')} htmlFor={`${idPrefix}-z-index`}>
           <input
             id={`${idPrefix}-z-index`}
@@ -249,6 +255,9 @@ export function BlockInspector({ info }) {
   );
 }
 
+// A cleared optional parameter is left out: binding params are scalars, never null.
+const withoutEmpty = (params) => Object.fromEntries(Object.entries(params).filter(([, v]) => v !== null && v !== undefined && v !== ''));
+
 function BindingsEditor({ block, def, manifest, applyOp }) {
   const bindings = asObject(block.bindings);
   const commit = (next) => applyOp(ops.updateBlockBindings(block.id, next), { label: def.label });
@@ -278,7 +287,7 @@ function BindingsEditor({ block, def, manifest, applyOp }) {
             schema={provider.params}
             value={asObject(current.params)}
             manifest={manifest}
-            onChange={(params) => commit({ ...bindings, [slot.slot]: { ...current, params } })}
+            onChange={(params) => commit({ ...bindings, [slot.slot]: { ...current, params: withoutEmpty(params) } })}
           />
         )}
       </fieldset>
