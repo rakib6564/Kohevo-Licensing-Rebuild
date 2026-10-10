@@ -437,3 +437,12 @@ unit('embed copy: French strings exist for the block copy, parameter labels and 
         assert_true(isset($fr[$key]) && trim((string) $fr[$key]) !== '', "{$key} has a French entry");
     }
 });
+
+unit('forms embed: the site stylesheet defines the variables the Forms stylesheet reads, so the submit button is never transparent', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    assert_true(str_contains($css, '.sb-block--forms-embed{--f-accent:var(--sb-color-accent)'), 'the accent variable is mapped to the site accent');
+    foreach (['--f-accent-d', '--f-ink', '--f-muted', '--f-line', '--f-surface', '--f-soft', '--f-ring'] as $variable) {
+        assert_true(str_contains($css, $variable . ':'), "{$variable} is defined for the embed");
+    }
+});

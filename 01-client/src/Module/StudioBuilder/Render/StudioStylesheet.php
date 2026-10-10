@@ -129,6 +129,9 @@ final class StudioStylesheet
             . '.sb-embed-card__fields{margin:.75rem 0 0;padding-left:1.25rem;color:var(--sb-text-muted)}'
             . '.sb-embed-card__note{margin:.75rem 0 0;font-size:.8125rem;color:var(--sb-text-muted)}'
             . '.sb-embed-frame{width:100%;border:0;display:block}'
+            // The Forms stylesheet reads its colours from variables it defines only on its own standalone page (`.forms-public`).
+            // Embedded in a Studio page there is no such ancestor, so the submit button lost its background; map them to the site tokens.
+            . '.sb-block--forms-embed{--f-accent:var(--sb-color-accent);--f-accent-d:color-mix(in srgb,var(--sb-color-accent) 85%,#000);--f-ink:var(--sb-text-primary);--f-muted:var(--sb-text-muted);--f-line:#e4e7ec;--f-line-2:#eef1f5;--f-surface:#fff;--f-soft:#f7f8fa;--f-radius:14px;--f-radius-s:11px;--f-ring:rgba(17,17,17,.14)}'
             . '.sb-empty{color:var(--sb-text-muted)}'
             . '.sb-unavailable{padding:.75rem 1rem;border:1px dashed #b45309;color:#92400e;background:#fffbeb;border-radius:6px;font-size:.875rem}'
             . '.sb-preview-banner{position:sticky;top:0;z-index:10;padding:.5rem 1rem;background:#1e293b;color:#fff;font:600 .8rem/1.4 system-ui,sans-serif;text-align:center}'
