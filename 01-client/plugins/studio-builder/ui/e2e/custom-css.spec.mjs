@@ -1,5 +1,5 @@
 // Settings › Site › Custom CSS: an administrator's site stylesheet is reduced on save, shown back as stored,
-// emitted in Preview, and withheld from the editing canvas.
+// emitted in Preview, and shown in the editing canvas (after which a guard keeps blocks selectable).
 import { test, expect } from '@playwright/test';
 import { openBuilder, settled, sandboxPageId } from './helpers.mjs';
 
@@ -19,7 +19,7 @@ async function openCss(page) {
   return panel.getByTestId('custom-css');
 }
 
-test('custom CSS is saved reduced, shown as stored, and reaches Preview but not the canvas', async ({ page }) => {
+test('custom CSS is saved reduced, shown as stored, and reaches Preview and the canvas', async ({ page }) => {
   await openBuilder(page);
   await settled(page);
   const cc = await openCss(page);
@@ -41,7 +41,11 @@ test('custom CSS is saved reduced, shown as stored, and reaches Preview but not 
     });
     expect(html.preview).toContain('data-sb="tenant-css"');
     expect(html.preview).toContain('.e2e-probe');
-    expect(html.canvas).not.toContain('.e2e-probe');
+    expect(html.canvas).toContain('data-sb="tenant-css"');
+    expect(html.canvas).toContain('.e2e-probe');
+    // the guard comes after the tenant stylesheet, so tenant CSS cannot block selecting or scrolling
+    expect(html.canvas.indexOf('data-sb="editor-guard"')).toBeGreaterThan(html.canvas.indexOf('data-sb="tenant-css"'));
+    expect(html.canvas).not.toContain('<script');
   } finally {
     await editor.fill('');
     if (await save.isEnabled()) await save.click();

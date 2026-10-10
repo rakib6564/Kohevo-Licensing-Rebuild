@@ -133,10 +133,47 @@ unit('analytics: GTM body iframe is never emitted outside Public', function (): 
     assert_eq('', StudioCodePolicy::bodyMarkup(SBP1C_TENANT, RenderMode::Preview));
 });
 
-// ── Rule (a): tenant CSS is never emitted into the canvas ─────────────────
+// ── Rule (a): no scripts in the canvas; the site's look (CSS, font links) is allowed ──
 
-unit('custom css: never emitted in the Editor canvas', function (): void {
+unit('custom css: with nothing configured the Editor canvas emits nothing', function (): void {
     assert_eq('', StudioCodePolicy::customCssMarkup(SBP1C_TENANT, RenderMode::Editor));
+});
+
+unit('editor guard: tenant CSS cannot block selecting or scrolling in the canvas', function (): void {
+    $guard = StudioCodePolicy::editorGuardCss();
+    assert_true(str_contains($guard, 'pointer-events:auto!important') && str_contains($guard, '[data-sb-node]'));
+    assert_true(str_contains($guard, 'overflow-y:auto!important'));
+    assert_false(str_contains($guard, '<script'));
+});
+
+unit('editor head: only font links on allowed https hosts survive from a head snippet', function (): void {
+    $snippet = '<script src="https://evil.test/x.js"></script>'
+        . '<meta name="a" content="b">'
+        . '<link rel="preconnect" href="https://fonts.googleapis.com">'
+        . '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&amp;display=swap" rel="stylesheet" onload="alert(1)">'
+        . '<link rel="stylesheet" href="https://evil.test/a.css">'
+        . '<link rel="stylesheet" href="http://fonts.googleapis.com/css">'
+        . '<link rel="icon" href="https://fonts.gstatic.com/i.png">'
+        . '<link rel="stylesheet" href="https://fonts.googleapis.com.evil.test/css">';
+    $out = StudioCodePolicy::fontLinksFrom($snippet);
+    assert_true(str_contains($out, '<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>'));
+    assert_true(str_contains($out, '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&amp;display=swap">'));
+    assert_eq(2, substr_count($out, '<link'), 'two links kept: ' . $out);
+    foreach (['evil', 'onload', '<script', 'http://', '<meta', 'icon'] as $bad) {
+        assert_false(str_contains($out, $bad), 'must drop: ' . $bad);
+    }
+    assert_eq('', StudioCodePolicy::fontLinksFrom(''));
+});
+
+unit('canvas csp: scripts stay off and styles may load from the font hosts only', function (): void {
+    $csp = \Slate\Module\StudioBuilder\Http\StudioCanvasPolicy::CONTENT_SECURITY_POLICY;
+    assert_true(str_contains($csp, "script-src 'none'"));
+    foreach (StudioCodePolicy::EDITOR_FONT_HOSTS as $host) {
+        if ($host !== 'fonts.gstatic.com') {
+            assert_true(str_contains($csp, 'https://' . $host), $host);
+        }
+    }
+    assert_false(str_contains($csp, 'style-src *') || str_contains($csp, "style-src 'self' 'unsafe-inline' https:;"));
 });
 
 unit('custom css: read failure degrades to empty, never throws', function (): void {

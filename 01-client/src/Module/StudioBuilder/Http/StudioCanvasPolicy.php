@@ -26,7 +26,7 @@ use Slate\Module\StudioBuilder\Render\RenderResult;
 final class StudioCanvasPolicy
 {
     public const CONTENT_SECURITY_POLICY = "default-src 'self'; script-src 'none'; object-src 'none'; base-uri 'none'; "
-        . "form-action 'none'; frame-ancestors 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; "
+        . "form-action 'none'; frame-ancestors 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net https://use.typekit.net https://p.typekit.net; "
         . "font-src 'self' https: data:; connect-src 'none'";
 
     /** The iframe sandbox the builder must use for the canvas. */

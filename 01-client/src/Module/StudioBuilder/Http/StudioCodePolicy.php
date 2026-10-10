@@ -28,10 +28,14 @@
  *
  * ── The three rules that make this safe ──────────────────────────────────
  *
- * (a) NEVER in the Editor canvas. `StudioCanvasPolicy` pins the canvas to
+ * (a) NO SCRIPTS in the Editor canvas. `StudioCanvasPolicy` pins the canvas to
  *     `script-src 'none'`; emitting anything script-shaped there would either
- *     break that contract or invite a future bypass. Custom CSS is withheld
- *     too, so the canvas shows the tenant's real published design.
+ *     break that contract or invite a future bypass. Scripts, analytics and
+ *     arbitrary head markup stay out. What the canvas DOES get is what makes
+ *     it look like the published page: the tenant stylesheet and the font
+ *     `<link>`s of the head snippet (https, an allowlist of font hosts only),
+ *     followed by a small guard so tenant CSS cannot stop the author from
+ *     selecting blocks or scrolling.
  *
  * (b) NEVER analytics outside Public. Preview is an authenticated authoring
  *     surface — firing GA4/GTM from it would contaminate the tenant's real
@@ -330,12 +334,60 @@ final class StudioCodePolicy
         return self::sanitizeCustomCss((string) (self::setting(self::SETTING_CUSTOM_CSS, $tenantId) ?? ''));
     }
 
+    /** Hosts whose stylesheets the Editor canvas may load (also listed in StudioCanvasPolicy's `style-src`). */
+    public const EDITOR_FONT_HOSTS = ['fonts.googleapis.com', 'fonts.bunny.net', 'use.typekit.net', 'p.typekit.net', 'fonts.gstatic.com'];
+
     /**
-     * Markup for <head>. Returns '' in Editor (rule (a)) and whenever nothing
-     * is configured, so the common case emits nothing at all.
+     * The font `<link>`s of the head snippet, rebuilt from their parts: `rel` stylesheet / preconnect /
+     * dns-prefetch, an https `href` on an allowed font host. Anything else in the snippet (scripts,
+     * styles, other links, other attributes) is dropped, so the canvas gets the site's fonts and nothing else.
+     */
+    public static function editorFontLinks(int $tenantId): string
+    {
+        return self::fontLinksFrom(self::snippet($tenantId, self::SETTING_HEAD_SNIPPET, 'head'));
+    }
+
+    /** Pure core of editorFontLinks(): the allowed font links of one head snippet. */
+    public static function fontLinksFrom(string $html): string
+    {
+        if ($html === '' || !preg_match_all('/<link\b[^>]*>/i', $html, $tags)) {
+            return '';
+        }
+        $out = '';
+        foreach ($tags[0] as $tag) {
+            if (!preg_match('/\brel\s*=\s*["\']?(stylesheet|preconnect|dns-prefetch)\b/i', $tag, $rel)) {
+                continue;
+            }
+            if (!preg_match('/\bhref\s*=\s*(?:"([^"]*)"|\'([^\']*)\')/i', $tag, $href)) {
+                continue;
+            }
+            $url = html_entity_decode($href[1] !== '' ? $href[1] : ($href[2] ?? ''), ENT_QUOTES);
+            $parts = parse_url($url);
+            if (!is_array($parts) || ($parts['scheme'] ?? '') !== 'https' || !in_array(strtolower((string) ($parts['host'] ?? '')), self::EDITOR_FONT_HOSTS, true)) {
+                continue;
+            }
+            $kind = strtolower($rel[1]);
+            $out .= '<link rel="' . $kind . '" href="' . htmlspecialchars($url, ENT_QUOTES) . '"' . ($kind === 'stylesheet' ? '' : ' crossorigin') . '>';
+        }
+        return $out;
+    }
+
+    /** Declared after the tenant stylesheet in the Editor canvas: tenant CSS must not block selecting or scrolling. */
+    public static function editorGuardCss(): string
+    {
+        return '<style data-sb="editor-guard">html,body,[data-sb-node]{pointer-events:auto!important}'
+            . 'html{overflow-y:auto!important}body{overflow:visible!important}</style>';
+    }
+
+    /**
+     * Markup for <head>. In Editor only the font links (rule (a)); '' whenever nothing is
+     * configured, so the common case emits nothing at all.
      */
     public static function headMarkup(int $tenantId, RenderMode $mode): string
     {
+        if ($mode === RenderMode::Editor) {
+            return self::editorFontLinks($tenantId);
+        }
         if ($mode !== RenderMode::Public) {
             return '';
         }
@@ -370,11 +422,11 @@ final class StudioCodePolicy
      */
     public static function customCssMarkup(int $tenantId, RenderMode $mode): string
     {
-        if ($mode === RenderMode::Editor) {
+        $css = self::customCss($tenantId);
+        if ($css === '') {
             return '';
         }
-        $css = self::customCss($tenantId);
-        return $css === '' ? '' : '<style data-sb="tenant-css">' . $css . '</style>';
+        return '<style data-sb="tenant-css">' . $css . '</style>' . ($mode === RenderMode::Editor ? self::editorGuardCss() : '');
     }
 
     /**
