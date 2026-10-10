@@ -308,3 +308,66 @@ unit('elements 2: the countdown markup matches the browser fixture and the runti
     $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
     assert_true(str_contains($css, '.sb-countdown[data-sb-live]') && str_contains($css, '[data-sb-finished] .sb-countdown__done'), 'the stylesheet reveals units and the done text by the attributes the runtime sets');
 });
+
+// ── Divider and Spacer ───────────────────────────────────────────────────────
+
+unit('divider and spacer: registered as layout leaves with a title, description and a drawable icon', function (): void {
+    $registry = ModuleBlockDefinitions::studioRegistry();
+    $byType = [];
+    foreach ($registry->editorManifests() as $m) {
+        $byType[$m['type']] = $m;
+    }
+    foreach (['core.divider', 'core.spacer'] as $type) {
+        assert_true($registry->has($type), "{$type} registered");
+        assert_eq('layout', $byType[$type]['category'], "{$type} is in the Layout group");
+        assert_true($byType[$type]['allows_children'] === false, "{$type} holds nothing");
+    }
+    assert_eq('divider', $byType['core.divider']['icon']);
+    assert_eq('spacer', $byType['core.spacer']['icon']);
+});
+
+unit('divider: renders an hr with its style, thickness, width and alignment, and the defaults when nothing is set', function (): void {
+    assert_true(str_contains(sbel_render([sbel_block('core.divider', [])]), '<hr class="sb-divider sb-divider--solid sb-divider--thin sb-divider--w-full sb-divider--center">'), 'the defaults');
+    $html = sbel_render([sbel_block('core.divider', ['style' => 'dashed', 'weight' => 'thick', 'width' => 'short', 'align' => 'left'])]);
+    assert_true(str_contains($html, '<hr class="sb-divider sb-divider--dashed sb-divider--thick sb-divider--w-short sb-divider--left">'), 'every choice reaches the markup');
+    assert_eq(sbel_render([sbel_block('core.divider', ['style' => 'dotted'])]), sbel_render([sbel_block('core.divider', ['style' => 'dotted'])]), 'deterministic');
+});
+
+unit('divider: only the allowlisted words are accepted, and a stored value outside them is never rendered as a divider or echoed', function (): void {
+    $block = ModuleBlockDefinitions::studioRegistry()->get('core.divider');
+    foreach ([['style', 'wavy'], ['weight', 'huge'], ['width', '80%'], ['align', 'justify'], ['style', '"><script>x</script>']] as [$key, $bad]) {
+        assert_false($block->validateProps([$key => $bad])->isValid(), "{$key} = {$bad} is refused");
+    }
+    assert_true($block->validateProps(['style' => 'dotted', 'weight' => 'medium', 'width' => 'narrow', 'align' => 'right'])->isValid(), 'valid choices pass');
+    $html = sbel_render([sbel_block('core.divider', ['style' => '"><script>x</script>', 'weight' => 'huge'])]);
+    assert_false(str_contains($html, '<script>x'), 'a bad value is never echoed');
+    assert_false(str_contains($html, '<hr'), 'a block with a bad value is not rendered as a divider (the document check refuses it)');
+});
+
+unit('spacer: renders an empty, hidden block of the chosen size, md by default, and refuses other sizes', function (): void {
+    assert_true(str_contains(sbel_render([sbel_block('core.spacer', [])]), '<div class="sb-spacer sb-spacer--md" aria-hidden="true"></div>'), 'the default');
+    foreach (['xs', 'sm', 'md', 'lg', 'xl', '2xl'] as $size) {
+        assert_true(str_contains(sbel_render([sbel_block('core.spacer', ['size' => $size])]), 'class="sb-spacer sb-spacer--' . $size . '"'), "size {$size}");
+    }
+    $block = ModuleBlockDefinitions::studioRegistry()->get('core.spacer');
+    foreach (['3xl', '40px', '"><b>'] as $bad) {
+        assert_false($block->validateProps(['size' => $bad])->isValid(), "size {$bad} is refused");
+    }
+    assert_false(str_contains(sbel_render([sbel_block('core.spacer', ['size' => '999'])]), 'sb-spacer'), 'a stored value outside the words is not rendered as a spacer');
+});
+
+unit('divider and spacer: the stylesheet has a rule for every word, the spacer shrinks on a phone, and the divider takes the theme border colour', function (): void {
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    foreach (\Slate\Module\StudioBuilder\Render\Block\CoreRenderers\DividerRenderer::STYLES as $v) {
+        assert_true(str_contains($css, ".sb-divider--{$v}{border-top-style:{$v}}"), "divider style {$v}");
+    }
+    foreach (\Slate\Module\StudioBuilder\Render\Block\CoreRenderers\DividerRenderer::WIDTHS as $v) {
+        assert_true(str_contains($css, ".sb-divider--w-{$v}{width:"), "divider width {$v}");
+    }
+    foreach (\Slate\Module\StudioBuilder\Render\Block\CoreRenderers\SpacerRenderer::SIZES as $v) {
+        assert_true(str_contains($css, ".sb-spacer--{$v}{height:"), "spacer size {$v}");
+        assert_true(str_contains($css, "@media (max-width:767.98px){") && substr_count($css, ".sb-spacer--{$v}{height:") === 2, "spacer {$v} has a desktop and a phone height");
+    }
+    assert_true(str_contains($css, ':where(.sb-block--core-divider){border-color:var(--sb-border-default)}'), 'zero-specificity default, so a border colour on the block wins');
+    assert_true(str_contains($css, 'border-top-color:inherit'), 'the line takes the block\'s border colour');
+});

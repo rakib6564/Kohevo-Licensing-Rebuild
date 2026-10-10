@@ -902,6 +902,39 @@ final class BlockRegistry
             ]),
             allowsChildren: false,
         ));
+
+        // 36. core.divider — a horizontal rule that separates parts of a page.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.divider',
+            version: 1,
+            label: 'Divider',
+            title: 'Divider',
+            description: 'A line that separates parts of a page',
+            category: 'layout',
+            icon: 'divider',
+            schema: FieldSchema::define([
+                ['key' => 'style', 'type' => 'enum', 'label' => 'Line style', 'required' => false, 'allowed_values' => ['solid', 'dashed', 'dotted'], 'default' => 'solid'],
+                ['key' => 'weight', 'type' => 'enum', 'label' => 'Thickness', 'required' => false, 'allowed_values' => ['thin', 'medium', 'thick'], 'default' => 'thin'],
+                ['key' => 'width', 'type' => 'enum', 'label' => 'Width', 'required' => false, 'allowed_values' => ['full', 'wide', 'narrow', 'short'], 'default' => 'full'],
+                ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['left', 'center', 'right'], 'default' => 'center'],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 37. core.spacer — empty vertical space of a set size (smaller on a phone).
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.spacer',
+            version: 1,
+            label: 'Spacer',
+            title: 'Spacer',
+            description: 'Empty space between two parts of a page',
+            category: 'layout',
+            icon: 'spacer',
+            schema: FieldSchema::define([
+                ['key' => 'size', 'type' => 'enum', 'label' => 'Height', 'required' => false, 'allowed_values' => ['xs', 'sm', 'md', 'lg', 'xl', '2xl'], 'default' => 'md'],
+            ]),
+            allowsChildren: false,
+        ));
     }
 
     /**

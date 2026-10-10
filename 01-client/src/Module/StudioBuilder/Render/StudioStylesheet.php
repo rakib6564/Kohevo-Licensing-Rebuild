@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '4';
+    public const VERSION = '5';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -108,6 +108,15 @@ final class StudioStylesheet
             . '.sb-countdown__num{font-size:2rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}'
             . '.sb-countdown__name{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--sb-text-muted)}'
             . '.sb-countdown__done{display:none;margin:.5rem 0 0;font-weight:600}.sb-countdown[data-sb-finished] .sb-countdown__done{display:block}'
+            . ':where(.sb-block--core-divider){border-color:var(--sb-border-default)}'
+            . '.sb-divider{box-sizing:content-box;height:0;margin:1rem 0;border:0;border-top-style:solid;border-top-color:inherit}'
+            . '.sb-divider--solid{border-top-style:solid}.sb-divider--dashed{border-top-style:dashed}.sb-divider--dotted{border-top-style:dotted}'
+            . '.sb-divider--thin{border-top-width:1px}.sb-divider--medium{border-top-width:2px}.sb-divider--thick{border-top-width:4px}'
+            . '.sb-divider--w-full{width:100%}.sb-divider--w-wide{width:75%}.sb-divider--w-narrow{width:50%}.sb-divider--w-short{width:25%}'
+            . '.sb-divider--left{margin-left:0;margin-right:auto}.sb-divider--center{margin-left:auto;margin-right:auto}.sb-divider--right{margin-left:auto;margin-right:0}'
+            . '.sb-spacer{display:block;width:100%}'
+            . '.sb-spacer--xs{height:.5rem}.sb-spacer--sm{height:1rem}.sb-spacer--md{height:2rem}.sb-spacer--lg{height:3.5rem}.sb-spacer--xl{height:5.5rem}.sb-spacer--2xl{height:8rem}'
+            . '@media (max-width:767.98px){.sb-spacer--xs{height:.25rem}.sb-spacer--sm{height:.5rem}.sb-spacer--md{height:1rem}.sb-spacer--lg{height:2rem}.sb-spacer--xl{height:3rem}.sb-spacer--2xl{height:4.5rem}}'
             . '.sb-link-row{margin:0 0 1rem}.sb-link-row--center{text-align:center}.sb-link-row--right{text-align:right}'
             . '.sb-link{color:var(--sb-color-accent);font-weight:600}.sb-link--plain{text-decoration:none}'
             . '.sb-link--arrow{text-decoration:none}.sb-link--arrow::after{content:" \\2192"}'

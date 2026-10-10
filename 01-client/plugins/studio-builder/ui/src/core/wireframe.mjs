@@ -114,6 +114,12 @@ function place(node, x, y, w, shapes, depth) {
       for (let i = 1; i < rows; i += 1) shapes.push({ k: 'line', x, y: y + i * 6 + 1, w, h: 2 });
       return rows * 6 - 1;
     }
+    case 'core.divider': {
+      shapes.push({ k: 'line', x, y: y + 2, w, h: 1 });
+      return 5;
+    }
+    case 'core.spacer':
+      return 6;
     case 'core.countdown': {
       const cw = (w - 12) / 4;
       for (let i = 0; i < 4; i += 1) shapes.push({ k: 'card', x: x + i * (cw + 4), y, w: cw, h: 12 });
