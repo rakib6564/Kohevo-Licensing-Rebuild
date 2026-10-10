@@ -77,6 +77,22 @@ final class RenderCollector
         return true;
     }
 
+    /** @var array<string, true> */
+    private array $claimedOnce = [];
+
+    /**
+     * True the first time `$key` is asked for in this render, false after: a block that needs a stylesheet or helper
+     * script on the page emits its tag only once, however many such blocks the page has. Not an HTML id (`claimId`).
+     */
+    public function claimOnce(string $key): bool
+    {
+        if (isset($this->claimedOnce[$key])) {
+            return false;
+        }
+        $this->claimedOnce[$key] = true;
+        return true;
+    }
+
     /**
      * Register the generated rules for one block or section and return the class to put on its
      * element. `$declarations` and `$states` must come from `StyleSurface` (never from authored text).

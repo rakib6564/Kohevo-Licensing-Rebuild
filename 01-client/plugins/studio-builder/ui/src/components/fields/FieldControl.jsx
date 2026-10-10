@@ -63,6 +63,21 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
   const described = problem ? `${id}-problem` : undefined;
   const common = { id, 'aria-describedby': described, 'aria-invalid': problem ? true : undefined, 'aria-required': field.required || undefined };
 
+  // A provider parameter that is the id of one of the site's own things (a form, a service): a dropdown of what exists.
+  if (Array.isArray(field.choices)) {
+    const choices = field.choices;
+    const missing = draft !== null && draft !== undefined && draft !== '' && !choices.some((c) => String(c.value) === String(draft));
+    return (
+      <FieldRow id={id} label={field.label} required={field.required} problem={problem}>
+        <select {...common} value={draft ?? ''} disabled={choices.length === 0 && !draft} onChange={(e) => update(coerce(field, e.target.value))}>
+          <option value="">{choices.length === 0 ? t('pick_empty') : field.required ? t('tok_choose') : t('pick_none')}</option>
+          {missing && <option value={draft}>#{draft}</option>}
+          {choices.map((c) => <option key={String(c.value)} value={c.value}>{c.label}</option>)}
+        </select>
+      </FieldRow>
+    );
+  }
+
   switch (kind) {
     case 'text':
       return (

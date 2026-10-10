@@ -93,7 +93,9 @@ use Slate\Module\StudioBuilder\Operation\DocumentOperation;
 use Slate\Module\StudioBuilder\Operation\DocumentOperationApplier;
 use Slate\Module\StudioBuilder\Package\Html\HtmlImportConverter;
 use Slate\Module\StudioBuilder\Package\StudioImportReport;
+use Slate\Module\StudioBuilder\Provider\DataProviderInterface;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
+use Slate\Module\StudioBuilder\Provider\ParamChoicesProviderInterface;
 use Slate\Module\StudioBuilder\Http\StudioCodePolicy;
 use Slate\Module\StudioBuilder\Registry\BlockAvailability;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
@@ -1238,6 +1240,35 @@ final class StudioApplicationService
     }
 
     /**
+     * A provider's parameter schema as editor data. Every parameter of a pick-list provider (the id of one of the tenant's
+     * forms or services) carries its `choices` for the ACTIVE tenant, so the Inspector shows a dropdown; its label is
+     * translated like the block copy (`studio_param_<provider key with dots as underscores>_<param>`).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function providerParams(DataProviderInterface $provider): array
+    {
+        $slug = str_replace('.', '_', $provider->key());
+        $params = [];
+        foreach ($provider->parameterSchema()->toEditorManifest() as $param) {
+            $default = (string) ($param['label'] ?? '');
+            if ($default !== '' && \function_exists('__')) {
+                try {
+                    $param['label'] = (string) \__("studio_param_{$slug}_{$param['key']}", $default);
+                } catch (\Throwable $ignored) {
+                    $param['label'] = $default;
+                }
+            }
+            if ($provider instanceof ParamChoicesProviderInterface) {
+                // An empty list is still a pick-list ("no forms yet"), never a free number box.
+                $param['choices'] = array_slice($provider->paramChoices((string) $param['key']), 0, ParamChoicesProviderInterface::MAX_CHOICES);
+            }
+            $params[] = $param;
+        }
+        return $params;
+    }
+
+    /**
      * Everything the builder needs to generate its palette and property panels,
      * as transport-safe DATA: block manifests (filtered by this tenant's
      * entitlements and this actor's permissions), the parameter schemas of the
@@ -1260,7 +1291,7 @@ final class StudioApplicationService
             $providers[] = [
                 'key'         => (string) $key,
                 'max_results' => $provider->maxResults(),
-                'params'      => $provider->parameterSchema()->toEditorManifest(),
+                'params'      => self::providerParams($provider),
             ];
         }
 

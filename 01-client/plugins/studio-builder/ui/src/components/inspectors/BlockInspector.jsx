@@ -255,6 +255,9 @@ export function BlockInspector({ info }) {
   );
 }
 
+// A cleared optional parameter is left out: binding params are scalars, never null.
+const withoutEmpty = (params) => Object.fromEntries(Object.entries(params).filter(([, v]) => v !== null && v !== undefined && v !== ''));
+
 function BindingsEditor({ block, def, manifest, applyOp }) {
   const bindings = asObject(block.bindings);
   const commit = (next) => applyOp(ops.updateBlockBindings(block.id, next), { label: def.label });
@@ -284,7 +287,7 @@ function BindingsEditor({ block, def, manifest, applyOp }) {
             schema={provider.params}
             value={asObject(current.params)}
             manifest={manifest}
-            onChange={(params) => commit({ ...bindings, [slot.slot]: { ...current, params } })}
+            onChange={(params) => commit({ ...bindings, [slot.slot]: { ...current, params: withoutEmpty(params) } })}
           />
         )}
       </fieldset>

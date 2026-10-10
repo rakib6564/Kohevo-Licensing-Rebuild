@@ -873,6 +873,8 @@ const EN = {
   background: 'Background',
   provider: 'Data source',
   bindings_hint: 'This block shows live data from an installed module.',
+  pick_none: 'None',
+  pick_empty: 'Nothing to choose from yet',
   editing_at: 'Editing at',
   unavailable_block: 'Unknown block',
 
