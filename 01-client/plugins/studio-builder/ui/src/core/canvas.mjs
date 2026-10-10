@@ -138,10 +138,10 @@ export function nodeElementFrom(target) {
 /**
  * Wire a loaded canvas document. Returns a detach function.
  * @param {Document} doc
- * @param {{onSelect: Function, onHover?: Function, onDrop?: Function, onAction?: Function, onInlineText?: Function, isLocked?: Function}} handlers
+ * @param {{onSelect: Function, onHover?: Function, onDrop?: Function, onAction?: Function, onInlineText?: Function, isLocked?: Function, onContextMenu?: Function, onKeyDown?: Function}} handlers
  */
 export function attachCanvas(doc, handlers) {
-  const { onSelect, onHover, onDrop, onAction, onInlineText, isLocked, inlineSpecs } = handlers || {};
+  const { onSelect, onHover, onDrop, onAction, onInlineText, isLocked, inlineSpecs, onContextMenu, onKeyDown } = handlers || {};
   if (!doc || !doc.body) return () => {};
   if (!doc.getElementById(STYLE_ID)) {
     const style = doc.createElement('style');
@@ -315,6 +315,24 @@ export function attachCanvas(doc, handlers) {
     startDeclaredEdit(nodeEl, nodeId, e.target);
   };
 
+  // Right-click (and the long press / Ctrl+click that mean the same): the builder draws its own menu for the node.
+  // Text being edited keeps the browser's menu (spelling, paste).
+  const contextmenu = (e) => {
+    if (e.target && e.target.closest && e.target.closest(`.${BAR_CLASS}, .${BUBBLE_CLASS}`)) return;
+    if (activeEditingEl && activeEditingEl.contains(e.target)) return;
+    const el = nodeElementFrom(e.target);
+    if (!el || !onContextMenu) return;
+    e.preventDefault();
+    e.stopPropagation();
+    onContextMenu(el.getAttribute(NODE_ATTR), { x: e.clientX, y: e.clientY }, nodeIdChain(e.target));
+  };
+
+  // Keys pressed while the canvas has focus do not reach the builder's window: hand them over, unless text is being edited.
+  const keydown = (e) => {
+    if (activeEditingEl || !onKeyDown) return;
+    onKeyDown(e);
+  };
+
   const over = (e) => {
     const el = nodeElementFrom(e.target);
     if (el === hovered) return;
@@ -377,6 +395,8 @@ export function attachCanvas(doc, handlers) {
   const block = (e) => e.preventDefault();
   doc.addEventListener('click', click, true);
   doc.addEventListener('dblclick', dblclick, true);
+  doc.addEventListener('contextmenu', contextmenu, true);
+  doc.addEventListener('keydown', keydown, true);
   doc.addEventListener('mouseover', over, true);
   doc.addEventListener('dragover', dragover, true);
   doc.addEventListener('dragleave', dragleave, true);
@@ -388,6 +408,8 @@ export function attachCanvas(doc, handlers) {
     finishInlineEdit(true);
     doc.removeEventListener('click', click, true);
     doc.removeEventListener('dblclick', dblclick, true);
+    doc.removeEventListener('contextmenu', contextmenu, true);
+    doc.removeEventListener('keydown', keydown, true);
     doc.removeEventListener('mouseover', over, true);
     doc.removeEventListener('dragover', dragover, true);
     doc.removeEventListener('dragleave', dragleave, true);
