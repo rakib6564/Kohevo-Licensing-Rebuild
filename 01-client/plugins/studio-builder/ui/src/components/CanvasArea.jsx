@@ -155,13 +155,16 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     } catch { return false; }
   }, []);
 
-  /** A new block is on the canvas as a placeholder: fetch its real markup now, in parallel with the save. */
+  /** A new block or section is on the canvas as a placeholder: fetch its real markup now, in parallel with the save. */
   const showFragments = useCallback((placeholders) => {
     if (!transport || typeof transport.renderBlock !== 'function') return;
     for (const el of placeholders) {
       const info = findNode(workingRef.current, el.getAttribute('data-sb-node'));
       if (!info) continue;
-      transport.renderBlock(boot.pageId, info.node).then((res) => {
+      const isSection = info.kind === 'section';
+      if (isSection && typeof transport.renderSection !== 'function') continue;
+      const request = isSection ? transport.renderSection(boot.pageId, info.node) : transport.renderBlock(boot.pageId, info.node);
+      request.then((res) => {
         if (!res || !res.ok || !res.data) return;
         let doc = null;
         try { doc = frameRef.current && frameRef.current.contentDocument; } catch { doc = null; }
@@ -169,7 +172,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
         if (!doc || el.ownerDocument !== doc || !el.isConnected || !el.classList.contains('sbx-pending')) return;
         const now = findNode(workingRef.current, el.getAttribute('data-sb-node'));
         if (!now) return;
-        const fragment = adoptFragment(res.data.html, now.node, doc);
+        const fragment = adoptFragment(res.data.html, now.node, doc, undefined, now.kind === 'section' ? 'section' : 'block');
         if (fragment && applyFragment(doc, el, fragment, now.node.id)) markSelected(doc, selectionRef.current, { scroll: false, ids: selectedIdsRef.current });
       }).catch(() => { /* the server's render after the save fills it in */ });
     }

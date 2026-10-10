@@ -1,8 +1,8 @@
-// The real markup for a block the author has just inserted, fetched while the save is still on its way.
+// The real markup for a block or section the author has just inserted, fetched while the save is still on its way.
 //
-// `core/liveStructure.mjs` puts a placeholder where the block goes; the server renders the block (`render_block`, read-only,
-// nothing stored) and this file turns that page into the one element to swap in, with the document's own ids and only the
-// CSS rules that element's classes need. The server's render after the save then replaces it like everything else.
+// `core/liveStructure.mjs` puts a placeholder where the node goes; the server renders it (`render_block` / `render_section`,
+// read-only, nothing stored) and this file turns that page into the one element to swap in, with the document's own ids and
+// only the CSS rules that element's classes need. The server's render after the save then replaces it like everything else.
 
 import { asList } from './doc.mjs';
 
@@ -32,18 +32,19 @@ export function rulesFor(cssText, classes, Sheet = globalThis.CSSStyleSheet) {
 const UNAVAILABLE = /class="[^"]*\bsb-unavailable\b/;
 
 /**
- * Turn the server's page for one block into an element of the open canvas.
- * @param {Document} page   the parsed `render_block` response page
+ * Turn the server's page for one block (or section) into an element of the open canvas.
+ * @param {Document} page   the parsed `render_block` / `render_section` response page
  * @param {string} html     the same page as text (to tell an "unavailable" notice from a render)
- * @param {object} node     the block as the document has it now (its ids are the ones the element gets)
+ * @param {object} node     the block or section as the document has it now (its ids are the ones the element gets)
  * @param {Document} canvasDoc  the open canvas document
+ * @param {'block'|'section'} [kind]  what `node` is
  * @returns {{element: Element, css: string} | null}  null when the render is unusable (the placeholder stays)
  */
-export function adoptFromPage(page, html, node, canvasDoc) {
+export function adoptFromPage(page, html, node, canvasDoc, kind = 'block') {
   if (!page || !node || !canvasDoc || UNAVAILABLE.test(html || '')) return null;
   const main = page.querySelector('main');
   const section = main && main.querySelector(`[${ATTR}]`); // the one fresh section
-  const root = section && section.querySelector(`[${ATTR}]`); // the block, first inside it
+  const root = kind === 'section' ? section : section && section.querySelector(`[${ATTR}]`); // the section, or the block first inside it
   if (!root) return null;
 
   const ids = preorder(node);
@@ -61,9 +62,9 @@ export function adoptFromPage(page, html, node, canvasDoc) {
 }
 
 /** The same, from the response text. */
-export function adoptFragment(html, node, canvasDoc, Parser = globalThis.DOMParser) {
+export function adoptFragment(html, node, canvasDoc, Parser = globalThis.DOMParser, kind = 'block') {
   if (!html || typeof Parser !== 'function') return null;
-  return adoptFromPage(new Parser().parseFromString(html, 'text/html'), html, node, canvasDoc);
+  return adoptFromPage(new Parser().parseFromString(html, 'text/html'), html, node, canvasDoc, kind);
 }
 
 /** Swap a placeholder for the block's real element, and keep the CSS rules it needs until the server's render replaces them. */

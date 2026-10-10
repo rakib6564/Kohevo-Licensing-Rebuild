@@ -504,6 +504,36 @@ unit('phase5 integration: builder command/query API (real MySQL, tenants 101/202
                 assert_eq(404, sbp5_call($rt, SBP5_TENANT_B, $editor, 'POST', 'render_block', ['page_id' => $S->pageA, 'block' => $block])->status, 'another tenant cannot render against this page');
             });
 
+            unit('phase5 int 9c: render_section renders one unsaved section with fresh ids, stores nothing, and keeps the walls', function () use ($rt, $editor, $viewer, $S): void {
+                $doc = sbp5_ok(sbp5_call($rt, SBP5_TENANT_A, $editor, 'GET', 'document', ['page' => $S->pageA]), 'document')['document'];
+                $heading = sbp5_find($doc, $S->heading);
+                assert_true($heading !== null, 'the page has a heading to build a section from');
+                $heading['id'] = 'tmp_h';
+                $heading['props']['text'] = 'Section rendered before saving';
+                $section = ['id' => 'tmp_s', 'label' => 'Draft', 'blocks' => [$heading]];
+                $revisions = sbp5_count('SELECT COUNT(*) FROM studiobuilder_revisions WHERE tenant_id = ? AND page_id = ?', [SBP5_TENANT_A, $S->pageA]);
+
+                $r = sbp5_ok(sbp5_call($rt, SBP5_TENANT_A, $editor, 'POST', 'render_section', ['page_id' => $S->pageA, 'section' => $section]), 'render_section');
+                $html = (string) $r['html'];
+                assert_true(str_contains($html, 'Section rendered before saving'), 'the section is rendered with its block');
+                assert_true(!str_contains($html, 'tmp_s') && !str_contains($html, 'tmp_h'), 'made-up ids are never echoed');
+                preg_match('~<main\b.*?</main>~s', $html, $main);
+                assert_eq(1, preg_match_all('/data-sb-node="sec_[a-z0-9]{16,32}"/', $main[0] ?? ''), 'one section node in the fragment');
+                assert_eq(1, preg_match_all('/data-sb-node="blk_[a-z0-9]{24}"/', $main[0] ?? ''), 'one block node in the section');
+                assert_eq($revisions, sbp5_count('SELECT COUNT(*) FROM studiobuilder_revisions WHERE tenant_id = ? AND page_id = ?', [SBP5_TENANT_A, $S->pageA]), 'nothing is stored');
+                assert_eq($doc, sbp5_ok(sbp5_call($rt, SBP5_TENANT_A, $editor, 'GET', 'document', ['page' => $S->pageA]), 'document again')['document'], 'the draft is untouched');
+
+                $empty = sbp5_ok(sbp5_call($rt, SBP5_TENANT_A, $editor, 'POST', 'render_section', ['page_id' => $S->pageA, 'section' => []]), 'an empty section');
+                assert_true(str_contains((string) $empty['html'], '<main'), 'an empty section still renders');
+
+                assert_eq(422, sbp5_call($rt, SBP5_TENANT_A, $editor, 'POST', 'render_section', ['page_id' => $S->pageA, 'section' => 'x'])->status, 'the section must be an object');
+                assert_eq(422, sbp5_call($rt, SBP5_TENANT_A, $editor, 'POST', 'render_section', ['page_id' => $S->pageA, 'section' => [1, 2]])->status, 'a list is not a section');
+                assert_eq(422, sbp5_call($rt, SBP5_TENANT_A, $editor, 'POST', 'render_section', ['page_id' => $S->pageA, 'section' => $section, 'extra' => 1])->status, 'unknown fields are refused');
+                assert_eq(403, sbp5_call($rt, SBP5_TENANT_A, $viewer, 'POST', 'render_section', ['page_id' => $S->pageA, 'section' => $section])->status, 'viewing is not editing');
+                assert_eq(403, sbp5_call($rt, SBP5_TENANT_A, $editor, 'POST', 'render_section', ['page_id' => $S->pageA, 'section' => $section], false)->status, 'a command needs the CSRF token');
+                assert_eq(404, sbp5_call($rt, SBP5_TENANT_B, $editor, 'POST', 'render_section', ['page_id' => $S->pageA, 'section' => $section])->status, 'another tenant cannot render against this page');
+            });
+
             // ── 10. Canvas + preview + publish boundary ──
             unit('phase5 int 10: canvas = renderForEditor (node metadata, CSP); public output changes only through publish', function () use ($rt, $editor, $publisher, $S): void {
                 $canvas = $rt->tenants->runAs(SBP5_TENANT_A, fn() => $rt->app->renderForEditor($editor, $S->pageA));

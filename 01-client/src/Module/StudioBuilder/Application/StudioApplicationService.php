@@ -1157,18 +1157,49 @@ final class StudioApplicationService
      */
     public function renderBlockFragment(StudioActor $actor, int $pageId, array $block): RenderResult
     {
-        $tenantId = $this->authorize($actor, StudioPermissions::EDIT);
-        $renderer = $this->requireRenderer();
-        [$page, $revision] = $this->loadPageRevision($pageId, null);
-        $document = CanonicalJson::decode((string) $revision['document_json']);
-        $document['sections'] = [[
+        return $this->renderFragment($actor, $pageId, [[
             'id'         => CanonicalDocumentSchema::newSectionId(),
             'label'      => '',
             'global_ref' => null,
             'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
             'visibility' => CanonicalDocumentSchema::defaultVisibility(),
             'blocks'     => [self::withFreshBlockIds($block)],
-        ]];
+        ]]);
+    }
+
+    /**
+     * The same for ONE whole section (a section preset, a pasted or duplicated section): it is the only section of a
+     * copy of the working draft, with fresh ids for the section and every block in it. Nothing is stored.
+     * Requires studio-builder.edit.
+     *
+     * @param array<string, mixed> $section
+     */
+    public function renderSectionFragment(StudioActor $actor, int $pageId, array $section): RenderResult
+    {
+        $blocks = $section['blocks'] ?? [];
+        $section['blocks'] = is_array($blocks) && array_is_list($blocks)
+            ? array_map(static fn(mixed $b): mixed => is_array($b) && !array_is_list($b) ? self::withFreshBlockIds($b) : $b, $blocks)
+            : [];
+        $section += [
+            'label'      => '',
+            'global_ref' => null,
+            'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
+            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+        ];
+        $section['id'] = CanonicalDocumentSchema::newSectionId();
+        return $this->renderFragment($actor, $pageId, [$section]);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $sections
+     */
+    private function renderFragment(StudioActor $actor, int $pageId, array $sections): RenderResult
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::EDIT);
+        $renderer = $this->requireRenderer();
+        [$page, $revision] = $this->loadPageRevision($pageId, null);
+        $document = CanonicalJson::decode((string) $revision['document_json']);
+        $document['sections'] = $sections;
         $revision['document_json'] = CanonicalJson::encode($document);
         return $renderer->renderRevision($page, $revision, RenderContext::forEditor($tenantId, $renderer->siteContext(), $actor));
     }

@@ -80,3 +80,22 @@ test('the CSS of the fragment rides in an editor-owned sheet that the server ren
   assert.equal(doc.head.kids.length, 0);
   assert.equal(applyFragment(doc, new El('div'), { element: real, css: '' }, 'x'), false, 'a placeholder that is gone is not swapped');
 });
+
+test('a section comes out as the section itself, with the document ids for it and its blocks', () => {
+  const page = new El('html'); const main = page.add(new El('main'));
+  const section = main.add(new El('section', { 'data-sb-node': 'sec_server', class: 'sb-section sb-x-aaaaaaaaaaaaaaaa' }));
+  const block = section.add(new El('div', { 'data-sb-node': 'blk_server1', class: 'sb-block sb-x-bbbbbbbbbbbbbbbb' }));
+  block.add(new El('div', { 'data-sb-node': 'blk_server2' }));
+  page.add(new El('style')).text = '.sb-x-aaaaaaaaaaaaaaaa{padding:1rem}.sb-x-bbbbbbbbbbbbbbbb{margin:0}';
+  const doc = { id: 'tmp_sec', blocks: [{ id: 'tmp_a', children: [{ id: 'tmp_b', children: [] }] }] };
+  const out = adoptFromPage(page, '<section class="sb-section">', doc, canvasDoc(), 'section');
+  assert.equal(out.element.getAttribute('data-sb-node'), 'tmp_sec');
+  assert.equal(out.element.kids[0].getAttribute('data-sb-node'), 'tmp_a');
+  assert.equal(out.element.kids[0].kids[0].getAttribute('data-sb-node'), 'tmp_b');
+});
+
+test('a section render with a different number of nodes than the document is not used', () => {
+  const page = new El('html'); const main = page.add(new El('main'));
+  main.add(new El('section', { 'data-sb-node': 'sec_server' }));
+  assert.equal(adoptFromPage(page, '', { id: 'tmp_sec', blocks: [{ id: 'tmp_a', children: [] }] }, canvasDoc(), 'section'), null);
+});

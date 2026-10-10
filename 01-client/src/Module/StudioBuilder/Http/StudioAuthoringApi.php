@@ -77,6 +77,7 @@ final class StudioAuthoringApi
         'operations'   => ['POST', ['page_id', 'expected_revision_id', 'revision_kind', 'operations', 'summary']],
         // Renders one unsaved block for the canvas (read-only: nothing is stored). A POST only because the block is the body.
         'render_block' => ['POST', ['page_id', 'block']],
+        'render_section' => ['POST', ['page_id', 'section']],
         'save_draft'   => ['POST', ['page_id', 'expected_revision_id', 'revision_kind', 'document', 'summary']],
         'publish'      => ['POST', ['page_id', 'expected_revision_id', 'summary']],
         'rollback'     => ['POST', ['page_id', 'target_revision_id', 'expected_revision_id', 'summary']],
@@ -247,6 +248,7 @@ final class StudioAuthoringApi
             'pages'        => StudioApiResponse::ok(['pages' => $this->app->listPages($actor)]),
             'operations'   => $this->operations($actor, $input),
             'render_block' => $this->renderBlock($actor, $input),
+            'render_section' => $this->renderSection($actor, $input),
             'save_draft'   => $this->saveDraft($actor, $input),
             'publish'      => $this->publish($actor, $input),
             'rollback'     => $this->rollback($actor, $input),
@@ -652,6 +654,16 @@ final class StudioAuthoringApi
             throw self::invalid('block', 'invalid_block', 'block must be a JSON object.');
         }
         return StudioApiResponse::ok(['html' => $this->app->renderBlockFragment($actor, self::id($input, 'page_id'), $block)->html]);
+    }
+
+    /** @param array<string, mixed> $input */
+    private function renderSection(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $section = $input['section'] ?? null;
+        if (!is_array($section) || ($section !== [] && array_is_list($section))) {
+            throw self::invalid('section', 'invalid_section', 'section must be a JSON object.');
+        }
+        return StudioApiResponse::ok(['html' => $this->app->renderSectionFragment($actor, self::id($input, 'page_id'), $section)->html]);
     }
 
     /** @param array<string, mixed> $input */
