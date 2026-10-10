@@ -12,14 +12,14 @@ import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { DRAG_TYPE_NEW } from './BlockPalette.jsx';
 import { RowMenu } from './RowMenu.jsx';
 import { PartialRows, useChromeBindings } from './PartialRows.jsx';
-import { rowMenuItems } from '../core/rowMenu.mjs';
+import { pasteState, rowMenuItems } from '../core/rowMenu.mjs';
 import { autoScrollDelta, dropPositionAt, isSelfOrDescendant } from '../core/outlineDrag.mjs';
 import { t } from '../core/messages.mjs';
 import {
   asList, blockDefinition, blockIndentTarget, blockMoveTarget, blockOutdentTarget,
   canInsertBlock, canInsertSection, canMoveBlock, nodeLabel,
 } from '../core/doc.mjs';
-import { isProvisionalId, updateBlockVisibility, updateSectionVisibility } from '../core/operations.mjs';
+import { isProvisionalId } from '../core/operations.mjs';
 import { topLevelIds } from '../core/shellState.mjs';
 import { effectivelyLocked, isLocked, lockIndex } from '../core/layerLock.mjs';
 
@@ -89,7 +89,8 @@ export function dropDestination(doc, rows, dragged, row, position) {
 export const Outline = memo(function Outline() {
   const {
     manifest, insertBlock, insertSection,
-    duplicateNode, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, applyOp, openSaveTemplate,
+    duplicateNode, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, openSaveTemplate,
+    copyNode, cutNode, pasteNode, toggleHidden, peekClipboard,
   } = useEditor();
   const { selection, selectedIds, select, pick } = useSelection();
   const working = useEngineState((s) => s.working);
@@ -149,17 +150,6 @@ export const Outline = memo(function Outline() {
     });
   }, []);
 
-  const toggleVisibility = useCallback((row) => {
-    const isHidden = (row.node.visibility && Array.isArray(row.node.visibility.devices) && row.node.visibility.devices.length === 0);
-    const newDevices = isHidden ? ['base', 'sm', 'md', 'lg'] : [];
-    const newVis = { ...(row.node.visibility || {}), devices: newDevices };
-    if (row.kind === 'section') {
-      applyOp(updateSectionVisibility(row.id, newVis));
-    } else {
-      applyOp(updateBlockVisibility(row.id, newVis));
-    }
-  }, [applyOp]);
-
   const finishRename = useCallback((id) => {
     if (renameNode) renameNode(id, editLabel);
     setEditingId(null);
@@ -190,7 +180,11 @@ export const Outline = memo(function Outline() {
       case 'duplicate': duplicateNode(row.id); break;
       case 'lock': setLocked(row.id, true); break;
       case 'unlock': setLocked(row.id, false); break;
-      case 'hide': case 'show': toggleVisibility(row); break;
+      case 'hide': case 'show': toggleHidden(row.id); break;
+      case 'copy': copyNode(row.id); break;
+      case 'cut': cutNode(row.id); return;
+      case 'paste_after': pasteNode(row.id, 'after'); break;
+      case 'paste_inside': pasteNode(row.id, 'inside'); break;
       case 'move_up': keyboardMove(row, 'ArrowUp'); break;
       case 'move_down': keyboardMove(row, 'ArrowDown'); break;
       case 'save_library': select(row.id); if (openSaveTemplate) openSaveTemplate(); return;
@@ -198,13 +192,21 @@ export const Outline = memo(function Outline() {
       default: break;
     }
     focusRow(row.id);
-  }, [startRename, duplicateNode, setLocked, toggleVisibility, keyboardMove, select, openSaveTemplate, removeNode, focusRow]);
+  }, [startRename, duplicateNode, setLocked, toggleHidden, copyNode, cutNode, pasteNode, keyboardMove, select, openSaveTemplate, removeNode, focusRow]);
 
   const onKeyDown = (e, row, i) => {
     if (e.altKey && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
       e.preventDefault();
       keyboardMove(row, e.key);
       focusRow(row.id);
+      return;
+    }
+    // Copy / Cut / Paste act on the focused row (not while its name is being edited: that is an input, not the row).
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.target === e.currentTarget && /^[cxv]$/i.test(e.key)) {
+      e.preventDefault();
+      e.stopPropagation();
+      const k = e.key.toLowerCase();
+      if (k === 'c') copyNode(row.id); else if (k === 'x') cutNode(row.id); else pasteNode(row.id, 'after');
       return;
     }
     switch (e.key) {
@@ -459,6 +461,16 @@ export const Outline = memo(function Outline() {
               }}
               onFocus={() => setFocusId(row.id)}
               onKeyDown={(e) => onKeyDown(e, row, i)}
+              onContextMenu={(e) => {
+                // A right-click on a row opens the same menu as its ⋯ button.
+                if (e.target.closest && e.target.closest('input, .sbx-row-menu')) return;
+                const btn = e.currentTarget.querySelector('.sbx-tree__more');
+                if (!btn) return;
+                e.preventDefault();
+                setFocusId(row.id);
+                if (!picked.has(row.id)) pick(row.id, {}, visibleRows);
+                btn.click();
+              }}
             >
               {row.hasChildren ? (
                 <button
@@ -530,7 +542,7 @@ export const Outline = memo(function Outline() {
                 <RowMenu
                   label={label}
                   testId={`row-menu-${row.id}`}
-                  items={rowMenuItems({ row, doc: working, manifest, locks, pageType, canSaveToLibrary: !!(manifest.permissions && manifest.permissions.admin) })}
+                  items={() => rowMenuItems({ row, doc: working, manifest, locks, pageType, canSaveToLibrary: !!(manifest.permissions && manifest.permissions.admin), paste: pasteState({ row, doc: working, manifest, envelope: peekClipboard ? peekClipboard() : null }) })}
                   onChoose={(key) => runRowAction(row, key)}
                 />
               </div>

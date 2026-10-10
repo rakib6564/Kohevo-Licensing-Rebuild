@@ -146,6 +146,9 @@ export const updateSeo = (seo) => op(OPS.UPDATE_SEO, { seo });
 
 // ── Id bookkeeping ──────────────────────────────────────────────────────────
 
+// Keys an inserted block may carry besides its core fields (the server keeps the same list).
+const INSERT_BLOCK_EXTRAS = ['responsive', 'attributes', 'classNames', 'conditions', 'metadata', 'interactions', 'animation', 'style_states', 'tag'];
+
 const ID_KEYS = ['section_id', 'block_id', 'parent_id'];
 
 /** Ids an operation references (targets and parents). */
@@ -212,7 +215,9 @@ export function applyLocal(doc, operation, ctx = {}) {
       return { ...doc, seo: { ...asObject(doc.seo), ...asObject(p.seo) } };
     case OPS.INSERT_SECTION: {
       const given = asObject(p.section);
+      const { id: _givenId, ...givenRest } = given;
       const section = {
+        ...givenRest,
         blocks: asList(given.blocks),
         global_ref: given.global_ref ?? null,
         id: ctx.provisionalId || provisionalId('sec'),
@@ -303,9 +308,13 @@ export function applyLocal(doc, operation, ctx = {}) {
     case OPS.INSERT_BLOCK: {
       const given = asObject(p.block);
       const def = ctx.manifest ? asList(ctx.manifest.blocks).find((b) => b.type === given.type) : null;
+      // A preset or a pasted block carries a subtree and optional keys: keep them (descendants get provisional ids).
+      const extras = {};
+      for (const key of INSERT_BLOCK_EXTRAS) if (given[key] !== undefined) extras[key] = given[key];
       const block = {
+        ...extras,
         bindings: Object.keys(asObject(given.bindings)).length ? given.bindings : {},
-        children: [],
+        children: def && def.allows_children ? asList(given.children).map((c) => cloneWithProvisionalIds(c, 'blk')) : [],
         id: ctx.provisionalId || provisionalId('blk'),
         props: Object.keys(asObject(given.props)).length ? given.props : asObject(def && def.default_props),
         style: Object.keys(asObject(given.style)).length ? given.style : DEFAULT_BLOCK_STYLE,

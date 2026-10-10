@@ -15,9 +15,12 @@ import { STATUS } from '../core/sync.mjs';
 import { t } from '../core/messages.mjs';
 import { ancestorPath, asList, canInsertBlock, canMoveBlock, findNode } from '../core/doc.mjs';
 import { effectivelyLocked, lockIndex } from '../core/layerLock.mjs';
+import { canvasMenuItems, pasteState, rowFor } from '../core/rowMenu.mjs';
+import { frameScale } from '../core/overlayGeometry.mjs';
 import * as ops from '../core/operations.mjs';
 import { DRAG_TYPE_NEW } from './BlockPalette.jsx';
 import { CanvasOverlay } from './CanvasOverlay.jsx';
+import { CanvasContextMenu } from './CanvasContextMenu.jsx';
 import { BottomBar } from './BottomBar.jsx';
 import { stepZoom, zoomPercent } from '../core/zoom.mjs';
 import { useIsMobileShell } from '../hooks/useIsMobileShell.mjs';
@@ -42,7 +45,7 @@ function blockNavigation(doc) {
 }
 
 export const CanvasArea = memo(function CanvasArea({ interactive = true, collapsed = false, onToggleCollapse = null, onReloadCanvas = null }) {
-  const { boot, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode, applyOp, canvasView, setCanvasView } = useEditor();
+  const { boot, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode, applyOp, canvasView, setCanvasView, copyNode, cutNode, pasteNode, setLocked, toggleHidden, clipboardShortcut, peekClipboard, labelOf } = useEditor();
   const isMobile = useIsMobileShell();
   const { selection, selectedIds, select, pick } = useSelection();
   const working = useEngineState((s) => s.working);
@@ -286,6 +289,84 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   const workingRef = useRef(working);
   workingRef.current = working;
 
+  // ── Right-click menu (drawn here, over the frame; the frame itself stays script-less) ──
+  const [menu, setMenu] = useState(null); // { id, x, y } in window coordinates
+  const menuItems = useMemo(() => {
+    const row = menu ? rowFor(working, menu.id) : null;
+    if (!row) return null;
+    const locks = lockIndex(working);
+    return canvasMenuItems({ row, doc: working, manifest, locks, paste: pasteState({ row, doc: working, manifest, envelope: peekClipboard ? peekClipboard() : null }) });
+  }, [menu, working, manifest, peekClipboard]);
+  const closeMenu = useCallback((refocus) => {
+    setMenu(null);
+    if (!refocus) return;
+    try { const f = frameRef.current; if (f) { f.focus(); if (f.contentWindow) f.contentWindow.focus(); } } catch { /* ignore */ }
+  }, []);
+  // A node that vanishes (undo, a reload) takes its menu with it.
+  useEffect(() => { if (menu && !menuItems) setMenu(null); }, [menu, menuItems]);
+
+  /** Open the menu for a node at a point of the frame's own coordinates (the zoom and the frame offset are applied here). */
+  const openMenuFor = (id, point, chain = null) => {
+    const w = workingRef.current;
+    const target = findNode(w, id) ? id : (chain || []).find((c) => c && findNode(w, c));
+    const frame = frameRef.current;
+    if (!target || !frame) return;
+    const fr = frame.getBoundingClientRect();
+    const s = frameScale(fr, frame.clientWidth);
+    if (!selectedIdsRef.current.includes(target)) pickRef.current(target, {}, null, chain);
+    setMenu({ id: target, x: fr.left + point.x * s, y: fr.top + point.y * s });
+  };
+  const openMenuForRef = useRef(openMenuFor);
+  openMenuForRef.current = openMenuFor;
+
+  /** The Menu key / Shift+F10: the menu of the selected node, at the top-left of its box. */
+  const openMenuForSelection = () => {
+    const id = selectionRef.current;
+    if (!id) return false;
+    let point = { x: 8, y: 8 };
+    try {
+      const doc = frameRef.current && frameRef.current.contentDocument;
+      const el = doc && doc.querySelector(`[data-sb-node="${id}"]`);
+      if (el) { const r = el.getBoundingClientRect(); point = { x: Math.max(8, r.left + 8), y: Math.max(8, r.top + 8) }; }
+    } catch { /* ignore */ }
+    openMenuForRef.current(id, point);
+    return true;
+  };
+  const openMenuForSelectionRef = useRef(openMenuForSelection);
+  openMenuForSelectionRef.current = openMenuForSelection;
+
+  const frameKey = (e) => {
+    if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+      if (openMenuForSelectionRef.current()) e.preventDefault();
+      return;
+    }
+    const view = e.target && e.target.ownerDocument ? e.target.ownerDocument.defaultView : null;
+    clipboardShortcut && clipboardShortcut(e, null, view);
+  };
+  const frameKeyRef = useRef(frameKey);
+  frameKeyRef.current = frameKey;
+
+  const chooseMenu = (key) => {
+    const id = menu && menu.id;
+    setMenu(null);
+    if (!id) return;
+    const view = frameRef.current && frameRef.current.contentWindow;
+    switch (key) {
+      case 'edit': actionRef.current('edit', id); break;
+      case 'duplicate': duplicateNode(id); break;
+      case 'copy': copyNode(id, view); break;
+      case 'cut': cutNode(id, view); break;
+      case 'paste_after': pasteNode(id, 'after', view); break;
+      case 'paste_inside': pasteNode(id, 'inside', view); break;
+      case 'lock': setLocked(id, true); break;
+      case 'unlock': setLocked(id, false); break;
+      case 'hide': case 'show': toggleHidden(id); break;
+      case 'delete': removeNode(id); break;
+      default: break;
+    }
+    if (key !== 'edit') closeMenu(true);
+  };
+
   const onCanvasDropRef = useRef(onCanvasDrop);
   onCanvasDropRef.current = onCanvasDrop;
 
@@ -305,6 +386,8 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       onSelect: (id, _type, mods, chain) => pickRef.current(id, mods || {}, null, chain),
       onDrop: (drop) => onCanvasDropRef.current(drop),
       onAction: (action, id) => actionRef.current(action, id),
+      onContextMenu: (id, point, chain) => openMenuForRef.current(id, point, chain),
+      onKeyDown: (e) => frameKeyRef.current(e),
       onInlineText: (id, text, prop) => onInlineTextRef.current(id, text, prop),
       inlineSpecs: (id) => {
         const info = findNode(workingRef.current, id);
@@ -359,7 +442,14 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   const unsaved = status === STATUS.DIRTY || status === STATUS.SAVING;
 
   return (
-    <main className="sbx-canvas" aria-label={t('canvas_label')}>
+    <main
+      className="sbx-canvas"
+      aria-label={t('canvas_label')}
+      onKeyDown={(e) => {
+        // Menu key / Shift+F10 while the canvas toolbar (not the frame) has focus.
+        if (interactive && (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) && openMenuForSelection()) e.preventDefault();
+      }}
+    >
       {isMobile && (
       <div className="sbx-canvas__meta">
         <div className="sbx-canvas__meta-left">
@@ -456,6 +546,16 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
         onAction={(action, id) => actionRef.current(action, id)}
       />
       </div>
+      {menu && menuItems && (
+        <CanvasContextMenu
+          label={labelOf(menu.id)}
+          items={menuItems}
+          x={menu.x}
+          y={menu.y}
+          onChoose={chooseMenu}
+          onClose={closeMenu}
+        />
+      )}
       <BottomBar
         path={path}
         showPath={interactive}

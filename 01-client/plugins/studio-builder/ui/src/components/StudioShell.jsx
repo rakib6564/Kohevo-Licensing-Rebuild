@@ -36,7 +36,7 @@ import { createTransport } from '../core/api.mjs';
 import { SyncEngine, STATUS } from '../core/sync.mjs';
 import { EditLock } from '../core/lock.mjs';
 import { t, errorMessage } from '../core/messages.mjs';
-import { blockDefinition, documentRows, findNode, insertionPoint, nodeLabel, sectionsOf } from '../core/doc.mjs';
+import { asList, blockDefinition, documentRows, findNode, insertionPoint, nodeLabel, sectionsOf } from '../core/doc.mjs';
 import {
   EMPTY_SELECTION, actionIds, clickSelect, pruneSelection, remapSelection, selectOnly, selectionCount, setFocus as focusNode, setHover as hoverNode,
 } from '../core/selection.mjs';
@@ -44,6 +44,7 @@ import { defaultBindings, setupFields } from '../core/fields.mjs';
 import { insertTargetFor, referenceIndexFor, slugify } from '../core/library.mjs';
 import * as ops from '../core/operations.mjs';
 import { lockViolation } from '../core/layerLock.mjs';
+import { buildEnvelope, peekMemory, planPaste, readClipboard, regenerateIds, writeClipboard } from '../core/clipboard.mjs';
 import { viewportByKey } from '../core/viewport.mjs';
 import { useIsMobileShell, isMobileShellNow } from '../hooks/useIsMobileShell.mjs';
 import { isEditing, keyboardInset, normalizeViewMode } from '../core/shellState.mjs';
@@ -311,6 +312,111 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     }
   }, [engine, manifest, announce]);
 
+  // ── Clipboard: Copy / Cut / Paste of a section or block, across pages ─────────
+  const [notice, setNotice] = useState('');
+  const noticeTimer = useRef(0);
+  /** Say it twice: to screen readers, and as a short note on screen (a refused paste must not be silent). */
+  const notify = useCallback((text) => {
+    announce(text);
+    setNotice(text);
+    clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => setNotice(''), 4500);
+  }, [announce]);
+  useEffect(() => () => clearTimeout(noticeTimer.current), []);
+
+  const copyNode = useCallback(async (id, view = null) => {
+    const info = findNode(engine.getSnapshot().working, id);
+    if (!info) return false;
+    const envelope = buildEnvelope(info.kind, info.node);
+    if (!envelope) { notify(t('clip_invalid')); return false; }
+    const res = await writeClipboard(envelope, view ? view.navigator : undefined);
+    if (!res.ok) { notify(t(res.reasonKey)); return false; }
+    announce(t('announce_copied', { label: nodeLabel(info.node, manifest, info.kind) }));
+    return true;
+  }, [engine, manifest, announce, notify]);
+
+  const cutNode = useCallback(async (id, view = null) => {
+    const working = engine.getSnapshot().working;
+    const info = findNode(working, id);
+    if (!info) return false;
+    // A locked layer (or one holding a locked layer) cannot be removed, so it is not copied away either.
+    if (lockViolation(working, info.kind === 'section' ? ops.removeSection(id) : ops.removeBlock(id))) { announce(t('announce_locked')); return false; }
+    if (!(await copyNode(id, view))) return false;
+    removeNode(id, { confirmed: true });
+    announce(t('announce_cut', { label: nodeLabel(info.node, manifest, info.kind) }));
+    return true;
+  }, [engine, manifest, announce, copyNode, removeNode]);
+
+  /** Paste what the clipboard holds next to (`after`) or inside the target; every id is new, the server validates it again. */
+  const pasteNode = useCallback(async (targetId = null, mode = 'after', view = null) => {
+    const got = await readClipboard(view ? view.navigator : undefined);
+    if (!got.ok) { notify(t(got.reasonKey)); return false; }
+    const { envelope } = got;
+    const working = engine.getSnapshot().working;
+    const plan = planPaste({ doc: working, manifest, envelope, targetId: targetId && findNode(working, targetId) ? targetId : null, mode });
+    if (!plan.ok) { notify(t(plan.reasonKey)); return false; }
+    const fresh = regenerateIds(envelope.node, envelope.kind);
+    const label = envelope.kind === 'section' ? (fresh.label || t('section')) : nodeLabel(fresh, manifest, 'block');
+    let landed = null;
+    if (envelope.kind === 'section') {
+      const sectionId = ops.provisionalId('sec');
+      const { id: _id, blocks, ...rest } = fresh;
+      // The section goes in empty and its blocks follow one by one: the server mints ids for a block's subtree, not for a section's blocks.
+      if (!engine.apply(ops.insertSection(plan.index, { ...rest, blocks: [] }), { provisionalId: sectionId, label })) { notify(t('clip_rejected')); return false; }
+      asList(blocks).forEach((b, i) => {
+        const { id: _bid, ...block } = b;
+        engine.apply(ops.insertBlock(sectionId, i, block), { provisionalId: ops.provisionalId('blk'), label: nodeLabel(block, manifest, 'block') });
+      });
+      landed = sectionId;
+    } else {
+      let parentId = plan.parentId;
+      let index = plan.index;
+      if (plan.newSection) {
+        parentId = ops.provisionalId('sec');
+        if (!engine.apply(ops.insertSection(plan.sectionIndex, { label: t('section') }), { provisionalId: parentId, label: t('section') })) { notify(t('clip_rejected')); return false; }
+        index = 0;
+      }
+      const { id: blockId, ...block } = fresh;
+      if (!engine.apply(ops.insertBlock(parentId, index, block), { provisionalId: blockId, label })) { notify(t('clip_rejected')); return false; }
+      landed = blockId;
+    }
+    setSelection(landed);
+    announce(t('announce_pasted', { label }));
+    return true;
+  }, [engine, manifest, announce, notify]);
+
+  const toggleHidden = useCallback((id) => {
+    const info = findNode(engine.getSnapshot().working, id);
+    if (!info) return;
+    const hidden = !!(info.node.visibility && Array.isArray(info.node.visibility.devices) && info.node.visibility.devices.length === 0);
+    const visibility = { ...(info.node.visibility || {}), devices: hidden ? ['base', 'sm', 'md', 'lg'] : [] };
+    engine.apply(info.kind === 'section' ? ops.updateSectionVisibility(id, visibility) : ops.updateBlockVisibility(id, visibility), { label: labelOf(id) });
+  }, [engine, labelOf]);
+
+  /**
+   * Cmd/Ctrl+C, X and V on the canvas or in Layers. Handles the key only when no text is being edited and no text is
+   * selected (the browser's own copy keeps working there). `view` is the window the key came from (the canvas frame
+   * has its own, and its own clipboard focus). Returns true when it took the key.
+   */
+  const clipboardShortcut = useCallback((e, id = null, view = null) => {
+    if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return false;
+    const key = String(e.key || '').toLowerCase();
+    if (key !== 'c' && key !== 'x' && key !== 'v') return false;
+    const target = e.target;
+    if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return false;
+    try {
+      const sel = ((target && target.ownerDocument && target.ownerDocument.defaultView) || window).getSelection();
+      if (sel && !sel.isCollapsed && String(sel).trim() !== '') return false;
+    } catch { /* no selection API: carry on */ }
+    const at = id || selectionRef.current;
+    if (key !== 'v' && !at) return false;
+    e.preventDefault();
+    if (key === 'c') copyNode(at, view);
+    else if (key === 'x') cutNode(at, view);
+    else pasteNode(at, 'after', view);
+    return true;
+  }, [copyNode, cutNode, pasteNode]);
+
   const updateSectionLabel = useCallback((id, label) => {
     const info = findNode(engine.getSnapshot().working, id);
     if (!info || info.kind !== 'section') return;
@@ -502,6 +608,8 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
       const typing = e.target && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName));
       if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); save(); return; }
       if (typing) return;
+      // Copy / Cut / Paste when the canvas side has focus (Layers rows handle their own keys, on the focused row).
+      if (mod && /^[cxv]$/i.test(e.key) && e.target && (e.target === document.body || (e.target.closest && e.target.closest('.sbx-canvas'))) && clipboardShortcut(e)) return;
       if (mod && e.key.toLowerCase() === 'd' && selectionRef.current) {
         e.preventDefault();
         actionIds(selModelRef.current, documentRows(engine.getSnapshot().working)).forEach((id) => duplicateNode(id));
@@ -513,13 +621,14 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [engine, save, undo, redo, duplicateNode]);
+  }, [engine, save, undo, redo, duplicateNode, clipboardShortcut]);
 
   const libraryWithPresets = useMemo(() => (library ? { ...library, presets: presets === null ? undefined : presets } : library), [library, presets]);
 
   const ctx = useMemo(() => ({
     boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView,
     insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf,
+    copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, peekClipboard: peekMemory,
     viewport: viewportByKey(viewportKey), setViewport: changeViewport, tokensSaved: onTokensSaved, refreshManifest,
     library: libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate,
     insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion,
@@ -530,7 +639,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     openHistory: () => setHistoryOpen(true),
     openTheme: manifest && manifest.permissions && (manifest.permissions.tokens || manifest.permissions.view) ? () => setDialog('theme') : null,
     openPackages: manifest && manifest.permissions && manifest.permissions.view ? () => setDialog('package') : null,
-  }), [boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, viewportKey, changeViewport, onTokensSaved, refreshManifest,
+  }), [boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, viewportKey, changeViewport, onTokensSaved, refreshManifest,
     libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
 
   const selectionCtx = useMemo(() => ({
@@ -565,6 +674,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
         onPublish={publish}
         onReload={reload}
         announcement={announcement}
+        notice={notice}
         lockState={lockState}
         historyOpen={historyOpen}
         setHistoryOpen={setHistoryOpen}
@@ -609,7 +719,7 @@ const SHEET_TABS = ['theme', 'more'];
 
 /** The unified one-sided builder shell (rendered inside an EditorContext). */
 export function ShellLayout({
-  viewportKey, onViewport, onSave, onUndo, onRedo, onPublish, onReload, announcement, lockState,
+  viewportKey, onViewport, onSave, onUndo, onRedo, onPublish, onReload, announcement, notice = '', lockState,
   historyOpen = false, setHistoryOpen = () => {}, pendingInsert = null, onCancelInsert = () => {}, onConfirmInsert = () => {},
   onTheme = null, dialogs = null, onAiReview = null, onPackages = null,
 }) {
@@ -760,6 +870,7 @@ export function ShellLayout({
         hasSelection={!!selection}
       />
       <LiveRegion text={announcement} />
+      {notice && <div className="sbx-toast" aria-hidden="true" data-testid="toast">{notice}</div>}
       {pendingInsert && <InsertDialog request={pendingInsert} onCancel={onCancelInsert} onConfirm={onConfirmInsert} />}
       {historyOpen && <HistoryDialog onClose={() => setHistoryOpen(false)} />}
       {mobileOpen && activeTab === 'theme' && (
