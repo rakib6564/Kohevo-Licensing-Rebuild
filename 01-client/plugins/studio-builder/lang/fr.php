@@ -681,6 +681,7 @@ return [
     'studio_ui_tok_field_radius_token' => 'Arrondi des coins',
     'studio_ui_tok_field_shadow_token' => 'Ombre',
     'studio_ui_tok_field_font_token' => 'Police',
+    'studio_ui_tok_field_border_token' => 'Couleur de la bordure',
     'studio_ui_tok_default' => 'Par défaut',
     'studio_ui_inspector_bar' => 'Actions de l’inspecteur',
     'studio_ui_inspector_reset' => 'Réinitialiser',

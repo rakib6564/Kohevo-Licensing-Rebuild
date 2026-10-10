@@ -50,6 +50,7 @@ final class DocumentRenderer
     public const EMBEDDED_KEY = '__sb_embedded';
 
     private const STYLE_UTILITIES = [
+        'border_token'  => 'bd',
         'font_token'    => 'font',
         'radius_token'  => 'rad',
         'shadow_token'  => 'shd',

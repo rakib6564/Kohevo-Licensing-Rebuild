@@ -49,6 +49,23 @@ const enumOf = (list) => (v) => typeof v === 'string' && list.includes(v);
 const measure = (auto) => (v) => isMeasure(v, auto);
 const padding = (v) => isMeasure(v, false) && !v.trim().startsWith('-');
 const colour = (v) => typeof v === 'string' && isColor(v) && !isToken(v.trim());
+
+/** The token categories that hold a colour (StyleSurface::COLOUR_TOKEN_CATEGORIES). */
+export const COLOUR_TOKEN_CATEGORIES = Object.freeze(['surface', 'text', 'color', 'border']);
+
+/** A theme token that holds a colour: `color.accent`, `text.muted`, `border.default`. */
+export function isColourToken(v) {
+  return typeof v === 'string' && isToken(v) && COLOUR_TOKEN_CATEGORIES.includes(v.split('.')[0]);
+}
+
+/** What goes in the CSS for a colour that may be a token: the theme's custom property, or the colour as written. */
+export function colourCss(v) {
+  const text = String(v).trim();
+  return isColourToken(text) ? `var(--sb-${text.replace(/\./g, '-')})` : text;
+}
+
+/** A literal colour, or a theme colour token (StyleSurface's `tcolor`). */
+const tcolour = (v) => typeof v === 'string' && (isColourToken(v.trim()) || colour(v));
 const int = (min, max) => (v) => Number.isInteger(v) && v >= min && v <= max;
 const num = (min, max) => (v) => inRange(v, min, max);
 const ratio = (v) => typeof v === 'string' && /^[1-9][0-9]{0,2}\/[1-9][0-9]{0,2}$/.test(v);
@@ -77,7 +94,7 @@ for (const s of SIDES) {
   add(`padding.${s}`, padding);
   add(`border.${s}.width`, measure(false));
   add(`border.${s}.style`, enumOf(OPTIONS.borderStyle));
-  add(`border.${s}.color`, colour);
+  add(`border.${s}.color`, tcolour);
 }
 for (const c of CORNERS) add(`border.radius_corners.${c}`, measure(false));
 
@@ -91,12 +108,12 @@ add('dimensions.object_position', enumOf(OPTIONS.objectPosition));
 add('typography.style', enumOf(OPTIONS.fontStyle));
 add('typography.decoration', enumOf(OPTIONS.decoration));
 add('typography.decoration_style', enumOf(OPTIONS.decorationStyle));
-add('typography.decoration_color', colour);
+add('typography.decoration_color', tcolour);
 add('typography.decoration_thickness', measure(false));
 add('typography.decoration_offset', measure(false));
 
 for (const f of ['x', 'y', 'blur', 'spread']) add(`shadow.${f}`, measure(false));
-add('shadow.color', colour);
+add('shadow.color', tcolour);
 
 for (const [f, [min, max]] of Object.entries(TRANSFORM)) add(`effects.transform.${f}`, num(min, max));
 add('effects.transform.translate_x', measure(false));

@@ -15,7 +15,7 @@ import { presentersFor } from '../../core/propPresenters.mjs';
 import { ResponsiveSelect, VisibilityControls } from './controls.jsx';
 import { StyleControls } from './StyleControls.jsx';
 import { BorderExtras, DimensionsExtras, EffectsPane, LayoutPane, PositionPane, ShadowExtras, SpacingPane, StatesPane, TypographyExtras } from './SurfaceControls.jsx';
-import { OPTIONS } from '../../core/styleSurface.mjs';
+import { COLOUR_TOKEN_CATEGORIES, OPTIONS } from '../../core/styleSurface.mjs';
 import { EntranceSelect, MotionInspector } from './MotionInspector.jsx';
 import { ClassNamesField, DataAttributes, IdentityFields } from './AdvancedControls.jsx';
 import { InspectorShell } from './InspectorShell.jsx';
@@ -67,6 +67,9 @@ export function BlockInspector({ info }) {
   // The controls that can differ per device edit through this (desktop = the style, tablet/mobile = block.responsive).
   const deviceScope = { style, responsive, saveStyle, saveResponsive: (next) => save(ops.updateBlockResponsive(block.id, next)) };
   const patchTypography = (patch) => saveStyle({ ...style, typography: { ...asObject(style.typography), ...patch } });
+
+  // The theme's colour tokens: what the colour fields of a group's card offer next to a literal colour.
+  const colourTokens = tokensFor(manifest, COLOUR_TOKEN_CATEGORIES);
 
   const sections = {
     content: () => (
@@ -141,7 +144,7 @@ export function BlockInspector({ info }) {
         >
           {transform}
           <StyleControls style={style} capabilities={capabilities} only="typography" typoPart="more" mediaPicker={boot.mediaPicker} onChange={saveStyle} deviceScope={deviceScope} tokens={tokens} />
-          <TypographyExtras style={style} onChange={saveStyle} />
+          <TypographyExtras style={style} onChange={saveStyle} tokens={colourTokens} />
         </Popover>
       );
     },
@@ -149,9 +152,9 @@ export function BlockInspector({ info }) {
     border: () => (
       <Popover
         label={t('edit_border')}
-        row={<StyleControls style={style} capabilities={capabilities} only="border" onChange={saveStyle} />}
+        row={<StyleControls style={style} capabilities={capabilities} only="border" onChange={saveStyle} tokens={manifest && manifest.tokens} />}
       >
-        <BorderExtras style={style} onChange={saveStyle} />
+        <BorderExtras style={style} onChange={saveStyle} tokens={colourTokens} />
       </Popover>
     ),
     shadow: () => {
@@ -161,7 +164,7 @@ export function BlockInspector({ info }) {
           label={t('edit_shadow')}
           row={custom ? <span className="sbx-pop__summary">{t('shadow_custom')}</span> : <StyleControls style={style} capabilities={capabilities} only="shadow" onChange={saveStyle} />}
         >
-          <ShadowExtras style={style} onChange={saveStyle} />
+          <ShadowExtras style={style} onChange={saveStyle} tokens={colourTokens} />
         </Popover>
       );
     },

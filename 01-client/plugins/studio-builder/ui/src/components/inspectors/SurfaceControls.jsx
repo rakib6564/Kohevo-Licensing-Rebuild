@@ -12,7 +12,7 @@ import { Field, Pills, Check } from '../ui/index.js';
 import { asObject } from '../../core/doc.mjs';
 import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
 import { DeviceStyle } from './DeviceStyle.jsx';
-import { CORNERS, FILTER, OPTIONS, SIDES, TRANSFORM, getPath, setPath, setPaths } from '../../core/styleSurface.mjs';
+import { CORNERS, FILTER, OPTIONS, SIDES, TRANSFORM, getPath, isColourToken, setPath, setPaths } from '../../core/styleSurface.mjs';
 import { t } from '../../core/messages.mjs';
 import { optionLabel } from '../../core/optionLabels.mjs';
 import { setSpacingToken } from '../../core/tokenStyle.mjs';
@@ -140,6 +140,26 @@ const LENGTH_UNITS = ['px', 'rem', 'em', '%'];
 
 function Length({ id, path, label, get, put, placeholder, units }) {
   return <DraftText id={pathId(id, path)} path={path} label={label} value={get(path)} placeholder={placeholder} units={units} onCommit={(v) => put(path, v)} />;
+}
+
+/**
+ * A colour field that can also take a theme colour. The stored value is either a literal colour or the token's ref, in the
+ * same path (the server writes a token out as the theme's custom property), so a pick replaces the literal and the reverse.
+ * With no `tokens` it is the plain colour field.
+ */
+function ThemeColor({ id, label, value, onChange, tokens, fallback }) {
+  const token = isColourToken(value) ? value : null;
+  return (
+    <ColorField
+      id={id}
+      label={label}
+      value={token ? undefined : value}
+      onChange={onChange}
+      tokens={tokens}
+      token={token}
+      onToken={(ref) => onChange(ref ?? fallback)}
+    />
+  );
 }
 
 /** Four sides of margin or padding, optionally linked so one value sets all four. */
@@ -322,7 +342,7 @@ export function EffectsPane({ style, onChange }) {
 
 // ── Extras that sit inside existing sections ────────────────────────────────
 
-export function BorderExtras({ style, onChange }) {
+export function BorderExtras({ style, onChange, tokens }) {
   const id = useId();
   const f = useFields(style, onChange);
   return (
@@ -340,7 +360,7 @@ export function BorderExtras({ style, onChange }) {
             <legend>{t(`side_${s}`)}</legend>
             <Length id={id} path={`border.${s}.width`} label={t('border_width')} get={f.get} put={f.put} placeholder="1px" />
             <SelectField id={pathId(id, `border.${s}.style`)} label={t('border_style')} value={f.get(`border.${s}.style`)} options={OPTIONS.borderStyle} onChange={(v) => f.put(`border.${s}.style`, v)} />
-            <ColorField id={pathId(id, `border.${s}.color`)} label={t('border_color')} value={f.get(`border.${s}.color`)} onChange={(v) => f.put(`border.${s}.color`, v)} />
+            <ThemeColor id={pathId(id, `border.${s}.color`)} label={t('border_color')} value={f.get(`border.${s}.color`)} onChange={(v) => f.put(`border.${s}.color`, v)} tokens={tokens} />
           </fieldset>
         ))}
       </details>
@@ -351,7 +371,7 @@ export function BorderExtras({ style, onChange }) {
 const NEW_SHADOW = Object.freeze({ x: '0', y: '4px', blur: '12px', color: 'rgba(0,0,0,0.2)' });
 
 /** The custom shadow object ({x, y, blur, spread, color, inset}); presets stay in the existing select. */
-export function ShadowExtras({ style, onChange }) {
+export function ShadowExtras({ style, onChange, tokens }) {
   const id = useId();
   const shadow = style.shadow;
   const custom = shadow && typeof shadow === 'object' && !Array.isArray(shadow);
@@ -370,7 +390,7 @@ export function ShadowExtras({ style, onChange }) {
       <Length id={id} path="shadow.y" label={t('shadow_y')} get={f.get} put={(p, v) => required(p, NEW_SHADOW.y)(v)} />
       <Length id={id} path="shadow.blur" label={t('shadow_blur')} get={f.get} put={f.put} />
       <Length id={id} path="shadow.spread" label={t('shadow_spread')} get={f.get} put={f.put} />
-      <ColorField id={pathId(id, 'shadow.color')} label={t('shadow_color')} value={shadow.color} onChange={required('shadow.color', NEW_SHADOW.color)} />
+      <ThemeColor id={pathId(id, 'shadow.color')} label={t('shadow_color')} value={shadow.color} onChange={required('shadow.color', NEW_SHADOW.color)} tokens={tokens} fallback={NEW_SHADOW.color} />
       <Check label={t('shadow_inset')} checked={shadow.inset === true} onChange={(e) => f.put('shadow.inset', e.target.checked ? true : undefined)} />
       <button type="button" className="sbx-btn sbx-btn--xs" onClick={() => onChange(setPath(style, 'shadow', undefined))}>{t('shadow_back')}</button>
     </fieldset>
@@ -396,7 +416,7 @@ export function DimensionsExtras({ style, onChange, media }) {
   );
 }
 
-export function TypographyExtras({ style, onChange }) {
+export function TypographyExtras({ style, onChange, tokens }) {
   const id = useId();
   const f = useFields(style, onChange);
   const deco = f.get('typography.decoration');
@@ -407,7 +427,7 @@ export function TypographyExtras({ style, onChange }) {
       {deco && deco !== 'none' && (
         <>
           <SelectField id={pathId(id, 'typography.decoration_style')} label={t('deco_style')} value={f.get('typography.decoration_style')} options={OPTIONS.decorationStyle} onChange={(v) => f.put('typography.decoration_style', v)} />
-          <ColorField id={pathId(id, 'typography.decoration_color')} label={t('deco_color')} value={f.get('typography.decoration_color')} onChange={(v) => f.put('typography.decoration_color', v)} />
+          <ThemeColor id={pathId(id, 'typography.decoration_color')} label={t('deco_color')} value={f.get('typography.decoration_color')} onChange={(v) => f.put('typography.decoration_color', v)} tokens={tokens} />
           <Length id={id} path="typography.decoration_thickness" label={t('deco_thickness')} get={f.get} put={f.put} placeholder="2px" />
           <Length id={id} path="typography.decoration_offset" label={t('deco_offset')} get={f.get} put={f.put} placeholder="3px" />
         </>

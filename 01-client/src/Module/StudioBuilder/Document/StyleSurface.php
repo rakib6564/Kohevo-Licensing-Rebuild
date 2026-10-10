@@ -106,7 +106,7 @@ final class StyleSurface
             $sideDef[$side] = [
                 'width' => ['length', 'border-' . $side . '-width'],
                 'style' => ['enum', 'border-' . $side . '-style', CanonicalDocumentSchema::ALLOWED_BORDER_STYLES],
-                'color' => ['color', 'border-' . $side . '-color'],
+                'color' => ['tcolor', 'border-' . $side . '-color'],
             ];
         }
         $corners = [];
@@ -122,7 +122,7 @@ final class StyleSurface
                 'style'                => ['enum', 'font-style', ['normal', 'italic']],
                 'decoration'           => ['enum', 'text-decoration-line', ['none', 'underline', 'line-through', 'overline']],
                 'decoration_style'     => ['enum', 'text-decoration-style', ['solid', 'dashed', 'dotted', 'wavy', 'double']],
-                'decoration_color'     => ['color', 'text-decoration-color'],
+                'decoration_color'     => ['tcolor', 'text-decoration-color'],
                 'decoration_thickness' => ['length', 'text-decoration-thickness'],
                 'decoration_offset'    => ['length', 'text-underline-offset'],
             ],
@@ -131,7 +131,7 @@ final class StyleSurface
                 'y'      => ['length', 'y'],
                 'blur'   => ['length', 'blur'],
                 'spread' => ['length', 'spread'],
-                'color'  => ['color', 'color'],
+                'color'  => ['tcolor', 'color'],
             ],
         ];
     }
@@ -330,8 +330,28 @@ final class StyleSurface
             case 'color':
                 // A literal colour only: a token is not a CSS value, and would emit a declaration the browser ignores.
                 return is_string($v) && StyleValueGuard::isColor($v) && !StyleValueGuard::isToken(trim($v));
+            case 'tcolor':
+                // A literal colour, or a theme colour token that is written out as the theme's own custom property.
+                return is_string($v) && (self::isColourToken(trim($v)) || (StyleValueGuard::isColor($v) && !StyleValueGuard::isToken(trim($v))));
         }
         return false;
+    }
+
+    /** The token categories that hold a colour. */
+    private const COLOUR_TOKEN_CATEGORIES = ['surface', 'text', 'color', 'border'];
+
+    /** A theme token that holds a colour (`color.accent`, `text.muted`, `border.default`...). */
+    public static function isColourToken(string $v): bool
+    {
+        return StyleValueGuard::isToken($v) && in_array(explode('.', $v, 2)[0], self::COLOUR_TOKEN_CATEGORIES, true);
+    }
+
+    /** What goes in the CSS for a colour field: the theme's custom property for a token, the colour as written otherwise. */
+    private static function colourCss(string $v): string
+    {
+        $v = trim($v);
+        // The name is ResolvedTheme::cssVarName's (a unit test keeps the two the same); this layer does not depend on the renderer.
+        return self::isColourToken($v) ? 'var(--sb-' . str_replace('.', '-', $v) . ')' : $v;
     }
 
     /** A length with no CSS-wide keywords; `auto` only where the property takes it. */
@@ -404,7 +424,7 @@ final class StyleSurface
                 }
             }
         }
-        $parts[] = trim((string) $sh['color']);
+        $parts[] = self::colourCss((string) $sh['color']);
         return implode(' ', $parts);
     }
 
@@ -567,6 +587,7 @@ final class StyleSurface
                 'map'  => $def[2][$v],
                 'int'  => isset($def[4]) ? sprintf($def[4], $v) : (string) $v,
                 'length' => trim((string) $v),
+                'tcolor' => self::colourCss((string) $v),
                 default => (string) $v,
             };
             $out[] = $def[1] . ':' . $css;

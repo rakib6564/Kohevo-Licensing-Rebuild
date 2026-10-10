@@ -976,7 +976,7 @@ final class DocumentValidator
             }
         }
 
-        foreach (['surface_token', 'text_token', 'spacing_token', 'radius_token', 'shadow_token', 'font_token'] as $tokenField) {
+        foreach (['surface_token', 'text_token', 'spacing_token', 'radius_token', 'shadow_token', 'font_token', 'border_token'] as $tokenField) {
             if (array_key_exists($tokenField, $style) && $style[$tokenField] !== null) {
                 $tokenVal = $style[$tokenField];
                 if (!is_string($tokenVal) || preg_match(CanonicalDocumentSchema::TOKEN_REF_PATTERN, $tokenVal) !== 1) {

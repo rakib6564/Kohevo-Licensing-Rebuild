@@ -263,6 +263,7 @@ final class CanonicalDocumentSchema
         'radius_token',
         'shadow_token',
         'font_token',
+        'border_token',
         'typography',
         'color',
         'background',

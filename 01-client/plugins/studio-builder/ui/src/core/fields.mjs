@@ -27,6 +27,7 @@ export const STYLE_TOKEN_CATEGORIES = Object.freeze({
   radius_token: ['radius'],
   shadow_token: ['shadow'],
   font_token: ['font'],
+  border_token: ['border', 'color'],
 });
 
 export function tokensFor(manifest, categories = null) {
