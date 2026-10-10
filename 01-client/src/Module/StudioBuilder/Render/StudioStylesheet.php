@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '7';
+    public const VERSION = '8';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -241,6 +241,7 @@ final class StudioStylesheet
             . '.sb-align-tablet-left{text-align:left}.sb-align-tablet-center{text-align:center}.sb-align-tablet-right{text-align:right}'
             . '.sb-align-mobile-left{text-align:left}.sb-align-mobile-center{text-align:center}.sb-align-mobile-right{text-align:right}'
             . '.sb-query-loop{width:100%}'
+            . '@media (max-width:767.98px){.sb-query-loop .sb-query-loop__grid{grid-template-columns:minmax(0,1fr)}}'
             . '.sb-post-card{display:flex;flex-direction:column;border:1px solid var(--sb-border-default,#e2e8f0);border-radius:var(--sb-radius-md,.5rem);overflow:hidden;background:var(--sb-surface-secondary,#ffffff);transition:box-shadow .2s ease}'
             . '.sb-post-card:hover{box-shadow:var(--sb-shadow-md,0 4px 6px -1px rgba(0,0,0,0.1))}'
             . '.sb-post-card__media img{width:100%;height:12rem;object-fit:cover;display:block}'

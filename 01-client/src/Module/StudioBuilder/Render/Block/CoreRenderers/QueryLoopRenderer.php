@@ -148,7 +148,7 @@ final class QueryLoopRenderer implements BlockRendererInterface
             }
         }
 
-        $gridHtml = '<div class="sb-query-loop__grid sb-grid sb-grid--cols-' . $columns . ' sb-gap--' . Html::e($gap) . '">'
+        $gridHtml = '<div class="sb-query-loop__grid sb-grid sb-cols-' . $columns . ' sb-gap-' . Html::e($gap) . '">'
             . $itemsHtml
             . '</div>';
 

@@ -228,7 +228,7 @@ unit('sprint5 unit: QueryLoopRenderer renders post card grid and pagination', fu
 
     $html = $renderer->render($scope);
     assert_true(str_contains($html, 'sb-query-loop'), 'contains query loop container');
-    assert_true(str_contains($html, 'sb-grid--cols-2'), 'contains columns-2 grid');
+    assert_true(preg_match('/sb-grid sb-cols-2 sb-gap-[a-z0-9]+"/', $html) === 1, 'the grid carries the column and gap classes the stylesheet defines');
     assert_true(str_contains($html, 'First Post'), 'renders first post title');
     assert_true(str_contains($html, 'Second Post'), 'renders second post title');
     assert_true(str_contains($html, 'Design'), 'renders category badge');
@@ -281,4 +281,15 @@ unit('sprint5 unit: QueryLoopRenderer custom template child repeats with token s
     assert_true(str_contains($html, 'Dr. Alpha'), 'interpolates Dr. Alpha');
     assert_true(str_contains($html, 'Post Beta'), 'interpolates Post Beta');
     assert_true(str_contains($html, 'Prof. Beta'), 'interpolates Prof. Beta');
+});
+
+unit('query loop: every class on its grid is one the stylesheet defines, and a phone gets one column', function (): void {
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    foreach (range(1, 6) as $n) {
+        assert_true(str_contains($css, ".sb-cols-{$n}{grid-template-columns:repeat({$n},minmax(0,1fr))}"), "columns {$n}");
+    }
+    foreach (\Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::ALLOWED_SPACING_SCALE as $gap) {
+        assert_true(str_contains($css, ".sb-gap-{$gap}{gap:"), "gap {$gap}");
+    }
+    assert_true(str_contains($css, '.sb-query-loop .sb-query-loop__grid{grid-template-columns:minmax(0,1fr)}'), 'one column on a phone, over the column utility');
 });
