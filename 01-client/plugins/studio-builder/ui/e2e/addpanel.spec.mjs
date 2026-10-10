@@ -69,8 +69,14 @@ test('Components lists only real things — no placeholder header/footer cards',
   await expect(comps.getByRole('heading', { name: 'Global components' })).toBeVisible();
   await expect(comps).not.toContainText('Global header');
   await expect(comps).not.toContainText('Global footer');
-  // the sandbox is licensed for studio-builder only, so no module component is offered
-  await expect(comps.locator('[data-block-type^="booking."], [data-block-type^="membership."], [data-block-type^="forms."]')).toHaveCount(0);
+  // the sandbox is licensed for studio-builder only: module components are not offered. They are listed in
+  // their own "Not available" group, greyed and not insertable, instead of silently missing.
+  const modules = comps.locator('[data-block-type^="booking."], [data-block-type^="membership."], [data-block-type^="forms."]');
+  const locked = comps.getByTestId('palette-components-locked').locator('[data-block-type]');
+  await expect(comps.getByTestId('palette-components-locked')).toBeVisible();
+  await expect(modules).toHaveCount(await locked.count());
+  expect(await locked.count()).toBeGreaterThan(0);
+  for (const tile of await locked.all()) await expect(tile).toBeDisabled();
 });
 
 test('at the block limit, cards are disabled and say why (and insert nothing)', async ({ page }) => {
