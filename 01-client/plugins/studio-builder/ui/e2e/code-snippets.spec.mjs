@@ -1,5 +1,5 @@
 // Code & tracking: site verification tokens and header/footer snippets reach the PUBLIC page only,
-// are refused when unsafe, and never appear in Preview or the canvas.
+// are refused when unsafe, and never appear in Preview or the canvas (the canvas only gets the font links).
 import { test, expect } from '@playwright/test';
 import { openBuilder, settled, sandboxPageId } from './helpers.mjs';
 
@@ -53,7 +53,7 @@ test('a pasted meta tag becomes a token; snippets show on the public page but no
   try {
     await save(page, {
       verify_google: `<meta name="google-site-verification" content="${TOKEN}" />`,
-      head_snippet: '<meta name="e2e-head" content="head-snippet-marker">',
+      head_snippet: '<meta name="e2e-head" content="head-snippet-marker"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter&display=swap">',
       footer_snippet: '<script>window.__e2eFooter = "footer-snippet-marker";</script>',
     });
     await expect(page.locator('.alert-success')).toContainText('code snippets');
@@ -73,6 +73,9 @@ test('a pasted meta tag becomes a token; snippets show on the public page but no
     expect(seen.live).toContain('footer-snippet-marker');
     expect(seen.live.indexOf('head-snippet-marker')).toBeLessThan(seen.live.indexOf('</head>'));
     expect(seen.live.indexOf('footer-snippet-marker')).toBeGreaterThan(seen.live.indexOf('</head>'));
+    // the canvas shows the site's fonts (an allowed font link), but still none of the snippet's other markup
+    expect(seen.canvas).toContain('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter&amp;display=swap">');
+    expect(seen.canvas).not.toContain('<script');
     for (const where of [seen.preview, seen.canvas]) {
       expect(where).not.toContain('head-snippet-marker');
       expect(where).not.toContain('footer-snippet-marker');
