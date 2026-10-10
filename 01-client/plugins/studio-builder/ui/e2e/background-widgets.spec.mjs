@@ -43,6 +43,7 @@ test('the Background image offers a focal-point pad and an overlay with opacity,
     // Nothing to place until an image is chosen.
     await expect(bg.getByRole('slider', { name: 'Focal point' })).toHaveCount(0);
     await chooseImage(page, bg);
+    await bg.getByRole('button', { name: 'Edit image options' }).click(); // fit, repeat, focal point and overlay live in the card
 
     const pad = bg.getByRole('slider', { name: 'Focal point' });
     await expect(pad).toBeVisible();

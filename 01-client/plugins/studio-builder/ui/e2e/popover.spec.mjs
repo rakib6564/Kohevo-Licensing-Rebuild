@@ -70,3 +70,44 @@ test('the shadow group is a row with a pencil: it opens a card, Escape and a cli
     await restore(page, before);
   }
 });
+
+test('typography and border keep the common controls in the row and move the rest into the pencil card', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openBuilder(page);
+  await settled(page);
+  const before = await layerCount(page);
+  try {
+    await page.getByRole('tab', { name: /^(Add|Ajouter)$/ }).click();
+    const panel = page.locator('#sbx-leftpanel-blocks');
+    await panel.getByRole('tab', { name: 'Elements' }).click();
+    await panel.locator('[data-chip="content"]').click();
+    await panel.locator('[data-block-type="core.quote"]').click();
+    await settled(page);
+    await page.locator('[id^="sbx-blk-"][id$="-tab-style"]').click();
+
+    const typo = await openSection(page, 'typography');
+    for (const inline of ['Font Weight', 'Font Size']) await expect(typo.getByLabel(inline, { exact: true })).toBeVisible();
+    await expect(typo.locator('input[id$="-tcolor-text"]')).toBeVisible();
+    for (const inCard of ['Line Height', 'Font Family', 'Text Transform']) await expect(typo.getByLabel(inCard, { exact: true })).toHaveCount(0);
+    await typo.getByRole('button', { name: 'Edit typography' }).click();
+    const card = typo.getByRole('dialog', { name: 'Edit typography' });
+    for (const inCard of ['Line Height', 'Font Family', 'Text Transform']) await expect(card.getByLabel(inCard, { exact: true })).toBeVisible();
+    // an edit inside the card reaches the document: the section summary is unchanged but the value sticks after closing
+    const lh = card.getByLabel('Line Height', { exact: true });
+    await lh.fill('1.8');
+    await lh.blur();
+    await settled(page);
+    await card.getByRole('button', { name: 'Done' }).click();
+    await typo.getByRole('button', { name: 'Edit typography' }).click();
+    await expect(typo.getByRole('dialog').getByLabel('Line Height', { exact: true })).toHaveValue('1.8');
+    await typo.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
+
+    const border = await openSection(page, 'border');
+    await expect(border.getByLabel('Border Style', { exact: true })).toBeVisible();
+    await expect(border.getByText('Corners', { exact: false })).toHaveCount(0);
+    await border.getByRole('button', { name: 'Edit border' }).click();
+    await expect(border.getByRole('dialog', { name: 'Edit border' }).getByText(/Corners/)).toBeVisible();
+  } finally {
+    await restore(page, before);
+  }
+});
