@@ -75,6 +75,8 @@ final class StudioAuthoringApi
         'diff'         => ['GET', ['page', 'base', 'proposed']],
         // Commands
         'operations'   => ['POST', ['page_id', 'expected_revision_id', 'revision_kind', 'operations', 'summary']],
+        // Renders one unsaved block for the canvas (read-only: nothing is stored). A POST only because the block is the body.
+        'render_block' => ['POST', ['page_id', 'block']],
         'save_draft'   => ['POST', ['page_id', 'expected_revision_id', 'revision_kind', 'document', 'summary']],
         'publish'      => ['POST', ['page_id', 'expected_revision_id', 'summary']],
         'rollback'     => ['POST', ['page_id', 'target_revision_id', 'expected_revision_id', 'summary']],
@@ -244,6 +246,7 @@ final class StudioAuthoringApi
             'section_presets' => StudioApiResponse::ok(['presets' => $this->app->sectionPresets($actor)]),
             'pages'        => StudioApiResponse::ok(['pages' => $this->app->listPages($actor)]),
             'operations'   => $this->operations($actor, $input),
+            'render_block' => $this->renderBlock($actor, $input),
             'save_draft'   => $this->saveDraft($actor, $input),
             'publish'      => $this->publish($actor, $input),
             'rollback'     => $this->rollback($actor, $input),
@@ -639,6 +642,16 @@ final class StudioAuthoringApi
             self::revisionKind($input),
         );
         return StudioApiResponse::ok(self::mutationResult($result));
+    }
+
+    /** @param array<string, mixed> $input */
+    private function renderBlock(StudioActor $actor, array $input): StudioApiResponse
+    {
+        $block = $input['block'] ?? null;
+        if (!is_array($block) || ($block !== [] && array_is_list($block))) {
+            throw self::invalid('block', 'invalid_block', 'block must be a JSON object.');
+        }
+        return StudioApiResponse::ok(['html' => $this->app->renderBlockFragment($actor, self::id($input, 'page_id'), $block)->html]);
     }
 
     /** @param array<string, mixed> $input */

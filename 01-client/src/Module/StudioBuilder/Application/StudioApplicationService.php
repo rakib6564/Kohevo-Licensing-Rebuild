@@ -1145,6 +1145,50 @@ final class StudioApplicationService
         return $renderer->renderRevision($page, $revision, RenderContext::forEditor($tenantId, $renderer->siteContext(), $actor));
     }
 
+    /**
+     * Render ONE block as the editor canvas would show it, and save nothing. It lets the canvas show a block the author
+     * has just inserted while the save is still on its way: the block goes into a copy of the page's working draft as the
+     * only block of one fresh section, through the same preparation as a stored block (an invalid block, or one whose
+     * module is not available, renders as the editor's "unavailable" notice). Every id is replaced with a fresh one, in
+     * document order, so the caller maps them back by position and a made-up id can never collide with a real one.
+     * Requires studio-builder.edit.
+     *
+     * @param array<string, mixed> $block
+     */
+    public function renderBlockFragment(StudioActor $actor, int $pageId, array $block): RenderResult
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::EDIT);
+        $renderer = $this->requireRenderer();
+        [$page, $revision] = $this->loadPageRevision($pageId, null);
+        $document = CanonicalJson::decode((string) $revision['document_json']);
+        $document['sections'] = [[
+            'id'         => CanonicalDocumentSchema::newSectionId(),
+            'label'      => '',
+            'global_ref' => null,
+            'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
+            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+            'blocks'     => [self::withFreshBlockIds($block)],
+        ]];
+        $revision['document_json'] = CanonicalJson::encode($document);
+        return $renderer->renderRevision($page, $revision, RenderContext::forEditor($tenantId, $renderer->siteContext(), $actor));
+    }
+
+    /**
+     * @param array<string, mixed> $block
+     * @return array<string, mixed>
+     */
+    private static function withFreshBlockIds(array $block): array
+    {
+        $block['id'] = CanonicalDocumentSchema::newBlockId();
+        if (isset($block['children']) && is_array($block['children']) && array_is_list($block['children'])) {
+            $block['children'] = array_map(
+                static fn(mixed $child): mixed => is_array($child) && !array_is_list($child) ? self::withFreshBlockIds($child) : $child,
+                $block['children'],
+            );
+        }
+        return $block;
+    }
+
     // ── Builder queries (read-only) ─────────────────────────────────────────
 
     /**

@@ -12,6 +12,8 @@ import { patchCanvas } from '../core/canvasPatch.mjs';
 import { isInlineEditing, morphDocument } from '../core/canvasMorph.mjs';
 import { ghostNodeIds, isStructuralChange, syncLiveDOM } from '../core/canvasLiveSync.mjs';
 import { releaseLive, syncLiveStyles, tokensOfDoc } from '../core/liveStyleSync.mjs';
+import { syncLiveStructure } from '../core/liveStructure.mjs';
+import { adoptFragment, applyFragment, clearFragments } from '../core/liveFragment.mjs';
 import { STATUS } from '../core/sync.mjs';
 import { t } from '../core/messages.mjs';
 import { ancestorPath, asList, canInsertBlock, canMoveBlock, findNode } from '../core/doc.mjs';
@@ -46,7 +48,7 @@ function blockNavigation(doc) {
 }
 
 export const CanvasArea = memo(function CanvasArea({ interactive = true, collapsed = false, onToggleCollapse = null, onReloadCanvas = null }) {
-  const { boot, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode, applyOp, canvasView, setCanvasView, copyNode, cutNode, pasteNode, setLocked, toggleHidden, clipboardShortcut, peekClipboard, labelOf } = useEditor();
+  const { boot, transport, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode, applyOp, canvasView, setCanvasView, copyNode, cutNode, pasteNode, setLocked, toggleHidden, clipboardShortcut, peekClipboard, labelOf } = useEditor();
   const isMobile = useIsMobileShell();
   const { selection, selectedIds, select, pick } = useSelection();
   const working = useEngineState((s) => s.working);
@@ -83,6 +85,8 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   // The document the server's render last showed, and the nodes whose style the editor has painted ahead of it (core/liveStyleSync.mjs).
   const serverBaseRef = useRef(null);
   const liveRef = useRef(new Map());
+  // The document whose structure the canvas shows: the server's render, then each insert, move and delete since (core/liveStructure.mjs).
+  const structRef = useRef(null);
   const lastLoadedRevRef = useRef(revisionId);
 
   useEffect(() => {
@@ -151,6 +155,26 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     } catch { return false; }
   }, []);
 
+  /** A new block is on the canvas as a placeholder: fetch its real markup now, in parallel with the save. */
+  const showFragments = useCallback((placeholders) => {
+    if (!transport || typeof transport.renderBlock !== 'function') return;
+    for (const el of placeholders) {
+      const info = findNode(workingRef.current, el.getAttribute('data-sb-node'));
+      if (!info) continue;
+      transport.renderBlock(boot.pageId, info.node).then((res) => {
+        if (!res || !res.ok || !res.data) return;
+        let doc = null;
+        try { doc = frameRef.current && frameRef.current.contentDocument; } catch { doc = null; }
+        // The author may have deleted it, or the server's render may already have replaced it.
+        if (!doc || el.ownerDocument !== doc || !el.isConnected || !el.classList.contains('sbx-pending')) return;
+        const now = findNode(workingRef.current, el.getAttribute('data-sb-node'));
+        if (!now) return;
+        const fragment = adoptFragment(res.data.html, now.node, doc);
+        if (fragment && applyFragment(doc, el, fragment, now.node.id)) markSelected(doc, selectionRef.current, { scroll: false, ids: selectedIdsRef.current });
+      }).catch(() => { /* the server's render after the save fills it in */ });
+    }
+  }, [transport, boot.pageId]);
+
   // A confirmed revision: the live patch has usually painted it already; otherwise morph the server's render in.
   useEffect(() => {
     const next = canvasSrc;
@@ -189,6 +213,13 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
         if (doc) {
           // The render carries the styles the editor painted; end those overrides, then paint whatever the author has changed since.
           releaseLive(doc, liveRef.current);
+          clearFragments(doc);
+          // The render is the structure of the revision it was made from; paint what the author has done since.
+          try {
+            const { pending } = syncLiveStructure(doc, baseAtStart, workingRef.current);
+            if (pending && pending.length) showFragments(pending);
+          } catch (_) { /* the next render settles it */ }
+          structRef.current = workingRef.current;
           syncLiveStyles(doc, serverBaseRef.current, workingRef.current, tokensOfDoc(doc), liveRef.current);
           markSelected(doc, selectionRef.current, { scroll: false, ids: selectedIdsRef.current });
         }
@@ -198,7 +229,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     };
     timer = setTimeout(run, REPAINT_DEBOUNCE_MS);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [canvasSrc, revisionId, working, repaintInPlace, reloadFrame]);
+  }, [canvasSrc, revisionId, working, repaintInPlace, reloadFrame, showFragments]);
 
   // 0ms Real-time live canvas DOM sync on every keystroke and property change!
   useEffect(() => {
@@ -209,6 +240,15 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     let doc = null;
     try { doc = frameRef.current && frameRef.current.contentDocument; } catch { doc = null; }
     if (!doc || doc.readyState === 'loading') return;
+
+    // An insert, move, duplicate or delete is shown now; the server's render follows after the save.
+    try {
+      if (structRef.current && structRef.current !== working) {
+        const { pending } = syncLiveStructure(doc, structRef.current, working);
+        if (pending && pending.length) showFragments(pending);
+      }
+      structRef.current = working;
+    } catch (_) { structRef.current = working; }
 
     // Run conservative patchCanvas
     try { patchCanvas(doc, prev, working); } catch (_) {}
@@ -224,7 +264,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     // stay "unpainted", so the reload that follows the next save still sees it as structural.
     if (!isStructuralChange(prev, working, tokens)) paintedRef.current = working;
     markSelected(doc, selectionRef.current, { scroll: false });
-  }, [working, loading, viewport.key]);
+  }, [working, loading, viewport.key, showFragments]);
 
   // Integrity check: once the canvas has settled, any node on it that the document does not have means the live
   // patch and the server's paint disagree. Repaint from the server once (a node the server tags for some other
@@ -435,6 +475,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     loadedRef.current = true;
     paintedRef.current = baseRef.current;
     serverBaseRef.current = baseRef.current;
+    structRef.current = baseRef.current;
     liveRef.current.clear();
     bindDoc();
     try { frameRef.current.contentWindow.scrollTo(0, scrollRef.current); } catch { /* ignore */ }
