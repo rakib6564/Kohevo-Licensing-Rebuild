@@ -1,50 +1,49 @@
 import { blk, sec, text, h, btn, link, box, flex, grid, list, rich, setSeed } from './dsl.mjs';
 import { site, contact, problemStates, principles, capabilities, projects, MEDIA, hrefOf } from './content.mjs';
 
-const media = (id, alt) => ({ media_id: id, alt });
-const img = (id, alt, o = {}) => blk('core.image', { media: media(id, alt), caption: '', aspect_ratio: 'auto', rounded: false }, o);
-const fade = { type: 'fade_up' };
-const S0 = { padding_y: 'none', width: 'full', columns: { base: 1, md: 1 } };            // a section whose inner shell carries the gutters
-const T = (c, cls, o = {}) => text(c, { classNames: cls, ...o });
-const eyebrow = (c, extra = '') => T(c, `eyebrow ${extra}`.trim());
+export const media = (id, alt) => ({ media_id: id, alt });
+export const img = (id, alt, o = {}) => blk('core.image', { media: media(id, alt), caption: '', aspect_ratio: 'auto', rounded: false }, o);
+export const fade = { type: 'fade_up' };
+export const S0 = { padding_y: 'none', width: 'full', columns: { base: 1, md: 1 } };            // a section whose inner shell carries the gutters
+export const T = (c, cls, o = {}) => text(c, { classNames: cls, ...o });
+export const eyebrow = (c, extra = '') => T(c, `eyebrow ${extra}`.trim());
 
-function sectionHeading(eyebrowText, title, body, highlight = '') {
+export function sectionHeading(eyebrowText, title, body, highlight = '') {
   return box([eyebrow(eyebrowText), h('h2', title, { highlight }), ...(body ? [T(body, 'section-heading-body')] : [])], { classNames: 'section-heading', animation: fade });
 }
-function rail(num, caption) {
+export function rail(num, caption) {
   return box([eyebrow(num), box([], { classNames: 'rail-rule' }), T(caption, 'rail-caption')], { classNames: 'section-rail' });
 }
-const railLayout = (num, caption, children, cls = '') => box([rail(num, caption), ...children], { classNames: `rail-layout ${cls}`.trim() });
-const arrowBox = () => box([], { classNames: 'capability-arrow' });
+export const railLayout = (num, caption, children, cls = '') => box([rail(num, caption), ...children], { classNames: `rail-layout ${cls}`.trim() });
+export const arrowBox = () => box([], { classNames: 'capability-arrow' });
 
 // ── Header / footer partials ────────────────────────────────────────────────
-export function headerDoc() {
-  setSeed('header');
-  const links = [['Home', '/'], ['Work', '/work'], ['About', '/about'], ['Contact', '/contact']];
+export function headerDoc({ brand = site.name.toUpperCase(), links = [['Home', '/'], ['Work', '/work'], ['About', '/about'], ['Contact', '/contact']], cta = 'Start a project', seed = 'header' } = {}) {
+  setSeed(seed);
   return [sec('Header', [
     box([
-      box([link(site.name.toUpperCase(), '/', { linkStyle: 'plain' })], { classNames: 'wordmark' }),
+      box([link(brand, '/', { linkStyle: 'plain' })], { classNames: 'wordmark' }),
       box(links.map(([l, href]) => link(l, href, { linkStyle: 'plain' })), { classNames: 'desktop-nav' }),
-      box([link('Start a project', '/contact', { linkStyle: 'plain' })], { classNames: 'header-project-link' }),
+      box([link(cta, '/contact', { linkStyle: 'plain' })], { classNames: 'header-project-link' }),
       box([blk('layout.offcanvas', { drawer_id: 'site-menu', title: 'Menu', position: 'right', trigger_text: 'Menu', trigger_variant: 'outline' }, {
-        children: [...links.map(([l, href]) => link(l, href, { linkStyle: 'plain' })), btn('Start a project', '/contact', { classNames: 'mobile-nav-cta' })],
+        children: [...links.map(([l, href]) => link(l, href, { linkStyle: 'plain' })), btn(cta, '/contact', { classNames: 'mobile-nav-cta' })],
       })], { classNames: 'header-menu' }),
     ], { classNames: 'header-inner' }),
   ], S0)];
 }
-export function footerDoc() {
-  setSeed('footer');
+export function footerDoc({ brand = site.name.toUpperCase(), note = 'A calm digital partner for problems worth solving.', phone = [contact.phone, contact.phoneHref], socials = contact.socials, links = [['Work', '/work'], ['About', '/about'], ['Contact', '/contact']], legal = `© ${new Date().getFullYear()} ${site.name}. Built with intent.`, tagline = 'Web · UX · Systems', seed = 'footer' } = {}) {
+  setSeed(seed);
   return [sec('Footer', [
     box([
       box([
-        box([box([link(site.name.toUpperCase(), '/', { linkStyle: 'plain' })], { classNames: 'wordmark footer-wordmark' }), T('A calm digital partner for problems worth solving.', 'footer-note')]),
+        box([box([link(brand, '/', { linkStyle: 'plain' })], { classNames: 'wordmark footer-wordmark' }), T(note, 'footer-note')]),
         box([
-          box([link(contact.phone, contact.phoneHref, { linkStyle: 'plain' })], { classNames: 'footer-phone' }),
-          box(contact.socials.map((s) => link(s.label, s.href, { linkStyle: 'plain' })), { classNames: 'footer-socials' }),
+          box([link(phone[0], phone[1], { linkStyle: 'plain' })], { classNames: 'footer-phone' }),
+          box(socials.map((s) => link(s.label, s.href, { linkStyle: 'plain' })), { classNames: 'footer-socials' }),
         ], { classNames: 'footer-contact-block' }),
-        box([...[['Work', '/work'], ['About', '/about'], ['Contact', '/contact']].map(([l, href]) => link(l, href, { linkStyle: 'plain' })), box([link('Back to top', '/', { linkStyle: 'plain' })], { classNames: 'footer-link' })], { classNames: 'footer-nav' }),
+        box([...links.map(([l, href]) => link(l, href, { linkStyle: 'plain' })), box([link('Back to top', '/', { linkStyle: 'plain' })], { classNames: 'footer-link' })], { classNames: 'footer-nav' }),
       ], { classNames: 'footer-top' }),
-      box([T(`© ${new Date().getFullYear()} ${site.name}. Built with intent.`, ''), T('Web · UX · Systems', '')], { classNames: 'footer-bottom' }),
+      box([T(legal, ''), T(tagline, '')], { classNames: 'footer-bottom' }),
     ], { classNames: 'footer-shell' }),
   ], { ...S0, background_token: 'surface.inverse' })];
 }
@@ -167,9 +166,9 @@ export function projectGrid() {
 }
 
 // ── Shared page pieces ───────────────────────────────────────────────────────
-const pageHero = (eyebrowText, title, supporting, extra = '') =>
+export const pageHero = (eyebrowText, title, supporting, extra = '') =>
   sec('Hero', [box([eyebrow(eyebrowText, 'dot'), h('h1', title), T(supporting, 'page-hero-supporting')], { classNames: `page-hero ${extra}`.trim() })], S0);
-const noteBand = (cls, c) => box([T(c, 'band-text')], { classNames: cls });
+export const noteBand = (cls, c) => box([T(c, 'band-text')], { classNames: cls });
 const fillHero = (...a) => pageHero(...a);
 
 // ── Work ─────────────────────────────────────────────────────────────────────
@@ -216,7 +215,7 @@ export function aboutDoc() {
 }
 
 // ── Contact ──────────────────────────────────────────────────────────────────
-const field = (name, label, o = {}) => blk('core.form_field', { name, label, field_type: o.type || 'text', placeholder: '', required: !!o.required, help_text: '', options: '' }, { classNames: o.cls || 'form-field' });
+export const field = (name, label, o = {}) => blk('core.form_field', { name, label, field_type: o.type || 'text', placeholder: '', required: !!o.required, help_text: '', options: '' }, { classNames: o.cls || 'form-field' });
 export function contactDoc() {
   setSeed('contact');
   return [
