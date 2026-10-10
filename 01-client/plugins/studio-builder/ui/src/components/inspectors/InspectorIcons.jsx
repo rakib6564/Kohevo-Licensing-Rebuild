@@ -3,6 +3,7 @@
 
 const PATHS = {
   chevron: 'M9 6l6 6-6 6',
+  edit: 'M4 20h4L19 9l-4-4L4 16zM13 7l4 4',
   up: 'M12 19V5M6 11l6-6 6 6',
   down: 'M12 5v14M6 13l6 6 6-6',
   indent: 'M4 6h16M12 12h8M4 18h16M4 9l3 3-3 3',

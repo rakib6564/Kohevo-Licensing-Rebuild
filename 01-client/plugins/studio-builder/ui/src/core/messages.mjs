@@ -362,6 +362,8 @@ const EN = {
   inspector_apply_hint: 'Save now instead of waiting for the autosave.',
   announce_reset: 'Style reset',
   announce_discarded: 'Changes discarded',
+  popover_done: 'Done',
+  edit_shadow: 'Edit shadow',
   tok_custom: 'Custom',
   tok_theme_colour: 'Theme colour',
   tok_theme_spacing: 'Theme spacing',

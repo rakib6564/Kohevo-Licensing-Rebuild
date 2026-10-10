@@ -28,7 +28,7 @@ import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
 import { IconButton } from './InspectorIcons.jsx';
 import { optionLabel } from '../../core/optionLabels.mjs';
-import { Field } from '../ui/index.js';
+import { Field, Popover } from '../ui/index.js';
 import { DeviceStyle } from './DeviceStyle.jsx';
 import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
 
@@ -139,12 +139,17 @@ export function BlockInspector({ info }) {
         <BorderExtras style={style} onChange={saveStyle} />
       </>
     ),
-    shadow: () => (
-      <>
-        {!(style.shadow && typeof style.shadow === 'object') && <StyleControls style={style} capabilities={capabilities} only="shadow" onChange={saveStyle} />}
-        <ShadowExtras style={style} onChange={saveStyle} />
-      </>
-    ),
+    shadow: () => {
+      const custom = !!style.shadow && typeof style.shadow === 'object';
+      return (
+        <Popover
+          label={t('edit_shadow')}
+          row={custom ? <span className="sbx-pop__summary">{t('shadow_custom')}</span> : <StyleControls style={style} capabilities={capabilities} only="shadow" onChange={saveStyle} />}
+        >
+          <ShadowExtras style={style} onChange={saveStyle} />
+        </Popover>
+      );
+    },
     dimensions: () => (
       <>
         <StyleControls style={style} capabilities={capabilities} only="dimensions" onChange={saveStyle} />

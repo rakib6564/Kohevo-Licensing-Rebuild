@@ -691,6 +691,8 @@ return [
     'studio_ui_inspector_apply_hint' => 'Enregistre maintenant sans attendre l’enregistrement automatique.',
     'studio_ui_announce_reset' => 'Style réinitialisé',
     'studio_ui_announce_discarded' => 'Changements annulés',
+    'studio_ui_popover_done' => 'Terminé',
+    'studio_ui_edit_shadow' => 'Modifier l’ombre',
     'studio_ui_tok_custom' => 'Personnalisé',
     'studio_ui_tok_theme_colour' => 'Couleur du thème',
     'studio_ui_tok_theme_spacing' => 'Espacement du thème',
