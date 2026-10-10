@@ -60,13 +60,13 @@ final class _SbblNoMedia implements MediaResolverInterface
 }
 
 /** @return array<string, mixed> */
-function sbbl_pipeline(): array
+function sbbl_pipeline(?MediaResolverInterface $media = null): array
 {
     $tenants   = new TenantContext();
     $registry  = ModuleBlockDefinitions::studioRegistry();
     $renderers = BlockRendererRegistry::withStudioRenderers();
     $providers = new DataProviderRegistry();
-    $media     = new _SbblNoMedia();
+    $media   ??= new _SbblNoMedia();
 
     $documents = new DocumentRenderer($registry, $renderers, $media, new ProviderBindingResolver($providers, $tenants));
     $compiler  = new StudioCompiler($tenants, $registry, $renderers, $documents, new ThemeResolver(null, static fn(): array => ['accent' => '#ff5500', 'heading' => 'Inter']), new ChromeResolver(), $media);
@@ -133,6 +133,40 @@ function sbbl_render(array $p, array $doc, RenderContext $ctx): string
     });
 }
 
+
+/** Resolves every media id to a fixed servable image. */
+final class _SbblFixedMedia implements MediaResolverInterface
+{
+    public function resolveImage(int $mediaId): ?ResolvedMedia
+    {
+        return new ResolvedMedia($mediaId, 'https://acme.test/uploads/slide-' . $mediaId . '.jpg', 800, 600);
+    }
+}
+
+unit('block library: carousel image slide renders its alt text without warnings', function (): void {
+    $p = sbbl_pipeline(new _SbblFixedMedia());
+    $doc = sbbl_doc([sbbl_block('core.carousel', ['slides' => [
+        ['image' => ['media_id' => 7, 'alt' => 'Harbour & "dawn"'], 'caption' => 'One'],
+        ['image' => ['media_id' => 8, 'alt' => ''], 'caption' => 'Two'],
+    ]])]);
+
+    $warnings = [];
+    set_error_handler(static function (int $no, string $msg) use (&$warnings): bool {
+        $warnings[] = $msg;
+        return true;
+    });
+    try {
+        $html = sbbl_render($p, $doc, sbbl_public());
+    } finally {
+        restore_error_handler();
+    }
+
+    assert_eq([], $warnings, 'rendering a carousel with images raises no PHP warnings');
+    assert_true(str_contains($html, 'slide-7.jpg'), 'first slide image rendered');
+    assert_true(str_contains($html, 'alt="Harbour &amp; &quot;dawn&quot;"'), 'alt text is rendered and escaped');
+    assert_true(str_contains($html, 'slide-8.jpg"'), 'second slide image rendered');
+    assert_true(str_contains($html, 'slide-8.jpg" alt=""'), 'a slide with no alt gets an empty alt');
+});
 
 // ── Registry + palette manifest ──────────────────────────────────────────────
 
