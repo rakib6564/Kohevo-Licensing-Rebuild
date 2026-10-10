@@ -55,9 +55,10 @@ function Section({ typeKey, section, ctx, open, idPrefix, render, forceOpen, reg
  * @param {object} props.def             its manifest definition
  * @param {React.ReactNode} props.header the header (icon, name, ⋯); the shell adds nothing of its own to it
  * @param {React.ReactNode} [props.actions] extra controls under the header
+ * @param {React.ReactNode} [props.footer] pinned under the controls (the Reset / Discard / Apply bar)
  * @param {(id: string) => React.ReactNode} props.renderSection renders the controls of one section
  */
-export function InspectorShell({ idPrefix, node, def, header, actions, renderSection, registry = SECTIONS, typeKey: typeKeyProp }) {
+export function InspectorShell({ idPrefix, node, def, header, actions, footer, renderSection, registry = SECTIONS, typeKey: typeKeyProp }) {
   const ctx = useMemo(() => inspectorContext(node, def), [node, def]);
   const groups = useMemo(() => applicableSections(ctx, registry), [ctx, registry]);
   const [tab, setTab] = useState('content');
@@ -107,6 +108,7 @@ export function InspectorShell({ idPrefix, node, def, header, actions, renderSec
           ))}
         </>
       )}
+      {footer}
     </div>
   );
 }

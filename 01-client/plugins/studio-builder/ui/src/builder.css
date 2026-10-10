@@ -3261,3 +3261,7 @@ html, body.sbx-body {
 /* A theme colour or spacing picker sits under the literal field it can replace. */
 .sbx-color__theme { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
 .sbx-color__theme .sbx-field__label { font-size: var(--sbx-fs-sm); color: var(--sbx-text-dim); }
+
+/* Reset · Discard · Apply: pinned under the Inspector's controls. */
+.sbx-inspector__bar { position: sticky; bottom: 0; display: flex; gap: 8px; padding: 10px 0; margin-top: 12px; background: var(--sbx-bg); border-top: 1px solid var(--sbx-border); z-index: 2; }
+.sbx-inspector__bar .sbx-btn { flex: 1 1 0; justify-content: center; }
