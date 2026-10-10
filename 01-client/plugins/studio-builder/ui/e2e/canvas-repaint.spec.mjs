@@ -75,7 +75,7 @@ test('a style edit shows on the canvas without waiting for the save or the serve
     expect(await canvasFrame(page).evaluate(() => window.__sbxMarker)).toBe('same-document');
   } finally {
     release();
-    await page.unroute('**/admin/api.php?action=operations*');
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
     await settled(page);
     // Once the save lands, the server's render replaces the live paint and the page still looks the same.
     await expect.poll(() => frameEval(page, '[data-sb-type="core.quote"]', (el) => getComputedStyle(el).fontSize), { timeout: 20_000 }).toBe('24px');

@@ -472,6 +472,38 @@ unit('phase5 integration: builder command/query API (real MySQL, tenants 101/202
                 assert_eq(422, $r->status, 'a crafted request cannot insert an unentitled module block');
             });
 
+            // ── 9b. One unsaved block rendered for the canvas ──
+            unit('phase5 int 9b: render_block renders one unsaved block with fresh ids, stores nothing, and keeps the tenant and permission walls', function () use ($rt, $editor, $viewer, $S): void {
+                $doc = sbp5_ok(sbp5_call($rt, SBP5_TENANT_A, $editor, 'GET', 'document', ['page' => $S->pageA]), 'document')['document'];
+                $block = sbp5_find($doc, $S->heading);
+                assert_true($block !== null, 'the page has a heading to copy the block shape from');
+                $block['id'] = 'tmp_provisional';
+                $block['props']['text'] = 'Rendered before saving';
+                $revisions = sbp5_count('SELECT COUNT(*) FROM studiobuilder_revisions WHERE tenant_id = ? AND page_id = ?', [SBP5_TENANT_A, $S->pageA]);
+
+                $r = sbp5_ok(sbp5_call($rt, SBP5_TENANT_A, $editor, 'POST', 'render_block', ['page_id' => $S->pageA, 'block' => $block]), 'render_block');
+                $html = (string) $r['html'];
+                assert_true(str_contains($html, 'Rendered before saving') && str_contains($html, 'data-sb-type="core.heading"'), 'the block is rendered as the canvas shows it');
+                assert_true(!str_contains($html, 'tmp_provisional'), 'a made-up id is never echoed; the node gets a fresh one');
+                preg_match('~<main\b.*?</main>~s', $html, $main);
+                assert_eq(1, preg_match_all('/data-sb-node="blk_[a-z0-9]{24}"/', $main[0] ?? ''), 'one block node in the fragment');
+                assert_true(preg_match('/class="[^"]*\bsb-unavailable\b/', $html) !== 1, 'a valid block is not an unavailable notice');
+                assert_eq($revisions, sbp5_count('SELECT COUNT(*) FROM studiobuilder_revisions WHERE tenant_id = ? AND page_id = ?', [SBP5_TENANT_A, $S->pageA]), 'nothing is stored');
+                assert_eq($doc, sbp5_ok(sbp5_call($rt, SBP5_TENANT_A, $editor, 'GET', 'document', ['page' => $S->pageA]), 'document again')['document'], 'the draft is untouched');
+
+                $bad = $block;
+                $bad['type'] = 'nope.nothing';
+                $r = sbp5_ok(sbp5_call($rt, SBP5_TENANT_A, $editor, 'POST', 'render_block', ['page_id' => $S->pageA, 'block' => $bad]), 'unknown type');
+                assert_true(preg_match('/class="[^"]*\bsb-unavailable\b/', (string) $r['html']) === 1 && !str_contains((string) $r['html'], 'Rendered before saving'), 'an invalid block renders as the unavailable notice, never as itself');
+
+                assert_eq(422, sbp5_call($rt, SBP5_TENANT_A, $editor, 'POST', 'render_block', ['page_id' => $S->pageA, 'block' => 'x'])->status, 'the block must be an object');
+                assert_eq(422, sbp5_call($rt, SBP5_TENANT_A, $editor, 'POST', 'render_block', ['page_id' => $S->pageA, 'block' => [1, 2]])->status, 'a list is not a block');
+                assert_eq(422, sbp5_call($rt, SBP5_TENANT_A, $editor, 'POST', 'render_block', ['page_id' => $S->pageA, 'block' => $block, 'extra' => 1])->status, 'unknown fields are refused');
+                assert_eq(403, sbp5_call($rt, SBP5_TENANT_A, $viewer, 'POST', 'render_block', ['page_id' => $S->pageA, 'block' => $block])->status, 'viewing is not editing');
+                assert_eq(403, sbp5_call($rt, SBP5_TENANT_A, $editor, 'POST', 'render_block', ['page_id' => $S->pageA, 'block' => $block], false)->status, 'a command needs the CSRF token');
+                assert_eq(404, sbp5_call($rt, SBP5_TENANT_B, $editor, 'POST', 'render_block', ['page_id' => $S->pageA, 'block' => $block])->status, 'another tenant cannot render against this page');
+            });
+
             // ── 10. Canvas + preview + publish boundary ──
             unit('phase5 int 10: canvas = renderForEditor (node metadata, CSP); public output changes only through publish', function () use ($rt, $editor, $publisher, $S): void {
                 $canvas = $rt->tenants->runAs(SBP5_TENANT_A, fn() => $rt->app->renderForEditor($editor, $S->pageA));
