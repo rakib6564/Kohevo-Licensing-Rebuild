@@ -24,6 +24,7 @@ import {
   IconLink,
   IconTable,
   IconTimer,
+  IconCalendar,
 } from './Icons.jsx';
 
 export const DRAG_TYPE_NEW = 'application/x-kohevo-studio-block-type';
@@ -55,6 +56,7 @@ export const ICON_BY_NAME = {
   link: IconLink,
   table: IconTable,
   timer: IconTimer,
+  calendar: IconCalendar,
 };
 
 export function renderBlockIcon(type, icon, label) {
