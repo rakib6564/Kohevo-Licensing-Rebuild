@@ -27,19 +27,21 @@ test('a text edit made while the render of the previous save is on its way is st
     await panel.getByRole('tab', { name: 'Elements' }).click();
     await panel.locator('[data-chip="content"]').click();
     await panel.locator('[data-block-type="core.heading"]').click();
-    await expect(canvas(page).locator('[data-sb-type="core.heading"] .sb-heading')).toHaveCount(1, { timeout: 10_000 });
+    // The new heading is the selected one (the page may hold others).
+    const heading = canvas(page).locator('[data-sb-type="core.heading"].sbx-selected .sb-heading');
+    await expect(heading).toHaveCount(1, { timeout: 10_000 });
     await expect(canvas(page).locator('.sbx-pending')).toHaveCount(0, { timeout: 10_000 });
 
     const text = page.getByLabel('Heading Text', { exact: false }).first();
     await text.fill('Edited fast');
     await text.blur();
-    await expect(canvas(page).locator('[data-sb-type="core.heading"] .sb-heading').last()).toHaveText('Edited fast', { timeout: 5_000 }); // painted at once
+    await expect(heading).toHaveText('Edited fast', { timeout: 5_000 }); // painted at once
 
     slow = false;
     await settled(page);
     // Whatever render lands, and however it is ordered with the save, the canvas ends up showing the saved text.
     await page.waitForTimeout(5_000);
-    await expect(canvas(page).locator('[data-sb-type="core.heading"] .sb-heading').last()).toHaveText('Edited fast', { timeout: 20_000 });
+    await expect(heading).toHaveText('Edited fast', { timeout: 20_000 });
   } finally {
     await page.unrouteAll({ behavior: 'ignoreErrors' });
     await restoreLayers(page, before);
