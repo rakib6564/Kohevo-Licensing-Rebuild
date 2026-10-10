@@ -28,7 +28,7 @@ import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
 import { IconButton } from './InspectorIcons.jsx';
 import { optionLabel } from '../../core/optionLabels.mjs';
-import { Field } from '../ui/index.js';
+import { Field, Popover } from '../ui/index.js';
 import { DeviceStyle } from './DeviceStyle.jsx';
 import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
 
@@ -96,55 +96,75 @@ export function BlockInspector({ info }) {
         onChange={(align) => saveStyle({ ...style, align: Object.keys(align).length ? align : null })}
       />
     ),
-    typography: () => (
-      <>
-        {capabilities.includes('typography') && (
-          <>
-            <Field label={t('font_weight')} htmlFor={`${idPrefix}-typo-weight`}>
-              <select
-                id={`${idPrefix}-typo-weight`}
-                value={asObject(style.typography).weight || ''}
-                onChange={(e) => patchTypography({ weight: e.target.value || undefined })}
-              >
-                <option value="">{t('inherit')}</option>
-                <option value="normal">{t('fw_normal')}</option>
-                <option value="medium">{t('fw_medium')}</option>
-                <option value="semibold">{t('fw_semibold')}</option>
-                <option value="bold">{t('fw_bold')}</option>
-                <option value="extrabold">{t('fw_extrabold')}</option>
-              </select>
-            </Field>
-            <Field label={t('text_transform')} htmlFor={`${idPrefix}-typo-transform`}>
-              <select
-                id={`${idPrefix}-typo-transform`}
-                value={asObject(style.typography).transform || ''}
-                onChange={(e) => patchTypography({ transform: e.target.value || undefined })}
-              >
-                <option value="">{t('none')}</option>
-                <option value="uppercase">{t('tt_uppercase')}</option>
-                <option value="lowercase">{t('tt_lowercase')}</option>
-                <option value="capitalize">{t('tt_capitalize')}</option>
-              </select>
-            </Field>
-          </>
-        )}
-        <StyleControls style={style} capabilities={capabilities} only="typography" mediaPicker={boot.mediaPicker} onChange={saveStyle} deviceScope={deviceScope} tokens={manifest && manifest.tokens} />
-        <TypographyExtras style={style} onChange={saveStyle} />
-      </>
-    ),
+    typography: () => {
+      const weight = capabilities.includes('typography') && (
+        <Field label={t('font_weight')} htmlFor={`${idPrefix}-typo-weight`}>
+          <select
+            id={`${idPrefix}-typo-weight`}
+            value={asObject(style.typography).weight || ''}
+            onChange={(e) => patchTypography({ weight: e.target.value || undefined })}
+          >
+            <option value="">{t('inherit')}</option>
+            <option value="normal">{t('fw_normal')}</option>
+            <option value="medium">{t('fw_medium')}</option>
+            <option value="semibold">{t('fw_semibold')}</option>
+            <option value="bold">{t('fw_bold')}</option>
+            <option value="extrabold">{t('fw_extrabold')}</option>
+          </select>
+        </Field>
+      );
+      const transform = capabilities.includes('typography') && (
+        <Field label={t('text_transform')} htmlFor={`${idPrefix}-typo-transform`}>
+          <select
+            id={`${idPrefix}-typo-transform`}
+            value={asObject(style.typography).transform || ''}
+            onChange={(e) => patchTypography({ transform: e.target.value || undefined })}
+          >
+            <option value="">{t('none')}</option>
+            <option value="uppercase">{t('tt_uppercase')}</option>
+            <option value="lowercase">{t('tt_lowercase')}</option>
+            <option value="capitalize">{t('tt_capitalize')}</option>
+          </select>
+        </Field>
+      );
+      const tokens = manifest && manifest.tokens;
+      // The size, weight and colour stay in the row; line height, spacing, family, case and decoration are in the pencil's card.
+      return (
+        <Popover
+          label={t('edit_typography')}
+          row={(
+            <>
+              {weight}
+              <StyleControls style={style} capabilities={capabilities} only="typography" typoPart="main" mediaPicker={boot.mediaPicker} onChange={saveStyle} deviceScope={deviceScope} tokens={tokens} />
+            </>
+          )}
+        >
+          {transform}
+          <StyleControls style={style} capabilities={capabilities} only="typography" typoPart="more" mediaPicker={boot.mediaPicker} onChange={saveStyle} deviceScope={deviceScope} tokens={tokens} />
+          <TypographyExtras style={style} onChange={saveStyle} />
+        </Popover>
+      );
+    },
     background: () => <StyleControls style={style} capabilities={capabilities} only="background" mediaPicker={boot.mediaPicker} onChange={saveStyle} tokens={manifest && manifest.tokens} />,
     border: () => (
-      <>
-        <StyleControls style={style} capabilities={capabilities} only="border" onChange={saveStyle} />
+      <Popover
+        label={t('edit_border')}
+        row={<StyleControls style={style} capabilities={capabilities} only="border" onChange={saveStyle} />}
+      >
         <BorderExtras style={style} onChange={saveStyle} />
-      </>
+      </Popover>
     ),
-    shadow: () => (
-      <>
-        {!(style.shadow && typeof style.shadow === 'object') && <StyleControls style={style} capabilities={capabilities} only="shadow" onChange={saveStyle} />}
-        <ShadowExtras style={style} onChange={saveStyle} />
-      </>
-    ),
+    shadow: () => {
+      const custom = !!style.shadow && typeof style.shadow === 'object';
+      return (
+        <Popover
+          label={t('edit_shadow')}
+          row={custom ? <span className="sbx-pop__summary">{t('shadow_custom')}</span> : <StyleControls style={style} capabilities={capabilities} only="shadow" onChange={saveStyle} />}
+        >
+          <ShadowExtras style={style} onChange={saveStyle} />
+        </Popover>
+      );
+    },
     dimensions: () => (
       <>
         <StyleControls style={style} capabilities={capabilities} only="dimensions" onChange={saveStyle} />

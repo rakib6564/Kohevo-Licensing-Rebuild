@@ -173,6 +173,7 @@ test('Effects sliders write only values the server accepts, and the custom shado
     await openSection(page, 'effects');
     await page.getByLabel('Rotate', { exact: true }).fill('15');
     await openSection(page, 'shadow');
+    await page.locator('[data-section="shadow"]').getByRole('button', { name: 'Edit shadow' }).click();
     await page.locator('[data-section="shadow"]').getByRole('button', { name: 'Custom shadow' }).click();
     const blur = page.locator('[data-section="shadow"]').getByLabel('Blur', { exact: true });
     await blur.fill('20px');

@@ -5,3 +5,4 @@ export { Field } from './Field.jsx';
 export { Tile, TileGrid } from './Tile.jsx';
 export { Check } from './Check.jsx';
 export { MenuList } from './MenuList.jsx';
+export { Popover } from './Popover.jsx';

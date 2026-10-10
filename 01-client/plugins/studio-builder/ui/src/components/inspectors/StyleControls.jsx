@@ -25,7 +25,7 @@ import { STYLE_TOKEN_CATEGORIES } from '../../core/fields.mjs';
 import { setSurfaceToken, setTextLiteral, setTextToken } from '../../core/tokenStyle.mjs';
 import { asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
-import { Pills, Field } from '../ui/index.js';
+import { Pills, Field, Popover } from '../ui/index.js';
 import { acceptsDraft } from '../../core/styleValues.mjs';
 import { acceptsSurfaceDraft, setPath } from '../../core/styleSurface.mjs';
 import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
@@ -240,8 +240,10 @@ function GradientField({ value, onChange }) {
  * @param {string} [props.only]                  render just this section (typography, background, border, shadow, dimensions, opacity)
  * @param {boolean} [props.mediaPicker]            whether the media library picker is available to this user
  */
-export function StyleControls({ style, capabilities, onChange, mediaPicker, only, deviceScope, tokens }) {
+export function StyleControls({ style, capabilities, onChange, mediaPicker, only, deviceScope, tokens, typoPart = 'all' }) {
   const id = useId();
+  const mainTypo = typoPart !== 'more';
+  const moreTypo = typoPart !== 'main';
   const textTokens = useMemo(() => (tokens || []).filter((tk) => STYLE_TOKEN_CATEGORIES.text_token.includes(tk.category)), [tokens]);
   const surfaceTokens = useMemo(() => (tokens || []).filter((tk) => STYLE_TOKEN_CATEGORIES.surface_token.includes(tk.category)), [tokens]);
   // `only` renders a single section of the stack (the Inspector shows each in its own collapsible section);
@@ -291,6 +293,15 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
     onChange(merged);
   };
 
+  const bgMedia = (
+    <MediaControl
+      field={{ key: 'bg-image', label: t('bg_image'), required: false }}
+      value={isMediaRef(bg.image) ? bg.image : null}
+      mediaPicker={mediaPicker}
+      hideFocal
+      onChange={(ref) => patchBackground({ image: ref ?? undefined })}
+    />
+  );
   const bgColor = bg.color ?? (typeof style.background === 'string' ? style.background : undefined);
 
   return (
@@ -298,68 +309,78 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
       {has('typography') && (
         <fieldset className="sbx-fieldset">
           {!only && <legend>{t('typography')}</legend>}
-          {deviceScope ? (
-            // The font size is the one typography field that can differ per device (a plain string; a stored breakpoint map is left alone).
-            <DeviceStyle scope={deviceScope} paths={RESPONSIVE_SCOPES.size} label={t('font_size')}>
-              {(view) => (
-                <DraftText
-                  id={`${id}-size`}
-                  kind="length"
-                  label={t('font_size')}
-                  value={asObject(view.style.typography).size}
-                  units={['px', 'rem', 'em', '%']}
-                  placeholder="1.5rem"
-                  onCommit={(v) => view.onChange(setPath(view.style, 'typography.size', v))}
-                />
-              )}
-            </DeviceStyle>
-          ) : (
+          {mainTypo && (
+            <>
+            {deviceScope ? (
+              // The font size is the one typography field that can differ per device (a plain string; a stored breakpoint map is left alone).
+              <DeviceStyle scope={deviceScope} paths={RESPONSIVE_SCOPES.size} label={t('font_size')}>
+                {(view) => (
+                  <DraftText
+                    id={`${id}-size`}
+                    kind="length"
+                    label={t('font_size')}
+                    value={asObject(view.style.typography).size}
+                    units={['px', 'rem', 'em', '%']}
+                    placeholder="1.5rem"
+                    onCommit={(v) => view.onChange(setPath(view.style, 'typography.size', v))}
+                  />
+                )}
+              </DeviceStyle>
+            ) : (
+              <DraftText
+                id={`${id}-size`}
+                kind="length"
+                label={t('font_size')}
+                value={typo.size}
+                units={['px', 'rem', 'em', '%']}
+                placeholder="1.5rem"
+                onCommit={(v) => patchNested('typography', 'size', v)}
+              />
+            )}
+            </>
+          )}
+          {moreTypo && (
+            <>
             <DraftText
-              id={`${id}-size`}
-              kind="length"
-              label={t('font_size')}
-              value={typo.size}
-              units={['px', 'rem', 'em', '%']}
-              placeholder="1.5rem"
-              onCommit={(v) => patchNested('typography', 'size', v)}
+              id={`${id}-lh`}
+              kind="lineHeight"
+              label={t('line_height')}
+              value={typo.line_height}
+              placeholder="1.5"
+              onCommit={(v) => patchNested('typography', 'line_height', v)}
+            />
+            <DraftText
+              id={`${id}-ls`}
+              kind="letterSpacing"
+              label={t('letter_spacing')}
+              value={typo.letter_spacing}
+              units={['px', 'em', 'rem']}
+              placeholder="-0.01em"
+              onCommit={(v) => patchNested('typography', 'letter_spacing', v)}
+            />
+            <DraftText
+              id={`${id}-ff`}
+              kind="fontFamily"
+              label={t('font_family')}
+              value={typo.font_family}
+              placeholder="Inter, sans-serif"
+              onCommit={(v) => patchNested('typography', 'font_family', v)}
+            />
+            </>
+          )}
+          {mainTypo && (
+            <ColorField
+              id={`${id}-tcolor`}
+              label={t('text_color')}
+              value={typo.color ?? style.color}
+              // One text colour: it lives in typography.color, and an older flat `color` is folded into it
+              // (the server writes the flat one last, so leaving both would let it silently win). A theme colour replaces both.
+              onChange={(v) => onChange(setTextLiteral(style, v))}
+              tokens={capabilities.includes('text_token') ? textTokens : undefined}
+              token={style.text_token}
+              onToken={(ref) => onChange(setTextToken(style, ref))}
             />
           )}
-          <DraftText
-            id={`${id}-lh`}
-            kind="lineHeight"
-            label={t('line_height')}
-            value={typo.line_height}
-            placeholder="1.5"
-            onCommit={(v) => patchNested('typography', 'line_height', v)}
-          />
-          <DraftText
-            id={`${id}-ls`}
-            kind="letterSpacing"
-            label={t('letter_spacing')}
-            value={typo.letter_spacing}
-            units={['px', 'em', 'rem']}
-            placeholder="-0.01em"
-            onCommit={(v) => patchNested('typography', 'letter_spacing', v)}
-          />
-          <DraftText
-            id={`${id}-ff`}
-            kind="fontFamily"
-            label={t('font_family')}
-            value={typo.font_family}
-            placeholder="Inter, sans-serif"
-            onCommit={(v) => patchNested('typography', 'font_family', v)}
-          />
-          <ColorField
-            id={`${id}-tcolor`}
-            label={t('text_color')}
-            value={typo.color ?? style.color}
-            // One text colour: it lives in typography.color, and an older flat `color` is folded into it
-            // (the server writes the flat one last, so leaving both would let it silently win). A theme colour replaces both.
-            onChange={(v) => onChange(setTextLiteral(style, v))}
-            tokens={capabilities.includes('text_token') ? textTokens : undefined}
-            token={style.text_token}
-            onToken={(ref) => onChange(setTextToken(style, ref))}
-          />
         </fieldset>
       )}
 
@@ -385,39 +406,32 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
 
           {bgMode === 'image' && (
             <div className="sbx-bg-image-pane">
-              <MediaControl
-                field={{ key: 'bg-image', label: t('bg_image'), required: false }}
-                value={isMediaRef(bg.image) ? bg.image : null}
-                mediaPicker={mediaPicker}
-                hideFocal
-                onChange={(ref) => patchBackground({ image: ref ?? undefined })}
-              />
-              {isMediaRef(bg.image) && (
-                <>
-                  <Field label={t('bg_fit')} htmlFor={`${id}-bg-fit`}>
-                    <select id={`${id}-bg-fit`} value={BG_FIT.includes(bg.fit) ? bg.fit : 'cover'} onChange={(e) => patchBackground({ fit: e.target.value })}>
-                      <option value="cover">{t('fit_cover')}</option>
-                      <option value="contain">{t('fit_contain')}</option>
-                      <option value="auto">{t('fit_auto')}</option>
-                    </select>
-                  </Field>
-                  <Field label={t('bg_repeat')} htmlFor={`${id}-bg-repeat`}>
-                    <select id={`${id}-bg-repeat`} value={BG_REPEAT.includes(bg.repeat) ? bg.repeat : 'no-repeat'} onChange={(e) => patchBackground({ repeat: e.target.value })}>
-                      {BG_REPEAT.map((r) => <option key={r} value={r}>{t(`repeat_${r.replace('-', '_')}`)}</option>)}
-                    </select>
-                  </Field>
-                  <FocalPad
-                    id={`${id}-bg`}
-                    value={bg.image.focal_point}
-                    onChange={(fp) => patchBackground({ image: { ...bg.image, focal_point: fp } })}
-                  />
-                  <OverlayField
-                    id={`${id}-bg`}
-                    value={asObject(bg.overlay).color}
-                    onChange={(v) => patchBackground({ overlay: v ? { color: v } : undefined })}
-                  />
-                </>
-              )}
+              {isMediaRef(bg.image) ? (
+                <Popover label={t('edit_bg_image')} row={bgMedia}>
+                <Field label={t('bg_fit')} htmlFor={`${id}-bg-fit`}>
+                  <select id={`${id}-bg-fit`} value={BG_FIT.includes(bg.fit) ? bg.fit : 'cover'} onChange={(e) => patchBackground({ fit: e.target.value })}>
+                    <option value="cover">{t('fit_cover')}</option>
+                    <option value="contain">{t('fit_contain')}</option>
+                    <option value="auto">{t('fit_auto')}</option>
+                  </select>
+                </Field>
+                <Field label={t('bg_repeat')} htmlFor={`${id}-bg-repeat`}>
+                  <select id={`${id}-bg-repeat`} value={BG_REPEAT.includes(bg.repeat) ? bg.repeat : 'no-repeat'} onChange={(e) => patchBackground({ repeat: e.target.value })}>
+                    {BG_REPEAT.map((r) => <option key={r} value={r}>{t(`repeat_${r.replace('-', '_')}`)}</option>)}
+                  </select>
+                </Field>
+                <FocalPad
+                  id={`${id}-bg`}
+                  value={bg.image.focal_point}
+                  onChange={(fp) => patchBackground({ image: { ...bg.image, focal_point: fp } })}
+                />
+                <OverlayField
+                  id={`${id}-bg`}
+                  value={asObject(bg.overlay).color}
+                  onChange={(v) => patchBackground({ overlay: v ? { color: v } : undefined })}
+                />
+                </Popover>
+              ) : bgMedia}
             </div>
           )}
 
