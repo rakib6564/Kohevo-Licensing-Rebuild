@@ -603,3 +603,40 @@ unit('responsive style: documents without overrides render exactly as before', f
     assert_eq($before['css'], $after['css'], 'same stylesheet');
     assert_true(str_contains($after['html'], 'sb-hide-tablet') && str_contains($after['html'], 'sb-align-mobile-center'), 'the existing hide/align classes still apply');
 });
+
+// ── Typography reaches the block's own text ───────────────────────────────
+
+unit('typography marks: only the properties the author set get a class', function (): void {
+    $r = sbss_render(['typography' => ['size' => '40px', 'weight' => 'bold']]);
+    assert_true(str_contains($r['html'], 'sb-ty-size') && str_contains($r['html'], 'sb-ty-fw'), 'size and weight are marked');
+    foreach (['sb-ty-color', 'sb-ty-lh', 'sb-ty-ls', 'sb-ty-ff', 'sb-ty-tt'] as $mark) {
+        assert_true(!str_contains($r['html'], $mark), "{$mark} is not set, so it is absent");
+    }
+    $r = sbss_render(['typography' => ['color' => '#ff0000', 'line_height' => 1.2, 'letter_spacing' => '0.02em', 'transform' => 'uppercase']]);
+    foreach (['sb-ty-color', 'sb-ty-lh', 'sb-ty-ls', 'sb-ty-tt'] as $mark) {
+        assert_true(str_contains($r['html'], $mark), "{$mark} is present");
+    }
+});
+
+unit('typography marks: a block with no typography renders exactly as before', function (): void {
+    $r = sbss_render([]);
+    assert_true(!str_contains($r['html'], 'sb-ty-'), 'no marker class: ' . $r['html']);
+});
+
+unit('typography marks: a size set only for tablet or mobile still marks the block, an invalid one does not', function (): void {
+    $r = sbss_render_responsive([], ['tablet' => ['style' => ['typography' => ['size' => '22px']]]]);
+    assert_true(str_contains($r['html'], 'sb-ty-size'), 'a tablet-only size marks the block');
+    $r = sbss_render(['typography' => ['size' => 'url(x)']]);
+    assert_true(!str_contains($r['html'], 'sb-ty-size'), 'a refused size leaves the theme size alone');
+});
+
+unit('typography marks: the stylesheet makes the block text inherit, reaches three levels and never through a nested block', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    assert_true(str_contains($css, '.sb-ty-size>:is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,a,span,li),.sb-ty-size>:not(.sb-block)>'), 'the size rule is scoped to the block text');
+    assert_true(str_contains($css, ':not(.sb-block)>:not(.sb-block)>:is('), 'it stops at nested blocks');
+    foreach (['font-size', 'color', 'line-height', 'letter-spacing', 'font-family', 'font-weight', 'text-transform'] as $prop) {
+        assert_true(str_contains($css, '{' . $prop . ':inherit !important}'), "{$prop} is inherited when marked");
+    }
+    assert_true(str_contains($css, '.sb-ty-color>:is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,span,li,a.sb-button)'), 'a text colour does not repaint links, except a button label');
+});

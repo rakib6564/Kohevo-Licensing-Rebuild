@@ -168,6 +168,7 @@ final class DocumentRenderer
             ['sb-block', 'sb-block--' . str_replace(['.', '_'], '-', $type)],
             $scopedClasses,
             $this->styleClasses(is_array($block['style'] ?? null) ? $block['style'] : [], $theme, $collector),
+            self::typographyMarkers($block),
             self::hideClasses($visibility),
             $customClasses,
             $responsiveClasses,
@@ -330,6 +331,51 @@ final class DocumentRenderer
                 $block['children'] = self::markEmbedded($block['children']);
             }
             $out[] = $block;
+        }
+        return $out;
+    }
+
+    /**
+     * Marks the wrapper with one class for each typography property the author set, so the stylesheet can make the block's own
+     * text elements inherit exactly those properties. Without it a theme rule on `h2`, `p` or `a` (a size, a colour, a family)
+     * would beat the value on the wrapper and the Inspector control would appear to do nothing. A property nobody set gets no
+     * class, so the theme's own look is left alone.
+     *
+     * @param array<string, mixed> $block
+     * @return list<string>
+     */
+    private static function typographyMarkers(array $block): array
+    {
+        $style = is_array($block['style'] ?? null) ? $block['style'] : [];
+        $typo  = is_array($style['typography'] ?? null) ? $style['typography'] : [];
+        $set   = static fn (mixed $v): bool => is_string($v) && $v !== '';
+        $out   = [];
+
+        $size = isset($typo['size']) && is_string($typo['size']) && StyleValueGuard::isLength($typo['size']);
+        foreach (['tablet', 'mobile'] as $device) {
+            $deviceSize = $block['responsive'][$device]['style']['typography']['size'] ?? null;
+            $size = $size || (is_string($deviceSize) && StyleValueGuard::isLength($deviceSize));
+        }
+        if ($size) {
+            $out[] = 'sb-ty-size';
+        }
+        if ($set($typo['color'] ?? null) || $set($style['color'] ?? null)) {
+            $out[] = 'sb-ty-color';
+        }
+        if (isset($typo['line_height']) && StyleValueGuard::isLineHeight($typo['line_height'])) {
+            $out[] = 'sb-ty-lh';
+        }
+        if (isset($typo['letter_spacing']) && is_string($typo['letter_spacing']) && StyleValueGuard::isLetterSpacing($typo['letter_spacing'])) {
+            $out[] = 'sb-ty-ls';
+        }
+        if ($set($typo['font_family'] ?? null)) {
+            $out[] = 'sb-ty-ff';
+        }
+        if (isset($typo['weight']) && in_array((string) $typo['weight'], CanonicalDocumentSchema::ALLOWED_FONT_WEIGHTS, true)) {
+            $out[] = 'sb-ty-fw';
+        }
+        if (isset($typo['transform']) && in_array((string) $typo['transform'], CanonicalDocumentSchema::ALLOWED_TEXT_TRANSFORMS, true)) {
+            $out[] = 'sb-ty-tt';
         }
         return $out;
     }
