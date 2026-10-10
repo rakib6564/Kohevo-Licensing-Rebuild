@@ -1,7 +1,7 @@
 // Background image extras: the focal-point pad and the overlay colour + opacity. Neither adds a new stored field:
 // the focal point is the media_ref's own pair and the overlay opacity is the alpha of its one colour.
 import { test, expect } from '@playwright/test';
-import { openBuilder, settled, openSection, frameEval } from './helpers.mjs';
+import { chooseImage, openBuilder, settled, openSection, frameEval } from './helpers.mjs';
 
 test.afterEach(async ({ page }) => {
   await page.goto(`/plugins/studio-builder/admin/builder.php?page=${(await import('./helpers.mjs')).sandboxPageId()}&lang=en`);
@@ -42,8 +42,7 @@ test('the Background image offers a focal-point pad and an overlay with opacity,
 
     // Nothing to place until an image is chosen.
     await expect(bg.getByRole('slider', { name: 'Focal point' })).toHaveCount(0);
-    await bg.getByLabel('Media ID').fill('1');
-    await bg.getByLabel('Media ID').blur();
+    await chooseImage(page, bg);
 
     const pad = bg.getByRole('slider', { name: 'Focal point' });
     await expect(pad).toBeVisible();

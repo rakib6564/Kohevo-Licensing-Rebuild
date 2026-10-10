@@ -85,7 +85,9 @@ $sbVersion  = (string) max(
     (int) (@filemtime($sbAssetDir . '/builder.css') ?: 0),
     (int) (@filemtime(__FILE__) ?: 0)
 );
-$sbMediaPicker = class_exists('PluginLoader') && PluginLoader::isActive('media-library') && Auth::can('media.view');
+// The builder has its own image picker (admin/media-api.php over the core Media service): it needs no other plugin,
+// only the right to edit in Studio.
+$sbMediaPicker = Auth::can('studio-builder.edit') || Auth::isSuperAdmin();
 // Phase 7: the AI assistant entry point (the MCP gateway's admin chat) is offered only
 // when that module is active and the signed-in admin may open it. The chat prepares
 // DRAFT revisions; publishing stays this builder's own Publish action.
@@ -119,6 +121,7 @@ $sbBoot = [
     'csrfToken'  => csrf_token(),
     'canvasSandbox' => StudioCanvasPolicy::IFRAME_SANDBOX,
     'mediaPicker'   => $sbMediaPicker,
+    'mediaApiUrl'   => plugin_url('studio-builder', 'admin/media-api.php'),
     'builderUrl'    => plugin_url('studio-builder', 'admin/builder.php'),
     'brandingUrl'   => rtrim((string) SLATE_URL, '/') . '/admin/settings.php?tab=branding',
     'assistantUrl'  => $sbAssistantUrl,
@@ -813,6 +816,22 @@ $sbBoot = [
         'em_truncated' => __('studio_ui_em_truncated', 'Only the most recently edited pages were counted.'),
         'em_empty' => __('studio_ui_em_empty', 'No elements match.'),
         'pal_reason_disabled' => __('studio_ui_pal_reason_disabled', 'Switched off for this site.'),
+        'media_dialog_title' => __('studio_ui_media_dialog_title', 'Choose an image'),
+        'media_search' => __('studio_ui_media_search', 'Search images'),
+        'media_upload' => __('studio_ui_media_upload', 'Upload an image'),
+        'media_uploading' => __('studio_ui_media_uploading', 'Uploading…'),
+        'media_use' => __('studio_ui_media_use', 'Use this image'),
+        'media_replace' => __('studio_ui_media_replace', 'Replace image'),
+        'media_empty' => __('studio_ui_media_empty', 'No images yet. Upload one to start.'),
+        'media_none_found' => __('studio_ui_media_none_found', 'No image matches your search.'),
+        'media_load_more' => __('studio_ui_media_load_more', 'Load more'),
+        'media_drop_hint' => __('studio_ui_media_drop_hint', 'You can also drop an image here. JPG, PNG, GIF, WebP or SVG, up to 10 MB.'),
+        'media_err_none' => __('studio_ui_media_err_none', 'Choose one image to upload.'),
+        'media_err_too_big' => __('studio_ui_media_err_too_big', 'That image is larger than 10 MB.'),
+        'media_err_type' => __('studio_ui_media_err_type', 'Only JPG, PNG, GIF, WebP or SVG images can be uploaded.'),
+        'media_err_upload' => __('studio_ui_media_err_upload', 'The image could not be uploaded.'),
+        'media_err_load' => __('studio_ui_media_err_load', 'The images could not be loaded. Try again.'),
+        'media_err_denied' => __('studio_ui_media_err_denied', 'You do not have access to the image library.'),
         'pal_reason_locked' => __('studio_ui_pal_reason_locked', 'This needs a Kohevo module that is not active or licensed on this site.'),
         'pal_components_locked' => __('studio_ui_pal_components_locked', 'Not available on this site'),
         'site_settings_title' => __('studio_ui_site_settings_title', 'Site settings'),
@@ -1198,10 +1217,6 @@ $sbBoot = [
 <link rel="icon" href="data:,">
 <title><?= e($sbTitle) ?> — <?= e(__('studio_builder', 'Kohevo Studio')) ?></title>
 <link rel="stylesheet" href="<?= e(plugin_url('studio-builder', 'assets/builder/builder.css')) ?>?v=<?= e($sbVersion) ?>">
-<?php if ($sbMediaPicker): ?>
-<link rel="stylesheet" href="<?= e(plugin_url('media-library', 'assets/css/picker.css')) ?>">
-<script src="<?= e(plugin_url('media-library', 'assets/js/picker.js')) ?>" defer></script>
-<?php endif; ?>
 <script type="application/json" id="sb-builder-boot"><?= json_encode($sbBoot, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES) ?></script>
 <script type="module" src="<?= e(plugin_url('studio-builder', 'assets/builder/builder.js')) ?>?v=<?= e($sbVersion) ?>"></script>
 </head>

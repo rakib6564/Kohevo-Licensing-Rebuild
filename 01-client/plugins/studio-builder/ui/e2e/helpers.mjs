@@ -66,3 +66,40 @@ export async function frameEval(page, selector, fn, { last = true } = {}) {
     return await loc.evaluate(fn);
   } catch { return 'retry'; }
 }
+
+/** A 1x1 PNG, uploaded when the site has no image yet. */
+const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+
+/** Open the image dialog from `scope`'s "Choose image" button and use the first image (uploading one if the site has none). */
+export async function chooseImage(page, scope = page) {
+  await scope.getByTestId('media-choose').first().click();
+  const dialog = page.getByTestId('media-dialog');
+  await expect(dialog).toBeVisible();
+  await expect.poll(async () => (await dialog.locator('[data-media-id]').count()) + (await dialog.getByTestId('media-empty').count()), { timeout: 15_000 }).toBeGreaterThan(0);
+  if (await dialog.locator('[data-media-id]').count() === 0) {
+    await dialog.getByTestId('media-file').setInputFiles({ name: 'pixel.png', mimeType: 'image/png', buffer: PIXEL });
+    await expect(dialog.locator('[data-media-id]').first()).toBeVisible();
+  }
+  await dialog.locator('[data-media-id]').first().click();
+  await page.getByTestId('media-use').click();
+  await expect(dialog).toHaveCount(0);
+}
+
+/** Layers rows on the shared sandbox page (sections and blocks). */
+export async function layerCount(page) {
+  await page.getByRole('tab', { name: /^Layers$/ }).click();
+  return page.locator('[role="treeitem"]').count();
+}
+
+/** Undo what a spec added to the shared sandbox page, so the specs after it start from the same page. */
+export async function restoreLayers(page, layers) {
+  for (let i = 0; i < 16; i++) {
+    await settled(page);
+    if ((await layerCount(page)) <= layers) return;
+    const undo = page.getByTestId('undo');
+    await expect(undo).toBeEnabled({ timeout: 15_000 });
+    await undo.click();
+    await page.waitForTimeout(500);
+  }
+  throw new Error('could not restore the shared sandbox page');
+}

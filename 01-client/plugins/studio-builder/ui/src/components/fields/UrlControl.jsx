@@ -1,12 +1,13 @@
 // UrlControl — a URL property control with built-in Media Library integration.
 //
 // Allows typing/pasting an external or relative URL, or clicking "Media Library"
-// to pick/upload an asset via SlateMedia.open(). If the URL points to an image
+// to pick/upload an asset via the builder's image picker. If the URL points to an image
 // (or the field represents an image/cover/avatar/mockup/photo), an image preview
 // is displayed.
 
 import { coerce } from '../../core/fields.mjs';
 import { t } from '../../core/messages.mjs';
+import { mediaPickerAvailable, openMediaPicker } from '../../core/mediaPicker.mjs';
 
 function isImageTarget(field, val) {
   const key = String((field && field.key) || '').toLowerCase();
@@ -23,10 +24,10 @@ function isImageTarget(field, val) {
 
 export function UrlControl({ field, draft, update, problem, common, id, mediaPicker }) {
   const isImage = isImageTarget(field, draft);
-  const pickerAvailable = mediaPicker && typeof window !== 'undefined' && window.SlateMedia && typeof window.SlateMedia.open === 'function';
+  const pickerAvailable = mediaPickerAvailable(mediaPicker);
 
   const pickMedia = () => {
-    window.SlateMedia.open({
+    openMediaPicker({
       types: isImage ? 'image' : 'all',
       onPick: (record) => {
         const pickedUrl = (record && (record.url || record.path)) || '';
