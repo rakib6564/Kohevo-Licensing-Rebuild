@@ -4,7 +4,7 @@
 //   delete           the element goes.
 //   move / reorder   the elements are re-seated among their siblings.
 //   duplicate/paste  the source element is cloned (the render of identical content is identical), ids rewritten.
-//   new block        a placeholder stands in until the server's markup is merged in.
+//   new block/section a placeholder stands in until the server's markup is merged in.
 //   id remap         a provisional id the server has replaced is renamed on its element, never rebuilt.
 //
 // The server's render still follows (the editor morphs it in after the save) and replaces all of this, so nothing here
@@ -88,7 +88,7 @@ function placeholder(canvasDoc, node) {
 /**
  * Bring the canvas from `prevDoc`'s structure to `nextDoc`'s.
  * @returns {{changed: number, complete: boolean, pending: Element[]}} `complete` is false when part of it was left for the
- *   server's render; `pending` are the placeholders standing in for new blocks (their real markup can be fetched now).
+ *   server's render; `pending` are the placeholders standing in for new blocks and sections (their real markup can be fetched now).
  */
 export function syncLiveStructure(canvasDoc, prevDoc, nextDoc) {
   if (!canvasDoc || !canvasDoc.querySelector || !prevDoc || !nextDoc) return { changed: 0, complete: false, pending: [] };
@@ -150,7 +150,7 @@ export function syncLiveStructure(canvasDoc, prevDoc, nextDoc) {
       if (source) { copy = cleanClone(source, ids); if (copy) break; }
     }
     const stand = copy || placeholder(canvasDoc, node);
-    if (!copy && N.map.get(id).kind === 'block') pending.push(stand);
+    if (!copy) pending.push(stand);
     fresh.set(id, stand);
   }
 

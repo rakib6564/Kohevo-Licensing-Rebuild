@@ -56,3 +56,32 @@ test('insert, duplicate and delete show on the canvas before the save returns', 
     await restoreLayers(page, before);
   }
 });
+
+test('a section preset shows its real content before the save returns', async ({ page }) => {
+  await openBuilder(page);
+  await settled(page);
+  const before = await layerCount(page);
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  try {
+    await page.route(OPERATIONS, async (route) => { await gate; await route.continue(); });
+    const rendered = page.waitForResponse((res) => res.url().includes('action=render_section') && res.ok());
+
+    await page.getByRole('tab', { name: /^(Add|Ajouter)$/ }).click();
+    await page.getByRole('tab', { name: /^(Sections)$/ }).click();
+    await page.locator('#sbx-leftpanel-blocks [data-preset="system-section-pricing"] .sbx-preset-card__insert').click();
+
+    // The save is held, so this came from render_section, not from the page's own render after the save.
+    await rendered;
+    await expect(canvas(page).getByText('Simple pricing')).toBeVisible({ timeout: 10_000 });
+    await expect(canvas(page).locator('.sbx-pending')).toHaveCount(0, { timeout: 10_000 });
+    expect(await canvas(page).getByText(/^(Starter|Pro|Business)$/).count()).toBe(3);
+  } finally {
+    release();
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await settled(page);
+    await expect(canvas(page).getByText('Simple pricing')).toBeVisible({ timeout: 20_000 });
+    await expect(canvas(page).locator('.sbx-pending')).toHaveCount(0, { timeout: 20_000 });
+    await restoreLayers(page, before);
+  }
+});

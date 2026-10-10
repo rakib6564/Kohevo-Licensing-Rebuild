@@ -180,3 +180,15 @@ test('nothing changed: nothing is touched', () => {
   assert.deepEqual(syncLiveStructure(root, before, doc(sec('sec_1', [blk('a'), blk('b')]))), { changed: 0, complete: true, pending: [] });
   assert.deepEqual(syncLiveStructure(null, before, before), { changed: 0, complete: false, pending: [] });
 });
+
+test('a new section gets one placeholder for the whole section, and its real markup can be fetched', () => {
+  const before = doc(sec('sec_1', [blk('a')]));
+  const { root } = render(before);
+  const fresh = sec('tmp_sec', [blk('tmp_x'), blk('tmp_y')]);
+  const r = syncLiveStructure(root, before, doc(sec('sec_1', [blk('a')]), fresh));
+  assert.deepEqual(ids(root), ['sec_1', 'a', 'tmp_sec']);
+  const ph = root.querySelector('[data-sb-node="tmp_sec"]');
+  assert.ok(ph.cls().includes('sbx-pending'));
+  assert.deepEqual(r.pending, [ph], 'the section, not its blocks, is what the server renders');
+  assert.equal(r.complete, true);
+});

@@ -67,6 +67,7 @@ export function createTransport({ apiUrl, csrfToken, fetchImpl, timeoutMs = TIME
     operations: (body) => call('POST', 'operations', { body }),
     // One unsaved block rendered as the canvas shows it (nothing is stored): for a block the author has just inserted.
     renderBlock: (pageId, block) => call('POST', 'render_block', { body: { page_id: pageId, block } }),
+    renderSection: (pageId, section) => call('POST', 'render_section', { body: { page_id: pageId, section } }),
     saveDraft: (body) => call('POST', 'save_draft', { body }),
     publish: (body) => call('POST', 'publish', { body }),
     rollback: (body) => call('POST', 'rollback', { body }),
