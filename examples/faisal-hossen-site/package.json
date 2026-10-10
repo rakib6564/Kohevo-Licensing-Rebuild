@@ -1,0 +1,11 @@
+{
+  "name": "faisal-hossen-site-for-kohevo-studio",
+  "private": true,
+  "type": "module",
+  "description": "Builds the Faisal Hossen portfolio as Kohevo Studio blocks and installs it through the builder's own authoring API.",
+  "scripts": {
+    "install-site": "node tools/install.mjs",
+    "compare": "node tools/shoot.mjs"
+  },
+  "dependencies": { "playwright": "1.64.0" }
+}
