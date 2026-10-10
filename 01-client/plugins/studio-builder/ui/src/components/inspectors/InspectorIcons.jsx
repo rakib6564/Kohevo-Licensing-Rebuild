@@ -34,6 +34,7 @@ const PATHS = {
   stacking: 'M12 3l9 5-9 5-9-5zM3 13l9 5 9-5M3 17l9 5 9-5',
   tag: 'M9 6L3 12l6 6M15 6l6 6-6 6',
   attributes: 'M4 6h16M4 12h10M4 18h16M18 10l3 2-3 2',
+  reset: 'M4 12a8 8 0 1 0 3-6.2M4 4v5h5',
   link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
   tab_content: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',
   tab_style: 'M12 3a9 9 0 1 0 0 18zM12 3v18',

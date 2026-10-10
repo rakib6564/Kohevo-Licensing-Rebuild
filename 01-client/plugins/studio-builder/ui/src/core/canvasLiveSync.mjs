@@ -91,6 +91,12 @@ export const SERVER_RENDERED_TYPES = new Set(['core.icon', 'core.list', 'core.qu
  */
 const HIGHLIGHT_TYPES = new Set(['core.heading', 'core.hero']);
 
+/** The per-device style overrides (`responsive.tablet|mobile.style`): @media rules written only by the server. */
+function deviceStyles(block) {
+  const r = isPlainObject(block.responsive) ? block.responsive : {};
+  return { tablet: isPlainObject(r.tablet) ? r.tablet.style : undefined, mobile: isPlainObject(r.mobile) ? r.mobile.style : undefined };
+}
+
 /** Compare two block lists to any depth: ids, types, child counts and the props of server-rendered types. */
 function blocksChanged(prev, next) {
   const prevBlocks = Array.isArray(prev) ? prev : [];
@@ -102,6 +108,7 @@ function blocksChanged(prev, next) {
     if (!pb || !nb || pb.id !== nb.id || pb.type !== nb.type) return true;
     if (differs(styleWithoutAlign(pb.style), styleWithoutAlign(nb.style))) return true;
     if (SERVER_PAINTED_FIELDS.some((f) => differs(pb[f], nb[f]))) return true;
+    if (differs(deviceStyles(pb), deviceStyles(nb))) return true;
     if (HIGHLIGHT_TYPES.has(nb.type) && (asHighlight(pb) || asHighlight(nb)) && differs(pb.props, nb.props)) return true;
     if (SERVER_RENDERED_TYPES.has(nb.type) && pb.props !== nb.props && JSON.stringify(pb.props) !== JSON.stringify(nb.props)) return true;
     if (blocksChanged(pb.children, nb.children)) return true;

@@ -3243,3 +3243,8 @@ html, body.sbx-body {
 .sbx-media-dialog__name { font-size: var(--sbx-fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sbx-media-dialog__empty { padding: var(--sbx-s-5, 24px) 0; text-align: center; }
 .sbx-media-dialog__more { align-self: center; }
+
+/* Per-device style controls (DeviceStyle): the device switch sits above the group of controls it applies to. */
+.sbx-devstyle { margin-bottom: var(--sbx-s-3); }
+.sbx-devstyle__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sbx-s-2); }
+.sbx-devstyle .sbx-hint { margin: 0 0 var(--sbx-s-2); }
