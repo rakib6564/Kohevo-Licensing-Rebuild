@@ -203,6 +203,7 @@ final class StudioStylesheet
             . '.sb-button--md{padding:.7rem 1.3rem;font-size:1rem}'
             . '.sb-button--lg{padding:.9rem 1.8rem;font-size:1.125rem}'
             . '.sb-font-normal{font-weight:400}.sb-font-medium{font-weight:500}.sb-font-semibold{font-weight:600}.sb-font-bold{font-weight:700}.sb-font-extrabold{font-weight:800}'
+            . self::typographyInheritCss()
             . '.sb-uppercase{text-transform:uppercase}.sb-lowercase{text-transform:lowercase}.sb-capitalize{text-transform:capitalize}.sb-normal-case{text-transform:none}'
             . '.sb-leading-tight{line-height:1.25}.sb-leading-snug{line-height:1.375}.sb-leading-normal{line-height:1.5}.sb-leading-relaxed{line-height:1.625}.sb-leading-loose{line-height:2}'
             . '.sb-tracking-tighter{letter-spacing:-0.05em}.sb-tracking-tight{letter-spacing:-0.025em}.sb-tracking-normal{letter-spacing:0}.sb-tracking-wide{letter-spacing:0.025em}.sb-tracking-wider{letter-spacing:0.05em}.sb-tracking-widest{letter-spacing:0.1em}'
@@ -429,6 +430,28 @@ final class StudioStylesheet
     }
 
     /** Breakpoint prefix for a responsive utility (`base` has none). */
+    /**
+     * `sb-ty-*` marks (see DocumentRenderer::typographyMarkers) make a block's own text elements inherit the typography
+     * that was set on its wrapper. The selectors reach three levels down but never through a nested block, so a container's
+     * font size does not rewrite the headings of the blocks inside it. `!important` because the rules it must beat are theme
+     * and element rules of any specificity.
+     */
+    private static function typographyInheritCss(): string
+    {
+        $text = ':is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,a,span,li)';
+        // A text colour must not repaint the links inside a paragraph; a button's label is the one link that follows it.
+        $colorText = ':is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,span,li,a.sb-button)';
+        $props = ['size' => 'font-size', 'color' => 'color', 'lh' => 'line-height', 'ls' => 'letter-spacing', 'ff' => 'font-family', 'fw' => 'font-weight', 'tt' => 'text-transform'];
+        $css = '';
+        foreach ($props as $mark => $prop) {
+            $root = '.sb-ty-' . $mark;
+            $sel  = $mark === 'color' ? $colorText : $text;
+            $css .= $root . '>' . $sel . ',' . $root . '>:not(.sb-block)>' . $sel . ',' . $root . '>:not(.sb-block)>:not(.sb-block)>' . $sel
+                . '{' . $prop . ':inherit !important}';
+        }
+        return $css;
+    }
+
     public static function prefix(string $breakpoint): ?string
     {
         if ($breakpoint === 'base') {
