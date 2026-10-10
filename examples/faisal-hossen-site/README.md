@@ -62,3 +62,25 @@ heading, eyebrow and button, which is how the two sites were matched to within a
   rather than a bespoke component.
 - **Scroll reveal** uses the builder's `fade_up` entrance animation on the main groups.
 - **Social icons and arrows** are CSS masks, so the blocks stay plain, editable text.
+
+## Template library
+
+`tools/library.mjs` turns the site into a reusable library inside the builder (Library panel): **46 templates**, with the same classes and block settings but neutral copy and a placeholder image.
+
+| Type | Count | Examples |
+| --- | --- | --- |
+| Page templates | 5 | Home, Work index, About, Contact, Case study |
+| Section presets | 19 | Hero, page hero, workbench, dark statement band, capabilities, principles, project grid, CTA band, contact form, case study hero/body |
+| Block presets | 20 | Main navigation, mobile off-canvas menu, wordmark, project card, project grid, section heading, section rail, form, chips, meta row |
+| Header / footer | 2 | Header with nav + mobile menu, dark three-column footer |
+
+```bash
+node tools/library.mjs                  # sandbox: tokens, CSS, fonts, placeholder image, then every template
+FH_BASE=https://your.site node tools/library.mjs   # a real site: you sign in yourself
+node tools/starter.mjs work about contact case-study   # header, footer and pages built from the library
+node tools/wipe.mjs                     # sandbox only: archive every page (slugs freed)
+```
+
+Templates are saved with the builder's own `save_template`, cut from temporary draft pages that are archived afterwards. Re-running replaces the `kh-*` templates. The library relies on the site's tokens and Custom CSS, which `library.mjs` installs.
+
+The library tools drive a local sandbox by default (`http://localhost:8200`, sandbox credentials from `SBX_EMAIL` / `SBX_PASSWORD`). On any other site they open a visible browser and wait for you to sign in; they never see or store a password.

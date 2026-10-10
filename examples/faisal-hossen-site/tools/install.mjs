@@ -11,6 +11,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { session } from './session.mjs';
 import { uploadImages } from './media.mjs';
+import { applySiteSetup } from './setup.mjs';
 import { MEDIA, site } from '../src/content.mjs';
 import * as P from '../src/pages.mjs';
 
@@ -18,14 +19,6 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const base = process.env.FH_BASE || 'http://localhost:8200';
 const only = process.argv.slice(2);
-const css = ['base', 'home', 'pages'].map((n) => fs.readFileSync(path.join(root, 'src', 'css', `${n}.css`), 'utf8')).join('\n');
-const HEAD = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">';
-const TOKENS = {
-  'surface.page': '#f5f3ee', 'surface.primary': '#f5f3ee', 'surface.secondary': '#eeece6', 'surface.muted': '#fbfaf7', 'surface.inverse': '#11130f', 'surface.accent': '#b6ff45',
-  'text.primary': '#11130f', 'text.muted': '#6f716b', 'text.inverse': '#fbfaf7', 'text.accent': '#11130f', 'color.accent': '#11130f', 'border.default': '#dcdad4',
-  'font.body': "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif", 'font.heading': "'DM Sans', Inter, system-ui, sans-serif",
-  'radius.full': '999px', 'radius.lg': '24px', 'radius.md': '12px', 'radius.sm': '6px',
-};
 const PAGES = [
   { slug: 'default', title: 'Header', page_type: 'header_partial', route_mode: 'standalone', doc: P.headerDoc },
   { slug: 'default', title: 'Footer', page_type: 'footer_partial', route_mode: 'standalone', doc: P.footerDoc },
@@ -46,15 +39,7 @@ try {
   console.log('media', JSON.stringify(MEDIA));
   await page.goto('plugins/studio-builder/admin/pages.php');
 
-  console.log('tokens', must(await api('POST', 'save_tokens', { group: 'default', tokens: TOKENS }), 'tokens') && 'ok');
-  must(await api('POST', 'save_custom_css', { css }), 'custom css');
-  console.log('custom css', css.length, 'bytes');
-
-  await page.goto('plugins/studio-builder/admin/code-tracking.php');
-  await page.locator('[name="head_snippet"]').fill(HEAD);
-  await page.getByRole('button', { name: /^Save$/ }).click();
-  console.log('fonts snippet:', (await page.locator('.alert-success, .alert-danger').first().innerText()).slice(0, 100));
-  await page.goto('plugins/studio-builder/admin/pages.php');
+  await applySiteSetup(page, api, must);
 
   const existing = must(await api('GET', 'pages', null, ''), 'pages').pages || [];
   for (const spec of PAGES) {
