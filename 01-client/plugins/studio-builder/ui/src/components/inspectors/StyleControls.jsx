@@ -20,7 +20,9 @@
 // overwritten — the renderer already skips emitting a literal when a token ref
 // is present, so a literal and a ref never both reach the page.
 
-import { useId, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
+import { STYLE_TOKEN_CATEGORIES } from '../../core/fields.mjs';
+import { setSurfaceToken, setTextLiteral, setTextToken } from '../../core/tokenStyle.mjs';
 import { asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
 import { Pills, Field } from '../ui/index.js';
@@ -30,6 +32,7 @@ import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
 import { DeviceStyle } from './DeviceStyle.jsx';
 import { MediaControl } from '../fields/MediaControl.jsx';
 import { FocalPad, OverlayField } from './BackgroundWidgets.jsx';
+import { TokenPicker } from '../fields/TokenPicker.jsx';
 /**
  * A colour control that accepts a token reference or a literal hex.
  *
@@ -37,7 +40,7 @@ import { FocalPad, OverlayField } from './BackgroundWidgets.jsx';
  * input is the source of truth and the swatch is a convenience that writes back
  * into it. An empty text field means "inherit".
  */
-export function ColorField({ id, label, value, onChange }) {
+export function ColorField({ id, label, value, onChange, tokens, token, onToken }) {
   const literal = typeof value === 'string' && /^#[0-9a-f]{3,8}$/i.test(value) ? value.slice(0, 7) : '';
   // Typing `#e8` is not yet a colour: keep the draft locally and commit only
   // once it is one (or empty), so a half-typed value never reaches the document.
@@ -74,6 +77,12 @@ export function ColorField({ id, label, value, onChange }) {
         />
       </div>
       {invalid && <p className="sbx-field__error" id={`${id}-err`} role="alert">{t('invalid_css_value')}</p>}
+      {onToken && tokens && tokens.length > 0 && (
+        <div className="sbx-color__theme">
+          <span className="sbx-field__label">{t('tok_theme_colour')}</span>
+          <TokenPicker id={`${id}-token`} label={t('tok_theme_colour')} value={token ?? null} tokens={tokens} noneLabel={t('tok_custom')} onChange={onToken} />
+        </div>
+      )}
     </Field>
   );
 }
@@ -231,8 +240,10 @@ function GradientField({ value, onChange }) {
  * @param {string} [props.only]                  render just this section (typography, background, border, shadow, dimensions, opacity)
  * @param {boolean} [props.mediaPicker]            whether the media library picker is available to this user
  */
-export function StyleControls({ style, capabilities, onChange, mediaPicker, only, deviceScope }) {
+export function StyleControls({ style, capabilities, onChange, mediaPicker, only, deviceScope, tokens }) {
   const id = useId();
+  const textTokens = useMemo(() => (tokens || []).filter((tk) => STYLE_TOKEN_CATEGORIES.text_token.includes(tk.category)), [tokens]);
+  const surfaceTokens = useMemo(() => (tokens || []).filter((tk) => STYLE_TOKEN_CATEGORIES.surface_token.includes(tk.category)), [tokens]);
   // `only` renders a single section of the stack (the Inspector shows each in its own collapsible section);
   // the text colour belongs with Typography.
   const has = (k) => capabilities.includes(k) && (!only || only === k || (only === 'typography' && k === 'color'));
@@ -264,7 +275,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
    * editors wrote that it now refuses (`focal_point`, `fit: fill`, a two-word `position`) the next time the
    * author touches the background.
    */
-  const patchBackground = (changes) => {
+  const patchBackground = (changes, dropSurfaceToken = false) => {
     const next = { ...bg, ...changes };
     for (const key of Object.keys(next)) if (next[key] === undefined) delete next[key];
     delete next.focal_point;
@@ -275,6 +286,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
     }
     const merged = { ...style };
     delete merged.background;
+    if (dropSurfaceToken) delete merged.surface_token; // a literal colour replaces the theme colour
     if (Object.keys(next).length > 0) merged.background = next;
     onChange(merged);
   };
@@ -341,16 +353,12 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
             id={`${id}-tcolor`}
             label={t('text_color')}
             value={typo.color ?? style.color}
-            onChange={(v) => {
-              // One text colour: it lives in typography.color, and an older flat `color` is folded into it
-              // (the server writes the flat one last, so leaving both would let it silently win).
-              const merged = { ...style };
-              delete merged.color;
-              const nextTypo = { ...typo };
-              if (v === undefined) delete nextTypo.color; else nextTypo.color = v;
-              if (Object.keys(nextTypo).length === 0) delete merged.typography; else merged.typography = nextTypo;
-              onChange(merged);
-            }}
+            // One text colour: it lives in typography.color, and an older flat `color` is folded into it
+            // (the server writes the flat one last, so leaving both would let it silently win). A theme colour replaces both.
+            onChange={(v) => onChange(setTextLiteral(style, v))}
+            tokens={capabilities.includes('text_token') ? textTokens : undefined}
+            token={style.text_token}
+            onToken={(ref) => onChange(setTextToken(style, ref))}
           />
         </fieldset>
       )}
@@ -418,7 +426,10 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
               id={`${id}-bg`}
               label={t('background_color')}
               value={bgColor}
-              onChange={(v) => patchBackground({ color: v })}
+              onChange={(v) => patchBackground({ color: v }, v !== undefined)}
+              tokens={capabilities.includes('surface_token') ? surfaceTokens : undefined}
+              token={style.surface_token}
+              onToken={(ref) => onChange(setSurfaceToken(style, ref))}
             />
           )}
 

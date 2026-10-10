@@ -15,6 +15,8 @@ import { DeviceStyle } from './DeviceStyle.jsx';
 import { CORNERS, FILTER, OPTIONS, SIDES, TRANSFORM, getPath, setPath, setPaths } from '../../core/styleSurface.mjs';
 import { t } from '../../core/messages.mjs';
 import { optionLabel } from '../../core/optionLabels.mjs';
+import { setSpacingToken } from '../../core/tokenStyle.mjs';
+import { TokenPicker } from '../fields/TokenPicker.jsx';
 
 const optLabel = optionLabel;
 const pathId = (id, path) => `${id}-${path.replace(/\./g, '-')}`;
@@ -245,11 +247,16 @@ export function LayoutPane({ style, onChange, deviceScope }) {
 
 // ── Spacing and position ────────────────────────────────────────────────────
 
-export function SpacingPane({ style, onChange }) {
+export function SpacingPane({ style, onChange, tokens }) {
   const id = useId();
   const f = useFields(style, onChange);
   return (
     <>
+      {tokens && tokens.length > 0 && (
+        <Field label={t('tok_theme_spacing')} htmlFor={pathId(id, 'spacing_token')}>
+          <TokenPicker id={pathId(id, 'spacing_token')} label={t('tok_theme_spacing')} value={style.spacing_token ?? null} tokens={tokens} noneLabel={t('tok_custom')} onChange={(ref) => onChange(setSpacingToken(style, ref))} />
+        </Field>
+      )}
       <SpacingBox id={id} group="margin" label={t('margin_label')} get={f.get} putAll={f.putAll} />
       <SpacingBox id={id} group="padding" label={t('padding_label')} get={f.get} putAll={f.putAll} />
     </>

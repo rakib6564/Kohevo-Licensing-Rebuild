@@ -2758,6 +2758,7 @@ html, body.sbx-body {
   .sbx-left .sbx-field input:not([type]), .sbx-left .sbx-field textarea, .sbx-left .sbx-field select { min-height: 44px; font-size: 16px; }
   .sbx-left .sbx-inspector .sbx-btn { min-height: 44px; padding: 0 14px; font-size: var(--sbx-fs-lg); }
   .sbx-left .sbx-inspector .sbx-tab { min-height: 44px; }
+  .sbx-left .sbx-inspector .sbx-tp__btn, .sbx-left .sbx-inspector .sbx-tp__opt { min-height: 44px; }
   .sbx-left .sbx-isec__toggle { min-height: 48px; font-size: 15px; }
   .sbx-left .sbx-segmented-pill { min-height: 44px; padding: 0 16px; font-size: var(--sbx-fs-lg); }
   .sbx-left .sbx-color__swatch { width: 44px; height: 44px; flex: none; }
@@ -3256,3 +3257,7 @@ html, body.sbx-body {
 .sbx-devstyle { margin-bottom: var(--sbx-s-3); }
 .sbx-devstyle__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sbx-s-2); }
 .sbx-devstyle .sbx-hint { margin: 0 0 var(--sbx-s-2); }
+
+/* A theme colour or spacing picker sits under the literal field it can replace. */
+.sbx-color__theme { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.sbx-color__theme .sbx-field__label { font-size: var(--sbx-fs-sm); color: var(--sbx-text-dim); }
