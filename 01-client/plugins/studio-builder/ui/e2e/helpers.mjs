@@ -84,3 +84,22 @@ export async function chooseImage(page, scope = page) {
   await page.getByTestId('media-use').click();
   await expect(dialog).toHaveCount(0);
 }
+
+/** Layers rows on the shared sandbox page (sections and blocks). */
+export async function layerCount(page) {
+  await page.getByRole('tab', { name: /^Layers$/ }).click();
+  return page.locator('[role="treeitem"]').count();
+}
+
+/** Undo what a spec added to the shared sandbox page, so the specs after it start from the same page. */
+export async function restoreLayers(page, layers) {
+  for (let i = 0; i < 16; i++) {
+    await settled(page);
+    if ((await layerCount(page)) <= layers) return;
+    const undo = page.getByTestId('undo');
+    await expect(undo).toBeEnabled({ timeout: 15_000 });
+    await undo.click();
+    await page.waitForTimeout(500);
+  }
+  throw new Error('could not restore the shared sandbox page');
+}
