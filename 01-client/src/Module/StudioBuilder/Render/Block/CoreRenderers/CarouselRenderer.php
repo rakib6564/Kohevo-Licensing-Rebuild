@@ -44,12 +44,13 @@ final class CarouselRenderer implements BlockRendererInterface
             }
             $caption = is_string($slide['caption'] ?? null) ? trim($slide['caption']) : '';
             $image   = $scope->image($slide['image'] ?? null);
+            $alt     = is_array($slide['image'] ?? null) && is_string($slide['image']['alt'] ?? null) ? $slide['image']['alt'] : '';
             $quote   = is_string($slide['quote'] ?? null) ? trim($slide['quote']) : '';
             $author  = is_string($slide['author'] ?? null) ? trim($slide['author']) : '';
             if ($image === null && $quote === '' && $caption === '') {
                 continue;
             }
-            $slides[] = ['image' => $image, 'quote' => $quote, 'author' => $author, 'caption' => $caption];
+            $slides[] = ['image' => $image, 'alt' => $alt, 'quote' => $quote, 'author' => $author, 'caption' => $caption];
         }
 
         if ($slides === []) {
@@ -68,7 +69,7 @@ final class CarouselRenderer implements BlockRendererInterface
             $track .= '<figure class="sb-carousel__slide" data-sb-slide>';
             if ($slide['image'] !== null) {
                 $track .= '<img class="sb-carousel__image" src="' . Html::e($slide['image']->url)
-                    . '" alt="' . Html::e($slide['image']->alt) . '" loading="lazy" decoding="async">';
+                    . '" alt="' . Html::e($slide['alt']) . '" loading="lazy" decoding="async">';
             }
             if ($slide['quote'] !== '') {
                 $track .= '<blockquote class="sb-carousel__quote"><p>' . Html::text($slide['quote']) . '</p>';
