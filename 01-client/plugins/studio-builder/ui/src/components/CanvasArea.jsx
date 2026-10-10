@@ -11,6 +11,7 @@ import { inlineSpecsFor, propsWithInlineText } from '../core/inlineText.mjs';
 import { patchCanvas } from '../core/canvasPatch.mjs';
 import { isInlineEditing, morphDocument } from '../core/canvasMorph.mjs';
 import { ghostNodeIds, isStructuralChange, syncLiveDOM } from '../core/canvasLiveSync.mjs';
+import { releaseLive, syncLiveStyles, tokensOfDoc } from '../core/liveStyleSync.mjs';
 import { STATUS } from '../core/sync.mjs';
 import { t } from '../core/messages.mjs';
 import { ancestorPath, asList, canInsertBlock, canMoveBlock, findNode } from '../core/doc.mjs';
@@ -79,6 +80,9 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   const stageRef = useRef(null);
   const [stage, setStage] = useState({ width: 0, height: 0 });
   const paintedRef = useRef(null);
+  // The document the server's render last showed, and the nodes whose style the editor has painted ahead of it (core/liveStyleSync.mjs).
+  const serverBaseRef = useRef(null);
+  const liveRef = useRef(new Map());
   const lastLoadedRevRef = useRef(revisionId);
 
   useEffect(() => {
@@ -152,9 +156,13 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     const next = canvasSrc;
     if (next === shownRef.current) return undefined;
 
-    const structural = isStructuralChange(paintedRef.current, working);
+    let frameDoc = null;
+    try { frameDoc = frameRef.current && frameRef.current.contentDocument; } catch { frameDoc = null; }
+    const structural = isStructuralChange(paintedRef.current, working, frameDoc ? tokensOfDoc(frameDoc) : null);
 
-    if (!structural && revisionId !== lastLoadedRevRef.current) {
+    // A style the editor painted ahead of the server still gets the server's render merged in, so the canvas never
+    // drifts from what the page will really look like.
+    if (!structural && revisionId !== lastLoadedRevRef.current && liveRef.current.size === 0) {
       // The canvas DOM is already updated in 0ms via syncLiveDOM!
       lastLoadedRevRef.current = revisionId;
       paintedRef.current = working;
@@ -166,6 +174,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     let cancelled = false;
     let timer = 0;
     let tries = 0;
+    const baseAtStart = baseRef.current;
     const run = async () => {
       const done = await repaintInPlace(next);
       if (cancelled) return;
@@ -174,9 +183,15 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       lastLoadedRevRef.current = revisionId;
       if (done === true) {
         paintedRef.current = baseRef.current;
+        serverBaseRef.current = baseAtStart;
         let doc = null;
         try { doc = frameRef.current && frameRef.current.contentDocument; } catch { doc = null; }
-        if (doc) markSelected(doc, selectionRef.current, { scroll: false, ids: selectedIdsRef.current });
+        if (doc) {
+          // The render carries the styles the editor painted; end those overrides, then paint whatever the author has changed since.
+          releaseLive(doc, liveRef.current);
+          syncLiveStyles(doc, serverBaseRef.current, workingRef.current, tokensOfDoc(doc), liveRef.current);
+          markSelected(doc, selectionRef.current, { scroll: false, ids: selectedIdsRef.current });
+        }
       } else {
         reloadFrame(next);
       }
@@ -198,12 +213,16 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     // Run conservative patchCanvas
     try { patchCanvas(doc, prev, working); } catch (_) {}
 
+    // A style edit is predicted here, the moment it is made; the server's render confirms it after the save.
+    const tokens = tokensOfDoc(doc);
+    try { syncLiveStyles(doc, serverBaseRef.current, working, tokens, liveRef.current); } catch (_) {}
+
     // Synchronize all live DOM elements (props, text, styles, typography, colors, surfaces, cards) in 0ms!
     syncLiveDOM(doc, prev, working, viewport.key);
 
     // A change the live patch cannot express (a server-rendered element's props, or the tree itself) must
     // stay "unpainted", so the reload that follows the next save still sees it as structural.
-    if (!isStructuralChange(prev, working)) paintedRef.current = working;
+    if (!isStructuralChange(prev, working, tokens)) paintedRef.current = working;
     markSelected(doc, selectionRef.current, { scroll: false });
   }, [working, loading, viewport.key]);
 
@@ -415,6 +434,8 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     setLoading(false);
     loadedRef.current = true;
     paintedRef.current = baseRef.current;
+    serverBaseRef.current = baseRef.current;
+    liveRef.current.clear();
     bindDoc();
     try { frameRef.current.contentWindow.scrollTo(0, scrollRef.current); } catch { /* ignore */ }
   };

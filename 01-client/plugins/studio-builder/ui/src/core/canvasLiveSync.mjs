@@ -8,14 +8,16 @@
 //   1. Section surfaces, padding tokens, and colors.
 //   2. Block text props (heading, title, subtitle, eyebrow, text, content, buttonText, label, etc.)
 //   3. Complex block items (feature lists, cards, columns, portfolio items)
-//   4. Block alignment (classes). Every other style key is CSS the server writes (scoped, content-addressed
-//      rules), so a change to it repaints the canvas from the server instead of being patched here.
+//   4. Block alignment (classes). The rest of a block's style is CSS the server writes (scoped, content-addressed
+//      rules). `core/liveStyleSync.mjs` predicts it for the edits it can (and the server's render then confirms it);
+//      a style it cannot predict repaints the canvas from the server instead.
 //   5. Breakpoint visibility tokens and animation variables
 //
 // When changes are non-structural (only props or styles changed), iframe reloads
 // are completely suppressed — guaranteeing instantaneous preview response.
 
 import { nodeIds } from './doc.mjs';
+import { styleChangeIsLive } from './liveStyleSync.mjs';
 
 const BREAKPOINTS = ['base', 'sm', 'md', 'lg'];
 const HIDE_PREFIX = 'sb-hide-';
@@ -45,8 +47,11 @@ function isPlainObject(v) {
  *
  * If this returns false, the document structure is identical and `syncLiveDOM`
  * has already updated all visuals in 0ms — no iframe reload is needed!
+ *
+ * `tokens` (`{ has(ref) }`) lets a style change the client can predict count as non-structural; without it every
+ * style change but alignment is structural, as before.
  */
-export function isStructuralChange(prevDoc, nextDoc) {
+export function isStructuralChange(prevDoc, nextDoc, tokens = null) {
   if (!prevDoc || !nextDoc) return true;
   const prevSections = Array.isArray(prevDoc.sections) ? prevDoc.sections : [];
   const nextSections = Array.isArray(nextDoc.sections) ? nextDoc.sections : [];
@@ -57,8 +62,8 @@ export function isStructuralChange(prevDoc, nextDoc) {
     const nextSec = nextSections[s];
     if (!prevSec || !nextSec || prevSec.id !== nextSec.id) return true;
     if (differs(prevSec.animation, nextSec.animation) || differs(prevSec.interactions, nextSec.interactions)) return true; // section motion: classes written by the server
-    if (differs(prevSec.style, nextSec.style)) return true; // section background/padding: scoped CSS from the server
-    if (blocksChanged(prevSec.blocks, nextSec.blocks)) return true;
+    if (differs(prevSec.style, nextSec.style) && !liveStyle({ kind: 'section', node: prevSec }, { kind: 'section', node: nextSec }, tokens)) return true; // section background/padding: scoped CSS from the server
+    if (blocksChanged(prevSec.blocks, nextSec.blocks, tokens)) return true;
   }
   return false;
 }
@@ -98,7 +103,11 @@ function deviceStyles(block) {
 }
 
 /** Compare two block lists to any depth: ids, types, child counts and the props of server-rendered types. */
-function blocksChanged(prev, next) {
+function liveStyle(prevEntry, nextEntry, tokens) {
+  return !!tokens && styleChangeIsLive(prevEntry, nextEntry, tokens);
+}
+
+function blocksChanged(prev, next, tokens = null) {
   const prevBlocks = Array.isArray(prev) ? prev : [];
   const nextBlocks = Array.isArray(next) ? next : [];
   if (prevBlocks.length !== nextBlocks.length) return true;
@@ -106,12 +115,12 @@ function blocksChanged(prev, next) {
     const pb = prevBlocks[i];
     const nb = nextBlocks[i];
     if (!pb || !nb || pb.id !== nb.id || pb.type !== nb.type) return true;
-    if (differs(styleWithoutAlign(pb.style), styleWithoutAlign(nb.style))) return true;
+    const styled = differs(styleWithoutAlign(pb.style), styleWithoutAlign(nb.style)) || differs(deviceStyles(pb), deviceStyles(nb));
+    if (styled && !liveStyle({ kind: 'block', node: pb }, { kind: 'block', node: nb }, tokens)) return true;
     if (SERVER_PAINTED_FIELDS.some((f) => differs(pb[f], nb[f]))) return true;
-    if (differs(deviceStyles(pb), deviceStyles(nb))) return true;
     if (HIGHLIGHT_TYPES.has(nb.type) && (asHighlight(pb) || asHighlight(nb)) && differs(pb.props, nb.props)) return true;
     if (SERVER_RENDERED_TYPES.has(nb.type) && pb.props !== nb.props && JSON.stringify(pb.props) !== JSON.stringify(nb.props)) return true;
-    if (blocksChanged(pb.children, nb.children)) return true;
+    if (blocksChanged(pb.children, nb.children, tokens)) return true;
   }
   return false;
 }
