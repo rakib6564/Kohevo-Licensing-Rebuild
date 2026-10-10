@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '6';
+    public const VERSION = '7';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -117,6 +117,12 @@ final class StudioStylesheet
             . '.sb-spacer{display:block;width:100%}'
             . '.sb-spacer--xs{height:.5rem}.sb-spacer--sm{height:1rem}.sb-spacer--md{height:2rem}.sb-spacer--lg{height:3.5rem}.sb-spacer--xl{height:5.5rem}.sb-spacer--2xl{height:8rem}'
             . '@media (max-width:767.98px){.sb-spacer--xs{height:.25rem}.sb-spacer--sm{height:.5rem}.sb-spacer--md{height:1rem}.sb-spacer--lg{height:2rem}.sb-spacer--xl{height:3rem}.sb-spacer--2xl{height:4.5rem}}'
+            // The pin shows while the frame has not loaded, and in the editing canvas, whose policy blocks third-party frames.
+            . '.sb-map{position:relative;margin:0 0 1rem;border-radius:var(--sb-radius-md);overflow:hidden;background:var(--sb-border-default)}'
+            . '.sb-map::before{content:"";position:absolute;left:50%;top:50%;width:1.25rem;height:1.25rem;margin:-.9rem 0 0 -.625rem;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--sb-color-accent)}'
+            . '.sb-map iframe{position:relative;z-index:1;display:block;width:100%;height:100%;border:0}'
+            . '.sb-map--sm{height:15.5rem}.sb-map--md{height:25rem}.sb-map--lg{height:34rem}'
+            . '@media (max-width:767.98px){.sb-map--md{height:20rem}.sb-map--lg{height:26rem}}'
             . '.sb-nav{margin:0 0 1rem}.sb-nav__list{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:.25rem 1.5rem}'
             . '.sb-nav--vertical .sb-nav__list{flex-direction:column;gap:.25rem}'
             . '.sb-nav--center .sb-nav__list{justify-content:center}.sb-nav--right .sb-nav__list{justify-content:flex-end}'

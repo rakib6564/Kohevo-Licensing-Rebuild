@@ -1103,6 +1103,8 @@ return [
     'studio_block_core_divider_title' => 'Séparateur',
     'studio_block_core_divider_desc' => 'Une ligne qui sépare deux parties d’une page',
     'studio_block_core_spacer_title' => 'Espaceur',
+    'studio_block_core_map_title' => 'Carte',
+    'studio_block_core_map_desc' => 'Une carte OpenStreetMap centrée sur un lieu',
     'studio_block_core_nav_menu_title' => 'Menu de navigation',
     'studio_block_core_nav_menu_desc' => 'Une rangée ou une colonne de liens',
     'studio_block_core_spacer_desc' => 'De l’espace vide entre deux parties d’une page',

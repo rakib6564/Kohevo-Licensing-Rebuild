@@ -1906,6 +1906,103 @@
         {
             "allowed_binding_providers": [],
             "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "height": "md",
+                "latitude": 50.8503,
+                "longitude": 4.3517,
+                "title": "Map",
+                "zoom": 13
+            },
+            "description": "An OpenStreetMap centred on a place",
+            "field_schema": [
+                {
+                    "key": "latitude",
+                    "type": "number",
+                    "label": "Latitude",
+                    "required": true,
+                    "default": 50.8503,
+                    "min": -85,
+                    "max": 85
+                },
+                {
+                    "key": "longitude",
+                    "type": "number",
+                    "label": "Longitude",
+                    "required": true,
+                    "default": 4.3517,
+                    "min": -180,
+                    "max": 180
+                },
+                {
+                    "key": "zoom",
+                    "type": "number",
+                    "label": "Zoom (1 world, 19 street)",
+                    "required": false,
+                    "default": 13,
+                    "min": 1,
+                    "max": 19,
+                    "integer_only": true
+                },
+                {
+                    "key": "height",
+                    "type": "enum",
+                    "label": "Height",
+                    "required": false,
+                    "default": "md",
+                    "allowed_values": [
+                        "sm",
+                        "md",
+                        "lg"
+                    ]
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "label": "Title (for screen readers)",
+                    "required": false,
+                    "default": "Map",
+                    "max_length": 120
+                }
+            ],
+            "icon": "pin",
+            "inline_text": [],
+            "label": "Map",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
+            ],
+            "title": "Map",
+            "type": "core.map",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
             "allows_children": true,
             "binding_slots": [],
             "category": "advanced",
@@ -2113,7 +2210,7 @@
                     ]
                 }
             ],
-            "icon": "link",
+            "icon": "menu",
             "inline_text": [],
             "label": "Nav menu",
             "required_entitlement": null,
