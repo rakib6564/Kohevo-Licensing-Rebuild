@@ -96,6 +96,11 @@ if (!function_exists('sb_render_admin_nav')) {
             ['id' => 'redirects',       'label' => 'Redirects',        'file' => 'redirects.php',      'icon' => 'redirects'],
         ];
 
+        // Code & tracking injects scripts and CSS into every public page: administrators only.
+        if (!(Auth::can('studio-builder.admin') || Auth::isSuperAdmin())) {
+            $items = array_values(array_filter($items, static fn (array $item): bool => $item['id'] !== 'code-tracking'));
+        }
+
         $targetPageId = $portfolioPageId ?? 1;
         ?>
         <style>

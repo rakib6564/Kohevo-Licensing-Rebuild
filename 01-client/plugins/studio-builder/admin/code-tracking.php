@@ -25,8 +25,15 @@ require_once __DIR__ . '/_nav.php';
 Auth::require();
 Auth::requirePerm('studio-builder.view');
 
-$canEdit = Auth::can('studio-builder.edit') || Auth::isSuperAdmin();
+// Scripts and CSS run on every public page, so only a Studio administrator may open or change this screen.
 $isAdmin = Auth::can('studio-builder.admin') || Auth::isSuperAdmin();
+if (!$isAdmin) {
+    http_response_code(403);
+    echo '<h1>403 Forbidden</h1><p>You do not have permission to access this page.</p>';
+    echo '<p>Required permission: <code>studio-builder.admin</code></p>';
+    exit;
+}
+$canEdit = true;
 $tenantId = current_tenant_id();
 
 $pageTitle = __('studio_code_tracking', 'Code & tracking');
