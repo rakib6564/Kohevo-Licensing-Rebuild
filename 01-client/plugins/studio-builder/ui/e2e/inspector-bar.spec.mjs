@@ -1,6 +1,6 @@
 // The Inspector bar: Reset clears a block's look, Discard puts it back to how it was when selected, Apply saves now.
 import { test, expect } from '@playwright/test';
-import { openBuilder, frameDocument, settled, sandboxPageId } from './helpers.mjs';
+import { openBuilder, frameDocument, settled, sandboxPageId, openSection } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
@@ -72,6 +72,71 @@ test('Reset clears the look, Discard restores the selection state, Apply saves n
     await expect(apply).toBeDisabled();
     await settled(page);
     await expect(literal).toHaveValue('#112233');
+  } finally {
+    await restore(page, before);
+  }
+});
+
+async function insertQuote(page) {
+  await page.getByRole('tab', { name: /^(Add|Ajouter)$/ }).click();
+  const panel = page.locator('#sbx-leftpanel-blocks');
+  await panel.getByRole('tab', { name: 'Elements' }).click();
+  await panel.locator('[data-chip="content"]').click();
+  await panel.locator('[data-block-type="core.quote"]').click();
+  await settled(page);
+}
+
+test('the bar sits at the bottom of the Inspector panel even when the controls are short', async ({ page }) => {
+  await openBuilder(page);
+  await settled(page);
+  const before = await layerCount(page);
+  try {
+    await insertQuote(page);
+    const panelBox = await page.getByTestId('inspector-panel').boundingBox();
+    const barBox = await page.getByTestId('inspector-bar').boundingBox();
+    // the panel has 12px of padding below the bar
+    expect(panelBox.y + panelBox.height - (barBox.y + barBox.height)).toBeLessThanOrEqual(16);
+    expect(barBox.y).toBeGreaterThan(panelBox.y + panelBox.height / 2);
+  } finally {
+    await restore(page, before);
+  }
+});
+
+test('a section has the bar too: Discard takes a layout change back, Reset clears its background styling', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openBuilder(page);
+  await settled(page);
+  const before = await layerCount(page);
+  try {
+    await insertQuote(page);
+    await page.getByRole('tab', { name: /^Layers$/ }).click();
+    await page.locator('[role="treeitem"][aria-level="1"]').first().click();
+    await settled(page);
+
+    const bar = page.getByTestId('inspector-bar');
+    const reset = bar.getByRole('button', { name: 'Reset' });
+    const discard = bar.getByRole('button', { name: 'Discard' });
+    await expect(discard).toBeDisabled();
+
+    const width = page.locator('select[id$="-width"]').first();
+    const was = await width.inputValue();
+    const other = (await width.locator('option').evaluateAll((os) => os.map((o) => o.value))).find((v) => v !== was);
+    await width.selectOption(other);
+    await expect(discard).toBeEnabled();
+    await discard.click();
+    await expect(width).toHaveValue(was);
+    await expect(discard).toBeDisabled();
+
+    await page.locator('[id^="sbx-sec-"][id$="-tab-style"]').click();
+    const bg = await openSection(page, 'background');
+    const colour = bg.locator('input[id$="-style-bg-text"]');
+    await colour.fill('#335577');
+    await colour.blur();
+    await settled(page);
+    await expect(reset).toBeEnabled();
+    await reset.click();
+    await expect(colour).toHaveValue('');
+    await expect(reset).toBeDisabled();
   } finally {
     await restore(page, before);
   }

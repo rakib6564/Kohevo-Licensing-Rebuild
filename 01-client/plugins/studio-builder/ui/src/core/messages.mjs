@@ -355,6 +355,8 @@ const EN = {
   tok_default: 'Default',
   inspector_bar: 'Inspector actions',
   inspector_reset: 'Reset',
+  inspector_reset_section_hint: 'Clear this section’s background and padding styling. Its content stays.',
+  inspector_discard_section_hint: 'Put this section back to how it was when you selected it.',
   inspector_reset_hint: 'Clear this block’s style, device overrides and states. Its content stays.',
   inspector_discard: 'Discard',
   inspector_discard_hint: 'Put this block back to how it was when you selected it.',
