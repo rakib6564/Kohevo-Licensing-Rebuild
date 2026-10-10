@@ -82,3 +82,5 @@ node tools/wipe.mjs                     # sandbox only: archive every page (slug
 ```
 
 Templates are saved with the builder's own `save_template`, cut from temporary draft pages that are archived afterwards. Re-running replaces the `kh-*` templates. The library relies on the site's tokens and Custom CSS, which `library.mjs` installs.
+
+The library tools drive a local sandbox by default (`http://localhost:8200`, sandbox credentials from `SBX_EMAIL` / `SBX_PASSWORD`). On any other site they open a visible browser and wait for you to sign in; they never see or store a password.
