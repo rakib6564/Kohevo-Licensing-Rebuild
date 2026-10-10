@@ -33,6 +33,15 @@ export function deviceView(style, responsive, device, paths) {
   }, {});
 }
 
+/**
+ * The block style after a control group's view changed on desktop: only the group's own paths are taken from the view,
+ * every other style key (a layout display, a colour, ...) is kept. A view holds just its group's paths, so saving it
+ * as the whole style would erase the rest.
+ */
+export function writeDesktop(style, paths, nextView) {
+  return paths.reduce((acc, path) => setPath(acc, path, getPath(nextView, path)), asObject(style));
+}
+
 /** True when a device holds a value for any of the paths. */
 export function hasOverride(responsive, device, paths) {
   const own = deviceOverride(responsive, device);

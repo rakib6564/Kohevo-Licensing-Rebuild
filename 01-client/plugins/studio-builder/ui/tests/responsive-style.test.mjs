@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { RESPONSIVE_SCOPES, clearOverride, deviceView, hasOverride, writeOverride } from '../src/core/responsiveStyle.mjs';
+import { RESPONSIVE_SCOPES, clearOverride, deviceView, hasOverride, writeDesktop, writeOverride } from '../src/core/responsiveStyle.mjs';
 import { surfaceAccepts } from '../src/core/styleSurface.mjs';
 
 const style = { typography: { size: '3rem', weight: 'bold' }, padding: { top: '4rem' } };
@@ -40,4 +40,21 @@ test('every responsive path is one the server accepts for a device style', () =>
     const value = sample[path] ?? '1rem';
     assert.equal(path === 'typography.size' || surfaceAccepts(path, value), true, path);
   }
+});
+
+test('a desktop edit keeps every style key outside the control group', () => {
+  const full = { typography: { size: '3rem', weight: 'bold' }, layout: { display: 'flex', direction: 'column' }, padding: { top: '4rem' } };
+  // the view of the gap group holds only the gap; saving it must not drop the display, direction or anything else
+  const next = writeDesktop(full, RESPONSIVE_SCOPES.gap, { layout: { gap: '12px' } });
+  assert.deepEqual(next.layout, { display: 'flex', direction: 'column', gap: '12px' });
+  assert.deepEqual(next.typography, full.typography);
+  assert.deepEqual(next.padding, full.padding);
+  // a cleared field leaves the style without that key, and the rest untouched
+  const cleared = writeDesktop(next, RESPONSIVE_SCOPES.gap, {});
+  assert.equal(cleared.layout.gap, undefined);
+  assert.equal(cleared.layout.display, 'flex');
+  // font size in the same way
+  const sized = writeDesktop(full, RESPONSIVE_SCOPES.size, { typography: { size: '2rem' } });
+  assert.deepEqual(sized.typography, { size: '2rem', weight: 'bold' });
+  assert.equal(full.layout.gap, undefined, 'the input is not changed');
 });
