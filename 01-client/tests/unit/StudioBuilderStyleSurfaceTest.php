@@ -262,6 +262,9 @@ unit('surface 2: valid margin, padding, border sides and corners, typography ext
         ['typography' => ['style' => 'italic', 'decoration' => 'underline', 'decoration_style' => 'wavy', 'decoration_color' => 'rgba(0,0,0,.5)', 'decoration_thickness' => '2px', 'decoration_offset' => '4px']],
         ['shadow' => ['x' => '0', 'y' => '10px', 'blur' => '25px', 'spread' => '-5px', 'color' => 'rgba(0,0,0,.15)', 'inset' => true]],
         ['shadow' => ['x' => '1px', 'y' => '1px', 'color' => '#000']],
+        ['border' => ['top' => ['color' => 'color.accent'], 'left' => ['color' => 'border.default']]],
+        ['typography' => ['decoration' => 'underline', 'decoration_color' => 'text.muted']],
+        ['shadow' => ['x' => '0', 'y' => '4px', 'color' => 'color.accent']],
     ] as $style) {
         $r = sbss_validate_block($style);
         assert_true($r->isValid(), 'must validate ' . json_encode($style) . ' → ' . json_encode($r->errors()));
@@ -278,7 +281,9 @@ unit('surface 2: invalid spacing, border, typography and shadow values are refus
         'margin keyword'          => ['margin' => ['top' => 'inherit']],
         'border side unknown'     => ['border' => ['top' => ['weight' => '1px']]],
         'border side style'       => ['border' => ['top' => ['style' => 'groove; x:y']]],
-        'border side token colour' => ['border' => ['top' => ['color' => 'color.primary']]],
+        'border side non-colour token' => ['border' => ['top' => ['color' => 'space.md']]],
+        'shadow non-colour token' => ['shadow' => ['x' => '1px', 'y' => '1px', 'color' => 'radius.md']],
+        'deco non-colour token' => ['typography' => ['decoration_color' => 'shadow.lg']],
         'border side url colour'  => ['border' => ['top' => ['color' => 'url(x)']]],
         'border corner unknown'   => ['border' => ['radius_corners' => ['xx' => '1px']]],
         'border corner url'       => ['border' => ['radius_corners' => ['tl' => 'url(x)']]],
@@ -292,6 +297,21 @@ unit('surface 2: invalid spacing, border, typography and shadow values are refus
     ];
     foreach ($bad as $label => $style) {
         assert_false(sbss_validate_block($style)->isValid(), "must refuse: {$label}");
+    }
+});
+
+unit('surface tokens: a theme colour is written out as the theme\'s own custom property, and the name is the renderer\'s', function (): void {
+    assert_eq('border-top-color:var(--sb-color-accent)', StyleSurface::declarations(['border' => ['top' => ['color' => 'color.accent']]]));
+    assert_eq('text-decoration-line:underline;text-decoration-color:var(--sb-text-muted)', StyleSurface::declarations(['typography' => ['decoration' => 'underline', 'decoration_color' => 'text.muted']]));
+    assert_eq('box-shadow:0 4px var(--sb-color-accent)', StyleSurface::declarations(['shadow' => ['x' => '0', 'y' => '4px', 'color' => 'color.accent']]));
+    assert_eq('box-shadow:inset 0 4px 12px 2px #000', StyleSurface::declarations(['shadow' => ['inset' => true, 'x' => '0', 'y' => '4px', 'blur' => '12px', 'spread' => '2px', 'color' => '#000']]), 'a literal colour is unchanged');
+    assert_eq('', StyleSurface::declarations(['border' => ['top' => ['color' => 'space.md']]]), 'a token that is not a colour is never written');
+    foreach (['color.accent', 'text.muted', 'surface.alt', 'border.default', 'color.brand.dark'] as $ref) {
+        assert_eq(\Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme::cssVarName($ref), '--sb-' . str_replace('.', '-', $ref), "the custom property name for {$ref} is the renderer's");
+        assert_true(StyleSurface::isColourToken($ref), "{$ref} is a colour token");
+    }
+    foreach (['space.md', 'radius.sm', 'shadow.lg', 'font.body', '#fff', 'color', 'color.', 'Color.accent'] as $notColour) {
+        assert_true(!StyleSurface::isColourToken($notColour), "{$notColour} is not a colour token");
     }
 });
 

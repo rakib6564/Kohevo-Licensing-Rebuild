@@ -22,7 +22,7 @@
 
 import { useId, useMemo, useRef, useState } from 'react';
 import { STYLE_TOKEN_CATEGORIES } from '../../core/fields.mjs';
-import { setSurfaceToken, setTextLiteral, setTextToken } from '../../core/tokenStyle.mjs';
+import { setBorderLiteral, setBorderToken, setSurfaceToken, setTextLiteral, setTextToken } from '../../core/tokenStyle.mjs';
 import { asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
 import { Pills, Field, Popover } from '../ui/index.js';
@@ -245,6 +245,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
   const mainTypo = typoPart !== 'more';
   const moreTypo = typoPart !== 'main';
   const textTokens = useMemo(() => (tokens || []).filter((tk) => STYLE_TOKEN_CATEGORIES.text_token.includes(tk.category)), [tokens]);
+  const borderTokens = useMemo(() => (tokens || []).filter((tk) => STYLE_TOKEN_CATEGORIES.border_token.includes(tk.category)), [tokens]);
   const surfaceTokens = useMemo(() => (tokens || []).filter((tk) => STYLE_TOKEN_CATEGORIES.surface_token.includes(tk.category)), [tokens]);
   // `only` renders a single section of the stack (the Inspector shows each in its own collapsible section);
   // the text colour belongs with Typography.
@@ -496,7 +497,10 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
             id={`${id}-border-color`}
             label={t('border_color')}
             value={border.color}
-            onChange={(v) => patchNested('border', 'color', v)}
+            onChange={(v) => onChange(setBorderLiteral(style, v))}
+            tokens={capabilities.includes('border_token') ? borderTokens : undefined}
+            token={style.border_token}
+            onToken={(ref) => onChange(setBorderToken(style, ref))}
           />
         </fieldset>
       )}

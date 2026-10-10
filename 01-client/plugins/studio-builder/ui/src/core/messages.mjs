@@ -352,6 +352,7 @@ const EN = {
   tok_field_radius_token: 'Corner radius',
   tok_field_shadow_token: 'Shadow',
   tok_field_font_token: 'Font',
+  tok_field_border_token: 'Border colour',
   tok_default: 'Default',
   inspector_bar: 'Inspector actions',
   inspector_reset: 'Reset',

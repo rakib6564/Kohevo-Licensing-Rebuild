@@ -123,7 +123,7 @@ final class DependencyExtractor
         $bindings = is_array($block['bindings'] ?? null) ? $block['bindings'] : [];
 
         // Style tokens on block
-        foreach (['surface_token', 'text_token', 'spacing_token', 'radius_token', 'shadow_token', 'font_token'] as $tokenField) {
+        foreach (['surface_token', 'text_token', 'spacing_token', 'radius_token', 'shadow_token', 'font_token', 'border_token'] as $tokenField) {
             $tokenVal = $style[$tokenField] ?? null;
             if (is_string($tokenVal) && $tokenVal !== '') {
                 $add(new DependencyRecord($blockId, 'token_group', $tokenVal));

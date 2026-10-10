@@ -9,7 +9,7 @@
 // Anything this file cannot predict exactly (a style key it does not know, a background image, interaction states,
 // a token the theme does not have) reports `covered: false`, and the canvas falls back to the server's render.
 
-import { isMeasure, surfaceAccepts } from './styleSurface.mjs';
+import { colourCss, isMeasure, surfaceAccepts } from './styleSurface.mjs';
 import {
   isBorderWidth, isColor, isFontFamily, isGradient, isLength, isLetterSpacing, isLengthList, isLineHeight, isShadow, isToken,
 } from './styleValues.mjs';
@@ -40,7 +40,7 @@ const FILTER = { blur: [0, 50, 'px'], brightness: [0, 300, '%'], contrast: [0, 3
 /** token class infix => CSS property (RenderCollector::TOKEN_UTILITIES). */
 const TOKEN_PROPS = { bd: 'border-color', bg: 'background-color', fg: 'color', font: 'font-family', pad: 'padding', rad: 'border-radius', shd: 'box-shadow' };
 /** style key => token class infix (DocumentRenderer::STYLE_UTILITIES). */
-const TOKEN_KEYS = { font_token: 'font', radius_token: 'rad', shadow_token: 'shd', spacing_token: 'pad', surface_token: 'bg', text_token: 'fg' };
+const TOKEN_KEYS = { border_token: 'bd', font_token: 'font', radius_token: 'rad', shadow_token: 'shd', spacing_token: 'pad', surface_token: 'bg', text_token: 'fg' };
 
 export const DEVICE_QUERIES = { tablet: '(max-width:1023.98px)', mobile: '(max-width:767.98px)' };
 
@@ -86,6 +86,7 @@ function emitTable(group, values, table, out) {
     if (map) css = map[v];
     else if (template) css = template.replace('%d', String(v));
     else css = typeof v === 'string' ? v.trim() : String(v);
+    if (prop === 'text-decoration-color') css = colourCss(v);
     out.push(`${prop}:${css}`);
   }
 }
@@ -107,7 +108,7 @@ function shadowValue(sh) {
     if (f in sh && ok(`shadow.${f}`, sh[f])) parts.push(String(sh[f]).trim());
     else if ((f === 'blur' || f === 'spread') && 'spread' in sh && f === 'blur') parts.push('0');
   }
-  parts.push(String(sh.color).trim());
+  parts.push(colourCss(sh.color));
   return parts.join(' ');
 }
 
@@ -161,7 +162,7 @@ export function scopedDeclarations(style) {
       if (!isObj(b)) continue;
       if ('width' in b && ok(`border.${side}.width`, b.width)) out.push(`border-${side}-width:${String(b.width).trim()}`);
       if ('style' in b && ok(`border.${side}.style`, b.style)) out.push(`border-${side}-style:${b.style}`);
-      if ('color' in b && ok(`border.${side}.color`, b.color)) out.push(`border-${side}-color:${b.color}`);
+      if ('color' in b && ok(`border.${side}.color`, b.color)) out.push(`border-${side}-color:${colourCss(b.color)}`);
     }
     if (isObj(style.border.radius_corners)) {
       for (const [short, long] of Object.entries(CORNER_CSS)) {

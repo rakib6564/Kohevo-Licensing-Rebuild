@@ -501,7 +501,7 @@ const BLOCK_TAGS = ['div', 'section', 'article', 'aside', 'header', 'footer', 'n
 const STATES = ['hover', 'focus', 'active', 'disabled'];
 const STATE_KEYS = ['color', 'typography', 'background', 'border', 'shadow', 'opacity', 'effects'];
 const STYLE_KEYS = [
-  'align', 'surface_token', 'text_token', 'spacing_token', 'radius_token', 'shadow_token', 'font_token', 'typography', 'color',
+  'align', 'surface_token', 'text_token', 'spacing_token', 'radius_token', 'shadow_token', 'font_token', 'border_token', 'typography', 'color',
   'background', 'spacing', 'border', 'shadow', 'dimensions', 'opacity', 'z_index', 'layout', 'position', 'effects', 'margin', 'padding',
 ];
 const PROPERTY_PATH = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){0,3}$/;

@@ -61,3 +61,24 @@ export function setSpacingToken(style, ref) {
   if (ref) delete next.padding;
   return next;
 }
+
+/** A theme border colour (or none): the literal border colour goes. */
+export function setBorderToken(style, ref) {
+  const next = withToken(style, 'border_token', ref || null);
+  if (ref && isObj(next.border)) {
+    const border = { ...next.border };
+    delete border.color;
+    if (Object.keys(border).length === 0) delete next.border; else next.border = border;
+  }
+  return next;
+}
+
+/** A literal border colour (or none): the theme border colour goes. */
+export function setBorderLiteral(style, value) {
+  const next = { ...style };
+  delete next.border_token;
+  const border = { ...asObject(style.border) };
+  if (value === undefined) delete border.color; else border.color = value;
+  if (Object.keys(border).length === 0) delete next.border; else next.border = border;
+  return next;
+}

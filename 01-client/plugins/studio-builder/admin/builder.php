@@ -723,6 +723,7 @@ $sbBoot = [
         'tok_field_radius_token' => __('studio_ui_tok_field_radius_token', 'Corner radius'),
         'tok_field_shadow_token' => __('studio_ui_tok_field_shadow_token', 'Shadow'),
         'tok_field_font_token' => __('studio_ui_tok_field_font_token', 'Font'),
+        'tok_field_border_token' => __('studio_ui_tok_field_border_token', 'Border colour'),
         'tok_default' => __('studio_ui_tok_default', 'Default'),
         'inspector_bar' => __('studio_ui_inspector_bar', 'Inspector actions'),
         'inspector_reset' => __('studio_ui_inspector_reset', 'Reset'),

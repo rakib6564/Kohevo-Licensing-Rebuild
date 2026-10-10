@@ -208,7 +208,7 @@
   {
    "path": "border.top.color",
    "value": "surface.page",
-   "ok": false
+   "ok": true
   },
   {
    "path": "border.top.color",
@@ -383,6 +383,56 @@
   {
    "path": "dimensions.object_position",
    "value": "top left",
+   "ok": false
+  },
+  {
+   "path": "border.top.color",
+   "value": "color.accent",
+   "ok": true
+  },
+  {
+   "path": "border.left.color",
+   "value": "border.default",
+   "ok": true
+  },
+  {
+   "path": "border.top.color",
+   "value": "text.muted",
+   "ok": true
+  },
+  {
+   "path": "border.top.color",
+   "value": "space.md",
+   "ok": false
+  },
+  {
+   "path": "border.top.color",
+   "value": "font.body",
+   "ok": false
+  },
+  {
+   "path": "border.top.color",
+   "value": "color.accent.extra.deep",
+   "ok": false
+  },
+  {
+   "path": "shadow.color",
+   "value": "color.accent",
+   "ok": true
+  },
+  {
+   "path": "shadow.color",
+   "value": "radius.md",
+   "ok": false
+  },
+  {
+   "path": "typography.decoration_color",
+   "value": "text.muted",
+   "ok": true
+  },
+  {
+   "path": "typography.decoration_color",
+   "value": "shadow.lg",
    "ok": false
   }
  ]
