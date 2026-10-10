@@ -20,6 +20,7 @@ import { EntranceSelect, MotionInspector } from './MotionInspector.jsx';
 import { ClassNamesField, DataAttributes, IdentityFields } from './AdvancedControls.jsx';
 import { InspectorShell } from './InspectorShell.jsx';
 import { InspectorHeader } from './InspectorHeader.jsx';
+import { InspectorBar } from './InspectorBar.jsx';
 import { asList, asObject, blockDefinition, blockIndentTarget, blockMoveTarget, blockOutdentTarget } from '../../core/doc.mjs';
 import { STYLE_TOKEN_CATEGORIES, tokensFor } from '../../core/fields.mjs';
 import { MEDIA_TYPES } from '../../core/inspectorSections.mjs';
@@ -250,6 +251,7 @@ export function BlockInspector({ info }) {
           <IconButton icon="outdent" label={t('outdent')} disabled={!outdent} onClick={() => moveBlockTo(block.id, outdent)} />
         </div>
       )}
+      footer={<InspectorBar block={block} label={def.label} />}
       renderSection={(id) => (sections[id] ? sections[id]() : null)}
     />
   );
