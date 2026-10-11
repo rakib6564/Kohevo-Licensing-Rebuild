@@ -445,6 +445,16 @@
       el.setAttribute('aria-hidden', 'true');
       el.setAttribute('data-sb-overlay', '');
 
+      // `position: fixed` is relative to the nearest ancestor with a transform, filter or backdrop-filter. A panel inside
+      // an animated block, or inside a sticky blurred header, would be clipped to that block instead of covering the page.
+      // So it lives on <body> while the runtime is on, and goes back where the author put it when the runtime is disabled.
+      var home = el.parentNode;
+      var marker = home && home !== document.body && document.createComment('sb-overlay');
+      if (marker) {
+        home.insertBefore(marker, el);
+        document.body.appendChild(el);
+      }
+
       var off = [];
       off.push(on(el, 'click', function (e) {
         // Closers: the renderers emit kind-scoped attributes (`data-sb-modal-close` /
@@ -500,6 +510,10 @@
         if (el.__sbClose) el.__sbClose();
         el.removeAttribute('data-sb-open');
         el.setAttribute('aria-hidden', 'true');
+        if (marker && marker.parentNode) {
+          marker.parentNode.insertBefore(el, marker);
+          marker.parentNode.removeChild(marker);
+        }
       });
     });
 

@@ -19,7 +19,7 @@ const drawer = (id) => `
     <a href="#" class="sb-offcanvas__backdrop" data-sb-offcanvas-close aria-label="Close"></a>
     <aside class="sb-offcanvas__panel"><header class="sb-offcanvas__header"><h3 id="${id}-title">Drawer ${id}</h3><a href="#" class="sb-offcanvas__close" data-sb-offcanvas-close aria-label="Close">&times;</a></header><div class="sb-offcanvas__body">Menu ${id}</div></aside>
   </div>`;
-const CSS = '.sb-modal,.sb-offcanvas{display:none;position:fixed;inset:0}.sb-modal[data-sb-open],.sb-offcanvas[data-sb-open]{display:block}';
+const CSS = '.sb-modal,.sb-offcanvas{display:none;position:fixed;inset:0}.sb-modal[data-sb-open],.sb-offcanvas[data-sb-open]{display:block}.sb-offcanvas__panel{position:fixed;top:0;bottom:0;right:0;width:20rem}';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'no layout involved; run once');
@@ -52,4 +52,23 @@ test('a modal and a drawer on one page do not disturb each other', async ({ page
   await page.locator('[data-sb-modal-open="enquiry"]').click();
   await expect(page.locator('#enquiry')).toBeVisible();
   await expect(page.locator('#other')).toBeHidden();
+});
+
+test('a modal or drawer inside a transformed or blurred block still covers the page, and goes back when the runtime is disabled', async ({ page }) => {
+  await page.setViewportSize({ width: 1000, height: 700 });
+  await load(page, `<div style="transform:translateY(0);width:300px;height:120px">${modal('boxed')}</div><header style="position:sticky;top:0;height:60px;backdrop-filter:blur(8px)">${drawer('menu')}</header>`);
+  await page.locator('[data-sb-modal-open="boxed"]').click();
+  const cover = await page.locator('#boxed').boundingBox();
+  expect(Math.round(cover.width)).toBe(1000);
+  expect(Math.round(cover.height)).toBe(700);
+  await page.locator('#boxed [data-sb-modal-close]').click();
+
+  await page.locator('[data-sb-offcanvas-open="menu"]').click();
+  const panel = await page.locator('#menu .sb-offcanvas__panel').boundingBox();
+  expect(Math.round(panel.height)).toBe(700);
+
+  const ok = await page.evaluate(() => { if (!window.StudioRuntime || !window.StudioRuntime.disable) return false; window.StudioRuntime.disable(); return true; });
+  expect(ok).toBe(true);
+  expect(await page.locator('#boxed').evaluate((el) => el.parentElement.style.transform)).toBe('translateY(0px)');
+  expect(await page.locator('#menu').evaluate((el) => el.parentElement.tagName)).toBe('HEADER');
 });
