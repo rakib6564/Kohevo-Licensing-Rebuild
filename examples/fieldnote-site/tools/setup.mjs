@@ -18,7 +18,10 @@ export async function applySiteSetup(page, api, must) {
   must(await api('POST', 'save_custom_css', { css }), 'custom css');
   console.log('custom css', css.length, 'bytes');
   await page.goto('plugins/studio-builder/admin/code-tracking.php');
-  await page.locator('[name="head_snippet"]').fill(HEAD);
+  // Append: a live site may already carry tracking or verification tags in this box.
+  const current = (await page.locator('[name="head_snippet"]').inputValue()).trim();
+  if (current.includes('family=Fraunces')) console.log('fonts snippet: already there');
+  else await page.locator('[name="head_snippet"]').fill(current ? `${current}\n${HEAD}` : HEAD);
   await page.getByRole('button', { name: /^Save$/ }).click();
   console.log('fonts snippet:', (await page.locator('.alert-success, .alert-danger').first().innerText()).slice(0, 100));
   await page.goto('plugins/studio-builder/admin/pages.php');

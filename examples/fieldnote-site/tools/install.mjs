@@ -24,8 +24,11 @@ try {
   await page.goto('plugins/studio-builder/admin/pages.php');
   await applySiteSetup(page, api, must);
   const existing = must(await api('GET', 'pages', null, ''), 'pages').pages || [];
+  console.log('pages on the site now:', existing.map((p) => `${p.slug} (${p.page_type})`).join(', ') || 'none');
+  const failed = [];
   for (const spec of PAGES) {
     if (only.length && !only.includes(spec.slug)) continue;
+    try {
     let row = existing.find((p) => p.slug === spec.slug && p.page_type === spec.page_type);
     if (!row) row = must(await api('POST', 'create_page', { title: spec.title, slug: spec.slug, page_type: spec.page_type, route_mode: spec.route_mode }), `create ${spec.slug}`).page;
     const cur = must(await api('GET', 'document', null, `&page=${row.id}`), `document ${spec.slug}`);
@@ -36,7 +39,9 @@ try {
     const rev = saved.revision?.id ?? saved.page?.active_draft_revision_id;
     const pub = await api('POST', 'publish', { page_id: row.id, expected_revision_id: rev, summary: 'Publish' });
     console.log(spec.page_type.padEnd(15), spec.slug.padEnd(24), 'published', pub.s === 200 ? 'ok' : `FAILED ${pub.s} ${JSON.stringify(pub.j).slice(0, 300)}`);
+    } catch (e) { failed.push(spec.slug); console.log(spec.page_type.padEnd(15), spec.slug.padEnd(24), 'SKIPPED:', String(e.message).slice(0, 300)); }
   }
+  if (failed.length) console.log('Not installed:', failed.join(', '));
   console.log(local ? `Done. Open ${base}/` : 'Done. Open your site’s home page.');
 } finally {
   await browser.close();
