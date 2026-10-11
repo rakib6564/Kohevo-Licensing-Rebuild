@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '8';
+    public const VERSION = '9';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -127,8 +127,9 @@ final class StudioStylesheet
             . '.sb-nav--vertical .sb-nav__list{flex-direction:column;gap:.25rem}'
             . '.sb-nav--center .sb-nav__list{justify-content:center}.sb-nav--right .sb-nav__list{justify-content:flex-end}'
             . '.sb-nav--vertical.sb-nav--center{text-align:center}.sb-nav--vertical.sb-nav--right{text-align:right}'
-            . '.sb-nav__link{color:inherit;text-decoration:none;display:inline-block;padding:.35rem 0}'
-            . '.sb-nav__link:hover{color:var(--sb-color-accent)}'
+            // `.sb-body a:not(.sb-button)` colours every link in the accent; a menu link takes the surrounding text colour, so it must outrank that rule.
+            . '.sb-nav__link{text-decoration:none;display:inline-block;padding:.35rem 0}'
+            . '.sb-body .sb-nav a.sb-nav__link{color:inherit}.sb-body .sb-nav a.sb-nav__link:hover{color:var(--sb-color-accent)}'
             . '.sb-nav--underline .sb-nav__link{text-decoration:underline;text-underline-offset:.25em}'
             . '.sb-nav--pill .sb-nav__link{padding:.35rem .9rem;border-radius:999px}.sb-nav--pill .sb-nav__link:hover{background:var(--sb-border-default)}'
             . '.sb-link-row{margin:0 0 1rem}.sb-link-row--center{text-align:center}.sb-link-row--right{text-align:right}'

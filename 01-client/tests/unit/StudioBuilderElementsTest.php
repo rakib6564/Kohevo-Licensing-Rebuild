@@ -404,6 +404,7 @@ unit('nav menu: the stylesheet styles the list, both layouts, alignment and ever
     foreach (['.sb-nav__list{', '.sb-nav--vertical .sb-nav__list{', '.sb-nav--center .sb-nav__list{', '.sb-nav--right .sb-nav__list{', '.sb-nav--underline .sb-nav__link{', '.sb-nav--pill .sb-nav__link{'] as $rule) {
         assert_true(str_contains($css, $rule), $rule);
     }
+    assert_true(str_contains($css, '.sb-body .sb-nav a.sb-nav__link{color:inherit}'), 'a menu link outranks the global link colour (.sb-body a:not(.sb-button)), so it keeps the surrounding text colour');
 });
 
 unit('map: renders an OpenStreetMap frame centred on the point, from the numbers alone', function (): void {
