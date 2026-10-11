@@ -245,22 +245,22 @@ unit('embed blocks: min_height is bounded by the schema', function (): void {
 
 // ── forms.embed ──────────────────────────────────────────────────────────────
 
-unit('forms.embed (public): the Forms module renders the live form once its stylesheet and script are on the page', function (): void {
+unit('forms.embed (public): a same-origin frame onto the form\'s own page, never an inline form with a token', function (): void {
     sbeb_seed();
     $page = sbeb_page();
-    $first = sbeb_render(sbeb_form_block(1), 'public', $page);
-    $second = sbeb_render(sbeb_form_block(1), 'public', $page);
-    assert_true(str_contains($first, '<form method="post" action="/forms/contact-us">'), 'the form comes from FormsAPI::renderContentBlock, posting to the Forms route');
-    assert_true(str_contains($first, 'href="https://acme.test/plugins/forms/assets/css/public.css?v=9.9.9"') && str_contains($first, 'forms-logic.js?v=9.9.9" defer'), 'its own assets');
-    assert_true(!str_contains($second, 'forms-logic.js') && str_contains($second, '<form'), 'assets are emitted once per page');
-    assert_eq(2, FormsAPI::$renders);
-    assert_true(!str_contains($first, 'Contact'), 'Studio adds no form fields or copy of its own');
+    $html = sbeb_render(sbeb_form_block(1), 'public', $page);
+    assert_true(str_contains($html, '<iframe class="sb-embed-frame sb-embed-frame--form" src="https://acme.test/forms/contact-us?embed=1"'), 'a frame onto the Forms module\'s embed page');
+    assert_true(str_contains($html, 'loading="lazy"') && str_contains($html, 'min-height:420px'), 'lazy, with room before it has loaded');
+    assert_false(str_contains($html, '<form') || str_contains($html, 'csrf'), 'no form and no CSRF token in the cacheable page (the token would belong to no visitor)');
+    assert_false(str_contains($html, 'forms-logic') || str_contains($html, '<script'), 'no script or stylesheet of the Forms module on the page');
+    assert_eq(0, FormsAPI::$renders, 'the Forms renderer is never called');
+    assert_true(str_contains($html, 'title="'), 'the frame has a title for screen readers');
 });
 
-unit('forms.embed (preview): the live form too', function (): void {
+unit('forms.embed (preview): the working form too, in its frame', function (): void {
     sbeb_seed();
     $html = sbeb_render(sbeb_form_block(1), 'preview');
-    assert_true(str_contains($html, '<form method="post" action="/forms/contact-us">'));
+    assert_true(str_contains($html, 'src="https://acme.test/forms/contact-us?embed=1"'));
 });
 
 unit('forms.embed (editor): a static preview card, never the form, a script or a frame', function (): void {

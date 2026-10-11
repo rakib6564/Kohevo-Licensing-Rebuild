@@ -2,12 +2,9 @@
 /**
  * Kohevo Studio — `forms.embed` renderer.
  *
- * Puts ONE published form of the site on the page. The form itself is rendered
- * by the Forms module (`FormsAPI::renderContentBlock`, the same call its own
- * content block uses), so fields, validation, CSRF, spam guard, uploads and
- * submission stay owned by Forms: it POSTs to its own `/forms/<slug>` route and
- * Studio never accepts or stores a submission, so no second submission path
- * exists. The `forms.form_embed` provider has already re-checked, for the
+ * Puts ONE published form of the site on the page, in a frame onto the Forms module's own `/forms/<slug>?embed=1`
+ * page, so fields, validation, CSRF, spam guard, uploads and submission stay owned by Forms: it POSTs to its own
+ * `/forms/<slug>` route and Studio never accepts or stores a submission, so no second submission path exists. The `forms.form_embed` provider has already re-checked, for the
  * active tenant, that the form exists and is published.
  *
  * The Editor canvas runs no script (`script-src 'none'`), so there it shows a
@@ -26,6 +23,9 @@ use Slate\Module\StudioBuilder\Render\RenderMode;
 
 final class FormEmbedRenderer implements BlockRendererInterface
 {
+    /** Room for a short form before its page has loaded and sized the frame. */
+    private const MIN_HEIGHT = 420;
+
     public function type(): string
     {
         return 'forms.embed';
@@ -53,7 +53,7 @@ final class FormEmbedRenderer implements BlockRendererInterface
         if ($scope->mode() === RenderMode::Editor) {
             return $this->previewCard($form);
         }
-        return $this->liveForm($scope, $slug);
+        return $this->liveForm($scope, $slug, CatalogFormat::str($form, 'title'));
     }
 
     /** @param array<string, mixed> $form */
@@ -75,28 +75,20 @@ final class FormEmbedRenderer implements BlockRendererInterface
             . '</div>';
     }
 
-    private function liveForm(BlockRenderScope $scope, string $slug): string
+    /**
+     * The form is the Forms module's own public page in a same-origin frame. Studio's public pages are anonymous and
+     * cacheable (no session cookie), so a CSRF-protected form cannot be rendered into one: its token would belong to no
+     * visitor. The frame is a page of its own that starts its own session, is never cached, validates, stores and
+     * notifies by itself, and sizes the frame from inside (same origin). Booking embeds the same way.
+     */
+    private function liveForm(BlockRenderScope $scope, string $slug, string $title): string
     {
         if (!class_exists('FormsAPI')) {
             return CatalogFormat::unavailable($scope);
         }
-        try {
-            $html = (string) \FormsAPI::renderContentBlock(['formSlug' => $slug]);
-        } catch (\Throwable $failure) {
-            return CatalogFormat::unavailable($scope);
-        }
-        if ($html === '') {
-            return CatalogFormat::unavailable($scope);
-        }
-
-        // The form's own stylesheet and field logic, once per page (the Forms content block gets them from the page head).
-        $assets = '';
-        if ($scope->claimOnce('forms-assets')) {
-            $v = defined('FormsAPI::ASSET_VERSION') ? '?v=' . rawurlencode((string) \FormsAPI::ASSET_VERSION) : '';
-            $site = $scope->site();
-            $assets = '<link rel="stylesheet" href="' . Html::e($site->absoluteUrl('plugins/forms/assets/css/public.css') . $v) . '">'
-                . '<script src="' . Html::e($site->absoluteUrl('plugins/forms/assets/js/forms-logic.js') . $v) . '" defer></script>';
-        }
-        return $assets . $html;
+        $src = $scope->site()->absoluteUrl('forms/' . rawurlencode($slug)) . '?embed=1';
+        return '<iframe class="sb-embed-frame sb-embed-frame--form" src="' . Html::e($src) . '"'
+            . ' title="' . Html::e($title !== '' ? $title : Html::t('studio_embed_form_kind', 'Form')) . '"'
+            . ' style="min-height:' . self::MIN_HEIGHT . 'px" loading="lazy"></iframe>';
     }
 }
