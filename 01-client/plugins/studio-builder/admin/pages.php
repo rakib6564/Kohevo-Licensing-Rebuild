@@ -31,6 +31,24 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     if (!csrf_verify()) {
         $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
     } else {
+        if (($_POST['bulk_action'] ?? '') === 'delete') {
+            // Deleting a page is archiving it: it leaves the site and the list, and its history stays. A page that cannot go
+            // (a Global Component other pages still use) is skipped and counted, not allowed to stop the rest.
+            $ids = array_values(array_unique(array_filter(array_map('intval', (array) ($_POST['ids'] ?? [])), static fn(int $i): bool => $i > 0)));
+            $deleted = 0;
+            $failed = 0;
+            foreach (array_slice($ids, 0, 200) as $pageId) {
+                try {
+                    $studioApp->archivePage($studioActor, $pageId);
+                    $deleted++;
+                } catch (StudioException $e) {
+                    $failed++;
+                }
+            }
+            $keep = (string) ($_POST['filter'] ?? 'all');
+            header('Location: pages.php?' . http_build_query(['filter' => $keep, 'deleted' => $deleted, 'failed' => $failed]), true, 303);
+            exit;
+        }
         foreach (array_keys($formValues) as $k) {
             $formValues[$k] = trim((string) ($_POST[$k] ?? ''));
         }
@@ -52,6 +70,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $flash = ['type' => 'error', 'msg' => __('studio_page_create_denied', 'You cannot create Studio pages here.')];
         }
     }
+}
+
+if (isset($_GET['deleted']) || isset($_GET['failed'])) {
+    $nDeleted = (int) ($_GET['deleted'] ?? 0);
+    $nFailed  = (int) ($_GET['failed'] ?? 0);
+    $flash = $nFailed > 0
+        ? ['type' => 'error', 'msg' => sprintf(__('studio_pages_deleted_some', '%1$d page(s) deleted, %2$d could not be (a shared component that other pages still use).'), $nDeleted, $nFailed)]
+        : ['type' => 'success', 'msg' => sprintf(__('studio_pages_deleted', '%d page(s) deleted.'), $nDeleted)];
 }
 
 $pages = [];
@@ -168,7 +194,11 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <p class="text-sm"><?= e(__('studio_no_pages_hint', 'Create a page above to open it in the builder.')) ?></p>
         </div>
         <?php else: ?>
-        <?= PageListView::render($filteredPages, $canEdit, plugin_url('studio-builder', 'admin/builder.php'), plugin_url('studio-builder', 'admin/preview.php')) ?>
+        <form method="post" id="studio-bulk-form">
+            <?= csrf_field() ?>
+            <input type="hidden" name="filter" value="<?= e($filter) ?>">
+            <?= PageListView::render($filteredPages, $canEdit, plugin_url('studio-builder', 'admin/builder.php'), plugin_url('studio-builder', 'admin/preview.php'), $canEdit) ?>
+        </form>
         <?php slate_data_list_script(); ?>
         <?= PageListView::selectionScript() ?>
         <?php endif; ?>

@@ -19,9 +19,10 @@ final class PageListView
     /**
      * @param list<array<string, mixed>> $pages   StudioEditorViews::page() rows
      * @param bool                       $canEdit whether "Open builder" is offered
+     * @param bool                       $canDelete whether the selection bar offers Delete (the list sits inside a POST form that carries `ids[]`)
      * @return string the .data-list markup (no script tag; see slate_data_list_script())
      */
-    public static function render(array $pages, bool $canEdit, string $builderUrl, string $previewUrl): string
+    public static function render(array $pages, bool $canEdit, string $builderUrl, string $previewUrl, bool $canDelete = false): string
     {
         if (!function_exists('slate_data_row')) {
             require_once dirname(__DIR__, 4) . '/includes/ui_components.php';
@@ -35,7 +36,13 @@ final class PageListView
         echo '<div class="data-list is-columnar" data-single-open id="studio-page-list">';
         echo '<div class="data-list-selectbar" role="status"><span><span class="data-list-selected-count">0</span> '
             . \e(\__('studio_selected', 'selected')) . '</span>'
-            . '<button type="button" class="btn btn-sm btn-ghost data-list-clear">' . \e(\__('studio_clear_selection', 'Clear selection')) . '</button></div>';
+            . '<button type="button" class="btn btn-sm btn-ghost data-list-clear">' . \e(\__('studio_clear_selection', 'Clear selection')) . '</button>'
+            . ($canDelete
+                ? '<button type="submit" name="bulk_action" value="delete" class="btn btn-sm btn-danger data-list-delete" style="margin-left:auto"'
+                    . ' data-confirm="' . \e(\__('studio_delete_pages_confirm', 'Delete %d selected page(s)? They leave your site and this list. Their history is kept.')) . '">'
+                    . \e(\__('studio_delete_pages', 'Delete')) . '</button>'
+                : '')
+            . '</div>';
         \slate_data_list_head(
             ['main' => \__('title', 'Title'), 'value' => \__('studio_page_type', 'Type'), 'badge' => \__('status', 'Status')],
             ['select_all' => \__('studio_select_all_pages', 'Select all pages')]
@@ -107,6 +114,11 @@ final class PageListView
     }
     all.addEventListener('change', function () { boxes().forEach(function (b) { b.checked = all.checked; }); sync(); });
     list.addEventListener('change', function (e) { if (e.target.classList.contains('data-row-select')) sync(); });
+    var del = list.querySelector('.data-list-delete');
+    if (del) del.closest('form').addEventListener('submit', function (e) {
+        var n = boxes().filter(function (b) { return b.checked; }).length;
+        if (n === 0 || !window.confirm(del.getAttribute('data-confirm').replace('%d', n))) e.preventDefault();
+    });
     list.querySelector('.data-list-clear').addEventListener('click', function () { boxes().forEach(function (b) { b.checked = false; }); sync(); all.focus(); });
     sync();
 })();

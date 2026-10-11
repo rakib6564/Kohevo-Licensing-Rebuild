@@ -127,12 +127,37 @@ unit('studio admin list: empty input renders an empty list; index.php keeps its 
 unit('studio admin list: every translation key the list uses has a French entry', function (): void {
     $fr = require dirname(__DIR__, 2) . '/plugins/studio-builder/lang/fr.php';
     $core = require dirname(__DIR__, 2) . '/lang/fr.php';
-    foreach (['studio_status_published', 'studio_status_draft', 'studio_address', 'studio_page_type', 'studio_unpublished_changes', 'studio_open_builder', 'studio_preview', 'studio_no_pages', 'studio_selected', 'studio_clear_selection', 'studio_select_all_pages', 'studio_select_page'] as $k) {
+    foreach (['studio_status_published', 'studio_status_draft', 'studio_address', 'studio_page_type', 'studio_unpublished_changes', 'studio_open_builder', 'studio_preview', 'studio_no_pages', 'studio_selected', 'studio_clear_selection', 'studio_select_all_pages', 'studio_select_page', 'studio_delete_pages', 'studio_delete_pages_confirm', 'studio_pages_deleted', 'studio_pages_deleted_some'] as $k) {
         assert_true(isset($fr[$k]), "studio-builder fr: {$k}");
     }
     foreach (['status', 'updated', 'title'] as $k) {
         assert_true(isset($core[$k]), "core fr: {$k}");
     }
+});
+
+unit('studio admin list: the selection bar offers Delete only when allowed, as a submit that carries the ticked ids and asks first', function (): void {
+    $pages = [sbal_page(1, 'A', true, false), sbal_page(2, 'B', false, false)];
+    $with = sbal_xpath(PageListView::render($pages, true, '/b.php', '/p.php', true));
+    $button = $with->query('//div[contains(@class,"data-list-selectbar")]//button[@name="bulk_action"][@value="delete"][@type="submit"]');
+    assert_eq(1, $button->length, 'one Delete button in the selection bar');
+    assert_true(str_contains($button->item(0)->getAttribute('data-confirm'), '%d'), 'the confirmation names how many pages');
+    assert_eq(2, $with->query('//input[@name="ids[]"]')->length, 'each row carries its id for the form');
+
+    $without = sbal_xpath(PageListView::render($pages, true, '/b.php', '/p.php'));
+    assert_eq(0, $without->query('//button[@name="bulk_action"]')->length, 'no Delete unless the page asks for it');
+    $none = sbal_xpath(PageListView::render($pages, false, '/b.php', '/p.php', false));
+    assert_eq(0, $none->query('//button[@name="bulk_action"]')->length, 'a viewer is never offered Delete');
+
+    $js = PageListView::selectionScript();
+    assert_true(str_contains($js, 'window.confirm') && str_contains($js, 'preventDefault'), 'the script asks before submitting and cancels on No');
+});
+
+unit('studio admin pages: the bulk delete is a CSRF-checked POST that archives each id, skips what cannot go, and redirects', function (): void {
+    $src = (string) file_get_contents(dirname(__DIR__, 2) . '/plugins/studio-builder/admin/pages.php');
+    assert_true(str_contains($src, "'bulk_action'") && str_contains($src, 'archivePage($studioActor, $pageId)'), 'archives each ticked page');
+    assert_true(str_contains($src, 'csrf_verify()'), 'behind the CSRF check');
+    assert_true(str_contains($src, '303'), 'redirects after the POST so a refresh does not repeat it');
+    assert_true(str_contains($src, '<form method="post" id="studio-bulk-form">') && str_contains($src, 'csrf_field()'), 'the list sits in a form with the CSRF field');
 });
 
 if (!empty($studioAdminListStandalone)) {
