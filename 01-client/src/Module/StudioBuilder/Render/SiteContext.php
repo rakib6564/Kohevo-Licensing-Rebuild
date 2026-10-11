@@ -100,6 +100,13 @@ final class SiteContext
         return $this->baseUrl . '/' . ltrim($path, '/');
     }
 
+    /** The install's folder (`/site` for `https://example.com/site`), or '' when it sits at the domain root. */
+    public function basePath(): string
+    {
+        $path = $this->baseUrl === '' ? null : parse_url($this->baseUrl, PHP_URL_PATH);
+        return is_string($path) ? rtrim($path, '/') : '';
+    }
+
     public function host(): ?string
     {
         if ($this->baseUrl === '') {

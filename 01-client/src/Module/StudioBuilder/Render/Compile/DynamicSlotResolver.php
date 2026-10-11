@@ -21,6 +21,7 @@ namespace Slate\Module\StudioBuilder\Render\Compile;
 use Slate\Module\StudioBuilder\Render\DocumentRenderer;
 use Slate\Module\StudioBuilder\Render\RenderCollector;
 use Slate\Module\StudioBuilder\Render\RenderContext;
+use Slate\Module\StudioBuilder\Render\SiteLinks;
 use Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme;
 use Slate\Module\StudioBuilder\Runtime\StudioLog;
 
@@ -48,7 +49,7 @@ final class DynamicSlotResolver
             $html = '';
             if (is_array($block)) {
                 try {
-                    $html = $this->documents->renderBlock($block, $context, $theme, $collector, false);
+                    $html = SiteLinks::rebase($this->documents->renderBlock($block, $context, $theme, $collector, false), $context->site->basePath());
                 } catch (\Throwable $e) {
                     StudioLog::failure('render', 'dynamic_node', $e, 'warning');
                     $html = $this->documents->unavailable('render_failed', $context);

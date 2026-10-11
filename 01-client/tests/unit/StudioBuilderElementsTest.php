@@ -73,7 +73,7 @@ function sbel_doc(array $blocks): array
 }
 
 /** Compile `$blocks` as a published page and return the body HTML. */
-function sbel_render(array $blocks): string
+function sbel_render(array $blocks, string $baseUrl = 'https://acme.test'): string
 {
     $tenants   = new TenantContext();
     $registry  = ModuleBlockDefinitions::studioRegistry();
@@ -81,7 +81,7 @@ function sbel_render(array $blocks): string
     $media     = new _SbelNoMedia();
     $documents = new DocumentRenderer($registry, $renderers, $media, new ProviderBindingResolver(new DataProviderRegistry(), $tenants));
     $compiler  = new StudioCompiler($tenants, $registry, $renderers, $documents, new ThemeResolver(null, static fn(): array => ['accent' => '#ff5500']), new ChromeResolver(), $media);
-    $site      = new SiteContext('https://acme.test', 'Acme', 'https://acme.test/l.png', 'https://acme.test/f.png', 'en');
+    $site      = new SiteContext($baseUrl, 'Acme', 'https://acme.test/l.png', 'https://acme.test/f.png', 'en');
     $ctx       = RenderContext::forPublic(SBEL_TENANT, $site, static fn(): bool => true);
     $page      = new PageAddress(6, '11111111-2222-3333-4444-555555555557', 'Elements', 'elements', 'page', 'published', 'standalone', 9, 9);
     $doc       = sbel_doc($blocks);
@@ -442,4 +442,36 @@ unit('map: the stylesheet gives the frame its height words, and the frame fills 
         assert_true(str_contains($css, ".sb-map--{$v}{height:"), "map height {$v}");
     }
     assert_true(str_contains($css, '.sb-map iframe{position:relative;z-index:1;display:block;width:100%;height:100%;border:0}'), 'the frame fills the box and sits over the pin');
+});
+
+unit('sub-folder install: root-relative links, buttons and menu items go to the install folder; nothing else is touched', function (): void {
+    $base = 'https://acme.test/site';
+    $blocks = [
+        sbel_block('core.button', ['link' => ['href' => '/contact', 'label' => 'Contact'], 'variant' => 'primary', 'size' => 'md']),
+        sbel_block('core.link', ['link' => ['href' => '/services?x=1#top', 'label' => 'Services'], 'style' => 'plain', 'align' => 'left']),
+        sbel_block('core.nav_menu', ['items' => [['label' => 'Work', 'url' => '/work'], ['label' => 'Home', 'url' => '/'], ['label' => 'Done', 'url' => '/site/already'], ['label' => 'Away', 'url' => 'https://elsewhere.test/a'], ['label' => 'Top', 'url' => '#top']]]),
+    ];
+    $html = sbel_render($blocks, $base);
+    foreach (['href="/site/contact"', 'href="/site/services?x=1#top"', 'href="/site/work"', 'href="/site/"', 'href="/site/already"', 'href="https://elsewhere.test/a"', 'href="#top"'] as $needle) {
+        assert_true(str_contains($html, $needle), $needle);
+    }
+    assert_false(str_contains($html, 'href="/site/site/'), 'a link that already carries the folder is not prefixed twice');
+    assert_false(str_contains($html, 'href="/contact"') || str_contains($html, 'href="/work"'), 'no link is left pointing at the parent site');
+
+    $root = sbel_render($blocks, 'https://acme.test');
+    assert_true(str_contains($root, 'href="/contact"') && str_contains($root, 'href="/work"'), 'at the domain root nothing changes');
+});
+
+unit('site links: rebase is idempotent, skips //host, mailto, tel and fragments, and rebases forms', function (): void {
+    $r = static fn(string $h, string $b = '/site'): string => \Slate\Module\StudioBuilder\Render\SiteLinks::rebase($h, $b);
+    assert_eq('<a href="/site/a">x</a>', $r('<a href="/a">x</a>'));
+    assert_eq($r('<a href="/a">x</a>'), $r($r('<a href="/a">x</a>')), 'twice is the same as once');
+    assert_eq('<a href="//cdn.test/a">x</a>', $r('<a href="//cdn.test/a">x</a>'), '//host is another site');
+    assert_eq('<a href="mailto:a@b.test">x</a><a href="tel:+32123">y</a><a href="#s">z</a>', $r('<a href="mailto:a@b.test">x</a><a href="tel:+32123">y</a><a href="#s">z</a>'));
+    assert_eq('<form action="/site/contact" method="post">', $r('<form action="/contact" method="post">'));
+    assert_eq('<a href="/a">x</a>', $r('<a href="/a">x</a>', ''), 'no folder, no change');
+    assert_eq('<a href="/a">x</a>', $r('<a href="/a">x</a>', '/'), 'a bare slash is no folder');
+    assert_eq('/site', (new \Slate\Module\StudioBuilder\Render\SiteContext('https://acme.test/site/', 'A'))->basePath());
+    assert_eq('', (new \Slate\Module\StudioBuilder\Render\SiteContext('https://acme.test', 'A'))->basePath());
+    assert_eq('', (new \Slate\Module\StudioBuilder\Render\SiteContext('', 'A'))->basePath());
 });

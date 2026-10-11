@@ -80,7 +80,7 @@ final class DocumentRenderer
                 $html .= $this->renderSection($section, $context, $theme, $collector, $deferDynamic, $components);
             }
         }
-        return $html;
+        return SiteLinks::rebase($html, $context->site->basePath());
     }
 
     /**
