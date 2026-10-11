@@ -34,6 +34,8 @@ try {
     const cur = must(await api('GET', 'document', null, `&page=${row.id}`), `document ${spec.slug}`);
     const doc = cur.document;
     doc.sections = spec.doc();
+    // An existing page keeps its own settings: the site header and footer, and the page width, are part of this design.
+    doc.settings = { ...doc.settings, header_mode: 'inherit', footer_mode: 'inherit', container_width: 'normal' };
     doc.seo = { ...doc.seo, title: spec.title, ...(spec.seo || {}) };
     const saved = must(await api('POST', 'save_draft', { page_id: row.id, expected_revision_id: cur.page.active_draft_revision_id, revision_kind: 'manual', document: doc, summary: 'Fieldnote site' }), `save ${spec.slug}`);
     const rev = saved.revision?.id ?? saved.page?.active_draft_revision_id;
