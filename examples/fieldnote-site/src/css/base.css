@@ -50,7 +50,8 @@ h3.sb-heading{font-size:1.45rem;letter-spacing:-.01em;line-height:1.2;margin-bot
 .sb-main{overflow-x:clip}
 
 /* Header (sticky) and mobile drawer */
-.sb-site-header{position:sticky;top:0;z-index:50;background:rgba(250,246,239,.9);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-bottom:1px solid rgba(222,211,193,.7)}
+.sb-site-header{padding:0;position:sticky;top:0;z-index:50;background:rgba(250,246,239,.98);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-bottom:1px solid rgba(222,211,193,.7)}
+.sb-site-header .sb-section{background-color:transparent}
 .header-inner > .sb-container{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;padding-top:.9rem;padding-bottom:.9rem}
 .wordmark .sb-link{font-family:var(--fn-serif);font-size:1.55rem;font-weight:600;letter-spacing:-.02em}
 .wordmark .sb-link::after{content:".";color:var(--fn-accent)}
