@@ -468,7 +468,10 @@
       // Accept the kind-specific open attribute, and the generic one the
       // prototype used, so a trigger keeps working whichever it was written
       // with. Generic triggers are wired to the panel they actually name.
-      var triggers = qsa(root, '[' + openAttr + ']');
+      // Only the triggers that name THIS panel: every panel on the page runs this block, so an unfiltered
+      // list wires each trigger once per panel, and the second handler closes what the first one opened.
+      var names = function (t, attr) { return document.getElementById(t.getAttribute(attr)) === el; };
+      var triggers = qsa(root, '[' + openAttr + ']').filter(function (t) { return names(t, openAttr); });
       if (kind === 'modal') triggers = triggers.concat(qsa(root, '[data-sb-offcanvas-open]').filter(function (t) {
         return document.getElementById(t.getAttribute('data-sb-offcanvas-open')) === el;
       }));
