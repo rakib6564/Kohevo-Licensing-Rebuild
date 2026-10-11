@@ -7,6 +7,7 @@
 import { session } from './session.mjs';
 import { applySiteSetup } from './setup.mjs';
 import * as P from '../src/pages.mjs';
+import { ensureForms } from './forms.mjs';
 
 const base = process.env.FN_BASE || 'http://localhost:8201';
 const only = process.argv.slice(2);
@@ -23,6 +24,8 @@ const must = (r, what) => { if (r.s >= 300 || !r.j?.ok) throw new Error(`${what}
 try {
   await page.goto('plugins/studio-builder/admin/pages.php');
   await applySiteSetup(page, api, must);
+  await ensureForms(page, P.FORM_IDS);
+  await page.goto('plugins/studio-builder/admin/pages.php');
   const existing = must(await api('GET', 'pages', null, ''), 'pages').pages || [];
   console.log('pages on the site now:', existing.map((p) => `${p.slug} (${p.page_type})`).join(', ') || 'none');
   const failed = [];

@@ -6,11 +6,11 @@ export const setSeed = (s) => { seed = s; n = 0; };
 const hid = (p) => p + '_' + createHash('sha256').update(`${seed}:${p}:${++n}`).digest('hex').slice(0, 24);
 export const DEVICES = ['base', 'sm', 'md', 'lg'];
 export function blk(type, props = {}, o = {}) {
-  const { children = [], classNames, style = {}, tag, attributes, responsive, animation, label } = o;
+  const { children = [], classNames, style = {}, tag, attributes, responsive, animation, label, bindings = {} } = o;
   const b = {
     id: hid('blk'), type, version: 1, props,
     style: { align: { base: 'left' }, font_token: null, radius_token: null, shadow_token: null, spacing_token: null, surface_token: null, text_token: null, ...style },
-    visibility: { auth_state: 'any', devices: DEVICES }, bindings: {}, children,
+    visibility: { auth_state: 'any', devices: DEVICES }, bindings, children,
   };
   if (classNames) b.classNames = Array.isArray(classNames) ? classNames : classNames.split(/\s+/).filter(Boolean);
   if (tag) b.tag = tag;

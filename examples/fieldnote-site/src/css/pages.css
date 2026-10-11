@@ -90,7 +90,8 @@
 
 /* Contact */
 .contact-grid > .sb-container{grid-template-columns:1.3fr 1fr}
-.form-card{background:var(--fn-card);border:1px solid var(--fn-line);border-radius:var(--fn-radius);padding:clamp(1.5rem,3vw,2.5rem);box-shadow:0 30px 60px -44px rgba(60,40,20,.5)}
+.form-card{min-width:0}
+.form-card .sb-embed-frame{border-radius:var(--fn-radius)}
 .contact-side > .sb-container{display:flex;flex-direction:column;gap:1.5rem}
 .contact-item{border-bottom:1px solid var(--fn-line);padding-bottom:1.25rem}
 .contact-item .sb-text{margin:0}

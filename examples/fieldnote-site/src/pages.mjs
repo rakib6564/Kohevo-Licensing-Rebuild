@@ -10,19 +10,14 @@ export const eyebrow = (c, extra = '') => T(c, `eyebrow ${extra}`.trim());
 const shell = (children, cls = '', o = {}) => box(children, { classNames: `shell ${cls}`.trim(), ...o });
 const head = (eye, title, body, highlight = '', cls = '') => box([eyebrow(eye), h('h2', title, { highlight }), ...(body ? [T(body, 'lede')] : [])], { classNames: `section-head ${cls}`.trim(), animation: fade });
 const arrowLink = (label, href, cls = '') => link(label, href, { linkStyle: 'arrow', classNames: cls });
-const field = (name, label, o = {}) => blk('core.form_field', { name, label, field_type: o.type || 'text', placeholder: o.ph || '', required: !!o.required, help_text: '', options: '' }, { classNames: o.cls || 'form-field' });
-const startForm = (name) => blk('core.form', { action: '/contact', method: 'post', form_name: name, submit_text: 'Send enquiry', submit_variant: 'primary' }, {
-  classNames: 'enquiry-form',
-  children: [
-    field('name', 'Your name', { required: true, ph: 'Ada Lovelace' }),
-    field('email', 'Email', { type: 'email', required: true, ph: 'you@company.com' }),
-    field('company', 'Company or project', { ph: 'What are we working on?' }),
-    field('message', 'How can we help?', { type: 'textarea', required: true, ph: 'A few lines about the project, timing and budget is perfect.', cls: 'form-field form-field--wide' }),
-  ],
-});
+// The forms live in the Forms plugin (validation, spam guard, inbox, email): the page only embeds them.
+// tools/forms.mjs creates them and fills FORM_IDS before the pages are built.
+export const FORM_IDS = {};
+const formEmbed = (key, o = {}) => blk('forms.embed', {}, { ...o, bindings: { form: { provider: 'forms.form_embed', params: { id: FORM_IDS[key] || 1 } } } });
+const startForm = () => formEmbed('enquiry', { classNames: 'enquiry-form' });
 const modalCta = (id, label = 'Start a project', variant = 'primary') => blk('core.modal', { modal_id: id, title: 'Tell us about your project', size: 'md', trigger_text: label, trigger_variant: variant }, {
   classNames: 'cta-modal',
-  children: [T('We reply within one working day, usually sooner.', 'modal-note'), startForm(`enquiry_${id}`)],
+  children: [T('We reply within one working day, usually sooner.', 'modal-note'), startForm()],
 });
 
 // ── project cards ───────────────────────────────────────────────────────────
@@ -252,16 +247,7 @@ export function contactDoc() {
   return [
     sec('Page header', [shell([eyebrow('Contact', 'dot'), h('h1', 'Tell us what you are making.', { highlight: 'what you are making.' }), T('A few lines is plenty. You will hear back within one working day.', 'lede')], 'page-head', { animation: fade })], S0),
     sec('Form and details', [shell([
-      box([blk('core.form', { action: '/contact', method: 'post', form_name: 'contact', submit_text: 'Send message', submit_variant: 'primary' }, {
-        classNames: 'enquiry-form enquiry-form--page',
-        children: [
-          field('name', 'Your name', { required: true, ph: 'Ada Lovelace' }),
-          field('email', 'Email', { type: 'email', required: true, ph: 'you@company.com' }),
-          field('company', 'Company or project', { ph: 'What are we working on?' }),
-          field('budget', 'Rough budget', { ph: 'For example €5,000 to €10,000' }),
-          field('message', 'How can we help?', { type: 'textarea', required: true, ph: 'Goals, timing, anything that helps.', cls: 'form-field form-field--wide' }),
-        ],
-      })], { classNames: 'form-card', animation: fade }),
+      box([formEmbed('contact', { classNames: 'enquiry-form enquiry-form--page' })], { classNames: 'form-card', animation: fade }),
       box([
         box([T('Email', 'fact-k'), link(site.email, `mailto:${site.email}`, { linkStyle: 'plain' })], { classNames: 'contact-item' }),
         box([T('Studio', 'fact-k'), T(`${site.city}. Visits by appointment.`, '')], { classNames: 'contact-item' }),
