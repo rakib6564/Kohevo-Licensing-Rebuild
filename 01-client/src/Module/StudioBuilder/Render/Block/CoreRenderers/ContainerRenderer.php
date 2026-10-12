@@ -10,9 +10,9 @@ namespace Slate\Module\StudioBuilder\Render\Block\CoreRenderers;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
-use Slate\Module\StudioBuilder\Render\Html;
+use Slate\Module\StudioBuilder\Render\Block\WrapperClassesInterface;
 
-final class ContainerRenderer implements BlockRendererInterface
+final class ContainerRenderer implements BlockRendererInterface, WrapperClassesInterface
 {
     public function type(): string
     {
@@ -24,13 +24,19 @@ final class ContainerRenderer implements BlockRendererInterface
         return false;
     }
 
+    /** The children go straight into the block's own wrapper, which is the flex box the Layout settings style. */
     public function render(BlockRenderScope $scope): string
+    {
+        return $scope->childrenHtml();
+    }
+
+    public function wrapperClasses(BlockRenderScope $scope): array
     {
         $gap = $scope->string('gap', 'md');
         if (!in_array($gap, CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, true)) {
             $gap = 'md';
         }
         $direction = $scope->string('direction', 'vertical') === 'horizontal' ? 'horizontal' : 'vertical';
-        return '<div' . Html::classAttr(['sb-stack', 'sb-stack--' . $direction, 'sb-gap-' . $gap]) . '>' . $scope->childrenHtml() . '</div>';
+        return ['sb-stack', 'sb-stack--' . $direction, 'sb-gap-' . $gap];
     }
 }

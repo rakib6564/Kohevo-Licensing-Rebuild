@@ -1320,6 +1320,96 @@
                 "media": [],
                 "reduceMotion": false
             }
+        },
+        {
+            "name": "flex container with per-device layout",
+            "block": {
+                "id": "blk_flexc",
+                "type": "core.container",
+                "props": [],
+                "style": {
+                    "layout": {
+                        "display": "flex",
+                        "direction": "row",
+                        "wrap": "wrap",
+                        "justify": "between",
+                        "align": "center",
+                        "align_content": "between",
+                        "gap": "2rem",
+                        "align_self": "end",
+                        "grow": 1
+                    }
+                },
+                "responsive": {
+                    "tablet": {
+                        "style": {
+                            "layout": {
+                                "direction": "column",
+                                "wrap": "nowrap",
+                                "justify": "center",
+                                "align": "stretch",
+                                "align_content": "start",
+                                "gap": "1rem",
+                                "order": 2,
+                                "grow": 0,
+                                "basis": "100%",
+                                "align_self": "auto",
+                                "columns": 2
+                            }
+                        }
+                    },
+                    "mobile": {
+                        "style": {
+                            "layout": {
+                                "direction": "column-reverse",
+                                "row_gap": "8px"
+                            }
+                        }
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [
+                    "align-content:space-between",
+                    "align-items:center",
+                    "align-self:flex-end",
+                    "display:flex",
+                    "flex-direction:row",
+                    "flex-grow:1",
+                    "flex-wrap:wrap",
+                    "gap:2rem",
+                    "justify-content:space-between"
+                ],
+                "inline": [],
+                "classes": [],
+                "media": [
+                    {
+                        "query": "(max-width:1023.98px)",
+                        "declarations": [
+                            "flex-direction:column !important",
+                            "flex-wrap:nowrap !important",
+                            "justify-content:center !important",
+                            "align-items:stretch !important",
+                            "align-content:flex-start !important",
+                            "gap:1rem !important",
+                            "order:2 !important",
+                            "flex-grow:0 !important",
+                            "flex-basis:100% !important",
+                            "align-self:auto !important",
+                            "grid-template-columns:repeat(2,minmax(0,1fr)) !important"
+                        ]
+                    },
+                    {
+                        "query": "(max-width:767.98px)",
+                        "declarations": [
+                            "flex-direction:column-reverse !important",
+                            "row-gap:8px !important"
+                        ]
+                    }
+                ],
+                "reduceMotion": false
+            },
+            "covered": true
         }
     ]
 }

@@ -578,6 +578,20 @@ unit('responsive style: tablet and mobile overrides of size, padding, margin and
     }
 });
 
+unit('responsive style: the flex layout of a container can differ per device', function (): void {
+    $layout = ['direction' => 'column', 'wrap' => 'nowrap', 'justify' => 'between', 'align' => 'center', 'align_content' => 'around', 'gap' => '1rem', 'columns' => 2, 'order' => 2, 'grow' => 1, 'shrink' => 0, 'basis' => '100%', 'align_self' => 'end'];
+    $r = sbss_validate_block([], ['responsive' => ['mobile' => ['style' => ['layout' => $layout]]]]);
+    assert_true($r->isValid(), 'must validate → ' . json_encode($r->errors()));
+    $css = StyleSurface::responsiveRules(['mobile' => ['style' => ['layout' => ['direction' => 'column', 'align_content' => 'between', 'align_self' => 'end']]]]);
+    assert_eq(['(max-width:767.98px)' => 'flex-direction:column !important;align-content:space-between !important;align-self:flex-end !important'], $css);
+});
+
+unit('surface: align-content and align-self validate and render', function (): void {
+    assert_true(sbss_validate_block(['layout' => ['display' => 'flex', 'align_content' => 'evenly', 'align_self' => 'auto']])->isValid());
+    assert_false(sbss_validate_block(['layout' => ['align_self' => 'between']])->isValid(), 'between is not an align-self');
+    assert_eq('display:flex;align-content:space-evenly;align-self:auto', StyleSurface::declarations(['layout' => ['display' => 'flex', 'align_content' => 'evenly', 'align_self' => 'auto']]));
+});
+
 unit('responsive style: values outside the closed table are refused', function (): void {
     $bad = [
         'a colour' => ['tablet' => ['style' => ['color' => '#fff']]],
@@ -587,7 +601,9 @@ unit('responsive style: values outside the closed table are refused', function (
         'a negative padding' => ['mobile' => ['style' => ['padding' => ['top' => '-1rem']]]],
         'an unknown typography field' => ['tablet' => ['style' => ['typography' => ['weight' => 'bold']]]],
         'a unitless gap' => ['tablet' => ['style' => ['layout' => ['gap' => '12']]]],
-        'a layout field outside the gaps' => ['tablet' => ['style' => ['layout' => ['display' => 'flex']]]],
+        'the display type' => ['tablet' => ['style' => ['layout' => ['display' => 'flex']]]],
+        'a hostile align-self' => ['tablet' => ['style' => ['layout' => ['align_self' => 'center;color:red']]]],
+        'a direction that is not one' => ['mobile' => ['style' => ['layout' => ['direction' => 'diagonal']]]],
         'a list' => ['tablet' => ['style' => ['padding']]],
     ];
     foreach ($bad as $label => $responsive) {

@@ -174,7 +174,7 @@ export function BlockInspector({ info }) {
         <DimensionsExtras style={style} media={MEDIA_TYPES.has(block.type)} onChange={saveStyle} />
       </>
     ),
-    layout: () => <LayoutPane style={style} onChange={saveStyle} deviceScope={deviceScope} />,
+    layout: () => <LayoutPane style={style} onChange={saveStyle} deviceScope={deviceScope} defaultDisplay={block.type === 'core.container' ? 'flex' : undefined} />,
     position: () => <PositionPane style={style} onChange={saveStyle} />,
     effects: () => <EffectsPane style={style} onChange={saveStyle} />,
     states: () => <StatesPane states={block.style_states} onChange={(next) => save(ops.updateBlockStyleStates(block.id, next))} />,

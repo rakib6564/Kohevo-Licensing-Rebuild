@@ -41,6 +41,7 @@ use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
+use Slate\Module\StudioBuilder\Render\Block\WrapperClassesInterface;
 use Slate\Module\StudioBuilder\Render\Media\MediaResolverInterface;
 use Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme;
 
@@ -129,7 +130,9 @@ final class DocumentRenderer
             ? $this->bindings->resolve($block, $definition, $context)
             : [];
 
-        $inner = $renderer->render(new BlockRenderScope($block, $context, $this->media, $theme, $collector, $children, $rows));
+        $scope = new BlockRenderScope($block, $context, $this->media, $theme, $collector, $children, $rows);
+        $inner = $renderer->render($scope);
+        $wrapperClasses = $renderer instanceof WrapperClassesInterface ? $renderer->wrapperClasses($scope) : [];
 
         $customClasses = [];
         if (isset($block['classNames']) && is_array($block['classNames'])) {
@@ -167,6 +170,7 @@ final class DocumentRenderer
 
         $classes = array_merge(
             ['sb-block', 'sb-block--' . str_replace(['.', '_'], '-', $type)],
+            $wrapperClasses,
             $scopedClasses,
             $this->styleClasses(is_array($block['style'] ?? null) ? $block['style'] : [], $theme, $collector),
             self::typographyMarkers($block),

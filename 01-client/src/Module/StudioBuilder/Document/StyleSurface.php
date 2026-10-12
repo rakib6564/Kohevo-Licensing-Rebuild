@@ -36,6 +36,8 @@ final class StyleSurface
 
     private const JUSTIFY = ['start' => 'flex-start', 'center' => 'center', 'end' => 'flex-end', 'between' => 'space-between', 'around' => 'space-around', 'evenly' => 'space-evenly'];
     private const ALIGN   = ['start' => 'flex-start', 'center' => 'center', 'end' => 'flex-end', 'stretch' => 'stretch', 'baseline' => 'baseline'];
+    private const ALIGN_CONTENT = ['start' => 'flex-start', 'center' => 'center', 'end' => 'flex-end', 'stretch' => 'stretch', 'between' => 'space-between', 'around' => 'space-around', 'evenly' => 'space-evenly'];
+    private const ALIGN_SELF    = ['auto' => 'auto', 'start' => 'flex-start', 'center' => 'center', 'end' => 'flex-end', 'stretch' => 'stretch', 'baseline' => 'baseline'];
     private const POSITIONS = ['center' => 'center', 'top' => 'top', 'bottom' => 'bottom', 'left' => 'left', 'right' => 'right',
         'top-left' => 'top left', 'top-right' => 'top right', 'bottom-left' => 'bottom left', 'bottom-right' => 'bottom right'];
     private const EASINGS = ['ease' => 'ease', 'ease-in' => 'ease-in', 'ease-out' => 'ease-out', 'ease-in-out' => 'ease-in-out', 'linear' => 'linear'];
@@ -55,6 +57,7 @@ final class StyleSurface
                 'wrap'      => ['enum', 'flex-wrap', ['nowrap', 'wrap', 'wrap-reverse']],
                 'justify'   => ['map', 'justify-content', self::JUSTIFY],
                 'align'     => ['map', 'align-items', self::ALIGN],
+                'align_content' => ['map', 'align-content', self::ALIGN_CONTENT],
                 'gap'       => ['length', 'gap'],
                 'row_gap'   => ['length', 'row-gap'],
                 'column_gap' => ['length', 'column-gap'],
@@ -62,6 +65,7 @@ final class StyleSurface
                 'grow'      => ['int', 'flex-grow', 0, 10],
                 'shrink'    => ['int', 'flex-shrink', 0, 10],
                 'basis'     => ['length', 'flex-basis', true],
+                'align_self' => ['map', 'align-self', self::ALIGN_SELF],
                 'columns'   => ['int', 'grid-template-columns', 1, 12, 'repeat(%d,minmax(0,1fr))'],
                 'rows'      => ['int', 'grid-template-rows', 1, 12, 'repeat(%d,minmax(0,1fr))'],
             ],
@@ -908,7 +912,7 @@ final class StyleSurface
     private static function responsiveFields(): array
     {
         $more   = self::moreFields();
-        $layout = array_intersect_key(self::fields()['layout'], array_flip(['gap', 'row_gap', 'column_gap']));
+        $layout = array_diff_key(self::fields()['layout'], ['display' => 1]);
         return [
             'typography' => ['size' => ['length', 'font-size']],
             'padding'    => $more['padding'],
@@ -918,7 +922,7 @@ final class StyleSurface
     }
 
     /**
-     * Issues for one device's style override: a partial style limited to font size, padding, margin and gaps.
+     * Issues for one device's style override: a partial style limited to font size, padding, margin and the flex/grid layout (everything but the display type).
      *
      * @return list<array{path: string, code: string, message: string}>
      */

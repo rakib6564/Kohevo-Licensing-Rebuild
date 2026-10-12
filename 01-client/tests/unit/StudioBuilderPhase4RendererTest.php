@@ -258,6 +258,14 @@ unit('phase4 renderer: known core blocks render escaped, deterministic static ou
     assert_eq([], $a['compiled']->dynamicManifest['nodes'], 'a static-only page defers nothing');
 });
 
+unit('phase4 renderer: a container is the flex box itself, its children sit straight in its own wrapper', function (): void {
+    $p = sbp4u_pipeline();
+    $doc = sbp4u_doc([sbp4u_block('core.container', ['direction' => 'horizontal', 'gap' => 'lg'], ['children' => [sbp4u_block('core.heading', ['text' => 'Inside'])]])]);
+    $html = sbp4u_render($p, $doc, sbp4u_public())['html'];
+    assert_true(preg_match('/<div class="sb-block sb-block--core-container sb-stack sb-stack--horizontal sb-gap-lg[^"]*">\\s*<div class="sb-block sb-block--core-heading/', $html) === 1, 'the wrapper carries the stack classes and holds the child block directly: ' . $html);
+    assert_false(str_contains($html, '<div class="sb-stack'), 'no second box inside the wrapper');
+});
+
 unit('phase4 renderer: unknown block type, invalid props and unsupported version fail safe per block', function (): void {
     $p = sbp4u_pipeline();
     $good = sbp4u_block('core.heading', ['text' => 'Still here']);

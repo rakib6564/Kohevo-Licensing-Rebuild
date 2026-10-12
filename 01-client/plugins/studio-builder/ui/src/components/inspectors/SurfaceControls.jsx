@@ -211,33 +211,21 @@ export function SpacingBox({ id, group, label, get, putAll, placeholder = '0' })
 
 // ── Layout ──────────────────────────────────────────────────────────────────
 
-/** The three gap fields: the part of the layout that can differ per device. */
-function GapFields({ id, style, onChange }) {
+/**
+ * The flex / grid fields of a container: the part of the layout that can differ per device. `style` is the view for the
+ * device being edited (the block's own style on desktop, only that device's values on tablet and mobile).
+ */
+function ContainerFields({ id, style, onChange, flex, grid }) {
   const f = useFields(style, onChange);
   return (
     <>
-      <Length id={id} units={LENGTH_UNITS} path="layout.gap" label={t('layout_gap')} get={f.get} put={f.put} placeholder="1rem" />
-      <Length id={id} units={LENGTH_UNITS} path="layout.row_gap" label={t('layout_row_gap')} get={f.get} put={f.put} placeholder="1rem" />
-      <Length id={id} units={LENGTH_UNITS} path="layout.column_gap" label={t('layout_column_gap')} get={f.get} put={f.put} placeholder="1rem" />
-    </>
-  );
-}
-
-export function LayoutPane({ style, onChange, deviceScope }) {
-  const id = useId();
-  const f = useFields(style, onChange);
-  const display = f.get('layout.display');
-  const flex = display === 'flex' || display === 'inline-flex';
-  const grid = display === 'grid';
-  return (
-    <>
-      <Segmented label={t('layout_display')} value={display} options={OPTIONS.display} onChange={(v) => f.put('layout.display', v)} />
       {flex && (
         <>
           <IconChoice label={t('layout_direction')} kind="dir" value={f.get('layout.direction')} options={OPTIONS.direction} onChange={(v) => f.put('layout.direction', v)} />
           <IconChoice label={t('layout_wrap')} kind="wrap" value={f.get('layout.wrap')} options={OPTIONS.wrap} onChange={(v) => f.put('layout.wrap', v)} />
           <IconChoice label={t('layout_justify')} kind="justify" value={f.get('layout.justify')} options={OPTIONS.justify} onChange={(v) => f.put('layout.justify', v)} />
           <IconChoice label={t('layout_align')} kind="items" value={f.get('layout.align')} options={OPTIONS.align} onChange={(v) => f.put('layout.align', v)} />
+          <SelectField id={pathId(id, 'layout.align_content')} label={t('layout_align_content')} value={f.get('layout.align_content')} options={OPTIONS.alignContent} onChange={(v) => f.put('layout.align_content', v)} />
         </>
       )}
       {grid && (
@@ -248,18 +236,54 @@ export function LayoutPane({ style, onChange, deviceScope }) {
         </>
       )}
       {(flex || grid) && (
+        <>
+          <Length id={id} units={LENGTH_UNITS} path="layout.gap" label={t('layout_gap')} get={f.get} put={f.put} placeholder="1rem" />
+          <Length id={id} units={LENGTH_UNITS} path="layout.row_gap" label={t('layout_row_gap')} get={f.get} put={f.put} placeholder="1rem" />
+          <Length id={id} units={LENGTH_UNITS} path="layout.column_gap" label={t('layout_column_gap')} get={f.get} put={f.put} placeholder="1rem" />
+        </>
+      )}
+    </>
+  );
+}
+
+/** How the block sits inside a flex parent: order, grow, shrink, basis and its own alignment. Also per device. */
+function ItemFields({ id, style, onChange }) {
+  const f = useFields(style, onChange);
+  return (
+    <>
+      <IntField id={pathId(id, 'layout.order')} label={t('layout_order')} value={f.get('layout.order')} min={-99} max={99} onChange={(v) => f.put('layout.order', v)} />
+      <IntField id={pathId(id, 'layout.grow')} label={t('layout_grow')} value={f.get('layout.grow')} min={0} max={10} onChange={(v) => f.put('layout.grow', v)} />
+      <IntField id={pathId(id, 'layout.shrink')} label={t('layout_shrink')} value={f.get('layout.shrink')} min={0} max={10} onChange={(v) => f.put('layout.shrink', v)} />
+      <Length id={id} units={LENGTH_UNITS} path="layout.basis" label={t('layout_basis')} get={f.get} put={f.put} placeholder={'auto'} />
+      <SelectField id={pathId(id, 'layout.align_self')} label={t('layout_align_self')} value={f.get('layout.align_self')} options={OPTIONS.alignSelf} onChange={(v) => f.put('layout.align_self', v)} />
+    </>
+  );
+}
+
+/** `defaultDisplay`: what the block is when it has no display of its own (a Container is a flex box from the start). */
+export function LayoutPane({ style, onChange, deviceScope, defaultDisplay }) {
+  const id = useId();
+  const f = useFields(style, onChange);
+  const display = f.get('layout.display') || defaultDisplay;
+  const flex = display === 'flex' || display === 'inline-flex';
+  const grid = display === 'grid';
+  return (
+    <>
+      <Segmented label={t('layout_display')} value={display} options={OPTIONS.display} onChange={(v) => f.put('layout.display', v)} />
+      {(flex || grid) && (
         deviceScope ? (
-          <DeviceStyle scope={deviceScope} paths={RESPONSIVE_SCOPES.gap} label={t('layout_gap')}>
-            {(view) => <GapFields id={id} style={view.style} onChange={view.onChange} />}
+          <DeviceStyle scope={deviceScope} paths={RESPONSIVE_SCOPES.layout} label={t('layout_container')}>
+            {(view) => <ContainerFields id={id} style={view.style} onChange={view.onChange} flex={flex} grid={grid} />}
           </DeviceStyle>
-        ) : <GapFields id={id} style={style} onChange={onChange} />
+        ) : <ContainerFields id={id} style={style} onChange={onChange} flex={flex} grid={grid} />
       )}
       <fieldset className="sbx-fieldset">
         <legend>{t('layout_as_item')}</legend>
-        <IntField id={pathId(id, 'layout.order')} label={t('layout_order')} value={f.get('layout.order')} min={-99} max={99} onChange={(v) => f.put('layout.order', v)} />
-        <IntField id={pathId(id, 'layout.grow')} label={t('layout_grow')} value={f.get('layout.grow')} min={0} max={10} onChange={(v) => f.put('layout.grow', v)} />
-        <IntField id={pathId(id, 'layout.shrink')} label={t('layout_shrink')} value={f.get('layout.shrink')} min={0} max={10} onChange={(v) => f.put('layout.shrink', v)} />
-        <Length id={id} units={LENGTH_UNITS} path="layout.basis" label={t('layout_basis')} get={f.get} put={f.put} placeholder={'auto'} />
+        {deviceScope ? (
+          <DeviceStyle scope={deviceScope} paths={RESPONSIVE_SCOPES.item} label={t('layout_as_item')}>
+            {(view) => <ItemFields id={id} style={view.style} onChange={view.onChange} />}
+          </DeviceStyle>
+        ) : <ItemFields id={id} style={style} onChange={onChange} />}
       </fieldset>
     </>
   );

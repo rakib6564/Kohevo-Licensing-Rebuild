@@ -2,7 +2,7 @@
 //
 // Desktop is the block's own `style`. Tablet and mobile keep a partial style under
 // `block.responsive.<device>.style`, limited to the paths the server accepts there (font size, padding, margin and
-// gaps). The editor only edits these document values; the server turns them into @media rules and is the only
+// the flex / grid layout). The editor only edits these document values; the server turns them into @media rules and is the only
 // place that writes CSS. A cleared field is removed, and an override left empty is removed with it.
 
 import { asObject } from './doc.mjs';
@@ -16,6 +16,9 @@ export const RESPONSIVE_SCOPES = Object.freeze({
   size: ['typography.size'],
   spacing: ['margin.top', 'margin.right', 'margin.bottom', 'margin.left', 'padding.top', 'padding.right', 'padding.bottom', 'padding.left'],
   gap: ['layout.gap', 'layout.row_gap', 'layout.column_gap'],
+  // The flex / grid layout of a container: every layout field but the display type, which stays one value for all devices.
+  layout: ['layout.direction', 'layout.wrap', 'layout.justify', 'layout.align', 'layout.align_content', 'layout.gap', 'layout.row_gap', 'layout.column_gap', 'layout.columns', 'layout.rows'],
+  item: ['layout.order', 'layout.grow', 'layout.shrink', 'layout.basis', 'layout.align_self'],
 });
 
 

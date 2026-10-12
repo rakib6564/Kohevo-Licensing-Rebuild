@@ -19,6 +19,8 @@ const CORNER_CSS = { tl: 'top-left', tr: 'top-right', br: 'bottom-right', bl: 'b
 
 const JUSTIFY = { start: 'flex-start', center: 'center', end: 'flex-end', between: 'space-between', around: 'space-around', evenly: 'space-evenly' };
 const ALIGN = { start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'stretch', baseline: 'baseline' };
+const ALIGN_CONTENT = { start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'stretch', between: 'space-between', around: 'space-around', evenly: 'space-evenly' };
+const ALIGN_SELF = { auto: 'auto', ...ALIGN };
 const POSITIONS = {
   center: 'center', top: 'top', bottom: 'bottom', left: 'left', right: 'right',
   'top-left': 'top left', 'top-right': 'top right', 'bottom-left': 'bottom left', 'bottom-right': 'bottom right',
@@ -64,9 +66,9 @@ const ok = (path, v) => surfaceAccepts(path, v);
 // ── scoped rule: StyleSurface::declarations ─────────────────────────────────
 
 const LAYOUT = [
-  ['display', 'display'], ['direction', 'flex-direction'], ['wrap', 'flex-wrap'], ['justify', 'justify-content', JUSTIFY], ['align', 'align-items', ALIGN],
+  ['display', 'display'], ['direction', 'flex-direction'], ['wrap', 'flex-wrap'], ['justify', 'justify-content', JUSTIFY], ['align', 'align-items', ALIGN], ['align_content', 'align-content', ALIGN_CONTENT],
   ['gap', 'gap'], ['row_gap', 'row-gap'], ['column_gap', 'column-gap'], ['order', 'order'], ['grow', 'flex-grow'], ['shrink', 'flex-shrink'],
-  ['basis', 'flex-basis'], ['columns', 'grid-template-columns', null, 'repeat(%d,minmax(0,1fr))'], ['rows', 'grid-template-rows', null, 'repeat(%d,minmax(0,1fr))'],
+  ['basis', 'flex-basis'], ['align_self', 'align-self', ALIGN_SELF], ['columns', 'grid-template-columns', null, 'repeat(%d,minmax(0,1fr))'], ['rows', 'grid-template-rows', null, 'repeat(%d,minmax(0,1fr))'],
 ];
 const DIMENSIONS = [
   ['min_width', 'min-width'], ['max_height', 'max-height'], ['aspect_ratio', 'aspect-ratio'], ['overflow', 'overflow'], ['object_fit', 'object-fit'],
@@ -281,11 +283,7 @@ export function responsiveDeclarations(responsive) {
     if (isObj(style.typography) && isMeasure(style.typography.size, false)) out.push(`font-size:${style.typography.size.trim()}`);
     emitSides('padding', style.padding, out);
     emitSides('margin', style.margin, out);
-    if (isObj(style.layout)) {
-      for (const [field, prop] of [['gap', 'gap'], ['row_gap', 'row-gap'], ['column_gap', 'column-gap']]) {
-        if (field in style.layout && ok(`layout.${field}`, style.layout[field])) out.push(`${prop}:${String(style.layout[field]).trim()}`);
-      }
-    }
+    emitTable('layout', style.layout, LAYOUT.filter(([field]) => field !== 'display'), out);
     if (out.length) rules.push({ query, declarations: out.map((d) => `${d} !important`) });
   }
   return rules;

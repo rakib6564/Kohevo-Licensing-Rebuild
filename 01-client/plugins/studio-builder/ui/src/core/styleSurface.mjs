@@ -14,6 +14,8 @@ export const OPTIONS = Object.freeze({
   wrap: ['nowrap', 'wrap', 'wrap-reverse'],
   justify: ['start', 'center', 'end', 'between', 'around', 'evenly'],
   align: ['start', 'center', 'end', 'stretch', 'baseline'],
+  alignContent: ['start', 'center', 'end', 'stretch', 'between', 'around', 'evenly'],
+  alignSelf: ['auto', 'start', 'center', 'end', 'stretch', 'baseline'],
   position: ['static', 'relative', 'absolute', 'sticky'],
   overflow: ['visible', 'hidden', 'auto', 'scroll'],
   objectFit: ['cover', 'contain', 'fill', 'none', 'scale-down'],
@@ -79,6 +81,8 @@ add('layout.direction', enumOf(OPTIONS.direction));
 add('layout.wrap', enumOf(OPTIONS.wrap));
 add('layout.justify', enumOf(OPTIONS.justify));
 add('layout.align', enumOf(OPTIONS.align));
+add('layout.align_content', enumOf(OPTIONS.alignContent));
+add('layout.align_self', enumOf(OPTIONS.alignSelf));
 for (const f of ['gap', 'row_gap', 'column_gap']) add(`layout.${f}`, measure(false));
 add('layout.basis', measure(true));
 add('layout.order', int(-99, 99));
