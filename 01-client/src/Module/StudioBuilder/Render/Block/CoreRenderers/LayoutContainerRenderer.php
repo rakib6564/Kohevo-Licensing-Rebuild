@@ -12,9 +12,9 @@ namespace Slate\Module\StudioBuilder\Render\Block\CoreRenderers;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
-use Slate\Module\StudioBuilder\Render\Html;
+use Slate\Module\StudioBuilder\Render\Block\WrapperClassesInterface;
 
-final class LayoutContainerRenderer implements BlockRendererInterface
+final class LayoutContainerRenderer implements BlockRendererInterface, WrapperClassesInterface
 {
     private const ALLOWED_WIDTHS = ['full', 'constrained', 'compact'];
     private const ALLOWED_ALIGNMENTS = ['left', 'center', 'right'];
@@ -29,7 +29,13 @@ final class LayoutContainerRenderer implements BlockRendererInterface
         return false;
     }
 
+    /** The children go straight into the block's own wrapper, which is the box the Layout settings style. */
     public function render(BlockRenderScope $scope): string
+    {
+        return $scope->childrenHtml();
+    }
+
+    public function wrapperClasses(BlockRenderScope $scope): array
     {
         $width = $scope->string('width', 'constrained');
         if (!in_array($width, self::ALLOWED_WIDTHS, true)) {
@@ -55,6 +61,6 @@ final class LayoutContainerRenderer implements BlockRendererInterface
             $classes[] = 'sb-pad-' . $padding;
         }
 
-        return '<div' . Html::classAttr($classes) . '>' . $scope->childrenHtml() . '</div>';
+        return $classes;
     }
 }

@@ -125,36 +125,42 @@ unit('sprint1: LayoutContainerRenderer compiles with constraint classes and alig
     $renderer = new LayoutContainerRenderer();
     assert_eq('layout.container', $renderer->type());
 
-    $html = $renderer->render(s1_scope([
+    $scope = s1_scope([
         'type' => 'layout.container',
         'props' => ['width' => 'constrained', 'alignment' => 'center', 'padding' => 'md'],
-    ], '<p>Contained</p>'));
+    ], '<p>Contained</p>');
+    $html = $renderer->render($scope);
 
-    assert_eq('<div class="sb-container sb-container--constrained sb-container--align-center sb-pad-md"><p>Contained</p></div>', $html);
+    assert_eq('<p>Contained</p>', $html, 'the children go straight into the block wrapper');
+    assert_eq(['sb-container', 'sb-container--constrained', 'sb-container--align-center', 'sb-pad-md'], $renderer->wrapperClasses($scope));
 });
 
 unit('sprint1: FlexRenderer compiles with flex direction, wrap, and justify classes', function (): void {
     $renderer = new FlexRenderer();
     assert_eq('layout.flex', $renderer->type());
 
-    $html = $renderer->render(s1_scope([
+    $scope = s1_scope([
         'type' => 'layout.flex',
         'props' => ['direction' => 'row', 'wrap' => 'wrap', 'justify' => 'between', 'align' => 'center', 'gap' => 'lg'],
-    ], '<span>Item 1</span><span>Item 2</span>'));
+    ], '<span>Item 1</span><span>Item 2</span>');
+    $html = $renderer->render($scope);
 
-    assert_eq('<div class="sb-flex sb-flex--row sb-flex--wrap sb-flex--justify-between sb-flex--align-center sb-gap-lg"><span>Item 1</span><span>Item 2</span></div>', $html);
+    assert_eq('<span>Item 1</span><span>Item 2</span>', $html, 'the children go straight into the block wrapper');
+    assert_eq(['sb-flex', 'sb-flex--row', 'sb-flex--wrap', 'sb-flex--justify-between', 'sb-flex--align-center', 'sb-gap-lg'], $renderer->wrapperClasses($scope));
 });
 
 unit('sprint1: GridRenderer compiles with columns and alignment classes', function (): void {
     $renderer = new GridRenderer();
     assert_eq('layout.grid', $renderer->type());
 
-    $html = $renderer->render(s1_scope([
+    $scope = s1_scope([
         'type' => 'layout.grid',
         'props' => ['columns' => 3, 'gap' => 'md', 'align' => 'stretch'],
-    ], '<div>A</div><div>B</div><div>C</div>'));
+    ], '<div>A</div><div>B</div><div>C</div>');
+    $html = $renderer->render($scope);
 
-    assert_eq('<div class="sb-grid sb-cols-3 sb-grid--align-stretch sb-gap-md"><div>A</div><div>B</div><div>C</div></div>', $html);
+    assert_eq('<div>A</div><div>B</div><div>C</div>', $html, 'the children go straight into the block wrapper');
+    assert_eq(['sb-grid', 'sb-cols-3', 'sb-grid--align-stretch', 'sb-gap-md'], $renderer->wrapperClasses($scope));
 });
 
 unit('sprint1: TextRenderer compiles paragraph text with size and alignment', function (): void {

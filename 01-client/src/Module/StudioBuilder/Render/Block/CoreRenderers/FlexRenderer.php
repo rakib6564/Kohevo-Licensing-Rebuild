@@ -12,9 +12,9 @@ namespace Slate\Module\StudioBuilder\Render\Block\CoreRenderers;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
-use Slate\Module\StudioBuilder\Render\Html;
+use Slate\Module\StudioBuilder\Render\Block\WrapperClassesInterface;
 
-final class FlexRenderer implements BlockRendererInterface
+final class FlexRenderer implements BlockRendererInterface, WrapperClassesInterface
 {
     private const ALLOWED_DIRECTIONS = ['row', 'column', 'row_reverse', 'column_reverse'];
     private const ALLOWED_WRAPS      = ['nowrap', 'wrap', 'wrap_reverse'];
@@ -31,7 +31,13 @@ final class FlexRenderer implements BlockRendererInterface
         return false;
     }
 
+    /** The children go straight into the block's own wrapper, which is the box the Layout settings style. */
     public function render(BlockRenderScope $scope): string
+    {
+        return $scope->childrenHtml();
+    }
+
+    public function wrapperClasses(BlockRenderScope $scope): array
     {
         $direction = $scope->string('direction', 'row');
         if (!in_array($direction, self::ALLOWED_DIRECTIONS, true)) {
@@ -67,6 +73,6 @@ final class FlexRenderer implements BlockRendererInterface
             'sb-gap-' . $gap,
         ];
 
-        return '<div' . Html::classAttr($classes) . '>' . $scope->childrenHtml() . '</div>';
+        return $classes;
     }
 }

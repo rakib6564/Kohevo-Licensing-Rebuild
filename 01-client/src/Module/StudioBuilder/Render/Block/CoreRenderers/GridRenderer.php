@@ -12,9 +12,9 @@ namespace Slate\Module\StudioBuilder\Render\Block\CoreRenderers;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
-use Slate\Module\StudioBuilder\Render\Html;
+use Slate\Module\StudioBuilder\Render\Block\WrapperClassesInterface;
 
-final class GridRenderer implements BlockRendererInterface
+final class GridRenderer implements BlockRendererInterface, WrapperClassesInterface
 {
     private const ALLOWED_ALIGN = ['start', 'center', 'end', 'stretch'];
 
@@ -28,7 +28,13 @@ final class GridRenderer implements BlockRendererInterface
         return false;
     }
 
+    /** The children go straight into the block's own wrapper, which is the box the Layout settings style. */
     public function render(BlockRenderScope $scope): string
+    {
+        return $scope->childrenHtml();
+    }
+
+    public function wrapperClasses(BlockRenderScope $scope): array
     {
         $cols = (int) ($scope->prop('columns', 2));
         if ($cols < 1 || $cols > 12) {
@@ -52,6 +58,6 @@ final class GridRenderer implements BlockRendererInterface
             'sb-gap-' . $gap,
         ];
 
-        return '<div' . Html::classAttr($classes) . '>' . $scope->childrenHtml() . '</div>';
+        return $classes;
     }
 }

@@ -32,6 +32,9 @@ import { Field, Popover } from '../ui/index.js';
 import { DeviceStyle } from './DeviceStyle.jsx';
 import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
 
+/** What a layout block is before an author picks a display: a Container and Flex are flex boxes, a Grid is a grid. */
+const LAYOUT_DISPLAY = Object.freeze({ 'core.container': 'flex', 'layout.flex': 'flex', 'layout.grid': 'grid' });
+
 /** Mirrors CanonicalDocumentSchema::Z_INDEX_MIN / Z_INDEX_MAX. */
 const Z_INDEX_MIN = -999;
 const Z_INDEX_MAX = 999;
@@ -174,7 +177,7 @@ export function BlockInspector({ info }) {
         <DimensionsExtras style={style} media={MEDIA_TYPES.has(block.type)} onChange={saveStyle} />
       </>
     ),
-    layout: () => <LayoutPane style={style} onChange={saveStyle} deviceScope={deviceScope} defaultDisplay={block.type === 'core.container' ? 'flex' : undefined} />,
+    layout: () => <LayoutPane style={style} onChange={saveStyle} deviceScope={deviceScope} defaultDisplay={LAYOUT_DISPLAY[block.type]} />,
     position: () => <PositionPane style={style} onChange={saveStyle} />,
     effects: () => <EffectsPane style={style} onChange={saveStyle} />,
     states: () => <StatesPane states={block.style_states} onChange={(next) => save(ops.updateBlockStyleStates(block.id, next))} />,
