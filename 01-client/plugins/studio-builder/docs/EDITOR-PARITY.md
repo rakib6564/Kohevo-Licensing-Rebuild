@@ -34,7 +34,7 @@ The accent stays Kohevo violet (`--sbx-accent`).
 2. Top bar (48px, logo only) and one left panel with an Edit tab: a canvas pick or a new element opens Edit; the right-hand Inspector is gone on desktop. Done.
 3. Controls (desktop): plain section headers, label-left rows for every single-line field, joined unit fields, a slim device mark. Done as one final CSS layer, "Editor controls", at the end of `builder.css`; the phone sheet keeps its 44px controls.
 4. Add panel: folding groups, a New badge, quieter tiles, and the two "Container" tiles told apart. Still to do: fold the search, the six sub-tabs and the category chips into one lighter header.
-5. Canvas: outline, floating toolbar, empty drop zone, layout chooser.
+5. Canvas: outline, floating toolbar, empty drop zone, layout chooser. Done.
 6. Structure (Navigator) window.
 7. Library modal.
 8. Globals: colour and font tokens.

@@ -17,8 +17,8 @@ const BUBBLE_CLASS = 'sbx-text-bubble';
 
 const OVERLAY_CSS = `
 /* An empty layout block would otherwise collapse to a hairline and be impossible to see or pick. */
-.sb-grid:empty, .sb-flex:empty, .sb-stack:empty, .sb-card:empty {
-  min-height: 56px;
+.sb-grid:empty, .sb-flex:empty, .sb-stack:empty, .sb-card:empty, .sb-container:empty {
+  min-height: 160px;
   outline: 1px dashed rgba(139, 92, 246, 0.45);
   outline-offset: -1px;
 }

@@ -2,7 +2,7 @@
 // premium dark cards with green-tinted stroke outline icons, clean microcopy,
 // drag & drop support, and single-click insertion.
 
-import { memo, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { useEditor, useEngineState } from './EditorContext.jsx';
 import { t } from '../core/messages.mjs';
 import { asList } from '../core/doc.mjs';
@@ -115,10 +115,14 @@ function AiPanel({ boot, onReview }) {
 }
 
 export const BlockPalette = memo(function BlockPalette({ compact = false }) {
-  const { boot, manifest, insertBlock, insertSection, insertBlockWithProps, openAiReview } = useEditor();
+  const { boot, manifest, insertBlock, insertSection, insertBlockWithProps, openAiReview, panelRequest } = useEditor();
   const [query, setQuery] = useState('');
   const [categoryTab, setCategoryTab] = useState('sections');
   const [favorites, setFavorites] = useState(new Set());
+  // A button on the canvas (an empty container's Add, AI) can ask for a sub-tab.
+  useEffect(() => {
+    if (!compact && panelRequest && panelRequest.tab === 'blocks' && panelRequest.sub) { setCategoryTab(panelRequest.sub); setQuery(''); }
+  }, [panelRequest, compact]);
 
   const toggleFavorite = (e, key) => {
     e.stopPropagation();

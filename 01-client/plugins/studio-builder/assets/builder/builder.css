@@ -3335,3 +3335,22 @@ html, body.sbx-body {
   .sbx-left .sbx-tile:hover .sbx-tile__icon { color: var(--sbx-accent-text); }
   .sbx-left .sbx-tile__label { font-weight: 400; font-size: var(--sbx-fs-sm); color: var(--sbx-text); }
 }
+
+/* ── Canvas: the drop zone of an empty container, and the layout chooser ───────────────────────────────────────── */
+.sbx-overlay__zone { position: absolute; display: flex; align-items: center; justify-content: center; pointer-events: none; box-sizing: border-box; }
+.sbx-overlay__emptyhint, .sbx-overlay__chooser { display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 100%; }
+.sbx-overlay__zonebtns { display: inline-flex; gap: 8px; }
+.sbx-overlay__zonebtn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: var(--sbx-r-pill); background: var(--sbx-inset); color: var(--sbx-panel); cursor: pointer; pointer-events: auto; }
+.sbx-overlay__zonebtn:hover { background: var(--sbx-accent); color: var(--sbx-accent-ink); }
+.sbx-overlay__zonebtn:focus-visible { box-shadow: var(--sbx-focus); outline: none; }
+.sbx-overlay__zone.is-compact .sbx-overlay__zonebtn { width: 28px; height: 28px; }
+.sbx-overlay__zonetext { margin: 0; font-size: var(--sbx-fs-md); font-style: italic; color: var(--sbx-text-faint); }
+.sbx-overlay__chooser { position: relative; width: 100%; height: 100%; min-height: 128px; justify-content: center; pointer-events: auto; }
+.sbx-overlay__chooser .sbx-overlay__zonetext { font-style: normal; color: var(--sbx-panel); }
+.sbx-overlay__choices { display: inline-flex; gap: 28px; }
+.sbx-overlay__choice { display: inline-flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 10px; border: 0; border-radius: var(--sbx-r-md); background: transparent; color: var(--sbx-panel); font: inherit; font-size: var(--sbx-fs-md); cursor: pointer; }
+.sbx-overlay__choice svg rect { fill: var(--sbx-selected); stroke: none; }
+.sbx-overlay__choice svg rect.is-dashed { fill: none; stroke: var(--sbx-text-faint); stroke-dasharray: 2 2; stroke-width: 1; }
+.sbx-overlay__choice:hover, .sbx-overlay__choice:focus-visible { background: var(--sbx-inset); outline: none; box-shadow: var(--sbx-focus); }
+.sbx-overlay__zoneclose { position: absolute; top: 6px; right: 8px; width: 26px; height: 26px; padding: 0; border: 0; border-radius: var(--sbx-r-sm); background: transparent; color: var(--sbx-panel); font-size: 20px; line-height: 1; cursor: pointer; }
+.sbx-overlay__zoneclose:hover { background: var(--sbx-inset); }

@@ -64,9 +64,13 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   const selectionRef = useRef(null);
   selectionRef.current = selection;
   const setSelection = useCallback((id) => setSel((s) => selectOnly(s, id)), []);
-  // A pick on the canvas, or a new element, asks the left panel (below, in Workspace) to show its Edit tab: a counter it reacts to.
-  const [editTick, setEditTick] = useState(0);
-  const requestEdit = useCallback(() => setEditTick((n) => n + 1), []);
+  // A pick on the canvas, a new element, or a button on an empty container asks the left panel (below, in Workspace) to
+  // show a tab (and an Add sub-tab): `n` counts requests so the same one can be asked twice.
+  const [panelRequest, setPanelRequest] = useState({ tab: null, sub: null, n: 0 });
+  const requestPanel = useCallback((tab, sub = null) => setPanelRequest((r) => ({ tab, sub, n: r.n + 1 })), []);
+  const requestEdit = useCallback(() => requestPanel('inspector'), [requestPanel]);
+  // A Container just added asks, on the canvas, which layout it should use (Flexbox or Grid): the id of that block.
+  const [layoutChooser, setLayoutChooser] = useState(null);
   const [announcement, setAnnouncement] = useState('');
   // A phone starts on the Mobile device so the canvas is not a shrunken desktop page.
   const [viewportKey, setViewportKey] = useState(() => (isMobileShellNow() ? 'mobile' : 'desktop'));
@@ -95,6 +99,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     pageId: boot.pageId,
     onRemap: (tmp, real) => {
       setSel((s) => remapSelection(s, new Map([[tmp, real]])));
+      setLayoutChooser((id) => (id === tmp ? real : id));
     },
     onEvent: (e) => {
       switch (e.type) {
@@ -258,6 +263,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     if (engine.apply(ops.insertBlock(where.parentId, where.index, block), { provisionalId, label: def ? def.label : type })) {
       setSelection(provisionalId);
       requestEdit();
+      if (type === 'core.container') setLayoutChooser(provisionalId);
       announce(t('announce_inserted', { label: def ? def.label : type }));
     }
   }, [engine, manifest, announce, requestEdit]);
@@ -633,7 +639,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView,
     insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf,
     copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, peekClipboard: peekMemory,
-    viewport: viewportByKey(viewportKey), setViewport: changeViewport, tokensSaved: onTokensSaved, refreshManifest, editTick, requestEdit,
+    viewport: viewportByKey(viewportKey), setViewport: changeViewport, tokensSaved: onTokensSaved, refreshManifest, panelRequest, requestPanel, requestEdit, layoutChooser, setLayoutChooser,
     library: libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate,
     insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion,
     openSaveTemplate: () => setDialog('save_template'),
@@ -643,7 +649,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     openHistory: () => setHistoryOpen(true),
     openTheme: manifest && manifest.permissions && (manifest.permissions.tokens || manifest.permissions.view) ? () => setDialog('theme') : null,
     openPackages: manifest && manifest.permissions && manifest.permissions.view ? () => setDialog('package') : null,
-  }), [boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, viewportKey, changeViewport, onTokensSaved, refreshManifest, editTick, requestEdit,
+  }), [boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, viewportKey, changeViewport, onTokensSaved, refreshManifest, panelRequest, requestPanel, requestEdit, layoutChooser, setLayoutChooser,
     libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
 
   const selectionCtx = useMemo(() => ({
@@ -756,12 +762,12 @@ export function ShellLayout({
   useEffect(() => {
     if (selection && editing && isMobile) setActiveTab('inspector');
   }, [selection, editing, isMobile]);
-  const { editTick } = useEditor();
+  const { panelRequest } = useEditor();
   useEffect(() => {
-    if (!editTick || isMobile) return;
+    if (!panelRequest.n || !panelRequest.tab || isMobile) return;
     setCollapsed(false);
-    setActiveTab('inspector');
-  }, [editTick, isMobile]);
+    setActiveTab(panelRequest.tab);
+  }, [panelRequest, isMobile]);
 
   // Edit toggle: open the left panel on its Edit tab; a second press collapses the panel for a full-width canvas.
   const inspectorOpen = isMobile ? (mobileOpen && activeTab === 'inspector') : (!collapsed && activeTab === 'inspector');

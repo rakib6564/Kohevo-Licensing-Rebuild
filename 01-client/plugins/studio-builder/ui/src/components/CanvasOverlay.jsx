@@ -1,4 +1,4 @@
-// CanvasOverlay — the selection box, name chip and contextual toolbar.
+// CanvasOverlay — the selection box, name chip and contextual toolbar, and the drop zone of an empty container.
 //
 // Drawn in the PARENT document above the canvas stage, positioned from the
 // rectangles of `[data-sb-node]` elements inside the script-less canvas iframe.
@@ -7,7 +7,8 @@
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
-import { childrenOf, findNode, sectionsOf } from '../core/doc.mjs';
+import { asList, blockDefinition, childrenOf, findNode, sectionsOf } from '../core/doc.mjs';
+import * as ops from '../core/operations.mjs';
 import { effectivelyLocked, lockIndex } from '../core/layerLock.mjs';
 import { clipTo, frameScale, placeFloating, rect, selectionCorners, stepId, toOverlayRect, unionRect } from '../core/overlayGeometry.mjs';
 import { t } from '../core/messages.mjs';
@@ -15,6 +16,25 @@ import { t } from '../core/messages.mjs';
 const NODE_ATTR = 'data-sb-node';
 const FALLBACK_BAR = { width: 280, height: 30 };
 const MAX_AID_NODES = 300;
+/** Layout blocks that are an invitation when empty: an empty one says "drag a widget here" and offers Add. */
+const ZONE_TYPES = new Set(['core.container', 'layout.container', 'layout.flex', 'layout.grid']);
+/** An empty box shorter than this only has room for the Add button. */
+const ZONE_ROOMY = 96;
+/** The chooser is asked for, so it shows even in a box smaller than this (a zoomed-out canvas): its content may overflow. */
+
+function emptyZoneIds(doc, manifest) {
+  const out = [];
+  const walk = (blocks) => {
+    for (const b of asList(blocks)) {
+      if (!b || !b.id) continue;
+      const kids = asList(b.children);
+      if (ZONE_TYPES.has(b.type) && kids.length === 0 && blockDefinition(manifest, b.type)) out.push(b.id);
+      walk(kids);
+    }
+  };
+  for (const section of sectionsOf(doc)) walk(section.blocks);
+  return out;
+}
 
 const cssEscape = (id) => (typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(id) : String(id).replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`));
 
@@ -25,6 +45,20 @@ const ICONS = {
   duplicate: <><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></>,
   remove: <><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></>,
 };
+
+const ZONE_ICONS = {
+  add: <path d="M12 5v14M5 12h14" />,
+  templates: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />,
+  ai: <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" />,
+};
+
+function ZoneButton({ action, label, onClick }) {
+  return (
+    <button type="button" className="sbx-overlay__zonebtn" data-zone-action={action} data-testid={`zone-${action}`} aria-label={label} title={label} onClick={onClick}>
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{ZONE_ICONS[action]}</svg>
+    </button>
+  );
+}
 
 function ToolbarButton({ action, label, disabled, tabIndex, onClick, onFocus, refCb }) {
   return (
@@ -55,15 +89,19 @@ function ToolbarButton({ action, label, disabled, tabIndex, onClick, onFocus, re
  * @param {(action: string, id: string) => void} props.onAction
  */
 export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, scale, enabled, outlines = false, labels = false, onAction }) {
-  const { labelOf } = useEditor();
-  const { selection, selectedIds } = useSelection();
+  const { labelOf, manifest, applyOp, requestPanel, layoutChooser, setLayoutChooser } = useEditor();
+  const { selection, selectedIds, select } = useSelection();
   const working = useEngineState((s) => s.working);
   const rootRef = useRef(null);
   const barRef = useRef(null);
   const buttonRefs = useRef([]);
-  const [geo, setGeo] = useState({ items: [], bounds: rect(0, 0, 0, 0), outlines: [], labels: [] });
+  const [geo, setGeo] = useState({ items: [], bounds: rect(0, 0, 0, 0), outlines: [], labels: [], zones: [] });
   const workingRef = useRef(null);
   workingRef.current = working;
+  const zoneIds = useMemo(() => emptyZoneIds(working, manifest), [working, manifest]);
+  const zoneIdsRef = useRef(zoneIds);
+  zoneIdsRef.current = zoneIds;
+  const zoneKey = zoneIds.join(',');
   const [barSize, setBarSize] = useState(FALLBACK_BAR);
   const [activeIdx, setActiveIdx] = useState(0);
   const lastKey = useRef('');
@@ -72,8 +110,8 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
   const measure = useCallback(() => {
     const root = rootRef.current;
     const frame = frameRef.current;
-    if (!root || !frame || !enabled || (!selectedIds.length && !outlines && !labels)) {
-      if (lastKey.current !== '') { lastKey.current = ''; setGeo({ items: [], bounds: rect(0, 0, 0, 0), outlines: [], labels: [] }); }
+    if (!root || !frame || !enabled || (!selectedIds.length && !outlines && !labels && !zoneIdsRef.current.length)) {
+      if (lastKey.current !== '') { lastKey.current = ''; setGeo({ items: [], bounds: rect(0, 0, 0, 0), outlines: [], labels: [], zones: [] }); }
       return;
     }
     let doc = null;
@@ -118,11 +156,16 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
         if (hit) labelTags.push({ ...hit, text: section.label || t('section') });
       }
     }
-    const key = JSON.stringify([items.map((i) => [i.id, i.visible]), outlineBoxes.map((i) => [i.id, i.visible]), labelTags.map((i) => [i.id, i.text, i.visible]), bounds]);
+    const zones = [];
+    for (const id of zoneIdsRef.current) {
+      const hit = place(id);
+      if (hit) zones.push(hit);
+    }
+    const key = JSON.stringify([items.map((i) => [i.id, i.visible]), outlineBoxes.map((i) => [i.id, i.visible]), labelTags.map((i) => [i.id, i.text, i.visible]), zones.map((i) => [i.id, i.visible]), bounds]);
     if (key === lastKey.current) return;
     lastKey.current = key;
-    setGeo({ items, bounds, outlines: outlineBoxes, labels: labelTags });
-  }, [frameRef, enabled, selectedIds, outlines, labels]);
+    setGeo({ items, bounds, outlines: outlineBoxes, labels: labelTags, zones });
+  }, [frameRef, enabled, selectedIds, outlines, labels, zoneKey]);
 
   const schedule = useCallback(() => {
     if (frameRaf.current) return;
@@ -130,7 +173,7 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
   }, [measure]);
 
   // Re-measure whenever what we draw from can have changed.
-  useEffect(() => { lastKey.current = ''; schedule(); }, [schedule, working, scale, selectedIds, outlines, labels]);
+  useEffect(() => { lastKey.current = ''; schedule(); }, [schedule, working, scale, selectedIds, outlines, labels, zoneKey]);
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -227,6 +270,54 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
 
   return (
     <div className="sbx-overlay" ref={rootRef} data-testid="canvas-overlay" data-active={enabled && selectedIds.length ? 'true' : 'false'}>
+      {enabled && geo.zones.map((z) => {
+        const roomy = z.visible.height >= ZONE_ROOMY && z.visible.width >= 160;
+        const choosing = layoutChooser === z.id;
+        const pick = (layout) => {
+          setLayoutChooser(null);
+          if (layout === 'grid') {
+            const info = findNode(working, z.id);
+            const style = info && info.node.style && typeof info.node.style === 'object' ? info.node.style : {};
+            applyOp(ops.updateBlockStyle(z.id, { ...style, layout: { ...(style.layout || {}), display: 'grid', columns: 2 } }), { label: t('chooser_grid') });
+          }
+        };
+        const ask = (tab, sub) => { select(z.id); requestPanel(tab, sub); };
+        return (
+          <div
+            key={`z-${z.id}`}
+            className={`sbx-overlay__zone${roomy ? '' : ' is-compact'}`}
+            data-testid="overlay-empty"
+            data-zone-for={z.id}
+            style={{ left: z.visible.left, top: z.visible.top, width: z.visible.width, height: z.visible.height }}
+          >
+            {choosing ? (
+              <div className="sbx-overlay__chooser" role="group" aria-label={t('chooser_title')} data-testid="layout-chooser">
+                <button type="button" className="sbx-overlay__zoneclose" data-testid="chooser-close" aria-label={t('chooser_close')} title={t('chooser_close')} onClick={() => setLayoutChooser(null)}>×</button>
+                <p className="sbx-overlay__zonetext">{t('chooser_title')}</p>
+                <div className="sbx-overlay__choices">
+                  <button type="button" className="sbx-overlay__choice" data-layout="flex" onClick={() => pick('flex')}>
+                    <svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true"><rect x="4" y="4" width="18" height="40" /><rect x="24" y="4" width="20" height="19" /><rect x="24" y="25" width="20" height="19" /></svg>
+                    <span>{t('chooser_flex')}</span>
+                  </button>
+                  <button type="button" className="sbx-overlay__choice" data-layout="grid" onClick={() => pick('grid')}>
+                    <svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true"><rect className="is-dashed" x="4" y="4" width="18" height="18" /><rect className="is-dashed" x="24" y="4" width="20" height="18" /><rect className="is-dashed" x="4" y="24" width="18" height="20" /><rect className="is-dashed" x="24" y="24" width="20" height="20" /></svg>
+                    <span>{t('chooser_grid')}</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="sbx-overlay__emptyhint">
+                <span className="sbx-overlay__zonebtns">
+                  <ZoneButton action="add" label={t('zone_add')} onClick={() => ask('blocks', 'elements')} />
+                  {roomy && <ZoneButton action="templates" label={t('zone_templates')} onClick={() => ask('library', null)} />}
+                  {roomy && <ZoneButton action="ai" label={t('zone_ai')} onClick={() => ask('blocks', 'ai')} />}
+                </span>
+                {roomy && <span className="sbx-overlay__zonetext">{t('zone_drag_here')}</span>}
+              </div>
+            )}
+          </div>
+        );
+      })}
       {enabled && outlines && geo.outlines.map((o) => (
         <div
           key={`o-${o.id}`}
