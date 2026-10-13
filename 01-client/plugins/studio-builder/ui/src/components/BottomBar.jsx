@@ -16,6 +16,7 @@ const SHORTCUTS = [
   [`${MOD} ⇧ Z`, 'shortcut_redo'],
   [`${MOD} S`, 'shortcut_save'],
   [`${MOD} K`, 'shortcut_search'],
+  [`${MOD} I`, 'shortcut_structure'],
   [`${MOD} D`, 'shortcut_duplicate'],
   [`${MOD} click`, 'shortcut_multi'],
   ['⇧ click', 'shortcut_range'],

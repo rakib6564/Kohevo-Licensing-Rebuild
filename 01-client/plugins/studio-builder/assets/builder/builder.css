@@ -3354,3 +3354,9 @@ html, body.sbx-body {
 .sbx-overlay__choice:hover, .sbx-overlay__choice:focus-visible { background: var(--sbx-inset); outline: none; box-shadow: var(--sbx-focus); }
 .sbx-overlay__zoneclose { position: absolute; top: 6px; right: 8px; width: 26px; height: 26px; padding: 0; border: 0; border-radius: var(--sbx-r-sm); background: transparent; color: var(--sbx-panel); font-size: 20px; line-height: 1; cursor: pointer; }
 .sbx-overlay__zoneclose:hover { background: var(--sbx-inset); }
+
+/* Structure window (desktop): the outline floating over the editor. */
+.sbx-structure-window { position: fixed; z-index: 60; width: 300px; height: 440px; min-width: 240px; min-height: 200px; max-width: 60vw; max-height: calc(100vh - 96px); display: flex; flex-direction: column; resize: both; overflow: hidden; background: var(--sbx-panel); border: 1px solid var(--sbx-border); border-radius: var(--sbx-r-md); box-shadow: var(--sbx-shadow-lg); color: var(--sbx-text); }
+.sbx-structure-window__bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px 6px 12px; background: var(--sbx-panel-elevated); border-bottom: 1px solid var(--sbx-border); cursor: grab; touch-action: none; user-select: none; }
+.sbx-structure-window__bar:active { cursor: grabbing; }
+.sbx-structure-window__body { flex: 1; min-height: 0; overflow: auto; padding: 6px 4px; }

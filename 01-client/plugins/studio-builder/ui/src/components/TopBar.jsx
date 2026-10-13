@@ -25,6 +25,7 @@ import {
   IconSparkles,
   IconMenu,
   IconSliders,
+  IconLayers,
 } from './Icons.jsx';
 
 const STATUS_KEY = {
@@ -93,6 +94,8 @@ export const TopBar = memo(function TopBar({
   onPackages = null,
   onOpenMobileDock = null,
   onResponsiveView = null,
+  structureOpen = false,
+  onToggleStructure = null,
 }) {
   const { boot, engine, manifest } = useEditor();
   const page = useEngineState((s) => s.page);
@@ -328,6 +331,19 @@ export const TopBar = memo(function TopBar({
       <div className="sbx-topbar__right">
         {/* Secondary Tool Actions */}
         <div className="sbx-topbar__tools">
+          {onToggleStructure && (
+            <button
+              type="button"
+              className="sbx-btn sbx-btn--icon"
+              data-testid="toggle-structure"
+              aria-pressed={structureOpen}
+              onClick={onToggleStructure}
+              title={t('structure_toggle')}
+              aria-label={t('panel_structure')}
+            >
+              <IconLayers size={15} />
+            </button>
+          )}
           <button
             type="button"
             className="sbx-btn sbx-btn--icon"

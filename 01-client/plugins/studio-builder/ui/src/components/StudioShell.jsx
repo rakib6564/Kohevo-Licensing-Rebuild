@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { EditorContext, SelectionContext, useEditor, useSelection } from './EditorContext.jsx';
+import { StructureWindow } from './StructureWindow.jsx';
 import { TopBar } from './TopBar.jsx';
 import { LeftPanel } from './LeftPanel.jsx';
 import { CanvasArea } from './CanvasArea.jsx';
@@ -71,6 +72,9 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   const requestEdit = useCallback(() => requestPanel('inspector'), [requestPanel]);
   // A Container just added asks, on the canvas, which layout it should use (Flexbox or Grid): the id of that block.
   const [layoutChooser, setLayoutChooser] = useState(null);
+  // The floating Structure window (desktop): the page outline over the canvas.
+  const [structureOpen, setStructureOpen] = useState(false);
+  const toggleStructure = useCallback(() => setStructureOpen((o) => !o), []);
   const [announcement, setAnnouncement] = useState('');
   // A phone starts on the Mobile device so the canvas is not a shrunken desktop page.
   const [viewportKey, setViewportKey] = useState(() => (isMobileShellNow() ? 'mobile' : 'desktop'));
@@ -618,6 +622,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
       const typing = e.target && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName));
       if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); save(); return; }
       if (typing) return;
+      if (mod && e.key.toLowerCase() === 'i' && !isMobileShellNow()) { e.preventDefault(); toggleStructure(); return; }
       // Copy / Cut / Paste when the canvas side has focus (Layers rows handle their own keys, on the focused row).
       if (mod && /^[cxv]$/i.test(e.key) && e.target && (e.target === document.body || (e.target.closest && e.target.closest('.sbx-canvas'))) && clipboardShortcut(e)) return;
       if (mod && e.key.toLowerCase() === 'd' && selectionRef.current) {
@@ -631,7 +636,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [engine, save, undo, redo, duplicateNode, clipboardShortcut]);
+  }, [engine, save, undo, redo, duplicateNode, clipboardShortcut, toggleStructure]);
 
   const libraryWithPresets = useMemo(() => (library ? { ...library, presets: presets === null ? undefined : presets } : library), [library, presets]);
 
@@ -639,7 +644,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView,
     insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf,
     copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, peekClipboard: peekMemory,
-    viewport: viewportByKey(viewportKey), setViewport: changeViewport, tokensSaved: onTokensSaved, refreshManifest, panelRequest, requestPanel, requestEdit, layoutChooser, setLayoutChooser,
+    viewport: viewportByKey(viewportKey), setViewport: changeViewport, tokensSaved: onTokensSaved, refreshManifest, panelRequest, requestPanel, requestEdit, layoutChooser, setLayoutChooser, structureOpen, setStructureOpen, toggleStructure,
     library: libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate,
     insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion,
     openSaveTemplate: () => setDialog('save_template'),
@@ -649,7 +654,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     openHistory: () => setHistoryOpen(true),
     openTheme: manifest && manifest.permissions && (manifest.permissions.tokens || manifest.permissions.view) ? () => setDialog('theme') : null,
     openPackages: manifest && manifest.permissions && manifest.permissions.view ? () => setDialog('package') : null,
-  }), [boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, viewportKey, changeViewport, onTokensSaved, refreshManifest, panelRequest, requestPanel, requestEdit, layoutChooser, setLayoutChooser,
+  }), [boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, viewportKey, changeViewport, onTokensSaved, refreshManifest, panelRequest, requestPanel, requestEdit, layoutChooser, setLayoutChooser, structureOpen, setStructureOpen, toggleStructure,
     libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
 
   const selectionCtx = useMemo(() => ({
@@ -734,7 +739,7 @@ export function ShellLayout({
   onTheme = null, dialogs = null, onAiReview = null, onPackages = null,
 }) {
   const { selection, select } = useSelection();
-  const { canvasView } = useEditor();
+  const { canvasView, structureOpen, setStructureOpen, toggleStructure } = useEditor();
   const [activeTab, setActiveTab] = useState(() => (selection ? 'inspector' : 'structure'));
   const isMobile = useIsMobileShell();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -835,6 +840,8 @@ export function ShellLayout({
         onPublish={onPublish}
         onHistory={() => setHistoryOpen(true)}
         onResponsiveView={isMobile ? () => setResponsiveOpen(true) : null}
+        structureOpen={structureOpen}
+        onToggleStructure={isMobile ? null : toggleStructure}
         onTheme={onTheme}
         onAiReview={onAiReview}
         onPackages={onPackages}
@@ -885,6 +892,7 @@ export function ShellLayout({
         }}
         hasSelection={!!selection}
       />
+      {structureOpen && !isMobile && <StructureWindow onClose={() => setStructureOpen(false)} />}
       <LiveRegion text={announcement} />
       {notice && <div className="sbx-toast" aria-hidden="true" data-testid="toast">{notice}</div>}
       {pendingInsert && <InsertDialog request={pendingInsert} onCancel={onCancelInsert} onConfirm={onConfirmInsert} />}

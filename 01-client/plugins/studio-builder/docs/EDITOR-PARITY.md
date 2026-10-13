@@ -35,6 +35,6 @@ The accent stays Kohevo violet (`--sbx-accent`).
 3. Controls (desktop): plain section headers, label-left rows for every single-line field, joined unit fields, a slim device mark. Done as one final CSS layer, "Editor controls", at the end of `builder.css`; the phone sheet keeps its 44px controls.
 4. Add panel: folding groups, a New badge, quieter tiles, and the two "Container" tiles told apart. Still to do: fold the search, the six sub-tabs and the category chips into one lighter header.
 5. Canvas: outline, floating toolbar, empty drop zone, layout chooser. Done.
-6. Structure (Navigator) window.
+6. Structure (Navigator) window: a floating, draggable, resizable window with the page outline, from the top bar or Ctrl/⌘ I (desktop). Done.
 7. Library modal.
 8. Globals: colour and font tokens.
