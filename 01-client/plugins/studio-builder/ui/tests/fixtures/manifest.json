@@ -3401,7 +3401,7 @@
                 "padding": "none",
                 "width": "constrained"
             },
-            "description": "Constrained width container",
+            "description": "A container with a set width, alignment and padding",
             "field_schema": [
                 {
                     "key": "width",
@@ -3446,7 +3446,7 @@
             ],
             "icon": "box",
             "inline_text": [],
-            "label": "Container",
+            "label": "Width container",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
             "style_capabilities": [
@@ -3473,7 +3473,7 @@
                 "margin",
                 "padding"
             ],
-            "title": "Container",
+            "title": "Width container",
             "type": "layout.container",
             "version": 1
         },

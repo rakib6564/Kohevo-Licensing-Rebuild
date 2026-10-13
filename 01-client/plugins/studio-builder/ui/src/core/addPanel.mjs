@@ -10,6 +10,10 @@ import { isDynamicBlock } from '../components/blockKinds.mjs';
 /** Block categories in display order (manifest `category`); unknown ones sort last. */
 export const BLOCK_CATEGORY_ORDER = ['layout', 'content', 'media', 'forms', 'business', 'advanced', 'theme'];
 
+/** Blocks added recently enough to carry a "New" badge in the Add panel. Drop a type from here when it is no longer news. */
+export const NEW_BLOCKS = Object.freeze(['core.nav_menu', 'core.map', 'core.divider', 'core.spacer']);
+export const isNewBlock = (def) => !!def && !def.variantKey && NEW_BLOCKS.includes(def.type);
+
 /** Cards shown per category before "View all". */
 export const GROUP_PREVIEW = 6;
 

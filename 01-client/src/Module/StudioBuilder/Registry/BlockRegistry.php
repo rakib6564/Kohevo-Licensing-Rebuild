@@ -288,9 +288,9 @@ final class BlockRegistry
         $registry->register(new DeclarativeBlockDefinition(
             type: 'layout.container',
             version: 1,
-            label: 'Container',
-            title: 'Container',
-            description: 'Constrained width container',
+            label: 'Width container',
+            title: 'Width container',
+            description: 'A container with a set width, alignment and padding',
             category: 'layout',
             icon: 'box',
             schema: FieldSchema::define([

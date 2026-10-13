@@ -1124,6 +1124,7 @@ $sbBoot = [
         'pal_all' => __('studio_ui_pal_all', 'All'),
         'pal_category_rail' => __('studio_ui_pal_category_rail', 'Categories'),
         'pal_view_all' => __('studio_ui_pal_view_all', 'View all ({count})'),
+        'pal_new' => __('studio_ui_pal_new', 'New'),
         'row_drag_handle' => __('studio_ui_row_drag_handle', 'Drag to reorder {label}'),
         'row_drag_hint' => __('studio_ui_row_drag_hint', 'Drag, or press the up and down arrow keys to move it.'),
         'nav_tools_label' => __('studio_ui_nav_tools_label', 'Page tools'),

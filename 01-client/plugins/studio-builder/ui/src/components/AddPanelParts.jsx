@@ -6,7 +6,7 @@ import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { renderBlockIcon, DRAG_TYPE_NEW } from './blockIcons.jsx';
 import { t } from '../core/messages.mjs';
 import { Tile } from './ui/index.js';
-import { blockInsertState, presetInsertState, reasonKey } from '../core/addPanel.mjs';
+import { blockInsertState, isNewBlock, presetInsertState, reasonKey } from '../core/addPanel.mjs';
 
 /** The working document, the manifest and the primary selection: what insertion rules depend on. */
 export function useInsertContext() {
@@ -65,7 +65,9 @@ export function BlockCard({ def, onInsert }) {
       icon={renderBlockIcon(def.type, def.icon, def.label)}
       label={title}
       srText={def.description || t('pal_block_component_fallback')}
-    />
+    >
+      {isNewBlock(def) && !disabled ? <span className="sbx-tile__badge" data-testid="new-badge">{t('pal_new')}</span> : null}
+    </Tile>
   );
 }
 

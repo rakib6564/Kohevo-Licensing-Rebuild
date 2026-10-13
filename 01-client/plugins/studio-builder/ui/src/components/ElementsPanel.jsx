@@ -1,6 +1,7 @@
-// ElementsPanel — plain building blocks grouped by category, with a category rail and "View all".
+// ElementsPanel — plain building blocks grouped by category, with a category rail and "View all". Each group folds
+// away under its heading (kept for this visit only: the builder never touches browser storage).
 
-import { memo, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useEditor } from './EditorContext.jsx';
 import { TileGrid } from './ui/index.js';
 import { BlockCard, CategoryRail, blockCategoryLabel } from './AddPanelParts.jsx';
@@ -10,6 +11,12 @@ import { GROUP_PREVIEW, blocksWithVariants, groupBlocks, isElementBlock } from '
 export const ElementsPanel = memo(function ElementsPanel() {
   const { manifest, insertBlock } = useEditor();
   const [cat, setCat] = useState('all');
+  const [folded, setFolded] = useState(() => new Set());
+  const toggleFold = useCallback((category) => setFolded((prev) => {
+    const next = new Set(prev);
+    if (next.has(category)) next.delete(category); else next.add(category);
+    return next;
+  }), []);
   const groups = useMemo(() => groupBlocks(blocksWithVariants(manifest).filter(isElementBlock), '', blockCategoryLabel), [manifest.blocks, manifest.variants]);
   const active = groups.some((g) => g.category === cat) ? cat : 'all';
   const shown = active === 'all' ? groups : groups.filter((g) => g.category === active);
@@ -20,17 +27,30 @@ export const ElementsPanel = memo(function ElementsPanel() {
       {shown.map((g) => {
         const preview = active === 'all' && g.items.length > GROUP_PREVIEW;
         const items = preview ? g.items.slice(0, GROUP_PREVIEW) : g.items;
+        const isFolded = folded.has(g.category);
         return (
           <section key={g.category} className="sbx-elements__group" aria-labelledby={`sbx-el-cat-${g.category}`}>
             <div className="sbx-elements__head">
-              <h3 id={`sbx-el-cat-${g.category}`} className="sbx-palette__category">{blockCategoryLabel(g.category)}</h3>
-              {preview && (
+              <h3 id={`sbx-el-cat-${g.category}`} className="sbx-palette__category">
+                <button
+                  type="button"
+                  className="sbx-elements__fold"
+                  aria-expanded={!isFolded}
+                  aria-controls={`sbx-el-grid-${g.category}`}
+                  data-fold={g.category}
+                  onClick={() => toggleFold(g.category)}
+                >
+                  <span className="sbx-elements__caret" aria-hidden="true" />
+                  {blockCategoryLabel(g.category)}
+                </button>
+              </h3>
+              {preview && !isFolded && (
                 <button type="button" className="sbx-link-btn" data-view-all={g.category} onClick={() => setCat(g.category)}>
                   {t('pal_view_all', { count: g.items.length })}
                 </button>
               )}
             </div>
-            <TileGrid>
+            <TileGrid id={`sbx-el-grid-${g.category}`} hidden={isFolded}>
               {items.map((b) => <BlockCard key={b.variantKey || b.type} def={b} onInsert={insertBlock} />)}
             </TileGrid>
           </section>

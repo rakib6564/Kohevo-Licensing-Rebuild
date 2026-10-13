@@ -1236,6 +1236,7 @@ return [
     'studio_ui_pal_all' => 'Tout',
     'studio_ui_pal_category_rail' => 'Catégories',
     'studio_ui_pal_view_all' => 'Tout voir ({count})',
+    'studio_ui_pal_new' => 'Nouveau',
     'studio_ui_row_drag_handle' => 'Glisser pour réordonner {label}',
     'studio_ui_row_drag_hint' => 'Glissez, ou utilisez les flèches haut et bas pour la déplacer.',
     'studio_ui_nav_tools_label' => 'Outils de la page',

@@ -753,6 +753,7 @@ const EN = {
   pal_all: 'All',
   pal_category_rail: 'Categories',
   pal_view_all: 'View all ({count})',
+  pal_new: 'New',
   pal_reason_blocks_limit: 'This page has reached its block limit.',
   pal_reason_sections_limit: 'This page has reached its section limit.',
   pal_reason_not_allowed: 'This cannot go inside the selected item. Select a section instead.',
