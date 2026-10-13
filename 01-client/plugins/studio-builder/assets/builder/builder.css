@@ -3274,3 +3274,46 @@ html, body.sbx-body {
 .sbx-inspector > .sbx-inspector__bar { margin-top: auto; }
 .sbx-left__body--inspector:not([hidden]) { display: flex; flex-direction: column; }
 .sbx-left__body--inspector > .sbx-inspector-host { flex: 1 0 auto; }
+
+/* ── Editor controls (desktop): the Edit panel's rhythm ─────────────────────────────────────────────────────────────
+   One final layer for the controls in the Edit tab: plain section headers with a hairline between them, a quiet label
+   on the left and the control on the right for every single-line field, a unit that joins its number, and a device
+   mark that sits on one slim row. Earlier layers above stay for the phone sheet, which keeps its 44px controls. */
+@media (min-width: 861px) {
+  .sbx-left .sbx-isec-list { gap: 0; margin: 0 -14px; }
+  .sbx-left .sbx-isec, .sbx-left .sbx-isec.is-open { background: transparent; border: 0; border-bottom: 1px solid var(--sbx-border); border-radius: 0; margin: 0; }
+  .sbx-left .sbx-isec:last-child { border-bottom: 0; }
+  .sbx-left .sbx-isec__toggle { min-height: 40px; padding: 8px 14px; font-size: var(--sbx-fs-md); font-weight: 600; color: var(--sbx-text-strong); }
+  .sbx-left .sbx-isec__toggle:hover { background: var(--sbx-fill-1); }
+  .sbx-left .sbx-isec__body { padding: 2px 14px 14px; }
+
+  .sbx-left .sbx-inspector .sbx-field { margin-bottom: 10px; }
+  .sbx-left .sbx-inspector .sbx-field__label { font-size: var(--sbx-fs-sm); font-weight: 400; color: var(--sbx-muted); }
+  .sbx-left .sbx-inspector .sbx-field input[type="text"], .sbx-left .sbx-inspector .sbx-field input[type="number"],
+  .sbx-left .sbx-inspector .sbx-field input[type="search"], .sbx-left .sbx-inspector .sbx-field input:not([type]),
+  .sbx-left .sbx-inspector .sbx-field select { min-height: var(--sbx-input-h); padding: 0 8px; border-radius: var(--sbx-r-sm); font-size: var(--sbx-fs-sm); }
+  .sbx-left .sbx-inspector .sbx-field textarea { padding: 6px 8px; border-radius: var(--sbx-r-sm); font-size: var(--sbx-fs-sm); }
+
+  /* every short single-line field reads as one row: label left, control right (a stacked field keeps its label above) */
+  .sbx-left .sbx-inspector .sbx-field:not(.sbx-field--stacked):has(> input[type="text"], > input[type="number"], > input[type="search"], > input:not([type]), > select, > .sbx-unitfield, > .sbx-color) {
+    display: grid; grid-template-columns: minmax(70px, 38%) minmax(0, 1fr); align-items: center; column-gap: 10px;
+  }
+  .sbx-left .sbx-inspector .sbx-field:not(.sbx-field--stacked):has(> input, > select, > .sbx-unitfield, > .sbx-color) > .sbx-field__label { margin: 0; }
+
+  /* a unit sits inside its number's border, as one control */
+  .sbx-left .sbx-unitfield { gap: 0; }
+  .sbx-left .sbx-unitfield > input { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+  .sbx-left .sbx-unitfield__unit, .sbx-left .sbx-field .sbx-unitfield__unit { width: 56px; margin-left: -1px; border-top-left-radius: 0; border-bottom-left-radius: 0; background-color: var(--sbx-selected); color: var(--sbx-text-soft); }
+
+  /* the device mark: a slim row of three small icons, the active one lit, instead of a boxed toolbar */
+  .sbx-left .sbx-devstyle { margin-bottom: 6px; }
+  .sbx-left .sbx-devstyle__bar { justify-content: flex-end; }
+  .sbx-left .sbx-responsive__devices { margin: 0; padding: 0; border: 0; background: transparent; gap: 0; }
+  .sbx-left .sbx-responsive__device { position: relative; width: 24px; height: 22px; border-radius: var(--sbx-r-sm); color: var(--sbx-text-faint); }
+  .sbx-left .sbx-responsive__device:hover { color: var(--sbx-text-bright); background: var(--sbx-fill-2); }
+  .sbx-left .sbx-responsive__device.is-active { background: var(--sbx-selected); color: var(--sbx-text-bright); }
+
+  /* the header chrome above the tabs takes less height */
+  .sbx-left .sbx-ihead { margin: 0 0 8px; }
+  .sbx-left .sbx-inspector__tools { margin: 0 0 8px; gap: 4px; }
+}

@@ -32,7 +32,7 @@ The accent stays Kohevo violet (`--sbx-accent`).
 
 1. Design foundation: tokens, palette, guard test (this file's palette).
 2. Top bar (48px, logo only) and one left panel with an Edit tab: a canvas pick or a new element opens Edit; the right-hand Inspector is gone on desktop. Done.
-3. Controls: label-left rows, device marks, unit fields.
+3. Controls (desktop): plain section headers, label-left rows for every single-line field, joined unit fields, a slim device mark. Done as one final CSS layer, "Editor controls", at the end of `builder.css`; the phone sheet keeps its 44px controls.
 4. Add panel: tile grid, search, groups.
 5. Canvas: outline, floating toolbar, empty drop zone, layout chooser.
 6. Structure (Navigator) window.
