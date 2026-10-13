@@ -7,26 +7,30 @@
      literal; tests/css-tokens.test.mjs stops new hex colours from creeping back in. ───────────────────────── */
 
   /* Surfaces */
-  --sbx-bg: #0b0b0d;
-  --sbx-panel: #141417;
-  --sbx-panel-elevated: #1a1d28;
-  --sbx-card-bg: #161922;
-  --sbx-card-hover: #1e2230;
+  --sbx-bg: #0b0d0f;
+  --sbx-panel: #1f2125;
+  --sbx-panel-elevated: #26282c;
+  --sbx-card-bg: #24262a;
+  --sbx-card-hover: #2c2e33;
+  /* Form controls sit one step above the panel; a selected row or tile one step above that. */
+  --sbx-input-bg: #26282c;
+  --sbx-selected: #333438;
+  --sbx-unit-bg: #5a5c60;
   /* Translucent fills over any surface: faint → strong */
   --sbx-fill-1: rgba(255, 255, 255, 0.04);
   --sbx-fill-2: rgba(255, 255, 255, 0.06);
   --sbx-fill-3: rgba(255, 255, 255, 0.12);
   /* Lines */
-  --sbx-border: rgba(255, 255, 255, 0.08);
+  --sbx-border: rgba(255, 255, 255, 0.07);
   --sbx-border-strong: rgba(255, 255, 255, 0.16);
 
   /* Text: strong → faint */
   --sbx-text-bright: #ffffff;
-  --sbx-text: #f5f5f7;
-  --sbx-text-strong: #f1f5f9;
-  --sbx-text-soft: #cbd5e1;
-  --sbx-text-dim: #94a3b8;
-  --sbx-muted: #9ca3af;
+  --sbx-text: #d2d4d8;
+  --sbx-text-strong: #eceef1;
+  --sbx-text-soft: #c1c3c7;
+  --sbx-text-dim: #a2a4a9;
+  --sbx-muted: #adafb3;
   --sbx-text-faint: #64748b;
 
   /* Accent */
@@ -83,6 +87,7 @@
   /* Controls and layout */
   --sbx-inset: rgba(0, 0, 0, 0.25);
   --sbx-control-h: 28px;
+  --sbx-input-h: 30px;
   --sbx-topbar-h: 56px;
 }
 
@@ -1301,7 +1306,7 @@ html, body.sbx-body {
   padding: 0.4rem 0.5rem;
   border: 1px solid var(--sbx-border);
   border-radius: var(--sbx-r-md);
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--sbx-input-bg);
   color: var(--sbx-text);
   font: inherit;
   font-size: 12.5px;
@@ -1785,7 +1790,7 @@ html, body.sbx-body {
   bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   max-height: min(75vh, calc(100dvh - var(--sbx-kb-inset, 0px) - 120px));
   height: 70vh;
-  background: #141417;
+  background: var(--sbx-panel);
   border-top: 1px solid var(--sbx-fill-3);
   border-radius: 20px 20px 0 0;
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.85);
@@ -1932,7 +1937,7 @@ html, body.sbx-body {
   display: flex;
   align-items: center;
   padding: 14px 18px;
-  background: #0b0b0d;
+  background: var(--sbx-bg);
   border: 1px solid var(--sbx-border);
   border-radius: var(--sbx-r-lg);
 }
@@ -2001,7 +2006,7 @@ html, body.sbx-body {
   flex-direction: column;
   gap: 4px;
   padding: 8px;
-  background: #0b0b0d;
+  background: var(--sbx-bg);
   border: 1px solid var(--sbx-border);
   border-radius: var(--sbx-r-lg);
 }
@@ -2144,7 +2149,7 @@ html, body.sbx-body {
   overflow: hidden;
   border: 1px solid var(--sbx-fill-3);
   cursor: crosshair;
-  background: #0b0b0d;
+  background: var(--sbx-bg);
   user-select: none;
   touch-action: none;
 }

@@ -13,8 +13,8 @@ const chrome = rest.split('\n').filter((l) => !l.trimStart().startsWith('.sbx-wf
 const count = (re) => chrome.reduce((n, l) => n + (l.match(re) || []).length, 0);
 
 // Ratchet: the numbers only go down. When you replace a literal with a token, lower the ceiling.
-const HEX_CEILING = 119;
-const RGBA_CEILING = 124;
+const HEX_CEILING = 112;
+const RGBA_CEILING = 121;
 
 // Set at runtime by the mobile shell (visual viewport / sheet height), so they have no static definition.
 const RUNTIME = new Set(['--sbx-sheet-h', '--sbx-kb-inset']);
@@ -31,6 +31,12 @@ test('the token scales are complete', () => {
   for (const n of ['fs-2xs', 'fs-xs', 'fs-sm', 'fs-md', 'fs-lg', 'r-xs', 'r-sm', 'r-md', 'r-lg', 'r-xl', 'r-pill', 's-1', 's-2', 's-3', 's-4', 's-5', 'fill-1', 'fill-2', 'fill-3', 'trans']) {
     assert.ok(tokenBlock.includes(`--sbx-${n}:`), `--sbx-${n} is defined`);
   }
+});
+
+test('the editor skin tokens exist: control surface, selected row, unit pill and control height', () => {
+  for (const n of ['input-bg', 'selected', 'unit-bg', 'input-h']) assert.ok(tokenBlock.includes(`--sbx-${n}:`), `--sbx-${n} is defined`);
+  // inputs read the token, never a private shade of black
+  assert.ok(/\.sbx-field input\[type="text"\][^{]*\{[^}]*background: var\(--sbx-input-bg\)/s.test(rest));
 });
 
 test('hard-coded hex colours outside the token block do not grow', () => {
