@@ -23,15 +23,15 @@ The accent stays Kohevo violet (`--sbx-accent`).
 
 | Part | Reference (CSS px, approx.) | Kohevo now |
 | --- | --- | --- |
-| Left panel width | 300 | 347 |
-| Top bar height | 48 | 56 |
+| Left panel width | 300 | 320 (`--sbx-left-w`) |
+| Top bar height | 48 | 48 (`--sbx-topbar-h`) |
 | Control row pitch | 42 | about 36 to 44 |
 | Input height | 30 | 28 (`--sbx-control-h`) |
 
 ## Phases
 
 1. Design foundation: tokens, palette, guard test (this file's palette).
-2. Top bar and one left panel that swaps between elements and edit.
+2. Top bar (48px, logo only) and one left panel with an Edit tab: a canvas pick or a new element opens Edit; the right-hand Inspector is gone on desktop. Done.
 3. Controls: label-left rows, device marks, unit fields.
 4. Add panel: tile grid, search, groups.
 5. Canvas: outline, floating toolbar, empty drop zone, layout chooser.

@@ -103,3 +103,9 @@ export async function restoreLayers(page, layers) {
   }
   throw new Error('could not restore the shared sandbox page');
 }
+
+/** The one left panel swaps to its Edit tab for a selection made on the canvas or by adding an element; a row picked in Layers keeps the panel on Layers, so open Edit to reach the controls. */
+export async function showEdit(page) {
+  await page.getByRole('tab', { name: /^(Edit|Éditer)$/ }).click();
+  await expect(page.locator('#sbx-leftpanel-inspector')).toBeVisible();
+}

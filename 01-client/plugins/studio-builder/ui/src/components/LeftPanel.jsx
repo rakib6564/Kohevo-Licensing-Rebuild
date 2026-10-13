@@ -1,7 +1,7 @@
 // LeftPanel — Unified single-sided builder navigation & property panel.
 //
-// Desktop: Docked left panel with fast tab switching between Add (palette),
-// Layers (structure tree), Style (inspector), Library, and Settings.
+// Desktop: the one docked panel, with fast tab switching between Add (palette), Layers (structure tree),
+// Edit (the controls of the selection), Library, and Settings. Selecting on the canvas opens Edit.
 // Mobile: Responsive slide-up bottom sheet with native-app touch workflow.
 
 import { memo, useEffect, useRef, useState } from 'react';
@@ -64,9 +64,7 @@ export const LeftPanel = memo(function LeftPanel({
   const siteAllowed = !!(manifest && manifest.permissions && (manifest.permissions.tokens || manifest.permissions.view));
 
   const setTab = onTabChange || setLocalTab;
-  // On a desktop the Inspector has its own docked panel (right); only the phone sheet keeps it as a tab here.
-  const requestedTab = controlledTab !== undefined ? controlledTab : localTab;
-  const tab = !isMobile && requestedTab === 'inspector' ? 'structure' : requestedTab;
+  const tab = controlledTab !== undefined ? controlledTab : localTab;
 
   const collapsed = controlledCollapsed !== undefined ? controlledCollapsed : localCollapsed;
   const toggleCollapse = onToggleCollapse || (() => setLocalCollapsed((c) => !c));
@@ -81,10 +79,10 @@ export const LeftPanel = memo(function LeftPanel({
   const tabs = [
     { key: 'blocks',    label: t('tab_add'),       Icon: IconPlus,     title: t('tab_add_title') },
     { key: 'structure', label: t('tab_layers'),    Icon: IconLayers,   title: t('panel_structure') },
-    { key: 'inspector', label: t('tab_style'),     Icon: IconSliders,  title: t('inspector') },
+    { key: 'inspector', label: isMobile ? t('tab_style') : t('tab_edit'), Icon: IconSliders, title: t('inspector') },
     { key: 'library',   label: t('tab_library'),   Icon: IconPalette,  title: t('panel_library') },
     { key: 'settings',  label: t('tab_settings'),  Icon: IconSettings, title: t('tab_settings_title') },
-  ].filter((x) => isMobile || x.key !== 'inspector');
+  ];
 
   const sheetFull = sheet.height !== null && sheet.height >= fullSheetHeight() - 8;
   let sheetTitle = t('panel_word');
@@ -219,18 +217,17 @@ export const LeftPanel = memo(function LeftPanel({
           {navView === 'pages' && <PagesPanel onOpenSettings={() => setTab('settings')} />}
         </div>
 
-        {/* 3. Style / Inspector Tab (phone sheet only; a desktop has the docked right panel) */}
-        {isMobile && (
+        {/* 3. Edit / Inspector Tab: the controls of the selection (the phone sheet's Style tab) */}
         <div
           id="sbx-leftpanel-inspector"
           role="tabpanel"
           aria-labelledby="sbx-lefttab-inspector"
           hidden={tab !== 'inspector'}
           className="sbx-left__body sbx-left__body--inspector"
+          data-testid="inspector-panel"
         >
           <InspectorHost onNavigate={setTab} />
         </div>
-        )}
 
         {/* 4. Library Tab — Templates & Saved Components */}
         <div

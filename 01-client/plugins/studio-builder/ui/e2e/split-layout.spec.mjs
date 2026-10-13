@@ -1,7 +1,7 @@
-// The three-region workspace (reference D01/D02): Add and Layers on the left, the canvas in the middle, and the
-// Inspector docked on the right. Selecting a node fills the right panel and leaves the left panel where it was.
+// The two-region workspace: one left panel (Add, Layers, Edit, Library, Settings) and the canvas filling the rest.
+// Picking on the canvas, or adding an element, opens the panel's Edit tab; picking a Layers row leaves it on Layers.
 import { test, expect } from '@playwright/test';
-import { openBuilder, frameDocument, settled, sandboxPageId } from './helpers.mjs';
+import { openBuilder, frameDocument, settled, sandboxPageId, showEdit } from './helpers.mjs';
 
 test.afterEach(async ({ page }) => {
   await page.goto(`/plugins/studio-builder/admin/builder.php?page=${sandboxPageId()}&lang=en`);
@@ -33,37 +33,48 @@ async function insertHeading(page) {
   await settled(page);
 }
 
-test('on a desktop the Inspector is docked on the right, and the left panel has no Style tab', async ({ page }, info) => {
+test('on a desktop one left panel holds every tab and the canvas fills the rest of the window', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'docked layout');
   await openBuilder(page);
-  await expect(page.getByTestId('inspector-panel')).toBeVisible();
-  await expect(page.getByRole('tablist', { name: 'Structure' }).getByRole('tab')).toHaveText(['Add', 'Layers', 'Library', 'Settings']);
+  await expect(page.getByRole('tablist', { name: 'Structure' }).getByRole('tab')).toHaveText(['Add', 'Layers', 'Edit', 'Library', 'Settings']);
+  await expect(page.locator('.sbx-right')).toHaveCount(0); // no second, docked Inspector
   const left = await page.locator('aside.sbx-left').boundingBox();
-  const right = await page.getByTestId('inspector-panel').boundingBox();
-  const canvas = await page.locator('main, .sbx-canvas').first().boundingBox();
-  expect(right.x).toBeGreaterThan(left.x + left.width - 1); // right of the left panel
-  expect(right.x + right.width).toBeGreaterThan(page.viewportSize().width - 2); // flush with the window's right edge
-  expect(canvas.width).toBeGreaterThan(300);
+  const canvas = await page.locator('iframe.sbx-canvas__frame').boundingBox();
+  expect(left.width).toBeLessThan(341);
+  expect(canvas.x).toBeGreaterThan(left.x + left.width - 1); // right of the left panel
+  expect(canvas.x + canvas.width).toBeGreaterThan(page.viewportSize().width - 24); // and out to the window's edge
 });
 
-test('selecting a block fills the right panel and leaves the left panel on its tab', async ({ page }, info) => {
+test('adding an element or picking it on the canvas opens Edit; the other tabs stay one click away', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'docked layout');
   await openBuilder(page);
   await settled(page);
   const before = await layerCount(page);
   try {
-    await page.getByRole('tab', { name: /^(Add|Ajouter)$/ }).click();
     await insertHeading(page);
+    const edit = page.getByRole('tab', { name: /^Edit$/ });
+    await expect(edit).toHaveAttribute('aria-selected', 'true'); // a new element opens its controls
     await expect(page.getByTestId('inspector-panel').locator('.sbx-ihead .sbx-inspector__title')).toHaveText('Heading');
-    await expect(page.getByRole('tab', { name: /^Add$/ })).toHaveAttribute('aria-selected', 'true'); // not pulled to another tab
-    await expect(page.locator('#sbx-leftpanel-blocks')).toBeVisible();
     await expect(page.locator('[data-section="content"]')).toHaveCount(1); // one Inspector, not two
+
+    await page.getByRole('tab', { name: /^Add$/ }).click();
+    await expect(page.locator('#sbx-leftpanel-blocks')).toBeVisible();
+    await expect(page.getByTestId('inspector-panel')).toBeHidden();
+
+    await (await frameDocument(page)).locator('[data-sb-type="core.heading"]').first().click({ force: true });
+    await expect(edit).toHaveAttribute('aria-selected', 'true'); // a canvas pick brings the controls back
+    await expect(page.getByTestId('inspector-panel')).toBeVisible();
+
+    await page.getByRole('tab', { name: /^Layers$/ }).click();
+    await page.locator('[role="treeitem"]').first().click();
+    await expect(page.getByRole('tab', { name: /^Layers$/ })).toHaveAttribute('aria-selected', 'true'); // a Layers pick keeps the tree
+    await showEdit(page);
   } finally {
     await restore(page, before);
   }
 });
 
-test('the toggle hides the Inspector for a wider canvas and shows it again with the selection intact', async ({ page }, info) => {
+test('the toggle collapses the panel for a wider canvas and brings Edit back with the selection intact', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'docked layout');
   await openBuilder(page);
   await settled(page);
@@ -74,29 +85,31 @@ test('the toggle hides the Inspector for a wider canvas and shows it again with 
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
     const open = (await page.locator('iframe.sbx-canvas__frame').boundingBox()).width;
     await toggle.click();
-    await expect(page.getByTestId('inspector-panel')).toHaveCount(0);
     await expect(toggle).toHaveAttribute('aria-pressed', 'false');
     await expect.poll(async () => (await page.locator('iframe.sbx-canvas__frame').boundingBox()).width).toBeGreaterThan(open);
     await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByTestId('inspector-panel').locator('.sbx-ihead .sbx-inspector__title')).toHaveText('Heading');
   } finally {
     await restore(page, before);
   }
 });
 
-test('with nothing selected the right panel says so, and its shortcuts open the left tabs', async ({ page }, info) => {
+test('with nothing selected Edit says so, and its shortcuts open the other tabs', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'docked layout');
   await openBuilder(page);
+  await showEdit(page);
   const panel = page.getByTestId('inspector-panel');
   await expect(panel.getByText(/Select a block or section/)).toBeVisible();
   await panel.getByRole('button', { name: 'Add elements' }).click();
   await expect(page.getByRole('tab', { name: /^Add$/ })).toHaveAttribute('aria-selected', 'true');
+  await showEdit(page);
   await panel.getByRole('button', { name: 'View Layers' }).click();
   await expect(page.getByRole('tab', { name: /^Layers$/ })).toHaveAttribute('aria-selected', 'true');
 });
 
-test('a phone has no right panel: the Inspector stays in the sheet', async ({ page }, info) => {
+test('a phone keeps the Inspector in the sheet: its panel is not on screen until the sheet opens', async ({ page }, info) => {
   test.skip(info.project.name === 'desktop', 'phone shell');
   await openBuilder(page);
-  await expect(page.getByTestId('inspector-panel')).toHaveCount(0);
+  await expect(page.getByTestId('inspector-panel')).toBeHidden();
 });

@@ -59,6 +59,7 @@ const EN = {
   inspector_no_match: 'No setting matches that search.',
   tab_content: 'Content',
   tab_style: 'Style',
+  tab_edit: 'Edit',
   tab_advanced: 'Advanced',
   tab_responsive: 'Responsive',
   tab_visibility: 'Visibility',

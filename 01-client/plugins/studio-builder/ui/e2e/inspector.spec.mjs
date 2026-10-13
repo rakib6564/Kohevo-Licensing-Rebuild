@@ -1,6 +1,6 @@
 // The contextual Inspector (B2-P3c): header, tabs, collapsible sections with summaries, search, and the ⋯ menu.
 import { test, expect } from '@playwright/test';
-import { openBuilder, settled, sandboxPageId, openSection } from './helpers.mjs';
+import { openBuilder, settled, sandboxPageId, openSection, showEdit } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
@@ -143,6 +143,7 @@ test('the header ⋯ menu renames, duplicates and locks the selected block', asy
     await settled(page);
 
     const layers = await layerCount(page);
+    await showEdit(page); // counting the layers left the panel on the Layers tab
     await page.getByTestId('inspector-menu').click();
     await item('duplicate').click();
     await settled(page);

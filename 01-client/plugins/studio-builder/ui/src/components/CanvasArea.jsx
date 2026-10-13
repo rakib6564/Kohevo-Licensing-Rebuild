@@ -48,7 +48,7 @@ function blockNavigation(doc) {
 }
 
 export const CanvasArea = memo(function CanvasArea({ interactive = true, collapsed = false, onToggleCollapse = null, onReloadCanvas = null }) {
-  const { boot, transport, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode, applyOp, canvasView, setCanvasView, copyNode, cutNode, pasteNode, setLocked, toggleHidden, clipboardShortcut, peekClipboard, labelOf } = useEditor();
+  const { boot, transport, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode, applyOp, canvasView, setCanvasView, copyNode, cutNode, pasteNode, setLocked, toggleHidden, clipboardShortcut, peekClipboard, labelOf, requestEdit } = useEditor();
   const isMobile = useIsMobileShell();
   const { selection, selectedIds, select, pick } = useSelection();
   const working = useEngineState((s) => s.working);
@@ -80,6 +80,8 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   selectRef.current = select;
   const pickRef = useRef(pick);
   pickRef.current = pick;
+  const requestEditRef = useRef(requestEdit);
+  requestEditRef.current = requestEdit;
   const selectedIdsRef = useRef(selectedIds);
   selectedIdsRef.current = selectedIds;
   const stageRef = useRef(null);
@@ -457,7 +459,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       return;
     }
     detachRef.current = attachCanvas(doc, {
-      onSelect: (id, _type, mods, chain) => pickRef.current(id, mods || {}, null, chain),
+      onSelect: (id, _type, mods, chain) => { pickRef.current(id, mods || {}, null, chain); if (requestEditRef.current) requestEditRef.current(); },
       onDrop: (drop) => onCanvasDropRef.current(drop),
       onAction: (action, id) => actionRef.current(action, id),
       onContextMenu: (id, point, chain) => openMenuForRef.current(id, point, chain),

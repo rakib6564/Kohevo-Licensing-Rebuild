@@ -1,6 +1,6 @@
 // The Inspector bar: Reset clears a block's look, Discard puts it back to how it was when selected, Apply saves now.
 import { test, expect } from '@playwright/test';
-import { openBuilder, frameDocument, settled, sandboxPageId, openSection } from './helpers.mjs';
+import { openBuilder, frameDocument, settled, sandboxPageId, openSection, showEdit } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
@@ -112,6 +112,7 @@ test('a section has the bar too: Discard takes a layout change back, Reset clear
     await page.getByRole('tab', { name: /^Layers$/ }).click();
     await page.locator('[role="treeitem"][aria-level="1"]').first().click();
     await settled(page);
+    await showEdit(page);
 
     const bar = page.getByTestId('inspector-bar');
     const reset = bar.getByRole('button', { name: 'Reset' });

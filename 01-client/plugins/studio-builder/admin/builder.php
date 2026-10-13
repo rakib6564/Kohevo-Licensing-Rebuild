@@ -379,6 +379,7 @@ $sbBoot = [
         'section' => __('studio_ui_section', 'Section'),
         'show' => __('studio_ui_show', 'Show'),
         'tab_style' => __('studio_ui_tab_style', 'Style'),
+        'tab_edit' => __('studio_ui_tab_edit', 'Edit'),
         'theme' => __('studio_ui_theme', 'Theme'),
         'theme_title' => __('studio_ui_theme_title', 'Design tokens'),
         'undo' => __('studio_ui_undo', 'Undo'),

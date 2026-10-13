@@ -2,9 +2,9 @@
 //
 //   StudioShell
 //   ├── TopBar        page, save state, undo/redo, viewport, preview, publish
-//   ├── LeftPanel     block palette + structure outline (insert / reorder)
-//   ├── CanvasArea    sandboxed iframe of the server's renderForEditor() output
-//   └── RightPanel    metadata-driven property panels for the selection
+//   ├── LeftPanel     block palette, structure outline, and the Edit tab for the selection
+//   └── CanvasArea    sandboxed iframe of the server's renderForEditor() output
+//       (its Edit tab holds the metadata-driven property panels for the selection)
 //
 // The shell owns transient UI state only (selection, viewport, dialogs). The
 // document lives in the SyncEngine (server revision + optimistic operations);
@@ -14,7 +14,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { EditorContext, SelectionContext, useEditor, useSelection } from './EditorContext.jsx';
 import { TopBar } from './TopBar.jsx';
 import { LeftPanel } from './LeftPanel.jsx';
-import { RightPanel } from './RightPanel.jsx';
 import { CanvasArea } from './CanvasArea.jsx';
 import { MobileDock } from './MobileDock.jsx';
 import { VisitorPreview } from './VisitorPreview.jsx';
@@ -65,6 +64,9 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   const selectionRef = useRef(null);
   selectionRef.current = selection;
   const setSelection = useCallback((id) => setSel((s) => selectOnly(s, id)), []);
+  // A pick on the canvas, or a new element, asks the left panel (below, in Workspace) to show its Edit tab: a counter it reacts to.
+  const [editTick, setEditTick] = useState(0);
+  const requestEdit = useCallback(() => setEditTick((n) => n + 1), []);
   const [announcement, setAnnouncement] = useState('');
   // A phone starts on the Mobile device so the canvas is not a shrunken desktop page.
   const [viewportKey, setViewportKey] = useState(() => (isMobileShellNow() ? 'mobile' : 'desktop'));
@@ -235,10 +237,11 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     const provisionalId = ops.provisionalId('sec');
     if (engine.apply(ops.insertSection(at, { label: t('section') }), { provisionalId, label: t('section') })) {
       setSelection(provisionalId);
+      requestEdit();
       announce(t('announce_inserted', { label: t('section') }));
     }
     return provisionalId;
-  }, [engine, announce]);
+  }, [engine, announce, requestEdit]);
 
   const commitInsert = useCallback((type, target, props = null, bindings = null) => {
     const def = blockDefinition(manifest, type);
@@ -254,9 +257,10 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
       : target;
     if (engine.apply(ops.insertBlock(where.parentId, where.index, block), { provisionalId, label: def ? def.label : type })) {
       setSelection(provisionalId);
+      requestEdit();
       announce(t('announce_inserted', { label: def ? def.label : type }));
     }
-  }, [engine, manifest, announce]);
+  }, [engine, manifest, announce, requestEdit]);
 
   /** Insert a block: at `target` or the natural insertion point; asks for required setup first. */
   const insertBlock = useCallback((type, target = null) => {
@@ -629,7 +633,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView,
     insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf,
     copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, peekClipboard: peekMemory,
-    viewport: viewportByKey(viewportKey), setViewport: changeViewport, tokensSaved: onTokensSaved, refreshManifest,
+    viewport: viewportByKey(viewportKey), setViewport: changeViewport, tokensSaved: onTokensSaved, refreshManifest, editTick, requestEdit,
     library: libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate,
     insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion,
     openSaveTemplate: () => setDialog('save_template'),
@@ -639,7 +643,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     openHistory: () => setHistoryOpen(true),
     openTheme: manifest && manifest.permissions && (manifest.permissions.tokens || manifest.permissions.view) ? () => setDialog('theme') : null,
     openPackages: manifest && manifest.permissions && manifest.permissions.view ? () => setDialog('package') : null,
-  }), [boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, viewportKey, changeViewport, onTokensSaved, refreshManifest,
+  }), [boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, viewportKey, changeViewport, onTokensSaved, refreshManifest, editTick, requestEdit,
     libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
 
   const selectionCtx = useMemo(() => ({
@@ -730,9 +734,6 @@ export function ShellLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [responsiveOpen, setResponsiveOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  // Desktop: the docked Inspector on the right, shown unless the author hides it for a wider canvas. A narrow
-  // desktop window starts with it hidden, so the canvas keeps a usable width next to the left panel.
-  const [inspectorShown, setInspectorShown] = useState(() => typeof window === 'undefined' || window.innerWidth > 1000);
   const [viewMode, setViewModeRaw] = useState('edit');
   const shellRef = useRef(null);
   const editing = isEditing(viewMode);
@@ -748,22 +749,32 @@ export function ShellLayout({
     }
   }, [select]);
 
-  // Selecting a node points the panel at Style; on a phone it does NOT open the sheet:
-  // the canvas stays visible with the contextual bar, and Edit (dock) opens the sheet.
+  // Selecting a node points the panel at its controls. On a phone it does NOT open the sheet: the canvas stays
+  // visible with the contextual bar, and Edit (dock) opens the sheet. On a desktop the one left panel swaps to its
+  // Edit tab only when the author picks on the canvas (`openEdit`); a selection made inside the panel itself (a Layers
+  // row, an element just added from Add) leaves the panel where the author is working.
   useEffect(() => {
     if (selection && editing && isMobile) setActiveTab('inspector');
   }, [selection, editing, isMobile]);
+  const { editTick } = useEditor();
+  useEffect(() => {
+    if (!editTick || isMobile) return;
+    setCollapsed(false);
+    setActiveTab('inspector');
+  }, [editTick, isMobile]);
 
-  // Inspector toggle: open the docked panel on Style; a second press collapses it for a full-width canvas.
-  const inspectorOpen = isMobile ? (mobileOpen && activeTab === 'inspector') : inspectorShown;
+  // Edit toggle: open the left panel on its Edit tab; a second press collapses the panel for a full-width canvas.
+  const inspectorOpen = isMobile ? (mobileOpen && activeTab === 'inspector') : (!collapsed && activeTab === 'inspector');
   const toggleInspector = useCallback(() => {
     if (isMobile) {
       setActiveTab('inspector');
       setMobileOpen((open) => !(open && activeTab === 'inspector'));
       return;
     }
-    setInspectorShown((shown) => !shown);
-  }, [activeTab, isMobile]);
+    if (!collapsed && activeTab === 'inspector') { setCollapsed(true); return; }
+    setCollapsed(false);
+    setActiveTab('inspector');
+  }, [activeTab, collapsed, isMobile]);
 
   // Cmd/Ctrl+K: open Add and focus its search (the "⌘ K" badge in the palette promises this).
   useEffect(() => {
@@ -842,7 +853,6 @@ export function ShellLayout({
           onToggleCollapse={() => setCollapsed((c) => !c)}
           onReloadCanvas={onReload}
         />
-        {!isMobile && inspectorShown && editing && <RightPanel onNavigate={(tab) => { setCollapsed(false); setActiveTab(tab); }} />}
       </div>
       {visitor && (
         <VisitorPreview

@@ -88,7 +88,8 @@
   --sbx-inset: rgba(0, 0, 0, 0.25);
   --sbx-control-h: 28px;
   --sbx-input-h: 30px;
-  --sbx-topbar-h: 56px;
+  --sbx-topbar-h: 48px;
+  --sbx-left-w: 320px;
 }
 
 html, body.sbx-body {
@@ -176,7 +177,7 @@ html, body.sbx-body {
 /* Shell layout */
 .sbx-shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-/* TopBar — compact 56px header (spec: 52–56px) with unified 30px control height */
+/* TopBar — compact 48px header with unified 30px control height */
 .sbx-topbar {
   height: var(--sbx-topbar-h);
   min-height: var(--sbx-topbar-h);
@@ -226,7 +227,7 @@ html, body.sbx-body {
   box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4);
 }
 .sbx-brand-badge__info {
-  display: flex;
+  display: none; /* the logo alone, like the reference bar; the name stays in the title attribute */
   flex-direction: column;
   line-height: 1.15;
 }
@@ -557,8 +558,8 @@ html, body.sbx-body {
 }
 
 .sbx-left {
-  width: 360px;
-  min-width: 320px;
+  width: var(--sbx-left-w);
+  min-width: 300px;
   max-width: 440px;
   flex-shrink: 0;
   display: flex;
@@ -577,23 +578,6 @@ html, body.sbx-body {
   min-width: 0 !important;
   border-right: 0 !important;
   overflow: hidden !important;
-}
-
-.sbx-right {
-  /* The docked Inspector (desktop). On a phone the shell does not render it: the sheet holds the Inspector. */
-  width: 340px;
-  min-width: 300px;
-  max-width: 420px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  padding: 12px 14px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  background: var(--sbx-panel);
-  border-left: 1px solid var(--sbx-border);
-  z-index: 24;
 }
 
 .sbx-left__body {
@@ -1442,7 +1426,6 @@ html, body.sbx-body {
 
 @media (max-width: 1100px) {
   .sbx-left { width: 300px; min-width: 280px; }
-  .sbx-right { width: 300px; min-width: 280px; }
 }
 
 @media (max-width: 960px) {
@@ -2927,8 +2910,8 @@ html, body.sbx-body {
 .sbx-brand-badge__logo svg { display: block; }
 
 /* Panels still scroll; the bar is hidden. */
-.sbx-left, .sbx-left *, .sbx-right, .sbx-right *, .sbx-dialog__body, .sbx-bottombar__left { scrollbar-width: none; -ms-overflow-style: none; }
-.sbx-left::-webkit-scrollbar, .sbx-left *::-webkit-scrollbar, .sbx-right::-webkit-scrollbar, .sbx-right *::-webkit-scrollbar, .sbx-dialog__body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.sbx-left, .sbx-left *, .sbx-dialog__body, .sbx-bottombar__left { scrollbar-width: none; -ms-overflow-style: none; }
+.sbx-left::-webkit-scrollbar, .sbx-left *::-webkit-scrollbar, .sbx-dialog__body::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
 /* The desktop canvas runs edge to edge: no stage gutter, no frame rounding or shadow. */
 @media (min-width: 861px) {
@@ -3271,7 +3254,7 @@ html, body.sbx-body {
 .sbx-inspector__bar { position: sticky; bottom: 0; display: flex; gap: 8px; padding: 10px 0; margin-top: 12px; background: var(--sbx-bg); border-top: 1px solid var(--sbx-border); z-index: 2; }
 .sbx-inspector__bar .sbx-btn { flex: 1 1 0; justify-content: center; }
 /* Keep a focused or scrolled-to control clear of the pinned bar. */
-.sbx-right, .sbx-left__body { scroll-padding-bottom: 72px; }
+.sbx-left__body { scroll-padding-bottom: 72px; }
 
 /* Popover: a compact row with a pencil, and the rest of the group in a card under it. */
 .sbx-pop { position: relative; }
@@ -3283,7 +3266,8 @@ html, body.sbx-body {
 .sbx-pop.is-open .sbx-pop__row .sbx-iconbtn { border-color: var(--sbx-accent); }
 
 /* The bar sits at the bottom of the panel even when the controls are short: the host, its fieldset and the Inspector fill it. */
-.sbx-right > .sbx-inspector-host { flex: 1 0 auto; }
+.sbx-left__body--inspector:not([hidden]) { display: flex; flex-direction: column; }
+.sbx-left__body--inspector > .sbx-inspector-host { flex: 1 0 auto; }
 .sbx-inspector-host > .sbx-lock-fieldset { flex: 1 0 auto; display: flex; flex-direction: column; }
 .sbx-lock-fieldset > .sbx-inspector { flex: 1 0 auto; display: flex; flex-direction: column; }
 .sbx-inspector > * { flex: none; }

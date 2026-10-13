@@ -1,7 +1,7 @@
 // The builder's own image picker: choose or upload an image from the Inspector, see it, set its focal point, and
 // never see a raw "Media ID" box. No other plugin is involved.
 import { test, expect } from '@playwright/test';
-import { chooseImage, layerCount, openBuilder, restoreLayers, settled } from './helpers.mjs';
+import { chooseImage, layerCount, openBuilder, restoreLayers, settled, showEdit } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
@@ -27,6 +27,7 @@ async function addImageBlock(page) {
   const section = page.locator('[role="treeitem"][aria-level="1"]').first();
   if ((await section.getAttribute('aria-expanded')) === 'false') { await section.focus(); await page.keyboard.press('ArrowRight'); }
   await page.locator('[role="treeitem"]', { hasText: 'Image' }).last().click();
+  await showEdit(page);
   await expect(page.locator('.sbx-inspector-host').getByTestId('media-choose')).toBeVisible();
 }
 

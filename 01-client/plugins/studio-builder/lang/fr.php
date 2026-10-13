@@ -341,6 +341,7 @@ return [
     'studio_ui_section' => 'Section',
     'studio_ui_show' => 'Afficher',
     'studio_ui_tab_style' => 'Style',
+    'studio_ui_tab_edit' => 'Éditer',
     'studio_ui_theme' => 'Thème',
     'studio_ui_theme_title' => 'Jetons de design',
     'studio_ui_undo' => 'Annuler',

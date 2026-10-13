@@ -1,6 +1,6 @@
 // Motion (B2-P3d): the move/reveal presets, and a section's own motion.
 import { test, expect } from '@playwright/test';
-import { openBuilder, frameDocument, settled, sandboxPageId, openSection } from './helpers.mjs';
+import { openBuilder, frameDocument, settled, sandboxPageId, openSection, showEdit } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
@@ -55,6 +55,7 @@ test('a block takes a reveal preset and a section takes its own motion; both rea
 
     await page.getByRole('tab', { name: /^Layers$/ }).click();
     await page.locator('[role="treeitem"]').first().click();
+    await showEdit(page);
     await openSection(page, 'motion');
     const sectionPresets = page.getByRole('radiogroup', { name: 'Entrance' });
     await sectionPresets.getByRole('radio', { name: /Move left/ }).click();
