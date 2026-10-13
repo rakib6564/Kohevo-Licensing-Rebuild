@@ -91,17 +91,20 @@ test('a canvas node the editor does not have and nothing around it is refused wi
   await page.locator('#sbx-leftpanel-blocks [data-preset="system-section-team"] .sbx-preset-card__insert').click();
   await settled(page);
   await expect(page.frameLocator('iframe.sbx-canvas__frame').locator('[data-sb-node^="blk_"]').first()).toBeVisible();
-  const frame = await frameDocument(page);
-  await frame.evaluate(() => {
-    const el = document.createElement('p');
-    el.setAttribute('data-sb-node', 'blk_stale_ghost');
-    el.setAttribute('data-sb-type', 'core.text');
-    el.textContent = 'ghost';
-    el.style.cssText = 'display:block;min-height:40px';
-    document.body.prepend(el);
-  });
-  await page.frameLocator('iframe.sbx-canvas__frame').locator('[data-sb-node="blk_stale_ghost"]').click();
-  await expect(page.getByRole('status').filter({ hasText: 'cannot be selected here' })).toHaveCount(1);
+  // A canvas repaint right after the insert can drop the injected node, so draw it again until the click lands on it.
+  await expect(async () => {
+    await (await frameDocument(page)).evaluate(() => {
+      if (document.querySelector('[data-sb-node="blk_stale_ghost"]')) return;
+      const el = document.createElement('p');
+      el.setAttribute('data-sb-node', 'blk_stale_ghost');
+      el.setAttribute('data-sb-type', 'core.text');
+      el.textContent = 'ghost';
+      el.style.cssText = 'display:block;min-height:40px';
+      document.body.prepend(el);
+    });
+    await page.frameLocator('iframe.sbx-canvas__frame').locator('[data-sb-node="blk_stale_ghost"]').click({ timeout: 2_000 });
+    await expect(page.getByRole('status').filter({ hasText: 'cannot be selected here' })).toHaveCount(1, { timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
   // The repaint drops the ghost node, and nothing is left selected (no empty Inspector with a selection box).
   await expect(page.frameLocator('iframe.sbx-canvas__frame').locator('[data-sb-node="blk_stale_ghost"]')).toHaveCount(0, { timeout: 15_000 });
   await expect(page.locator('.sbx-overlay__box.is-primary')).toHaveCount(0);
@@ -143,16 +146,20 @@ test('clicking content the editor does not own selects the nearest node it does 
   await expect(block).toBeVisible();
   const owner = await block.getAttribute('data-sb-node');
   // A node the editor has never heard of, drawn inside a real block (what a template or shared part would do).
-  await (await frameDocument(page)).evaluate((id) => {
-    const host = document.querySelector(`[data-sb-node="${id}"]`);
-    const el = document.createElement('span');
-    el.setAttribute('data-sb-node', 'blk_unowned_ghost');
-    el.setAttribute('data-sb-type', 'core.text');
-    el.textContent = 'drawn elsewhere';
-    el.style.cssText = 'display:inline-block;min-width:60px;min-height:20px';
-    host.prepend(el);
-  }, owner);
-  await frame.locator('[data-sb-node="blk_unowned_ghost"]').click({ force: true });
+  // A canvas re-sync right after the insert can prune it, so draw it again until it survives the click.
+  await expect(async () => {
+    await (await frameDocument(page)).evaluate((id) => {
+      if (document.querySelector('[data-sb-node="blk_unowned_ghost"]')) return;
+      const host = document.querySelector(`[data-sb-node="${id}"]`);
+      const el = document.createElement('span');
+      el.setAttribute('data-sb-node', 'blk_unowned_ghost');
+      el.setAttribute('data-sb-type', 'core.text');
+      el.textContent = 'drawn elsewhere';
+      el.style.cssText = 'display:inline-block;min-width:60px;min-height:20px';
+      host.prepend(el);
+    }, owner);
+    await frame.locator('[data-sb-node="blk_unowned_ghost"]').click({ force: true, timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
   await expect(page.locator('.sbx-inspector-host [role="tab"]').first()).toBeVisible();
   await expect(page.locator('.sbx-inspector-empty')).toHaveCount(0);
   await expect(page.locator(`.sbx-overlay__box.is-primary[data-overlay-for="${owner}"]`)).toHaveCount(1);
