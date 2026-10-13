@@ -89,7 +89,7 @@ function ToolbarButton({ action, label, disabled, tabIndex, onClick, onFocus, re
  * @param {(action: string, id: string) => void} props.onAction
  */
 export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, scale, enabled, outlines = false, labels = false, onAction }) {
-  const { labelOf, manifest, applyOp, requestPanel, layoutChooser, setLayoutChooser } = useEditor();
+  const { labelOf, manifest, applyOp, requestPanel, openLibraryModal, layoutChooser, setLayoutChooser } = useEditor();
   const { selection, selectedIds, select } = useSelection();
   const working = useEngineState((s) => s.working);
   const rootRef = useRef(null);
@@ -309,7 +309,7 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
               <div className="sbx-overlay__emptyhint">
                 <span className="sbx-overlay__zonebtns">
                   <ZoneButton action="add" label={t('zone_add')} onClick={() => ask('blocks', 'elements')} />
-                  {roomy && <ZoneButton action="templates" label={t('zone_templates')} onClick={() => ask('library', null)} />}
+                  {roomy && <ZoneButton action="templates" label={t('zone_templates')} onClick={() => { select(z.id); openLibraryModal(); }} />}
                   {roomy && <ZoneButton action="ai" label={t('zone_ai')} onClick={() => ask('blocks', 'ai')} />}
                 </span>
                 {roomy && <span className="sbx-overlay__zonetext">{t('zone_drag_here')}</span>}

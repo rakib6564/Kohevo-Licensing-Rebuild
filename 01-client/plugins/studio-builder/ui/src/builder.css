@@ -3360,3 +3360,20 @@ html, body.sbx-body {
 .sbx-structure-window__bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px 6px 12px; background: var(--sbx-panel-elevated); border-bottom: 1px solid var(--sbx-border); cursor: grab; touch-action: none; user-select: none; }
 .sbx-structure-window__bar:active { cursor: grabbing; }
 .sbx-structure-window__body { flex: 1; min-height: 0; overflow: auto; padding: 6px 4px; }
+
+/* Library modal: a wide window with a card grid. */
+.sbx-dialog--library { width: min(980px, 94vw); }
+.sbx-dialog--library .sbx-dialog__body { max-height: 74vh; }
+.sbx-libmodal__bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.sbx-libmodal__tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.sbx-libmodal__tab { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 0; border-radius: var(--sbx-r-md); background: transparent; color: var(--sbx-text-faint); cursor: pointer; font: inherit; }
+.sbx-libmodal__tab:hover { color: var(--sbx-text); background: var(--sbx-inset); }
+.sbx-libmodal__tab[aria-selected="true"] { color: var(--sbx-text); background: var(--sbx-selected); }
+.sbx-libmodal__count { font-size: var(--sbx-fs-xs); color: var(--sbx-text-faint); }
+.sbx-libmodal__search { min-width: 220px; }
+.sbx-libmodal__grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+.sbx-libmodal__card { position: relative; display: flex; flex-direction: column; border: 1px solid var(--sbx-border); border-radius: var(--sbx-r-md); background: var(--sbx-panel-elevated); overflow: hidden; }
+.sbx-libmodal__thumb { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--sbx-inset); }
+.sbx-libmodal__meta { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px 10px; font-size: var(--sbx-fs-sm); }
+.sbx-libmodal__action { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); opacity: 0; }
+.sbx-libmodal__card:hover .sbx-libmodal__action, .sbx-libmodal__action:focus-visible { opacity: 1; }

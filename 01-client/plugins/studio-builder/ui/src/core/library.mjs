@@ -120,3 +120,13 @@ export function groupPresets(presets, query, labelOf = (c) => c) {
   }
   return [...groups.entries()].map(([category, items]) => ({ category, items }));
 }
+
+/** Templates whose name, description or block labels contain every word of the query (case-insensitive). */
+export function filterTemplates(items, query) {
+  const words = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return asList(items);
+  return asList(items).filter((tpl) => {
+    const hay = [tpl.name, tpl.description, ...asList(tpl.summary && tpl.summary.block_labels)].join(' ').toLowerCase();
+    return words.every((w) => hay.includes(w));
+  });
+}

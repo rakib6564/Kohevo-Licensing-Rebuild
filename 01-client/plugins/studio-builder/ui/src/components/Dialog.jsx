@@ -12,7 +12,7 @@ import { useEffect, useId, useRef } from 'react';
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
 
-export function Dialog({ title, onClose, children, footer }) {
+export function Dialog({ title, onClose, children, footer, className = '' }) {
   const ref = useRef(null);
   const titleId = useId();
   const opener = useRef(typeof document !== 'undefined' ? document.activeElement : null);
@@ -49,7 +49,7 @@ export function Dialog({ title, onClose, children, footer }) {
       <div className="sbx-dialog-backdrop" aria-hidden="true" onClick={() => onCloseRef.current()} />
       <dialog
         ref={ref}
-        className="sbx-dialog"
+        className={`sbx-dialog${className ? ` ${className}` : ''}`}
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}

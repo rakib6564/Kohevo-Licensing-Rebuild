@@ -148,3 +148,15 @@ test('command: a command that returns no document (component created without a s
   assert.equal(engine.getSnapshot().status, STATUS.SAVED);
   assert.equal(engine.getSnapshot().undo.length, 0);
 });
+
+import { filterTemplates } from '../src/core/library.mjs';
+test('filterTemplates needs every word, in the name, description or block labels', () => {
+  const items = [
+    { name: 'Hero with image', description: 'big banner', summary: { block_labels: ['Heading', 'Button'] } },
+    { name: 'Pricing table', description: '', summary: { block_labels: ['Heading'] } },
+  ];
+  assert.equal(filterTemplates(items, '').length, 2);
+  assert.deepEqual(filterTemplates(items, 'hero BANNER').map((x) => x.name), ['Hero with image']);
+  assert.deepEqual(filterTemplates(items, 'heading').length, 2);
+  assert.equal(filterTemplates(items, 'nothing here').length, 0);
+});

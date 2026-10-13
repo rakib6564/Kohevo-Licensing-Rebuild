@@ -26,6 +26,7 @@ import {
   IconMenu,
   IconSliders,
   IconLayers,
+  IconGridPanes,
 } from './Icons.jsx';
 
 const STATUS_KEY = {
@@ -95,6 +96,7 @@ export const TopBar = memo(function TopBar({
   onOpenMobileDock = null,
   onResponsiveView = null,
   structureOpen = false,
+  onLibrary = null,
   onToggleStructure = null,
 }) {
   const { boot, engine, manifest } = useEditor();
@@ -331,6 +333,19 @@ export const TopBar = memo(function TopBar({
       <div className="sbx-topbar__right">
         {/* Secondary Tool Actions */}
         <div className="sbx-topbar__tools">
+          {onLibrary && (
+            <button
+              type="button"
+              className="sbx-btn sbx-btn--icon"
+              data-testid="open-library"
+              onClick={onLibrary}
+              disabled={conflict}
+              title={t('library_modal_title')}
+              aria-label={t('library_modal_title')}
+            >
+              <IconGridPanes size={15} />
+            </button>
+          )}
           {onToggleStructure && (
             <button
               type="button"

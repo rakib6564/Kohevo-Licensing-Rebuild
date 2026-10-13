@@ -985,6 +985,9 @@ const EN = {
   // Phase 6 — library, global components, chrome, theme
   panel_library: 'Library',
   library_templates: 'Templates',
+  library_modal_title: 'Template library',
+  library_search: 'Search templates',
+  library_no_match: 'No template matches your search.',
   library_page_templates: 'Page templates',
   library_section_presets: 'Section presets',
   library_block_presets: 'Block presets',

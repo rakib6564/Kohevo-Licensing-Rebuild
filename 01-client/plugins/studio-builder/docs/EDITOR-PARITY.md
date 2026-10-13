@@ -36,5 +36,5 @@ The accent stays Kohevo violet (`--sbx-accent`).
 4. Add panel: folding groups, a New badge, quieter tiles, and the two "Container" tiles told apart. Still to do: fold the search, the six sub-tabs and the category chips into one lighter header.
 5. Canvas: outline, floating toolbar, empty drop zone, layout chooser. Done.
 6. Structure (Navigator) window: a floating, draggable, resizable window with the page outline, from the top bar or Ctrl/⌘ I (desktop). Done.
-7. Library modal.
+7. Library modal: the templates in a large window with a tab per kind, search and a card grid, from the top bar or the empty container button. Done.
 8. Globals: colour and font tokens.

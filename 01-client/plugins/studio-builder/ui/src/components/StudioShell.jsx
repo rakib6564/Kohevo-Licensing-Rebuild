@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { EditorContext, SelectionContext, useEditor, useSelection } from './EditorContext.jsx';
+import { LibraryModal } from './LibraryModal.jsx';
 import { StructureWindow } from './StructureWindow.jsx';
 import { TopBar } from './TopBar.jsx';
 import { LeftPanel } from './LeftPanel.jsx';
@@ -648,6 +649,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     library: libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate,
     insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion,
     openSaveTemplate: () => setDialog('save_template'),
+    openLibraryModal: () => setDialog('library'),
     openComponentDialog: () => setDialog('component'),
     openAiReview: () => setDialog('ai_review'),
     // Entry points the Pages view's quick tools reuse (null when the person may not use them).
@@ -705,6 +707,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
         onPackages={manifest.permissions && manifest.permissions.view ? () => setDialog('package') : null}
         dialogs={(
           <>
+            {dialog === 'library' && <LibraryModal onClose={() => setDialog(null)} />}
             {dialog === 'save_template' && (
               <SaveTemplateDialog
                 onClose={() => setDialog(null)}
@@ -739,7 +742,7 @@ export function ShellLayout({
   onTheme = null, dialogs = null, onAiReview = null, onPackages = null,
 }) {
   const { selection, select } = useSelection();
-  const { canvasView, structureOpen, setStructureOpen, toggleStructure } = useEditor();
+  const { canvasView, structureOpen, setStructureOpen, toggleStructure, openLibraryModal } = useEditor();
   const [activeTab, setActiveTab] = useState(() => (selection ? 'inspector' : 'structure'));
   const isMobile = useIsMobileShell();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -842,6 +845,7 @@ export function ShellLayout({
         onResponsiveView={isMobile ? () => setResponsiveOpen(true) : null}
         structureOpen={structureOpen}
         onToggleStructure={isMobile ? null : toggleStructure}
+        onLibrary={isMobile ? null : openLibraryModal}
         onTheme={onTheme}
         onAiReview={onAiReview}
         onPackages={onPackages}
