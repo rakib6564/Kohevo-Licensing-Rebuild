@@ -1,7 +1,7 @@
 // The style-surface controls (B2-P3c slice 4): layout, spacing, states, wrapper tag and section style write
 // values the server keeps, and the canvas shows them.
 import { test, expect } from '@playwright/test';
-import { openBuilder, frameDocument, frameEval, settled, sandboxPageId, openSection } from './helpers.mjs';
+import { openBuilder, frameDocument, frameEval, settled, sandboxPageId, openSection, showEdit } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
@@ -202,6 +202,7 @@ test('a section takes its own background and padding', async ({ page }) => {
     await insertQuote(page); // the sandbox page starts empty; adding a block creates its section
     await page.getByRole('tab', { name: /^Layers$/ }).click();
     await page.locator('[role="treeitem"]').first().click();
+    await showEdit(page); // a Layers pick leaves the panel on the tree
     await expect(page.locator('[id^="sbx-sec-"][id$="-tab-style"]')).toBeVisible(); // a section has the same three tabs as a block
     await openSection(page, 'background');
     await page.locator('input[id$="-style-bg-text"]').fill('#123456');
