@@ -1,6 +1,6 @@
 // Motion (B2-P3d): the move/reveal presets, and a section's own motion.
 import { test, expect } from '@playwright/test';
-import { openBuilder, frameDocument, settled, sandboxPageId, openSection, showEdit } from './helpers.mjs';
+import { openBuilder, frameDocument, settled, sandboxPageId, openSection, showEdit, undoReady } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
@@ -20,7 +20,7 @@ async function restore(page, layers) {
     await settled(page);
     if ((await layerCount(page)) <= layers) return;
     const undo = page.getByTestId('undo');
-    await expect(undo).toBeEnabled({ timeout: 15_000 });
+    if (!(await undoReady(undo))) return; // nothing left to undo: stop quietly so the test's own error is the one reported
     await undo.click();
     await page.waitForTimeout(500);
   }

@@ -3405,3 +3405,12 @@ html, body.sbx-body {
 .sbx-media__frame { position: relative; display: block; line-height: 0; }
 .sbx-media__tint { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
 .sbx-bg-overlay-note { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0 0; font-size: var(--sbx-fs-sm); color: var(--sbx-text-soft); }
+
+/* The options pencil of Typography, Border and Box shadow sits on the section's first row; Theme colour reads like every row. */
+@media (min-width: 861px) {
+  .sbx-left .sbx-isec__body .sbx-pop__row { position: relative; display: block; padding-right: 34px; }
+  .sbx-left .sbx-isec__body .sbx-pop__row > .sbx-iconbtn { position: absolute; top: 2px; right: 0; }
+  .sbx-left .sbx-bg-image-pane .sbx-pop__row { padding-right: 0; }
+  .sbx-left .sbx-color__theme { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(84px, 38%) minmax(0, 1fr); align-items: center; column-gap: 10px; margin-top: 4px; }
+  .sbx-left .sbx-color__theme .sbx-tp, .sbx-left .sbx-color__theme .sbx-tp__btn { width: 100%; }
+}

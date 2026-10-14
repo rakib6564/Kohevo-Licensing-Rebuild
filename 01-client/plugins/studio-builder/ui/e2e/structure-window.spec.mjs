@@ -1,6 +1,6 @@
 // The Structure window: the page outline floating over the editor, opened from the top bar or with Ctrl/⌘ I.
 import { test, expect } from '@playwright/test';
-import { openBuilder, settled, sandboxPageId } from './helpers.mjs';
+import { openBuilder, settled, sandboxPageId, undoReady } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'floating window (desktop)');
@@ -30,7 +30,7 @@ async function withSection(page, run) {
       await settled(page);
       if ((await sections.count()) <= initial) break;
       const undo = page.getByTestId('undo');
-      await expect(undo).toBeEnabled({ timeout: 15_000 });
+      if (!(await undoReady(undo))) break; // nothing left to undo: stop quietly so the test's own error is the one reported
       await undo.click();
       await page.waitForTimeout(500);
     }
