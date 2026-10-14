@@ -33,8 +33,9 @@ The accent stays Kohevo violet (`--sbx-accent`).
 1. Design foundation: tokens, palette, guard test (this file's palette).
 2. Top bar (48px, logo only) and one left panel with an Edit tab: a canvas pick or a new element opens Edit; the right-hand Inspector is gone on desktop. Done.
 3. Controls (desktop): plain section headers, label-left rows for every single-line field, joined unit fields, a slim device mark. Done as one final CSS layer, "Editor controls", at the end of `builder.css`; the phone sheet keeps its 44px controls.
-4. Add panel: folding groups, a New badge, quieter tiles, and the two "Container" tiles told apart. Still to do: fold the search, the six sub-tabs and the category chips into one lighter header.
+4. Add panel: folding groups, a New badge, quieter tiles, and the two "Container" tiles told apart. The header is lighter on desktop: the six sub-tabs sit on one underline row and the category chips are text-only (the final CSS layer, "Add panel header").
 5. Canvas: outline, floating toolbar, empty drop zone, layout chooser. Done.
 6. Structure (Navigator) window: a floating, draggable, resizable window with the page outline, from the top bar or Ctrl/⌘ I (desktop). Done.
 7. Library modal: the templates in a large window with a tab per kind, search and a card grid, from the top bar or the empty container button. Done.
 8. Globals: colour and font tokens (Settings > Site): a round-swatch palette above the colour fields, whose chips jump to their field, and a font preview on every font field. Done.
+9. Polish: the lighter Add header, and the Background image pencil moved to the title row. Done.

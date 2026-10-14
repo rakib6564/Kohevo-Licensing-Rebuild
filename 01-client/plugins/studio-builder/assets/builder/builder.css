@@ -3384,3 +3384,19 @@ html, body.sbx-body {
 .sbx-ss__chip:hover { transform: scale(1.12); }
 .sbx-ss__chip:focus-visible { outline: none; box-shadow: var(--sbx-focus); }
 .sbx-ss__fontprev { flex: none; width: 28px; text-align: center; font-size: var(--sbx-fs-lg); color: var(--sbx-text); }
+
+/* Add panel header (desktop): the six sub-tabs on one underline row and quieter category chips. */
+@media (min-width: 861px) {
+  .sbx-left .sbx-palette__tabs { display: flex; flex-wrap: nowrap; gap: 0; overflow-x: auto; scrollbar-width: none; padding: 0; margin: 0 0 8px; background: transparent; border: 0; border-bottom: 1px solid var(--sbx-border); border-radius: 0; }
+  .sbx-left .sbx-palette__tabs::-webkit-scrollbar { display: none; }
+  .sbx-left .sbx-palette__tabs .sbx-segmented-pill { flex: 1 0 auto; padding: 7px 2px; border-radius: 0; background: transparent; box-shadow: none; color: var(--sbx-text-faint); font-size: var(--sbx-fs-xs); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .sbx-left .sbx-palette__tabs .sbx-segmented-pill:hover { color: var(--sbx-text); background: transparent; }
+  .sbx-left .sbx-palette__tabs .sbx-segmented-pill.is-active { color: var(--sbx-text); background: transparent; box-shadow: none; border-bottom-color: var(--sbx-accent); }
+  .sbx-left .sbx-chips { gap: 2px; padding: 0 0 6px; }
+  .sbx-left .sbx-chip { min-height: 24px; padding: 2px 8px; border-color: transparent; background: transparent; color: var(--sbx-text-faint); font-size: var(--sbx-fs-xs); }
+  .sbx-left .sbx-chip:hover { border-color: transparent; color: var(--sbx-text); background: var(--sbx-inset); }
+  .sbx-left .sbx-chip.is-active { border-color: transparent; background: var(--sbx-selected); color: var(--sbx-text); }
+  /* The Background image pencil sits on the title row, not at the foot of the alt text. */
+  .sbx-left .sbx-bg-image-pane .sbx-pop__row { position: relative; display: block; }
+  .sbx-left .sbx-bg-image-pane .sbx-pop__row > .sbx-iconbtn { position: absolute; top: -4px; right: 0; }
+}
