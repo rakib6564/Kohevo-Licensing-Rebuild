@@ -16,6 +16,8 @@ async function withSection(page, run) {
   await settled(page);
   const canvas = page.frameLocator('iframe.sbx-canvas__frame');
   const sections = canvas.locator('[data-sb-node^="sec_"]');
+  await expect(canvas.locator('body')).toBeAttached();
+  await page.waitForTimeout(1500);
   const initial = await sections.count();
   await page.getByRole('tab', { name: /^Add$/ }).click();
   await page.getByRole('tab', { name: 'Sections' }).click();
