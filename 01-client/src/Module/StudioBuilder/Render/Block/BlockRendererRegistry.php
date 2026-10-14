@@ -109,6 +109,8 @@ final class BlockRendererRegistry
         $registry->register(new ModuleRenderers\FormCardRenderer());
         $registry->register(new ModuleRenderers\FormEmbedRenderer());
         $registry->register(new ModuleRenderers\BookingEmbedRenderer());
+        $registry->register(new ModuleRenderers\PaymentButtonRenderer());
+        $registry->register(new ModuleRenderers\PaymentLinkRenderer());
         foreach (\Slate\Module\StudioBuilder\Sdk\WidgetSdk::instance()->all() as $customWidget) {
             if (!$registry->has($customWidget->type())) {
                 $registry->register($customWidget->toBlockRenderer());

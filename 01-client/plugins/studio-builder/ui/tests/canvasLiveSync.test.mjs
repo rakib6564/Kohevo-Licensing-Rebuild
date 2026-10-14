@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isStructuralChange, syncLiveDOM } from '../src/core/canvasLiveSync.mjs';
+import { isServerRenderedType, isStructuralChange, syncLiveDOM } from '../src/core/canvasLiveSync.mjs';
 
 function fakeEl(tag = 'div', classes = [], text = '') {
   const classList = new Set(classes);
@@ -152,4 +152,15 @@ test('a per-device style override repaints from the server, while hide and align
   assert.equal(isStructuralChange(doc({}), doc({ tablet: { style: { padding: { top: '2rem' } } } })), true);
   assert.equal(isStructuralChange(doc({ mobile: { style: { padding: { top: '1rem' } } } }), doc({})), true);
   assert.equal(isStructuralChange(doc({}), doc({ tablet: { hide: true } })), false);
+});
+
+test('a property edit on a module or custom block repaints from the server; core text blocks keep their live patch', () => {
+  const doc = (type, props) => ({ sections: [{ id: 'sec_1', style: {}, blocks: [{ id: 'blk_1', type, props, style: {}, children: [] }] }] });
+  for (const type of ['payment.link', 'payment.button', 'membership.plans', 'booking.embed', 'acme.widget']) {
+    assert.equal(isStructuralChange(doc(type, { label: 'a' }), doc(type, { label: 'b' })), true, `${type} is server-rendered`);
+  }
+  assert.equal(isStructuralChange(doc('core.heading', { text: 'a' }), doc('core.heading', { text: 'b' })), false, 'a heading is patched in place');
+  assert.equal(isStructuralChange(doc('layout.container', { padding: 'sm' }), doc('layout.container', { padding: 'md' })), false, 'a layout container is patched in place');
+  assert.equal(isServerRenderedType('core.quote'), true);
+  assert.equal(isServerRenderedType('core.text'), false);
 });

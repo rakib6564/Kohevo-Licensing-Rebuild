@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '10';
+    public const VERSION = '11';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -153,6 +153,8 @@ final class StudioStylesheet
             . '.sb-embed-card__fields{margin:.75rem 0 0;padding-left:1.25rem;color:var(--sb-text-muted)}'
             . '.sb-embed-card__note{margin:.75rem 0 0;font-size:.8125rem;color:var(--sb-text-muted)}'
             . '.sb-embed-frame{width:100%;border:0;display:block}'
+            . '.sb-pay{margin:1rem 0 0}.sb-pay__button{cursor:pointer;border:0;font:inherit}'
+            . '.sb-pay-card__button{margin:.5rem 0}.sb-pay-card__summary{margin:0;font-weight:600;color:var(--sb-text-primary)}'
             // The Forms stylesheet reads its colours from variables it defines only on its own standalone page (`.forms-public`).
             // Embedded in a Studio page there is no such ancestor, so the submit button lost its background; map them to the site tokens.
             . '.sb-block--forms-embed{--f-accent:var(--sb-color-accent);--f-accent-d:color-mix(in srgb,var(--sb-color-accent) 85%,#000);--f-ink:var(--sb-text-primary);--f-muted:var(--sb-text-muted);--f-line:#e4e7ec;--f-line-2:#eef1f5;--f-surface:#fff;--f-soft:#f7f8fa;--f-radius:14px;--f-radius-s:11px;--f-ring:rgba(17,17,17,.14)}'

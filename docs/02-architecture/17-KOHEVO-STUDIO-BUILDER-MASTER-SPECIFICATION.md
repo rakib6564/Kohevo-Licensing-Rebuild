@@ -651,7 +651,7 @@ Allows assigning headers, footers, and single/archive templates conditionally:
 | 7 | Nav menu, map, divider, spacer | Not started |
 | 8 | Universal Advanced tab | Not started |
 | 9 | Forms and Booking widgets | Open (#38) |
-| 10 | Membership, Coaching, Payments | Not started |
+| 10 | Membership, Coaching, Payments | Payments built: a fixed-amount Stripe Checkout button (`payment.button`, signed offer, `plugins/studio-builder/public/pay.php`) and a Stripe Payment Link button (`payment.link`). Membership plans exist (`membership.plans`). Coaching has no packages or curriculum data in its plugin, so it is not built |
 | 11 | Context menu and clipboard | Open (#40) |
 | 12 | Theme Builder display conditions | Not started |
 

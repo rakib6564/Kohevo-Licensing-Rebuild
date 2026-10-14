@@ -91,6 +91,16 @@ const SERVER_PAINTED_FIELDS = ['style_states', 'tag', 'classNames', 'attributes'
 export const SERVER_RENDERED_TYPES = new Set(['core.icon', 'core.list', 'core.quote', 'core.link', 'core.card', 'core.table', 'core.countdown', 'core.divider', 'core.spacer', 'core.nav_menu', 'core.map']);
 
 /**
+ * Whether a block's markup is built only by the server, so any property edit repaints it from the server: the core types listed
+ * above, and every block a module or a custom widget brings (their renderers are PHP and nothing in the editor can predict them).
+ * Only the `core.*` blocks with a live patch and the `layout.*` containers are painted ahead.
+ */
+export const isServerRenderedType = (type) => {
+  const t = String(type || '');
+  return SERVER_RENDERED_TYPES.has(t) || !(t.startsWith('core.') || t.startsWith('layout.'));
+};
+
+/**
  * Types whose heading can carry a highlighted word: the server wraps it in a span, which the text patch
  * (textContent) would erase, so while a highlight is set any prop change repaints from the server.
  */
@@ -119,7 +129,7 @@ function blocksChanged(prev, next, tokens = null) {
     if (styled && !liveStyle({ kind: 'block', node: pb }, { kind: 'block', node: nb }, tokens)) return true;
     if (SERVER_PAINTED_FIELDS.some((f) => differs(pb[f], nb[f]))) return true;
     if (HIGHLIGHT_TYPES.has(nb.type) && (asHighlight(pb) || asHighlight(nb)) && differs(pb.props, nb.props)) return true;
-    if (SERVER_RENDERED_TYPES.has(nb.type) && pb.props !== nb.props && JSON.stringify(pb.props) !== JSON.stringify(nb.props)) return true;
+    if (isServerRenderedType(nb.type) && pb.props !== nb.props && JSON.stringify(pb.props) !== JSON.stringify(nb.props)) return true;
     if (blocksChanged(pb.children, nb.children, tokens)) return true;
   }
   return false;

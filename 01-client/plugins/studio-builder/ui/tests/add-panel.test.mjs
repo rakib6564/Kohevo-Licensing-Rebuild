@@ -21,7 +21,7 @@ test('every block is reachable from a tab, and Elements never overlap Components
     assert.ok(!(isElementBlock(b) && isComponentBlock(b)), `${b.type} is not in both Elements and Components`);
   }
   assert.ok(blocks.filter(isElementBlock).length >= 15, 'a real Elements set');
-  assert.deepEqual(blocks.filter(isComponentBlock).map((b) => b.type).sort(), ['booking.embed', 'booking.services', 'forms.embed', 'forms.form_card', 'membership.plans']);
+  assert.deepEqual(blocks.filter(isComponentBlock).map((b) => b.type).sort(), ['booking.embed', 'booking.services', 'forms.embed', 'forms.form_card', 'membership.plans', 'payment.button', 'payment.link']);
 });
 
 test('groupBlocks orders categories as designed and keeps unknown ones last', () => {

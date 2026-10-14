@@ -10,6 +10,8 @@
  *   forms.form_card   -> provider forms.form           (entitlement: forms)
  *   forms.embed       -> provider forms.form_embed     (entitlement: forms)
  *   booking.embed     -> provider booking.embed_target (entitlement: booking)
+ *   payment.button    -> no provider: fixed amount typed in the block, signed at render time (see Payment/PaymentOffer)
+ *   payment.link      -> no provider: a Stripe-hosted link typed in the block (see Payment/PaymentLinkUrl)
  *
  * Each block declares its commercial entitlement (enforced at write time by
  * `DocumentValidator` and again, live, at every render) and allowlists exactly
@@ -20,6 +22,8 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Registry;
 
+use Slate\Module\StudioBuilder\Payment\PaymentLinkUrl;
+use Slate\Module\StudioBuilder\Payment\PaymentOffer;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 
 final class ModuleBlockDefinitions
@@ -105,6 +109,35 @@ final class ModuleBlockDefinitions
                 requiredEntitlement: 'booking',
                 allowedBindingProviders: ['booking.embed_target'],
                 bindingSlots: ['service' => 'booking.embed_target'],
+            ),
+            new DeclarativeBlockDefinition(
+                type: 'payment.button',
+                version: 1,
+                label: 'Payment Button',
+                title: 'Payment Button',
+                description: 'A fixed-amount pay button that opens Stripe Checkout',
+                category: 'business',
+                icon: 'arrow-up-right',
+                schema: FieldSchema::define([
+                    ['key' => 'label', 'type' => 'string', 'label' => 'Button label', 'required' => false, 'default' => 'Pay now', 'max_length' => 80],
+                    ['key' => 'amount', 'type' => 'number', 'label' => 'Amount', 'required' => false, 'default' => 10, 'min' => 0.5, 'max' => 999999],
+                    ['key' => 'currency', 'type' => 'enum', 'label' => 'Currency', 'required' => false, 'default' => 'USD', 'allowed_values' => PaymentOffer::CURRENCIES],
+                    ['key' => 'description', 'type' => 'string', 'label' => 'What the visitor is paying for', 'required' => false, 'default' => '', 'max_length' => PaymentOffer::MAX_DESCRIPTION],
+                    ['key' => 'success_path', 'type' => 'string', 'label' => 'Thank-you page path', 'required' => false, 'default' => '', 'max_length' => 120, 'pattern' => '~^(?:[A-Za-z0-9][A-Za-z0-9_\-]*(?:/[A-Za-z0-9][A-Za-z0-9_\-]*){0,5})?$~'],
+                ]),
+            ),
+            new DeclarativeBlockDefinition(
+                type: 'payment.link',
+                version: 1,
+                label: 'Stripe Payment Link',
+                title: 'Stripe Payment Link',
+                description: 'A button to a Stripe Payment Link or Buy Button page',
+                category: 'business',
+                icon: 'link',
+                schema: FieldSchema::define([
+                    ['key' => 'label', 'type' => 'string', 'label' => 'Button label', 'required' => false, 'default' => 'Pay now', 'max_length' => 80],
+                    ['key' => 'url', 'type' => 'string', 'label' => 'Stripe link', 'required' => false, 'default' => '', 'max_length' => 600, 'pattern' => PaymentLinkUrl::PATTERN],
+                ]),
             ),
         ];
     }

@@ -3974,6 +3974,171 @@
             "version": 1
         },
         {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "business",
+            "default_props": {
+                "amount": 10,
+                "currency": "USD",
+                "description": "",
+                "label": "Pay now",
+                "success_path": ""
+            },
+            "description": "A fixed-amount pay button that opens Stripe Checkout",
+            "field_schema": [
+                {
+                    "key": "label",
+                    "type": "string",
+                    "label": "Button label",
+                    "required": false,
+                    "default": "Pay now",
+                    "max_length": 80
+                },
+                {
+                    "key": "amount",
+                    "type": "number",
+                    "label": "Amount",
+                    "required": false,
+                    "default": 10,
+                    "min": 0.5,
+                    "max": 999999
+                },
+                {
+                    "key": "currency",
+                    "type": "enum",
+                    "label": "Currency",
+                    "required": false,
+                    "default": "USD",
+                    "allowed_values": [
+                        "USD",
+                        "EUR",
+                        "GBP",
+                        "CAD",
+                        "AUD",
+                        "CHF",
+                        "SEK",
+                        "NOK",
+                        "DKK",
+                        "PLN",
+                        "CZK",
+                        "NZD"
+                    ]
+                },
+                {
+                    "key": "description",
+                    "type": "string",
+                    "label": "What the visitor is paying for",
+                    "required": false,
+                    "default": "",
+                    "max_length": 120
+                },
+                {
+                    "key": "success_path",
+                    "type": "string",
+                    "label": "Thank-you page path",
+                    "required": false,
+                    "default": "",
+                    "max_length": 120
+                }
+            ],
+            "icon": "arrow-up-right",
+            "inline_text": [],
+            "label": "Payment Button",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
+            ],
+            "title": "Payment Button",
+            "type": "payment.button",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "business",
+            "default_props": {
+                "label": "Pay now",
+                "url": ""
+            },
+            "description": "A button to a Stripe Payment Link or Buy Button page",
+            "field_schema": [
+                {
+                    "key": "label",
+                    "type": "string",
+                    "label": "Button label",
+                    "required": false,
+                    "default": "Pay now",
+                    "max_length": 80
+                },
+                {
+                    "key": "url",
+                    "type": "string",
+                    "label": "Stripe link",
+                    "required": false,
+                    "default": "",
+                    "max_length": 600
+                }
+            ],
+            "icon": "link",
+            "inline_text": [],
+            "label": "Stripe Payment Link",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
+            ],
+            "title": "Stripe Payment Link",
+            "type": "payment.link",
+            "version": 1
+        },
+        {
             "allowed_binding_providers": [
                 "content.taxonomy"
             ],
