@@ -69,9 +69,12 @@ test('the Blocks sheet can be dragged and pulled down to close', async ({ page }
   await dock(page, 'blocks').click();
   const sheet = page.locator('.sbx-left.is-mobile-open');
   await expect(sheet).toHaveCount(1);
-  // wait for the slide-up animation to finish so the starting height is stable
-  let last = -1;
-  await expect.poll(async () => { const h = (await sheet.boundingBox()).height; const same = h === last; last = h; return same; }).toBe(true);
+  // wait for the slide animation to finish so the height (and the handle under the pointer) is stable
+  const stable = async () => {
+    let last = -1;
+    await expect.poll(async () => { const h = (await sheet.boundingBox()).height; const same = h === last; last = h; return same; }).toBe(true);
+  };
+  await stable();
   const handle = await page.getByTestId('left-sheet-handle').boundingBox();
   const before = (await sheet.boundingBox()).height;
 
@@ -82,6 +85,7 @@ test('the Blocks sheet can be dragged and pulled down to close', async ({ page }
   await page.mouse.up();
   const grown = (await sheet.boundingBox()).height;
   expect(grown).toBeGreaterThan(before - 1);
+  await stable(); // the sheet is still settling onto its snap: grabbing the handle now can miss it
 
   // pull well below the lowest snap: it closes
   const h2 = await page.getByTestId('left-sheet-handle').boundingBox();
