@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { copyNames, failureDetail, isValidSlug, listablePages, pageChips, renameChanges } from '../src/core/pages.mjs';
+import { copyNames, failureDetail, isChromePartial, isValidSlug, listablePages, pageChips, previewHostPages, renameChanges } from '../src/core/pages.mjs';
 
 const page = (over = {}) => ({ id: 1, title: 'About us', slug: 'about', page_type: 'page', status: 'draft', route_mode: 'standalone', is_published: false, has_unpublished_changes: false, ...over });
 
@@ -43,4 +43,16 @@ test('the first validation message is surfaced, otherwise nothing', () => {
   assert.equal(failureDetail({ details: { errors: [{ message: 'A page with slug exists.' }] } }), 'A page with slug exists.');
   assert.equal(failureDetail({ code: 'server_error' }), '');
   assert.equal(failureDetail(null), '');
+});
+
+test('a header or footer is previewed on a real page: homepage first, then by title, never a partial or an archived page', () => {
+  const list = previewHostPages([
+    page({ id: 1, title: 'Services' }), page({ id: 2, title: 'About' }), page({ id: 3, title: 'Home', route_mode: 'homepage' }),
+    page({ id: 4, page_type: 'header_partial', title: 'Default' }), page({ id: 5, title: 'Old', status: 'archived' }),
+  ]);
+  assert.deepEqual(list.map((p) => p.id), [3, 2, 1]);
+  assert.deepEqual(previewHostPages(undefined), []);
+  assert.equal(isChromePartial({ page_type: 'footer_partial' }), true);
+  assert.equal(isChromePartial({ page_type: 'page' }), false);
+  assert.equal(isChromePartial(null), false);
 });

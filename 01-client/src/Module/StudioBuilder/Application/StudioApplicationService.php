@@ -101,6 +101,7 @@ use Slate\Module\StudioBuilder\Registry\BlockAvailability;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Registry\BlockUsage;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeResolver;
+use Slate\Module\StudioBuilder\Render\Chrome\ChromeSource;
 use Slate\Module\StudioBuilder\Render\Compile\StudioCompilationInvalidator;
 use Slate\Module\StudioBuilder\Render\Media\MediaResolverInterface;
 use Slate\Module\StudioBuilder\Render\RenderContext;
@@ -1125,12 +1126,27 @@ final class StudioApplicationService
      * revision id is never rendered on its own authority. Read-only: no
      * revision, compilation, audit row or any other write is produced.
      */
-    public function renderPreview(StudioActor $actor, int $pageId, ?int $revisionId = null): RenderResult
+    public function renderPreview(StudioActor $actor, int $pageId, ?int $revisionId = null, ?int $asPageId = null): RenderResult
     {
         $tenantId = $this->authorize($actor, StudioPermissions::VIEW);
         $renderer = $this->requireRenderer();
         [$page, $revision] = $this->loadPageRevision($pageId, $revisionId);
-        return $renderer->renderRevision($page, $revision, RenderContext::forPreview($tenantId, $renderer->siteContext(), $actor));
+        if ($asPageId === null) {
+            return $renderer->renderRevision($page, $revision, RenderContext::forPreview($tenantId, $renderer->siteContext(), $actor));
+        }
+
+        // "Preview as a page": the header or footer being edited (its saved draft, or the revision asked for), shown on a
+        // real page. Both pages are looked up inside the tenant; the page shown must be a page that gets chrome.
+        $region = ['header_partial' => 'header', 'footer_partial' => 'footer'][$page->pageType] ?? null;
+        if ($region === null) {
+            throw new StudioNotFoundException('Only a header or a footer can be previewed on another page.', ['page_id' => $pageId]);
+        }
+        [$host, $hostRevision] = $this->loadPageRevision($asPageId, null);
+        if (!in_array($host->pageType, ChromeResolver::CHROMED_PAGE_TYPES, true)) {
+            throw new StudioNotFoundException('That page does not carry a header or a footer.', ['page_id' => $asPageId]);
+        }
+        $override = [$region => ChromeSource::partial((int) $revision['id'], (string) $revision['document_json'])];
+        return $renderer->renderRevision($host, $hostRevision, RenderContext::forPreview($tenantId, $renderer->siteContext(), $actor, null, ['chrome_override' => $override]));
     }
 
     /**

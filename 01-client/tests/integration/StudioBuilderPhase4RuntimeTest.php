@@ -577,7 +577,7 @@ unit('phase4 integration: server renderer, preview and public runtime (real MySQ
             });
 
             // ── 11. Chrome partials, homepage, SEO, platform identity ──────
-            unit('phase4 int 11: published chrome partials, homepage route, SEO head and protected platform signature', function () use ($rt, $editor, $publisher, $base, $S): void {
+            unit('phase4 int 11: published chrome partials, homepage route, SEO head and protected platform signature', function () use ($rt, $editor, $viewer, $publisher, $base, $S): void {
                 [$headerId] = sbp4_publish_page($rt, SBP4_TENANT_A, $publisher, 'default', sbp4_doc([sbp4_heading('Alpha Site Header')], 'header_partial'), 'header_partial');
                 $r = sbp4_public($rt, SBP4_TENANT_A, '/about');
                 assert_true(str_contains($r->body, 'Alpha Site Header'), 'inherit uses the tenant\'s published site header partial (artifact recompiled automatically)');
@@ -589,6 +589,19 @@ unit('phase4 integration: server renderer, preview and public runtime (real MySQ
                     $rt->app->saveDraft($editor, $headerId, sbp4_doc([sbp4_heading('Alpha Header DRAFT')], 'header_partial'), (int) $p['active_draft_revision_id']);
                 });
                 assert_true(!str_contains(sbp4_public($rt, SBP4_TENANT_A, '/about')->body, 'Alpha Header DRAFT'), 'a draft partial never leaks into pages');
+
+                // Preview as a page: the header's saved draft on a real page, only for an authorized, in-tenant pair.
+                $onAbout = $rt->tenants->runAs(SBP4_TENANT_A, static fn() => $rt->app->renderPreview($viewer, $headerId, null, $S->aboutA));
+                assert_true(str_contains($onAbout->html, 'Alpha Header DRAFT'), 'the header draft is shown on the chosen page');
+                $plain = $rt->tenants->runAs(SBP4_TENANT_A, static fn() => $rt->app->renderPreview($viewer, $S->aboutA));
+                preg_match('~<main[^>]*>(.*?)</main>~s', $plain->html, $m1);
+                preg_match('~<main[^>]*>(.*?)</main>~s', $onAbout->html, $m2);
+                assert_true(($m1[1] ?? '') !== '' && ($m1[1] ?? '') === ($m2[1] ?? null), 'and the chosen page body is exactly what its own preview shows');
+                assert_true(!str_contains($onAbout->html, 'Alpha Site Header') && str_contains($onAbout->html, '<meta name="robots" content="noindex,nofollow">'), 'the published header is replaced, and the preview stays noindex');
+                assert_throws(StudioNotFoundException::class, static fn() => $rt->tenants->runAs(SBP4_TENANT_A, static fn() => $rt->app->renderPreview($viewer, $S->aboutA, null, $S->aboutA)), 'only a header or footer can be previewed on a page');
+                assert_throws(StudioNotFoundException::class, static fn() => $rt->tenants->runAs(SBP4_TENANT_A, static fn() => $rt->app->renderPreview($viewer, $headerId, null, $headerId)), 'a header cannot host a header preview');
+                assert_throws(StudioNotFoundException::class, static fn() => $rt->tenants->runAs(SBP4_TENANT_B, static fn() => $rt->app->renderPreview($viewer, $headerId, null, $S->aboutB)), 'tenant B cannot reach tenant A\'s header');
+                assert_true(!str_contains(sbp4_public($rt, SBP4_TENANT_A, '/about')->body, 'Alpha Header DRAFT'), 'the preview left the public page alone');
 
                 $hidden = sbp4_doc([sbp4_heading('Bare page')], 'page', ['header_mode' => 'hidden', 'footer_mode' => 'hidden']);
                 sbp4_publish_page($rt, SBP4_TENANT_A, $publisher, 'bare', $hidden);

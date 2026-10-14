@@ -8,6 +8,12 @@ export const NAVIGABLE_PAGE_TYPES = ['page', 'landing'];
 
 export const listablePages = (pages) => asList(pages).filter((p) => p && NAVIGABLE_PAGE_TYPES.includes(p.page_type) && p.status !== 'archived');
 
+/** A header or footer is shown on a real page when previewed: the pages it can sit on, homepage first, then by title. */
+export const isChromePartial = (page) => !!page && ['header_partial', 'footer_partial'].includes(page.page_type);
+export const previewHostPages = (pages) => listablePages(pages)
+  .slice()
+  .sort((a, b) => (b.route_mode === 'homepage') - (a.route_mode === 'homepage') || String(a.title).localeCompare(String(b.title)));
+
 /** Status chips for one page, as message-key suffixes, in display order. */
 export function pageChips(page) {
   const chips = [];

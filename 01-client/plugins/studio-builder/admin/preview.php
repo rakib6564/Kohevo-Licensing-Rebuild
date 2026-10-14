@@ -2,7 +2,9 @@
 /**
  * Kohevo Studio — authorized preview endpoint.
  *
- *   GET /plugins/studio-builder/admin/preview.php?page=<id>[&revision=<id>]
+ *   GET /plugins/studio-builder/admin/preview.php?page=<id>[&revision=<id>][&as_page=<id>]
+ *
+ * `as_page` (header/footer only): show THAT page with this header or footer swapped in.
  *
  * A thin HTTP adapter over StudioApplicationService::renderPreview(), which
  * enforces, in order: active tenant -> authenticated actor -> studio-builder
@@ -38,13 +40,17 @@ $revisionId = isset($_GET['revision'])
     ? filter_var($_GET['revision'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])
     : null;
 
-if ($pageId === false || $pageId === null || $revisionId === false) {
+$asPageId = isset($_GET['as_page'])
+    ? filter_var($_GET['as_page'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])
+    : null;
+
+if ($pageId === false || $pageId === null || $revisionId === false || $asPageId === false) {
     StudioHttpResponder::sendAuthoringError(404);
     exit;
 }
 
 try {
-    $result = StudioRuntimeFactory::build()->app->renderPreview(StudioActor::fromCurrentSession(), $pageId, $revisionId);
+    $result = StudioRuntimeFactory::build()->app->renderPreview(StudioActor::fromCurrentSession(), $pageId, $revisionId, $asPageId);
     StudioHttpResponder::sendRender($result);
 } catch (StudioException $e) {
     if ($e->httpStatus() >= 500) {

@@ -43,6 +43,7 @@ use Slate\Module\StudioBuilder\Render\Media\MediaResolverInterface;
 use Slate\Module\StudioBuilder\Render\RenderCollector;
 use Slate\Module\StudioBuilder\Render\RenderContext;
 use Slate\Module\StudioBuilder\Render\RenderDocumentPreparer;
+use Slate\Module\StudioBuilder\Render\RenderMode;
 use Slate\Module\StudioBuilder\Render\Seo\SeoHead;
 use Slate\Module\StudioBuilder\Render\StudioStylesheet;
 use Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme;
@@ -273,6 +274,14 @@ final class StudioCompiler
         $theme  = $this->themes->resolve((string) $settings['token_group']);
         $header = $this->chrome->resolve('header', (string) $settings['header_mode'], $page, $settings);
         $footer = $this->chrome->resolve('footer', (string) $settings['footer_mode'], $page, $settings);
+        // "Preview as a page": an authoring preview may swap in the draft of a header or footer being edited.
+        $override = $context->mode === RenderMode::Preview ? $context->attribute('chrome_override') : null;
+        if (is_array($override) && ($override['header'] ?? null) instanceof ChromeSource && in_array($page->pageType, ChromeResolver::CHROMED_PAGE_TYPES, true)) {
+            $header = $override['header'];
+        }
+        if (is_array($override) && ($override['footer'] ?? null) instanceof ChromeSource && in_array($page->pageType, ChromeResolver::CHROMED_PAGE_TYPES, true)) {
+            $footer = $override['footer'];
+        }
         // Live references resolve to the referenced components' PUBLISHED revisions; their
         // identity is part of the fingerprint, so a republished component makes every
         // dependent artifact stale on the next request even without explicit invalidation.

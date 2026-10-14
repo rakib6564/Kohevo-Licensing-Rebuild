@@ -66,9 +66,9 @@ final class RenderContext
         return $this->attributes[$key] ?? $default;
     }
 
-    public static function forPreview(int $tenantId, SiteContext $site, StudioActor $actor, ?\Closure $entitlementCheck = null): self
+    public static function forPreview(int $tenantId, SiteContext $site, StudioActor $actor, ?\Closure $entitlementCheck = null, array $attributes = []): self
     {
-        return new self(RenderMode::Preview, $tenantId, $site, $actor, $entitlementCheck);
+        return new self(RenderMode::Preview, $tenantId, $site, $actor, $entitlementCheck, $attributes);
     }
 
     public static function forEditor(int $tenantId, SiteContext $site, StudioActor $actor, ?\Closure $entitlementCheck = null): self

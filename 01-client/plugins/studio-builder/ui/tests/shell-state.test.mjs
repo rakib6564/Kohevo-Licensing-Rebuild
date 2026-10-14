@@ -26,6 +26,8 @@ test('only edit mode is interactive and unknown modes fall back to edit', () => 
 
 test('visitor preview targets the authorized preview endpoint for this page', () => {
   assert.equal(visitorPreviewUrl({ previewUrl: '/p/preview.php', pageId: 7 }), '/p/preview.php?page=7');
+  assert.equal(visitorPreviewUrl({ previewUrl: '/p/preview.php', pageId: 7 }, 12), '/p/preview.php?page=7&as_page=12');
+  assert.equal(visitorPreviewUrl({ previewUrl: '/p/preview.php', pageId: 7 }, 0), '/p/preview.php?page=7');
 });
 
 test('rangeIds is inclusive, order-independent and tolerant of a missing anchor', () => {

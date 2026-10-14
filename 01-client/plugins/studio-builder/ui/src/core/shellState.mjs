@@ -25,8 +25,9 @@ export function normalizeViewMode(mode) {
 }
 
 /** The authorized preview endpoint for this page (the same one the external Preview link opens). */
-export function visitorPreviewUrl(boot) {
-  return `${boot.previewUrl}?page=${encodeURIComponent(boot.pageId)}`;
+export function visitorPreviewUrl(boot, asPageId = 0) {
+  const base = `${boot.previewUrl}?page=${encodeURIComponent(boot.pageId)}`;
+  return asPageId > 0 ? `${base}&as_page=${encodeURIComponent(asPageId)}` : base;
 }
 
 /** Ids from `a` to `b` inclusive in visual order; just `[b]` when `a` is absent from the rows. */
