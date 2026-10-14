@@ -449,6 +449,8 @@ return [
     'studio_ui_devices' => 'Afficher sur',
     'studio_ui_audience' => 'Audience',
     'studio_ui_align' => 'Alignement',
+    'studio_ui_align_text' => 'Alignement du texte',
+    'studio_ui_align_device' => 'Alignement par appareil',
     'studio_ui_columns' => 'Colonnes',
     'studio_ui_padding_y' => 'Marge intérieure verticale',
     'studio_ui_width' => 'Largeur',

@@ -927,6 +927,8 @@ const EN = {
   devices: 'Show on',
   audience: 'Audience',
   align: 'Alignment',
+  align_text: 'Text alignment',
+  align_device: 'Alignment by device',
   columns: 'Columns',
   padding_y: 'Vertical padding',
   width: 'Width',

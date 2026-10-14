@@ -32,6 +32,12 @@ export const MEDIA_TYPES = new Set(['core.image', 'core.video', 'core.gallery'])
 const SURFACE_TYPES = new Set(['core.button', 'core.card']);
 
 /** A block that holds other blocks: how it arranges and spaces them is what an author edits first. */
+/** A block whose own content already carries a left/centre/right `align` field: Style's Alignment is then the per-device one. */
+const hasTextAlignField = (ctx) => asList(ctx.def && ctx.def.field_schema).some((f) => f && f.key === 'align' && asList(f.allowed_values).includes('left'));
+
+/** What Style's Alignment is called: it must not read like the block's own Alignment field in Content. */
+export const alignTitleKey = (ctx) => (isContainer(ctx) ? 'align_text' : (hasTextAlignField(ctx) ? 'align_device' : 'align'));
+
 const isContainer = (ctx) => !!ctx.def && ctx.def.allows_children === true;
 
 /** Where a surface-type section lives: Style for a container or surface block, Advanced for everything else. */
@@ -51,7 +57,7 @@ export const SECTIONS = Object.freeze([
   { id: 'advanced', tab: 'advanced', titleKey: 'section_advanced', keywords: ['margin', 'padding', 'spacing', 'z-index', 'stacking', 'entrance', 'animation', 'css id', 'class'], appliesTo: () => true, summary: (ctx) => advancedSummary(ctx), openFor: () => true },
   { id: 'layout', tab: (ctx) => (isContainer(ctx) ? 'content' : 'advanced'), titleKey: 'section_layout', titleFor: (ctx) => (isContainer(ctx) ? 'section_flex_grid' : 'section_layout'), keywords: ['flex', 'grid', 'display', 'order', 'grow', 'shrink', 'basis'], appliesTo: (ctx) => has(ctx, 'layout'), summary: (ctx) => layoutSummary(ctx.style.layout), openFor: () => false },
 
-  { id: 'align', tab: 'style', titleKey: 'align', appliesTo: (ctx) => has(ctx, 'align'), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
+  { id: 'align', tab: 'style', titleKey: 'align', titleFor: alignTitleKey, appliesTo: (ctx) => has(ctx, 'align'), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
   { id: 'typography', tab: 'style', titleKey: 'typography', appliesTo: (ctx) => (has(ctx, 'typography') || has(ctx, 'color')) && !MEDIA_TYPES.has(ctx.node.type), summary: (ctx) => typographySummary(ctx.style), openFor: (ctx) => TEXT_TYPES.has(ctx.node.type) },
   { id: 'background', tab: surfaceTab, titleKey: 'background_label', appliesTo: (ctx) => has(ctx, 'background'), summary: (ctx) => backgroundSummary(ctx.style.background), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
   { id: 'border', tab: surfaceTab, titleKey: 'border', appliesTo: (ctx) => has(ctx, 'border'), summary: (ctx) => borderSummary(ctx.style.border), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },

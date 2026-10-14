@@ -20,7 +20,7 @@ const DEVICE_ICONS = { desktop: IconMonitor, tablet: IconTablet, mobile: IconSma
  * mobile-first; the inherited value is shown as the placeholder. `base` is
  * required when `requireBase`.
  */
-export function ResponsiveSelect({ label, value, options, onChange, activeBreakpoint, requireBase = false, numeric = false, icons = null, labelOf = null }) {
+export function ResponsiveSelect({ label, value, options, onChange, activeBreakpoint, requireBase = false, numeric = false, icons = null, labelOf = null, hideLegend = false }) {
   const id = useId();
   const { viewport, setViewport } = useEditor();
   const map = typeof value === 'object' && value !== null && !Array.isArray(value) ? value : (value === null || value === undefined ? {} : { base: value });
@@ -53,7 +53,7 @@ export function ResponsiveSelect({ label, value, options, onChange, activeBreakp
   const editing = device ? device.breakpoint : 'base';
   return (
     <fieldset className="sbx-fieldset sbx-responsive">
-      <legend>{label}</legend>
+      <legend className={hideLegend ? 'sbx-sr-only' : undefined}>{label}</legend>
       <div className="sbx-responsive__devices" role="group" aria-label={`${label} — ${t('viewport')}`}>
         {VIEWPORTS.map((v) => {
           const Dev = DEVICE_ICONS[v.key];

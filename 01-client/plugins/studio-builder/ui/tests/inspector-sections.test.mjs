@@ -150,3 +150,14 @@ test('a container shows its flex and grid options under Content (closed) and tit
   assert.ok(!ids('advanced', container).includes('layout'));
   assert.ok(ids('advanced', ctxOf('core.heading')).includes('layout'));
 });
+
+test('Style Alignment is named so it cannot be mistaken for the block\'s own Alignment field', () => {
+  const text = inspectorContext({ id: 'blk_1', type: 'core.text', style: {} }, { style_capabilities: ['align', 'opacity'], binding_slots: [], field_schema: [{ key: 'align', type: 'enum', allowed_values: ['left', 'center', 'right'] }] });
+  const flex = inspectorContext({ id: 'blk_2', type: 'layout.flex', style: {} }, { style_capabilities: ['align'], binding_slots: [], allows_children: true, field_schema: [{ key: 'align', type: 'enum', allowed_values: ['start', 'center', 'end', 'stretch'] }] });
+  const heading = inspectorContext({ id: 'blk_3', type: 'core.heading', style: {} }, { style_capabilities: ['align'], binding_slots: [], field_schema: [{ key: 'text', type: 'string' }] });
+  const align = SECTIONS.find((s) => s.id === 'align');
+  assert.equal(titleKeyOf(align, text), 'align_device');
+  assert.equal(titleKeyOf(align, flex), 'align_text');
+  assert.equal(titleKeyOf(align, heading), 'align');
+  assert.ok(ids('style', text).includes('align'));
+});

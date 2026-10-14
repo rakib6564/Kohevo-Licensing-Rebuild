@@ -23,7 +23,7 @@ import { InspectorHeader } from './InspectorHeader.jsx';
 import { InspectorBar } from './InspectorBar.jsx';
 import { asList, asObject, blockDefinition, blockIndentTarget, blockMoveTarget, blockOutdentTarget } from '../../core/doc.mjs';
 import { STYLE_TOKEN_CATEGORIES, tokensFor } from '../../core/fields.mjs';
-import { MEDIA_TYPES } from '../../core/inspectorSections.mjs';
+import { MEDIA_TYPES, alignTitleKey } from '../../core/inspectorSections.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
 import { IconButton } from './InspectorIcons.jsx';
@@ -94,7 +94,8 @@ export function BlockInspector({ info }) {
     ),
     align: () => (
       <ResponsiveSelect
-        label={t('align')}
+        label={t(alignTitleKey({ def, node: block }))}
+        hideLegend
         icons="text"
         value={style.align ?? null}
         options={asList(manifest.vocabulary.alignments)}
