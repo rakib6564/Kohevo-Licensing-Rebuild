@@ -2,7 +2,7 @@
 // named under it with a way to remove it, the tabs mark which kinds of background are set, and the Color tab says an
 // image covers it.
 import { test, expect } from '@playwright/test';
-import { chooseImage, openBuilder, settled, openSection, sandboxPageId } from './helpers.mjs';
+import { chooseImage, openBuilder, settled, openSection, sandboxPageId, undoReady } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Edit panel (desktop)');
@@ -22,7 +22,7 @@ async function restore(page, layers) {
     await settled(page);
     if ((await layerCount(page)) <= layers) return;
     const undo = page.getByTestId('undo');
-    await expect(undo).toBeEnabled({ timeout: 15_000 });
+    if (!(await undoReady(undo))) return; // nothing left to undo: stop quietly so the test's own error is the one reported
     await undo.click();
     await page.waitForTimeout(500);
   }

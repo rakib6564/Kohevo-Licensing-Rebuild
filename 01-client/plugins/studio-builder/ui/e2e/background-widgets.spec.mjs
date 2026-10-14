@@ -1,7 +1,7 @@
 // Background image extras: the focal-point pad and the overlay colour + opacity. Neither adds a new stored field:
 // the focal point is the media_ref's own pair and the overlay opacity is the alpha of its one colour.
 import { test, expect } from '@playwright/test';
-import { chooseImage, openBuilder, settled, openSection, frameEval } from './helpers.mjs';
+import { chooseImage, openBuilder, settled, openSection, frameEval, undoReady } from './helpers.mjs';
 
 test.afterEach(async ({ page }) => {
   await page.goto(`/plugins/studio-builder/admin/builder.php?page=${(await import('./helpers.mjs')).sandboxPageId()}&lang=en`);
@@ -17,7 +17,7 @@ async function restore(page, layers) {
     await settled(page);
     if ((await layerCount(page)) <= layers) return;
     const undo = page.getByTestId('undo');
-    await expect(undo).toBeEnabled({ timeout: 15_000 });
+    if (!(await undoReady(undo))) return; // nothing left to undo: stop quietly so the test's own error is the one reported
     await undo.click();
     await page.waitForTimeout(500);
   }

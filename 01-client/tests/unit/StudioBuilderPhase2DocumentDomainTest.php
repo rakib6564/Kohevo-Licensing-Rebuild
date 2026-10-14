@@ -663,3 +663,26 @@ unit('phase2 document domain: StudioTemplate construction, fromRow decoding, and
 if (!empty($studioP2UnitStandalone)) {
     exit(unit_summary());
 }
+
+unit('phase2 document domain: display conditions validate as a small closed rule set', function (): void {
+    $registry = sb2_registry();
+    $with = static function (mixed $conditions): array {
+        $doc = sb2_document([]);
+        $doc['settings']['conditions'] = $conditions;
+        return $doc;
+    };
+    $valid = static fn (mixed $c): bool => DocumentValidator::validate($with($c), sb2_registry())->isValid();
+
+    assert_true($valid(['rules' => [['action' => 'include', 'condition' => 'entire_site'], ['action' => 'exclude', 'condition' => 'category', 'value' => 'News']]]), 'rules under "rules"');
+    assert_true($valid([['type' => 'include', 'condition' => 'singular', 'value' => 'post']]), 'a bare list, as the admin screen writes it');
+    assert_true($valid([['scope' => 'category', 'value' => 'Tech']]), 'the older scope spelling still validates');
+    assert_true($valid(['rules' => []]), 'an empty rule set');
+
+    assert_false($valid(['rules' => [['condition' => 'run_code']]]), 'an unknown condition is refused');
+    assert_false($valid(['rules' => [['condition' => 'category', 'html' => '<b>']]]), 'an unknown rule key is refused');
+    assert_false($valid(['rules' => [['condition' => 'category', 'value' => ['a' => 1]]]]), 'a rule value must be a scalar');
+    assert_false($valid(['rules' => [['condition' => 'category', 'value' => str_repeat('x', 101)]]]), 'a rule value is at most 100 characters');
+    assert_false($valid(['rules' => array_fill(0, 31, ['condition' => 'entire_site'])]), 'at most 30 rules');
+    assert_false($valid(['rules' => [['condition' => 'entire_site']], 'extra' => 1]), 'extra keys beside "rules" are refused');
+    assert_false($valid('entire_site'), 'a string is not a rule set');
+});

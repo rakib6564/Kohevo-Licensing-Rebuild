@@ -1,6 +1,6 @@
 // Container blocks: icon toggles and a column picker for their own props; flex & grid options and size sit apart.
 import { test, expect } from '@playwright/test';
-import { openBuilder, settled, sandboxPageId } from './helpers.mjs';
+import { openBuilder, settled, sandboxPageId, undoReady } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
@@ -44,7 +44,7 @@ test('a flex container uses icon toggles and keeps its flex options and size apa
       await settled(page);
       await page.getByRole('tab', { name: /^Layers$/ }).click();
       if ((await page.locator('[role="treeitem"]').count()) <= layers) break;
-      await expect(page.getByTestId('undo')).toBeEnabled({ timeout: 15_000 });
+      if (!(await undoReady(page.getByTestId('undo')))) break; // nothing left to undo: stop quietly so the test's own error is the one reported
       await page.getByTestId('undo').click();
       await page.waitForTimeout(500);
     }
@@ -70,7 +70,7 @@ test('a grid picks its column count from tiles or a number', async ({ page }) =>
       await settled(page);
       await page.getByRole('tab', { name: /^Layers$/ }).click();
       if ((await page.locator('[role="treeitem"]').count()) <= layers) break;
-      await expect(page.getByTestId('undo')).toBeEnabled({ timeout: 15_000 });
+      if (!(await undoReady(page.getByTestId('undo')))) break; // nothing left to undo: stop quietly so the test's own error is the one reported
       await page.getByTestId('undo').click();
       await page.waitForTimeout(500);
     }
@@ -105,7 +105,7 @@ test('size words show their real size, and the Responsive section speaks plainly
       await settled(page);
       await page.getByRole('tab', { name: /^Layers$/ }).click();
       if ((await page.locator('[role="treeitem"]').count()) <= layers) break;
-      await expect(page.getByTestId('undo')).toBeEnabled({ timeout: 15_000 });
+      if (!(await undoReady(page.getByTestId('undo')))) break; // nothing left to undo: stop quietly so the test's own error is the one reported
       await page.getByTestId('undo').click();
       await page.waitForTimeout(500);
     }

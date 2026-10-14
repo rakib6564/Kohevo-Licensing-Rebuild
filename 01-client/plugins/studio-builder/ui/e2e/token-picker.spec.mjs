@@ -1,6 +1,6 @@
 // Theme tokens are chosen by name, with a sample, not by their raw refs.
 import { test, expect } from '@playwright/test';
-import { openBuilder, settled, sandboxPageId, openSection } from './helpers.mjs';
+import { openBuilder, settled, sandboxPageId, openSection, undoReady } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
@@ -55,7 +55,7 @@ test('the token picker lists named tokens under readable headings and stores the
       await settled(page);
       await page.getByRole('tab', { name: /^Layers$/ }).click();
       if ((await page.locator('[role="treeitem"]').count()) <= layers) break;
-      await expect(page.getByTestId('undo')).toBeEnabled({ timeout: 15_000 });
+      if (!(await undoReady(page.getByTestId('undo')))) break; // nothing left to undo: stop quietly so the test's own error is the one reported
       await page.getByTestId('undo').click();
       await page.waitForTimeout(500);
     }
