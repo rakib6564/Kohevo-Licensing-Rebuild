@@ -1,17 +1,36 @@
 // Selection model wired into the shell: Layers, canvas and Inspector stay in sync (B2-P1).
 import { test, expect } from '@playwright/test';
-import { openBuilder, frameDocument, settled } from './helpers.mjs';
+import { openBuilder, frameDocument, settled, layerCount, restoreLayers } from './helpers.mjs';
 
 const ROWS = '[role="treeitem"]';
 
-/** Make sure the page has at least `n` sections, adding through the Layers panel like an author. */
+// These specs add sections to the shared sandbox page (some a whole Team section). Each test notes how many layers the
+// page had when it opened, and undoes back to that afterwards, so the specs that run next do not inherit the leftovers.
+let baseline = null;
+async function open(page) {
+  await openBuilder(page);
+  await settled(page);
+  baseline = await layerCount(page);
+}
+test.afterEach(async ({ page }) => {
+  if (baseline === null) return;
+  const layers = baseline;
+  baseline = null;
+  try {
+    await restoreLayers(page, layers);
+  } catch {
+    // the test's own error is the one worth reading
+  }
+});
+
+/** Make sure the page has at least `n` top-level sections (not rows: a section with blocks is many rows), adding through the Layers panel like an author. */
 async function ensureSections(page, n) {
   await page.getByRole('tab', { name: /Layers/ }).click();
   for (let guard = 0; guard < n + 2; guard++) {
-    const count = await page.locator(ROWS).count();
+    const count = await page.locator(`${ROWS}[aria-level="1"]`).count();
     if (count >= n) break;
     await page.getByRole('button', { name: /Add section/ }).first().click();
-    await expect.poll(() => page.locator(ROWS).count(), { timeout: 15_000 }).toBeGreaterThan(count);
+    await expect.poll(() => page.locator(`${ROWS}[aria-level="1"]`).count(), { timeout: 15_000 }).toBeGreaterThan(count);
   }
   await settled(page);
 }
@@ -26,7 +45,7 @@ test.beforeEach(async ({}, info) => {
 });
 
 test('Cmd/Ctrl-click in Layers multi-selects: the Inspector shows the count and the canvas outlines both nodes', async ({ page }) => {
-  await openBuilder(page);
+  await open(page);
   await ensureSections(page, 2);
   const [a, b] = await topLevelRowIds(page);
 
@@ -47,7 +66,7 @@ test('Cmd/Ctrl-click in Layers multi-selects: the Inspector shows the count and 
 });
 
 test('Cmd/Ctrl-click on the canvas adds to the selection and Layers reflects it', async ({ page }) => {
-  await openBuilder(page);
+  await open(page);
   await ensureSections(page, 2);
   const [a, b] = await topLevelRowIds(page);
 
@@ -70,7 +89,7 @@ test('Cmd/Ctrl-click on the canvas adds to the selection and Layers reflects it'
 });
 
 test('Escape clears the whole selection', async ({ page }) => {
-  await openBuilder(page);
+  await open(page);
   await ensureSections(page, 2);
   const [a, b] = await topLevelRowIds(page);
   await page.locator(`${ROWS}[data-row="${a}"]`).click();
@@ -84,7 +103,7 @@ test('Escape clears the whole selection', async ({ page }) => {
 
 test('a canvas node the editor does not have and nothing around it is refused with a note, never selected', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
-  await openBuilder(page);
+  await open(page);
   await settled(page);
   await page.getByRole('tab', { name: /^Add$/ }).click();
   await page.getByRole('tab', { name: 'Sections' }).click();
@@ -113,7 +132,7 @@ test('a canvas node the editor does not have and nothing around it is refused wi
 
 test('a canvas that drifted from the document repaints by itself', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'docked canvas (desktop)');
-  await openBuilder(page);
+  await open(page);
   await settled(page);
   await page.getByRole('tab', { name: /^Add$/ }).click();
   await page.getByRole('tab', { name: 'Sections' }).click();
@@ -135,7 +154,7 @@ test('a canvas that drifted from the document repaints by itself', async ({ page
 
 test('clicking content the editor does not own selects the nearest node it does own', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Inspector (desktop)');
-  await openBuilder(page);
+  await open(page);
   await settled(page);
   await page.getByRole('tab', { name: /^Add$/ }).click();
   await page.getByRole('tab', { name: 'Sections' }).click();

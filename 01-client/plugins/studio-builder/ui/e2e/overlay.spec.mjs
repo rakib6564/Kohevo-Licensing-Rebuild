@@ -7,10 +7,10 @@ const ROWS = '[role="treeitem"]';
 async function ensureSections(page, n) {
   await page.getByRole('tab', { name: /Layers/ }).click();
   for (let guard = 0; guard < n + 2; guard++) {
-    const count = await page.locator(ROWS).count();
+    const count = await page.locator(`${ROWS}[aria-level="1"]`).count();
     if (count >= n) break;
     await page.getByRole('button', { name: /Add section/ }).first().click();
-    await expect.poll(() => page.locator(ROWS).count(), { timeout: 15_000 }).toBeGreaterThan(count);
+    await expect.poll(() => page.locator(`${ROWS}[aria-level="1"]`).count(), { timeout: 15_000 }).toBeGreaterThan(count);
   }
   await settled(page);
 }
