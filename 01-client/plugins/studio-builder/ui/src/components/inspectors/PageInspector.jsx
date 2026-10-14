@@ -20,6 +20,8 @@ import { seoLimits, canonicalProblem, canonicalValue } from '../../core/seo.mjs'
 import { SeoImageControl } from './SeoImageControl.jsx';
 import { optionLabel } from '../../core/optionLabels.mjs';
 import { Field } from '../ui/index.js';
+import { ConditionDialog } from '../ConditionDialog.jsx';
+import { toRows } from '../../core/conditions.mjs';
 
 function TextSetting({ label, value, maxLength, multiline = false, onCommit, counter = false }) {
   const id = useId();
@@ -114,6 +116,27 @@ function ChromeRegion({ region, binding, settings, onMode, onCreatePartial, buil
   );
 }
 
+/** Pages whose job is to apply somewhere: a site header or footer, or a single, archive, search or 404 template. */
+const TEMPLATE_TYPES = ['header', 'footer', 'single', 'archive', 'search', '404', 'not_found'];
+export const hasDisplayConditions = (page, settings) => !!page && (['header_partial', 'footer_partial'].includes(page.page_type) || TEMPLATE_TYPES.includes(settings.template_type));
+
+function ConditionsSetting({ page, settings, onSave }) {
+  const [open, setOpen] = useState(false);
+  const rows = toRows(settings.conditions);
+  const fallback = page && page.slug === 'default';
+  return (
+    <>
+      <h3 className="sbx-inspector__subtitle">{t('cond_title')}</h3>
+      {fallback && <p className="sbx-hint" data-testid="cond-fallback">{t('cond_fallback')}</p>}
+      <p className="sbx-hint" data-testid="cond-summary">{rows.length === 0 ? t('cond_summary_none') : t('cond_summary_count', { count: rows.length })}</p>
+      <div className="sbx-inspector__actions">
+        <button type="button" className="sbx-btn sbx-btn--xs" data-testid="cond-edit" onClick={() => setOpen(true)}>{t('cond_edit')}</button>
+      </div>
+      {open && <ConditionDialog initialRows={rows} onClose={() => setOpen(false)} onSave={(next) => { onSave(next); setOpen(false); }} />}
+    </>
+  );
+}
+
 export function PageInspector() {
   const { manifest, applyOp, transport, boot, createPartial = null } = useEditor();
   const working = useEngineState((s) => s.working);
@@ -152,6 +175,10 @@ export function PageInspector() {
     <div className="sbx-inspector">
       <h2 className="sbx-inspector__title">{t('page_settings')}</h2>
       {select('container_width', asList(vocab.container_widths), t('width'))}
+
+      {hasDisplayConditions(page, settings) && (
+        <ConditionsSetting page={page} settings={settings} onSave={(conditions) => applyOp(ops.updateSettings({ conditions }), { label: t('cond_title') })} />
+      )}
 
       <h3 className="sbx-inspector__subtitle">{t('chrome_title')}</h3>
       {!chromed && <p className="sbx-hint">{t('chrome_not_chromed')}</p>}

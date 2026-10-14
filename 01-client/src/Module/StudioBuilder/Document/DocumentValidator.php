@@ -275,8 +275,76 @@ final class DocumentValidator
             $errors[] = ValidationResult::issue('$.settings.template_type', 'invalid_template_type', 'Invalid settings.template_type value.');
         }
 
-        if (isset($settings['conditions']) && !is_array($settings['conditions'])) {
-            $errors[] = ValidationResult::issue('$.settings.conditions', 'invalid_conditions', 'settings.conditions must be an array or object.');
+        if (isset($settings['conditions'])) {
+            self::validateConditions($settings['conditions'], $errors);
+        }
+    }
+
+    /**
+     * Display conditions: a list of rules, or `{"rules": [...]}`. Each rule is a small object of known keys with short scalar values,
+     * so what the Theme Builder dialog writes is exactly what `TemplateConditionMatcher` reads and nothing else can ride along.
+     *
+     * @param list<array{path: string, code: string, message: string}> $errors
+     */
+    private static function validateConditions(mixed $conditions, array &$errors): void
+    {
+        $path = '$.settings.conditions';
+        if (!is_array($conditions)) {
+            $errors[] = ValidationResult::issue($path, 'invalid_conditions', 'settings.conditions must be an array or object.');
+            return;
+        }
+        $rules = $conditions;
+        if (array_key_exists('rules', $conditions) && !array_is_list($conditions)) {
+            foreach (array_keys($conditions) as $k) {
+                if ($k !== 'rules') {
+                    $errors[] = ValidationResult::issue("{$path}.{$k}", 'unknown_property', "Unknown conditions property '{$k}'.");
+                }
+            }
+            $rules = $conditions['rules'];
+            $path .= '.rules';
+        }
+        if (!is_array($rules) || ($rules !== [] && !array_is_list($rules))) {
+            // A single rule object is still read by the matcher; anything else is not a rule set.
+            if (!is_array($rules) || !isset($rules['condition']) && !isset($rules['scope']) && !isset($rules['type'])) {
+                $errors[] = ValidationResult::issue($path, 'invalid_conditions', 'settings.conditions must be a list of rules.');
+                return;
+            }
+            $rules = [$rules];
+        }
+        if (count($rules) > CanonicalDocumentSchema::MAX_CONDITION_RULES) {
+            $errors[] = ValidationResult::issue($path, 'too_many_conditions', 'A template can have at most ' . CanonicalDocumentSchema::MAX_CONDITION_RULES . ' display conditions.');
+            return;
+        }
+        foreach ($rules as $i => $rule) {
+            $rp = "{$path}[{$i}]";
+            if (!is_array($rule) || ($rule !== [] && array_is_list($rule))) {
+                $errors[] = ValidationResult::issue($rp, 'invalid_condition_rule', 'A display condition must be an object.');
+                continue;
+            }
+            foreach ($rule as $key => $value) {
+                $ks = (string) $key;
+                if (!in_array($ks, CanonicalDocumentSchema::ALLOWED_CONDITION_KEYS, true)) {
+                    $errors[] = ValidationResult::issue("{$rp}.{$ks}", 'unknown_property', "Unknown condition property '{$ks}'.");
+                    continue;
+                }
+                if (!is_string($value) && !is_int($value) && !is_float($value) && !is_bool($value)) {
+                    $errors[] = ValidationResult::issue("{$rp}.{$ks}", 'invalid_condition_value', 'A condition value must be text or a number.');
+                    continue;
+                }
+                if (is_string($value) && mb_strlen($value, 'UTF-8') > 100) {
+                    $errors[] = ValidationResult::issue("{$rp}.{$ks}", 'invalid_condition_value', 'A condition value is at most 100 characters.');
+                }
+            }
+            foreach (['condition', 'scope'] as $nameKey) {
+                if (isset($rule[$nameKey]) && (!is_string($rule[$nameKey]) || !in_array(strtolower(trim($rule[$nameKey])), CanonicalDocumentSchema::ALLOWED_CONDITION_SCOPES, true))) {
+                    $errors[] = ValidationResult::issue("{$rp}.{$nameKey}", 'invalid_condition_scope', "Unknown display condition '" . (is_string($rule[$nameKey]) ? mb_substr($rule[$nameKey], 0, 40, 'UTF-8') : '') . "'.");
+                }
+            }
+            foreach (['action', 'type'] as $actKey) {
+                if (isset($rule[$actKey]) && (!is_string($rule[$actKey]) || preg_match('/^[a-z_0-9]{1,40}$/i', $rule[$actKey]) !== 1)) {
+                    $errors[] = ValidationResult::issue("{$rp}.{$actKey}", 'invalid_condition_action', 'A condition action must be include or exclude.');
+                }
+            }
         }
     }
 

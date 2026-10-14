@@ -3405,3 +3405,12 @@ html, body.sbx-body {
 .sbx-media__frame { position: relative; display: block; line-height: 0; }
 .sbx-media__tint { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
 .sbx-bg-overlay-note { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0 0; font-size: var(--sbx-fs-sm); color: var(--sbx-text-soft); }
+
+/* Display conditions dialog. */
+.sbx-dialog--conditions { width: min(640px, 94vw); }
+.sbx-cond__list { list-style: none; margin: 8px 0 12px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sbx-cond__row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sbx-cond__row select, .sbx-cond__row input { flex: 1 1 130px; min-width: 0; }
+.sbx-cond__row select[data-cond="action"] { flex: 0 0 96px; }
+.sbx-cond__custom { flex: 1; color: var(--sbx-text-soft); font-size: var(--sbx-fs-sm); }
+.sbx-cond__problem { flex-basis: 100%; margin: 0; }

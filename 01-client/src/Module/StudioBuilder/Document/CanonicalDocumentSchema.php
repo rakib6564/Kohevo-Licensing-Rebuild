@@ -68,6 +68,17 @@ final class CanonicalDocumentSchema
         'conditions',
     ];
 
+    /** Display-condition rules (Theme Builder): how many, which keys and which `condition` names a rule may use. */
+    public const MAX_CONDITION_RULES = 30;
+    public const ALLOWED_CONDITION_KEYS = [
+        'action', 'type', 'condition', 'scope', 'value', 'category', 'tag', 'author_id', 'id', 'slug',
+        'post_type', 'archive_type', 'term', 'field', 'field_value',
+    ];
+    public const ALLOWED_CONDITION_SCOPES = [
+        'entire_site', 'all', 'global', 'front_page', 'home', 'category', 'tag', 'author', 'singular_id', 'id', 'slug',
+        'singular', 'post_type', 'page_type', 'archive', '404', 'not_found', 'search',
+    ];
+
     public const ALLOWED_CONTAINER_WIDTHS = ['narrow', 'normal', 'wide', 'full'];
     public const ALLOWED_CHROME_MODES     = ['inherit', 'custom', 'hidden'];
 
