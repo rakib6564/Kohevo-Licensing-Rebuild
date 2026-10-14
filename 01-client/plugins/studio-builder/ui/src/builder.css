@@ -3400,3 +3400,8 @@ html, body.sbx-body {
   .sbx-left .sbx-bg-image-pane .sbx-pop__row { position: relative; display: block; }
   .sbx-left .sbx-bg-image-pane .sbx-pop__row > .sbx-iconbtn { position: absolute; top: -4px; right: 0; }
 }
+
+/* Background image: the preview shows the overlay the page draws, and the overlay is named under it. */
+.sbx-media__frame { position: relative; display: block; line-height: 0; }
+.sbx-media__tint { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
+.sbx-bg-overlay-note { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0 0; font-size: var(--sbx-fs-sm); color: var(--sbx-text-soft); }

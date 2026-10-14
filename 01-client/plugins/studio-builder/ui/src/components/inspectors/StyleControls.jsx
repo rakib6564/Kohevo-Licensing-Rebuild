@@ -24,6 +24,7 @@ import { useId, useMemo, useRef, useState } from 'react';
 import { STYLE_TOKEN_CATEGORIES } from '../../core/fields.mjs';
 import { setBorderLiteral, setBorderToken, setSurfaceToken, setTextLiteral, setTextToken } from '../../core/tokenStyle.mjs';
 import { asObject } from '../../core/doc.mjs';
+import { parseOverlay } from '../../core/overlayColor.mjs';
 import { t } from '../../core/messages.mjs';
 import { Pills, Field, Popover } from '../ui/index.js';
 import { acceptsDraft } from '../../core/styleValues.mjs';
@@ -294,12 +295,17 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
     onChange(merged);
   };
 
+  // What sits on top of the image on the page: drawn on the preview and named under it, so a strong overlay is never a surprise.
+  const overlayColor = typeof asObject(bg.overlay).color === 'string' && asObject(bg.overlay).color !== '' ? asObject(bg.overlay).color : null;
+  const overlayPercent = overlayColor ? parseOverlay(overlayColor).percent : null;
+  const hasImage = isMediaRef(bg.image);
   const bgMedia = (
     <MediaControl
       field={{ key: 'bg-image', label: t('bg_image'), required: false }}
       value={isMediaRef(bg.image) ? bg.image : null}
       mediaPicker={mediaPicker}
       hideFocal
+      tint={overlayColor}
       onChange={(ref) => patchBackground({ image: ref ?? undefined })}
     />
   );
@@ -401,7 +407,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
             role="radiogroup"
             label={t('bg_type')}
             value={bgMode}
-            options={['image', 'color', 'gradient'].map((m) => ({ value: m, label: t(`bg_mode_${m}`) }))}
+            options={['image', 'color', 'gradient'].map((m) => ({ value: m, label: t(`bg_mode_${m}`), hasValue: m === 'image' ? hasImage : (m === 'color' ? !!bgColor || !!style.surface_token : !!bg.gradient) }))}
             onChange={setBgMode}
           />
 
@@ -433,9 +439,16 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
                 />
                 </Popover>
               ) : bgMedia}
+              {hasImage && overlayPercent !== null && (
+                <p className="sbx-bg-overlay-note" data-testid="bg-overlay-note">
+                  <span>{t('bg_overlay_note', { percent: overlayPercent })}</span>
+                  <button type="button" className="sbx-btn sbx-btn--ghost sbx-btn--xs" onClick={() => patchBackground({ overlay: undefined })}>{t('bg_overlay_remove')}</button>
+                </p>
+              )}
             </div>
           )}
 
+          {bgMode === 'color' && hasImage && <p className="sbx-hint" data-testid="bg-covered-hint">{t('bg_image_covers')}</p>}
           {bgMode === 'color' && (
             <ColorField
               id={`${id}-bg`}

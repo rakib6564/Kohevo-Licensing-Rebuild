@@ -28,7 +28,7 @@ export function useMediaUrl(mediaId) {
 }
 
 /** `hideFocal`: the caller draws its own focal-point control (the Background pad), so the reticle is left out. */
-export function MediaControl({ field, value, onChange, problem, mediaPicker, hideFocal = false }) {
+export function MediaControl({ field, value, onChange, problem, mediaPicker, hideFocal = false, tint = null }) {
   const id = useId();
   const ref = asObject(value);
   const url = useMediaUrl(ref.media_id || null);
@@ -60,7 +60,12 @@ export function MediaControl({ field, value, onChange, problem, mediaPicker, hid
       <legend>{field.label}{field.required ? ' *' : ''}</legend>
 
       {has && url && (hideFocal
-        ? <img className="sbx-media__preview" src={url} alt="" />
+        ? (
+          <span className="sbx-media__frame">
+            <img className="sbx-media__preview" src={url} alt="" />
+            {tint ? <span className="sbx-media__tint" data-testid="bg-preview-tint" aria-hidden="true" style={{ background: tint }} /> : null}
+          </span>
+        )
         : (
           <FocalPointControl
             imageUrl={url}
