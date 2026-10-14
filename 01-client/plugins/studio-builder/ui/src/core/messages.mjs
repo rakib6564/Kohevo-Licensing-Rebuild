@@ -49,7 +49,6 @@ const EN = {
   expand_all: 'Expand all',
   navigator: 'Navigator',
   announce_duplicated: '{label} duplicated',
-  announce_renamed: '{label} renamed',
 
   inspector: 'Properties',
   section_content: 'Content',

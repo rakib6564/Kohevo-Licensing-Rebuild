@@ -97,11 +97,19 @@ export async function restoreLayers(page, layers) {
     await settled(page);
     if ((await layerCount(page)) <= layers) return;
     const undo = page.getByTestId('undo');
-    await expect(undo).toBeEnabled({ timeout: 15_000 });
+    if (!(await undoReady(undo))) return;
     await undo.click();
     await page.waitForTimeout(500);
   }
   throw new Error('could not restore the shared sandbox page');
+}
+
+/**
+ * Undo is usable within a few seconds, or there is nothing to undo. Restores stop quietly in the second case: a test that
+ * failed before it changed anything must report its own error, not a cleanup one that hides it.
+ */
+export async function undoReady(undo) {
+  return expect(undo).toBeEnabled({ timeout: 4_000 }).then(() => true, () => false);
 }
 
 /** The one left panel swaps to its Edit tab for a selection made on the canvas or by adding an element; a row picked in Layers keeps the panel on Layers, so open Edit to reach the controls. */

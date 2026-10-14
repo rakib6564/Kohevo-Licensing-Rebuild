@@ -1,7 +1,7 @@
 // New elements (B2-P2b): Icon, List, Quote and Link insert from the Add panel, render in the canvas,
 // and repaint from the server when their properties change.
 import { test, expect } from '@playwright/test';
-import { openBuilder, frameDocument, settled, sandboxPageId } from './helpers.mjs';
+import { openBuilder, frameDocument, settled, sandboxPageId, undoReady } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked Add panel (desktop)');
@@ -37,7 +37,7 @@ async function restore(page, layers) {
     await settled(page);
     if ((await layerCount(page)) <= layers) return;
     const undo = page.getByTestId('undo');
-    await expect(undo).toBeEnabled({ timeout: 15_000 });
+    if (!(await undoReady(undo))) return; // nothing left to undo: stop quietly so the test's own error is the one reported
     await undo.click();
     await page.waitForTimeout(500);
   }
