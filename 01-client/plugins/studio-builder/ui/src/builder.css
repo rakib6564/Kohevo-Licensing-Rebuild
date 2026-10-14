@@ -3377,3 +3377,10 @@ html, body.sbx-body {
 .sbx-libmodal__meta { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px 10px; font-size: var(--sbx-fs-sm); }
 .sbx-libmodal__action { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); opacity: 0; }
 .sbx-libmodal__card:hover .sbx-libmodal__action, .sbx-libmodal__action:focus-visible { opacity: 1; }
+
+/* Globals: the colour palette strip and the font previews in Settings > Site. */
+.sbx-ss__palette { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0 8px; }
+.sbx-ss__chip { width: 26px; height: 26px; padding: 0; border: 1px solid var(--sbx-border-strong); border-radius: var(--sbx-r-pill); cursor: pointer; }
+.sbx-ss__chip:hover { transform: scale(1.12); }
+.sbx-ss__chip:focus-visible { outline: none; box-shadow: var(--sbx-focus); }
+.sbx-ss__fontprev { flex: none; width: 28px; text-align: center; font-size: var(--sbx-fs-lg); color: var(--sbx-text); }

@@ -52,3 +52,22 @@ test('an invalid token value shows the problem beside it and is not stored', asy
   await expect(form.getByRole('alert').first()).toBeVisible();
   await expect(field).toHaveAttribute('aria-invalid', 'true');
 });
+
+test('the colour palette shows one chip per colour token, follows an edit, and a chip jumps to its field', async ({ page }) => {
+  await openBuilder(page);
+  await settled(page);
+  await page.getByRole('tab', { name: /^Settings$/ }).click();
+  const panel = page.locator('#sbx-leftpanel-settings');
+  await panel.locator('[data-settings-view="site"]').click();
+  const form = panel.getByTestId('site-settings');
+  const palette = form.getByTestId('ss-palette');
+  const colourRows = form.locator('[data-ss-group="colors"] .sbx-ss__row');
+  await expect(palette.locator('.sbx-ss__chip')).toHaveCount(await colourRows.count());
+  const chip = palette.locator('.sbx-ss__chip[data-chip-for="surface.page"]');
+  await expect(chip).toHaveCount(1);
+  await chip.click();
+  await expect(form.locator('input[data-token-ref="surface.page"]')).toBeFocused();
+  await form.locator('input[data-token-ref="surface.page"]').fill('#123456');
+  await expect(chip).toHaveCSS('background-color', 'rgb(18, 52, 86)');
+  await expect(form.locator('[data-ss-group="fonts"] .sbx-ss__fontprev').first()).toBeVisible();
+});

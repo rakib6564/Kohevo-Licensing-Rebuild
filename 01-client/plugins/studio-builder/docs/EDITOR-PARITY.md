@@ -37,4 +37,4 @@ The accent stays Kohevo violet (`--sbx-accent`).
 5. Canvas: outline, floating toolbar, empty drop zone, layout chooser. Done.
 6. Structure (Navigator) window: a floating, draggable, resizable window with the page outline, from the top bar or Ctrl/⌘ I (desktop). Done.
 7. Library modal: the templates in a large window with a tab per kind, search and a card grid, from the top bar or the empty container button. Done.
-8. Globals: colour and font tokens.
+8. Globals: colour and font tokens (Settings > Site): a round-swatch palette above the colour fields, whose chips jump to their field, and a font preview on every font field. Done.

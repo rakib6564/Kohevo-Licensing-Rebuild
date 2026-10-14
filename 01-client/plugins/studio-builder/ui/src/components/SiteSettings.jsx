@@ -2,7 +2,7 @@
 // shadows, spacing). One form serves the docked Settings › Site view and the Theme dialog, and it saves
 // through the same token endpoint, so only values the server's sanitizer accepts are stored.
 
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useEditor, useEngineState } from './EditorContext.jsx';
 import { t, errorMessage } from '../core/messages.mjs';
 import { asList, asObject } from '../core/doc.mjs';
@@ -16,7 +16,7 @@ const friendly = (tk) => {
   return text && text !== key ? text : tk.ref;
 };
 
-function TokenRow({ tk, value, canEdit, problem, onChange, swatch, listId }) {
+function TokenRow({ tk, value, canEdit, problem, onChange, swatch, listId, fonts = false }) {
   const id = useId();
   const shown = value !== '' ? value : tk.effective;
   return (
@@ -28,8 +28,10 @@ function TokenRow({ tk, value, canEdit, problem, onChange, swatch, listId }) {
             ? <input type="color" className="sbx-ss__swatch" aria-label={`${friendly(tk)} (${tk.ref})`} value={shown} disabled={!canEdit} onChange={(e) => onChange(e.target.value)} />
             : <span className="sbx-ss__swatch sbx-ss__swatch--static" aria-hidden="true" style={{ background: shown || 'transparent' }} />
         )}
+        {fonts && <span className="sbx-ss__fontprev" aria-hidden="true" style={{ fontFamily: shown || undefined }}>Aa</span>}
         <input
           id={id}
+          data-token-ref={tk.ref}
           type="text"
           className="sbx-ss__text"
           maxLength={200}
@@ -60,6 +62,7 @@ export function SiteSettingsForm({ onSaved, footer = null }) {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const listId = useId();
+  const rootRef = useRef(null);
   const canSave = !!(manifest && manifest.permissions && manifest.permissions.tokens);
 
   useEffect(() => {
@@ -120,7 +123,7 @@ export function SiteSettingsForm({ onSaved, footer = null }) {
   );
 
   return (
-    <div className="sbx-ss" data-testid="site-settings">
+    <div className="sbx-ss" data-testid="site-settings" ref={rootRef}>
       <p className="sbx-hint">{t('ss_intro')}</p>
       {!canSave && <p className="sbx-hint">{t('ss_readonly')}</p>}
       <p className="sbx-hint">
@@ -138,6 +141,28 @@ export function SiteSettingsForm({ onSaved, footer = null }) {
         return (
           <details key={g.id} className="sbx-ss__group" data-ss-group={g.id} open={g.id === 'colors' || g.id === 'fonts'}>
             <summary><span>{t(g.titleKey)}</span><span className="sbx-ss__count">{g.tokens.length}</span></summary>
+            {g.swatch && (
+              <div className="sbx-ss__palette" data-testid="ss-palette" role="group" aria-label={t(g.titleKey)}>
+                {g.tokens.map((tk) => {
+                  const shown = valueOf(tk) !== '' ? valueOf(tk) : tk.effective;
+                  return (
+                    <button
+                      key={tk.ref}
+                      type="button"
+                      className="sbx-ss__chip"
+                      data-chip-for={tk.ref}
+                      title={friendly(tk)}
+                      aria-label={friendly(tk)}
+                      style={{ background: shown || 'transparent' }}
+                      onClick={() => {
+                        const input = rootRef.current && rootRef.current.querySelector(`input[data-token-ref="${tk.ref}"]`);
+                        if (input) { input.scrollIntoView({ block: 'nearest' }); input.focus(); }
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            )}
             {cats.map((c) => (
               <div key={c || g.id} className="sbx-ss__block">
                 {c && <h4 className="sbx-ss__cat">{t(`ss_cat_${c}`)}</h4>}
@@ -149,6 +174,7 @@ export function SiteSettingsForm({ onSaved, footer = null }) {
                     canEdit={canSave}
                     problem={problems[tk.ref]}
                     swatch={!!g.swatch}
+                    fonts={!!g.fonts}
                     listId={g.fonts ? listId : undefined}
                     onChange={(v) => set(tk.ref, v)}
                   />
