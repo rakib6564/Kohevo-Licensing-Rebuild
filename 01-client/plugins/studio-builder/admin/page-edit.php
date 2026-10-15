@@ -16,7 +16,9 @@ require_once __DIR__ . '/_nav.php';
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Exception\StudioException;
 use Slate\Module\StudioBuilder\Exception\StudioNotFoundException;
+use Slate\Module\StudioBuilder\Admin\PageMetaForm;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
+use Slate\Module\StudioBuilder\Meta\PageMeta;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 use Slate\Module\StudioBuilder\StudioPermissions;
 
@@ -60,6 +62,10 @@ try {
         : __('studio_page_not_found', 'This page does not exist, or has been deleted.');
 }
 $canEdit = $page !== null && $studioActor->can(StudioPermissions::EDIT);
+$tenantId = current_tenant_id();
+$hasMeta = $page !== null && in_array((string) $page['page_type'], PageMeta::PAGE_TYPES, true);
+$metaErrors = [];
+$metaPosted = null;
 
 if ($page !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
@@ -93,6 +99,17 @@ if ($page !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $page['slug'] = $slug !== '' ? $slug : $page['slug'];
             $page['route_mode'] = $route !== '' ? $route : $page['route_mode'];
         }
+    } elseif ($action === 'save_meta' && $hasMeta) {
+        $postedType = trim((string) ($_POST['post_type'] ?? ''));
+        $posted = is_array($_POST['meta'] ?? null) ? $_POST['meta'] : [];
+        $saved = PageMeta::save($tenantId, $pageId, $postedType, $posted);
+        if ($saved['errors'] === []) {
+            header('Location: ' . $self . '&meta_saved=1', true, 303);
+            exit;
+        }
+        $metaErrors = $saved['errors'];
+        $metaPosted = ['type' => $postedType, 'values' => $posted];
+        $flash = ['type' => 'error', 'msg' => __('studio_page_meta_invalid', 'Some custom fields need attention.')];
     } elseif ($action === 'duplicate') {
         $title = trim((string) ($_POST['copy_title'] ?? ''));
         $slug  = trim((string) ($_POST['copy_slug'] ?? ''));
@@ -101,6 +118,7 @@ if ($page !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
         try {
             $copy = $studioApp->duplicatePage($studioActor, $pageId, $title, $slug);
+            PageMeta::copy($tenantId, $pageId, (int) $copy['page']['id']);
             header('Location: page-edit.php?id=' . (int) $copy['page']['id'] . '&duplicated=1', true, 303);
             exit;
         } catch (StudioException $e) {
@@ -109,6 +127,7 @@ if ($page !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     } elseif ($action === 'delete') {
         try {
             $studioApp->archivePage($studioActor, $pageId);
+            PageMeta::forget($tenantId, $pageId);
             header('Location: pages.php?' . http_build_query(['deleted' => 1, 'failed' => 0]), true, 303);
             exit;
         } catch (StudioException $e) {
@@ -119,6 +138,8 @@ if ($page !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
 if ($flash === null && isset($_GET['saved'])) {
     $flash = ['type' => 'success', 'msg' => __('studio_page_saved', 'Page saved.')];
+} elseif ($flash === null && isset($_GET['meta_saved'])) {
+    $flash = ['type' => 'success', 'msg' => __('studio_page_meta_saved', 'Custom fields saved.')];
 } elseif ($flash === null && isset($_GET['duplicated'])) {
     $flash = ['type' => 'success', 'msg' => __('studio_page_duplicated', 'Page duplicated. This is the copy.')];
 }
@@ -193,6 +214,33 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </div>
         <?php endif; ?>
     </form>
+
+    <?php if ($hasMeta):
+        $metaTypes = PageMeta::postTypes($tenantId);
+        $metaFieldsByType = [];
+        $relationPages = [];
+        foreach ($metaTypes as $mk => $_t) {
+            $metaFieldsByType[$mk] = PageMeta::fieldsFor($tenantId, (string) $mk);
+            foreach ($metaFieldsByType[$mk] as $mf) {
+                $target = (string) ($mf['options']['target'] ?? '');
+                if ($target !== '' && !isset($relationPages[$target])) {
+                    $relationPages[$target] = [];
+                    $ids = array_flip(PageMeta::pageIdsOfType($tenantId, $target));
+                    try {
+                        foreach ($studioApp->listPages($studioActor) as $row) {
+                            if (isset($ids[(int) $row['id']]) && (int) $row['id'] !== $pageId) {
+                                $relationPages[$target][(int) $row['id']] = (string) $row['title'];
+                            }
+                        }
+                    } catch (StudioException) {
+                    }
+                }
+            }
+        }
+        $savedMeta = $metaPosted ?? PageMeta::read($tenantId, $pageId);
+        $savedType = isset($metaTypes[$savedMeta['type']]) ? $savedMeta['type'] : '';
+        echo PageMetaForm::card($self, $pageId, $savedType, $metaTypes, $metaFieldsByType, $savedMeta['values'], $metaErrors, $relationPages, $canEdit, 'types-fields.php');
+    endif; ?>
 
     <?php if ($canEdit): ?>
     <form method="post" class="card sb-form-card">

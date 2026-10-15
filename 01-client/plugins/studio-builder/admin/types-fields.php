@@ -13,6 +13,7 @@ require __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/_nav.php';
 
 use Slate\Module\StudioBuilder\Meta\MetaFieldTypes;
+use Slate\Module\StudioBuilder\Meta\PageMeta;
 
 Auth::require();
 Auth::requirePerm('studio-builder.view');
@@ -26,40 +27,7 @@ $currentNav = 'studio-types-fields';
 $flash = null;
 
 // Built-in Post Types
-$defaultTypes = [
-    'portfolio' => [
-        'key' => 'portfolio',
-        'singular' => 'Portfolio Item',
-        'plural' => 'Portfolio Items',
-        'route' => '/portfolio',
-        'is_system' => true,
-        'description' => 'Showcase client work, case studies, technologies, and project metrics.',
-    ],
-    'services' => [
-        'key' => 'services',
-        'singular' => 'Service',
-        'plural' => 'Services',
-        'route' => '/services',
-        'is_system' => true,
-        'description' => 'Service packages, deliverables, tech stacks, and freelance pricing tiers.',
-    ],
-    'testimonials' => [
-        'key' => 'testimonials',
-        'singular' => 'Testimonial',
-        'plural' => 'Testimonials',
-        'route' => '/testimonials',
-        'is_system' => true,
-        'description' => 'Social proof, client reviews, ratings, and endorsements.',
-    ],
-    'case_studies' => [
-        'key' => 'case_studies',
-        'singular' => 'Case Study',
-        'plural' => 'Case Studies',
-        'route' => '/case-studies',
-        'is_system' => true,
-        'description' => 'In-depth project breakdown with challenge, solution, and quantifiable results.',
-    ],
-];
+$defaultTypes = PageMeta::defaultTypes();
 
 // Load Custom Post Types from Settings
 $customTypesRaw = Database::setting('studio_custom_post_types', $tenantId);
@@ -79,53 +47,7 @@ $metaFieldsRaw = Database::setting('studio_meta_fields', $tenantId);
 $metaFields = $metaFieldsRaw ? json_decode((string) $metaFieldsRaw, true) : [];
 if (!is_array($metaFields)) {
     // Default starter fields for portfolio
-    $metaFields = [
-        [
-            'id' => 'f_client',
-            'post_type' => 'portfolio',
-            'label' => 'Client / Organization',
-            'key' => 'client',
-            'type' => 'text',
-            'required' => true,
-            'placeholder' => 'e.g. Acme Corp, FinTech Labs',
-        ],
-        [
-            'id' => 'f_year',
-            'post_type' => 'portfolio',
-            'label' => 'Completion Year',
-            'key' => 'year',
-            'type' => 'number',
-            'required' => false,
-            'placeholder' => 'e.g. 2026',
-        ],
-        [
-            'id' => 'f_role',
-            'post_type' => 'portfolio',
-            'label' => 'Role & Scope',
-            'key' => 'role',
-            'type' => 'text',
-            'required' => false,
-            'placeholder' => 'e.g. Lead Full-Stack Architect',
-        ],
-        [
-            'id' => 'f_project_url',
-            'post_type' => 'portfolio',
-            'label' => 'Live Project URL',
-            'key' => 'project_url',
-            'type' => 'url',
-            'required' => false,
-            'placeholder' => 'https://...',
-        ],
-        [
-            'id' => 'f_featured',
-            'post_type' => 'portfolio',
-            'label' => 'Featured Highlight',
-            'key' => 'featured',
-            'type' => 'boolean',
-            'required' => false,
-            'placeholder' => '',
-        ],
-    ];
+    $metaFields = PageMeta::starterFields();
 }
 
 // POST Actions

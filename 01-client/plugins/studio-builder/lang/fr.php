@@ -1545,4 +1545,13 @@ return [
     'studio_ui_announce_copied' => '{label} copié',
     'studio_ui_announce_cut' => '{label} coupé',
     'studio_ui_announce_pasted' => '{label} collé',
+    'studio_page_content_type' => 'Type de contenu et champs personnalisés',
+    'studio_page_content_type_sub' => 'Choisissez la nature de cette page, puis remplissez les champs personnalisés de ce type. Les champs se définissent dans Types et champs.',
+    'studio_page_content_type_label' => 'Type de contenu',
+    'studio_page_no_type' => 'Aucun (une page simple)',
+    'studio_page_no_fields' => 'Ce type n’a pas encore de champs personnalisés.',
+    'studio_page_meta_invalid' => 'Certains champs personnalisés demandent votre attention.',
+    'studio_page_meta_saved' => 'Champs personnalisés enregistrés.',
+    'studio_choose' => 'Choisir…',
+    'studio_yes' => 'Oui',
 ];
