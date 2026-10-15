@@ -221,7 +221,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <?php sb_render_admin_nav('types-fields', $portfolioPageId); ?>
 
     <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" style="margin-bottom: 24px; border-radius: 10px;">
+        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" >
             <?= e($flash['msg']) ?>
         </div>
     <?php endif; ?>
@@ -243,9 +243,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
     </div>
 
     <!-- Drawer: New Post Type Form -->
-    <div id="sb-cpt-drawer" style="display: none; background: #ffffff; border: 1px solid var(--sb-border); border-radius: 14px; padding: 24px; margin-bottom: 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
-            <div style="font-weight: 700; font-size: 1.15rem; color: var(--sb-text); display: flex; align-items: center; gap: 8px;">
+    <div id="sb-cpt-drawer" class="sb-card sb-drawer" style="display: none;">
+        <div class="sb-card__head sb-card__head--split">
+            <div class="sb-card__title" style="display: flex; align-items: center; gap: 8px;">
                 <?= sb_svg('types-fields', 20) ?> Register New Custom Post Type
             </div>
             <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('sb-cpt-drawer').style.display='none'">
@@ -255,30 +255,30 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>">
             <?= csrf_field() ?>
             <input type="hidden" name="_action" value="create_post_type">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 16px;">
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Key / Identifier <span style="color: #ef4444;">*</span></label>
+            <div class="sb-form-grid">
+                <div class="sb-field">
+                    <label class="sb-field__label">Key / Identifier <span style="color: #ef4444;">*</span></label>
                     <input type="text" name="key" class="form-control" placeholder="e.g. clients, events" required>
-                    <span style="font-size: 0.75rem; color: var(--sb-muted);">Lower-case letters and hyphens only.</span>
+                    <p class="sb-field__hint">Lower-case letters and hyphens only.</p>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Singular Label <span style="color: #ef4444;">*</span></label>
+                <div class="sb-field">
+                    <label class="sb-field__label">Singular Label <span style="color: #ef4444;">*</span></label>
                     <input type="text" name="singular" class="form-control" placeholder="e.g. Client, Event" required>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Plural Label</label>
+                <div class="sb-field">
+                    <label class="sb-field__label">Plural Label</label>
                     <input type="text" name="plural" class="form-control" placeholder="e.g. Clients, Events">
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">URL Route Prefix</label>
+                <div class="sb-field">
+                    <label class="sb-field__label">URL Route Prefix</label>
                     <input type="text" name="route" class="form-control" placeholder="/clients">
                 </div>
             </div>
-            <div style="margin-bottom: 16px;">
-                <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Description</label>
+            <div class="sb-field">
+                <label class="sb-field__label">Description</label>
                 <input type="text" name="description" class="form-control" placeholder="Purpose and data description...">
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <div class="sb-card-actions">
                 <button type="button" class="btn btn-outline" onclick="document.getElementById('sb-cpt-drawer').style.display='none'">Cancel</button>
                 <button type="submit" class="btn btn-primary"><?= sb_svg('check', 14) ?> Save Post Type</button>
             </div>
@@ -286,9 +286,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
     </div>
 
     <!-- Drawer: Add Meta Field Form -->
-    <div id="sb-field-drawer" style="display: none; background: #ffffff; border: 1px solid var(--sb-border); border-radius: 14px; padding: 24px; margin-bottom: 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
-            <div style="font-weight: 700; font-size: 1.15rem; color: var(--sb-text); display: flex; align-items: center; gap: 8px;">
+    <div id="sb-field-drawer" class="sb-card sb-drawer" style="display: none;">
+        <div class="sb-card__head sb-card__head--split">
+            <div class="sb-card__title" style="display: flex; align-items: center; gap: 8px;">
                 <?= sb_svg('plus', 20) ?> Add Meta Field
             </div>
             <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('sb-field-drawer').style.display='none'">
@@ -298,25 +298,25 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>">
             <?= csrf_field() ?>
             <input type="hidden" name="_action" value="create_meta_field">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px;">
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Target Post Type</label>
+            <div class="sb-form-grid">
+                <div class="sb-field">
+                    <label class="sb-field__label">Target Post Type</label>
                     <select name="post_type" class="form-control" style="background: #ffffff;">
                         <?php foreach ($allPostTypes as $tKey => $t): ?>
                             <option value="<?= e($tKey) ?>"><?= e($t['singular']) ?> (<?= e($tKey) ?>)</option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Field Label <span style="color: #ef4444;">*</span></label>
+                <div class="sb-field">
+                    <label class="sb-field__label">Field Label <span style="color: #ef4444;">*</span></label>
                     <input type="text" name="label" class="form-control" placeholder="e.g. Project Budget" required>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Field Key <span style="color: #ef4444;">*</span></label>
+                <div class="sb-field">
+                    <label class="sb-field__label">Field Key <span style="color: #ef4444;">*</span></label>
                     <input type="text" name="key" class="form-control" placeholder="e.g. project_budget" required>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Field Type</label>
+                <div class="sb-field">
+                    <label class="sb-field__label">Field Type</label>
                     <select name="type" class="form-control" style="background: #ffffff;">
                         <option value="text">Text (Single-line string)</option>
                         <option value="textarea">Textarea (Multi-line / rich text)</option>
@@ -332,8 +332,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 </div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; margin-bottom: 16px;">
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Placeholder / Default</label>
+                <div class="sb-field">
+                    <label class="sb-field__label">Placeholder / Default</label>
                     <input type="text" name="placeholder" class="form-control" placeholder="Optional placeholder hint or default value">
                 </div>
                 <div style="padding-top: 22px;">
@@ -343,7 +343,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     </label>
                 </div>
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <div class="sb-card-actions">
                 <button type="button" class="btn btn-outline" onclick="document.getElementById('sb-field-drawer').style.display='none'">Cancel</button>
                 <button type="submit" class="btn btn-primary"><?= sb_svg('check', 14) ?> Save Field</button>
             </div>
@@ -365,9 +365,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
                             <span style="font-size: 0.72rem; font-weight: 700; background: rgba(99, 102, 241, 0.1); color: var(--sb-accent); padding: 2px 7px; border-radius: 6px; text-transform: uppercase;">
                                 <?= e($pt['key']) ?>
                             </span>
-                            <span style="font-size: 0.75rem; color: var(--sb-muted);">
+                            <p class="sb-field__hint">
                                 <?= $fieldCount ?> field(s)
-                            </span>
+                            </p>
                         </div>
                         <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--sb-text); margin: 0 0 4px 0;"><?= e($pt['singular']) ?></h4>
                         <p style="font-size: 0.82rem; color: var(--sb-muted); line-height: 1.4; margin: 0 0 12px 0;">

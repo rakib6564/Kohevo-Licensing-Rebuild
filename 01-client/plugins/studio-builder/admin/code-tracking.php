@@ -162,114 +162,120 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <?php sb_render_admin_nav('code-tracking', $portfolioPageId); ?>
 
     <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" style="margin-bottom: 24px; border-radius: 10px;">
+        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?> sb-alert">
             <?= e($flash['msg']) ?>
         </div>
     <?php endif; ?>
 
-    <div style="margin-bottom: 24px;">
-        <h2 style="font-size: 1.3rem; font-weight: 800; color: var(--sb-text); margin: 0 0 4px 0;">Custom Code, Tracking & CSS</h2>
-        <p style="font-size: 0.88rem; color: var(--sb-muted); margin: 0;">Connect Google Search Console and Analytics, add marketing pixels or any vendor tag to the header or footer, and style the whole site with CSS.</p>
+    <div class="sb-page-head">
+        <h2>Custom code, tracking &amp; CSS</h2>
+        <p>Connect Google Search Console and Analytics, add marketing pixels or any vendor tag to the header or footer, and style the whole site with CSS.</p>
     </div>
 
     <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/code-tracking.php')) ?>">
         <?= csrf_field() ?>
 
-        <!-- Section 1: Fast Analytics Integration -->
-        <div class="card" style="border-radius: 16px; border: 1px solid var(--sb-border); padding: 24px; margin-bottom: 24px;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
-                <?= sb_svg('zap', 20, 'text-accent') ?>
-                <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--sb-text); margin: 0;">Analytics & Tag IDs</h3>
-            </div>
-
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+        <!-- Analytics -->
+        <section class="sb-card">
+            <div class="sb-card__head">
+                <span class="sb-card__icon"><?= sb_svg('zap', 18) ?></span>
                 <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Google Analytics 4 Measurement ID</label>
-                    <input type="text" name="ga4_id" value="<?= e($ga4Id) ?>" class="form-control" placeholder="G-XXXXXXXXXX">
-                    <span style="font-size: 0.75rem; color: var(--sb-muted);">Automatically loads gtag.js asynchronously without editing templates.</span>
-                </div>
-
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Google Tag Manager Container ID</label>
-                    <input type="text" name="gtm_id" value="<?= e($gtmId) ?>" class="form-control" placeholder="GTM-XXXXXXX">
-                    <span style="font-size: 0.75rem; color: var(--sb-muted);">Injects official GTM container snippets into head and body.</span>
+                    <h3 class="sb-card__title">Analytics &amp; tag IDs</h3>
+                    <p class="sb-card__sub">Load Google's tags without editing a template.</p>
                 </div>
             </div>
-        </div>
+            <div class="sb-form-grid">
+                <div class="sb-field">
+                    <label class="sb-field__label" for="ga4_id">Google Analytics 4 measurement ID</label>
+                    <input type="text" id="ga4_id" name="ga4_id" value="<?= e($ga4Id) ?>" class="form-control" placeholder="G-XXXXXXXXXX">
+                    <p class="sb-field__hint">Loads gtag.js asynchronously on every public page.</p>
+                </div>
+                <div class="sb-field">
+                    <label class="sb-field__label" for="gtm_id">Google Tag Manager container ID</label>
+                    <input type="text" id="gtm_id" name="gtm_id" value="<?= e($gtmId) ?>" class="form-control" placeholder="GTM-XXXXXXX">
+                    <p class="sb-field__hint">Adds the official container snippets to the head and body.</p>
+                </div>
+            </div>
+        </section>
 
         <?php if ($isAdmin): ?>
-        <!-- Section: Search engine & platform verification -->
-        <div class="card" style="border-radius: 16px; border: 1px solid var(--sb-border); padding: 24px; margin-bottom: 24px;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
-                <?= sb_svg('check', 20, 'text-accent') ?>
-                <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--sb-text); margin: 0;">Site verification</h3>
+        <!-- Search engine & platform verification -->
+        <section class="sb-card">
+            <div class="sb-card__head">
+                <span class="sb-card__icon"><?= sb_svg('check', 18) ?></span>
+                <div>
+                    <h3 class="sb-card__title">Site verification</h3>
+                    <p class="sb-card__sub">Prove you own the site to search engines and social platforms.</p>
+                </div>
             </div>
-            <p style="font-size: 0.85rem; color: var(--sb-muted); margin-bottom: 14px;">
+            <p class="sb-card__note">
                 Paste the token, or the whole <code>&lt;meta&gt;</code> tag, that Google Search Console, Bing Webmaster Tools, Meta or Pinterest gives you.
                 Only the token is stored; the tag is added to the <code>&lt;head&gt;</code> of your public pages.
             </p>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+            <div class="sb-form-grid">
                 <?php foreach ([
                     'google' => ['Google Search Console', 'google-site-verification'],
                     'bing' => ['Bing Webmaster Tools', 'msvalidate.01'],
                     'facebook' => ['Meta (Facebook) domain', 'facebook-domain-verification'],
                     'pinterest' => ['Pinterest', 'p:domain_verify'],
                 ] as $service => [$label, $metaName]): ?>
-                    <div>
-                        <label class="form-label" style="font-weight: 600; font-size: 0.85rem;"><?= e($label) ?></label>
-                        <input type="text" name="verify_<?= e($service) ?>" value="<?= e($verify[$service]) ?>" class="form-control" autocomplete="off" spellcheck="false" placeholder="<meta name=&quot;<?= e($metaName) ?>&quot; content=&quot;…&quot;> or the token">
+                    <div class="sb-field">
+                        <label class="sb-field__label" for="verify_<?= e($service) ?>"><?= e($label) ?></label>
+                        <input type="text" id="verify_<?= e($service) ?>" name="verify_<?= e($service) ?>" value="<?= e($verify[$service]) ?>" class="form-control" autocomplete="off" spellcheck="false" placeholder="<meta name=&quot;<?= e($metaName) ?>&quot; content=&quot;…&quot;> or the token">
                     </div>
                 <?php endforeach; ?>
             </div>
-        </div>
+        </section>
 
-        <!-- Section: Header and footer code -->
-        <div class="card" style="border-radius: 16px; border: 1px solid var(--sb-border); padding: 24px; margin-bottom: 24px;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
-                <?= sb_svg('code', 20, 'text-accent') ?>
-                <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--sb-text); margin: 0;">Header &amp; footer code</h3>
+        <!-- Header and footer code -->
+        <section class="sb-card">
+            <div class="sb-card__head">
+                <span class="sb-card__icon"><?= sb_svg('code', 18) ?></span>
+                <div>
+                    <h3 class="sb-card__title">Header &amp; footer code</h3>
+                    <p class="sb-card__sub">Vendor tags and pixels, on the live site only.</p>
+                </div>
             </div>
-            <div class="alert alert-warning" style="border-radius: 10px; margin-bottom: 14px; font-size: 0.85rem;">
+            <div class="alert alert-warning sb-alert" style="font-size: 0.85rem; margin-bottom: 18px;">
                 This code runs on every public page of your site, for every visitor. Only add code from vendors you trust.
                 It is <strong>not</strong> loaded in the builder canvas or in Preview, only on the live site, and only administrators can change it.
                 Each change is recorded in the audit log.
             </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;" for="head_snippet">Header code <span style="font-weight: 400; color: var(--sb-muted);">(inside &lt;head&gt;)</span></label>
-                    <textarea id="head_snippet" name="head_snippet" rows="8" class="form-control" spellcheck="false" autocomplete="off" style="font-family: ui-monospace, monospace; font-size: 0.85rem; background: #0f172a; color: #cbd5e1;" placeholder="<!-- e.g. Meta Pixel, Hotjar, Clarity, a verification meta tag -->"><?= e($headSnippet) ?></textarea>
-                    <span style="font-size: 0.75rem; color: var(--sb-muted);">script, noscript, style, link and meta tags.</span>
+            <div class="sb-form-grid">
+                <div class="sb-field">
+                    <label class="sb-field__label" for="head_snippet">Header code <small>(inside &lt;head&gt;)</small></label>
+                    <textarea id="head_snippet" name="head_snippet" rows="8" class="form-control sb-code-input" spellcheck="false" autocomplete="off" placeholder="<!-- e.g. Meta Pixel, Hotjar, Clarity, a verification meta tag -->"><?= e($headSnippet) ?></textarea>
+                    <p class="sb-field__hint">script, noscript, style, link and meta tags.</p>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;" for="footer_snippet">Footer code <span style="font-weight: 400; color: var(--sb-muted);">(end of &lt;body&gt;)</span></label>
-                    <textarea id="footer_snippet" name="footer_snippet" rows="8" class="form-control" spellcheck="false" autocomplete="off" style="font-family: ui-monospace, monospace; font-size: 0.85rem; background: #0f172a; color: #cbd5e1;" placeholder="<!-- e.g. a chat widget, a tracking pixel, a noscript fallback -->"><?= e($footerSnippet) ?></textarea>
-                    <span style="font-size: 0.75rem; color: var(--sb-muted);">The same tags, plus img and iframe. At most <?= (int) (StudioCodePolicy::MAX_SNIPPET_BYTES / 1024) ?> KiB each.</span>
+                <div class="sb-field">
+                    <label class="sb-field__label" for="footer_snippet">Footer code <small>(end of &lt;body&gt;)</small></label>
+                    <textarea id="footer_snippet" name="footer_snippet" rows="8" class="form-control sb-code-input" spellcheck="false" autocomplete="off" placeholder="<!-- e.g. a chat widget, a tracking pixel, a noscript fallback -->"><?= e($footerSnippet) ?></textarea>
+                    <p class="sb-field__hint">The same tags, plus img and iframe. At most <?= (int) (StudioCodePolicy::MAX_SNIPPET_BYTES / 1024) ?> KiB each.</p>
                 </div>
             </div>
-        </div>
+        </section>
         <?php endif; ?>
 
-        <!-- Section 2: Global Custom CSS -->
-        <div class="card" style="border-radius: 16px; border: 1px solid var(--sb-border); padding: 24px; margin-bottom: 28px;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
-                <?= sb_svg('edit', 20, 'text-accent') ?>
-                <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--sb-text); margin: 0;">Global Custom CSS</h3>
+        <!-- Global custom CSS -->
+        <section class="sb-card">
+            <div class="sb-card__head">
+                <span class="sb-card__icon"><?= sb_svg('edit', 18) ?></span>
+                <div>
+                    <h3 class="sb-card__title">Global custom CSS</h3>
+                    <p class="sb-card__sub">Loaded after Studio's own stylesheet on every public and preview page.</p>
+                </div>
             </div>
-
-            <p style="font-size: 0.85rem; color: var(--sb-muted); margin-bottom: 12px;">
-                Style rules defined here are loaded after Studio's own stylesheet on every
-                public and preview page, so they override block styling. They are not applied
-                inside the builder canvas, so the canvas always shows the published design.
-                <code>@import</code> and script-bearing URLs are stripped on save.
-            </p>
-
-            <textarea name="custom_css" rows="6" class="form-control" style="font-family: ui-monospace, monospace; font-size: 0.85rem; background: #0f172a; color: #cbd5e1;" placeholder="/* Custom CSS overrides */
+            <div class="sb-field">
+                <label class="sb-field__label" for="custom_css">Style rules</label>
+                <textarea id="custom_css" name="custom_css" rows="8" class="form-control sb-code-input" spellcheck="false" placeholder="/* Custom CSS overrides */
 .sb-custom-highlight {
     background: linear-gradient(135deg, #6366f1, #8b5cf6);
 }"><?= e($customCss) ?></textarea>
-        </div>
+                <p class="sb-field__hint">These rules override block styling. They are not applied inside the builder canvas, so the canvas always shows the published design. <code>@import</code> and script-bearing URLs are stripped on save.</p>
+            </div>
+        </section>
 
-        <div style="display: flex; justify-content: flex-end;">
+        <div class="sb-card-actions" style="margin-top: 0;">
             <button type="submit" class="btn btn-primary">
                 <?= sb_svg('save', 14) ?> Save
             </button>

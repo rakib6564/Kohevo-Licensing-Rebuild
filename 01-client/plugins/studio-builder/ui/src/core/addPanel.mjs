@@ -106,3 +106,17 @@ export function searchAll({ blocks: allBlocks, presets, components }, query, lab
 }
 
 export { canContain, isGlobalSection, sectionsOf };
+
+/**
+ * A category's heading: the translated name when the builder has one (`block_cat_<slug>`), and otherwise the slug read as
+ * words ("case_studies" -> "Case studies"), so a category a module or a saved template brings never shows its raw key.
+ * @param {string} slug
+ * @param {(key: string) => string} t
+ */
+export function categoryLabel(slug, t) {
+  const key = `block_cat_${slug}`;
+  const label = t(key);
+  if (label !== key) return label;
+  const words = String(slug || '').replace(/[_-]+/g, ' ').trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : '';
+}

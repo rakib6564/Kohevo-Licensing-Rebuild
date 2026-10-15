@@ -1,0 +1,186 @@
+{
+  "text_color": {
+    "typography": {
+      "color": "#ff0000"
+    }
+  },
+  "text_token": {
+    "text_token": "text.primary"
+  },
+  "bg_color": {
+    "background": {
+      "color": "#00aa00"
+    }
+  },
+  "bg_token": {
+    "surface_token": "surface.accent"
+  },
+  "bg_gradient": {
+    "background": {
+      "gradient": "linear-gradient(90deg,#ff0000,#0000ff)"
+    }
+  },
+  "padding": {
+    "padding": {
+      "top": "40px",
+      "right": "40px",
+      "bottom": "40px",
+      "left": "40px"
+    }
+  },
+  "margin": {
+    "margin": {
+      "top": "30px",
+      "bottom": "30px"
+    }
+  },
+  "border": {
+    "border": {
+      "top": {
+        "width": "4px",
+        "style": "solid",
+        "color": "#0000ff"
+      },
+      "right": {
+        "width": "4px",
+        "style": "solid",
+        "color": "#0000ff"
+      },
+      "bottom": {
+        "width": "4px",
+        "style": "solid",
+        "color": "#0000ff"
+      },
+      "left": {
+        "width": "4px",
+        "style": "solid",
+        "color": "#0000ff"
+      }
+    }
+  },
+  "radius": {
+    "border": {
+      "radius": "24px"
+    },
+    "background": {
+      "color": "#00aa00"
+    }
+  },
+  "shadow": {
+    "shadow": {
+      "x": "0",
+      "y": "8px",
+      "blur": "20px",
+      "spread": "0",
+      "color": "rgba(0,0,0,.4)"
+    }
+  },
+  "font_size": {
+    "typography": {
+      "size": "48px"
+    }
+  },
+  "font_weight": {
+    "typography": {
+      "weight": "bold"
+    }
+  },
+  "font_italic": {
+    "typography": {
+      "style": "italic"
+    }
+  },
+  "uppercase": {
+    "typography": {
+      "transform": "uppercase"
+    }
+  },
+  "letter_spacing": {
+    "typography": {
+      "letter_spacing": "0.2em"
+    }
+  },
+  "line_height": {
+    "typography": {
+      "line_height": 2.4
+    }
+  },
+  "font_family": {
+    "typography": {
+      "font_family": "Georgia, serif"
+    }
+  },
+  "underline": {
+    "typography": {
+      "decoration": "underline"
+    }
+  },
+  "align_center": {
+    "align": {
+      "base": "center"
+    }
+  },
+  "opacity": {
+    "opacity": 0.5
+  },
+  "max_width": {
+    "dimensions": {
+      "max_width": "200px"
+    }
+  },
+  "min_height": {
+    "dimensions": {
+      "min_height": "300px"
+    }
+  },
+  "rotate": {
+    "effects": {
+      "transform": {
+        "rotate": 10
+      }
+    }
+  },
+  "blur": {
+    "effects": {
+      "filter": {
+        "blur": 4
+      }
+    }
+  },
+  "space_token": {
+    "spacing_token": "space.lg"
+  },
+  "radius_token": {
+    "radius_token": "radius.lg",
+    "background": {
+      "color": "#00aa00"
+    }
+  },
+  "shadow_token": {
+    "shadow_token": "shadow.md"
+  },
+  "font_token": {
+    "font_token": "font.heading"
+  },
+  "border_token": {
+    "border_token": "border.default",
+    "border": {
+      "top": {
+        "width": "4px",
+        "style": "solid"
+      },
+      "right": {
+        "width": "4px",
+        "style": "solid"
+      },
+      "bottom": {
+        "width": "4px",
+        "style": "solid"
+      },
+      "left": {
+        "width": "4px",
+        "style": "solid"
+      }
+    }
+  }
+}

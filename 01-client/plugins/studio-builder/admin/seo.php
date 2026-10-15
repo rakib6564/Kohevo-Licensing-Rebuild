@@ -79,34 +79,34 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <?php sb_render_admin_nav('seo', $portfolioPageId); ?>
 
     <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" style="margin-bottom: 24px; border-radius: 10px;">
+        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?> sb-alert">
             <?= e($flash['msg']) ?>
         </div>
     <?php endif; ?>
 
-    <div style="margin-bottom: 24px;">
-        <h2 style="font-size: 1.3rem; font-weight: 800; color: var(--sb-text); margin: 0 0 4px 0;">Site & Search Engine Optimization</h2>
-        <p style="font-size: 0.88rem; color: var(--sb-muted); margin: 0;">Configure global metadata, search bot indexing directives, and social card sharing previews.</p>
+    <div class="sb-page-head">
+        <h2>Site &amp; Search Engine Optimization</h2>
+        <p>Configure global metadata, search bot indexing directives, and social card sharing previews.</p>
     </div>
 
-    <!-- Quick Links & Diagnostics -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 28px;">
-        <div class="card" style="border-radius: 14px; border: 1px solid var(--sb-border); padding: 18px; display: flex; align-items: center; justify-content: space-between;">
+    <!-- Quick links -->
+    <div class="sb-two-up">
+        <div class="sb-card sb-link-card">
             <div>
-                <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #10b981; letter-spacing: 0.05em;">Live XML Feed</span>
-                <h4 style="font-size: 1rem; font-weight: 700; color: var(--sb-text); margin: 2px 0;">sitemap.xml</h4>
-                <p style="font-size: 0.8rem; color: var(--sb-muted); margin: 0;">Two-query zero-cost deterministic feed.</p>
+                <span class="sb-link-card__kicker" style="color: #10b981;">Live XML feed</span>
+                <h4>sitemap.xml</h4>
+                <p>Every published, indexable page, kept up to date automatically.</p>
             </div>
             <a href="<?= e(SLATE_URL . '/sitemap.xml') ?>" target="_blank" rel="noopener" class="btn btn-sm btn-outline">
                 <?= sb_svg('external-link', 14) ?> View
             </a>
         </div>
 
-        <div class="card" style="border-radius: 14px; border: 1px solid var(--sb-border); padding: 18px; display: flex; align-items: center; justify-content: space-between;">
+        <div class="sb-card sb-link-card">
             <div>
-                <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--sb-accent); letter-spacing: 0.05em;">Bot Directives</span>
-                <h4 style="font-size: 1rem; font-weight: 700; color: var(--sb-text); margin: 2px 0;">robots.txt</h4>
-                <p style="font-size: 0.8rem; color: var(--sb-muted); margin: 0;">Configured base crawl permissions.</p>
+                <span class="sb-link-card__kicker" style="color: var(--sb-accent);">Bot directives</span>
+                <h4>robots.txt</h4>
+                <p>Base crawl permissions and the sitemap location.</p>
             </div>
             <a href="<?= e(SLATE_URL . '/robots.txt') ?>" target="_blank" rel="noopener" class="btn btn-sm btn-outline">
                 <?= sb_svg('external-link', 14) ?> View
@@ -114,61 +114,70 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </div>
     </div>
 
-    <!-- SEO Settings Form & Live Social Preview Side-by-Side -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px; margin-bottom: 32px;">
-        <!-- Left: Settings Form -->
-        <div class="card" style="border-radius: 16px; border: 1px solid var(--sb-border); padding: 24px;">
-            <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--sb-text); margin: 0 0 18px 0;">Global SEO Controls</h3>
+    <!-- SEO settings and a live preview, side by side -->
+    <div class="sb-two-up">
+        <!-- Left: settings form -->
+        <div class="sb-card">
+            <div class="sb-card__head">
+                <span class="sb-card__icon"><?= sb_svg('seo', 18) ?></span>
+                <div>
+                    <h3 class="sb-card__title">Global SEO controls</h3>
+                    <p class="sb-card__sub">Defaults for every page that does not set its own.</p>
+                </div>
+            </div>
 
             <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/seo.php')) ?>">
                 <?= csrf_field() ?>
+                <div class="sb-stack">
+                    <div class="sb-field">
+                        <label class="sb-field__label" for="seo-input-title">Title format pattern</label>
+                        <input type="text" name="title_format" id="seo-input-title" value="<?= e($seoTitleFormat) ?>" class="form-control" placeholder="%title% | %site_name%">
+                        <p class="sb-field__hint">Supported tags: <code>%title%</code>, <code>%site_name%</code>.</p>
+                    </div>
 
-                <div style="margin-bottom: 16px;">
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Title Format Pattern</label>
-                    <input type="text" name="title_format" id="seo-input-title" value="<?= e($seoTitleFormat) ?>" class="form-control" placeholder="%title% | %site_name%">
-                    <span style="font-size: 0.75rem; color: var(--sb-muted);">Supported tags: <code>%title%</code>, <code>%site_name%</code>.</span>
+                    <div class="sb-field">
+                        <label class="sb-field__label" for="seo-input-desc">Global meta description</label>
+                        <textarea name="description" id="seo-input-desc" rows="3" class="form-control" placeholder="Compelling summary under 160 characters..."><?= e($seoDescription) ?></textarea>
+                        <p class="sb-field__hint">Search engines show about 160 characters.</p>
+                    </div>
+
+                    <div>
+                        <input type="hidden" name="og_media_id" id="seo_og_media_id" value="<?= e($seoOgMediaId) ?>" data-sb-id-for="seo_og_image_url">
+                        <?= sb_media_picker_field([
+                            'id'          => 'seo_og_image_url',
+                            'name'        => 'og_image_url',
+                            'label'       => 'Default social share image (OpenGraph)',
+                            'value'       => $ogImageUrl,
+                            'placeholder' => 'https://... or choose from Media Library',
+                            'help'        => 'Select an asset from your Media Library (recommended: 1200×630px). Used for Twitter/X, LinkedIn, and social embeds.',
+                        ]) ?>
+                    </div>
+
+                    <div class="sb-field">
+                        <label class="sb-field__label" for="seo-input-robots">Search robots policy</label>
+                        <select name="robots" id="seo-input-robots" class="form-control">
+                            <option value="index,follow" <?= $seoRobots === 'index,follow' ? 'selected' : '' ?>>index, follow (Recommended — allow indexing &amp; links)</option>
+                            <option value="noindex,follow" <?= $seoRobots === 'noindex,follow' ? 'selected' : '' ?>>noindex, follow (hide from search, follow internal links)</option>
+                            <option value="index,nofollow" <?= $seoRobots === 'index,nofollow' ? 'selected' : '' ?>>index, nofollow (index page, do not crawl outbound links)</option>
+                            <option value="noindex,nofollow" <?= $seoRobots === 'noindex,nofollow' ? 'selected' : '' ?>>noindex, nofollow (complete bot blackout)</option>
+                        </select>
+                    </div>
+
+                    <div class="sb-form-grid">
+                        <div class="sb-field">
+                            <label class="sb-field__label" for="seo-input-google">Google site verification tag</label>
+                            <input type="text" name="google_verify" id="seo-input-google" value="<?= e($seoGoogleVerification) ?>" class="form-control" placeholder="google-site-verification code">
+                        </div>
+                        <div class="sb-field">
+                            <label class="sb-field__label" for="seo-input-bing">Bing Webmaster tag</label>
+                            <input type="text" name="bing_verify" id="seo-input-bing" value="<?= e($seoBingVerification) ?>" class="form-control" placeholder="msvalidate.01 code">
+                        </div>
+                    </div>
                 </div>
 
-                <div style="margin-bottom: 16px;">
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Global Meta Description</label>
-                    <textarea name="description" id="seo-input-desc" rows="3" class="form-control" placeholder="Compelling summary under 160 characters..."><?= e($seoDescription) ?></textarea>
-                </div>
-
-                <div style="margin-bottom: 16px;">
-                    <input type="hidden" name="og_media_id" id="seo_og_media_id" value="<?= e($seoOgMediaId) ?>" data-sb-id-for="seo_og_image_url">
-                    <?= sb_media_picker_field([
-                        'id'          => 'seo_og_image_url',
-                        'name'        => 'og_image_url',
-                        'label'       => 'Default Social Share Image (OpenGraph)',
-                        'value'       => $ogImageUrl,
-                        'placeholder' => 'https://... or choose from Media Library',
-                        'help'        => 'Select an asset from your Media Library (recommended: 1200×630px). Used for Twitter/X, LinkedIn, and social embeds.',
-                    ]) ?>
-                </div>
-
-                <div style="margin-bottom: 16px;">
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Search Robots Policy</label>
-                    <select name="robots" class="form-control" style="background: #ffffff;">
-                        <option value="index,follow" <?= $seoRobots === 'index,follow' ? 'selected' : '' ?>>index, follow (Recommended — Allow Indexing & Links)</option>
-                        <option value="noindex,follow" <?= $seoRobots === 'noindex,follow' ? 'selected' : '' ?>>noindex, follow (Hide from search, follow internal links)</option>
-                        <option value="index,nofollow" <?= $seoRobots === 'index,nofollow' ? 'selected' : '' ?>>index, nofollow (Index page, do not crawl outbound links)</option>
-                        <option value="noindex,nofollow" <?= $seoRobots === 'noindex,nofollow' ? 'selected' : '' ?>>noindex, nofollow (Complete bot blackout)</option>
-                    </select>
-                </div>
-
-                <div style="margin-bottom: 16px;">
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Google Site Verification Tag</label>
-                    <input type="text" name="google_verify" value="<?= e($seoGoogleVerification) ?>" class="form-control" placeholder="google-site-verification code">
-                </div>
-
-                <div style="margin-bottom: 24px;">
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Bing Webmaster Tag</label>
-                    <input type="text" name="bing_verify" value="<?= e($seoBingVerification) ?>" class="form-control" placeholder="msvalidate.01 code">
-                </div>
-
-                <div style="display: flex; justify-content: flex-end;">
+                <div class="sb-card-actions">
                     <button type="submit" class="btn btn-primary">
-                        <?= sb_svg('save', 14) ?> Save SEO Settings
+                        <?= sb_svg('save', 14) ?> Save SEO settings
                     </button>
                 </div>
             </form>
@@ -177,7 +186,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <!-- Right: Real-time SERP & Social Card Simulator -->
         <div>
             <!-- Google SERP Snippet Preview -->
-            <div class="card" style="border-radius: 16px; border: 1px solid var(--sb-border); padding: 22px; margin-bottom: 20px;">
+            <div class="sb-card">
                 <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--sb-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
                     <?= sb_svg('globe', 14) ?> Google Search Result Simulator
                 </div>
@@ -196,7 +205,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             </div>
 
             <!-- Twitter / OpenGraph Card Preview -->
-            <div class="card" style="border-radius: 16px; border: 1px solid var(--sb-border); padding: 22px;">
+            <div class="sb-card" style="margin-bottom: 0;">
                 <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--sb-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
                     <?= sb_svg('eye', 14) ?> OpenGraph / Twitter Card Preview
                 </div>

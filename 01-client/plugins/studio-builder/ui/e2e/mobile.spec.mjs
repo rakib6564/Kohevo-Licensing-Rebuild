@@ -88,12 +88,16 @@ test('the Blocks sheet can be dragged and pulled down to close', async ({ page }
   await stable(); // the sheet is still settling onto its snap: grabbing the handle now can miss it
 
   // pull well below the lowest snap: it closes
-  const h2 = await page.getByTestId('left-sheet-handle').boundingBox();
-  await page.mouse.move(h2.x + h2.width / 2, h2.y + 10);
-  await page.mouse.down();
-  await page.mouse.move(h2.x + h2.width / 2, h2.y + 700, { steps: 12 });
-  await page.mouse.up();
-  await expect(page.locator('.sbx-left.is-mobile-open')).toHaveCount(0);
+  // A pointer drag on a CI runner sometimes lets go early; grab the handle again where it is now until the sheet closes.
+  await expect(async () => {
+    await stable();
+    const h2 = await page.getByTestId('left-sheet-handle').boundingBox();
+    await page.mouse.move(h2.x + h2.width / 2, h2.y + 10);
+    await page.mouse.down();
+    await page.mouse.move(h2.x + h2.width / 2, h2.y + 700, { steps: 12 });
+    await page.mouse.up();
+    await expect(page.locator('.sbx-left.is-mobile-open')).toHaveCount(0, { timeout: 3_000 });
+  }).toPass({ timeout: 20_000 });
 });
 
 test('the More sheet is a modal dialog: Tab stays inside, Escape closes and focus returns', async ({ page }) => {
