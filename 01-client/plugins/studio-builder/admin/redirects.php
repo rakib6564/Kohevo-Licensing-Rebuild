@@ -97,7 +97,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <?php sb_render_admin_nav('redirects', $portfolioPageId); ?>
 
     <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" style="margin-bottom: 24px; border-radius: 10px;">
+        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" >
             <?= e($flash['msg']) ?>
         </div>
     <?php endif; ?>
@@ -114,9 +114,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
     </div>
 
     <!-- Add Redirect Drawer / Form -->
-    <div id="sb-redirect-drawer" style="display: none; background: #ffffff; border: 1px solid var(--sb-border); border-radius: 14px; padding: 24px; margin-bottom: 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
-            <div style="font-weight: 700; font-size: 1.15rem; color: var(--sb-text); display: flex; align-items: center; gap: 8px;">
+    <div id="sb-redirect-drawer" class="sb-card sb-drawer" style="display: none;">
+        <div class="sb-card__head sb-card__head--split">
+            <div class="sb-card__title" style="display: flex; align-items: center; gap: 8px;">
                 <?= sb_svg('redirects', 20) ?> Create URL Redirection
             </div>
             <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('sb-redirect-drawer').style.display='none'">
@@ -126,30 +126,30 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/redirects.php')) ?>">
             <?= csrf_field() ?>
             <input type="hidden" name="_action" value="add_redirect">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 16px;">
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Source Path <span style="color: #ef4444;">*</span></label>
+            <div class="sb-form-grid">
+                <div class="sb-field">
+                    <label class="sb-field__label">Source Path <span style="color: #ef4444;">*</span></label>
                     <input type="text" name="from_path" class="form-control" placeholder="e.g. /old-portfolio or /work" required>
-                    <span style="font-size: 0.75rem; color: var(--sb-muted);">Incoming request path to intercept.</span>
+                    <p class="sb-field__hint">Incoming request path to intercept.</p>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Target Destination <span style="color: #ef4444;">*</span></label>
+                <div class="sb-field">
+                    <label class="sb-field__label">Target Destination <span style="color: #ef4444;">*</span></label>
                     <input type="text" name="to_path" class="form-control" placeholder="e.g. /portfolio or https://..." required>
-                    <span style="font-size: 0.75rem; color: var(--sb-muted);">New destination URL or relative path.</span>
+                    <p class="sb-field__hint">New destination URL or relative path.</p>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">HTTP Status Code</label>
+                <div class="sb-field">
+                    <label class="sb-field__label">HTTP Status Code</label>
                     <select name="status_code" class="form-control" style="background: #ffffff;">
                         <option value="301">301 Moved Permanently (SEO Standard)</option>
                         <option value="302">302 Found / Temporary (Shortlinks)</option>
                     </select>
                 </div>
             </div>
-            <div style="margin-bottom: 18px;">
-                <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Notes</label>
+            <div class="sb-field">
+                <label class="sb-field__label">Notes</label>
                 <input type="text" name="notes" class="form-control" placeholder="Reason for redirect or migration note...">
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <div class="sb-card-actions">
                 <button type="button" class="btn btn-outline" onclick="document.getElementById('sb-redirect-drawer').style.display='none'">Cancel</button>
                 <button type="submit" class="btn btn-primary"><?= sb_svg('check', 14) ?> Save Rule</button>
             </div>
