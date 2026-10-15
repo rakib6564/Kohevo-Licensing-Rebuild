@@ -32,3 +32,16 @@ test('the Studio tab bar wraps instead of showing a scrollbar on a desktop scree
   const { scroll, client } = await bar.evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
   expect(scroll).toBeLessThanOrEqual(client + 1);
 });
+
+test('a page\'s settings, duplicate and delete cards are as wide as the strip above them', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'desktop width');
+  await page.goto(`${ADMIN}/pages.php`);
+  const href = await page.locator('a[href*="page-edit.php?id="]').first().getAttribute('href');
+  await page.goto(`${ADMIN}/${href.split('/').pop()}`);
+  const strip = (await page.getByTestId('page-meta').boundingBox()).width;
+  const cards = page.locator('form.sb-form-card');
+  expect(await cards.count()).toBeGreaterThanOrEqual(3);
+  for (const w of await cards.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width))) {
+    expect(Math.abs(w - strip), 'a card is as wide as the strip').toBeLessThanOrEqual(2);
+  }
+});

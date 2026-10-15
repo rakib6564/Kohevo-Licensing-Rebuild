@@ -168,20 +168,18 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <input type="hidden" name="id" value="<?= $pageId ?>">
         <input type="hidden" name="action" value="save">
         <div class="card-header"><div><h2><?= e(__('studio_page_settings', 'Settings')) ?></h2></div></div>
-        <div class="field-row field-row-2">
-            <div class="field">
-                <label class="field-label" for="sb-title"><?= e(__('title', 'Title')) ?> <span class="field-required">*</span></label>
+        <div class="sb-form-grid">
+            <div class="sb-field">
+                <label class="sb-field__label" for="sb-title"><?= e(__('title', 'Title')) ?> <span class="field-required" style="color:#ef4444;">*</span></label>
                 <input type="text" id="sb-title" name="title" required maxlength="255" value="<?= e((string) $page['title']) ?>"<?= $canEdit ? '' : ' disabled' ?>>
             </div>
-            <div class="field">
-                <label class="field-label" for="sb-slug"><?= e(__('studio_slug', 'Address (slug)')) ?></label>
+            <div class="sb-field">
+                <label class="sb-field__label" for="sb-slug"><?= e(__('studio_slug', 'Address (slug)')) ?></label>
                 <input type="text" id="sb-slug" name="slug" required maxlength="191" pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" value="<?= e((string) $page['slug']) ?>"<?= $canEdit ? '' : ' disabled' ?>>
-                <?php if ($published): ?><div class="field-hint"><?= e(__('studio_slug_published_hint', 'This page is live: changing its address changes its public URL.')) ?></div><?php endif; ?>
+                <?php if ($published): ?><p class="sb-field__hint"><?= e(__('studio_slug_published_hint', 'This page is live: changing its address changes its public URL.')) ?></p><?php endif; ?>
             </div>
-        </div>
-        <div class="field-row field-row-2">
-            <div class="field">
-                <label class="field-label" for="sb-route"><?= e(__('studio_route_mode', 'Route Mode')) ?></label>
+            <div class="sb-field">
+                <label class="sb-field__label" for="sb-route"><?= e(__('studio_route_mode', 'Route Mode')) ?></label>
                 <select id="sb-route" name="route_mode"<?= $canEdit ? '' : ' disabled' ?>>
                     <option value="standalone"<?= $page['route_mode'] === 'standalone' ? ' selected' : '' ?>><?= e(__('studio_route_standalone', 'Dedicated URL Path')) ?></option>
                     <option value="homepage"<?= $page['route_mode'] === 'homepage' ? ' selected' : '' ?>><?= e(__('studio_route_homepage', 'Site Homepage (/)')) ?></option>
@@ -202,15 +200,15 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <input type="hidden" name="id" value="<?= $pageId ?>">
         <input type="hidden" name="action" value="duplicate">
         <div class="card-header"><div><h2><?= e(__('studio_duplicate_page', 'Duplicate')) ?></h2><div class="card-sub"><?= e(__('studio_duplicate_sub', 'Make a draft copy of this page under a new title and address.')) ?></div></div></div>
-        <div class="field-row field-row-2">
-            <div class="field">
-                <label class="field-label" for="sb-copy-title"><?= e(__('title', 'Title')) ?></label>
+        <div class="sb-form-grid">
+            <div class="sb-field">
+                <label class="sb-field__label" for="sb-copy-title"><?= e(__('title', 'Title')) ?></label>
                 <input type="text" id="sb-copy-title" name="copy_title" required maxlength="255" value="<?= e(sprintf(__('studio_copy_of', '%s copy'), (string) $page['title'])) ?>">
             </div>
-            <div class="field">
-                <label class="field-label" for="sb-copy-slug"><?= e(__('studio_slug', 'Address (slug)')) ?></label>
+            <div class="sb-field">
+                <label class="sb-field__label" for="sb-copy-slug"><?= e(__('studio_slug', 'Address (slug)')) ?></label>
                 <input type="text" id="sb-copy-slug" name="copy_slug" maxlength="191" pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" placeholder="<?= e((string) $page['slug']) ?>-copy">
-                <div class="field-hint"><?= e(__('studio_slug_hint', 'Lowercase letters, numbers and hyphens. Leave blank to generate from title.')) ?></div>
+                <p class="sb-field__hint"><?= e(__('studio_slug_hint', 'Lowercase letters, numbers and hyphens. Leave blank to generate from title.')) ?></p>
             </div>
         </div>
         <div class="sb-form-actions">

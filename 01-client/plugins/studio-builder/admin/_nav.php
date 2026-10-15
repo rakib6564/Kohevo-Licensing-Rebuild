@@ -327,7 +327,8 @@ if (!function_exists('sb_render_admin_nav')) {
             }
             .sb-search { display: flex; align-items: center; gap: 8px; }
             .sb-search input[type="search"] { min-width: 240px; }
-            .sb-form-card { max-width: 860px; }
+            /* The cards on a page's screens are as wide as the strip above them; the fields inside arrange themselves in columns. */
+            .sb-form-card { max-width: none; width: 100%; box-sizing: border-box; }
             .sb-form-card + .sb-form-card { margin-top: 20px; }
             .sb-form-actions {
                 display: flex;

@@ -90,36 +90,36 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
     <form method="post" class="card sb-form-card">
         <?= csrf_field() ?>
-        <div class="field-row field-row-2">
-            <div class="field">
-                <label class="field-label" for="sb-title"><?= e(__('title', 'Title')) ?> <span class="field-required">*</span></label>
+        <div class="sb-form-grid">
+            <div class="sb-field">
+                <label class="sb-field__label" for="sb-title"><?= e(__('title', 'Title')) ?> <span class="field-required" style="color:#ef4444;">*</span></label>
                 <input type="text" id="sb-title" name="title" required maxlength="255" autofocus placeholder="<?= e(__('studio_title_placeholder', 'About us')) ?>" value="<?= e($formValues['title']) ?>">
             </div>
-            <div class="field">
-                <label class="field-label" for="sb-slug"><?= e(__('studio_slug', 'Address (slug)')) ?></label>
+            <div class="sb-field">
+                <label class="sb-field__label" for="sb-slug"><?= e(__('studio_slug', 'Address (slug)')) ?></label>
                 <input type="text" id="sb-slug" name="slug" maxlength="191" pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" placeholder="about-us" value="<?= e($formValues['slug']) ?>">
-                <div class="field-hint"><?= e(__('studio_slug_hint', 'Lowercase letters, numbers and hyphens. Leave blank to generate from title.')) ?></div>
+                <p class="sb-field__hint"><?= e(__('studio_slug_hint', 'Lowercase letters, numbers and hyphens. Leave blank to generate from title.')) ?></p>
             </div>
         </div>
-        <div class="field-row <?= $templates !== [] ? 'field-row-3' : 'field-row-2' ?>">
-            <div class="field">
-                <label class="field-label" for="sb-type"><?= e(__('studio_page_type', 'Page Type')) ?></label>
+        <div class="sb-form-grid">
+            <div class="sb-field">
+                <label class="sb-field__label" for="sb-type"><?= e(__('studio_page_type', 'Page Type')) ?></label>
                 <select id="sb-type" name="page_type">
                     <?php foreach (['page' => __('studio_type_page', 'Standard Page'), 'landing' => __('studio_type_landing', 'Landing Page'), 'header_partial' => __('studio_type_header', 'Site Header Partial'), 'footer_partial' => __('studio_type_footer', 'Site Footer Partial')] as $v => $l): ?>
                         <option value="<?= e($v) ?>"<?= $formValues['page_type'] === $v ? ' selected' : '' ?>><?= e($l) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="field">
-                <label class="field-label" for="sb-route"><?= e(__('studio_route_mode', 'Route Mode')) ?></label>
+            <div class="sb-field">
+                <label class="sb-field__label" for="sb-route"><?= e(__('studio_route_mode', 'Route Mode')) ?></label>
                 <select id="sb-route" name="route_mode">
                     <option value="standalone"<?= $formValues['route_mode'] === 'standalone' ? ' selected' : '' ?>><?= e(__('studio_route_standalone', 'Dedicated URL Path')) ?></option>
                     <option value="homepage"<?= $formValues['route_mode'] === 'homepage' ? ' selected' : '' ?>><?= e(__('studio_route_homepage', 'Site Homepage (/)')) ?></option>
                 </select>
             </div>
             <?php if ($templates !== []): ?>
-            <div class="field">
-                <label class="field-label" for="sb-template"><?= e(__('studio_template', 'Start from template')) ?></label>
+            <div class="sb-field">
+                <label class="sb-field__label" for="sb-template"><?= e(__('studio_template', 'Start from template')) ?></label>
                 <select id="sb-template" name="template_key">
                     <option value=""><?= e(__('studio_template_blank', 'Blank canvas')) ?></option>
                     <?php foreach ($templates as $tpl): ?>
