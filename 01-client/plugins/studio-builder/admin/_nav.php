@@ -448,6 +448,14 @@ if (!function_exists('sb_render_admin_nav')) {
             .sb-drawer { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06); margin-bottom: 28px; }
             .sb-form-grid + .sb-field, .sb-form-grid + .sb-form-grid { margin-top: 20px; }
             .sb-card form > * + *:not(.sb-card-actions):not(input[type="hidden"]) { margin-top: 20px; }
+            .sb-pager { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 20px; margin: 18px 0 32px; font-size: 0.86rem; color: var(--sb-muted); }
+            .sb-pager__pages { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+            .sb-pager__link, .sb-pager__gap { min-width: 34px; height: 34px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: 600; text-decoration: none; color: var(--sb-text); border: 1px solid var(--sb-border); background: #ffffff; }
+            .sb-pager__link:hover { border-color: var(--sb-accent); color: var(--sb-accent); }
+            .sb-pager__link.is-current { background: var(--sb-accent); border-color: var(--sb-accent); color: #ffffff; }
+            .sb-pager__link.is-disabled { opacity: 0.4; pointer-events: none; }
+            .sb-pager__gap { border-color: transparent; background: none; color: var(--sb-muted); }
+            .sb-pager__size { display: flex; align-items: center; gap: 6px; }
             .sb-media-field-group { margin: 0; }
             .sb-media-field-group .field-label { display: block; margin: 0 0 6px; font-size: 0.86rem; font-weight: 600; color: var(--sb-text); }
             .sb-two-up { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 24px; align-items: start; margin-bottom: 32px; }
@@ -503,6 +511,49 @@ if (!function_exists('sb_render_admin_nav')) {
             <?php endforeach; ?>
         </nav>
         <?php
+    }
+}
+
+if (!function_exists('sb_render_pagination')) {
+    /**
+     * A pager for an admin list: "Showing a-b of N", page links with gaps, and a rows-per-page choice. Links keep `$query`
+     * (the list's filters); `p` and `per` are the pager's own. `$total` is the number of rows over ALL pages.
+     *
+     * @param array<string, scalar> $query
+     * @param list<int>             $sizes  the rows-per-page choices
+     */
+    function sb_render_pagination(string $file, array $query, int $page, int $perPage, int $total, array $sizes = [25, 50, 100]): void
+    {
+        $pages = max(1, (int) ceil($total / max(1, $perPage)));
+        if ($total <= min($sizes)) {
+            return; // everything fits on the smallest page: nothing to page through
+        }
+        $url = static fn(int $p, int $per) => e($file . '?' . http_build_query(array_merge($query, ['per' => $per, 'p' => $p])));
+        $from = ($page - 1) * $perPage + 1;
+        $to = min($total, $page * $perPage);
+
+        $nums = array_values(array_unique(array_filter([1, 2, $page - 1, $page, $page + 1, $pages - 1, $pages], static fn(int $n): bool => $n >= 1 && $n <= $pages)));
+        sort($nums);
+
+        echo '<nav class="sb-pager" aria-label="' . e(__('studio_pagination', 'Pagination')) . '">';
+        echo '<span>' . e(sprintf(__('studio_showing_range', 'Showing %1$d–%2$d of %3$d'), $from, $to, $total)) . '</span>';
+        echo '<div class="sb-pager__pages">';
+        echo '<a class="sb-pager__link' . ($page <= 1 ? ' is-disabled' : '') . '" href="' . $url(max(1, $page - 1), $perPage) . '" rel="prev" aria-label="' . e(__('studio_prev_page', 'Previous page')) . '">‹</a>';
+        $prev = 0;
+        foreach ($nums as $n) {
+            if ($n - $prev > 1) {
+                echo '<span class="sb-pager__gap" aria-hidden="true">…</span>';
+            }
+            echo '<a class="sb-pager__link' . ($n === $page ? ' is-current' : '') . '" href="' . $url($n, $perPage) . '"' . ($n === $page ? ' aria-current="page"' : '') . '>' . $n . '</a>';
+            $prev = $n;
+        }
+        echo '<a class="sb-pager__link' . ($page >= $pages ? ' is-disabled' : '') . '" href="' . $url(min($pages, $page + 1), $perPage) . '" rel="next" aria-label="' . e(__('studio_next_page', 'Next page')) . '">›</a>';
+        echo '</div>';
+        echo '<div class="sb-pager__size"><span>' . e(__('studio_rows_per_page', 'Rows per page')) . '</span>';
+        foreach ($sizes as $size) {
+            echo '<a class="sb-pager__link' . ($size === $perPage ? ' is-current' : '') . '" href="' . $url(1, $size) . '">' . $size . '</a>';
+        }
+        echo '</div></nav>';
     }
 }
 

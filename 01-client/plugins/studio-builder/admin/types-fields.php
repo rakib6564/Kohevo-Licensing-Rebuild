@@ -65,7 +65,12 @@ $customTypes = $customTypesRaw ? json_decode((string) $customTypesRaw, true) : [
 if (!is_array($customTypes)) {
     $customTypes = [];
 }
-$allPostTypes = array_merge($defaultTypes, $customTypes);
+// Built-in types an administrator has removed from this site (the list of their keys), so every type can be deleted.
+$removedRaw = Database::setting('studio_removed_post_types', $tenantId);
+$removedTypes = $removedRaw ? json_decode((string) $removedRaw, true) : [];
+$removedTypes = is_array($removedTypes) ? array_values(array_filter($removedTypes, 'is_string')) : [];
+$visibleDefaults = fn(array $removed): array => array_diff_key($defaultTypes, array_flip($removed));
+$allPostTypes = array_merge($visibleDefaults($removedTypes), $customTypes);
 
 // Load Meta Fields from Settings
 $metaFieldsRaw = Database::setting('studio_meta_fields', $tenantId);
@@ -153,20 +158,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'description' => $desc,
                 ];
                 Database::setSetting('studio_custom_post_types', json_encode($customTypes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
-                $allPostTypes = array_merge($defaultTypes, $customTypes);
+                $allPostTypes = array_merge($visibleDefaults($removedTypes), $customTypes);
                 $flash = ['type' => 'success', 'msg' => "Custom post type '{$singular}' created successfully!"];
             }
         } elseif ($action === 'delete_post_type') {
+            // Any type can go, built-in or custom. A built-in is hidden (its key is remembered); a custom one is removed. Fields
+            // attached to the type go with it; content items already created are not touched.
             $key = trim((string) ($_POST['key'] ?? ''));
-            if (isset($customTypes[$key])) {
-                unset($customTypes[$key]);
-                Database::setSetting('studio_custom_post_types', json_encode($customTypes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
-                $allPostTypes = array_merge($defaultTypes, $customTypes);
-                // Also remove fields attached to this post type
+            if (isset($customTypes[$key]) || (isset($defaultTypes[$key]) && !in_array($key, $removedTypes, true))) {
+                $label = (string) (($customTypes[$key] ?? $defaultTypes[$key])['singular'] ?? $key);
+                if (isset($customTypes[$key])) {
+                    unset($customTypes[$key]);
+                    Database::setSetting('studio_custom_post_types', json_encode($customTypes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
+                } else {
+                    $removedTypes[] = $key;
+                    Database::setSetting('studio_removed_post_types', json_encode(array_values(array_unique($removedTypes)), JSON_UNESCAPED_SLASHES), $tenantId);
+                }
+                $allPostTypes = array_merge($visibleDefaults($removedTypes), $customTypes);
                 $metaFields = array_values(array_filter($metaFields, fn($f) => ($f['post_type'] ?? '') !== $key));
                 Database::setSetting('studio_meta_fields', json_encode($metaFields, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
-                $flash = ['type' => 'success', 'msg' => "Post type '{$key}' deleted."];
+                AuditLog::record('studio.post_type_deleted', (string) $tenantId, ['key' => $key, 'system' => isset($defaultTypes[$key])]);
+                $flash = ['type' => 'success', 'msg' => "Post type '{$label}' deleted."];
             }
+        } elseif ($action === 'restore_post_types') {
+            Database::setSetting('studio_removed_post_types', '[]', $tenantId);
+            $removedTypes = [];
+            $allPostTypes = array_merge($visibleDefaults([]), $customTypes);
+            $flash = ['type' => 'success', 'msg' => 'Built-in post types restored.'];
         } elseif ($action === 'create_meta_field') {
             $pType = trim((string) ($_POST['post_type'] ?? 'portfolio'));
             $label = trim((string) ($_POST['label'] ?? ''));
@@ -352,7 +370,19 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
     <!-- Section 1: Active Post Types Grid -->
     <div style="margin-bottom: 36px;">
-        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--sb-text); margin-bottom: 16px;">Active Content Types</h3>
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;">
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--sb-text); margin: 0;">Active Content Types</h3>
+            <?php if ($removedTypes !== [] && $canEdit): ?>
+                <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>" style="margin: 0;">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="_action" value="restore_post_types">
+                    <button type="submit" class="btn btn-sm btn-outline"><?= sb_svg('refresh', 12) ?> Restore <?= count($removedTypes) ?> built-in type(s)</button>
+                </form>
+            <?php endif; ?>
+        </div>
+        <?php if ($allPostTypes === []): ?>
+            <div class="sb-card" style="text-align: center; color: var(--sb-muted);">No post types. Create one with “New Post Type”<?= $removedTypes !== [] ? ', or restore the built-in ones' : '' ?>.</div>
+        <?php endif; ?>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px;">
             <?php foreach ($allPostTypes as $tKey => $pt):
                 $isSys = !empty($pt['is_system']);
@@ -378,13 +408,13 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         <a href="<?= e(plugin_url('studio-builder', 'admin/content.php?type=' . $tKey)) ?>" class="btn btn-sm btn-outline">
                             <?= sb_svg('content', 12) ?> Manage Items
                         </a>
-                        <?php if (!$isSys && $canEdit): ?>
-                            <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>" onsubmit="return confirm('Delete custom post type <?= e($pt['singular']) ?>?');" style="margin: 0;">
+                        <?php if ($canEdit): ?>
+                            <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>" onsubmit="return confirm('Delete the post type <?= e(addslashes($pt['singular'])) ?>? Its meta fields are deleted too. Content already created is kept.');" style="margin: 0;">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="_action" value="delete_post_type">
                                 <input type="hidden" name="key" value="<?= e($tKey) ?>">
-                                <button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444;" title="Delete Post Type">
-                                    <?= sb_svg('trash', 12) ?>
+                                <button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444;" title="Delete this post type" aria-label="Delete the post type <?= e($pt['singular']) ?>">
+                                    <?= sb_svg('trash', 12) ?> Delete
                                 </button>
                             </form>
                         <?php endif; ?>
