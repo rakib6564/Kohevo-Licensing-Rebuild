@@ -2,8 +2,8 @@
 /**
  * Kohevo Studio — Pages Management Console.
  *
- * Full page listing, filtering by route mode/type, new page creation,
- * and direct launch into the visual canvas builder.
+ * The list of Studio pages: search, filter by type, open in the builder, preview, bulk delete.
+ * Creating a page is page-new.php; one page's settings, duplicate and delete are page-edit.php.
  */
 
 declare(strict_types=1);
@@ -14,7 +14,6 @@ require_once __DIR__ . '/_nav.php';
 use Slate\Module\StudioBuilder\Admin\PageListView;
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Exception\StudioException;
-use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 use Slate\Module\StudioBuilder\StudioPermissions;
 
@@ -25,7 +24,6 @@ $studioActor = StudioActor::fromCurrentSession();
 $pageTitle   = __('studio_pages', 'Studio Pages');
 $currentNav  = 'studio-pages';
 $flash       = null;
-$formValues  = ['title' => '', 'slug' => '', 'page_type' => 'page', 'route_mode' => 'standalone', 'template_key' => ''];
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     if (!csrf_verify()) {
@@ -49,26 +47,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             header('Location: pages.php?' . http_build_query(['filter' => $keep, 'deleted' => $deleted, 'failed' => $failed]), true, 303);
             exit;
         }
-        foreach (array_keys($formValues) as $k) {
-            $formValues[$k] = trim((string) ($_POST[$k] ?? ''));
-        }
-        if ($formValues['slug'] === '') {
-            $formValues['slug'] = trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower($formValues['title'])), '-');
-        }
-        try {
-            $created = $studioApp->createPage($studioActor, $formValues['title'], $formValues['slug'], $formValues['page_type'], $formValues['route_mode']);
-            $newId = (int) $created['page']['id'];
-            if ($formValues['template_key'] !== '') {
-                $studioApp->applyTemplate($studioActor, $formValues['template_key'], $newId, (int) $created['revision']['id']);
-            }
-            header('Location: ' . plugin_url('studio-builder', 'admin/builder.php') . '?page=' . $newId, true, 303);
-            exit;
-        } catch (StudioValidationException $e) {
-            $first = $e->errors()[0]['message'] ?? '';
-            $flash = ['type' => 'error', 'msg' => __('studio_page_invalid', 'The page could not be created.') . ($first !== '' ? ' ' . $first : '')];
-        } catch (StudioException $e) {
-            $flash = ['type' => 'error', 'msg' => __('studio_page_create_denied', 'You cannot create Studio pages here.')];
-        }
     }
 }
 
@@ -81,11 +59,9 @@ if (isset($_GET['deleted']) || isset($_GET['failed'])) {
 }
 
 $pages = [];
-$templates = [];
 $listError = null;
 try {
     $pages = $studioApp->listPages($studioActor);
-    $templates = $studioApp->listTemplates($studioActor, 'page_template');
 } catch (StudioException $e) {
     $listError = $e->httpStatus() === 403
         ? __('studio_pages_forbidden', 'Kohevo Studio is not available for your account on this site.')
@@ -101,6 +77,21 @@ if ($filter === 'page' || $filter === 'landing' || $filter === 'header_partial' 
     $filteredPages = array_values(array_filter($pages, static fn(array $p) => ($p['route_mode'] ?? '') === 'homepage'));
 }
 
+$search = trim((string) ($_GET['q'] ?? ''));
+if ($search !== '') {
+    $needle = mb_strtolower($search);
+    $filteredPages = array_values(array_filter($filteredPages, static fn(array $p): bool => str_contains(mb_strtolower((string) ($p['title'] ?? '')), $needle) || str_contains(mb_strtolower((string) ($p['slug'] ?? '')), $needle)));
+}
+$filterUrl = static fn(string $f): string => 'pages.php' . ($f === 'all' && $search === '' ? '' : '?' . http_build_query(array_filter(['filter' => $f === 'all' ? null : $f, 'q' => $search !== '' ? $search : null])));
+$countOf = static function (string $f) use ($pages): int {
+    return match ($f) {
+        'homepage' => count(array_filter($pages, static fn(array $p): bool => ($p['route_mode'] ?? '') === 'homepage')),
+        'all'      => count($pages),
+        default    => count(array_filter($pages, static fn(array $p): bool => ($p['page_type'] ?? '') === $f)),
+    };
+};
+$tabs = ['all' => __('studio_filter_all', 'All'), 'page' => __('studio_filter_pages', 'Pages'), 'landing' => __('studio_filter_landing', 'Landing'), 'homepage' => __('studio_filter_homepage', 'Homepage'), 'header_partial' => __('studio_filter_headers', 'Headers'), 'footer_partial' => __('studio_filter_footers', 'Footers')];
+
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
@@ -115,89 +106,49 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <div class="alert alert-error" role="status"><?= e($listError) ?></div>
     <?php else: ?>
 
-    <?php if ($canEdit): ?>
-    <div class="card" style="margin-bottom: 24px;">
-        <div class="card-header">
-            <div>
-                <h2><?= e(__('studio_new_page', 'Create New Page')) ?></h2>
-                <div class="card-sub"><?= e(__('studio_new_page_sub', 'Give it a title and address, then open directly in the Visual Canvas Builder.')) ?></div>
-            </div>
+    <div class="sb-screen-head">
+        <div>
+            <h2><?= e(__('studio_pages', 'Studio Pages')) ?></h2>
+            <p><?= e(__('studio_pages_sub', 'Your published pages, drafts, headers and footers.')) ?></p>
         </div>
-        <form method="post">
-            <?= csrf_field() ?>
-            <div class="field-row field-row-2">
-                <div class="field">
-                    <label class="field-label" for="sb-title"><?= e(__('title', 'Title')) ?> <span class="field-required">*</span></label>
-                    <input type="text" id="sb-title" name="title" required maxlength="255" placeholder="<?= e(__('studio_title_placeholder', 'About us')) ?>" value="<?= e($formValues['title']) ?>">
-                </div>
-                <div class="field">
-                    <label class="field-label" for="sb-slug"><?= e(__('studio_slug', 'Address (slug)')) ?></label>
-                    <input type="text" id="sb-slug" name="slug" maxlength="191" pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" placeholder="about-us" value="<?= e($formValues['slug']) ?>">
-                    <div class="field-hint"><?= e(__('studio_slug_hint', 'Lowercase letters, numbers and hyphens. Leave blank to generate from title.')) ?></div>
-                </div>
-            </div>
-            <div class="field-row <?= $templates !== [] ? 'field-row-3' : 'field-row-2' ?>">
-                <div class="field">
-                    <label class="field-label" for="sb-type"><?= e(__('studio_page_type', 'Page Type')) ?></label>
-                    <select id="sb-type" name="page_type">
-                        <?php foreach (['page' => __('studio_type_page', 'Standard Page'), 'landing' => __('studio_type_landing', 'Landing Page'), 'header_partial' => __('studio_type_header', 'Site Header Partial'), 'footer_partial' => __('studio_type_footer', 'Site Footer Partial')] as $v => $l): ?>
-                            <option value="<?= e($v) ?>"<?= $formValues['page_type'] === $v ? ' selected' : '' ?>><?= e($l) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="field">
-                    <label class="field-label" for="sb-route"><?= e(__('studio_route_mode', 'Route Mode')) ?></label>
-                    <select id="sb-route" name="route_mode">
-                        <option value="standalone"<?= $formValues['route_mode'] === 'standalone' ? ' selected' : '' ?>><?= e(__('studio_route_standalone', 'Dedicated URL Path')) ?></option>
-                        <option value="homepage"<?= $formValues['route_mode'] === 'homepage' ? ' selected' : '' ?>><?= e(__('studio_route_homepage', 'Site Homepage (/)')) ?></option>
-                    </select>
-                </div>
-                <?php if ($templates !== []): ?>
-                <div class="field">
-                    <label class="field-label" for="sb-template"><?= e(__('studio_template', 'Start from template')) ?></label>
-                    <select id="sb-template" name="template_key">
-                        <option value=""><?= e(__('studio_template_blank', 'Blank canvas')) ?></option>
-                        <?php foreach ($templates as $tpl): ?>
-                            <option value="<?= e((string) $tpl['template_key']) ?>"<?= $formValues['template_key'] === $tpl['template_key'] ? ' selected' : '' ?>><?= e((string) $tpl['name']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <?php endif; ?>
-            </div>
-            <button type="submit" class="btn btn-primary">
+        <?php if ($canEdit): ?>
+        <div class="sb-screen-actions">
+            <a href="page-new.php" class="btn btn-primary" data-testid="new-page">
                 <?= sb_svg('plus', 14) ?>
-                <span><?= e(__('studio_create_and_open', 'Create & Open Canvas Builder')) ?></span>
-            </button>
-        </form>
+                <span><?= e(__('studio_new_page_button', 'New page')) ?></span>
+            </a>
+        </div>
+        <?php endif; ?>
     </div>
-    <?php endif; ?>
 
     <div class="card">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-            <div>
-                <h2>All Studio Pages (<?= count($filteredPages) ?>)</h2>
-                <div class="card-sub">Manage and edit your published pages, drafts, and system templates.</div>
+        <div class="sb-toolbar">
+            <div class="sb-pill-filter" style="margin-bottom: 0;" role="navigation" aria-label="<?= e(__('studio_filter_label', 'Filter pages')) ?>">
+                <?php foreach ($tabs as $key => $label): ?>
+                    <a href="<?= e($filterUrl($key)) ?>" class="sb-pill-item <?= $filter === $key ? 'active' : '' ?>"><?= e($label) ?> (<?= $countOf($key) ?>)</a>
+                <?php endforeach; ?>
             </div>
-            <div class="sb-pill-filter" style="margin-bottom: 0;">
-                <a href="pages.php" class="sb-pill-item <?= $filter === 'all' ? 'active' : '' ?>">All (<?= count($pages) ?>)</a>
-                <a href="pages.php?filter=page" class="sb-pill-item <?= $filter === 'page' ? 'active' : '' ?>">Pages</a>
-                <a href="pages.php?filter=landing" class="sb-pill-item <?= $filter === 'landing' ? 'active' : '' ?>">Landing</a>
-                <a href="pages.php?filter=homepage" class="sb-pill-item <?= $filter === 'homepage' ? 'active' : '' ?>">Homepage</a>
-                <a href="pages.php?filter=header_partial" class="sb-pill-item <?= $filter === 'header_partial' ? 'active' : '' ?>">Headers</a>
-                <a href="pages.php?filter=footer_partial" class="sb-pill-item <?= $filter === 'footer_partial' ? 'active' : '' ?>">Footers</a>
-            </div>
+            <form method="get" class="sb-search" role="search">
+                <?php if ($filter !== 'all'): ?><input type="hidden" name="filter" value="<?= e($filter) ?>"><?php endif; ?>
+                <input type="search" name="q" value="<?= e($search) ?>" placeholder="<?= e(__('studio_search_pages', 'Search title or address')) ?>" aria-label="<?= e(__('studio_search_pages', 'Search title or address')) ?>">
+                <button type="submit" class="btn btn-outline"><?= e(__('search', 'Search')) ?></button>
+                <?php if ($search !== ''): ?><a href="<?= e('pages.php' . ($filter !== 'all' ? '?filter=' . urlencode($filter) : '')) ?>" class="btn btn-ghost"><?= e(__('studio_clear_search', 'Clear')) ?></a><?php endif; ?>
+            </form>
         </div>
 
         <?php if ($filteredPages === []): ?>
         <div class="empty">
-            <div class="empty-title"><?= e(__('studio_no_pages', 'No Studio pages match this filter')) ?></div>
-            <p class="text-sm"><?= e(__('studio_no_pages_hint', 'Create a page above to open it in the builder.')) ?></p>
+            <div class="empty-title"><?= e($pages === [] ? __('studio_no_pages_yet', 'No pages yet') : __('studio_no_pages', 'No Studio pages match this filter')) ?></div>
+            <p class="text-sm"><?= e($pages === [] ? __('studio_no_pages_first', 'Create your first page to open it in the builder.') : __('studio_no_pages_hint', 'Try another filter or clear the search.')) ?></p>
+            <?php if ($canEdit && $pages === []): ?>
+                <a href="page-new.php" class="btn btn-primary"><?= sb_svg('plus', 14) ?> <span><?= e(__('studio_new_page_button', 'New page')) ?></span></a>
+            <?php endif; ?>
         </div>
         <?php else: ?>
         <form method="post" id="studio-bulk-form">
             <?= csrf_field() ?>
             <input type="hidden" name="filter" value="<?= e($filter) ?>">
-            <?= PageListView::render($filteredPages, $canEdit, plugin_url('studio-builder', 'admin/builder.php'), plugin_url('studio-builder', 'admin/preview.php'), $canEdit) ?>
+            <?= PageListView::render($filteredPages, $canEdit, plugin_url('studio-builder', 'admin/builder.php'), plugin_url('studio-builder', 'admin/preview.php'), $canEdit, 'page-edit.php') ?>
         </form>
         <?php slate_data_list_script(); ?>
         <?= PageListView::selectionScript() ?>

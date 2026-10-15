@@ -8,7 +8,7 @@ test.beforeEach(async ({}, info) => {
 
 test('a header partial is previewed on a chosen page, and a normal page has no such picker', async ({ page }) => {
   const title = `Preview header ${Date.now()}`;
-  await page.goto('/plugins/studio-builder/admin/pages.php');
+  await page.goto('/plugins/studio-builder/admin/page-new.php');
   await page.getByLabel('Title').fill(title);
   await page.locator('#sb-type').selectOption('header_partial');
   await page.getByRole('button', { name: /Create & Open Canvas Builder/ }).click();
@@ -46,7 +46,7 @@ test('a header partial is previewed on a chosen page, and a normal page has no s
 });
 
 test('an ordinary page shows no page picker in its preview', async ({ page }) => {
-  await page.goto('/plugins/studio-builder/admin/pages.php');
+  await page.goto('/plugins/studio-builder/admin/page-new.php');
   await page.getByLabel('Title').fill(`Plain ${Date.now()}`);
   await page.getByRole('button', { name: /Create & Open Canvas Builder/ }).click();
   await page.waitForURL(/builder\.php\?page=\d+/);

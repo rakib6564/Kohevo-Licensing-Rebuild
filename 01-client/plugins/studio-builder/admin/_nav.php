@@ -286,6 +286,67 @@ if (!function_exists('sb_render_admin_nav')) {
                 overflow-x: auto;
                 margin: 12px 0;
             }
+            .sb-crumbs {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 6px;
+                margin: 0 0 14px;
+                font-size: 0.84rem;
+                color: var(--sb-muted);
+            }
+            .sb-crumbs a { color: var(--sb-muted); text-decoration: none; font-weight: 600; }
+            .sb-crumbs a:hover { color: var(--sb-accent); }
+            .sb-crumbs [aria-current] { color: var(--sb-text); font-weight: 600; }
+            .sb-screen-head {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 14px;
+                margin-bottom: 20px;
+            }
+            .sb-screen-head h2 { margin: 0 0 4px; font-size: 1.35rem; color: var(--sb-text); }
+            .sb-screen-head p { margin: 0; color: var(--sb-muted); font-size: 0.9rem; }
+            .sb-screen-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+            .sb-toolbar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 12px;
+                margin-bottom: 16px;
+            }
+            .sb-search { display: flex; align-items: center; gap: 8px; }
+            .sb-search input[type="search"] { min-width: 240px; }
+            .sb-form-card { max-width: 860px; }
+            .sb-form-card + .sb-form-card { margin-top: 20px; }
+            .sb-form-actions {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+                margin-top: 22px;
+                padding-top: 18px;
+                border-top: 1px solid var(--sb-border);
+            }
+            .sb-form-actions .sb-spacer { margin-left: auto; }
+            .sb-meta-strip {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px 28px;
+                margin: 0 0 20px;
+                padding: 14px 18px;
+                background: #f8fafc;
+                border: 1px solid var(--sb-border);
+                border-radius: 12px;
+                font-size: 0.86rem;
+                color: var(--sb-muted);
+            }
+            .sb-meta-strip strong { display: block; color: var(--sb-text); font-weight: 600; }
+            .sb-danger-card { border-color: #fecaca; }
+            .sb-danger-card h3 { color: #b91c1c; margin: 0 0 4px; }
+            .sb-row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
             .sb-pill-filter {
                 display: flex;
                 gap: 8px;
@@ -357,5 +418,26 @@ if (!function_exists('sb_render_admin_nav')) {
             <?php endforeach; ?>
         </nav>
         <?php
+    }
+}
+
+if (!function_exists('sb_render_crumbs')) {
+    /**
+     * Breadcrumb trail for a Studio admin screen: [[label, url|null], ...]; the last item (url null) is the current screen.
+     *
+     * @param list<array{0: string, 1: ?string}> $trail
+     */
+    function sb_render_crumbs(array $trail): void
+    {
+        echo '<nav class="sb-crumbs" aria-label="' . e(__('studio_breadcrumb', 'Breadcrumb')) . '">';
+        foreach ($trail as $i => [$label, $url]) {
+            if ($i > 0) {
+                echo '<span aria-hidden="true">/</span>';
+            }
+            echo $url !== null
+                ? '<a href="' . e($url) . '">' . e($label) . '</a>'
+                : '<span aria-current="page">' . e($label) . '</span>';
+        }
+        echo '</nav>';
     }
 }

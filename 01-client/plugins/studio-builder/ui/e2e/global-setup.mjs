@@ -27,7 +27,7 @@ export default async function globalSetup(config) {
   await page.waitForURL(/\/admin\/?(\?.*)?$/);
 
   // A fresh page for this run (the sandbox is disposable), created through the form an author uses.
-  await page.goto('/plugins/studio-builder/admin/pages.php');
+  await page.goto('/plugins/studio-builder/admin/page-new.php');
   await page.getByLabel('Title').fill(`E2E ${Date.now()}`);
   await page.getByRole('button', { name: /Create & Open Canvas Builder/ }).click();
   await page.waitForURL(/builder\.php\?page=\d+/);
