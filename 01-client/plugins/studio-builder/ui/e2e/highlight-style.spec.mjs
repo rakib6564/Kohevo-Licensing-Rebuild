@@ -21,7 +21,10 @@ test('the highlighted phrase takes its own colour, italic and underline, and a b
     const edit = page.locator('#sbx-leftpanel-inspector');
     await expect(edit.getByLabel('Heading Text')).toBeVisible();
     await edit.getByLabel('Heading Text').fill('Three steps, in order.');
+    await edit.getByLabel('Highlighted Word').fill('ok');
+    await expect(edit.getByText('nothing is highlighted')).toBeVisible(); // a phrase that is not in the text says so
     await edit.getByLabel('Highlighted Word').fill('in order.');
+    await expect(edit.getByText('nothing is highlighted')).toHaveCount(0);
 
     // The new controls sit with the highlight.
     await expect(edit.getByLabel('Highlight in italic')).toBeVisible();

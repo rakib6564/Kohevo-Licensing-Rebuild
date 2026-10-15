@@ -15,6 +15,15 @@ export const CONTROL = Object.freeze({
   repeater: 'repeater', object: 'object',
 });
 
+/** True when a block's `highlight` phrase is set but is not in its text, so the page would show no highlight at all. */
+export function highlightMissing(props) {
+  const p = props || {};
+  const phrase = typeof p.highlight === 'string' ? p.highlight.trim() : '';
+  if (phrase === '') return false;
+  const text = typeof p.text === 'string' ? p.text : (typeof p.heading === 'string' ? p.heading : '');
+  return !text.includes(phrase);
+}
+
 export function controlFor(field) {
   if (field && field.type === 'string' && field.format === 'color') return 'color';
   return CONTROL[field && field.type] || null;

@@ -7,8 +7,8 @@
 // half-typed links/URLs are never autosaved (and never rejected by the
 // server mid-typing). Labels come from the server manifest and are text only.
 
-import { lazy, memo, Suspense, useEffect, useId, useRef, useState } from 'react';
-import { coerce, controlFor, hint, newRepeaterItem, swatchHex, tokensFor, clone } from '../../core/fields.mjs';
+import { Fragment, lazy, memo, Suspense, useEffect, useId, useRef, useState } from 'react';
+import { coerce, controlFor, highlightMissing, hint, newRepeaterItem, swatchHex, tokensFor, clone } from '../../core/fields.mjs';
 import { asList, asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
 import { MediaControl } from './MediaControl.jsx';
@@ -180,7 +180,7 @@ export function ObjectFields({ schema, value, onChange, manifest, mediaPicker, p
     const labelOf = fieldId && tableFor(fieldId) ? sizedLabeller(fieldId) : null;
     if (presenter && presenter.tiles && f.type === 'number') return <PropTiles key={f.key} field={f} value={value[f.key] ?? null} presenter={presenter} onChange={set} />;
     if (presenter && (presenter.icons || presenter.pills) && f.type === 'enum') return <PropChoice key={f.key} field={f} value={value[f.key] ?? null} presenter={presenter} labelOf={labelOf} onChange={set} />;
-    return (
+    const control = (
       <FieldControl
         key={f.key}
         field={f}
@@ -191,6 +191,10 @@ export function ObjectFields({ schema, value, onChange, manifest, mediaPicker, p
         onChange={set}
       />
     );
+    if (f.key === 'highlight' && highlightMissing(value)) {
+      return <Fragment key={f.key}>{control}<p className="sbx-hint sbx-hint--warn" role="status">{t('highlight_not_found')}</p></Fragment>;
+    }
+    return control;
   });
 }
 

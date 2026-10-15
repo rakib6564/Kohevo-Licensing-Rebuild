@@ -24,3 +24,14 @@ test('the swatch shows the six-digit form, and nothing for a value it cannot sho
   assert.equal(swatchHex(''), null);
   assert.equal(swatchHex(null), null);
 });
+
+import { highlightMissing } from '../src/core/fields.mjs';
+
+test('highlightMissing: warns only when a phrase is set and absent from the text', () => {
+  assert.equal(highlightMissing({ text: 'Maple & Co.', highlight: 'ok' }), true);
+  assert.equal(highlightMissing({ text: 'Maple & Co.', highlight: 'Maple' }), false);
+  assert.equal(highlightMissing({ text: 'Maple & Co.', highlight: '  ' }), false);
+  assert.equal(highlightMissing({ heading: 'Welcome home', highlight: 'home' }), false); // a hero's text is `heading`
+  assert.equal(highlightMissing({ heading: 'Welcome home', highlight: 'away' }), true);
+  assert.equal(highlightMissing({}), false);
+});
