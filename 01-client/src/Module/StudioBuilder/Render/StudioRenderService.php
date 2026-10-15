@@ -26,6 +26,7 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Render;
 
+use Slate\Module\StudioBuilder\Meta\PageMeta;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
 use Slate\Module\StudioBuilder\Render\Cache\StudioCacheKey;
 use Slate\Module\StudioBuilder\Render\Cache\StudioCachePolicy;
@@ -66,6 +67,7 @@ final class StudioRenderService
         if ($context->mode->isPublic()) {
             throw new \LogicException('renderRevision() serves authoring contexts only; public output comes from renderPublished().');
         }
+        $context = $this->withPageMeta($page, $context);
         $compiled = $this->compiler->compile($page, $revision, $context);
         $html = $this->assembler->assemble($compiled, $this->slots->fill($compiled, $context), $context);
         return new RenderResult($context->mode, $html, StudioCachePolicy::headersFor($context->mode));
@@ -89,6 +91,7 @@ final class StudioRenderService
             return null;
         }
 
+        $context = $this->withPageMeta($page, $context);
         $compiled = $this->compiler->publishedArtifact($page, $revision, $context);
         $html = $this->assembler->assemble($compiled, $this->slots->fill($compiled, $context), $context);
 
@@ -109,5 +112,25 @@ final class StudioRenderService
     public function compilePublished(PageAddress $page, array $revision, RenderContext $context): CompiledPage
     {
         return $this->compiler->compileAndStorePublished($page, $revision, $context);
+    }
+
+    /**
+     * The page's content type and custom field values, for `theme.field_value`. A block is rendered per request (it is
+     * dynamic), so editing a value never needs the compiled page rebuilt. A template shown for another page names that
+     * page in the `meta_page_id` attribute.
+     */
+    private function withPageMeta(PageAddress $page, RenderContext $context): RenderContext
+    {
+        $id = (int) $context->attribute('meta_page_id', $page->id ?? 0);
+        if ($id <= 0 || $context->attribute('page_meta') !== null) {
+            return $context;
+        }
+        try {
+            $meta = PageMeta::read($context->tenantId, $id);
+            $fields = $meta['type'] === '' ? [] : PageMeta::fieldsFor($context->tenantId, $meta['type']);
+        } catch (\Throwable) {
+            return $context;
+        }
+        return $context->withAttributes(['page_meta' => $meta + ['fields' => $fields]]);
     }
 }

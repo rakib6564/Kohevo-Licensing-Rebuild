@@ -70,6 +70,7 @@ final class TemplatePreviewContext
                     'post_title' => self::text($host['title'] ?? ''),
                     'post_url'   => $site->absoluteUrl('/' . ltrim((string) ($host['slug'] ?? ''), '/')),
                     'category'   => $category,
+                    'meta_page_id' => (int) ($host['id'] ?? 0),
                 ];
         }
         return [];

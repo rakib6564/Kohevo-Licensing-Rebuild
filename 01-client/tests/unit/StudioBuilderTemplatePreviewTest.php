@@ -55,9 +55,9 @@ unit('template preview: archive, search and 404 samples are the fixed attributes
 
 unit('template preview: a single template takes its title, address and category from the page it is shown for', function (): void {
     $site = new SiteContext('https://example.test', 'Example');
-    $host = ['title' => 'Hello world', 'slug' => 'hello', 'settings_json' => json_encode(['category' => 'News'])];
+    $host = ['title' => 'Hello world', 'id' => 12, 'slug' => 'hello', 'settings_json' => json_encode(['category' => 'News'])];
     assert_eq(
-        ['post_title' => 'Hello world', 'post_url' => 'https://example.test/hello', 'category' => 'News'],
+        ['post_title' => 'Hello world', 'post_url' => 'https://example.test/hello', 'category' => 'News', 'meta_page_id' => 12],
         TemplatePreviewContext::attributes('single', ['post_title' => 'forged'], $host, $site)
     );
     assert_eq([], TemplatePreviewContext::attributes('single', [], null, $site), 'no page, no sample');

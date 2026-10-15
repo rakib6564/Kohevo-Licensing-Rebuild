@@ -61,6 +61,12 @@ final class RenderContext
         return new self(RenderMode::Public, $tenantId, $site, null, $entitlementCheck, $attributes);
     }
 
+    /** The same context with more attributes (a given key replaces the existing one). */
+    public function withAttributes(array $more): self
+    {
+        return new self($this->mode, $this->tenantId, $this->site, $this->actor, $this->entitlementCheck, array_merge($this->attributes, $more));
+    }
+
     public function attribute(string $key, mixed $default = null): mixed
     {
         return $this->attributes[$key] ?? $default;

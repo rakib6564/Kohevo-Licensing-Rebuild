@@ -455,6 +455,25 @@ final class BlockRegistry
             allowedBindingProviders: ['content.posts', 'content.authors'],
         ));
 
+        // theme.field_value — one custom field of the page being shown
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'theme.field_value',
+            version: 1,
+            label: 'Field value',
+            title: 'Field value',
+            description: 'A custom field of this page',
+            category: 'theme',
+            icon: 'list-check',
+            schema: FieldSchema::define([
+                ['key' => 'field', 'type' => 'string', 'label' => 'Field key', 'required' => false, 'default' => '', 'max_length' => 64, 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
+                ['key' => 'show_label', 'type' => 'boolean', 'label' => 'Show the field name', 'required' => false, 'default' => false],
+                ['key' => 'fallback', 'type' => 'string', 'label' => 'Text when empty', 'required' => false, 'default' => '', 'max_length' => 255],
+                ['key' => 'tag', 'type' => 'enum', 'label' => 'HTML tag', 'required' => false, 'allowed_values' => ['div', 'p', 'span', 'h2', 'h3', 'h4'], 'default' => 'div'],
+            ]),
+            allowsChildren: false,
+            allowedBindingProviders: [],
+        ));
+
         // 17. theme.archive_title
         $registry->register(new DeclarativeBlockDefinition(
             type: 'theme.archive_title',

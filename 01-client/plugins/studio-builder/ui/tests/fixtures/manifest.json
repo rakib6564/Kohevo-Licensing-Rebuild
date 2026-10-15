@@ -4312,6 +4312,92 @@
             "version": 1
         },
         {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "theme",
+            "default_props": {
+                "fallback": "",
+                "field": "",
+                "show_label": false,
+                "tag": "div"
+            },
+            "description": "A custom field of this page",
+            "field_schema": [
+                {
+                    "key": "field",
+                    "type": "string",
+                    "label": "Field key",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64
+                },
+                {
+                    "key": "show_label",
+                    "type": "boolean",
+                    "label": "Show the field name",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "fallback",
+                    "type": "string",
+                    "label": "Text when empty",
+                    "required": false,
+                    "default": "",
+                    "max_length": 255
+                },
+                {
+                    "key": "tag",
+                    "type": "enum",
+                    "label": "HTML tag",
+                    "required": false,
+                    "default": "div",
+                    "allowed_values": [
+                        "div",
+                        "p",
+                        "span",
+                        "h2",
+                        "h3",
+                        "h4"
+                    ]
+                }
+            ],
+            "icon": "list-check",
+            "inline_text": [],
+            "label": "Field value",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "spacing",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding"
+            ],
+            "title": "Field value",
+            "type": "theme.field_value",
+            "version": 1
+        },
+        {
             "allowed_binding_providers": [
                 "content.posts"
             ],

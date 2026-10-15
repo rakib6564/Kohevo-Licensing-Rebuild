@@ -1335,6 +1335,8 @@ return [
     'studio_block_theme_post_content_desc' => 'Corps d’article dynamique',
     'studio_block_theme_post_meta_title' => 'Métadonnées de l’article',
     'studio_block_theme_post_meta_desc' => 'Auteur, date et catégorie',
+    'studio_block_theme_field_value_title' => 'Valeur de champ',
+    'studio_block_theme_field_value_desc' => 'Un champ personnalisé de cette page',
     'studio_block_theme_post_title_title' => 'Titre de l’article',
     'studio_block_theme_post_title_desc' => 'Titre d’article dynamique',
     'studio_block_theme_search_box_title' => 'Champ de recherche',
