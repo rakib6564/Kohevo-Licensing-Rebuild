@@ -308,7 +308,7 @@ final class CanonicalDocumentSchema
     public const GLOBAL_REF_PATTERN   = '/^[a-z0-9][a-z0-9_.-]{0,119}$/';
     /** A Global Component reference is the component page's immutable v4 uuid (a subset of GLOBAL_REF_PATTERN). */
     public const COMPONENT_REF_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/';
-    public const TOKEN_REF_PATTERN    = '/^(surface|text|space|radius|shadow|font|color|border)\.[a-z0-9_]+(\.[a-z0-9_]+)?$/';
+    public const TOKEN_REF_PATTERN    = '/^(surface|text|space|radius|shadow|font|color|border|layout)\.[a-z0-9_]+(\.[a-z0-9_]+)?$/';
     public const PROVIDER_KEY_PATTERN = '/^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/';
 
     /**

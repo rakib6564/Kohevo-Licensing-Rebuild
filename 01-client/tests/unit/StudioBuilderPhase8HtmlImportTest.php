@@ -490,7 +490,7 @@ unit('phase8b unit: the quantization scales are exactly StudioStylesheet\'s', fu
         assert_true(str_contains($css, ".sb-gap-{$name}{gap:{$value}}"), "gap {$name} = {$value}");
     }
     foreach (HtmlCssValues::WIDTH_SCALE as $name => $rem) {
-        assert_true(str_contains($css, '.sb-w-' . $name . '{max-width:' . (int) $rem . 'rem'), "width {$name}");
+        assert_true(str_contains($css, '.sb-w-' . $name . '{max-width:' . (int) $rem . 'rem') || str_contains($css, '.sb-w-' . $name . '{max-width:var(--sb-layout-' . $name . ',' . (int) $rem . 'rem)'), "width {$name}");
     }
 });
 
