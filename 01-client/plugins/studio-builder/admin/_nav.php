@@ -423,6 +423,7 @@ if (!function_exists('sb_render_admin_nav')) {
             .sb-stack { display: flex; flex-direction: column; gap: 20px; }
             .sb-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
             .sb-field--wide { grid-column: 1 / -1; }
+            .sb-field[hidden] { display: none; }
             .sb-field__label { display: block; margin: 0; font-size: 0.86rem; font-weight: 600; line-height: 1.3; color: var(--sb-text); }
             .sb-field__label small { font-weight: 400; color: var(--sb-muted); }
             .sb-field .form-control,

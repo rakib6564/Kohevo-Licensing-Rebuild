@@ -3,14 +3,16 @@
  * Kohevo Studio — Types & Fields Architect.
  *
  * Dedicated admin page for Custom Post Types and Meta Fields Builder,
- * supporting all 10 canonical field types (text, textarea, number, image,
- * gallery, select, relation, date, boolean, url) and dynamic query loop bindings.
+ * with the field types in `MetaFieldTypes` (text, number, choice, media, date and time,
+ * relation and advanced kinds, each with its own options) and dynamic query loop bindings.
  */
 
 declare(strict_types=1);
 
 require __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/_nav.php';
+
+use Slate\Module\StudioBuilder\Meta\MetaFieldTypes;
 
 Auth::require();
 Auth::requirePerm('studio-builder.view');
@@ -187,16 +189,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $flash = ['type' => 'success', 'msg' => 'Built-in post types restored.'];
         } elseif ($action === 'create_meta_field') {
             $pType = trim((string) ($_POST['post_type'] ?? 'portfolio'));
-            $label = trim((string) ($_POST['label'] ?? ''));
+            $label = mb_substr(trim((string) ($_POST['label'] ?? '')), 0, 120);
             $fKey = strtolower(trim((string) ($_POST['key'] ?? '')));
-            $fType = trim((string) ($_POST['type'] ?? 'text'));
-            $placeholder = trim((string) ($_POST['placeholder'] ?? ''));
+            $fType = MetaFieldTypes::normalize((string) ($_POST['type'] ?? 'text'));
+            $placeholder = mb_substr(trim((string) ($_POST['placeholder'] ?? '')), 0, 255);
+            $help = mb_substr(trim((string) ($_POST['help'] ?? '')), 0, 300);
             $required = !empty($_POST['required']);
 
-            $fKey = preg_replace('/[^a-z0-9_]/', '_', $fKey);
+            $fKey = trim((string) preg_replace('/[^a-z0-9_]/', '_', $fKey), '_');
+            $fOptions = MetaFieldTypes::options($fType, $_POST, array_keys($allPostTypes));
+            $duplicate = array_filter($metaFields, fn($f) => ($f['post_type'] ?? '') === $pType && ($f['key'] ?? '') === $fKey);
 
             if ($label === '' || $fKey === '') {
                 $flash = ['type' => 'error', 'msg' => 'Field label and field key are required.'];
+            } elseif (!isset($allPostTypes[$pType])) {
+                $flash = ['type' => 'error', 'msg' => 'Choose a post type that exists.'];
+            } elseif ($duplicate !== []) {
+                $flash = ['type' => 'error', 'msg' => "A field with the key '{$fKey}' already exists on {$pType}."];
+            } elseif (in_array($fType, ['select', 'radio', 'multiselect', 'checkboxes'], true) && empty($fOptions['choices'])) {
+                $flash = ['type' => 'error', 'msg' => 'Add at least one choice (one per line, as value or value : Label).'];
+            } elseif (in_array($fType, ['relation', 'relations'], true) && empty($fOptions['target'])) {
+                $flash = ['type' => 'error', 'msg' => 'Pick the post type this relation links to.'];
             } else {
                 $fieldId = 'f_' . bin2hex(random_bytes(4));
                 $metaFields[] = [
@@ -207,6 +220,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'type' => $fType,
                     'required' => $required,
                     'placeholder' => $placeholder,
+                    'help' => $help,
+                    'options' => $fOptions,
                 ];
                 Database::setSetting('studio_meta_fields', json_encode($metaFields, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
                 $flash = ['type' => 'success', 'msg' => "Meta field '{$label}' added to {$pType}!"];
@@ -334,20 +349,76 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     <input type="text" name="key" class="form-control" placeholder="e.g. project_budget" required>
                 </div>
                 <div class="sb-field">
-                    <label class="sb-field__label">Field Type</label>
-                    <select name="type" class="form-control" style="background: #ffffff;">
-                        <option value="text">Text (Single-line string)</option>
-                        <option value="textarea">Textarea (Multi-line / rich text)</option>
-                        <option value="number">Number (Integer / Decimal / Metric)</option>
-                        <option value="image">Image (Media asset ID attachment)</option>
-                        <option value="gallery">Gallery (Multi-image collection)</option>
-                        <option value="select">Select (Dropdown choices)</option>
-                        <option value="relation">Relation (Linked item reference)</option>
-                        <option value="date">Date (Calendar picker / timestamp)</option>
-                        <option value="boolean">Boolean (True/False toggle)</option>
-                        <option value="url">URL (Web address link)</option>
+                    <label class="sb-field__label" for="sb-meta-type">Field Type</label>
+                    <select name="type" id="sb-meta-type" class="form-control">
+                        <?php foreach (MetaFieldTypes::GROUPS as $gKey => $gLabel): ?>
+                            <optgroup label="<?= e($gLabel) ?>">
+                                <?php foreach (MetaFieldTypes::all() as $tk => $tdef): if ($tdef['group'] !== $gKey) { continue; } ?>
+                                    <option value="<?= e($tk) ?>" data-options="<?= e(implode(' ', $tdef['options'])) ?>"><?= e($tdef['label']) ?> — <?= e($tdef['hint']) ?></option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                        <?php endforeach; ?>
                     </select>
                 </div>
+            </div>
+
+            <!-- Options for the chosen type: only the ones it takes are shown -->
+            <div class="sb-form-grid" id="sb-meta-options" style="margin-top: 20px;">
+                <div class="sb-field sb-field--wide" data-opt="choices" hidden>
+                    <label class="sb-field__label" for="sb-opt-choices">Choices</label>
+                    <textarea name="choices" id="sb-opt-choices" rows="4" class="form-control" placeholder="remote : Remote&#10;onsite : On-site&#10;hybrid : Hybrid"></textarea>
+                    <p class="sb-field__hint">One per line, as <code>value</code> or <code>value : Label</code>.</p>
+                </div>
+                <div class="sb-field" data-opt="target" hidden>
+                    <label class="sb-field__label" for="sb-opt-target">Links to</label>
+                    <select name="target" id="sb-opt-target" class="form-control">
+                        <?php foreach ($allPostTypes as $tKey => $t): ?>
+                            <option value="<?= e($tKey) ?>"><?= e($t['singular']) ?> (<?= e($tKey) ?>)</option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="sb-field" data-opt="min" hidden>
+                    <label class="sb-field__label" for="sb-opt-min">Minimum</label>
+                    <input type="number" step="any" name="min" id="sb-opt-min" class="form-control" placeholder="e.g. 0">
+                </div>
+                <div class="sb-field" data-opt="max" hidden>
+                    <label class="sb-field__label" for="sb-opt-max">Maximum</label>
+                    <input type="number" step="any" name="max" id="sb-opt-max" class="form-control" placeholder="e.g. 100">
+                </div>
+                <div class="sb-field" data-opt="step" hidden>
+                    <label class="sb-field__label" for="sb-opt-step">Step</label>
+                    <input type="number" step="any" min="0" name="step" id="sb-opt-step" class="form-control" placeholder="e.g. 1">
+                </div>
+                <div class="sb-field" data-opt="max_length" hidden>
+                    <label class="sb-field__label" for="sb-opt-maxlen">Maximum length</label>
+                    <input type="number" min="1" max="65535" name="max_length" id="sb-opt-maxlen" class="form-control" placeholder="characters">
+                </div>
+                <div class="sb-field" data-opt="extensions" hidden>
+                    <label class="sb-field__label" for="sb-opt-ext">Allowed file types</label>
+                    <input type="text" name="extensions" id="sb-opt-ext" class="form-control" placeholder="pdf, docx, zip">
+                </div>
+            </div>
+            <script>
+            (function () {
+                var sel = document.getElementById('sb-meta-type');
+                var box = document.getElementById('sb-meta-options');
+                if (!sel || !box) return;
+                function sync() {
+                    var wanted = (sel.options[sel.selectedIndex].getAttribute('data-options') || '').split(' ');
+                    box.querySelectorAll('[data-opt]').forEach(function (el) {
+                        var on = wanted.indexOf(el.getAttribute('data-opt')) !== -1;
+                        el.hidden = !on;
+                        el.querySelectorAll('input,select,textarea').forEach(function (c) { c.disabled = !on; });
+                    });
+                    box.style.display = box.querySelector('[data-opt]:not([hidden])') ? '' : 'none';
+                }
+                sel.addEventListener('change', sync);
+                sync();
+            })();
+            </script>
+            <div class="sb-field" style="margin-top: 20px;">
+                <label class="sb-field__label" for="sb-meta-help">Help text</label>
+                <input type="text" name="help" id="sb-meta-help" class="form-control" maxlength="300" placeholder="Shown to editors under the field (optional)">
             </div>
             <div style="display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; margin-bottom: 16px;">
                 <div class="sb-field">
@@ -470,14 +541,16 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         'avatar'       => $fLabel,
                         'avatar_color' => 'accent',
                         'title'        => $fLabel,
-                        'meta_html'    => '<code>{{meta.' . e($fKey) . '}}</code>',
+                        'meta_html'    => '<code>{{meta.' . e($fKey) . '}}</code> · ' . e(MetaFieldTypes::label($fType)),
                         'value'        => $fPType,
                         'badge'        => $fReq ? ['Required', 'danger'] : ['Optional', 'muted'],
-                        'detail'       => [
+                        'detail'       => array_filter([
                             'key'  => ['label' => 'Key / Binding Token', 'html' => '<code>{{meta.' . e($fKey) . '}}</code>'],
                             'ptype' => ['label' => 'Post Type', 'value' => $fPType],
-                            'ftype' => ['label' => 'Field Type', 'value' => strtoupper($fType)],
-                        ],
+                            'ftype' => ['label' => 'Field Type', 'value' => MetaFieldTypes::label($fType)],
+                            'opts'  => MetaFieldTypes::summary($f) !== '' ? ['label' => 'Options', 'value' => MetaFieldTypes::summary($f)] : null,
+                            'help'  => !empty($f['help']) ? ['label' => 'Help text', 'value' => (string) $f['help']] : null,
+                        ]),
                         'actions'      => $actions,
                     ]);
                 }
