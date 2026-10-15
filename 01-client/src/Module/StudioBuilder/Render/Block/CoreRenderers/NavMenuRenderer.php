@@ -9,6 +9,7 @@ namespace Slate\Module\StudioBuilder\Render\Block\CoreRenderers;
 
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
+use Slate\Module\StudioBuilder\Menu\StudioMenus;
 use Slate\Module\StudioBuilder\Render\Html;
 
 final class NavMenuRenderer implements BlockRendererInterface
@@ -34,12 +35,20 @@ final class NavMenuRenderer implements BlockRendererInterface
         $style  = self::pick($scope->string('style', 'plain'), self::STYLES, 'plain');
         $name   = trim($scope->string('aria_label', 'Menu'));
 
+        // A chosen site menu wins; a menu that was since deleted falls back to this block's own links, so a header never goes blank.
+        $links = (array) $scope->prop('items', []);
+        $menuKey = trim($scope->string('menu', ''));
+        $menu = $menuKey !== '' ? StudioMenus::find($scope->context()->tenantId, $menuKey) : null;
+        if ($menu !== null) {
+            $links = $menu['items'];
+        }
+
         $items = '';
-        foreach ((array) $scope->prop('items', []) as $item) {
+        foreach ($links as $item) {
             if (!is_array($item)) {
                 continue;
             }
-            $anchor = Html::link(['href' => $item['url'] ?? null, 'label' => $item['label'] ?? ''], 'sb-nav__link');
+            $anchor = Html::link(['href' => $item['url'] ?? null, 'label' => $item['label'] ?? '', 'target' => !empty($item['new_tab']) ? '_blank' : '_self'], 'sb-nav__link');
             if ($anchor !== '') {
                 $items .= '<li class="sb-nav__item">' . $anchor . '</li>';
             }

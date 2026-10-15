@@ -32,6 +32,7 @@ use Slate\Module\StudioBuilder\Exception\StudioRenderException;
 use Slate\Module\StudioBuilder\Exception\StudioTenantScopeException;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions;
+use Slate\Module\StudioBuilder\Menu\StudioMenus;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeResolver;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeSource;
@@ -299,6 +300,7 @@ final class StudioCompiler
             'document'    => hash('sha256', $documentJson),
             'footer'      => $footer->key(),
             'header'      => $header->key(),
+            'menus'       => StudioMenus::fingerprint($context->tenantId),
             'mode'        => $context->mode->value,
             'page'        => hash('sha256', $page->slug . "\n" . $page->title . "\n" . $page->routeMode . "\n" . $page->pageType),
             'registry'    => ModuleBlockDefinitions::registryFingerprint($this->registry),

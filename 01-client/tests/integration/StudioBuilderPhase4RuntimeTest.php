@@ -630,6 +630,23 @@ unit('phase4 integration: server renderer, preview and public runtime (real MySQ
                 }
                 assert_true(str_contains($about, '<meta name="robots" content="index,follow">'));
 
+                // Site menus: a published page shows the chosen menu, and editing the menu refreshes the already-compiled page.
+                $nav = sbp4_block('core.nav_menu', ['menu' => 'footer', 'items' => [['label' => 'Own link', 'url' => '/own']]]);
+                sbp4_publish_page($rt, SBP4_TENANT_A, $publisher, 'with-menu', sbp4_doc([sbp4_heading('Menu page'), $nav]));
+                \Slate\Module\StudioBuilder\Menu\StudioMenus::forget();
+                $before = sbp4_public($rt, SBP4_TENANT_A, '/with-menu')->body;
+                assert_true(str_contains($before, '>Own link</a>'), 'before the menu exists the block shows its own links');
+                $rt->tenants->runAs(SBP4_TENANT_A, static fn() => \Slate\Module\StudioBuilder\Menu\StudioMenus::save(SBP4_TENANT_A, 'footer', 'Footer menu', [['label' => 'Privacy', 'url' => '/privacy']]));
+                $after = sbp4_public($rt, SBP4_TENANT_A, '/with-menu')->body;
+                assert_true(str_contains($after, '>Privacy</a>') && !str_contains($after, '>Own link</a>'), 'saving the menu changes the already-published page without republishing it');
+                assert_true(!str_contains(sbp4_public($rt, SBP4_TENANT_B, '/about')->body, '>Privacy</a>'), 'a menu never reaches another tenant');
+                $manifest = $rt->tenants->runAs(SBP4_TENANT_A, static fn() => $rt->app->editorManifest($editor));
+                $navDef = array_values(array_filter($manifest['blocks'], static fn(array $b): bool => $b['type'] === 'core.nav_menu'))[0];
+                $menuField = array_values(array_filter($navDef['field_schema'], static fn(array $f): bool => $f['key'] === 'menu'))[0];
+                assert_eq([['value' => 'footer', 'label' => 'Footer menu']], $menuField['choices'], 'the editor offers this tenant\'s menus as the choices');
+                $rt->tenants->runAs(SBP4_TENANT_A, static fn() => \Slate\Module\StudioBuilder\Menu\StudioMenus::delete(SBP4_TENANT_A, 'footer'));
+                assert_true(str_contains(sbp4_public($rt, SBP4_TENANT_A, '/with-menu')->body, '>Own link</a>'), 'deleting the menu falls back to the block\'s own links');
+
                 // Homepage route mode.
                 assert_null($rt->tenants->runAs(SBP4_TENANT_A, static fn() => $rt->publicRuntime->handleHomepage()), 'no homepage published yet: existing landing page is preserved');
                 sbp4_publish_page($rt, SBP4_TENANT_A, $publisher, 'home', sbp4_doc([sbp4_heading('Alpha Homepage')]), 'page', 'homepage');

@@ -2123,10 +2123,19 @@
                     }
                 ],
                 "layout": "horizontal",
+                "menu": "",
                 "style": "plain"
             },
             "description": "A row or column of links",
             "field_schema": [
+                {
+                    "key": "menu",
+                    "type": "string",
+                    "label": "Menu",
+                    "required": false,
+                    "default": "",
+                    "max_length": 63
+                },
                 {
                     "key": "aria_label",
                     "type": "string",
@@ -2173,7 +2182,7 @@
                 {
                     "key": "items",
                     "type": "repeater",
-                    "label": "Links",
+                    "label": "Custom links (used when no menu is chosen)",
                     "required": false,
                     "default": [
                         {

@@ -475,3 +475,60 @@ unit('site links: rebase is idempotent, skips //host, mailto, tel and fragments,
     assert_eq('', (new \Slate\Module\StudioBuilder\Render\SiteContext('https://acme.test', 'A'))->basePath());
     assert_eq('', (new \Slate\Module\StudioBuilder\Render\SiteContext('', 'A'))->basePath());
 });
+
+unit('site menus: a menu is validated as one small closed shape, and decoded safely', function (): void {
+    $ok = \Slate\Module\StudioBuilder\Menu\StudioMenus::validate('header', 'Header menu', [['label' => 'Home', 'url' => '/'], ['label' => '', 'url' => ''], ['label' => 'Docs', 'url' => 'https://example.com/docs', 'new_tab' => '1']]);
+    assert_eq('header', $ok['key']);
+    assert_eq(2, count($ok['items']), 'an unused empty row is dropped');
+    assert_true($ok['items'][1]['new_tab'] === true && $ok['items'][0]['new_tab'] === false, 'new tab is a flag');
+    foreach ([
+        ['Bad Key', 'N', []], ['', 'N', []], ['ok', '', []], ['ok', str_repeat('x', 81), []],
+        ['ok', 'N', [['label' => 'x', 'url' => 'javascript:alert(1)']]],
+        ['ok', 'N', [['label' => 'x', 'url' => '//evil.test']]],
+        ['ok', 'N', [['label' => '', 'url' => '/a']]],
+        ['ok', 'N', [['label' => 'x', 'url' => '']]],
+        ['ok', 'N', array_fill(0, 31, ['label' => 'x', 'url' => '/a'])],
+    ] as [$k, $n, $rows]) {
+        $threw = false;
+        try {
+            \Slate\Module\StudioBuilder\Menu\StudioMenus::validate($k, $n, $rows);
+        } catch (\InvalidArgumentException) {
+            $threw = true;
+        }
+        assert_true($threw, 'refused: ' . json_encode([$k, $n, count($rows)]));
+    }
+    $decoded = \Slate\Module\StudioBuilder\Menu\StudioMenus::decode(json_encode(['menus' => [
+        ['key' => 'good', 'name' => 'Good', 'items' => [['label' => 'A', 'url' => '/a']]],
+        ['key' => 'evil', 'name' => 'Evil', 'items' => [['label' => 'A', 'url' => 'javascript:alert(1)']]],
+        ['key' => 'BAD KEY', 'name' => 'x', 'items' => []],
+    ]]));
+    assert_eq(['good'], array_keys($decoded), 'a hand-edited setting cannot put an unsafe link or a bad key on a page');
+    assert_eq([], \Slate\Module\StudioBuilder\Menu\StudioMenus::decode('not json'));
+});
+
+unit('site menus: a Nav menu block shows the chosen menu, falls back to its own links, and never crosses tenants', function (): void {
+    $menus = \Slate\Module\StudioBuilder\Menu\StudioMenus::class;
+    $menus::useForTests(SBEL_TENANT, [['key' => 'footer', 'name' => 'Footer menu', 'items' => [['label' => 'Privacy', 'url' => '/privacy'], ['label' => 'Docs', 'url' => 'https://example.com/docs', 'new_tab' => true]]]]);
+    $own = [['label' => 'Own', 'url' => '/own']];
+
+    $html = sbel_render([sbel_block('core.nav_menu', ['menu' => 'footer', 'items' => $own])]);
+    assert_true(str_contains($html, '>Privacy</a>') && str_contains($html, 'target="_blank"') && str_contains($html, 'rel="noopener noreferrer"'), 'the chosen menu is shown, a new-tab link is safe');
+    assert_false(str_contains($html, '>Own<'), "the block's own links are not shown when a menu is chosen");
+
+    $gone = sbel_render([sbel_block('core.nav_menu', ['menu' => 'deleted-menu', 'items' => $own])]);
+    assert_true(str_contains($gone, '>Own</a>'), 'a menu that no longer exists falls back to the block\'s own links');
+    $none = sbel_render([sbel_block('core.nav_menu', ['items' => $own])]);
+    assert_true(str_contains($none, '>Own</a>') && !str_contains($none, 'Privacy'), 'no menu chosen: its own links');
+
+    $fp = $menus::fingerprint(SBEL_TENANT);
+    $menus::useForTests(SBEL_TENANT, [['key' => 'footer', 'name' => 'Footer menu', 'items' => [['label' => 'Terms', 'url' => '/terms']]]]);
+    assert_true($menus::fingerprint(SBEL_TENANT) !== $fp, 'editing a menu changes the fingerprint pages are compiled against');
+    $menus::useForTests(SBEL_TENANT + 1000, []);
+    assert_eq('-', $menus::fingerprint(SBEL_TENANT + 1000), 'a tenant with no menus has the empty fingerprint');
+    assert_eq(null, $menus::find(SBEL_TENANT + 1000, 'footer'), 'another tenant does not see this tenant\'s menu');
+
+    $block = ModuleBlockDefinitions::studioRegistry()->get('core.nav_menu');
+    assert_true($block->validateProps(['menu' => 'header-2'])->isValid() && $block->validateProps(['menu' => ''])->isValid(), 'a menu key or none is valid');
+    assert_false($block->validateProps(['menu' => 'Bad Key!'])->isValid(), 'anything else is refused');
+    $menus::forget();
+});

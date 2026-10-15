@@ -100,6 +100,7 @@ use Slate\Module\StudioBuilder\Http\StudioCodePolicy;
 use Slate\Module\StudioBuilder\Registry\BlockAvailability;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Registry\BlockUsage;
+use Slate\Module\StudioBuilder\Menu\StudioMenus;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeResolver;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeSource;
 use Slate\Module\StudioBuilder\Render\Compile\StudioCompilationInvalidator;
@@ -1414,6 +1415,18 @@ final class StudioApplicationService
             static fn(array $block): array => self::translateBlockCopy($block) + (in_array($block['type'] ?? '', $disabledTypes, true) ? ['disabled' => true] : []),
             $this->registry->editorManifests($entitled, static fn(string $perm): bool => $actor->can($perm), true),
         );
+        // The Nav menu block picks one of this tenant's named menus: the choices ride in the manifest like provider choices do.
+        $menuChoices = array_map(static fn(array $m): array => ['value' => $m['key'], 'label' => $m['name']], array_values(StudioMenus::all($tenantId)));
+        foreach ($blocks as $i => $block) {
+            if (($block['type'] ?? '') !== 'core.nav_menu') {
+                continue;
+            }
+            foreach ($block['field_schema'] ?? [] as $j => $field) {
+                if (($field['key'] ?? '') === 'menu') {
+                    $blocks[$i]['field_schema'][$j]['choices'] = $menuChoices;
+                }
+            }
+        }
         $offered = array_column(array_filter($blocks, static fn(array $b): bool => empty($b['locked'])), 'type');
 
         return [

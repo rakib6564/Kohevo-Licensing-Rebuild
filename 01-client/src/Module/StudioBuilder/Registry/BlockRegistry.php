@@ -936,7 +936,7 @@ final class BlockRegistry
             allowsChildren: false,
         ));
 
-        // 38. core.nav_menu — a row or column of links the author lists by hand (a mobile toggle comes from placing it in an Offcanvas).
+        // 38. core.nav_menu — a row or column of links: one of the site's named menus (Menus screen), or links listed by hand (a mobile toggle comes from placing it in an Offcanvas).
         $registry->register(new DeclarativeBlockDefinition(
             type: 'core.nav_menu',
             version: 1,
@@ -946,6 +946,7 @@ final class BlockRegistry
             category: 'layout',
             icon: 'menu',
             schema: FieldSchema::define([
+                ['key' => 'menu', 'type' => 'string', 'label' => 'Menu', 'required' => false, 'default' => '', 'max_length' => 63, 'pattern' => '/^([a-z0-9][a-z0-9-]{0,62})?$/'],
                 ['key' => 'aria_label', 'type' => 'string', 'label' => 'Menu name (for screen readers)', 'required' => false, 'default' => 'Menu', 'max_length' => 80],
                 ['key' => 'layout', 'type' => 'enum', 'label' => 'Layout', 'required' => false, 'allowed_values' => ['horizontal', 'vertical'], 'default' => 'horizontal'],
                 ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['left', 'center', 'right'], 'default' => 'left'],
@@ -953,7 +954,7 @@ final class BlockRegistry
                 [
                     'key'         => 'items',
                     'type'        => 'repeater',
-                    'label'       => 'Links',
+                    'label'       => 'Custom links (used when no menu is chosen)',
                     'required'    => false,
                     'default'     => [['label' => 'Home', 'url' => '/'], ['label' => 'Services', 'url' => '/services/'], ['label' => 'Contact', 'url' => '/contact/']],
                     'max_items'   => 12,
