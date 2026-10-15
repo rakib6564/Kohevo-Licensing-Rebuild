@@ -117,7 +117,7 @@ function AiPanel({ boot, onReview }) {
 export const BlockPalette = memo(function BlockPalette({ compact = false }) {
   const { boot, manifest, insertBlock, insertSection, insertBlockWithProps, openAiReview, panelRequest } = useEditor();
   const [query, setQuery] = useState('');
-  const [categoryTab, setCategoryTab] = useState('sections');
+  const [categoryTab, setCategoryTab] = useState('elements');
   const [favorites, setFavorites] = useState(new Set());
   // A button on the canvas (an empty container's Add, AI) can ask for a sub-tab.
   useEffect(() => {

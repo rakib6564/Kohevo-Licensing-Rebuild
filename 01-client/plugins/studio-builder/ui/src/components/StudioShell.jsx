@@ -743,7 +743,7 @@ export function ShellLayout({
 }) {
   const { selection, select } = useSelection();
   const { canvasView, structureOpen, setStructureOpen, toggleStructure, openLibraryModal } = useEditor();
-  const [activeTab, setActiveTab] = useState(() => (selection ? 'inspector' : 'structure'));
+  const [activeTab, setActiveTab] = useState(() => (selection ? 'inspector' : 'blocks'));
   const isMobile = useIsMobileShell();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [responsiveOpen, setResponsiveOpen] = useState(false);
