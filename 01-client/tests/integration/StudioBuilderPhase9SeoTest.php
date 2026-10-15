@@ -306,6 +306,17 @@ unit('phase9c integration: SEO settings, sitemap.xml, robots.txt and slug hygien
                 assert_eq(200, sbs9_file($rt, SBS9_A, '/sitemap.xml', '"' . str_repeat('0', 64) . '"')->status);
             });
 
+            unit('phase9c int 1b: the sitemap names the browser stylesheet, and the stylesheet is served as XSLT with the same headers', function () use ($rt): void {
+                $r = sbs9_file($rt, SBS9_A, '/sitemap.xml');
+                assert_true(str_contains($r->body, '<?xml-stylesheet type="text/xsl" href="sitemap.xsl"?>'), 'the sitemap points at sitemap.xsl');
+                $x = sbs9_file($rt, SBS9_A, '/sitemap.xsl');
+                assert_eq(200, $x->status);
+                assert_eq('text/xsl; charset=utf-8', $x->headers['Content-Type']);
+                assert_eq('nosniff', $x->headers['X-Content-Type-Options']);
+                assert_true(str_contains($x->body, 'Kohevo Studio'), 'the Kohevo page');
+                assert_eq(304, sbs9_file($rt, SBS9_A, '/sitemap.xsl', $x->headers['ETag'])->status, 'revalidates');
+            });
+
             unit('phase9c int 2: every excluded state is excluded — draft-only, archived, unpublished, noindex, reserved/unreachable slug, shadowed landing, canonical elsewhere', function () use ($rt): void {
                 $locs = implode("\n", sbs9_sitemap($rt, SBS9_A));
                 foreach (['draftonly' => 'draft-only page', 'gone' => 'archived page', 'offline' => 'unpublished page', 'team' => 'noindex page', 'shop' => 'reserved route', 'moved' => 'page canonical to another URL', 'twin-l' => 'shadowed landing', '/home' => 'the homepage slug (it is /)'] as $needle => $why) {

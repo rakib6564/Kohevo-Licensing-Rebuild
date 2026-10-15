@@ -136,10 +136,15 @@ final class StudioSitemapService
         return array_map(static fn(array $e): array => ['loc' => $e['loc'], 'lastmod' => $e['lastmod']], $entries);
     }
 
-    /** The sitemap document for the given entries (pure, deterministic, XML-escaped). */
-    public static function xml(array $entries): string
+    /**
+     * The sitemap document for the given entries (pure, deterministic, XML-escaped). With `$stylesheet` (a relative
+     * file name such as `sitemap.xsl`) a browser shows the styled page; a crawler ignores the instruction.
+     */
+    public static function xml(array $entries, ?string $stylesheet = null): string
     {
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n"
+            . ($stylesheet !== null && preg_match('/^[A-Za-z0-9._-]+$/', $stylesheet) === 1
+                ? '<?xml-stylesheet type="text/xsl" href="' . $stylesheet . '"?>' . "\n" : '')
             . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
         foreach ($entries as $entry) {
             $xml .= "  <url>\n    <loc>" . self::escape((string) $entry['loc']) . "</loc>\n";

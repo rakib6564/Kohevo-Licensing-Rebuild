@@ -162,7 +162,7 @@ final class StudioPublicRuntime
         return $path;
     }
 
-    /** `robots.txt` / `sitemap.xml` (the whole path, nothing else), else null. */
+    /** `robots.txt` / `sitemap.xml` / `sitemap.xsl` (the whole path, nothing else), else null. */
     private function seoFileFromPath(string $path): ?string
     {
         $path = trim($path);
@@ -170,7 +170,7 @@ final class StudioPublicRuntime
             $path = substr($path, 0, $q);
         }
         $path = trim($path, '/');
-        return ($path === 'robots.txt' || $path === 'sitemap.xml') ? $path : null;
+        return ($path === 'robots.txt' || $path === 'sitemap.xml' || $path === SitemapStylesheet::FILE) ? $path : null;
     }
 
     private function serveSeoFile(string $file, ?string $ifNoneMatch): ?PublicResponse
@@ -187,12 +187,15 @@ final class StudioPublicRuntime
             if ($file === 'robots.txt') {
                 $type = 'text/plain; charset=utf-8';
                 $body = StudioSitemapService::robotsTxt($site);
+            } elseif ($file === SitemapStylesheet::FILE) {
+                $type = 'text/xsl; charset=utf-8';
+                $body = SitemapStylesheet::xsl();
             } else {
                 if ($site->baseUrl === '') {
                     return null; // no configured base URL: no sitemap rather than one on an invented host
                 }
                 $type = 'application/xml; charset=utf-8';
-                $body = StudioSitemapService::xml($this->sitemap->entries($site));
+                $body = StudioSitemapService::xml($this->sitemap->entries($site), SitemapStylesheet::FILE);
             }
         } catch (\Throwable $e) {
             self::log('seo file', $e);

@@ -170,3 +170,28 @@ unit('phase9c sitemap: the generator reads only published revisions — no seo_j
         assert_true(!str_contains($sitemap, $needle), "the sitemap must not use {$needle}");
     }
 });
+
+unit('phase9c sitemap stylesheet: the sitemap names a relative stylesheet, which is fixed, well-formed and turns the urlset into a branded page', function (): void {
+    $entries = [['loc' => 'https://site.example/', 'lastmod' => '2026-10-01'], ['loc' => 'https://site.example/about', 'lastmod' => null]];
+    $plain = StudioSitemapService::xml($entries);
+    assert_true(!str_contains($plain, 'xml-stylesheet'), 'no stylesheet unless asked');
+    $styled = StudioSitemapService::xml($entries, \Slate\Module\StudioBuilder\Runtime\SitemapStylesheet::FILE);
+    assert_true(str_contains($styled, '<?xml-stylesheet type="text/xsl" href="sitemap.xsl"?>'), 'the instruction is a relative file name');
+    assert_true(!str_contains(StudioSitemapService::xml($entries, 'x" y'), 'xml-stylesheet'), 'a name with a quote or space is refused');
+    $doc = new DOMDocument();
+    assert_true($doc->loadXML($styled, LIBXML_NONET), 'the styled sitemap is still well-formed');
+    assert_eq(2, $doc->getElementsByTagName('url')->length);
+
+    $xsl = \Slate\Module\StudioBuilder\Runtime\SitemapStylesheet::xsl();
+    $sheet = new DOMDocument();
+    assert_true($sheet->loadXML($xsl, LIBXML_NONET), 'the stylesheet is well-formed XML');
+    assert_true(!preg_match('/<script|https?:\/\/(?!www\.w3\.org|www\.sitemaps\.org)/i', $xsl), 'no script and no external resource');
+    if (class_exists('XSLTProcessor')) {
+        $p = new XSLTProcessor();
+        $p->importStylesheet($sheet);
+        $html = (string) $p->transformToXml($doc);
+        assert_true(str_contains($html, 'Kohevo Studio'), 'branded');
+        assert_true(str_contains($html, '<span class="home">Home</span>'), 'the first entry is the home page');
+        assert_eq(2, substr_count($html, '<tr>') - 1, 'one row per url (and the header row)');
+    }
+});
