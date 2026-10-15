@@ -452,7 +452,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <?php sb_render_admin_nav('templates', $portfolioPageId); ?>
 
     <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : ($flash['type'] === 'warning' ? 'warning' : 'danger') ?>" style="margin-bottom: 24px; border-radius: 10px;">
+        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : ($flash['type'] === 'warning' ? 'warning' : 'danger') ?>" >
             <?= e($flash['msg']) ?>
         </div>
     <?php endif; ?>
@@ -489,9 +489,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
     </div>
 
     <!-- Create Template Drawer / Form -->
-    <div id="sb-tpl-drawer" style="display: none; background: #ffffff; border: 1px solid var(--sb-border); border-radius: 14px; padding: 24px; margin-bottom: 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
+    <div id="sb-tpl-drawer" class="sb-card sb-drawer" style="display: none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
-            <div style="font-weight: 700; font-size: 1.15rem; color: var(--sb-text); display: flex; align-items: center; gap: 8px;">
+            <div class="sb-card__title" style="display: flex; align-items: center; gap: 8px;">
                 <?= sb_svg('templates', 20) ?> Create Theme Builder Template
             </div>
             <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('sb-tpl-drawer').style.display='none'">
@@ -501,13 +501,13 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/templates.php')) ?>">
             <?= csrf_field() ?>
             <input type="hidden" name="_action" value="create_template">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 16px;">
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Template Name <span style="color: #ef4444;">*</span></label>
+            <div class="sb-form-grid">
+                <div class="sb-field">
+                    <label class="sb-field__label">Template Name <span style="color: #ef4444;">*</span></label>
                     <input type="text" name="name" class="form-control" placeholder="e.g. Modern Glass Header" required>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Template Type</label>
+                <div class="sb-field">
+                    <label class="sb-field__label">Template Type</label>
                     <select name="template_type" class="form-control" style="background: #ffffff;">
                         <option value="header">Header (Top navigation & hero chrome)</option>
                         <option value="footer">Footer (Site-wide footer & bottom chrome)</option>
@@ -517,8 +517,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         <option value="section_preset">Section & Component Preset (Reusable block layout)</option>
                     </select>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Display Condition</label>
+                <div class="sb-field">
+                    <label class="sb-field__label">Display Condition</label>
                     <select name="condition_rule" class="form-control" style="background: #ffffff;">
                         <option value="entire_site">Entire Site (Global Default)</option>
                         <option value="front_page">Front Page / Homepage Only</option>
@@ -529,8 +529,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     </select>
                 </div>
             </div>
-            <div style="margin-bottom: 16px;">
-                <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Description / Notes</label>
+            <div class="sb-field">
+                <label class="sb-field__label">Description / Notes</label>
                 <input type="text" name="description" class="form-control" placeholder="Optional notes about design intent or typography...">
             </div>
             <div style="margin-bottom: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px;">
@@ -542,7 +542,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     Publishes revision #1 so <code>ThemeTemplateResolver</code> attaches it to live matching pages immediately. You can further customize layout in the visual Canvas editor at any time.
                 </div>
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <div class="sb-card-actions">
                 <button type="button" class="btn btn-outline" onclick="document.getElementById('sb-tpl-drawer').style.display='none'">Cancel</button>
                 <button type="submit" class="btn btn-primary"><?= sb_svg('check', 14) ?> Create Template</button>
             </div>
@@ -672,7 +672,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <?php endif; ?>
 
     <!-- Theme Builder Architecture & Blueprint Guidance -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 24px;">
+    <div class="sb-form-grid">
         <div class="card" style="background: #ffffff; border: 1px solid var(--sb-border); border-radius: 14px; padding: 20px;">
             <div style="color: var(--sb-accent); margin-bottom: 10px;">
                 <?= sb_svg('layer', 24) ?>

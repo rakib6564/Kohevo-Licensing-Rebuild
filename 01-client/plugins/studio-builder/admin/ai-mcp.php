@@ -96,14 +96,14 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <?php sb_render_admin_nav('ai-mcp', $portfolioPageId); ?>
 
     <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" style="margin-bottom: 24px; border-radius: 10px;">
+        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" >
             <?= e($flash['msg']) ?>
         </div>
     <?php endif; ?>
 
-    <div style="margin-bottom: 24px;">
-        <h2 style="font-size: 1.3rem; font-weight: 800; color: var(--sb-text); margin: 0 0 4px 0;">AI Gateway & Model Context Protocol (MCP)</h2>
-        <p style="font-size: 0.88rem; color: var(--sb-muted); margin: 0;">Configure autonomous AI page generation, reasoning models, and review tool capabilities.</p>
+    <div class="sb-page-head">
+        <h2>AI Gateway & Model Context Protocol (MCP)</h2>
+        <p>Configure autonomous AI page generation, reasoning models, and review tool capabilities.</p>
     </div>
 
     <!-- KPI / Status Cards -->
@@ -146,30 +146,30 @@ require SLATE_ROOT . '/admin/partials/header.php';
     </div>
 
     <!-- AI Settings & MCP Registry Grid -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px; margin-bottom: 32px;">
+    <div class="sb-two-up">
         <!-- Left: Model & Generation Configuration -->
-        <div class="card" style="border-radius: 16px; border: 1px solid var(--sb-border); padding: 24px;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
-                <?= sb_svg('sparkles', 20, 'text-accent') ?>
-                <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--sb-text); margin: 0;">AI Engine Configuration</h3>
+        <div class="sb-card">
+            <div class="sb-card__head">
+                <span class="sb-card__icon"><?= sb_svg('sparkles', 18) ?></span>
+                <h3 class="sb-card__title">AI Engine Configuration</h3>
             </div>
 
             <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/ai-mcp.php')) ?>">
                 <?= csrf_field() ?>
                 <input type="hidden" name="_action" value="save_ai_config">
 
-                <div style="margin-bottom: 16px;">
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Foundation Model</label>
-                    <select name="ai_model" class="form-control" style="background: #ffffff;">
+                <div class="sb-field">
+                    <label class="sb-field__label">Foundation Model</label>
+                    <select name="ai_model" class="form-control">
                         <option value="gemini-2.5-flash" <?= $aiModel === 'gemini-2.5-flash' ? 'selected' : '' ?>>Gemini 2.5 Flash (Ultra-fast visual drafting & iterations)</option>
                         <option value="gemini-1.5-pro" <?= $aiModel === 'gemini-1.5-pro' ? 'selected' : '' ?>>Gemini 1.5 Pro (Deep architectural reasoning & long context)</option>
                         <option value="gemini-2.0-flash" <?= $aiModel === 'gemini-2.0-flash' ? 'selected' : '' ?>>Gemini 2.0 Flash (Agentic tool-calling & structured output)</option>
                     </select>
                 </div>
 
-                <div style="margin-bottom: 16px;">
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Brand Voice & Copywriting Tone</label>
-                    <select name="ai_tone" class="form-control" style="background: #ffffff;">
+                <div class="sb-field">
+                    <label class="sb-field__label">Brand Voice & Copywriting Tone</label>
+                    <select name="ai_tone" class="form-control">
                         <option value="executive_modern" <?= $aiTone === 'executive_modern' ? 'selected' : '' ?>>Executive & Modern (Crisp, authoritative, sophisticated)</option>
                         <option value="tech_minimalist" <?= $aiTone === 'tech_minimalist' ? 'selected' : '' ?>>High-Tech & Minimalist (Concise, engineering-focused)</option>
                         <option value="creative_portfolio" <?= $aiTone === 'creative_portfolio' ? 'selected' : '' ?>>Creative Freelancer (Engaging, personal, compelling)</option>
@@ -177,18 +177,18 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     </select>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
-                    <div>
-                        <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Creativity Temperature (0.0 – 1.0)</label>
+                <div class="sb-form-grid">
+                    <div class="sb-field">
+                        <label class="sb-field__label">Creativity Temperature (0.0 – 1.0)</label>
                         <input type="number" step="0.1" min="0" max="1" name="ai_temperature" value="<?= e($aiTemperature) ?>" class="form-control">
                     </div>
-                    <div>
-                        <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Max Tokens</label>
+                    <div class="sb-field">
+                        <label class="sb-field__label">Max Tokens</label>
                         <input type="number" step="512" min="1000" max="16000" name="ai_max_tokens" value="<?= e($aiMaxTokens) ?>" class="form-control">
                     </div>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end;">
+                <div class="sb-card-actions">
                     <button type="submit" class="btn btn-primary">
                         <?= sb_svg('save', 14) ?> Save AI Preferences
                     </button>
@@ -197,10 +197,10 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </div>
 
         <!-- Right: MCP Tools Registry -->
-        <div class="card" style="border-radius: 16px; border: 1px solid var(--sb-border); padding: 24px;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
-                <?= sb_svg('terminal', 20, 'text-accent') ?>
-                <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--sb-text); margin: 0;">Registered MCP Tools</h3>
+        <div class="sb-card">
+            <div class="sb-card__head">
+                <span class="sb-card__icon"><?= sb_svg('terminal', 18) ?></span>
+                <h3 class="sb-card__title">Registered MCP Tools</h3>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 14px;">
@@ -244,11 +244,11 @@ require SLATE_ROOT . '/admin/partials/header.php';
     </div>
 
     <!-- AI Interactive Sandbox -->
-    <div class="card" style="border-radius: 16px; border: 1px solid var(--sb-border); padding: 24px; margin-bottom: 32px;">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
-            <?= sb_svg('zap', 20, 'text-accent') ?>
-            <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--sb-text); margin: 0;">Interactive Layout Generation Sandbox</h3>
-        </div>
+    <div class="sb-card">
+        <div class="sb-card__head">
+                <span class="sb-card__icon"><?= sb_svg('zap', 18) ?></span>
+                <h3 class="sb-card__title">Interactive Layout Generation Sandbox</h3>
+            </div>
 
         <p style="font-size: 0.85rem; color: var(--sb-muted); margin-bottom: 16px;">
             Test layout prompts to preview how the AI gateway plans section structure, typography, and child widgets before applying to live pages.

@@ -82,7 +82,7 @@ export function SectionInspector({ info }) {
         <span className="sbx-ihead__icon" aria-hidden="true"><IconLayoutSection size={18} /></span>
         <div className="sbx-ihead__names">
           <h2 className="sbx-inspector__title">{label}</h2>
-          {section.label ? <span className="sbx-ihead__type">{t('section')}</span> : null}
+          {section.label && section.label !== t('section') ? <span className="sbx-ihead__type">{t('section')}</span> : null}
         </div>
       </header>
   );
