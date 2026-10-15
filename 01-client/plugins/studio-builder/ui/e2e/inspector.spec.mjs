@@ -51,13 +51,13 @@ test('a block shows Content, Style and Advanced, with only the relevant sections
     await expect(toggleOf(page, 'content')).toHaveAttribute('aria-expanded', 'true');
     await page.locator('[id^="sbx-blk-"][id$="-tab-style"]').click();
     await expect(toggleOf(page, 'typography')).toHaveAttribute('aria-expanded', 'true'); // a quote is text
-    for (const closed of ['shadow', 'opacity']) {
+    for (const closed of ['background', 'border', 'shadow', 'opacity']) { // Background and Border are Style for every block
       await expect(toggleOf(page, closed)).toHaveAttribute('aria-expanded', 'false');
       await expect(page.locator(`[data-section="${closed}"] .sbx-isec__body`)).toBeHidden();
     }
     await page.locator('[id^="sbx-blk-"][id$="-tab-advanced"]').click();
     await expect(toggleOf(page, 'advanced')).toHaveAttribute('aria-expanded', 'true'); // margin, padding, z-index, entrance, CSS ID and classes
-    for (const closed of ['background', 'border', 'dimensions', 'effects', 'motion', 'responsive']) {
+    for (const closed of ['dimensions', 'effects', 'motion', 'responsive']) {
       await expect(toggleOf(page, closed)).toHaveAttribute('aria-expanded', 'false');
     }
   } finally {

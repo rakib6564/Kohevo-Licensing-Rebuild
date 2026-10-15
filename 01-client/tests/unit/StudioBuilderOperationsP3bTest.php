@@ -225,7 +225,7 @@ unit('p3b render: tag, section style and states reach the page through the real 
     $bClass = $bm[1];
     assert_true(str_contains($out->html, '<article class="sb-block'), 'the block wrapper is an <article>: ' . $out->html);
     assert_true(str_contains($out->html, '</article>'), 'and closes as one');
-    assert_true(str_contains($out->css, '.' . $sClass . '{background-image:linear-gradient(rgba(0,0,0,.4),rgba(0,0,0,.4)),url("/uploads/t101/hero.jpg");background-size:cover;background-repeat:no-repeat;background-position:center;padding-top:2rem}'), $out->css);
+    assert_true(str_contains($out->css, '.' . $sClass . '{background-image:linear-gradient(rgba(0,0,0,.4),rgba(0,0,0,.4)),url("/uploads/t101/hero.jpg") !important;background-size:cover !important;background-repeat:no-repeat !important;background-position:center !important;padding-top:2rem}'), $out->css);
     assert_true(str_contains($out->css, '.' . $bClass . ':hover{opacity:0.8}'), 'the state rule survives normalization: ' . substr($out->css, -400));
     assert_true(str_contains($out->css, 'cursor:pointer'), 'the base rule survives normalization');
     assert_false(str_contains($out->html, 'hero.jpg'), 'the image URL is only in the stylesheet');

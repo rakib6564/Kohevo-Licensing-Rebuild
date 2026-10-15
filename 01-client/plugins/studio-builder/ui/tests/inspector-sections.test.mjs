@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   SECTIONS, TABS, applicableSections, defaultOpenIds, inspectorContext, isSectionOpen, resetSectionState,
-  searchSections, sectionsFor, setSectionOpen, subscribeSections, PAGE_SECTION_SECTIONS, SECTION_DEF, titleKeyOf,
+  searchSections, sectionsFor, setSectionOpen, subscribeSections, PAGE_SECTION_SECTIONS, SECTION_DEF, statesFor, titleKeyOf,
 } from '../src/core/inspectorSections.mjs';
 
 const manifest = JSON.parse(readFileSync(new URL('./fixtures/manifest.json', import.meta.url), 'utf8'));
@@ -25,13 +25,15 @@ test('the registry has unique ids, known tabs and a title key for every section'
 test('a heading shows content, the full style stack and the advanced fields, in order', () => {
   const ctx = ctxOf('core.heading');
   assert.deepEqual(ids('content', ctx), ['content']);
-  assert.deepEqual(ids('style', ctx), ['align', 'typography', 'shadow', 'opacity', 'states', 'tokens']);
-  // A leaf block keeps Layout, Background, Border and Dimensions under Advanced, after the one group of everyday fields.
-  assert.deepEqual(ids('advanced', ctx), ['advanced', 'layout', 'background', 'border', 'dimensions', 'position', 'effects', 'motion', 'responsive', 'identity', 'tag', 'attributes']);
+  assert.deepEqual(ids('style', ctx), ['align', 'typography', 'background', 'border', 'shadow', 'opacity', 'states', 'tokens']);
+  // Background and Border are Style for every block; a leaf block keeps Layout and Dimensions under Advanced, after the one group of everyday fields.
+  assert.deepEqual(ids('advanced', ctx), ['advanced', 'layout', 'dimensions', 'position', 'effects', 'motion', 'responsive', 'identity', 'tag', 'attributes']);
 });
 
-test('a media block has no Typography section, a text block does', () => {
-  for (const type of ['core.image', 'core.video', 'core.gallery']) {
+test('a block with no text of its own has no Typography section, a text block does; a map has no Background', () => {
+  assert.ok(!ids('style', ctxOf('core.map')).includes('background'));
+  assert.ok(ids('style', ctxOf('core.divider')).includes('background'));
+  for (const type of ['core.image', 'core.video', 'core.gallery', 'core.divider', 'core.spacer', 'core.icon', 'core.map']) {
     assert.ok(!ids('style', ctxOf(type)).includes('typography'), `${type} has no typography`);
   }
   for (const type of ['core.heading', 'core.text', 'core.button', 'core.quote']) {
@@ -160,4 +162,11 @@ test('Style Alignment is named so it cannot be mistaken for the block\'s own Ali
   assert.equal(titleKeyOf(align, flex), 'align_text');
   assert.equal(titleKeyOf(align, heading), 'align');
   assert.ok(ids('style', text).includes('align'));
+});
+
+test('States: every block offers Hover; only blocks a visitor can focus or press offer Focus and Active; a stored state still shows', () => {
+  assert.deepEqual(statesFor('core.heading', undefined), ['hover']);
+  assert.deepEqual(statesFor('core.image', {}), ['hover']);
+  assert.deepEqual(statesFor('core.button', {}), ['hover', 'focus', 'active']);
+  assert.deepEqual(statesFor('core.heading', { disabled: { opacity: 0.5 }, hover: { opacity: 1 } }), ['hover', 'disabled']);
 });

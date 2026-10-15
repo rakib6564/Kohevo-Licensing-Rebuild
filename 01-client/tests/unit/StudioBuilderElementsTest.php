@@ -475,3 +475,30 @@ unit('site links: rebase is idempotent, skips //host, mailto, tel and fragments,
     assert_eq('', (new \Slate\Module\StudioBuilder\Render\SiteContext('https://acme.test', 'A'))->basePath());
     assert_eq('', (new \Slate\Module\StudioBuilder\Render\SiteContext('', 'A'))->basePath());
 });
+
+unit('heading highlight: the highlighted part has its own colour, italic, weight and underline, and nothing unsafe reaches the page', function (): void {
+    $html = sbel_render([sbel_block('core.heading', ['text' => 'Three steps, in order.', 'highlight' => 'in order.', 'highlight_color' => '#d4623d', 'highlight_italic' => true, 'highlight_weight' => 'bold', 'highlight_underline' => true])]);
+    assert_true(str_contains($html, 'Three steps, <span class="sb-hl sb-hl--italic sb-hl--underline sb-hl--w-bold" style="color:#d4623d">in order.</span>'), 'the phrase carries its own look');
+
+    $token = sbel_render([sbel_block('core.heading', ['text' => 'Hello world', 'highlight' => 'world', 'highlight_color_token' => 'text.accent'])]);
+    assert_true(str_contains($token, '<span class="sb-hl sb-fg--text-accent">world</span>'), 'a theme colour is a token class, no inline style');
+
+    $both = sbel_render([sbel_block('core.heading', ['text' => 'Hello world', 'highlight' => 'world', 'highlight_color_token' => 'text.accent', 'highlight_color' => '#112233'])]);
+    assert_true(str_contains($both, 'style="color:#112233"') && !str_contains($both, 'sb-fg--text-accent">world'), 'a custom colour wins over the theme one');
+
+    $plain = sbel_render([sbel_block('core.heading', ['text' => 'Hello world', 'highlight' => 'world'])]);
+    assert_true(str_contains($plain, '<span class="sb-hl">world</span>'), 'no look set: the default accent highlight, as before');
+
+    foreach (['red;position:fixed', 'url(javascript:x)', '#12', '"><script>', 'expression(1)'] as $bad) {
+        $out = sbel_render([sbel_block('core.heading', ['text' => 'Hello world', 'highlight' => 'world', 'highlight_color' => $bad])]);
+        assert_false(str_contains($out, 'style='), "an unsafe colour is never written: {$bad}");
+        $block = ModuleBlockDefinitions::studioRegistry()->get('core.heading');
+        assert_false($block->validateProps(['text' => 'x', 'highlight_color' => $bad])->isValid(), "and the editor refuses it: {$bad}");
+    }
+    $block = ModuleBlockDefinitions::studioRegistry()->get('core.heading');
+    assert_true($block->validateProps(['text' => 'x', 'highlight_color' => '#d4623d', 'highlight_weight' => 'medium', 'highlight_italic' => true])->isValid(), 'a valid look passes');
+    assert_false($block->validateProps(['text' => 'x', 'highlight_weight' => 'ultra'])->isValid(), 'only the listed weights');
+
+    $hero = sbel_render([sbel_block('core.hero', ['heading' => 'Build in order', 'highlight' => 'in order', 'highlight_italic' => true, 'highlight_color' => '#d4623d'])]);
+    assert_true(str_contains($hero, '<span class="sb-hl sb-hl--italic" style="color:#d4623d">in order</span>'), 'the hero heading takes the same look');
+});

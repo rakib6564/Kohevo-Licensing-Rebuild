@@ -15,6 +15,7 @@ namespace Slate\Module\StudioBuilder\Registry;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\CountdownRenderer;
+use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 
@@ -118,6 +119,11 @@ final class BlockRegistry
                 ['key' => 'eyebrow', 'type' => 'string', 'label' => 'Eyebrow', 'required' => false, 'default' => '', 'max_length' => 120],
                 ['key' => 'heading', 'type' => 'string', 'label' => 'Heading', 'required' => true, 'default' => 'Welcome', 'max_length' => 255],
                 ['key' => 'highlight', 'type' => 'string', 'label' => 'Highlighted Word', 'required' => false, 'default' => '', 'max_length' => 100],
+                ['key' => 'highlight_color_token', 'type' => 'token_ref', 'label' => 'Highlight colour (theme)', 'required' => false, 'default' => null],
+                ['key' => 'highlight_color', 'type' => 'string', 'label' => 'Highlight colour (custom)', 'required' => false, 'default' => '', 'max_length' => 40, 'format' => 'color', 'pattern' => Html::HIGHLIGHT_COLOR_PATTERN],
+                ['key' => 'highlight_italic', 'type' => 'boolean', 'label' => 'Highlight in italic', 'required' => false, 'default' => false],
+                ['key' => 'highlight_weight', 'type' => 'enum', 'label' => 'Highlight weight', 'required' => false, 'allowed_values' => ['inherit', 'normal', 'medium', 'bold'], 'default' => 'inherit'],
+                ['key' => 'highlight_underline', 'type' => 'boolean', 'label' => 'Highlight underlined', 'required' => false, 'default' => false],
                 ['key' => 'subheading', 'type' => 'text', 'label' => 'Subheading', 'required' => false, 'default' => '', 'max_length' => 1000],
                 ['key' => 'primary_cta', 'type' => 'link', 'label' => 'Primary Call to Action', 'required' => false, 'default' => null],
                 ['key' => 'media', 'type' => 'media_ref', 'label' => 'Hero Image', 'required' => false, 'default' => null],
@@ -139,6 +145,11 @@ final class BlockRegistry
             schema: FieldSchema::define([
                 ['key' => 'text', 'type' => 'string', 'label' => 'Heading Text', 'required' => true, 'default' => 'Section Heading', 'max_length' => 300],
                 ['key' => 'highlight', 'type' => 'string', 'label' => 'Highlighted Word', 'required' => false, 'default' => '', 'max_length' => 100],
+                ['key' => 'highlight_color_token', 'type' => 'token_ref', 'label' => 'Highlight colour (theme)', 'required' => false, 'default' => null],
+                ['key' => 'highlight_color', 'type' => 'string', 'label' => 'Highlight colour (custom)', 'required' => false, 'default' => '', 'max_length' => 40, 'format' => 'color', 'pattern' => Html::HIGHLIGHT_COLOR_PATTERN],
+                ['key' => 'highlight_italic', 'type' => 'boolean', 'label' => 'Highlight in italic', 'required' => false, 'default' => false],
+                ['key' => 'highlight_weight', 'type' => 'enum', 'label' => 'Highlight weight', 'required' => false, 'allowed_values' => ['inherit', 'normal', 'medium', 'bold'], 'default' => 'inherit'],
+                ['key' => 'highlight_underline', 'type' => 'boolean', 'label' => 'Highlight underlined', 'required' => false, 'default' => false],
                 ['key' => 'level', 'type' => 'enum', 'label' => 'Heading Level', 'required' => false, 'allowed_values' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], 'default' => 'h2'],
             ]),
             allowsChildren: false,

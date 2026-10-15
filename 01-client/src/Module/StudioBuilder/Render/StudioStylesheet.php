@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '12';
+    public const VERSION = '17';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -63,7 +63,7 @@ final class StudioStylesheet
             . '.sb-hero__heading{font-size:clamp(2rem,5vw,3.5rem)}'
             . '.sb-hero__media img{display:block;width:100%;border-radius:var(--sb-radius-lg);object-fit:cover}'
             . '.sb-button-row{margin:1rem 0 0}'
-            . '.sb-button{display:inline-block;padding:.7rem 1.3rem;border-radius:var(--sb-radius-md);text-decoration:none;font-weight:600;border:2px solid var(--sb-color-accent)}'
+            . '.sb-button{font-style:inherit;display:inline-block;padding:.7rem 1.3rem;border-radius:var(--sb-radius-md);text-decoration:none;font-weight:600;border:2px solid var(--sb-color-accent)}'
             . '.sb-button--primary{background:var(--sb-surface-accent);color:var(--sb-text-inverse)}'
             . '.sb-button--secondary{background:var(--sb-surface-secondary);color:var(--sb-text-primary);border-color:var(--sb-surface-secondary)}'
             . '.sb-button--outline{background:transparent;color:var(--sb-color-accent)}'
@@ -96,9 +96,9 @@ final class StudioStylesheet
             . '.sb-card--shadow{box-shadow:0 6px 24px rgba(0,0,0,.12)}'
             . '.sb-card--pad-sm{padding:.75rem}.sb-card--pad-md{padding:1.25rem}.sb-card--pad-lg{padding:2rem}'
             . '.sb-table-wrap{overflow-x:auto;margin:0 0 1rem}'
-            . '.sb-table{width:100%;border-collapse:collapse;text-align:left}'
+            . '.sb-table{width:100%;border-collapse:collapse;text-align:inherit}'
             . '.sb-table th,.sb-table td{padding:.6rem .8rem;border-bottom:1px solid var(--sb-border-default)}'
-            . '.sb-table th{font-weight:600}.sb-table__caption{caption-side:top;text-align:left;font-weight:600;padding:0 0 .5rem}'
+            . '.sb-table th{font-weight:600;text-align:inherit}.sb-table__caption{caption-side:top;text-align:inherit;font-weight:600;padding:0 0 .5rem}'
             . '.sb-table-wrap--striped tbody tr:nth-child(even){background:var(--sb-surface-secondary)}'
             . '.sb-countdown{margin:0 0 1rem}.sb-countdown__label{margin:0 0 .5rem;font-weight:600}'
             . '.sb-countdown__date{margin:0;color:var(--sb-text-muted)}'
@@ -210,7 +210,9 @@ final class StudioStylesheet
             . '.sb-text--base{font-size:1rem}'
             . '.sb-text--lg{font-size:1.125rem}'
             . '.sb-text--xl{font-size:1.25rem}'
-            . '.sb-hl{color:var(--sb-color-accent)}'
+            . ':where(.sb-hl){color:var(--sb-color-accent)}'
+            . '.sb-hl--italic{font-style:italic}.sb-hl--underline{text-decoration:underline;text-underline-offset:.15em}'
+            . '.sb-hl--w-normal{font-weight:400}.sb-hl--w-medium{font-weight:500}.sb-hl--w-bold{font-weight:700}'
             . '.sb-text--lead{font-size:1.25rem;line-height:1.75;font-weight:400}'
             . '.sb-text--align-left{text-align:left}'
             . '.sb-text--align-center{text-align:center}'
@@ -267,7 +269,7 @@ final class StudioStylesheet
             . '.sb-search-form{width:100%;max-width:36rem;margin:0 auto 2rem}'
             . '.sb-search-input-wrap{display:flex;align-items:center;border:1px solid var(--sb-border-default,#cbd5e1);border-radius:var(--sb-radius-md,.5rem);overflow:hidden;background:#fff}'
             . '.sb-search-input{flex:1;border:none;padding:.75rem 1rem;font-size:1rem;outline:none}'
-            . '.sb-search-button{background:var(--sb-surface-accent,#6366f1);color:#fff;border:none;padding:.75rem 1.5rem;font-weight:600;cursor:pointer}'
+            . '.sb-search-button{font-style:inherit;background:var(--sb-surface-accent,#6366f1);color:#fff;border:none;padding:.75rem 1.5rem;font-weight:600;cursor:pointer}'
             . '.sb-animate-fade-in{animation:sb-fade-in var(--sb-anim-duration,.4s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
             . '.sb-animate-fade-up{animation:sb-fade-up var(--sb-anim-duration,.5s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
             . '.sb-animate-fade-down{animation:sb-fade-down var(--sb-anim-duration,.5s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
@@ -330,7 +332,7 @@ final class StudioStylesheet
             . '.sb-tabs__tab:focus-visible{outline:2px solid currentColor;outline-offset:-2px;border-radius:2px}'
             . '.sb-accordion{border:1px solid var(--sb-border-default,#e2e8f0);border-radius:.5rem;overflow:hidden}'
             . '.sb-accordion__item+.sb-accordion__item{border-top:1px solid var(--sb-border-default,#e2e8f0)}'
-            . '.sb-accordion__button{width:100%;display:flex;justify-content:space-between;align-items:center;gap:1rem;background:none;border:0;padding:1rem 1.25rem;font:inherit;color:inherit;text-align:left;cursor:pointer}'
+            . '.sb-accordion__button{width:100%;display:flex;justify-content:space-between;align-items:center;gap:1rem;background:none;border:0;padding:1rem 1.25rem;font:inherit;color:inherit;text-align:inherit;cursor:pointer}'
             . '.sb-accordion__button:focus-visible{outline:2px solid currentColor;outline-offset:-2px}'
             . '.sb-accordion__icon{flex:none;transition:transform .2s ease}'
             . '.sb-accordion__button[aria-expanded="true"] .sb-accordion__icon{transform:rotate(180deg)}'
@@ -468,11 +470,16 @@ final class StudioStylesheet
      * font size does not rewrite the headings of the blocks inside it. `!important` because the rules it must beat are theme
      * and element rules of any specificity.
      */
+    /** Form controls, table cells, lists and the theme blocks' own wrappers carry browser or stylesheet values of their own, so they are listed too. */
+    private const OWN_TEXT = 'ul,ol,dl,dt,dd,label,button,input,select,textarea,th,td,caption,summary,small,cite,time,.sb-post-content,.sb-post-meta,.sb-empty';
+
+    /** The text elements a text colour reaches. It must not repaint the links inside a paragraph; a button's label and a link block's link are the links that follow it. */
+    public const COLOR_TEXT = ':is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,span,li,a.sb-button,a.sb-link,' . self::OWN_TEXT . ')';
+
     private static function typographyInheritCss(): string
     {
-        $text = ':is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,a,span,li)';
-        // A text colour must not repaint the links inside a paragraph; a button's label is the one link that follows it.
-        $colorText = ':is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,span,li,a.sb-button)';
+        $text = ':is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,a,span,li,' . self::OWN_TEXT . ')';
+        $colorText = self::COLOR_TEXT;
         $props = ['size' => 'font-size', 'color' => 'color', 'lh' => 'line-height', 'ls' => 'letter-spacing', 'ff' => 'font-family', 'fw' => 'font-weight', 'tt' => 'text-transform'];
         $css = '';
         foreach ($props as $mark => $prop) {
@@ -480,6 +487,10 @@ final class StudioStylesheet
             $sel  = $mark === 'color' ? $colorText : $text;
             $css .= $root . '>' . $sel . ',' . $root . '>:not(.sb-block)>' . $sel . ',' . $root . '>:not(.sb-block)>:not(.sb-block)>' . $sel
                 . '{' . $prop . ':inherit !important}';
+        }
+        // The accordion's header button sits deeper than the three levels above reach, and an accordion holds no nested blocks.
+        foreach ($props as $mark => $prop) {
+            $css .= '.sb-ty-' . $mark . ' :is(.sb-accordion__heading,.sb-accordion__button){' . $prop . ':inherit !important}';
         }
         return $css;
     }

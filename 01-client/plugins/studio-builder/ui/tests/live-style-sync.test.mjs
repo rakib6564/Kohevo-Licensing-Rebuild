@@ -70,7 +70,7 @@ test('an edit paints the node at once: classes swapped, inline style rebuilt, sc
   const working = docOf(block({ typography: { weight: 'normal', size: '2rem' }, padding: { top: '3rem' }, text_token: 'text.primary' }));
   const live = new Map();
   assert.equal(syncLiveStyles(canvas, server, working, tokens, live), 1);
-  assert.deepEqual(el.cls().sort(), ['sb-block', 'sb-font-normal', 'sb-fg--text-primary', 'sb-ty-fw', 'sb-ty-size', 'sbx-selected'].sort());
+  assert.deepEqual(el.cls().sort(), ['sb-block', 'sb-font-normal', 'sb-fg--text-primary', 'sb-ty-color', 'sb-ty-fw', 'sb-ty-size', 'sbx-selected'].sort());
   assert.equal(el.getAttribute('style'), '--sb-anim-duration:300ms;text-align:center;font-size:2rem');
   const sheet = canvas.getElementById('sbx-live-style');
   assert.match(sheet.textContent, /\[data-sb-node="blk_aaaaaaaaaaaaaaaaaaaaaaaa"\]\[data-sb-node\]\{padding-top:3rem\}/);

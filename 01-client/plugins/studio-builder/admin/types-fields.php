@@ -410,78 +410,51 @@ require SLATE_ROOT . '/admin/partials/header.php';
             </div>
         </div>
 
-        <div class="card" style="border-radius: 14px; border: 1px solid var(--sb-border); overflow: hidden; padding: 0;">
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
-                    <thead>
-                        <tr style="background: #f8fafc; border-bottom: 1px solid var(--sb-border);">
-                            <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Field Label</th>
-                            <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Key / Binding Token</th>
-                            <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Post Type</th>
-                            <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Field Type</th>
-                            <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Required</th>
-                            <th style="padding: 12px 18px; text-align: right; font-weight: 600; color: var(--sb-muted);">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($filteredFields)): ?>
-                            <tr>
-                                <td colspan="6" style="padding: 32px; text-align: center; color: var(--sb-muted);">
-                                    No custom fields found for this post type. Click "Add Meta Field" to create one.
-                                </td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($filteredFields as $f):
-                                $fId = (string) ($f['id'] ?? '');
-                                $fLabel = (string) ($f['label'] ?? '');
-                                $fKey = (string) ($f['key'] ?? '');
-                                $fPType = (string) ($f['post_type'] ?? 'portfolio');
-                                $fType = (string) ($f['type'] ?? 'text');
-                                $fReq = !empty($f['required']);
-                            ?>
-                                <tr style="border-bottom: 1px solid var(--sb-border);">
-                                    <td style="padding: 14px 18px; font-weight: 600; color: var(--sb-text);">
-                                        <?= e($fLabel) ?>
-                                    </td>
-                                    <td style="padding: 14px 18px; font-family: ui-monospace, monospace; color: var(--sb-accent);">
-                                        {{meta.<?= e($fKey) ?>}}
-                                    </td>
-                                    <td style="padding: 14px 18px;">
-                                        <span style="background: #f1f5f9; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; color: var(--sb-text);">
-                                            <?= e($fPType) ?>
-                                        </span>
-                                    </td>
-                                    <td style="padding: 14px 18px;">
-                                        <span style="border: 1px solid var(--sb-border); padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; color: var(--sb-muted);">
-                                            <?= e($fType) ?>
-                                        </span>
-                                    </td>
-                                    <td style="padding: 14px 18px;">
-                                        <?php if ($fReq): ?>
-                                            <span style="color: #ef4444; font-weight: 700; font-size: 0.8rem;">Yes</span>
-                                        <?php else: ?>
-                                            <span style="color: var(--sb-muted); font-size: 0.8rem;">Optional</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td style="padding: 14px 18px; text-align: right;">
-                                        <?php if ($canEdit): ?>
-                                            <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>" onsubmit="return confirm('Remove meta field <?= e($fLabel) ?>?');" style="margin: 0; display: inline;">
-                                                <?= csrf_field() ?>
-                                                <input type="hidden" name="_action" value="delete_meta_field">
-                                                <input type="hidden" name="field_id" value="<?= e($fId) ?>">
-                                                <button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444; padding: 4px 8px;" title="Delete Field">
-                                                    <?= sb_svg('trash', 12) ?>
-                                                </button>
-                                            </form>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+        <?php if (empty($filteredFields)): ?>
+            <div class="card" style="padding: 32px; text-align: center; color: var(--sb-muted);">
+                No custom fields found for this post type. Click "Add Meta Field" to create one.
             </div>
-        </div>
+        <?php else: ?>
+            <div class="data-list is-columnar" data-single-open>
+                <?php
+                slate_data_list_head(['main' => 'Field Label', 'value' => 'Post Type', 'badge' => 'Required']);
+                foreach ($filteredFields as $f) {
+                    $fId = (string) ($f['id'] ?? '');
+                    $fLabel = (string) ($f['label'] ?? '');
+                    $fKey = (string) ($f['key'] ?? '');
+                    $fPType = (string) ($f['post_type'] ?? 'portfolio');
+                    $fType = (string) ($f['type'] ?? 'text');
+                    $fReq = !empty($f['required']);
+
+                    $actions = '';
+                    if ($canEdit) {
+                        $actions = '<form method="POST" action="' . e(plugin_url('studio-builder', 'admin/types-fields.php')) . '" onsubmit="return confirm(\'Remove meta field ' . e($fLabel) . '?\');" style="margin: 0; display: inline;">'
+                            . csrf_field()
+                            . '<input type="hidden" name="_action" value="delete_meta_field">'
+                            . '<input type="hidden" name="field_id" value="' . e($fId) . '">'
+                            . '<button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444;" title="Delete Field">' . sb_svg('trash', 12) . ' Delete</button>'
+                            . '</form>';
+                    }
+
+                    slate_data_row([
+                        'avatar'       => $fLabel,
+                        'avatar_color' => 'accent',
+                        'title'        => $fLabel,
+                        'meta_html'    => '<code>{{meta.' . e($fKey) . '}}</code>',
+                        'value'        => $fPType,
+                        'badge'        => $fReq ? ['Required', 'danger'] : ['Optional', 'muted'],
+                        'detail'       => [
+                            'key'  => ['label' => 'Key / Binding Token', 'html' => '<code>{{meta.' . e($fKey) . '}}</code>'],
+                            'ptype' => ['label' => 'Post Type', 'value' => $fPType],
+                            'ftype' => ['label' => 'Field Type', 'value' => strtoupper($fType)],
+                        ],
+                        'actions'      => $actions,
+                    ]);
+                }
+                ?>
+            </div>
+            <?php slate_data_list_script(); ?>
+        <?php endif; ?>
     </div>
 
     <!-- Section 3: Dynamic Data Binding Documentation -->
