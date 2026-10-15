@@ -151,7 +151,10 @@ class StudioBuilder extends Plugin
             return false;
         }
         $runtime = StudioRuntimeFactory::build()->publicRuntime;
-        return self::send(self::publicResponse(static fn(?string $ifNoneMatch) => $runtime->handlePath((string) $path, $ifNoneMatch)));
+        // A browser is shown the sitemap as a readable page; `?format=xml` (the page's own link) always returns the XML.
+        $accept = isset($_SERVER['HTTP_ACCEPT']) && is_string($_SERVER['HTTP_ACCEPT']) && ($_GET['format'] ?? '') !== 'xml'
+            ? substr($_SERVER['HTTP_ACCEPT'], 0, 400) : null;
+        return self::send(self::publicResponse(static fn(?string $ifNoneMatch) => $runtime->handlePath((string) $path, $ifNoneMatch, $accept)));
     }
 
     /**

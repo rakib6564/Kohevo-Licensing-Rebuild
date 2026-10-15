@@ -171,27 +171,23 @@ unit('phase9c sitemap: the generator reads only published revisions — no seo_j
     }
 });
 
-unit('phase9c sitemap stylesheet: the sitemap names a relative stylesheet, which is fixed, well-formed and turns the urlset into a branded page', function (): void {
-    $entries = [['loc' => 'https://site.example/', 'lastmod' => '2026-10-01'], ['loc' => 'https://site.example/about', 'lastmod' => null]];
-    $plain = StudioSitemapService::xml($entries);
-    assert_true(!str_contains($plain, 'xml-stylesheet'), 'no stylesheet unless asked');
-    $styled = StudioSitemapService::xml($entries, \Slate\Module\StudioBuilder\Runtime\SitemapStylesheet::FILE);
-    assert_true(str_contains($styled, '<?xml-stylesheet type="text/xsl" href="sitemap.xsl"?>'), 'the instruction is a relative file name');
-    assert_true(!str_contains(StudioSitemapService::xml($entries, 'x" y'), 'xml-stylesheet'), 'a name with a quote or space is refused');
-    $doc = new DOMDocument();
-    assert_true($doc->loadXML($styled, LIBXML_NONET), 'the styled sitemap is still well-formed');
-    assert_eq(2, $doc->getElementsByTagName('url')->length);
-
-    $xsl = \Slate\Module\StudioBuilder\Runtime\SitemapStylesheet::xsl();
-    $sheet = new DOMDocument();
-    assert_true($sheet->loadXML($xsl, LIBXML_NONET), 'the stylesheet is well-formed XML');
-    assert_true(!preg_match('/<script|https?:\/\/(?!www\.w3\.org|www\.sitemaps\.org)/i', $xsl), 'no script and no external resource');
-    if (class_exists('XSLTProcessor')) {
-        $p = new XSLTProcessor();
-        $p->importStylesheet($sheet);
-        $html = (string) $p->transformToXml($doc);
-        assert_true(str_contains($html, 'Kohevo Studio'), 'branded');
-        assert_true(str_contains($html, '<span class="home">Home</span>'), 'the first entry is the home page');
-        assert_eq(2, substr_count($html, '<tr>') - 1, 'one row per url (and the header row)');
+unit('phase9c sitemap page: a browser is told apart from a crawler by Accept, and the page escapes everything', function (): void {
+    $browser = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
+    assert_true(\Slate\Module\StudioBuilder\Runtime\SitemapPage::prefersHtml($browser), 'a browser');
+    foreach ([null, '', '*/*', 'application/xml', 'text/xml, */*', 'application/xml, text/html;q=0.5'] as $accept) {
+        assert_true(!\Slate\Module\StudioBuilder\Runtime\SitemapPage::prefersHtml($accept), 'not a browser: ' . var_export($accept, true));
     }
+    $html = \Slate\Module\StudioBuilder\Runtime\SitemapPage::html([
+        ['loc' => 'https://site.example/', 'lastmod' => '2026-10-01'],
+        ['loc' => 'https://site.example/a?x=1&y="2"&z=<3>', 'lastmod' => null],
+    ], 'Site <b>', 'https://site.example/');
+    assert_true(str_contains($html, '<span class="home">Home</span>'), 'the home row is marked');
+    assert_eq(1, substr_count($html, 'class="home"'), 'only the home row');
+    assert_true(str_contains($html, 'a?x=1&amp;y=&quot;2&quot;&amp;z=&lt;3&gt;'), 'the address is escaped');
+    assert_true(str_contains($html, 'Site &lt;b&gt;') && !str_contains($html, 'Site <b>'), 'the site name is escaped');
+    assert_true(str_contains($html, '>2026-10-01<'), 'the date is shown');
+    $doc = new DOMDocument();
+    assert_true(@$doc->loadHTML($html), 'parses');
+    assert_eq(2, $doc->getElementsByTagName('tbody')->item(0)->getElementsByTagName('tr')->length, 'one row per page');
+    assert_true(str_contains(\Slate\Module\StudioBuilder\Runtime\SitemapPage::html([], 'S', 'https://site.example/'), 'No pages are published yet.'));
 });

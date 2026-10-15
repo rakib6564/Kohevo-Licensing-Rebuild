@@ -169,9 +169,9 @@ function sbs9_publish(StudioRuntime $rt, int $tenantId, StudioActor $actor, stri
 const SBS9_C = 303;
 const SBS9_SITE = 'https://site.example';
 
-function sbs9_file(StudioRuntime $rt, int $tenantId, string $path, ?string $ifNoneMatch = null): ?PublicResponse
+function sbs9_file(StudioRuntime $rt, int $tenantId, string $path, ?string $ifNoneMatch = null, ?string $accept = null): ?PublicResponse
 {
-    return $rt->tenants->runAs($tenantId, static fn() => $rt->publicRuntime->handlePath($path, $ifNoneMatch));
+    return $rt->tenants->runAs($tenantId, static fn() => $rt->publicRuntime->handlePath($path, $ifNoneMatch, $accept));
 }
 
 /** @return list<string> the <loc> values of a 200 sitemap, after asserting it is valid XML */
@@ -306,15 +306,30 @@ unit('phase9c integration: SEO settings, sitemap.xml, robots.txt and slug hygien
                 assert_eq(200, sbs9_file($rt, SBS9_A, '/sitemap.xml', '"' . str_repeat('0', 64) . '"')->status);
             });
 
-            unit('phase9c int 1b: the sitemap names the browser stylesheet, and the stylesheet is served as XSLT with the same headers', function () use ($rt): void {
-                $r = sbs9_file($rt, SBS9_A, '/sitemap.xml');
-                assert_true(str_contains($r->body, '<?xml-stylesheet type="text/xsl" href="sitemap.xsl"?>'), 'the sitemap points at sitemap.xsl');
-                $x = sbs9_file($rt, SBS9_A, '/sitemap.xsl');
-                assert_eq(200, $x->status);
-                assert_eq('text/xsl; charset=utf-8', $x->headers['Content-Type']);
-                assert_eq('nosniff', $x->headers['X-Content-Type-Options']);
-                assert_true(str_contains($x->body, 'Kohevo Studio'), 'the Kohevo page');
-                assert_eq(304, sbs9_file($rt, SBS9_A, '/sitemap.xsl', $x->headers['ETag'])->status, 'revalidates');
+            unit('phase9c int 1b: a browser gets the sitemap as a readable page, a crawler and ?format=xml get the XML, and the two never share a cache entry', function () use ($rt, $expectedA): void {
+                $browser = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
+                $page = sbs9_file($rt, SBS9_A, '/sitemap.xml', null, $browser);
+                assert_eq(200, $page->status);
+                assert_eq('text/html; charset=utf-8', $page->headers['Content-Type']);
+                assert_eq('Accept', $page->headers['Vary']);
+                assert_eq('noindex', $page->headers['X-Robots-Tag'], 'the readable page is not itself indexed');
+                assert_true(str_contains($page->body, 'Kohevo Studio'), 'branded');
+                foreach ($expectedA as $loc) {
+                    assert_true(str_contains($page->body, htmlspecialchars($loc, ENT_QUOTES)), "lists {$loc}");
+                }
+                assert_true(!str_contains($page->body, '<script'), 'no script');
+                assert_eq(304, sbs9_file($rt, SBS9_A, '/sitemap.xml', $page->headers['ETag'], $browser)->status, 'revalidates');
+
+                foreach (['*/*', 'application/xml, text/xml', null] as $crawler) {
+                    $xml = sbs9_file($rt, SBS9_A, '/sitemap.xml', null, $crawler);
+                    assert_eq('application/xml; charset=utf-8', $xml->headers['Content-Type'], 'a crawler gets XML: ' . var_export($crawler, true));
+                    assert_eq('Accept', $xml->headers['Vary']);
+                    assert_true(!isset($xml->headers['X-Robots-Tag']));
+                    assert_true($xml->headers['ETag'] !== $page->headers['ETag'], 'a different representation has its own ETag');
+                }
+                $raw = sbs9_file($rt, SBS9_A, '/sitemap.xml?format=xml', null, $browser);
+                assert_eq('application/xml; charset=utf-8', $raw->headers['Content-Type'], '?format=xml is the raw XML even for a browser');
+                assert_eq($expectedA, sbs9_locs($raw));
             });
 
             unit('phase9c int 2: every excluded state is excluded — draft-only, archived, unpublished, noindex, reserved/unreachable slug, shadowed landing, canonical elsewhere', function () use ($rt): void {
