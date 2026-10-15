@@ -364,7 +364,7 @@ final class DocumentRenderer
         if ($size) {
             $out[] = 'sb-ty-size';
         }
-        if ($set($typo['color'] ?? null) || $set($style['color'] ?? null)) {
+        if ($set($typo['color'] ?? null) || $set($style['color'] ?? null) || $set($style['text_token'] ?? null)) {
             $out[] = 'sb-ty-color';
         }
         if (isset($typo['line_height']) && StyleValueGuard::isLineHeight($typo['line_height'])) {
@@ -373,7 +373,7 @@ final class DocumentRenderer
         if (isset($typo['letter_spacing']) && is_string($typo['letter_spacing']) && StyleValueGuard::isLetterSpacing($typo['letter_spacing'])) {
             $out[] = 'sb-ty-ls';
         }
-        if ($set($typo['font_family'] ?? null)) {
+        if ($set($typo['font_family'] ?? null) || $set($style['font_token'] ?? null)) {
             $out[] = 'sb-ty-ff';
         }
         if (isset($typo['weight']) && in_array((string) $typo['weight'], CanonicalDocumentSchema::ALLOWED_FONT_WEIGHTS, true)) {

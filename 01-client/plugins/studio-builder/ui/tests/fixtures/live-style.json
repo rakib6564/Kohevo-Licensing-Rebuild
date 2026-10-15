@@ -962,7 +962,9 @@
                     "sb-fg--text-primary",
                     "sb-font--font-heading",
                     "sb-rad--radius-md",
-                    "sb-shd--shadow-md"
+                    "sb-shd--shadow-md",
+                    "sb-ty-color",
+                    "sb-ty-ff"
                 ],
                 "media": [],
                 "reduceMotion": false
@@ -979,7 +981,9 @@
             "expected": {
                 "scoped": [],
                 "inline": [],
-                "classes": [],
+                "classes": [
+                    "sb-ty-color"
+                ],
                 "media": [],
                 "reduceMotion": false
             }

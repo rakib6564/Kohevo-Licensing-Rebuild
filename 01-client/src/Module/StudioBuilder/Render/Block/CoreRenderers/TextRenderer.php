@@ -44,8 +44,11 @@ final class TextRenderer implements BlockRendererInterface
         $classes = [
             'sb-text',
             'sb-text--' . $size,
-            'sb-text--align-' . $align,
         ];
+        // `left` is the default, so it adds no class: a class on the paragraph would beat the Style tab's Alignment on the wrapper.
+        if ($align !== 'left') {
+            $classes[] = 'sb-text--align-' . $align;
+        }
 
         $colorToken = $scope->prop('color_token');
         if ($colorToken !== null) {
