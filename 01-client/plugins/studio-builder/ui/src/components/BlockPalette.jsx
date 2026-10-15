@@ -13,7 +13,7 @@ import { isOffered } from '../core/addPanel.mjs';
 import { ElementsPanel } from './ElementsPanel.jsx';
 import { ComponentsPanel } from './ComponentsPanel.jsx';
 import { AddSearchResults } from './AddSearchResults.jsx';
-import { IconPlus, IconSearch } from './Icons.jsx';
+import { IconImage, IconPlus, IconSearch } from './Icons.jsx';
 import { Pills } from './ui/index.js';
 import { mediaPickerAvailable, openMediaPicker } from '../core/mediaPicker.mjs';
 import { DRAG_TYPE_NEW, renderBlockIcon } from './blockIcons.jsx';

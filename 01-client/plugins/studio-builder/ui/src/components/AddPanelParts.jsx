@@ -6,7 +6,7 @@ import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { renderBlockIcon, DRAG_TYPE_NEW } from './blockIcons.jsx';
 import { t } from '../core/messages.mjs';
 import { Tile } from './ui/index.js';
-import { blockInsertState, isNewBlock, presetInsertState, reasonKey } from '../core/addPanel.mjs';
+import { blockInsertState, categoryLabel, isNewBlock, presetInsertState, reasonKey } from '../core/addPanel.mjs';
 
 /** The working document, the manifest and the primary selection: what insertion rules depend on. */
 export function useInsertContext() {
@@ -43,7 +43,7 @@ export function useWhenVisible(ref, callback) {
   }, [ref]);
 }
 
-export const blockCategoryLabel = (slug) => t(`block_cat_${slug}`);
+export const blockCategoryLabel = (slug) => categoryLabel(slug, t);
 
 /** A block tile: click or drag to insert, or disabled with the reason shown (not hidden in a tooltip). */
 export function BlockCard({ def, onInsert }) {
