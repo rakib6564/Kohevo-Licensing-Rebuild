@@ -221,7 +221,7 @@ final class FieldSchema implements \JsonSerializable
                 'default'  => array_key_exists('default', $field) ? $field['default'] : self::typeDefault($field),
             ];
 
-            foreach (['max_length', 'min_length', 'min', 'max', 'integer_only', 'allowed_values', 'max_items'] as $constraint) {
+            foreach (['max_length', 'min_length', 'min', 'max', 'integer_only', 'allowed_values', 'max_items', 'format'] as $constraint) {
                 if (array_key_exists($constraint, $field)) {
                     $item[$constraint] = $field[$constraint];
                 }

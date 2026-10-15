@@ -1037,6 +1037,7 @@ const EN = {
   field_integer: 'Enter a whole number.',
   field_too_small: 'This number is too small.',
   field_too_large: 'This number is too large.',
+  field_colour: 'Enter a colour such as #e4572e, or rgb(228 87 46).',
   field_url: 'Enter a safe address (https://…, /path, #anchor, mailto: or tel:).',
   field_link_label: 'A link needs a label.',
   field_media: 'Choose an image.',

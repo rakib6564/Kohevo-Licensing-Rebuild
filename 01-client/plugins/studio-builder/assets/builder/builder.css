@@ -3426,3 +3426,9 @@ html, body.sbx-body {
   .sbx-left .sbx-color__theme { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(84px, 38%) minmax(0, 1fr); align-items: center; column-gap: 10px; margin-top: 4px; }
   .sbx-left .sbx-color__theme .sbx-tp, .sbx-left .sbx-color__theme .sbx-tp__btn { width: 100%; }
 }
+
+/* A literal colour field: swatch, text, clear. */
+.sbx-colorfield { display: flex; align-items: center; gap: var(--sbx-s-2, 8px); min-width: 0; }
+.sbx-colorfield__swatch { flex: 0 0 auto; width: 32px; height: 32px; padding: 0; border: 1px solid var(--sbx-border); border-radius: var(--sbx-r-md); background: none; cursor: pointer; }
+.sbx-colorfield__swatch[data-empty="true"] { opacity: 0.45; }
+.sbx-colorfield__text { flex: 1 1 auto; min-width: 0; }

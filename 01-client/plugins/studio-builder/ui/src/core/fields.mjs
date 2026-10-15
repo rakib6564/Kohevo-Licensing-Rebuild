@@ -16,7 +16,18 @@ export const CONTROL = Object.freeze({
 });
 
 export function controlFor(field) {
+  if (field && field.type === 'string' && field.format === 'color') return 'color';
   return CONTROL[field && field.type] || null;
+}
+
+/** A colour the server accepts for a literal colour field: hex, or rgb/rgba/hsl/hsla with plain numbers. */
+export const COLOR_VALUE = /^(#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})|(rgb|rgba|hsl|hsla)\(\s*[0-9.%\s,/]{1,60}\))$/i;
+/** `#abc` -> `#aabbcc` for the browser's colour input; anything else (rgb(), alpha) has no swatch value. */
+export function swatchHex(value) {
+  const v = String(value || '').trim();
+  if (/^#[0-9a-f]{6}$/i.test(v)) return v.toLowerCase();
+  const m = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(v);
+  return m ? `#${m[1]}${m[1]}${m[2]}${m[2]}${m[3]}${m[3]}`.toLowerCase() : null;
 }
 
 /** Style keys → the token categories that make sense for them. */
@@ -67,6 +78,7 @@ export function hint(field, value) {
   switch (field.type) {
     case 'string':
     case 'text':
+      if (field.format === 'color' && !COLOR_VALUE.test(String(value).trim())) return 'field_colour';
       if (typeof field.max_length === 'number' && String(value).length > field.max_length) return 'field_too_long';
       if (typeof field.min_length === 'number' && String(value).length < field.min_length) return 'field_too_short';
       return null;

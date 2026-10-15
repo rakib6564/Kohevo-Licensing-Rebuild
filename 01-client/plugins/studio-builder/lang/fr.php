@@ -559,6 +559,7 @@ return [
     'studio_ui_field_integer' => 'Saisissez un nombre entier.',
     'studio_ui_field_too_small' => 'Ce nombre est trop petit.',
     'studio_ui_field_too_large' => 'Ce nombre est trop grand.',
+    'studio_ui_field_colour' => 'Saisissez une couleur comme #e4572e, ou rgb(228 87 46).',
     'studio_ui_field_url' => 'Saisissez une adresse sûre (https://…, /chemin, #ancre, mailto: ou tel:).',
     'studio_ui_field_link_label' => 'Un lien doit avoir un libellé.',
     'studio_ui_field_media' => 'Choisissez une image.',
