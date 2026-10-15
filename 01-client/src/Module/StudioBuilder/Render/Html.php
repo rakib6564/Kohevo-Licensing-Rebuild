@@ -73,13 +73,22 @@ final class Html
 
     /** The one class a highlight span carries; the only attribute a rich-text `span` may have. */
     public const HIGHLIGHT_CLASS = 'sb-hl';
+    /** A literal highlight colour: hex, or rgb/rgba/hsl/hsla with plain numbers — nothing that could close a declaration. Empty is allowed (no custom colour). */
+    public const HIGHLIGHT_COLOR_PATTERN = '/^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\(\s*[0-9.%\s,\/]{1,60}\))?$/';
+    public const HIGHLIGHT_WEIGHTS = ['normal', 'medium', 'bold'];
 
     /**
      * Escaped text with the FIRST occurrence of `$highlight` wrapped in a highlight span. An empty or absent
      * needle, or one that is not in the text, leaves the text escaped and unwrapped. The needle is matched as
      * plain text (never as markup) and every part is escaped separately.
      */
-    public static function highlighted(string $value, string $highlight): string
+    /**
+     * `$value` with the first occurrence of `$highlight` wrapped in a span.
+     *
+     * @param array{color_class?: string, color?: string, italic?: bool, weight?: string, underline?: bool} $look how the span looks
+     *        (all optional; the colour is a theme token's class or a checked literal, never raw author text)
+     */
+    public static function highlighted(string $value, string $highlight, array $look = []): string
     {
         $highlight = trim($highlight);
         $at = $highlight === '' ? false : mb_strpos($value, $highlight, 0, 'UTF-8');
@@ -87,9 +96,40 @@ final class Html
             return self::e($value);
         }
         $len = mb_strlen($highlight, 'UTF-8');
+
+        $classes = [self::HIGHLIGHT_CLASS];
+        if (!empty($look['italic'])) {
+            $classes[] = 'sb-hl--italic';
+        }
+        if (!empty($look['underline'])) {
+            $classes[] = 'sb-hl--underline';
+        }
+        if (in_array($look['weight'] ?? '', self::HIGHLIGHT_WEIGHTS, true)) {
+            $classes[] = 'sb-hl--w-' . $look['weight'];
+        }
+        $custom = (string) ($look['color'] ?? '');
+        $style = '';
+        if ($custom !== '' && preg_match(self::HIGHLIGHT_COLOR_PATTERN, $custom) === 1) {
+            $style = ' style="color:' . self::e($custom) . '"'; // a custom colour wins over a theme one
+        } elseif (($look['color_class'] ?? '') !== '') {
+            $classes[] = (string) $look['color_class'];
+        }
+
         return self::e(mb_substr($value, 0, $at, 'UTF-8'))
-            . '<span class="' . self::HIGHLIGHT_CLASS . '">' . self::e($highlight) . '</span>'
+            . '<span' . self::classAttr($classes) . $style . '>' . self::e($highlight) . '</span>'
             . self::e(mb_substr($value, $at + $len, null, 'UTF-8'));
+    }
+
+    /** The highlight's look from a block's props, ready for `highlighted()`. */
+    public static function highlightLook(\Slate\Module\StudioBuilder\Render\Block\BlockRenderScope $scope): array
+    {
+        return [
+            'color_class' => $scope->tokenClass('fg', $scope->prop('highlight_color_token')),
+            'color'       => $scope->string('highlight_color'),
+            'italic'      => $scope->bool('highlight_italic'),
+            'weight'      => $scope->string('highlight_weight', 'inherit'),
+            'underline'   => $scope->bool('highlight_underline'),
+        ];
     }
 
     /** Escaped multi-line text with newlines as `<br>`. */
