@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '11';
+    public const VERSION = '12';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -416,7 +416,9 @@ final class StudioStylesheet
             . '.sb-video-wrapper iframe,.sb-video-wrapper video{width:100%;height:100%;border:0}';
 
         foreach (self::WIDTHS as $name => $max) {
-            $css .= '.sb-w-' . $name . '{max-width:' . $max . ';margin-left:auto;margin-right:auto}';
+            // The three real widths follow the site's Layout tokens (Site settings); `full` is no limit.
+            $limit = $max === 'none' ? 'none' : 'var(--sb-layout-' . $name . ',' . $max . ')';
+            $css .= '.sb-w-' . $name . '{max-width:' . $limit . ';margin-left:auto;margin-right:auto}';
         }
         foreach (self::GAP as $name => $value) {
             $css .= '.sb-gap-' . $name . '{gap:' . $value . '}';

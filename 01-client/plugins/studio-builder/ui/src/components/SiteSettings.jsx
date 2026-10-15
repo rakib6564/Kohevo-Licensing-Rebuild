@@ -141,6 +141,7 @@ export function SiteSettingsForm({ onSaved, footer = null }) {
         return (
           <details key={g.id} className="sbx-ss__group" data-ss-group={g.id} open={g.id === 'colors' || g.id === 'fonts'}>
             <summary><span>{t(g.titleKey)}</span><span className="sbx-ss__count">{g.tokens.length}</span></summary>
+            {g.hintKey && <p className="sbx-hint">{t(g.hintKey)}</p>}
             {g.swatch && (
               <div className="sbx-ss__palette" data-testid="ss-palette" role="group" aria-label={t(g.titleKey)}>
                 {g.tokens.map((tk) => {

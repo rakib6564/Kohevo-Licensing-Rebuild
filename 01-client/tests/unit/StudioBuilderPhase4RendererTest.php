@@ -566,9 +566,29 @@ unit('phase4 stylesheet: the generic link colour never reaches .sb-button links,
     assert_true(str_contains($css, '.sb-body a:not(.sb-button){color:var(--sb-color-accent)}'), 'ordinary links keep the accent colour');
     assert_true(str_contains($css, '.sb-button--primary{background:var(--sb-surface-accent);color:var(--sb-text-inverse)}'), 'primary: inverse text on the accent surface');
     assert_true(str_contains($css, '.sb-button--secondary{background:var(--sb-surface-secondary);color:var(--sb-text-primary)'), 'secondary keeps its own text colour');
-    assert_eq('11', \Slate\Module\StudioBuilder\Render\StudioStylesheet::VERSION, 'stylesheet version bumped so compiled pages are rebuilt');
+    assert_eq('12', \Slate\Module\StudioBuilder\Render\StudioStylesheet::VERSION, 'stylesheet version bumped so compiled pages are rebuilt');
 });
 
 if (!empty($studioP4UnitStandalone)) {
     exit(unit_summary());
 }
+
+unit('layout width tokens: three sizes, safe lengths only, and the page width classes follow them', function (): void {
+    foreach (['layout.narrow' => '42rem', 'layout.normal' => '64rem', 'layout.wide' => '80rem'] as $ref => $default) {
+        assert_eq($default, ThemeResolver::DEFAULT_TOKENS[$ref], "{$ref} default");
+    }
+    $resolver = new ThemeResolver(null, static fn(): array => []);
+    $sanitize = new \ReflectionMethod(ThemeResolver::class, 'sanitizeValue');
+    $sanitize->setAccessible(true);
+    foreach (['72rem', '1200px', '60.5em'] as $ok) {
+        assert_eq($ok, $sanitize->invoke(null, 'layout.wide', $ok), "{$ok} is a usable width");
+    }
+    foreach (['100%', 'calc(100% - 2rem)', '0', '-5rem', '80', 'url(x)', '80rem;color:red', 'auto', '99999rem'] as $bad) {
+        assert_null($sanitize->invoke(null, 'layout.wide', $bad), "{$bad} is refused");
+    }
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    assert_true(str_contains($css, '.sb-w-wide{max-width:var(--sb-layout-wide,80rem)'), 'the Wide page width follows layout.wide');
+    assert_true(str_contains($css, '.sb-w-full{max-width:none'), 'Full stays no limit');
+    $theme = new \Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme('default', ['layout.wide' => '72rem'] + ThemeResolver::DEFAULT_TOKENS);
+    assert_true(str_contains($theme->rootCss(), '--sb-layout-wide:72rem'), 'a stored width reaches the page as a custom property');
+});
