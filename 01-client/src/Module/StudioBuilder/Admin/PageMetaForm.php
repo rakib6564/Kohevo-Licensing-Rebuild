@@ -68,7 +68,7 @@ final class PageMetaForm
             $out .= '</div>';
         }
         if ($canEdit) {
-            $out .= '<div class="sb-form-actions"><button type="submit" class="btn btn-primary"><span>' . $h(\__('save', 'Save changes')) . '</span></button></div>';
+            $out .= '<div class="sb-form-actions"><button type="submit" class="btn btn-primary"><span>' . $h(\__('studio_page_save_meta', 'Save custom fields')) . '</span></button></div>';
         }
         $out .= '</form><script>(function(){var f=document.getElementById("sb-meta-form");if(!f)return;var s=f.querySelector("#sb-ctype");'
             . 'function sync(){f.querySelectorAll(".sb-meta-group").forEach(function(g){var on=g.getAttribute("data-type")===s.value;g.hidden=!on;'

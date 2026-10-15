@@ -1552,6 +1552,7 @@ return [
     'studio_page_no_fields' => 'Ce type n’a pas encore de champs personnalisés.',
     'studio_page_meta_invalid' => 'Certains champs personnalisés demandent votre attention.',
     'studio_page_meta_saved' => 'Champs personnalisés enregistrés.',
+    'studio_page_save_meta' => 'Enregistrer les champs personnalisés',
     'studio_choose' => 'Choisir…',
     'studio_yes' => 'Oui',
 ];
