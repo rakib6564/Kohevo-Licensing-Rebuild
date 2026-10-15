@@ -669,10 +669,14 @@ unit('typography marks: a size set only for tablet or mobile still marks the blo
 unit('typography marks: the stylesheet makes the block text inherit, reaches three levels and never through a nested block', function (): void {
     \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
     $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
-    assert_true(str_contains($css, '.sb-ty-size>:is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,a,span,li),.sb-ty-size>:not(.sb-block)>'), 'the size rule is scoped to the block text');
+    assert_true(str_contains($css, '.sb-ty-size>:is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,a,span,li,'), 'the size rule is scoped to the block text');
+    assert_true(str_contains($css, '.sb-ty-size>:not(.sb-block)>:is('), 'and reaches one level down');
+    // Controls, table cells, lists and the theme blocks' own wrappers carry values of their own, so they follow too.
+    assert_true(str_contains($css, 'button,input,select,textarea,th,td,caption'), 'form controls and table cells inherit the typography');
+    assert_true(str_contains($css, 'a.sb-link,'), 'a link block follows the text colour');
     assert_true(str_contains($css, ':not(.sb-block)>:not(.sb-block)>:is('), 'it stops at nested blocks');
     foreach (['font-size', 'color', 'line-height', 'letter-spacing', 'font-family', 'font-weight', 'text-transform'] as $prop) {
         assert_true(str_contains($css, '{' . $prop . ':inherit !important}'), "{$prop} is inherited when marked");
     }
-    assert_true(str_contains($css, '.sb-ty-color>:is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,span,li,a.sb-button)'), 'a text colour does not repaint links, except a button label');
+    assert_true(str_contains($css, '.sb-ty-color>:is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,span,li,a.sb-button,a.sb-link,'), 'a text colour does not repaint links, except a button label');
 });

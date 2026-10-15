@@ -28,6 +28,13 @@ const TEXT_TYPES = new Set(['core.heading', 'core.text', 'core.rich_text', 'core
  */
 export const MEDIA_TYPES = new Set(['core.image', 'core.video', 'core.gallery']);
 
+/**
+ * Blocks that draw no text of their own (a line, a gap, an icon, a map): Typography would be a dead section, so it is
+ * hidden along with the media types. A map's background is hidden behind its frame, so it gets no Background either.
+ */
+export const NO_TEXT_TYPES = new Set(['core.divider', 'core.spacer', 'core.icon', 'core.map']);
+const NO_BACKGROUND_TYPES = new Set(['core.map']);
+
 /** Types shaped like a button or card: the surface (background, border) is what an author edits first. */
 const SURFACE_TYPES = new Set(['core.button', 'core.card']);
 
@@ -40,8 +47,8 @@ export const alignTitleKey = (ctx) => (isContainer(ctx) ? 'align_text' : (hasTex
 
 const isContainer = (ctx) => !!ctx.def && ctx.def.allows_children === true;
 
-/** Where a surface-type section lives: Style for a container or surface block, Advanced for everything else. */
-const surfaceTab = (ctx) => (isContainer(ctx) || SURFACE_TYPES.has(ctx.node.type) ? 'style' : 'advanced');
+/** Background and border are how a block looks, so they live under Style for every block (not buried in Advanced). */
+const surfaceTab = () => 'style';
 
 /**
  * Sections in display order, laid out like the reference editors: Content (what it says, and how a container
@@ -58,8 +65,8 @@ export const SECTIONS = Object.freeze([
   { id: 'layout', tab: (ctx) => (isContainer(ctx) ? 'content' : 'advanced'), titleKey: 'section_layout', titleFor: (ctx) => (isContainer(ctx) ? 'section_flex_grid' : 'section_layout'), keywords: ['flex', 'grid', 'display', 'order', 'grow', 'shrink', 'basis'], appliesTo: (ctx) => has(ctx, 'layout'), summary: (ctx) => layoutSummary(ctx.style.layout), openFor: () => false },
 
   { id: 'align', tab: 'style', titleKey: 'align', titleFor: alignTitleKey, appliesTo: (ctx) => has(ctx, 'align'), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
-  { id: 'typography', tab: 'style', titleKey: 'typography', appliesTo: (ctx) => (has(ctx, 'typography') || has(ctx, 'color')) && !MEDIA_TYPES.has(ctx.node.type), summary: (ctx) => typographySummary(ctx.style), openFor: (ctx) => TEXT_TYPES.has(ctx.node.type) },
-  { id: 'background', tab: surfaceTab, titleKey: 'background_label', appliesTo: (ctx) => has(ctx, 'background'), summary: (ctx) => backgroundSummary(ctx.style.background), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
+  { id: 'typography', tab: 'style', titleKey: 'typography', appliesTo: (ctx) => (has(ctx, 'typography') || has(ctx, 'color')) && !MEDIA_TYPES.has(ctx.node.type) && !NO_TEXT_TYPES.has(ctx.node.type), summary: (ctx) => typographySummary(ctx.style), openFor: (ctx) => TEXT_TYPES.has(ctx.node.type) },
+  { id: 'background', tab: surfaceTab, titleKey: 'background_label', appliesTo: (ctx) => has(ctx, 'background') && !NO_BACKGROUND_TYPES.has(ctx.node.type), summary: (ctx) => backgroundSummary(ctx.style.background), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
   { id: 'border', tab: surfaceTab, titleKey: 'border', appliesTo: (ctx) => has(ctx, 'border'), summary: (ctx) => borderSummary(ctx.style.border), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
   { id: 'shadow', tab: 'style', titleKey: 'box_shadow', appliesTo: (ctx) => has(ctx, 'shadow'), summary: (ctx) => (typeof ctx.style.shadow === 'string' ? ctx.style.shadow : (ctx.style.shadow ? '…' : '')), openFor: () => false },
   { id: 'dimensions', tab: (ctx) => (MEDIA_TYPES.has(ctx.node.type) || isContainer(ctx) ? 'style' : 'advanced'), titleKey: 'dimensions_label', appliesTo: (ctx) => has(ctx, 'dimensions'), summary: (ctx) => dimensionsSummary(ctx.style.dimensions), openFor: (ctx) => ctx.node.type === 'core.image' || isContainer(ctx) },

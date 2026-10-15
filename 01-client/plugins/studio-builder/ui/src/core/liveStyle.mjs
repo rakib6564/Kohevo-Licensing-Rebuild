@@ -259,10 +259,10 @@ export function typographyMarkers(block) {
     size = size || (typeof v === 'string' && isLength(v));
   }
   if (size) out.push('sb-ty-size');
-  if (set(typo.color) || set(style.color)) out.push('sb-ty-color');
+  if (set(typo.color) || set(style.color) || set(style.text_token)) out.push('sb-ty-color');
   if (typo.line_height !== undefined && typo.line_height !== null && isLineHeight(typo.line_height)) out.push('sb-ty-lh');
   if (typeof typo.letter_spacing === 'string' && isLetterSpacing(typo.letter_spacing)) out.push('sb-ty-ls');
-  if (set(typo.font_family)) out.push('sb-ty-ff');
+  if (set(typo.font_family) || set(style.font_token)) out.push('sb-ty-ff');
   if (typo.weight !== undefined && FONT_WEIGHTS.includes(String(typo.weight))) out.push('sb-ty-fw');
   if (typo.transform !== undefined && TEXT_TRANSFORMS.includes(String(typo.transform))) out.push('sb-ty-tt');
   return out;

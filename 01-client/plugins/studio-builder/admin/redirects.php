@@ -156,73 +156,52 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </form>
     </div>
 
-    <!-- Redirects Table -->
-    <div class="card" style="border-radius: 16px; border: 1px solid var(--sb-border); overflow: hidden; padding: 0; margin-bottom: 32px;">
-        <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
-                <thead>
-                    <tr style="background: #f8fafc; border-bottom: 1px solid var(--sb-border);">
-                        <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Source URL</th>
-                        <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Target Destination</th>
-                        <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Type</th>
-                        <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Notes</th>
-                        <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Created</th>
-                        <th style="padding: 12px 18px; text-align: right; font-weight: 600; color: var(--sb-muted);">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($redirects)): ?>
-                        <tr>
-                            <td colspan="6" style="padding: 36px; text-align: center; color: var(--sb-muted);">
-                                No redirect rules configured. Click "Add Redirect Rule" to map legacy URLs or vanity paths.
-                            </td>
-                        </tr>
-                    <?php else: ?>
-                        <?php foreach ($redirects as $rule):
-                            $rId = (string) ($rule['id'] ?? '');
-                            $from = (string) ($rule['from'] ?? '');
-                            $to = (string) ($rule['to'] ?? '');
-                            $code = (int) ($rule['code'] ?? 301);
-                            $notes = (string) ($rule['notes'] ?? '—');
-                            $createdAt = (string) ($rule['created_at'] ?? '');
-                        ?>
-                            <tr style="border-bottom: 1px solid var(--sb-border);">
-                                <td style="padding: 14px 18px; font-family: monospace; font-weight: 600; color: var(--sb-text);">
-                                    <?= e($from) ?>
-                                </td>
-                                <td style="padding: 14px 18px; font-family: monospace; color: var(--sb-accent);">
-                                    <?= e($to) ?>
-                                </td>
-                                <td style="padding: 14px 18px;">
-                                    <span style="background: <?= $code === 301 ? '#10b98115' : '#6366f115' ?>; color: <?= $code === 301 ? '#10b981' : '#6366f1' ?>; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">
-                                        <?= $code ?>
-                                    </span>
-                                </td>
-                                <td style="padding: 14px 18px; color: var(--sb-muted);">
-                                    <?= e($notes) ?>
-                                </td>
-                                <td style="padding: 14px 18px; font-size: 0.8rem; color: var(--sb-muted); white-space: nowrap;">
-                                    <?= e($createdAt !== '' ? date('M j, Y', strtotime($createdAt)) : '—') ?>
-                                </td>
-                                <td style="padding: 14px 18px; text-align: right; white-space: nowrap;">
-                                    <?php if ($canEdit): ?>
-                                        <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/redirects.php')) ?>" onsubmit="return confirm('Remove redirect rule for <?= e($from) ?>?');" style="margin: 0; display: inline;">
-                                            <?= csrf_field() ?>
-                                            <input type="hidden" name="_action" value="delete_redirect">
-                                            <input type="hidden" name="rule_id" value="<?= e($rId) ?>">
-                                            <button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444; padding: 4px 8px;" title="Delete rule">
-                                                <?= sb_svg('trash', 12) ?>
-                                            </button>
-                                        </form>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+    <!-- Redirect rules (shared Kohevo expandable data rows) -->
+    <?php if (empty($redirects)): ?>
+        <div class="card" style="padding: 36px; text-align: center; color: var(--sb-muted); margin-bottom: 32px;">
+            No redirect rules configured. Click "Add Redirect Rule" to map legacy URLs or vanity paths.
         </div>
-    </div>
+    <?php else: ?>
+        <div class="data-list is-columnar" data-single-open style="margin-bottom: 32px;">
+            <?php
+            slate_data_list_head(['main' => 'Source URL', 'value' => 'Target', 'badge' => 'Type']);
+            foreach ($redirects as $rule) {
+                $rId = (string) ($rule['id'] ?? '');
+                $from = (string) ($rule['from'] ?? '');
+                $to = (string) ($rule['to'] ?? '');
+                $code = (int) ($rule['code'] ?? 301);
+                $notes = (string) ($rule['notes'] ?? '');
+                $createdAt = (string) ($rule['created_at'] ?? '');
+
+                $actions = '';
+                if ($canEdit) {
+                    $actions = '<form method="POST" action="' . e(plugin_url('studio-builder', 'admin/redirects.php')) . '" onsubmit="return confirm(\'Remove redirect rule for ' . e($from) . '?\');" style="margin: 0; display: inline;">'
+                        . csrf_field()
+                        . '<input type="hidden" name="_action" value="delete_redirect">'
+                        . '<input type="hidden" name="rule_id" value="' . e($rId) . '">'
+                        . '<button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444;" title="Delete rule">' . sb_svg('trash', 12) . ' Delete</button>'
+                        . '</form>';
+                }
+
+                slate_data_row([
+                    'avatar'       => (string) $code,
+                    'avatar_color' => $code === 301 ? 'success' : 'info',
+                    'title'        => $from,
+                    'meta'         => '→ ' . $to,
+                    'value'        => $to,
+                    'badge'        => [(string) $code, $code === 301 ? 'active' : 'info'],
+                    'detail'       => [
+                        'to'      => ['label' => 'Target Destination', 'html' => '<code>' . e($to) . '</code>'],
+                        'notes'   => ['label' => 'Notes', 'value' => $notes !== '' ? $notes : '—', 'muted' => $notes === ''],
+                        'created' => ['label' => 'Created', 'value' => $createdAt !== '' ? date('M j, Y', strtotime($createdAt)) : '—'],
+                    ],
+                    'actions'      => $actions,
+                ]);
+            }
+            ?>
+        </div>
+        <?php slate_data_list_script(); ?>
+    <?php endif; ?>
 </div>
 
 <?php require SLATE_ROOT . '/admin/partials/footer.php'; ?>
