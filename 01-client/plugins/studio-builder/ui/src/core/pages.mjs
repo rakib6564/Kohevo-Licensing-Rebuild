@@ -9,8 +9,18 @@ export const NAVIGABLE_PAGE_TYPES = ['page', 'landing'];
 export const listablePages = (pages) => asList(pages).filter((p) => p && NAVIGABLE_PAGE_TYPES.includes(p.page_type) && p.status !== 'archived');
 
 /** A header or footer is shown on a real page when previewed: the pages it can sit on, homepage first, then by title. */
+/** What a page's visitor preview is shown with: a page for a header, footer or single template; a sample request for an archive, search or 404. */
+const TEMPLATE_KINDS = { single: 'single', archive: 'archive', search: 'search', 404: '404', not_found: '404' };
+export function previewKind(page, settings) {
+  if (!page) return null;
+  if (['header_partial', 'footer_partial'].includes(page.page_type)) return 'chrome';
+  const type = settings && typeof settings.template_type === 'string' ? settings.template_type : '';
+  return TEMPLATE_KINDS[type] || null;
+}
+
 export const isChromePartial = (page) => !!page && ['header_partial', 'footer_partial'].includes(page.page_type);
 export const previewHostPages = (pages) => listablePages(pages)
+  .filter((p) => !String(p.slug).startsWith('template-')) // a Theme Builder template is not a page to show a header on
   .slice()
   .sort((a, b) => (b.route_mode === 'homepage') - (a.route_mode === 'homepage') || String(a.title).localeCompare(String(b.title)));
 

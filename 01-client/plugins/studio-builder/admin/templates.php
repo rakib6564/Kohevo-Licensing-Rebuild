@@ -232,7 +232,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'schema_version'     => CanonicalDocumentSchema::SCHEMA_VERSION,
                         'document_json'      => CanonicalJson::encode($starterDoc),
                         'is_system'          => 0,
-                        'created_by'         => (int) (Auth::id() ?? 1),
+                        'created_by'         => (int) (Auth::userId() ?? 1),
                         'created_at'         => date('Y-m-d H:i:s'),
                         'updated_at'         => date('Y-m-d H:i:s'),
                     ]);
@@ -259,8 +259,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'published_revision_id'    => null,
                         'seo_json'                 => json_encode(['noindex' => true]),
                         'settings_json'            => CanonicalJson::encode($pageSettings),
-                        'created_by'               => (int) (Auth::id() ?? 1),
-                        'updated_by'               => (int) (Auth::id() ?? 1),
+                        'created_by'               => (int) (Auth::userId() ?? 1),
+                        'updated_by'               => (int) (Auth::userId() ?? 1),
                         'created_at'               => date('Y-m-d H:i:s'),
                         'updated_at'               => date('Y-m-d H:i:s'),
                     ]);
@@ -275,7 +275,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'document_json'      => CanonicalJson::encode($starterDoc),
                         'summary'            => "Theme template created: {$name} ({$uiType})",
                         'parent_revision_id' => null,
-                        'created_by'         => (int) (Auth::id() ?? 1),
+                        'created_by'         => (int) (Auth::userId() ?? 1),
                         'created_at'         => date('Y-m-d H:i:s'),
                     ]);
 
@@ -331,9 +331,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $templateId = (int) ($_POST['template_id'] ?? 0);
             if ($templateId > 0) {
                 try {
+                    $doomed = Database::row("SELECT template_key FROM studiobuilder_templates WHERE tenant_id = ? AND id = ? AND is_system = 0", [$tenantId, $templateId]);
                     Database::delete('studiobuilder_templates', 'tenant_id = ? AND id = ? AND is_system = 0', [$tenantId, $templateId]);
-                    // Clean up linked backing page and revisions
-                    $backingPage = Database::row("SELECT id FROM studiobuilder_pages WHERE tenant_id = ? AND settings_json LIKE ?", [$tenantId, '%"template_id":' . $templateId . '%']);
+                    // Clean up linked backing page and revisions (found by the link written at creation, or by its slug once published)
+                    $backingPage = Database::row("SELECT id FROM studiobuilder_pages WHERE tenant_id = ? AND (settings_json LIKE ? OR slug = ?)", [$tenantId, '%"template_id":' . $templateId . '%', 'template-' . (string) ($doomed['template_key'] ?? "\0")]);
                     if ($backingPage) {
                         $pId = (int) $backingPage['id'];
                         Database::delete('studiobuilder_revisions', 'tenant_id = ? AND page_id = ?', [$tenantId, $pId]);
@@ -416,11 +417,13 @@ $templates = array_filter($allTemplates, static function(array $t) use ($typeFil
     return true;
 });
 
-// Fetch backing pages to link visual builder and show real publish status
+// Fetch backing pages to link visual builder and show real publish status. Publishing rewrites a page's settings from its
+// document, which drops the `template_id` link written at creation, so a page is also found by its `template-<key>` slug.
 $pagesMap = [];
 $pagesInfo = [];
+$pagesByKey = [];
 try {
-    $tplPages = Database::all("SELECT id, slug, title, page_type, status, published_revision_id, settings_json FROM studiobuilder_pages WHERE tenant_id = ? AND settings_json LIKE '%is_theme_template%'", [$tenantId]);
+    $tplPages = Database::all("SELECT id, slug, title, page_type, status, published_revision_id, settings_json FROM studiobuilder_pages WHERE tenant_id = ? AND (settings_json LIKE '%is_theme_template%' OR slug LIKE 'template-%')", [$tenantId]);
     foreach ($tplPages as $p) {
         $meta = json_decode((string) ($p['settings_json'] ?? '{}'), true) ?: [];
         $tid = (int) ($meta['template_id'] ?? 0);
@@ -428,10 +431,14 @@ try {
             $pagesMap[$tid] = (int) $p['id'];
             $pagesInfo[$tid] = $p;
         }
+        if (str_starts_with((string) $p['slug'], 'template-')) {
+            $pagesByKey[substr((string) $p['slug'], 9)] = $p;
+        }
     }
 } catch (\Throwable $e) {
     $pagesMap = [];
     $pagesInfo = [];
+    $pagesByKey = [];
 }
 
 // Portfolio page ID for nav
@@ -565,8 +572,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 $tCat = (string) ($tpl['category'] ?? '');
                 $tDesc = (string) ($tpl['description'] ?? '');
                 $isSys = (bool) ($tpl['is_system'] ?? false);
-                $backingPageId = $pagesMap[$tid] ?? null;
-                $pageRow = $pagesInfo[$tid] ?? null;
+                $byKey = $pagesByKey[(string) ($tpl['template_key'] ?? '')] ?? null;
+                $backingPageId = $pagesMap[$tid] ?? ($byKey ? (int) $byKey['id'] : null);
+                $pageRow = $pagesInfo[$tid] ?? $byKey;
                 $isPublished = $pageRow && (($pageRow['status'] ?? '') === 'published') && !empty($pageRow['published_revision_id']);
 
                 $displayType = match(true) {

@@ -2219,6 +2219,7 @@ html, body.sbx-body {
 .sbx-visitor__bar-right { display: flex; gap: 6px; margin-left: auto; }
 .sbx-visitor__host { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-size: var(--sbx-fs-sm); color: var(--sbx-text-soft); }
 .sbx-visitor__host select { max-width: 200px; min-width: 0; }
+.sbx-visitor__host input { width: 130px; min-width: 0; }
 .sbx-visitor__note {
   display: flex;
   align-items: center;

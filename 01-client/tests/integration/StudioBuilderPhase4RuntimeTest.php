@@ -603,6 +603,16 @@ unit('phase4 integration: server renderer, preview and public runtime (real MySQ
                 assert_throws(StudioNotFoundException::class, static fn() => $rt->tenants->runAs(SBP4_TENANT_B, static fn() => $rt->app->renderPreview($viewer, $headerId, null, $S->aboutB)), 'tenant B cannot reach tenant A\'s header');
                 assert_true(!str_contains(sbp4_public($rt, SBP4_TENANT_A, '/about')->body, 'Alpha Header DRAFT'), 'the preview left the public page alone');
 
+                // A template is previewed with a sample of the request it gets on the site.
+                [$archiveId] = sbp4_publish_page($rt, SBP4_TENANT_A, $publisher, 'theme-archive-t', sbp4_doc([sbp4_block('theme.archive_title', ['level' => 'h1'])], 'system', ['template_type' => 'archive']), 'system');
+                $plainArchive = $rt->tenants->runAs(SBP4_TENANT_A, static fn() => $rt->app->renderPreview($viewer, $archiveId));
+                assert_true(str_contains($plainArchive->html, 'Category: Sample</h1>'), 'without a sample the archive title shows a sample category');
+                $sampled = $rt->tenants->runAs(SBP4_TENANT_A, static fn() => $rt->app->renderPreview($viewer, $archiveId, null, null, ['archive_type' => 'tag', 'term' => 'Dev', 'category' => 'ignored', 'is_404' => '1']));
+                assert_true(str_contains($sampled->html, 'Tag: #Dev</h1>'), 'the archive title shows the sample archive type and term');
+                assert_true(!str_contains($sampled->html, 'ignored'), 'a sample cannot name an attribute of its own');
+                $notATemplate = $rt->tenants->runAs(SBP4_TENANT_A, static fn() => $rt->app->renderPreview($viewer, $S->aboutA, null, null, ['archive_type' => 'tag', 'term' => 'Dev']));
+                assert_true(!str_contains($notATemplate->html, 'Tag: #Dev'), 'an ordinary page ignores a sample');
+
                 $hidden = sbp4_doc([sbp4_heading('Bare page')], 'page', ['header_mode' => 'hidden', 'footer_mode' => 'hidden']);
                 sbp4_publish_page($rt, SBP4_TENANT_A, $publisher, 'bare', $hidden);
                 $bare = sbp4_public($rt, SBP4_TENANT_A, '/bare')->body;

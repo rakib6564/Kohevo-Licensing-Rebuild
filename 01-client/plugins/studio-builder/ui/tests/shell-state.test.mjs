@@ -28,6 +28,9 @@ test('visitor preview targets the authorized preview endpoint for this page', ()
   assert.equal(visitorPreviewUrl({ previewUrl: '/p/preview.php', pageId: 7 }), '/p/preview.php?page=7');
   assert.equal(visitorPreviewUrl({ previewUrl: '/p/preview.php', pageId: 7 }, 12), '/p/preview.php?page=7&as_page=12');
   assert.equal(visitorPreviewUrl({ previewUrl: '/p/preview.php', pageId: 7 }, 0), '/p/preview.php?page=7');
+  assert.equal(visitorPreviewUrl({ previewUrl: '/p/preview.php', pageId: 7 }, 0, { archive: 'tag', term: 'Dev & co' }), '/p/preview.php?page=7&archive=tag&term=Dev%20%26%20co');
+  assert.equal(visitorPreviewUrl({ previewUrl: '/p/preview.php', pageId: 7 }, 0, { search: 'kohevo' }), '/p/preview.php?page=7&q=kohevo');
+  assert.equal(visitorPreviewUrl({ previewUrl: '/p/preview.php', pageId: 7 }, 0, { term: '' }), '/p/preview.php?page=7');
 });
 
 test('rangeIds is inclusive, order-independent and tolerant of a missing anchor', () => {

@@ -124,6 +124,7 @@ use Slate\Module\StudioBuilder\Service\StudioRevisionService;
 use Slate\Module\StudioBuilder\Service\StudioTemplateService;
 use Slate\Module\StudioBuilder\Service\StudioThemeService;
 use Slate\Module\StudioBuilder\StudioPermissions;
+use Slate\Module\StudioBuilder\Theme\TemplatePreviewContext;
 use Slate\Data\Database;
 use Slate\Services\Audit\AuditLog;
 use Slate\Services\Licensing\EntitlementService;
@@ -1126,27 +1127,43 @@ final class StudioApplicationService
      * revision id is never rendered on its own authority. Read-only: no
      * revision, compilation, audit row or any other write is produced.
      */
-    public function renderPreview(StudioActor $actor, int $pageId, ?int $revisionId = null, ?int $asPageId = null): RenderResult
+    public function renderPreview(StudioActor $actor, int $pageId, ?int $revisionId = null, ?int $asPageId = null, array $sample = []): RenderResult
     {
         $tenantId = $this->authorize($actor, StudioPermissions::VIEW);
         $renderer = $this->requireRenderer();
         [$page, $revision] = $this->loadPageRevision($pageId, $revisionId);
+        $plain = static fn(array $attributes = []) => RenderContext::forPreview($tenantId, $renderer->siteContext(), $actor, null, $attributes);
+
+        // A single, archive, search or 404 template is previewed with a sample of the request it will get on the site.
+        $decoded  = json_decode((string) $revision['document_json'], true);
+        $settings = is_array($decoded) && is_array($decoded['settings'] ?? null) ? $decoded['settings'] : [];
+        $kind     = TemplatePreviewContext::kind(is_string($settings['template_type'] ?? null) ? $settings['template_type'] : '', $page->slug);
+
         if ($asPageId === null) {
-            return $renderer->renderRevision($page, $revision, RenderContext::forPreview($tenantId, $renderer->siteContext(), $actor));
+            return $renderer->renderRevision($page, $revision, $plain($kind === null ? [] : TemplatePreviewContext::attributes($kind, $sample, null, $renderer->siteContext())));
+        }
+
+        // A single template shown for one real page of the tenant.
+        if ($kind === 'single') {
+            $row = $this->pageRepo->find($asPageId);
+            if ($row === null || !in_array((string) ($row['page_type'] ?? ''), ChromeResolver::CHROMED_PAGE_TYPES, true)) {
+                throw new StudioNotFoundException('That page cannot be shown in a single template.', ['page_id' => $asPageId]);
+            }
+            return $renderer->renderRevision($page, $revision, $plain(TemplatePreviewContext::attributes('single', $sample, $row, $renderer->siteContext())));
         }
 
         // "Preview as a page": the header or footer being edited (its saved draft, or the revision asked for), shown on a
         // real page. Both pages are looked up inside the tenant; the page shown must be a page that gets chrome.
         $region = ['header_partial' => 'header', 'footer_partial' => 'footer'][$page->pageType] ?? null;
         if ($region === null) {
-            throw new StudioNotFoundException('Only a header or a footer can be previewed on another page.', ['page_id' => $pageId]);
+            throw new StudioNotFoundException('Only a header, a footer or a single template can be previewed on another page.', ['page_id' => $pageId]);
         }
         [$host, $hostRevision] = $this->loadPageRevision($asPageId, null);
         if (!in_array($host->pageType, ChromeResolver::CHROMED_PAGE_TYPES, true)) {
             throw new StudioNotFoundException('That page does not carry a header or a footer.', ['page_id' => $asPageId]);
         }
         $override = [$region => ChromeSource::partial((int) $revision['id'], (string) $revision['document_json'])];
-        return $renderer->renderRevision($host, $hostRevision, RenderContext::forPreview($tenantId, $renderer->siteContext(), $actor, null, ['chrome_override' => $override]));
+        return $renderer->renderRevision($host, $hostRevision, $plain(['chrome_override' => $override]));
     }
 
     /**

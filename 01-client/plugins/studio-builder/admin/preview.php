@@ -4,7 +4,8 @@
  *
  *   GET /plugins/studio-builder/admin/preview.php?page=<id>[&revision=<id>][&as_page=<id>]
  *
- * `as_page` (header/footer only): show THAT page with this header or footer swapped in.
+ * `as_page` (header/footer): show THAT page with this header or footer swapped in; (single template): show the
+ * template for that page. `archive`+`term` (archive template) and `q` (search template) are sample request values.
  *
  * A thin HTTP adapter over StudioApplicationService::renderPreview(), which
  * enforces, in order: active tenant -> authenticated actor -> studio-builder
@@ -44,13 +45,21 @@ $asPageId = isset($_GET['as_page'])
     ? filter_var($_GET['as_page'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])
     : null;
 
+// A sample for a template's preview: archive type and term, or search words. Plain strings; the service cuts them.
+$sample = [];
+foreach (['archive_type' => 'archive', 'term' => 'term', 'search_query' => 'q'] as $key => $param) {
+    if (isset($_GET[$param]) && is_string($_GET[$param])) {
+        $sample[$key] = $_GET[$param];
+    }
+}
+
 if ($pageId === false || $pageId === null || $revisionId === false || $asPageId === false) {
     StudioHttpResponder::sendAuthoringError(404);
     exit;
 }
 
 try {
-    $result = StudioRuntimeFactory::build()->app->renderPreview(StudioActor::fromCurrentSession(), $pageId, $revisionId, $asPageId);
+    $result = StudioRuntimeFactory::build()->app->renderPreview(StudioActor::fromCurrentSession(), $pageId, $revisionId, $asPageId, $sample);
     StudioHttpResponder::sendRender($result);
 } catch (StudioException $e) {
     if ($e->httpStatus() >= 500) {

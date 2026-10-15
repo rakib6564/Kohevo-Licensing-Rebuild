@@ -10,23 +10,47 @@ import { useEditor, useEngineState } from './EditorContext.jsx';
 import { STATUS } from '../core/sync.mjs';
 import { VIEWPORTS } from '../core/viewport.mjs';
 import { visitorPreviewUrl } from '../core/shellState.mjs';
-import { isChromePartial, previewHostPages } from '../core/pages.mjs';
+import { previewKind, previewHostPages } from '../core/pages.mjs';
 import { t } from '../core/messages.mjs';
 import { IconArrowLeft, IconExternalLink } from './Icons.jsx';
+
+/** A text box that reloads the preview when it is left or Enter is pressed, not on every key. */
+function SampleText({ label, testId, value, onCommit }) {
+  const [text, setText] = useState(value);
+  const commit = () => { if (text.trim() !== value) onCommit(text.trim()); };
+  return (
+    <label>
+      <span>{label}</span>{' '}
+      <input
+        type="text"
+        data-testid={testId}
+        maxLength={191}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === 'Enter') commit(); }}
+      />
+    </label>
+  );
+}
 
 export const VisitorPreview = memo(function VisitorPreview({ viewportKey, onViewport, onExit, onSave }) {
   const { boot, viewport, transport } = useEditor();
   const page = useEngineState((s) => s.page);
+  const working = useEngineState((s) => s.working);
   const revisionId = useEngineState((s) => (s.revision ? s.revision.id : 0));
   const pendingCount = useEngineState((s) => s.pending.length);
   const status = useEngineState((s) => s.status);
   const [reloads, setReloads] = useState(0);
   const [loading, setLoading] = useState(true);
   const [stage, setStage] = useState({ width: 0, height: 0 });
-  // A header or footer on its own is only a strip: it is shown on a real page, chosen here (kept in memory only).
-  const partial = isChromePartial(page);
+  // A header, footer or single template on its own is only a strip: it is shown on a real page, chosen here. An archive,
+  // a search or a 404 is shown with a sample of the request it gets on the site. Both choices live in memory only.
+  const kind = previewKind(page, working && working.settings);
+  const needsPage = kind === 'chrome' || kind === 'single';
   const [hosts, setHosts] = useState(null);
   const [hostId, setHostId] = useState(0);
+  const [sample, setSample] = useState({ archive: 'category', term: 'News', search: 'kohevo' });
   const stageRef = useRef(null);
 
   useEffect(() => {
@@ -41,7 +65,7 @@ export const VisitorPreview = memo(function VisitorPreview({ viewportKey, onView
   }, []);
 
   useEffect(() => {
-    if (!partial || !transport || typeof transport.pages !== 'function') return undefined;
+    if (!needsPage || !transport || typeof transport.pages !== 'function') return undefined;
     let alive = true;
     transport.pages().then((res) => {
       if (!alive) return;
@@ -50,15 +74,15 @@ export const VisitorPreview = memo(function VisitorPreview({ viewportKey, onView
       setHostId((current) => (list.some((p) => Number(p.id) === current) ? current : (list[0] ? Number(list[0].id) : 0)));
     });
     return () => { alive = false; };
-  }, [partial, transport]);
+  }, [needsPage, transport]);
 
   // A save moves the revision on: show it without making the user hit reload.
-  useEffect(() => { setLoading(true); }, [revisionId, reloads, hostId]);
+  useEffect(() => { setLoading(true); }, [revisionId, reloads, hostId, sample]);
 
   const stale = pendingCount > 0 || status === STATUS.DIRTY || status === STATUS.SAVING;
   const scale = stage.width > 0 ? Math.min(1, Math.max(0.35, (stage.width - 32) / viewport.width)) : 1;
   const frameHeight = stage.height > 0 ? Math.max(480, (stage.height - 16) / scale) : 800;
-  const url = visitorPreviewUrl(boot, partial ? hostId : 0);
+  const url = visitorPreviewUrl(boot, needsPage ? hostId : 0, kind === 'archive' ? { archive: sample.archive, term: sample.term } : (kind === 'search' ? { search: sample.search } : {}));
 
   return (
     <section className="sbx-visitor" aria-label={t('visitor_preview')}>
@@ -83,7 +107,7 @@ export const VisitorPreview = memo(function VisitorPreview({ viewportKey, onView
           ))}
         </div>
 
-        {partial && (
+        {needsPage && (
           <label className="sbx-visitor__host">
             <span>{t('preview_on_page')}</span>
             <select
@@ -97,6 +121,22 @@ export const VisitorPreview = memo(function VisitorPreview({ viewportKey, onView
               {(hosts || []).map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
             </select>
           </label>
+        )}
+        {kind === 'archive' && (
+          <div className="sbx-visitor__host" title={t('preview_sample_hint')}>
+            <label>
+              <span>{t('preview_archive_type')}</span>{' '}
+              <select data-testid="preview-archive" value={sample.archive} onChange={(e) => setSample((c) => ({ ...c, archive: e.target.value }))}>
+                {['category', 'tag', 'author'].map((k) => <option key={k} value={k}>{t(`preview_type_${k}`)}</option>)}
+              </select>
+            </label>
+            <SampleText label={t('preview_term')} testId="preview-term" value={sample.term} onCommit={(v) => setSample((c) => ({ ...c, term: v }))} />
+          </div>
+        )}
+        {kind === 'search' && (
+          <div className="sbx-visitor__host" title={t('preview_sample_hint')}>
+            <SampleText label={t('preview_search')} testId="preview-search" value={sample.search} onCommit={(v) => setSample((c) => ({ ...c, search: v }))} />
+          </div>
         )}
 
         <div className="sbx-visitor__bar-right">

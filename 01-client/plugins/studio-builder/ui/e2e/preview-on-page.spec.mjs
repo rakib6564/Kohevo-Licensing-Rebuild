@@ -40,6 +40,9 @@ test('a header partial is previewed on a chosen page, and a normal page has no s
   // The same URL for something that is not a header or footer is refused, not rendered.
   const res = await page.request.get(`/plugins/studio-builder/admin/preview.php?page=${chosen}&as_page=${chosen}`);
   expect(res.status()).toBe(404);
+  // ...and so is a page standing in for a header: the header page cannot host a header preview.
+  const self = new URL(page.url()).searchParams.get('page');
+  expect((await page.request.get(`/plugins/studio-builder/admin/preview.php?page=${self}&as_page=${self}`)).status()).toBe(404);
 });
 
 test('an ordinary page shows no page picker in its preview', async ({ page }) => {

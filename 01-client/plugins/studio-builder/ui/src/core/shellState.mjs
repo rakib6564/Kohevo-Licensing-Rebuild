@@ -25,9 +25,13 @@ export function normalizeViewMode(mode) {
 }
 
 /** The authorized preview endpoint for this page (the same one the external Preview link opens). */
-export function visitorPreviewUrl(boot, asPageId = 0) {
-  const base = `${boot.previewUrl}?page=${encodeURIComponent(boot.pageId)}`;
-  return asPageId > 0 ? `${base}&as_page=${encodeURIComponent(asPageId)}` : base;
+export function visitorPreviewUrl(boot, asPageId = 0, sample = {}) {
+  let url = `${boot.previewUrl}?page=${encodeURIComponent(boot.pageId)}`;
+  if (asPageId > 0) url += `&as_page=${encodeURIComponent(asPageId)}`;
+  for (const [key, param] of [['archive', 'archive'], ['term', 'term'], ['search', 'q']]) {
+    if (sample && typeof sample[key] === 'string' && sample[key] !== '') url += `&${param}=${encodeURIComponent(sample[key])}`;
+  }
+  return url;
 }
 
 /** Ids from `a` to `b` inclusive in visual order; just `[b]` when `a` is absent from the rows. */
