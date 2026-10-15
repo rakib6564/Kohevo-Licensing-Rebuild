@@ -480,17 +480,17 @@ unit('background: bad images, fits, repeats, positions and overlays are refused'
 
 unit('background: the image comes from the tenant media resolver and renders as one scoped rule', function (): void {
     $out = sbss_render_with_media(['background' => ['image' => ['media_id' => 7, 'alt' => '', 'focal_point' => [0.25, 0.75]], 'overlay' => ['color' => 'rgba(0,0,0,.4)'], 'fit' => 'cover', 'repeat' => 'no-repeat']], [7 => '/uploads/t101/hero.jpg']);
-    assert_true(str_contains($out['css'], 'background-image:linear-gradient(rgba(0,0,0,.4),rgba(0,0,0,.4)),url("/uploads/t101/hero.jpg")'), $out['css']);
-    assert_true(str_contains($out['css'], 'background-size:cover;background-repeat:no-repeat;background-position:25% 75%'), $out['css']);
+    assert_true(str_contains($out['css'], 'background-image:linear-gradient(rgba(0,0,0,.4),rgba(0,0,0,.4)),url("/uploads/t101/hero.jpg") !important'), $out['css']);
+    assert_true(str_contains($out['css'], 'background-size:cover !important;background-repeat:no-repeat !important;background-position:25% 75% !important'), $out['css']);
     assert_false(str_contains($out['html'], 'hero.jpg'), 'the URL lives in the stylesheet only');
     assert_false(str_contains($out['html'], 'style='), 'nothing inline');
 });
 
 unit('background: defaults, and position keyword when there is no focal point', function (): void {
     $plain = sbss_render_with_media(['background' => ['image' => ['media_id' => 7, 'alt' => '']]], [7 => '/u/a.jpg']);
-    assert_true(str_contains($plain['css'], 'background-image:url("/u/a.jpg");background-size:cover;background-repeat:no-repeat;background-position:center'), $plain['css']);
+    assert_true(str_contains($plain['css'], 'background-image:url("/u/a.jpg") !important;background-size:cover !important;background-repeat:no-repeat !important;background-position:center !important'), $plain['css']);
     $kw = sbss_render_with_media(['background' => ['image' => ['media_id' => 7, 'alt' => ''], 'position' => 'bottom-left']], [7 => '/u/a.jpg']);
-    assert_true(str_contains($kw['css'], 'background-position:bottom left'), $kw['css']);
+    assert_true(str_contains($kw['css'], 'background-position:bottom left !important'), $kw['css']);
 });
 
 unit('background: a media id that does not resolve for this tenant produces nothing', function (): void {
