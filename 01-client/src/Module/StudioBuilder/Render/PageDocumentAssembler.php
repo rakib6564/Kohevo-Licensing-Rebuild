@@ -23,7 +23,6 @@ use Slate\Module\StudioBuilder\Runtime\StudioRuntimeAsset;
 use Slate\Module\StudioBuilder\Render\Compile\CompiledPage;
 use Slate\Module\StudioBuilder\Render\Compile\FilledPage;
 use Slate\Module\StudioBuilder\Render\Seo\SeoHead;
-use Slate\Services\Content\PlatformSignature;
 
 final class PageDocumentAssembler
 {
@@ -106,12 +105,14 @@ final class PageDocumentAssembler
         return StudioRuntimeAsset::scriptTag();
     }
 
+    /**
+     * Studio pages carry no platform mark: a page built here is the site owner's own. The slot, its protection CSS and
+     * the injected `$signatureSource` stay so a signature can be shown again by passing one in; nothing in production does.
+     */
     private function signature(): string
     {
         try {
-            return $this->signatureSource !== null
-                ? (string) ($this->signatureSource)()
-                : PlatformSignature::render(PlatformSignature::MODE_SIGNATURE);
+            return $this->signatureSource !== null ? (string) ($this->signatureSource)() : '';
         } catch (\Throwable $ignored) {
             return '';
         }

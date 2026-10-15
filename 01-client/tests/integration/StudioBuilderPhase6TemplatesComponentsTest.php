@@ -523,7 +523,7 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
                 assert_true(!str_contains(sbp6_canvas($rt, SBP6_TENANT_A, $editor, $S->about), 'v2'), 'not even into the builder canvas of a consumer');
                 sbp6_publish($rt, SBP6_TENANT_A, $publisher, $S->componentId);
                 assert_true(str_contains(sbp6_public($rt, SBP6_TENANT_A, '/about'), 'About Alpha v2'), 'republishing the component updates the dependent public page');
-                assert_true(str_contains(sbp6_public($rt, SBP6_TENANT_A, '/about'), '<div class="sb-platform-signature">'), 'the platform signature slot is unaffected by embedded content');
+                assert_true(!str_contains(sbp6_public($rt, SBP6_TENANT_A, '/about'), '<div class="sb-platform-signature">'), 'embedded content does not bring a platform mark either');
 
                 // Rollback of the component to an earlier revision + publish also propagates (fingerprint + dependency index).
                 $hist = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'GET', 'revisions', ['page' => $S->componentId, 'limit' => 10]), 'history')['revisions'];
@@ -684,7 +684,7 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
                 assert_eq(0, sbp6_count('SELECT COUNT(*) FROM studiobuilder_compilations WHERE tenant_id = ?', [SBP6_TENANT_A]), 'saving tokens invalidates the tenant\'s artifacts');
                 $public = sbp6_public($rt, SBP6_TENANT_A, '/about');
                 assert_true(str_contains($public, '--sb-surface-page:#112233') && str_contains($public, '--sb-color-accent:#00aa00'), 'stored Studio tokens are emitted as custom properties');
-                assert_true(str_contains($public, '<div class="sb-platform-signature">') && str_contains($public, '.sb-platform-signature{padding:.75rem 1rem;text-align:center;font-size:.75rem;color:#6b7280}'), 'the signature slot and its fixed styling survive tenant tokens');
+                assert_true(!str_contains($public, '<div class="sb-platform-signature">'), 'tenant tokens do not bring a platform mark either');
                 assert_true(str_contains(sbp6_canvas($rt, SBP6_TENANT_A, $editor, $S->about), '--sb-surface-page:#112233'), 'the builder canvas uses the same theme');
 
                 // Tenant isolation.
