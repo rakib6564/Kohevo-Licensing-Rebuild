@@ -468,13 +468,16 @@ final class StudioStylesheet
      * font size does not rewrite the headings of the blocks inside it. `!important` because the rules it must beat are theme
      * and element rules of any specificity.
      */
+    /** Form controls, table cells, lists and the theme blocks' own wrappers carry browser or stylesheet values of their own, so they are listed too. */
+    private const OWN_TEXT = 'ul,ol,dl,dt,dd,label,button,input,select,textarea,th,td,caption,summary,small,cite,time,.sb-post-content,.sb-post-meta,.sb-empty';
+
+    /** The text elements a text colour reaches. It must not repaint the links inside a paragraph; a button's label and a link block's link are the links that follow it. */
+    public const COLOR_TEXT = ':is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,span,li,a.sb-button,a.sb-link,' . self::OWN_TEXT . ')';
+
     private static function typographyInheritCss(): string
     {
-        // Form controls, table cells, lists and the theme blocks' own wrappers carry browser or stylesheet values of their own, so they are listed too.
-        $own  = 'ul,ol,dl,dt,dd,label,button,input,select,textarea,th,td,caption,summary,small,cite,time,.sb-post-content,.sb-post-meta,.sb-empty';
-        $text = ':is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,a,span,li,' . $own . ')';
-        // A text colour must not repaint the links inside a paragraph; a button's label and a link block's link are the links that follow it.
-        $colorText = ':is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,span,li,a.sb-button,a.sb-link,' . $own . ')';
+        $text = ':is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,a,span,li,' . self::OWN_TEXT . ')';
+        $colorText = self::COLOR_TEXT;
         $props = ['size' => 'font-size', 'color' => 'color', 'lh' => 'line-height', 'ls' => 'letter-spacing', 'ff' => 'font-family', 'fw' => 'font-weight', 'tt' => 'text-transform'];
         $css = '';
         foreach ($props as $mark => $prop) {

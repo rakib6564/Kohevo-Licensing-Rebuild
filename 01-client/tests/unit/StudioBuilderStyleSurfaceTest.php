@@ -383,8 +383,8 @@ unit('states: they render as pseudo-class rules scoped to the block, with the ba
     $c = '.' . sbss_class($html);
     assert_true(str_contains($css, $c . '{transition:all 200ms ease;cursor:pointer}'), $css);
     assert_true(str_contains($css, $c . ':hover{background-color:#e8734a;transform:scale(1.05)}'), $css);
-    assert_true(str_contains($css, $c . ':focus{box-shadow:0 0 0 3px #e8734a}'), 'a spread without a blur keeps the blur slot: ' . $css);
-    assert_true(str_contains($css, $c . ':disabled{opacity:0.5}'), 'the bad colour is dropped, the opacity stays: ' . $css);
+    assert_true(str_contains($css, $c . ':focus-within{box-shadow:0 0 0 3px #e8734a}'), 'a spread without a blur keeps the blur slot: ' . $css);
+    assert_true(str_contains($css, $c . ':has(:disabled){opacity:0.5}'), 'the bad colour is dropped, the opacity stays: ' . $css);
     assert_false(str_contains($css, 'url('), 'no url() anywhere: ' . $css);
     assert_true(str_contains($css, '@media (prefers-reduced-motion:reduce)'), 'transitions respect reduced motion');
     assert_false(str_contains($html, 'hover'), 'states never touch the markup');
@@ -679,4 +679,18 @@ unit('typography marks: the stylesheet makes the block text inherit, reaches thr
         assert_true(str_contains($css, '{' . $prop . ':inherit !important}'), "{$prop} is inherited when marked");
     }
     assert_true(str_contains($css, '.sb-ty-color>:is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,span,li,a.sb-button,a.sb-link,'), 'a text colour does not repaint links, except a button label');
+});
+
+unit('states: focus follows focus inside the block, a state colour reaches the text inside it, and a state with no colour adds no text rule', function (): void {
+    assert_eq(':focus-within', \Slate\Module\StudioBuilder\Document\StyleSurface::STATE_SELECTORS['focus'], 'a wrapper is never focused itself');
+    $c = new \Slate\Module\StudioBuilder\Render\RenderCollector();
+    $withColor = $c->scopedRule('blk_aaaaaaaaaaaaaaaaaaaaaaaa', '', false, ['hover' => 'color:#ca7272']);
+    $all = $c->css();
+    assert_true(str_contains($all, ':hover{color:#ca7272}'), 'the wrapper rule');
+    assert_true(str_contains($all, ':hover>:is(h1,h2,h3,h4,h5,h6,p,'), 'the heading and paragraph text follows the hover colour');
+    assert_true(str_contains($all, '{color:inherit !important}'), 'by inheriting it');
+    $c2 = new \Slate\Module\StudioBuilder\Render\RenderCollector();
+    $c2->scopedRule('blk_bbbbbbbbbbbbbbbbbbbbbbbb', '', false, ['hover' => 'opacity:.5']);
+    assert_true(!str_contains($c2->css(), 'color:inherit'), 'an opacity-only state leaves the text alone');
+    assert_true($withColor !== '', 'a class is returned');
 });

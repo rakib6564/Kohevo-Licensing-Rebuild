@@ -94,7 +94,7 @@ final class StyleSurface
     public const TYPOGRAPHY_EXTRAS = ['style', 'decoration', 'decoration_style', 'decoration_color', 'decoration_thickness', 'decoration_offset'];
 
     /** Pseudo-classes an author may style, keyed by the `style_states` name. */
-    public const STATE_SELECTORS = ['hover' => ':hover', 'focus' => ':focus', 'active' => ':active', 'disabled' => ':disabled'];
+    public const STATE_SELECTORS = ['hover' => ':hover', 'focus' => ':focus-within', 'active' => ':active', 'disabled' => ':has(:disabled)'];
 
     /** @return array<string, array<string, array<int, mixed>>> */
     private static function moreFields(): array

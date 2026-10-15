@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   SECTIONS, TABS, applicableSections, defaultOpenIds, inspectorContext, isSectionOpen, resetSectionState,
-  searchSections, sectionsFor, setSectionOpen, subscribeSections, PAGE_SECTION_SECTIONS, SECTION_DEF, titleKeyOf,
+  searchSections, sectionsFor, setSectionOpen, subscribeSections, PAGE_SECTION_SECTIONS, SECTION_DEF, statesFor, titleKeyOf,
 } from '../src/core/inspectorSections.mjs';
 
 const manifest = JSON.parse(readFileSync(new URL('./fixtures/manifest.json', import.meta.url), 'utf8'));
@@ -162,4 +162,11 @@ test('Style Alignment is named so it cannot be mistaken for the block\'s own Ali
   assert.equal(titleKeyOf(align, flex), 'align_text');
   assert.equal(titleKeyOf(align, heading), 'align');
   assert.ok(ids('style', text).includes('align'));
+});
+
+test('States: every block offers Hover; only blocks a visitor can focus or press offer Focus and Active; a stored state still shows', () => {
+  assert.deepEqual(statesFor('core.heading', undefined), ['hover']);
+  assert.deepEqual(statesFor('core.image', {}), ['hover']);
+  assert.deepEqual(statesFor('core.button', {}), ['hover', 'focus', 'active']);
+  assert.deepEqual(statesFor('core.heading', { disabled: { opacity: 0.5 }, hover: { opacity: 1 } }), ['hover', 'disabled']);
 });

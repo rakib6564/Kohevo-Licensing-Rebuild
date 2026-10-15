@@ -35,6 +35,23 @@ export const MEDIA_TYPES = new Set(['core.image', 'core.video', 'core.gallery'])
 export const NO_TEXT_TYPES = new Set(['core.divider', 'core.spacer', 'core.icon', 'core.map']);
 const NO_BACKGROUND_TYPES = new Set(['core.map']);
 
+/**
+ * Blocks a visitor can focus or press: only these offer Focus and Active states. Every block offers Hover. Disabled is
+ * never offered: the rule sits on the block's wrapper, which is not a form control, so it would have no effect on a new
+ * block (a document that already holds one keeps it, and it still shows).
+ */
+export const INTERACTIVE_TYPES = new Set([
+  'core.button', 'core.link', 'payment.button', 'payment.link', 'core.form', 'core.form_field',
+  'core.accordion', 'core.tabs', 'core.nav_menu', 'core.modal', 'layout.offcanvas', 'theme.search_box',
+]);
+
+/** The states a block's States section offers, plus any it already stores. */
+export function statesFor(type, stored) {
+  const offered = INTERACTIVE_TYPES.has(type) ? ['hover', 'focus', 'active'] : ['hover'];
+  const kept = Object.keys(asObject(stored)).filter((s) => !offered.includes(s));
+  return [...offered, ...kept];
+}
+
 /** Types shaped like a button or card: the surface (background, border) is what an author edits first. */
 const SURFACE_TYPES = new Set(['core.button', 'core.card']);
 
