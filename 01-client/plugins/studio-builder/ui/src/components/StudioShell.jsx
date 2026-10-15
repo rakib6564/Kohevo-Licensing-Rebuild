@@ -743,7 +743,8 @@ export function ShellLayout({
 }) {
   const { selection, select } = useSelection();
   const { canvasView, structureOpen, setStructureOpen, toggleStructure, openLibraryModal } = useEditor();
-  const [activeTab, setActiveTab] = useState(() => (selection ? 'inspector' : 'blocks'));
+  // A phone keeps Layers as the first sheet; the docked desktop panel opens on Add.
+  const [activeTab, setActiveTab] = useState(() => (selection ? 'inspector' : (isMobileShellNow() ? 'structure' : 'blocks')));
   const isMobile = useIsMobileShell();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [responsiveOpen, setResponsiveOpen] = useState(false);
