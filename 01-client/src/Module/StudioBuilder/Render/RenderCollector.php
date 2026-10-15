@@ -120,6 +120,12 @@ final class RenderCollector
         foreach (StyleSurface::STATE_SELECTORS as $name => $selector) {
             if (isset($states[$name]) && $states[$name] !== '') {
                 $template .= ".\0" . $selector . '{' . $states[$name] . '}';
+                // A state's text colour is set on the wrapper, but the text inside has colours of its own: make it follow, as a base colour does.
+                if (preg_match('/(^|;)color:/', $states[$name]) === 1) {
+                    $on = ".\0" . $selector;
+                    $c  = StudioStylesheet::COLOR_TEXT;
+                    $template .= $on . '>' . $c . ',' . $on . '>:not(.sb-block)>' . $c . ',' . $on . '>:not(.sb-block)>:not(.sb-block)>' . $c . '{color:inherit !important}';
+                }
             }
         }
         // `$media` is query => declarations from StyleSurface::responsiveRules(); it follows the base rule so it wins at equal weight.

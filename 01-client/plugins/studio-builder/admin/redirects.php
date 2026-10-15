@@ -97,7 +97,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <?php sb_render_admin_nav('redirects', $portfolioPageId); ?>
 
     <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" style="margin-bottom: 24px; border-radius: 10px;">
+        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" >
             <?= e($flash['msg']) ?>
         </div>
     <?php endif; ?>
@@ -114,9 +114,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
     </div>
 
     <!-- Add Redirect Drawer / Form -->
-    <div id="sb-redirect-drawer" style="display: none; background: #ffffff; border: 1px solid var(--sb-border); border-radius: 14px; padding: 24px; margin-bottom: 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
-            <div style="font-weight: 700; font-size: 1.15rem; color: var(--sb-text); display: flex; align-items: center; gap: 8px;">
+    <div id="sb-redirect-drawer" class="sb-card sb-drawer" style="display: none;">
+        <div class="sb-card__head sb-card__head--split">
+            <div class="sb-card__title" style="display: flex; align-items: center; gap: 8px;">
                 <?= sb_svg('redirects', 20) ?> Create URL Redirection
             </div>
             <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('sb-redirect-drawer').style.display='none'">
@@ -126,103 +126,82 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/redirects.php')) ?>">
             <?= csrf_field() ?>
             <input type="hidden" name="_action" value="add_redirect">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 16px;">
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Source Path <span style="color: #ef4444;">*</span></label>
+            <div class="sb-form-grid">
+                <div class="sb-field">
+                    <label class="sb-field__label">Source Path <span style="color: #ef4444;">*</span></label>
                     <input type="text" name="from_path" class="form-control" placeholder="e.g. /old-portfolio or /work" required>
-                    <span style="font-size: 0.75rem; color: var(--sb-muted);">Incoming request path to intercept.</span>
+                    <p class="sb-field__hint">Incoming request path to intercept.</p>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Target Destination <span style="color: #ef4444;">*</span></label>
+                <div class="sb-field">
+                    <label class="sb-field__label">Target Destination <span style="color: #ef4444;">*</span></label>
                     <input type="text" name="to_path" class="form-control" placeholder="e.g. /portfolio or https://..." required>
-                    <span style="font-size: 0.75rem; color: var(--sb-muted);">New destination URL or relative path.</span>
+                    <p class="sb-field__hint">New destination URL or relative path.</p>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">HTTP Status Code</label>
+                <div class="sb-field">
+                    <label class="sb-field__label">HTTP Status Code</label>
                     <select name="status_code" class="form-control" style="background: #ffffff;">
                         <option value="301">301 Moved Permanently (SEO Standard)</option>
                         <option value="302">302 Found / Temporary (Shortlinks)</option>
                     </select>
                 </div>
             </div>
-            <div style="margin-bottom: 18px;">
-                <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Notes</label>
+            <div class="sb-field">
+                <label class="sb-field__label">Notes</label>
                 <input type="text" name="notes" class="form-control" placeholder="Reason for redirect or migration note...">
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <div class="sb-card-actions">
                 <button type="button" class="btn btn-outline" onclick="document.getElementById('sb-redirect-drawer').style.display='none'">Cancel</button>
                 <button type="submit" class="btn btn-primary"><?= sb_svg('check', 14) ?> Save Rule</button>
             </div>
         </form>
     </div>
 
-    <!-- Redirects Table -->
-    <div class="card" style="border-radius: 16px; border: 1px solid var(--sb-border); overflow: hidden; padding: 0; margin-bottom: 32px;">
-        <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
-                <thead>
-                    <tr style="background: #f8fafc; border-bottom: 1px solid var(--sb-border);">
-                        <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Source URL</th>
-                        <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Target Destination</th>
-                        <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Type</th>
-                        <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Notes</th>
-                        <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Created</th>
-                        <th style="padding: 12px 18px; text-align: right; font-weight: 600; color: var(--sb-muted);">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($redirects)): ?>
-                        <tr>
-                            <td colspan="6" style="padding: 36px; text-align: center; color: var(--sb-muted);">
-                                No redirect rules configured. Click "Add Redirect Rule" to map legacy URLs or vanity paths.
-                            </td>
-                        </tr>
-                    <?php else: ?>
-                        <?php foreach ($redirects as $rule):
-                            $rId = (string) ($rule['id'] ?? '');
-                            $from = (string) ($rule['from'] ?? '');
-                            $to = (string) ($rule['to'] ?? '');
-                            $code = (int) ($rule['code'] ?? 301);
-                            $notes = (string) ($rule['notes'] ?? '—');
-                            $createdAt = (string) ($rule['created_at'] ?? '');
-                        ?>
-                            <tr style="border-bottom: 1px solid var(--sb-border);">
-                                <td style="padding: 14px 18px; font-family: monospace; font-weight: 600; color: var(--sb-text);">
-                                    <?= e($from) ?>
-                                </td>
-                                <td style="padding: 14px 18px; font-family: monospace; color: var(--sb-accent);">
-                                    <?= e($to) ?>
-                                </td>
-                                <td style="padding: 14px 18px;">
-                                    <span style="background: <?= $code === 301 ? '#10b98115' : '#6366f115' ?>; color: <?= $code === 301 ? '#10b981' : '#6366f1' ?>; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">
-                                        <?= $code ?>
-                                    </span>
-                                </td>
-                                <td style="padding: 14px 18px; color: var(--sb-muted);">
-                                    <?= e($notes) ?>
-                                </td>
-                                <td style="padding: 14px 18px; font-size: 0.8rem; color: var(--sb-muted); white-space: nowrap;">
-                                    <?= e($createdAt !== '' ? date('M j, Y', strtotime($createdAt)) : '—') ?>
-                                </td>
-                                <td style="padding: 14px 18px; text-align: right; white-space: nowrap;">
-                                    <?php if ($canEdit): ?>
-                                        <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/redirects.php')) ?>" onsubmit="return confirm('Remove redirect rule for <?= e($from) ?>?');" style="margin: 0; display: inline;">
-                                            <?= csrf_field() ?>
-                                            <input type="hidden" name="_action" value="delete_redirect">
-                                            <input type="hidden" name="rule_id" value="<?= e($rId) ?>">
-                                            <button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444; padding: 4px 8px;" title="Delete rule">
-                                                <?= sb_svg('trash', 12) ?>
-                                            </button>
-                                        </form>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+    <!-- Redirect rules (shared Kohevo expandable data rows) -->
+    <?php if (empty($redirects)): ?>
+        <div class="card" style="padding: 36px; text-align: center; color: var(--sb-muted); margin-bottom: 32px;">
+            No redirect rules configured. Click "Add Redirect Rule" to map legacy URLs or vanity paths.
         </div>
-    </div>
+    <?php else: ?>
+        <div class="data-list is-columnar" data-single-open style="margin-bottom: 32px;">
+            <?php
+            slate_data_list_head(['main' => 'Source URL', 'value' => 'Target', 'badge' => 'Type']);
+            foreach ($redirects as $rule) {
+                $rId = (string) ($rule['id'] ?? '');
+                $from = (string) ($rule['from'] ?? '');
+                $to = (string) ($rule['to'] ?? '');
+                $code = (int) ($rule['code'] ?? 301);
+                $notes = (string) ($rule['notes'] ?? '');
+                $createdAt = (string) ($rule['created_at'] ?? '');
+
+                $actions = '';
+                if ($canEdit) {
+                    $actions = '<form method="POST" action="' . e(plugin_url('studio-builder', 'admin/redirects.php')) . '" onsubmit="return confirm(\'Remove redirect rule for ' . e($from) . '?\');" style="margin: 0; display: inline;">'
+                        . csrf_field()
+                        . '<input type="hidden" name="_action" value="delete_redirect">'
+                        . '<input type="hidden" name="rule_id" value="' . e($rId) . '">'
+                        . '<button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444;" title="Delete rule">' . sb_svg('trash', 12) . ' Delete</button>'
+                        . '</form>';
+                }
+
+                slate_data_row([
+                    'avatar'       => (string) $code,
+                    'avatar_color' => $code === 301 ? 'success' : 'info',
+                    'title'        => $from,
+                    'meta'         => '→ ' . $to,
+                    'value'        => $to,
+                    'badge'        => [(string) $code, $code === 301 ? 'active' : 'info'],
+                    'detail'       => [
+                        'to'      => ['label' => 'Target Destination', 'html' => '<code>' . e($to) . '</code>'],
+                        'notes'   => ['label' => 'Notes', 'value' => $notes !== '' ? $notes : '—', 'muted' => $notes === ''],
+                        'created' => ['label' => 'Created', 'value' => $createdAt !== '' ? date('M j, Y', strtotime($createdAt)) : '—'],
+                    ],
+                    'actions'      => $actions,
+                ]);
+            }
+            ?>
+        </div>
+        <?php slate_data_list_script(); ?>
+    <?php endif; ?>
 </div>
 
 <?php require SLATE_ROOT . '/admin/partials/footer.php'; ?>

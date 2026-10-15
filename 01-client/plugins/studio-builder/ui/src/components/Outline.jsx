@@ -99,6 +99,27 @@ export const Outline = memo(function Outline() {
   const allRows = useMemo(() => outlineRows(working, manifest), [working, manifest]);
   const locks = useMemo(() => lockIndex(working), [working]);
   const [collapsed, setCollapsed] = useState(() => new Set());
+  // Every layer starts collapsed, so a long page opens as a short list of its sections. Seeded once, when the first rows arrive.
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (seeded.current || allRows.length === 0) return;
+    seeded.current = true;
+    setCollapsed(new Set(allRows.filter((r) => r.hasChildren).map((r) => r.id)));
+  }, [allRows]);
+  // Selecting a block (on the canvas, say) opens the layers above it so its row can be seen.
+  useEffect(() => {
+    if (!selection) return;
+    const byId = new Map(allRows.map((r) => [r.id, r]));
+    const ancestors = [];
+    for (let row = byId.get(selection); row && row.parentId; row = byId.get(row.parentId)) ancestors.push(row.parentId);
+    if (ancestors.length === 0) return;
+    setCollapsed((prev) => {
+      if (!ancestors.some((id) => prev.has(id))) return prev;
+      const next = new Set(prev);
+      for (const id of ancestors) next.delete(id);
+      return next;
+    });
+  }, [selection, allRows]);
   const [editingId, setEditingId] = useState(null);
   const [editLabel, setEditLabel] = useState('');
   const [searchQuery, setSearchQuery] = useState('');

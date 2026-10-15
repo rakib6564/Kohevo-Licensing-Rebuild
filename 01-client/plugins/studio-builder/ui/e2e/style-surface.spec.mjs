@@ -127,7 +127,12 @@ test('a hover state is saved and reaches the page as a :hover rule', async ({ pa
     await openSection(page, 'states');
     const section = page.locator('[data-section="states"]');
     await expect(section.getByText(/Normal is the base style/)).toBeVisible();
+    // A quote cannot be focused or pressed, so it offers Hover only (no Focus, Active or Disabled to leave unused).
+    await expect(section.getByRole('tab', { name: 'Focus' })).toHaveCount(0);
+    await expect(section.getByRole('tab', { name: 'Active' })).toHaveCount(0);
+    await expect(section.getByRole('tab', { name: 'Disabled' })).toHaveCount(0);
     await section.getByRole('tab', { name: 'Hover' }).click();
+    await expect(section.getByText(/Shown while a visitor points at this block/)).toBeVisible();
     const colour = section.locator('input[id$="-color-text"]');
     await colour.fill('#ff0000');
     await settled(page);
@@ -138,6 +143,17 @@ test('a hover state is saved and reaches the page as a :hover rule', async ({ pa
       const html = await (await page.request.get(`${src}9`)).text();
       return /:hover\{[^}]*color:#ff0000/.test(html);
     }, { timeout: 20_000 }).toBe(true);
+
+    // And it works: pointing at the quote on the page turns its text red, not just the wrapper.
+    const visitor = await page.context().newPage();
+    try {
+      await visitor.goto(`${src}9`);
+      const text = visitor.locator('[data-sb-type="core.quote"] blockquote, [data-sb-type="core.quote"] p').first();
+      await text.hover();
+      await expect.poll(() => text.evaluate((el) => getComputedStyle(el).color), { timeout: 10_000 }).toBe('rgb(255, 0, 0)');
+    } finally {
+      await visitor.close();
+    }
   } finally {
     await restore(page, before);
   }

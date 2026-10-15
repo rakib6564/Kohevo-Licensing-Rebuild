@@ -617,11 +617,11 @@ unit('phase4 integration: server renderer, preview and public runtime (real MySQ
                 sbp4_publish_page($rt, SBP4_TENANT_A, $publisher, 'bare', $hidden);
                 $bare = sbp4_public($rt, SBP4_TENANT_A, '/bare')->body;
                 assert_true(!str_contains($bare, '<header') && !str_contains($bare, '<footer'), 'hidden chrome');
-                assert_true(str_contains($bare, '<div class="sb-platform-signature">') && str_contains($bare, 'Kohevo'), 'the platform signature survives hidden chrome');
+                assert_true(!str_contains($bare, '<div class="sb-platform-signature">') && !str_contains($bare, 'Powered by Kohevo'), 'a Studio page carries no platform mark, with or without header and footer');
 
                 Database::setSetting('site_name', 'Kohevo Impostor Ltd', SBP4_TENANT_A);
                 $imp = sbp4_public($rt, SBP4_TENANT_A, '/bare')->body;
-                assert_true(str_contains($imp, 'Powered by Kohevo') || str_contains($imp, 'Kohevo</div>') || str_contains($imp, ' Kohevo'), 'tenant branding cannot replace the platform identity');
+                assert_true(!str_contains($imp, '<div class="sb-platform-signature">'), 'changing the site name does not bring a mark back');
                 Database::setSetting('site_name', 'Alpha Studio', SBP4_TENANT_A);
 
                 $about = sbp4_public($rt, SBP4_TENANT_A, '/about')->body;

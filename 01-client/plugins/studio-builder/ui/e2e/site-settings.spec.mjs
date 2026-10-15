@@ -17,7 +17,7 @@ test('Site settings groups the tokens, saves an override, and resets it', async 
   const panel = page.locator('#sbx-leftpanel-settings');
   await panel.locator('[data-settings-view="site"]').click();
   const form = panel.getByTestId('site-settings');
-  await expect(form.locator('[data-ss-group]')).toHaveText([/Global colors/, /Global fonts/, /Corners/, /Shadows/, /Spacing/, /Custom CSS/]);
+  await expect(form.locator('[data-ss-group]')).toHaveText([/Global colors/, /Global fonts/, /Corners/, /Shadows/, /Spacing/, /Page widths/, /Custom CSS/]);
   await expect(form.locator('[data-ss-group="colors"]')).toHaveAttribute('open', '');
   await expect(form.locator('[data-ss-group="shape"]')).not.toHaveAttribute('open', '');
 
@@ -70,4 +70,39 @@ test('the colour palette shows one chip per colour token, follows an edit, and a
   await form.locator('input[data-token-ref="surface.page"]').fill('#123456');
   await expect(chip).toHaveCSS('background-color', 'rgb(18, 52, 86)');
   await expect(form.locator('[data-ss-group="fonts"] .sbx-ss__fontprev').first()).toBeVisible();
+});
+
+test('Page widths are three site-wide sizes: a new Wide reaches the page, and a percentage is refused', async ({ page }) => {
+  await openBuilder(page);
+  await settled(page);
+  await page.getByRole('tab', { name: /^Settings$/ }).click();
+  const panel = page.locator('#sbx-leftpanel-settings');
+  await panel.locator('[data-settings-view="site"]').click();
+  const form = panel.getByTestId('site-settings');
+  const group = form.locator('[data-ss-group="layout"]');
+  await group.locator('summary').click();
+  await expect(group).toContainText('Each page picks Narrow, Normal, Wide or Full');
+  const wide = group.locator('.sbx-ss__row', { hasText: 'Wide' }).first().locator('input[type="text"]');
+  const save = form.getByTestId('site-settings-save');
+  try {
+    await wide.fill('100%');
+    await save.click();
+    await expect(wide).toHaveAttribute('aria-invalid', 'true');
+    await wide.fill('61rem');
+    await save.click();
+    await expect(form.getByRole('status')).toHaveText('Design saved');
+    await page.reload();
+    await settled(page);
+    const frame = page.frameLocator('iframe.sbx-canvas__frame');
+    await expect.poll(async () => (await frame.locator('html').evaluate((el) => getComputedStyle(el).getPropertyValue('--sb-layout-wide').trim()))).toBe('61rem');
+  } finally {
+    await page.getByRole('tab', { name: /^Settings$/ }).click();
+    await panel.locator('[data-settings-view="site"]').click();
+    const again = form.locator('[data-ss-group="layout"]');
+    if (!(await again.getAttribute('open'))) await again.locator('summary').click();
+    const field = again.locator('.sbx-ss__row', { hasText: 'Wide' }).first().locator('input[type="text"]');
+    await field.fill('');
+    if (await save.isEnabled()) await save.click();
+    await expect(form.getByRole('status')).toHaveText('Design saved');
+  }
 });

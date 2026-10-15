@@ -35,15 +35,7 @@ final class PageListView
 
         ob_start();
         echo '<div class="data-list is-columnar" data-single-open id="studio-page-list">';
-        echo '<div class="data-list-selectbar" role="status"><span><span class="data-list-selected-count">0</span> '
-            . \e(\__('studio_selected', 'selected')) . '</span>'
-            . '<button type="button" class="btn btn-sm btn-ghost data-list-clear">' . \e(\__('studio_clear_selection', 'Clear selection')) . '</button>'
-            . ($canDelete
-                ? '<button type="submit" name="bulk_action" value="delete" class="btn btn-sm btn-danger data-list-delete" style="margin-left:auto"'
-                    . ' data-confirm="' . \e(\__('studio_delete_pages_confirm', 'Delete %d selected page(s)? They leave your site and this list. Their history is kept.')) . '">'
-                    . \e(\__('studio_delete_pages', 'Delete')) . '</button>'
-                : '')
-            . '</div>';
+        echo self::selectBar($canDelete, 'delete', \__('studio_delete_pages', 'Delete'), \__('studio_delete_pages_confirm', 'Delete %d selected page(s)? They leave your site and this list. Their history is kept.'));
         \slate_data_list_head(
             ['main' => \__('title', 'Title'), 'value' => \__('studio_page_type', 'Type'), 'badge' => \__('status', 'Status')],
             ['select_all' => \__('studio_select_all_pages', 'Select all pages')]
@@ -94,16 +86,33 @@ final class PageListView
     }
 
     /**
+     * The bar that appears over a list once rows are ticked: how many, Clear, and (when `$canDelete`) one submit button
+     * named `bulk_action`. `$confirm` asks first; `%d` is replaced by the number ticked. Reused by any list of
+     * `slate_data_row`s with a select box.
+     */
+    public static function selectBar(bool $canDelete, string $action, string $label, string $confirm): string
+    {
+        return '<div class="data-list-selectbar" role="status"><span><span class="data-list-selected-count">0</span> '
+            . \e(\__('studio_selected', 'selected')) . '</span>'
+            . '<button type="button" class="btn btn-sm btn-ghost data-list-clear">' . \e(\__('studio_clear_selection', 'Clear selection')) . '</button>'
+            . ($canDelete
+                ? '<button type="submit" name="bulk_action" value="' . \e($action) . '" class="btn btn-sm btn-danger data-list-delete" style="margin-left:auto"'
+                    . ' data-confirm="' . \e($confirm) . '">' . \e($label) . '</button>'
+                : '')
+            . '</div>';
+    }
+
+    /**
      * Selection behaviour (select-all, indeterminate state, count bar). Row
      * expansion is the platform's slate_data_list_script(); this only tracks
      * checkboxes, which live beside the toggle buttons, never inside them.
      */
-    public static function selectionScript(): string
+    public static function selectionScript(string $listId = 'studio-page-list'): string
     {
-        return <<<'HTML'
+        $js = <<<'HTML'
 <script>
 (function () {
-    var list = document.getElementById('studio-page-list');
+    var list = document.getElementById('__LIST_ID__');
     if (!list) return;
     var all = list.querySelector('.data-list-select-all');
     var bar = list.querySelector('.data-list-selectbar');
@@ -121,6 +130,7 @@ final class PageListView
     list.addEventListener('change', function (e) { if (e.target.classList.contains('data-row-select')) sync(); });
     var del = list.querySelector('.data-list-delete');
     if (del) del.closest('form').addEventListener('submit', function (e) {
+        if (e.submitter && e.submitter !== del) return; // a row's own button (Restore, Delete one) is not the bulk Delete
         var n = boxes().filter(function (b) { return b.checked; }).length;
         if (n === 0 || !window.confirm(del.getAttribute('data-confirm').replace('%d', n))) e.preventDefault();
     });
@@ -129,5 +139,6 @@ final class PageListView
 })();
 </script>
 HTML;
+        return str_replace('__LIST_ID__', \e($listId), $js);
     }
 }

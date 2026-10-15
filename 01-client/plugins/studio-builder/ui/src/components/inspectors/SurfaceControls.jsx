@@ -14,6 +14,7 @@ import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
 import { DeviceStyle } from './DeviceStyle.jsx';
 import { CORNERS, FILTER, OPTIONS, SIDES, TRANSFORM, getPath, isColourToken, setPath, setPaths } from '../../core/styleSurface.mjs';
 import { t } from '../../core/messages.mjs';
+import { statesFor } from '../../core/inspectorSections.mjs';
 import { optionLabel } from '../../core/optionLabels.mjs';
 import { setSpacingToken } from '../../core/tokenStyle.mjs';
 import { TokenPicker } from '../fields/TokenPicker.jsx';
@@ -462,14 +463,13 @@ export function TypographyExtras({ style, onChange, tokens }) {
 
 // ── Interaction states ──────────────────────────────────────────────────────
 
-const STATE_TABS = ['normal', ...OPTIONS.states];
 
 /**
  * Hover / focus / active / disabled. "Normal" is the base style (the sections above); a state holds only what
  * differs: text colour, background, border colour, opacity and a transform. Transition and cursor belong to the
  * base style, so they are not offered here.
  */
-export function StatesPane({ states, onChange }) {
+export function StatesPane({ type = null, states, onChange }) {
   const id = useId();
   const [tab, setTab] = useState('normal');
   const all = asObject(states);
@@ -489,13 +489,14 @@ export function StatesPane({ states, onChange }) {
         role="tablist"
         label={t('section_states')}
         value={tab}
-        options={STATE_TABS.map((s) => ({ value: s, label: t(`state_${s}`), hasValue: s !== 'normal' && !!all[s] }))}
+        options={['normal', ...statesFor(type, states)].map((s) => ({ value: s, label: t(`state_${s}`), hasValue: s !== 'normal' && !!all[s] }))}
         onChange={setTab}
       />
       {tab === 'normal' ? (
         <p className="sbx-hint">{t('state_normal_hint')}</p>
       ) : (
         <>
+          <p className="sbx-hint">{t(`state_${tab}_when`)}</p>
           <ColorField id={pathId(id, `${tab}.color`)} label={t('state_text_color')} value={f.get('color')} onChange={(v) => f.put('color', v)} />
           <ColorField id={pathId(id, `${tab}.bg`)} label={t('background_color')} value={f.get('background.color')} onChange={(v) => f.put('background.color', v)} />
           <ColorField id={pathId(id, `${tab}.border`)} label={t('border_color')} value={f.get('border.color')} onChange={(v) => f.put('border.color', v)} />

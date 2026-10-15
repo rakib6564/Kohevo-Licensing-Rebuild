@@ -63,7 +63,9 @@ unit('option values: every size the Inspector shows is the size the stylesheet e
             $prop = $table['prop'];
             assert_true(isset($decls[$prop]), "{$name}.{$value}: {$selector} sets {$prop}");
             $want = $table['alias'][$value] ?? $expected;
-            assert_eq(sbov_norm($want), sbov_norm($decls[$prop]), "{$name}.{$value} ({$selector} {$prop})");
+            // A page width follows the site's Layout token; the number the Inspector shows is its default (the var() fallback).
+            $got = preg_replace('~^var\(--sb-layout-[a-z]+,\s*([^)]+)\)$~', '$1', $decls[$prop]) ?? $decls[$prop];
+            assert_eq(sbov_norm($want), sbov_norm($got), "{$name}.{$value} ({$selector} {$prop})");
             $checked++;
         }
     }

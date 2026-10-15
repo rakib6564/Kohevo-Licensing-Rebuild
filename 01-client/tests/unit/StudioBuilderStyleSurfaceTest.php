@@ -383,8 +383,8 @@ unit('states: they render as pseudo-class rules scoped to the block, with the ba
     $c = '.' . sbss_class($html);
     assert_true(str_contains($css, $c . '{transition:all 200ms ease;cursor:pointer}'), $css);
     assert_true(str_contains($css, $c . ':hover{background-color:#e8734a;transform:scale(1.05)}'), $css);
-    assert_true(str_contains($css, $c . ':focus{box-shadow:0 0 0 3px #e8734a}'), 'a spread without a blur keeps the blur slot: ' . $css);
-    assert_true(str_contains($css, $c . ':disabled{opacity:0.5}'), 'the bad colour is dropped, the opacity stays: ' . $css);
+    assert_true(str_contains($css, $c . ':focus-within{box-shadow:0 0 0 3px #e8734a}'), 'a spread without a blur keeps the blur slot: ' . $css);
+    assert_true(str_contains($css, $c . ':has(:disabled){opacity:0.5}'), 'the bad colour is dropped, the opacity stays: ' . $css);
     assert_false(str_contains($css, 'url('), 'no url() anywhere: ' . $css);
     assert_true(str_contains($css, '@media (prefers-reduced-motion:reduce)'), 'transitions respect reduced motion');
     assert_false(str_contains($html, 'hover'), 'states never touch the markup');
@@ -480,17 +480,17 @@ unit('background: bad images, fits, repeats, positions and overlays are refused'
 
 unit('background: the image comes from the tenant media resolver and renders as one scoped rule', function (): void {
     $out = sbss_render_with_media(['background' => ['image' => ['media_id' => 7, 'alt' => '', 'focal_point' => [0.25, 0.75]], 'overlay' => ['color' => 'rgba(0,0,0,.4)'], 'fit' => 'cover', 'repeat' => 'no-repeat']], [7 => '/uploads/t101/hero.jpg']);
-    assert_true(str_contains($out['css'], 'background-image:linear-gradient(rgba(0,0,0,.4),rgba(0,0,0,.4)),url("/uploads/t101/hero.jpg")'), $out['css']);
-    assert_true(str_contains($out['css'], 'background-size:cover;background-repeat:no-repeat;background-position:25% 75%'), $out['css']);
+    assert_true(str_contains($out['css'], 'background-image:linear-gradient(rgba(0,0,0,.4),rgba(0,0,0,.4)),url("/uploads/t101/hero.jpg") !important'), $out['css']);
+    assert_true(str_contains($out['css'], 'background-size:cover !important;background-repeat:no-repeat !important;background-position:25% 75% !important'), $out['css']);
     assert_false(str_contains($out['html'], 'hero.jpg'), 'the URL lives in the stylesheet only');
     assert_false(str_contains($out['html'], 'style='), 'nothing inline');
 });
 
 unit('background: defaults, and position keyword when there is no focal point', function (): void {
     $plain = sbss_render_with_media(['background' => ['image' => ['media_id' => 7, 'alt' => '']]], [7 => '/u/a.jpg']);
-    assert_true(str_contains($plain['css'], 'background-image:url("/u/a.jpg");background-size:cover;background-repeat:no-repeat;background-position:center'), $plain['css']);
+    assert_true(str_contains($plain['css'], 'background-image:url("/u/a.jpg") !important;background-size:cover !important;background-repeat:no-repeat !important;background-position:center !important'), $plain['css']);
     $kw = sbss_render_with_media(['background' => ['image' => ['media_id' => 7, 'alt' => ''], 'position' => 'bottom-left']], [7 => '/u/a.jpg']);
-    assert_true(str_contains($kw['css'], 'background-position:bottom left'), $kw['css']);
+    assert_true(str_contains($kw['css'], 'background-position:bottom left !important'), $kw['css']);
 });
 
 unit('background: a media id that does not resolve for this tenant produces nothing', function (): void {
@@ -669,10 +669,28 @@ unit('typography marks: a size set only for tablet or mobile still marks the blo
 unit('typography marks: the stylesheet makes the block text inherit, reaches three levels and never through a nested block', function (): void {
     \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
     $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
-    assert_true(str_contains($css, '.sb-ty-size>:is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,a,span,li),.sb-ty-size>:not(.sb-block)>'), 'the size rule is scoped to the block text');
+    assert_true(str_contains($css, '.sb-ty-size>:is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,a,span,li,'), 'the size rule is scoped to the block text');
+    assert_true(str_contains($css, '.sb-ty-size>:not(.sb-block)>:is('), 'and reaches one level down');
+    // Controls, table cells, lists and the theme blocks' own wrappers carry values of their own, so they follow too.
+    assert_true(str_contains($css, 'button,input,select,textarea,th,td,caption'), 'form controls and table cells inherit the typography');
+    assert_true(str_contains($css, 'a.sb-link,'), 'a link block follows the text colour');
     assert_true(str_contains($css, ':not(.sb-block)>:not(.sb-block)>:is('), 'it stops at nested blocks');
     foreach (['font-size', 'color', 'line-height', 'letter-spacing', 'font-family', 'font-weight', 'text-transform'] as $prop) {
         assert_true(str_contains($css, '{' . $prop . ':inherit !important}'), "{$prop} is inherited when marked");
     }
-    assert_true(str_contains($css, '.sb-ty-color>:is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,span,li,a.sb-button)'), 'a text colour does not repaint links, except a button label');
+    assert_true(str_contains($css, '.sb-ty-color>:is(h1,h2,h3,h4,h5,h6,p,blockquote,figcaption,span,li,a.sb-button,a.sb-link,'), 'a text colour does not repaint links, except a button label');
+});
+
+unit('states: focus follows focus inside the block, a state colour reaches the text inside it, and a state with no colour adds no text rule', function (): void {
+    assert_eq(':focus-within', \Slate\Module\StudioBuilder\Document\StyleSurface::STATE_SELECTORS['focus'], 'a wrapper is never focused itself');
+    $c = new \Slate\Module\StudioBuilder\Render\RenderCollector();
+    $withColor = $c->scopedRule('blk_aaaaaaaaaaaaaaaaaaaaaaaa', '', false, ['hover' => 'color:#ca7272']);
+    $all = $c->css();
+    assert_true(str_contains($all, ':hover{color:#ca7272}'), 'the wrapper rule');
+    assert_true(str_contains($all, ':hover>:is(h1,h2,h3,h4,h5,h6,p,'), 'the heading and paragraph text follows the hover colour');
+    assert_true(str_contains($all, '{color:inherit !important}'), 'by inheriting it');
+    $c2 = new \Slate\Module\StudioBuilder\Render\RenderCollector();
+    $c2->scopedRule('blk_bbbbbbbbbbbbbbbbbbbbbbbb', '', false, ['hover' => 'opacity:.5']);
+    assert_true(!str_contains($c2->css(), 'color:inherit'), 'an opacity-only state leaves the text alone');
+    assert_true($withColor !== '', 'a class is returned');
 });

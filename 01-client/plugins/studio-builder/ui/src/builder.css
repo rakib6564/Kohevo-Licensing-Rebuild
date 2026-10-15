@@ -107,6 +107,7 @@ html, body.sbx-body {
 .sbx-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .sbx-muted { color: var(--sbx-muted); }
 .sbx-hint { color: var(--sbx-muted); font-size: var(--sbx-fs-sm); margin: 0.25rem 0 0.75rem; }
+.sbx-hint--warn { color: var(--sbx-warn-text); }
 .sbx-field__error { color: var(--sbx-danger); font-size: var(--sbx-fs-sm); margin: 0.25rem 0 0.5rem; }
 .sbx-input[aria-invalid='true'] { border-color: var(--sbx-danger); }
 
@@ -3008,7 +3009,8 @@ html, body.sbx-body {
 /* Margin and padding as one compact row (TOP · RIGHT · BOTTOM · LEFT · link), the label under each box. */
 @media (min-width: 861px) {
   .sbx-spacing--box .sbx-spacing__grid { grid-template-columns: repeat(4, minmax(0, 1fr)) 34px; grid-template-areas: none; gap: 0 4px; padding: 0; border: 0; background: transparent; align-items: start; }
-  .sbx-spacing--box .sbx-spacing__grid > .sbx-field:nth-child(n) { grid-area: auto; display: flex; flex-direction: column-reverse; }
+  /* Weighted above the label-left row rule for single-line fields, which would otherwise squeeze each box to a sliver. */
+  .sbx-inspector .sbx-spacing--box .sbx-spacing__grid > .sbx-field:nth-child(n), .sbx-spacing--box .sbx-spacing__grid > .sbx-field:nth-child(n) { grid-area: auto; display: flex; flex-direction: column-reverse; }
   .sbx-spacing--box .sbx-spacing__grid > .sbx-field .sbx-field__label { position: static; width: auto; height: auto; margin: 3px 0 0; overflow: visible; clip: auto; text-align: center; font-size: 9.5px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sbx-muted); }
   .sbx-spacing--box .sbx-spacing__grid input { height: 32px; padding: 0 2px; }
   .sbx-spacing--box .sbx-spacing__link { grid-area: auto; justify-self: stretch; width: 34px; height: 32px; }
@@ -3298,10 +3300,10 @@ html, body.sbx-body {
   .sbx-left .sbx-inspector .sbx-field textarea { padding: 6px 8px; border-radius: var(--sbx-r-sm); font-size: var(--sbx-fs-sm); }
 
   /* every short single-line field reads as one row: label left, control right (a stacked field keeps its label above) */
-  .sbx-left .sbx-inspector .sbx-field:not(.sbx-field--stacked):has(> input[type="text"], > input[type="number"], > input[type="search"], > input:not([type]), > select, > .sbx-unitfield, > .sbx-color) {
+  .sbx-left .sbx-inspector .sbx-field:not(.sbx-field--stacked, .sbx-spacing__grid > .sbx-field):has(> input[type="text"], > input[type="number"], > input[type="search"], > input:not([type]), > select, > .sbx-unitfield, > .sbx-color) {
     display: grid; grid-template-columns: minmax(70px, 38%) minmax(0, 1fr); align-items: center; column-gap: 10px;
   }
-  .sbx-left .sbx-inspector .sbx-field:not(.sbx-field--stacked):has(> input, > select, > .sbx-unitfield, > .sbx-color) > .sbx-field__label { margin: 0; }
+  .sbx-left .sbx-inspector .sbx-field:not(.sbx-field--stacked, .sbx-spacing__grid > .sbx-field):has(> input, > select, > .sbx-unitfield, > .sbx-color) > .sbx-field__label { margin: 0; }
 
   /* a unit sits inside its number's border, as one control */
   .sbx-left .sbx-unitfield { gap: 0; }
@@ -3319,6 +3321,15 @@ html, body.sbx-body {
   /* the header chrome above the tabs takes less height */
   .sbx-left .sbx-ihead { margin: 0 0 8px; }
   .sbx-left .sbx-inspector__tools { margin: 0 0 8px; gap: 4px; }
+  /* a compact header: a smaller icon, the block type on the title's line, and small tool buttons right under it */
+  .sbx-left .sbx-ihead { gap: 8px; margin: 0 0 6px; }
+  .sbx-left .sbx-ihead__icon { width: 28px; height: 28px; border-radius: 7px; }
+  .sbx-left .sbx-ihead__icon svg { width: 15px; height: 15px; }
+  .sbx-left .sbx-ihead__names { flex-direction: row; align-items: baseline; gap: 8px; }
+  .sbx-left .sbx-ihead .sbx-inspector__title { font-size: var(--sbx-fs-md); flex: 0 1 auto; }
+  .sbx-left .sbx-ihead__type { flex: none; }
+  .sbx-left .sbx-inspector__tools { margin: 0 0 8px; gap: 4px; }
+  .sbx-left .sbx-inspector__tools .sbx-iconbtn { width: 28px; height: 28px; min-width: 0; min-height: 0; }
 }
 
 /* ── Add panel (desktop): folding groups and quieter tiles ──────────────────────────────────────────────────────── */
@@ -3426,3 +3437,9 @@ html, body.sbx-body {
   .sbx-left .sbx-color__theme { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(84px, 38%) minmax(0, 1fr); align-items: center; column-gap: 10px; margin-top: 4px; }
   .sbx-left .sbx-color__theme .sbx-tp, .sbx-left .sbx-color__theme .sbx-tp__btn { width: 100%; }
 }
+
+/* A literal colour field: swatch, text, clear. */
+.sbx-colorfield { display: flex; align-items: center; gap: var(--sbx-s-2, 8px); min-width: 0; }
+.sbx-colorfield__swatch { flex: 0 0 auto; width: 32px; height: 32px; padding: 0; border: 1px solid var(--sbx-border); border-radius: var(--sbx-r-md); background: none; cursor: pointer; }
+.sbx-colorfield__swatch[data-empty="true"] { opacity: 0.45; }
+.sbx-colorfield__text { flex: 1 1 auto; min-width: 0; }

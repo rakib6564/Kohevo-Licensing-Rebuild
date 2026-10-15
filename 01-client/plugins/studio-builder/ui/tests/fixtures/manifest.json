@@ -1323,6 +1323,11 @@
             "category": "content",
             "default_props": {
                 "highlight": "",
+                "highlight_color": "",
+                "highlight_color_token": null,
+                "highlight_italic": false,
+                "highlight_underline": false,
+                "highlight_weight": "inherit",
                 "level": "h2",
                 "text": "Section Heading"
             },
@@ -1343,6 +1348,49 @@
                     "required": false,
                     "default": "",
                     "max_length": 100
+                },
+                {
+                    "key": "highlight_color_token",
+                    "type": "token_ref",
+                    "label": "Highlight colour (theme)",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "highlight_color",
+                    "type": "string",
+                    "label": "Highlight colour (custom)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40,
+                    "format": "color"
+                },
+                {
+                    "key": "highlight_italic",
+                    "type": "boolean",
+                    "label": "Highlight in italic",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "highlight_weight",
+                    "type": "enum",
+                    "label": "Highlight weight",
+                    "required": false,
+                    "default": "inherit",
+                    "allowed_values": [
+                        "inherit",
+                        "normal",
+                        "medium",
+                        "bold"
+                    ]
+                },
+                {
+                    "key": "highlight_underline",
+                    "type": "boolean",
+                    "label": "Highlight underlined",
+                    "required": false,
+                    "default": false
                 },
                 {
                     "key": "level",
@@ -1410,6 +1458,11 @@
                 "eyebrow": "",
                 "heading": "Welcome",
                 "highlight": "",
+                "highlight_color": "",
+                "highlight_color_token": null,
+                "highlight_italic": false,
+                "highlight_underline": false,
+                "highlight_weight": "inherit",
                 "media": null,
                 "primary_cta": null,
                 "subheading": ""
@@ -1439,6 +1492,49 @@
                     "required": false,
                     "default": "",
                     "max_length": 100
+                },
+                {
+                    "key": "highlight_color_token",
+                    "type": "token_ref",
+                    "label": "Highlight colour (theme)",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "highlight_color",
+                    "type": "string",
+                    "label": "Highlight colour (custom)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40,
+                    "format": "color"
+                },
+                {
+                    "key": "highlight_italic",
+                    "type": "boolean",
+                    "label": "Highlight in italic",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "highlight_weight",
+                    "type": "enum",
+                    "label": "Highlight weight",
+                    "required": false,
+                    "default": "inherit",
+                    "allowed_values": [
+                        "inherit",
+                        "normal",
+                        "medium",
+                        "bold"
+                    ]
+                },
+                {
+                    "key": "highlight_underline",
+                    "type": "boolean",
+                    "label": "Highlight underlined",
+                    "required": false,
+                    "default": false
                 },
                 {
                     "key": "subheading",

@@ -129,7 +129,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <?php sb_render_admin_nav('media', $portfolioPageId); ?>
 
     <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" style="margin-bottom: 24px; border-radius: 10px;">
+        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" >
             <?= e($flash['msg']) ?>
         </div>
     <?php endif; ?>
@@ -185,7 +185,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <p style="font-size: 0.8rem; color: var(--sb-muted); margin-bottom: 16px;">PNG, JPG, WebP, SVG, PDF up to 20MB</p>
                 <input type="file" name="files[]" multiple required class="form-control" style="max-width: 320px; margin: 0 auto;">
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <div class="sb-card-actions">
                 <button type="button" class="btn btn-outline" onclick="document.getElementById('sb-upload-drawer').style.display='none'">Cancel</button>
                 <button type="submit" class="btn btn-primary"><?= sb_svg('check', 14) ?> Upload to Studio</button>
             </div>

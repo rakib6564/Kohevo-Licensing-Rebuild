@@ -65,7 +65,12 @@ $customTypes = $customTypesRaw ? json_decode((string) $customTypesRaw, true) : [
 if (!is_array($customTypes)) {
     $customTypes = [];
 }
-$allPostTypes = array_merge($defaultTypes, $customTypes);
+// Built-in types an administrator has removed from this site (the list of their keys), so every type can be deleted.
+$removedRaw = Database::setting('studio_removed_post_types', $tenantId);
+$removedTypes = $removedRaw ? json_decode((string) $removedRaw, true) : [];
+$removedTypes = is_array($removedTypes) ? array_values(array_filter($removedTypes, 'is_string')) : [];
+$visibleDefaults = fn(array $removed): array => array_diff_key($defaultTypes, array_flip($removed));
+$allPostTypes = array_merge($visibleDefaults($removedTypes), $customTypes);
 
 // Load Meta Fields from Settings
 $metaFieldsRaw = Database::setting('studio_meta_fields', $tenantId);
@@ -153,20 +158,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'description' => $desc,
                 ];
                 Database::setSetting('studio_custom_post_types', json_encode($customTypes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
-                $allPostTypes = array_merge($defaultTypes, $customTypes);
+                $allPostTypes = array_merge($visibleDefaults($removedTypes), $customTypes);
                 $flash = ['type' => 'success', 'msg' => "Custom post type '{$singular}' created successfully!"];
             }
         } elseif ($action === 'delete_post_type') {
+            // Any type can go, built-in or custom. A built-in is hidden (its key is remembered); a custom one is removed. Fields
+            // attached to the type go with it; content items already created are not touched.
             $key = trim((string) ($_POST['key'] ?? ''));
-            if (isset($customTypes[$key])) {
-                unset($customTypes[$key]);
-                Database::setSetting('studio_custom_post_types', json_encode($customTypes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
-                $allPostTypes = array_merge($defaultTypes, $customTypes);
-                // Also remove fields attached to this post type
+            if (isset($customTypes[$key]) || (isset($defaultTypes[$key]) && !in_array($key, $removedTypes, true))) {
+                $label = (string) (($customTypes[$key] ?? $defaultTypes[$key])['singular'] ?? $key);
+                if (isset($customTypes[$key])) {
+                    unset($customTypes[$key]);
+                    Database::setSetting('studio_custom_post_types', json_encode($customTypes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
+                } else {
+                    $removedTypes[] = $key;
+                    Database::setSetting('studio_removed_post_types', json_encode(array_values(array_unique($removedTypes)), JSON_UNESCAPED_SLASHES), $tenantId);
+                }
+                $allPostTypes = array_merge($visibleDefaults($removedTypes), $customTypes);
                 $metaFields = array_values(array_filter($metaFields, fn($f) => ($f['post_type'] ?? '') !== $key));
                 Database::setSetting('studio_meta_fields', json_encode($metaFields, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
-                $flash = ['type' => 'success', 'msg' => "Post type '{$key}' deleted."];
+                AuditLog::record('studio.post_type_deleted', (string) $tenantId, ['key' => $key, 'system' => isset($defaultTypes[$key])]);
+                $flash = ['type' => 'success', 'msg' => "Post type '{$label}' deleted."];
             }
+        } elseif ($action === 'restore_post_types') {
+            Database::setSetting('studio_removed_post_types', '[]', $tenantId);
+            $removedTypes = [];
+            $allPostTypes = array_merge($visibleDefaults([]), $customTypes);
+            $flash = ['type' => 'success', 'msg' => 'Built-in post types restored.'];
         } elseif ($action === 'create_meta_field') {
             $pType = trim((string) ($_POST['post_type'] ?? 'portfolio'));
             $label = trim((string) ($_POST['label'] ?? ''));
@@ -221,7 +239,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <?php sb_render_admin_nav('types-fields', $portfolioPageId); ?>
 
     <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" style="margin-bottom: 24px; border-radius: 10px;">
+        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" >
             <?= e($flash['msg']) ?>
         </div>
     <?php endif; ?>
@@ -243,9 +261,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
     </div>
 
     <!-- Drawer: New Post Type Form -->
-    <div id="sb-cpt-drawer" style="display: none; background: #ffffff; border: 1px solid var(--sb-border); border-radius: 14px; padding: 24px; margin-bottom: 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
-            <div style="font-weight: 700; font-size: 1.15rem; color: var(--sb-text); display: flex; align-items: center; gap: 8px;">
+    <div id="sb-cpt-drawer" class="sb-card sb-drawer" style="display: none;">
+        <div class="sb-card__head sb-card__head--split">
+            <div class="sb-card__title" style="display: flex; align-items: center; gap: 8px;">
                 <?= sb_svg('types-fields', 20) ?> Register New Custom Post Type
             </div>
             <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('sb-cpt-drawer').style.display='none'">
@@ -255,30 +273,30 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>">
             <?= csrf_field() ?>
             <input type="hidden" name="_action" value="create_post_type">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 16px;">
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Key / Identifier <span style="color: #ef4444;">*</span></label>
+            <div class="sb-form-grid">
+                <div class="sb-field">
+                    <label class="sb-field__label">Key / Identifier <span style="color: #ef4444;">*</span></label>
                     <input type="text" name="key" class="form-control" placeholder="e.g. clients, events" required>
-                    <span style="font-size: 0.75rem; color: var(--sb-muted);">Lower-case letters and hyphens only.</span>
+                    <p class="sb-field__hint">Lower-case letters and hyphens only.</p>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Singular Label <span style="color: #ef4444;">*</span></label>
+                <div class="sb-field">
+                    <label class="sb-field__label">Singular Label <span style="color: #ef4444;">*</span></label>
                     <input type="text" name="singular" class="form-control" placeholder="e.g. Client, Event" required>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Plural Label</label>
+                <div class="sb-field">
+                    <label class="sb-field__label">Plural Label</label>
                     <input type="text" name="plural" class="form-control" placeholder="e.g. Clients, Events">
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">URL Route Prefix</label>
+                <div class="sb-field">
+                    <label class="sb-field__label">URL Route Prefix</label>
                     <input type="text" name="route" class="form-control" placeholder="/clients">
                 </div>
             </div>
-            <div style="margin-bottom: 16px;">
-                <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Description</label>
+            <div class="sb-field">
+                <label class="sb-field__label">Description</label>
                 <input type="text" name="description" class="form-control" placeholder="Purpose and data description...">
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <div class="sb-card-actions">
                 <button type="button" class="btn btn-outline" onclick="document.getElementById('sb-cpt-drawer').style.display='none'">Cancel</button>
                 <button type="submit" class="btn btn-primary"><?= sb_svg('check', 14) ?> Save Post Type</button>
             </div>
@@ -286,9 +304,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
     </div>
 
     <!-- Drawer: Add Meta Field Form -->
-    <div id="sb-field-drawer" style="display: none; background: #ffffff; border: 1px solid var(--sb-border); border-radius: 14px; padding: 24px; margin-bottom: 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
-            <div style="font-weight: 700; font-size: 1.15rem; color: var(--sb-text); display: flex; align-items: center; gap: 8px;">
+    <div id="sb-field-drawer" class="sb-card sb-drawer" style="display: none;">
+        <div class="sb-card__head sb-card__head--split">
+            <div class="sb-card__title" style="display: flex; align-items: center; gap: 8px;">
                 <?= sb_svg('plus', 20) ?> Add Meta Field
             </div>
             <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('sb-field-drawer').style.display='none'">
@@ -298,25 +316,25 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>">
             <?= csrf_field() ?>
             <input type="hidden" name="_action" value="create_meta_field">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px;">
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Target Post Type</label>
+            <div class="sb-form-grid">
+                <div class="sb-field">
+                    <label class="sb-field__label">Target Post Type</label>
                     <select name="post_type" class="form-control" style="background: #ffffff;">
                         <?php foreach ($allPostTypes as $tKey => $t): ?>
                             <option value="<?= e($tKey) ?>"><?= e($t['singular']) ?> (<?= e($tKey) ?>)</option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Field Label <span style="color: #ef4444;">*</span></label>
+                <div class="sb-field">
+                    <label class="sb-field__label">Field Label <span style="color: #ef4444;">*</span></label>
                     <input type="text" name="label" class="form-control" placeholder="e.g. Project Budget" required>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Field Key <span style="color: #ef4444;">*</span></label>
+                <div class="sb-field">
+                    <label class="sb-field__label">Field Key <span style="color: #ef4444;">*</span></label>
                     <input type="text" name="key" class="form-control" placeholder="e.g. project_budget" required>
                 </div>
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Field Type</label>
+                <div class="sb-field">
+                    <label class="sb-field__label">Field Type</label>
                     <select name="type" class="form-control" style="background: #ffffff;">
                         <option value="text">Text (Single-line string)</option>
                         <option value="textarea">Textarea (Multi-line / rich text)</option>
@@ -332,8 +350,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 </div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; margin-bottom: 16px;">
-                <div>
-                    <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">Placeholder / Default</label>
+                <div class="sb-field">
+                    <label class="sb-field__label">Placeholder / Default</label>
                     <input type="text" name="placeholder" class="form-control" placeholder="Optional placeholder hint or default value">
                 </div>
                 <div style="padding-top: 22px;">
@@ -343,7 +361,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     </label>
                 </div>
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <div class="sb-card-actions">
                 <button type="button" class="btn btn-outline" onclick="document.getElementById('sb-field-drawer').style.display='none'">Cancel</button>
                 <button type="submit" class="btn btn-primary"><?= sb_svg('check', 14) ?> Save Field</button>
             </div>
@@ -352,7 +370,19 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
     <!-- Section 1: Active Post Types Grid -->
     <div style="margin-bottom: 36px;">
-        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--sb-text); margin-bottom: 16px;">Active Content Types</h3>
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;">
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--sb-text); margin: 0;">Active Content Types</h3>
+            <?php if ($removedTypes !== [] && $canEdit): ?>
+                <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>" style="margin: 0;">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="_action" value="restore_post_types">
+                    <button type="submit" class="btn btn-sm btn-outline"><?= sb_svg('refresh', 12) ?> Restore <?= count($removedTypes) ?> built-in type(s)</button>
+                </form>
+            <?php endif; ?>
+        </div>
+        <?php if ($allPostTypes === []): ?>
+            <div class="sb-card" style="text-align: center; color: var(--sb-muted);">No post types. Create one with “New Post Type”<?= $removedTypes !== [] ? ', or restore the built-in ones' : '' ?>.</div>
+        <?php endif; ?>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px;">
             <?php foreach ($allPostTypes as $tKey => $pt):
                 $isSys = !empty($pt['is_system']);
@@ -365,9 +395,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
                             <span style="font-size: 0.72rem; font-weight: 700; background: rgba(99, 102, 241, 0.1); color: var(--sb-accent); padding: 2px 7px; border-radius: 6px; text-transform: uppercase;">
                                 <?= e($pt['key']) ?>
                             </span>
-                            <span style="font-size: 0.75rem; color: var(--sb-muted);">
+                            <p class="sb-field__hint">
                                 <?= $fieldCount ?> field(s)
-                            </span>
+                            </p>
                         </div>
                         <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--sb-text); margin: 0 0 4px 0;"><?= e($pt['singular']) ?></h4>
                         <p style="font-size: 0.82rem; color: var(--sb-muted); line-height: 1.4; margin: 0 0 12px 0;">
@@ -378,13 +408,13 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         <a href="<?= e(plugin_url('studio-builder', 'admin/content.php?type=' . $tKey)) ?>" class="btn btn-sm btn-outline">
                             <?= sb_svg('content', 12) ?> Manage Items
                         </a>
-                        <?php if (!$isSys && $canEdit): ?>
-                            <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>" onsubmit="return confirm('Delete custom post type <?= e($pt['singular']) ?>?');" style="margin: 0;">
+                        <?php if ($canEdit): ?>
+                            <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>" onsubmit="return confirm('Delete the post type <?= e(addslashes($pt['singular'])) ?>? Its meta fields are deleted too. Content already created is kept.');" style="margin: 0;">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="_action" value="delete_post_type">
                                 <input type="hidden" name="key" value="<?= e($tKey) ?>">
-                                <button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444;" title="Delete Post Type">
-                                    <?= sb_svg('trash', 12) ?>
+                                <button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444;" title="Delete this post type" aria-label="Delete the post type <?= e($pt['singular']) ?>">
+                                    <?= sb_svg('trash', 12) ?> Delete
                                 </button>
                             </form>
                         <?php endif; ?>
@@ -410,78 +440,51 @@ require SLATE_ROOT . '/admin/partials/header.php';
             </div>
         </div>
 
-        <div class="card" style="border-radius: 14px; border: 1px solid var(--sb-border); overflow: hidden; padding: 0;">
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
-                    <thead>
-                        <tr style="background: #f8fafc; border-bottom: 1px solid var(--sb-border);">
-                            <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Field Label</th>
-                            <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Key / Binding Token</th>
-                            <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Post Type</th>
-                            <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Field Type</th>
-                            <th style="padding: 12px 18px; font-weight: 600; color: var(--sb-muted);">Required</th>
-                            <th style="padding: 12px 18px; text-align: right; font-weight: 600; color: var(--sb-muted);">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($filteredFields)): ?>
-                            <tr>
-                                <td colspan="6" style="padding: 32px; text-align: center; color: var(--sb-muted);">
-                                    No custom fields found for this post type. Click "Add Meta Field" to create one.
-                                </td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($filteredFields as $f):
-                                $fId = (string) ($f['id'] ?? '');
-                                $fLabel = (string) ($f['label'] ?? '');
-                                $fKey = (string) ($f['key'] ?? '');
-                                $fPType = (string) ($f['post_type'] ?? 'portfolio');
-                                $fType = (string) ($f['type'] ?? 'text');
-                                $fReq = !empty($f['required']);
-                            ?>
-                                <tr style="border-bottom: 1px solid var(--sb-border);">
-                                    <td style="padding: 14px 18px; font-weight: 600; color: var(--sb-text);">
-                                        <?= e($fLabel) ?>
-                                    </td>
-                                    <td style="padding: 14px 18px; font-family: ui-monospace, monospace; color: var(--sb-accent);">
-                                        {{meta.<?= e($fKey) ?>}}
-                                    </td>
-                                    <td style="padding: 14px 18px;">
-                                        <span style="background: #f1f5f9; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; color: var(--sb-text);">
-                                            <?= e($fPType) ?>
-                                        </span>
-                                    </td>
-                                    <td style="padding: 14px 18px;">
-                                        <span style="border: 1px solid var(--sb-border); padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; color: var(--sb-muted);">
-                                            <?= e($fType) ?>
-                                        </span>
-                                    </td>
-                                    <td style="padding: 14px 18px;">
-                                        <?php if ($fReq): ?>
-                                            <span style="color: #ef4444; font-weight: 700; font-size: 0.8rem;">Yes</span>
-                                        <?php else: ?>
-                                            <span style="color: var(--sb-muted); font-size: 0.8rem;">Optional</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td style="padding: 14px 18px; text-align: right;">
-                                        <?php if ($canEdit): ?>
-                                            <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>" onsubmit="return confirm('Remove meta field <?= e($fLabel) ?>?');" style="margin: 0; display: inline;">
-                                                <?= csrf_field() ?>
-                                                <input type="hidden" name="_action" value="delete_meta_field">
-                                                <input type="hidden" name="field_id" value="<?= e($fId) ?>">
-                                                <button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444; padding: 4px 8px;" title="Delete Field">
-                                                    <?= sb_svg('trash', 12) ?>
-                                                </button>
-                                            </form>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+        <?php if (empty($filteredFields)): ?>
+            <div class="card" style="padding: 32px; text-align: center; color: var(--sb-muted);">
+                No custom fields found for this post type. Click "Add Meta Field" to create one.
             </div>
-        </div>
+        <?php else: ?>
+            <div class="data-list is-columnar" data-single-open>
+                <?php
+                slate_data_list_head(['main' => 'Field Label', 'value' => 'Post Type', 'badge' => 'Required']);
+                foreach ($filteredFields as $f) {
+                    $fId = (string) ($f['id'] ?? '');
+                    $fLabel = (string) ($f['label'] ?? '');
+                    $fKey = (string) ($f['key'] ?? '');
+                    $fPType = (string) ($f['post_type'] ?? 'portfolio');
+                    $fType = (string) ($f['type'] ?? 'text');
+                    $fReq = !empty($f['required']);
+
+                    $actions = '';
+                    if ($canEdit) {
+                        $actions = '<form method="POST" action="' . e(plugin_url('studio-builder', 'admin/types-fields.php')) . '" onsubmit="return confirm(\'Remove meta field ' . e($fLabel) . '?\');" style="margin: 0; display: inline;">'
+                            . csrf_field()
+                            . '<input type="hidden" name="_action" value="delete_meta_field">'
+                            . '<input type="hidden" name="field_id" value="' . e($fId) . '">'
+                            . '<button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444;" title="Delete Field">' . sb_svg('trash', 12) . ' Delete</button>'
+                            . '</form>';
+                    }
+
+                    slate_data_row([
+                        'avatar'       => $fLabel,
+                        'avatar_color' => 'accent',
+                        'title'        => $fLabel,
+                        'meta_html'    => '<code>{{meta.' . e($fKey) . '}}</code>',
+                        'value'        => $fPType,
+                        'badge'        => $fReq ? ['Required', 'danger'] : ['Optional', 'muted'],
+                        'detail'       => [
+                            'key'  => ['label' => 'Key / Binding Token', 'html' => '<code>{{meta.' . e($fKey) . '}}</code>'],
+                            'ptype' => ['label' => 'Post Type', 'value' => $fPType],
+                            'ftype' => ['label' => 'Field Type', 'value' => strtoupper($fType)],
+                        ],
+                        'actions'      => $actions,
+                    ]);
+                }
+                ?>
+            </div>
+            <?php slate_data_list_script(); ?>
+        <?php endif; ?>
     </div>
 
     <!-- Section 3: Dynamic Data Binding Documentation -->

@@ -139,7 +139,8 @@ final class StudioSitemapService
     /** The sitemap document for the given entries (pure, deterministic, XML-escaped). */
     public static function xml(array $entries): string
     {
-        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n"
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "
+"
             . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
         foreach ($entries as $entry) {
             $xml .= "  <url>\n    <loc>" . self::escape((string) $entry['loc']) . "</loc>\n";

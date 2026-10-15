@@ -29,6 +29,7 @@ test('adding a section from the Layers panel puts it in the canvas', async ({ pa
   await openBuilder(page);
   const frame = await frameDocument(page);
   const before = await frame.locator('[data-sb-node]').count();
+  await page.getByRole('tab', { name: /^Layers$/ }).click(); // the editor opens on Add; the Add section button is in Layers
   await page.getByRole('button', { name: /Add section/ }).first().click();
   await expect.poll(async () => (await frameDocument(page)).locator('[data-sb-node]').count(), { timeout: 15_000 }).toBeGreaterThan(before);
 });

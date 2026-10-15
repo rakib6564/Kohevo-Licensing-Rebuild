@@ -58,11 +58,14 @@ final class StudioPublicRuntime
             ?? static fn(int $tenantId, string $moduleKey): bool => EntitlementService::canAccess($tenantId, $moduleKey);
     }
 
-    public function handlePath(string $path, ?string $ifNoneMatch = null): ?PublicResponse
+    /** @param ?string $accept the request's `Accept` header: a browser gets the sitemap as a readable page, a crawler as XML */
+    public function handlePath(string $path, ?string $ifNoneMatch = null, ?string $accept = null): ?PublicResponse
     {
         $file = $this->seoFileFromPath($path);
         if ($file !== null) {
-            return $this->serveSeoFile($file, $ifNoneMatch);
+            // `?format=xml` is the raw XML for anyone, whatever their browser asks for.
+            $rawXml = preg_match('/[?&]format=xml(?:&|$)/', $path) === 1;
+            return $this->serveSeoFile($file, $ifNoneMatch, $rawXml ? null : $accept);
         }
 
         // Theme Builder: Taxonomy archive routing (e.g. category/Engineering, tag/dev, author/10)
@@ -173,7 +176,7 @@ final class StudioPublicRuntime
         return ($path === 'robots.txt' || $path === 'sitemap.xml') ? $path : null;
     }
 
-    private function serveSeoFile(string $file, ?string $ifNoneMatch): ?PublicResponse
+    private function serveSeoFile(string $file, ?string $ifNoneMatch, ?string $accept = null): ?PublicResponse
     {
         if ($this->sitemap === null || !$this->tenants->isScoped()) {
             return null;
@@ -182,6 +185,7 @@ final class StudioPublicRuntime
         if ($tenantId <= 0 || !$this->isEntitled($tenantId, self::ENTITLEMENT_KEY)) {
             return null;
         }
+        $readable = false;
         try {
             $site = $this->sitemap->site();
             if ($file === 'robots.txt') {
@@ -191,8 +195,15 @@ final class StudioPublicRuntime
                 if ($site->baseUrl === '') {
                     return null; // no configured base URL: no sitemap rather than one on an invented host
                 }
-                $type = 'application/xml; charset=utf-8';
-                $body = StudioSitemapService::xml($this->sitemap->entries($site));
+                $entries = $this->sitemap->entries($site);
+                if (SitemapPage::prefersHtml($accept)) {
+                    $readable = true;
+                    $type = 'text/html; charset=utf-8';
+                    $body = SitemapPage::html($entries, $site->siteName, $site->absoluteUrl('/'));
+                } else {
+                    $type = 'application/xml; charset=utf-8';
+                    $body = StudioSitemapService::xml($entries);
+                }
             }
         } catch (\Throwable $e) {
             self::log('seo file', $e);
@@ -206,6 +217,13 @@ final class StudioPublicRuntime
             'Cache-Control'          => 'public, no-cache',
             'ETag'                   => '"' . $etag . '"',
         ];
+        if ($file === 'sitemap.xml') {
+            // The same address has two representations; a cache must not hand a crawler the page, or a browser the XML.
+            $headers['Vary'] = 'Accept';
+            if ($readable) {
+                $headers['X-Robots-Tag'] = 'noindex';
+            }
+        }
         if ($ifNoneMatch !== null && self::etagMatches($ifNoneMatch, $etag)) {
             return PublicResponse::notModified($headers);
         }

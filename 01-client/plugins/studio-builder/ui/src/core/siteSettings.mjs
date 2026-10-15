@@ -10,6 +10,7 @@ export const SITE_GROUPS = Object.freeze([
   { id: 'shape', titleKey: 'ss_group_shape', categories: ['radius'] },
   { id: 'shadows', titleKey: 'ss_group_shadows', categories: ['shadow'] },
   { id: 'spacing', titleKey: 'ss_group_spacing', categories: ['space'] },
+  { id: 'layout', titleKey: 'ss_group_layout', categories: ['layout'], hintKey: 'ss_hint_layout' },
 ]);
 
 /** Font stacks that pass the server's font pattern (letters, digits, space, comma, quotes, hyphen). */

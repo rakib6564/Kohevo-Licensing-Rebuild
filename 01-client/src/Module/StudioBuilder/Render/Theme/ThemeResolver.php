@@ -42,6 +42,9 @@ final class ThemeResolver
         'color.accent'      => '#1f2937',
         'font.body'         => 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
         'font.heading'      => 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+        'layout.narrow'     => '42rem',
+        'layout.normal'     => '64rem',
+        'layout.wide'       => '80rem',
         'radius.full'       => '9999px',
         'radius.lg'         => '16px',
         'radius.md'         => '8px',
@@ -167,6 +170,7 @@ final class ThemeResolver
                 '/^(' . self::LENGTH . '\s+){2,4}(#[0-9a-fA-F]{3,8}|rgba?\([0-9.%\s,]{1,60}\))$/',
                 $value
             ) === 1,
+            'layout' => preg_match('/^[1-9][0-9]{0,3}(\.[0-9]{1,2})?(px|rem|em)$/', $value) === 1,
             'font' => preg_match(self::FONT_PATTERN, $value) === 1,
             default => false,
         };

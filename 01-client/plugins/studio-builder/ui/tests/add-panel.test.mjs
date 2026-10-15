@@ -125,3 +125,13 @@ test('a locked module block is listed but never offered or insertable', () => {
   assert.deepEqual(blockInsertState(oneSection, m, 'sec_a', 'coaching.demo_locked'), { ok: false, reason: 'locked' });
   assert.equal(reasonKey('locked'), 'pal_reason_locked');
 });
+
+import { categoryLabel } from '../src/core/addPanel.mjs';
+
+test('categoryLabel: a translated category keeps its name; an unknown one is read as words, never a raw key', () => {
+  const t = (key) => ({ block_cat_layout: 'Layout' }[key] ?? key);
+  assert.equal(categoryLabel('layout', t), 'Layout');
+  assert.equal(categoryLabel('portfolio', t), 'Portfolio');
+  assert.equal(categoryLabel('case_studies', t), 'Case studies');
+  assert.equal(categoryLabel('', t), '');
+});

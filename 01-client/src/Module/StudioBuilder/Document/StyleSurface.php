@@ -94,7 +94,7 @@ final class StyleSurface
     public const TYPOGRAPHY_EXTRAS = ['style', 'decoration', 'decoration_style', 'decoration_color', 'decoration_thickness', 'decoration_offset'];
 
     /** Pseudo-classes an author may style, keyed by the `style_states` name. */
-    public const STATE_SELECTORS = ['hover' => ':hover', 'focus' => ':focus', 'active' => ':active', 'disabled' => ':disabled'];
+    public const STATE_SELECTORS = ['hover' => ':hover', 'focus' => ':focus-within', 'active' => ':active', 'disabled' => ':has(:disabled)'];
 
     /** @return array<string, array<string, array<int, mixed>>> */
     private static function moreFields(): array
@@ -211,9 +211,11 @@ final class StyleSurface
             $layers[] = 'linear-gradient(' . $c . ',' . $c . ')';
         }
         $layers[] = 'url("' . $url . '")';
-        $out[] = 'background-image:' . implode(',', $layers);
-        $out[] = 'background-size:' . (isset($bg['fit']) && is_string($bg['fit']) && in_array($bg['fit'], self::FITS, true) ? $bg['fit'] : 'cover');
-        $out[] = 'background-repeat:' . (isset($bg['repeat']) && is_string($bg['repeat']) && in_array($bg['repeat'], self::REPEATS, true) ? $bg['repeat'] : 'no-repeat');
+        // `!important`: an image the author chose in the Inspector must show even when a CSS class on the block (a `background:`
+        // shorthand in the page's custom CSS, say) sets a background of its own, which would otherwise cover it.
+        $out[] = 'background-image:' . implode(',', $layers) . ' !important';
+        $out[] = 'background-size:' . (isset($bg['fit']) && is_string($bg['fit']) && in_array($bg['fit'], self::FITS, true) ? $bg['fit'] : 'cover') . ' !important';
+        $out[] = 'background-repeat:' . (isset($bg['repeat']) && is_string($bg['repeat']) && in_array($bg['repeat'], self::REPEATS, true) ? $bg['repeat'] : 'no-repeat') . ' !important';
         $position = 'center';
         $fp = $bg['image']['focal_point'] ?? null;
         if (is_array($fp) && count($fp) === 2 && self::inRange($fp[0] ?? null, 0, 1) && self::inRange($fp[1] ?? null, 0, 1)) {
@@ -222,7 +224,7 @@ final class StyleSurface
         } elseif (isset($bg['position']) && is_string($bg['position']) && isset(self::POSITIONS[$bg['position']])) {
             $position = self::POSITIONS[$bg['position']];
         }
-        $out[] = 'background-position:' . $position;
+        $out[] = 'background-position:' . $position . ' !important';
     }
 
     /** Numeric parts of `effects`: group => field => [min, max, unit]. */

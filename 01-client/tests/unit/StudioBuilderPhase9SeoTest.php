@@ -170,3 +170,24 @@ unit('phase9c sitemap: the generator reads only published revisions — no seo_j
         assert_true(!str_contains($sitemap, $needle), "the sitemap must not use {$needle}");
     }
 });
+
+unit('phase9c sitemap page: a browser is told apart from a crawler by Accept, and the page escapes everything', function (): void {
+    $browser = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
+    assert_true(\Slate\Module\StudioBuilder\Runtime\SitemapPage::prefersHtml($browser), 'a browser');
+    foreach ([null, '', '*/*', 'application/xml', 'text/xml, */*', 'application/xml, text/html;q=0.5'] as $accept) {
+        assert_true(!\Slate\Module\StudioBuilder\Runtime\SitemapPage::prefersHtml($accept), 'not a browser: ' . var_export($accept, true));
+    }
+    $html = \Slate\Module\StudioBuilder\Runtime\SitemapPage::html([
+        ['loc' => 'https://site.example/', 'lastmod' => '2026-10-01'],
+        ['loc' => 'https://site.example/a?x=1&y="2"&z=<3>', 'lastmod' => null],
+    ], 'Site <b>', 'https://site.example/');
+    assert_true(str_contains($html, '<span class="home">Home</span>'), 'the home row is marked');
+    assert_eq(1, substr_count($html, 'class="home"'), 'only the home row');
+    assert_true(str_contains($html, 'a?x=1&amp;y=&quot;2&quot;&amp;z=&lt;3&gt;'), 'the address is escaped');
+    assert_true(str_contains($html, 'Site &lt;b&gt;') && !str_contains($html, 'Site <b>'), 'the site name is escaped');
+    assert_true(str_contains($html, '>2026-10-01<'), 'the date is shown');
+    $doc = new DOMDocument();
+    assert_true(@$doc->loadHTML($html), 'parses');
+    assert_eq(2, $doc->getElementsByTagName('tbody')->item(0)->getElementsByTagName('tr')->length, 'one row per page');
+    assert_true(str_contains(\Slate\Module\StudioBuilder\Runtime\SitemapPage::html([], 'S', 'https://site.example/'), 'No pages are published yet.'));
+});

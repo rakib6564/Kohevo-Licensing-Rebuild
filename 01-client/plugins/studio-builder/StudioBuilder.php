@@ -101,9 +101,7 @@ class StudioBuilder extends Plugin
             ['slug' => 'studio-templates',       'label' => function_exists('__') ? __('studio_templates', 'Templates') : 'Templates',              'file' => 'admin/templates.php',       'icon' => 'layout',      'order' => 204],
             ['slug' => 'studio-menus',       'label' => function_exists('__') ? __('studio_menus', 'Menus') : 'Menus',              'file' => 'admin/menus.php',       'icon' => 'list',      'order' => 204],
             ['slug' => 'studio-types-fields',    'label' => function_exists('__') ? __('studio_types_fields', 'Types & fields') : 'Types & fields',  'file' => 'admin/types-fields.php',    'icon' => 'tag',         'order' => 205],
-            ['slug' => 'studio-themes',          'label' => function_exists('__') ? __('studio_themes', 'Themes') : 'Themes',                        'file' => 'admin/themes.php',          'icon' => 'palette',     'order' => 206],
             ['slug' => 'studio-seo',             'label' => function_exists('__') ? __('studio_seo', 'Site & SEO') : 'Site & SEO',                    'file' => 'admin/seo.php',             'icon' => 'globe',       'order' => 207],
-            ['slug' => 'studio-global-settings', 'label' => function_exists('__') ? __('studio_global_settings', 'Global settings') : 'Global settings', 'file' => 'admin/global-settings.php', 'icon' => 'sliders',     'order' => 208],
             ['slug' => 'studio-ai-mcp',          'label' => function_exists('__') ? __('studio_ai_mcp', 'AI & MCP') : 'AI & MCP',                      'file' => 'admin/ai-mcp.php',          'icon' => 'sparkles',    'order' => 209],
             ['slug' => 'studio-reviews',         'label' => function_exists('__') ? __('studio_reviews', 'Reviews') : 'Reviews',                      'file' => 'admin/reviews.php',         'icon' => 'clock',       'order' => 210],
             ['slug' => 'studio-code-tracking',   'label' => function_exists('__') ? __('studio_code_tracking', 'Code & tracking') : 'Code & tracking','file' => 'admin/code-tracking.php',   'icon' => 'edit-3',      'order' => 211],
@@ -154,7 +152,10 @@ class StudioBuilder extends Plugin
             return false;
         }
         $runtime = StudioRuntimeFactory::build()->publicRuntime;
-        return self::send(self::publicResponse(static fn(?string $ifNoneMatch) => $runtime->handlePath((string) $path, $ifNoneMatch)));
+        // A browser is shown the sitemap as a readable page; `?format=xml` (the page's own link) always returns the XML.
+        $accept = isset($_SERVER['HTTP_ACCEPT']) && is_string($_SERVER['HTTP_ACCEPT']) && ($_GET['format'] ?? '') !== 'xml'
+            ? substr($_SERVER['HTTP_ACCEPT'], 0, 400) : null;
+        return self::send(self::publicResponse(static fn(?string $ifNoneMatch) => $runtime->handlePath((string) $path, $ifNoneMatch, $accept)));
     }
 
     /**

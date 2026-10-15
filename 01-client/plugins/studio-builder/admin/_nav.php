@@ -89,9 +89,7 @@ if (!function_exists('sb_render_admin_nav')) {
             ['id' => 'templates',       'label' => 'Templates',        'file' => 'templates.php',      'icon' => 'templates'],
             ['id' => 'menus',           'label' => 'Menus',            'file' => 'menus.php',          'icon' => 'menus'],
             ['id' => 'types-fields',    'label' => 'Types & fields',   'file' => 'types-fields.php',   'icon' => 'types-fields'],
-            ['id' => 'themes',          'label' => 'Themes',           'file' => 'themes.php',         'icon' => 'themes'],
             ['id' => 'seo',             'label' => 'Site & SEO',       'file' => 'seo.php',            'icon' => 'seo'],
-            ['id' => 'global-settings', 'label' => 'Global settings',  'file' => 'global-settings.php','icon' => 'global-settings'],
             ['id' => 'ai-mcp',          'label' => 'AI & MCP',         'file' => 'ai-mcp.php',         'icon' => 'ai-mcp'],
             ['id' => 'reviews',         'label' => 'Reviews',          'file' => 'reviews.php',        'icon' => 'reviews'],
             ['id' => 'code-tracking',   'label' => 'Code & tracking',  'file' => 'code-tracking.php',  'icon' => 'code-tracking'],
@@ -146,14 +144,24 @@ if (!function_exists('sb_render_admin_nav')) {
             .sb-admin-nav-bar {
                 display: flex;
                 align-items: center;
-                gap: 6px;
-                overflow-x: auto;
+                flex-wrap: wrap;
+                gap: 4px;
                 padding: 6px;
                 background: #f1f5f9;
                 border-radius: 12px;
                 margin-bottom: 28px;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: thin;
+            }
+            @media (max-width: 860px) {
+                /* a phone: one scrolling row, no scrollbar, a soft fade on the right edge says there is more */
+                .sb-admin-nav-bar {
+                    flex-wrap: nowrap;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                    scrollbar-width: none;
+                    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+                    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+                }
+                .sb-admin-nav-bar::-webkit-scrollbar { display: none; }
             }
             .sb-admin-nav-tab {
                 display: inline-flex;
@@ -373,6 +381,91 @@ if (!function_exists('sb_render_admin_nav')) {
                 background: var(--sb-accent);
                 color: #ffffff;
             }
+            /* ── Studio admin UI kit: one card, one field, one rhythm for every screen ── */
+            .sb-page-head { margin: 0 0 24px; }
+            .sb-page-head h2 { margin: 0 0 4px; font-size: 1.3rem; font-weight: 800; color: var(--sb-text); }
+            .sb-page-head p { margin: 0; font-size: 0.9rem; color: var(--sb-muted); max-width: 70ch; }
+            .sb-alert { margin-bottom: 24px; border-radius: 10px; }
+            .sb-card {
+                background: #ffffff;
+                border: 1px solid var(--sb-border);
+                border-radius: 16px;
+                padding: 24px;
+                margin-bottom: 24px;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+            }
+            .sb-card__head {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin: 0 0 18px;
+                padding-bottom: 14px;
+                border-bottom: 1px solid var(--sb-border);
+            }
+            .sb-card__icon {
+                width: 36px;
+                height: 36px;
+                flex: none;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 10px;
+                background: rgba(99, 102, 241, 0.1);
+                color: var(--sb-accent);
+            }
+            .sb-card__title { margin: 0; font-size: 1.05rem; font-weight: 700; line-height: 1.3; color: var(--sb-text); }
+            .sb-card__sub { margin: 2px 0 0; font-size: 0.84rem; color: var(--sb-muted); }
+            .sb-card__note { margin: 0 0 18px; font-size: 0.88rem; line-height: 1.55; color: var(--sb-muted); max-width: 80ch; }
+            .sb-form-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+                gap: 20px 24px;
+                align-items: start;
+            }
+            .sb-stack { display: flex; flex-direction: column; gap: 20px; }
+            .sb-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+            .sb-field--wide { grid-column: 1 / -1; }
+            .sb-field__label { display: block; margin: 0; font-size: 0.86rem; font-weight: 600; line-height: 1.3; color: var(--sb-text); }
+            .sb-field__label small { font-weight: 400; color: var(--sb-muted); }
+            .sb-field .form-control,
+            .sb-field input[type="text"],
+            .sb-field input[type="url"],
+            .sb-field input[type="email"],
+            .sb-field input[type="number"],
+            .sb-field select,
+            .sb-field textarea {
+                display: block;
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+                margin: 0;
+            }
+            .sb-field select { background-color: #ffffff; }
+            .sb-field textarea { resize: vertical; }
+            .sb-field__hint { margin: 0; font-size: 0.8rem; line-height: 1.45; color: var(--sb-muted); }
+            .sb-code-input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; background: #0f172a !important; color: #cbd5e1 !important; }
+            .sb-card-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+            .sb-card__head--split { justify-content: space-between; }
+            .sb-card__head--split .sb-card__title { font-size: 1.05rem; }
+            .sb-drawer { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06); margin-bottom: 28px; }
+            .sb-form-grid + .sb-field, .sb-form-grid + .sb-form-grid { margin-top: 20px; }
+            .sb-card form > * + *:not(.sb-card-actions):not(input[type="hidden"]) { margin-top: 20px; }
+            .sb-pager { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 20px; margin: 18px 0 32px; font-size: 0.86rem; color: var(--sb-muted); }
+            .sb-pager__pages { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+            .sb-pager__link, .sb-pager__gap { min-width: 34px; height: 34px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: 600; text-decoration: none; color: var(--sb-text); border: 1px solid var(--sb-border); background: #ffffff; }
+            .sb-pager__link:hover { border-color: var(--sb-accent); color: var(--sb-accent); }
+            .sb-pager__link.is-current { background: var(--sb-accent); border-color: var(--sb-accent); color: #ffffff; }
+            .sb-pager__link.is-disabled { opacity: 0.4; pointer-events: none; }
+            .sb-pager__gap { border-color: transparent; background: none; color: var(--sb-muted); }
+            .sb-pager__size { display: flex; align-items: center; gap: 6px; }
+            .sb-media-field-group { margin: 0; }
+            .sb-media-field-group .field-label { display: block; margin: 0 0 6px; font-size: 0.86rem; font-weight: 600; color: var(--sb-text); }
+            .sb-two-up { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 24px; align-items: start; margin-bottom: 32px; }
+            .sb-two-up > .sb-card { margin-bottom: 0; }
+            .sb-link-card { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 20px; margin-bottom: 0; }
+            .sb-link-card__kicker { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+            .sb-link-card h4 { margin: 2px 0; font-size: 1rem; font-weight: 700; color: var(--sb-text); }
+            .sb-link-card p { margin: 0; font-size: 0.82rem; color: var(--sb-muted); }
             @media (max-width: 768px) {
                 .sb-admin-header {
                     flex-direction: column;
@@ -420,6 +513,49 @@ if (!function_exists('sb_render_admin_nav')) {
             <?php endforeach; ?>
         </nav>
         <?php
+    }
+}
+
+if (!function_exists('sb_render_pagination')) {
+    /**
+     * A pager for an admin list: "Showing a-b of N", page links with gaps, and a rows-per-page choice. Links keep `$query`
+     * (the list's filters); `p` and `per` are the pager's own. `$total` is the number of rows over ALL pages.
+     *
+     * @param array<string, scalar> $query
+     * @param list<int>             $sizes  the rows-per-page choices
+     */
+    function sb_render_pagination(string $file, array $query, int $page, int $perPage, int $total, array $sizes = [25, 50, 100]): void
+    {
+        $pages = max(1, (int) ceil($total / max(1, $perPage)));
+        if ($total <= min($sizes)) {
+            return; // everything fits on the smallest page: nothing to page through
+        }
+        $url = static fn(int $p, int $per) => e($file . '?' . http_build_query(array_merge($query, ['per' => $per, 'p' => $p])));
+        $from = ($page - 1) * $perPage + 1;
+        $to = min($total, $page * $perPage);
+
+        $nums = array_values(array_unique(array_filter([1, 2, $page - 1, $page, $page + 1, $pages - 1, $pages], static fn(int $n): bool => $n >= 1 && $n <= $pages)));
+        sort($nums);
+
+        echo '<nav class="sb-pager" aria-label="' . e(__('studio_pagination', 'Pagination')) . '">';
+        echo '<span>' . e(sprintf(__('studio_showing_range', 'Showing %1$d–%2$d of %3$d'), $from, $to, $total)) . '</span>';
+        echo '<div class="sb-pager__pages">';
+        echo '<a class="sb-pager__link' . ($page <= 1 ? ' is-disabled' : '') . '" href="' . $url(max(1, $page - 1), $perPage) . '" rel="prev" aria-label="' . e(__('studio_prev_page', 'Previous page')) . '">‹</a>';
+        $prev = 0;
+        foreach ($nums as $n) {
+            if ($n - $prev > 1) {
+                echo '<span class="sb-pager__gap" aria-hidden="true">…</span>';
+            }
+            echo '<a class="sb-pager__link' . ($n === $page ? ' is-current' : '') . '" href="' . $url($n, $perPage) . '"' . ($n === $page ? ' aria-current="page"' : '') . '>' . $n . '</a>';
+            $prev = $n;
+        }
+        echo '<a class="sb-pager__link' . ($page >= $pages ? ' is-disabled' : '') . '" href="' . $url(min($pages, $page + 1), $perPage) . '" rel="next" aria-label="' . e(__('studio_next_page', 'Next page')) . '">›</a>';
+        echo '</div>';
+        echo '<div class="sb-pager__size"><span>' . e(__('studio_rows_per_page', 'Rows per page')) . '</span>';
+        foreach ($sizes as $size) {
+            echo '<a class="sb-pager__link' . ($size === $perPage ? ' is-current' : '') . '" href="' . $url(1, $size) . '">' . $size . '</a>';
+        }
+        echo '</div></nav>';
     }
 }
 
