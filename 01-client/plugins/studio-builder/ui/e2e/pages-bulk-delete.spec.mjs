@@ -8,7 +8,7 @@ test.beforeEach(async ({}, info) => {
 const LIST = '/plugins/studio-builder/admin/pages.php';
 
 async function create(page, title, slug) {
-  await page.goto(LIST);
+  await page.goto('/plugins/studio-builder/admin/page-new.php');
   await page.locator('#sb-title').fill(title);
   await page.locator('#sb-slug').fill(slug);
   await page.getByRole('button', { name: /Create & Open Canvas Builder/ }).click();

@@ -20,9 +20,10 @@ final class PageListView
      * @param list<array<string, mixed>> $pages   StudioEditorViews::page() rows
      * @param bool                       $canEdit whether "Open builder" is offered
      * @param bool                       $canDelete whether the selection bar offers Delete (the list sits inside a POST form that carries `ids[]`)
+     * @param string                     $settingsUrl the page-settings screen (`?id=` is appended); empty offers no link
      * @return string the .data-list markup (no script tag; see slate_data_list_script())
      */
-    public static function render(array $pages, bool $canEdit, string $builderUrl, string $previewUrl, bool $canDelete = false): string
+    public static function render(array $pages, bool $canEdit, string $builderUrl, string $previewUrl, bool $canDelete = false, string $settingsUrl = ''): string
     {
         if (!function_exists('slate_data_row')) {
             require_once dirname(__DIR__, 4) . '/includes/ui_components.php';
@@ -67,6 +68,10 @@ final class PageListView
             if ($canEdit) {
                 $actions .= '<a class="btn btn-sm btn-primary" href="' . \e($builderUrl . '?page=' . $id) . '">'
                     . \e(\__('studio_open_builder', 'Open builder')) . '</a> ';
+            }
+            if ($settingsUrl !== '') {
+                $actions .= '<a class="btn btn-sm btn-ghost" href="' . \e($settingsUrl . '?id=' . $id) . '">'
+                    . \e(\__('studio_page_settings', 'Settings')) . '</a> ';
             }
             $actions .= '<a class="btn btn-sm btn-ghost" target="_blank" rel="noopener" href="' . \e($previewUrl . '?page=' . $id) . '">'
                 . \e(\__('studio_preview', 'Preview')) . '</a>';

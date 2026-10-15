@@ -8,7 +8,7 @@ test.beforeEach(async ({}, info) => {
 
 test('a header partial gets include and exclude rules from the dialog, validates them, and keeps them', async ({ page }) => {
   const title = `Cond header ${Date.now()}`;
-  await page.goto('/plugins/studio-builder/admin/pages.php');
+  await page.goto('/plugins/studio-builder/admin/page-new.php');
   await page.getByLabel('Title').fill(title);
   await page.locator('#sb-type').selectOption('header_partial');
   await page.getByRole('button', { name: /Create & Open Canvas Builder/ }).click();

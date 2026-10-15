@@ -1,0 +1,235 @@
+<?php
+/**
+ * Kohevo Studio — One page's settings.
+ *
+ *   page-edit.php?id=<page id>
+ *
+ * Rename a page, change its address or route mode, duplicate it, or delete it. The content itself is edited in the
+ * visual canvas builder, which is one click away; the list is pages.php and a new page is page-new.php.
+ */
+
+declare(strict_types=1);
+
+require_once dirname(__DIR__, 3) . '/config.php';
+require_once __DIR__ . '/_nav.php';
+
+use Slate\Module\StudioBuilder\Application\StudioActor;
+use Slate\Module\StudioBuilder\Exception\StudioException;
+use Slate\Module\StudioBuilder\Exception\StudioNotFoundException;
+use Slate\Module\StudioBuilder\Exception\StudioValidationException;
+use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
+use Slate\Module\StudioBuilder\StudioPermissions;
+
+Auth::require();
+
+$studioApp   = StudioRuntimeFactory::build()->app;
+$studioActor = StudioActor::fromCurrentSession();
+$currentNav  = 'studio-pages';
+$flash       = null;
+$pageId      = (int) ($_GET['id'] ?? $_POST['id'] ?? 0);
+$self        = 'page-edit.php?id=' . $pageId;
+$builderUrl  = plugin_url('studio-builder', 'admin/builder.php');
+$previewUrl  = plugin_url('studio-builder', 'admin/preview.php');
+
+$errorFor = static function (StudioException $e, string $fallback): string {
+    if ($e instanceof StudioValidationException) {
+        $first = $e->errors()[0]['message'] ?? '';
+        return $fallback . ($first !== '' ? ' ' . $first : '');
+    }
+    return $e->httpStatus() === 403 ? __('studio_page_edit_denied', 'You cannot change this page.') : $fallback;
+};
+
+$load = static function () use ($studioApp, $studioActor, $pageId): array {
+    if ($pageId <= 0) {
+        throw new StudioNotFoundException('Studio page id missing.');
+    }
+    $page = $studioApp->pageStatus($studioActor, $pageId);
+    if (($page['status'] ?? '') === 'archived') {
+        throw new StudioNotFoundException('Studio page is deleted.', ['page_id' => $pageId]);
+    }
+    return $page;
+};
+
+$page = null;
+$loadError = null;
+try {
+    $page = $load();
+} catch (StudioException $e) {
+    $loadError = $e->httpStatus() === 403
+        ? __('studio_pages_forbidden', 'Kohevo Studio is not available for your account on this site.')
+        : __('studio_page_not_found', 'This page does not exist, or has been deleted.');
+}
+$canEdit = $page !== null && $studioActor->can(StudioPermissions::EDIT);
+
+if ($page !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $action = (string) ($_POST['action'] ?? '');
+    if (!csrf_verify()) {
+        $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
+    } elseif (!$canEdit) {
+        $flash = ['type' => 'error', 'msg' => __('studio_page_edit_denied', 'You cannot change this page.')];
+    } elseif ($action === 'save') {
+        $title = trim((string) ($_POST['title'] ?? ''));
+        $slug  = trim((string) ($_POST['slug'] ?? ''));
+        $route = trim((string) ($_POST['route_mode'] ?? ''));
+        $changes = [];
+        if ($title !== (string) $page['title']) {
+            $changes['title'] = $title;
+        }
+        if ($slug !== (string) $page['slug']) {
+            $changes['slug'] = $slug;
+        }
+        if ($route !== '' && $route !== (string) $page['route_mode']) {
+            $changes['route_mode'] = $route;
+        }
+        try {
+            if ($changes !== []) {
+                $studioApp->updatePageAddress($studioActor, $pageId, $changes);
+            }
+            header('Location: ' . $self . '&saved=1', true, 303);
+            exit;
+        } catch (StudioException $e) {
+            $flash = ['type' => 'error', 'msg' => $errorFor($e, __('studio_page_save_failed', 'The page could not be saved.'))];
+            $page['title'] = $title !== '' ? $title : $page['title'];
+            $page['slug'] = $slug !== '' ? $slug : $page['slug'];
+            $page['route_mode'] = $route !== '' ? $route : $page['route_mode'];
+        }
+    } elseif ($action === 'duplicate') {
+        $title = trim((string) ($_POST['copy_title'] ?? ''));
+        $slug  = trim((string) ($_POST['copy_slug'] ?? ''));
+        if ($slug === '') {
+            $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower($title)), '-');
+        }
+        try {
+            $copy = $studioApp->duplicatePage($studioActor, $pageId, $title, $slug);
+            header('Location: page-edit.php?id=' . (int) $copy['page']['id'] . '&duplicated=1', true, 303);
+            exit;
+        } catch (StudioException $e) {
+            $flash = ['type' => 'error', 'msg' => $errorFor($e, __('studio_page_duplicate_failed', 'The page could not be duplicated.'))];
+        }
+    } elseif ($action === 'delete') {
+        try {
+            $studioApp->archivePage($studioActor, $pageId);
+            header('Location: pages.php?' . http_build_query(['deleted' => 1, 'failed' => 0]), true, 303);
+            exit;
+        } catch (StudioException $e) {
+            $flash = ['type' => 'error', 'msg' => $errorFor($e, __('studio_page_delete_failed', 'The page could not be deleted. A shared component that other pages still use cannot be deleted.'))];
+        }
+    }
+}
+
+if ($flash === null && isset($_GET['saved'])) {
+    $flash = ['type' => 'success', 'msg' => __('studio_page_saved', 'Page saved.')];
+} elseif ($flash === null && isset($_GET['duplicated'])) {
+    $flash = ['type' => 'success', 'msg' => __('studio_page_duplicated', 'Page duplicated. This is the copy.')];
+}
+
+$pageTitle = $page !== null ? (string) $page['title'] : __('studio_pages', 'Studio Pages');
+$published = $page !== null && !empty($page['is_published']);
+$typeLabels = ['page' => __('studio_type_page', 'Standard Page'), 'landing' => __('studio_type_landing', 'Landing Page'), 'header_partial' => __('studio_type_header', 'Site Header Partial'), 'footer_partial' => __('studio_type_footer', 'Site Footer Partial')];
+
+require SLATE_ROOT . '/admin/partials/header.php';
+?>
+
+<div class="sb-admin-wrapper">
+    <?php sb_render_admin_nav('pages'); ?>
+    <?php sb_render_crumbs([[__('studio_pages', 'Studio Pages'), 'pages.php'], [$page !== null ? (string) $page['title'] : __('studio_page_settings', 'Settings'), null]]); ?>
+
+    <?php if ($flash): ?>
+        <div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div>
+    <?php endif; ?>
+
+    <?php if ($loadError !== null): ?>
+        <div class="alert alert-error" role="status"><?= e($loadError) ?></div>
+        <p><a class="btn btn-outline" href="pages.php"><?= e(__('studio_back_to_pages', 'Back to pages')) ?></a></p>
+    <?php else: ?>
+
+    <div class="sb-screen-head">
+        <div>
+            <h2><?= e((string) $page['title']) ?></h2>
+            <p><?= e(__('studio_page_edit_sub', 'Name, address and route. The content is edited in the visual builder.')) ?></p>
+        </div>
+        <div class="sb-screen-actions">
+            <?php if ($canEdit): ?>
+                <a class="btn btn-primary" href="<?= e($builderUrl . '?page=' . $pageId) ?>"><?= sb_svg('zap', 14) ?> <span><?= e(__('studio_open_builder', 'Open builder')) ?></span></a>
+            <?php endif; ?>
+            <a class="btn btn-outline" target="_blank" rel="noopener" href="<?= e($previewUrl . '?page=' . $pageId) ?>"><?= sb_svg('eye', 14) ?> <span><?= e(__('studio_preview', 'Preview')) ?></span></a>
+        </div>
+    </div>
+
+    <div class="sb-meta-strip" data-testid="page-meta">
+        <div><?= e(__('status', 'Status')) ?><strong><?= e($published ? __('studio_status_published', 'Published') : __('studio_status_draft', 'Draft')) ?><?= $published && !empty($page['has_unpublished_changes']) ? ' · ' . e(__('studio_unpublished_changes', 'unpublished changes')) : '' ?></strong></div>
+        <div><?= e(__('studio_page_type', 'Type')) ?><strong><?= e($typeLabels[(string) $page['page_type']] ?? (string) $page['page_type']) ?></strong></div>
+        <div><?= e(__('studio_address', 'Address')) ?><strong><code><?= e((string) $page['public_path']) ?></code></strong></div>
+        <?php if (!empty($page['updated_at'])): ?><div><?= e(__('updated', 'Updated')) ?><strong><?= e((string) $page['updated_at']) ?></strong></div><?php endif; ?>
+    </div>
+
+    <form method="post" class="card sb-form-card">
+        <?= csrf_field() ?>
+        <input type="hidden" name="id" value="<?= $pageId ?>">
+        <input type="hidden" name="action" value="save">
+        <div class="card-header"><div><h2><?= e(__('studio_page_settings', 'Settings')) ?></h2></div></div>
+        <div class="field-row field-row-2">
+            <div class="field">
+                <label class="field-label" for="sb-title"><?= e(__('title', 'Title')) ?> <span class="field-required">*</span></label>
+                <input type="text" id="sb-title" name="title" required maxlength="255" value="<?= e((string) $page['title']) ?>"<?= $canEdit ? '' : ' disabled' ?>>
+            </div>
+            <div class="field">
+                <label class="field-label" for="sb-slug"><?= e(__('studio_slug', 'Address (slug)')) ?></label>
+                <input type="text" id="sb-slug" name="slug" required maxlength="191" pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" value="<?= e((string) $page['slug']) ?>"<?= $canEdit ? '' : ' disabled' ?>>
+                <?php if ($published): ?><div class="field-hint"><?= e(__('studio_slug_published_hint', 'This page is live: changing its address changes its public URL.')) ?></div><?php endif; ?>
+            </div>
+        </div>
+        <div class="field-row field-row-2">
+            <div class="field">
+                <label class="field-label" for="sb-route"><?= e(__('studio_route_mode', 'Route Mode')) ?></label>
+                <select id="sb-route" name="route_mode"<?= $canEdit ? '' : ' disabled' ?>>
+                    <option value="standalone"<?= $page['route_mode'] === 'standalone' ? ' selected' : '' ?>><?= e(__('studio_route_standalone', 'Dedicated URL Path')) ?></option>
+                    <option value="homepage"<?= $page['route_mode'] === 'homepage' ? ' selected' : '' ?>><?= e(__('studio_route_homepage', 'Site Homepage (/)')) ?></option>
+                </select>
+            </div>
+        </div>
+        <?php if ($canEdit): ?>
+        <div class="sb-form-actions">
+            <button type="submit" class="btn btn-primary"><?= sb_svg('save', 14) ?> <span><?= e(__('save', 'Save changes')) ?></span></button>
+            <a href="pages.php" class="btn btn-ghost"><?= e(__('studio_back_to_pages', 'Back to pages')) ?></a>
+        </div>
+        <?php endif; ?>
+    </form>
+
+    <?php if ($canEdit): ?>
+    <form method="post" class="card sb-form-card">
+        <?= csrf_field() ?>
+        <input type="hidden" name="id" value="<?= $pageId ?>">
+        <input type="hidden" name="action" value="duplicate">
+        <div class="card-header"><div><h2><?= e(__('studio_duplicate_page', 'Duplicate')) ?></h2><div class="card-sub"><?= e(__('studio_duplicate_sub', 'Make a draft copy of this page under a new title and address.')) ?></div></div></div>
+        <div class="field-row field-row-2">
+            <div class="field">
+                <label class="field-label" for="sb-copy-title"><?= e(__('title', 'Title')) ?></label>
+                <input type="text" id="sb-copy-title" name="copy_title" required maxlength="255" value="<?= e(sprintf(__('studio_copy_of', '%s copy'), (string) $page['title'])) ?>">
+            </div>
+            <div class="field">
+                <label class="field-label" for="sb-copy-slug"><?= e(__('studio_slug', 'Address (slug)')) ?></label>
+                <input type="text" id="sb-copy-slug" name="copy_slug" maxlength="191" pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" placeholder="<?= e((string) $page['slug']) ?>-copy">
+                <div class="field-hint"><?= e(__('studio_slug_hint', 'Lowercase letters, numbers and hyphens. Leave blank to generate from title.')) ?></div>
+            </div>
+        </div>
+        <div class="sb-form-actions">
+            <button type="submit" class="btn btn-outline"><?= sb_svg('copy', 14) ?> <span><?= e(__('studio_duplicate_page', 'Duplicate')) ?></span></button>
+        </div>
+    </form>
+
+    <form method="post" class="card sb-form-card sb-danger-card" onsubmit="return window.confirm(this.getAttribute('data-confirm'));" data-confirm="<?= e(__('studio_delete_page_confirm', 'Delete this page? It leaves your site and the list. Its history is kept.')) ?>">
+        <?= csrf_field() ?>
+        <input type="hidden" name="id" value="<?= $pageId ?>">
+        <input type="hidden" name="action" value="delete">
+        <div class="card-header"><div><h3><?= e(__('studio_delete_page', 'Delete page')) ?></h3><div class="card-sub"><?= e(__('studio_delete_page_sub', 'The page leaves your site and the list. Its history is kept.')) ?></div></div></div>
+        <div class="sb-form-actions" style="border-top:0; margin-top:0; padding-top:0;">
+            <button type="submit" class="btn btn-danger"><?= sb_svg('trash', 14) ?> <span><?= e(__('studio_delete_page', 'Delete page')) ?></span></button>
+        </div>
+    </form>
+    <?php endif; ?>
+
+    <?php endif; ?>
+</div>
+
+<?php require SLATE_ROOT . '/admin/partials/footer.php'; ?>
