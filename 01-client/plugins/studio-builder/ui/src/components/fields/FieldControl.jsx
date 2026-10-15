@@ -16,6 +16,7 @@ import { UrlControl } from './UrlControl.jsx';
 import { PropChoice, PropTiles } from './PropPresenters.jsx';
 import { TokenPicker } from './TokenPicker.jsx';
 import { optionLabel } from '../../core/optionLabels.mjs';
+import { getMetaFields, isKnownMetaField, metaFieldGroups } from '../../core/metaFields.mjs';
 import { sizedLabeller, tableFor } from '../../core/optionValues.mjs';
 import { Check, Field } from '../ui/index.js';
 
@@ -102,6 +103,23 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
           />
         </FieldRow>
       );
+    case 'metafield': {
+      const known = isKnownMetaField(draft || '');
+      return (
+        <FieldRow id={id} label={field.label} required={field.required} problem={problem}>
+          <select {...common} value={draft ?? ''} onChange={(e) => update(e.target.value)} data-testid="meta-field-select">
+            <option value="">{t('meta_field_none')}</option>
+            {draft && !known ? <option value={draft}>{t('meta_field_missing', { key: draft })}</option> : null}
+            {metaFieldGroups().map((g) => (
+              <optgroup key={g.label} label={g.label}>
+                {g.fields.map((f) => <option key={`${f.postType}:${f.key}`} value={f.key}>{f.label} · {f.key}</option>)}
+              </optgroup>
+            ))}
+          </select>
+          {getMetaFields().length === 0 ? <p className="sbx-hint">{t('meta_field_empty')}</p> : null}
+        </FieldRow>
+      );
+    }
     case 'checkbox':
       return (
         <div className="sbx-field sbx-field--check">

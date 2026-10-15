@@ -7,6 +7,9 @@
 const EN = {
   app_name: 'Kohevo Studio',
   back_to_pages: 'Studio pages',
+  meta_field_none: 'Choose a field…',
+  meta_field_missing: '{key} (no longer defined)',
+  meta_field_empty: 'No custom fields yet. Add them under Types & fields.',
   loading: 'Loading the builder…',
   load_failed: 'The builder could not load this page.',
   retry: 'Try again',
