@@ -20,7 +20,16 @@
  *   - decrypts with neither         -> reported; with any such value the run
  *     stops and changes nothing (--apply included), so a wrong old secret
  *     cannot half-rotate the database.
- * --apply writes every change in one transaction. Values are never printed.
+ * --apply first writes a backup of the affected envelopes (ciphertext only,
+ * never plaintext) to data/rekey-backup-<timestamp>.json with mode 0600,
+ * then writes every change in one transaction. Values are never printed.
+ * Rerunning is safe: values already under the new secret are skipped.
+ *
+ * Rollback: the tool is symmetric. Put the previous secret back in
+ * APP_SECRET and run it with OLD_APP_SECRET set to the secret you rotated
+ * to; every value is re-encrypted back. The backup file holds the exact
+ * previous envelopes (readable with the previous secret) for a manual
+ * restore if ever needed.
  */
 
 if (PHP_SAPI !== 'cli') {
@@ -82,6 +91,16 @@ if (!$apply) {
     echo $plan ? "Dry run: nothing changed. Re-run with --apply to write.\n" : "Nothing to do.\n";
     exit(0);
 }
+
+$backup = dirname(__DIR__) . '/data/rekey-backup-' . date('Ymd-His') . '.json';
+if (!is_dir(dirname($backup))) mkdir(dirname($backup), 0700, true);
+$rows = array_map(static fn(array $p): array => ['table' => $p[0], 'column' => $p[1], 'id' => $p[2], 'envelope' => $p[3]], $plan);
+if (file_put_contents($backup, json_encode($rows, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX) === false) {
+    fwrite(STDERR, "Could not write the backup file {$backup}. Nothing was changed.\n");
+    exit(3);
+}
+chmod($backup, 0600);
+echo "Backup of the previous envelopes (ciphertext only): {$backup}\n";
 
 $pdo->beginTransaction();
 try {

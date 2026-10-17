@@ -57,6 +57,19 @@ unit('rekey CLI: dry run reports, --apply re-encrypts old values to the current 
         assert_eq('PLAIN-BRAVO', slate_decrypt_secret(rksc_value('test.rekey_old_b')));
         assert_eq($current, rksc_value('test.rekey_current'), 'a value already under the current secret is left byte-for-byte');
         assert_false(str_contains($out, 'PLAIN-'), 'no plaintext is printed');
+
+        assert_true(preg_match('/Backup of the previous envelopes \(ciphertext only\): (\S+)/', $out, $bm) === 1, 'apply names its backup file');
+        $backup = $bm[1];
+        assert_true(is_file($backup), 'the backup file exists');
+        assert_eq('600', substr(sprintf('%o', fileperms($backup)), -3), 'the backup is readable by the owner only');
+        $raw = (string) file_get_contents($backup);
+        assert_true(str_contains($raw, $before[0]) && str_contains($raw, $before[1]), 'the backup holds the previous envelopes');
+        assert_false(str_contains($raw, 'PLAIN-'), 'the backup holds no plaintext');
+        @unlink($backup);
+
+        [$code, $out] = rksc_run($old, false);
+        assert_eq(0, $code, 'a rerun is safe');
+        assert_false(str_contains($out, 're-encrypt settings.setting_value id='), 'a rerun finds nothing of ours left to re-encrypt: ' . $out);
     } finally {
         foreach ($keys as $k) Database::query('DELETE FROM settings WHERE tenant_id = ? AND setting_key = ?', [current_tenant_id(), $k]);
     }
@@ -85,4 +98,13 @@ unit('rekey CLI: refuses to run without OLD_APP_SECRET, or when it equals APP_SE
     assert_true(str_contains($out, 'OLD_APP_SECRET'));
     [$code] = rksc_run((string) APP_SECRET, false);
     assert_eq(1, $code, 'same secret is refused');
+});
+
+unit('rekey CLI: refuses to run when the new APP_SECRET is not configured, and writes nothing', function (): void {
+    $code = "define('APP_SECRET', '');"
+          . '$argv = ["rekey-secrets.php", "--apply"]; $argc = 2; $_SERVER["argv"] = $argv;'
+          . 'require ' . var_export(dirname(__DIR__, 2) . '/bin/rekey-secrets.php', true) . ';';
+    exec('OLD_APP_SECRET=whatever ' . escapeshellarg(PHP_BINARY) . ' -d display_errors=stderr -r ' . escapeshellarg($code) . ' 2>&1', $lines, $exit);
+    assert_eq(1, $exit, implode("\n", $lines));
+    assert_true(str_contains(implode("\n", $lines), 'APP_SECRET (the new secret) is not configured'));
 });
