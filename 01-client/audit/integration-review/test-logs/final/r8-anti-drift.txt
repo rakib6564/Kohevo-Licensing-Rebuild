@@ -1,0 +1,55 @@
+anti-drift: TENANT backlog 44/70 (down 26). Re-record with --update-baseline to lock it in.
+
+anti-drift: 12 NEW violation(s).
+
+  [TENANT] includes/installer_flow.php:63
+      query touches tenant-scoped table `users` without naming tenant_id. Add slate_tenant_clause() and bind slate_tenant_id().
+
+  [TENANT] plugins/studio-builder/admin/builder.php:647
+      query touches tenant-scoped table `settings` without naming tenant_id. Add slate_tenant_clause() and bind slate_tenant_id().
+
+  [TENANT] plugins/studio-builder/admin/reviews.php:151
+      query touches tenant-scoped table `studiobuilder_pages` without naming tenant_id. Add slate_tenant_clause() and bind slate_tenant_id().
+
+  [TENANT] plugins/studio-builder/admin/reviews.php:154
+      query touches tenant-scoped table `studiobuilder_pages` without naming tenant_id. Add slate_tenant_clause() and bind slate_tenant_id().
+
+  [TENANT] src/Services/Media/Media.php:381
+      query touches tenant-scoped table `media_files` without naming tenant_id. Add slate_tenant_clause() and bind slate_tenant_id().
+
+  [CLOCK] plugins/studio-builder/admin/redirects.php:72
+      PHP-clock timestamp in MySQL DATETIME format. PHP and MySQL do not share a timezone here; use slate_db_now() (string) or slate_db_time() (int).
+
+  [CLOCK] plugins/studio-builder/admin/reviews.php:109
+      PHP-clock timestamp in MySQL DATETIME format. PHP and MySQL do not share a timezone here; use slate_db_now() (string) or slate_db_time() (int).
+
+  [CLOCK] plugins/studio-builder/admin/templates.php:265
+      PHP-clock timestamp in MySQL DATETIME format. PHP and MySQL do not share a timezone here; use slate_db_now() (string) or slate_db_time() (int).
+
+  [CLOCK] plugins/studio-builder/admin/templates.php:279
+      PHP-clock timestamp in MySQL DATETIME format. PHP and MySQL do not share a timezone here; use slate_db_now() (string) or slate_db_time() (int).
+
+  [CLOCK] plugins/studio-builder/ui/e2e/provision.php:55
+      PHP-clock timestamp in MySQL DATETIME format. PHP and MySQL do not share a timezone here; use slate_db_now() (string) or slate_db_time() (int).
+
+  [CLOCK] src/Module/StudioBuilder/Provider/PostsProvider.php:136
+      time() compared against a stored timestamp. Use slate_db_time() so both sides are on the database clock.
+
+  [CLOCK] src/Services/Licensing/EntitlementService.php:76
+      time() compared against a stored timestamp. Use slate_db_time() so both sides are on the database clock.
+
+
+If a violation is genuinely correct, annotate the line:
+    // anti-drift-ignore: RULE — why this one is safe
+Do not run --update-baseline to clear a new finding; that is what the annotation is for.
+anti-drift: TENANT backlog 40/70 (down 30). Re-record with --update-baseline to lock it in.
+
+anti-drift: 1 NEW violation(s).
+
+  [TENANT] plugins/licensing/admin/license.php:228
+      query touches tenant-scoped table `users` without naming tenant_id. Add slate_tenant_clause() and bind slate_tenant_id().
+
+
+If a violation is genuinely correct, annotate the line:
+    // anti-drift-ignore: RULE — why this one is safe
+Do not run --update-baseline to clear a new finding; that is what the annotation is for.

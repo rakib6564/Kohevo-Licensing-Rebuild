@@ -1,5 +1,17 @@
 # Test results
 
+> **Current status, 2026-10-17.** The text below this block is **historical**: it was written for `audit/settings-secrets-hardening` alone. The current state has been tested as one combined tree, on the local test-only branch `integration/final-check`, which merges three branches onto `origin/main` `ba4c9a5`:
+>
+> | Branch | Head | What it holds |
+> |---|---|---|
+> | PR #102 `fix/secret-handling-gaps` | `6fed518` | SMTP OAuth secrets, Multilang translate key, AI base URL (SSRF) |
+> | `fix/licensing-module-guard` | `188808b` | Central `ModuleGuard`, per-tenant plan enforcement, plan CLIs |
+> | `audit/settings-hardening-next` | this branch | The audit work, encrypt-first saves, `APP_SECRET` rotation tool, test hardening |
+>
+> Test results and the risk register are in `01-client/audit/integration-review/` (start with `README.md` and `10-final-release-readiness.md`).
+>
+> The tables below are **historical** (audit branch alone). Current results for the integrated tree, with commands, base comparison and mutation tests, are in `integration-review/04-test-results.md`. One correction applies to every unit figure, here and there: in both unit runs, `AuthSecurityBoundaryTest`'s redirect-sanitizer case takes its skip branch and is counted as a pass, because the unit runner never defines `SLATE_URL`. The same happens on `origin/main`. That makes 1 silent skip per tree.
+
 **Run date:** 2026-10-17
 **Environment:** macOS arm64, PHP 8.5.9 CLI, Node v24.18.0, local MySQL. Test databases: `root_slate_t9` (client) and `root_slate_t20` (licensing), taken from each tree's `.env`.
 

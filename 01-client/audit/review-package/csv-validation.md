@@ -1,5 +1,17 @@
 # Inventory CSV validation
 
+> **Current status, 2026-10-17.** The text below this block is **historical**: it was written for `audit/settings-secrets-hardening` alone. The current state has been tested as one combined tree, on the local test-only branch `integration/final-check`, which merges three branches onto `origin/main` `ba4c9a5`:
+>
+> | Branch | Head | What it holds |
+> |---|---|---|
+> | PR #102 `fix/secret-handling-gaps` | `6fed518` | SMTP OAuth secrets, Multilang translate key, AI base URL (SSRF) |
+> | `fix/licensing-module-guard` | `188808b` | Central `ModuleGuard`, per-tenant plan enforcement, plan CLIs |
+> | `audit/settings-hardening-next` | this branch | The audit work, encrypt-first saves, `APP_SECRET` rotation tool, test hardening |
+>
+> Test results and the risk register are in `01-client/audit/integration-review/` (start with `README.md` and `10-final-release-readiness.md`).
+>
+> Integrated re-validation: 100 rows, 12 columns, LF line endings. `csv-verify.py` finds 99 VERIFIED and 1 NOT_IMPLEMENTED. The claim check (`integration-review/inventory-claims-verify.py`) confirms all 12 encryption claims and all 69 "Identical" parity claims. Eight rows were corrected after this document was written: the 4 secret rows fixed by #102 (`smtp_oauth_client_secret`, `smtp_oauth_refresh_token`, `ai_base_url`, `autotranslate_api_key`) and 4 rows with a wrong parity or value (`stripe_payment_field` parity n/a, `LICENSE_SERVER_URL` client-only, `OFFLINE_TOLERANCE_SECONDS` client-only and 7 days, `ALLOWED_MIMES` is `MediaLibrary::ALLOWED_MIMES` = jpeg, png, webp, gif). Parity totals are now Identical 69, Client-Only 17, Both Trees 13, n/a 1.
+
 **File:** `01-client/audit/kohevo-settings-widget-inventory.csv`
 **Checked:** 2026-10-17, branch `audit/settings-secrets-hardening` (on `origin/main` `ba4c9a5`)
 **Tools:** Python 3 standard-library `csv`; `csv-verify.py` (strict source check); `inventory-corrections.py` (the corrections applied, each with its reason)

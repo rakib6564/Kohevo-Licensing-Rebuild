@@ -1,5 +1,24 @@
 # Remaining risks and open items
 
+> **Current status, 2026-10-17.** The text below this block is **historical**: it was written for `audit/settings-secrets-hardening` alone. The current state has been tested as one combined tree, on the local test-only branch `integration/final-check`, which merges three branches onto `origin/main` `ba4c9a5`:
+>
+> | Branch | Head | What it holds |
+> |---|---|---|
+> | PR #102 `fix/secret-handling-gaps` | `6fed518` | SMTP OAuth secrets, Multilang translate key, AI base URL (SSRF) |
+> | `fix/licensing-module-guard` | `188808b` | Central `ModuleGuard`, per-tenant plan enforcement, plan CLIs |
+> | `audit/settings-hardening-next` | this branch | The audit work, encrypt-first saves, `APP_SECRET` rotation tool, test hardening |
+>
+> Test results and the risk register are in `01-client/audit/integration-review/` (start with `README.md` and `10-final-release-readiness.md`).
+>
+> **Status of R1–R8:**
+> - **R1–R3 fixed** by PR #102.
+> - **R4 fixed** on `fix/licensing-module-guard`: 60 calls in 56 central files, per-plan gating, plan tooling.
+> - **R5 fixed** on this branch: `bin/rekey-secrets.php` re-encrypts stored secrets after an `APP_SECRET` rotation.
+> - **R6 fixed** on this branch: Backups, Booking and AI now encrypt every secret first and save nothing on failure.
+> - **R7 and R8 remain open.**
+>
+> The current register is `integration-review/05-remaining-risks.md`.
+
 **Date:** 2026-10-17. **Checkout:** `~/Downloads/Fahim/KOHEVO-STUDIO`, branch `audit/settings-secrets-hardening`. Audit commit `e9a1bdf` sits on `origin/main` `ba4c9a5`, re-fetched today with no divergence; this pass's follow-up changes are uncommitted on top of it. Nothing has been pushed, merged or deployed.
 
 ## Fixed in this pass (were open)

@@ -26,7 +26,7 @@
 | `core.form` | `FormRenderer` | 2 | StudioBuilderSprint7AcceptanceTest.php, StudioBuilderSprint7AdvancedUiTest.php | Implemented |
 | `core.gallery` | `GalleryRenderer` | 3 | StudioBuilderSprint7AcceptanceTest.php, StudioBuilderSprint7AdvancedUiTest.php, inspector-sections.test.mjs | Implemented |
 | `layout.grid` | `GridRenderer` | 5 | StudioBuilderElementManagerTest.php, StudioBuilderSprint1LayoutAndWidgetsTest.php, add-panel.test.mjs | Implemented |
-| `core.heading` | `HeadingRenderer` | 61 | StudioBuilderBlockAttributesTest.php, StudioBuilderElementManagerTest.php, StudioBuilderElementsTest.php | Implemented |
+| `core.heading` | `HeadingRenderer` | 62 | StudioBuilderBlockAttributesTest.php, StudioBuilderElementManagerTest.php, StudioBuilderElementsTest.php | Implemented |
 | `core.hero` | `HeroRenderer` | 14 | StudioBuilderElementManagerTest.php, StudioBuilderElementsTest.php, StudioBuilderInlineTextTest.php | Implemented |
 | `core.icon` | `IconRenderer` | 4 | StudioBuilderElementsTest.php, canvasLiveSync.test.mjs, inspector-sections.test.mjs | Implemented |
 | `core.image` | `ImageRenderer` | 12 | StudioBuilderInlineTextTest.php, StudioBuilderPhase2DocumentDomainTest.php, StudioBuilderPhase4RendererTest.php | Implemented |
@@ -71,6 +71,7 @@
 | Plugin | Type ids | Test files per type | Status |
 |---|---|---|---|
 | `studio-freelancer-portfolio` | `portfolio.experience_timeline`, `portfolio.eyebrow`, `portfolio.footer`, `portfolio.nav_header`, `portfolio.project_card`, `portfolio.reassurance_badges`, `portfolio.service_card`, `portfolio.skill_grid`, `portfolio.stat_highlight`, `portfolio.status_pill`, `portfolio.testimonial_card` | 2 each | Implemented |
+| `studio-builder` (`StudioBuilderPortfolioWidgets.php`) | `portfolio.rakib_showcase` | 0 | Implemented, untested (no test references the type id; added 2026-10-17) |
 | `studio-testimonial-widget` | `acme.testimonial` (example Widget SDK block) | 2 | Implemented |
 
 ## Claimed earlier but not implemented

@@ -1,5 +1,15 @@
 # Kohevo Complete System, Plugin, Widget and Settings Audit Report
 
+> **Current status, 2026-10-17.** The text below this block is **historical**: it was written for `audit/settings-secrets-hardening` alone. The current state has been tested as one combined tree, on the local test-only branch `integration/final-check`, which merges three branches onto `origin/main` `ba4c9a5`:
+>
+> | Branch | Head | What it holds |
+> |---|---|---|
+> | PR #102 `fix/secret-handling-gaps` | `6fed518` | SMTP OAuth secrets, Multilang translate key, AI base URL (SSRF) |
+> | `fix/licensing-module-guard` | `188808b` | Central `ModuleGuard`, per-tenant plan enforcement, plan CLIs |
+> | `audit/settings-hardening-next` | this branch | The audit work, encrypt-first saves, `APP_SECRET` rotation tool, test hardening |
+>
+> Test results and the risk register are in `01-client/audit/integration-review/` (start with `README.md` and `10-final-release-readiness.md`).
+
 > **Current status (verified 2026-10-17, supersedes the totals and claims below).** The body of this report is the original audit text. Several of its claims were wrong and have been corrected elsewhere:
 > - "2,473 tests, 25 failures resolved, 0 failures" left out the licensing integration suite. On `origin/main` the client integration suite has 23 failures, not 25.
 > - The inventory and widget matrix named settings and classes that do not exist.

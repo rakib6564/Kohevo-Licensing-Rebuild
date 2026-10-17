@@ -1,3 +1,15 @@
+> **Current status, 2026-10-17.** The text below this block is **historical**: it was written for `audit/settings-secrets-hardening` alone. The current state has been tested as one combined tree, on the local test-only branch `integration/final-check`, which merges three branches onto `origin/main` `ba4c9a5`:
+>
+> | Branch | Head | What it holds |
+> |---|---|---|
+> | PR #102 `fix/secret-handling-gaps` | `6fed518` | SMTP OAuth secrets, Multilang translate key, AI base URL (SSRF) |
+> | `fix/licensing-module-guard` | `188808b` | Central `ModuleGuard`, per-tenant plan enforcement, plan CLIs |
+> | `audit/settings-hardening-next` | this branch | The audit work, encrypt-first saves, `APP_SECRET` rotation tool, test hardening |
+>
+> Test results and the risk register are in `01-client/audit/integration-review/` (start with `README.md` and `10-final-release-readiness.md`).
+>
+> When this PR is opened after #102 has merged, replace the "Remaining risks" items for SMTP OAuth, the Multilang key and the AI base URL with "fixed in #102", and refresh the test numbers from `integration-review/04-test-results.md`.
+
 ## Purpose and scope
 
 This PR hardens how the admin settings pages handle secrets and bounded values, in both `01-client` and `02-licensing`. It also brings stale tests in line with the current architecture. The base is `origin/main` (`ba4c9a5`). It does not include the unrelated Field value dropdown work.
@@ -93,6 +105,6 @@ Revert the commits. Stripe envelopes stay readable by `main`. **Forms CAPTCHA se
 ## Audit evidence
 
 - Review package: `01-client/audit/review-package/`. It holds the test results, verification matrix, CSV validation, remaining risks, the patches against `origin/main` and `e9a1bdf`, and test logs.
-- Local bundle (gitignored, not committed): `01-client/audit/Kohevo_Complete_System_Plugin_Widget_Audit_Final_Bundle.zip`, 56 files, 541,455 bytes, SHA-256 `7d471a151bc3865ad05fd13e761f882637fe9e4ec9e8083faaa23ce81275eaf3`.
+- Local bundle (gitignored, not committed): `01-client/audit/Kohevo_Complete_System_Plugin_Widget_Audit_Final_Bundle.zip`. It was rebuilt on 2026-10-17 from the integrated tree. An archive can't contain its own checksum, so the file count, size and SHA-256 are recorded in the release report delivered with it. The earlier build (56 files, SHA-256 `7d471a15…eaf3`) is superseded.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

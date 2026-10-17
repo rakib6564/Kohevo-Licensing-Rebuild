@@ -1,5 +1,17 @@
 # Kohevo option disposition
 
+> **Current status, 2026-10-17.** The text below this block is **historical**: it was written for `audit/settings-secrets-hardening` alone. The current state has been tested as one combined tree, on the local test-only branch `integration/final-check`, which merges three branches onto `origin/main` `ba4c9a5`:
+>
+> | Branch | Head | What it holds |
+> |---|---|---|
+> | PR #102 `fix/secret-handling-gaps` | `6fed518` | SMTP OAuth secrets, Multilang translate key, AI base URL (SSRF) |
+> | `fix/licensing-module-guard` | `188808b` | Central `ModuleGuard`, per-tenant plan enforcement, plan CLIs |
+> | `audit/settings-hardening-next` | this branch | The audit work, encrypt-first saves, `APP_SECRET` rotation tool, test hardening |
+>
+> Test results and the risk register are in `01-client/audit/integration-review/` (start with `README.md` and `10-final-release-readiness.md`).
+>
+> Options whose status changed in the integrated tree: `smtp_oauth_client_secret` and `smtp_oauth_refresh_token` are now encrypted and fail closed. `ai_base_url` accepts public https addresses only. `autotranslate_api_key` is write-only and encrypted.
+
 > **Regenerated 2026-10-17 from the corrected inventory.** The earlier version was built on an inventory in which 66 of 137 rows named keys that do not exist in the source. Each row below now traces to a real key, block type or field type (see `review-package/csv-row-verification.csv`), and the rows that described non-existent settings are listed at the end with the reason they were removed.
 
 ## Categories

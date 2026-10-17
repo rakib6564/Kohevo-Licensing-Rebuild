@@ -1,5 +1,17 @@
 # Kohevo Complete System Implementation Prompt for AI Agents and Developers
 
+> **Current status, 2026-10-17.** The text below this block is **historical**: it was written for `audit/settings-secrets-hardening` alone. The current state has been tested as one combined tree, on the local test-only branch `integration/final-check`, which merges three branches onto `origin/main` `ba4c9a5`:
+>
+> | Branch | Head | What it holds |
+> |---|---|---|
+> | PR #102 `fix/secret-handling-gaps` | `6fed518` | SMTP OAuth secrets, Multilang translate key, AI base URL (SSRF) |
+> | `fix/licensing-module-guard` | `188808b` | Central `ModuleGuard`, per-tenant plan enforcement, plan CLIs |
+> | `audit/settings-hardening-next` | this branch | The audit work, encrypt-first saves, `APP_SECRET` rotation tool, test hardening |
+>
+> Test results and the risk register are in `01-client/audit/integration-review/` (start with `README.md` and `10-final-release-readiness.md`).
+>
+> Pattern references added by #102: `SmtpOAuth::sealSecrets()` (encrypt everything before any write), `MLT_AutoTranslate::resolveStoredApiKey()` (write-only key), and `AiProviderClient::vetBaseUrl()` (outbound URLs set by an admin). See `integration-review/06-integration-plan-and-guidance.md` § Guidance.
+
 **Target Architecture:** Dual-Tree (`01-client/` and `02-licensing/`)\
 **Core Technologies:** PHP 8.2+ (PHP 8.5 compatible), MySQL 8+, React/TypeScript, Node.js v20+\
 **Security Standard:** Zero-Trust Cryptographic Authority, Fail-Closed Encryption, Write-Only Secrets
