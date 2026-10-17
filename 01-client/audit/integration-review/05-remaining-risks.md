@@ -13,12 +13,12 @@ Every item was confirmed against the source of the final combined tree, `integra
 | S5 | Stripe "Disconnect" left the `test_`/`live_` key slots set | Clears all key slots and webhook secrets in both modes, keeps unrelated settings, writes an audit-log entry | hardening `d368b5c` | `StripeWriteOnlySecretTest` (Disconnect case) |
 | S6 | Production test hook in `PaymentButtonRenderer` | Removed | hardening `d368b5c` | `git grep` finds no override |
 | S7 | Backups, Booking and AI saved half a form when a secret couldn't be encrypted | `slate_seal_posted_secrets()`: encrypt first, otherwise save nothing | hardening `b8a6fdc` | `SettingsEncryptFirstTest` (fails on the old code, 3/6), `SealPostedSecretsTest` |
-| S8 | `APP_SECRET` rotation made every stored secret unreadable, with no recovery | `bin/rekey-secrets.php`:<br>• dry run by default; the old secret comes from an environment variable, never argv<br>• stops if any value is unreadable<br>• one transaction; an envelope-only backup (mode 0600)<br>• symmetric rollback; rerunning is safe | hardening `197fe44`, `17f3a43` | `RekeySecretsCliTest`; removing the stop makes it fail |
+| S8 | `APP_SECRET` rotation made every stored secret unreadable, with no recovery | `bin/rekey-secrets.php`:<br>• dry run by default; the old secret comes from an environment variable, never argv<br>• stops if any value is unreadable<br>• one transaction; an envelope-only backup (mode 0600)<br>• symmetric rollback; rerunning is safe | hardening `197fe44`, `346b48b` | `RekeySecretsCliTest`; removing the stop makes it fail |
 | S9 | Central `ModuleGuard` missing: 60 calls in 56 files fataled with a 500 | Class ported; per-tenant plan gating | `fix/licensing-module-guard` | `CentralModuleGuardTest` (real pages: 200 or 403 per plan); making `allows()` return true fails it |
 | S10 | No supported way to give a central tenant a plan | `bin/assign-tenant-plan.php` (refuses inactive plans; audit-logged) and the `bin/check-tenant-plans.php` preflight | `fix/licensing-module-guard` | `CentralTenantPlanCliTest` |
 | T1 | A silent skip counted as a pass (redirect origin, both unit runs) | Now runs in a child process, including lookalike hosts | hardening `b8a6fdc` | `AuthSecurityBoundaryTest` |
 | T2 | Five `APP_SECRET` skip-as-pass guards (Forms CAPTCHA, Stripe) | Now precondition assertions | hardening `b8a6fdc` | n/a |
-| T3 | Licensing single-process runner crashed (`licplug_teardown` declared twice); CentralLicensingFoundation failed on its own | One shared support file | hardening `938c4d0` | 22/22 alone; the runner completes |
+| T3 | Licensing single-process runner crashed (`licplug_teardown` declared twice); CentralLicensingFoundation failed on its own | One shared support file | hardening `c926c18` | 22/22 alone; the runner completes |
 
 ## Still open
 

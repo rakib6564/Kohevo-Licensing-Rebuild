@@ -10,6 +10,7 @@
   - PR #102 at `6fed518`;
   - `audit/settings-hardening-next` at `17f3a43`;
   - `fix/licensing-module-guard` at `fd592d3`.
+  - The final tree's head after the documentation merges is `b90dc74` (code identical to `ed90282`).
 - The final tree's code is `ed90282`; the documentation commit merged afterwards changes no code.
 
 The full set ran on `8a09f58` (run r8). Two later sets of fixes touch only `02-licensing` tests, the rekey CLI and its test. The suites they affect were rerun on `a747ed6` (r9) and `ed90282` (r10). Each row says which run it comes from. Logs are in `test-logs/final/`.
@@ -74,3 +75,5 @@ These are recorded here because they first showed up as failures.
 1. **My `SettingsEncryptFirstTest` turned Booking capabilities off.** It restored only the keys it asserted, which caused 5 Booking failures in the first final run. Fixed in `240caef`, which restores whole prefixes; the settings fingerprint is now identical before and after. I removed the 27 polluted test-database rows after saving a JSON backup of them.
 2. **The shared test tenant got Enterprise for the whole process**, and Enterprise carries `white_label`. That caused 15 platform-signature failures in single-process runs. Fixed in `fd592d3` by switching to Professional.
 3. **My static-check update** (`9ac61ab`). The audit check required a `try/catch` in each settings page, so it failed once encryption moved into the shared seal step. It now checks the stronger rule.
+
+> **History note:** on 2026-10-17 the hardening branch's mis-scoped commit `938c4d0` (test helpers plus 74 documentation files) was split. Its code and that of `17f3a43` are now `c926c18` and `346b48b`. The trees are identical, and the old commits stay reachable through `refs/backup/settings-hardening-next-before-split`. The combined tree tested here merged the old SHAs; its code is byte-identical to the current branch heads (`git diff ed90282 <final> -- ':!01-client/audit' ':!01-client/Claude'` is empty).

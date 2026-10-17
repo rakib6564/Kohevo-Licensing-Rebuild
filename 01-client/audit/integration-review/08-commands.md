@@ -59,3 +59,5 @@ python3 -I review-package/csv-verify.py 01-client <out>; python3 -I integration-
 # Test-DB repair: 27 settings rows written by my own test, backed up to JSON, then deleted
 ```
 No push, merge, deploy, branch deletion or migration against a non-test database was done.
+
+> **History note:** on 2026-10-17 the hardening branch's mis-scoped commit `938c4d0` (test helpers plus 74 documentation files) was split. Its code and that of `17f3a43` are now `c926c18` and `346b48b`. The trees are identical, and the old commits stay reachable through `refs/backup/settings-hardening-next-before-split`. The combined tree tested here merged the old SHAs; its code is byte-identical to the current branch heads (`git diff ed90282 <final> -- ':!01-client/audit' ':!01-client/Claude'` is empty).
