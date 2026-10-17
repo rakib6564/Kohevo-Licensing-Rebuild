@@ -41,6 +41,30 @@ if (interface_exists('PHPMailer\\PHPMailer\\OAuthTokenProvider')) {
             $this->refreshToken = $refreshToken;
         }
 
+        /**
+         * Encrypt every non-empty value (enc:v1 envelope), or return null if
+         * any of them cannot be encrypted (APP_SECRET missing, helper absent).
+         * Callers must then store nothing: OAuth secrets are never written in
+         * plaintext, and a half-written connection is worse than none.
+         *
+         * @param array<string,string> $plain
+         * @return array<string,string>|null
+         */
+        public static function sealSecrets(array $plain): ?array {
+            if (!function_exists('slate_encrypt_secret')) return null;
+            $out = [];
+            foreach ($plain as $k => $v) {
+                $v = (string) $v;
+                if ($v === '') { $out[$k] = ''; continue; }
+                try {
+                    $out[$k] = slate_encrypt_secret($v);
+                } catch (\Throwable $e) {
+                    return null;
+                }
+            }
+            return $out;
+        }
+
         /** Build the SmtpOAuth from saved settings, or null if not connected. */
         public static function fromSettings(): ?self {
             if (Database::setting('smtp_auth_type') !== 'xoauth2') return null;
@@ -90,12 +114,20 @@ if (interface_exists('PHPMailer\\PHPMailer\\OAuthTokenProvider')) {
             }
             $access = (string)($data['access_token'] ?? '');
             $ttl    = (int)($data['expires_in'] ?? 3600);
-            Database::setSetting('smtp_oauth_access_token', function_exists('slate_encrypt_secret') ? slate_encrypt_secret($access) : $access);
-            Database::setSetting('smtp_oauth_expires', (string)(time() + $ttl));
-            // Microsoft rotates refresh tokens; persist the new one if returned.
-            if (!empty($data['refresh_token']) && function_exists('slate_encrypt_secret')) {
-                Database::setSetting('smtp_oauth_refresh_token', slate_encrypt_secret((string)$data['refresh_token']));
-                $this->refreshToken = (string)$data['refresh_token'];
+            // Cache the new access token (and Microsoft's rotated refresh token)
+            // only when they can be encrypted; otherwise use them for this
+            // request without persisting them, rather than storing plaintext.
+            $rotated = (string)($data['refresh_token'] ?? '');
+            $sealed  = self::sealSecrets(['access' => $access, 'refresh' => $rotated]);
+            if ($sealed !== null) {
+                Database::setSetting('smtp_oauth_access_token', $sealed['access']);
+                Database::setSetting('smtp_oauth_expires', (string)(time() + $ttl));
+                if ($rotated !== '') {
+                    Database::setSetting('smtp_oauth_refresh_token', $sealed['refresh']);
+                }
+            }
+            if ($rotated !== '') {
+                $this->refreshToken = $rotated;
             }
             return $access;
         }

@@ -126,5 +126,6 @@ if (!is_array($fields)) $fields = [];
 $fields['_csrf'] = csrf_token();
 
 $_POST = $fields;
+$_REQUEST = array_merge($_GET, $_POST); // PHP default request_order "GP": POST overrides GET
 
 require $file;

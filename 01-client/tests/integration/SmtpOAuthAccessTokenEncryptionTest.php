@@ -83,31 +83,38 @@ unit('SmtpOAuth::fromSettings()->bearerToken() decrypts the cached access token,
     }
 });
 
-unit('SmtpOAuth.php: accessToken() encrypts on write and decrypts on read (fix present in the shipped file)', function (): void {
+unit('SmtpOAuth.php: accessToken() decrypts on read and persists refreshed tokens only through sealSecrets() (fix present in the shipped file)', function (): void {
     $src = file_get_contents(dirname(__DIR__, 2) . '/includes/SmtpOAuth.php');
 
     $fnPos = strpos($src, 'private function accessToken(): string {');
     assert_true($fnPos !== false, 'accessToken() must still exist');
-    $fnEnd = strpos($src, "\n        }", $fnPos);
-    $fnBody = substr($src, $fnPos, ($fnEnd !== false ? $fnEnd - $fnPos : 800));
+    $fnEnd = strpos($src, "\n        }\n", $fnPos);
+    $fnBody = substr($src, $fnPos, ($fnEnd !== false ? $fnEnd - $fnPos : 1600));
 
     assert_true(
         str_contains($fnBody, "slate_decrypt_secret(\$cachedRaw)"),
         'accessToken() must decrypt the cached value via slate_decrypt_secret() before using it'
     );
     assert_true(
-        str_contains($fnBody, "slate_encrypt_secret(\$access)"),
-        'accessToken() must encrypt the freshly-refreshed token via slate_encrypt_secret() before persisting it'
+        str_contains($fnBody, "self::sealSecrets(['access' => \$access, 'refresh' => \$rotated])"),
+        'accessToken() must encrypt the refreshed (and rotated) tokens via sealSecrets() before persisting them'
+    );
+    assert_false(
+        (bool) preg_match('/setSetting\(\s*\'smtp_oauth_(access|refresh)_token\',\s*\$(access|data)/', $fnBody),
+        'accessToken() must never persist a raw token'
     );
 });
 
-unit('admin/oauth_callback.php: the freshly-exchanged access token is encrypted before being persisted (fix present in the shipped file)', function (): void {
+unit('admin/oauth_callback.php: every OAuth secret is sealed before anything is written, and nothing is written if sealing fails (fix present in the shipped file)', function (): void {
     $src = file_get_contents(dirname(__DIR__, 2) . '/admin/oauth_callback.php');
 
-    $encVarPos    = strpos($src, "\$enc = function_exists('slate_encrypt_secret');");
-    $accessSetPos = strpos($src, "Database::setSetting('smtp_oauth_access_token', \$enc ? slate_encrypt_secret(\$accessToken) : \$accessToken);");
-
-    assert_true($encVarPos !== false, 'the existing $enc capability-check must still be present');
-    assert_true($accessSetPos !== false, 'the access-token persist must route through the same $enc ? slate_encrypt_secret(...) convention as the client secret and refresh token');
-    assert_true($encVarPos < $accessSetPos, 'the capability check must be defined before the access-token persist uses it');
+    $sealPos   = strpos($src, '$sealed = SmtpOAuth::sealSecrets([');
+    $abortPos  = strpos($src, 'if ($sealed === null) {');
+    $firstSet  = strpos($src, 'Database::setSetting(');
+    assert_true($sealPos !== false && $abortPos !== false, 'the callback must seal the secrets and handle failure');
+    assert_true($firstSet !== false && $sealPos < $firstSet && $abortPos < $firstSet, 'sealing and the abort must come before the first settings write');
+    foreach (['client_secret', 'refresh_token', 'access_token'] as $k) {
+        assert_true(str_contains($src, "Database::setSetting('smtp_oauth_{$k}', \$sealed['{$k}']);"), "smtp_oauth_{$k} must be stored from the sealed value");
+    }
+    assert_false(str_contains($src, '$enc ?'), 'no plaintext fallback ($enc ? encrypt : raw) may remain');
 });

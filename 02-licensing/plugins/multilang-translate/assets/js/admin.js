@@ -307,8 +307,17 @@
             switcher_fg: document.getElementById('mlt-cz-fg').value,
             switcher_accent: document.getElementById('mlt-cz-accent').value
         }).then(function (r) {
-            if (r.ok) { toast('Switcher settings saved.'); document.getElementById('mlt-modal-customize').hidden = true; Object.assign(window.MLT_SETTINGS, {}); }
-            else toast(r.error || 'Failed');
+            if (!r.ok) { toast(r.error || 'Failed'); return; }
+            var keyEl = document.getElementById('mlt-cz-at-key');
+            var clearEl = document.getElementById('mlt-cz-at-clear');
+            var key = keyEl ? keyEl.value.trim() : '';
+            var clear = !!(clearEl && clearEl.checked);
+            var done = function () { toast('Settings saved.'); document.getElementById('mlt-modal-customize').hidden = true; };
+            if (key === '' && !clear) { done(); return; }
+            post('save_autotranslate_key', { api_key: key, clear: clear ? '1' : '0' }).then(function (k) {
+                if (keyEl) keyEl.value = '';
+                if (k.ok) done(); else toast(k.error || 'Failed');
+            });
         });
     });
 })();

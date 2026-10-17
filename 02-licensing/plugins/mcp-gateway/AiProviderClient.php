@@ -21,6 +21,48 @@ class AiProviderClient {
         return rtrim((string) Database::setting('mcp-gateway.ai_base_url'), '/');
     }
 
+    /**
+     * Vet an AI base URL before it is saved or called. It must be https,
+     * carry no credentials, and every address its host resolves to must be
+     * public (no private, loopback, link-local or reserved ranges), so the
+     * admin-configured endpoint cannot be pointed at internal services.
+     * $resolve maps a host to its IPs; it is injectable for tests.
+     *
+     * @return array{ok: bool, error: ?string, host?: string, port?: int, ip?: string}
+     */
+    public static function vetBaseUrl(string $url, ?callable $resolve = null): array {
+        $parts = parse_url(trim($url));
+        if (!is_array($parts) || strtolower((string)($parts['scheme'] ?? '')) !== 'https') {
+            return ['ok' => false, 'error' => 'https_required'];
+        }
+        if (isset($parts['user']) || isset($parts['pass'])) {
+            return ['ok' => false, 'error' => 'credentials_in_url'];
+        }
+        $host = strtolower(trim((string)($parts['host'] ?? ''), '[]'));
+        if ($host === '') return ['ok' => false, 'error' => 'host_missing'];
+        $port = (int)($parts['port'] ?? 443);
+
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            $ips = [$host];
+        } else {
+            $resolve ??= static function (string $h): array {
+                $ips = @gethostbynamel($h) ?: [];
+                foreach (@dns_get_record($h, DNS_AAAA) ?: [] as $rec) {
+                    if (!empty($rec['ipv6'])) $ips[] = $rec['ipv6'];
+                }
+                return $ips;
+            };
+            $ips = $resolve($host);
+        }
+        if (!$ips) return ['ok' => false, 'error' => 'host_unresolvable'];
+        foreach ($ips as $ip) {
+            if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                return ['ok' => false, 'error' => 'private_address'];
+            }
+        }
+        return ['ok' => true, 'error' => null, 'host' => $host, 'port' => $port, 'ip' => $ips[0]];
+    }
+
     public static function model(): string {
         return trim((string) Database::setting('mcp-gateway.ai_model'));
     }
@@ -55,8 +97,20 @@ class AiProviderClient {
             $payload['tool_choice'] = 'auto';
         }
 
+        // Re-vet at call time (a value saved before this check existed, or a
+        // DNS change since) and pin curl to the vetted address so it talks to
+        // exactly what was checked (no DNS rebinding), https only, no redirects.
+        $vet = self::vetBaseUrl(self::baseUrl());
+        if (!$vet['ok']) {
+            throw new RuntimeException('AI provider URL is not allowed (' . $vet['error'] . '): it must be a public https endpoint (Settings → AI Connection).');
+        }
+        $pinIp = str_contains($vet['ip'], ':') ? '[' . $vet['ip'] . ']' : $vet['ip'];
+
         $ch = curl_init(self::baseUrl() . '/chat/completions');
         curl_setopt_array($ch, [
+            CURLOPT_RESOLVE        => [$vet['host'] . ':' . $vet['port'] . ':' . $pinIp],
+            CURLOPT_PROTOCOLS      => CURLPROTO_HTTPS,
+            CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST           => true,
             CURLOPT_HTTPHEADER     => [
