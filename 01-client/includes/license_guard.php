@@ -226,7 +226,11 @@ if (!function_exists('slate_license_guard')) {
         // bootstraps (06 §3a, D19 LOCKED). Defined only by this suite's own
         // trusted bootstrap scripts — never derived from request input, so
         // an attacker cannot set these by crafting a request.
-        if (defined('SLATE_TESTING') || defined('SLATE_MIGRATING') || env('APP_ENV') === 'testing') {
+        // APP_ENV=testing counts only for CLI processes (test runners and
+        // their child probes): on a request served by a web server it is
+        // ignored, so a production .env that wrongly says "testing" cannot
+        // switch the licence guard off.
+        if (defined('SLATE_TESTING') || defined('SLATE_MIGRATING') || (PHP_SAPI === 'cli' && env('APP_ENV') === 'testing')) {
             return;
         }
 
