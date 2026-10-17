@@ -63,3 +63,13 @@ unit('AI base URL: private, loopback, link-local and metadata addresses are refu
 unit('AI base URL: a host that does not resolve is refused', function (): void {
     assert_eq('host_unresolvable', AiProviderClient::vetBaseUrl('https://nowhere.example.test/v1', apcv_dns([]))['error']);
 });
+
+unit('AI base URL: CGNAT, benchmarking, multicast and IPv4-embedding IPv6 prefixes are refused; neighbours stay allowed', function (): void {
+    foreach (['100.64.0.1', '100.127.255.255', '198.18.0.1', '198.19.255.254', '224.0.0.1', '[64:ff9b::a9fe:a9fe]', '[2002:7f00:1::]', '[2001:0:4136:e378::1]', '[ff02::1]'] as $literal) {
+        assert_eq('private_address', AiProviderClient::vetBaseUrl("https://{$literal}/v1", apcv_dns([]))['error'] ?? null, "{$literal} must be refused");
+    }
+    foreach (['100.128.0.1', '198.20.0.1', '[2001:4860:4860::8888]', '[2606:4700:4700::1111]'] as $literal) {
+        assert_true(AiProviderClient::vetBaseUrl("https://{$literal}/v1", apcv_dns([]))['ok'], "{$literal} is public and must be allowed");
+    }
+    assert_eq('private_address', AiProviderClient::vetBaseUrl('https://nat64.example.test/v1', apcv_dns(['nat64.example.test' => ['64:ff9b::7f00:1']]))['error'], 'a NAT64-wrapped loopback via DNS is refused');
+});

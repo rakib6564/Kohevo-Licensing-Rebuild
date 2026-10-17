@@ -56,11 +56,40 @@ class AiProviderClient {
         }
         if (!$ips) return ['ok' => false, 'error' => 'host_unresolvable'];
         foreach ($ips as $ip) {
-            if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)
+                || self::inBlockedRange($ip)) {
                 return ['ok' => false, 'error' => 'private_address'];
             }
         }
         return ['ok' => true, 'error' => null, 'host' => $host, 'port' => $port, 'ip' => $ips[0]];
+    }
+
+    /**
+     * Ranges PHP's NO_PRIV/NO_RES flags let through but that are not public
+     * internet hosts: carrier-grade NAT, benchmarking, multicast, and the
+     * IPv6 transition prefixes that embed an IPv4 address (NAT64, 6to4,
+     * Teredo), which could otherwise wrap 127.0.0.1 or 169.254.169.254.
+     */
+    private const BLOCKED_RANGES = [
+        '100.64.0.0/10', '198.18.0.0/15', '224.0.0.0/4',
+        '64:ff9b::/96', '64:ff9b:1::/48', '2002::/16', '2001::/32', 'ff00::/8', '100::/64',
+    ];
+
+    private static function inBlockedRange(string $ip): bool {
+        $bin = @inet_pton($ip);
+        if ($bin === false) return true;
+        foreach (self::BLOCKED_RANGES as $cidr) {
+            [$net, $bits] = explode('/', $cidr);
+            $netBin = inet_pton($net);
+            if (strlen($netBin) !== strlen($bin)) continue;
+            $bytes = intdiv((int) $bits, 8);
+            $rest  = (int) $bits % 8;
+            if (substr($bin, 0, $bytes) !== substr($netBin, 0, $bytes)) continue;
+            if ($rest === 0) return true;
+            $mask = chr((0xFF << (8 - $rest)) & 0xFF);
+            if ((($bin[$bytes] ^ $netBin[$bytes]) & $mask) === "\0") return true;
+        }
+        return false;
     }
 
     public static function model(): string {
@@ -107,8 +136,12 @@ class AiProviderClient {
         $pinIp = str_contains($vet['ip'], ':') ? '[' . $vet['ip'] . ']' : $vet['ip'];
 
         $ch = curl_init(self::baseUrl() . '/chat/completions');
+        // An IP-literal host is never looked up, so it needs no pin (and an
+        // IPv6 literal cannot be written as a HOST:PORT:ADDR entry anyway).
+        if (!filter_var($vet['host'], FILTER_VALIDATE_IP)) {
+            curl_setopt($ch, CURLOPT_RESOLVE, [$vet['host'] . ':' . $vet['port'] . ':' . $pinIp]);
+        }
         curl_setopt_array($ch, [
-            CURLOPT_RESOLVE        => [$vet['host'] . ':' . $vet['port'] . ':' . $pinIp],
             CURLOPT_PROTOCOLS      => CURLPROTO_HTTPS,
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_RETURNTRANSFER => true,
