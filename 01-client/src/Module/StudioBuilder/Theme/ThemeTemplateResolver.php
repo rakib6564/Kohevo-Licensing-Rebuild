@@ -93,15 +93,7 @@ final class ThemeTemplateResolver
                 continue;
             }
 
-            $settings = [];
-            if (!empty($row['settings_json'])) {
-                try {
-                    $decoded = CanonicalJson::decode((string) $row['settings_json']);
-                    if (is_array($decoded)) {
-                        $settings = $decoded;
-                    }
-                } catch (\Throwable) {}
-            }
+            $settings = $this->publishedSettings($row);
 
             $conditions = $settings['conditions'] ?? null;
             if (empty($conditions)) {
@@ -242,15 +234,7 @@ final class ThemeTemplateResolver
             }
 
             $slug = (string) ($row['slug'] ?? '');
-            $settings = [];
-            if (!empty($row['settings_json'])) {
-                try {
-                    $decoded = CanonicalJson::decode((string) $row['settings_json']);
-                    if (is_array($decoded)) {
-                        $settings = $decoded;
-                    }
-                } catch (\Throwable) {}
-            }
+            $settings = $this->publishedSettings($row);
 
             $templateType = (string) ($settings['template_type'] ?? '');
             $isRoleMatch = ($templateType === $role)
@@ -294,5 +278,50 @@ final class ThemeTemplateResolver
         }
 
         return null;
+    }
+
+    /**
+     * The settings a template candidate was PUBLISHED with.
+     *
+     * pages.settings_json mirrors the current draft: every draft save,
+     * rollback, package import and template apply rewrites it. Selecting
+     * templates from it let unpublished edits to display conditions or
+     * template_type change the live site, including by users who may edit
+     * but not publish. When the working draft is the published revision the
+     * column is an exact mirror (and also carries the Theme Builder link
+     * fields), so it is used; otherwise the published revision's own
+     * document settings are.
+     *
+     * @param array<string, mixed> $row a published page row
+     * @return array<string, mixed>
+     */
+    private function publishedSettings(array $row): array
+    {
+        $published = (int) ($row['published_revision_id'] ?? 0);
+        $draft     = isset($row['active_draft_revision_id']) ? (int) $row['active_draft_revision_id'] : 0;
+
+        if ($draft === 0 || $draft === $published) {
+            return self::decodeObject((string) ($row['settings_json'] ?? ''));
+        }
+
+        $rev = method_exists($this->revisions, 'findByIdForPage')
+            ? $this->revisions->findByIdForPage((int) $row['id'], $published)
+            : null;
+        $doc = $rev !== null ? self::decodeObject((string) ($rev['document_json'] ?? '')) : [];
+        return is_array($doc['settings'] ?? null) ? $doc['settings'] : [];
+    }
+
+    /** @return array<string, mixed> */
+    private static function decodeObject(string $json): array
+    {
+        if ($json === '') {
+            return [];
+        }
+        try {
+            $decoded = CanonicalJson::decode($json);
+            return is_array($decoded) ? $decoded : [];
+        } catch (\Throwable) {
+            return [];
+        }
     }
 }

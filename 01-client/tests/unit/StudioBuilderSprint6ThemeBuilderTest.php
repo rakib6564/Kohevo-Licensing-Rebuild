@@ -369,3 +369,66 @@ unit('sprint6 unit: Theme block renderers output correct semantic HTML and dynam
     assert_true(str_contains($htmlSearch, 'value="elementor"'), "contains pre-filled value: {$htmlSearch}");
     assert_true(str_contains($htmlSearch, '>Find</button>'), "contains submit button: {$htmlSearch}");
 });
+
+unit('theme builder: template selection follows the PUBLISHED conditions and type, not an unpublished draft', function (): void {
+    $pagesRepo = new class {
+        public array $pages = [];
+        public function allOfType(string $type, int $limit = 100): array {
+            return array_values(array_filter($this->pages, fn($p) => ($p['page_type'] ?? '') === $type));
+        }
+    };
+    $revisionsRepo = new class {
+        public array $revisions = [];
+        public function findByIdForPage(int $pageId, int $revId): ?array {
+            $r = $this->revisions[$revId] ?? null;
+            return $r !== null && (int) $r['page_id'] === $pageId ? $r : null;
+        }
+    };
+    $doc = static fn(array $settings, string $type = 'header_partial'): string => json_encode([
+        'schema_version' => '1.0', 'document_type' => $type, 'template_key' => 'default', 'settings' => $settings, 'sections' => [],
+    ]);
+    $techRules  = ['rules' => [['type' => 'include', 'condition' => 'category', 'value' => 'Tech']]];
+    $siteRules  = ['rules' => [['type' => 'include', 'condition' => 'entire_site']]];
+    $designOnly = ['rules' => [['type' => 'include', 'condition' => 'category', 'value' => 'Design']]];
+
+    // Header published for category Tech; an editor's unpublished draft (rev 302) widens it to the entire site.
+    $pagesRepo->pages = [[
+        'id' => 110, 'slug' => 'tech-header', 'page_type' => 'header_partial', 'status' => 'published',
+        'published_revision_id' => 301, 'active_draft_revision_id' => 302,
+        'settings_json' => json_encode(['template_type' => 'header', 'conditions' => $siteRules]),
+    ]];
+    $revisionsRepo->revisions = [
+        301 => ['id' => 301, 'page_id' => 110, 'document_json' => $doc(['template_type' => 'header', 'conditions' => $techRules])],
+        302 => ['id' => 302, 'page_id' => 110, 'document_json' => $doc(['template_type' => 'header', 'conditions' => $siteRules])],
+    ];
+    $resolver = new ThemeTemplateResolver($pagesRepo, $revisionsRepo);
+    $page = PageAddress::fromRow(['id' => 10, 'uuid' => '10000000-0000-0000-0000-000000000010', 'title' => 'P', 'slug' => 'p', 'page_type' => 'page',
+        'status' => 'published', 'route_mode' => 'standalone', 'published_revision_id' => 50]);
+    assert_null($resolver->resolveHeader($page, ['category' => 'Design']), 'the draft "entire site" rule must not apply before it is published');
+    assert_eq(301, $resolver->resolveHeader($page, ['category' => 'Tech'])->revisionId, 'the published Tech rule still applies');
+
+    // Once published (draft == published), the column mirrors the published document and is used.
+    $pagesRepo->pages[0]['published_revision_id'] = 302;
+    assert_eq(302, $resolver->resolveHeader($page, ['category' => 'Design'])->revisionId, 'after publishing, the wider rule applies');
+
+    // A published page whose unpublished draft sets template_type=archive must not become the archive template,
+    // and an archive template whose draft narrows its conditions keeps serving with its published ones.
+    $pagesRepo->pages = [
+        ['id' => 120, 'slug' => 'about', 'page_type' => 'page', 'status' => 'published',
+         'published_revision_id' => 401, 'active_draft_revision_id' => 402,
+         'settings_json' => json_encode(['template_type' => 'archive'])],
+        ['id' => 121, 'slug' => 'blog-archive', 'page_type' => 'system', 'status' => 'published',
+         'published_revision_id' => 411, 'active_draft_revision_id' => 412,
+         'settings_json' => json_encode(['template_type' => 'archive', 'conditions' => $designOnly])],
+    ];
+    $revisionsRepo->revisions = [
+        401 => ['id' => 401, 'page_id' => 120, 'document_json' => $doc([], 'page')],
+        402 => ['id' => 402, 'page_id' => 120, 'document_json' => $doc(['template_type' => 'archive'], 'page')],
+        411 => ['id' => 411, 'page_id' => 121, 'document_json' => $doc(['template_type' => 'archive'], 'system')],
+        412 => ['id' => 412, 'page_id' => 121, 'document_json' => $doc(['template_type' => 'archive', 'conditions' => $designOnly], 'system')],
+    ];
+    $hit = $resolver->resolveArchive('category', 'Tech');
+    assert_true($hit !== null && (int) $hit['page']['id'] === 121, 'the real archive template serves Tech with its published (unconditioned) settings');
+    assert_eq(411, (int) $hit['revision']['id']);
+    assert_null($resolver->resolveNotFound(), 'no page becomes the 404 template');
+});
