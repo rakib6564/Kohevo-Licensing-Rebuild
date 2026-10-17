@@ -37,3 +37,6 @@ class_alias(\Slate\Services\Auth\Auth::class, 'Auth'); // was includes/Auth.php
 class_alias(\Slate\Kernel\Module\PluginLoader::class, 'PluginLoader'); // was includes/PluginLoader.php
 class_alias(\Slate\Services\Portal\CustomerPortal::class, 'CustomerPortal');
 class_alias(\Slate\Services\Notifications\BrandedEmail::class, 'BrandedEmail'); // shared branded email chrome, new — no includes/ predecessor
+// Module entitlement guard, aliased so the bundled Forms/Booking plugins can
+// call it unqualified exactly as they do in 01-client (see that tree's note).
+class_alias(\Slate\Services\Licensing\ModuleGuard::class, 'ModuleGuard');
