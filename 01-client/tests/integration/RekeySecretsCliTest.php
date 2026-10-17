@@ -108,3 +108,105 @@ unit('rekey CLI: refuses to run when the new APP_SECRET is not configured, and w
     assert_eq(1, $exit, implode("\n", $lines));
     assert_true(str_contains(implode("\n", $lines), 'APP_SECRET (the new secret) is not configured'));
 });
+
+/** Run the CLI with APP_SECRET forced to $appSecret (a constant, so defined before config.php). */
+function rksc_run_as(string $appSecret, array $args, string $oldSecret = ''): array
+{
+    $code = 'define("APP_SECRET", ' . var_export($appSecret, true) . ');'
+          . '$argv = ' . var_export(array_merge(['rekey-secrets.php'], $args), true) . '; $argc = count($argv); $_SERVER["argv"] = $argv;'
+          . 'require ' . var_export(dirname(__DIR__, 2) . '/bin/rekey-secrets.php', true) . ';';
+    $env = $oldSecret !== '' ? 'OLD_APP_SECRET=' . escapeshellarg($oldSecret) . ' ' : 'OLD_APP_SECRET= ';
+    exec($env . escapeshellarg(PHP_BINARY) . ' -d display_errors=stderr -r ' . escapeshellarg($code) . ' 2>&1', $lines, $exit);
+    return [$exit, implode("\n", $lines)];
+}
+
+function rksc_opens_with(string $envelope, string $secret): ?string
+{
+    $raw = base64_decode(substr($envelope, 7), true);
+    if (!str_starts_with($envelope, 'enc:v1:') || $raw === false || strlen($raw) < 28) return null;
+    $p = openssl_decrypt(substr($raw, 28), 'aes-256-gcm', hash('sha256', $secret, true), OPENSSL_RAW_DATA, substr($raw, 0, 12), substr($raw, 12, 16));
+    return $p === false ? null : $p;
+}
+
+unit('rekey CLI: a failure part-way through --apply rolls the whole run back (nothing half-rotated)', function (): void {
+    $old = 'rotation-old-' . bin2hex(random_bytes(6));
+    $tid = current_tenant_id();
+    try {
+        Database::setSetting('test.rekey_first', rksc_seal('PLAIN-FIRST', $old));
+        Database::setSetting('test.rekey_trip', rksc_seal('PLAIN-TRIP', $old));
+        $before = [rksc_value('test.rekey_first'), rksc_value('test.rekey_trip')];
+        // A real database error on the second write (no hook in the CLI itself).
+        Database::query("CREATE TRIGGER rksc_trip BEFORE UPDATE ON settings FOR EACH ROW BEGIN IF NEW.setting_key = 'test.rekey_trip' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'rksc forced failure'; END IF; END");
+        [$code, $out] = rksc_run($old, true);
+        assert_eq(3, $code, 'the run reports the rollback: ' . $out);
+        assert_true(str_contains($out, 'Rolled back, nothing changed'), $out);
+        assert_eq($before, [rksc_value('test.rekey_first'), rksc_value('test.rekey_trip')], 'the value written before the failure was rolled back too');
+        assert_false(str_contains($out, 'PLAIN-'), 'no plaintext is printed');
+        foreach (glob(dirname(__DIR__, 2) . '/data/rekey-backup-*.json') ?: [] as $f) @unlink($f);
+    } finally {
+        Database::query('DROP TRIGGER IF EXISTS rksc_trip');
+        foreach (['test.rekey_first', 'test.rekey_trip'] as $k) Database::query('DELETE FROM settings WHERE tenant_id = ? AND setting_key = ?', [$tid, $k]);
+    }
+});
+
+unit('rekey CLI: rotate, then roll back by a reverse run; and restore from the backup (refused under the wrong secret)', function (): void {
+    $old = 'rotation-old-' . bin2hex(random_bytes(6));
+    $new = (string) APP_SECRET;
+    $tid = current_tenant_id();
+    try {
+        $orig = rksc_seal('PLAIN-ECHO', $old);
+        Database::setSetting('test.rekey_cycle', $orig);
+        [$code, $out] = rksc_run($old, true);
+        assert_eq(0, $code, $out);
+        $rotated = rksc_value('test.rekey_cycle');
+        assert_eq('PLAIN-ECHO', rksc_opens_with($rotated, $new), 'rotated to the current secret');
+        preg_match('/\(ciphertext only\): (\S+)/', $out, $bm);
+        $backup = $bm[1] ?? '';
+        assert_true(is_file($backup), 'a backup was written');
+
+        // Restore refuses while APP_SECRET is still the new secret (the backup holds old-secret envelopes).
+        [$code, $out] = rksc_run_as($new, ['--restore=' . $backup]);
+        assert_eq(2, $code, 'restore under the wrong secret is refused: ' . $out);
+        assert_eq($rotated, rksc_value('test.rekey_cycle'), 'nothing changed');
+
+        // Restore with the old secret configured again: byte-identical original envelope back.
+        [$code, $out] = rksc_run_as($old, ['--restore=' . $backup]);
+        assert_eq(0, $code, 'restore: ' . $out);
+        assert_eq($orig, rksc_value('test.rekey_cycle'), 'the original envelope is back, byte for byte');
+
+        // Rotate again, then roll back with a reverse run (APP_SECRET=old, OLD_APP_SECRET=new).
+        rksc_run($old, true);
+        [$code, $out] = rksc_run_as($old, ['--apply'], $new);
+        assert_eq(0, $code, 'reverse run: ' . $out);
+        assert_eq('PLAIN-ECHO', rksc_opens_with(rksc_value('test.rekey_cycle'), $old), 'opens with the old secret again after the reverse run');
+        assert_false(str_contains($out, 'PLAIN-'), 'no plaintext is printed');
+    } finally {
+        foreach (glob(dirname(__DIR__, 2) . '/data/rekey-backup-*.json') ?: [] as $f) @unlink($f);
+        Database::query('DELETE FROM settings WHERE tenant_id = ? AND setting_key = ?', [$tid, 'test.rekey_cycle']);
+    }
+});
+
+unit('rekey CLI: a non-transactional table is refused before anything is written; corrupt ciphertext stops the run', function (): void {
+    $old = 'rotation-old-' . bin2hex(random_bytes(6));
+    $tid = current_tenant_id();
+    try {
+        Database::query('CREATE TABLE rksc_myisam (id INT UNSIGNED NOT NULL PRIMARY KEY, v TEXT) ENGINE=MyISAM');
+        $env = rksc_seal('PLAIN-FOXTROT', $old);
+        Database::query('INSERT INTO rksc_myisam (id, v) VALUES (1, ?)', [$env]);
+        [$code, $out] = rksc_run($old, true);
+        assert_eq(4, $code, 'MyISAM is refused: ' . $out);
+        assert_true(str_contains($out, 'rksc_myisam (MyISAM)'), $out);
+        assert_eq($env, (string) Database::value('SELECT v FROM rksc_myisam WHERE id = 1'), 'nothing changed');
+        Database::query('DROP TABLE rksc_myisam');
+
+        Database::setSetting('test.rekey_corrupt', 'enc:v1:' . base64_encode(random_bytes(40)));
+        [$code, $out] = rksc_run($old, true);
+        assert_eq(2, $code, 'corrupt ciphertext stops the run: ' . $out);
+        assert_true(str_contains($out, 'UNREADABLE settings.setting_value'), $out);
+    } finally {
+        Database::query('DROP TABLE IF EXISTS rksc_myisam');
+        foreach (glob(dirname(__DIR__, 2) . '/data/rekey-backup-*.json') ?: [] as $f) @unlink($f);
+        Database::query('DELETE FROM settings WHERE tenant_id = ? AND setting_key = ?', [$tid, 'test.rekey_corrupt']);
+    }
+});
+
