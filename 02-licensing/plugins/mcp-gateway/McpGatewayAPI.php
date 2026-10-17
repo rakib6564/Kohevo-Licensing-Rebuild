@@ -232,8 +232,8 @@ class McpGatewayAPI {
         self::enforceRateLimit($context);
 
         // Every attempt is audited, success or failure — including a
-        // content-based refusal (e.g. slate_settings_set on a secret-looking
-        // key) that isn't caught by the name-based Layer 2 guard above. Log,
+        // content-based refusal (e.g. slate_settings_set on a key outside its
+        // allow-list) that isn't caught by the name-based Layer 2 guard above. Log,
         // then re-throw so the JSON-RPC error path still fires.
         try {
             if ($name === 'mcp_ping') {
@@ -311,7 +311,7 @@ class McpGatewayAPI {
         // A generic {key, value} shape (e.g. slate_settings_set) where the
         // key NAME looks sensitive means the sibling value is a secret too,
         // even though the "value" key itself doesn't look sensitive.
-        $siblingValueIsSensitive = is_string($args['key'] ?? null) && preg_match('/password|secret/i', $args['key']);
+        $siblingValueIsSensitive = is_string($args['key'] ?? null) && preg_match('/pass|secret|token|api_?key|private|credential|webhook|signing/i', $args['key']);
         $out = [];
         foreach ($args as $k => $v) {
             if (is_string($k) && preg_match('/password|secret|token/i', $k)) { $out[$k] = '[redacted]'; continue; }
