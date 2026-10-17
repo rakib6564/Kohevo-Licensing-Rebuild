@@ -1,6 +1,6 @@
 # Settings and widget inventory validation (integrated tree)
 
-Checked on 2026-10-17 on `integration/secrets-and-audit`, using a standard CSV parser (Python `csv`).
+Checked on 2026-10-17 against the **combined tree** `integration/final-check` (PR #102 + ModuleGuard + this branch), using a standard CSV parser (Python `csv`). The inventory describes that combined release. On this branch alone, `autotranslate_api_key`'s encryption claim doesn't hold until PR #102 is merged.
 
 ## Settings inventory: `01-client/audit/kohevo-settings-widget-inventory.csv`
 
@@ -8,11 +8,11 @@ Checked on 2026-10-17 on `integration/secrets-and-audit`, using a standard CSV p
 |---|---|
 | Rows / columns | 100 rows plus header; 12 columns on every row; LF line endings |
 | Each key exists in source (`review-package/csv-verify.py 01-client <out>`) | 99 VERIFIED, 1 NOT_IMPLEMENTED (`stripe_payment_field`, by design), **0 NOT_FOUND** |
-| Encryption claims match the code (`inventory-claims-verify.py`) | 12 rows claim encryption; **12 verified**: the key is written in a source file that calls an encryption helper |
+| Encryption claims match the code (`inventory-claims-verify.py . <out>` on the combined tree) | 12 rows claim encryption; **12 verified**: the key is written in a source file that calls an encryption helper (`slate_encrypt_secret`, `slate_seal_posted_secrets`, `sealSecrets`, `resolveStored…`) |
 | Parity claims match the code | 69 "Identical"; **69 verified** in 02-licensing. Distribution: Identical 69, Client-Only 17, Both Trees 13, n/a 1 |
 | History | The original 137 rows: 38 were moved to `kohevo-inventory-removed-rows.csv` and 1 was added (`autotranslate_api_key`), giving 100. The original claim that "66 of 137 rows don't exist in source" was resolved in the audit follow-up (corrected or removed). |
 
-Rows corrected in this pass (8):
+Rows corrected in this pass (12):
 
 | Row | Correction |
 |---|---|
@@ -23,6 +23,7 @@ Rows corrected in this pass (8):
 | `LICENSE_SERVER_URL` | Parity changed to "Client-Only": 02-licensing only mentions it in a comment |
 | `OFFLINE_TOLERANCE_SECONDS` | Parity changed to "Client-Only"; bounds corrected from 14 days to `7 * 86400` (`CommercialLicenseWindow.php:71`) |
 | `ALLOWED_MIMES` | Location corrected to `plugins/media-library/MediaLibrary.php:35`; values corrected to jpeg, png, webp, gif (it isn't `Services/Media/Media.php`, and it doesn't allow audio, video or PDF) |
+| `backups.google_client_secret`, `booking.google_client_secret`, `booking.twilio_token`, `mcp-gateway.ai_api_key` | Notes no longer say "save skips the secret" or "try/catch". Now: encrypt first, and nothing is saved if encryption fails (`b8a6fdc`) |
 
 ## Widget and field matrix: `01-client/audit/kohevo-widget-test-matrix.md`
 

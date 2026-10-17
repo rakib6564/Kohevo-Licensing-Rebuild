@@ -21,7 +21,7 @@ root, outdir = sys.argv[1], sys.argv[2]
 client = os.path.join(root, '01-client')
 lic = os.path.join(root, '02-licensing')
 SKIP = ('/tests', 'node_modules', '/vendor', '/lang', '/audit', '/assets', '/archive')
-ENC = re.compile(r'slate_encrypt_secret|sealSecrets|resolveStoredSecret|resolveStoredApiKey|\$encSecret|\$keepStored')
+ENC = re.compile(r'slate_encrypt_secret|slate_seal_posted_secrets|sealSecrets|resolveStoredSecret|resolveStoredApiKey|\$encSecret|\$keepStored')
 
 
 def src_files(base, exts=('.php',)):
