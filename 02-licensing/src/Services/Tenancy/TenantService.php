@@ -92,9 +92,11 @@ final class TenantService
         $row = \Database::row(
             "SELECT t.id, t.name, t.slug, t.status, t.created_at,
                     p.owner_name, p.owner_email, p.lifecycle_status, p.trial_ends_at,
-                    p.timezone, p.locale, p.default_plugins, p.updated_at AS profile_updated_at
+                    p.timezone, p.locale, p.default_plugins, p.updated_at AS profile_updated_at,
+                    p.plan_id, pp.slug AS plan_slug, pp.name AS plan_name, pp.is_active AS plan_is_active
                FROM tenants t
           LEFT JOIN tenant_profiles p ON p.tenant_id = t.id
+          LEFT JOIN platform_plans pp ON pp.id = p.plan_id
               WHERE t.id = ?",
             [$tenantId]
         );
@@ -127,11 +129,12 @@ final class TenantService
 
         $sql = "SELECT t.id, t.name, t.slug, t.status, t.created_at,
                        p.owner_name, p.owner_email, p.lifecycle_status, p.trial_ends_at,
-                       p.timezone, p.locale,
+                       p.timezone, p.locale, p.plan_id, pp.name AS plan_name, pp.is_active AS plan_is_active,
                        (SELECT COUNT(*) FROM users u WHERE u.tenant_id = t.id) AS user_count,
                        (SELECT COUNT(*) FROM customers c WHERE c.tenant_id = t.id) AS customer_count
                   FROM tenants t
-             LEFT JOIN tenant_profiles p ON p.tenant_id = t.id";
+             LEFT JOIN tenant_profiles p ON p.tenant_id = t.id
+             LEFT JOIN platform_plans pp ON pp.id = p.plan_id";
         if ($where) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
@@ -201,5 +204,51 @@ final class TenantService
         }
 
         \AuditLog::record('tenant.updated', "tenant#$tenantId", ['fields' => array_keys($fields)]);
+    }
+
+    /**
+     * Give a tenant a platform plan (or none). This is the plan
+     * EntitlementService reads (tenant_profiles.plan_id) to decide which
+     * plugin modules the tenant may use, so it is the one place plans are
+     * assigned: admin/tenants.php and bin/assign-tenant-plan.php both call it.
+     *
+     * The plan must exist and be active; an inactive plan is "retired from
+     * new assignments" and is refused, except that re-saving a tenant's
+     * current plan is a no-op rather than an error. Recorded in the audit log.
+     * Returns false when nothing changed.
+     *
+     * @throws \InvalidArgumentException unknown tenant, unknown or inactive plan
+     */
+    public static function assignPlan(int $tenantId, ?int $planId, string $via = 'admin'): bool
+    {
+        $current = self::find($tenantId);
+        if ($current === null) {
+            throw new \InvalidArgumentException("No such tenant: $tenantId");
+        }
+        $from = $current['plan_id'] !== null ? (int) $current['plan_id'] : null;
+        if ($planId === $from) {
+            return false;
+        }
+        if ($planId !== null) {
+            // anti-drift-ignore: TENANT — platform_plans is the platform's plan catalogue, not tenant data
+            $plan = \Database::row('SELECT id, is_active FROM platform_plans WHERE id = ?', [$planId]);
+            if (!$plan) {
+                throw new \InvalidArgumentException('That plan does not exist.');
+            }
+            if (!(int) $plan['is_active']) {
+                throw new \InvalidArgumentException('That plan is inactive and cannot be assigned.');
+            }
+        }
+        // anti-drift-ignore: TENANT — tenant_profiles is keyed 1:1 by the named tenant's id
+        $hasProfile = (bool) \Database::value('SELECT 1 FROM tenant_profiles WHERE tenant_id = ?', [$tenantId]);
+        if ($hasProfile) {
+            // anti-drift-ignore: TENANT — updates the named tenant's own 1:1 profile row
+            \Database::query('UPDATE tenant_profiles SET plan_id = ?, updated_at = ? WHERE tenant_id = ?', [$planId, \slate_db_now(), $tenantId]);
+        } else {
+            // anti-drift-ignore: TENANT — creates the named tenant's own 1:1 profile row
+            \Database::insert('tenant_profiles', ['tenant_id' => $tenantId, 'plan_id' => $planId]);
+        }
+        \AuditLog::record('tenant.plan_assigned', "tenant#$tenantId", ['from' => $from, 'to' => $planId, 'via' => $via]);
+        return true;
     }
 }

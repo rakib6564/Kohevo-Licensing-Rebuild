@@ -3,11 +3,10 @@
  * Kohevo central — assign a platform plan to a tenant from the CLI.
  *
  * EntitlementService reads tenant_profiles.plan_id to decide which gated
- * modules (Forms, Booking, Membership, …) a tenant may use, but no admin
- * screen sets that column yet (admin/licenses.php stores a plan on the
- * licence, which entitlement checks do not read). Until a plan selector
- * exists on the Tenants screen, this is the supported way to give a tenant,
- * including the operator's own tenant, a plan before deploying.
+ * modules (Forms, Booking, Membership, …) a tenant may use. The Tenants
+ * screen (Edit > Plan) sets it; this CLI does the same through the same
+ * TenantService::assignPlan(), for scripted deploys and recovery when no
+ * one can reach the admin UI (e.g. the operator tenant itself).
  *
  * Run:  php bin/assign-tenant-plan.php <tenant-id|tenant-slug> <plan-slug|none>
  * e.g.: php bin/assign-tenant-plan.php 1 enterprise
@@ -39,29 +38,20 @@ if (!$tenant) {
 
 $planId = null;
 if ($planArg !== 'none') {
-    $plan = Database::row('SELECT id, slug, name, is_active FROM platform_plans WHERE slug = ?', [$planArg]);
+    $plan = Database::row('SELECT id FROM platform_plans WHERE slug = ?', [$planArg]);
     if (!$plan) {
         $slugs = implode(', ', array_column(Database::rows('SELECT slug FROM platform_plans ORDER BY sort_order, id'), 'slug'));
         fwrite(STDERR, "No plan '{$planArg}'. Plans: {$slugs}\n");
         exit(1);
     }
-    if (!(int) $plan['is_active']) {
-        fwrite(STDERR, "Plan '{$planArg}' is inactive (retired from new assignments).\n");
-        exit(1);
-    }
     $planId = (int) $plan['id'];
 }
 
-$tid = (int) $tenant['id'];
-// anti-drift-ignore: TENANT — tenant_profiles is keyed 1:1 by the named tenant's id
-$prior = Database::row('SELECT plan_id FROM tenant_profiles WHERE tenant_id = ?', [$tid]);
-if ($prior) {
-    // anti-drift-ignore: TENANT — tenant_profiles is keyed 1:1 by the named tenant's id
-    Database::query('UPDATE tenant_profiles SET plan_id = ?, updated_at = ? WHERE tenant_id = ?', [$planId, slate_db_now(), $tid]);
-} else {
-    // anti-drift-ignore: TENANT — creating the named tenant's own 1:1 profile row
-    Database::insert('tenant_profiles', ['tenant_id' => $tid, 'plan_id' => $planId]);
+try {
+    $changed = Slate\Services\Tenancy\TenantService::assignPlan((int) $tenant['id'], $planId, 'cli');
+} catch (\InvalidArgumentException $e) {
+    fwrite(STDERR, $e->getMessage() . "\n");
+    exit(1);
 }
-AuditLog::record('tenant.plan_assigned', "tenant#{$tid}", ['from' => $prior['plan_id'] ?? null, 'to' => $planId, 'via' => 'cli']);
-echo "Tenant #{$tid} ({$tenant['name']}): plan " . ($planId === null ? 'removed' : "set to {$planArg}") . ".\n";
+echo "Tenant #{$tenant['id']} ({$tenant['name']}): " . (!$changed ? 'unchanged' : ($planId === null ? 'plan removed' : "plan set to {$planArg}")) . ".\n";
 exit(0);

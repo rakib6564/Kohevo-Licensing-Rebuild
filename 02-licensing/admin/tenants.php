@@ -11,13 +11,20 @@
  *   GET  /admin/tenants.php                → list, with ?q= search and ?status= filter
  *   GET  /admin/tenants.php?new            → new-tenant form
  *   GET  /admin/tenants.php?edit=42        → edit existing tenant
- *   POST (_action=create|update|transition) → mutation
+ *   POST (_action=create|update|transition|assign_plan) → mutation
+ *
+ * The Plan selector (edit screen) sets tenant_profiles.plan_id, which is
+ * what EntitlementService / ModuleGuard read to decide which plugin modules
+ * the tenant may use. The list warns about active tenants that would be
+ * denied a gated module (Slate\Services\Licensing\PlanCoverage).
  *
  * "Enter Tenant" is NOT part of this page (Phase 1E B2, a separate,
  * higher-scrutiny action layered on top of this list once it exists).
  */
 require_once dirname(__DIR__) . '/config.php';
 
+use Slate\Services\Licensing\PlanCoverage;
+use Slate\Services\Licensing\PlanService;
 use Slate\Services\Tenancy\TenantService;
 
 Auth::require();
@@ -72,6 +79,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mode = 'edit';
                 $editing = TenantService::find($tenantId);
             }
+        } elseif ($action === 'assign_plan') {
+            // Platform admins only (page gate above) + CSRF (checked above).
+            // TenantService::assignPlan() validates the tenant and that the
+            // plan exists and is active, and writes the audit log entry.
+            $tenantId = (int)($_POST['tenant_id'] ?? 0);
+            $rawPlan  = (string)($_POST['plan_id'] ?? '');
+            $planId   = $rawPlan === '' ? null : (ctype_digit($rawPlan) ? (int)$rawPlan : -1);
+            try {
+                TenantService::assignPlan($tenantId, $planId, 'admin');
+                header('Location: ' . SLATE_URL . '/admin/tenants.php?edit=' . $tenantId . '&plan_saved=1');
+                exit;
+            } catch (\InvalidArgumentException $e) {
+                $flash = ['type' => 'error', 'msg' => __('tenant_plan_not_saved', 'Plan not saved:') . ' ' . $e->getMessage()];
+                $mode = 'edit';
+                $editing = TenantService::find($tenantId);
+            }
         } elseif ($action === 'transition') {
             $tenantId  = (int)($_POST['tenant_id'] ?? 0);
             $newStatus = (string)($_POST['status'] ?? '');
@@ -121,6 +144,9 @@ if (isset($_GET['created'])) {
 }
 if (isset($_GET['saved'])) {
     $flash = ['type' => 'success', 'msg' => __('settings_saved', 'Settings saved.')];
+}
+if (isset($_GET['plan_saved'])) {
+    $flash = ['type' => 'success', 'msg' => __('tenant_plan_saved', 'Plan saved.')];
 }
 
 $allPlugins = PluginLoader::listAll();
@@ -242,6 +268,33 @@ require __DIR__ . '/partials/header.php';
         </div>
     </div>
 
+    <?php if ($mode === 'edit'):
+        $currentPlanId = $t['plan_id'] !== null ? (int)$t['plan_id'] : null; ?>
+    <div class="card" id="tenant-plan">
+        <div class="card-body">
+            <h2><?= __('tenant_plan', 'Plan') ?></h2>
+            <p class="field-hint"><?= __('tenant_plan_hint', 'Decides which plugin modules this tenant may use (Forms, Booking, Membership, …). With no plan, those modules are refused.') ?></p>
+            <form method="post">
+                <?= csrf_field() ?>
+                <input type="hidden" name="_action" value="assign_plan">
+                <input type="hidden" name="tenant_id" value="<?= (int)$t['id'] ?>">
+                <div class="field">
+                    <label class="field-label" for="t_plan"><?= __('tenant_plan', 'Plan') ?></label>
+                    <select id="t_plan" name="plan_id">
+                        <option value="" <?= $currentPlanId === null ? 'selected' : '' ?>><?= __('no_plan', 'No plan') ?></option>
+                        <?php foreach (PlanService::list() as $p):
+                            $isCurrent = $currentPlanId === (int)$p['id'];
+                            if (!(int)$p['is_active'] && !$isCurrent) continue; ?>
+                            <option value="<?= (int)$p['id'] ?>" <?= $isCurrent ? 'selected' : '' ?>><?= e($p['name']) ?><?= (int)$p['is_active'] ? '' : ' (' . e(__('inactive', 'Inactive')) . ')' ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary"><?= __('tenant_plan_save', 'Save plan') ?></button>
+            </form>
+        </div>
+    </div>
+    <?php endif; ?>
+
 <?php else: ?>
 
     <div class="page-header">
@@ -251,6 +304,20 @@ require __DIR__ . '/partials/header.php';
         </div>
         <a href="<?= e(SLATE_URL) ?>/admin/tenants.php?new" class="btn btn-primary"><?= __('new_tenant', 'New tenant') ?></a>
     </div>
+
+    <?php $planGaps = PlanCoverage::gaps(); if ($planGaps): ?>
+        <div class="alert alert-warning" role="status" id="tenant-plan-gaps">
+            <strong><?= e(sprintf(__('tenant_plan_gaps_title', '%d active tenant(s) would be refused a plugin module.'), count($planGaps))) ?></strong>
+            <?= __('tenant_plan_gaps_hint', 'Give each one a plan (Edit, then Plan) before they need it.') ?>
+            <ul>
+                <?php foreach ($planGaps as $g):
+                    $denied = [];
+                    foreach ($g['modules'] as $m => $c) if (!$c['allowed']) $denied[] = $m . ' (' . $c['reason'] . ')'; ?>
+                    <li><a href="<?= e(SLATE_URL) ?>/admin/tenants.php?edit=<?= (int)$g['id'] ?>#tenant-plan"><?= e($g['name']) ?></a>: <?= e(implode(', ', $denied)) ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    <?php endif; ?>
 
     <form method="get" style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
         <input type="search" name="q" placeholder="<?= e(__('search_tenants', 'Search name, slug, or owner email…')) ?>"
@@ -318,6 +385,7 @@ require __DIR__ . '/partials/header.php';
                     'badge'        => [ucfirst($lifecycle), $statusColor === 'accent' ? 'accent' : $statusColor],
                     'detail'       => [
                         'Owner'     => $t['owner_name'] ?: ($t['owner_email'] ?: '—'),
+                        'Plan'      => $t['plan_id'] === null ? __('no_plan', 'No plan') : (($t['plan_name'] ?? '') !== '' ? $t['plan_name'] . ((int)($t['plan_is_active'] ?? 1) ? '' : ' (' . __('inactive', 'Inactive') . ')') : '#' . (int)$t['plan_id']),
                         'Users'     => (string)(int)($t['user_count'] ?? 0),
                         'Customers' => (string)(int)($t['customer_count'] ?? 0),
                         'Created'   => $t['created_at'],
