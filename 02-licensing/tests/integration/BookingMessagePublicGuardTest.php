@@ -28,6 +28,11 @@
 
 declare(strict_types=1);
 
+// Central tree: Booking/Forms entry points run through ModuleGuard, so the
+// test tenant needs a plan that includes them (restored at shutdown).
+require_once dirname(__DIR__) . '/support/tenant-plan.php';
+slate_test_entitle_current_tenant();
+
 /** Run a public page in a child process. Returns [status, body]. */
 function bppg_probe(string $page, string $query = ''): array
 {

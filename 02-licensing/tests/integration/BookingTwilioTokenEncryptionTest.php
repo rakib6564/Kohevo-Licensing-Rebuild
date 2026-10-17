@@ -23,6 +23,11 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/plugins/booking/BookingAPI.php';
 
+// Central tree: Booking/Forms entry points run through ModuleGuard, so the
+// test tenant needs a plan that includes them (restored at shutdown).
+require_once dirname(__DIR__) . '/support/tenant-plan.php';
+slate_test_entitle_current_tenant();
+
 /** Snapshot every booking.* setting for this tenant, return the exact undo. */
 function btte_snapshot_booking_settings(): callable
 {

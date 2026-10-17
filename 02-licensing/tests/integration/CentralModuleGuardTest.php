@@ -9,6 +9,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/support/tenant-plan.php';
+
 function cmg_probe(string $page): array
 {
     $cmd = escapeshellarg(PHP_BINARY) . ' '
@@ -50,3 +52,45 @@ unit('central ModuleGuard: Forms and Booking admin pages no longer die on a miss
         assert_true($status !== 0 && $status < 500, "{$page}: expected a non-error status, got {$status}");
     }
 });
+
+unit('central ModuleGuard: a super-admin gets each module page only when the tenant plan includes it (200), otherwise 403', function (): void {
+    $pages = [
+        'forms'      => 'plugins/forms/admin/index.php',
+        'booking'    => 'plugins/booking/admin/index.php',
+        'membership' => 'plugins/membership/admin/index.php',
+    ];
+    $expect = [
+        null           => ['forms' => 403, 'booking' => 403, 'membership' => 403],
+        'free'         => ['forms' => 200, 'booking' => 403, 'membership' => 403],
+        'starter'      => ['forms' => 200, 'booking' => 200, 'membership' => 403],
+        'professional' => ['forms' => 200, 'booking' => 200, 'membership' => 200],
+    ];
+    foreach ($expect as $plan => $byModule) {
+        $restore = slate_test_set_tenant_plan($plan === '' ? null : $plan);
+        try {
+            foreach ($byModule as $module => $status) {
+                [$got, $out] = cmg_probe($pages[$module]);
+                $label = ($plan === '' ? 'no plan' : "plan {$plan}") . ", {$module}";
+                assert_eq($status, $got, "{$label}: " . substr(preg_replace('/\s+/', ' ', strip_tags($out)), 0, 160));
+            }
+        } finally {
+            $restore();
+        }
+    }
+});
+
+unit('central ModuleGuard: a plan id that does not exist denies like no plan (fail closed)', function (): void {
+    $tid = current_tenant_id();
+    $restore = slate_test_set_tenant_plan(null);
+    try {
+        Database::query('UPDATE tenant_profiles SET plan_id = 999999 WHERE tenant_id = ?', [$tid]);
+        foreach (['forms', 'booking', 'membership'] as $module) {
+            assert_false(ModuleGuard::isEntitled($module), "{$module}: an unknown plan grants nothing");
+        }
+        [$got] = cmg_probe('plugins/forms/admin/index.php');
+        assert_eq(403, $got, 'forms admin with an unknown plan');
+    } finally {
+        $restore();
+    }
+});
+
