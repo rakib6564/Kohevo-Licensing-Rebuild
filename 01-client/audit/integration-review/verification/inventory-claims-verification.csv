@@ -64,7 +64,7 @@ plans,Plugin,False,,identical,True
 currency,Plugin,False,,identical,True
 enable_attendance,Plugin,False,,identical,True
 default_language,Plugin,False,,identical,True
-autotranslate_api_key,Plugin,True,False,identical,True
+autotranslate_api_key,Plugin,True,True,identical,True
 mode,Plugin,False,,identical,True
 publishable_key,Plugin,False,,identical,True
 secret_key,Plugin,True,True,identical,True
