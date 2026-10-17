@@ -105,16 +105,23 @@ unit('audit fixes: system settings does not overwrite timezone', function (): vo
     assert_true(str_contains(ssaf_settings_branch('save_datetime'), "Database::setSetting('timezone'"), 'save_datetime remains the one place timezone is written');
 });
 
-unit('audit fixes: fail-closed encryption try/catch is present across sensitive secret settings', function (): void {
-    $files = [
-        'plugins/stripe-payment/admin/settings.php',
-        'plugins/backups/admin/settings.php',
-        'plugins/booking/admin/settings.php',
-        'plugins/mcp-gateway/admin/ai-settings.php',
-    ];
-    foreach ($files as $f) {
+unit('audit fixes: secret settings encrypt fail-closed (Stripe catches itself; Backups, Booking and AI seal every secret first)', function (): void {
+    $stripe = file_get_contents(SLATE_ROOT . '/plugins/stripe-payment/admin/settings.php');
+    assert_true(str_contains($stripe, 'catch (\Throwable') || str_contains($stripe, 'catch (Throwable'), 'stripe settings must handle encryption failure via try/catch');
+
+    // The shared step encrypts every posted secret and returns null on any failure.
+    $helpers = file_get_contents(SLATE_ROOT . '/includes/helpers.php');
+    $start = strpos($helpers, 'function slate_seal_posted_secrets(');
+    assert_true($start !== false, 'slate_seal_posted_secrets() exists');
+    $body = substr($helpers, $start, 1200);
+    assert_true(str_contains($body, 'slate_encrypt_secret(') && str_contains($body, 'catch (\Throwable') && str_contains($body, 'return null;'), 'the seal step catches encryption failure and returns null');
+
+    // Each page seals first, refuses the save when sealing fails, and never calls the throwing encryptor directly.
+    foreach (['plugins/backups/admin/settings.php', 'plugins/booking/admin/settings.php', 'plugins/mcp-gateway/admin/ai-settings.php'] as $f) {
         $content = file_get_contents(SLATE_ROOT . '/' . $f);
-        assert_true(str_contains($content, 'catch (\Throwable') || str_contains($content, 'catch (Throwable'), "$f must handle encryption failure via try/catch");
+        assert_true(str_contains($content, 'slate_seal_posted_secrets('), "$f must seal its secrets before saving");
+        assert_true(str_contains($content, "__('settings_not_saved_encryption'"), "$f must refuse the whole save when sealing fails");
+        assert_false(str_contains($content, 'slate_encrypt_secret('), "$f must not call slate_encrypt_secret() directly (uncaught, or a half-saved form)");
     }
 });
 

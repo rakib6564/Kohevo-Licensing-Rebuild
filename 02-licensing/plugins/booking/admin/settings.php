@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Google Calendar 2-way sync — master toggle + OAuth app credentials.
         // Secret is write-only (like the Twilio token below) and stored
-        // encrypted at rest via slate_encrypt_secret().
+        // encrypted at rest (sealed with the form's other secrets, above).
         Database::setSetting('booking.google_enabled',   !empty($_POST['google_enabled']) ? '1' : '0');
         Database::setSetting('booking.google_client_id', trim((string)($_POST['google_client_id'] ?? '')));
         if (isset($sealed['booking.google_client_secret'])) {
@@ -97,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Database::setSetting('booking.twilio_sms_from',      trim((string)($_POST['twilio_sms_from'] ?? '')));
         Database::setSetting('booking.twilio_whatsapp_from', trim((string)($_POST['twilio_whatsapp_from'] ?? '')));
         // Token is write-only (like the Google client secret above) and
-        // stored encrypted at rest via slate_encrypt_secret(); only
+        // stored encrypted at rest (sealed above, before any write); only
         // overwrite when a new value is supplied.
         if (isset($sealed['booking.twilio_token'])) {
             Database::setSetting('booking.twilio_token', $sealed['booking.twilio_token']);
