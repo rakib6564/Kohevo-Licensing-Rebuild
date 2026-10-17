@@ -71,7 +71,7 @@ function swos_seed_legacy_plaintext(string $pub, string $secret, string $webhook
 }
 
 unit('stripe settings: a blank secret field keeps the stored keys and upgrades legacy plaintext to an envelope', function (): void {
-    if (!slate_has_app_secret()) { assert_true(true, 'skipped: APP_SECRET not configured in the test environment'); return; }
+    assert_true(slate_has_app_secret(), 'precondition: APP_SECRET must be configured for the integration suite (CI sets it); without it this test cannot prove anything');
     $restore = swos_snapshot();
     $pub     = 'pk_test_swos' . bin2hex(random_bytes(10));
     $secret  = 'sk_test_swos' . bin2hex(random_bytes(10));
@@ -102,7 +102,7 @@ unit('stripe settings: a blank secret field keeps the stored keys and upgrades l
 });
 
 unit('stripe settings: an already-encrypted secret is kept byte-for-byte when the field is left blank', function (): void {
-    if (!slate_has_app_secret()) { assert_true(true, 'skipped: APP_SECRET not configured in the test environment'); return; }
+    assert_true(slate_has_app_secret(), 'precondition: APP_SECRET must be configured for the integration suite (CI sets it); without it this test cannot prove anything');
     $restore = swos_snapshot();
     $pub    = 'pk_test_swos' . bin2hex(random_bytes(10));
     $secret = 'sk_test_swos' . bin2hex(random_bytes(10));
@@ -122,7 +122,7 @@ unit('stripe settings: an already-encrypted secret is kept byte-for-byte when th
 });
 
 unit('stripe settings: the page shows that a secret is configured without rendering it', function (): void {
-    if (!slate_has_app_secret()) { assert_true(true, 'skipped: APP_SECRET not configured in the test environment'); return; }
+    assert_true(slate_has_app_secret(), 'precondition: APP_SECRET must be configured for the integration suite (CI sets it); without it this test cannot prove anything');
     $restore = swos_snapshot();
     $pub     = 'pk_test_swos' . bin2hex(random_bytes(10));
     $secret  = 'sk_test_swos' . bin2hex(random_bytes(10));
@@ -142,7 +142,7 @@ unit('stripe settings: the page shows that a secret is configured without render
 });
 
 unit('stripe settings: Disconnect clears the keys of BOTH modes and leaves unrelated settings alone', function (): void {
-    if (!slate_has_app_secret()) { assert_true(true, 'skipped: APP_SECRET not configured in the test environment'); return; }
+    assert_true(slate_has_app_secret(), 'precondition: APP_SECRET must be configured for the integration suite (CI sets it); without it this test cannot prove anything');
     $restore = swos_snapshot();
     try {
         Database::setSetting('stripe-payment.mode', 'live');

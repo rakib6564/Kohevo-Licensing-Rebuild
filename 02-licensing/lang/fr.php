@@ -1324,4 +1324,5 @@ return array (
     'timezone_system_hint' => 'Le fuseau horaire se gère uniquement dans l’onglet Date et heure.',
     'default_language_studio_hint' => 'C\'est aussi la langue de vos pages publiques Kohevo Studio. Un changement de langue par un visiteur ne les modifie pas.',
     'forms_captcha_encryption_failed' => 'La clé secrète n’a pas été enregistrée : le chiffrement est indisponible (vérifiez APP_SECRET). Les secrets ne sont jamais stockés en clair.',
+    'settings_not_saved_encryption' => 'Rien n’a été enregistré : un secret n’a pas pu être chiffré (vérifiez APP_SECRET). Les secrets ne sont jamais stockés en clair.',
 );

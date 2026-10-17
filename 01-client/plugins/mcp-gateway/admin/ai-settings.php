@@ -30,27 +30,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $clearKey = isset($_POST['clear_ai_api_key']) && $_POST['clear_ai_api_key'] === '1';
         $customerEnabled = !empty($_POST['customer_assistant_enabled']);
 
-        Database::setSetting('mcp-gateway.ai_base_url', mb_substr($baseUrl, 0, 300));
-        Database::setSetting('mcp-gateway.ai_model', mb_substr($model, 0, 120));
-        Database::setSetting('mcp-gateway.customer_assistant_enabled', $customerEnabled ? '1' : '0');
-
-        $encError = false;
-        if ($clearKey) {
-            Database::setSetting('mcp-gateway.ai_api_key', '');
-        } elseif (trim($key) !== '') {
-            try {
-                $enc = slate_encrypt_secret(trim($key));
-                Database::setSetting('mcp-gateway.ai_api_key', $enc);
-            } catch (\Throwable $ex) {
-                $encError = true;
-            }
-        }
-        // Blank key field with no clear checkbox = leave the saved key untouched.
-
-        AuditLog::record('mcp-gateway.ai_settings_updated', '');
-        if ($encError) {
-            $flash = ['type' => 'error', 'msg' => __('encryption_failed', 'Settings saved, but API key encryption failed. Check APP_SECRET.')];
+        // Encrypt a new key before writing anything: if it cannot be
+        // encrypted, nothing on the form is saved (never plaintext).
+        $sealed = $clearKey ? [] : slate_seal_posted_secrets(['ai_api_key' => 'mcp-gateway.ai_api_key'], $_POST);
+        if ($sealed === null) {
+            $flash = ['type' => 'error', 'msg' => __('settings_not_saved_encryption', 'Nothing was saved: a secret could not be encrypted (check APP_SECRET). Secrets are never stored in plain text.')];
         } else {
+            Database::setSetting('mcp-gateway.ai_base_url', mb_substr($baseUrl, 0, 300));
+            Database::setSetting('mcp-gateway.ai_model', mb_substr($model, 0, 120));
+            Database::setSetting('mcp-gateway.customer_assistant_enabled', $customerEnabled ? '1' : '0');
+            if ($clearKey) {
+                Database::setSetting('mcp-gateway.ai_api_key', '');
+            } elseif (isset($sealed['mcp-gateway.ai_api_key'])) {
+                Database::setSetting('mcp-gateway.ai_api_key', $sealed['mcp-gateway.ai_api_key']);
+            }
+            // Blank key field with no clear checkbox = leave the saved key untouched.
+            AuditLog::record('mcp-gateway.ai_settings_updated', '');
             $flash = ['type' => 'success', 'msg' => __('mcp_gateway_ai_settings_saved', 'AI connection settings saved.')];
         }
     }

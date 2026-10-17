@@ -73,7 +73,7 @@ function fcss_cleanup(string $title): void
 }
 
 unit('forms editor: the CAPTCHA secret is encrypted on save, kept when blank, upgraded from plaintext, cleared on request, and never rendered', function (): void {
-    if (!slate_has_app_secret()) { assert_true(true, 'skipped: APP_SECRET not configured in the test environment'); return; }
+    assert_true(slate_has_app_secret(), 'precondition: APP_SECRET must be configured for the integration suite (CI sets it); without it this test cannot prove anything');
     FormsAPI::ensureSchema();
     $title  = '__probe-fcss-' . bin2hex(random_bytes(5));
     $secret = '0xCAPTCHA' . bin2hex(random_bytes(10));

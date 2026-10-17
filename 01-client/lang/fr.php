@@ -1369,4 +1369,5 @@ return array (
     'manage_in_datetime' => 'Modifier dans Date et heure',
     'timezone_system_hint' => 'Le fuseau horaire se gère uniquement dans l’onglet Date et heure.',
     'forms_captcha_encryption_failed' => 'La clé secrète n’a pas été enregistrée : le chiffrement est indisponible (vérifiez APP_SECRET). Les secrets ne sont jamais stockés en clair.',
+    'settings_not_saved_encryption' => 'Rien n’a été enregistré : un secret n’a pas pu être chiffré (vérifiez APP_SECRET). Les secrets ne sont jamais stockés en clair.',
 );

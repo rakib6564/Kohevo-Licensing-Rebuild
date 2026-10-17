@@ -19,6 +19,13 @@ $flash = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_verify()) {
         $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
+    } elseif (($sealed = slate_seal_posted_secrets([
+        'google_client_secret' => 'booking.google_client_secret',
+        'twilio_token'         => 'booking.twilio_token',
+    ], $_POST)) === null) {
+        // Secrets are encrypted before anything is written: if one cannot
+        // be, nothing on the form is saved (never half-applied, never plaintext).
+        $flash = ['type' => 'error', 'msg' => __('settings_not_saved_encryption', 'Nothing was saved: a secret could not be encrypted (check APP_SECRET). Secrets are never stored in plain text.')];
     } else {
         // Normalise reminder leads to a clean CSV of positive minutes.
         $leads = [];
@@ -75,17 +82,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Google Calendar 2-way sync — master toggle + OAuth app credentials.
         // Secret is write-only (like the Twilio token below) and stored
         // encrypted at rest via slate_encrypt_secret().
-        $encError = false;
         Database::setSetting('booking.google_enabled',   !empty($_POST['google_enabled']) ? '1' : '0');
         Database::setSetting('booking.google_client_id', trim((string)($_POST['google_client_id'] ?? '')));
-        $gClientSecret = trim((string)($_POST['google_client_secret'] ?? ''));
-        if ($gClientSecret !== '') {
-            try {
-                $enc = slate_encrypt_secret($gClientSecret);
-                Database::setSetting('booking.google_client_secret', $enc);
-            } catch (\Throwable $ex) {
-                $encError = true;
-            }
+        if (isset($sealed['booking.google_client_secret'])) {
+            Database::setSetting('booking.google_client_secret', $sealed['booking.google_client_secret']);
         }
 
         Database::setSetting('booking.followup_enabled',     !empty($_POST['followup_enabled']) ? '1' : '0');
@@ -99,14 +99,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Token is write-only (like the Google client secret above) and
         // stored encrypted at rest via slate_encrypt_secret(); only
         // overwrite when a new value is supplied.
-        $token = trim((string)($_POST['twilio_token'] ?? ''));
-        if ($token !== '') {
-            try {
-                $enc = slate_encrypt_secret($token);
-                Database::setSetting('booking.twilio_token', $enc);
-            } catch (\Throwable $ex) {
-                $encError = true;
-            }
+        if (isset($sealed['booking.twilio_token'])) {
+            Database::setSetting('booking.twilio_token', $sealed['booking.twilio_token']);
         }
 
         // The seam. Booking owns this screen, this form and this POST; a
@@ -117,11 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Hook::doAction('booking_settings_save', $_POST);
 
         AuditLog::record('booking.settings_updated', 'booking');
-        if ($encError) {
-            $flash = ['type' => 'error', 'msg' => __('encryption_failed', 'Settings saved, but secret encryption failed. Check APP_SECRET.')];
-        } else {
-            $flash = ['type' => 'success', 'msg' => __('settings_saved', 'Settings saved.')];
-        }
+        $flash = ['type' => 'success', 'msg' => __('settings_saved', 'Settings saved.')];
     }
 }
 

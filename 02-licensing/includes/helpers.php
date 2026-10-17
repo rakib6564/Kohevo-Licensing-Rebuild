@@ -555,6 +555,35 @@ if (!function_exists('slate_decrypt_secret')) {
     }
 }
 
+if (!function_exists('slate_seal_posted_secrets')) {
+    /**
+     * Encrypt every secret a settings form posted, before anything is saved.
+     * $fieldToKey maps a POST field to the setting key it is stored under.
+     * A blank field means "keep the stored secret" and is left out. Returns
+     * [settingKey => enc:v1 envelope] for the filled-in fields, or null if
+     * any of them could not be encrypted (APP_SECRET missing): the caller
+     * then saves nothing from the form, so settings are never half-applied
+     * and a secret is never stored in plain text.
+     *
+     * @param array<string,string> $fieldToKey
+     * @param array<string,mixed>  $post
+     * @return array<string,string>|null
+     */
+    function slate_seal_posted_secrets(array $fieldToKey, array $post): ?array {
+        $sealed = [];
+        foreach ($fieldToKey as $field => $key) {
+            $plain = trim((string)($post[$field] ?? ''));
+            if ($plain === '') continue;
+            try {
+                $sealed[$key] = slate_encrypt_secret($plain);
+            } catch (\Throwable $e) {
+                return null;
+            }
+        }
+        return $sealed;
+    }
+}
+
 // ── Semver comparison ─────────────────────────────────────────
 if (!function_exists('slate_semver_satisfies')) {
     /**
