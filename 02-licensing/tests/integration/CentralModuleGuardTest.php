@@ -94,3 +94,29 @@ unit('central ModuleGuard: a plan id that does not exist denies like no plan (fa
     }
 });
 
+unit('central ModuleGuard: APP_ENV=testing does not bypass the guard for a request served by a web server', function (): void {
+    $restore = slate_test_set_tenant_plan(null);
+    $port = 20000 + random_int(0, 9999);
+    $cmd  = [PHP_BINARY, '-S', "127.0.0.1:{$port}", dirname(__DIR__) . '/fixtures/sapi-guard-probe.php'];
+    $env  = array_merge(getenv(), ['APP_ENV' => 'testing']);
+    $proc = proc_open($cmd, [0 => ['pipe', 'r'], 1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes, dirname(__DIR__, 2), $env);
+    try {
+        assert_true(is_resource($proc), 'precondition: the built-in server started');
+        $body = false;
+        for ($i = 0; $i < 50 && $body === false; $i++) {
+            usleep(100000);
+            $body = @file_get_contents("http://127.0.0.1:{$port}/?m=booking");
+        }
+        $r = json_decode((string) $body, true);
+        assert_true(is_array($r), 'the server answered: ' . var_export($body, true));
+        assert_eq('cli-server', $r['sapi'], 'precondition: served by a web-server SAPI, not CLI');
+        assert_eq('testing', $r['app_env'], 'precondition: APP_ENV=testing reached the request');
+        assert_false($r['testing_constant'], 'precondition: no SLATE_TESTING constant in a web request');
+        assert_false($r['entitled'], 'precondition: the tenant has no plan');
+        assert_false($r['allows'], 'APP_ENV=testing must not let an unentitled tenant through on a web request');
+    } finally {
+        if (is_resource($proc)) { proc_terminate($proc); proc_close($proc); }
+        $restore();
+    }
+});
+
