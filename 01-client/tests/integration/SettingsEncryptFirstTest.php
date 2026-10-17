@@ -14,20 +14,27 @@
 
 declare(strict_types=1);
 
-function sefs_snapshot(array $keys): callable
+/**
+ * Snapshot every setting under these prefixes (the whole form writes far
+ * more than the fields a case asserts: a real POST with unticked boxes turns
+ * Booking capabilities and toggles off) and restore them exactly, deleting
+ * rows the test created.
+ */
+function sefs_snapshot(array $prefixes): callable
 {
     $tid = current_tenant_id();
     $rows = [];
-    foreach ($keys as $k) {
-        $rows[$k] = Database::value('SELECT setting_value FROM settings WHERE tenant_id = ? AND setting_key = ?', [$tid, $k]);
+    foreach ($prefixes as $p) {
+        foreach (Database::rows('SELECT setting_key, setting_value FROM settings WHERE tenant_id = ? AND setting_key LIKE ?', [$tid, $p . '%']) as $r) {
+            $rows[$r['setting_key']] = $r['setting_value'];
+        }
     }
-    return static function () use ($tid, $rows): void {
+    return static function () use ($tid, $prefixes, $rows): void {
+        foreach ($prefixes as $p) {
+            Database::query('DELETE FROM settings WHERE tenant_id = ? AND setting_key LIKE ?', [$tid, $p . '%']);
+        }
         foreach ($rows as $k => $v) {
-            if ($v === null || $v === false) {
-                Database::query('DELETE FROM settings WHERE tenant_id = ? AND setting_key = ?', [$tid, $k]);
-            } else {
-                Database::setSetting($k, (string) $v, $tid);
-            }
+            Database::setSetting((string) $k, (string) $v, $tid);
         }
     };
 }
@@ -58,26 +65,28 @@ $sefs_cases = [
         'fields' => ['_action' => 'save_settings', 'client_id' => 'cid-after', 'client_secret' => 'gsec-new', 'retention_count' => '30'],
         'plain'  => ['backups.google_client_id' => ['cid-before', 'cid-after'], 'backups.retention_count' => ['7', '30']],
         'secret' => ['backups.google_client_secret', 'gsec-new'],
+        'prefixes' => ['backups.'],
     ],
     'booking' => [
         'page'   => 'plugins/booking/admin/settings.php',
         'fields' => ['google_client_id' => 'gcid-after', 'twilio_token' => 'tw-new', 'twilio_sid' => 'AC-after', 'multislot_max' => '9'],
         'plain'  => ['booking.google_client_id' => ['gcid-before', 'gcid-after'], 'booking.twilio_sid' => ['AC-before', 'AC-after']],
         'secret' => ['booking.twilio_token', 'tw-new'],
+        'prefixes' => ['booking.', 'embed_allowed_origins'],
     ],
     'ai' => [
         'page'   => 'plugins/mcp-gateway/admin/ai-settings.php',
         'fields' => ['ai_base_url' => '', 'ai_model' => 'model-after', 'ai_api_key' => 'ai-new'],
         'plain'  => ['mcp-gateway.ai_model' => ['model-before', 'model-after']],
         'secret' => ['mcp-gateway.ai_api_key', 'ai-new'],
+        'prefixes' => ['mcp-gateway.'],
     ],
 ];
 
 foreach ($sefs_cases as $name => $c) {
     unit("encrypt-first save ({$name}): with no APP_SECRET nothing on the form is saved and the page says so", function () use ($c): void {
         assert_true(slate_has_app_secret(), 'precondition: APP_SECRET is configured for the parent test process');
-        $keys = array_merge(array_keys($c['plain']), [$c['secret'][0]]);
-        $restore = sefs_snapshot($keys);
+        $restore = sefs_snapshot($c['prefixes']);
         try {
             foreach ($c['plain'] as $k => [$before]) Database::setSetting($k, $before);
             $storedSecret = slate_encrypt_secret('existing-secret');
@@ -97,8 +106,7 @@ foreach ($sefs_cases as $name => $c) {
     });
 
     unit("encrypt-first save ({$name}): with APP_SECRET the form saves and the secret is an envelope", function () use ($c): void {
-        $keys = array_merge(array_keys($c['plain']), [$c['secret'][0]]);
-        $restore = sefs_snapshot($keys);
+        $restore = sefs_snapshot($c['prefixes']);
         try {
             foreach ($c['plain'] as $k => [$before]) Database::setSetting($k, $before);
             [$status] = sefs_post($c['page'], $c['fields'], true);
