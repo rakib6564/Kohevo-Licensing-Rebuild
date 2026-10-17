@@ -239,10 +239,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Spam & security settings (textareas come in as strings; normalize()
         // splits them into clean lists and clamps every value to a safe shape).
+        $existingCaptchaSecret = (string)($fset['spam']['captcha_secret'] ?? '');
+        $postedCaptchaSecret   = trim((string)($_POST['sp_captcha_secret'] ?? ''));
+        if (!empty($_POST['sp_captcha_clear_secret'])) {
+            $savedCaptchaSecret = '';
+        } elseif ($postedCaptchaSecret !== '') {
+            $savedCaptchaSecret = $postedCaptchaSecret;
+        } else {
+            $savedCaptchaSecret = $existingCaptchaSecret;
+        }
+
         $fset['spam'] = FormsSpamGuard::normalize([
             'captcha_provider' => $_POST['sp_captcha_provider'] ?? 'none',
             'captcha_site_key' => $_POST['sp_captcha_site_key'] ?? '',
-            'captcha_secret'   => $_POST['sp_captcha_secret']   ?? '',
+            'captcha_secret'   => $savedCaptchaSecret,
             'recaptcha_min'    => $_POST['sp_recaptcha_min']    ?? 0.5,
             'country_mode'     => $_POST['sp_country_mode']     ?? 'off',
             'country_list'     => $_POST['sp_country_list']     ?? '',
@@ -1266,9 +1276,27 @@ $publicUrl = ($state['slug'] !== '' && !$isNew) ? SLATE_URL . '/forms/' . $state
                                value="<?= e($sp['captcha_site_key']) ?>" autocomplete="off" spellcheck="false">
                     </div>
                     <div class="field">
-                        <label class="field-label" for="sp_captcha_secret"><?= __('forms_edit_secret_key', 'Secret key') ?></label>
+                        <label class="field-label" for="sp_captcha_secret">
+                            <?= __('forms_edit_secret_key', 'Secret key') ?>
+                            <?php if (!empty($sp['captcha_secret'])): ?>
+                                <span class="badge badge-success" style="font-size: 10px; margin-left: 6px;">✓ <?= e(__('configured', 'Configured')) ?></span>
+                            <?php endif; ?>
+                        </label>
                         <input type="password" id="sp_captcha_secret" name="sp_captcha_secret" maxlength="200"
-                               value="<?= e($sp['captcha_secret']) ?>" autocomplete="off" spellcheck="false">
+                               value=""
+                               placeholder="<?= !empty($sp['captcha_secret']) ? '••••••••  (' . e(__('leave_blank_to_keep', 'Leave blank to keep existing secret')) . ')' : '' ?>"
+                               autocomplete="new-password" spellcheck="false">
+                        <div class="field-hint">
+                            <?php if (!empty($sp['captcha_secret'])): ?>
+                                <span><?= e(__('forms_captcha_configured_hint', 'A secret key is already configured. Leave blank to keep it unchanged, or enter a new one to update.')) ?></span>
+                                <label style="display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; cursor: pointer;">
+                                    <input type="checkbox" name="sp_captcha_clear_secret" value="1">
+                                    <span style="font-size: 11px; color: var(--color-danger, #ef4444);"><?= e(__('clear_saved_secret', 'Clear saved secret')) ?></span>
+                                </label>
+                            <?php else: ?>
+                                <span><?= e(__('forms_captcha_empty_hint', 'Paste the secret key from your CAPTCHA provider.')) ?></span>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
                 <div class="field" style="margin-bottom:0;" data-sp-recaptcha<?= $sp['captcha_provider'] === 'recaptcha' ? '' : ' hidden' ?>>

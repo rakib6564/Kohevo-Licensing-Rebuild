@@ -1,0 +1,51 @@
+# Untracked files manifest (KOHEVO-STUDIO, against HEAD 1ae3847)
+#
+# `git diff` covers only tracked files, so none of the files below appear in
+# audit-changes.patch. Files marked COMMIT are reproduced in new-files.patch.
+# Review-package files are committed as themselves.
+
+COMMIT: security sentinels (without them PluginLoaderArchiveBoundaryTest fails on a clean checkout)
+  01-client/archive/.htaccess                                   Require all denied
+  02-licensing/archive/.htaccess                                Require all denied
+
+COMMIT: tests
+  01-client/tests/unit/SystemSettingsAuditFixesTest.php         9 static checks over shipped source; 0/9 pass on HEAD source
+  02-licensing/tests/unit/SystemSettingsAuditFixesTest.php      identical file (SLATE_ROOT resolves per tree)
+  01-client/tests/integration/StripeWriteOnlySecretTest.php     added in the verification pass; 3 end-to-end tests
+
+COMMIT: audit documents (each carries a verification note where its claims were wrong)
+  01-client/audit/kohevo-complete-system-audit.md
+  01-client/audit/kohevo-cross-tree-parity.md
+  01-client/audit/kohevo-option-disposition.md
+  01-client/audit/kohevo-settings-widget-inventory.csv         137 rows; 66 rows not traceable to source
+  01-client/audit/kohevo-widget-test-matrix.md
+  01-client/Claude/kohevo-complete-system-implementation-prompt.md
+
+COMMIT: review package (01-client/audit/review-package/)
+  git-status.txt  changed-files.txt  untracked-files-manifest.txt
+  audit-changes.patch  new-files.patch  staged-audit-changes.patch
+  diff-summary.md  test-results.md  verification-matrix.md  remaining-risks.md
+  csv-validation.md  csv-row-verification.csv  csv-verify.py
+  commit-message.txt  pr-description.md
+
+GENERATED, NOT COMMITTED
+  01-client/audit/Kohevo_Complete_System_Plugin_Widget_Audit_Final_Bundle.zip
+
+EXCLUDED: local environment
+  01-client/vendor/  02-licensing/vendor/        composer install (PHPMailer); needed by SmtpOAuth tests locally
+  01-client/composer.lock  02-licensing/composer.lock
+
+EXCLUDED: pre-existing user work (never stage)
+  prototype-14islands/   (12 files)
+  prototype-juanmora/    (509 files)
+
+Bundle contents (ZIP paths -> repo paths)
+  kohevo-*.md, kohevo-settings-widget-inventory.csv            -> 01-client/audit/
+  kohevo-complete-system-implementation-prompt.md              -> 01-client/Claude/
+  tests/unit/SystemSettingsAuditFixesTest.php                  -> 01-client/tests/unit/ (byte-identical in 02-licensing)
+  tests/integration/StripeWriteOnlySecretTest.php              -> 01-client/tests/integration/
+  archive/.htaccess                                            -> 01-client/archive/ and 02-licensing/archive/
+  review-package/*                                             -> 01-client/audit/review-package/
+Licensing regression tests are not duplicated in the ZIP: the licensing copy of
+SystemSettingsAuditFixesTest.php is byte-identical to the client copy, and both
+paths appear in new-files.patch.

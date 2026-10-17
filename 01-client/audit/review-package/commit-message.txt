@@ -1,0 +1,32 @@
+fix(settings): write-only secrets, fail-closed encryption and bounded settings
+
+Stripe secret key and webhook secret are now write-only. Inputs render
+empty, a blank field keeps the stored value, and new secrets are
+encrypted or the save is refused (it used to fall back to plaintext).
+Legacy plaintext keys are still upgraded to enc:v1 envelopes on save.
+The Forms CAPTCHA secret is write-only, with an explicit clear checkbox.
+Backups, Booking and MCP no longer 500 when encryption throws: the
+affected secret is skipped and an error is shown.
+
+Settings: permalink structure is allow-listed to the form's choices,
+start_of_week is limited to 0..6, backup retention to 1..365, and only
+the Date & Time tab writes timezone. Brand font and radius are emitted
+as CSS variables. Coaching settings saves are audit-logged.
+
+Identity tokens are stamped on the database clock, matching
+consumeToken(). Before this, a PHP/MySQL timezone gap expired tokens
+immediately.
+
+Adds archive/.htaccess (Require all denied) in both trees, French
+strings for the new UI text, SystemSettingsAuditFixesTest (static checks
+of the shipped files) and StripeWriteOnlySecretTest (end-to-end save
+and render). Fixes the POST probe's unlock flag clashing with its
+tenant-override argument. Brings the stale integration tests in line
+with Phase 13 remote authority and the plugin lock.
+
+Client integration goes from 608/631 to 634/634; unit suites are green
+in both trees. Licensing integration is 351/403 per file, with the same
+52 failures as before this change. The audit documents and evidence
+are in 01-client/audit/review-package/.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

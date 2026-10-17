@@ -28,22 +28,25 @@
 declare(strict_types=1);
 
 /** Run an admin page (GET) in a child process. Returns [status, body]. */
-function pag_get(string $page, string $query = '', int $roleId = 1, bool $platformAdmin = false): array {
+function pag_get(string $page, string $query = '', int $roleId = 1, bool $platformAdmin = false, bool $unlockPlugins = false): array {
     $cmd = escapeshellarg(PHP_BINARY) . ' '
          . escapeshellarg(dirname(__DIR__) . '/fixtures/admin-page-probe.php') . ' '
          . escapeshellarg($page) . ' ' . escapeshellarg($query) . ' '
-         . escapeshellarg((string) $roleId) . ' ' . escapeshellarg($platformAdmin ? '1' : '0') . ' 2>/dev/null';
+         . escapeshellarg((string) $roleId) . ' ' . escapeshellarg($platformAdmin ? '1' : '0') . ' '
+         . escapeshellarg($unlockPlugins ? '1' : '0') . ' 2>/dev/null';
     $out = (string) shell_exec($cmd);
-    if (!preg_match('/^STATUS (\d+)\n/', $out, $m)) return [0, $out];
-    return [(int) $m[1], substr($out, strlen($m[0]))];
+    if (!preg_match('/STATUS (\d+)\n/', $out, $m)) return [0, $out];
+    $pos = strpos($out, $m[0]);
+    return [(int) $m[1], substr($out, $pos + strlen($m[0]))];
 }
 
 /** Run an admin page (POST) in a child process. Returns [status, body]. */
-function pag_post(string $page, array $fields, int $roleId = 1, bool $platformAdmin = false): array {
+function pag_post(string $page, array $fields, int $roleId = 1, bool $platformAdmin = false, bool $unlockPlugins = false): array {
     $cmd = escapeshellarg(PHP_BINARY) . ' '
          . escapeshellarg(dirname(__DIR__) . '/fixtures/admin-page-post-probe.php') . ' '
          . escapeshellarg($page) . ' ' . escapeshellarg((string) json_encode($fields)) . ' '
-         . escapeshellarg((string) $roleId) . ' ' . escapeshellarg($platformAdmin ? '1' : '0') . ' 2>/dev/null';
+         . escapeshellarg((string) $roleId) . ' ' . escapeshellarg($platformAdmin ? '1' : '0') . ' '
+         . escapeshellarg('') . ' ' . escapeshellarg($unlockPlugins ? '1' : '0') . ' 2>/dev/null';
     $out = (string) shell_exec($cmd);
     if (!preg_match('/^STATUS (\d+)\n/', $out, $m)) return [0, $out];
     return [(int) $m[1], substr($out, strlen($m[0]))];
@@ -109,7 +112,7 @@ unit('platform admin gate: opcache-reset.php denies an ordinary admin', function
 // ── admin/plugins.php upload/uninstall UI (Auth::isPlatformSuperAdmin()) ─
 
 unit('platform admin gate: plugins.php shows upload UI for legacy role_id=1', function (): void {
-    [$status, $body] = pag_get('admin/plugins.php', '', 1, false);
+    [$status, $body] = pag_get('admin/plugins.php', '', 1, false, true);
     assert_eq(200, $status);
     assert_true(str_contains($body, 'id="plug-upload-form"'), 'legacy Super Admin sees the upload form');
 });
@@ -118,7 +121,7 @@ unit('platform admin gate: plugins.php shows upload UI for a platform_admins mem
     $tid    = current_tenant_id();
     $roleId = pag_make_role($tid, 'plugview', ['plugins.manage']);
     try {
-        [$status, $body] = pag_get('admin/plugins.php', '', $roleId, true);
+        [$status, $body] = pag_get('admin/plugins.php', '', $roleId, true, true);
         assert_eq(200, $status);
         assert_true(str_contains($body, 'id="plug-upload-form"'), 'platform_admins membership alone shows the upload form');
     } finally {

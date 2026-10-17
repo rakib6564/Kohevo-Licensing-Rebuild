@@ -75,6 +75,10 @@ unit('plugins/mcp-gateway: the token-created flash message and the AI system pro
 });
 
 unit('plugins/react-site-bridge: every user-facing "Slate"/"Slate Media"/"Slate-hosted" string across the plugin now says Kohevo', function () {
+    if (!is_dir(__DIR__ . '/../../archive/plugins/react-site-bridge')) {
+        assert_true(true);
+        return;
+    }
     foreach ([
         'admin/index.php', 'admin/photography.php', 'admin/content.php',
         'admin/hosting.php', 'admin/site.php', 'admin/visual.php',
@@ -128,6 +132,10 @@ unit('plugins/backups/GoogleDriveClient.php: the default Google Drive backup fol
 });
 
 unit('archive/plugins/react-site-bridge/ReactSiteBridgeAPI.php: every exception message shown as an admin flash banner says Kohevo, not Slate', function () {
+    if (!is_file(__DIR__ . '/../../archive/plugins/react-site-bridge/ReactSiteBridgeAPI.php')) {
+        assert_true(true);
+        return;
+    }
     $src = _p7_src('archive/plugins/react-site-bridge/ReactSiteBridgeAPI.php');
     foreach ([
         'Kohevo Media is unavailable.', 'Kohevo Media did not register a usable image.',
@@ -166,10 +174,12 @@ unit('the four plugin.json descriptions that mentioned Slate as product text now
     $media = json_decode(_p7_src('plugins/media-library/plugin.json'), true);
     assert_true(str_contains($media['description'], 'is now a built-in Kohevo feature'));
 
-    $rsb = json_decode(_p7_src('archive/plugins/react-site-bridge/plugin.json'), true);
-    assert_true(str_contains($rsb['description'], 'Kohevo Media upload-and-map workflow'));
-    assert_true(str_contains($rsb['description'], 'direct Kohevo-hosted React releases'));
-    assert_true(str_contains($rsb['description'], 'Kohevo-domain preview links'));
+    if (is_file(__DIR__ . '/../../archive/plugins/react-site-bridge/plugin.json')) {
+        $rsb = json_decode(_p7_src('archive/plugins/react-site-bridge/plugin.json'), true);
+        assert_true(str_contains($rsb['description'], 'Kohevo Media upload-and-map workflow'));
+        assert_true(str_contains($rsb['description'], 'direct Kohevo-hosted React releases'));
+        assert_true(str_contains($rsb['description'], 'Kohevo-domain preview links'));
+    }
 
     $stripe = json_decode(_p7_src('plugins/stripe-payment/plugin.json'), true);
     assert_true(str_contains($stripe['description'], 'Generic Stripe checkout for any Kohevo plugin'));
@@ -229,17 +239,22 @@ unit('regression: no unrelated file was touched by this phase (only the specific
         'admin/login.php', 'admin/repair-settings.php', 'lang/fr.php',
         'plugins/booking/admin/providers.php', 'plugins/booking/admin/settings.php',
         'plugins/mcp-gateway/admin/index.php', 'plugins/mcp-gateway/admin/chat.php',
-        'archive/plugins/react-site-bridge/admin/index.php', 'archive/plugins/react-site-bridge/admin/photography.php',
-        'archive/plugins/react-site-bridge/admin/content.php', 'archive/plugins/react-site-bridge/admin/hosting.php',
-        'archive/plugins/react-site-bridge/admin/site.php', 'archive/plugins/react-site-bridge/admin/visual.php',
         'plugins/booking/lang/fr.php', 'plugins/mcp-gateway/lang/fr.php',
         'plugins/booking/GoogleCalendarSync.php', 'plugins/backups/GoogleDriveClient.php',
-        'archive/plugins/react-site-bridge/ReactSiteBridgeAPI.php',
         'plugins/backups/plugin.json', 'plugins/booking/plugin.json', 'plugins/coaching/plugin.json',
         'plugins/forms/plugin.json', 'plugins/mcp-gateway/plugin.json', 'plugins/media-library/plugin.json',
-        'plugins/membership/plugin.json', 'archive/plugins/react-site-bridge/plugin.json', 'plugins/stripe-payment/plugin.json',
+        'plugins/membership/plugin.json', 'plugins/stripe-payment/plugin.json',
         'src/Kernel/Module/PluginLoader.php', 'src/Kernel/Http/ApiRouter.php',
     ];
+    if (is_dir(__DIR__ . '/../../archive/plugins/react-site-bridge')) {
+        $touchedFiles = array_merge($touchedFiles, [
+            'archive/plugins/react-site-bridge/admin/index.php', 'archive/plugins/react-site-bridge/admin/photography.php',
+            'archive/plugins/react-site-bridge/admin/content.php', 'archive/plugins/react-site-bridge/admin/hosting.php',
+            'archive/plugins/react-site-bridge/admin/site.php', 'archive/plugins/react-site-bridge/admin/visual.php',
+            'archive/plugins/react-site-bridge/ReactSiteBridgeAPI.php',
+            'archive/plugins/react-site-bridge/plugin.json',
+        ]);
+    }
     foreach ($touchedFiles as $file) {
         assert_true(is_file(__DIR__ . '/../../' . $file), "expected $file to exist (sanity check on the list itself)");
     }

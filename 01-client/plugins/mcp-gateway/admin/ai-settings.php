@@ -34,15 +34,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Database::setSetting('mcp-gateway.ai_model', mb_substr($model, 0, 120));
         Database::setSetting('mcp-gateway.customer_assistant_enabled', $customerEnabled ? '1' : '0');
 
+        $encError = false;
         if ($clearKey) {
             Database::setSetting('mcp-gateway.ai_api_key', '');
         } elseif (trim($key) !== '') {
-            Database::setSetting('mcp-gateway.ai_api_key', slate_encrypt_secret(trim($key)));
+            try {
+                $enc = slate_encrypt_secret(trim($key));
+                Database::setSetting('mcp-gateway.ai_api_key', $enc);
+            } catch (\Throwable $ex) {
+                $encError = true;
+            }
         }
         // Blank key field with no clear checkbox = leave the saved key untouched.
 
         AuditLog::record('mcp-gateway.ai_settings_updated', '');
-        $flash = ['type' => 'success', 'msg' => __('mcp_gateway_ai_settings_saved', 'AI connection settings saved.')];
+        if ($encError) {
+            $flash = ['type' => 'error', 'msg' => __('encryption_failed', 'Settings saved, but API key encryption failed. Check APP_SECRET.')];
+        } else {
+            $flash = ['type' => 'success', 'msg' => __('mcp_gateway_ai_settings_saved', 'AI connection settings saved.')];
+        }
     }
 }
 

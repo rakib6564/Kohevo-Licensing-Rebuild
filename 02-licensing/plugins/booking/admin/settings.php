@@ -75,11 +75,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Google Calendar 2-way sync — master toggle + OAuth app credentials.
         // Secret is write-only (like the Twilio token below) and stored
         // encrypted at rest via slate_encrypt_secret().
+        $encError = false;
         Database::setSetting('booking.google_enabled',   !empty($_POST['google_enabled']) ? '1' : '0');
         Database::setSetting('booking.google_client_id', trim((string)($_POST['google_client_id'] ?? '')));
         $gClientSecret = trim((string)($_POST['google_client_secret'] ?? ''));
         if ($gClientSecret !== '') {
-            Database::setSetting('booking.google_client_secret', slate_encrypt_secret($gClientSecret));
+            try {
+                $enc = slate_encrypt_secret($gClientSecret);
+                Database::setSetting('booking.google_client_secret', $enc);
+            } catch (\Throwable $ex) {
+                $encError = true;
+            }
         }
 
         Database::setSetting('booking.followup_enabled',     !empty($_POST['followup_enabled']) ? '1' : '0');
@@ -94,7 +100,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // stored encrypted at rest via slate_encrypt_secret(); only
         // overwrite when a new value is supplied.
         $token = trim((string)($_POST['twilio_token'] ?? ''));
-        if ($token !== '') Database::setSetting('booking.twilio_token', slate_encrypt_secret($token));
+        if ($token !== '') {
+            try {
+                $enc = slate_encrypt_secret($token);
+                Database::setSetting('booking.twilio_token', $enc);
+            } catch (\Throwable $ex) {
+                $encError = true;
+            }
+        }
 
         // The seam. Booking owns this screen, this form and this POST; a
         // plugin that needs a booking setting contributes a card via
@@ -104,7 +117,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Hook::doAction('booking_settings_save', $_POST);
 
         AuditLog::record('booking.settings_updated', 'booking');
-        $flash = ['type' => 'success', 'msg' => __('settings_saved', 'Settings saved.')];
+        if ($encError) {
+            $flash = ['type' => 'error', 'msg' => __('encryption_failed', 'Settings saved, but secret encryption failed. Check APP_SECRET.')];
+        } else {
+            $flash = ['type' => 'success', 'msg' => __('settings_saved', 'Settings saved.')];
+        }
     }
 }
 

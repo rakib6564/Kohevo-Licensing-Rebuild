@@ -26,15 +26,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = (string)($_POST['_action'] ?? '');
 
         if ($action === 'save_settings') {
+            $encError = false;
             Database::setSetting('backups.google_client_id', trim((string)($_POST['client_id'] ?? '')));
             $secret = trim((string)($_POST['client_secret'] ?? ''));
             if ($secret !== '') { // blank means "leave the stored secret alone"
-                Database::setSetting('backups.google_client_secret', slate_encrypt_secret($secret));
+                try {
+                    $enc = slate_encrypt_secret($secret);
+                    Database::setSetting('backups.google_client_secret', $enc);
+                } catch (\Throwable $ex) {
+                    $encError = true;
+                }
             }
-            Database::setSetting('backups.retention_count', (string) max(1, (int)($_POST['retention_count'] ?? 14)));
+            Database::setSetting('backups.retention_count', (string) max(1, min(365, (int)($_POST['retention_count'] ?? 14))));
             Database::setSetting('backups.enabled', !empty($_POST['enabled']) ? '1' : '0');
             AuditLog::record('backups.settings_updated');
-            $flash = ['type' => 'success', 'msg' => __('settings_saved', 'Settings saved.')];
+            if ($encError) {
+                $flash = ['type' => 'error', 'msg' => __('encryption_failed', 'Settings saved, but secret encryption failed. Check APP_SECRET.')];
+            } else {
+                $flash = ['type' => 'success', 'msg' => __('settings_saved', 'Settings saved.')];
+            }
 
         } elseif ($action === 'connect') {
             if (!GoogleDriveClient::isConfigured()) {

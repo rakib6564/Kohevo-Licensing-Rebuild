@@ -1310,4 +1310,17 @@ return array (
     'core_err_deactivate_the_plugin_before_uninstalling' => 'Désactivez l’extension avant de la désinstaller.',
     'date_format_weekday_long' => 'l j F Y',
     'date_format_default' => 'j F Y',
+    // Settings audit: write-only secrets, encryption failures, timezone ownership.
+    'leave_blank_to_keep' => 'Laisser vide pour conserver le secret existant',
+    'clear_saved_secret' => 'Effacer le secret enregistré',
+    'forms_captcha_configured_hint' => 'Une clé secrète est déjà configurée. Laissez ce champ vide pour la conserver, ou saisissez-en une nouvelle pour la remplacer.',
+    'forms_captcha_empty_hint' => 'Collez la clé secrète fournie par votre service CAPTCHA.',
+    'encryption_failed' => 'Réglages enregistrés, mais le chiffrement du secret a échoué. Vérifiez APP_SECRET.',
+    'stripe_encryption_unavailable' => 'Impossible d’enregistrer les secrets : APP_SECRET n’est pas configuré ou le chiffrement est indisponible. L’enregistrement des secrets en clair est désactivé par sécurité.',
+    'stripe_encryption_failed' => 'Impossible d’enregistrer les secrets : le chiffrement a échoué. L’enregistrement des secrets en clair est désactivé par sécurité.',
+    'stripe_secret_configured_hint' => 'Une clé secrète est stockée chiffrée. Laissez ce champ vide pour la conserver, ou collez-en une nouvelle pour la remplacer.',
+    'stripe_secret_empty_hint' => 'Saisissez votre clé secrète commençant par sk_test_ ou sk_live_.',
+    'manage_in_datetime' => 'Modifier dans Date et heure',
+    'timezone_system_hint' => 'Le fuseau horaire se gère uniquement dans l’onglet Date et heure.',
+    'default_language_studio_hint' => 'C\'est aussi la langue de vos pages publiques Kohevo Studio. Un changement de langue par un visiteur ne les modifie pas.',
 );

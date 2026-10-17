@@ -44,6 +44,10 @@ use Slate\Tenancy\TenantContext;
 const SBPB_TENANT = 101;
 const SBPB_SECRET = 'unit-test-secret';
 
+if (!defined('APP_SECRET')) {
+    define('APP_SECRET', SBPB_SECRET);
+}
+
 if (!class_exists('StripePaymentAPI', false)) {
     /** Stand-in for the Stripe plugin: `isConfigured` is switchable. */
     final class StripePaymentAPI
@@ -195,7 +199,10 @@ function sbpb_render(string $type, array $props, string $mode): string
 
 unit('payment blocks: the button renders a signed form publicly, a card in the editor, and nothing when it cannot work', function (): void {
     $props = ['label' => 'Buy <now>', 'amount' => 25, 'currency' => 'GBP', 'description' => 'A "quoted" thing', 'success_path' => 'thanks'];
-    StripePaymentAPI::$configured = true;
+    if (class_exists('StripePaymentAPI', false)) {
+        StripePaymentAPI::$configured = true;
+    }
+    \Slate\Module\StudioBuilder\Render\Block\ModuleRenderers\PaymentButtonRenderer::$stripeReadyOverride = true;
 
     $public = sbpb_render('payment.button', $props, 'public');
     assert_true(str_contains($public, '<form class="sb-pay" method="post" action="https://acme.test/solaya/plugins/studio-builder/public/pay.php">'), 'posts to the endpoint under the site base');
@@ -214,10 +221,16 @@ unit('payment blocks: the button renders a signed form publicly, a card in the e
     assert_true(str_contains($editor, '25.00 GBP'), 'the card says what visitors will pay');
 
     assert_true(!str_contains(sbpb_render('payment.button', ['amount' => 0.1], 'public'), '<form'), 'an amount that cannot be charged renders no form publicly');
-    StripePaymentAPI::$configured = false;
+    if (class_exists('StripePaymentAPI', false)) {
+        StripePaymentAPI::$configured = false;
+    }
+    \Slate\Module\StudioBuilder\Render\Block\ModuleRenderers\PaymentButtonRenderer::$stripeReadyOverride = false;
     assert_true(!str_contains(sbpb_render('payment.button', $props, 'public'), '<form'), 'Stripe not set up: no form publicly');
     assert_true(str_contains(sbpb_render('payment.button', $props, 'editor'), 'Stripe is not set up'), 'the editor says why');
-    StripePaymentAPI::$configured = true;
+    if (class_exists('StripePaymentAPI', false)) {
+        StripePaymentAPI::$configured = true;
+    }
+    \Slate\Module\StudioBuilder\Render\Block\ModuleRenderers\PaymentButtonRenderer::$stripeReadyOverride = null;
 });
 
 unit('payment blocks: the link block renders only a Stripe address, safely', function (): void {

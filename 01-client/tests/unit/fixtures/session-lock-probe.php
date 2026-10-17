@@ -35,7 +35,7 @@ if ($role === '' || $path === '' || $sid === '') {
 ini_set('session.save_handler', 'files');
 ini_set('session.save_path', $path);
 ini_set('session.use_cookies', '0');
-ini_set('session.use_only_cookies', '0');
+@ini_set('session.use_only_cookies', '0');
 session_id($sid);
 
 if ($role === 'hold') {

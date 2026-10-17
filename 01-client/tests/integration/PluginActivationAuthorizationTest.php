@@ -22,13 +22,14 @@
 declare(strict_types=1);
 
 /** Run admin/plugins.php's POST handler in a child process. Returns [status, body]. */
-function paat_post(array $fields, int $roleId, bool $platformAdmin): array
+function paat_post(array $fields, int $roleId, bool $platformAdmin, bool $unlockPlugins = true): array
 {
     $cmd = escapeshellarg(PHP_BINARY) . ' '
          . escapeshellarg(dirname(__DIR__) . '/fixtures/admin-page-post-probe.php') . ' '
          . escapeshellarg('admin/plugins.php') . ' '
          . escapeshellarg((string) json_encode($fields)) . ' '
-         . escapeshellarg((string) $roleId) . ' ' . escapeshellarg($platformAdmin ? '1' : '0') . ' 2>/dev/null';
+         . escapeshellarg((string) $roleId) . ' ' . escapeshellarg($platformAdmin ? '1' : '0') . ' '
+         . escapeshellarg('') . ' ' . escapeshellarg($unlockPlugins ? '1' : '0') . ' 2>/dev/null';
     $out = (string) shell_exec($cmd);
     if (!preg_match('/^STATUS (\d+)\n/', $out, $m)) return [0, $out];
     return [(int) $m[1], substr($out, strlen($m[0]))];
@@ -56,7 +57,8 @@ function paat_drop_role(int $roleId): void
     Database::query('DELETE FROM roles WHERE id = ?', [$roleId]);
 }
 
-$SLUG = 'mcp-gateway';
+// Use a platform-only infrastructure plugin (backups) to test the platform admin boundary.
+$SLUG = 'backups';
 $tid  = current_tenant_id();
 
 // Guard the whole file: only proceed if this checkout actually has the
@@ -72,9 +74,7 @@ if ($originalStatus === null) {
 } else {
 
 unit('plugin activation: an ordinary tenant admin with plugins.manage cannot activate a plugin', function () use ($SLUG, $tid, $originalStatus): void {
-    if ($originalStatus === 'active') {
-        Database::update('plugins', ['status' => 'inactive'], 'slug = ?', [$SLUG]);
-    }
+    Database::update('plugins', ['status' => 'inactive'], 'slug = ?', [$SLUG]);
     $roleId = paat_make_role($tid);
     try {
         [$status, $body] = paat_post(['_action' => 'activate', 'slug' => $SLUG], $roleId, false);
@@ -92,9 +92,7 @@ unit('plugin activation: an ordinary tenant admin with plugins.manage cannot act
 });
 
 unit('plugin activation: a platform super admin can activate a plugin', function () use ($SLUG, $originalStatus): void {
-    if ($originalStatus === 'active') {
-        Database::update('plugins', ['status' => 'inactive'], 'slug = ?', [$SLUG]);
-    }
+    Database::update('plugins', ['status' => 'inactive'], 'slug = ?', [$SLUG]);
     try {
         [$status, $body] = paat_post(['_action' => 'activate', 'slug' => $SLUG], 1, true);
         assert_eq(200, $status);
