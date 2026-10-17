@@ -1,6 +1,6 @@
 # Integration plan and PR sequence (final)
 
-Three focused PRs, merged in this order. The combination was tested as `integration/final-check`, which is local only and must never be pushed.
+Three focused PRs, merged in this order. The combination was tested as `integration/release-check` (it replaces the earlier `integration/final-check`), which is local only and must never be pushed.
 
 | # | Branch | Head | Scope | Status | Needs from you |
 |---|---|---|---|---|---|
@@ -8,7 +8,7 @@ Three focused PRs, merged in this order. The combination was tested as `integrat
 | 2 | `fix/licensing-module-guard` | `fd592d3` | Central `ModuleGuard`, test tenant plan helper, plan preflight and assignment CLIs (13 files, `02-licensing` only) | Local; ready | **Approve D1**, **push**, open the PR (body: `pr-licensing-module-guard.md`) |
 | 3 | `audit/settings-hardening-next` | tip (last code commit `346b48b`; only docs commits after it) | Audit work (`e9a1bdf` and `d368b5c`), encrypt-first saves, rekey CLI, test hardening, licensing test helpers, corrected inventory and reports | Local; ready after #102 lands | **Push** and open the PR (body: `pr-settings-hardening.md`); merge `main` in once #102 has merged |
 
-PRs 2 and 3 don't touch the same files. PR 3 conflicts with PR #102 only in `lang/fr.php` and `plugins/mcp-gateway/admin/ai-settings.php`, in both trees. The resolution recorded in `03-conflict-map.md` and tested in `integration/final-check` is: vet the URL, then seal the key, and write only if both pass; keep both sets of French strings.
+PRs 2 and 3 don't touch the same files. PR 3 conflicts with PR #102 only in `lang/fr.php` and `plugins/mcp-gateway/admin/ai-settings.php`, in both trees. The resolution recorded in `03-conflict-map.md` and tested again in `integration/release-check` is: vet the URL, then seal the key, and write only if both pass; keep both sets of French strings.
 
 ## Deploy steps (central server)
 

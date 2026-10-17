@@ -1,43 +1,53 @@
-# Remaining-risk register (final, 2026-10-17)
+# Remaining-risk register (2026-10-17, release-check)
 
-Every item was confirmed against the source of the final combined tree, `integration/final-check`.
+Every item was checked against the combined tree `integration/release-check` (local, test only). The full list of individual findings, including the new Studio Builder and settings audit, is in `12-findings-register.md`. This file covers only what decides the release.
 
 ## Closed in this release set
 
 | # | Risk | Fix | Branch | Regression evidence |
 |---|---|---|---|---|
-| S1 | SMTP OAuth secrets stored in plaintext when encryption was unavailable; a half-configured mailer | `SmtpOAuth::sealSecrets()`: encrypt before any write; on failure nothing is saved | PR #102 | `SmtpOAuthSealSecretsTest`; mutation tests caught |
-| S2 | Multilang auto-translate key stored and read in plaintext; no write path | Write-only field; `save_autotranslate_key` (`mlt.manage`, CSRF, audit log); encrypted at rest | PR #102 | `MltAutoTranslateKeyTest`, `SecretHandlingGapsTest` |
-| S3 | AI base URL SSRF | `vetBaseUrl()` on save and when used: https only, every resolved address must be public (including CGNAT, NAT64, 6to4, Teredo, multicast); pinned with `CURLOPT_RESOLVE`; no redirects | PR #102 | `AiProviderClientUrlVettingTest` (5 cases per tree); real-DNS probes of shorthand IPv4 forms |
-| S4 | Forms CAPTCHA secret stored in plaintext | Encrypted; save blocked if encryption fails; blank keeps; explicit clear | hardening `d368b5c` | `FormsCaptchaSecretEncryptionTest`, `FormsCaptchaSecretSaveTest` |
-| S5 | Stripe "Disconnect" left the `test_`/`live_` key slots set | Clears all key slots and webhook secrets in both modes, keeps unrelated settings, writes an audit-log entry | hardening `d368b5c` | `StripeWriteOnlySecretTest` (Disconnect case) |
-| S6 | Production test hook in `PaymentButtonRenderer` | Removed | hardening `d368b5c` | `git grep` finds no override |
-| S7 | Backups, Booking and AI saved half a form when a secret couldn't be encrypted | `slate_seal_posted_secrets()`: encrypt first, otherwise save nothing | hardening `b8a6fdc` | `SettingsEncryptFirstTest` (fails on the old code, 3/6), `SealPostedSecretsTest` |
-| S8 | `APP_SECRET` rotation made every stored secret unreadable, with no recovery | `bin/rekey-secrets.php`:<br>• dry run by default; the old secret comes from an environment variable, never argv<br>• stops if any value is unreadable<br>• one transaction; an envelope-only backup (mode 0600)<br>• symmetric rollback; rerunning is safe | hardening `197fe44`, `346b48b` | `RekeySecretsCliTest`; removing the stop makes it fail |
-| S9 | Central `ModuleGuard` missing: 60 calls in 56 files fataled with a 500 | Class ported; per-tenant plan gating | `fix/licensing-module-guard` | `CentralModuleGuardTest` (real pages: 200 or 403 per plan); making `allows()` return true fails it |
-| S10 | No supported way to give a central tenant a plan | `bin/assign-tenant-plan.php` (refuses inactive plans; audit-logged) and the `bin/check-tenant-plans.php` preflight | `fix/licensing-module-guard` | `CentralTenantPlanCliTest` |
-| T1 | A silent skip counted as a pass (redirect origin, both unit runs) | Now runs in a child process, including lookalike hosts | hardening `b8a6fdc` | `AuthSecurityBoundaryTest` |
-| T2 | Five `APP_SECRET` skip-as-pass guards (Forms CAPTCHA, Stripe) | Now precondition assertions | hardening `b8a6fdc` | n/a |
-| T3 | Licensing single-process runner crashed (`licplug_teardown` declared twice); CentralLicensingFoundation failed on its own | One shared support file | hardening `c926c18` | 22/22 alone; the runner completes |
+| S1 | SMTP OAuth secrets stored in plaintext when encryption was unavailable; a half-configured mailer | `SmtpOAuth::sealSecrets()`: encrypt before any write; on failure nothing is saved | PR #102 | `SmtpOAuthSealSecretsTest`; mutation caught |
+| S2 | Multilang auto-translate key stored and read in plaintext | Write-only field, encrypted at rest, audit-logged | PR #102 | `MltAutoTranslateKeyTest`, `SecretHandlingGapsTest` |
+| S3 | AI base URL SSRF | `vetBaseUrl()` on save and use: https only, every resolved address public, pinned with `CURLOPT_RESOLVE`, no redirects | PR #102 | `AiProviderClientUrlVettingTest`; mutation caught |
+| S4 | Forms CAPTCHA secret in plaintext | Encrypted; blank keeps; explicit clear | PR 3 `d368b5c` | `FormsCaptchaSecret*Test` |
+| S5 | Stripe Disconnect left the `test_`/`live_` slots set | Clears every slot in both modes; audit-logged | PR 3 `d368b5c` | `StripeWriteOnlySecretTest`; mutation caught |
+| S6 | Production test hook in `PaymentButtonRenderer` | Removed | PR 3 `d368b5c` | `git grep` |
+| S7 | Backups, Booking and AI saved half a form when a secret couldn't be encrypted | `slate_seal_posted_secrets()`: encrypt first, otherwise save nothing | PR 3 `b8a6fdc` | `SettingsEncryptFirstTest`, `SealPostedSecretsTest`; mutation caught |
+| S8 | `APP_SECRET` rotation made every secret unreadable | `bin/rekey-secrets.php`: dry run by default; old secret from the environment only; stops on any unreadable value; refuses non-InnoDB tables; ciphertext-only backup (0600); one transaction with guarded writes; `--restore` that refuses under the wrong secret; reverse run | PR 3 `197fe44`, `346b48b`, `c56c7be` | `RekeySecretsCliTest` 7 cases (forced mid-run failure via trigger, MyISAM refusal, corrupt ciphertext, restore, reverse run); 4 mutations caught |
+| S9 | Central `ModuleGuard` missing: 60 calls in 56 files fataled | Class ported; per-plan gating | PR 2 `08f3b99` | `CentralModuleGuardTest`; mutation caught |
+| S10 | No supported way to give a central tenant a plan (was **R1**) | Tenants › **Plan** selector: platform admins only, CSRF, audit log `tenant.plan_assigned`, inactive plans refused, "would be refused a module" warning on the list; plus `bin/assign-tenant-plan.php` and `bin/check-tenant-plans.php` on the same service | PR 2 `188808b`, `2866452` | `TenantPlanAdminTest` 5 cases, `CentralTenantPlanCliTest`; 2 mutations caught |
+| S11 | `APP_ENV=testing` switched off the licence guard and ModuleGuard on **web** requests | Honoured only on CLI | client PR 3 `8db616f`, central PR 2 `d77b076` | built-in web server probes in `AppEnvTestingBypassTest` (2 cases) and `CentralModuleGuardTest`; 3 mutations caught |
+| T1–T3 | Silent skips; licensing single-process crash | See `04-test-results.md` | PR 3 | — |
+| T4 | 3 `LicenseGateTest` failures (fixtures predated the installation-identity trust rule) | Fixtures seed trusted rows; new case pins that untrusted rows restrict | PR 3 `5462c1e` | 9/9 |
+| T5 | Two test-order dependencies (fatal or unique-key failure in any non-alphabetical order) | `19c9a55`, `444c531` | PR 3 | seeded shuffled runs pass in both trees |
 
-## Still open
+## Still open: decisions for the owner
 
-| # | Severity | Risk | Recommendation |
+| # | Severity | Item | Recommendation |
 |---|---|---|---|
-| R1 | High: **decision** | **Per-plan gating in central needs a plan-assignment path.** No admin screen sets `tenant_profiles.plan_id`, and licences store their own `plan_id`, which entitlement checks don't read. Today the CLI is the only path. | Choose: (a) add a plan selector to the Tenants screen (platform admins only, CSRF, audit log); or (b) make `EntitlementService` fall back to the tenant's current licence plan. Until then, run the preflight and assign plans with the CLI before deploying. |
-| R2 | Medium: **decision** | An inactive plan keeps granting its modules to tenants already on it (`PlanService::entitlementsFor()` ignores `is_active`). This matches the architecture doc's "retire a plan from future use without deleting historical reference", and the CLI refuses to assign inactive plans. | Confirm the policy. If inactive should also revoke access, change it in one place and add a test. |
-| R3 | Low | PR #102's `SecretHandlingGapsTest` still has 2 `APP_SECRET` skip-as-pass guards. `APP_SECRET` is set locally and in CI, so they run. | Convert them when the hardening PR is merged on top of #102 (a one-line change each). |
-| R4 | Medium | CI does not run `tests/unit/run.php` or `tests/integration/run.php` in either tree, so most security tests run only locally. | Add both runners to `ci.yml`. All are green on the final tree, and the licensing single-process runner now completes. |
-| R5 | Low | 5 licensing integration tests have out-of-date expectations: LicenseGate 3 (seeds an unsigned cache that Phase 13 no longer trusts), Dashboard 2. | Update the fixtures in a follow-up. |
-| R6 | Low | With HTTPS proxy environment variables set, curl sends AI requests through the proxy, which does its own DNS lookup. The Multilang endpoint has no write path and is not vetted. | Document; vet the endpoint if a UI for it is ever added. |
-| R7 | Low | Anti-drift: 12 client findings and 1 central (`plugins/licensing/admin/license.php:228`). The same findings appear on `origin/main`. | Fix separately. |
-| R8 | Info | AI provider error text (up to 300 characters) is shown in the admin chat (`mcp-gateway.manage` only) and only logged for the public assistant. | Acceptable. |
-| R9 | Info | Playwright was not run locally on the combined tree. The sandbox script drops and recreates the `slate_sbx_e2e` database. Playwright did pass in CI on PR #102. | It runs in CI on each PR. |
+| D1 | High: **decision** | Gate central Forms, Booking and Membership per plan (implemented) or exempt the central tree | Approve per-plan gating. Before deploying PR 2, run `bin/check-tenant-plans.php` and assign plans, starting with the operator's tenant (`11-runbooks.md` §1). Nothing is assigned automatically. |
+| R2 | Medium: **decision** | A retired (inactive) plan keeps granting its modules to tenants already on it; new assignments are refused. Re-saving a tenant's current retired plan is a no-op | Confirm. It matches the architecture doc ("retire from future use"). If retiring should also revoke, it is one change in `PlanService::entitlementsFor()` plus a test. |
+| R5 | Medium: **decision** | `0d48565` ("Fix Date & Time formatting mismatch…") removed the central dashboard's "Platform overview" and "Your plan" sections. That looks accidental and is the cause of the 2 remaining `DashboardMetricsTest` failures | Restore the sections (preferred) or retire the test. Not changed here. |
 
-## Studio Builder product gaps (not release blockers; from the audit and source)
+## Still open: security findings found in this pass (not fixed in these PRs)
 
-- `portfolio.rakib_showcase` is registered but no test references it.
-- The Booking, Forms, Membership and payment widgets are not render-tested by the widget audit tool (`docs/WIDGET-AUDIT.md`).
-- Flex-child controls (Order, Grow, Shrink, Basis) were reported earlier as needing a design-control review.
-- Brand font tokens change CSS variables, but the font files aren't loaded.
-- The widget matrix counts test files that reference each type. It does not prove every control, default, responsive value or sanitization path is covered. Containers, Theme Builder conditions, and template import/export were **not re-audited in this pass**; earlier audit coverage applies.
+These are new. They are not regressions from these PRs; each already exists on `origin/main`.
+
+| # | Severity | Item | Recommendation |
+|---|---|---|---|
+| N1 | High | Stored XSS in `theme.post_content` "Fallback Content" (W-F1) | Escape it or run it through the rich-text sanitizer; add a renderer test with an `onerror` payload. A small, separate PR. |
+| N2 | High | MCP `settings.set` writes any key not matching `pass|secret` (S-11) | Allow-list keys and reuse the page validators. |
+| N3 | High | Template delete hard-deletes the wrong page and its revisions (TB-02) | Match the backing page exactly (JSON path or a stored id). |
+| N4 | High | Draft Theme Builder conditions go live without publishing (TB-01) | Resolve from the published revision. |
+| N5 | High | `admin/templates.php` and the Studio Content page skip Studio permission levels (TB-03, ST-01) | Route through the application services' permission checks. |
+
+## Still open: lower
+
+| # | Severity | Item |
+|---|---|---|
+| R3 | Low | PR #102's `SecretHandlingGapsTest` has 2 skip-as-pass guards (not taken; `APP_SECRET` is set locally and in CI). |
+| R4 | Medium | CI doesn't run either tree's `tests/unit/run.php` or `tests/integration/run.php`; most security tests run only locally. Both are now order-independent and green apart from R5, so they can be added. **Client and licensing integration suites must not run at the same time** against the same MySQL: client Phase 10 tests reset the licensing test tables. |
+| R6 | Low | AI requests honour HTTPS proxy environment variables (the proxy resolves DNS). |
+| R7 | Low | Anti-drift: 12 client + 1 central findings, identical to `origin/main`. |
+| R9 | Info | Studio Playwright e2e not run locally (its sandbox drops `slate_sbx_e2e`); runs in CI on push. |
+| — | Medium/Low | Studio Builder product gaps (inert controls, duplicate controls, responsive gaps, dead branding keys, settings saved but unused): `12-findings-register.md`. |

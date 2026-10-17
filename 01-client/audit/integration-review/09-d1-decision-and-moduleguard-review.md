@@ -83,3 +83,10 @@ Under the recommended D1 policy, every central tenant would therefore be denied 
 | Professional | 200 | 200 | 200 |
 
 Making `ModuleGuard::allows()` always return true causes this test to fail (3/5).
+
+## Addendum (release-check, 2026-10-17)
+
+- **R1 is resolved.** The Tenants screen now has a Plan card (`2866452`): platform admins only, CSRF-checked, audit-logged, only active plans accepted. The list warns about active tenants that would be refused a module. The CLI uses the same `TenantService::assignPlan()`. `TenantPlanAdminTest` covers it (5/5). The licence-plan fallback (option b) was not implemented: it would silently grant modules from a licence record that entitlement checks have never read.
+- **R2 is implemented as recommended and still needs your confirmation.** A tenant already on a retired plan keeps it (re-saving is a no-op) and keeps its modules; new assignments of a retired plan are refused. `TenantPlanAdminTest` case 3 pins this, so changing the policy will fail that test.
+- **`APP_ENV=testing`** used to bypass ModuleGuard on web requests as well as on CLI. Now it counts only on CLI (`d77b076` central, `8db616f` client), proven against PHP's built-in web server.
+- `CentralModuleGuardTest` now has 6 cases (`d77b076` added the web-request case); making `allows()` always true fails 3 of them.

@@ -1,6 +1,6 @@
 # Settings and widget inventory validation (integrated tree)
 
-Checked on 2026-10-17 against the **combined tree** `integration/final-check` (PR #102 + ModuleGuard + this branch), using a standard CSV parser (Python `csv`). The inventory describes that combined release. On this branch alone, `autotranslate_api_key`'s encryption claim doesn't hold until PR #102 is merged.
+Checked on 2026-10-17 against the **combined tree** `integration/final-check` (PR #102 + ModuleGuard + this branch), and re-run unchanged on `integration/release-check` `99ba13e` with identical results (99 VERIFIED, 1 NOT_IMPLEMENTED; 60/60 types; 12/12 encryption and 69/69 parity claims), using a standard CSV parser (Python `csv`). The inventory describes that combined release. On this branch alone, `autotranslate_api_key`'s encryption claim doesn't hold until PR #102 is merged.
 
 ## Settings inventory: `01-client/audit/kohevo-settings-widget-inventory.csv`
 
@@ -42,3 +42,15 @@ Per-row output: `verification/widget-matrix-verification.csv` and `verification/
 - It covers the options and blocks named in the CSV and the matrix, cross-checked against static source. It is **not** a proof that every runtime option is listed.
 - Plugin settings built dynamically (for example loops over provider lists) and per-block style controls are summarised, not listed one by one. See `review-package/csv-validation.md` § "What a static inventory cannot enumerate".
 - A "Test files" count shows that a test references the type ID. It does not show that every control, default or responsive behaviour is covered.
+
+## Limits of this check (found by the full settings audit)
+
+The 100-row inventory passes the checks above, which confirm each row's key, location and claims exist in source. They do not check that a key has a writer or that it covers every key. The full scan in `settings/settings-full-inventory.csv` found:
+
+- the inventory covers 54 of 251 client keys and 54 of 222 central keys;
+- `site_tagline` and `site_admin_email` are listed under Settings › General, but nothing writes them;
+- `license_key` is the `LICENSE_KEY` environment variable, not a database setting;
+- the Forms CAPTCHA secret and provider live in each form's `settings_json`, not the settings table;
+- `business_hours`, `currency` and `default_language` are filed under plugins but are core keys written by `admin/settings.php`.
+
+Use `settings/settings-full-inventory.csv` as the complete inventory; the 100-row file remains as the reviewed subset.
