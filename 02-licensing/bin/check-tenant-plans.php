@@ -10,8 +10,10 @@
  * admin pages and 404 on their public routes.
  *
  * This lists, for every tenant, which of those modules it would be allowed
- * or denied, and why, so plans can be assigned (admin/tenants.php) before a
- * deploy. It writes nothing.
+ * or denied, and why, so plans can be assigned before a deploy (with
+ * bin/assign-tenant-plan.php: no admin screen sets tenant_profiles.plan_id
+ * yet). It changes no settings, plans or profiles; the only write is the
+ * licences' last_validated_at stamp that every entitlement check makes.
  *
  * Run:  php bin/check-tenant-plans.php
  * Exit: 0 when every active tenant is entitled to every active gated module,
@@ -69,7 +71,7 @@ foreach ($tenants as $t) {
 
 echo "\n";
 if ($denied) {
-    echo "{$denied} module(s) would be denied to active tenants. Assign a plan in Platform > Tenants before deploying.\n";
+    echo "{$denied} module(s) would be denied to active tenants. Assign a plan before deploying: php bin/assign-tenant-plan.php <tenant> <plan>\n";
     exit(2);
 }
 echo "Every active tenant is entitled to every active gated module.\n";
