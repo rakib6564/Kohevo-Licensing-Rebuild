@@ -16,6 +16,7 @@ use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
+use Slate\Module\StudioBuilder\StudioPermissions;
 
 Auth::require();
 Auth::requirePerm('studio-builder.view');
@@ -88,6 +89,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to manage templates.')];
     } else {
         $action = (string) ($_POST['_action'] ?? '');
+        // Each action needs the Studio permission its application service
+        // requires (createTemplate / deleteTemplate: admin; publish: publish),
+        // not just edit: this page writes the same rows directly.
+        $requiredPerm = match ($action) {
+            'create_template', 'delete_template'       => StudioPermissions::ADMIN,
+            'publish_template', 'unpublish_template'   => StudioPermissions::PUBLISH,
+            default                                     => StudioPermissions::ADMIN,
+        };
+        if (!StudioActor::fromCurrentSession()->can($requiredPerm)) {
+            $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to manage templates.')];
+            $action = '';
+        }
 
         if ($action === 'create_template') {
             $name = trim((string) ($_POST['name'] ?? ''));
@@ -321,8 +334,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pageId = (int) ($_POST['page_id'] ?? 0);
             if ($pageId > 0) {
                 try {
-                    Database::query("UPDATE studiobuilder_pages SET status = 'draft', published_revision_id = NULL, published_at = NULL WHERE id = ? AND tenant_id = ?", [$pageId, $tenantId]);
-                    $flash = ['type' => 'success', 'msg' => "Template unpublished (reverted to draft)."];
+                    // Only a Theme Builder page (never an ordinary site page), with
+                    // the compiled output dropped and the change audit-logged.
+                    $tplPage = Database::row("SELECT id, slug, settings_json FROM studiobuilder_pages WHERE id = ? AND tenant_id = ?", [$pageId, $tenantId]);
+                    $tplSettings = $tplPage !== null ? json_decode((string) ($tplPage['settings_json'] ?? ''), true) : null;
+                    $isTemplatePage = $tplPage !== null
+                        && (str_starts_with((string) $tplPage['slug'], 'template-') || (is_array($tplSettings) && !empty($tplSettings['is_theme_template'])));
+                    if (!$isTemplatePage) {
+                        $flash = ['type' => 'error', 'msg' => 'Template not found.'];
+                    } else {
+                        Database::query("UPDATE studiobuilder_pages SET status = 'draft', published_revision_id = NULL, published_at = NULL WHERE id = ? AND tenant_id = ?", [$pageId, $tenantId]);
+                        StudioRuntimeFactory::build()->invalidator->invalidatePage($pageId);
+                        AuditLog::record('studio.page.unpublished', (string) $pageId, ['via' => 'theme-builder']);
+                        $flash = ['type' => 'success', 'msg' => "Template unpublished (reverted to draft)."];
+                    }
                 } catch (\Throwable $e) {
                     $flash = ['type' => 'error', 'msg' => 'Failed to unpublish template: ' . $e->getMessage()];
                 }
