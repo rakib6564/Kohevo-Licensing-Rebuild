@@ -28,7 +28,7 @@
 declare(strict_types=1);
 
 // Central tree: Booking/Forms entry points run through ModuleGuard, so the
-// test tenant needs a plan that includes them (restored at shutdown).
+// test tenant needs a plan that includes them (Professional; restored at shutdown).
 require_once dirname(__DIR__) . '/support/tenant-plan.php';
 slate_test_entitle_current_tenant();
 

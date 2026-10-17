@@ -47,12 +47,18 @@ if (!function_exists('slate_test_set_tenant_plan')) {
     }
 
     /**
-     * For a whole test file: entitle the current tenant to every module once
-     * per process and restore at shutdown. Safe to call from several files
-     * in one process (the single-process runner): only the first call
-     * assigns and registers the restore.
+     * For a whole test file: entitle the current tenant to the gated
+     * modules once per process and restore at shutdown. Safe to call from
+     * several files in one process (the single-process runner): only the
+     * first call assigns and registers the restore.
+     *
+     * Defaults to Professional, the smallest seeded plan that includes
+     * forms, booking and membership. Not Enterprise: it also carries
+     * white_label, which hides the platform mark, so a process-wide
+     * Enterprise grant made every later PlatformSignature* test fail in a
+     * single-process run.
      */
-    function slate_test_entitle_current_tenant(string $slug = 'enterprise'): void
+    function slate_test_entitle_current_tenant(string $slug = 'professional'): void
     {
         static $done = false;
         if ($done) return;
