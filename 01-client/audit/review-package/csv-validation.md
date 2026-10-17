@@ -1,88 +1,87 @@
 # Inventory CSV validation
 
-**File:** `01-client/audit/kohevo-settings-widget-inventory.csv` (not modified by this verification)
-**Checked:** 2026-10-17 on branch `feat/field-value-dropdown`, HEAD `1ae3847`
-**Parser:** the Python 3 standard-library `csv` module
-
-This file replaces an earlier version. That version gave the wrong domain breakdown and the wrong disposition values, and it called the inventory "exhaustive".
+**File:** `01-client/audit/kohevo-settings-widget-inventory.csv`
+**Checked:** 2026-10-17, branch `audit/settings-secrets-hardening` (on `origin/main` `ba4c9a5`)
+**Tools:** Python 3 standard-library `csv`; `csv-verify.py` (strict source check); `inventory-corrections.py` (the corrections applied, each with its reason)
 
 ## Result
 
 | Check | Result | Status |
 |---|---|---|
-| Header | 12 columns, exactly `Domain, Component, Setting_Or_Widget, Type, Storage_Key, Input_Validation, Bounds_Enforced, Secret_Handling, Owner_Tab, Parity_Status, Disposition, Notes` | PASS |
-| Data rows | 137 (138 physical lines including the header). This matches the reported 137. | PASS |
-| Row width | Every row has 12 fields. 0 malformed. | PASS |
-| Quoting | The file parses cleanly. No quoting fix was needed, so the file was left unchanged. | PASS |
-| Encoding | UTF-8 without BOM. Originally CRLF line endings; normalized to LF in this pass so `git diff --check` passes. A parse before and after gave identical rows. | PASS |
-| Duplicates | 0 duplicate `(Domain, Component, Setting_Or_Widget)` keys. 0 identical rows. | PASS |
-| Blank rows | 0 | PASS |
-| Mandatory fields | No column has an empty cell. | PASS |
-| **Content traced to source** | **60 VERIFIED, 11 PARTIAL, 66 NOT_FOUND** (details below) | **FAIL** |
-| Exhaustiveness | Not demonstrated; see "Coverage limits" | NOT VERIFIED |
+| Header | Exactly 12 columns: `Domain, Component, Setting_Or_Widget, Type, Storage_Key, Input_Validation, Bounds_Enforced, Secret_Handling, Owner_Tab, Parity_Status, Disposition, Notes` | PASS |
+| Data rows | **100** (was 137) | PASS |
+| Row width | Every row has 12 fields | PASS |
+| Duplicates | 0 duplicate `(Domain, Component, Setting_Or_Widget)` keys | PASS |
+| Mandatory fields | No empty `Domain`, `Component`, `Setting_Or_Widget`, `Type`, `Parity_Status` or `Disposition` | PASS |
+| Encoding | UTF-8, no BOM, LF line endings | PASS |
+| **Key traced to source (strict)** | **99 VERIFIED, 1 NOT_IMPLEMENTED, 0 NOT_FOUND** | **PASS** |
+| `Secret_Handling` on secret-like rows | Checked row by row against code. Two rows corrected to "encrypted, with plaintext fallback". | PASS |
+| `Input_Validation` / `Bounds_Enforced` / `Notes` on rows not otherwise touched | Spot-checked only. One false claim was found and corrected (`ai_base_url` "strict SSRF validation"). | NOT VERIFIED |
+| Exhaustiveness | Not claimed (see the last section) | NOT VERIFIED |
 
-## Actual distribution
+## What changed since the first audit
 
-The earlier report listed "Core Admin 22 / Platform Admin 16 / Plugins 71 / Studio 15+2 / Forms 11". The file actually contains:
+The first audit's CSV had 137 rows, and 66 of them named keys that do not exist in the source. A previous pass flagged them, and this pass reworked every one:
 
-| Domain | Rows | VERIFIED | PARTIAL | NOT_FOUND |
-|---|---|---|---|---|
-| `Plugin` | 76 | 21 | 6 | 49 |
-| `Core: System` | 33 | 15 | 4 | 14 |
-| `Widget: Studio` | 17 | 14 | 1 | 2 |
-| `Field: Forms` | 11 | 10 | 0 | 1 |
-| **Total** | **137** | **60** | **11** | **66** |
+| Action | Rows | Where recorded |
+|---|---|---|
+| **Corrected** to the real key, block type or field type. The old name stays in the row's Notes as `[corrected 2026-10-17: was …]`. | 52 | The inventory itself; the full table is in `kohevo-option-disposition.md` |
+| **Removed**, because the setting does not exist | 38 | `01-client/audit/kohevo-inventory-removed-rows.csv` (original line, name, reason) |
+| **Kept, marked "Not implemented"**: `forms` `stripe_payment_field`, a documented deferral | 1 | Inventory |
+| **Added**: `multilang-translate` `autotranslate_api_key` (real key, stored in plaintext) | 1 | Inventory |
+| **Claim corrected**: `mcp-gateway` `ai_base_url` validation, and the plaintext fallback on two SMTP OAuth rows | 3 | Inventory Notes |
 
-`Disposition` values present: `Keep/Core` (132), `Keep/Advanced` (4), `Deprecate/Docs Corrected` (1). The earlier report's vocabulary ("Retained, Bounded, Hardened, Canonicalized, Deprecated") does not appear in the file.
+137 − 38 + 1 = **100** rows.
 
-## Row-to-source trace method
+The earlier verifier counted any quoted occurrence of a word as a match. That let `header`, `paragraph` and `columns` pass as Studio blocks when they are not block types at all. `csv-verify.py` is now strict, with one rule per domain:
 
-Rerun with: `python3 -I 01-client/audit/review-package/csv-verify.py 01-client 01-client/audit/review-package/csv-row-verification.csv`
-
-The script searches every `.php`, `.js`, `.mjs` and `.json` file under `01-client/{admin,includes,src,plugins,api,public}`. It skips `tests`, `lang`, `vendor` and `node_modules`.
-
-- **VERIFIED**: the key appears as a quoted literal (`'key'` or `"key"`). Plugin rows also match `'<plugin>.key'`.
-- **PARTIAL**: the key appears only as a case-insensitive substring of other code. Treat the row as approximate.
-- **NOT_FOUND**: the key does not appear anywhere in the shipped source.
-
-Per-row output: `csv-row-verification.csv`.
-
-### NOT_FOUND rows (66)
-
-The source does not store any of these settings under the key the row gives:
-
-- **Core:** `default_role`, `users_can_register`, `membership_requires_approval`, `brand_primary_color`, `brand_secondary_color`, `brand_logo_url`, `brand_favicon_url`, `session_idle_timeout`, `mfa_enforced`, `login_lockout_attempts`, `login_lockout_duration`, `mail_driver`, `smtp_username`, `smtp_oauth_tokens`
-- **backups:** `schedule_frequency`, `schedule_time`, `gdrive_client_id`, `gdrive_client_secret`, `gdrive_refresh_token`, `include_database`, `include_uploads`. The real keys include `backups.google_client_id` and `backups.google_client_secret`.
-- **booking:** `slot_interval_minutes`, `buffer_minutes`, `max_future_days`, `deposit_mode`, `deposit_amount`, `google_calendar_enabled`, `google_tokens`, `twilio_from`
-- **coaching:** `gated_plans`, `macro_protein_pct`, `macro_carb_pct`, `macro_fat_pct`, `client_diary_visibility`, `audit_logging`
-- **forms:** `sp_captcha_sitekey` (the real name is `sp_captcha_site_key`), `sp_honeypot_enabled`, `sp_rate_limit_rpm`, `notification_emails`, `stripe_payment_field`
-- **licensing:** `central_api_url`
-- **mcp-gateway:** `mcp_enabled`, `ai_provider`, `allowed_tools`
-- **media-library:** `allowed_mime_types`, `max_upload_size_mb`, `track_usage`, `image_variants`
-- **membership:** `grace_period_days`, `stripe_sync_enabled`, `qr_attendance_enabled`, `wallet_ledger_enabled`
-- **multilang-translate:** `active_languages`, `crawler_protection`, `url_prefix_mode`
-- **stripe-payment:** `stripe_mode` (the real key is `stripe-payment.mode`)
-- **studio-builder:** `site_title`, `custom_head_code`, `custom_footer_code`, `tracking_head_code`, `tracking_body_code`, `global_css`, `theme_preset`
-- **Widgets/fields:** `membership-pricing`, `testimonial-slider`, `checkbox_group`
-
-Some of these rows misname a real setting, as in the Google Drive and site-key cases. Others describe features this codebase does not have, such as an MFA-enforcement toggle or Studio custom head code. The rows were not deleted, because this pass was instructed to keep meaningful content. **Read this inventory only together with `csv-row-verification.csv`.**
-
-### Spot checks against source (VERIFIED rows)
-
-| Row | Source evidence |
+| Domain | Match rule |
 |---|---|
-| `Core: System / timezone` | In `admin/settings.php`, `save_datetime` validates against `DateTimeZone::listIdentifiers()` and is now the only writer. |
-| `Core: System / permalink_structure` | In `admin/settings.php`, `save_permalinks` has an allow-list identical to the three radio values (checked by `SystemSettingsAuditFixesTest`). |
-| `Core: System / start_of_week` | In `admin/settings.php`, `save_datetime` resets values outside 0..6 to 1 before writing. |
-| `Plugin / backups / retention_count` | `plugins/backups/admin/settings.php` clamps with `max(1, min(365, …))`, and the input declares `min="1" max="365"`. |
-| `Plugin / stripe-payment / secret_key`, `webhook_secret` | Stored as encrypted `enc:v1:` envelopes; the form is write-only. Covered end to end by `StripeWriteOnlySecretTest`. |
-| `Plugin / mcp-gateway / ai_api_key` | Encrypted, with an explicit "clear" checkbox. The save is skipped if encryption throws. |
+| `Widget: Studio` | Must be a block id returned by a renderer's `type()`, or defined as `'type' => '<id>'` in a plugin |
+| `Field: Forms` | Must be in `FormsAPI::SUPPORTED_TYPES` |
+| Settings | An exact `'<plugin>.<key>'`, `'<key>'` or `name="<key>"` literal |
+| Constants, config and tables | A whole-identifier match |
 
-## Coverage limits: what a static inventory cannot enumerate
+Rerun it with:
 
-- **Tenant-defined data.** Studio page custom fields (29 meta field types, plus field sets per content type), form schemas and membership plans are tenant data, not platform settings.
-- **Runtime-registered modules and blocks.** Plugins installed from disk and Widget SDK blocks register at runtime. `studio-freelancer-portfolio` and `studio-testimonial-widget` are examples that exist as plugin directories. The block list depends on which plugins are active.
-- **Hook-contributed settings.** `Hook::doAction('booking_settings_save', $_POST)` lets other plugins add booking settings cards, and their keys cannot be known statically.
-- **Settings that exist only in 02-licensing.** The inventory was built from `01-client`. Settings unique to the licensing tree, such as central licensing keypair storage, are not listed.
+```bash
+python3 -I 01-client/audit/review-package/csv-verify.py 01-client 01-client/audit/review-package/csv-row-verification.csv
+```
 
-**Conclusion:** the CSV is structurally valid, but only about 44% of its rows can be traced verbatim to the source, and it is not exhaustive.
+## Distribution after correction
+
+| Domain | Rows | VERIFIED | NOT_IMPLEMENTED |
+|---|---|---|---|
+| `Plugin` | 46 | 45 | 1 |
+| `Core: System` | 27 | 27 | 0 |
+| `Widget: Studio` | 16 | 16 | 0 |
+| `Field: Forms` | 11 | 11 | 0 |
+| **Total** | **100** | **99** | **1** |
+
+**`Secret_Handling` values:**
+
+| Value | Rows |
+|---|---|
+| plaintext | 60 |
+| n/a | 28 |
+| encrypted (AES-256-GCM) | 9 |
+| encrypted, with plaintext fallback | 2 |
+| signature verified | 1 |
+
+The `forms` `sp_captcha_secret` row is "encrypted" and is now true (Forms fix in this pass). The plaintext secret-like rows are flagged as open risks: `autotranslate_api_key`, and the two SMTP OAuth rows with a fallback.
+
+## Implemented, planned, retired, unverified
+
+| Category | Rows | Where |
+|---|---|---|
+| Implemented | 99 | Inventory |
+| Planned / deferred | 1 | Inventory, `Disposition = Not implemented` |
+| Retired / never existed | 38 | `kohevo-inventory-removed-rows.csv` |
+| Unverified | Descriptive columns of untouched rows | See the table above |
+
+## What a static inventory cannot enumerate
+
+- **Tenant-defined data.** Studio custom fields (29 meta field types, plus field sets per content type), form schemas and membership plans are tenant data.
+- **Runtime-registered blocks.** Widget SDK blocks depend on which plugins are active. The inventory lists one representative row per bundled plugin; `kohevo-widget-test-matrix.md` lists every block id.
+- **Hook-contributed settings.** Plugins can add booking settings cards through `Hook::doAction('booking_settings_save', $_POST)`.
+- **Coverage gaps.** The inventory is not exhaustive. For example, about 224 distinct setting keys appear in `Database::setting()` calls in `01-client`, and many are not listed: landing-page, business-profile, Studio SEO/AI and Multilang switcher keys. Rows are only claims that have been checked, not a complete catalogue.

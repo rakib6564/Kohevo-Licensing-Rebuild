@@ -140,3 +140,42 @@ unit('stripe settings: the page shows that a secret is configured without render
         $restore();
     }
 });
+
+unit('stripe settings: Disconnect clears the keys of BOTH modes and leaves unrelated settings alone', function (): void {
+    if (!slate_has_app_secret()) { assert_true(true, 'skipped: APP_SECRET not configured in the test environment'); return; }
+    $restore = swos_snapshot();
+    try {
+        Database::setSetting('stripe-payment.mode', 'live');
+        foreach (['test', 'live'] as $m) {
+            Database::setSetting("stripe-payment.{$m}_publishable_key", "pk_{$m}_swos" . bin2hex(random_bytes(6)));
+            Database::setSetting("stripe-payment.{$m}_secret_key", slate_encrypt_secret("sk_{$m}_swos" . bin2hex(random_bytes(6))));
+            Database::setSetting("stripe-payment.{$m}_webhook_secret", slate_encrypt_secret('whsec_swos' . bin2hex(random_bytes(6))));
+        }
+        Database::setSetting('stripe-payment.secret_key', slate_encrypt_secret('sk_live_legacy'));
+        Database::setSetting('stripe-payment.allowed_countries', 'BE,NL');
+        Database::setSetting('stripe-payment.wallet_link', '1');
+        assert_true(StripePaymentAPI::isConfigured(), 'precondition: Stripe is configured');
+
+        [$status] = swos_probe(['_action' => 'clear_keys']);
+        assert_eq(200, $status);
+
+        foreach (['test', 'live'] as $m) {
+            foreach (['publishable_key', 'secret_key', 'webhook_secret'] as $k) {
+                assert_eq('', swos_stored("{$m}_{$k}"), "{$m}_{$k} must be cleared");
+            }
+        }
+        foreach (['publishable_key', 'secret_key', 'webhook_secret', 'mode'] as $k) {
+            assert_eq('', swos_stored($k), "legacy {$k} must be cleared");
+        }
+        assert_false(StripePaymentAPI::isConfigured(), 'Stripe must no longer be configured after Disconnect');
+        assert_eq('BE,NL', swos_stored('allowed_countries'), 'unrelated settings are preserved');
+        assert_eq('1', swos_stored('wallet_link'), 'unrelated toggles are preserved');
+        $audited = (int) Database::value(
+            "SELECT COUNT(*) FROM audit_log WHERE tenant_id = ? AND action = 'stripe.keys_cleared' AND created_at >= NOW() - INTERVAL 5 MINUTE",
+            [current_tenant_id()]
+        );
+        assert_true($audited >= 1, 'Disconnect must be recorded in the audit log');
+    } finally {
+        $restore();
+    }
+});

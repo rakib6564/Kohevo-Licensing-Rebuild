@@ -239,14 +239,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Spam & security settings (textareas come in as strings; normalize()
         // splits them into clean lists and clamps every value to a safe shape).
-        $existingCaptchaSecret = (string)($fset['spam']['captcha_secret'] ?? '');
-        $postedCaptchaSecret   = trim((string)($_POST['sp_captcha_secret'] ?? ''));
-        if (!empty($_POST['sp_captcha_clear_secret'])) {
-            $savedCaptchaSecret = '';
-        } elseif ($postedCaptchaSecret !== '') {
-            $savedCaptchaSecret = $postedCaptchaSecret;
-        } else {
-            $savedCaptchaSecret = $existingCaptchaSecret;
+        // The CAPTCHA secret is write-only and encrypted at rest; see
+        // FormsSpamGuard::resolveStoredSecret() for the keep/clear/encrypt rules.
+        $captchaResolved = FormsSpamGuard::resolveStoredSecret(
+            (string)($fset['spam']['captcha_secret'] ?? ''),
+            (string)($_POST['sp_captcha_secret'] ?? ''),
+            !empty($_POST['sp_captcha_clear_secret'])
+        );
+        $savedCaptchaSecret = $captchaResolved['secret'];
+        if ($captchaResolved['error'] !== null) {
+            $fieldErrors['sp_captcha_secret'] = __('forms_captcha_encryption_failed', 'The secret key was not saved: encryption is unavailable (check APP_SECRET). Secrets are never stored in plain text.');
         }
 
         $fset['spam'] = FormsSpamGuard::normalize([
@@ -1297,6 +1299,9 @@ $publicUrl = ($state['slug'] !== '' && !$isNew) ? SLATE_URL . '/forms/' . $state
                                 <span><?= e(__('forms_captcha_empty_hint', 'Paste the secret key from your CAPTCHA provider.')) ?></span>
                             <?php endif; ?>
                         </div>
+                        <?php if (!empty($fieldErrors['sp_captcha_secret'])): ?>
+                            <div class="field-error"><?= e($fieldErrors['sp_captcha_secret']) ?></div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="field" style="margin-bottom:0;" data-sp-recaptcha<?= $sp['captcha_provider'] === 'recaptcha' ? '' : ' hidden' ?>>

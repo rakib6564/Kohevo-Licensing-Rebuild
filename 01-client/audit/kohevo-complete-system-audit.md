@@ -1,6 +1,13 @@
 # Kohevo Complete System, Plugin, Widget and Settings Audit Report
 
-> **Verification note (2026-10-17):** The test totals below (2,473 tests, "25 previous failures", "100%") were not reproduced as stated: the HEAD baseline shows 23 client-integration failures, the 02-licensing integration suite was never run (its single-process runner fatals at HEAD and in the working tree), and "exhaustive" coverage is not demonstrated. Current, re-run numbers are in `review-package/test-results.md`; per-claim status is in `review-package/verification-matrix.md`.
+> **Current status (verified 2026-10-17, supersedes the totals and claims below).** The body of this report is the original audit text. Several of its claims were wrong and have been corrected elsewhere:
+> - "2,473 tests, 25 failures resolved, 0 failures" left out the licensing integration suite. On `origin/main` the client integration suite has 23 failures, not 25.
+> - The inventory and widget matrix named settings and classes that do not exist.
+> - The Forms CAPTCHA secret was not encrypted.
+> - Stripe "Disconnect" did not clear both modes.
+> - A production test seam had been added to `PaymentButtonRenderer`.
+>
+> All of these are now fixed or documented. Authoritative, re-run evidence: `review-package/test-results.md` (exact counts against `origin/main`), `review-package/verification-matrix.md` (per-claim status), `review-package/remaining-risks.md` (open items), `review-package/csv-validation.md` (inventory: 100 rows, all traced to source, 38 false rows removed).
 
 
 **Date:** 2026-10-17\

@@ -1,54 +1,47 @@
 # Remaining risks and open items
 
-**Date:** 2026-10-17. **Checkout:** `~/Downloads/Fahim/KOHEVO-STUDIO`, branch `feat/field-value-dropdown`, HEAD `1ae3847`. Nothing has been committed, pushed or deployed.
+**Date:** 2026-10-17. **Checkout:** `~/Downloads/Fahim/KOHEVO-STUDIO`, branch `audit/settings-secrets-hardening`. Audit commit `e9a1bdf` sits on `origin/main` `ba4c9a5`, re-fetched today with no divergence; this pass's follow-up changes are uncommitted on top of it. Nothing has been pushed, merged or deployed.
 
-This replaces the earlier risk list. That list claimed test coverage that does not exist (for example "`StripeWebhookRaceTest.php` passing 9/9 assertions" as evidence of live webhook handling) and was silent on the items below.
+## Fixed in this pass (were open)
 
-## Release blockers for this change set
+| Item | Fix | Evidence |
+|---|---|---|
+| Forms CAPTCHA secret stored in plaintext | Encrypted at rest (`enc:v1`) via `FormsSpamGuard::resolveStoredSecret()`. A save is refused when encryption is unavailable. A blank field keeps the stored value. Legacy plaintext is upgraded on save. Explicit clear supported. The runtime decrypts in `captchaSecret()`, and an undecryptable secret fails closed in `verifyCaptcha()`. Both trees. | `FormsCaptchaSecretEncryptionTest` (6 unit tests ×2 trees: new write, blank keep, legacy upgrade, clear, decrypt failure, no `APP_SECRET` in a child process); `FormsCaptchaSecretSaveTest` (integration, real editor POST/GET; fails if the editor stores plaintext) |
+| Stripe "Disconnect" left `test_*`/`live_*` keys in place | `clear_keys` now blanks the publishable key, secret key and webhook secret in both modes plus the legacy slots, and writes the `stripe.keys_cleared` audit event. Countries and toggles are untouched. The confirmation text already said "Clear ALL Stripe keys". CSRF and `stripe.manage_settings` are unchanged. | `StripeWriteOnlySecretTest` Disconnect case; fails 3/4 when the mode-slot clearing is removed |
+| Production test seam `PaymentButtonRenderer::$stripeReadyOverride` | Removed; the renderer is identical to `origin/main`. Root cause of the old order-dependent failure: `APP_SECRET` was undefined once the real `includes/helpers.php` was loaded. The test now defines it and signs and verifies through `slate_sign()`. | `StudioBuilderPaymentBlocksTest` 8/8 alone and in the full unit run |
+| Vacuous react-site-bridge tests | Removed: that plugin has never been committed to this repository. They are no longer counted as passes. | `Phase7SlateKohevoIdentityTest` 18/18 (was 20, two of them vacuous) |
+| Negative upload-form test ran with the plugin lock closed | Now runs with the lock open, so only platform authority differs | `PlatformAdminGateTest` 8/8 |
+| Licensing clock-skew test fixtures | The client fixture fix was mirrored to `02-licensing/tests/integration/{ContactSeeder,CustomerAuthParity}Test.php` | 3 licensing failures fixed |
 
-1. **Not committed. The archive sentinel is untracked.** `01-client/archive/.htaccess` and `02-licensing/archive/.htaccess` have never been in git. On any fresh checkout `PluginLoaderArchiveBoundaryTest` fails and the directory is unprotected until these files are committed.
-2. **The branch is wrong for this work.** The changes sit uncommitted on `feat/field-value-dropdown`, a feature branch that already carries an unrelated pushed commit (`1ae3847`, Field value dropdown). Commit them on a dedicated branch instead (see `diff-summary.md` → "Commit plan").
-3. **The 02-licensing integration suite is not runnable as one process.** `php 02-licensing/tests/integration/run.php` fatals with `Cannot redeclare function licplug_teardown()` (`DynamicModuleSystemTest.php` and `LicensingPluginSchemaTest.php`). This happens identically at HEAD, so this change set did not cause it. As a result the earlier report's totals never included that suite. CI runs selected licensing integration files one at a time. The per-file results are in `test-results.md`.
+## Still open
 
-## Security gaps remaining
-
-| # | Risk | Where | Status |
+| # | Risk | Where | Status / next step |
 |---|---|---|---|
-| R1 | **The Forms CAPTCHA secret is stored in plaintext** inside each form's settings JSON. The UI is now write-only, but anyone with read access to the database still sees the secret. | `plugins/forms/lib/FormsSpamGuard.php:94`, `:236` | Open. Next step: encrypt it in `admin/edit.php` with `slate_encrypt_secret()` and decrypt it where `FormsSpamGuard` builds the verification request. `slate_decrypt_secret()` passes plaintext through unchanged, so no migration is needed. |
-| R2 | **Stripe "Clear keys" leaves the mode-prefixed keys in place.** `clear_keys` blanks only `stripe-payment.{secret_key,…}`. `keyByMode()` reads `test_*`/`live_*` first, so the integration remains configured after a "clear". | `plugins/stripe-payment/admin/settings.php:118-124` | Open (this existed at HEAD). Next step: also blank `test_*` and `live_*` for `publishable_key`, `secret_key` and `webhook_secret`, and add a probe test. |
-| R3 | **Partial saves on encryption failure.** Backups, Booking and MCP skip only the secret that failed to encrypt. The other fields on the form are still saved, and the user sees an error flash. Stripe refuses the whole save. Neither path stores plaintext, but the two behave inconsistently. | the three settings pages | Accepted, documented. |
-| R4 | **`APP_SECRET` rotation makes every stored secret unreadable.** `slate_decrypt_secret()` returns `null` when the key changes. Stripe, Booking, Google Drive, Twilio, MCP and SMTP OAuth then behave as unconfigured. A blank re-save keeps the unreadable envelope, so the admin must re-enter each secret. There is no re-encryption tool. | `includes/helpers.php:545-556` | Open (by design). Next step: add a CLI that takes the old and new secret and re-wraps every `enc:v1:` value. |
-| R5 | **A test seam was added to production code.** `PaymentButtonRenderer::$stripeReadyOverride` is a public static mutable flag. Nothing in production sets it, but `StudioBuilderPaymentBlocksTest` no longer exercises the real `StripePaymentAPI::isConfigured()` check. | `src/Module/StudioBuilder/Render/Block/ModuleRenderers/PaymentButtonRenderer.php:22,64` | Reviewer decision. |
-| R6 | **Probe fixtures can bypass the plugin lock.** `PROBE_UNLOCK_PLUGINS`/`argv[6]` sets `plugins_unlocked_until` in a test session. This is CLI-only (`PHP_SAPI !== 'cli'` → 404) and test-only. | `tests/fixtures/admin-page{,-post}-probe.php` | Acceptable. |
-| R7 | **Brand fonts are not loaded.** Choosing Plus Jakarta, Outfit, Playfair or Roboto changes `--font-sans` and `--font-display`, but no font file is loaded, so the browser falls back to the system stack. | `includes/ui_components.php` | Cosmetic, open. |
+| R1 | **The SMTP OAuth client secret and refresh token are stored in plaintext when encryption is unavailable** (`$enc ? slate_encrypt_secret(...) : ...`). | `admin/oauth_callback.php:74-75` (both trees) | Open, pre-existing. Make it fail closed like Stripe: refuse to complete the connection without `APP_SECRET`. |
+| R2 | **The Multilang auto-translate API key is stored and read in plaintext.** | `plugins/multilang-translate/includes/AutoTranslate.php:143` | Open, pre-existing. Encrypt on save and decrypt on read, as `mcp-gateway.ai_api_key` does. |
+| R3 | **`mcp-gateway.ai_base_url` has no scheme/host validation**, so an admin can point the AI client at internal hosts (an SSRF surface limited to admins). The earlier inventory falsely claimed strict SSRF validation. | `plugins/mcp-gateway/admin/ai-settings.php:27-33`, `AiProviderClient.php:58` | Open, pre-existing. Require https and reject private/loopback hosts. |
+| R4 | **`ModuleGuard` is missing from the 02-licensing tree**, while its Booking and Forms plugins call it. Those paths fatal there. | `02-licensing/plugins/booking/BookingApiHandler.php:19`, `BookingAPI.php:2368`, `plugins/forms/public/router.php:19`, … | Open, pre-existing (also on `origin/main`). Decide whether those plugins should run in the licensing tree at all, then port the class or remove the plugins. |
+| R5 | Rotating `APP_SECRET` makes every stored secret unreadable. A blank re-save keeps the unreadable envelope. Forms CAPTCHA now fails closed (it rejects submissions and logs a warning) until the secret is re-entered. | `includes/helpers.php` | By design; no re-encryption tool exists. |
+| R6 | Backups, Booking and MCP skip only the secret that fails to encrypt and save the rest of the form. Stripe and Forms refuse the whole save. | settings pages | Accepted inconsistency; no plaintext is stored either way. |
+| R7 | Brand fonts change CSS variables, but the font files are not loaded. | `includes/ui_components.php` | Cosmetic |
+| R8 | The licensing integration suite cannot run as one process: `licplug_teardown()` and `licplug_ensure_schema()` are defined only in other test files, so files depend on run order. | `02-licensing/tests/integration/*` | Open, pre-existing. Move the shared helpers into a support file. |
 
-## Test-quality caveats
+## Test caveats that remain
 
-The tests now pass, but these caveats limit what that proves. Details are in `verification-matrix.md`.
+- `SystemSettingsAuditFixesTest` is a static check of the shipped source. The behaviour of the Stripe and Forms secret paths is covered end to end; the other settings fixes (permalinks, start of week, retention, timezone, brand tokens, coaching audit) have static checks only.
+- No test simulates an encryption failure on the Backups, Booking or MCP pages.
+- The entitlement, white-label and dashboard client tests seed the signed licence cache they then assert against. That is correct under Phase 13, but the test names are stale.
 
-- `Phase7SlateKohevoIdentityTest` (both trees): the react-site-bridge assertions now pass vacuously. That plugin was never tracked.
-- The entitlement, white-label and dashboard tests seed the exact signed entitlements they then assert. That is correct under Phase 13, but the test names are stale.
-- `SystemSettingsAuditFixesTest` is a static source check: it reads the shipped files and does not execute the pages. Each of its 9 tests fails against the HEAD source. Only the Stripe write-only path has an end-to-end test (`StripeWriteOnlySecretTest`).
-- No test simulates an encryption failure (missing `APP_SECRET`) on any settings page.
+## Inventory
 
-## Inventory and report accuracy
+The CSV has 100 rows: 99 match source by key and 1 is marked "Not implemented". 38 rows that described non-existent settings were moved to `kohevo-inventory-removed-rows.csv` with the reason for each. Only the key and secret-handling columns were verified row by row. The other descriptive columns are NOT VERIFIED wholesale; one spot check (`ai_base_url`) found and corrected a false claim.
 
-- 66 of the 137 inventory rows name keys that do not exist in the source (`csv-validation.md`).
-- `kohevo-widget-test-matrix.md` cites 10 classes that do not exist.
-- The earlier "2,473 / 25 resolved" totals were wrong (see `test-results.md`).
+## Not run
 
-Verification notes were added at the top of each affected document. The documents were not rewritten.
-
-## Not run or not verifiable here
-
-- **NOT RUN:** live Stripe API verification (`stripe_verify_secret`), webhook delivery from Stripe, Twilio SMS, the Google OAuth consent flow, and Playwright e2e (`npm run test:e2e`).
-- **NOT RUN:** CI on GitHub. Nothing has been pushed. Local PHP is 8.5.9, while CI uses 8.3.
-- **Environment:** the client integration suite needs `01-client/vendor/` (Composer, untracked). Without it the SMTP OAuth test fails. This is a local-setup issue, not a code change.
+- Live Stripe, Twilio and Google calls
+- Playwright e2e (`npm run test:e2e`)
+- GitHub Actions CI. Nothing has been pushed; CI uses PHP 8.3, while local runs used 8.5.9.
 
 ## Rollback
 
-Every change is confined to PHP pages, test files and docs. There are no schema changes or migrations.
-
-- To roll back after merge, revert the commit.
-- Stripe secrets written by the new code are standard `enc:v1:` envelopes, which HEAD code also reads, so rolling back does not strand any stored credential.
-- Values the old System tab had written to `timezone` remain valid.
+There are no schema changes or migrations. To roll back, revert the commit(s). Stripe and Forms secrets written by this code are standard `enc:v1` envelopes. After a rollback, `origin/main` code reads Stripe envelopes correctly, but it does **not** decrypt Forms CAPTCHA secrets: it would send the envelope to the provider, and those forms would fail CAPTCHA until each secret is re-entered. Re-enter the CAPTCHA secrets after any rollback.

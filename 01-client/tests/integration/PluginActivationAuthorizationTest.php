@@ -12,11 +12,10 @@
  * tenant-delegable one — any tenant admin holding it could flip a plugin
  * on or off platform-wide.
  *
- * Uses the mcp-gateway plugin as the toggle target: present with a `plugins`
- * row in every provisioned test database, inactive by default, and not
- * relied upon by any other suite's assumed-active state — restored to its
- * original status in every case, including denied attempts (which should
- * leave it untouched anyway).
+ * Uses the backups plugin as the toggle target (mcp-gateway became
+ * client-managed in e6630de, so tenant admins may toggle it): forced inactive
+ * before each activate attempt and restored to its original status in every
+ * case, including denied attempts (which should leave it untouched anyway).
  */
 
 declare(strict_types=1);
@@ -68,7 +67,7 @@ $tid  = current_tenant_id();
 $originalStatus = paat_plugin_status($SLUG);
 
 if ($originalStatus === null) {
-    unit('plugin activation authorization: skipped — mcp-gateway plugin row not present in this database', function (): void {
+    unit('plugin activation authorization: skipped — backups plugin row not present in this database', function (): void {
         assert_true(true);
     });
 } else {

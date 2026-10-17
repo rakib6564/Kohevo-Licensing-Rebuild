@@ -62,6 +62,8 @@ if (getenv('SLATE_LICENSE_GUARD_LIVE') !== '1') {
 // boot time — the Global License Guard — sees the same simulated request
 // context a real HTTP request would already have from its first line.
 $_GET  = [];
+// Optional query string for pages that take ?id= on POST (e.g. forms/admin/edit.php).
+parse_str((string) getenv('PROBE_QUERY'), $_GET);
 $_SERVER['REQUEST_METHOD'] = 'POST';
 $_SERVER['REQUEST_URI']    = '/' . ltrim($page, '/');
 $_SERVER['HTTP_HOST']      = 'localhost';

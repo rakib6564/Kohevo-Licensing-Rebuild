@@ -133,7 +133,8 @@ unit('platform admin gate: plugins.php hides upload UI for an ordinary user hold
     $tid    = current_tenant_id();
     $roleId = pag_make_role($tid, 'plugordinary', ['plugins.manage']);
     try {
-        [$status, $body] = pag_get('admin/plugins.php', '', $roleId, false);
+        // Lock open, like the positive cases above, so only platform authority differs.
+        [$status, $body] = pag_get('admin/plugins.php', '', $roleId, false, true);
         assert_eq(200, $status, 'plugins.manage alone still lets the page render');
         assert_true(!str_contains($body, 'id="plug-upload-form"'), 'holding the tenant permission is not platform authority — no upload form');
     } finally {

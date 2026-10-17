@@ -1368,4 +1368,5 @@ return array (
     'stripe_secret_empty_hint' => 'Saisissez votre clé secrète commençant par sk_test_ ou sk_live_.',
     'manage_in_datetime' => 'Modifier dans Date et heure',
     'timezone_system_hint' => 'Le fuseau horaire se gère uniquement dans l’onglet Date et heure.',
+    'forms_captcha_encryption_failed' => 'La clé secrète n’a pas été enregistrée : le chiffrement est indisponible (vérifiez APP_SECRET). Les secrets ne sont jamais stockés en clair.',
 );

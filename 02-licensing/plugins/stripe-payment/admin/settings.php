@@ -118,9 +118,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (($_POST['_action'] ?? '') === 'clear_keys') {
         // Explicit "disconnect" — wipe stored creds so Stripe stops
         // showing up as an available payment method until reconfigured.
-        foreach (['mode', 'publishable_key', 'secret_key', 'webhook_secret',
-                  'verified_at', 'verified_account', 'verified_mode'] as $k) {
+        // "ALL keys" means both modes: StripePaymentAPI::keyByMode() reads
+        // the test_*/live_* slots before the legacy single-key slots, so
+        // clearing only the legacy slots left Stripe configured.
+        $cleared = ['mode', 'publishable_key', 'secret_key', 'webhook_secret',
+                    'verified_at', 'verified_account', 'verified_mode'];
+        foreach (['test', 'live'] as $m) {
+            foreach (['publishable_key', 'secret_key', 'webhook_secret'] as $k) {
+                $cleared[] = $m . '_' . $k;
+            }
+        }
+        foreach ($cleared as $k) {
             Database::setSetting('stripe-payment.' . $k, '');
+        }
+        if (class_exists('AuditLog')) {
+            AuditLog::record('stripe.keys_cleared');
         }
         $flash = ['type' => 'success', 'msg' => __('stripe_settings_keys_cleared', 'Stripe keys cleared.')];
     } else {

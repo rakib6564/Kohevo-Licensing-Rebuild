@@ -19,8 +19,6 @@ use Slate\Module\StudioBuilder\Render\RenderMode;
 
 final class PaymentButtonRenderer implements BlockRendererInterface
 {
-    public static ?bool $stripeReadyOverride = null;
-
     public function type(): string
     {
         return 'payment.button';
@@ -61,9 +59,6 @@ final class PaymentButtonRenderer implements BlockRendererInterface
     /** The Stripe plugin is active and has keys: otherwise a visitor would reach a button that cannot work. */
     private static function stripeReady(): bool
     {
-        if (self::$stripeReadyOverride !== null) {
-            return self::$stripeReadyOverride;
-        }
         return class_exists('StripePaymentAPI') && \StripePaymentAPI::isConfigured();
     }
 

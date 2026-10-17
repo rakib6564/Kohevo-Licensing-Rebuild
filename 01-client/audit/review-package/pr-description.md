@@ -1,69 +1,98 @@
-## Summary
+## Purpose and scope
 
-This hardens how admin settings handle secrets and bounded values, in both `01-client` and `02-licensing`. It also brings the stale integration tests in line with the current architecture. The earlier audit's claims were checked independently and corrected where they were wrong (`01-client/audit/review-package/`).
+This PR hardens how the admin settings pages handle secrets and bounded values, in both `01-client` and `02-licensing`. It also brings stale tests in line with the current architecture. The base is `origin/main` (`ba4c9a5`). It does not include the unrelated Field value dropdown work.
 
-## Security changes
+The first audit pass (`e9a1bdf`) was independently verified. This PR adds a follow-up that:
+- fixes the three remaining issues that verification found;
+- removes test-only hooks from production code and tests that could never run;
+- corrects the audit inventory against the source.
 
-- **Stripe:** the secret key and webhook signing secret are write-only.
-  - Their inputs render empty, with a "Configured" badge.
-  - A blank field keeps the stored value.
-  - A new secret is encrypted. If `APP_SECRET` is missing or encryption throws, the save is refused. Previously it silently stored plaintext.
-  - Legacy plaintext keys are still upgraded to `enc:v1` envelopes on save.
-- **Forms:** the CAPTCHA secret is write-only, and a "Clear saved secret" checkbox removes it.
-  - It is *still stored in plaintext* in the form settings JSON. This is listed as an open risk.
-- **Backups (Google Drive), Booking (Google, Twilio), MCP (AI key):** an encryption failure no longer causes a 500.
-  - The failing secret is skipped and an error is shown. The other fields on the form are saved.
-  - No plaintext is ever persisted.
-- **Identity tokens:** expiry is now stamped on the database clock, the same clock `consumeToken()` compares against. Before this, tokens expired immediately whenever PHP's timezone differed from MySQL's.
-- **`archive/.htaccess`:** added in both trees with `Require all denied`. This file was never tracked before, so the boundary test failed on every clean checkout.
+## Security and reliability changes
 
-## Settings changes
+**Stripe**
+- The secret key and webhook signing secret are write-only.
+- New secrets are encrypted at rest; if encryption is unavailable, the save is refused instead of silently storing plaintext.
+- Legacy plaintext keys are upgraded on save.
+- **"Disconnect" now clears the test, live and legacy key slots** and records `stripe.keys_cleared`. Before, the test and live keys survived "Clear ALL Stripe keys".
 
-- Permalink structure is restricted to an allow-list equal to the form's three choices.
-- `start_of_week` is limited to 0..6.
-- Backup retention is limited to 1..365, both on the server and in the input.
-- Timezone is written only by the Date & Time tab. The System tab now shows it read-only.
-- Brand font and border radius are emitted as CSS variables (`--font-sans`, `--font-display`, `--radius*`). The web fonts themselves are not loaded yet.
+**Forms CAPTCHA secret**
+- **Now encrypted at rest** (`enc:v1`) and write-only.
+- A blank field keeps the stored value, and an explicit checkbox clears it.
+- If encryption is unavailable, the save is refused.
+- The public form decrypts the secret before verifying, and fails closed if it can't.
+
+**Google Drive, Booking (Google, Twilio) and MCP AI key**
+- An encryption failure no longer causes a 500: the secret is skipped and an error is shown.
+- Plaintext is never stored.
+
+**Identity tokens**
+- Expiry is now stamped on the database clock, matching `consumeToken()`. Before, a PHP/MySQL timezone gap expired tokens immediately.
+
+**Archive directory**
+- `archive/.htaccess` denies direct HTTP access in both trees.
+
+**Settings**
+- Permalink allow-list.
+- `start_of_week` limited to 0–6; backup retention limited to 1–365.
+- Timezone is written only by the Date & Time tab.
+- Brand font and radius are emitted as CSS variables.
 - Coaching settings saves are audit-logged.
 
-## Test evidence
+**No production test hooks**
+- The `PaymentButtonRenderer::$stripeReadyOverride` seam is removed. The renderer is unchanged from `main`.
 
-Each run was made locally on PHP 8.5.9 with MySQL. The HEAD baseline was run from a clean `git archive` of the base commit. Full detail is in `test-results.md`.
+## Test results (local, PHP 8.5.9 + MySQL; base = clean copy of `origin/main`)
 
-| Suite | Before (HEAD) | After |
+| Suite | `origin/main` | This branch |
 |---|---|---|
-| Client unit | 977/983 | 992/992 |
-| Licensing unit | 426/430 | 439/439 |
-| Smoke (both trees) | 21/21, 21/21 | 21/21, 21/21 |
-| Client integration | 608/631 | 634/634 |
-| Licensing integration (per file) | 349/403 | 351/403 (no new failures) |
-| Studio Builder UI | 371/371 | 371/371 |
-| `scripts/check-i18n.php` | OK | OK |
+| Client unit | 977/983 | **996/996** |
+| Licensing unit | 426/430 | **443/443** |
+| Smoke, both trees | 21/21, 21/21 | **21/21, 21/21** |
+| Client integration | 608/631 | **636/636** |
+| Studio Builder UI | 368/368 | **368/368** |
+| Licensing CI command set (`ci.yml`) | all pass | **all pass** |
+| Licensing integration, file by file | 349/403 | **354/403** |
+| `scripts/check-i18n.php`, `php -l`, `git diff --check` | — | pass |
+
+Each test counted once: **2,839 passed, 49 failed, 0 skipped** out of 2,888.
 
 New tests:
+- `SystemSettingsAuditFixesTest` (both trees): checks the shipped source.
+- `FormsCaptchaSecretEncryptionTest` (both trees, 6 tests), including a child process with no `APP_SECRET`.
+- `FormsCaptchaSecretSaveTest`: drives the real form editor.
+- `StripeWriteOnlySecretTest`: 4 tests through the real admin page, including Disconnect.
 
-- `SystemSettingsAuditFixesTest` (both trees): static checks over the shipped files. All 9 fail against the HEAD source.
-- `StripeWriteOnlySecretTest`: end-to-end save and render through the admin page. It fails if the re-encryption step is removed.
+The key new tests were mutation-checked: each one fails when its fix is removed.
 
-## Limitations
+## Known failures and suites not run
 
-- **Licensing integration suite:** it cannot run as a single process; it fatals on a duplicate `licplug_teardown()` at HEAD too. Run file by file, it has 52 failures, all also present at HEAD. They are not addressed here.
-- **Weaker test guarantees, kept on purpose for review:**
-  - The react-site-bridge identity checks now skip when that never-tracked directory is absent.
-  - `PaymentButtonRenderer` gained a public static test override.
-  - The entitlement, white-label and dashboard tests now seed the signed licence cache they assert against, which is correct under Phase 13.
-- **Inventory CSV:** 66 of its 137 rows name keys that do not exist in the source. The CSV is shipped with a per-row verification file, not as an authoritative inventory.
-- **Not run:** live Stripe/Twilio/Google, Playwright e2e, CI.
+- **Licensing integration still fails: 49 per-file failures, and the documented single-process runner fatals.** Every failing test also fails on `origin/main`; this PR introduces none and fixes 5. The remaining 49:
+  - **22 (`CentralLicensingFoundationTest`):** fail only when the file runs alone. It depends on a helper in another file, and CI's combined command passes 27/27.
+  - **22 (Booking and Forms):** the licensing tree calls a `ModuleGuard` class that only exists in `01-client`.
+  - **5 (`LicenseGate`, `Dashboard`):** stale pre-Phase-13 tests in the licensing tree.
+- **Not run:** live Stripe, Twilio and Google calls; Playwright e2e; GitHub Actions CI.
 
-## Migration
+## Migration and compatibility
 
-- No schema changes and no data migration.
-- Existing encrypted secrets are unchanged.
-- Legacy plaintext Stripe secrets are re-encrypted the next time Stripe settings are saved. That requires `APP_SECRET`; without it they stay as they are.
-- If `APP_SECRET` changes, every stored secret becomes unreadable. This is unchanged by this PR; see `remaining-risks.md` R4.
+No schema changes or migrations.
+- Existing encrypted secrets keep working unchanged.
+- Legacy plaintext Stripe and Forms CAPTCHA secrets are re-encrypted on the next save of that page. This needs `APP_SECRET`; without it they are left exactly as they are.
+- Rotating `APP_SECRET` makes stored secrets unreadable, as before. Forms CAPTCHA then rejects submissions and logs a warning until the secret is re-entered.
+
+## Remaining risks (open, found during verification; details in `01-client/audit/review-package/remaining-risks.md`)
+
+- SMTP OAuth client secret and refresh token fall back to plaintext when `APP_SECRET` is missing (`admin/oauth_callback.php`).
+- The Multilang auto-translate API key is stored in plaintext.
+- `mcp-gateway.ai_base_url` has no host validation, an SSRF surface open to admins only.
+- The licensing tree's Booking and Forms plugins call the missing `ModuleGuard`.
 
 ## Rollback
 
-Revert the commit. Secrets written by this code use the same `enc:v1` envelope the previous code reads, so no credential is stranded.
+Revert the commits. Stripe envelopes stay readable by `main`. **Forms CAPTCHA secrets saved by this branch are envelopes that `main` does not decrypt**: after a rollback, those forms fail CAPTCHA until each secret is re-entered.
+
+## Audit evidence
+
+- Review package: `01-client/audit/review-package/`. It holds the test results, verification matrix, CSV validation, remaining risks, the patches against `origin/main` and `e9a1bdf`, and test logs.
+- Local bundle (gitignored, not committed): `01-client/audit/Kohevo_Complete_System_Plugin_Widget_Audit_Final_Bundle.zip`, 56 files, 541,455 bytes, SHA-256 `7d471a151bc3865ad05fd13e761f882637fe9e4ec9e8083faaa23ce81275eaf3`.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

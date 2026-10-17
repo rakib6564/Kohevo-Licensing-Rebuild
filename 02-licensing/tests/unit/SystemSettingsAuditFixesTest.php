@@ -71,15 +71,18 @@ unit('audit fixes: backups retention_count is clamped to 1..365 on save and in t
     assert_true((bool) preg_match('/name="retention_count"[^>]*min="1"[^>]*max="365"/', $src), 'the input must declare the same bounds');
 });
 
-unit('audit fixes: forms captcha secret is write-only, kept when blank, cleared only by the checkbox', function (): void {
+unit('audit fixes: forms editor routes the captcha secret through FormsSpamGuard and never echoes it', function (): void {
+    // Behaviour (encrypt / keep / upgrade / clear / no APP_SECRET) is covered by
+    // FormsCaptchaSecretEncryptionTest (unit) and FormsCaptchaSecretSaveTest
+    // (integration); this pins the editor's wiring to that code.
     $src = (string) file_get_contents(SLATE_ROOT . '/plugins/forms/admin/edit.php');
-    assert_true(str_contains($src, "'captcha_secret'   => \$savedCaptchaSecret,"), 'the saved secret must come from the resolved value, not straight from $_POST');
-    $clear = strpos($src, "if (!empty(\$_POST['sp_captcha_clear_secret']))");
-    $typed = strpos($src, "} elseif (\$postedCaptchaSecret !== '') {");
-    $keep  = strpos($src, '$savedCaptchaSecret = $existingCaptchaSecret;');
-    assert_true($clear !== false && $typed !== false && $keep !== false && $clear < $typed && $typed < $keep, 'order must be: clear checkbox, then typed value, then keep existing');
+    assert_true(str_contains($src, "FormsSpamGuard::resolveStoredSecret(\n            (string)(\$fset['spam']['captcha_secret'] ?? ''),\n            (string)(\$_POST['sp_captcha_secret'] ?? ''),\n            !empty(\$_POST['sp_captcha_clear_secret'])\n        );"), 'the editor must resolve the secret via FormsSpamGuard::resolveStoredSecret(stored, posted, clear)');
+    assert_true(str_contains($src, "'captcha_secret'   => \$savedCaptchaSecret,"), 'the saved secret must be the resolved value, not raw $_POST');
+    assert_true(str_contains($src, "\$fieldErrors['sp_captcha_secret']"), 'an encryption failure must block the save');
     assert_true((bool) preg_match('/name="sp_captcha_secret"[^>]*\n\s*value=""/', $src), 'the secret input must render empty');
     assert_false(str_contains($src, "value=\"<?= e(\$sp['captcha_secret']) ?>\""), 'the stored secret must never be echoed into the page');
+    $guard = (string) file_get_contents(SLATE_ROOT . '/plugins/forms/lib/FormsSpamGuard.php');
+    assert_true(str_contains($guard, "'secret'   => \$secret,"), 'the provider call must use the decrypted secret');
 });
 
 unit('audit fixes: Stripe secret and webhook inputs never echo the stored secret', function (): void {

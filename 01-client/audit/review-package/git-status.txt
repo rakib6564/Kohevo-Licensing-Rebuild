@@ -1,112 +1,66 @@
-# Git state — KOHEVO-STUDIO (captured 2026-10-17T00:24:31Z)
+# Git state — KOHEVO-STUDIO (captured 2026-10-17T01:20:19Z, after git fetch origin)
 repository root : /Users/rakibhasan/Downloads/Fahim/KOHEVO-STUDIO
-branch          : feat/field-value-dropdown
-HEAD            : 1ae3847cb88860d13e59b20307d36972f7006038
-upstream        : origin/feat/field-value-dropdown (behind 0, ahead 0)
-baseline        : HEAD 1ae3847 — every audit change is uncommitted working-tree state on top of it
-remotes         :
-  origin	https://github.com/rakib6564/Kohevo-Licensing-Rebuild.git (fetch)
-  origin	https://github.com/rakib6564/Kohevo-Licensing-Rebuild.git (push)
+branch          : audit/settings-secrets-hardening
+HEAD            : e9a1bdf313e0e6aed1ea99e7217076a96f1122c6  (fix(settings): write-only secrets, fail-closed encryption and bounded settings)
+origin/main     : ba4c9a54a5cfc03f2f0f5c388baa5f798dbf3c8a
+merge-base      : ba4c9a54a5cfc03f2f0f5c388baa5f798dbf3c8a
+divergence      : behind 0, ahead 1 — no rebase needed
+upstream        : none (branch never pushed)
+remote          : https://github.com/rakib6564/Kohevo-Licensing-Rebuild.git
 
-Note: this is NOT the session checkout ~/Downloads/Fahim/Kohevo-Licensing-Rebuild (that one is on main, clean, behind origin/main by 67).
-Branch feat/page-meta-fields exists locally and on origin and was not touched.
+Committed on the branch (origin/main..HEAD):
+  e9a1bdf fix(settings): write-only secrets, fail-closed encryption and bounded settings
 
-## staged (git diff --cached --name-status)
-  (nothing staged)
+Uncommitted follow-up changes from the 2026-10-17 verification pass (not staged):
+   M 01-client/audit/kohevo-complete-system-audit.md
+   M 01-client/audit/kohevo-cross-tree-parity.md
+   M 01-client/audit/kohevo-option-disposition.md
+   M 01-client/audit/kohevo-settings-widget-inventory.csv
+   M 01-client/audit/kohevo-widget-test-matrix.md
+   M 01-client/audit/review-package/csv-row-verification.csv
+   M 01-client/audit/review-package/csv-validation.md
+   M 01-client/audit/review-package/csv-verify.py
+   M 01-client/audit/review-package/git-status.txt
+   D 01-client/audit/review-package/new-files.patch
+   M 01-client/audit/review-package/remaining-risks.md
+   D 01-client/audit/review-package/staged-audit-changes.patch
+   M 01-client/audit/review-package/test-results.md
+   M 01-client/audit/review-package/verification-matrix.md
+   M 01-client/lang/fr.php
+   M 01-client/plugins/forms/admin/edit.php
+   M 01-client/plugins/forms/lib/FormsSpamGuard.php
+   M 01-client/plugins/stripe-payment/admin/settings.php
+   M 01-client/src/Module/StudioBuilder/Render/Block/ModuleRenderers/PaymentButtonRenderer.php
+   M 01-client/tests/fixtures/admin-page-post-probe.php
+   M 01-client/tests/integration/PlatformAdminGateTest.php
+   M 01-client/tests/integration/PluginActivationAuthorizationTest.php
+   M 01-client/tests/integration/StripeWriteOnlySecretTest.php
+   M 01-client/tests/unit/Phase7SlateKohevoIdentityTest.php
+   M 01-client/tests/unit/StudioBuilderPaymentBlocksTest.php
+   M 01-client/tests/unit/SystemSettingsAuditFixesTest.php
+   M 02-licensing/lang/fr.php
+   M 02-licensing/plugins/forms/admin/edit.php
+   M 02-licensing/plugins/forms/lib/FormsSpamGuard.php
+   M 02-licensing/plugins/stripe-payment/admin/settings.php
+   M 02-licensing/tests/integration/ContactSeederTest.php
+   M 02-licensing/tests/integration/CustomerAuthParityTest.php
+   M 02-licensing/tests/unit/Phase7SlateKohevoIdentityTest.php
+   M 02-licensing/tests/unit/SystemSettingsAuditFixesTest.php
+  ?? 01-client/audit/kohevo-inventory-removed-rows.csv
+  ?? 01-client/audit/review-package/inventory-corrections.py
+  ?? 01-client/audit/review-package/test-logs/
+  ?? 01-client/tests/integration/FormsCaptchaSecretSaveTest.php
+  ?? 01-client/tests/unit/FormsCaptchaSecretEncryptionTest.php
+  ?? 02-licensing/tests/unit/FormsCaptchaSecretEncryptionTest.php
 
-## git status --short --branch (untracked dirs collapsed)
-## feat/field-value-dropdown...origin/feat/field-value-dropdown
- M 01-client/admin/partials/header.php
- M 01-client/admin/settings.php
- M 01-client/includes/ui_components.php
- M 01-client/lang/fr.php
- M 01-client/plugins/backups/admin/settings.php
- M 01-client/plugins/booking/README.md
- M 01-client/plugins/booking/admin/settings.php
- M 01-client/plugins/coaching/admin/settings.php
- M 01-client/plugins/forms/README.md
- M 01-client/plugins/forms/admin/edit.php
- M 01-client/plugins/mcp-gateway/admin/ai-settings.php
- M 01-client/plugins/stripe-payment/admin/settings.php
- M 01-client/src/Module/StudioBuilder/Render/Block/ModuleRenderers/PaymentButtonRenderer.php
- M 01-client/src/Services/Identity/IdentityStore.php
- M 01-client/tests/fixtures/admin-page-post-probe.php
- M 01-client/tests/fixtures/admin-page-probe.php
- M 01-client/tests/integration/ContactSeederTest.php
- M 01-client/tests/integration/CustomerAuthParityTest.php
- M 01-client/tests/integration/DashboardMetricsTest.php
- M 01-client/tests/integration/EntitlementServiceTest.php
- M 01-client/tests/integration/PlatformAdminGateTest.php
- M 01-client/tests/integration/PlatformIdentityWhiteLabelTest.php
- M 01-client/tests/integration/PluginActivationAuthorizationTest.php
- M 01-client/tests/unit/Phase3RemoteAuthorityTest.php
- M 01-client/tests/unit/Phase7SlateKohevoIdentityTest.php
- M 01-client/tests/unit/SessionLockTest.php
- M 01-client/tests/unit/StudioBuilderPaymentBlocksTest.php
- M 01-client/tests/unit/StudioBuilderSprint8WidgetSdkTest.php
- M 01-client/tests/unit/fixtures/session-lock-probe.php
- M 02-licensing/admin/partials/header.php
- M 02-licensing/admin/settings.php
- M 02-licensing/includes/ui_components.php
- M 02-licensing/lang/fr.php
- M 02-licensing/plugins/backups/admin/settings.php
- M 02-licensing/plugins/booking/README.md
- M 02-licensing/plugins/booking/admin/settings.php
- M 02-licensing/plugins/coaching/admin/settings.php
- M 02-licensing/plugins/forms/README.md
- M 02-licensing/plugins/forms/admin/edit.php
- M 02-licensing/plugins/mcp-gateway/admin/ai-settings.php
- M 02-licensing/plugins/stripe-payment/admin/settings.php
- M 02-licensing/src/Services/Identity/IdentityStore.php
- M 02-licensing/tests/unit/Phase7SlateKohevoIdentityTest.php
- M 02-licensing/tests/unit/SessionLockTest.php
- M 02-licensing/tests/unit/fixtures/session-lock-probe.php
-?? 01-client/Claude/kohevo-complete-system-implementation-prompt.md
-?? 01-client/archive/
-?? 01-client/audit/kohevo-complete-system-audit.md
-?? 01-client/audit/kohevo-cross-tree-parity.md
-?? 01-client/audit/kohevo-option-disposition.md
-?? 01-client/audit/kohevo-settings-widget-inventory.csv
-?? 01-client/audit/kohevo-widget-test-matrix.md
-?? 01-client/audit/review-package/
-?? 01-client/composer.lock
-?? 01-client/tests/integration/StripeWriteOnlySecretTest.php
-?? 01-client/tests/unit/SystemSettingsAuditFixesTest.php
-?? 01-client/vendor/
-?? 02-licensing/archive/
-?? 02-licensing/composer.lock
-?? 02-licensing/tests/unit/SystemSettingsAuditFixesTest.php
-?? 02-licensing/vendor/
-?? prototype-14islands/
-?? prototype-juanmora/
+Excluded untracked (never stage):
+  ?? 01-client/composer.lock
+  ?? 01-client/vendor/
+  ?? 02-licensing/composer.lock
+  ?? 02-licensing/vendor/
+  ?? prototype-14islands/
+  ?? prototype-juanmora/
 
-## untracked file count by top-level area
-   1 01-client/Claude/kohevo-complete-system-implementation-prompt.md
-   1 01-client/archive/.htaccess
-   1 01-client/audit/kohevo-complete-system-audit.md
-   1 01-client/audit/kohevo-cross-tree-parity.md
-   1 01-client/audit/kohevo-option-disposition.md
-   1 01-client/audit/kohevo-settings-widget-inventory.csv
-   1 01-client/audit/kohevo-widget-test-matrix.md
-   1 01-client/audit/review-package/audit-changes.patch
-   1 01-client/audit/review-package/changed-files.txt
-   1 01-client/audit/review-package/csv-row-verification.csv
-   1 01-client/audit/review-package/csv-validation.md
-   1 01-client/audit/review-package/csv-verify.py
-   1 01-client/audit/review-package/diff-summary.md
-   1 01-client/audit/review-package/git-status.txt
-   1 01-client/audit/review-package/remaining-risks.md
-   1 01-client/audit/review-package/staged-audit-changes.patch
-   1 01-client/audit/review-package/test-results.md
-   1 01-client/audit/review-package/untracked-files-manifest.txt
-   1 01-client/audit/review-package/verification-matrix.md
-   1 01-client/composer.lock
-   1 01-client/tests/integration/StripeWriteOnlySecretTest.php
-   1 01-client/tests/unit/SystemSettingsAuditFixesTest.php
-  84 01-client/vendor/
-   1 02-licensing/archive/.htaccess
-   1 02-licensing/composer.lock
-   1 02-licensing/tests/unit/SystemSettingsAuditFixesTest.php
-  84 02-licensing/vendor/
-  12 prototype-14islands/
- 509 prototype-juanmora/
+Ignored local artifact: 01-client/audit/Kohevo_Complete_System_Plugin_Widget_Audit_Final_Bundle.zip (matched by .gitignore)
+Staged: 0 files. Stashes: 0.
+Branch feat/page-meta-fields: 783dbb7, untouched.

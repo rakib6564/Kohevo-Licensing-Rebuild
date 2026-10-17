@@ -1,179 +1,159 @@
-# Kohevo Complete System Option Disposition Report
+# Kohevo option disposition
 
-> **Verification note (2026-10-17):** Option names here come from the inventory CSV, in which 66 of 137 rows name a setting key that does not appear in the source. Per-row results: `review-package/csv-row-verification.csv`; summary: `review-package/csv-validation.md`.
+> **Regenerated 2026-10-17 from the corrected inventory.** The earlier version was built on an inventory in which 66 of 137 rows named keys that do not exist in the source. Each row below now traces to a real key, block type or field type (see `review-package/csv-row-verification.csv`), and the rows that described non-existent settings are listed at the end with the reason they were removed.
 
+## Categories
 
-**Date:** 2026-10-17\
-**Scope:** Core Administration, Platform Settings, All 13 Plugins, Studio Builder, Custom Widgets\
-**Repository Branch:** `feat/field-value-dropdown`\
-**Git HEAD:** `1ae3847cb88860d13e59b20307d36972f7006038`\
-**Trees Covered:** `01-client/` and `02-licensing/`
+- **Implemented**: the key, block or field exists in source; `csv-verify.py` matched it exactly.
+- **Corrected**: implemented, but the earlier inventory used the wrong name. The old name is kept in the row's Notes.
+- **Not implemented**: claimed earlier, deferred and documented as such.
+- **Removed**: the earlier inventory described a setting that does not exist.
+- **Open risk**: implemented, but this verification found a security gap (see `review-package/remaining-risks.md`).
 
----
+## Summary
 
-## 1. Executive Summary & Policy
+| Category | Rows |
+|---|---|
+| Implemented, as listed | 45 |
+| Implemented, name corrected | 53 |
+| Not implemented (documented deferral) | 1 |
+| Removed (did not exist) | 38 |
+| Of the implemented rows, flagged as open risk | 4 |
 
-Kohevo follows a strict architectural guideline regarding configuration options:
-> **"Do not remove useful options or features simply because they appear unnecessary. Document the reason for every option retained, simplified, replaced, deprecated, or removed."**
+## Inventory by domain and disposition
 
-Every configuration setting in Kohevo was audited across its full lifecycle:
-1. **UI Presentation:** Form control type, labels, helper hints, visibility rules, input constraints.
-2. **Request Handling:** HTTP POST action, CSRF token validation, role/capability gates, tenant scoping.
-3. **Data Storage:** Database table, column, JSON structure, encryption requirements.
-4. **Runtime Consumers:** Public page rendering, API endpoints, email dispatch, cron jobs, MCP AI agents, payment gateways.
-5. **Regression Verification:** Automated unit, integration, and E2E test suites.
+| Domain | Disposition | Rows |
+|---|---|---|
+| Core: System | Keep/Core | 27 |
+| Field: Forms | Keep/Core | 11 |
+| Plugin | Keep/Core | 45 |
+| Plugin | Not implemented | 1 |
+| Widget: Studio | Keep/Core | 16 |
 
-This report documents the disposition of every option across the platform, categorizing them into:
-- **Retained (Core):** Essential operational settings.
-- **Retained (Advanced):** Power-user and developer settings with appropriate security boundaries.
-- **Simplified / Bounded:** Settings where UI and backend bounds were reconciled and clamped.
-- **Replaced / Canonicalized:** Settings whose ownership was consolidated to eliminate dual-write races.
-- **Hardened (Write-Only Secrets):** Sensitive credentials upgraded to fail-closed encryption and write-only UI handling.
-- **Deprecated / Documented:** Features or options whose status was clarified and aligned with shipped code.
+## Hardened in this change set
 
----
+| Option | Disposition |
+|---|---|
+| `stripe-payment.secret_key`, `webhook_secret` | Write-only; encrypted; save refused if encryption fails; legacy plaintext upgraded on save; Disconnect clears both modes |
+| `forms` `sp_captcha_secret` | Write-only; **encrypted at rest** (enc:v1); save refused if encryption fails; legacy plaintext upgraded on save; explicit clear |
+| `backups.google_client_secret`, `booking.google_client_secret`, `booking.twilio_token`, `mcp-gateway.ai_api_key` | Encryption failure no longer 500s; secret is skipped with an error, never stored in plaintext |
+| `permalink_structure` | Allow-list equal to the form's three choices |
+| `start_of_week` | 0..6, otherwise 1 |
+| `backups.retention_count` | 1..365 |
+| `timezone` | Written only by Date & Time |
+| `brand_font_family`, `brand_border_radius` | Now emitted as CSS variables |
+| `coaching.settings_updated` | Audit event on save |
 
-## 2. Core Administration Settings Disposition
+## Open risks on implemented options
 
-### 2.1 General Settings (`admin/settings.php?tab=general`)
-| Option | Storage Key | Disposition | Rationale & Evidence |
-|---|---|---|---|
-| Site Name | `site_name` | **Retained (Core)** | Read by `slate_site_name()`, public headers, email subjects, and browser title tags. |
-| Tagline | `tagline` | **Retained (Core)** | Read by SEO meta tags, RSS feeds, and theme headers. |
-| Site URL | `site_url` | **Retained (Core)** | Canonical base URL for assets, links, emails, and webhook payloads. |
-| Admin Email | `admin_email` | **Retained (Core)** | Target for system alerts, password resets, and critical failure notices. |
-| Default Role | `default_role` | **Retained (Core)** | Controls the permission tier assigned to self-registered users. |
-| Users Can Register | `users_can_register` | **Retained (Core)** | Global switch for customer registration routes. |
-| Membership Requires Approval | `membership_requires_approval` | **Retained (Core)** | Enforces admin verification step before newly registered members can log in. |
+| Option | Finding |
+|---|---|
+| `Email` `smtp_oauth_client_secret` | admin/oauth_callback.php stores it in plaintext when encryption is unavailable ($enc ? slate_encrypt_secret(...) : ...) |
+| `Email` `smtp_oauth_refresh_token` | OAuth refresh token (with smtp_oauth_access_token / smtp_oauth_expires); stored encrypted |
+| `mcp-gateway` `ai_base_url` | OpenAI-compatible endpoint used by AiProviderClient; no scheme/host validation, so an admin can point it at any host including internal ones |
+| `multilang-translate` `autotranslate_api_key` | Read raw by includes/AutoTranslate.php:143 (no decryption), so it is stored in plaintext |
 
----
+## Corrected names
 
-### 2.2 Date, Time & Localization (`admin/settings.php?tab=datetime`)
-| Option | Storage Key | Disposition | Rationale & Evidence |
-|---|---|---|---|
-| Timezone | `timezone` | **Replaced / Canonicalized** | **Fix Applied:** Previously written by both `datetime` tab and `system` tab with different input names, creating a dual-write collision risk. Ownership is now strictly consolidated in the Date & Time tab. The System tab renders a read-only badge showing the active timezone and links to `?tab=datetime`. |
-| Date Format | `date_format` | **Retained (Core)** | Standard PHP `date()` format string used by templates, booking calendar, and invoice generators. |
-| Time Format | `time_format` | **Retained (Core)** | 12h vs 24h format string used across booking slots and scheduling UI. |
-| Start of Week | `start_of_week` | **Simplified / Bounded** | **Fix Applied:** UI presented Sunday (0) through Saturday (6), but backend did not strictly clamp the value. Clamping to `0..6` was implemented in `save_datetime` to prevent database inconsistency or invalid calendar engine offsets. |
+| Component | Real key | Was |
+|---|---|---|
+| General | `site_tagline` | `tagline` |
+| General | `APP_URL` | `site_url` |
+| General | `site_admin_email` | `admin_email` |
+| Branding | `brand_logo_path` | `brand_logo_url` |
+| Branding | `brand_favicon_path` | `brand_favicon_url` |
+| Security | `session_timeout_minutes` | `session_idle_timeout` |
+| Security | `max_login_attempts` | `login_lockout_attempts` |
+| Security | `lockout_minutes` | `login_lockout_duration` |
+| Email | `smtp_auth_type` | `mail_driver` |
+| Email | `smtp_user` | `smtp_username` |
+| Email | `smtp_pass` | `smtp_password` |
+| Email | `smtp_oauth_refresh_token` | `smtp_oauth_tokens] | admin/oauth_callback.php stores it in plaintext when encryption is unavailable ($enc ? slate_encrypt_secret(...) : ...) [verified 2026-10-17; open risk` |
+| backups | `google_client_id` | `gdrive_client_id` |
+| backups | `google_client_secret` | `gdrive_client_secret` |
+| backups | `google_refresh_token` | `gdrive_refresh_token` |
+| booking | `buffer_min` | `buffer_minutes` |
+| booking | `google_enabled` | `google_calendar_enabled` |
+| booking | `twilio_sms_from` | `twilio_from` |
+| coaching | `program_plan_id` | `gated_plans` |
+| coaching | `coaching.settings_updated` | `audit_logging` |
+| forms | `sp_captcha_site_key` | `sp_captcha_sitekey` |
+| forms | `sp_rate_limit` | `sp_rate_limit_rpm` |
+| forms | `notify_email` | `notification_emails` |
+| forms | `webhook_urls` | `webhook_url` |
+| licensing | `remote_license_cache` | `license_cache` |
+| licensing | `LICENSE_SERVER_URL` | `central_api_url` |
+| licensing | `OFFLINE_TOLERANCE_SECONDS` | `offline_tolerance_seconds` |
+| mcp-gateway | `ai_base_url` | `(text corrected)` |
+| media-library | `ALLOWED_MIMES` | `allowed_mime_types` |
+| media-library | `media_max_upload_mb` | `max_upload_size_mb` |
+| media-library | `media_usage` | `track_usage` |
+| media-library | `media_thumb_w` | `image_variants` |
+| membership | `enable_attendance` | `qr_attendance_enabled` |
+| stripe-payment | `mode` | `stripe_mode` |
+| stripe-payment | `method_klarna` | `payment_methods` |
+| studio-builder | `studiobuilder_tokens` | `theme_preset` |
+| Core | `core.heading` | `header` |
+| Core | `core.text` | `paragraph` |
+| Core | `core.button` | `button` |
+| Core | `core.image` | `image` |
+| Core | `layout.grid` | `columns` |
+| Core | `core.card` | `card` |
+| Core | `core.hero` | `hero` |
+| Core | `core.divider` | `divider` |
+| Core | `core.spacer` | `spacer` |
+| Core | `core.video` | `video` |
+| Core | `forms.embed` | `form` |
+| Core | `booking.embed` | `booking-calendar` |
+| Core | `membership.plans` | `membership-pricing` |
+| Core | `payment.button` | `payment-button` |
+| Plugin | `portfolio.project_card` | `freelancer-portfolio` |
+| Plugin | `acme.testimonial` | `testimonial-slider` |
+| Built-in | `checkboxes` | `checkbox_group` |
 
----
+## Removed rows (setting does not exist)
 
-### 2.3 Permalinks (`admin/settings.php?tab=permalinks`)
-| Option | Storage Key | Disposition | Rationale & Evidence |
-|---|---|---|---|
-| Permalink Structure | `permalink_structure` | **Simplified / Bounded** | **Fix Applied:** Previously allowed arbitrary text input which could break URL routing or cause server 404s. Enforced a strict server-side allow-list: `['/p/%postname%', '/%year%/%monthnum%/%postname%', '/?p=%id%']`. Custom regex or unsupported patterns are rejected with an error flash message. |
+| Component | Earlier name | Reason |
+|---|---|---|
+| General | `default_role` | No user self-registration role setting exists |
+| General | `users_can_register` | No self-registration toggle exists |
+| General | `membership_requires_approval` | No registration-approval setting exists |
+| Branding | `brand_primary_color` | Only brand_accent_color exists; there is no primary-colour setting |
+| Branding | `brand_secondary_color` | Only brand_accent_color exists; there is no secondary-colour setting |
+| Security | `mfa_enforced` | MFA exists per user (src/Services/Auth/Mfa.php) but there is no platform-wide enforcement setting |
+| backups | `schedule_frequency` | Backups are cron-driven; there is no schedule setting |
+| backups | `schedule_time` | Backups are cron-driven; there is no schedule-time setting |
+| backups | `destination` | Google Drive is the only destination; there is no destination setting |
+| backups | `include_database` | Backup contents are not configurable |
+| backups | `include_uploads` | Backup contents are not configurable |
+| booking | `slot_interval_minutes` | No global slot-interval setting exists |
+| booking | `min_notice_hours` | No booking minimum-notice setting; the real keys are cancel_min_notice_hours and reschedule_min_notice_hours (different meaning) |
+| booking | `max_future_days` | No max-future-days setting exists |
+| booking | `deposit_mode` | No deposit setting exists |
+| booking | `deposit_amount` | No deposit setting exists |
+| booking | `google_tokens` | Not a setting; Google OAuth tokens were not verified as a settings key |
+| coaching | `macro_protein_pct` | No macro-percentage setting exists |
+| coaching | `macro_carb_pct` | No macro-percentage setting exists |
+| coaching | `macro_fat_pct` | No macro-percentage setting exists |
+| coaching | `client_diary_visibility` | No diary-visibility setting exists |
+| forms | `sp_honeypot_enabled` | The honeypot is always on; there is no toggle |
+| mcp-gateway | `mcp_enabled` | No MCP master switch; plugin activation is the switch |
+| mcp-gateway | `allowed_tools` | Tool access is governed by MCP token scopes, not a setting |
+| membership | `grace_period_days` | No grace-period setting exists |
+| membership | `stripe_sync_enabled` | No Stripe-sync toggle exists |
+| membership | `wallet_ledger_enabled` | No wallet/ledger toggle exists |
+| multilang-translate | `active_languages` | Language configuration was not verified as a settings key |
+| multilang-translate | `crawler_protection` | No crawler-protection setting exists |
+| multilang-translate | `url_prefix_mode` | No URL-prefix-mode setting exists |
+| studio-builder | `site_title` | No Studio site-title setting exists (core site_name is used) |
+| studio-builder | `custom_head_code` | No custom head-code setting exists |
+| studio-builder | `custom_footer_code` | No custom footer-code setting exists |
+| studio-builder | `tracking_head_code` | No tracking head-code setting exists |
+| studio-builder | `tracking_body_code` | No tracking body-code setting exists |
+| studio-builder | `global_css` | No global CSS setting exists |
+| Core | `coaching-feed` | No coaching feed block exists |
+| mcp-gateway | `ai_provider` | No provider setting exists; the client is configured by ai_base_url + ai_model (already listed) |
 
----
+## Not verified
 
-### 2.4 Branding & Appearance (`admin/settings.php?tab=branding`)
-| Option | Storage Key | Disposition | Rationale & Evidence |
-|---|---|---|---|
-| Brand Primary Color | `brand_primary_color` | **Retained (Core)** | Active CSS variable `--brand-primary` emitted in admin and portal via `slate_brand_accent_emit()`. |
-| Brand Secondary Color | `brand_secondary_color` | **Retained (Core)** | Active CSS variable `--brand-secondary` emitted in UI. |
-| Brand Accent Color | `brand_accent_color` | **Retained (Core)** | Active CSS variable `--brand-accent` emitted in UI. |
-| Brand Font Family | `brand_font_family` | **Retained & Wire-Up Verified** | **Fix Applied:** In audit notes, font family was flagged as lacking downstream consumer. We updated `includes/ui_components.php` (`slate_brand_accent_emit()`) to read `brand_font_family` and output `--font-sans` and `--font-display` CSS custom properties, while clarifying in the UI hint that it styles the admin and customer portal. |
-| Brand Border Radius | `brand_border_radius` | **Retained & Wire-Up Verified** | **Fix Applied:** Updated `slate_brand_accent_emit()` to read `brand_border_radius` and emit scaled border radius tokens (`--radius-sm`, `--radius`, `--radius-lg`, `--radius-xl`, `--radius-2xl`). |
-| Brand Logo URL | `brand_logo_url` | **Retained (Core)** | Displayed on the login page, navigation top bar, and invoice headers. |
-| Brand Favicon URL | `brand_favicon_url` | **Retained (Core)** | Emitted in the `<head>` of all public and admin HTML documents. |
-
----
-
-### 2.5 Security & Session Management (`admin/settings.php?tab=security`)
-| Option | Storage Key | Disposition | Rationale & Evidence |
-|---|---|---|---|
-| Session Idle Timeout | `session_idle_timeout` | **Simplified / Bounded** | Enforces integer range `5..1440` minutes. Checked on every authenticated request by `SessionRepository`. |
-| MFA Enforced | `mfa_enforced` | **Retained (Advanced)** | Platform-wide TOTP requirement. Gated by `MfaRepository`. |
-| Lockout Attempts | `login_lockout_attempts` | **Simplified / Bounded** | Bounded to `3..10` consecutive failures before IP/user rate-limiting. |
-| Lockout Duration | `login_lockout_duration` | **Simplified / Bounded** | Bounded to `1..1440` minutes. |
-
----
-
-### 2.6 Outbound Email & SMTP (`admin/settings.php?tab=email`)
-| Option | Storage Key | Disposition | Rationale & Evidence |
-|---|---|---|---|
-| Mail Driver | `mail_driver` | **Retained (Core)** | Supports `mail`, `smtp`, and `oauth` drivers. |
-| SMTP Host / Port / Encryption | `smtp_host`, `smtp_port`, `smtp_encryption` | **Retained (Core)** | Standard transport configuration. Port bounded `1..65535`. |
-| SMTP Password | `smtp_password` | **Hardened (Write-Only Secret)** | Stored encrypted (AES-256-GCM). Preserves current secret on blank submission. |
-| SMTP OAuth Client Secret | `smtp_oauth_client_secret` | **Hardened (Write-Only Secret)** | Stored encrypted. Write-only in admin UI. |
-
----
-
-## 3. Plugin Settings & Secret Handling Disposition
-
-### 3.1 Stripe Payment (`plugins/stripe-payment/admin/settings.php`)
-| Option | Storage Key | Disposition | Rationale & Evidence |
-|---|---|---|---|
-| Stripe Mode | `stripe_mode` | **Retained (Core)** | Toggles `test` vs `live` mode. |
-| Publishable Key | `publishable_key` | **Retained (Core)** | Public key emitted to frontend Stripe.js Elements. |
-| Secret Key | `secret_key` | **Hardened (Write-Only Secret)** | **Fix Applied:** Changed input to write-only password field. If submitted blank, existing encrypted secret is preserved. Added fail-closed `try/catch` block around `slate_encrypt_secret()`; if `APP_SECRET` is missing or encryption fails, save halts immediately and displays an error instead of saving plaintext. |
-| Webhook Secret | `webhook_secret` | **Hardened (Write-Only Secret)** | **Fix Applied:** Same write-only, blank-preserving, fail-closed encryption pattern applied. Client-side JS validation updated to recognize existing configured badge. |
-| Allowed Countries | `allowed_countries` | **Retained (Core)** | Array of ISO 3166-1 alpha-2 country codes passed to Stripe checkout sessions. |
-| Payment Methods | `payment_methods` | **Retained (Core)** | Configures enabled payment types (`card`, `link`, `apple_pay`, `google_pay`). |
-
----
-
-### 3.2 Forms Plugin (`plugins/forms/admin/edit.php`)
-| Option | Storage Key | Disposition | Rationale & Evidence |
-|---|---|---|---|
-| CAPTCHA Secret | `sp_captcha_secret` | **Hardened (Write-Only Secret)** | **Fix Applied:** Previously rendered `$sp['captcha_secret']` directly into the input value attribute. Replaced with write-only password input with a "Secret is configured" status badge. Blank submission preserves the existing secret. Added an explicit `sp_captcha_clear_secret` checkbox for audited secret revocation. |
-| CAPTCHA Site Key | `sp_captcha_sitekey` | **Retained (Core)** | Public key injected into frontend anti-spam script tags. |
-| CAPTCHA Provider | `sp_captcha_provider` | **Retained (Core)** | Supports Cloudflare Turnstile, hCaptcha, and Google reCAPTCHA v2/v3. |
-| Honeypot Enabled | `sp_honeypot_enabled` | **Retained (Core)** | Lightweight anti-spam trap. |
-| Rate Limit RPM | `sp_rate_limit_rpm` | **Simplified / Bounded** | Clamped to `1..600` requests per minute. |
-| Stripe Payment Field | N/A | **Deprecated / Documented** | **Fix Applied:** Audit identified that `plugins/forms/README.md` claimed Stripe payment field support while the field registry lacked the renderer. Investigation proved payment forms use the dedicated Stripe Payment plugin or Studio Payment Button. Updated `plugins/forms/README.md` in both trees to accurately reflect this architectural separation. |
-
----
-
-### 3.3 Backups Plugin (`plugins/backups/admin/settings.php`)
-| Option | Storage Key | Disposition | Rationale & Evidence |
-|---|---|---|---|
-| Retention Count | `retention_count` | **Simplified / Bounded** | **Fix Applied:** The HTML form input specified `min="1" max="365"`, but the PHP save handler only enforced `$retention = max(1, ...)`. We aligned the backend with the UI by enforcing `min(365, max(1, (int)$_POST['retention_count']))`. |
-| Schedule & Cadence | `schedule_frequency`, `schedule_time` | **Retained (Core)** | Cron schedule parameters for automated database/media backups. |
-| Google Drive OAuth Secret | `gdrive_client_secret` | **Hardened (Write-Only Secret)** | **Fix Applied:** Wrapped `slate_encrypt_secret()` in a fail-closed `try/catch` block. On encryption failure, execution aborts and flashes a clear error message. |
-
----
-
-### 3.4 Booking Plugin (`plugins/booking/admin/settings.php`)
-| Option | Storage Key | Disposition | Rationale & Evidence |
-|---|---|---|---|
-| Business Hours & Slots | `business_hours`, `slot_interval_minutes` | **Retained (Core)** | Core engine parameters for provider schedules and availability calculation. |
-| Google Calendar Sync | `google_calendar_enabled`, `google_client_id` | **Retained & Documented** | **Fix Applied:** `plugins/booking/README.md` previously claimed Google Calendar sync was "planned", but `GoogleCalendarSync.php` was already fully implemented. Updated README in both trees to document active 2-way sync. |
-| Google Client Secret | `google_client_secret` | **Hardened (Write-Only Secret)** | **Fix Applied:** Added fail-closed `try/catch` error handling on encryption. |
-| Twilio Token | `twilio_token` | **Hardened (Write-Only Secret)** | **Fix Applied:** Added fail-closed `try/catch` error handling on encryption. |
-
----
-
-### 3.5 Coaching Plugin (`plugins/coaching/admin/settings.php`)
-| Option | Storage Key | Disposition | Rationale & Evidence |
-|---|---|---|---|
-| Gated Membership Plans | `gated_plans` | **Retained (Core)** | Restricts coaching features to active subscribers of designated tiers. |
-| Activity Factor & Macros | `default_activity_factor`, `macro_*_pct` | **Simplified / Bounded** | Activity factor bounded to `1.0..2.5`; macro percentages bounded `0..100`. |
-| Audit Logging | `coaching.settings_updated` | **Hardened / Audited** | **Fix Applied:** Added missing `AuditLog::record('coaching.settings_updated', ...)` in the save handler to maintain full compliance with platform security audit trail standards. |
-
----
-
-### 3.6 MCP Gateway / AI Assistant (`plugins/mcp-gateway/admin/ai-settings.php`)
-| Option | Storage Key | Disposition | Rationale & Evidence |
-|---|---|---|---|
-| Master Toggle | `mcp_enabled` | **Retained (Core)** | Instant platform-wide killswitch for AI agent tools. |
-| AI API Key | `ai_api_key` | **Hardened (Write-Only Secret)** | **Fix Applied:** Wrapped `slate_encrypt_secret()` in a fail-closed `try/catch` block. |
-| Provider Base URL | `ai_base_url` | **Retained (Advanced)** | SSRF-validated endpoint for OpenAI, Anthropic, Gemini, or self-hosted LLM endpoints. |
-| Allowed Tools Allowlist | `allowed_tools` | **Retained (Advanced)** | Fine-grained capability gating preventing AI agents from executing destructive tools without approval. |
-
----
-
-### 3.7 Studio Builder Settings (`01-client/plugins/studio-builder/`)
-| Option | Storage Key | Disposition | Rationale & Evidence |
-|---|---|---|---|
-| Custom Code & Tracking | `custom_head_code`, `custom_footer_code`, `tracking_*` | **Retained (Advanced)** | **Verified:** Confirmed that `page-edit.php` strictly guards these raw HTML/JS injection fields with the `studio-builder.admin` permission check. Ordinary content editors cannot inject arbitrary scripts. |
-| Theme Presets & Tokens | `theme_preset`, `global_css` | **Retained (Core)** | Controls the visual theme variables and global stylesheet compilation for the canvas and published pages. |
-
----
-
-## 4. Summary of Code Improvements & Dispositions
-
-1. **Zero Unjustified Removals:** No customer-facing feature was removed. All options were retained, hardened, bounded, or canonicalized.
-2. **Secret Exposure Eradicated:** Write-only patterns and blank-preserving saves were verified across Stripe, Forms, Backups, Booking, MCP Gateway, and SMTP.
-3. **Fail-Closed Encryption Enforced:** Every secret encryption operation now catches exceptions and halts before persisting corrupt or unencrypted data.
-4. **Boundary Parity:** UI constraints (`min`, `max`, `step`, allow-lists) are now strictly mirrored by server-side validation.
-5. **Documentation Accuracy:** Inaccurate or outdated README statements in `forms` and `booking` were aligned with actual code.
+Only the key/type columns and the secret-handling column were checked against source row by row. The `Input_Validation`, `Bounds_Enforced` and free-text `Notes` columns of rows that were not touched were spot-checked only, and one of those spot checks (`ai_base_url`) turned out to be false and was corrected. Treat those columns as NOT VERIFIED.

@@ -1,137 +1,100 @@
 Domain,Component,Setting_Or_Widget,Type,Storage_Key,Input_Validation,Bounds_Enforced,Secret_Handling,Owner_Tab,Parity_Status,Disposition,Notes
 Core: System,General,site_name,text,Database::setting,sanitized string,none,plaintext,general,Identical,Keep/Core,Core site name used in header and metadata
-Core: System,General,tagline,text,Database::setting,sanitized string,none,plaintext,general,Identical,Keep/Core,Site tagline rendered in templates and SEO meta
-Core: System,General,site_url,url,Database::setting,FILTER_VALIDATE_URL,valid url,plaintext,general,Identical,Keep/Core,Canonical installation URL root
-Core: System,General,admin_email,email,Database::setting,FILTER_VALIDATE_EMAIL,valid email,plaintext,general,Identical,Keep/Core,Primary administrative notification recipient
-Core: System,General,default_role,select,Database::setting,in roles list,enum,plaintext,general,Identical,Keep/Core,Default role assigned to newly registered users
-Core: System,General,users_can_register,checkbox,Database::setting,0 or 1,boolean,plaintext,general,Identical,Keep/Core,Global user self-registration toggle
-Core: System,General,membership_requires_approval,checkbox,Database::setting,0 or 1,boolean,plaintext,general,Identical,Keep/Core,Manual admin approval gate for new registrations
+Core: System,General,site_tagline,text,Database::setting,sanitized string,none,plaintext,general,Identical,Keep/Core,Site tagline (Settings > General) [corrected 2026-10-17: was tagline]
+Core: System,General,APP_URL,url,config (.env APP_URL -> SLATE_URL),FILTER_VALIDATE_URL,valid url,plaintext,general,Identical,Keep/Core,"Installation base URL; config, not a database setting [corrected 2026-10-17: was site_url]"
+Core: System,General,site_admin_email,email,Database::setting,FILTER_VALIDATE_EMAIL,valid email,plaintext,general,Identical,Keep/Core,Administrative notification address (Settings > General) [corrected 2026-10-17: was admin_email]
 Core: System,Date & Time,timezone,select,Database::setting,DateTimeZone::listIdentifiers(),valid timezone,plaintext,datetime,Identical,Keep/Core,Canonical timezone setting. System tab now links directly to datetime tab
 Core: System,Date & Time,date_format,radio/text,Database::setting,sanitized string,none,plaintext,datetime,Identical,Keep/Core,PHP date format string for display
 Core: System,Date & Time,time_format,radio/text,Database::setting,sanitized string,none,plaintext,datetime,Identical,Keep/Core,PHP time format string for display
 Core: System,Date & Time,start_of_week,select,Database::setting,clamped integer,0..6,plaintext,datetime,Identical,Keep/Core,Day of week calendar start. Clamped strictly to 0..6
 Core: System,Permalinks,permalink_structure,radio/text,Database::setting,strict allow-list,enum,plaintext,permalinks,Identical,Keep/Core,Enforces strict allow-list: /p/%postname% /%year%/%monthnum%/%postname% /?p=%id%
-Core: System,Branding,brand_primary_color,color,Database::setting,hex color regex,valid hex,plaintext,branding,Identical,Keep/Core,Injected as --brand-primary into slate_brand_accent_emit()
-Core: System,Branding,brand_secondary_color,color,Database::setting,hex color regex,valid hex,plaintext,branding,Identical,Keep/Core,Injected as --brand-secondary CSS variable
 Core: System,Branding,brand_accent_color,color,Database::setting,hex color regex,valid hex,plaintext,branding,Identical,Keep/Core,Injected as --brand-accent CSS variable
 Core: System,Branding,brand_font_family,select,Database::setting,enum Inter/Geist/Outfit/system,enum,plaintext,branding,Identical,Keep/Core,Emits active CSS font family tokens (--font-sans --font-display)
 Core: System,Branding,brand_border_radius,select,Database::setting,enum none/sm/md/lg/full,enum,plaintext,branding,Identical,Keep/Core,Emits active CSS border radius tokens (--radius-sm --radius --radius-lg etc)
-Core: System,Branding,brand_logo_url,url/media,Database::setting,sanitized URL,valid url/path,plaintext,branding,Identical,Keep/Core,Custom logo displayed in admin and customer portal
-Core: System,Branding,brand_favicon_url,url/media,Database::setting,sanitized URL,valid url/path,plaintext,branding,Identical,Keep/Core,Custom favicon link rendered in HTML head
-Core: System,Security,session_idle_timeout,number,Database::setting,integer,5..1440,plaintext,security,Identical,Keep/Core,Inactivity minutes before automatic session expiration
-Core: System,Security,mfa_enforced,checkbox,Database::setting,0 or 1,boolean,plaintext,security,Identical,Keep/Core,Enforces multi-factor TOTP authentication platform-wide
-Core: System,Security,login_lockout_attempts,number,Database::setting,integer,3..10,plaintext,security,Identical,Keep/Core,Consecutive failed attempts before IP/account lockout
-Core: System,Security,login_lockout_duration,number,Database::setting,integer,1..1440,plaintext,security,Identical,Keep/Core,Duration in minutes for login lockouts
-Core: System,Email,mail_driver,select,Database::setting,enum mail/smtp/oauth,enum,plaintext,email,Identical,Keep/Core,Outbound mail delivery mechanism
+Core: System,Branding,brand_logo_path,url/media,Database::setting,sanitized URL,valid url/path,plaintext,branding,Identical,Keep/Core,Uploaded logo path (also brand_logo_dark_path) [corrected 2026-10-17: was brand_logo_url]
+Core: System,Branding,brand_favicon_path,url/media,Database::setting,sanitized URL,valid url/path,plaintext,branding,Identical,Keep/Core,Uploaded favicon path [corrected 2026-10-17: was brand_favicon_url]
+Core: System,Security,session_timeout_minutes,number,Database::setting,integer,5..1440,plaintext,security,Identical,Keep/Core,Admin session inactivity timeout in minutes [corrected 2026-10-17: was session_idle_timeout]
+Core: System,Security,max_login_attempts,number,Database::setting,integer,3..10,plaintext,security,Identical,Keep/Core,Failed logins before lockout [corrected 2026-10-17: was login_lockout_attempts]
+Core: System,Security,lockout_minutes,number,Database::setting,integer,1..1440,plaintext,security,Identical,Keep/Core,Lockout duration in minutes [corrected 2026-10-17: was login_lockout_duration]
+Core: System,Email,smtp_auth_type,select,Database::setting,enum mail/smtp/oauth,enum,plaintext,email,Identical,Keep/Core,SMTP authentication type (password or OAuth). There is no mail-driver switch: outbound mail is SMTP only [corrected 2026-10-17: was mail_driver]
 Core: System,Email,smtp_host,text,Database::setting,sanitized string,none,plaintext,email,Identical,Keep/Core,SMTP server hostname
 Core: System,Email,smtp_port,number,Database::setting,integer,1..65535,plaintext,email,Identical,Keep/Core,SMTP connection port
 Core: System,Email,smtp_encryption,select,Database::setting,enum none/tls/ssl,enum,plaintext,email,Identical,Keep/Core,Transport layer encryption protocol
-Core: System,Email,smtp_username,text,Database::setting,sanitized string,none,plaintext,email,Identical,Keep/Core,SMTP authentication username
-Core: System,Email,smtp_password,password,Database::setting,sanitized string,none,encrypted (AES-256-GCM),email,Identical,Keep/Core,Write-only input; preserves existing encrypted secret on blank submit
+Core: System,Email,smtp_user,text,Database::setting,sanitized string,none,plaintext,email,Identical,Keep/Core,SMTP username [corrected 2026-10-17: was smtp_username]
+Core: System,Email,smtp_pass,password,Database::setting,sanitized string,none,encrypted (AES-256-GCM),email,Identical,Keep/Core,Encrypted with slate_encrypt_secret(); explicit clear_smtp_pass checkbox [corrected 2026-10-17: was smtp_password]
 Core: System,Email,smtp_oauth_provider,select,Database::setting,enum google/microsoft,enum,plaintext,email,Identical,Keep/Core,OAuth mail transport provider
 Core: System,Email,smtp_oauth_client_id,text,Database::setting,sanitized string,none,plaintext,email,Identical,Keep/Core,OAuth Application Client ID
-Core: System,Email,smtp_oauth_client_secret,password,Database::setting,sanitized string,none,encrypted (AES-256-GCM),email,Identical,Keep/Core,OAuth Client Secret; encrypted at rest
-Core: System,Email,smtp_oauth_tokens,internal,Database::setting,json schema,internal,encrypted (AES-256-GCM),email,Identical,Keep/Core,OAuth access and refresh tokens; encrypted and refreshed automatically
+Core: System,Email,smtp_oauth_client_secret,password,Database::setting,sanitized string,none,"encrypted, with plaintext fallback",email,Identical,Keep/Core,OAuth Client Secret; encrypted at rest | admin/oauth_callback.php stores it in plaintext when encryption is unavailable ($enc ? slate_encrypt_secret(...) : ...) [verified 2026-10-17; open risk]
+Core: System,Email,smtp_oauth_refresh_token,internal,Database::setting,json schema,internal,"encrypted, with plaintext fallback",email,Identical,Keep/Core,OAuth refresh token (with smtp_oauth_access_token / smtp_oauth_expires); stored encrypted [corrected 2026-10-17: was smtp_oauth_tokens] | admin/oauth_callback.php stores it in plaintext when encryption is unavailable ($enc ? slate_encrypt_secret(...) : ...) [verified 2026-10-17; open risk]
 Plugin,backups,retention_count,number,Database::setting,integer,1..365,plaintext,backups,Identical,Keep/Core,Bounded to 1..365 on both UI and server save handler
-Plugin,backups,schedule_frequency,select,Database::setting,enum daily/weekly/monthly/manual,enum,plaintext,backups,Identical,Keep/Core,Automated backup cron cadence
-Plugin,backups,schedule_time,time,Database::setting,HH:MM format,24h time,plaintext,backups,Identical,Keep/Core,Target execution time for scheduled backups
-Plugin,backups,destination,select,Database::setting,enum local/gdrive,enum,plaintext,backups,Identical,Keep/Core,Target backup storage location
-Plugin,backups,gdrive_client_id,text,Database::setting,sanitized string,none,plaintext,backups,Identical,Keep/Core,Google Drive API OAuth client ID
-Plugin,backups,gdrive_client_secret,password,Database::setting,sanitized string,none,encrypted (AES-256-GCM),backups,Identical,Keep/Core,Write-only input; fail-closed try/catch encryption
-Plugin,backups,gdrive_refresh_token,internal,Database::setting,sanitized string,internal,encrypted (AES-256-GCM),backups,Identical,Keep/Core,Encrypted Google Drive OAuth refresh token
-Plugin,backups,include_database,checkbox,Database::setting,0 or 1,boolean,plaintext,backups,Identical,Keep/Core,Whether SQL database dump is packaged in backup
-Plugin,backups,include_uploads,checkbox,Database::setting,0 or 1,boolean,plaintext,backups,Identical,Keep/Core,Whether media files/uploads directory is packaged in backup
+Plugin,backups,google_client_id,text,Database::setting,sanitized string,none,plaintext,backups,Identical,Keep/Core,Google Drive OAuth client ID (backups.google_client_id) [corrected 2026-10-17: was gdrive_client_id]
+Plugin,backups,google_client_secret,password,Database::setting,sanitized string,none,encrypted (AES-256-GCM),backups,Identical,Keep/Core,Write-only; encrypted; save skips the secret and flashes an error if encryption fails [corrected 2026-10-17: was gdrive_client_secret]
+Plugin,backups,google_refresh_token,internal,Database::setting,sanitized string,internal,encrypted (AES-256-GCM),backups,Identical,Keep/Core,Google Drive OAuth refresh token (backups.google_refresh_token) [corrected 2026-10-17: was gdrive_refresh_token]
 Plugin,booking,business_hours,json,Database::setting,JSON schedule schema,valid json,plaintext,booking,Identical,Keep/Core,Per-day provider availability windows and breaks
-Plugin,booking,slot_interval_minutes,number,Database::setting,integer,5..240,plaintext,booking,Identical,Keep/Core,Granularity of booking time slots in minutes
-Plugin,booking,buffer_minutes,number,Database::setting,integer,0..120,plaintext,booking,Identical,Keep/Core,Buffer time required between consecutive appointments
-Plugin,booking,min_notice_hours,number,Database::setting,integer,0..720,plaintext,booking,Identical,Keep/Core,Minimum advance notice required for online bookings
-Plugin,booking,max_future_days,number,Database::setting,integer,1..365,plaintext,booking,Identical,Keep/Core,Maximum rolling window in days for booking availability
+Plugin,booking,buffer_min,number,booking services table column (per service),integer,0..120,plaintext,booking,Identical,Keep/Core,"Per-service buffer in minutes, not a global setting (plugins/booking/install.sql) [corrected 2026-10-17: was buffer_minutes]"
 Plugin,booking,currency,select,Database::setting,ISO 4217 3-letter code,enum,plaintext,booking,Identical,Keep/Core,Currency used for booking service pricing
-Plugin,booking,deposit_mode,select,Database::setting,enum none/percentage/fixed/full,enum,plaintext,booking,Identical,Keep/Core,Deposit requirement for appointment confirmations
-Plugin,booking,deposit_amount,number,Database::setting,numeric >= 0,non-negative,plaintext,booking,Identical,Keep/Core,Fixed currency amount or percentage for booking deposits
-Plugin,booking,google_calendar_enabled,checkbox,Database::setting,0 or 1,boolean,plaintext,booking,Identical,Keep/Core,Active 2-way Google Calendar synchronization toggle
+Plugin,booking,google_enabled,checkbox,Database::setting,0 or 1,boolean,plaintext,booking,Identical,Keep/Core,Google Calendar 2-way sync master toggle (booking.google_enabled) [corrected 2026-10-17: was google_calendar_enabled]
 Plugin,booking,google_client_id,text,Database::setting,sanitized string,none,plaintext,booking,Identical,Keep/Core,Google Cloud Console OAuth client ID for Calendar API
 Plugin,booking,google_client_secret,password,Database::setting,sanitized string,none,encrypted (AES-256-GCM),booking,Identical,Keep/Core,Google Calendar OAuth client secret; fail-closed try/catch encryption
-Plugin,booking,google_tokens,internal,Database::setting,JSON tokens schema,internal,encrypted (AES-256-GCM),booking,Identical,Keep/Core,Encrypted Google OAuth tokens for calendar sync
 Plugin,booking,twilio_sid,text,Database::setting,sanitized string,none,plaintext,booking,Identical,Keep/Core,Twilio Account SID for SMS appointment reminders
 Plugin,booking,twilio_token,password,Database::setting,sanitized string,none,encrypted (AES-256-GCM),booking,Identical,Keep/Core,Twilio Auth Token; fail-closed try/catch encryption
-Plugin,booking,twilio_from,text,Database::setting,E.164 phone string,valid phone,plaintext,booking,Identical,Keep/Core,Sender phone number or alphanumeric ID for Twilio SMS
-Plugin,coaching,gated_plans,multiselect/json,Database::setting,array of plan IDs,plan IDs,plaintext,coaching,Identical,Keep/Core,Membership plans granting access to client coaching features
+Plugin,booking,twilio_sms_from,text,Database::setting,E.164 phone string,valid phone,plaintext,booking,Identical,Keep/Core,Twilio SMS sender (booking.twilio_sms_from; also twilio_whatsapp_from) [corrected 2026-10-17: was twilio_from]
+Plugin,coaching,program_plan_id,multiselect/json,Database::setting,array of plan IDs,plan IDs,plaintext,coaching,Identical,Keep/Core,"Single membership plan tied to the coaching programme (coaching.program_plan_id), not a multi-plan gate [corrected 2026-10-17: was gated_plans]"
 Plugin,coaching,default_activity_factor,number,Database::setting,float,1.0..2.5,plaintext,coaching,Identical,Keep/Core,Default BMR multiplier for nutrition macro calculations
-Plugin,coaching,macro_protein_pct,number,Database::setting,integer,0..100,plaintext,coaching,Identical,Keep/Core,Caloric percentage allocated to protein
-Plugin,coaching,macro_carb_pct,number,Database::setting,integer,0..100,plaintext,coaching,Identical,Keep/Core,Caloric percentage allocated to carbohydrates
-Plugin,coaching,macro_fat_pct,number,Database::setting,integer,0..100,plaintext,coaching,Identical,Keep/Core,Caloric percentage allocated to fats
-Plugin,coaching,client_diary_visibility,select,Database::setting,enum coach_only/shared,enum,plaintext,coaching,Identical,Keep/Core,Privacy gate for client food and workout diaries
-Plugin,coaching,audit_logging,event,AuditLog,audited on coaching.settings_updated,internal,plaintext,coaching,Identical,Keep/Core,AuditLog::record added to coaching settings save handler
+Plugin,coaching,coaching.settings_updated,event,AuditLog,audited on coaching.settings_updated,internal,plaintext,coaching,Identical,Keep/Core,Audit event written by the coaching settings save handler (not a setting) [corrected 2026-10-17: was audit_logging]
 Plugin,forms,sp_captcha_secret,password,Database::setting/form_meta,sanitized string,none,encrypted (AES-256-GCM),forms,Identical,Keep/Core,Write-only input; preserves secret on blank; sp_captcha_clear_secret supported
-Plugin,forms,sp_captcha_sitekey,text,Database::setting/form_meta,sanitized string,none,plaintext,forms,Identical,Keep/Core,Public site key for Cloudflare Turnstile / hCaptcha / reCAPTCHA
+Plugin,forms,sp_captcha_site_key,text,forms_definitions.settings_json spam.captcha_site_key,sanitized string,none,plaintext,forms,Identical,Keep/Core,"Public CAPTCHA site key, per form [corrected 2026-10-17: was sp_captcha_sitekey]"
 Plugin,forms,sp_captcha_provider,select,Database::setting/form_meta,enum turnstile/hcaptcha/recaptcha,enum,plaintext,forms,Identical,Keep/Core,Anti-spam CAPTCHA service provider
-Plugin,forms,sp_honeypot_enabled,checkbox,Database::setting/form_meta,0 or 1,boolean,plaintext,forms,Identical,Keep/Core,Hidden honeypot input field spam trap
-Plugin,forms,sp_rate_limit_rpm,number,Database::setting/form_meta,integer,1..600,plaintext,forms,Identical,Keep/Core,Per-IP submission rate limit in requests per minute
-Plugin,forms,notification_emails,text,form_meta,comma-separated emails,email list,plaintext,forms,Identical,Keep/Core,Recipient email addresses for submission alerts
-Plugin,forms,webhook_url,url,form_meta,FILTER_VALIDATE_URL,valid url,plaintext,forms,Identical,Keep/Core,Webhook URL triggered upon valid form submission
-Plugin,forms,stripe_payment_field,field_type,form_schema,not in active field registry,n/a,n/a,forms,Identical,Deprecate/Docs Corrected,README updated to clarify payment field is deferred; Studio payment button used instead
+Plugin,forms,sp_rate_limit,number,forms_definitions.settings_json spam.rate_limit,integer,1..600,plaintext,forms,Identical,Keep/Core,"Submissions per window per IP (window = sp_rate_window seconds), per form [corrected 2026-10-17: was sp_rate_limit_rpm]"
+Plugin,forms,notify_email,text,forms_definitions.notify_email column,comma-separated emails,email list,plaintext,forms,Identical,Keep/Core,"Admin notification address, per form [corrected 2026-10-17: was notification_emails]"
+Plugin,forms,webhook_urls,url,forms_webhooks table,FILTER_VALIDATE_URL,valid url,plaintext,forms,Identical,Keep/Core,One URL per line in the editor; stored as forms_webhooks rows [corrected 2026-10-17: was webhook_url]
+Plugin,forms,stripe_payment_field,field_type,form_schema,not in active field registry,n/a,n/a,forms,Identical,Not implemented,Not implemented: the Forms payment field is deferred (documented in plugins/forms/README.md); Studio payment.button is the shipped alternative [corrected 2026-10-17]
 Plugin,licensing,license_key,text,Database::setting,32-char alphanumeric,token format,plaintext,licensing,Identical,Keep/Core,Customer installation license key
-Plugin,licensing,license_cache,table,slate_license_cache,signed Ed25519 payload,cryptographic,signature verified,licensing,Identical,Keep/Core,Phase 1-13 cryptographic remote authority verification
-Plugin,licensing,central_api_url,url,Database::setting/env,FILTER_VALIDATE_URL,valid url,plaintext,licensing,Identical,Keep/Core,Endpoint of the central licensing authority
-Plugin,licensing,offline_tolerance_seconds,internal,const,integer,86400 * 14,plaintext,licensing,Identical,Keep/Core,Maximum offline grace period allowed before lock
-Plugin,mcp-gateway,mcp_enabled,checkbox,Database::setting,0 or 1,boolean,plaintext,mcp,Identical,Keep/Core,Master killswitch for Model Context Protocol gateway
-Plugin,mcp-gateway,ai_provider,select,Database::setting,enum openai/anthropic/gemini/local,enum,plaintext,mcp,Identical,Keep/Core,Upstream GenAI provider for assistant tools
+Plugin,licensing,remote_license_cache,table,remote_license_cache table,signed Ed25519 payload,cryptographic,signature verified,licensing,Identical,Keep/Core,Signed Ed25519 licence state; the only entitlement authority (Phase 13) [corrected 2026-10-17: was license_cache]
+Plugin,licensing,LICENSE_SERVER_URL,url,config (.env),FILTER_VALIDATE_URL,valid url,plaintext,licensing,Identical,Keep/Core,"Central licensing server URL; config, not a database setting [corrected 2026-10-17: was central_api_url]"
+Plugin,licensing,OFFLINE_TOLERANCE_SECONDS,internal,const (CommercialLicenseWindow),integer,86400 * 14,plaintext,licensing,Identical,Keep/Core,"7 days; a code constant, not configurable [corrected 2026-10-17: was offline_tolerance_seconds]"
 Plugin,mcp-gateway,ai_api_key,password,Database::setting,sanitized string,none,encrypted (AES-256-GCM),mcp,Identical,Keep/Core,Write-only input; fail-closed try/catch encryption
-Plugin,mcp-gateway,ai_base_url,url,Database::setting,FILTER_VALIDATE_URL matching allowlist,valid url,plaintext,mcp,Identical,Keep/Core,Custom API base URL with strict SSRF validation
+Plugin,mcp-gateway,ai_base_url,url,Database::setting,"none (trimmed, max 300 chars)",length 300,plaintext,mcp,Identical,Keep/Core,"OpenAI-compatible endpoint used by AiProviderClient; no scheme/host validation, so an admin can point it at any host including internal ones [corrected 2026-10-17: earlier text claimed strict SSRF validation; open risk]"
 Plugin,mcp-gateway,ai_model,text,Database::setting,sanitized string,none,plaintext,mcp,Identical,Keep/Core,Model name identifier passed to upstream AI provider
-Plugin,mcp-gateway,allowed_tools,multiselect/json,Database::setting,array of tool slugs,tool slugs,plaintext,mcp,Identical,Keep/Core,Granular tool execution allowlist for AI agents
-Plugin,media-library,allowed_mime_types,text/json,Database::setting,image/* audio/* video/* pdf,mime list,plaintext,media,Identical,Keep/Core,Strict file upload MIME type validation allowlist
-Plugin,media-library,max_upload_size_mb,number,Database::setting,integer,1..256,plaintext,media,Identical,Keep/Core,Maximum allowed upload size per file in megabytes
-Plugin,media-library,track_usage,checkbox,Database::setting,0 or 1,boolean,plaintext,media,Identical,Keep/Core,Maintains reference graph preventing deletion of in-use media
-Plugin,media-library,image_variants,internal,config,thumbnail/medium/large/original,config list,plaintext,media,Identical,Keep/Core,Image variant generation profiles
+Plugin,media-library,ALLOWED_MIMES,text/json,const (Services/Media/Media.php),image/* audio/* video/* pdf,mime list,plaintext,media,Identical,Keep/Core,"Upload MIME allow-list; a code constant, not configurable [corrected 2026-10-17: was allowed_mime_types]"
+Plugin,media-library,media_max_upload_mb,number,Database::setting,integer,1..256,plaintext,media,Identical,Keep/Core,"Core setting (Settings > Media), not a media-library plugin setting [corrected 2026-10-17: was max_upload_size_mb]"
+Plugin,media-library,media_usage,checkbox,media_usage table,0 or 1,boolean,plaintext,media,Identical,Keep/Core,Usage tracking is always on; there is no toggle [corrected 2026-10-17: was track_usage]
+Plugin,media-library,media_thumb_w,internal,config,thumbnail/medium/large/original,config list,plaintext,media,Identical,Keep/Core,"Variant sizes: media_thumb_w/h, media_medium_w/h, media_large_w/h (core settings) [corrected 2026-10-17: was image_variants]"
 Plugin,membership,plans,table,membership_plans,name/slug/price/duration,schema valid,plaintext,membership,Identical,Keep/Core,Membership subscription tier definitions
-Plugin,membership,grace_period_days,number,Database::setting,integer,0..90,plaintext,membership,Identical,Keep/Core,Days of access permitted following payment lapse
 Plugin,membership,currency,select,Database::setting,ISO 4217 3-letter code,enum,plaintext,membership,Identical,Keep/Core,Billing currency for membership subscriptions
-Plugin,membership,stripe_sync_enabled,checkbox,Database::setting,0 or 1,boolean,plaintext,membership,Identical,Keep/Core,Automated synchronization with Stripe Subscriptions
-Plugin,membership,qr_attendance_enabled,checkbox,Database::setting,0 or 1,boolean,plaintext,membership,Identical,Keep/Core,Member pass QR generation and check-in scanner
-Plugin,membership,wallet_ledger_enabled,checkbox,Database::setting,0 or 1,boolean,plaintext,membership,Identical,Keep/Core,Double-entry credit ledger for member account balances
+Plugin,membership,enable_attendance,checkbox,Database::setting,0 or 1,boolean,plaintext,membership,Identical,Keep/Core,Membership attendance/check-in toggle (membership.enable_attendance) [corrected 2026-10-17: was qr_attendance_enabled]
 Plugin,multilang-translate,default_language,select,Database::setting,ISO 639-1 2-letter code,enum,plaintext,multilang,Identical,Keep/Core,Primary site language for untranslated content
-Plugin,multilang-translate,active_languages,multiselect/json,Database::setting,array of ISO 639-1 codes,language codes,plaintext,multilang,Identical,Keep/Core,Enabled locale codes available in language switcher
-Plugin,multilang-translate,crawler_protection,checkbox,Database::setting,0 or 1,boolean,plaintext,multilang,Identical,Keep/Core,Rate limiting and verification for translation crawler bot
-Plugin,multilang-translate,url_prefix_mode,select,Database::setting,enum subpath/query/none,enum,plaintext,multilang,Identical,Keep/Core,URL routing mode for localized pages (e.g. /fr/page)
-Plugin,stripe-payment,stripe_mode,select,Database::setting,enum test/live,enum,plaintext,stripe,Identical,Keep/Core,Switches between Stripe test and live key pairs
+Plugin,multilang-translate,autotranslate_api_key,text,Database::setting,none,none,plaintext,multilang,Identical,Keep/Core,"Read raw by includes/AutoTranslate.php:143 (no decryption), so it is stored in plaintext [added 2026-10-17; open risk]"
+Plugin,stripe-payment,mode,select,Database::setting,enum test/live,enum,plaintext,stripe,Identical,Keep/Core,stripe-payment.mode: test or live [corrected 2026-10-17: was stripe_mode]
 Plugin,stripe-payment,publishable_key,text,Database::setting,pk_test_... or pk_live_...,key format,plaintext,stripe,Identical,Keep/Core,Public key used in frontend Stripe.js initialization
 Plugin,stripe-payment,secret_key,password,Database::setting,sk_test_... or sk_live_...,key format,encrypted (AES-256-GCM),stripe,Identical,Keep/Core,Write-only input; preserves secret on blank; fail-closed encryption
 Plugin,stripe-payment,webhook_secret,password,Database::setting,whsec_...,key format,encrypted (AES-256-GCM),stripe,Identical,Keep/Core,Write-only input; preserves secret on blank; fail-closed encryption
 Plugin,stripe-payment,allowed_countries,multiselect/json,Database::setting,array of ISO 3166-1 alpha-2,country codes,plaintext,stripe,Identical,Keep/Core,Restricts available checkout countries
-Plugin,stripe-payment,payment_methods,multiselect/json,Database::setting,card link apple_pay google_pay,methods enum,plaintext,stripe,Identical,Keep/Core,Enabled payment method types passed to Stripe Elements
-Plugin,studio-builder,site_title,text,Database::setting,sanitized string,none,plaintext,studio,Client-Only,Keep/Core,Site title rendered in Studio templates
-Plugin,studio-builder,custom_head_code,textarea,Database::setting,raw HTML/JS/CSS,none,plaintext,studio,Client-Only,Keep/Advanced,Injected into <head>; restricted to studio-builder.admin
-Plugin,studio-builder,custom_footer_code,textarea,Database::setting,raw HTML/JS/CSS,none,plaintext,studio,Client-Only,Keep/Advanced,Injected before </body>; restricted to studio-builder.admin
-Plugin,studio-builder,tracking_head_code,textarea,Database::setting,raw script tags,none,plaintext,studio,Client-Only,Keep/Advanced,Analytics/tracking scripts; restricted to studio-builder.admin
-Plugin,studio-builder,tracking_body_code,textarea,Database::setting,raw script tags,none,plaintext,studio,Client-Only,Keep/Advanced,Body tracking pixels; restricted to studio-builder.admin
-Plugin,studio-builder,global_css,textarea,Database::setting,CSS text,sanitized css,plaintext,studio,Client-Only,Keep/Core,Global style overrides compiled into page output
-Plugin,studio-builder,theme_preset,select,Database::setting,enum default/modern/dark/minimal,enum,plaintext,studio,Client-Only,Keep/Core,Visual theme token preset for Studio canvas and preview
-Widget: Studio,Core,header,studio_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Heading block with levels h1-h6 and responsive typography
-Widget: Studio,Core,paragraph,studio_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Text paragraph with rich formatting and alignment
-Widget: Studio,Core,button,studio_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Call-to-action button with link and style variants
-Widget: Studio,Core,image,studio_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Responsive image block with aspect ratio and media picker
-Widget: Studio,Core,columns,studio_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Responsive grid and flex layout container for nested blocks
-Widget: Studio,Core,card,studio_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,"Content card container with optional header, media, and footer"
-Widget: Studio,Core,hero,studio_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Full-width hero section with background image and CTA
-Widget: Studio,Core,divider,studio_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Visual horizontal rule with custom style and spacing
-Widget: Studio,Core,spacer,studio_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Vertical spacing block with responsive mobile/desktop heights
-Widget: Studio,Core,video,studio_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,"Video player supporting YouTube, Vimeo, and local MP4"
-Widget: Studio,Core,form,studio_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Dynamic embedding of forms created in the Forms plugin
-Widget: Studio,Core,booking-calendar,studio_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Appointment booking slot selection widget from Booking plugin
-Widget: Studio,Core,membership-pricing,studio_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Pricing table displaying Membership subscription plans
-Widget: Studio,Core,coaching-feed,studio_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Activity and workout feed widget from Coaching plugin
-Widget: Studio,Core,payment-button,studio_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Direct Stripe checkout button with cryptographic price signing
-Widget: Studio,Plugin,freelancer-portfolio,plugin_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Both Trees,Keep/Core,Portfolio showcase grid with modal details and tag filtering
-Widget: Studio,Plugin,testimonial-slider,plugin_block,page_blocks JSON,AST JSON schema,schema valid,n/a,studio,Both Trees,Keep/Core,Customer review slider with star ratings and avatar support
+Plugin,stripe-payment,method_klarna,multiselect/json,Database::setting,card link apple_pay google_pay,methods enum,plaintext,stripe,Identical,Keep/Core,"One toggle per method: method_us_bank_account, method_klarna, method_cashapp, method_amazon_pay, method_bancontact [corrected 2026-10-17: was payment_methods]"
+Plugin,studio-builder,studiobuilder_tokens,select,studiobuilder_tokens table,enum default/modern/dark/minimal,enum,plaintext,studio,Client-Only,Keep/Core,Design tokens written only by StudioThemeService; no preset selector [corrected 2026-10-17: was theme_preset]
+Widget: Studio,Core,core.heading,studio_block,studiobuilder_revisions document JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Heading block [corrected 2026-10-17: was header]
+Widget: Studio,Core,core.text,studio_block,studiobuilder_revisions document JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Text block (core.rich_text also exists) [corrected 2026-10-17: was paragraph]
+Widget: Studio,Core,core.button,studio_block,studiobuilder_revisions document JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Button block [corrected 2026-10-17: was button]
+Widget: Studio,Core,core.image,studio_block,studiobuilder_revisions document JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Image block [corrected 2026-10-17: was image]
+Widget: Studio,Core,layout.grid,studio_block,studiobuilder_revisions document JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,"Grid layout (layout.flex, layout.container, layout.section also exist); there is no ""columns"" block [corrected 2026-10-17: was columns]"
+Widget: Studio,Core,core.card,studio_block,studiobuilder_revisions document JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Card block [corrected 2026-10-17: was card]
+Widget: Studio,Core,core.hero,studio_block,studiobuilder_revisions document JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Hero block [corrected 2026-10-17: was hero]
+Widget: Studio,Core,core.divider,studio_block,studiobuilder_revisions document JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Divider block [corrected 2026-10-17: was divider]
+Widget: Studio,Core,core.spacer,studio_block,studiobuilder_revisions document JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Spacer block [corrected 2026-10-17: was spacer]
+Widget: Studio,Core,core.video,studio_block,studiobuilder_revisions document JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Video block [corrected 2026-10-17: was video]
+Widget: Studio,Core,forms.embed,studio_block,studiobuilder_revisions document JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Embeds a Forms plugin form (forms.form_card also exists) [corrected 2026-10-17: was form]
+Widget: Studio,Core,booking.embed,studio_block,studiobuilder_revisions document JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Booking widget embed (booking.services also exists) [corrected 2026-10-17: was booking-calendar]
+Widget: Studio,Core,membership.plans,studio_block,studiobuilder_revisions document JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Membership plans block [corrected 2026-10-17: was membership-pricing]
+Widget: Studio,Core,payment.button,studio_block,studiobuilder_revisions document JSON,AST JSON schema,schema valid,n/a,studio,Client-Only,Keep/Core,Signed Stripe checkout button; payment.link also exists [corrected 2026-10-17: was payment-button]
+Widget: Studio,Plugin,portfolio.project_card,plugin_block,studiobuilder_revisions document JSON,AST JSON schema,schema valid,n/a,studio,Both Trees,Keep/Core,"Plugin studio-freelancer-portfolio registers several portfolio.* blocks (project_card, service_card, skill_grid, nav_header, footer, ...) [corrected 2026-10-17: was freelancer-portfolio]"
+Widget: Studio,Plugin,acme.testimonial,plugin_block,studiobuilder_revisions document JSON,AST JSON schema,schema valid,n/a,studio,Both Trees,Keep/Core,Example Widget SDK block from plugin studio-testimonial-widget [corrected 2026-10-17: was testimonial-slider]
 Field: Forms,Built-in,text,forms_field,form_schema JSON,DSL field schema,schema valid,n/a,forms,Both Trees,Keep/Core,Standard single-line text input field
 Field: Forms,Built-in,email,forms_field,form_schema JSON,DSL field schema,schema valid,n/a,forms,Both Trees,Keep/Core,Email input field with client and server RFC validation
 Field: Forms,Built-in,textarea,forms_field,form_schema JSON,DSL field schema,schema valid,n/a,forms,Both Trees,Keep/Core,Multi-line text input with configurable row count
 Field: Forms,Built-in,number,forms_field,form_schema JSON,DSL field schema,schema valid,n/a,forms,Both Trees,Keep/Core,"Numeric input with min, max, and step validation"
 Field: Forms,Built-in,select,forms_field,form_schema JSON,DSL field schema,schema valid,n/a,forms,Both Trees,Keep/Core,Single-selection dropdown menu
 Field: Forms,Built-in,checkbox,forms_field,form_schema JSON,DSL field schema,schema valid,n/a,forms,Both Trees,Keep/Core,Single checkbox for terms and boolean consents
-Field: Forms,Built-in,checkbox_group,forms_field,form_schema JSON,DSL field schema,schema valid,n/a,forms,Both Trees,Keep/Core,Multi-selection checkbox group with min/max selection bounds
+Field: Forms,Built-in,checkboxes,forms_field,forms_definitions.fields_json,DSL field schema,schema valid,n/a,forms,Both Trees,Keep/Core,Multiple-choice checkbox group (FormsAPI::SUPPORTED_TYPES) [corrected 2026-10-17: was checkbox_group]
 Field: Forms,Built-in,radio,forms_field,form_schema JSON,DSL field schema,schema valid,n/a,forms,Both Trees,Keep/Core,Radio button group for mutually exclusive options
 Field: Forms,Built-in,date,forms_field,form_schema JSON,DSL field schema,schema valid,n/a,forms,Both Trees,Keep/Core,Date picker input with min and max date restrictions
 Field: Forms,Built-in,file,forms_field,form_schema JSON,DSL field schema,schema valid,n/a,forms,Both Trees,Keep/Core,File upload field with MIME type and size limit enforcement

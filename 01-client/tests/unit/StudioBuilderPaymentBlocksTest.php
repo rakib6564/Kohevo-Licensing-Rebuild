@@ -44,6 +44,9 @@ use Slate\Tenancy\TenantContext;
 const SBPB_TENANT = 101;
 const SBPB_SECRET = 'unit-test-secret';
 
+// The renderer signs the form with slate_sign(). Once another test has
+// loaded includes/helpers.php, that is the real helper, which returns null
+// without APP_SECRET — so the key must exist whatever ran first.
 if (!defined('APP_SECRET')) {
     define('APP_SECRET', SBPB_SECRET);
 }
@@ -63,8 +66,10 @@ if (!function_exists('slate_sign')) {
     }
 }
 
-function sbpb_signer(): callable { return static fn(string $c, string $v): ?string => hash_hmac('sha256', $c . '|' . $v, SBPB_SECRET); }
-function sbpb_verifier(): callable { return static fn(string $c, string $v, string $s): bool => hash_equals(hash_hmac('sha256', $c . '|' . $v, SBPB_SECRET), $s); }
+// Sign and verify through slate_sign() — the stub above, or the real helper
+// when another test loaded includes/helpers.php first — exactly as the renderer does.
+function sbpb_signer(): callable { return static fn(string $c, string $v): ?string => slate_sign($c, $v); }
+function sbpb_verifier(): callable { return static fn(string $c, string $v, string $s): bool => hash_equals((string) slate_sign($c, $v), $s); }
 
 /** The form fields a button would post for these props. @return array<string, string> */
 function sbpb_post(array $props = ['amount' => 49.99, 'currency' => 'EUR', 'description' => 'Consulting', 'success_path' => 'thank-you']): array
@@ -199,10 +204,7 @@ function sbpb_render(string $type, array $props, string $mode): string
 
 unit('payment blocks: the button renders a signed form publicly, a card in the editor, and nothing when it cannot work', function (): void {
     $props = ['label' => 'Buy <now>', 'amount' => 25, 'currency' => 'GBP', 'description' => 'A "quoted" thing', 'success_path' => 'thanks'];
-    if (class_exists('StripePaymentAPI', false)) {
-        StripePaymentAPI::$configured = true;
-    }
-    \Slate\Module\StudioBuilder\Render\Block\ModuleRenderers\PaymentButtonRenderer::$stripeReadyOverride = true;
+    StripePaymentAPI::$configured = true;
 
     $public = sbpb_render('payment.button', $props, 'public');
     assert_true(str_contains($public, '<form class="sb-pay" method="post" action="https://acme.test/solaya/plugins/studio-builder/public/pay.php">'), 'posts to the endpoint under the site base');
@@ -221,16 +223,10 @@ unit('payment blocks: the button renders a signed form publicly, a card in the e
     assert_true(str_contains($editor, '25.00 GBP'), 'the card says what visitors will pay');
 
     assert_true(!str_contains(sbpb_render('payment.button', ['amount' => 0.1], 'public'), '<form'), 'an amount that cannot be charged renders no form publicly');
-    if (class_exists('StripePaymentAPI', false)) {
-        StripePaymentAPI::$configured = false;
-    }
-    \Slate\Module\StudioBuilder\Render\Block\ModuleRenderers\PaymentButtonRenderer::$stripeReadyOverride = false;
+    StripePaymentAPI::$configured = false;
     assert_true(!str_contains(sbpb_render('payment.button', $props, 'public'), '<form'), 'Stripe not set up: no form publicly');
     assert_true(str_contains(sbpb_render('payment.button', $props, 'editor'), 'Stripe is not set up'), 'the editor says why');
-    if (class_exists('StripePaymentAPI', false)) {
-        StripePaymentAPI::$configured = true;
-    }
-    \Slate\Module\StudioBuilder\Render\Block\ModuleRenderers\PaymentButtonRenderer::$stripeReadyOverride = null;
+    StripePaymentAPI::$configured = true;
 });
 
 unit('payment blocks: the link block renders only a Stripe address, safely', function (): void {

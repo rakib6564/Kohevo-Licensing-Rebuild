@@ -1,3 +1,0 @@
-# git diff --cached is empty: nothing is staged.
-# Tracked changes: audit-changes.patch. New files for the commit: new-files.patch.
-# Review-package files are committed as themselves and are not repeated in a patch.
