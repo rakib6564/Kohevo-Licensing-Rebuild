@@ -590,6 +590,7 @@ $sbBoot = [
         'field_too_small' => __('studio_ui_field_too_small', 'This number is too small.'),
         'field_too_large' => __('studio_ui_field_too_large', 'This number is too large.'),
         'field_colour' => __('studio_ui_field_colour', 'Enter a colour such as #e4572e, or rgb(228 87 46).'),
+        'prop_owned_by_layout' => __('studio_ui_prop_owned_by_layout', 'Set in Flex & grid below, which overrides this. Clear it there to use this control.'),
         'highlight_not_found' => __('studio_ui_highlight_not_found', 'This phrase is not in the text above, so nothing is highlighted. Type it exactly as it appears.'),
         'field_url' => __('studio_ui_field_url', 'Enter a safe address (https://…, /path, #anchor, mailto: or tel:).'),
         'field_link_label' => __('studio_ui_field_link_label', 'A link needs a label.'),

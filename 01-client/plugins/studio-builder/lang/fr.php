@@ -602,6 +602,7 @@ return [
     'studio_ui_field_too_small' => 'Ce nombre est trop petit.',
     'studio_ui_field_too_large' => 'Ce nombre est trop grand.',
     'studio_ui_field_colour' => 'Saisissez une couleur comme #e4572e, ou rgb(228 87 46).',
+    'studio_ui_prop_owned_by_layout' => "Défini dans Flex et grille ci-dessous, qui l’emporte sur ce réglage. Effacez-le là-bas pour utiliser ce contrôle.",
     'studio_ui_highlight_not_found' => "Cette expression ne figure pas dans le texte ci-dessus : rien n'est mis en évidence. Saisissez-la exactement comme elle apparaît.",
     'studio_ui_field_url' => 'Saisissez une adresse sûre (https://…, /chemin, #ancre, mailto: ou tel:).',
     'studio_ui_field_link_label' => 'Un lien doit avoir un libellé.',

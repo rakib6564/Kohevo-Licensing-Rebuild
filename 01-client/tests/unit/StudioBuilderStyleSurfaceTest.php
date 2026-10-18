@@ -752,3 +752,23 @@ unit('dimensions: width, height, min-height and max-width can differ on tablet a
     assert_true(StyleSurface::responsiveIssues(['dimensions' => ['width' => 'calc(1px);color:red']], '$.r') !== [], 'anything else is refused');
     assert_true(StyleSurface::responsiveIssues(['dimensions' => ['aspect_ratio' => '16/9']], '$.r') !== [], 'only the four sizes can differ per device');
 });
+
+// ── One owner for container layout values (CL-02) ─────────────────────────
+
+unit('container layout: a Flex & grid value beats the matching prop, which is why the Inspector locks the prop', function (): void {
+    $tenants   = new TenantContext();
+    $renderer  = new DocumentRenderer(BlockRegistry::withAllCoreBlocks(), BlockRendererRegistry::withCoreRenderers(), new CoreMediaResolver($tenants), new ProviderBindingResolver(new DataProviderRegistry(), $tenants));
+    $collector = new RenderCollector();
+    $html = $renderer->renderBlock([
+        'id' => 'blk_cccccccccccccccccccccccc', 'type' => 'layout.flex', 'version' => 1,
+        'props' => ['direction' => 'row'],
+        'style' => ['layout' => ['direction' => 'column']] + CanonicalDocumentSchema::defaultBlockStyle(),
+        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+        'bindings' => [], 'children' => [], 'animation' => [], 'interactions' => [],
+    ], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), $collector, false);
+    $css = $collector->css();
+    assert_true(str_contains($html, 'sb-flex--row'), 'the prop still writes its class: ' . $html);
+    $class = sbss_class($html);
+    assert_true((bool) preg_match('/\.' . preg_quote($class, '/') . '\{[^}]*flex-direction:column/', $css), 'the style is a scoped rule for that element: ' . $css);
+    assert_true(strpos(\Slate\Module\StudioBuilder\Render\StudioStylesheet::css() . $css, '.' . $class . '{') > strpos(\Slate\Module\StudioBuilder\Render\StudioStylesheet::css(), '.sb-flex--row'), 'the scoped rule comes after the class rule, so it wins');
+});
