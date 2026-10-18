@@ -1,0 +1,16 @@
+CAUGHT (1) - AI vet: blocked-range check removed | AiProviderClientUrlVettingTest: # passed 4 / 5
+CAUGHT (1) - SMTP sealSecrets keeps plaintext on failure | SmtpOAuthSealSecretsTest: # passed 1 / 2
+CAUGHT (1) - OAuth callback ignores seal failure | SmtpOAuthAccessTokenEncryptionTest: # passed 2 / 3
+CAUGHT (4) - Seal helper returns partial result on failure | SealPostedSecretsTest: # passed 1 / 2; SettingsEncryptFirstTest: # passed 3 / 6
+CAUGHT (1) - Stripe Disconnect skips the mode slots | StripeWriteOnlySecretTest: # passed 3 / 4
+CAUGHT (2) - Rekey: unreadable values no longer stop the run | RekeySecretsCliTest: # passed 5 / 7
+CAUGHT (3) - Rekey: writes not in a transaction | RekeySecretsCliTest: # passed 4 / 7
+CAUGHT (1) - Rekey: restore skips the secret check | RekeySecretsCliTest: # passed 6 / 7
+CAUGHT (1) - Rekey: non-InnoDB tables accepted | RekeySecretsCliTest: # passed 6 / 7
+CAUGHT (1) - Client licence guard: APP_ENV bypass on web | AppEnvTestingBypassTest: # passed 1 / 2
+CAUGHT (1) - Client ModuleGuard: APP_ENV bypass on web | AppEnvTestingBypassTest: # passed 1 / 2
+CAUGHT (1) - Central ModuleGuard: APP_ENV bypass on web | CentralModuleGuardTest: # passed 5 / 6
+CAUGHT (3) - Central ModuleGuard allows() always true | CentralModuleGuardTest: # passed 3 / 6
+CAUGHT (2) - assignPlan accepts inactive plans | TenantPlanAdminTest: # passed 4 / 5; CentralTenantPlanCliTest: # passed 1 / 2
+CAUGHT (1) - Tenants page without platform-admin gate | TenantPlanAdminTest: # passed 4 / 5
+15/15 caught

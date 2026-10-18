@@ -1,0 +1,56 @@
+rows 482
+  owner: composed key, name at cited line: 25
+  owner: composed key, name in file: 8
+  owner: dynamic key (not checked): 6
+  owner: key NOT in file: 28
+  owner: key at cited line: 336
+  owner: key in file, line drifted: 33
+  owner: none recorded: 46
+  reader: composed key, name at cited line: 97
+  reader: composed key, name in file: 10
+  reader: key NOT in file: 84
+  reader: key at cited line: 779
+  reader: key in file, line drifted: 157
+classification: {'normal': 342, 'secret': 41, 'sensitive': 90, 'mixed': 9}
+used: {'yes': 307, 'yes (internal state read by its own module)': 58, 'read-only (no production writer)': 46, 'display-only (read back only by its own form)': 52, 'no (dead: never read)': 10, 'dynamic': 9}
+  PROBLEM booking.cap.client_messaging client key not in owner file admin/plugins.php
+  PROBLEM booking.cap.client_messaging client key not in reader file includes/Plugin.php:149
+  PROBLEM booking.cap.client_messaging client key not in reader file src/Kernel/Module/PluginLoader.php:234
+  PROBLEM booking.cap.custom_reminders client key not in owner file admin/plugins.php
+  PROBLEM booking.cap.custom_reminders client key not in reader file includes/Plugin.php:149
+  PROBLEM booking.cap.custom_reminders client key not in reader file src/Kernel/Module/PluginLoader.php:234
+  PROBLEM booking.cap.service_rules client key not in owner file admin/plugins.php
+  PROBLEM booking.cap.service_rules client key not in reader file includes/Plugin.php:149
+  PROBLEM booking.cap.service_rules client key not in reader file src/Kernel/Module/PluginLoader.php:234
+  PROBLEM booking.cap.slot_restrictions client key not in owner file admin/plugins.php
+  PROBLEM booking.cap.slot_restrictions client key not in reader file includes/Plugin.php:149
+  PROBLEM booking.cap.slot_restrictions client key not in reader file src/Kernel/Module/PluginLoader.php:234
+  PROBLEM mcp-gateway.studio_rate_limit_render_per_min client key not in reader file plugins/mcp-gateway/McpGatewayAPI.php:439
+  PROBLEM mcp-gateway.studio_rate_limit_write_per_min client key not in reader file plugins/mcp-gateway/McpGatewayAPI.php:439
+  PROBLEM multilang-translate.autotranslate_api_key client key not in owner file plugins/multilang-translate/admin/api.php
+  PROBLEM multilang-translate.autotranslate_api_key client key not in reader file plugins/multilang-translate/admin/api.php:193
+  PROBLEM smtp_auth_type client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_backup_auth_type client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_backup_encryption client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_backup_from_email client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_backup_from_name client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_backup_host client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_backup_oauth_client_id client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_backup_oauth_client_secret client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_backup_oauth_email client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_backup_oauth_provider client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_backup_oauth_refresh_token client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_backup_pass client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_backup_port client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_backup_user client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_oauth_client_id client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_oauth_client_secret client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_oauth_email client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_oauth_provider client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM smtp_oauth_refresh_token client key not in reader file src/Services/Notifications/Mailer.php:101
+  PROBLEM stripe-payment.live_publishable_key client key not in owner file plugins/stripe-payment/admin/settings.php
+  PROBLEM stripe-payment.live_publishable_key client key not in reader file plugins/stripe-payment/StripePaymentAPI.php:79
+  PROBLEM stripe-payment.live_secret_key client key not in owner file plugins/stripe-payment/admin/settings.php
+  PROBLEM stripe-payment.live_secret_key client key not in reader file plugins/stripe-payment/admin/settings.php:244
+  PROBLEM stripe-payment.live_secret_key client key not in reader file plugins/stripe-payment/StripePaymentAPI.php:79
+problems total 112

@@ -134,7 +134,7 @@ unit('verifyCustomerEmail flips the flag on BOTH customers and identities', func
             $raw = bin2hex(random_bytes(16));
             Database::insert('customer_auth_tokens', [
                 'tenant_id' => _AUTH_TENANT, 'customer_id' => $cid, 'purpose' => 'verify_email',
-                'token_hash' => hash('sha256', $raw), 'expires_at' => date('Y-m-d H:i:s', time() + 3600),
+                'token_hash' => hash('sha256', $raw), 'expires_at' => date('Y-m-d H:i:s', slate_db_time() + 3600),
             ]);
             $ret = Auth::verifyCustomerEmail($raw);
             assert_eq($cid, $ret, 'verify returns the customer id');
@@ -154,7 +154,7 @@ unit('resetCustomerPassword dual-writes; new password works, old fails; token si
             $raw = bin2hex(random_bytes(16));
             Database::insert('customer_auth_tokens', [
                 'tenant_id' => _AUTH_TENANT, 'customer_id' => $cid, 'purpose' => 'password_reset',
-                'token_hash' => hash('sha256', $raw), 'expires_at' => date('Y-m-d H:i:s', time() + 3600),
+                'token_hash' => hash('sha256', $raw), 'expires_at' => date('Y-m-d H:i:s', slate_db_time() + 3600),
             ]);
             $res = Auth::resetCustomerPassword($raw, 'brand-new-pass-1');
             assert_true(($res['ok'] ?? false) === true, 'reset ok');

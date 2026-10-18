@@ -1,0 +1,11 @@
+smoke exit=0 # passed 21 / 21
+RemoteLicenseClientTest exit=0 # passed 14 / 14
+LicensingSignatureTest exit=0 # passed 12 / 12
+run-phase2-licensing exit=0 # passed 22 / 22
+LicensingPluginSchemaTest exit=0 # passed 5 / 5
+Schema+CentralLicensingFoundation exit=0 # passed 27 / 27
+SlateLicenseCacheStoreTest exit=0 # passed 7 / 7
+LicensingQaFixRound2Test exit=0 # passed 4 / 4
+Phase10CheckInSyncTest exit=0 # passed 9 / 9
+Phase13LegacyAdminTest exit=0 # passed 7 / 7
+run-phase2-race exit=0

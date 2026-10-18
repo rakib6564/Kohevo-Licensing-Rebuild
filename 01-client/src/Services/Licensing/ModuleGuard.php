@@ -129,7 +129,9 @@ final class ModuleGuard
         if (\defined('SLATE_TESTING') || \defined('SLATE_MIGRATING')) {
             return true;
         }
-        return \function_exists('env') && env('APP_ENV') === 'testing';
+        // APP_ENV=testing counts only for CLI processes (test runners and
+        // their child probes), never for a request served by a web server.
+        return \PHP_SAPI === 'cli' && \function_exists('env') && env('APP_ENV') === 'testing';
     }
 
     // ── Response rendering per surface (07 §4) ───────────────────────────

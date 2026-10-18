@@ -147,6 +147,54 @@ class FormsSpamGuard
     //  CAPTCHA — render + verify
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * Decide what to store for a form's CAPTCHA secret when the editor is
+     * saved. The secret is kept encrypted at rest (enc:v1 envelope, same
+     * helper as every other plugin secret):
+     *   - the "clear" checkbox removes it;
+     *   - a newly typed secret is encrypted, and if encryption is not
+     *     possible the save is refused rather than storing plaintext;
+     *   - a blank field keeps what is stored, upgrading a legacy plaintext
+     *     value to an envelope when it can (and leaving it as-is when it
+     *     cannot, so an existing install keeps working).
+     * Returns ['secret' => string to store, 'error' => ?string].
+     */
+    public static function resolveStoredSecret(string $stored, string $posted, bool $clear): array
+    {
+        if ($clear) return ['secret' => '', 'error' => null];
+        $posted = trim($posted);
+        if ($posted !== '') {
+            $enc = self::encryptSecret($posted);
+            return $enc === null
+                ? ['secret' => $stored, 'error' => 'encryption_unavailable']
+                : ['secret' => $enc, 'error' => null];
+        }
+        if ($stored === '' || str_starts_with($stored, 'enc:v1:')) {
+            return ['secret' => $stored, 'error' => null];
+        }
+        return ['secret' => self::encryptSecret($stored) ?? $stored, 'error' => null];
+    }
+
+    /** The plaintext CAPTCHA secret for a provider call, or null if it cannot be decrypted. */
+    public static function captchaSecret(array $spam): ?string
+    {
+        $raw = (string)($spam['captcha_secret'] ?? '');
+        if ($raw === '' || !str_starts_with($raw, 'enc:v1:')) return $raw;
+        if (!function_exists('slate_decrypt_secret')) return null;
+        $plain = slate_decrypt_secret($raw);
+        return ($plain === null || $plain === '') ? null : $plain;
+    }
+
+    private static function encryptSecret(string $plain): ?string
+    {
+        if (!function_exists('slate_encrypt_secret')) return null;
+        try {
+            return slate_encrypt_secret($plain);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     public static function captchaEnabled(array $spam): bool
     {
         return in_array($spam['captcha_provider'] ?? 'none', self::CAPTCHA_PROVIDERS, true)
@@ -232,8 +280,17 @@ class FormsSpamGuard
         $url = self::VERIFY_URLS[$provider] ?? '';
         if ($url === '') return true;
 
+        // A secret that can no longer be decrypted (APP_SECRET changed or
+        // missing) fails CLOSED like a rejected token: sending the envelope
+        // to the provider would only be rejected anyway.
+        $secret = self::captchaSecret($spam);
+        if ($secret === null) {
+            self::warn('CAPTCHA secret for ' . $provider . ' cannot be decrypted — check APP_SECRET; rejecting submissions until it is re-entered.');
+            return false;
+        }
+
         $res = self::httpPost($url, http_build_query([
-            'secret'   => $spam['captcha_secret'],
+            'secret'   => $secret,
             'response' => $token,
             'remoteip' => $ip,
         ]));

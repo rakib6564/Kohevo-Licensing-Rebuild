@@ -134,13 +134,53 @@ class MLT_AutoTranslate {
 
     private static ?MLT_TranslateProviderInterface $providerInstance = null;
 
+    public const API_KEY_SETTING = 'multilang-translate.autotranslate_api_key';
+
+    /**
+     * What to store for the provider API key when the settings form is saved.
+     * The key is kept encrypted at rest (enc:v1, same helper as every other
+     * plugin secret): the clear flag removes it; a newly typed key is
+     * encrypted, or refused if encryption is not possible (never stored in
+     * plaintext); a blank field keeps what is stored, upgrading a legacy
+     * plaintext value when it can.
+     * Returns ['key' => string to store, 'error' => ?string].
+     */
+    public static function resolveStoredApiKey(string $stored, string $posted, bool $clear): array {
+        if ($clear) return ['key' => '', 'error' => null];
+        $posted = trim($posted);
+        if ($posted !== '') {
+            $enc = self::encryptKey($posted);
+            return $enc === null ? ['key' => $stored, 'error' => 'encryption_unavailable'] : ['key' => $enc, 'error' => null];
+        }
+        if ($stored === '' || str_starts_with($stored, 'enc:v1:')) return ['key' => $stored, 'error' => null];
+        return ['key' => self::encryptKey($stored) ?? $stored, 'error' => null];
+    }
+
+    /** The plaintext API key for a provider call: null when none is set or it cannot be decrypted. */
+    public static function apiKey(): ?string {
+        $raw = (string) Database::setting(self::API_KEY_SETTING);
+        if ($raw === '') return null;
+        if (!str_starts_with($raw, 'enc:v1:')) return $raw; // legacy plaintext keeps working
+        $plain = function_exists('slate_decrypt_secret') ? slate_decrypt_secret($raw) : null;
+        return ($plain === null || $plain === '') ? null : $plain;
+    }
+
+    private static function encryptKey(string $plain): ?string {
+        if (!function_exists('slate_encrypt_secret')) return null;
+        try {
+            return slate_encrypt_secret($plain);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     /** Build (and cache) the configured provider from plugin settings. */
     public static function provider(): MLT_TranslateProviderInterface {
         if (self::$providerInstance !== null) return self::$providerInstance;
 
         $slug = Database::setting('multilang-translate.autotranslate_provider') ?: 'libretranslate';
         $endpoint = Database::setting('multilang-translate.autotranslate_endpoint') ?: 'https://libretranslate.com/translate';
-        $apiKey = Database::setting('multilang-translate.autotranslate_api_key') ?: null;
+        $apiKey = self::apiKey();
 
         switch ($slug) {
             case 'libretranslate':

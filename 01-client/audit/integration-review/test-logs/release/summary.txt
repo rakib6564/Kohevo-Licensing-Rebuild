@@ -1,0 +1,15 @@
+c-unit exit=0
+l-unit exit=0
+c-smoke exit=0
+l-smoke exit=0
+c-integration exit=0
+l-integration exit=1
+c-studio-unit exit=0
+c-studio-int exit=0
+ui exit=0
+DONE
+l-int-shuffled exit=1
+c-int-shuffled exit=0
+l-int-shuffled-7 exit=1
+c-int-shuffled-7 exit=0
+lint-error-lines:        0

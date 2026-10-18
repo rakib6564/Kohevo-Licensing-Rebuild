@@ -556,6 +556,55 @@ if (!function_exists('slate_decrypt_secret')) {
     }
 }
 
+if (!function_exists('slate_seal_posted_secrets')) {
+    /**
+     * Encrypt every secret a settings form posted, before anything is saved.
+     * $fieldToKey maps a POST field to the setting key it is stored under.
+     * A blank field means "keep the stored secret" and is left out. Returns
+     * [settingKey => enc:v1 envelope] for the filled-in fields, or null if
+     * any of them could not be encrypted (APP_SECRET missing): the caller
+     * then saves nothing from the form, so settings are never half-applied
+     * and a secret is never stored in plain text.
+     *
+     * @param array<string,string> $fieldToKey
+     * @param array<string,mixed>  $post
+     * @return array<string,string>|null
+     */
+    function slate_seal_posted_secrets(array $fieldToKey, array $post): ?array {
+        $sealed = [];
+        foreach ($fieldToKey as $field => $key) {
+            $plain = trim((string)($post[$field] ?? ''));
+            if ($plain === '') continue;
+            try {
+                $sealed[$key] = slate_encrypt_secret($plain);
+            } catch (\Throwable $e) {
+                return null;
+            }
+        }
+        return $sealed;
+    }
+}
+
+if (!function_exists('slate_reencrypt_envelope')) {
+    /**
+     * Re-encrypt one enc:v1 envelope from an old application secret to a new
+     * one (APP_SECRET rotation). Returns the new envelope, or null if the
+     * envelope does not decrypt with $oldSecret (wrong secret, already
+     * rotated, or corrupt): the caller must then leave it alone.
+     */
+    function slate_reencrypt_envelope(string $envelope, string $oldSecret, string $newSecret): ?string {
+        if ($oldSecret === '' || $newSecret === '' || !str_starts_with($envelope, 'enc:v1:')) return null;
+        $raw = base64_decode(substr($envelope, 7), true);
+        if ($raw === false || strlen($raw) < 28) return null;
+        $plain = openssl_decrypt(substr($raw, 28), 'aes-256-gcm', hash('sha256', $oldSecret, true), OPENSSL_RAW_DATA, substr($raw, 0, 12), substr($raw, 12, 16));
+        if ($plain === false) return null;
+        $iv  = random_bytes(12);
+        $tag = '';
+        $ct  = openssl_encrypt($plain, 'aes-256-gcm', hash('sha256', $newSecret, true), OPENSSL_RAW_DATA, $iv, $tag);
+        return 'enc:v1:' . base64_encode($iv . $tag . $ct);
+    }
+}
+
 // ── Semver comparison ─────────────────────────────────────────
 if (!function_exists('slate_semver_satisfies')) {
     /**

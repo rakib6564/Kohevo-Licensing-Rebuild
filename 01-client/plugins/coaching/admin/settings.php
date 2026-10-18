@@ -26,6 +26,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         if ($af < 1.0) $af = 1.0;
         if ($af > 2.5) $af = 2.5;
         Database::setSetting('coaching.default_activity_factor', (string) $af);
+        AuditLog::record('coaching.settings_updated');
         $flash = ['type' => 'success', 'msg' => __('settings_saved', 'Settings saved.')];
     }
 }

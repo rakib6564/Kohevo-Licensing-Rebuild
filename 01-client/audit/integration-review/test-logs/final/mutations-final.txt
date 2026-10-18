@@ -1,0 +1,13 @@
+CAUGHT (1) - AI vet: private-range check removed
+CAUGHT (1) - AI vet: blocked ranges removed
+CAUGHT (1) - MLT: typed key stored plaintext on failure
+CAUGHT (1) - Forms CAPTCHA plaintext on failure
+CAUGHT (2) - SMTP sealSecrets returns plaintext
+CAUGHT (1) - OAuth callback ignores seal failure
+CAUGHT (1) - Stripe clear skips mode slots
+CAUGHT (3) - Seal helper returns partial result on failure
+CAUGHT (1) - Booking page ignores seal failure
+CAUGHT (1) - Rekey: unreadable values no longer stop the run
+CAUGHT (2) - ModuleGuard allows() always true
+CAUGHT (1) - Plan CLI accepts inactive plans
+12/12 caught

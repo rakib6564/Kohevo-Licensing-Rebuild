@@ -44,6 +44,13 @@ use Slate\Tenancy\TenantContext;
 const SBPB_TENANT = 101;
 const SBPB_SECRET = 'unit-test-secret';
 
+// The renderer signs the form with slate_sign(). Once another test has
+// loaded includes/helpers.php, that is the real helper, which returns null
+// without APP_SECRET — so the key must exist whatever ran first.
+if (!defined('APP_SECRET')) {
+    define('APP_SECRET', SBPB_SECRET);
+}
+
 if (!class_exists('StripePaymentAPI', false)) {
     /** Stand-in for the Stripe plugin: `isConfigured` is switchable. */
     final class StripePaymentAPI
@@ -59,8 +66,10 @@ if (!function_exists('slate_sign')) {
     }
 }
 
-function sbpb_signer(): callable { return static fn(string $c, string $v): ?string => hash_hmac('sha256', $c . '|' . $v, SBPB_SECRET); }
-function sbpb_verifier(): callable { return static fn(string $c, string $v, string $s): bool => hash_equals(hash_hmac('sha256', $c . '|' . $v, SBPB_SECRET), $s); }
+// Sign and verify through slate_sign() — the stub above, or the real helper
+// when another test loaded includes/helpers.php first — exactly as the renderer does.
+function sbpb_signer(): callable { return static fn(string $c, string $v): ?string => slate_sign($c, $v); }
+function sbpb_verifier(): callable { return static fn(string $c, string $v, string $s): bool => hash_equals((string) slate_sign($c, $v), $s); }
 
 /** The form fields a button would post for these props. @return array<string, string> */
 function sbpb_post(array $props = ['amount' => 49.99, 'currency' => 'EUR', 'description' => 'Consulting', 'success_path' => 'thank-you']): array

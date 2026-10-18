@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { IconX } from '../Icons.jsx';
-import { dragHeight, settle, snapHeights } from '../../core/sheetSnap.mjs';
+import { dragHeight, releaseHeight, settle, snapHeights } from '../../core/sheetSnap.mjs';
 import { t } from '../../core/messages.mjs';
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -56,8 +56,9 @@ export function useSheetDrag(panelRef, onClose) {
     drag.current = null;
     setDragging(false);
     e.currentTarget.releasePointerCapture?.(e.pointerId);
-    const current = panelRef.current ? panelRef.current.offsetHeight : d.h;
-    const to = settle(current, d.v, d.snaps);
+    // A cancel carries no useful position: use the last move instead.
+    const releaseY = e.type === 'pointercancel' ? d.last.y : e.clientY;
+    const to = settle(releaseHeight(d.h, d.y, releaseY, d.snaps), d.v, d.snaps);
     if (to === null) { setHeight(null); onClose(); } else setHeight(to);
   };
 

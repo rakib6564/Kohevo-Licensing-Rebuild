@@ -1,0 +1,119 @@
+AdminNavPhase2VisibilityTest exit=0 # passed 3 / 3
+AuthClockSkewTest exit=0 # passed 3 / 3
+AuthLockoutBoundaryTest exit=0 # passed 1 / 1
+AuthLoginFailureResetScopeTest exit=0 # passed 6 / 6
+BackupDbPasswordExposureTest exit=0 # passed 1 / 1
+BookingAdminCapabilityGuardTest exit=1 # passed 0 / 7
+  [BookingAdminCapabilityGuardTest] FAIL - booking admin: plugins/booking/admin/service-rules.php serves while service_rules is enabled  (the real page content is rendered)
+  [BookingAdminCapabilityGuardTest] FAIL - booking admin: plugins/booking/admin/service-rules.php refuses with 503 while service_rules is disabled  (a disabled capability must refuse the admin page too, not just hide its nav link: expected 503 got 200)
+  [BookingAdminCapabilityGuardTest] FAIL - booking admin: plugins/booking/admin/restrictions.php serves while slot_restrictions is enabled  (the real page content is rendered)
+  [BookingAdminCapabilityGuardTest] FAIL - booking admin: plugins/booking/admin/restrictions.php refuses with 503 while slot_restrictions is disabled  (a disabled capability must refuse the admin page too, not just hide its nav link: expected 503 got 200)
+  [BookingAdminCapabilityGuardTest] FAIL - booking admin: plugins/booking/admin/messages.php serves while client_messaging is enabled  (the real page content is rendered)
+  [BookingAdminCapabilityGuardTest] FAIL - booking admin: plugins/booking/admin/messages.php refuses with 503 while client_messaging is disabled  (a disabled capability must refuse the admin page too, not just hide its nav link: expected 503 got 200)
+  [BookingAdminCapabilityGuardTest] FAIL - booking admin: service-rule.php refuses with 503 while service_rules is disabled  (the real edit form is rendered)
+BookingAdminTenantLinkageTest exit=1 # passed 0 / 3
+  [BookingAdminTenantLinkageTest] FAIL - booking services.php: a category/location id belonging to another tenant is rejected, not stored  (the service must still have been created (the save itself must not be blocked outright))
+  [BookingAdminTenantLinkageTest] FAIL - booking services.php: a category/location id that DOES belong to this tenant still saves correctly (no regression)  (the service must have been created)
+  [BookingAdminTenantLinkageTest] FAIL - booking providers.php: a service id belonging to another tenant is never linked via booking_provider_services  (a service id that legitimately belongs to this tenant must still be linked (no regression))
+BookingApiAuthorizationTest exit=1 # passed 0 / 8
+  [BookingApiAuthorizationTest] FAIL - booking API: an unauthenticated numeric-id lookup is denied  (a raw numeric id must never authorize returning appointment data: expected 404 got 500)
+  [BookingApiAuthorizationTest] FAIL - booking API: an unauthenticated lookup by the public reference is denied  (the public "BK-XXXXXXXX" reference is not a secret and must not authorize a lookup: expected 404 got 500)
+  [BookingApiAuthorizationTest] FAIL - booking API: sync is denied without an authenticated bearer token  (a bulk, all-appointments sync requires authentication: expected 401 got 500)
+  [BookingApiAuthorizationTest] FAIL - booking API: the manage_token customer self-service lookup still works with no bearer token  (a valid manage_token authorizes the customer self-service lookup: expected 200 got 500)
+  [BookingApiAuthorizationTest] FAIL - booking API: one customer's manage_token cannot retrieve another customer's appointment  (expected 200 got 500)
+  [BookingApiAuthorizationTest] FAIL - booking API: an authenticated bearer token can look up its own tenant's appointment by id, and sync succeeds  (a valid bearer token authorizes looking up its own tenant's appointment by id: expected 200 got 500)
+  [BookingApiAuthorizationTest] FAIL - booking API: an authenticated bearer token for tenant A cannot retrieve tenant B's appointment  (tenant A's bearer token must not retrieve tenant B's appointment by id: expected 404 got 500)
+  [BookingApiAuthorizationTest] FAIL - booking API: the public services catalogue is still reachable with no credential  (listServices() was not touched by the C1 fix and must remain public: expected 200 got 500)
+BookingCanBookGateTest exit=0 # passed 3 / 3
+BookingMessagePublicGuardTest exit=1 # passed 0 / 2
+  [BookingMessagePublicGuardTest] FAIL - booking message.php serves while client_messaging is enabled  (an enabled capability gets past the guard to the token lookup: expected 404 got 200)
+  [BookingMessagePublicGuardTest] FAIL - booking message.php refuses with 503 while client_messaging is disabled  (a disabled capability serves 503: expected 503 got 200)
+BookingSettingsSeamTest exit=0 # passed 6 / 6
+BookingTwilioTokenEncryptionTest exit=1 # passed 2 / 3
+  [BookingTwilioTokenEncryptionTest] FAIL - booking settings.php: saving a Twilio Auth Token stores it encrypted at rest, not plaintext  (a value must have been stored)
+CentralLicensingFoundationTest exit=1 # passed 0 / 22
+  [CentralLicensingFoundationTest] FAIL - central foundation: PlanService creates a plan with description/is_active and a template module set  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - central foundation: LicenseService::issue persists a License defaulting to status=unactivated and records a create event  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - central foundation: InstallationService::activate binds an Installation and transitions the License Unactivated -> Active  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - central foundation: a second active Installation for the same License is rejected (activation_limit default 1)  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - central foundation: LicenseService entitlements persist independently across all 8 optional-module combinations  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - central foundation: Core modules can never be granted as explicit license_modules rows (INV-06)  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - central foundation: InstallationService::reset soft-deactivates the old binding and preserves full history  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - central foundation: FK RESTRICT blocks deleting a License with an active Installation; FK CASCADE cleans up modules/events  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - central foundation: License lifecycle operations reject invalid preconditions  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - central foundation: LicenseService::issue rolls back the whole license row if an entitlement grant fails mid-transaction  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - central foundation: activation and plan-module updates are idempotent where required  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - central foundation: the pre-existing licensing_installs/licensing_plans (entitlements_json) path still works unmodified  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - QA fix (Finding 1): InstallationService::activate/reset reject Suspended, Revoked, and Expired licenses  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - QA fix (Finding 1): reset() on a still-Unactivated license also transitions the License to Active (no internally-inconsistent state)  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - QA fix (Finding 2): InstallationService::revoke() rejects revoking an installation that belongs to a different license  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - QA fix (Finding 3): a single Installation activation records exactly one activate event, carrying installation metadata  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - QA fix (Finding 4): LicenseService::syncExpiry/sweepExpired persist Active -> Expired once expires_at has passed, making renew() reachable  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - QA fix (Finding 5): InstallationService rejects an invalid domain rather than storing a NULL normalized domain  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - QA Fix Round 1 (Phase 4, Fix 2B/2C): InstallationService::activate()/reset() reject a malformed installation_id independently of admin/license.php's own pre-check, before any database mutation  (Call to undefined funct
+  [CentralLicensingFoundationTest] FAIL - QA fix (Finding 5): LicenseService::parseDate() rejects malformed dates and renew()/extend() reject a non-future expiry  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - QA fix (Finding 6): LicenseService::issue() rejects an unknown or cross-product plan_id  (Call to undefined function licplug_ensure_schema())
+  [CentralLicensingFoundationTest] FAIL - QA fix (Finding 6): PlanService::create() rejects an unknown product_id  (Call to undefined function licplug_ensure_schema())
+CoachingDiaryFoodsAndLeakTest exit=0 # passed 3 / 3
+CoachingDiaryOwnershipTest exit=0 # passed 3 / 3
+CoachingGoalCheckinOwnershipTest exit=0 # passed 3 / 3
+CoachingRecipeNoteTenantScopeTest exit=0 # passed 2 / 2
+ContactRepositoryTest exit=0 # passed 4 / 4
+ContactSeederTest exit=0 # passed 1 / 1
+CronDocumentationTest exit=0 # passed 3 / 3
+CronRateLimitTest exit=0 # passed 6 / 6
+CustomerAuthParityTest exit=0 # passed 8 / 8
+DashboardMetricsTest exit=1 # passed 1 / 3
+  [DashboardMetricsTest] FAIL - dashboard: a platform admin sees platform-wide tenant/license/plan counts matching direct queries  (platform admin must see the "Platform overview" section)
+  [DashboardMetricsTest] FAIL - dashboard: an ordinary tenant admin never sees platform-wide counts, only their own plan/license section  (an ordinary tenant admin must see their own tenant's plan section instead)
+DbClockHelperTest exit=0 # passed 3 / 3
+DynamicModuleSystemTest exit=0 # passed 6 / 6
+EntitlementServiceTest exit=0 # passed 9 / 9
+FormsPdfTokenLiveTest exit=1 # passed 0 / 1
+  [FormsPdfTokenLiveTest] FAIL - plugins/forms/public/router.php thanks page: a garbage token is quietly rejected (no crash), and the correct token is still accepted  (a garbage token must yield a normal 200 (not a 500 crash): PHP Fatal error:  Uncaught Error:
+FreshInstallMigrationTest exit=0 # passed 3 / 3
+IdentityStoreTest exit=0 # passed 7 / 7
+LicenseGateTest exit=1 # passed 5 / 8
+  [LicenseGateTest] FAIL - license gate: a fresh "active" status passes through normally  (expected 200 got 403)
+  [LicenseGateTest] FAIL - license gate: a fresh "trial" status passes through normally  (expected 200 got 403)
+  [LicenseGateTest] FAIL - license gate: an "active" status still within the 7-day grace period does NOT restrict  (a missed check-in inside the grace window must not restrict yet: expected 200 got 403)
+LicenseServiceTest exit=0 # passed 10 / 10
+LicensingCheckInTest exit=0 # passed 22 / 22
+LicensingKeypairStorageTest exit=0 # passed 5 / 5
+LicensingPluginSchemaTest exit=0 # passed 5 / 5
+LicensingQaFixRound2Test exit=0 # passed 4 / 4
+MembershipClockSkewTest exit=0 # passed 1 / 1
+MfaRepositoryTest exit=0 # passed 1 / 1
+MltSchemaSplitTest exit=0 # passed 2 / 2
+MultilangCrawlerSecurityTest exit=0 # passed 3 / 3
+MultilangTokenizerXssTest exit=0 # passed 6 / 6
+NotificationsTenantIsolationTest exit=0 # passed 2 / 2
+Phase10CheckInSyncTest exit=0 # passed 9 / 9
+Phase13LegacyAdminTest exit=0 # passed 7 / 7
+PlanServiceTest exit=0 # passed 7 / 7
+PlatformAdminGateTest exit=0 # passed 8 / 8
+PlatformAdminManagementTest exit=0 # passed 9 / 9
+PlatformAdminTest exit=0 # passed 9 / 9
+PlatformIdentityWhiteLabelTest exit=0 # passed 12 / 12
+PlatformSignatureAdminShellTest exit=0 # passed 4 / 4
+PlatformSignatureAuthShellTest exit=0 # passed 7 / 7
+PlatformSignatureEmailShellTest exit=0 # passed 5 / 5
+PlatformSignatureErrorShellTest exit=0 # passed 7 / 7
+PluginActivationAuthorizationTest exit=0 # passed 5 / 5
+PluginLoaderArchiveBoundaryTest exit=0 # passed 3 / 3
+RbacTenantIsolationTest exit=0 # passed 1 / 1
+SessionRepositoryTest exit=0 # passed 1 / 1
+SettingsRepositoryParityTest exit=0 # passed 4 / 4
+SlateLicenseCacheStoreTest exit=0 # passed 7 / 7
+SmtpOAuthAccessTokenEncryptionTest exit=0 # passed 3 / 3
+StripeEmbeddedCheckoutRaceTest exit=0 # passed 13 / 13
+StripePermissionSplitTest exit=0 # passed 7 / 7
+StripeReturnRaceTest exit=0 # passed 12 / 12
+StripeSuccessOwnershipTest exit=0 # passed 2 / 2
+StripeSuccessRaceTest exit=0 # passed 11 / 11
+StripeWebhookRaceTest exit=0 # passed 9 / 9
+TenantDelegatedAuthorizationTest exit=0 # passed 10 / 10
+TenantManagementTest exit=0 # passed 8 / 8
+TenantOverrideRecursionTest exit=0 # passed 5 / 5
+TenantSwitchAuditTest exit=0 # passed 10 / 10
+WhiteLabelSettingsTest exit=0 # passed 6 / 6

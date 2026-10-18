@@ -17,6 +17,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/support/licensing-plugin.php';
+
 require_once dirname(__DIR__, 2) . '/plugins/licensing/LicensingAPI.php';
 require_once dirname(__DIR__, 2) . '/plugins/licensing/PlanService.php';
 require_once dirname(__DIR__, 2) . '/plugins/licensing/LicenseService.php';

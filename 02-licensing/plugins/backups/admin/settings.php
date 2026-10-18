@@ -26,15 +26,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = (string)($_POST['_action'] ?? '');
 
         if ($action === 'save_settings') {
-            Database::setSetting('backups.google_client_id', trim((string)($_POST['client_id'] ?? '')));
-            $secret = trim((string)($_POST['client_secret'] ?? ''));
-            if ($secret !== '') { // blank means "leave the stored secret alone"
-                Database::setSetting('backups.google_client_secret', slate_encrypt_secret($secret));
+            // Encrypt first: if the secret cannot be encrypted, nothing on
+            // the form is saved (blank keeps the stored secret).
+            $sealed = slate_seal_posted_secrets(['client_secret' => 'backups.google_client_secret'], $_POST);
+            if ($sealed === null) {
+                $flash = ['type' => 'error', 'msg' => __('settings_not_saved_encryption', 'Nothing was saved: a secret could not be encrypted (check APP_SECRET). Secrets are never stored in plain text.')];
+            } else {
+                Database::setSetting('backups.google_client_id', trim((string)($_POST['client_id'] ?? '')));
+                foreach ($sealed as $k => $envelope) {
+                    Database::setSetting($k, $envelope);
+                }
+                Database::setSetting('backups.retention_count', (string) max(1, min(365, (int)($_POST['retention_count'] ?? 14))));
+                Database::setSetting('backups.enabled', !empty($_POST['enabled']) ? '1' : '0');
+                AuditLog::record('backups.settings_updated');
+                $flash = ['type' => 'success', 'msg' => __('settings_saved', 'Settings saved.')];
             }
-            Database::setSetting('backups.retention_count', (string) max(1, (int)($_POST['retention_count'] ?? 14)));
-            Database::setSetting('backups.enabled', !empty($_POST['enabled']) ? '1' : '0');
-            AuditLog::record('backups.settings_updated');
-            $flash = ['type' => 'success', 'msg' => __('settings_saved', 'Settings saved.')];
 
         } elseif ($action === 'connect') {
             if (!GoogleDriveClient::isConfigured()) {

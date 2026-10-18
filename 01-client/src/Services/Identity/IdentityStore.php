@@ -107,11 +107,10 @@ final class IdentityStore
             'identity_id' => $identityId,
             'purpose'     => $purpose,
             'token_hash'  => hash('sha256', $plaintext),
-            // PHP's clock on purpose: consumeToken() passes a PHP-built $now to
-            // findConsumable(), so both sides are PHP. If that comparison ever
-            // moves into SQL (expires_at > NOW()), this must become
-            // slate_db_now() — PHP and MySQL do not share a timezone here.
-            'expires_at'  => date('Y-m-d H:i:s', time() + $ttlSeconds),
+            // Clock alignment (CORE-1): consumeToken() passes slate_db_now() to
+            // findConsumable(), so expires_at must be stamped on the database clock
+            // via slate_db_time() to prevent false expirations across PHP/MySQL timezone offsets.
+            'expires_at'  => date('Y-m-d H:i:s', slate_db_time() + $ttlSeconds),
         ]);
         return $plaintext;
     }

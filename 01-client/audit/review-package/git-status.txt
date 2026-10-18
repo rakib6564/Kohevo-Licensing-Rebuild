@@ -1,0 +1,66 @@
+# Git state — KOHEVO-STUDIO (captured 2026-10-17T01:20:19Z, after git fetch origin)
+repository root : <repo>
+branch          : audit/settings-secrets-hardening
+HEAD            : e9a1bdf313e0e6aed1ea99e7217076a96f1122c6  (fix(settings): write-only secrets, fail-closed encryption and bounded settings)
+origin/main     : ba4c9a54a5cfc03f2f0f5c388baa5f798dbf3c8a
+merge-base      : ba4c9a54a5cfc03f2f0f5c388baa5f798dbf3c8a
+divergence      : behind 0, ahead 1 — no rebase needed
+upstream        : none (branch never pushed)
+remote          : https://github.com/rakib6564/Kohevo-Licensing-Rebuild.git
+
+Committed on the branch (origin/main..HEAD):
+  e9a1bdf fix(settings): write-only secrets, fail-closed encryption and bounded settings
+
+Uncommitted follow-up changes from the 2026-10-17 verification pass (not staged):
+   M 01-client/audit/kohevo-complete-system-audit.md
+   M 01-client/audit/kohevo-cross-tree-parity.md
+   M 01-client/audit/kohevo-option-disposition.md
+   M 01-client/audit/kohevo-settings-widget-inventory.csv
+   M 01-client/audit/kohevo-widget-test-matrix.md
+   M 01-client/audit/review-package/csv-row-verification.csv
+   M 01-client/audit/review-package/csv-validation.md
+   M 01-client/audit/review-package/csv-verify.py
+   M 01-client/audit/review-package/git-status.txt
+   D 01-client/audit/review-package/new-files.patch
+   M 01-client/audit/review-package/remaining-risks.md
+   D 01-client/audit/review-package/staged-audit-changes.patch
+   M 01-client/audit/review-package/test-results.md
+   M 01-client/audit/review-package/verification-matrix.md
+   M 01-client/lang/fr.php
+   M 01-client/plugins/forms/admin/edit.php
+   M 01-client/plugins/forms/lib/FormsSpamGuard.php
+   M 01-client/plugins/stripe-payment/admin/settings.php
+   M 01-client/src/Module/StudioBuilder/Render/Block/ModuleRenderers/PaymentButtonRenderer.php
+   M 01-client/tests/fixtures/admin-page-post-probe.php
+   M 01-client/tests/integration/PlatformAdminGateTest.php
+   M 01-client/tests/integration/PluginActivationAuthorizationTest.php
+   M 01-client/tests/integration/StripeWriteOnlySecretTest.php
+   M 01-client/tests/unit/Phase7SlateKohevoIdentityTest.php
+   M 01-client/tests/unit/StudioBuilderPaymentBlocksTest.php
+   M 01-client/tests/unit/SystemSettingsAuditFixesTest.php
+   M 02-licensing/lang/fr.php
+   M 02-licensing/plugins/forms/admin/edit.php
+   M 02-licensing/plugins/forms/lib/FormsSpamGuard.php
+   M 02-licensing/plugins/stripe-payment/admin/settings.php
+   M 02-licensing/tests/integration/ContactSeederTest.php
+   M 02-licensing/tests/integration/CustomerAuthParityTest.php
+   M 02-licensing/tests/unit/Phase7SlateKohevoIdentityTest.php
+   M 02-licensing/tests/unit/SystemSettingsAuditFixesTest.php
+  ?? 01-client/audit/kohevo-inventory-removed-rows.csv
+  ?? 01-client/audit/review-package/inventory-corrections.py
+  ?? 01-client/audit/review-package/test-logs/
+  ?? 01-client/tests/integration/FormsCaptchaSecretSaveTest.php
+  ?? 01-client/tests/unit/FormsCaptchaSecretEncryptionTest.php
+  ?? 02-licensing/tests/unit/FormsCaptchaSecretEncryptionTest.php
+
+Excluded untracked (never stage):
+  ?? 01-client/composer.lock
+  ?? 01-client/vendor/
+  ?? 02-licensing/composer.lock
+  ?? 02-licensing/vendor/
+  ?? prototype-14islands/
+  ?? prototype-juanmora/
+
+Ignored local artifact: 01-client/audit/Kohevo_Complete_System_Plugin_Widget_Audit_Final_Bundle.zip (matched by .gitignore)
+Staged: 0 files. Stashes: 0.
+Branch feat/page-meta-fields: 783dbb7, untouched.

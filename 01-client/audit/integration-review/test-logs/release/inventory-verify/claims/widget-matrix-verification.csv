@@ -1,0 +1,54 @@
+type,class,registered,class_exists,tests_claimed,tests_found,count_matches
+core.accordion,AccordionRenderer,True,True,2,2,True
+theme.archive_title,ArchiveTitleRenderer,True,True,3,3,True
+core.button,ButtonRenderer,True,True,20,20,True
+core.card,CardRenderer,True,True,3,3,True
+core.carousel,CarouselRenderer,True,True,1,1,True
+core.container,ContainerRenderer,True,True,15,15,True
+core.countdown,CountdownRenderer,True,True,3,3,True
+core.divider,DividerRenderer,True,True,2,2,True
+core.feature_list,FeatureListRenderer,True,True,8,8,True
+theme.field_value,FieldValueRenderer,True,True,1,1,True
+layout.flex,FlexRenderer,True,True,5,5,True
+core.form_field,FormFieldRenderer,True,True,2,2,True
+core.form,FormRenderer,True,True,2,2,True
+core.gallery,GalleryRenderer,True,True,3,3,True
+layout.grid,GridRenderer,True,True,5,5,True
+core.heading,HeadingRenderer,True,True,62,62,True
+core.hero,HeroRenderer,True,True,14,14,True
+core.icon,IconRenderer,True,True,4,4,True
+core.image,ImageRenderer,True,True,12,12,True
+layout.container,LayoutContainerRenderer,True,True,11,11,True
+core.link,LinkRenderer,True,True,3,3,True
+core.list,ListRenderer,True,True,3,3,True
+core.map,MapRenderer,True,True,2,2,True
+core.modal,ModalRenderer,True,True,2,2,True
+core.nav_menu,NavMenuRenderer,True,True,2,2,True
+layout.offcanvas,OffcanvasRenderer,True,True,2,2,True
+theme.post_content,PostContentRenderer,True,True,1,1,True
+theme.post_meta,PostMetaRenderer,True,True,2,2,True
+theme.post_title,PostTitleRenderer,True,True,3,3,True
+core.query_loop,QueryLoopRenderer,True,True,2,2,True
+core.quote,QuoteRenderer,True,True,6,6,True
+core.rich_text,RichTextRenderer,True,True,8,8,True
+theme.search_box,SearchBoxRenderer,True,True,2,2,True
+layout.section,SectionRenderer,True,True,3,3,True
+core.spacer,SpacerRenderer,True,True,2,2,True
+core.stats,StatsRenderer,True,True,1,1,True
+core.table,TableRenderer,True,True,1,1,True
+core.tabs,TabsRenderer,True,True,1,1,True
+core.text,TextRenderer,True,True,16,16,True
+core.video,VideoRenderer,True,True,4,4,True
+booking.embed,BookingEmbedRenderer,True,True,5,5,True
+booking.services,BookingServicesRenderer,True,True,9,9,True
+forms.form_card,FormCardRenderer,True,True,3,3,True
+forms.embed,FormEmbedRenderer,True,True,4,4,True
+membership.plans,MembershipPlansRenderer,True,True,6,6,True
+payment.button,PaymentButtonRenderer,True,True,3,3,True
+payment.link,PaymentLinkRenderer,True,True,3,3,True
+studio-freelancer-portfolio,"portfolio.experience_timeline`, `portfolio.eyebrow`, `portfolio.footer`, `portfolio.nav_header`, `portfolio.project_card`, `portfolio.reassurance_badges`, `portfolio.service_card`, `portfolio.skill_grid`, `portfolio.stat_highlight`, `portfolio.status_pill`, `portfolio.testimonial_card",False,True,,2,True
+studio-builder` (`StudioBuilderPortfolioWidgets.php`),portfolio.rakib_showcase,False,True,0,0,True
+studio-testimonial-widget,acme.testimonial` (example Widget SDK block),False,True,2,2,True
+coaching-feed` / `CoachingFeedRenderer,There is no coaching block.,False,True,,0,True
+testimonial-slider` / `TestimonialRenderer,"The only testimonial block is `acme.testimonial`, an SDK example. Slider, star-rating and avatar behaviour was not verified.",False,True,,0,True
+"TextValidator`, HTML Purifier",Forms validation lives in `FormsAPI`. The project has no HTML Purifier dependency.,False,True,,0,True

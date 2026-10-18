@@ -61,10 +61,11 @@ through to pick a time.
 - Customer profiles keyed by email (guests included) with no-show /
   loyalty counters and tags.
 
-### Notifications
+### Notifications & Integrations
 - Confirmation, staff-notice, configurable-lead reminders, cancel /
   reschedule, and post-visit follow-up emails.
 - Optional SMS + WhatsApp via Twilio (per settings).
+- **Google Calendar 2-Way Sync** — full OAuth 2.0 connection (`GoogleCalendarSync.php`), automated appointment push/sync, and token encryption at rest via `slate_encrypt_secret()`.
 
 ## Public URLs
 
@@ -149,6 +150,6 @@ All tenant-scoped via `tenant_id`.
 
 - Native calendar drag-to-reschedule (the calendar is currently
   read/navigate + click-through).
-- Google Calendar / iCal sync.
+- External iCal subscription feeds (`.ics` calendar subscriptions).
 - Multi-timezone slot computation (currently server-local).
 - Waitlist and membership plans.

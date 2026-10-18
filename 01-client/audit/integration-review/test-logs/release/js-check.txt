@@ -1,0 +1,2 @@
+ok 01-client/plugins/multilang-translate/assets/js/admin.js
+ok 02-licensing/plugins/multilang-translate/assets/js/admin.js

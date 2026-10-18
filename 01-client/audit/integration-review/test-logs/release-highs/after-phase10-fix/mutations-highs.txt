@@ -1,0 +1,12 @@
+CAUGHT (1) - N1: post content fallback emitted raw | StudioBuilderSprint6ThemeBuilderTest: # passed 7 / 8
+CAUGHT (1) - N2: settings.set accepts any other key | McpSettingsAllowlistTest: # passed 4 / 5
+CAUGHT (1) - N2: settings.get returns encrypted values | McpSettingsAllowlistTest: # passed 4 / 5
+CAUGHT (1) - N2: audit redaction back to password|secret | McpSettingsAllowlistTest: # passed 4 / 5
+CAUGHT (1) - N2 (central): settings.set accepts any other key | McpSettingsAllowlistTest: # passed 4 / 5
+CAUGHT (1) - N3: backing page matched without the exact id check | StudioTemplateDeleteTest: # passed 1 / 2
+CAUGHT (1) - N3: unknown/system template not refused | StudioTemplateDeleteTest: # passed 1 / 2
+CAUGHT (1) - N4: resolver reads draft settings again | StudioBuilderSprint6ThemeBuilderTest: # passed 7 / 8
+CAUGHT (1) - N5: per-action Studio permission skipped | StudioAdminPermissionsTest: # passed 2 / 3
+CAUGHT (1) - N5: unpublish accepts any page | StudioAdminPermissionsTest: # passed 2 / 3
+CAUGHT (1) - N5: content page without edit permission | StudioAdminPermissionsTest: # passed 2 / 3
+11/11 caught
