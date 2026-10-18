@@ -96,9 +96,9 @@ final class TemplateConditionMatcher
 
         // Front page rule
         if ($scope === 'front_page' || $scope === 'home') {
-            $slug = strtolower(trim((string) ($context['slug'] ?? '')));
-            $isFront = !empty($context['is_front_page']) || $slug === '' || $slug === 'home' || $slug === 'index';
-            return $isFront ? self::SCORE_SPECIFIC : self::SCORE_NONE;
+            // Only the page published as the homepage. A search, archive or 404 page has no slug and is
+            // not the front page; a page that happens to be called "home" is not either.
+            return !empty($context['is_front_page']) ? self::SCORE_SPECIFIC : self::SCORE_NONE;
         }
 
         // Category rule
@@ -161,15 +161,10 @@ final class TemplateConditionMatcher
                 return self::SCORE_NONE;
             }
 
+            // "All Portfolio Items" means pages of that type, never the one page whose slug is the type name.
             if ($expected === 'all' || $expected === $actual) {
                 return self::SCORE_CONTENT_TYPE;
             }
-
-            $slug = strtolower(trim((string) ($context['slug'] ?? '')));
-            if ($expected !== '' && $expected === $slug) {
-                return self::SCORE_SPECIFIC;
-            }
-
             return self::SCORE_NONE;
         }
 
@@ -181,7 +176,9 @@ final class TemplateConditionMatcher
             if (!empty($rule['term'])) {
                 $expTerm = (string) $rule['term'];
                 $actTerm = (string) ($context['term'] ?? '');
-                if (strcasecmp($expTerm, $actTerm) === 0) {
+                // A term rule for one archive type (a "news" category) does not match another (a "news" tag).
+                $typeMatches = $expectedType === 'all' || $expectedType === $actualType;
+                if ($typeMatches && strcasecmp($expTerm, $actTerm) === 0) {
                     return self::SCORE_SPECIFIC;
                 }
                 return self::SCORE_NONE;

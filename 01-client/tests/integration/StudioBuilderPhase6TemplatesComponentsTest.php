@@ -406,6 +406,23 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
                 $S->target = $target['id'];
             });
 
+            unit('phase6 int 2b: applying a template keeps the target page\'s own settings and SEO (TI-04)', function () use ($rt, $admin, $editor): void {
+                $source = sbp6_make_page($rt, SBP6_TENANT_A, $editor, 'Search source', 'search-source', 'page', [sbp6_heading('Search layout')], [
+                    'template_type' => 'search',
+                    'conditions'    => ['rules' => [['condition' => 'entire_site', 'type' => 'include']]],
+                ]);
+                sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $admin, 'POST', 'save_template', ['page_id' => $source['id'], 'node_id' => null, 'template_key' => 'search-layout', 'template_type' => 'page_template', 'category' => 'general', 'name' => 'Search layout', 'description' => null, 'thumbnail_media_id' => null]), 'save search template');
+
+                $target = sbp6_make_page($rt, SBP6_TENANT_A, $editor, 'Plain target', 'plain-target', 'page', [sbp6_heading('Before')], ['category' => 'News']);
+                $applied = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'apply_template', ['page_id' => $target['id'], 'template_key' => 'search-layout', 'expected_revision_id' => $target['rev']]), 'apply');
+                $doc = $applied['document'];
+                assert_eq('Search layout', $doc['sections'][0]['blocks'][0]['props']['text'], 'the template\'s content arrives');
+                assert_false(isset($doc['settings']['template_type']), 'the page does not become a search template');
+                assert_false(isset($doc['settings']['conditions']), 'and gets no display conditions');
+                assert_eq('News', $doc['settings']['category'] ?? null, 'its own category stays');
+                assert_eq($target['document']['seo'], $doc['seo'], 'its own SEO stays');
+            });
+
             // ── 3. Reusable presets: insertion is a COPY through the operation pipeline ──
             unit('phase6 int 3: inserting a section/block preset creates owned content with fresh ids (no reference, no dependency), validated like any edit, tenant- and permission-scoped', function () use ($rt, $viewer, $editor, $S): void {
                 $status = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'GET', 'status', ['page' => $S->about]), 'status')['page'];

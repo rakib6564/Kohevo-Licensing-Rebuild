@@ -46,13 +46,9 @@ final class ThemeTemplateResolver
         }
 
         // Merge page attributes into evaluation context
-        $evalContext = array_merge([
-            'page_id'   => $page->id,
-            'slug'      => $page->slug,
-            'page_type' => $page->pageType,
-        ], $context);
+        $evalContext = array_merge(self::pageContext($page), $context);
 
-        if (!isset($evalContext['category']) && $this->pages !== null) {
+        if ((!isset($evalContext['category']) || !isset($evalContext['author_id'])) && $this->pages !== null) {
             $pageRow = null;
             if ($page->id !== null && method_exists($this->pages, 'find')) {
                 $pageRow = $this->pages->find($page->id);
@@ -60,7 +56,10 @@ final class ThemeTemplateResolver
             if ($pageRow === null && method_exists($this->pages, 'findBySlug')) {
                 $pageRow = $this->pages->findBySlug($page->slug, $page->pageType);
             }
-            if ($pageRow !== null && !empty($pageRow['settings_json'])) {
+            if ($pageRow !== null && !isset($evalContext['author_id']) && (int) ($pageRow['created_by'] ?? 0) > 0) {
+                $evalContext['author_id'] = (int) $pageRow['created_by'];
+            }
+            if ($pageRow !== null && !isset($evalContext['category']) && !empty($pageRow['settings_json'])) {
                 try {
                     $decoded = CanonicalJson::decode((string) $pageRow['settings_json']);
                     if (is_array($decoded)) {
@@ -76,9 +75,7 @@ final class ThemeTemplateResolver
         }
 
         // Fetch candidate partials for this region
-        $candidates = method_exists($this->pages, 'allOfType')
-            ? $this->pages->allOfType($partialType, 100)
-            : [];
+        $candidates = $this->candidates($partialType);
 
         $bestScore = 0;
         $bestRow   = null;
@@ -155,11 +152,7 @@ final class ThemeTemplateResolver
      */
     public function resolveSingle(PageAddress $page, array $context = []): ?array
     {
-        return $this->resolveTemplate('single', array_merge([
-            'page_id'   => $page->id,
-            'slug'      => $page->slug,
-            'page_type' => $page->pageType,
-        ], $context));
+        return $this->resolveTemplate('single', array_merge(self::pageContext($page), $context));
     }
 
     /**
@@ -217,13 +210,7 @@ final class ThemeTemplateResolver
         }
 
         // Query published pages of type 'system' or 'page'
-        $candidates = [];
-        if (method_exists($this->pages, 'allOfType')) {
-            $candidates = array_merge(
-                $this->pages->allOfType('system', 50),
-                $this->pages->allOfType('page', 100)
-            );
-        }
+        $candidates = array_merge($this->candidates('system'), $this->candidates('page'));
 
         $bestScore = 0;
         $bestRow   = null;
@@ -278,6 +265,37 @@ final class ThemeTemplateResolver
         }
 
         return null;
+    }
+
+    /**
+     * What a display condition can ask about the page being shown. The front page is the page published
+     * as the homepage, whatever its slug; the content type is the page's type.
+     *
+     * @return array<string, mixed>
+     */
+    private static function pageContext(PageAddress $page): array
+    {
+        return [
+            'page_id'       => $page->id,
+            'slug'          => $page->slug,
+            'page_type'     => $page->pageType,
+            'content_type'  => $page->pageType,
+            'is_front_page' => $page->routeMode === 'homepage',
+        ];
+    }
+
+    /**
+     * Published template candidates of one page type. Filtering on status happens in the query, before
+     * any limit, so templates are not lost on a site with many pages.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function candidates(string $pageType): array
+    {
+        if (method_exists($this->pages, 'publishedOfType')) {
+            return $this->pages->publishedOfType($pageType);
+        }
+        return method_exists($this->pages, 'allOfType') ? $this->pages->allOfType($pageType, 5000) : [];
     }
 
     /**
