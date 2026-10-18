@@ -24,6 +24,9 @@ use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 
 Auth::require();
+// The fields here feed the public portfolio site, so changing them is a
+// Studio edit like any page change.
+Auth::requirePerm('studio-builder.edit');
 
 $studioActor = StudioActor::fromCurrentSession();
 $pageTitle   = __('studio_content', 'Studio Content');
