@@ -35,7 +35,7 @@ final class QueryLoopRenderer implements BlockRendererInterface
     {
         $rows = $scope->rows('items');
         $perPage = max(1, (int) $scope->prop('per_page', 6));
-        $currentPage = max(1, (int) ($scope->prop('page') ?? ($_GET['page'] ?? 1)));
+        $currentPage = self::currentPage($scope);
 
         // If no binding slot provided rows, execute PostsProvider directly
         if ($rows === null) {
@@ -51,13 +51,10 @@ final class QueryLoopRenderer implements BlockRendererInterface
                     'limit'     => $perPage,
                     'page'      => $currentPage,
                 ];
-                // In execution, if tenant is scoped via global/ambient context:
-                if (isset($GLOBALS['SLATE_TENANT_OVERRIDE'])) {
-                    $tenants = new \Slate\Tenancy\TenantContext();
-                    $rows = $provider->execute($tenants, $params);
-                } else {
-                    $rows = [];
-                }
+                // The render context names the tenant this page belongs to; run the query as that tenant
+                // instead of depending on an ambient global being set.
+                $tenants = new \Slate\Tenancy\TenantContext();
+                $rows = $tenants->runAs($scope->context()->tenantId, static fn(): array => $provider->execute($tenants, $params));
             } catch (\Throwable) {
                 $rows = [];
             }
@@ -175,5 +172,16 @@ final class QueryLoopRenderer implements BlockRendererInterface
             . $gridHtml
             . $paginationHtml
             . '</div>';
+    }
+
+    /**
+     * The page of results to show: a `page` prop, then a `page` render attribute, then the visitor's
+     * `?page=` link (the pager writes it). Only a whole number from 1 to 1000 counts; anything else is page 1.
+     */
+    private static function currentPage(BlockRenderScope $scope): int
+    {
+        $raw = $scope->prop('page') ?? $scope->context()->attribute('page') ?? ($_GET['page'] ?? null);
+        $page = filter_var(is_scalar($raw) ? (string) $raw : '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 1000]]);
+        return $page === false ? 1 : $page;
     }
 }
