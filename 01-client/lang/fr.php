@@ -1356,4 +1356,11 @@ return array (
     'plugin_uninstall_type_prompt' => 'Cette action supprime définitivement toutes les données de « %1$s ». Pour confirmer, tapez : %2$s',
     'plugin_uninstall_type_mismatch' => 'Le texte saisi ne correspond pas. Rien n’a été supprimé.',
     'plugin_confirm_mismatch' => 'La confirmation ne correspond pas. Rien n’a été supprimé.',
+    // Secret handling: AI base URL vetting, auto-translate API key.
+    'mcp_gateway_ai_base_url_rejected' => 'Réglages non enregistrés : l’URL de base de l’API doit être une adresse https publique (aucun hôte privé, local ou interne).',
+    'mlt_autotranslate_key' => 'Clé API de traduction automatique',
+    'mlt_autotranslate_key_placeholder' => 'Facultatif : la clé API de votre service de traduction',
+    'mlt_autotranslate_key_encryption_failed' => 'La clé API n’a pas été enregistrée : le chiffrement est indisponible (vérifiez APP_SECRET). Les clés ne sont jamais stockées en clair.',
+    'leave_blank_to_keep' => 'Laisser vide pour conserver le secret existant',
+    'clear_saved_secret' => 'Effacer le secret enregistré',
 );

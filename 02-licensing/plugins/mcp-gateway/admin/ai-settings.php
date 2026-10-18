@@ -30,7 +30,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $clearKey = isset($_POST['clear_ai_api_key']) && $_POST['clear_ai_api_key'] === '1';
         $customerEnabled = !empty($_POST['customer_assistant_enabled']);
 
-        Database::setSetting('mcp-gateway.ai_base_url', mb_substr($baseUrl, 0, 300));
+        // The base URL must be a public https endpoint; a URL that is not is
+        // refused and nothing on the form is saved.
+        $urlVet = $baseUrl === '' ? ['ok' => true, 'error' => null] : AiProviderClient::vetBaseUrl($baseUrl);
+        if (!$urlVet['ok'] || mb_strlen($baseUrl) > 300) {
+            $flash = ['type' => 'error', 'msg' => __('mcp_gateway_ai_base_url_rejected', 'Settings not saved: the API base URL must be a public https address (no private, local or internal hosts).')];
+        }
+    }
+    if ($flash === null) {
+        Database::setSetting('mcp-gateway.ai_base_url', $baseUrl);
         Database::setSetting('mcp-gateway.ai_model', mb_substr($model, 0, 120));
         Database::setSetting('mcp-gateway.customer_assistant_enabled', $customerEnabled ? '1' : '0');
 

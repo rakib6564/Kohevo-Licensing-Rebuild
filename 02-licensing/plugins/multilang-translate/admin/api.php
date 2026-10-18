@@ -184,6 +184,25 @@ switch ($action) {
         mlt_json(['ok' => true]);
         break;
 
+    case 'save_autotranslate_key':
+        // Write-only provider API key: never echoed back, encrypted at rest.
+        Auth::requirePerm('mlt.manage');
+        require_once dirname(__DIR__) . '/includes/AutoTranslate.php';
+        $clear = ($_POST['clear'] ?? '') === '1';
+        $res = MLT_AutoTranslate::resolveStoredApiKey(
+            (string) Database::setting(MLT_AutoTranslate::API_KEY_SETTING),
+            (string)($_POST['api_key'] ?? ''),
+            $clear
+        );
+        if ($res['error'] !== null) {
+            mlt_json(['error' => __('mlt_autotranslate_key_encryption_failed', 'The API key was not saved: encryption is unavailable (check APP_SECRET). Keys are never stored in plain text.')], 422);
+        }
+        Database::setSetting(MLT_AutoTranslate::API_KEY_SETTING, $res['key']);
+        MLT_AutoTranslate::resetProvider();
+        AuditLog::record($clear ? 'mlt.autotranslate_key_cleared' : 'mlt.autotranslate_key_updated');
+        mlt_json(['ok' => true, 'configured' => $res['key'] !== '']);
+        break;
+
     default:
         mlt_json(['error' => 'Unknown action'], 400);
 }
