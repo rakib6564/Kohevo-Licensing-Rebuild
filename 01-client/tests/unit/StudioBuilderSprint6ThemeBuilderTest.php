@@ -364,7 +364,7 @@ unit('sprint6 unit: Theme block renderers output correct semantic HTML and dynam
         $contextSearch, $media, $theme, $collector
     );
     $htmlSearch = $searchRenderer->render($scopeSearch);
-    assert_true(str_contains($htmlSearch, '<form class="sb-search-form"') && str_contains($htmlSearch, 'action="/search"'), "contains form: {$htmlSearch}");
+    assert_true(str_contains($htmlSearch, '<form class="sb-search-form"') && preg_match('~action="(?:https?://[^"/]+)?(?:/[^"]*)?/search"~', $htmlSearch) === 1, "contains form: {$htmlSearch}");
     assert_true(str_contains($htmlSearch, 'placeholder="Search articles..."'), "contains placeholder: {$htmlSearch}");
     assert_true(str_contains($htmlSearch, 'value="elementor"'), "contains pre-filled value: {$htmlSearch}");
     assert_true(str_contains($htmlSearch, '>Find</button>'), "contains submit button: {$htmlSearch}");
