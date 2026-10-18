@@ -26,17 +26,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $baseUrl = trim((string)($_POST['ai_base_url'] ?? ''));
         $model   = trim((string)($_POST['ai_model'] ?? ''));
-        $key     = (string)($_POST['ai_api_key'] ?? '');
         $clearKey = isset($_POST['clear_ai_api_key']) && $_POST['clear_ai_api_key'] === '1';
         $customerEnabled = !empty($_POST['customer_assistant_enabled']);
 
-        // Encrypt a new key before writing anything: if it cannot be
-        // encrypted, nothing on the form is saved (never plaintext).
-        $sealed = $clearKey ? [] : slate_seal_posted_secrets(['ai_api_key' => 'mcp-gateway.ai_api_key'], $_POST);
-        if ($sealed === null) {
+        // Nothing on the form is saved unless both checks pass: the base URL
+        // must be a public https endpoint, and a new API key must be
+        // encrypted before anything is written (never plaintext).
+        $urlVet = $baseUrl === '' ? ['ok' => true, 'error' => null] : AiProviderClient::vetBaseUrl($baseUrl);
+        $sealed = null;
+        if (!$urlVet['ok'] || mb_strlen($baseUrl) > 300) {
+            $flash = ['type' => 'error', 'msg' => __('mcp_gateway_ai_base_url_rejected', 'Settings not saved: the API base URL must be a public https address (no private, local or internal hosts).')];
+        } elseif (($sealed = $clearKey ? [] : slate_seal_posted_secrets(['ai_api_key' => 'mcp-gateway.ai_api_key'], $_POST)) === null) {
             $flash = ['type' => 'error', 'msg' => __('settings_not_saved_encryption', 'Nothing was saved: a secret could not be encrypted (check APP_SECRET). Secrets are never stored in plain text.')];
         } else {
-            Database::setSetting('mcp-gateway.ai_base_url', mb_substr($baseUrl, 0, 300));
+            Database::setSetting('mcp-gateway.ai_base_url', $baseUrl);
             Database::setSetting('mcp-gateway.ai_model', mb_substr($model, 0, 120));
             Database::setSetting('mcp-gateway.customer_assistant_enabled', $customerEnabled ? '1' : '0');
             if ($clearKey) {

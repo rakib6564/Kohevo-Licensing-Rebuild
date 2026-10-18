@@ -63,7 +63,19 @@ if ($refresh === '') {
         . 'myaccount.google.com/permissions and connect again so it re-prompts for consent.');
 }
 
-$enc = function_exists('slate_encrypt_secret');
+// Encrypt every secret BEFORE writing anything. If that is not possible
+// (APP_SECRET missing), store nothing: never plaintext, and never a
+// half-switched connection (auth type changed but no usable token).
+$accessToken = (string)($data['access_token'] ?? '');
+$sealed = SmtpOAuth::sealSecrets([
+    'client_secret' => $clientSecret,
+    'refresh_token' => $refresh,
+    'access_token'  => $accessToken,
+]);
+if ($sealed === null) {
+    if (class_exists('AuditLog')) AuditLog::record('smtp.oauth_connect', $provider, ['ok' => false, 'reason' => 'encryption_unavailable']);
+    $backToSmtp('error', 'Not connected: the OAuth secrets could not be encrypted (APP_SECRET is not configured). Nothing was saved; set APP_SECRET and connect again.');
+}
 
 // Persist the connection. Client id/secret were already saved by the connect
 // action; re-save here so a connection is always self-consistent.
@@ -71,12 +83,11 @@ Database::setSetting('smtp_auth_type',        'xoauth2');
 Database::setSetting('smtp_oauth_provider',   $provider);
 Database::setSetting('smtp_oauth_email',      $email);
 Database::setSetting('smtp_oauth_client_id',  $clientId);
-Database::setSetting('smtp_oauth_client_secret', $enc ? slate_encrypt_secret($clientSecret) : $clientSecret);
-Database::setSetting('smtp_oauth_refresh_token', $enc ? slate_encrypt_secret($refresh) : $refresh);
+Database::setSetting('smtp_oauth_client_secret', $sealed['client_secret']);
+Database::setSetting('smtp_oauth_refresh_token', $sealed['refresh_token']);
 
 // Cache the access token we just received so the first send doesn't re-refresh.
-$accessToken = (string)($data['access_token'] ?? '');
-Database::setSetting('smtp_oauth_access_token', $enc ? slate_encrypt_secret($accessToken) : $accessToken);
+Database::setSetting('smtp_oauth_access_token', $sealed['access_token']);
 Database::setSetting('smtp_oauth_expires', (string)(time() + (int)($data['expires_in'] ?? 3600)));
 
 // Point SMTP transport at the provider and use the mailbox as the From/user.

@@ -1370,4 +1370,9 @@ return array (
     'timezone_system_hint' => 'Le fuseau horaire se gère uniquement dans l’onglet Date et heure.',
     'forms_captcha_encryption_failed' => 'La clé secrète n’a pas été enregistrée : le chiffrement est indisponible (vérifiez APP_SECRET). Les secrets ne sont jamais stockés en clair.',
     'settings_not_saved_encryption' => 'Rien n’a été enregistré : un secret n’a pas pu être chiffré (vérifiez APP_SECRET). Les secrets ne sont jamais stockés en clair.',
+    // Secret handling: AI base URL vetting, auto-translate API key.
+    'mcp_gateway_ai_base_url_rejected' => 'Réglages non enregistrés : l’URL de base de l’API doit être une adresse https publique (aucun hôte privé, local ou interne).',
+    'mlt_autotranslate_key' => 'Clé API de traduction automatique',
+    'mlt_autotranslate_key_placeholder' => 'Facultatif : la clé API de votre service de traduction',
+    'mlt_autotranslate_key_encryption_failed' => 'La clé API n’a pas été enregistrée : le chiffrement est indisponible (vérifiez APP_SECRET). Les clés ne sont jamais stockées en clair.',
 );
