@@ -518,7 +518,7 @@ const EN = {
   ss_group_shadows: 'Shadows',
   ss_group_spacing: 'Spacing',
   ss_group_layout: 'Page widths',
-  ss_hint_layout: "How wide a page's content can get. Each page picks Narrow, Normal, Wide or Full in its Page settings; these set what those sizes mean for the whole site.",
+  ss_hint_layout: "How wide content can get. Each section picks Narrow, Normal, Wide or Full in its own settings; these set what those sizes mean for the whole site.",
   ss_tk_layout_narrow: 'Narrow',
   ss_tk_layout_normal: 'Normal',
   ss_tk_layout_wide: 'Wide',
