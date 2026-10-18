@@ -174,8 +174,6 @@ export function PageInspector() {
   return (
     <div className="sbx-inspector">
       <h2 className="sbx-inspector__title">{t('page_settings')}</h2>
-      {select('container_width', asList(vocab.container_widths), t('width'))}
-
       {hasDisplayConditions(page, settings) && (
         <ConditionsSetting page={page} settings={settings} onSave={(conditions) => applyOp(ops.updateSettings({ conditions }), { label: t('cond_title') })} />
       )}
