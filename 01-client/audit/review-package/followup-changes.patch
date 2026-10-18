@@ -1897,7 +1897,7 @@ index 4e2e073..8e2d704 100644
 @@ -1,112 +1,66 @@
 -# Git state — KOHEVO-STUDIO (captured 2026-10-17T00:24:31Z)
 +# Git state — KOHEVO-STUDIO (captured 2026-10-17T01:20:19Z, after git fetch origin)
- repository root : /Users/rakibhasan/Downloads/Fahim/KOHEVO-STUDIO
+ repository root : <repo>
 -branch          : feat/field-value-dropdown
 -HEAD            : 1ae3847cb88860d13e59b20307d36972f7006038
 -upstream        : origin/feat/field-value-dropdown (behind 0, ahead 0)

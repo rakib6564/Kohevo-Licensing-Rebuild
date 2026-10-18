@@ -1,5 +1,5 @@
 # Git state — KOHEVO-STUDIO (captured 2026-10-17T01:20:19Z, after git fetch origin)
-repository root : /Users/rakibhasan/Downloads/Fahim/KOHEVO-STUDIO
+repository root : <repo>
 branch          : audit/settings-secrets-hardening
 HEAD            : e9a1bdf313e0e6aed1ea99e7217076a96f1122c6  (fix(settings): write-only secrets, fail-closed encryption and bounded settings)
 origin/main     : ba4c9a54a5cfc03f2f0f5c388baa5f798dbf3c8a

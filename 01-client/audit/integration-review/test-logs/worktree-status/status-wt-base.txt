@@ -1,4 +1,4 @@
-## /private/tmp/claude-502/-Users-rakibhasan-Downloads-Fahim-Kohevo-Licensing-Rebuild/d99d9b36-f7a1-4ce0-b635-bbce1acaffae/scratchpad/wt-base
+## <scratchpad>/wt-base
 ## HEAD (no branch)
 HEAD ba4c9a54a5cfc03f2f0f5c388baa5f798dbf3c8a
 vs origin/main (behind ahead): 0	0

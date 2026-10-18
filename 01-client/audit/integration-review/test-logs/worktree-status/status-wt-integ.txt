@@ -1,4 +1,4 @@
-## /private/tmp/claude-502/-Users-rakibhasan-Downloads-Fahim-Kohevo-Licensing-Rebuild/d99d9b36-f7a1-4ce0-b635-bbce1acaffae/scratchpad/wt-integ
+## <scratchpad>/wt-integ
 ## integration/secrets-and-audit
 HEAD d6fc8b4e23780a1d252daafd6acd50f6f6abf1df
 vs origin/main (behind ahead): 0	11
