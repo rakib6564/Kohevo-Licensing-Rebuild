@@ -5,11 +5,12 @@
  * keeps that cheap holds. Real Central Server logic, real client cache, one
  * process per call (tests/fixtures/license-sync-probe.php).
  *
- * Named so it loads after Phase10SynchronizationTest.php, whose p10_*
- * helpers it reuses.
+ * Uses the shared p10_* helpers in tests/support/phase10.php.
  */
 
 declare(strict_types=1);
+
+require_once dirname(__DIR__) . '/support/phase10.php';
 
 const P10Z_CENTRAL = __DIR__ . '/../../../02-licensing/tests/fixtures/phase10-central.php';
 
