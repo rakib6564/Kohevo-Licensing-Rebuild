@@ -469,3 +469,33 @@ unit('theme builder: template selection follows the PUBLISHED conditions and typ
     assert_eq(411, (int) $hit['revision']['id']);
     assert_null($resolver->resolveNotFound(), 'no page becomes the 404 template');
 });
+
+unit('display conditions match the real page: the front page is the homepage, a type means the type, a term keeps its archive type (TB-06)', function (): void {
+    $rule = static fn(array $r): array => ['rules' => [$r + ['type' => 'include']]];
+    $front = $rule(['condition' => 'front_page']);
+    assert_true(TemplateConditionMatcher::score($front, ['slug' => 'welcome', 'is_front_page' => true]) > 0, 'a homepage with any slug is the front page');
+    assert_eq(0, TemplateConditionMatcher::score($front, ['is_search' => true]), 'a search page (no slug) is not the front page');
+    assert_eq(0, TemplateConditionMatcher::score($front, ['is_404' => true]), 'nor is a 404 page');
+    assert_eq(0, TemplateConditionMatcher::score($front, ['slug' => 'home', 'is_front_page' => false]), 'a page called "home" that is not the homepage is not either');
+
+    $portfolio = $rule(['condition' => 'singular', 'value' => 'portfolio']);
+    assert_eq(0, TemplateConditionMatcher::score($portfolio, ['slug' => 'portfolio', 'page_type' => 'page']), '"All Portfolio Items" does not mean the page whose slug is "portfolio"');
+    assert_eq(TemplateConditionMatcher::SCORE_CONTENT_TYPE, TemplateConditionMatcher::score($portfolio, ['slug' => 'any', 'content_type' => 'portfolio']), 'it means pages of that type');
+
+    $newsCategory = $rule(['condition' => 'archive', 'archive_type' => 'category', 'term' => 'news']);
+    assert_eq(0, TemplateConditionMatcher::score($newsCategory, ['archive_type' => 'tag', 'term' => 'news']), 'a "news" category rule does not match the "news" tag archive');
+    assert_eq(TemplateConditionMatcher::SCORE_SPECIFIC, TemplateConditionMatcher::score($newsCategory, ['archive_type' => 'category', 'term' => 'News']), 'it matches the "news" category archive');
+    assert_eq(TemplateConditionMatcher::SCORE_SPECIFIC, TemplateConditionMatcher::score($rule(['condition' => 'archive', 'term' => 'news']), ['archive_type' => 'tag', 'term' => 'news']), 'a term rule with no archive type matches any archive of that term');
+
+    $author = $rule(['condition' => 'author', 'value' => 7]);
+    assert_true(TemplateConditionMatcher::score($author, ['author_id' => 7]) > 0, 'an author rule matches the page author');
+});
+
+unit('the resolver tells conditions which page is the homepage and who wrote it (TB-06)', function (): void {
+    $method = new \ReflectionMethod(\Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::class, 'pageContext');
+    $home = new PageAddress(1, '11111111-1111-4111-8111-111111111111', 'Welcome', 'welcome', 'page', 'published', 'homepage', null, 3);
+    $other = new PageAddress(2, '22222222-2222-4222-8222-222222222222', 'Home', 'home', 'page', 'published', 'standalone', null, 4);
+    assert_true($method->invoke(null, $home)['is_front_page'], 'the homepage route is the front page');
+    assert_false($method->invoke(null, $other)['is_front_page'], 'a standalone page called "home" is not');
+    assert_eq('page', $method->invoke(null, $home)['content_type'], 'the content type is the page type');
+});

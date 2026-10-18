@@ -384,6 +384,34 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             // Tenant B calling handleNotFound() -> returns null (Tenant B has no 404 template configured)
             $respB_404 = $rt->tenants->runAs(S6_TENANT_B, static fn() => $rt->publicRuntime->handleNotFound());
             assert_null($respB_404, 'Tenant B has no custom 404 template, falls back to platform 404');
+
+            // TB-09: on a site with more than a hundred pages, a template titled late in the alphabet is
+            // still found. 150 published system pages and 150 pages titled "A…" sort before "Search Results".
+            $cols = array_values(array_diff($pdo->query('SHOW COLUMNS FROM studiobuilder_pages')->fetchAll(\PDO::FETCH_COLUMN), ['id', 'uuid', 'title', 'slug', 'page_type']));
+            $colList = implode(', ', array_map(static fn(string $c): string => "`{$c}`", $cols));
+            $sourceId = (int) $pdo->query("SELECT id FROM studiobuilder_pages WHERE tenant_id = " . S6_TENANT_A . " AND slug = 'eng-post'")->fetchColumn();
+            assert_true($sourceId > 0, 'a published page to copy');
+            $insert = $pdo->prepare("INSERT INTO studiobuilder_pages (uuid, title, slug, page_type, {$colList}) SELECT ?, ?, ?, ?, {$colList} FROM studiobuilder_pages WHERE id = ?");
+            foreach (['system', 'page'] as $k => $type) {
+                for ($i = 1; $i <= 150; $i++) {
+                    $n = $k * 1000 + $i;
+                    $insert->execute([sprintf('%08x-0000-4000-8000-%012x', $n, $n), sprintf('A filler %s %03d', $type, $i), sprintf('a-filler-%s-%03d', $type, $i), $type, $sourceId]);
+                }
+            }
+            assert_true((int) $pdo->query("SELECT COUNT(*) FROM studiobuilder_pages WHERE tenant_id = " . S6_TENANT_A . " AND slug LIKE 'a-filler-%' AND status = 'published'")->fetchColumn() === 300, '300 published filler pages');
+            $savedGet = $_GET;
+            try {
+                $_GET = ['q' => 'filler'];
+                ob_start();
+                try {
+                    $served = $rt->tenants->runAs(S6_TENANT_A, static fn(): bool => \StudioBuilder::servePublicPath(false, 'search'));
+                } finally {
+                    $outMany = (string) ob_get_clean();
+                }
+                assert_true($served === true && str_contains($outMany, 'Search Results: filler'), 'the search template is still used with 300 more pages titled before it');
+            } finally {
+                $_GET = $savedGet;
+            }
         });
     } finally {
         $port = defined('DB_PORT') ? trim((string) DB_PORT) : '';

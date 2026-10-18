@@ -65,6 +65,25 @@ final class PageRepository extends StudioRepository
     }
 
     /**
+     * Published pages of one type within the active tenant scope, for Theme Builder template lookup.
+     * The status filter runs in SQL before the limit, so a site with many drafts or archived pages
+     * still offers every published candidate; the limit only guards against a runaway query.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function publishedOfType(string $pageType, int $limit = 5000): array
+    {
+        return $this->query()
+            ->where('page_type', $pageType)
+            ->where('status', 'published')
+            ->whereNotNull('published_revision_id')
+            ->orderBy('title', 'ASC')
+            ->orderBy('id', 'ASC')
+            ->limit(max(1, $limit))
+            ->get();
+    }
+
+    /**
      * The tenant's published homepage (`route_mode = homepage`) among the given
      * routable page types; the most recently published one wins if several exist.
      *
