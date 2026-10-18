@@ -118,9 +118,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (($_POST['_action'] ?? '') === 'clear_keys') {
         // Explicit "disconnect" — wipe stored creds so Stripe stops
         // showing up as an available payment method until reconfigured.
-        foreach (['mode', 'publishable_key', 'secret_key', 'webhook_secret',
-                  'verified_at', 'verified_account', 'verified_mode'] as $k) {
+        // "ALL keys" means both modes: StripePaymentAPI::keyByMode() reads
+        // the test_*/live_* slots before the legacy single-key slots, so
+        // clearing only the legacy slots left Stripe configured.
+        $cleared = ['mode', 'publishable_key', 'secret_key', 'webhook_secret',
+                    'verified_at', 'verified_account', 'verified_mode'];
+        foreach (['test', 'live'] as $m) {
+            foreach (['publishable_key', 'secret_key', 'webhook_secret'] as $k) {
+                $cleared[] = $m . '_' . $k;
+            }
+        }
+        foreach ($cleared as $k) {
             Database::setSetting('stripe-payment.' . $k, '');
+        }
+        if (class_exists('AuditLog')) {
+            AuditLog::record('stripe.keys_cleared');
         }
         $flash = ['type' => 'success', 'msg' => __('stripe_settings_keys_cleared', 'Stripe keys cleared.')];
     } else {
@@ -156,10 +168,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // final customer/account eligibility check at checkout.
         $methodBancontact = isset($_POST['method_bancontact'])      ? '1' : '0';
 
-        // If both pk + sk are present, run validation. (If only webhook
-        // was changed, allow that without re-verifying the API key.)
-        $keysChanged = $newPub !== StripeAPI::publishableKey()
-                    || $newSecret !== StripeAPI::secretKey();
+        // Write-only: blank secret inputs preserve existing stored secrets.
+        $existingSecret  = StripeAPI::secretKey();
+        $existingWebhook = StripeAPI::webhookSecret();
+        $newSecret       = ($newSecret !== '')  ? $newSecret  : $existingSecret;
+        $newWebhook      = ($newWebhook !== '') ? $newWebhook : $existingWebhook;
+
+        // If secret was typed anew, or publishable key changed:
+        $keysChanged = ($newSecret !== $existingSecret)
+                    || ($newPub !== StripeAPI::publishableKey());
 
         $verifyError = null;
         $verifyOk    = null;
@@ -186,63 +203,92 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $verifyError = sprintf(__('stripe_settings_account_mismatch_server', 'Account mismatch: publishable belongs to %s, secret belongs to %s. Get both keys from the same Stripe dashboard.'), $pMark, $sMark);
                     } else {
                         // Server-side verification with Stripe itself.
-                        $verifyOk = stripe_verify_secret($newSecret);
-                        if (!$verifyOk['ok']) {
-                            $verifyError = $verifyOk['error'];
-                            $verifyOk = null;
+                        if ($newSecret !== $existingSecret || Database::setting('stripe-payment.verified_at') === '') {
+                            $verifyOk = stripe_verify_secret($newSecret);
+                            if (!$verifyOk['ok']) {
+                                $verifyError = $verifyOk['error'];
+                                $verifyOk = null;
+                            }
                         }
                     }
                 }
             }
         }
 
+        // Encrypt secret material at rest (AES-256-GCM envelope).
+        // Fail closed: new or changed secrets MUST be encrypted. If encryption
+        // helper is unavailable or throws, reject the save to prevent plaintext leak.
+        $encSecret = static function (string $v, bool $isChanged) use (&$verifyError): ?string {
+            if ($v === '') return '';
+            if (!function_exists('slate_encrypt_secret') || !slate_has_app_secret()) {
+                if ($isChanged) {
+                    $verifyError = __('stripe_encryption_unavailable', 'Cannot save secrets: APP_SECRET is not configured or encryption helper is unavailable. Storing secrets in plaintext is disabled for security.');
+                    return null;
+                }
+                return $v;
+            }
+            try {
+                return slate_encrypt_secret($v);
+            } catch (\Throwable $e) {
+                if ($isChanged) {
+                    $verifyError = __('stripe_encryption_failed', 'Cannot save secrets: encryption failed. Storing secrets in plaintext is disabled for security.');
+                    return null;
+                }
+                return $v;
+            }
+        };
+
+        $secretChanged  = ($newSecret !== $existingSecret);
+        $webhookChanged = ($newWebhook !== $existingWebhook);
+
+        $storedSecretKey = (string)(Database::setting('stripe-payment.' . $newMode . '_secret_key') ?: Database::setting('stripe-payment.secret_key') ?: '');
+        $storedWebhookSec = (string)(Database::setting('stripe-payment.' . $newMode . '_webhook_secret') ?: Database::setting('stripe-payment.webhook_secret') ?: '');
+
+        // An unchanged secret keeps its stored value, but a legacy plaintext
+        // value (saved before encryption at rest) is still upgraded to an
+        // envelope on save, as keyByMode() promises. If encryption is
+        // unavailable it stays as it was rather than being lost.
+        $keepStored = static function (string $stored) use ($encSecret): string {
+            if ($stored === '' || str_starts_with($stored, 'enc:v1:')) return $stored;
+            return (string) $encSecret($stored, false);
+        };
+
+        $secretEnc  = $secretChanged ? $encSecret($newSecret, true) : $keepStored($storedSecretKey);
+        $webhookEnc = $webhookChanged ? $encSecret($newWebhook, true) : $keepStored($storedWebhookSec);
+
         if ($verifyError !== null) {
             $flash = ['type' => 'error', 'msg' => $verifyError];
         } else {
-            // Encrypt secret material at rest (AES-256-GCM envelope).
-            // Falls back to plaintext only if APP_SECRET isn't configured,
-            // so a misconfigured install still works rather than fataling.
-            $encSecret = static function (string $v): string {
-                if ($v === '' || !function_exists('slate_encrypt_secret')) return $v;
-                try { return slate_encrypt_secret($v); }
-                catch (\Throwable $e) { return $v; }
-            };
-            $secretEnc  = $encSecret($newSecret);
-            $webhookEnc = $encSecret($newWebhook);
+                // Save. We always write all fields, so unchecked toggles
+                // become '0' (not removed entirely). The publishable key is
+                // public and stored as-is; secret + webhook keys are encrypted.
+                $fields = [
+                    'stripe-payment.mode'              => $newMode,
+                    'stripe-payment.publishable_key'   => $newPub,
+                    'stripe-payment.secret_key'        => (string)$secretEnc,
+                    'stripe-payment.webhook_secret'    => (string)$webhookEnc,
+                    'stripe-payment.allowed_countries' => $newCountries,
+                    'stripe-payment.show_hosted'       => $showHosted,
+                    'stripe-payment.show_embedded'    => $showEmbedded,
+                    'stripe-payment.booking_embedded'  => $bookingEmbedded,
+                    'stripe-payment.wallet_apple_pay'  => $walletApplePay,
+                    'stripe-payment.wallet_google_pay' => $walletGooglePay,
+                    'stripe-payment.wallet_link'       => $walletLink,
+                    'stripe-payment.method_us_bank_account' => $methodBank,
+                    'stripe-payment.method_klarna'          => $methodKlarna,
+                    'stripe-payment.method_cashapp'         => $methodCashapp,
+                    'stripe-payment.method_amazon_pay'      => $methodAmazonPay,
+                    'stripe-payment.method_bancontact'      => $methodBancontact,
+                ];
+                foreach ($fields as $k => $v) {
+                    Database::setSetting($k, (string)$v);
+                }
 
-            // Save. We always write all fields, so unchecked toggles
-            // become '0' (not removed entirely). The publishable key is
-            // public and stored as-is; secret + webhook keys are encrypted.
-            $fields = [
-                'stripe-payment.mode'              => $newMode,
-                'stripe-payment.publishable_key'   => $newPub,
-                'stripe-payment.secret_key'        => $secretEnc,
-                'stripe-payment.webhook_secret'    => $webhookEnc,
-                'stripe-payment.allowed_countries' => $newCountries,
-                'stripe-payment.show_hosted'       => $showHosted,
-                'stripe-payment.show_embedded'    => $showEmbedded,
-                'stripe-payment.booking_embedded'  => $bookingEmbedded,
-                'stripe-payment.wallet_apple_pay'  => $walletApplePay,
-                'stripe-payment.wallet_google_pay' => $walletGooglePay,
-                'stripe-payment.wallet_link'       => $walletLink,
-                'stripe-payment.method_us_bank_account' => $methodBank,
-                'stripe-payment.method_klarna'          => $methodKlarna,
-                'stripe-payment.method_cashapp'         => $methodCashapp,
-                'stripe-payment.method_amazon_pay'      => $methodAmazonPay,
-                'stripe-payment.method_bancontact'      => $methodBancontact,
-            ];
-            foreach ($fields as $k => $v) {
-                Database::setSetting($k, (string)$v);
-            }
-
-            // Phase 2: also save the keys into mode-prefixed slots so
-            // flipping the mode toggle later preserves both sets.
-            // StripePaymentAPI::keyByMode reads test_*/live_* first and
-            // falls back to the legacy single-key slot, so this is
-            // strictly additive.
-            Database::setSetting('stripe-payment.' . $newMode . '_publishable_key', $newPub);
-            Database::setSetting('stripe-payment.' . $newMode . '_secret_key',      $secretEnc);
-            Database::setSetting('stripe-payment.' . $newMode . '_webhook_secret',  $webhookEnc);
+                // Phase 2: also save the keys into mode-prefixed slots so
+                // flipping the mode toggle later preserves both sets.
+                Database::setSetting('stripe-payment.' . $newMode . '_publishable_key', $newPub);
+                Database::setSetting('stripe-payment.' . $newMode . '_secret_key',      (string)$secretEnc);
+                Database::setSetting('stripe-payment.' . $newMode . '_webhook_secret',  (string)$webhookEnc);
 
             // Cache verification info so the status card has fresh info
             // without re-hitting Stripe on every page load.
@@ -406,19 +452,19 @@ require $root . '/admin/partials/header.php';
                 <div class="field">
                     <label class="field-label" for="secret_key">
                         <?= e(__('stripe_settings_secret_key_label', 'Secret key')) ?> <span class="field-required">*</span>
+                        <?php if ($secretKey !== ''): ?>
+                            <span class="badge badge-success" style="font-size: 10px; margin-left: 6px;">✓ <?= e(__('configured', 'Configured')) ?></span>
+                        <?php endif; ?>
                         <span id="sec-marker" class="key-marker" hidden></span>
                     </label>
                     <input type="password" id="secret_key" name="secret_key"
-                           value="<?= e($secretKey) ?>"
-                           placeholder="sk_test_… or sk_live_…"
-                           autocomplete="off"
+                           value=""
+                           placeholder="<?= $secretKey !== '' ? '••••••••  (' . e(__('leave_blank_to_keep', 'Leave blank to keep existing secret')) . ')' : 'sk_test_… or sk_live_…' ?>"
+                           autocomplete="new-password"
                            spellcheck="false"
                            style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;">
                     <div class="field-hint">
-                        <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
-                            <input type="checkbox" id="show-secret">
-                            <?= e(__('stripe_settings_show_secret_label', 'Show secret key')) ?>
-                        </label>
+                        <?= $secretKey !== '' ? e(__('stripe_secret_configured_hint', 'A secret key is securely stored at rest. Leave blank to keep it unchanged, or paste a new one to update.')) : e(__('stripe_secret_empty_hint', 'Enter your secret key starting with sk_test_ or sk_live_.')) ?>
                     </div>
                 </div>
 
@@ -435,11 +481,14 @@ require $root . '/admin/partials/header.php';
                     <div class="field">
                         <label class="field-label" for="webhook_secret">
                             <?= e(__('stripe_settings_webhook_secret_label', 'Webhook signing secret')) ?>
+                            <?php if ($webhookSecret !== ''): ?>
+                                <span class="badge badge-success" style="font-size: 10px; margin-left: 6px;">✓ <?= e(__('configured', 'Configured')) ?></span>
+                            <?php endif; ?>
                         </label>
                         <input type="password" id="webhook_secret" name="webhook_secret"
-                               value="<?= e($webhookSecret) ?>"
-                               placeholder="whsec_…"
-                               autocomplete="off"
+                               value=""
+                               placeholder="<?= $webhookSecret !== '' ? '••••••••  (' . e(__('leave_blank_to_keep', 'Leave blank to keep existing secret')) . ')' : 'whsec_…' ?>"
+                               autocomplete="new-password"
                                spellcheck="false"
                                style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;">
                         <div class="field-hint">
@@ -869,6 +918,15 @@ require $root . '/admin/partials/header.php';
             showBanner('bad', MSG_SEC_FORMAT);
             saveBtn.disabled = true;
             return;
+        }
+
+        var hasSavedSecret = <?= $secretKey !== '' ? 'true' : 'false' ?>;
+        if (secField.value.trim() === '' && hasSavedSecret) {
+            if (pubField.value.trim() === '' || (p && p.type === 'pk')) {
+                hideBanner();
+                saveBtn.disabled = false;
+                return;
+            }
         }
 
         // Need both before we can compare

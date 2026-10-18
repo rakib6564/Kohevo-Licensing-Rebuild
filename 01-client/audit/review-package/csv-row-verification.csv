@@ -1,0 +1,101 @@
+csv_line,Domain,Component,Setting_Or_Widget,source_match
+2,Core: System,General,site_name,VERIFIED
+3,Core: System,General,site_tagline,VERIFIED
+4,Core: System,General,APP_URL,VERIFIED
+5,Core: System,General,site_admin_email,VERIFIED
+6,Core: System,Date & Time,timezone,VERIFIED
+7,Core: System,Date & Time,date_format,VERIFIED
+8,Core: System,Date & Time,time_format,VERIFIED
+9,Core: System,Date & Time,start_of_week,VERIFIED
+10,Core: System,Permalinks,permalink_structure,VERIFIED
+11,Core: System,Branding,brand_accent_color,VERIFIED
+12,Core: System,Branding,brand_font_family,VERIFIED
+13,Core: System,Branding,brand_border_radius,VERIFIED
+14,Core: System,Branding,brand_logo_path,VERIFIED
+15,Core: System,Branding,brand_favicon_path,VERIFIED
+16,Core: System,Security,session_timeout_minutes,VERIFIED
+17,Core: System,Security,max_login_attempts,VERIFIED
+18,Core: System,Security,lockout_minutes,VERIFIED
+19,Core: System,Email,smtp_auth_type,VERIFIED
+20,Core: System,Email,smtp_host,VERIFIED
+21,Core: System,Email,smtp_port,VERIFIED
+22,Core: System,Email,smtp_encryption,VERIFIED
+23,Core: System,Email,smtp_user,VERIFIED
+24,Core: System,Email,smtp_pass,VERIFIED
+25,Core: System,Email,smtp_oauth_provider,VERIFIED
+26,Core: System,Email,smtp_oauth_client_id,VERIFIED
+27,Core: System,Email,smtp_oauth_client_secret,VERIFIED
+28,Core: System,Email,smtp_oauth_refresh_token,VERIFIED
+29,Plugin,backups,retention_count,VERIFIED
+30,Plugin,backups,google_client_id,VERIFIED
+31,Plugin,backups,google_client_secret,VERIFIED
+32,Plugin,backups,google_refresh_token,VERIFIED
+33,Plugin,booking,business_hours,VERIFIED
+34,Plugin,booking,buffer_min,VERIFIED
+35,Plugin,booking,currency,VERIFIED
+36,Plugin,booking,google_enabled,VERIFIED
+37,Plugin,booking,google_client_id,VERIFIED
+38,Plugin,booking,google_client_secret,VERIFIED
+39,Plugin,booking,twilio_sid,VERIFIED
+40,Plugin,booking,twilio_token,VERIFIED
+41,Plugin,booking,twilio_sms_from,VERIFIED
+42,Plugin,coaching,program_plan_id,VERIFIED
+43,Plugin,coaching,default_activity_factor,VERIFIED
+44,Plugin,coaching,coaching.settings_updated,VERIFIED
+45,Plugin,forms,sp_captcha_secret,VERIFIED
+46,Plugin,forms,sp_captcha_site_key,VERIFIED
+47,Plugin,forms,sp_captcha_provider,VERIFIED
+48,Plugin,forms,sp_rate_limit,VERIFIED
+49,Plugin,forms,notify_email,VERIFIED
+50,Plugin,forms,webhook_urls,VERIFIED
+51,Plugin,forms,stripe_payment_field,NOT_IMPLEMENTED
+52,Plugin,licensing,license_key,VERIFIED
+53,Plugin,licensing,remote_license_cache,VERIFIED
+54,Plugin,licensing,LICENSE_SERVER_URL,VERIFIED
+55,Plugin,licensing,OFFLINE_TOLERANCE_SECONDS,VERIFIED
+56,Plugin,mcp-gateway,ai_api_key,VERIFIED
+57,Plugin,mcp-gateway,ai_base_url,VERIFIED
+58,Plugin,mcp-gateway,ai_model,VERIFIED
+59,Plugin,media-library,ALLOWED_MIMES,VERIFIED
+60,Plugin,media-library,media_max_upload_mb,VERIFIED
+61,Plugin,media-library,media_usage,VERIFIED
+62,Plugin,media-library,media_thumb_w,VERIFIED
+63,Plugin,membership,plans,VERIFIED
+64,Plugin,membership,currency,VERIFIED
+65,Plugin,membership,enable_attendance,VERIFIED
+66,Plugin,multilang-translate,default_language,VERIFIED
+67,Plugin,multilang-translate,autotranslate_api_key,VERIFIED
+68,Plugin,stripe-payment,mode,VERIFIED
+69,Plugin,stripe-payment,publishable_key,VERIFIED
+70,Plugin,stripe-payment,secret_key,VERIFIED
+71,Plugin,stripe-payment,webhook_secret,VERIFIED
+72,Plugin,stripe-payment,allowed_countries,VERIFIED
+73,Plugin,stripe-payment,method_klarna,VERIFIED
+74,Plugin,studio-builder,studiobuilder_tokens,VERIFIED
+75,Widget: Studio,Core,core.heading,VERIFIED
+76,Widget: Studio,Core,core.text,VERIFIED
+77,Widget: Studio,Core,core.button,VERIFIED
+78,Widget: Studio,Core,core.image,VERIFIED
+79,Widget: Studio,Core,layout.grid,VERIFIED
+80,Widget: Studio,Core,core.card,VERIFIED
+81,Widget: Studio,Core,core.hero,VERIFIED
+82,Widget: Studio,Core,core.divider,VERIFIED
+83,Widget: Studio,Core,core.spacer,VERIFIED
+84,Widget: Studio,Core,core.video,VERIFIED
+85,Widget: Studio,Core,forms.embed,VERIFIED
+86,Widget: Studio,Core,booking.embed,VERIFIED
+87,Widget: Studio,Core,membership.plans,VERIFIED
+88,Widget: Studio,Core,payment.button,VERIFIED
+89,Widget: Studio,Plugin,portfolio.project_card,VERIFIED
+90,Widget: Studio,Plugin,acme.testimonial,VERIFIED
+91,Field: Forms,Built-in,text,VERIFIED
+92,Field: Forms,Built-in,email,VERIFIED
+93,Field: Forms,Built-in,textarea,VERIFIED
+94,Field: Forms,Built-in,number,VERIFIED
+95,Field: Forms,Built-in,select,VERIFIED
+96,Field: Forms,Built-in,checkbox,VERIFIED
+97,Field: Forms,Built-in,checkboxes,VERIFIED
+98,Field: Forms,Built-in,radio,VERIFIED
+99,Field: Forms,Built-in,date,VERIFIED
+100,Field: Forms,Built-in,file,VERIFIED
+101,Field: Forms,Built-in,signature,VERIFIED

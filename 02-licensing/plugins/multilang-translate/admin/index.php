@@ -304,6 +304,11 @@ if (function_exists('slate_render_settings_tabs')) slate_render_settings_tabs('t
         <label><?= __('background_color', 'Background color') ?> <input type="color" id="mlt-cz-bg" value="#111827"></label>
         <label><?= __('text_color', 'Text color') ?> <input type="color" id="mlt-cz-fg" value="#ffffff"></label>
         <label><?= __('accent_color', 'Accent color') ?> <input type="color" id="mlt-cz-accent" value="#111111"></label>
+        <?php $mltKeySet = (string) Database::setting('multilang-translate.autotranslate_api_key') !== ''; ?>
+        <h4 style="margin:16px 0 4px"><?= __('mlt_autotranslate_key', 'Auto-translate API key') ?><?php if ($mltKeySet): ?> <span class="badge badge-success">✓ <?= e(__('configured', 'Configured')) ?></span><?php endif; ?></h4>
+        <label><input type="password" id="mlt-cz-at-key" value="" autocomplete="new-password" spellcheck="false"
+               placeholder="<?= e($mltKeySet ? __('leave_blank_to_keep', 'Leave blank to keep existing secret') : __('mlt_autotranslate_key_placeholder', 'Optional: your translation provider API key')) ?>"></label>
+        <?php if ($mltKeySet): ?><label><input type="checkbox" id="mlt-cz-at-clear" value="1"> <?= e(__('clear_saved_secret', 'Clear saved secret')) ?></label><?php endif; ?>
         <div class="mlt-modal-actions">
             <button type="button" class="btn" data-close><?= __('cancel', 'Cancel') ?></button>
             <button type="button" class="btn btn-primary" id="mlt-cz-confirm"><?= __('save_settings', 'Save settings') ?></button>

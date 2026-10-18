@@ -1,0 +1,30 @@
+# PR review: `fix/secret-handling-gaps`
+
+I reviewed commit `45eff7a` (on GitHub) line by line. Two defects turned up and are fixed in `6fed518` (local, not pushed). Lines are given for `01-client`; `02-licensing` is byte-identical for every file listed.
+
+## Verdict per requirement
+
+| Requirement | Result | Evidence |
+|---|---|---|
+| SMTP OAuth secrets are encrypted before any setting is written | PASS | `admin/oauth_callback.php` seals the secrets with `SmtpOAuth::sealSecrets()` at lines ~66–78. The first `Database::setSetting` comes after that, and an early return guards it. |
+| An encryption failure cannot leave SMTP half-configured | PASS | `sealSecrets()` returns null if any value fails (`includes/SmtpOAuth.php`, ~44–66). The callback then records the audit log and redirects without writing anything. Mutation test caught: the callback ignoring the seal failure. |
+| A refresh token is never stored in plaintext | PASS | The callback and `accessToken()` only write `$sealed[...]`. The old `$enc ? … : $plain` fallback is gone. Mutation test caught: `sealSecrets` returning plaintext. |
+| The Multilang key is write-only, blank keeps, clear removes, and the endpoint is authorised and CSRF-protected | PASS | `plugins/multilang-translate/admin/api.php`: everything except `export` must be a POST and pass `csrf_verify($_POST['_csrf'])` (lines 39–40). The new action calls `Auth::requirePerm('mlt.manage')` and returns 422 when encryption fails. `SecretHandlingGapsTest` confirms the key and its envelope are never in the response or the page. Mutation tests caught: plaintext stored on failure, and clear ignored. |
+| Existing plaintext keys keep working without being exposed | PASS | `MLT_AutoTranslate::apiKey()` passes a value without the envelope prefix through to the provider only. It is upgraded to an envelope on the next save. The page renders `has key` only. |
+| An AI base URL is refused on save and when used | PASS | `ai-settings.php`: a vetting failure sets `$flash`, and `if ($flash === null)` guards every write. `AiProviderClient::chat()` vets the URL again before calling `curl_init`. Mutation test caught: saving despite the refusal. |
+| DNS resolution, pinning, redirects, IPv4/IPv6, rebinding | PASS after `6fed518` | All A and AAAA records must be public. The request is pinned with `CURLOPT_RESOLVE` to the address that was checked (this defeats rebinding between check and connect), with https as the only protocol and `FOLLOWLOCATION` off. Short IPv4 forms (`127.1`, `0177.0.0.1`, `2130706433`, `0x7f.1`) resolve to loopback and are refused; checked with real DNS. IPv4-mapped `::ffff:127.0.0.1` and `::` are refused. |
+| The test resolver can't be driven by a request | PASS | `vetBaseUrl(string, ?callable $resolve = null)`. `git grep` finds only two production callers, `ai-settings.php:35` and `AiProviderClient.php:103`, and neither passes a resolver. |
+| Test-helper changes don't weaken production authorisation or tenant isolation | PASS | The only helper change is `tests/fixtures/admin-page-post-probe.php` setting `$_REQUEST = array_merge($_GET, $_POST)`. No production file under `includes/`, `src/` or `admin/` gains any test hook (`git grep` for override and probe environment hooks finds none). |
+
+## Findings
+
+| # | Severity | File / lines | Finding | Status |
+|---|---|---|---|---|
+| F1 | Medium | `plugins/mcp-gateway/AiProviderClient.php` `vetBaseUrl()` | PHP's `NO_PRIV_RANGE` and `NO_RES_RANGE` flags still accept several non-public ranges: `100.64.0.0/10` (CGNAT), `198.18.0.0/15`, `224.0.0.0/4`, and the IPv6 prefixes that wrap an IPv4 address: NAT64 `64:ff9b::/96` (`64:ff9b::a9fe:a9fe` = 169.254.169.254), 6to4 `2002::/16` (`2002:7f00:1::` = 127.0.0.1), and Teredo `2001::/32`. Before the fix, `vetBaseUrl` returned `ok` for all of these. | **Fixed in `6fed518`** with a `BLOCKED_RANGES` check. Neighbouring public ranges still pass (`100.128.0.1`, `198.20.0.1`, `2001:4860::8888`). One new unit test per tree; mutation caught. |
+| F2 | Low | `AiProviderClient::chat()` | An IP-literal host still got a `CURLOPT_RESOLVE` entry. For IPv6 that entry is `2606:…::1111:443:[…]`, which curl can't parse. It is harmless for the pin, but it is noise and can produce a warning. | **Fixed in `6fed518`**: no pin is set for IP-literal hosts, since they are never looked up. |
+| F3 | Low | `AiProviderClient::chat()` | If `https_proxy` or `HTTPS_PROXY` is set in the PHP environment, curl tunnels through the proxy and the proxy does its own DNS lookup, so the pin doesn't apply. | Documented; not changed, because forcing `CURLOPT_PROXY=''` could break hosts that rely on a proxy. |
+| F4 | Low | `MLT_AutoTranslate::provider()` | `multilang-translate.autotranslate_endpoint` isn't vetted. The decrypted key is sent to whatever endpoint is stored. The admin UI has no way to write this setting. | Documented. |
+| F5 | Info | `ai-settings.php` on this branch | `slate_encrypt_secret()` for the AI key isn't wrapped in try/catch (the same as `origin/main`). A missing `APP_SECRET` gives a 500 after the URL and model were saved. | Fixed by the audit branch. Once both are merged, the integrated file catches the failure (see `03-conflict-map.md`). |
+| F6 | Info | `.github/workflows/ci.yml` | CI doesn't run `tests/unit/run.php` or `tests/integration/run.php` in either tree, so none of this branch's tests run in CI. | Recommend a follow-up to add both runners to CI. |
+| F7 | Info | `SecretHandlingGapsTest` lines 73 and 90 | These tests pass with `assert_true(true, 'skipped…')` when `APP_SECRET` is missing. `APP_SECRET` is set both in the local `.env` and in CI (`ci.yml` lines 91 and 104), so they do run. | Documented. Prefer an explicit precondition assertion, as `SmtpOAuthSealSecretsTest` does. |
+| F8 | Info | `AiProviderClient::chat()` | A provider error puts up to 300 characters of the response body into the exception message. Destinations are vetted as public, so this cannot read internal services. `CustomerAssistant` only logs the message (`slate_log`), and only the admin chat (`mcp-gateway.manage`) shows it. | Documented; acceptable. |

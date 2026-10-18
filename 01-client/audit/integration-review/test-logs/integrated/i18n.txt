@@ -1,0 +1,3 @@
+01-client      keys used in code: 4767   French entries: 5299   missing: 0   en→fr gaps: 0
+02-licensing   keys used in code: 3556   French entries: 3709   missing: 0   en→fr gaps: 0
+OK — the French pack is complete.

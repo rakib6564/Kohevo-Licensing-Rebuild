@@ -1,0 +1,6 @@
+FAIL - dashboard: a platform admin sees platform-wide tenant/license/plan counts matching direct queries  (platform admin must see the "Platform overview" section)
+FAIL - dashboard: an ordinary tenant admin never sees platform-wide counts, only their own plan/license section  (an ordinary tenant admin must see their own tenant's plan section instead)
+FAIL - license gate: a fresh "active" status passes through normally  (expected 200 got 403)
+FAIL - license gate: a fresh "trial" status passes through normally  (expected 200 got 403)
+FAIL - license gate: an "active" status still within the 7-day grace period does NOT restrict  (a missed check-in inside the grace window must not restrict yet: expected 200 got 403)
+# passed 402 / 407

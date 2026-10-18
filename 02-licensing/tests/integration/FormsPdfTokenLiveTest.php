@@ -21,6 +21,11 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/plugins/forms/FormsAPI.php';
 
+// Central tree: Booking/Forms entry points run through ModuleGuard, so the
+// test tenant needs a plan that includes them (Professional; restored at shutdown).
+require_once dirname(__DIR__) . '/support/tenant-plan.php';
+slate_test_entitle_current_tenant();
+
 unit('plugins/forms/public/router.php thanks page: a garbage token is quietly rejected (no crash), and the correct token is still accepted', function (): void {
     $tid  = current_tenant_id();
     $slug = 'probe-form-' . bin2hex(random_bytes(4));

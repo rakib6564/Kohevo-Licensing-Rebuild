@@ -28,10 +28,41 @@ function lgate_clear(): void {
     Database::query('DELETE FROM remote_license_cache WHERE tenant_id = ?', [current_tenant_id()]);
 }
 
-function lgate_seed(string $status, string $fetchedAt): void {
+/**
+ * QA Fix Round 1 (Fix 4/5): the gate trusts a cache row only when its
+ * installation_id matches this install's own installation_identity row
+ * (SlateLicenseCacheStore::readTrustState()). These fixtures used to seed
+ * rows with no installation_id, which the gate correctly treats as an
+ * untrusted row and restricts, so the "licensed" cases failed. Every
+ * ordinary seed now carries the same installation_id as a local identity
+ * row, as in 01-client's copy of this test. The local identity row is put
+ * back exactly as it was at shutdown.
+ */
+function lgate_local_identity(): string { return str_repeat('c', 32); }
+
+function lgate_ensure_local_identity(): void {
+    static $restoreRegistered = false;
+    $prior = Database::row('SELECT * FROM installation_identity WHERE singleton_id = 1');
+    if (!$restoreRegistered) {
+        $restoreRegistered = true;
+        register_shutdown_function(static function () use ($prior): void {
+            Database::query('DELETE FROM installation_identity WHERE singleton_id = 1');
+            if ($prior) Database::insert('installation_identity', $prior);
+        });
+    }
+    if (!$prior) {
+        Database::insert('installation_identity', ['singleton_id' => 1, 'tenant_id' => current_tenant_id(), 'installation_id' => lgate_local_identity()]);
+    } elseif ((string) $prior['installation_id'] !== lgate_local_identity()) {
+        Database::update('installation_identity', ['installation_id' => lgate_local_identity()], 'singleton_id = 1', []);
+    }
+}
+
+function lgate_seed(string $status, string $fetchedAt, ?string $installationId = 'local'): void {
+    lgate_ensure_local_identity();
     (new SlateLicenseCacheStore(current_tenant_id()))->save([
         'status' => $status, 'plan' => 'pro', 'entitlements' => ['white_label'],
         'expires_at' => null, 'fetched_at' => $fetchedAt,
+        'installation_id' => $installationId === 'local' ? lgate_local_identity() : $installationId,
     ]);
 }
 
@@ -124,3 +155,18 @@ unit('license gate: also runs on public.php, BEFORE PublicRouter dispatch -- a s
         lgate_clear();
     }
 });
+
+unit('license gate: an active row with no installation_id (or another install\'s id) is untrusted and restricts', function () {
+    lgate_clear();
+    try {
+        foreach ([null, str_repeat('d', 32)] as $id) {
+            lgate_seed('active', gmdate('Y-m-d H:i:s'), $id);
+            $res = lgate_probe('index.php');
+            assert_eq(403, $res['status'], 'an untrusted cache row must restrict, not pass as licensed (' . var_export($id, true) . ')');
+            assert_true(str_contains($res['body'], 'License inactive'));
+        }
+    } finally {
+        lgate_clear();
+    }
+});
+

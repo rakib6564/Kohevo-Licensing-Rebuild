@@ -1,0 +1,10 @@
+c-unit exit=1
+l-unit exit=1
+c-smoke exit=0
+l-smoke exit=0
+c-integration exit=1
+l-integration exit=255
+c-studio-unit exit=0
+c-studio-int exit=0
+ui exit=0
+DONE

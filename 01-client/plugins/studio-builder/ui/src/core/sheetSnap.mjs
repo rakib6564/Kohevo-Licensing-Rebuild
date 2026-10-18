@@ -25,6 +25,15 @@ export function dragHeight(startHeight, dy, snaps) {
 }
 
 /**
+ * The sheet's height at release, from where the pointer was let go. Computed rather than read
+ * from the DOM: on a slow device the last pointer moves may not have been rendered yet, and a
+ * stale height would settle on a snap instead of closing.
+ */
+export function releaseHeight(startHeight, startY, releaseY, snaps) {
+  return dragHeight(startHeight, releaseY - startY, snaps);
+}
+
+/**
  * Where to settle on release. Returns a snap height, or null to close.
  *   height    current height while released
  *   velocity  px/ms, positive = moving down (shrinking)

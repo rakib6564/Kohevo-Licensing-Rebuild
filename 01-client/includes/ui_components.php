@@ -559,7 +559,27 @@ if (!function_exists('slate_brand_accent_emit')) {
             if ($m === 'light' || $m === 'dark') $onAccentMode = $m;
         }
 
-        if (($accent === '' || strcasecmp($accent, '#111111') === 0) && $onAccentMode === '') return; // nothing to override — theme already correct
+        $fontFamilyKey = '';
+        if (class_exists('Database')) {
+            $f = strtolower(trim((string)Database::setting('brand_font_family')));
+            if (in_array($f, ['system', 'inter', 'plus-jakarta', 'outfit', 'playfair', 'roboto'], true)) {
+                $fontFamilyKey = $f;
+            }
+        }
+
+        $borderRadiusKey = '';
+        if (class_exists('Database')) {
+            $r = strtolower(trim((string)Database::setting('brand_border_radius')));
+            if (in_array($r, ['none', 'small', 'medium', 'large', 'pill'], true)) {
+                $borderRadiusKey = $r;
+            }
+        }
+
+        $hasAccent = ($accent !== '' && strcasecmp($accent, '#111111') !== 0) || $onAccentMode !== '';
+        $hasFont   = ($fontFamilyKey !== '' && $fontFamilyKey !== 'inter');
+        $hasRadius = ($borderRadiusKey !== '' && $borderRadiusKey !== 'medium');
+
+        if (!$hasAccent && !$hasFont && !$hasRadius) return; // nothing to override — theme already correct
 
         // Both companions come from the shared derivation in brand_tokens.php,
         // which measures contrast rather than testing lightness against a
@@ -575,9 +595,27 @@ if (!function_exists('slate_brand_accent_emit')) {
         // page would otherwise show — only --on-accent actually changes.
         $effectiveAccent = $accent !== '' ? $accent : '#111111';
         $tokens = slate_brand_accent_tokens($effectiveAccent, $onAccentMode ?: null);
+
+        $fontMap = [
+            'inter'        => '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            'plus-jakarta' => '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            'outfit'       => '"Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            'playfair'     => '"Playfair Display", Georgia, serif',
+            'roboto'       => '"Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            'system'       => '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+        ];
+
+        $radiusMap = [
+            'none'   => ['sm' => '0px', 'md' => '0px', 'lg' => '0px', 'xl' => '0px', '2xl' => '0px'],
+            'small'  => ['sm' => '4px', 'md' => '6px', 'lg' => '8px', 'xl' => '10px', '2xl' => '14px'],
+            'medium' => ['sm' => '9px', 'md' => '11px', 'lg' => '16px', 'xl' => '20px', '2xl' => '26px'],
+            'large'  => ['sm' => '12px', 'md' => '16px', 'lg' => '22px', 'xl' => '28px', '2xl' => '34px'],
+            'pill'   => ['sm' => '9999px', 'md' => '9999px', 'lg' => '9999px', 'xl' => '9999px', '2xl' => '9999px'],
+        ];
         ?>
 <style>
 :root {
+<?php if ($hasAccent): ?>
     --accent:       <?= e($effectiveAccent) ?>;
     --accent-deep:  color-mix(in srgb, <?= e($effectiveAccent) ?> 82%, #000);
     --accent-hover: color-mix(in srgb, <?= e($effectiveAccent) ?> 82%, #000);
@@ -589,6 +627,18 @@ if (!function_exists('slate_brand_accent_emit')) {
     --ring:         color-mix(in srgb, <?= e($effectiveAccent) ?> 22%, transparent);
     --info:         <?= e($effectiveAccent) ?>;
     --info-soft:    color-mix(in srgb, <?= e($effectiveAccent) ?> 18%, #fff);
+<?php endif; ?>
+<?php if ($hasFont && isset($fontMap[$fontFamilyKey])): ?>
+    --font-sans:    <?= $fontMap[$fontFamilyKey] ?>;
+    --font-display: <?= $fontMap[$fontFamilyKey] ?>;
+<?php endif; ?>
+<?php if ($hasRadius && isset($radiusMap[$borderRadiusKey])): ?>
+    --radius-sm:    <?= $radiusMap[$borderRadiusKey]['sm'] ?>;
+    --radius:       <?= $radiusMap[$borderRadiusKey]['md'] ?>;
+    --radius-lg:    <?= $radiusMap[$borderRadiusKey]['lg'] ?>;
+    --radius-xl:    <?= $radiusMap[$borderRadiusKey]['xl'] ?>;
+    --radius-2xl:   <?= $radiusMap[$borderRadiusKey]['2xl'] ?>;
+<?php endif; ?>
 }
 </style>
 <?php

@@ -17,6 +17,10 @@ $userId = (int) $admin['id'];
 unit('MFA recovery codes are tenant-bound and single-use', function () use ($tenants, $repo, $tid, $userId) {
     Database::query('DELETE FROM user_mfa_recovery_codes WHERE tenant_id=? AND user_id=?', [$tid, $userId]);
     Database::query('DELETE FROM user_mfa_factors WHERE tenant_id=? AND user_id=?', [$tid, $userId]);
+    // completeMfa() below registers an admin session for this process's
+    // session id; remove only the rows this test adds, or a later test that
+    // registers the same session id hits the unique key.
+    $sessionsBefore = (int) Database::value('SELECT COALESCE(MAX(id), 0) FROM admin_sessions');
     try {
         $factorId = $repo->enroll($userId, Mfa::generateSecret());
         assert_true($factorId > 0, 'factor enrollment returns an id');
@@ -42,6 +46,7 @@ unit('MFA recovery codes are tenant-bound and single-use', function () use ($ten
     } finally {
         Database::query('DELETE FROM user_mfa_recovery_codes WHERE tenant_id=? AND user_id=?', [$tid, $userId]);
         Database::query('DELETE FROM user_mfa_factors WHERE tenant_id=? AND user_id=?', [$tid, $userId]);
+        Database::query('DELETE FROM admin_sessions WHERE tenant_id=? AND user_id=? AND id > ?', [$tid, $userId, $sessionsBefore]);
         unset($_SESSION['slate_mfa_pending'], $_SESSION['slate_user']);
     }
 });

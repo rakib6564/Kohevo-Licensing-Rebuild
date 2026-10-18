@@ -191,7 +191,8 @@ unit('admin/exit-tenant.php: unsets the override and records tenant.exited', fun
     }
 });
 
-// Re-run the existing recursion-safety suite's assertions are already covered
-// by requiring that file directly — confirms this phase introduced zero
-// regression in the mechanism B2 wires UI onto.
-require_once __DIR__ . '/TenantOverrideRecursionTest.php';
+// The recursion-safety suite (TenantOverrideRecursionTest.php) still guards
+// the mechanism B2 wires UI onto; the runners run it as its own file. It is
+// not required from here: a require_once here followed by the runner's
+// require of the same file redeclared its helpers whenever this file ran
+// first (a fatal in any non-alphabetical order).
