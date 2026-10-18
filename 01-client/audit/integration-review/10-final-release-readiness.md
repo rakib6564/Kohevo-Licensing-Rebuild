@@ -22,17 +22,17 @@
 | Mutation tests | ✅ 15/15 (release set) and 11/11 (N1–N5) caught on the combined tree |
 | High findings N1–N5 | ✅ fixed on separate local branches (`pr-high-fixes.md`); ⏳ not pushed |
 | Studio Builder audit (widgets/controls, containers/layout, Theme Builder, templates, tokens, settings) | ✅ written: `studio/`, `settings/`, register `12-…`. Source-read; nothing run in a browser |
-| Required CI on each PR head | ⚠️ #102 only; PR 2, PR 3 and the five High-fix branches are local |
+| Required CI on each PR head | ⏳ #102 green; the seven new PRs were just opened, CI pending |
 | Live providers (Stripe, Google, Microsoft, Twilio, AI, translation) | ⚠️ not called by any test; sandbox plan in `11-…` §4 |
 | Studio Playwright on the combined tree | ⚠️ not run locally (drops `slate_sbx_e2e`) |
 | No unauthorised push, merge or deploy | ✅ the only push was #102, on your instruction |
 
 ## Decisions needed
 
-1. **D1:** approve per-plan gating in central.
+1. ~~**D1:** approve per-plan gating in central.~~ **Approved 2026-10-18.**
 2. **R2:** confirm that a retired plan keeps granting its modules to tenants already on it.
 3. **R5:** restore the central dashboard sections removed by `0d48565`, or retire `DashboardMetricsTest`.
-4. **Pushes:** authorise pushing `fix/licensing-module-guard`, `audit/settings-hardening-next` and the five High-fix branches, and opening their PRs (descriptions in `pr-*.md`).
+4. ~~**Pushes**~~ authorised and done 2026-10-18 (PRs open, not merged).
 5. **N1–N5 behaviour changes:** confirm that MCP may only change general settings, and that template delete needs Studio admin and publish/unpublish needs Studio publish.
 
 ## PR order
@@ -44,4 +44,4 @@
 
 ## Single next action
 
-Approve D1 and authorise pushing the seven local branches (PR 2, PR 3 and the five High fixes), so their CI, including Playwright, runs on the real PR heads.
+Done 2026-10-18: D1 approved and the seven branches pushed with PRs opened (not merged). Next: review CI on each PR, merge #102 first, and assign plans on the central server before deploying PR 2 (`11-runbooks.md` §1).

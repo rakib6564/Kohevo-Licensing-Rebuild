@@ -34,7 +34,7 @@ One row per finding, across the security work, licensing, test infrastructure an
 |---|---|---|---|---|
 | L-01 | High | Central Forms/Booking/Membership fatal: `ModuleGuard` class missing | Fixed | PR 2 `08f3b99` |
 | L-02 | High | No way to assign a plan to a tenant; per-plan gating would lock tenants out | Fixed | PR 2 `2866452` Tenants › Plan selector (platform admin, CSRF, audit `tenant.plan_assigned`, inactive plans refused) + `PlanCoverage` warning + CLI; `TenantPlanAdminTest` |
-| L-03 | — | D1: gate central modules per plan (recommended) vs exempt central | **Decision** | `09-d1-decision-and-moduleguard-review.md` |
+| L-03 | — | D1: gate central modules per plan (recommended) vs exempt central | **Approved** 2026-10-18 | `09-d1-decision-and-moduleguard-review.md` |
 | L-04 | — | Retired (inactive) plan: tenants already on it keep its modules; new assignment refused | **Decision** (implemented as recommended, test documents it) | `TenantPlanAdminTest` case 3 |
 | L-05 | Medium | Dashboard "Platform overview" and "Your plan" sections removed by `0d48565` (likely accidental); 2 `DashboardMetricsTest` failures | **Decision** (restore or retire) | `02-licensing/admin/index.php` |
 

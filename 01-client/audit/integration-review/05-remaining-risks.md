@@ -25,7 +25,7 @@ Every item was checked against the combined tree `integration/release-check` (lo
 
 | # | Severity | Item | Recommendation |
 |---|---|---|---|
-| D1 | High: **decision** | Gate central Forms, Booking and Membership per plan (implemented) or exempt the central tree | Approve per-plan gating. Before deploying PR 2, run `bin/check-tenant-plans.php` and assign plans, starting with the operator's tenant (`11-runbooks.md` §1). Nothing is assigned automatically. |
+| D1 | High: **approved 2026-10-18** | Gate central Forms, Booking and Membership per plan (implemented) or exempt the central tree | Approve per-plan gating. Before deploying PR 2, run `bin/check-tenant-plans.php` and assign plans, starting with the operator's tenant (`11-runbooks.md` §1). Nothing is assigned automatically. |
 | R2 | Medium: **decision** | A retired (inactive) plan keeps granting its modules to tenants already on it; new assignments are refused. Re-saving a tenant's current retired plan is a no-op | Confirm. It matches the architecture doc ("retire from future use"). If retiring should also revoke, it is one change in `PlanService::entitlementsFor()` plus a test. |
 | R5 | Medium: **decision** | `0d48565` ("Fix Date & Time formatting mismatch…") removed the central dashboard's "Platform overview" and "Your plan" sections. That looks accidental and is the cause of the 2 remaining `DashboardMetricsTest` failures | Restore the sections (preferred) or retire the test. Not changed here. |
 

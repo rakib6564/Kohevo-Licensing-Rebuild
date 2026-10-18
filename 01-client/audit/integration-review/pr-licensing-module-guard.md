@@ -15,7 +15,7 @@ Branch `fix/licensing-module-guard`, based on `origin/main` `ba4c9a5`: 6 commits
 
 Commit `d23f4e0` bundled Forms, Booking and Membership into central, but not the guard they call: **60 calls in 56 central files**. On `main` every one of those pages, routes, API calls, MCP tools and hooks fails with `Class "ModuleGuard" not found` (a 500).
 
-### Policy (decision D1, needs owner approval)
+### Policy (decision D1, approved by the owner on 2026-10-18)
 
 Central tenants are gated by **their own platform plan**; central gets no exemption. This uses central's existing, tested `EntitlementService`:
 
