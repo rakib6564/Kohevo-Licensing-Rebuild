@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '17';
+    public const VERSION = '18';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -240,11 +240,8 @@ final class StudioStylesheet
             . '.sb-tracking-tighter{letter-spacing:-0.05em}.sb-tracking-tight{letter-spacing:-0.025em}.sb-tracking-normal{letter-spacing:0}.sb-tracking-wide{letter-spacing:0.025em}.sb-tracking-wider{letter-spacing:0.05em}.sb-tracking-widest{letter-spacing:0.1em}'
             . '.sb-radius-none{border-radius:0}.sb-radius-sm{border-radius:.25rem}.sb-radius-md{border-radius:.5rem}.sb-radius-lg{border-radius:1rem}.sb-radius-xl{border-radius:1.5rem}.sb-radius-2xl{border-radius:2rem}.sb-radius-full{border-radius:9999px}'
             . '.sb-shadow-none{box-shadow:none}.sb-shadow-sm{box-shadow:0 1px 2px 0 rgba(0,0,0,0.05)}.sb-shadow-md{box-shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -2px rgba(0,0,0,0.1)}.sb-shadow-lg{box-shadow:0 10px 15px -3px rgba(0,0,0,0.1),0 4px 6px -4px rgba(0,0,0,0.1)}.sb-shadow-xl{box-shadow:0 20px 25px -5px rgba(0,0,0,0.1),0 8px 10px -6px rgba(0,0,0,0.1)}.sb-shadow-2xl{box-shadow:0 25px 50px -12px rgba(0,0,0,0.25)}.sb-shadow-inner{box-shadow:inset 0 2px 4px 0 rgba(0,0,0,0.05)}'
-            . '.sb-border{border:1px solid var(--sb-border-default,#e2e8f0)}.sb-border-2{border-width:2px}.sb-border-4{border-width:4px}.sb-border-none{border:none}.sb-border-dashed{border-style:dashed}'
+            . '.sb-border{border:1px solid var(--sb-border-default,#e2e8f0)}.sb-border-2{border-width:2px}.sb-border-4{border-width:4px}.sb-border-none{border:none}.sb-border-solid{border-style:solid}.sb-border-dashed{border-style:dashed}.sb-border-dotted{border-style:dotted}.sb-border-double{border-style:double}'
             . '.sb-m-auto{margin:auto}.sb-mx-auto{margin-left:auto;margin-right:auto}.sb-my-auto{margin-top:auto;margin-bottom:auto}.sb-m-none{margin:0}.sb-my-none{margin-top:0;margin-bottom:0}'
-            . '.sb-align-desktop-left{text-align:left}.sb-align-desktop-center{text-align:center}.sb-align-desktop-right{text-align:right}'
-            . '.sb-align-tablet-left{text-align:left}.sb-align-tablet-center{text-align:center}.sb-align-tablet-right{text-align:right}'
-            . '.sb-align-mobile-left{text-align:left}.sb-align-mobile-center{text-align:center}.sb-align-mobile-right{text-align:right}'
             . '.sb-query-loop{width:100%}'
             . '@media (max-width:767.98px){.sb-query-loop .sb-query-loop__grid{grid-template-columns:minmax(0,1fr)}}'
             . '.sb-post-card{display:flex;flex-direction:column;border:1px solid var(--sb-border-default,#e2e8f0);border-radius:var(--sb-radius-md,.5rem);overflow:hidden;background:var(--sb-surface-secondary,#ffffff);transition:box-shadow .2s ease}'
@@ -439,8 +436,22 @@ final class StudioStylesheet
         $css .= '@media (min-width:1024px){.sb-hide-desktop{display:none!important}}';
         $css .= '@media (min-width:768px) and (max-width:1023.98px){.sb-hide-tablet{display:none!important}}';
         $css .= '@media (max-width:767.98px){.sb-hide-mobile{display:none!important}}';
+        // Per-device alignment, desktop first: the desktop value is the base, a tablet value
+        // overrides it at tablet width and below, a mobile value overrides both on a phone.
+        $css .= self::alignRules('desktop');
+        $css .= '@media (max-width:1023.98px){' . self::alignRules('tablet') . '}';
+        $css .= '@media (max-width:767.98px){' . self::alignRules('mobile') . '}';
 
         return self::$cache = $css;
+    }
+
+    private static function alignRules(string $device): string
+    {
+        $css = '';
+        foreach (CanonicalDocumentSchema::ALLOWED_ALIGNMENTS as $align) {
+            $css .= '.sb-align-' . $device . '-' . $align . '{text-align:' . $align . '}';
+        }
+        return $css;
     }
 
     public static function resetCache(): void

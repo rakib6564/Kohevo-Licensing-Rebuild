@@ -694,3 +694,36 @@ unit('states: focus follows focus inside the block, a state colour reaches the t
     assert_true(!str_contains($c2->css(), 'color:inherit'), 'an opacity-only state leaves the text alone');
     assert_true($withColor !== '', 'a class is returned');
 });
+
+// ── Per-device alignment and border styles (CL-03, W-F2) ──────────────────
+
+unit('per-device alignment: desktop is the base, tablet and mobile apply only at their widths and below', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    $tabletAt = strpos($css, '@media (max-width:1023.98px){.sb-align-tablet-');
+    $mobileAt = strpos($css, '@media (max-width:767.98px){.sb-align-mobile-');
+    assert_true($tabletAt !== false && $mobileAt !== false, 'tablet and mobile alignment sit in their own media queries');
+    foreach (CanonicalDocumentSchema::ALLOWED_ALIGNMENTS as $a) {
+        foreach (['desktop', 'tablet', 'mobile'] as $device) {
+            assert_eq(1, substr_count($css, ".sb-align-{$device}-{$a}{"), "one rule for {$device} {$a}");
+        }
+        $desktopAt = strpos($css, ".sb-align-desktop-{$a}{text-align:{$a}}");
+        assert_true($desktopAt !== false && $desktopAt < $tabletAt, "desktop {$a} is a base rule, before the tablet query");
+        assert_true(strpos($css, ".sb-align-tablet-{$a}{") > $tabletAt && strpos($css, ".sb-align-tablet-{$a}{") < $mobileAt, "tablet {$a} only inside the tablet query");
+        assert_true(strpos($css, ".sb-align-mobile-{$a}{") > $mobileAt, "mobile {$a} only inside the mobile query");
+    }
+    // The mobile value can no longer win on a desktop screen: no mobile rule outside a query.
+    assert_false((bool) preg_match('/^[^@]*\.sb-align-mobile-/', substr($css, 0, $tabletAt)), 'no mobile alignment before the queries');
+});
+
+unit('border styles: every offered style has a rule, so a solid, dotted or double border shows', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    foreach (CanonicalDocumentSchema::ALLOWED_BORDER_STYLES as $style) {
+        $rule = $style === 'none' ? '.sb-border-none{border:none}' : ".sb-border-{$style}{border-style:{$style}}";
+        assert_true(str_contains($css, $rule), "{$style} has its rule");
+    }
+    $r = sbss_render(['border' => ['style' => 'solid', 'width' => '2px', 'color' => '#ff0000']]);
+    assert_true(str_contains($r['html'], 'sb-border-solid'), 'the block carries the style class');
+    assert_true(str_contains($r['html'] . $r['css'], 'border-width:2px'), 'and its width: ' . $r['html'] . ' ' . $r['css']);
+});
