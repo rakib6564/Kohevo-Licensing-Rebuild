@@ -29,3 +29,19 @@ export const PROP_PRESENTERS = Object.freeze({
 });
 
 export const presentersFor = (type) => PROP_PRESENTERS[type] || null;
+
+// Container props that "Flex & grid" (style.layout) can also set. The style is a scoped rule that comes after the
+// prop's class, so when both are set the style wins; the Inspector then shows the prop read-only (CL-02).
+export const LAYOUT_OWNED_PROPS = Object.freeze({
+  'layout.flex': { direction: 'direction', wrap: 'wrap', justify: 'justify', align: 'align', gap: 'gap' },
+  'layout.grid': { columns: 'columns', align: 'align', gap: 'gap' },
+  'core.container': { direction: 'direction', gap: 'gap' },
+});
+
+/** The prop keys of `type` whose value `style.layout` currently overrides. */
+export function layoutOwnedProps(type, style) {
+  const map = LAYOUT_OWNED_PROPS[type];
+  const layout = style && typeof style === 'object' && style.layout && typeof style.layout === 'object' ? style.layout : null;
+  if (!map || !layout) return [];
+  return Object.keys(map).filter((prop) => layout[map[prop]] !== undefined && layout[map[prop]] !== null && layout[map[prop]] !== '');
+}

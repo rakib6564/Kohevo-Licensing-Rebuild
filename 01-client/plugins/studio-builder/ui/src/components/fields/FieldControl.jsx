@@ -172,30 +172,42 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
 });
 
 /** Controls for a map of fields (object properties, repeater items, block props). */
-export function ObjectFields({ schema, value, onChange, manifest, mediaPicker, presenters = null, blockType = null }) {
+export function ObjectFields({ schema, value, onChange, manifest, mediaPicker, presenters = null, blockType = null, owned = [] }) {
   return asList(schema).map((f) => {
-    const set = (v) => onChange({ ...value, [f.key]: v });
-    const presenter = presenters && presenters[f.key];
-    const fieldId = blockType ? `${blockType}.${f.key}` : null;
-    const labelOf = fieldId && tableFor(fieldId) ? sizedLabeller(fieldId) : null;
-    if (presenter && presenter.tiles && f.type === 'number') return <PropTiles key={f.key} field={f} value={value[f.key] ?? null} presenter={presenter} onChange={set} />;
-    if (presenter && (presenter.icons || presenter.pills) && f.type === 'enum') return <PropChoice key={f.key} field={f} value={value[f.key] ?? null} presenter={presenter} labelOf={labelOf} onChange={set} />;
-    const control = (
-      <FieldControl
-        key={f.key}
-        field={f}
-        value={value[f.key] ?? null}
-        manifest={manifest}
-        mediaPicker={mediaPicker}
-        labelOf={labelOf}
-        onChange={set}
-      />
+    const field = objectField(f, value, onChange, manifest, mediaPicker, presenters, blockType);
+    if (!owned.includes(f.key)) return field;
+    // Another control owns this value: show it, read-only, and say where to change it.
+    return (
+      <fieldset key={f.key} className="sbx-owned" disabled data-owned={f.key}>
+        {field}
+        <p className="sbx-hint">{t('prop_owned_by_layout')}</p>
+      </fieldset>
     );
-    if (f.key === 'highlight' && highlightMissing(value)) {
-      return <Fragment key={f.key}>{control}<p className="sbx-hint sbx-hint--warn" role="status">{t('highlight_not_found')}</p></Fragment>;
-    }
-    return control;
   });
+}
+
+function objectField(f, value, onChange, manifest, mediaPicker, presenters, blockType) {
+  const set = (v) => onChange({ ...value, [f.key]: v });
+  const presenter = presenters && presenters[f.key];
+  const fieldId = blockType ? `${blockType}.${f.key}` : null;
+  const labelOf = fieldId && tableFor(fieldId) ? sizedLabeller(fieldId) : null;
+  if (presenter && presenter.tiles && f.type === 'number') return <PropTiles key={f.key} field={f} value={value[f.key] ?? null} presenter={presenter} onChange={set} />;
+  if (presenter && (presenter.icons || presenter.pills) && f.type === 'enum') return <PropChoice key={f.key} field={f} value={value[f.key] ?? null} presenter={presenter} labelOf={labelOf} onChange={set} />;
+  const control = (
+    <FieldControl
+      key={f.key}
+      field={f}
+      value={value[f.key] ?? null}
+      manifest={manifest}
+      mediaPicker={mediaPicker}
+      labelOf={labelOf}
+      onChange={set}
+    />
+  );
+  if (f.key === 'highlight' && highlightMissing(value)) {
+    return <Fragment key={f.key}>{control}<p className="sbx-hint sbx-hint--warn" role="status">{t('highlight_not_found')}</p></Fragment>;
+  }
+  return control;
 }
 
 /** The token chooser: a named, sampled list (see TokenPicker). Kept under its old name for existing callers. */

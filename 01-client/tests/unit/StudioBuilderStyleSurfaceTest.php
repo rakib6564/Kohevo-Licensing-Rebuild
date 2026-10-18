@@ -727,3 +727,23 @@ unit('border styles: every offered style has a rule, so a solid, dotted or doubl
     assert_true(str_contains($r['html'], 'sb-border-solid'), 'the block carries the style class');
     assert_true(str_contains($r['html'] . $r['css'], 'border-width:2px'), 'and its width: ' . $r['html'] . ' ' . $r['css']);
 });
+
+// ── One owner for container layout values (CL-02) ─────────────────────────
+
+unit('container layout: a Flex & grid value beats the matching prop, which is why the Inspector locks the prop', function (): void {
+    $tenants   = new TenantContext();
+    $renderer  = new DocumentRenderer(BlockRegistry::withAllCoreBlocks(), BlockRendererRegistry::withCoreRenderers(), new CoreMediaResolver($tenants), new ProviderBindingResolver(new DataProviderRegistry(), $tenants));
+    $collector = new RenderCollector();
+    $html = $renderer->renderBlock([
+        'id' => 'blk_cccccccccccccccccccccccc', 'type' => 'layout.flex', 'version' => 1,
+        'props' => ['direction' => 'row'],
+        'style' => ['layout' => ['direction' => 'column']] + CanonicalDocumentSchema::defaultBlockStyle(),
+        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+        'bindings' => [], 'children' => [], 'animation' => [], 'interactions' => [],
+    ], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), $collector, false);
+    $css = $collector->css();
+    assert_true(str_contains($html, 'sb-flex--row'), 'the prop still writes its class: ' . $html);
+    $class = sbss_class($html);
+    assert_true((bool) preg_match('/\.' . preg_quote($class, '/') . '\{[^}]*flex-direction:column/', $css), 'the style is a scoped rule for that element: ' . $css);
+    assert_true(strpos(\Slate\Module\StudioBuilder\Render\StudioStylesheet::css() . $css, '.' . $class . '{') > strpos(\Slate\Module\StudioBuilder\Render\StudioStylesheet::css(), '.sb-flex--row'), 'the scoped rule comes after the class rule, so it wins');
+});
