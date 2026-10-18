@@ -370,6 +370,43 @@ unit('sprint6 unit: Theme block renderers output correct semantic HTML and dynam
     assert_true(str_contains($htmlSearch, '>Find</button>'), "contains submit button: {$htmlSearch}");
 });
 
+unit('theme.post_content: an editor-typed fallback with event handlers or scripts is never emitted raw', function (): void {
+    $collector = new RenderCollector();
+    $site = new SiteContext('https://example.test', 'My Site', '', '', 'en');
+    $theme = new ResolvedTheme('default', []);
+    $media = new _SbSprint6FakeMedia();
+    $renderer = new PostContentRenderer();
+    $render = static function (array $props, array $attrs = []) use ($renderer, $site, $theme, $media, $collector): string {
+        return $renderer->render(new BlockRenderScope(
+            ['id' => 'x1', 'type' => 'theme.post_content', 'props' => $props],
+            RenderContext::forPublic(1, $site, null, $attrs), $media, $theme, $collector
+        ));
+    };
+
+    $payloads = [
+        '<img src=x onerror=alert(document.cookie)>',
+        '<p onclick="alert(1)">Hi</p>',
+        '<svg onload=alert(1)>',
+        '<a href="javascript:alert(1)">x</a>',
+        '<iframe src="https://evil.example"></iframe>',
+        '<p>ok</p><script>alert(1)</script>',
+    ];
+    foreach ($payloads as $p) {
+        $html = $render(['content' => $p]);
+        foreach (['onerror', 'onclick', 'onload', 'javascript:', '<script', '<iframe', '<img', '<svg'] as $bad) {
+            assert_false(stripos($html, $bad) !== false, "fallback {$p} must not emit {$bad}: {$html}");
+        }
+    }
+    assert_true(\Slate\Module\StudioBuilder\Schema\FieldSchema::containsExecutableOrSqlFragment('<img src=x onerror=alert(document.cookie)>') === false,
+        'precondition: the write-time filter lets the img/onerror payload through, so output escaping is what stops it');
+
+    // Allowed formatting still renders; plain text keeps line breaks and is escaped.
+    assert_true(str_contains($render(['content' => '<p>Hello <strong>there</strong></p>']), '<p>Hello <strong>there</strong></p>'), 'safe markup kept');
+    assert_true(str_contains($render(['content' => "a < b\nnext"]), 'a &lt; b<br />'), 'plain text escaped with line breaks');
+    // Context-supplied content gets the same treatment.
+    assert_false(str_contains($render([], ['content' => '<img src=x onerror=alert(1)>']), 'onerror'), 'context content sanitized too');
+});
+
 unit('theme builder: template selection follows the PUBLISHED conditions and type, not an unpublished draft', function (): void {
     $pagesRepo = new class {
         public array $pages = [];
@@ -431,41 +468,4 @@ unit('theme builder: template selection follows the PUBLISHED conditions and typ
     assert_true($hit !== null && (int) $hit['page']['id'] === 121, 'the real archive template serves Tech with its published (unconditioned) settings');
     assert_eq(411, (int) $hit['revision']['id']);
     assert_null($resolver->resolveNotFound(), 'no page becomes the 404 template');
-});
-
-unit('theme.post_content: an editor-typed fallback with event handlers or scripts is never emitted raw', function (): void {
-    $collector = new RenderCollector();
-    $site = new SiteContext('https://example.test', 'My Site', '', '', 'en');
-    $theme = new ResolvedTheme('default', []);
-    $media = new _SbSprint6FakeMedia();
-    $renderer = new PostContentRenderer();
-    $render = static function (array $props, array $attrs = []) use ($renderer, $site, $theme, $media, $collector): string {
-        return $renderer->render(new BlockRenderScope(
-            ['id' => 'x1', 'type' => 'theme.post_content', 'props' => $props],
-            RenderContext::forPublic(1, $site, null, $attrs), $media, $theme, $collector
-        ));
-    };
-
-    $payloads = [
-        '<img src=x onerror=alert(document.cookie)>',
-        '<p onclick="alert(1)">Hi</p>',
-        '<svg onload=alert(1)>',
-        '<a href="javascript:alert(1)">x</a>',
-        '<iframe src="https://evil.example"></iframe>',
-        '<p>ok</p><script>alert(1)</script>',
-    ];
-    foreach ($payloads as $p) {
-        $html = $render(['content' => $p]);
-        foreach (['onerror', 'onclick', 'onload', 'javascript:', '<script', '<iframe', '<img', '<svg'] as $bad) {
-            assert_false(stripos($html, $bad) !== false, "fallback {$p} must not emit {$bad}: {$html}");
-        }
-    }
-    assert_true(\Slate\Module\StudioBuilder\Schema\FieldSchema::containsExecutableOrSqlFragment('<img src=x onerror=alert(document.cookie)>') === false,
-        'precondition: the write-time filter lets the img/onerror payload through, so output escaping is what stops it');
-
-    // Allowed formatting still renders; plain text keeps line breaks and is escaped.
-    assert_true(str_contains($render(['content' => '<p>Hello <strong>there</strong></p>']), '<p>Hello <strong>there</strong></p>'), 'safe markup kept');
-    assert_true(str_contains($render(['content' => "a < b\nnext"]), 'a &lt; b<br />'), 'plain text escaped with line breaks');
-    // Context-supplied content gets the same treatment.
-    assert_false(str_contains($render([], ['content' => '<img src=x onerror=alert(1)>']), 'onerror'), 'context content sanitized too');
 });
