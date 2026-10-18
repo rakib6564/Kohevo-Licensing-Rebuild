@@ -329,17 +329,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } elseif ($action === 'delete_template') {
             $templateId = (int) ($_POST['template_id'] ?? 0);
-            if ($templateId > 0) {
+            $doomed = $templateId > 0
+                ? Database::row("SELECT id, template_key FROM studiobuilder_templates WHERE tenant_id = ? AND id = ? AND is_system = 0", [$tenantId, $templateId])
+                : null;
+            if ($doomed === null) {
+                $flash = ['type' => 'error', 'msg' => 'Template not found.'];
+            } else {
                 try {
-                    $doomed = Database::row("SELECT template_key FROM studiobuilder_templates WHERE tenant_id = ? AND id = ? AND is_system = 0", [$tenantId, $templateId]);
-                    Database::delete('studiobuilder_templates', 'tenant_id = ? AND id = ? AND is_system = 0', [$tenantId, $templateId]);
-                    // Clean up linked backing page and revisions (found by the link written at creation, or by its slug once published)
-                    $backingPage = Database::row("SELECT id FROM studiobuilder_pages WHERE tenant_id = ? AND (settings_json LIKE ? OR slug = ?)", [$tenantId, '%"template_id":' . $templateId . '%', 'template-' . (string) ($doomed['template_key'] ?? "\0")]);
-                    if ($backingPage) {
-                        $pId = (int) $backingPage['id'];
-                        Database::delete('studiobuilder_revisions', 'tenant_id = ? AND page_id = ?', [$tenantId, $pId]);
-                        Database::delete('studiobuilder_compilations', 'tenant_id = ? AND page_id = ?', [$tenantId, $pId]);
-                        Database::delete('studiobuilder_pages', 'tenant_id = ? AND id = ?', [$tenantId, $pId]);
+                    $runtime = StudioRuntimeFactory::build();
+                    $actor = StudioActor::fromCurrentSession();
+                    $templateKey = (string) $doomed['template_key'];
+                    // The backing page is the one created with this template: its
+                    // slug, or settings_json.template_id equal to this id exactly
+                    // (a LIKE on the number alone also matched 50, 512, ...).
+                    $candidates = Database::all(
+                        "SELECT id, slug, settings_json FROM studiobuilder_pages WHERE tenant_id = ? AND status <> 'archived' AND (slug = ? OR settings_json LIKE ?)",
+                        [$tenantId, 'template-' . $templateKey, '%"template_id":' . $templateId . '%']
+                    );
+                    $backingIds = [];
+                    foreach ($candidates as $c) {
+                        $settings = json_decode((string) ($c['settings_json'] ?? ''), true);
+                        $linked = is_array($settings) && !empty($settings['is_theme_template'])
+                            && isset($settings['template_id']) && (int) $settings['template_id'] === $templateId;
+                        if ($linked || (string) $c['slug'] === 'template-' . $templateKey) {
+                            $backingIds[] = (int) $c['id'];
+                        }
+                    }
+                    // Through the Studio services: admin permission, audit log, cache
+                    // invalidation. The backing page is archived, not deleted, so its
+                    // revision history is kept (revisions are never deleted).
+                    $runtime->app->deleteTemplate($actor, $templateKey);
+                    foreach ($backingIds as $pId) {
+                        $runtime->app->archivePage($actor, $pId);
                     }
                     $flash = ['type' => 'success', 'msg' => 'Template deleted successfully.'];
                 } catch (\Throwable $e) {
