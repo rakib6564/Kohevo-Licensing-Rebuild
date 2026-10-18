@@ -118,6 +118,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // ── Permalinks tab ────────────────────────────────────
         elseif ($action === 'save_permalinks') {
             $struct = trim((string)($_POST['permalink_structure'] ?? '/p/%postname%'));
+            $allowedStructs = [
+                '/p/%postname%',
+                '/%year%/%monthnum%/%postname%',
+                '/?p=%id%',
+            ];
+            if (!in_array($struct, $allowedStructs, true)) {
+                $struct = '/p/%postname%';
+            }
             $postBase = trim((string)($_POST['permalink_post_base'] ?? 'post'));
             $postBase = preg_replace('/[^a-z0-9_-]/i', '', $postBase) ?: 'post';
             $trailing = isset($_POST['permalink_trailing_slash']) ? '1' : '0';
@@ -144,6 +152,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $timeFormat = trim((string)($_POST['time_format_custom'] ?? 'H:i'));
             }
             $startOfWeek = (int)($_POST['start_of_week'] ?? 1);
+            if ($startOfWeek < 0 || $startOfWeek > 6) {
+                $startOfWeek = 1;
+            }
 
             Database::setSetting('timezone', mb_substr($tz, 0, 64));
             Database::setSetting('date_format', mb_substr($dateFormat, 0, 32));
@@ -794,15 +805,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         elseif ($action === 'save_system') {
             $maintenanceMode = isset($_POST['maintenance_mode']) ? '1' : '0';
             $debugMode       = isset($_POST['debug_mode'])       ? '1' : '0';
-            $timezone        = trim((string)($_POST['timezone'] ?? 'UTC'));
-            // Validate timezone string
-            if (!in_array($timezone, timezone_identifiers_list(), true)) {
-                $timezone = 'UTC';
-            }
 
             Database::setSetting('maintenance_mode', $maintenanceMode);
             Database::setSetting('debug_mode',       $debugMode);
-            Database::setSetting('timezone',         $timezone);
             AuditLog::record('settings.updated', 'system');
             $redirectWithFlash(['type' => 'success', 'msg' => __('settings_saved', 'Settings saved.')], $activeTab);
         }
@@ -3736,7 +3741,7 @@ slate_render_settings_tabs($activeTab);
                     <option value="outfit"       <?= $brandSet['font_family'] === 'outfit'        ? 'selected' : '' ?>>Outfit (Contemporary Geometric)</option>
                     <option value="playfair"     <?= $brandSet['font_family'] === 'playfair'      ? 'selected' : '' ?>>Playfair Display (Classic Serif)</option>
                 </select>
-                <div class="field-hint"><?= __('font_hint', 'Not yet wired into any page template -- saved for a future release.') ?></div>
+                <div class="field-hint"><?= __('font_hint', 'Applies to the admin interface and customer portal via CSS font variables.') ?></div>
             </div>
 
             <div class="field">
@@ -3748,7 +3753,7 @@ slate_render_settings_tabs($activeTab);
                     <option value="large"  <?= $brandSet['border_radius'] === 'large'  ? 'selected' : '' ?>>Smooth (16px)</option>
                     <option value="pill"   <?= $brandSet['border_radius'] === 'pill'   ? 'selected' : '' ?>>Full Pill (999px)</option>
                 </select>
-                <div class="field-hint"><?= __('radius_hint', 'Not yet wired into any page template -- saved for a future release.') ?></div>
+                <div class="field-hint"><?= __('radius_hint', 'Applies to admin and customer portal cards, buttons, and inputs via CSS radius variables.') ?></div>
             </div>
 
             <div class="field">
@@ -4152,15 +4157,12 @@ slate_render_settings_tabs($activeTab);
             <input type="hidden" name="_tab"    value="system">
 
             <div class="field">
-                <label class="field-label" for="timezone"><?= __('timezone', 'Timezone') ?></label>
-                <select id="timezone" name="timezone" <?= $canEdit ? '' : 'disabled' ?>>
-                    <?php foreach (timezone_identifiers_list() as $tz): ?>
-                        <option value="<?= e($tz) ?>" <?= $tz === $sys['timezone'] ? 'selected' : '' ?>>
-                            <?= e($tz) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <div class="field-hint"><?= __('timezone_hint', 'Used for displaying dates and times throughout the admin.') ?></div>
+                <label class="field-label"><?= __('timezone', 'Timezone') ?></label>
+                <div style="display: flex; align-items: center; gap: 12px; margin-top: 4px;">
+                    <code style="font-size: 13px; font-weight: 600; padding: 4px 8px; background: var(--surface-2, #f1f5f9); border: 1px solid var(--border, #e2e8f0); border-radius: var(--radius-sm, 4px);"><?= e($sys['timezone'] ?: 'UTC') ?></code>
+                    <a href="?tab=datetime" class="btn btn-secondary btn-sm" style="font-size: 12px;"><?= __('manage_in_datetime', 'Change in Date &amp; Time') ?> &rarr;</a>
+                </div>
+                <div class="field-hint"><?= __('timezone_system_hint', 'Timezone is canonically managed under the Date &amp; Time tab.') ?></div>
             </div>
 
             <div style="padding: 8px 0 4px">

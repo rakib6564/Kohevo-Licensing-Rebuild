@@ -18,27 +18,7 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/plugins/licensing/LicensingAPI.php';
 
-function licplug_teardown(): void {
-    $file = __DIR__ . '/../../plugins/licensing/uninstall.sql';
-    $sql  = preg_replace('/^--.*$/m', '', (string) file_get_contents($file));
-    foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
-        if ($stmt === '') continue;
-        Database::query($stmt);
-    }
-}
-
-/**
- * ensureSchema() short-circuits after its first call per process
- * (LicensingAPI::$schemaChecked), which is right for production (boot()
- * only needs to check once) but wrong across these tests — each one drops
- * the tables in its own teardown, so the next test's call must actually
- * re-run the CREATE TABLEs, not no-op against tables that no longer exist.
- */
-function licplug_ensure_schema(): void {
-    $prop = new ReflectionProperty(LicensingAPI::class, 'schemaChecked');
-    $prop->setValue(null, false);
-    LicensingAPI::ensureSchema();
-}
+require_once dirname(__DIR__) . '/support/licensing-plugin.php';
 
 unit('licensing plugin: manifest is well-formed and passes PluginLoader::validateManifest()', function () {
     $manifest = json_decode((string) file_get_contents(__DIR__ . '/../../plugins/licensing/plugin.json'), true);

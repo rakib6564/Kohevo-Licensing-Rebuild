@@ -1,0 +1,2 @@
+# Stored diffs: context lines for blank source lines are a single space by format.
+*.patch -whitespace

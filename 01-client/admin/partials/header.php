@@ -1701,7 +1701,7 @@ if (!function_exists('slate_admin_nav_icon')) {
                     <?php if ($userAvatarUrl !== ''): ?><img src="<?= e($userAvatarUrl) ?>" alt="" loading="lazy" onerror="this.remove()"><?php endif; ?>
                 </span>
                 <div class="sidebar-user-info">
-                    <div class="sidebar-user-name"><?= e($user['name']) ?></div>
+                    <div class="sidebar-user-name"><?= e($user['name'] ?? $user['email'] ?? 'Administrator') ?></div>
                     <div class="sidebar-user-role"><?= e($user['role'] ?? __('administrator', 'Administrator')) ?></div>
                 </div>
                 <a href="<?= e(SLATE_URL) ?>/admin/logout.php?csrf=<?= e(csrf_token()) ?>"

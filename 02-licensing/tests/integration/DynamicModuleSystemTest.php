@@ -21,26 +21,13 @@ require_once dirname(__DIR__, 2) . '/plugins/licensing/LicenseService.php';
 require_once dirname(__DIR__, 2) . '/plugins/licensing/InstallationService.php';
 require_once dirname(__DIR__, 2) . '/plugins/licensing/client/LicenseSignatureVerifier.php';
 
-if (!function_exists('licplug_teardown')) {
-    function licplug_teardown(): void
-    {
-        $file = dirname(__DIR__, 2) . '/plugins/licensing/uninstall.sql';
-        $sql  = preg_replace('/^--.*$/m', '', (string) file_get_contents($file));
-        foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
-            if ($stmt === '') continue;
-            Database::query($stmt);
-        }
-        Database::query("DELETE FROM settings WHERE setting_key IN ('licensing.signing_public_key', 'licensing.signing_secret_key')");
-    }
-}
+require_once dirname(__DIR__) . '/support/licensing-plugin.php';
 
-if (!function_exists('licplug_ensure_schema')) {
-    function licplug_ensure_schema(): void
-    {
-        $prop = new ReflectionProperty(LicensingAPI::class, 'schemaChecked');
-        $prop->setValue(null, false);
-        LicensingAPI::ensureSchema();
-    }
+/** The shared teardown, plus the signing keypair these tests store. */
+function dms_teardown(): void
+{
+    licplug_teardown();
+    Database::query("DELETE FROM settings WHERE setting_key IN ('licensing.signing_public_key', 'licensing.signing_secret_key')");
 }
 
 /**
@@ -280,7 +267,7 @@ unit('central dynamic modules: all 8 V1 commercial combinations persist in Plan,
             assert_eq($expectedSorted, $verified['entitlements'], "Signed entitlements for $slug must match exact combination");
         }
     } finally {
-        licplug_teardown();
+        dms_teardown();
     }
 });
 
@@ -350,7 +337,7 @@ unit('central dynamic modules: License entitlements must be a subset of Plan ent
         }
         assert_true($caughtCorePlan, 'Issuing license with forms on a Core-only plan must be rejected');
     } finally {
-        licplug_teardown();
+        dms_teardown();
     }
 });
 
@@ -405,7 +392,7 @@ unit('central dynamic modules: forged module selections (editor, content, stripe
             assert_true($caughtLicense, "LicenseService::issue must reject forged input [$label]");
         }
     } finally {
-        licplug_teardown();
+        dms_teardown();
     }
 });
 
@@ -487,6 +474,6 @@ unit('central admin endpoints: plans.php, licenses.php, license.php reject forge
         assert_true(str_contains($dash['body'], 'Supporting Infrastructure'), 'Dashboard must show Stripe Payment as Supporting Infrastructure');
         assert_true(str_contains($dash['body'], 'Valid Forms License'), 'Dashboard must list issued commercial license');
     } finally {
-        licplug_teardown();
+        dms_teardown();
     }
 });

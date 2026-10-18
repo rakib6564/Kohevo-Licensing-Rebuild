@@ -1,0 +1,11 @@
+c-unit exit=0
+l-unit exit=0
+c-smoke exit=0
+l-smoke exit=0
+c-integration exit=0
+l-integration exit=255
+c-studio-unit exit=0
+c-studio-int exit=0
+ui exit=0
+DONE
+lint-error-lines:        0

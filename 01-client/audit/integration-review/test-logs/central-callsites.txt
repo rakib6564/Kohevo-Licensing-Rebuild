@@ -1,0 +1,61 @@
+plugins/forms/FormsMcpHandler.php:95:        if (str_starts_with($name, 'slate_forms_') && !ModuleGuard::allows('forms')) {
+plugins/forms/admin/spam_log.php:15:ModuleGuard::require('forms');
+plugins/forms/FormsAPI.php:2584:        if (!\ModuleGuard::allows('forms')) return '';
+plugins/forms/admin/submissions.php:13:ModuleGuard::require('forms');
+plugins/forms/admin/submission.php:16:ModuleGuard::require('forms');
+plugins/forms/admin/index.php:11:ModuleGuard::require('forms');
+plugins/forms/admin/contacts.php:14:ModuleGuard::require('forms');
+plugins/forms/admin/edit.php:15:ModuleGuard::require('forms');
+plugins/forms/public/router.php:19:ModuleGuard::requirePublic('forms');
+plugins/booking/Booking.php:141:        if (!ModuleGuard::allows('booking')) return;
+plugins/booking/Booking.php:473:        if (!ModuleGuard::allows('booking')) return;
+plugins/booking/Booking.php:990:        if (!ModuleGuard::allows('booking')) return;
+plugins/booking/BookingApiHandler.php:19:        ModuleGuard::requireApi('booking');
+plugins/booking/GoogleCalendarSync.php:510:        if (!ModuleGuard::allows('booking')) return;
+plugins/booking/admin/addons.php:12:ModuleGuard::require('booking');
+plugins/booking/admin/fields.php:12:ModuleGuard::require('booking');
+plugins/booking/BookingMcpHandler.php:125:        // (07 §6), matching BookingApiHandler.php's own ModuleGuard::requireApi() call.
+plugins/booking/BookingMcpHandler.php:126:        if (str_starts_with($name, 'slate_booking_') && !ModuleGuard::allows('booking')) {
+plugins/booking/BookingAPI.php:2368:        if (!\ModuleGuard::allows('booking')) return '';
+plugins/booking/admin/settings.php:12:ModuleGuard::require('booking');
+plugins/booking/admin/appointment.php:10:ModuleGuard::require('booking');
+plugins/booking/admin/service-rule.php:14:ModuleGuard::require('booking');
+plugins/booking/admin/coupons.php:11:ModuleGuard::require('booking');
+plugins/booking/admin/services.php:13:ModuleGuard::require('booking');
+plugins/booking/admin/index.php:19:ModuleGuard::require('booking');
+plugins/booking/admin/gcal-disconnect.php:10:ModuleGuard::require('booking');
+plugins/booking/admin/gcal-connect.php:14:ModuleGuard::require('booking');
+plugins/booking/admin/new.php:11:ModuleGuard::require('booking');
+plugins/booking/admin/invoice.php:15:ModuleGuard::require('booking');
+plugins/booking/admin/locations.php:11:ModuleGuard::require('booking');
+plugins/booking/admin/calendar.php:20:ModuleGuard::require('booking');
+plugins/booking/admin/gcal-sync-now.php:12:ModuleGuard::require('booking');
+plugins/booking/admin/gcal-callback.php:11:ModuleGuard::require('booking');
+plugins/booking/admin/categories.php:11:ModuleGuard::require('booking');
+plugins/booking/admin/service-rules.php:17:ModuleGuard::require('booking');
+plugins/booking/admin/appointments.php:10:ModuleGuard::require('booking');
+plugins/booking/admin/messages.php:16:ModuleGuard::require('booking');
+plugins/booking/admin/resources.php:13:ModuleGuard::require('booking');
+plugins/booking/admin/providers.php:11:ModuleGuard::require('booking');
+plugins/booking/public/message.php:18:ModuleGuard::requirePublic('booking'); // Phase 11: active is not entitled (07 §2, §4)
+plugins/booking/public/gcal-webhook.php:25:if (!PluginLoader::isActive('booking') || !ModuleGuard::allows('booking')) {
+plugins/booking/admin/customers.php:11:ModuleGuard::require('booking');
+plugins/booking/admin/giftcards.php:12:ModuleGuard::require('booking');
+plugins/booking/admin/restrictions.php:15:ModuleGuard::require('booking');
+plugins/booking/public/prereq.php:15:ModuleGuard::requirePublic('booking'); // Phase 11: active is not entitled (07 §2, §4)
+plugins/booking/public/pay-intent.php:42:if (!ModuleGuard::allows('booking')) {
+plugins/booking/public/router.php:20:ModuleGuard::requirePublic('booking');
+plugins/mcp-gateway/ReportingMcpTools.php:61:            'bookings'    => ModuleGuard::allows('booking') ? self::bookingsSection($tid, $days) : null,
+plugins/mcp-gateway/ReportingMcpTools.php:62:            'membership'  => ModuleGuard::allows('membership') ? self::membershipSection($tid, $days) : null,
+plugins/mcp-gateway/ReportingMcpTools.php:64:            'forms'       => ModuleGuard::allows('forms') ? self::formsSection($tid, $days) : null,
+plugins/membership/MembershipMcpHandler.php:113:        if (str_starts_with($name, 'slate_membership_') && !ModuleGuard::allows('membership')) {
+plugins/membership/admin/settings.php:11:ModuleGuard::require('membership');
+plugins/membership/MembershipAPI.php:296:        if (!\ModuleGuard::allows('membership')) return '';
+plugins/membership/admin/members.php:15:ModuleGuard::require('membership');
+plugins/membership/admin/plans.php:15:ModuleGuard::require('membership');
+plugins/membership/admin/member.php:16:ModuleGuard::require('membership');
+plugins/membership/public/router.php:37:ModuleGuard::require('membership');
+plugins/membership/public/landing.php:15:ModuleGuard::requirePublic('membership');
+plugins/membership/Membership.php:156:        if (!ModuleGuard::allows('membership')) return;
+plugins/membership/admin/index.php:15:ModuleGuard::require('membership');
+plugins/membership/admin/add-member.php:17:ModuleGuard::require('membership');

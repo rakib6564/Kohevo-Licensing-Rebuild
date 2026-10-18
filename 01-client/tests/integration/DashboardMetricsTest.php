@@ -40,11 +40,37 @@ unit('dashboard: an ordinary tenant admin never sees platform-wide counts, only 
 });
 
 unit('dashboard: the tenant-admin plan section reflects the actual assigned plan, license status, and enabled features', function (): void {
+    require_once dirname(__DIR__) . '/support/license_signing.php';
+
     $tenantId = TenantService::create(['name' => 'Dashboard Probe Tenant', 'slug' => 'dash-probe-' . bin2hex(random_bytes(4))]);
     $planId = PlanService::save(null, ['name' => 'Dashboard Probe Plan', 'slug' => 'dash-probe-plan-' . bin2hex(random_bytes(4))], ['forms']);
+
+    $old = [];
+    foreach (['LICENSE_SERVER_URL', 'LICENSE_SERVER_PUBLIC_KEY', 'LICENSE_PRODUCT', 'LICENSE_KEY'] as $k) {
+        $old[$k] = $_ENV[$k] ?? null;
+    }
+    $_ENV['LICENSE_SERVER_URL'] = 'https://license.test';
+    $_ENV['LICENSE_SERVER_PUBLIC_KEY'] = license_test_public_key();
+    $_ENV['LICENSE_PRODUCT'] = 'kohevo';
+    $_ENV['LICENSE_KEY'] = 'test-key';
+
     try {
         Database::query("UPDATE tenant_profiles SET plan_id = ? WHERE tenant_id = ?", [$planId, $tenantId]);
         LicenseService::issue($tenantId, $planId, ['status' => 'active']);
+
+        $row = Database::row('SELECT installation_id FROM installation_identity WHERE singleton_id = 1');
+        $iid = $row ? (string) $row['installation_id'] : str_repeat('d', 32);
+        if ($row === null) {
+            Database::insert('installation_identity', ['singleton_id' => 1, 'tenant_id' => 1, 'installation_id' => $iid]);
+        }
+        license_test_seed_cache($tenantId, [
+            'status' => 'active',
+            'plan' => 'pro',
+            'entitlements' => ['forms'],
+            'expires_at' => null,
+            'fetched_at' => gmdate('Y-m-d H:i:s'),
+            'installation_id' => $iid,
+        ]);
 
         // A tenant-scoped probe needs a real admin user seeded IN that
         // tenant (admin-page-probe.php's fake session id alone doesn't
@@ -57,6 +83,10 @@ unit('dashboard: the tenant-admin plan section reflects the actual assigned plan
         assert_eq('active', LicenseService::effectiveStatus($tenantId));
         assert_true(in_array('forms', \Slate\Services\Licensing\EntitlementService::enabledFeaturesFor($tenantId), true));
     } finally {
+        foreach ($old as $k => $v) {
+            if ($v === null) unset($_ENV[$k]); else $_ENV[$k] = $v;
+        }
+        Database::query("DELETE FROM remote_license_cache WHERE tenant_id = ?", [$tenantId]);
         Database::query("DELETE FROM licenses WHERE tenant_id = ?", [$tenantId]);
         Database::query("DELETE FROM plan_entitlements WHERE plan_id = ?", [$planId]);
         Database::query("DELETE FROM platform_plans WHERE id = ?", [$planId]);

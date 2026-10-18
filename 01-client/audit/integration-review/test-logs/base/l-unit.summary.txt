@@ -1,0 +1,5 @@
+FAIL - archive/plugins/react-site-bridge/ReactSiteBridgeAPI.php: every exception message shown as an admin flash banner says Kohevo, not Slate  (expected 'Kohevo Media is unavailable.' in ReactSiteBridgeAPI.php)
+FAIL - the four plugin.json descriptions that mentioned Slate as product text now say Kohevo, and every manifest is still valid JSON  (str_contains(): Argument #1 ($haystack) must be of type string, null given)
+FAIL - regression: no unrelated file was touched by this phase (only the specific identity-string files)  (expected archive/plugins/react-site-bridge/admin/index.php to exist (sanity check on the list itself))
+FAIL - the files session handler blocks a second opener, and closing releases it  (a second opener should have waited on the held lock, took 77ms)
+# passed 426 / 430

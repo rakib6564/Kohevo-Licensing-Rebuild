@@ -1,0 +1,128 @@
+# Changed files: complete manifest
+# Base: origin/main ba4c9a5. Branch: audit/settings-secrets-hardening.
+# Column "commit": in e9a1bdf = already committed; follow-up = uncommitted change from the 2026-10-17 pass; both = committed, then changed again.
+# Status letters are against origin/main: A added, M modified, D deleted.
+
+## Summary (against origin/main)
+   16  audit evidence
+    2  audit evidence (deleted)
+    9  audit evidence (test log)
+    4  documentation
+    6  documentation (audit report)
+   22  source
+    2  source (access rule)
+   26  test
+    2  translation
+   87  total paths differing from origin/main (deleted review files excluded: they never reached origin/main)
+
+## audit evidence
+  A                both        01-client/audit/review-package/csv-row-verification.csv
+  A                both        01-client/audit/review-package/csv-validation.md
+  A                both        01-client/audit/review-package/csv-verify.py
+  A                both        01-client/audit/review-package/git-status.txt
+  A                both        01-client/audit/review-package/remaining-risks.md
+  A                both        01-client/audit/review-package/test-results.md
+  A                both        01-client/audit/review-package/verification-matrix.md
+  A                follow-up   01-client/audit/kohevo-inventory-removed-rows.csv
+  A                follow-up   01-client/audit/review-package/inventory-corrections.py
+  A                in e9a1bdf  01-client/audit/review-package/.gitattributes
+  A                in e9a1bdf  01-client/audit/review-package/audit-changes.patch
+  A                in e9a1bdf  01-client/audit/review-package/changed-files.txt
+  A                in e9a1bdf  01-client/audit/review-package/commit-message.txt
+  A                in e9a1bdf  01-client/audit/review-package/diff-summary.md
+  A                in e9a1bdf  01-client/audit/review-package/pr-description.md
+  A                in e9a1bdf  01-client/audit/review-package/untracked-files-manifest.txt
+  D (vs e9a1bdf)   follow-up   01-client/audit/review-package/new-files.patch
+  D (vs e9a1bdf)   follow-up   01-client/audit/review-package/staged-audit-changes.patch
+
+## audit evidence (test log)
+  A                follow-up   01-client/audit/review-package/test-logs/base/l-ci.txt
+  A                follow-up   01-client/audit/review-package/test-logs/base/l-int-perfile.txt
+  A                follow-up   01-client/audit/review-package/test-logs/base/summary.txt
+  A                follow-up   01-client/audit/review-package/test-logs/final/l-ci.txt
+  A                follow-up   01-client/audit/review-package/test-logs/final/l-int-perfile.txt
+  A                follow-up   01-client/audit/review-package/test-logs/final/summary.txt
+  A                follow-up   01-client/audit/review-package/test-logs/run-lic-ci.sh
+  A                follow-up   01-client/audit/review-package/test-logs/run-lic-perfile.sh
+  A                follow-up   01-client/audit/review-package/test-logs/run-suites.sh
+
+## documentation
+  M                in e9a1bdf  01-client/plugins/booking/README.md
+  M                in e9a1bdf  01-client/plugins/forms/README.md
+  M                in e9a1bdf  02-licensing/plugins/booking/README.md
+  M                in e9a1bdf  02-licensing/plugins/forms/README.md
+
+## documentation (audit report)
+  A                both        01-client/audit/kohevo-complete-system-audit.md
+  A                both        01-client/audit/kohevo-cross-tree-parity.md
+  A                both        01-client/audit/kohevo-option-disposition.md
+  A                both        01-client/audit/kohevo-settings-widget-inventory.csv
+  A                both        01-client/audit/kohevo-widget-test-matrix.md
+  A                in e9a1bdf  01-client/Claude/kohevo-complete-system-implementation-prompt.md
+
+## source
+  M                both        01-client/plugins/forms/admin/edit.php
+  M                both        01-client/plugins/forms/lib/FormsSpamGuard.php
+  M                both        01-client/plugins/stripe-payment/admin/settings.php
+  M                both        02-licensing/plugins/forms/admin/edit.php
+  M                both        02-licensing/plugins/forms/lib/FormsSpamGuard.php
+  M                both        02-licensing/plugins/stripe-payment/admin/settings.php
+  M                in e9a1bdf  01-client/admin/partials/header.php
+  M                in e9a1bdf  01-client/admin/settings.php
+  M                in e9a1bdf  01-client/includes/ui_components.php
+  M                in e9a1bdf  01-client/plugins/backups/admin/settings.php
+  M                in e9a1bdf  01-client/plugins/booking/admin/settings.php
+  M                in e9a1bdf  01-client/plugins/coaching/admin/settings.php
+  M                in e9a1bdf  01-client/plugins/mcp-gateway/admin/ai-settings.php
+  M                in e9a1bdf  01-client/src/Services/Identity/IdentityStore.php
+  M                in e9a1bdf  02-licensing/admin/partials/header.php
+  M                in e9a1bdf  02-licensing/admin/settings.php
+  M                in e9a1bdf  02-licensing/includes/ui_components.php
+  M                in e9a1bdf  02-licensing/plugins/backups/admin/settings.php
+  M                in e9a1bdf  02-licensing/plugins/booking/admin/settings.php
+  M                in e9a1bdf  02-licensing/plugins/coaching/admin/settings.php
+  M                in e9a1bdf  02-licensing/plugins/mcp-gateway/admin/ai-settings.php
+  M                in e9a1bdf  02-licensing/src/Services/Identity/IdentityStore.php
+
+## source (access rule)
+  A                in e9a1bdf  01-client/archive/.htaccess
+  A                in e9a1bdf  02-licensing/archive/.htaccess
+
+## test
+  A                both        01-client/tests/integration/StripeWriteOnlySecretTest.php
+  A                both        01-client/tests/unit/SystemSettingsAuditFixesTest.php
+  A                both        02-licensing/tests/unit/SystemSettingsAuditFixesTest.php
+  A                follow-up   01-client/tests/integration/FormsCaptchaSecretSaveTest.php
+  A                follow-up   01-client/tests/unit/FormsCaptchaSecretEncryptionTest.php
+  A                follow-up   02-licensing/tests/unit/FormsCaptchaSecretEncryptionTest.php
+  M                both        01-client/tests/fixtures/admin-page-post-probe.php
+  M                both        01-client/tests/integration/PlatformAdminGateTest.php
+  M                both        01-client/tests/integration/PluginActivationAuthorizationTest.php
+  M                both        01-client/tests/unit/Phase7SlateKohevoIdentityTest.php
+  M                both        01-client/tests/unit/StudioBuilderPaymentBlocksTest.php
+  M                both        02-licensing/tests/integration/ContactSeederTest.php
+  M                both        02-licensing/tests/integration/CustomerAuthParityTest.php
+  M                both        02-licensing/tests/unit/Phase7SlateKohevoIdentityTest.php
+  M                in e9a1bdf  01-client/tests/fixtures/admin-page-probe.php
+  M                in e9a1bdf  01-client/tests/integration/ContactSeederTest.php
+  M                in e9a1bdf  01-client/tests/integration/CustomerAuthParityTest.php
+  M                in e9a1bdf  01-client/tests/integration/DashboardMetricsTest.php
+  M                in e9a1bdf  01-client/tests/integration/EntitlementServiceTest.php
+  M                in e9a1bdf  01-client/tests/integration/PlatformIdentityWhiteLabelTest.php
+  M                in e9a1bdf  01-client/tests/unit/Phase3RemoteAuthorityTest.php
+  M                in e9a1bdf  01-client/tests/unit/SessionLockTest.php
+  M                in e9a1bdf  01-client/tests/unit/StudioBuilderSprint8WidgetSdkTest.php
+  M                in e9a1bdf  01-client/tests/unit/fixtures/session-lock-probe.php
+  M                in e9a1bdf  02-licensing/tests/unit/SessionLockTest.php
+  M                in e9a1bdf  02-licensing/tests/unit/fixtures/session-lock-probe.php
+
+## translation
+  M                both        01-client/lang/fr.php
+  M                both        02-licensing/lang/fr.php
+
+## Not in any patch
+  01-client/audit/Kohevo_Complete_System_Plugin_Widget_Audit_Final_Bundle.zip   generated artifact, gitignored, local only
+  01-client/audit/review-package/audit-changes.patch, followup-changes.patch      the patches themselves
+  01-client/vendor/, 02-licensing/vendor/, */composer.lock                          local Composer install, excluded
+  prototype-14islands/, prototype-juanmora/                                          pre-existing user work, excluded
+  Binary files in the branch: none

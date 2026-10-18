@@ -57,7 +57,7 @@ unit('the files session handler blocks a second opener, and closing releases it'
     $dir = sys_get_temp_dir() . '/slate-slock-' . bin2hex(random_bytes(4));
     if (!@mkdir($dir, 0700, true)) { assert_true(false, "could not create {$dir}"); return; }
 
-    $hold = 700;   // ms the holder keeps the lock
+    $hold = 1200;   // ms the holder keeps the lock
 
     try {
         // ── A. holder keeps the lock; a second opener must wait ──

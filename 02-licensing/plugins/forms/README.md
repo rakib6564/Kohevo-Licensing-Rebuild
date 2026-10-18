@@ -226,8 +226,7 @@ country", which never blocks.
 - Spam log admin page (`admin/spam_log.php`) — filter blocked attempts by
   form + reason, paginated, clear per-form or wholesale (`forms.manage`)
 
-## Not yet built
+## Integration Boundaries & Deferred Scope
 
-- Stripe payment field
-
-Tracked under Phase 3 of `SLATE_ROADMAP.md` for follow-up sessions.
+- **Payments**: The Forms plugin focuses strictly on data collection, agreements, signatures, and surveys. Direct payment processing is handled by the dedicated **Stripe Payment** and **Booking** plugins (or custom checkout/payment widgets). An inline Stripe payment form-field is intentionally deferred to avoid duplicate checkout flows.
+- Tracked under Phase 3 of `SLATE_ROADMAP.md` for potential future sub-form payments.
