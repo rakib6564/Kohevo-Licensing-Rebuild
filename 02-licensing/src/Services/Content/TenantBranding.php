@@ -37,12 +37,21 @@ final class TenantBranding
         'accent' => 'brand_accent_color',
     ];
 
-    /** @return array<string,string> brand key => stored setting value */
+    /**
+     * The accent the Branding form shows before anyone picks a colour. Saving the form untouched stores
+     * it, and the admin theme treats it as "no accent chosen"; so does everything that reads resolve().
+     */
+    public const UNSET_ACCENT = '#111111';
+
+    /** @return array<string,string> brand key => stored setting value ('' when unset) */
     public static function resolve(): array
     {
         $out = [];
         foreach (self::KEYS as $brandKey => $settingKey) {
-            $out[$brandKey] = (string) (\Database::setting($settingKey) ?? '');
+            $out[$brandKey] = trim((string) (\Database::setting($settingKey) ?? ''));
+        }
+        if (strcasecmp($out['accent'] ?? '', self::UNSET_ACCENT) === 0) {
+            $out['accent'] = '';
         }
         return $out;
     }

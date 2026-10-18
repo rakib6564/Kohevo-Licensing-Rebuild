@@ -30,7 +30,7 @@ import { IconButton } from './InspectorIcons.jsx';
 import { optionLabel } from '../../core/optionLabels.mjs';
 import { Field, Popover } from '../ui/index.js';
 import { DeviceStyle } from './DeviceStyle.jsx';
-import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
+import { RESPONSIVE_SCOPES, legacyHideDevices } from '../../core/responsiveStyle.mjs';
 
 /** What a layout block is before an author picks a display: a Container and Flex are flex boxes, a Grid is a grid. */
 const LAYOUT_DISPLAY = Object.freeze({ 'core.container': 'flex', 'layout.flex': 'flex', 'layout.grid': 'grid' });
@@ -209,9 +209,11 @@ export function BlockInspector({ info }) {
     responsive: () => (
       <>
       <VisibilityControls value={block.visibility} manifest={manifest} onChange={(v) => save(ops.updateBlockVisibility(block.id, v))} />
-      <fieldset className="sbx-fieldset">
+      {legacyHideDevices(responsive).length > 0 && (
+      <fieldset className="sbx-fieldset" data-legacy-hide>
         <legend>{t('device_overrides')}</legend>
-        {['desktop', 'tablet', 'mobile'].map((device) => {
+        <p className="sbx-hint">{t('device_overrides_legacy')}</p>
+        {legacyHideDevices(responsive).map((device) => {
           const devOverride = asObject(responsive[device]);
           return (
             <div key={device} className="sbx-field" style={{ marginBottom: '12px' }}>
@@ -234,6 +236,7 @@ export function BlockInspector({ info }) {
           );
         })}
       </fieldset>
+      )}
       </>
     ),
     advanced: () => (

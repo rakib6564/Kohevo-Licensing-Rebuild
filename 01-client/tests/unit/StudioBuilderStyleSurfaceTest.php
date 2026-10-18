@@ -867,3 +867,23 @@ unit('tabs: "Tab position: bottom" puts the tab strip under the panels', functio
     ], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), new RenderCollector(), false);
     assert_true(str_contains($html, 'sb-tabs-block--bottom'), 'the renderer writes the class: ' . $html);
 });
+
+unit('Site settings: the tokens marked "used only by blocks" are exactly the ones the base stylesheet never reads (DT-M7)', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    $unused = [];
+    // A new section's background token is a default use too.
+    $sectionDefault = (string) (CanonicalDocumentSchema::defaultSectionLayout()['background_token'] ?? '');
+    foreach (array_keys(ThemeResolver::DEFAULT_TOKENS) as $ref) {
+        if ($ref !== $sectionDefault && !str_contains($css, 'var(' . \Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme::cssVarName($ref))) {
+            $unused[] = $ref;
+        }
+    }
+    $js = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/ui/src/core/siteSettings.mjs');
+    assert_true((bool) preg_match("/BLOCK_ONLY_TOKENS = Object\\.freeze\\(\\[([^\\]]*)\\]\\)/", $js, $m), 'the editor list is readable');
+    preg_match_all("/'([a-z.]+)'/", $m[1], $listed);
+    sort($unused);
+    $marked = $listed[1];
+    sort($marked);
+    assert_eq($unused, $marked, 'the editor marks exactly the tokens with no default use');
+});

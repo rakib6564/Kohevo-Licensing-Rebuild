@@ -74,3 +74,12 @@ export function writeOverride(responsive, device, paths, nextView) {
 /** Back to inheriting: the same as writing an empty view. */
 export const clearOverride = (responsive, device, paths) => writeOverride(responsive, device, paths, {});
 
+/**
+ * Devices whose stored `responsive.<device>.hide` is on. Hiding per device is done with Visibility
+ * ("Show on"); these older checkboxes are shown only where a document still carries one, so it can be
+ * removed, and are never offered for new edits.
+ */
+export function legacyHideDevices(responsive) {
+  const r = responsive && typeof responsive === 'object' ? responsive : {};
+  return ['desktop', 'tablet', 'mobile'].filter((d) => r[d] && typeof r[d] === 'object' && r[d].hide === true);
+}
