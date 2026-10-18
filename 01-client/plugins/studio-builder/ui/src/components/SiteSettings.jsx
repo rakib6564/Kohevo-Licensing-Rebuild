@@ -8,7 +8,7 @@ import { t, errorMessage } from '../core/messages.mjs';
 import { asList, asObject } from '../core/doc.mjs';
 import { isHexColor } from '../core/library.mjs';
 import { CustomCss } from './CustomCss.jsx';
-import { FONT_PRESETS, groupTokens, tokenNameKey } from '../core/siteSettings.mjs';
+import { FONT_PRESETS, groupTokens, tokenNameKey, tokenUsedOnlyByBlocks } from '../core/siteSettings.mjs';
 
 const friendly = (tk) => {
   const key = tokenNameKey(tk.ref);
@@ -46,6 +46,7 @@ function TokenRow({ tk, value, canEdit, problem, onChange, swatch, listId, fonts
           <button type="button" className="sbx-ss__reset" aria-label={`${t('theme_reset')}: ${friendly(tk)}`} title={t('theme_reset')} onClick={() => onChange('')}>×</button>
         )}
       </div>
+      {tokenUsedOnlyByBlocks(tk.ref) && <p className="sbx-hint">{t('ss_tk_block_only')}</p>}
       {problem && <p className="sbx-field__error" role="alert">{problem}</p>}
     </div>
   );
