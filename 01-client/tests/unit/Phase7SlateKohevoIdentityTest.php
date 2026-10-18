@@ -18,6 +18,13 @@ function _p7_src(string $relPath): string
 
 // ── The two originally-flagged candidates ────────────────────
 
+/*
+ * The react-site-bridge checks that used to live here were removed: that
+ * plugin is archived and has never been committed to this repository
+ * (archive/plugins/ holds only .htaccess), so they could not run anywhere and
+ * only ever passed vacuously.
+ */
+
 unit('admin/login.php: the install-success fallback now says Kohevo, not Slate', function () {
     $src = _p7_src('admin/login.php');
     assert_true(str_contains($src, "__('install_success', 'Kohevo is installed. Log in with the account you just created.')"));
@@ -74,30 +81,6 @@ unit('plugins/mcp-gateway: the token-created flash message and the AI system pro
     assert_false(str_contains($chat, 'this Slate installation'));
 });
 
-unit('plugins/react-site-bridge: every user-facing "Slate"/"Slate Media"/"Slate-hosted" string across the plugin now says Kohevo', function () {
-    foreach ([
-        'admin/index.php', 'admin/photography.php', 'admin/content.php',
-        'admin/hosting.php', 'admin/site.php', 'admin/visual.php',
-    ] as $file) {
-        $src = _p7_src('archive/plugins/react-site-bridge/' . $file);
-        // Every remaining "Slate" occurrence in these files must be one of
-        // the known-internal patterns (SLATE_URL constant, Slate\ namespace,
-        // slate_ helper functions, or an engineering-only doc comment) —
-        // never bare product-identity text like "Slate Media"/"Slate-hosted".
-        foreach (explode("\n", $src) as $i => $line) {
-            if (!str_contains($line, 'Slate')) {
-                continue;
-            }
-            $strippedOfKnownInternals = str_replace(['SLATE_URL', 'Slate\\', 'slate_breadcrumbs'], '', $line);
-            $isCommentLine = (bool) preg_match('/^\s*(\*|\/\/|\/\*)/', $line);
-            assert_true(
-                !str_contains($strippedOfKnownInternals, 'Slate') || $isCommentLine,
-                "$file line " . ($i + 1) . " still has a non-internal, non-comment 'Slate' occurrence: $line"
-            );
-        }
-    }
-});
-
 // ── Second sweep: French parity, external-facing text, plugin manifests ──
 
 unit('plugins/booking/lang/fr.php and plugins/mcp-gateway/lang/fr.php: the French translations of the Google Calendar sync and token-created copy also say Kohevo now', function () {
@@ -127,22 +110,6 @@ unit('plugins/backups/GoogleDriveClient.php: the default Google Drive backup fol
     assert_false(str_contains($src, 'Slate Backups'));
 });
 
-unit('archive/plugins/react-site-bridge/ReactSiteBridgeAPI.php: every exception message shown as an admin flash banner says Kohevo, not Slate', function () {
-    $src = _p7_src('archive/plugins/react-site-bridge/ReactSiteBridgeAPI.php');
-    foreach ([
-        'Kohevo Media is unavailable.', 'Kohevo Media did not register a usable image.',
-        'Kohevo Media and Uploads must be available', 'Kohevo requires ZipArchive and Uploads',
-        'a valid Kohevo React Release ZIP file.', 'a supported Kohevo React Release package.',
-        'could not be registered in Kohevo Media.',
-    ] as $expected) {
-        assert_true(str_contains($src, $expected), "expected '$expected' in ReactSiteBridgeAPI.php");
-    }
-    // Doc comments legitimately still say "Slate" (internal, e.g. "clean Slate routes",
-    // "Slate-owned uploads") — only the thrown exception strings were in scope.
-    assert_false(str_contains($src, "throw new RuntimeException('Slate"));
-    assert_false(str_contains($src, "throw new InvalidArgumentException('Slate"));
-});
-
 unit('every first-party plugin.json "author" field says Kohevo (multilang-translate, a real named third-party contributor, is correctly excluded)', function () {
     // react-site-bridge moved to archive/plugins/ (deactivated, not shipping) —
     // excluded from this active-manifest sweep, same reasoning as every other
@@ -165,11 +132,6 @@ unit('the four plugin.json descriptions that mentioned Slate as product text now
 
     $media = json_decode(_p7_src('plugins/media-library/plugin.json'), true);
     assert_true(str_contains($media['description'], 'is now a built-in Kohevo feature'));
-
-    $rsb = json_decode(_p7_src('archive/plugins/react-site-bridge/plugin.json'), true);
-    assert_true(str_contains($rsb['description'], 'Kohevo Media upload-and-map workflow'));
-    assert_true(str_contains($rsb['description'], 'direct Kohevo-hosted React releases'));
-    assert_true(str_contains($rsb['description'], 'Kohevo-domain preview links'));
 
     $stripe = json_decode(_p7_src('plugins/stripe-payment/plugin.json'), true);
     assert_true(str_contains($stripe['description'], 'Generic Stripe checkout for any Kohevo plugin'));
@@ -229,15 +191,11 @@ unit('regression: no unrelated file was touched by this phase (only the specific
         'admin/login.php', 'admin/repair-settings.php', 'lang/fr.php',
         'plugins/booking/admin/providers.php', 'plugins/booking/admin/settings.php',
         'plugins/mcp-gateway/admin/index.php', 'plugins/mcp-gateway/admin/chat.php',
-        'archive/plugins/react-site-bridge/admin/index.php', 'archive/plugins/react-site-bridge/admin/photography.php',
-        'archive/plugins/react-site-bridge/admin/content.php', 'archive/plugins/react-site-bridge/admin/hosting.php',
-        'archive/plugins/react-site-bridge/admin/site.php', 'archive/plugins/react-site-bridge/admin/visual.php',
         'plugins/booking/lang/fr.php', 'plugins/mcp-gateway/lang/fr.php',
         'plugins/booking/GoogleCalendarSync.php', 'plugins/backups/GoogleDriveClient.php',
-        'archive/plugins/react-site-bridge/ReactSiteBridgeAPI.php',
         'plugins/backups/plugin.json', 'plugins/booking/plugin.json', 'plugins/coaching/plugin.json',
         'plugins/forms/plugin.json', 'plugins/mcp-gateway/plugin.json', 'plugins/media-library/plugin.json',
-        'plugins/membership/plugin.json', 'archive/plugins/react-site-bridge/plugin.json', 'plugins/stripe-payment/plugin.json',
+        'plugins/membership/plugin.json', 'plugins/stripe-payment/plugin.json',
         'src/Kernel/Module/PluginLoader.php', 'src/Kernel/Http/ApiRouter.php',
     ];
     foreach ($touchedFiles as $file) {

@@ -23,7 +23,7 @@
  * TENANT_ID, for probing whether a page's own queries actually scope by
  * tenant_id rather than trusting it.
  *
- * Usage: php tests/fixtures/admin-page-post-probe.php <page> <postFieldsJson> [roleId=1] [platformAdmin=0] [tenantOverride='']
+ * Usage: php tests/fixtures/admin-page-post-probe.php <page> <postFieldsJson> [roleId=1] [platformAdmin=0] [tenantOverride=''] [unlockPlugins=0]
  *
  * Prints:
  *     STATUS <code>
@@ -62,6 +62,8 @@ if (getenv('SLATE_LICENSE_GUARD_LIVE') !== '1') {
 // boot time — the Global License Guard — sees the same simulated request
 // context a real HTTP request would already have from its first line.
 $_GET  = [];
+// Optional query string for pages that take ?id= on POST (e.g. forms/admin/edit.php).
+parse_str((string) getenv('PROBE_QUERY'), $_GET);
 $_SERVER['REQUEST_METHOD'] = 'POST';
 $_SERVER['REQUEST_URI']    = '/' . ltrim($page, '/');
 $_SERVER['HTTP_HOST']      = 'localhost';
@@ -106,12 +108,16 @@ $tid    = current_tenant_id();
 $fakeId = 900000 + random_int(1, 99999);
 $grantPlatformAdmin = ($argv[4] ?? '0') === '1';
 
+if (session_status() === PHP_SESSION_ACTIVE) {
+    session_write_close();
+}
 session_id('adminpostprobe_' . bin2hex(random_bytes(12)));
 Auth::startSession();
 $_SESSION['slate_user'] = [
     'id'        => $fakeId,
     'tenant_id' => $tid,
     'email'     => 'post-probe@example.test',
+    'name'      => 'Post Probe',
     'role_id'   => $roleId,
 ];
 (new SessionRepository(new TenantContext()))->register(
@@ -119,6 +125,11 @@ $_SESSION['slate_user'] = [
 );
 if ($grantPlatformAdmin) {
     Auth::grantPlatformAdmin($fakeId);
+}
+// argv[5] is tenantOverride, so the plugin-lock unlock flag is argv[6].
+if (($argv[6] ?? '0') === '1' || getenv('PROBE_UNLOCK_PLUGINS') === '1') {
+    $_SESSION['plugins_unlocked_until'] = time() + 900;
+    $_SESSION['plugins_unlocked_uid'] = $fakeId;
 }
 
 $fields = json_decode($postJson, true);

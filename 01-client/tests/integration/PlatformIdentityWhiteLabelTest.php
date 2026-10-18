@@ -15,6 +15,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/support/license_signing.php';
+
 use Slate\Services\Content\PlatformIdentity;
 use Slate\Services\Content\PlatformIdentityPolicy;
 use Slate\Services\Content\PlatformSignature;
@@ -24,6 +26,50 @@ use Slate\Services\Licensing\PlanService;
 use Slate\Services\Tenancy\TenantService;
 use Slate\Tenancy\TenantContext;
 
+function piwt_ensure_identity(): string
+{
+    $row = Database::row('SELECT installation_id FROM installation_identity WHERE singleton_id = 1');
+    $iid = $row ? (string) $row['installation_id'] : str_repeat('c', 32);
+    if ($row === null) {
+        Database::insert('installation_identity', [
+            'singleton_id' => 1, 'tenant_id' => 1, 'installation_id' => $iid,
+        ]);
+    }
+    return $iid;
+}
+
+function piwt_set_remote_env(): array
+{
+    $keys = ['LICENSE_SERVER_URL', 'LICENSE_SERVER_PUBLIC_KEY', 'LICENSE_PRODUCT', 'LICENSE_KEY'];
+    $old = [];
+    foreach ($keys as $k) { $old[$k] = $_ENV[$k] ?? null; }
+    $_ENV['LICENSE_SERVER_URL'] = 'https://license.test';
+    $_ENV['LICENSE_SERVER_PUBLIC_KEY'] = license_test_public_key();
+    $_ENV['LICENSE_PRODUCT'] = 'kohevo';
+    $_ENV['LICENSE_KEY'] = 'test-key';
+    return $old;
+}
+
+function piwt_restore_env(array $old): void
+{
+    foreach ($old as $k => $v) {
+        if ($v === null) unset($_ENV[$k]); else $_ENV[$k] = $v;
+    }
+}
+
+function piwt_seed_cache(int $tenantId, array $entitlements = ['white_label'], string $status = 'active'): void
+{
+    $iid = piwt_ensure_identity();
+    license_test_seed_cache($tenantId, [
+        'status' => $status,
+        'plan' => 'pro',
+        'entitlements' => $entitlements,
+        'expires_at' => null,
+        'fetched_at' => gmdate('Y-m-d H:i:s'),
+        'installation_id' => $iid,
+    ]);
+}
+
 /** A fresh tenant with no plan and no license — the "nothing configured yet" baseline. */
 function piwt_bare_tenant(string $tag): int
 {
@@ -32,6 +78,7 @@ function piwt_bare_tenant(string $tag): int
 
 function piwt_cleanup_tenant(int $tenantId): void
 {
+    Database::query("DELETE FROM remote_license_cache WHERE tenant_id = ?", [$tenantId]);
     Database::query("DELETE FROM licenses WHERE tenant_id = ?", [$tenantId]);
     Database::query("DELETE FROM settings WHERE tenant_id = ? AND (setting_key LIKE 'entitlement.%' OR setting_key IN ('site_name','brand_accent_color','brand_logo_path'))", [$tenantId]);
     Database::query("DELETE FROM tenant_profiles WHERE tenant_id = ?", [$tenantId]);
@@ -49,6 +96,7 @@ function piwt_entitle(int $tenantId, int $planId): void
 {
     Database::query("UPDATE tenant_profiles SET plan_id = ? WHERE tenant_id = ?", [$planId, $tenantId]);
     LicenseService::issue($tenantId, $planId, ['status' => 'active']);
+    piwt_seed_cache($tenantId, ['white_label'], 'active');
 }
 
 function piwt_assert_visible(int $tenantId, string $why): void
@@ -75,6 +123,8 @@ function piwt_assert_suppressed(int $tenantId, string $why): void
         assert_eq('', PlatformSignature::render(PlatformSignature::MODE_COMPACT), $why . ' (compact mark must ALSO be suppressed, not just the "Powered by" text)');
     });
 }
+
+$piwtOldEnv = piwt_set_remote_env();
 
 // ── No entitlement ───────────────────────────────────────────
 
@@ -109,13 +159,16 @@ unit('white_label: a suspended or revoked license keeps Kohevo visible even on a
     try {
         Database::query("UPDATE tenant_profiles SET plan_id = ? WHERE tenant_id = ?", [$planId, $tenantId]);
         $license = LicenseService::issue($tenantId, $planId, ['status' => 'active']);
+        piwt_seed_cache($tenantId, ['white_label'], 'active');
         piwt_assert_suppressed($tenantId, 'sanity: active + entitled = suppressed');
 
         LicenseService::suspend($license['id'], 'test');
+        piwt_seed_cache($tenantId, ['white_label'], 'suspended');
         piwt_assert_visible($tenantId, 'a suspended license must fail closed for white_label');
 
         LicenseService::activate($license['id']);
         LicenseService::revoke($license['id'], 'test');
+        piwt_seed_cache($tenantId, ['white_label'], 'revoked');
         piwt_assert_visible($tenantId, 'a revoked license must fail closed for white_label');
     } finally {
         piwt_cleanup_tenant($tenantId);
@@ -272,3 +325,5 @@ unit('white_label regression: an entitled tenant suppresses Kohevo on the error 
         piwt_cleanup_plan($planId);
     }
 });
+
+piwt_restore_env($piwtOldEnv);

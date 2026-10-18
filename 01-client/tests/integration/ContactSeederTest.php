@@ -48,7 +48,7 @@ unit('ContactSeeder seeds a tenant id-preserving, copies hashes, handles guests 
         // A reset token for the registered customer.
         Database::insert('customer_auth_tokens', [
             'tenant_id' => $t, 'customer_id' => $regId, 'purpose' => 'password_reset',
-            'token_hash' => hash('sha256', 'seed-raw-token'), 'expires_at' => date('Y-m-d H:i:s', time() + 3600),
+            'token_hash' => hash('sha256', 'seed-raw-token'), 'expires_at' => date('Y-m-d H:i:s', slate_db_time() + 3600),
         ]);
 
         // ── plan (dry-run) reports, writes nothing ──

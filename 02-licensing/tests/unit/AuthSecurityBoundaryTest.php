@@ -15,14 +15,25 @@ unit('redirect sanitizer accepts local paths and rejects external targets', func
 });
 
 unit('redirect sanitizer preserves an absolute URL only for the configured Slate origin', function (): void {
-    $fallback = '/admin/';
-    $origin = defined('SLATE_URL') ? (string) SLATE_URL : '';
-    if ($origin === '') {
-        assert_true(true, 'SLATE_URL unavailable in isolated unit harness');
-        return;
-    }
-    assert_eq($origin . '/admin/', slate_safe_redirect_target($origin . '/admin/', $fallback));
-    assert_eq($fallback, slate_safe_redirect_target('https://example.test' . '/admin/', $fallback));
+    // The unit runner does not load config.php, so SLATE_URL is undefined
+    // here; this used to "pass" by skipping. Run the check in a child
+    // process that defines the origin first (SLATE_URL is a constant).
+    $code = "define('SLATE_URL', 'https://kohevo.test');"
+          . 'require ' . var_export(dirname(__DIR__, 2) . '/includes/helpers.php', true) . ';'
+          . '$f = "/admin/"; echo json_encode(['
+          . 'slate_safe_redirect_target("https://kohevo.test/admin/", $f),'
+          . 'slate_safe_redirect_target("https://kohevo.test", $f),'
+          . 'slate_safe_redirect_target("https://example.test/admin/", $f),'
+          . 'slate_safe_redirect_target("https://kohevo.test.evil.example/admin/", $f),'
+          . 'slate_safe_redirect_target("https://kohevo.testevil.example/", $f)]);';
+    $out = (string) shell_exec(escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg($code) . ' 2>&1');
+    $r = json_decode($out, true);
+    assert_true(is_array($r), 'child output: ' . $out);
+    assert_eq('https://kohevo.test/admin/', $r[0], 'an absolute URL on the configured origin is kept');
+    assert_eq('https://kohevo.test', $r[1], 'the bare origin is kept');
+    assert_eq('/admin/', $r[2], 'another origin falls back');
+    assert_eq('/admin/', $r[3], 'a lookalike subdomain of another host falls back');
+    assert_eq('/admin/', $r[4], 'a prefix-sharing host falls back');
 });
 
 unit('session cookie policy rejects spoofed forwarded HTTP and keeps strict cookie flags', function (): void {

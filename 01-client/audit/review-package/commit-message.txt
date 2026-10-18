@@ -1,0 +1,28 @@
+fix(settings): encrypt Forms CAPTCHA secrets, clear both Stripe modes, drop test seams
+
+Forms CAPTCHA secrets are now stored as enc:v1 envelopes. The editor
+refuses to save a new secret when encryption is unavailable, a blank
+field keeps the stored value, a legacy plaintext secret is upgraded on
+save, and the clear checkbox removes it. The public form decrypts the
+secret before calling the provider and rejects submissions if it cannot.
+
+Stripe "Disconnect" now clears the test and live key slots as well as
+the legacy ones, so Stripe really is disconnected, and records
+stripe.keys_cleared. Countries and toggles are left alone.
+
+Remove the PaymentButtonRenderer::$stripeReadyOverride test seam. The
+old order-dependent failure was a missing APP_SECRET once the real
+slate_sign() was loaded; the test now defines it and verifies through
+slate_sign(). Remove the react-site-bridge tests, which could never
+run because that plugin was never committed. Run the platform-admin
+negative upload test with the plugin lock open, and mirror the client
+clock fixture into the licensing ContactSeeder and CustomerAuthParity
+tests.
+
+Correct the inventory against source: 52 rows renamed to real keys, 38
+rows for settings that do not exist moved to a removed-rows file with
+reasons, 1 marked not implemented, 1 added. Regenerate the widget
+matrix from the renderer registry, and refresh the review package and
+test evidence against origin/main.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

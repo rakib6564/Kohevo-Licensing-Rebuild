@@ -109,12 +109,16 @@ $tid    = current_tenant_id();
 $fakeId = 900000 + random_int(1, 99999);
 $grantPlatformAdmin = ($argv[4] ?? '0') === '1';
 
+if (session_status() === PHP_SESSION_ACTIVE) {
+    session_write_close();
+}
 session_id('adminprobe_' . bin2hex(random_bytes(12)));
 Auth::startSession();
 $_SESSION['slate_user'] = [
     'id'        => $fakeId,
     'tenant_id' => $tid,
     'email'     => 'capability-probe@example.test',
+    'name'      => 'Capability Probe',
     'role_id'   => $roleId,
 ];
 (new SessionRepository(new TenantContext()))->register(
@@ -122,6 +126,10 @@ $_SESSION['slate_user'] = [
 );
 if ($grantPlatformAdmin) {
     Auth::grantPlatformAdmin($fakeId);
+}
+if (($argv[5] ?? '0') === '1' || getenv('PROBE_UNLOCK_PLUGINS') === '1') {
+    $_SESSION['plugins_unlocked_until'] = time() + 900;
+    $_SESSION['plugins_unlocked_uid'] = $fakeId;
 }
 
 require $file;

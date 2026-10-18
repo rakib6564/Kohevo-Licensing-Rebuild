@@ -1,0 +1,101 @@
+key,domain,encryption_claim,encryption_verified,parity_claim,parity_verified
+site_name,Core: System,False,,identical,True
+site_tagline,Core: System,False,,identical,True
+APP_URL,Core: System,False,,identical,True
+site_admin_email,Core: System,False,,identical,True
+timezone,Core: System,False,,identical,True
+date_format,Core: System,False,,identical,True
+time_format,Core: System,False,,identical,True
+start_of_week,Core: System,False,,identical,True
+permalink_structure,Core: System,False,,identical,True
+brand_accent_color,Core: System,False,,identical,True
+brand_font_family,Core: System,False,,identical,True
+brand_border_radius,Core: System,False,,identical,True
+brand_logo_path,Core: System,False,,identical,True
+brand_favicon_path,Core: System,False,,identical,True
+session_timeout_minutes,Core: System,False,,identical,True
+max_login_attempts,Core: System,False,,identical,True
+lockout_minutes,Core: System,False,,identical,True
+smtp_auth_type,Core: System,False,,identical,True
+smtp_host,Core: System,False,,identical,True
+smtp_port,Core: System,False,,identical,True
+smtp_encryption,Core: System,False,,identical,True
+smtp_user,Core: System,False,,identical,True
+smtp_pass,Core: System,True,True,identical,True
+smtp_oauth_provider,Core: System,False,,identical,True
+smtp_oauth_client_id,Core: System,False,,identical,True
+smtp_oauth_client_secret,Core: System,True,True,identical,True
+smtp_oauth_refresh_token,Core: System,True,True,identical,True
+retention_count,Plugin,False,,identical,True
+google_client_id,Plugin,False,,identical,True
+google_client_secret,Plugin,True,True,identical,True
+google_refresh_token,Plugin,True,True,identical,True
+business_hours,Plugin,False,,identical,True
+buffer_min,Plugin,False,,identical,True
+currency,Plugin,False,,identical,True
+google_enabled,Plugin,False,,identical,True
+google_client_id,Plugin,False,,identical,True
+google_client_secret,Plugin,True,True,identical,True
+twilio_sid,Plugin,False,,identical,True
+twilio_token,Plugin,True,True,identical,True
+twilio_sms_from,Plugin,False,,identical,True
+program_plan_id,Plugin,False,,identical,True
+default_activity_factor,Plugin,False,,identical,True
+coaching.settings_updated,Plugin,False,,identical,True
+sp_captcha_secret,Plugin,True,True,identical,True
+sp_captcha_site_key,Plugin,False,,identical,True
+sp_captcha_provider,Plugin,False,,identical,True
+sp_rate_limit,Plugin,False,,identical,True
+notify_email,Plugin,False,,identical,True
+webhook_urls,Plugin,False,,identical,True
+stripe_payment_field,Plugin,False,,n/a,
+license_key,Plugin,False,,identical,True
+remote_license_cache,Plugin,False,,identical,True
+LICENSE_SERVER_URL,Plugin,False,,client-only,
+OFFLINE_TOLERANCE_SECONDS,Plugin,False,,client-only,
+ai_api_key,Plugin,True,True,identical,True
+ai_base_url,Plugin,False,,identical,True
+ai_model,Plugin,False,,identical,True
+ALLOWED_MIMES,Plugin,False,,identical,True
+media_max_upload_mb,Plugin,False,,identical,True
+media_usage,Plugin,False,,identical,True
+media_thumb_w,Plugin,False,,identical,True
+plans,Plugin,False,,identical,True
+currency,Plugin,False,,identical,True
+enable_attendance,Plugin,False,,identical,True
+default_language,Plugin,False,,identical,True
+autotranslate_api_key,Plugin,True,True,identical,True
+mode,Plugin,False,,identical,True
+publishable_key,Plugin,False,,identical,True
+secret_key,Plugin,True,True,identical,True
+webhook_secret,Plugin,True,True,identical,True
+allowed_countries,Plugin,False,,identical,True
+method_klarna,Plugin,False,,identical,True
+studiobuilder_tokens,Plugin,False,,client-only,
+core.heading,Widget: Studio,False,,client-only,
+core.text,Widget: Studio,False,,client-only,
+core.button,Widget: Studio,False,,client-only,
+core.image,Widget: Studio,False,,client-only,
+layout.grid,Widget: Studio,False,,client-only,
+core.card,Widget: Studio,False,,client-only,
+core.hero,Widget: Studio,False,,client-only,
+core.divider,Widget: Studio,False,,client-only,
+core.spacer,Widget: Studio,False,,client-only,
+core.video,Widget: Studio,False,,client-only,
+forms.embed,Widget: Studio,False,,client-only,
+booking.embed,Widget: Studio,False,,client-only,
+membership.plans,Widget: Studio,False,,client-only,
+payment.button,Widget: Studio,False,,client-only,
+portfolio.project_card,Widget: Studio,False,,both trees,
+acme.testimonial,Widget: Studio,False,,both trees,
+text,Field: Forms,False,,both trees,
+email,Field: Forms,False,,both trees,
+textarea,Field: Forms,False,,both trees,
+number,Field: Forms,False,,both trees,
+select,Field: Forms,False,,both trees,
+checkbox,Field: Forms,False,,both trees,
+checkboxes,Field: Forms,False,,both trees,
+radio,Field: Forms,False,,both trees,
+date,Field: Forms,False,,both trees,
+file,Field: Forms,False,,both trees,
+signature,Field: Forms,False,,both trees,

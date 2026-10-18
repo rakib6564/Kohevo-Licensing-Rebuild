@@ -1,0 +1,39 @@
+original_csv_line,Domain,Component,Setting_Or_Widget,reason
+6,Core: System,General,default_role,No user self-registration role setting exists
+7,Core: System,General,users_can_register,No self-registration toggle exists
+8,Core: System,General,membership_requires_approval,No registration-approval setting exists
+14,Core: System,Branding,brand_primary_color,Only brand_accent_color exists; there is no primary-colour setting
+15,Core: System,Branding,brand_secondary_color,Only brand_accent_color exists; there is no secondary-colour setting
+22,Core: System,Security,mfa_enforced,MFA exists per user (src/Services/Auth/Mfa.php) but there is no platform-wide enforcement setting
+36,Plugin,backups,schedule_frequency,Backups are cron-driven; there is no schedule setting
+37,Plugin,backups,schedule_time,Backups are cron-driven; there is no schedule-time setting
+38,Plugin,backups,destination,Google Drive is the only destination; there is no destination setting
+42,Plugin,backups,include_database,Backup contents are not configurable
+43,Plugin,backups,include_uploads,Backup contents are not configurable
+45,Plugin,booking,slot_interval_minutes,No global slot-interval setting exists
+47,Plugin,booking,min_notice_hours,No booking minimum-notice setting; the real keys are cancel_min_notice_hours and reschedule_min_notice_hours (different meaning)
+48,Plugin,booking,max_future_days,No max-future-days setting exists
+50,Plugin,booking,deposit_mode,No deposit setting exists
+51,Plugin,booking,deposit_amount,No deposit setting exists
+55,Plugin,booking,google_tokens,Not a setting; Google OAuth tokens were not verified as a settings key
+61,Plugin,coaching,macro_protein_pct,No macro-percentage setting exists
+62,Plugin,coaching,macro_carb_pct,No macro-percentage setting exists
+63,Plugin,coaching,macro_fat_pct,No macro-percentage setting exists
+64,Plugin,coaching,client_diary_visibility,No diary-visibility setting exists
+69,Plugin,forms,sp_honeypot_enabled,The honeypot is always on; there is no toggle
+78,Plugin,mcp-gateway,mcp_enabled,No MCP master switch; plugin activation is the switch
+83,Plugin,mcp-gateway,allowed_tools,"Tool access is governed by MCP token scopes, not a setting"
+89,Plugin,membership,grace_period_days,No grace-period setting exists
+91,Plugin,membership,stripe_sync_enabled,No Stripe-sync toggle exists
+93,Plugin,membership,wallet_ledger_enabled,No wallet/ledger toggle exists
+95,Plugin,multilang-translate,active_languages,Language configuration was not verified as a settings key
+96,Plugin,multilang-translate,crawler_protection,No crawler-protection setting exists
+97,Plugin,multilang-translate,url_prefix_mode,No URL-prefix-mode setting exists
+104,Plugin,studio-builder,site_title,No Studio site-title setting exists (core site_name is used)
+105,Plugin,studio-builder,custom_head_code,No custom head-code setting exists
+106,Plugin,studio-builder,custom_footer_code,No custom footer-code setting exists
+107,Plugin,studio-builder,tracking_head_code,No tracking head-code setting exists
+108,Plugin,studio-builder,tracking_body_code,No tracking body-code setting exists
+109,Plugin,studio-builder,global_css,No global CSS setting exists
+124,Widget: Studio,Core,coaching-feed,No coaching feed block exists
+(was 79),Plugin,mcp-gateway,ai_provider,No provider setting exists; the client is configured by ai_base_url + ai_model (already listed)
