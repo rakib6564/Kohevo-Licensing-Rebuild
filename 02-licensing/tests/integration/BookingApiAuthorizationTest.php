@@ -28,6 +28,11 @@ declare(strict_types=1);
 
 use Slate\Tenancy\TenantContext;
 
+// Central tree: Booking/Forms entry points run through ModuleGuard, so the
+// test tenant needs a plan that includes them (Professional; restored at shutdown).
+require_once dirname(__DIR__) . '/support/tenant-plan.php';
+slate_test_entitle_current_tenant();
+
 /** Run api/v1.php in a CHILD process. Returns [status, decodedJsonOrNull, rawBody]. */
 function bkapi_probe(string $routePath, string $method = 'GET', string $bearer = '', string $query = ''): array
 {
