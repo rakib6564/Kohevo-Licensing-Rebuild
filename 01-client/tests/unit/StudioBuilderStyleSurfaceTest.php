@@ -867,3 +867,23 @@ unit('tabs: "Tab position: bottom" puts the tab strip under the panels', functio
     ], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), new RenderCollector(), false);
     assert_true(str_contains($html, 'sb-tabs-block--bottom'), 'the renderer writes the class: ' . $html);
 });
+
+// ── Interaction triggers (W-F7) ───────────────────────────────────────────
+
+unit('interaction triggers: every trigger the validator accepts does something on the page', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    $runtime = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/assets/public/studio-runtime.js');
+    foreach (CanonicalDocumentSchema::ALLOWED_INTERACTION_TRIGGERS as $trigger) {
+        $class = '.sb-interaction-' . str_replace(['_', ' '], '-', $trigger);
+        $hasEffect = (bool) preg_match('/' . preg_quote($class, '/') . '[^{]*\{[^}]*(animation|transform)/', $css)
+            || (bool) preg_match('/' . preg_quote($class, '/') . ':(hover|focus-visible|active)\{/', $css);
+        assert_true($hasEffect, "{$trigger} has CSS that moves or animates the block");
+    }
+    assert_true(str_contains($css, '.sb-interaction-click[class*="sb-animate-"]:not([data-sb-play]){animation:none}'), 'a click animation waits for the click');
+    assert_true(str_contains($runtime, "data-sb-interaction-trigger=\"click\"") && str_contains($runtime, "setAttribute('data-sb-play', '')"), 'the runtime plays it on click');
+    assert_true(str_contains($css, '.sb-interaction-load:not([class*="sb-animate-"]){animation:sb-fade-in'), 'load with no animation fades in');
+    assert_true(str_contains($css, '.sb-interaction-scroll:not([class*="sb-animate-"]){animation:sb-scroll-drift linear both;animation-timeline:view()'), 'scroll with no animation drifts with the scroll');
+    assert_true(str_contains($runtime, "data-sb-interaction-trigger=\"scroll\"") && str_contains($runtime, "CSS.supports('animation-timeline: view()')"), 'the runtime drifts it where scroll timelines are missing');
+    assert_true(str_contains($runtime, "['interactions', initInteractions]"), 'the feature is registered');
+});
