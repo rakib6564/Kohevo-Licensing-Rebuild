@@ -978,7 +978,7 @@ return [
     'studio_ui_ss_group_shadows' => 'Ombres',
     'studio_ui_ss_group_spacing' => 'Espacement',
     'studio_ui_ss_group_layout' => 'Largeurs de page',
-    'studio_ui_ss_hint_layout' => 'Jusqu\'où le contenu d\'une page peut s\'étendre. Chaque page choisit Étroit, Normal, Large ou Plein dans ses réglages ; ceci définit ce que ces tailles valent pour tout le site.',
+    'studio_ui_ss_hint_layout' => "Jusqu'où le contenu peut s'étendre. Chaque section choisit Étroit, Normal, Large ou Plein dans ses propres réglages ; ceci définit ce que ces tailles valent pour tout le site.",
     'studio_ui_ss_tk_layout_narrow' => 'Étroit',
     'studio_ui_ss_tk_layout_normal' => 'Normal',
     'studio_ui_ss_tk_layout_wide' => 'Large',
