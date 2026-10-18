@@ -1,12 +1,12 @@
 // Per-device style overrides: the editor half of `StyleSurface::responsiveRules()`.
 //
 // Desktop is the block's own `style`. Tablet and mobile keep a partial style under
-// `block.responsive.<device>.style`, limited to the paths the server accepts there (font size, padding, margin and
-// the flex / grid layout). The editor only edits these document values; the server turns them into @media rules and is the only
+// `block.responsive.<device>.style`, limited to the paths the server accepts there (font size, padding, margin,
+// the flex / grid layout, and width, height, min-height and max-width). The editor only edits these document values; the server turns them into @media rules and is the only
 // place that writes CSS. A cleared field is removed, and an override left empty is removed with it.
 
 import { asObject } from './doc.mjs';
-import { getPath, setPath } from './styleSurface.mjs';
+import { getPath, isMeasure, setPath, surfaceAccepts } from './styleSurface.mjs';
 
 export const DEVICE_KEYS = Object.freeze(['desktop', 'tablet', 'mobile']);
 export const OVERRIDE_DEVICES = Object.freeze(['tablet', 'mobile']);
@@ -19,7 +19,14 @@ export const RESPONSIVE_SCOPES = Object.freeze({
   // The flex / grid layout of a container: every layout field but the display type, which stays one value for all devices.
   layout: ['layout.direction', 'layout.wrap', 'layout.justify', 'layout.align', 'layout.align_content', 'layout.gap', 'layout.row_gap', 'layout.column_gap', 'layout.columns', 'layout.rows'],
   item: ['layout.order', 'layout.grow', 'layout.shrink', 'layout.basis', 'layout.align_self'],
+  dimensions: ['dimensions.width', 'dimensions.height', 'dimensions.min_height', 'dimensions.max_width'],
 });
+
+/** Whether the server accepts `value` at `path` in a device style: a length or auto for the four sizes, else the surface's rule. */
+export function deviceAccepts(path, value) {
+  if (RESPONSIVE_SCOPES.dimensions.includes(path)) return isMeasure(value, true);
+  return path === 'typography.size' ? isMeasure(value, false) : surfaceAccepts(path, value);
+}
 
 
 /** The partial style a device overrides (empty for desktop, which is the block style itself). */
