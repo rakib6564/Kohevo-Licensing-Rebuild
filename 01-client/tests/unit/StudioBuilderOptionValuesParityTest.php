@@ -38,6 +38,8 @@ function sbov_rule(string $css, string $selector): ?array
 }
 
 /** ".25rem" and "0.25rem" are the same size. */
+require_once SLATE_ROOT . '/tests/support/css_defaults.php';
+
 function sbov_norm(string $v): string
 {
     $v = strtolower(preg_replace('~\s+~', '', $v) ?? $v);
@@ -64,7 +66,8 @@ unit('option values: every size the Inspector shows is the size the stylesheet e
             assert_true(isset($decls[$prop]), "{$name}.{$value}: {$selector} sets {$prop}");
             $want = $table['alias'][$value] ?? $expected;
             // A page width follows the site's Layout token; the number the Inspector shows is its default (the var() fallback).
-            $got = preg_replace('~^var\(--sb-layout-[a-z]+,\s*([^)]+)\)$~', '$1', $decls[$prop]) ?? $decls[$prop];
+            // A spacing size is a multiple of a Spacing token; the number shown is its size with the default tokens.
+            $got = sb_css_default($decls[$prop]);
             assert_eq(sbov_norm($want), sbov_norm($got), "{$name}.{$value} ({$selector} {$prop})");
             $checked++;
         }

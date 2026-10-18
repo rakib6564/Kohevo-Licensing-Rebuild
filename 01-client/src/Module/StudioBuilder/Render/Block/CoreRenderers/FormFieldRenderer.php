@@ -38,7 +38,8 @@ final class FormFieldRenderer implements BlockRendererInterface
         $required = $scope->bool('required', false);
         $helpText = $scope->string('help_text');
         $reqAttr = $required ? ' required' : '';
-        $inputId = 'sb_f_' . $name . '_' . substr(bin2hex(random_bytes(4)), 0, 8);
+        // Derived from the block's node id, so the same document always renders the same markup.
+        $inputId = 'sb_f_' . $name . '_' . substr(hash('sha256', $scope->domId()), 0, 8);
 
         $html = '<div class="sb-form-group sb-form-group--' . Html::e($fieldType) . '">';
 

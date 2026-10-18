@@ -155,7 +155,25 @@ class StudioBuilder extends Plugin
         // A browser is shown the sitemap as a readable page; `?format=xml` (the page's own link) always returns the XML.
         $accept = isset($_SERVER['HTTP_ACCEPT']) && is_string($_SERVER['HTTP_ACCEPT']) && ($_GET['format'] ?? '') !== 'xml'
             ? substr($_SERVER['HTTP_ACCEPT'], 0, 400) : null;
-        return self::send(self::publicResponse(static fn(?string $ifNoneMatch) => $runtime->handlePath((string) $path, $ifNoneMatch, $accept)));
+        $request = self::withSearchQuery((string) $path);
+        $response = self::publicResponse(static fn(?string $ifNoneMatch) => $runtime->handlePath($request, $ifNoneMatch, $accept))
+            // An address nothing serves gets the published 404 template, when there is one, with status 404.
+            ?? self::publicResponse(static fn(?string $ifNoneMatch) => $runtime->handleNotFound());
+        return self::send($response);
+    }
+
+    /**
+     * `/search` with the visitor's query attached: the router strips `?q=` before the path reaches Studio,
+     * so the search template would otherwise never learn what was searched for. `s` is accepted too.
+     */
+    public static function withSearchQuery(string $path): string
+    {
+        if (trim($path, '/') !== 'search') {
+            return $path;
+        }
+        $raw = $_GET['q'] ?? $_GET['s'] ?? '';
+        $query = is_string($raw) ? trim(mb_substr($raw, 0, 191)) : '';
+        return $query === '' ? $path : 'search?q=' . rawurlencode($query);
     }
 
     /**

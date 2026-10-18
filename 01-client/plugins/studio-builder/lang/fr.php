@@ -1563,4 +1563,5 @@ return [
     'studio_yes' => 'Oui',
     'studio_prev' => 'Précédent',
     'studio_next' => 'Suivant',
+    'studio_search' => 'Rechercher',
 ];

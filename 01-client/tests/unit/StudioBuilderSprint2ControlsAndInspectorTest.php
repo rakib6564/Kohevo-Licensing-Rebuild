@@ -286,8 +286,8 @@ unit('sprint2 unit: StudioStylesheet contains typography, radius, and shadow uti
     assert_true(str_contains($css, '.sb-uppercase{text-transform:uppercase}'));
 
     // Radius
-    assert_true(str_contains($css, '.sb-radius-full{border-radius:9999px}'));
-    assert_true(str_contains($css, '.sb-radius-lg{border-radius:1rem}'));
+    assert_true(str_contains($css, '.sb-radius-full{border-radius:var(--sb-radius-full,9999px)}'));
+    assert_true(str_contains($css, '.sb-radius-lg{border-radius:var(--sb-radius-lg,1rem)}'));
 
     // Shadows
     assert_true(str_contains($css, '.sb-shadow-none{box-shadow:none}'));

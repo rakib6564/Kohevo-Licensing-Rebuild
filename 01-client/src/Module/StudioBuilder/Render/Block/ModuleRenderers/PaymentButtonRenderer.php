@@ -24,9 +24,10 @@ final class PaymentButtonRenderer implements BlockRendererInterface
         return 'payment.button';
     }
 
+    /** Dynamic: whether the button shows depends on Stripe being set up, which no compiled page would notice. */
     public function isDynamic(): bool
     {
-        return false;
+        return true;
     }
 
     public function render(BlockRenderScope $scope): string

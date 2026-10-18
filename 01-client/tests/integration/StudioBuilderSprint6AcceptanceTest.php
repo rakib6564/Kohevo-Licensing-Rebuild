@@ -319,6 +319,57 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             assert_true(str_contains($resp404->body, 'Custom 404: Page Not Found in Kohevo Studio'), 'renders custom 404 message');
             assert_true(str_contains($resp404->body, 'class="sb-search-form"'), 'renders search box block in 404 template');
 
+            // The public entry point serves that 404 template for an address nothing else serves (TB-04).
+            $capture = static function (callable $fn): array {
+                ob_start();
+                try {
+                    $handled = $fn();
+                } finally {
+                    $out = (string) ob_get_clean();
+                }
+                return [$handled, $out];
+            };
+            [$handled404, $out404] = $capture(static fn() => $rt->tenants->runAs(S6_TENANT_A, static fn(): bool => \StudioBuilder::servePublicPath(false, 'no-such-page')));
+            assert_true($handled404 === true, 'an unknown address is answered by Studio');
+            assert_true(str_contains($out404, 'Custom 404: Page Not Found in Kohevo Studio'), 'with the published 404 template');
+            [$handledB404] = $capture(static fn() => $rt->tenants->runAs(S6_TENANT_B, static fn(): bool => \StudioBuilder::servePublicPath(false, 'no-such-page')));
+            assert_true($handledB404 === false, 'a tenant with no 404 template keeps the platform 404');
+
+            // The search template receives the visitor's query, and the search box shows each visitor
+            // their own query rather than one baked into the page (TB-05, TB-07, W-F15).
+            $tplSearch = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->createPage($actorA, 'Search Results', 'search-results', 'system', 'standalone'));
+            $tplSearchId = (int) $tplSearch['page']['id'];
+            $secSearch = s6_section([
+                s6_block('theme.archive_title', []),
+                s6_block('theme.search_box', ['placeholder' => 'Search across site...']),
+            ], 'Search Section');
+            $tplSearchEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, $tplSearchId, [
+                new DocumentOperation('insert_section', ['index' => 0, 'section' => $secSearch]),
+                new DocumentOperation('update_settings', ['settings' => ['template_type' => 'search']]),
+            ], (int) $tplSearch['revision']['id'], 'Add search content'));
+            $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, $tplSearchId, (int) $tplSearchEdit['revision']['id']));
+            $savedGet = $_GET;
+            try {
+                $_GET = ['q' => 'kubernetes'];
+                [$handledSearch, $outSearch] = $capture(static fn() => $rt->tenants->runAs(S6_TENANT_A, static fn(): bool => \StudioBuilder::servePublicPath(false, 'search')));
+                assert_true($handledSearch === true, '/search is served');
+                assert_true(str_contains($outSearch, 'Search Results: kubernetes'), 'the template title names the query');
+                assert_true(str_contains($outSearch, 'value="kubernetes"'), 'the search box holds the query');
+                assert_true((bool) preg_match('~<input type="search"[^>]* aria-label="Search across site\.\.\."~', $outSearch), 'the search box has an accessible name');
+
+                $_GET = ['s' => '<b>docker</b>'];
+                [, $outNext] = $capture(static fn() => $rt->tenants->runAs(S6_TENANT_A, static fn(): bool => \StudioBuilder::servePublicPath(false, 'search')));
+                assert_true(str_contains($outNext, 'value="&lt;b&gt;docker&lt;/b&gt;"'), 'the next visitor sees their own query, escaped');
+                assert_false(str_contains($outNext, 'kubernetes'), 'and not the previous visitor\'s');
+                assert_false(str_contains($outNext, '<b>docker</b>'), 'a query is never output as markup');
+
+                $_GET = [];
+                [, $outEmpty] = $capture(static fn() => $rt->tenants->runAs(S6_TENANT_A, static fn(): bool => \StudioBuilder::servePublicPath(false, 'search')));
+                assert_true(str_contains($outEmpty, '>Search<') && str_contains($outEmpty, 'value=""'), 'no query: the plain search page');
+            } finally {
+                $_GET = $savedGet;
+            }
+
             // ─────────────────────────────────────────────────────────────────
             // VERIFICATION 5: Strict Multi-Tenant Isolation
             // ─────────────────────────────────────────────────────────────────

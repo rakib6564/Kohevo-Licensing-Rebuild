@@ -772,3 +772,98 @@ unit('container layout: a Flex & grid value beats the matching prop, which is wh
     assert_true((bool) preg_match('/\.' . preg_quote($class, '/') . '\{[^}]*flex-direction:column/', $css), 'the style is a scoped rule for that element: ' . $css);
     assert_true(strpos(\Slate\Module\StudioBuilder\Render\StudioStylesheet::css() . $css, '.' . $class . '{') > strpos(\Slate\Module\StudioBuilder\Render\StudioStylesheet::css(), '.sb-flex--row'), 'the scoped rule comes after the class rule, so it wins');
 });
+
+// ── Presets follow the site tokens (DT-M1, CL-M11, CL-M1, DT-M5) ──────────
+
+/** Size in rem of a padding or gap value once the default Spacing tokens are filled in. */
+function sbss_default_rem(string $value): float
+{
+    if ($value === '0') {
+        return 0.0;
+    }
+    $ok = preg_match('/^(?:calc\()?var\(--sb-space-(sm|md|lg),([\d.]+)rem\)(?:\*(\d+))?(?:\/(\d+))?\)?$/', $value, $m);
+    assert_true($ok === 1, 'a size is a multiple of one Spacing token: ' . $value);
+    $token = ThemeResolver::DEFAULT_TOKENS['space.' . $m[1]];
+    assert_eq($m[2] . 'rem', $token === '0.75rem' ? '.75rem' : $token, 'the fallback is the default token value');
+    return (float) $m[2] * (int) (($m[3] ?? '') !== '' ? $m[3] : 1) / (int) (($m[4] ?? '') !== '' ? $m[4] : 1);
+}
+
+unit('spacing: padding and gap sizes follow the Spacing tokens and keep their sizes by default', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    $before = [
+        'pad' => ['none' => 0, 'xs' => .5, 'sm' => 1, 'md' => 2, 'lg' => 4, 'xl' => 6, '2xl' => 8],
+        'gap' => ['none' => 0, 'xs' => .25, 'sm' => .5, 'md' => 1, 'lg' => 1.5, 'xl' => 2, '2xl' => 3],
+    ];
+    foreach ($before as $kind => $sizes) {
+        $prop = $kind === 'pad' ? 'padding' : 'gap';
+        foreach ($sizes as $name => $rem) {
+            assert_true((bool) preg_match('/\.sb-' . $kind . '-' . preg_quote($name, '/') . '\{' . $prop . ':([^}]+)\}/', $css, $m), "{$kind}-{$name} has a rule");
+            assert_true(abs(sbss_default_rem($m[1]) - $rem) < 0.0001, "{$kind}-{$name} is still {$rem}rem by default, got {$m[1]}");
+        }
+    }
+    assert_true(str_contains($css, '.sb-pad-md{padding:calc(var(--sb-space-md,1.5rem)'), 'md padding is built on the md token');
+    assert_true(str_contains($css, '.sb-gap-md{gap:calc(var(--sb-space-md,1.5rem)'), 'md gap is built on the same token');
+    assert_true(str_contains($css, '.sb-md-py-md{padding-top:calc(var(--sb-space-md,1.5rem)'), 'responsive vertical padding too');
+});
+
+unit('presets: corner and shadow presets use the matching tokens, and fall back to their old values', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    foreach (['sm' => '.25rem', 'md' => '.5rem', 'lg' => '1rem', 'full' => '9999px'] as $size => $old) {
+        assert_true(str_contains($css, ".sb-radius-{$size}{border-radius:var(--sb-radius-{$size},{$old})}"), "radius {$size} follows its token");
+        assert_true(isset(ThemeResolver::DEFAULT_TOKENS['radius.' . $size]), "radius.{$size} is a default token");
+    }
+    foreach (['sm', 'md'] as $size) {
+        assert_true(str_contains($css, ".sb-shadow-{$size}{box-shadow:var(--sb-shadow-{$size},"), "shadow {$size} follows its token");
+    }
+    assert_true(str_contains($css, '.sb-radius-xl{border-radius:1.5rem}'), 'sizes with no token keep a fixed value');
+});
+
+unit('widths: layout sections and containers follow the Page width tokens', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    assert_true(str_contains($css, '.sb-layout-section--boxed{max-width:var(--sb-layout-wide,80rem)'), 'boxed = Wide');
+    assert_true(str_contains($css, '.sb-layout-section--narrow{max-width:var(--sb-layout-narrow,42rem)'), 'narrow = Narrow');
+    assert_true(str_contains($css, '.sb-container--constrained{max-width:var(--sb-layout-wide,80rem)}'), 'constrained = Wide');
+    assert_true(str_contains($css, '.sb-container--compact{max-width:var(--sb-layout-narrow,42rem)}'), 'compact = Narrow');
+    assert_false((bool) preg_match('/\.sb-(layout-section|container)--[a-z]+\{max-width:\d+(rem|px)/', $css), 'no hard-coded section or container width is left');
+});
+
+unit('text colours: post excerpt and content use variables the theme defines', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    preg_match_all('/var\((--sb-[a-z0-9-]+)/', $css, $m);
+    $defined = array_map([\Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme::class, 'cssVarName'], array_keys(ThemeResolver::DEFAULT_TOKENS));
+    // --sb-anim-* are set per element by the animation surface, not by the theme.
+    $missing = array_values(array_filter(array_diff(array_unique($m[1]), $defined), static fn (string $v): bool => !str_starts_with($v, '--sb-anim-')));
+    assert_eq([], $missing, 'every variable the base CSS reads is a token: ' . implode(', ', $missing));
+});
+
+// ── Drawer and tab positions (W-F5, W-F6) ─────────────────────────────────
+
+unit('offcanvas: every drawer position has a rule', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    foreach (['left', 'right', 'top', 'bottom'] as $pos) {
+        assert_true(str_contains($css, ".sb-offcanvas--{$pos} .sb-offcanvas__panel"), "{$pos} drawer is anchored");
+    }
+    assert_true((bool) preg_match('/\.sb-offcanvas--top \.sb-offcanvas__panel\{[^}]*bottom:auto/', $css), 'a top drawer is not full height');
+    assert_true((bool) preg_match('/\.sb-offcanvas--bottom \.sb-offcanvas__panel\{[^}]*top:auto/', $css), 'a bottom drawer is not full height');
+});
+
+unit('tabs: "Tab position: bottom" puts the tab strip under the panels', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    assert_true(str_contains($css, '.sb-tabs-block--bottom{display:flex;flex-direction:column-reverse}'), 'bottom reverses the strip and the panels');
+    $tenants  = new TenantContext();
+    $renderer = new DocumentRenderer(BlockRegistry::withAllCoreBlocks(), BlockRendererRegistry::withCoreRenderers(), new CoreMediaResolver($tenants), new ProviderBindingResolver(new DataProviderRegistry(), $tenants));
+    $html = $renderer->renderBlock([
+        'id' => 'blk_dddddddddddddddddddddddd', 'type' => 'core.tabs', 'version' => 1,
+        'props' => ['items' => [['label' => 'One', 'content' => 'First'], ['label' => 'Two', 'content' => 'Second']], 'options' => ['position' => 'bottom']],
+        'style' => CanonicalDocumentSchema::defaultBlockStyle(),
+        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+        'bindings' => [], 'children' => [], 'animation' => [], 'interactions' => [],
+    ], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), new RenderCollector(), false);
+    assert_true(str_contains($html, 'sb-tabs-block--bottom'), 'the renderer writes the class: ' . $html);
+});
