@@ -124,6 +124,8 @@ unit('phase9a locale: the pin wraps exactly the public render and the publish-ti
     assert_true(preg_match('/if \(\$response === null\) \{\s*return false;\s*\}\s*StudioPublicLocale::pin\(\);\s*StudioHttpResponder::sendPublic\(\$response\);/', sbl9u_method($plugin, 'send')) === 1, 'send(): pins only after a page is confirmed');
     foreach (['servePublicPath', 'servePublicHomepage'] as $hook) {
         $body = sbl9u_method($plugin, $hook);
-        assert_true(str_contains($body, 'return self::send(self::publicResponse(') && !str_contains($body, 'sendPublic'), "{$hook}: serves only through send()");
+        // servePublicPath builds its response first (a page, else the 404 template), then sends it the same way.
+        $sends = str_contains($body, 'return self::send(self::publicResponse(') || (str_contains($body, '= self::publicResponse(') && str_contains($body, 'return self::send($response);'));
+        assert_true($sends && !str_contains($body, 'sendPublic'), "{$hook}: serves only through send()");
     }
 });
