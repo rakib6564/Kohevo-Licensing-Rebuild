@@ -12,7 +12,7 @@ Branch `audit/settings-hardening-next`, based on `e9a1bdf` (the existing local `
 | `c926c18` | One definition of the licensing-plugin test helpers (fixes the licensing single-process crash). |
 | `8db616f` | `APP_ENV=testing` no longer switches off the client licence guard or ModuleGuard on web requests (CLI only). |
 | `5462c1e` | Central `LicenseGateTest` seeds trusted cache rows (the installation-identity trust rule), and pins that untrusted rows restrict. |
-| `19c9a55`, `444c531` | Two test-order dependencies fixed (found by seeded shuffled runs). |
+| `19c9a55`, `444c531`, `234b4d6` | Three test-order dependencies fixed (found by seeded shuffled runs); `234b4d6` moves the Phase 10 helpers into `tests/support/phase10.php`. |
 | `49c1fd4` | Direct web-request test of client ModuleGuard's `APP_ENV` rule (found by mutation testing). |
 
 ### Security changes

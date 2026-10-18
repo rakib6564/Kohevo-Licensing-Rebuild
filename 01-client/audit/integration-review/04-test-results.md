@@ -80,6 +80,35 @@ Seeded shuffled runs found two test-order bugs that predate this work. Both are 
 3. The static check required a `try/catch` in each settings page (`9ac61ab`).
 4. The two order dependencies above.
 
+## High fixes (N1–N5) on the combined tree
+
+**Tree:** `integration/release-check-highs` (local, test only, never pushed). It is `integration/release-check` plus the five fix branches (`c19c9d5`, `3862f1c`, `885d23e`, `72fd527`, `4aa8550`), plus `234b4d6`.
+
+The only merge conflict was in the Sprint6 unit test, where two new cases were both appended at the end. Both were kept. `templates.php` (N3 and N5) merged automatically.
+
+**Logs:** `test-logs/release-highs/`. Each suite ran one at a time.
+
+| Suite | Release `99ba13e` | Combined `762d0c7` (r17) | After `234b4d6` (`5e4963c`) | Status |
+|---|---|---|---|---|
+| Client unit | 1008/1008 | **1010/1010** | (unchanged) | PASS |
+| Licensing unit | 455/455 | 455/455 | (unchanged) | PASS |
+| Smoke, both trees | 21/21, 21/21 | 21/21, 21/21 | (unchanged) | PASS |
+| Client integration | 656/656 | **666/666** | **666/666** | PASS |
+| Client integration, shuffled 20261017 / 7 | 656 / 656 | 663/666 / 666 | **666 / 666** | PASS after `234b4d6` |
+| Licensing integration (single, per-file, both shuffles) | 412/414 | **417/419** | (unchanged) | 2 FAIL = R5 (Dashboard) |
+| Licensing CI subset | 128/128 | 128/128 | (unchanged) | PASS |
+| Studio Builder unit / integration | 499 / 137 | **501** / 137 | (unchanged) | PASS |
+| Studio Builder UI | 368, 0 skipped | 368 pass, 0 fail, 0 skipped (re-run, see note) | (unchanged) | PASS |
+| Translation, PHP/JS syntax, anti-drift | OK, 0, 2/2, 12+1 | OK, 0, 2/2, the same 12+1 | (unchanged) | PASS / BASELINE |
+| Mutations, release set | 15/15 | — | **15/15** | PASS |
+| Mutations, N1–N5 (`scripts/mutate-highs.py`) | — | — | **11/11** | PASS |
+
+**Notes:**
+- **Shuffled client run (seed 20261017):** the new test files changed the order, which exposed a dependency already on base. `Phase10ZAutoRefreshTest` borrowed helpers from `Phase10SynchronizationTest` and relied on loading after it. Fixed in `234b4d6` (`tests/support/phase10.php`). Both files now pass alone and in either order (22/22).
+- **Scan for similar dependencies:** a scan of every integration file in both trees for helpers defined in another test file found no other real case; the other 14 matches were mentions in comments.
+- **Studio UI:** the first UI run in the new worktree reported 22 skipped. `node_modules` was missing there, so the esbuild-based tests skip themselves; this is an environment gap, not a code change. With the dependencies linked, the suite passes 368/368 with 0 skipped. That re-run's log replaces the first one.
+- **Database state:** after the mutation runs the database was checked. No rows from these tests remain, and `smtp_host` is unchanged.
+
 ## Earlier runs
 
 Runs r8–r10 on the superseded `integration/final-check` are in `test-logs/final/`.

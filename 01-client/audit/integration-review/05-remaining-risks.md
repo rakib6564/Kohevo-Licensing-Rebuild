@@ -29,17 +29,23 @@ Every item was checked against the combined tree `integration/release-check` (lo
 | R2 | Medium: **decision** | A retired (inactive) plan keeps granting its modules to tenants already on it; new assignments are refused. Re-saving a tenant's current retired plan is a no-op | Confirm. It matches the architecture doc ("retire from future use"). If retiring should also revoke, it is one change in `PlanService::entitlementsFor()` plus a test. |
 | R5 | Medium: **decision** | `0d48565` ("Fix Date & Time formatting mismatch…") removed the central dashboard's "Platform overview" and "Your plan" sections. That looks accidental and is the cause of the 2 remaining `DashboardMetricsTest` failures | Restore the sections (preferred) or retire the test. Not changed here. |
 
-## Still open: security findings found in this pass (not fixed in these PRs)
+## Found in this pass and fixed on separate branches (N1–N5)
 
-These are new. They are not regressions from these PRs; each already exists on `origin/main`.
+These already existed on `origin/main`; they are not regressions from PRs #102, 2 or 3. Each fix is its own local branch based on `origin/main`, with a test that fails without it (descriptions in `pr-high-fixes.md`). None is pushed.
 
-| # | Severity | Item | Recommendation |
-|---|---|---|---|
-| N1 | High | Stored XSS in `theme.post_content` "Fallback Content" (W-F1) | Escape it or run it through the rich-text sanitizer; add a renderer test with an `onerror` payload. A small, separate PR. |
-| N2 | High | MCP `settings.set` writes any key not matching `pass|secret` (S-11) | Allow-list keys and reuse the page validators. |
-| N3 | High | Template delete hard-deletes the wrong page and its revisions (TB-02) | Match the backing page exactly (JSON path or a stored id). |
-| N4 | High | Draft Theme Builder conditions go live without publishing (TB-01) | Resolve from the published revision. |
-| N5 | High | `admin/templates.php` and the Studio Content page skip Studio permission levels (TB-03, ST-01) | Route through the application services' permission checks. |
+| # | Severity | Item | Branch, commit | Evidence |
+|---|---|---|---|---|
+| N1 | High | Stored XSS in `theme.post_content` "Fallback Content" (W-F1) | `fix/studio-post-content-xss` `c19c9d5` | Sprint6 case, 6 payloads; mutation caught |
+| N2 | High | MCP `settings.set` wrote any key not matching `pass\|secret` (S-11) | `fix/mcp-settings-allowlist` `3862f1c` | `McpSettingsAllowlistTest` 5 per tree; 4 mutations caught |
+| N3 | High | Template delete hard-deleted the wrong page and its revisions (TB-02) | `fix/studio-template-delete` `885d23e` | `StudioTemplateDeleteTest` with a decoy page; 2 mutations caught |
+| N4 | High | Draft Theme Builder conditions went live without publishing (TB-01) | `fix/studio-theme-published-conditions` `72fd527` | Sprint6 case, three draft scenarios; mutation caught |
+| N5 | High | `admin/templates.php` and the Studio Content page skipped Studio permission levels (TB-03, ST-01) | `fix/studio-admin-permissions` `4aa8550` | `StudioAdminPermissionsTest` with real roles; 3 mutations caught |
+
+**Behaviour changes to tell admins about (N2, N3, N5):**
+- MCP clients can no longer change plugin, mail or URL settings.
+- Deleting a theme template needs `studio-builder.admin`, and archives its page instead of erasing it.
+- Theme Builder publish and unpublish need `studio-builder.publish`.
+- The Studio Content page needs `studio-builder.edit`.
 
 ## Still open: lower
 

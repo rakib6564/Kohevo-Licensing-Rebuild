@@ -1,6 +1,6 @@
 # Integration review, 2026-10-17 (release-check)
 
-Base is `origin/main` `ba4c9a5`. The combined tree tested is `integration/release-check` (local, test only, never pushed): PR #102 `6fed518` plus `audit/settings-hardening-next` `49c1fd4` plus `fix/licensing-module-guard` `d77b076`. The earlier combined tree `integration/final-check` is superseded.
+Base is `origin/main` `ba4c9a5`. The combined tree tested is `integration/release-check` (local, test only, never pushed): PR #102 `6fed518` plus `audit/settings-hardening-next` `49c1fd4` plus `fix/licensing-module-guard` `d77b076`. The earlier combined tree `integration/final-check` is superseded. The five High-fix branches were tested on top of it as `integration/release-check-highs` (also local, never pushed).
 
 | File | Contents |
 |---|---|
@@ -22,7 +22,9 @@ Base is `origin/main` `ba4c9a5`. The combined tree tested is `integration/releas
 | `pr-secret-handling-gaps.md` | PR #102 description, as opened |
 | `pr-licensing-module-guard.md` | PR 2 description, ready to paste |
 | `pr-settings-hardening.md` | PR 3 description, ready to paste |
+| `pr-high-fixes.md` | Descriptions for the five High-fix branches (N1–N5), ready to paste |
 | `csv-row-verification-integrated.csv` | Result for each inventory row |
 | `test-logs/release/` | Runs on `integration/release-check`: full matrix, per-file, CI subset, shuffled orders, mutations (see `04-…`) |
+| `test-logs/release-highs/` | Runs on `integration/release-check-highs` (release tree plus N1–N5): full matrix, shuffled orders, 11 + 15 mutations |
 | `test-logs/final/` | Earlier runs r8–r10 on `integration/final-check` |
 | `test-logs/` | Summaries and runner scripts for each suite (base, integrated, integrated after the guard merge, combined at `a19abf0`), the D1 probes, the call-site list, and worktree status |
