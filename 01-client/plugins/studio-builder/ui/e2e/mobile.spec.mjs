@@ -87,14 +87,16 @@ test('the Blocks sheet can be dragged and pulled down to close', async ({ page }
   expect(grown).toBeGreaterThan(before - 1);
   await stable(); // the sheet is still settling onto its snap: grabbing the handle now can miss it
 
-  // pull well below the lowest snap: it closes
-  // A pointer drag on a CI runner sometimes lets go early; grab the handle again where it is now until the sheet closes.
+  // pull well below the lowest snap: it closes. The release point decides (not the last
+  // rendered height, which lags on a slow CI runner); a finger cannot leave the screen, so the
+  // pull ends just inside the viewport.
+  const bottom = page.viewportSize().height - 2;
   await expect(async () => {
     await stable();
     const h2 = await page.getByTestId('left-sheet-handle').boundingBox();
     await page.mouse.move(h2.x + h2.width / 2, h2.y + 10);
     await page.mouse.down();
-    await page.mouse.move(h2.x + h2.width / 2, h2.y + 700, { steps: 12 });
+    await page.mouse.move(h2.x + h2.width / 2, bottom, { steps: 12 });
     await page.mouse.up();
     await expect(page.locator('.sbx-left.is-mobile-open')).toHaveCount(0, { timeout: 3_000 });
   }).toPass({ timeout: 20_000 });
