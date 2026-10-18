@@ -28,26 +28,13 @@ const OVERLAY_CSS = `
   outline-offset: -1px;
   cursor: pointer;
 }
+/* Selection never changes layout: no position override here (an absolute or sticky block would move),
+   and the box, name chip and toolbar are drawn outside the page by CanvasOverlay. */
 [${NODE_ATTR}].sbx-selected {
-  position: relative !important;
   outline: 2px solid #8b5cf6 !important;
   outline-offset: -1px;
   box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.4), 0 0 16px rgba(139, 92, 246, 0.3) !important;
 }
-[${NODE_ATTR}].sbx-selected::before,
-[${NODE_ATTR}].sbx-selected::after {
-  content: '';
-  position: absolute;
-  width: 6px;
-  height: 6px;
-  background: #ffffff;
-  border: 1.5px solid #8b5cf6;
-  border-radius: 1px;
-  z-index: 99998;
-  pointer-events: none;
-}
-[${NODE_ATTR}].sbx-selected::before { top: -3px; left: -3px; }
-[${NODE_ATTR}].sbx-selected::after { bottom: -3px; right: -3px; }
 
 [${NODE_ATTR}].sbx-drop-before { box-shadow: inset 0 3px 0 #8b5cf6 !important; }
 [${NODE_ATTR}].sbx-drop-after { box-shadow: inset 0 -3px 0 #8b5cf6 !important; }
@@ -140,8 +127,22 @@ export function nodeElementFrom(target) {
  * @param {Document} doc
  * @param {{onSelect: Function, onHover?: Function, onDrop?: Function, onAction?: Function, onInlineText?: Function, isLocked?: Function, onContextMenu?: Function, onKeyDown?: Function}} handlers
  */
+/**
+ * Where a drop over a canvas node lands: `inside` the middle half of a node that takes children, else
+ * `before` / `after` by which half the pointer is in. "Takes children" is the manifest's own rule
+ * (`allowsChildren(type)`, the same one Layers uses), so a card, modal, form or Query Loop accepts a
+ * drop and a leaf block that happens to render a <section> does not. A document section (type
+ * `section`) always does.
+ */
+export function canvasDropPosition({ type = '', tagName = '', fraction = 0.5, allowsChildren } = {}) {
+  const isSection = type === 'section' || (!type && String(tagName).toLowerCase() === 'section');
+  const takesChildren = isSection || (typeof allowsChildren === 'function' ? allowsChildren(type) === true : type.startsWith('layout.'));
+  if (takesChildren && fraction > 0.25 && fraction < 0.75) return 'inside';
+  return fraction < 0.5 ? 'before' : 'after';
+}
+
 export function attachCanvas(doc, handlers) {
-  const { onSelect, onHover, onDrop, onAction, onInlineText, isLocked, inlineSpecs, onContextMenu, onKeyDown } = handlers || {};
+  const { onSelect, onHover, onDrop, onAction, onInlineText, isLocked, inlineSpecs, onContextMenu, onKeyDown, allowsChildren } = handlers || {};
   if (!doc || !doc.body) return () => {};
   if (!doc.getElementById(STYLE_ID)) {
     const style = doc.createElement('style');
@@ -348,9 +349,7 @@ export function attachCanvas(doc, handlers) {
     e.preventDefault();
     const rect = el.getBoundingClientRect();
     const y = (e.clientY - rect.top) / Math.max(1, rect.height);
-    const type = el.getAttribute(TYPE_ATTR) || '';
-    const isContainer = type.startsWith('layout.') || (el.tagName && el.tagName.toLowerCase() === 'section');
-    const pos = isContainer && y > 0.25 && y < 0.75 ? 'inside' : (y < 0.5 ? 'before' : 'after');
+    const pos = canvasDropPosition({ type: el.getAttribute(TYPE_ATTR) || '', tagName: el.tagName || '', fraction: y, allowsChildren });
 
     if (dropTarget !== el || dropPos !== pos) {
       if (dropTarget) {

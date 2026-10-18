@@ -922,3 +922,23 @@ unit('chrome: a custom header or footer partial gets none of the default chrome\
     assert_true(str_contains($css, '.sb-site-footer:not(.sb-site-footer--partial){border-top:'), 'the footer rule skips partials');
     assert_false((bool) preg_match('/(^|[},])\.sb-site-(header|footer)[{,]/', $css), 'no rule reaches every header or footer');
 });
+
+unit('Site settings: the tokens marked "used only by blocks" are exactly the ones the base stylesheet never reads (DT-M7)', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    $unused = [];
+    // A new section's background token is a default use too.
+    $sectionDefault = (string) (CanonicalDocumentSchema::defaultSectionLayout()['background_token'] ?? '');
+    foreach (array_keys(ThemeResolver::DEFAULT_TOKENS) as $ref) {
+        if ($ref !== $sectionDefault && !str_contains($css, 'var(' . \Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme::cssVarName($ref))) {
+            $unused[] = $ref;
+        }
+    }
+    $js = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/ui/src/core/siteSettings.mjs');
+    assert_true((bool) preg_match("/BLOCK_ONLY_TOKENS = Object\\.freeze\\(\\[([^\\]]*)\\]\\)/", $js, $m), 'the editor list is readable');
+    preg_match_all("/'([a-z.]+)'/", $m[1], $listed);
+    sort($unused);
+    $marked = $listed[1];
+    sort($marked);
+    assert_eq($unused, $marked, 'the editor marks exactly the tokens with no default use');
+});

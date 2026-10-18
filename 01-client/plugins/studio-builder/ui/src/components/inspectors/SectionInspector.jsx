@@ -18,7 +18,7 @@ import { InspectorBar } from './InspectorBar.jsx';
 import { PAGE_SECTION_SECTIONS, SECTION_DEF } from '../../core/inspectorSections.mjs';
 import { ColorField } from './StyleControls.jsx';
 import { SpacingBox } from './SurfaceControls.jsx';
-import { getPath, setPath, setPaths } from '../../core/styleSurface.mjs';
+import { getPath, sectionStyleOverrides, setPath, setPaths } from '../../core/styleSurface.mjs';
 import { asList, asObject, isGlobalSection, sectionsOf } from '../../core/doc.mjs';
 import { tokensFor } from '../../core/fields.mjs';
 import { componentByRef } from '../../core/library.mjs';
@@ -107,6 +107,11 @@ export function SectionInspector({ info }) {
     );
   }
 
+  const overridden = sectionStyleOverrides(style);
+  const owned = (on, hint, control) => (on
+    ? <fieldset className="sbx-owned" disabled data-owned>{control}<p className="sbx-hint">{t(hint)}</p></fieldset>
+    : control);
+
   const sectionBodies = {
     layout: () => (
       <>
@@ -129,18 +134,22 @@ export function SectionInspector({ info }) {
                 activeBreakpoint={viewport.breakpoint}
                 onChange={(columns) => setLayout({ columns })}
               />
-              <ResponsiveSelect
-                label={t('padding_y')}
-                value={layout.padding_y ?? { base: 'md' }}
-                options={asList(vocab.spacing_scale)}
-                labelOf={sizedLabeller('section.padding_y')}
-                requireBase
-                activeBreakpoint={viewport.breakpoint}
-                onChange={(padding) => setLayout({ padding_y: padding })}
-              />
-              <Field label={t('background')} htmlFor={`${idPrefix}-bg`}>
-                <TokenSelect id={`${idPrefix}-bg`} value={layout.background_token ?? null} tokens={tokensFor(manifest, ['surface', 'color'])} onChange={(v) => setLayout({ background_token: v })} />
-              </Field>
+              {owned(overridden.paddingY, 'section_padding_overridden', (
+                <ResponsiveSelect
+                  label={t('padding_y')}
+                  value={layout.padding_y ?? { base: 'md' }}
+                  options={asList(vocab.spacing_scale)}
+                  labelOf={sizedLabeller('section.padding_y')}
+                  requireBase
+                  activeBreakpoint={viewport.breakpoint}
+                  onChange={(padding) => setLayout({ padding_y: padding })}
+                />
+              ))}
+              {owned(overridden.background, 'section_bg_overridden', (
+                <Field label={t('background')} htmlFor={`${idPrefix}-bg`}>
+                  <TokenSelect id={`${idPrefix}-bg`} value={layout.background_token ?? null} tokens={tokensFor(manifest, ['surface', 'color'])} onChange={(v) => setLayout({ background_token: v })} />
+                </Field>
+              ))}
       </>
     ),
     background: () => (
