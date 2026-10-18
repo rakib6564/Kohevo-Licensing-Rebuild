@@ -43,6 +43,7 @@ use Slate\Module\StudioBuilder\Operation\DocumentOperation;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Repository\DependencyRepository;
 use Slate\Module\StudioBuilder\Repository\PageRepository;
+use Slate\Module\StudioBuilder\Repository\RevisionRepository;
 use Slate\Module\StudioBuilder\Repository\TemplateRepository;
 use Slate\Tenancy\TenantContext;
 
@@ -311,6 +312,17 @@ final class StudioTemplateService
         // address identity. Set BEFORE validation, not after — see F2 fix above.
         $rawDocument = $template->document;
         $rawDocument['document_type'] = (string) $page['page_type'];
+        // It also keeps its own settings (display conditions, template type, category…) and SEO: a
+        // template saved from a header or search template must not turn the page into one.
+        $own = $this->currentDocument($page);
+        if (is_array($own['settings'] ?? null)) {
+            $rawDocument['settings'] = $own['settings'];
+        } elseif (is_array($rawDocument['settings'] ?? null)) {
+            unset($rawDocument['settings']['conditions'], $rawDocument['settings']['template_type'], $rawDocument['settings']['category']);
+        }
+        if (is_array($own['seo'] ?? null)) {
+            $rawDocument['seo'] = $own['seo'];
+        }
         $validated = ValidatedDocument::from($rawDocument, $this->registry, $validationOptions);
 
         return $this->revisions->createDraftRevision(
@@ -321,6 +333,30 @@ final class StudioTemplateService
             $revisionKind,
             "Applied template '{$templateKey}'",
         );
+    }
+
+    /**
+     * The page's working document: its active draft, else its published revision, else an empty one.
+     *
+     * @param array<string, mixed> $page
+     * @return array<string, mixed>
+     */
+    private function currentDocument(array $page): array
+    {
+        $revisionId = (int) ($page['active_draft_revision_id'] ?? 0) ?: (int) ($page['published_revision_id'] ?? 0);
+        if ($revisionId <= 0) {
+            return [];
+        }
+        $json = (new RevisionRepository($this->tenants))->documentsByIds([$revisionId])[$revisionId] ?? '';
+        if ($json === '') {
+            return [];
+        }
+        try {
+            $decoded = CanonicalJson::decode($json);
+        } catch (\Throwable) {
+            return [];
+        }
+        return is_array($decoded) ? $decoded : [];
     }
 
     /**
