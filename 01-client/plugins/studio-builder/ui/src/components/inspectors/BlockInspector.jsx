@@ -11,7 +11,7 @@
 import { useState } from 'react';
 import { useEditor, useEngineState } from '../EditorContext.jsx';
 import { FieldControl, ObjectFields, TokenSelect } from '../fields/FieldControl.jsx';
-import { presentersFor } from '../../core/propPresenters.mjs';
+import { presentersFor, layoutOwnedProps } from '../../core/propPresenters.mjs';
 import { ResponsiveSelect, VisibilityControls } from './controls.jsx';
 import { StyleControls } from './StyleControls.jsx';
 import { BorderExtras, DimensionsExtras, EffectsPane, LayoutPane, PositionPane, ShadowExtras, SpacingPane, StatesPane, TypographyExtras } from './SurfaceControls.jsx';
@@ -83,6 +83,7 @@ export function BlockInspector({ info }) {
         mediaPicker={boot.mediaPicker}
         presenters={presentersFor(block.type)}
         blockType={block.type}
+        owned={layoutOwnedProps(block.type, style)}
         onChange={(next) => save(ops.updateBlockProps(block.id, next))}
       />
     ),
@@ -174,7 +175,9 @@ export function BlockInspector({ info }) {
     },
     dimensions: () => (
       <>
-        <StyleControls style={style} capabilities={capabilities} only="dimensions" onChange={saveStyle} />
+        <DeviceStyle scope={deviceScope} paths={RESPONSIVE_SCOPES.dimensions} label={t('dimensions_label')}>
+          {(view) => <StyleControls style={view.style} capabilities={capabilities} only="dimensions" onChange={view.onChange} />}
+        </DeviceStyle>
         <DimensionsExtras style={style} media={MEDIA_TYPES.has(block.type)} onChange={saveStyle} />
       </>
     ),

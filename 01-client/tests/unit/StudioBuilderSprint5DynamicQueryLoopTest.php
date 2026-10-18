@@ -234,7 +234,29 @@ unit('sprint5 unit: QueryLoopRenderer renders post card grid and pagination', fu
     assert_true(str_contains($html, 'Design'), 'renders category badge');
     assert_true(str_contains($html, 'Alice Smith'), 'renders author');
     assert_true(str_contains($html, 'Read Story'), 'renders read more button text');
-    assert_true(str_contains($html, 'sb-pagination'), 'renders pagination controls');
+    assert_false(str_contains($html, 'sb-pagination'), 'two posts fit on one page of six: no pager');
+});
+
+unit('query loop pager: only links to pages that can exist (W-F3)', function (): void {
+    $rows = static fn(int $n): array => array_map(static fn(int $i): array => ['id' => $i, 'title' => "Post {$i}", 'url' => "/p{$i}"], range(1, $n));
+    $render = static function (array $props, array $rows): string {
+        $block = ['id' => 'loop_p', 'type' => 'core.query_loop', 'props' => $props + ['enable_pagination' => true], 'bindings' => ['items' => ['provider' => 'content.posts']]];
+        $scope = new BlockRenderScope($block, RenderContext::forPublic(1, new SiteContext('https://example.test', 'Test Site', 'en')), new _SbSprint5FakeMedia(), new ResolvedTheme('default', []), new RenderCollector('nonce'), '', ['items' => $rows]);
+        return (new QueryLoopRenderer())->render($scope);
+    };
+
+    $first = $render(['per_page' => 3], $rows(3));
+    assert_true(str_contains($first, 'href="?page=2" class="sb-pagination__next"'), 'a full first page offers the next page');
+    assert_false(str_contains($first, 'href="?page=0"') || str_contains($first, 'sb-pagination__prev" rel'), 'page 1 has no previous link');
+    assert_true(str_contains($first, 'aria-current="page">1<'), 'the current page is 1');
+
+    $last = $render(['per_page' => 3, 'page' => 3], $rows(1));
+    assert_true(str_contains($last, 'href="?page=2" class="sb-pagination__prev"'), 'page 3 links back to page 2');
+    assert_false(str_contains($last, '?page=4'), 'a short page offers no next page');
+    assert_true(str_contains($last, 'aria-current="page">3<'), 'the current page is 3');
+
+    assert_false(str_contains($render(['per_page' => 6], $rows(3)), 'sb-pagination'), 'everything on page 1: no pager');
+    assert_false(str_contains($render(['per_page' => 3, 'enable_pagination' => false], $rows(3)), 'sb-pagination'), 'pagination switched off: no pager');
 });
 
 unit('sprint5 unit: QueryLoopRenderer custom template child repeats with token substitution', function (): void {

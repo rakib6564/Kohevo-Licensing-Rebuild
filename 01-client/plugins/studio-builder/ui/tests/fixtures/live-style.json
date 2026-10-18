@@ -1417,6 +1417,62 @@
                 "reduceMotion": false
             },
             "covered": true
+        },
+        {
+            "name": "per-device width, height, min-height and max-width (CL-04)",
+            "covered": true,
+            "block": {
+                "style": {
+                    "dimensions": {
+                        "width": "600px",
+                        "max_width": "90%"
+                    }
+                },
+                "responsive": {
+                    "tablet": {
+                        "style": {
+                            "dimensions": {
+                                "width": "80%",
+                                "min_height": "20rem"
+                            }
+                        }
+                    },
+                    "mobile": {
+                        "style": {
+                            "dimensions": {
+                                "width": "100%",
+                                "height": "auto",
+                                "max_width": "none"
+                            }
+                        }
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [],
+                "inline": [
+                    "max-width:90%",
+                    "width:600px"
+                ],
+                "classes": [],
+                "media": [
+                    {
+                        "query": "(max-width:1023.98px)",
+                        "declarations": [
+                            "width:80% !important",
+                            "min-height:20rem !important"
+                        ]
+                    },
+                    {
+                        "query": "(max-width:767.98px)",
+                        "declarations": [
+                            "width:100% !important",
+                            "height:auto !important"
+                        ]
+                    }
+                ],
+                "reduceMotion": false
+            }
         }
     ]
 }

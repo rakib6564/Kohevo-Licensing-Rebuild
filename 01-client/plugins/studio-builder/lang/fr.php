@@ -602,6 +602,7 @@ return [
     'studio_ui_field_too_small' => 'Ce nombre est trop petit.',
     'studio_ui_field_too_large' => 'Ce nombre est trop grand.',
     'studio_ui_field_colour' => 'Saisissez une couleur comme #e4572e, ou rgb(228 87 46).',
+    'studio_ui_prop_owned_by_layout' => "Défini dans Flex et grille ci-dessous, qui l’emporte sur ce réglage. Effacez-le là-bas pour utiliser ce contrôle.",
     'studio_ui_highlight_not_found' => "Cette expression ne figure pas dans le texte ci-dessus : rien n'est mis en évidence. Saisissez-la exactement comme elle apparaît.",
     'studio_ui_field_url' => 'Saisissez une adresse sûre (https://…, /chemin, #ancre, mailto: ou tel:).',
     'studio_ui_field_link_label' => 'Un lien doit avoir un libellé.',
@@ -977,7 +978,7 @@ return [
     'studio_ui_ss_group_shadows' => 'Ombres',
     'studio_ui_ss_group_spacing' => 'Espacement',
     'studio_ui_ss_group_layout' => 'Largeurs de page',
-    'studio_ui_ss_hint_layout' => 'Jusqu\'où le contenu d\'une page peut s\'étendre. Chaque page choisit Étroit, Normal, Large ou Plein dans ses réglages ; ceci définit ce que ces tailles valent pour tout le site.',
+    'studio_ui_ss_hint_layout' => "Jusqu'où le contenu peut s'étendre. Chaque section choisit Étroit, Normal, Large ou Plein dans ses propres réglages ; ceci définit ce que ces tailles valent pour tout le site.",
     'studio_ui_ss_tk_layout_narrow' => 'Étroit',
     'studio_ui_ss_tk_layout_normal' => 'Normal',
     'studio_ui_ss_tk_layout_wide' => 'Large',
@@ -1557,4 +1558,6 @@ return [
     'studio_page_save_meta' => 'Enregistrer les champs personnalisés',
     'studio_choose' => 'Choisir…',
     'studio_yes' => 'Oui',
+    'studio_prev' => 'Précédent',
+    'studio_next' => 'Suivant',
 ];

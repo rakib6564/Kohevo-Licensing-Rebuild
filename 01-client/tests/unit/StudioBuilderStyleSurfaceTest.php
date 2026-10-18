@@ -727,3 +727,48 @@ unit('border styles: every offered style has a rule, so a solid, dotted or doubl
     assert_true(str_contains($r['html'], 'sb-border-solid'), 'the block carries the style class');
     assert_true(str_contains($r['html'] . $r['css'], 'border-width:2px'), 'and its width: ' . $r['html'] . ' ' . $r['css']);
 });
+
+// ── Dimensions per device (CL-04) ─────────────────────────────────────────
+
+unit('dimensions: width, height, min-height and max-width can differ on tablet and mobile', function (): void {
+    $tenants   = new TenantContext();
+    $renderer  = new DocumentRenderer(BlockRegistry::withAllCoreBlocks(), BlockRendererRegistry::withCoreRenderers(), new CoreMediaResolver($tenants), new ProviderBindingResolver(new DataProviderRegistry(), $tenants));
+    $collector = new RenderCollector();
+    $html = $renderer->renderBlock([
+        'id' => 'blk_dddddddddddddddddddddddd', 'type' => 'core.heading', 'version' => 1,
+        'props' => ['text' => 'Sized', 'level' => 'h2'],
+        'style' => ['dimensions' => ['width' => '600px']] + CanonicalDocumentSchema::defaultBlockStyle(),
+        'responsive' => ['tablet' => ['style' => ['dimensions' => ['max_width' => '80%']]], 'mobile' => ['style' => ['dimensions' => ['width' => '100%', 'min_height' => '10rem']]]],
+        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+        'bindings' => [], 'children' => [], 'animation' => [], 'interactions' => [],
+    ], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), $collector, false);
+    $css = $collector->css();
+    assert_true(str_contains($html, 'width:600px'), 'the desktop width stays on the element: ' . $html);
+    assert_true((bool) preg_match('/@media \(max-width:767\.98px\)\{\.sb-x-[0-9a-f]{16}\{[^}]*width:100% !important/', $css), 'the mobile width is a media rule that beats it: ' . $css);
+    assert_true(str_contains($css, 'min-height:10rem !important'), 'min-height too');
+    assert_true((bool) preg_match('/@media \(max-width:1023\.98px\)\{\.sb-x-[0-9a-f]{16}\{[^}]*max-width:80% !important/', $css), 'and a tablet max-width');
+
+    assert_eq([], StyleSurface::responsiveIssues(['dimensions' => ['width' => '100%', 'height' => 'auto', 'min_height' => '0', 'max_width' => '40rem']], '$.r'), 'lengths and auto are accepted per device');
+    assert_true(StyleSurface::responsiveIssues(['dimensions' => ['width' => 'calc(1px);color:red']], '$.r') !== [], 'anything else is refused');
+    assert_true(StyleSurface::responsiveIssues(['dimensions' => ['aspect_ratio' => '16/9']], '$.r') !== [], 'only the four sizes can differ per device');
+});
+
+// ── One owner for container layout values (CL-02) ─────────────────────────
+
+unit('container layout: a Flex & grid value beats the matching prop, which is why the Inspector locks the prop', function (): void {
+    $tenants   = new TenantContext();
+    $renderer  = new DocumentRenderer(BlockRegistry::withAllCoreBlocks(), BlockRendererRegistry::withCoreRenderers(), new CoreMediaResolver($tenants), new ProviderBindingResolver(new DataProviderRegistry(), $tenants));
+    $collector = new RenderCollector();
+    $html = $renderer->renderBlock([
+        'id' => 'blk_cccccccccccccccccccccccc', 'type' => 'layout.flex', 'version' => 1,
+        'props' => ['direction' => 'row'],
+        'style' => ['layout' => ['direction' => 'column']] + CanonicalDocumentSchema::defaultBlockStyle(),
+        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+        'bindings' => [], 'children' => [], 'animation' => [], 'interactions' => [],
+    ], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), $collector, false);
+    $css = $collector->css();
+    assert_true(str_contains($html, 'sb-flex--row'), 'the prop still writes its class: ' . $html);
+    $class = sbss_class($html);
+    assert_true((bool) preg_match('/\.' . preg_quote($class, '/') . '\{[^}]*flex-direction:column/', $css), 'the style is a scoped rule for that element: ' . $css);
+    assert_true(strpos(\Slate\Module\StudioBuilder\Render\StudioStylesheet::css() . $css, '.' . $class . '{') > strpos(\Slate\Module\StudioBuilder\Render\StudioStylesheet::css(), '.sb-flex--row'), 'the scoped rule comes after the class rule, so it wins');
+});
