@@ -345,6 +345,33 @@ unit('sprint5 integration: dynamic bindings, query builder, loop, blog archive a
             $servedB = $rt->tenants->runAs(S5_TENANT_B, static fn() => $rt->publicRuntime->handlePath('blog'));
             assert_null($servedB, 'Tenant B cannot serve Tenant A blog');
 
+            // A Query Loop with no binding queries the posts of the tenant its render context names,
+            // with no ambient tenant global set (W-F20), and leaves no global behind.
+            $loopWithoutBinding = static function (int $tenantId): string {
+                $block = ['id' => 'blk_loopnobinding', 'type' => 'core.query_loop', 'props' => ['per_page' => 6], 'bindings' => []];
+                $scope = new \Slate\Module\StudioBuilder\Render\Block\BlockRenderScope(
+                    $block,
+                    \Slate\Module\StudioBuilder\Render\RenderContext::forPublic($tenantId, new \Slate\Module\StudioBuilder\Render\SiteContext('https://example.test', 'Test Site', 'en')),
+                    new \Slate\Module\StudioBuilder\Render\Media\CoreMediaResolver(new \Slate\Tenancy\TenantContext()),
+                    new \Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme('default', []),
+                    new \Slate\Module\StudioBuilder\Render\RenderCollector('nonce'),
+                );
+                return (new \Slate\Module\StudioBuilder\Render\Block\CoreRenderers\QueryLoopRenderer())->render($scope);
+            };
+            $savedOverride = $GLOBALS['SLATE_TENANT_OVERRIDE'] ?? null;
+            unset($GLOBALS['SLATE_TENANT_OVERRIDE']);
+            try {
+                $ownLoop = $loopWithoutBinding(S5_TENANT_A);
+                assert_true(str_contains($ownLoop, 'Building Resilient Microservices'), 'an unbound loop lists the tenant\'s posts with no global set: ' . substr($ownLoop, 0, 200));
+                assert_false(isset($GLOBALS['SLATE_TENANT_OVERRIDE']), 'the loop restores the tenant global it set');
+                $otherLoop = $loopWithoutBinding(S5_TENANT_B);
+                assert_false(str_contains($otherLoop, 'Building Resilient Microservices'), 'another tenant\'s loop does not list them');
+            } finally {
+                if ($savedOverride !== null) {
+                    $GLOBALS['SLATE_TENANT_OVERRIDE'] = $savedOverride;
+                }
+            }
+
             // Tenant B cannot load editor document of Tenant A blog
             assert_throws(StudioNotFoundException::class, static function () use ($rt, $actorB, $blogPageId): void {
                 $rt->tenants->runAs(S5_TENANT_B, fn() => $rt->app->loadEditorDocument($actorB, $blogPageId));

@@ -39,10 +39,10 @@ final class PostTitleRenderer implements BlockRendererInterface
             $classes[] = 'sb-post-title--align-' . $align;
         }
 
-        // Try bound prop, then context attribute, then static fallback
-        $title = (string) $scope->prop('text');
+        // The post being shown wins; the block's own text is the fallback for when there is none.
+        $title = (string) $scope->context()->attribute('title', $scope->context()->attribute('post_title', ''));
         if ($title === '') {
-            $title = (string) $scope->context()->attribute('title', $scope->context()->attribute('post_title', $scope->string('text', 'Single Post Title')));
+            $title = $scope->string('text', 'Single Post Title');
         }
 
         $body = Html::e($title);

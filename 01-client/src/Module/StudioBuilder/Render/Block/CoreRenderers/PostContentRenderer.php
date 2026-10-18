@@ -26,9 +26,10 @@ final class PostContentRenderer implements BlockRendererInterface
 
     public function render(BlockRenderScope $scope): string
     {
-        $content = (string) $scope->prop('content');
+        // The post being shown wins; the block's own content is the fallback for when there is none.
+        $content = (string) $scope->context()->attribute('content', $scope->context()->attribute('post_content', ''));
         if ($content === '') {
-            $content = (string) $scope->context()->attribute('content', $scope->context()->attribute('post_content', 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'));
+            $content = $scope->string('content', 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.');
         }
 
         // Plain text keeps its line breaks. Anything with markup goes through
