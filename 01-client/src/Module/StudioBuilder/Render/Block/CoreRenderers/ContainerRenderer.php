@@ -37,6 +37,11 @@ final class ContainerRenderer implements BlockRendererInterface, WrapperClassesI
             $gap = 'md';
         }
         $direction = $scope->string('direction', 'vertical') === 'horizontal' ? 'horizontal' : 'vertical';
-        return ['sb-stack', 'sb-stack--' . $direction, 'sb-gap-' . $gap];
+        $classes = ['sb-stack', 'sb-stack--' . $direction, 'sb-gap-' . $gap];
+        // A horizontal container wraps by default (as it always has); "nowrap" keeps one row, like a Flex row.
+        if ($direction === 'horizontal' && $scope->string('wrap', 'wrap') === 'nowrap') {
+            $classes[] = 'sb-stack--nowrap';
+        }
+        return $classes;
     }
 }

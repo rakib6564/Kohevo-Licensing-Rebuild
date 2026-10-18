@@ -105,7 +105,7 @@ unit('sprint2 unit: DocumentValidator accepts valid visual styles and rejects ma
                     'children' => [],
                     'style' => [
                         'typography' => [
-                            'size' => ['desktop' => '64px', 'tablet' => '48px', 'mobile' => '36px'],
+                            'size' => '64px',
                             'weight' => 'bold',
                             'transform' => 'capitalize',
                             'line_height' => '1.2',
@@ -134,6 +134,13 @@ unit('sprint2 unit: DocumentValidator accepts valid visual styles and rejects ma
 
     $res = DocumentValidator::validate($baseDoc, $blocks);
     assert_true($res->isValid(), 'Valid rich visual styles should pass validation');
+
+    // A size breakpoint map used to be accepted and then rendered as no size at all (CL-M7): refused now.
+    $mapDoc = $baseDoc;
+    $mapDoc['sections'][0]['blocks'][0]['style']['typography']['size'] = ['base' => '1rem', 'md' => '2rem'];
+    $mapRes = DocumentValidator::validate($mapDoc, $blocks);
+    assert_false($mapRes->isValid(), 'a typography size map is refused');
+    assert_true(in_array('invalid_style_value', array_column($mapRes->errors(), 'code'), true), 'as an invalid style value');
 
     // Test CSS Injection Prevention: semicolon / curly brace / javascript
     $maliciousStyles = [

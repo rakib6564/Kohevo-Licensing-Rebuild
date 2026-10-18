@@ -37,6 +37,7 @@ test('a prop is owned only while the matching style.layout key holds a value', (
   assert.deepEqual(layoutOwnedProps('layout.flex', { layout: { direction: 'column', gap: '24px', wrap: 'wrap' } }), ['direction', 'wrap', 'gap']);
   assert.deepEqual(layoutOwnedProps('layout.grid', { layout: { columns: 4, align: 'center' } }), ['columns', 'align']);
   assert.deepEqual(layoutOwnedProps('core.container', { layout: { gap: '1rem' } }), ['gap']);
+  assert.deepEqual(layoutOwnedProps('core.container', { layout: { wrap: 'nowrap' } }), ['wrap'], 'a Flex & grid wrap value owns the container\'s Wrap prop');
   assert.deepEqual(layoutOwnedProps('layout.flex', { layout: { direction: '' } }), [], 'a cleared value hands the prop back');
   assert.deepEqual(layoutOwnedProps('layout.flex', { layout: { order: 2 } }), [], 'an unrelated layout key owns nothing');
   assert.deepEqual(layoutOwnedProps('layout.flex', {}), []);

@@ -895,7 +895,9 @@ final class StyleSurface
             if (isset($states[$name]) && is_array($states[$name])) {
                 $decl = self::stateDeclarations($states[$name]);
                 if ($decl !== '') {
-                    $rules[$name] = $decl;
+                    // A base colour, background or opacity may be inline on the element; a state value has to
+                    // beat it to show at all, and inline style loses only to !important.
+                    $rules[$name] = implode(';', array_map(static fn(string $d): string => $d . ' !important', array_filter(explode(';', $decl), static fn(string $d): bool => trim($d) !== '')));
                 }
             }
         }

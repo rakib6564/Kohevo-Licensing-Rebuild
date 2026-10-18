@@ -599,7 +599,8 @@
             "category": "layout",
             "default_props": {
                 "direction": "vertical",
-                "gap": "md"
+                "gap": "md",
+                "wrap": "wrap"
             },
             "description": "Inner constraint container",
             "field_schema": [
@@ -628,6 +629,17 @@
                     "allowed_values": [
                         "vertical",
                         "horizontal"
+                    ]
+                },
+                {
+                    "key": "wrap",
+                    "type": "enum",
+                    "label": "Wrap",
+                    "required": false,
+                    "default": "wrap",
+                    "allowed_values": [
+                        "wrap",
+                        "nowrap"
                     ]
                 }
             ],
