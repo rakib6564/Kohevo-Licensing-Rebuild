@@ -60,7 +60,10 @@ final class QueryLoopRenderer implements BlockRendererInterface
             }
         }
 
-        $emptyMsg = $scope->string('empty_message', 'No posts found.');
+        $emptyMsg = $scope->string('empty_message', '');
+        if ($emptyMsg === '' || $emptyMsg === 'No posts found.') {
+            $emptyMsg = Html::t('studio_no_posts', 'No posts found.');
+        }
         if ($rows === [] || $rows === null) {
             return '<div class="sb-query-loop sb-query-loop--empty">'
                 . '<p class="sb-empty">' . Html::e($emptyMsg) . '</p>'
@@ -105,7 +108,7 @@ final class QueryLoopRenderer implements BlockRendererInterface
         } else {
             // Render standard responsive post cards
             foreach ($rows as $row) {
-                $title     = (string) ($row['title'] ?? 'Untitled');
+                $title     = (string) ($row['title'] ?? Html::t('studio_untitled', 'Untitled'));
                 $url       = (string) ($row['url'] ?? '#');
                 $excerpt   = (string) ($row['excerpt'] ?? '');
                 $category  = (string) ($row['category'] ?? '');

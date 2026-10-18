@@ -36,7 +36,7 @@ final class PostMetaRenderer implements BlockRendererInterface
 
         $items = [];
         if ($showAuthor && $author !== '') {
-            $items[] = '<span class="sb-meta-author">' . Html::e('By ' . $author) . '</span>';
+            $items[] = '<span class="sb-meta-author">' . Html::e(str_replace('%s', $author, Html::t('studio_post_by', 'By %s'))) . '</span>';
         }
         if ($showDate && $date !== '') {
             $items[] = '<span class="sb-meta-date">' . Html::e($date) . '</span>';
