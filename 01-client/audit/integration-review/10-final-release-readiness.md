@@ -42,6 +42,19 @@
 3. **`audit/settings-hardening-next`:** push, open PR after #102 merges; resolve the overlap as in `03-…`.
 4. The five High-fix branches (`fix/studio-post-content-xss`, `fix/mcp-settings-allowlist`, `fix/studio-template-delete`, `fix/studio-theme-published-conditions`, `fix/studio-admin-permissions`): push and open as five PRs; they are independent of each other and of 1–3. N3 and N5 merge cleanly together.
 
+## Pull requests (opened 2026-10-18, none merged)
+
+| PR | Branch | Contents |
+|---|---|---|
+| [#102](https://github.com/rakib6564/Kohevo-Licensing-Rebuild/pull/102) | `fix/secret-handling-gaps` | Secret handling gaps (merge first) |
+| [#103](https://github.com/rakib6564/Kohevo-Licensing-Rebuild/pull/103) | `fix/licensing-module-guard` | Central ModuleGuard, per-plan gating (D1), Tenants plan selector |
+| [#104](https://github.com/rakib6564/Kohevo-Licensing-Rebuild/pull/104) | `audit/settings-hardening-next` | Settings and secrets hardening, APP_SECRET rotation, test isolation, audit reports (merge after #102) |
+| [#105](https://github.com/rakib6564/Kohevo-Licensing-Rebuild/pull/105) | `fix/studio-post-content-xss` | N1 |
+| [#106](https://github.com/rakib6564/Kohevo-Licensing-Rebuild/pull/106) | `fix/mcp-settings-allowlist` | N2 |
+| [#107](https://github.com/rakib6564/Kohevo-Licensing-Rebuild/pull/107) | `fix/studio-template-delete` | N3 |
+| [#108](https://github.com/rakib6564/Kohevo-Licensing-Rebuild/pull/108) | `fix/studio-theme-published-conditions` | N4 |
+| [#109](https://github.com/rakib6564/Kohevo-Licensing-Rebuild/pull/109) | `fix/studio-admin-permissions` | N5 |
+
 ## Single next action
 
 Done 2026-10-18: D1 approved and the seven branches pushed with PRs opened (not merged). Next: review CI on each PR, merge #102 first, and assign plans on the central server before deploying PR 2 (`11-runbooks.md` §1).
