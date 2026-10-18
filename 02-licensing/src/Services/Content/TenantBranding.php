@@ -32,13 +32,9 @@ namespace Slate\Services\Content;
 
 final class TenantBranding
 {
-    /** Brand color/font setting keys. */
+    /** Brand setting keys other surfaces read. Only the accent colour is written (Settings › Branding). */
     public const KEYS = [
         'accent' => 'brand_accent_color',
-        'ink' => 'brand_text_color',
-        'pageBg' => 'brand_canvas_color',
-        'heading' => 'brand_heading_font',
-        'body' => 'brand_body_font',
     ];
 
     /** @return array<string,string> brand key => stored setting value */

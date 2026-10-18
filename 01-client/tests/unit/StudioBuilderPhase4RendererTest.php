@@ -329,8 +329,10 @@ unit('phase4 theme: defaults < branding < stored tokens, unsafe values dropped',
     $theme = (new ThemeResolver(null, static fn(): array => ['accent' => '#ff5500', 'ink' => 'red;}</style><script>', 'body' => 'Inter, sans-serif']))->resolve('default');
     assert_eq('#ff5500', $theme->value('color.accent'), 'tenant branding accent feeds color.accent');
     assert_eq('#ff5500', $theme->value('surface.accent'));
-    assert_eq(ThemeResolver::DEFAULT_TOKENS['text.primary'], $theme->value('text.primary'), 'an unsafe branding value is ignored, default kept');
-    assert_eq('Inter, sans-serif', $theme->value('font.body'));
+    assert_eq(ThemeResolver::DEFAULT_TOKENS['text.primary'], $theme->value('text.primary'), 'a branding key other than the accent is ignored, default kept');
+    assert_eq(ThemeResolver::DEFAULT_TOKENS['font.body'], $theme->value('font.body'), 'only the accent colour comes from branding (DT-02)');
+    assert_eq(['accent'], array_keys(ThemeResolver::BRANDING_TOKEN_MAP), 'the map holds only what Settings › Branding writes');
+    assert_eq(['accent' => 'brand_accent_color'], \Slate\Services\Content\TenantBranding::KEYS);
     $css = $theme->rootCss();
     assert_true(str_contains($css, '--sb-color-accent:#ff5500'));
     assert_true(!str_contains($css, '<') && !str_contains($css, '}</') && substr_count($css, '}') === 1, 'root CSS can never close the style element or rule early');

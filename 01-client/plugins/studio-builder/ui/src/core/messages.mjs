@@ -1145,7 +1145,7 @@ const EN = {
   theme: 'Theme',
   theme_title: 'Design tokens',
   theme_hint: 'Tokens are the only styling values pages can reference. Values are validated: colours, lengths, shadows and font families only.',
-  theme_branding_note: 'Site branding (colours and fonts from Settings › Branding) applies first; Studio tokens override it for Studio pages.',
+  theme_branding_note: 'Only the accent colour from Settings › Branding carries over; Studio tokens override it for Studio pages. Fonts, corners and other colours are set here.',
   theme_branding_link: 'Open site branding settings',
   theme_source_default: 'default',
   theme_source_branding: 'from branding',
