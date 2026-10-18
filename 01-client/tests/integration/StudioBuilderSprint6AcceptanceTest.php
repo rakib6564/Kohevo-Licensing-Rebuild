@@ -412,6 +412,62 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             } finally {
                 $_GET = $savedGet;
             }
+
+            // TB-08 / W-F19: a published Single template lays out the pages its conditions match. Its Post title
+            // and Post meta show the page, its Post content block is the page's own content, and the template
+            // itself is never a public page.
+            $tplSingle = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->createPage($actorA, 'Engineering Single', 'single-eng', 'system', 'standalone'));
+            $tplSingleId = (int) $tplSingle['page']['id'];
+            $singleSection = s6_section([
+                s6_block('core.heading', ['text' => 'Engineering single layout', 'level' => 'h2']),
+                s6_block('theme.post_title', ['level' => 'h1']),
+                s6_block('theme.post_meta', ['show_category' => true, 'show_author' => false, 'show_date' => false]),
+                s6_block('theme.post_content', []),
+            ], 'Single Section');
+            $tplSingleEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, $tplSingleId, [
+                new DocumentOperation('insert_section', ['index' => 0, 'section' => $singleSection]),
+                new DocumentOperation('update_settings', ['settings' => [
+                    'template_type' => 'single',
+                    'conditions'    => ['rules' => [['condition' => 'category', 'value' => 'Engineering', 'type' => 'include']]],
+                ]]),
+            ], (int) $tplSingle['revision']['id'], 'Single layout'));
+            $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, $tplSingleId, (int) $tplSingleEdit['revision']['id']));
+
+            $single = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/eng-post'));
+            assert_true($single !== null && $single->status === 200, 'the matching page is served');
+            assert_true(str_contains($single->body, 'Engineering single layout'), 'inside its Single template');
+            assert_true((bool) preg_match('~<h1 class="sb-post-title[^"]*">Engineering Deep Dive</h1>~', $single->body), 'Post title shows the page title');
+            assert_true(str_contains($single->body, 'sb-meta-category">Engineering<'), 'Post meta shows the page category');
+            assert_true((bool) preg_match('~class="sb-block sb-block--theme-post-content sb-post-body">.*Deep technical post content on microservices\.~s', $single->body), 'Post content is the page\'s own content');
+            assert_false(str_contains($single->body, 'Lorem ipsum') || str_contains($single->body, 'Single Post Title'), 'no placeholder text anywhere');
+            assert_true(strpos($single->body, 'Engineering single layout') < strpos($single->body, 'Deep technical post content'), 'the template content comes first, as laid out');
+
+            $other = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/design-post'));
+            assert_true($other !== null && !str_contains($other->body, 'Engineering single layout'), 'a page the conditions do not match keeps its own layout');
+            assert_null($rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/single-eng')), 'the template is not a public page');
+            $editor = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->renderForEditor($actorA, $p1Id));
+            assert_false(str_contains($editor->html, 'Engineering single layout'), 'the editor canvas edits the page itself, without the template');
+
+            // Publishing a change to the template reaches the page without republishing the page.
+            $tplSingleDraft = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->loadEditorDocument($actorA, $tplSingleId));
+            $headingId = (string) $tplSingleDraft['document']['sections'][0]['blocks'][0]['id'];
+            $tplSingleEdit2 = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, $tplSingleId, [
+                new DocumentOperation('update_block_props', ['block_id' => $headingId, 'props' => ['text' => 'Engineering layout v2', 'level' => 'h2']]),
+            ], (int) $tplSingleDraft['revision']['id'], 'Rename'));
+            $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, $tplSingleId, (int) $tplSingleEdit2['revision']['id']));
+            $again = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/eng-post'));
+            assert_true($again !== null && str_contains($again->body, 'Engineering layout v2') && !str_contains($again->body, 'Engineering single layout'), 'the page shows the republished template');
+
+            // An older Single template stored as a page is not a public page and is not in the sitemap.
+            $legacy = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->createPage($actorA, 'Old Single', 'template-old-single', 'page', 'standalone'));
+            $legacyEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, (int) $legacy['page']['id'], [
+                new DocumentOperation('update_settings', ['settings' => ['template_type' => 'single']]),
+            ], (int) $legacy['revision']['id'], 'Mark as template'));
+            $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, (int) $legacy['page']['id'], (int) $legacyEdit['revision']['id']));
+            $pdo->prepare("UPDATE studiobuilder_pages SET settings_json = ? WHERE id = ?")->execute(['{"is_theme_template":true,"template_type":"single"}', (int) $legacy['page']['id']]);
+            assert_null($rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/template-old-single')), 'an old Single template page is not served');
+            $sitemap = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('sitemap.xml?format=xml'));
+            assert_true($sitemap !== null && !str_contains($sitemap->body, 'template-old-single') && !str_contains($sitemap->body, 'single-eng'), 'and not listed in the sitemap');
         });
     } finally {
         $port = defined('DB_PORT') ? trim((string) DB_PORT) : '';

@@ -343,11 +343,23 @@ final class StudioPublicRuntime
     {
         foreach (StudioRenderService::PUBLIC_PAGE_TYPES as $type) {
             $row = $this->pages->findBySlug($slug, $type);
-            if ($row !== null && ($row['status'] ?? null) === 'published' && !empty($row['published_revision_id'])) {
+            if ($row !== null && ($row['status'] ?? null) === 'published' && !empty($row['published_revision_id']) && !self::isThemeTemplate($row)) {
                 return $row;
             }
         }
         return null;
+    }
+
+    /**
+     * A theme template (a Single template stored as a page, older rows) lays out other pages; it is never a page
+     * of its own at its `template-…` address.
+     *
+     * @param array<string, mixed> $row
+     */
+    public static function isThemeTemplate(array $row): bool
+    {
+        $settings = json_decode((string) ($row['settings_json'] ?? ''), true);
+        return is_array($settings) && (!empty($settings['is_theme_template']) || (is_string($settings['template_type'] ?? null) && $settings['template_type'] !== ''));
     }
 
     private function isEntitled(int $tenantId, string $moduleKey): bool
