@@ -108,6 +108,9 @@ html, body.sbx-body {
 .sbx-muted { color: var(--sbx-muted); }
 .sbx-hint { color: var(--sbx-muted); font-size: var(--sbx-fs-sm); margin: 0.25rem 0 0.75rem; }
 .sbx-hint--warn { color: var(--sbx-warn-text); }
+/* A prop another control owns (CL-02): shown, read-only, with a note saying where to change it. */
+.sbx-owned { border: 0; margin: 0; padding: 0; min-width: 0; }
+.sbx-owned > :not(.sbx-hint) { opacity: 0.55; }
 .sbx-field__error { color: var(--sbx-danger); font-size: var(--sbx-fs-sm); margin: 0.25rem 0 0.5rem; }
 .sbx-input[aria-invalid='true'] { border-color: var(--sbx-danger); }
 
