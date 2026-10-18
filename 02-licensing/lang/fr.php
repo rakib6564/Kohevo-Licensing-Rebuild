@@ -1317,4 +1317,11 @@ return array (
     'tenant_plan_not_saved' => 'Formule non enregistrée :',
     'tenant_plan_gaps_title' => '%d locataire(s) actif(s) se verraient refuser un module.',
     'tenant_plan_gaps_hint' => 'Attribuez une formule à chacun (Modifier, puis Formule) avant qu’ils en aient besoin.',
+    // Secret handling: AI base URL vetting, auto-translate API key.
+    'mcp_gateway_ai_base_url_rejected' => 'Réglages non enregistrés : l’URL de base de l’API doit être une adresse https publique (aucun hôte privé, local ou interne).',
+    'mlt_autotranslate_key' => 'Clé API de traduction automatique',
+    'mlt_autotranslate_key_placeholder' => 'Facultatif : la clé API de votre service de traduction',
+    'mlt_autotranslate_key_encryption_failed' => 'La clé API n’a pas été enregistrée : le chiffrement est indisponible (vérifiez APP_SECRET). Les clés ne sont jamais stockées en clair.',
+    'leave_blank_to_keep' => 'Laisser vide pour conserver le secret existant',
+    'clear_saved_secret' => 'Effacer le secret enregistré',
 );
