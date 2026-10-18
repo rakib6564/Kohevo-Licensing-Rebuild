@@ -7,8 +7,8 @@
  *
  *   1. Studio neutral defaults (DEFAULT_TOKENS) — so every core token a
  *      default document uses always resolves.
- *   2. Tenant branding (`TenantBranding::resolve()` — accent, ink, canvas,
- *      heading/body fonts), mapped onto Studio tokens.
+ *   2. Tenant branding (`TenantBranding::resolve()` — the accent colour from
+ *      Settings › Branding), mapped onto Studio tokens.
  *   3. The tenant's stored Studio token set for the document's
  *      `settings.token_group` (`studiobuilder_tokens.tokens_json`, falling back
  *      to the `default` group), read through the tenant-scoped TokenRepository.
@@ -69,10 +69,6 @@ final class ThemeResolver
     /** TenantBranding::resolve() key => Studio token refs it feeds. */
     public const BRANDING_TOKEN_MAP = [
         'accent'  => ['color.accent', 'surface.accent', 'text.accent'],
-        'ink'     => ['text.primary'],
-        'pageBg'  => ['surface.page'],
-        'heading' => ['font.heading'],
-        'body'    => ['font.body'],
     ];
 
     private const COLOR_PATTERN = '/^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(rgb|rgba|hsl|hsla)\(\s*[0-9.%\s,\/]{1,60}\)|transparent|currentColor)$/';

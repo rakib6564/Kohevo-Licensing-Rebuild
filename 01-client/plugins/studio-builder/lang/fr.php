@@ -679,7 +679,7 @@ return [
     'studio_ui_chrome_not_chromed' => 'Ce type de document n’a ni en-tête ni pied de page propre.',
     'studio_ui_chrome_draft_note' => '(modifications non publiées)',
     'studio_ui_theme_hint' => 'Les jetons sont les seules valeurs de style que les pages peuvent référencer. Les valeurs sont validées : couleurs, longueurs, ombres et familles de police uniquement.',
-    'studio_ui_theme_branding_note' => 'L’identité du site (couleurs et polices de Réglages › Identité) s’applique d’abord ; les jetons Studio la remplacent pour les pages Studio.',
+    'studio_ui_theme_branding_note' => 'Seule la couleur d’accent de Réglages › Identité est reprise ; les jetons Studio la remplacent pour les pages Studio. Les polices, les coins et les autres couleurs se règlent ici.',
     'studio_ui_theme_branding_link' => 'Ouvrir les réglages d’identité du site',
     'studio_ui_theme_source_default' => 'par défaut',
     'studio_ui_theme_source_branding' => 'depuis l’identité',
