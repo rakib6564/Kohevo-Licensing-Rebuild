@@ -8,7 +8,7 @@ import {
 import {
   rect, frameScale, toOverlayRect, intersects, clipTo, unionRect, placeFloating, selectionCorners, stepId,
 } from '../src/core/overlayGeometry.mjs';
-import { snapHeights, dragHeight, settle } from '../src/core/sheetSnap.mjs';
+import { snapHeights, dragHeight, releaseHeight, settle } from '../src/core/sheetSnap.mjs';
 import { MOBILE_SHELL_MAX_WIDTH, isMobileShellWidth } from '../src/core/shellState.mjs';
 
 const rows = [
@@ -184,6 +184,16 @@ test('release settles on the nearest snap, honours flings, and closes when dragg
   assert.equal(settle(700, -0.9, snaps), 736);
   assert.equal(settle(100, 0, snaps), null, 'dragged below half the lowest snap closes');
   assert.equal(settle(320, 0.9, snaps), null, 'flinging down from the lowest snap closes');
+});
+
+test('the release height comes from where the pointer was let go, not from the last render', () => {
+  const snaps = [320, 560, 736];
+  // grabbed at y=260 on a 560px sheet and let go at y=950: closes even if no move was rendered
+  assert.equal(releaseHeight(560, 260, 950, snaps), 0);
+  assert.equal(settle(releaseHeight(560, 260, 950, snaps), 0, snaps), null);
+  assert.equal(settle(releaseHeight(560, 260, 950, snaps), 19, snaps), null, 'a fast pull closes too');
+  assert.equal(releaseHeight(560, 260, 160, snaps), 660);
+  assert.equal(releaseHeight(560, 260, -500, snaps), 736, 'never above the top snap');
 });
 
 // ── mobile shell threshold ─────────────────────────────────────────────────
