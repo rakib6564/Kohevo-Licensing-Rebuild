@@ -102,12 +102,13 @@ test('Columns and form-field variants insert ready-set blocks; content added nex
     await expect(card).toBeVisible();
     await expect(card).toContainText('Three columns');
     expect(await card.getAttribute('draggable')).toBe('false'); // a drag would lose the ready-set props
-    const gridsBefore = await (await frameDocument(page)).locator('.sb-grid.sb-cols-3').count();
+    // three columns from tablet width up; one on a phone (CL-M3)
+    const gridsBefore = await (await frameDocument(page)).locator('.sb-grid.sb-md-cols-3').count();
     await card.click();
     await settled(page);
     let frame = await frameDocument(page);
-    await expect.poll(() => frame.locator('.sb-grid.sb-cols-3').count(), { timeout: 20_000 }).toBe(gridsBefore + 1);
-    expect(await frame.locator('.sb-grid.sb-cols-3').last().evaluate((n) => n.offsetHeight)).toBeGreaterThanOrEqual(56); // an empty layout block stays visible and droppable
+    await expect.poll(() => frame.locator('.sb-grid.sb-md-cols-3').count(), { timeout: 20_000 }).toBe(gridsBefore + 1);
+    expect(await frame.locator('.sb-grid.sb-md-cols-3').last().evaluate((n) => n.offsetHeight)).toBeGreaterThanOrEqual(56); // an empty layout block stays visible and droppable
 
     // the new grid is selected (and the inspector took the panel), so the next element goes into it
     await page.getByRole('tab', { name: /^(Add|Ajouter)$/ }).click();
@@ -116,7 +117,7 @@ test('Columns and form-field variants insert ready-set blocks; content added nex
     await panel(page).locator('[data-block-type="core.quote"]').click();
     await settled(page);
     frame = await frameDocument(page);
-    await expect.poll(() => frame.locator('.sb-grid.sb-cols-3 figure.sb-quote').count(), { timeout: 20_000 }).toBe(1);
+    await expect.poll(() => frame.locator('.sb-grid.sb-md-cols-3 figure.sb-quote').count(), { timeout: 20_000 }).toBe(1);
 
     // a form-field variant renders its own control
     await page.getByRole('tab', { name: /^(Add|Ajouter)$/ }).click();
