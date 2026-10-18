@@ -284,6 +284,11 @@ export function responsiveDeclarations(responsive) {
     emitSides('padding', style.padding, out);
     emitSides('margin', style.margin, out);
     emitTable('layout', style.layout, LAYOUT.filter(([field]) => field !== 'display'), out);
+    if (isObj(style.dimensions)) {
+      for (const [field, prop] of [['width', 'width'], ['height', 'height'], ['min_height', 'min-height'], ['max_width', 'max-width']]) {
+        if (isMeasure(style.dimensions[field], true)) out.push(`${prop}:${style.dimensions[field].trim()}`);
+      }
+    }
     if (out.length) rules.push({ query, declarations: out.map((d) => `${d} !important`) });
   }
   return rules;

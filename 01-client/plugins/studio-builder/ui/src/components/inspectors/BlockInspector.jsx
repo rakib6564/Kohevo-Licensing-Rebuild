@@ -175,7 +175,9 @@ export function BlockInspector({ info }) {
     },
     dimensions: () => (
       <>
-        <StyleControls style={style} capabilities={capabilities} only="dimensions" onChange={saveStyle} />
+        <DeviceStyle scope={deviceScope} paths={RESPONSIVE_SCOPES.dimensions} label={t('dimensions_label')}>
+          {(view) => <StyleControls style={view.style} capabilities={capabilities} only="dimensions" onChange={view.onChange} />}
+        </DeviceStyle>
         <DimensionsExtras style={style} media={MEDIA_TYPES.has(block.type)} onChange={saveStyle} />
       </>
     ),

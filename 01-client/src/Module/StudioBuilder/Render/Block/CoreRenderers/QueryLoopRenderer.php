@@ -34,6 +34,8 @@ final class QueryLoopRenderer implements BlockRendererInterface
     public function render(BlockRenderScope $scope): string
     {
         $rows = $scope->rows('items');
+        $perPage = max(1, (int) $scope->prop('per_page', 6));
+        $currentPage = max(1, (int) ($scope->prop('page') ?? ($_GET['page'] ?? 1)));
 
         // If no binding slot provided rows, execute PostsProvider directly
         if ($rows === null) {
@@ -46,8 +48,8 @@ final class QueryLoopRenderer implements BlockRendererInterface
                     'author_id' => (int) $scope->prop('author_id', 0),
                     'order_by'  => $scope->string('order_by', 'published_at'),
                     'order'     => $scope->string('order', 'desc'),
-                    'limit'     => (int) $scope->prop('per_page', 6),
-                    'page'      => (int) ($scope->prop('page') ?? ($_GET['page'] ?? 1)),
+                    'limit'     => $perPage,
+                    'page'      => $currentPage,
                 ];
                 // In execution, if tenant is scoped via global/ambient context:
                 if (isset($GLOBALS['SLATE_TENANT_OVERRIDE'])) {
@@ -152,13 +154,20 @@ final class QueryLoopRenderer implements BlockRendererInterface
             . $itemsHtml
             . '</div>';
 
+        // The provider returns one page and no total, so the pager only offers what is known:
+        // a previous page past page 1, and a next page when this one came back full.
         $paginationHtml = '';
-        if ($enablePagination) {
-            $paginationHtml = '<nav class="sb-pagination" aria-label="Pagination">'
-                . '<span class="sb-pagination__prev sb-pagination__disabled">' . Html::t('studio_prev', 'Previous') . '</span>'
-                . '<span class="sb-pagination__page sb-pagination__current">1</span>'
-                . '<a href="?page=2" class="sb-pagination__page">2</a>'
-                . '<a href="?page=2" class="sb-pagination__next">' . Html::t('studio_next', 'Next') . '</a>'
+        $hasPrev = $currentPage > 1;
+        $hasNext = count($rows) >= $perPage;
+        if ($enablePagination && ($hasPrev || $hasNext)) {
+            $paginationHtml = '<nav class="sb-pagination" aria-label="' . Html::t('studio_pagination', 'Pagination') . '">'
+                . ($hasPrev
+                    ? '<a href="?page=' . ($currentPage - 1) . '" class="sb-pagination__prev" rel="prev">' . Html::t('studio_prev', 'Previous') . '</a>'
+                    : '<span class="sb-pagination__prev sb-pagination__disabled">' . Html::t('studio_prev', 'Previous') . '</span>')
+                . '<span class="sb-pagination__page sb-pagination__current" aria-current="page">' . $currentPage . '</span>'
+                . ($hasNext
+                    ? '<a href="?page=' . ($currentPage + 1) . '" class="sb-pagination__next" rel="next">' . Html::t('studio_next', 'Next') . '</a>'
+                    : '<span class="sb-pagination__next sb-pagination__disabled">' . Html::t('studio_next', 'Next') . '</span>')
                 . '</nav>';
         }
 

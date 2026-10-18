@@ -1558,4 +1558,6 @@ return [
     'studio_page_save_meta' => 'Enregistrer les champs personnalisés',
     'studio_choose' => 'Choisir…',
     'studio_yes' => 'Oui',
+    'studio_prev' => 'Précédent',
+    'studio_next' => 'Suivant',
 ];

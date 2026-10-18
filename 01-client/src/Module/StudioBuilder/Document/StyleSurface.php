@@ -920,11 +920,18 @@ final class StyleSurface
             'padding'    => $more['padding'],
             'margin'     => $more['margin'],
             'layout'     => $layout,
+            // The four base sizes are inline on the element; these !important rules beat them per device.
+            'dimensions' => [
+                'width'      => ['length', 'width', true],
+                'height'     => ['length', 'height', true],
+                'min_height' => ['length', 'min-height', true],
+                'max_width'  => ['length', 'max-width', true],
+            ],
         ];
     }
 
     /**
-     * Issues for one device's style override: a partial style limited to font size, padding, margin and the flex/grid layout (everything but the display type).
+     * Issues for one device's style override: a partial style limited to font size, padding, margin, the flex/grid layout (everything but the display type) and width, height, min-height and max-width.
      *
      * @return list<array{path: string, code: string, message: string}>
      */

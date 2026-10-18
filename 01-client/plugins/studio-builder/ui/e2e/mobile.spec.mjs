@@ -125,6 +125,25 @@ test('tapping the scrim closes a sheet', async ({ page }) => {
   await expect(page.getByTestId('sheet-theme')).toHaveCount(0);
 });
 
+test('the Theme sheet saves a real design token and resets it', async ({ page }) => {
+  await openBuilder(page);
+  await dock(page, 'theme').click();
+  const form = page.getByTestId('sheet-theme').getByTestId('site-settings');
+  await expect(form).toBeVisible();
+  const save = form.getByTestId('site-settings-save');
+  const field = form.locator('.sbx-ss__row', { hasText: 'Main surface' }).first().locator('input[type="text"]');
+  try {
+    await field.fill('#112233');
+    await save.click();
+    await expect(form.getByRole('status')).toHaveText('Design saved');
+  } finally {
+    await field.fill('');
+    if (await save.isEnabled()) await save.click();
+    await expect(form.getByRole('status')).toHaveText('Design saved');
+  }
+  await expect(field).toHaveValue('');
+});
+
 test('Responsive view: device preset, zoom and layout aids drive the canvas', async ({ page }) => {
   await openBuilder(page);
   await ensureSection(page);
