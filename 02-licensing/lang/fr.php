@@ -1310,6 +1310,13 @@ return array (
     'core_err_deactivate_the_plugin_before_uninstalling' => 'Désactivez l’extension avant de la désinstaller.',
     'date_format_weekday_long' => 'l j F Y',
     'date_format_default' => 'j F Y',
+    'tenant_plan' => 'Formule',
+    'tenant_plan_hint' => 'Détermine les modules que ce locataire peut utiliser (Formulaires, Réservations, Adhésions, …). Sans formule, ces modules sont refusés.',
+    'tenant_plan_save' => 'Enregistrer la formule',
+    'tenant_plan_saved' => 'Formule enregistrée.',
+    'tenant_plan_not_saved' => 'Formule non enregistrée :',
+    'tenant_plan_gaps_title' => '%d locataire(s) actif(s) se verraient refuser un module.',
+    'tenant_plan_gaps_hint' => 'Attribuez une formule à chacun (Modifier, puis Formule) avant qu’ils en aient besoin.',
     // Settings audit: write-only secrets, encryption failures, timezone ownership.
     'leave_blank_to_keep' => 'Laisser vide pour conserver le secret existant',
     'clear_saved_secret' => 'Effacer le secret enregistré',

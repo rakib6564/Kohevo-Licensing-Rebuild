@@ -1,7 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { RESPONSIVE_SCOPES, clearOverride, deviceView, hasOverride, writeDesktop, writeOverride } from '../src/core/responsiveStyle.mjs';
-import { surfaceAccepts } from '../src/core/styleSurface.mjs';
+import { RESPONSIVE_SCOPES, clearOverride, deviceAccepts, deviceView, hasOverride, writeDesktop, writeOverride } from '../src/core/responsiveStyle.mjs';
 
 const style = { typography: { size: '3rem', weight: 'bold' }, padding: { top: '4rem' } };
 
@@ -40,8 +39,11 @@ test('every responsive path is one the server accepts for a device style', () =>
     'layout.columns': 2, 'layout.rows': 2, 'layout.order': 1, 'layout.grow': 1, 'layout.shrink': 1, 'layout.basis': '50%', 'layout.align_self': 'end' };
   for (const path of Object.values(RESPONSIVE_SCOPES).flat()) {
     const value = sample[path] ?? '1rem';
-    assert.equal(path === 'typography.size' || surfaceAccepts(path, value), true, path);
+    assert.equal(deviceAccepts(path, value), true, path);
   }
+  assert.equal(deviceAccepts('dimensions.width', 'auto'), true);
+  assert.equal(deviceAccepts('dimensions.max_width', 'none'), false, 'the server refuses keywords other than auto per device');
+  assert.equal(deviceAccepts('dimensions.width', '12'), false, 'a bare number is not a length');
 });
 
 test('a desktop edit keeps every style key outside the control group', () => {

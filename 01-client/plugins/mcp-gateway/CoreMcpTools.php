@@ -8,9 +8,11 @@
  *
  * Nothing here writes a password/secret field, deletes a role or user, or
  * touches this plugin's own active status — see McpGatewayAPI::isBlocked()
- * and README.md. slate_settings_set additionally refuses any key that
- * looks like a secret, since Layer 2's guard only inspects the tool NAME
- * and this tool's key is caller-supplied.
+ * and README.md. slate_settings_set only accepts the keys listed in
+ * writableSetting(), each checked the way its admin page checks it, since
+ * Layer 2's guard only inspects the tool NAME and this tool's key is
+ * caller-supplied. Mail servers, AI/webhook URLs, tokens, security and
+ * plugin settings are changed from the admin UI only.
  */
 
 declare(strict_types=1);
@@ -27,7 +29,7 @@ class CoreMcpTools {
 
     public static function filterScopes(array $scopes): array {
         $scopes['mcp-gateway.settings.read']      = 'Read site/plugin settings (secret-looking values are hidden)';
-        $scopes['mcp-gateway.settings.write']      = 'Change non-secret site/plugin settings';
+        $scopes['mcp-gateway.settings.write']      = 'Change general site settings (name, business details, currency, language, time and date)';
         $scopes['mcp-gateway.media.read']          = 'List media library files';
         $scopes['mcp-gateway.media.write']         = 'Upload and delete media library files';
         $scopes['mcp-gateway.notifications.write'] = 'Send an admin notification';
@@ -47,7 +49,7 @@ class CoreMcpTools {
             $tools[] = [
                 'name' => 'slate_settings_get',
                 'classification' => ['access' => 'read', 'requires_confirmation' => false],
-                'description' => 'Read one or more settings by key. Values whose key looks like a password/secret are returned as "[hidden]".',
+                'description' => 'Read one or more settings by key. Credentials (by key name) and encrypted values are returned as "[hidden]".',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'keys' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Setting keys, e.g. "site_name", "booking.multislot_max"'],
                 ], 'required' => ['keys'], 'additionalProperties' => false],
@@ -57,7 +59,7 @@ class CoreMcpTools {
             $tools[] = [
                 'name' => 'slate_settings_set',
                 'classification' => ['access' => 'write', 'requires_confirmation' => true],
-                'description' => 'Set a single setting by key. Refused if the key looks like a password/secret field.',
+                'description' => 'Set one general setting: site_name, business_name, business_email, business_phone, business_address, business_hours, currency, currency_position, default_language, timezone, date_format, time_format or start_of_week. Other settings are changed from the admin UI.',
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'key'   => ['type' => 'string'],
                     'value' => ['type' => 'string'],
@@ -250,9 +252,61 @@ class CoreMcpTools {
         }
     }
 
-    /** Anything that looks like a password/secret field, by key name. */
+    /** Anything that looks like a credential, by key name. */
     private static function looksSensitive(string $key): bool {
-        return (bool) preg_match('/pass|secret/i', $key);
+        return (bool) preg_match('/pass|secret|token|api_?key|private|credential|webhook|signing/i', $key);
+    }
+
+    /**
+     * The settings slate_settings_set may change, each normalised and checked
+     * the way admin/settings.php does it. Returns the value to store, or
+     * throws. Every other key (SMTP host, AI base URL, tokens, security,
+     * permalinks, plugin settings, ...) is refused: repointing a server
+     * setting can send stored credentials elsewhere, and a raw string would
+     * bypass the page's validation and encryption.
+     */
+    private static function writableSetting(string $key, string $value): string {
+        $text = static function (string $v, int $max): string {
+            $v = preg_replace('/[\x00-\x08\x0B-\x1F\x7F]+/', '', $v) ?? '';
+            $v = strip_tags(preg_replace('/<[^>]*>?/', '', $v) ?? '');
+            return mb_substr(trim($v), 0, $max);
+        };
+        $bad = static fn (string $why): InvalidArgumentException => new InvalidArgumentException("Invalid value for {$key}: {$why}.");
+        switch ($key) {
+            case 'site_name':
+                $v = $text(preg_replace('/\s+/', ' ', $value) ?? '', 120);
+                if ($v === '') throw $bad('must not be empty');
+                return $v;
+            case 'business_name':    return $text($value, 190);
+            case 'business_phone':   return $text($value, 64);
+            case 'business_address': return $text($value, 500);
+            case 'business_hours':   return $text($value, 500);
+            case 'business_email':
+                $v = trim($value);
+                if ($v !== '' && (mb_strlen($v) > 190 || !filter_var($v, FILTER_VALIDATE_EMAIL))) throw $bad('not an email address');
+                return $v;
+            case 'currency':
+                $v = strtoupper(trim($value));
+                if (!preg_match('/^[A-Z]{3,8}$/', $v)) throw $bad('expected a currency code such as EUR');
+                return $v;
+            case 'currency_position':
+                if (!in_array($value, ['before', 'after'], true)) throw $bad('expected "before" or "after"');
+                return $value;
+            case 'default_language':
+                if (!preg_match('/^[a-z]{2}$/', $value)) throw $bad('expected a two-letter language code');
+                return $value;
+            case 'timezone':
+                if (!in_array($value, \DateTimeZone::listIdentifiers(), true)) throw $bad('unknown timezone');
+                return $value;
+            case 'date_format':
+            case 'time_format':
+                if (!preg_match('/^[A-Za-z0-9 .,:\/\-]{1,32}$/', $value)) throw $bad('unsupported format characters');
+                return $value;
+            case 'start_of_week':
+                if (!preg_match('/^[0-6]$/', $value)) throw $bad('expected 0 (Sunday) to 6');
+                return $value;
+        }
+        throw new InvalidArgumentException("The setting '{$key}' can't be changed through MCP. Change it from the admin UI.");
     }
 
     private static function settingsGet(array $args): array {
@@ -260,7 +314,8 @@ class CoreMcpTools {
         if (!$keys) throw new InvalidArgumentException('keys is required and must be non-empty.');
         $out = [];
         foreach ($keys as $key) {
-            $out[$key] = self::looksSensitive($key) ? '[hidden]' : Database::setting($key);
+            $v = Database::setting($key);
+            $out[$key] = self::looksSensitive($key) || str_starts_with((string) $v, 'enc:v1:') ? '[hidden]' : $v;
         }
         return ['settings' => $out];
     }
@@ -268,10 +323,7 @@ class CoreMcpTools {
     private static function settingsSet(array $args): array {
         $key = trim((string)($args['key'] ?? ''));
         if ($key === '') throw new InvalidArgumentException('key is required.');
-        if (self::looksSensitive($key)) {
-            throw new RuntimeException('Refusing to set a setting whose key looks like a password/secret field. Change it from the admin UI instead.');
-        }
-        Database::setSetting($key, (string)($args['value'] ?? ''));
+        Database::setSetting($key, self::writableSetting($key, (string)($args['value'] ?? '')));
         AuditLog::record('mcp-gateway.settings_set', $key);
         return ['ok' => true, 'key' => $key];
     }

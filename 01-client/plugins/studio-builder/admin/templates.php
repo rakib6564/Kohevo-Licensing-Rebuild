@@ -16,6 +16,7 @@ use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
+use Slate\Module\StudioBuilder\StudioPermissions;
 
 Auth::require();
 Auth::requirePerm('studio-builder.view');
@@ -88,6 +89,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to manage templates.')];
     } else {
         $action = (string) ($_POST['_action'] ?? '');
+        // Each action needs the Studio permission its application service
+        // requires (createTemplate / deleteTemplate: admin; publish: publish),
+        // not just edit: this page writes the same rows directly.
+        $requiredPerm = match ($action) {
+            'create_template', 'delete_template'       => StudioPermissions::ADMIN,
+            'publish_template', 'unpublish_template'   => StudioPermissions::PUBLISH,
+            default                                     => StudioPermissions::ADMIN,
+        };
+        if (!StudioActor::fromCurrentSession()->can($requiredPerm)) {
+            $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to manage templates.')];
+            $action = '';
+        }
 
         if ($action === 'create_template') {
             $name = trim((string) ($_POST['name'] ?? ''));
@@ -321,25 +334,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pageId = (int) ($_POST['page_id'] ?? 0);
             if ($pageId > 0) {
                 try {
-                    Database::query("UPDATE studiobuilder_pages SET status = 'draft', published_revision_id = NULL, published_at = NULL WHERE id = ? AND tenant_id = ?", [$pageId, $tenantId]);
-                    $flash = ['type' => 'success', 'msg' => "Template unpublished (reverted to draft)."];
+                    // Only a Theme Builder page (never an ordinary site page), with
+                    // the compiled output dropped and the change audit-logged.
+                    $tplPage = Database::row("SELECT id, slug, settings_json FROM studiobuilder_pages WHERE id = ? AND tenant_id = ?", [$pageId, $tenantId]);
+                    $tplSettings = $tplPage !== null ? json_decode((string) ($tplPage['settings_json'] ?? ''), true) : null;
+                    $isTemplatePage = $tplPage !== null
+                        && (str_starts_with((string) $tplPage['slug'], 'template-') || (is_array($tplSettings) && !empty($tplSettings['is_theme_template'])));
+                    if (!$isTemplatePage) {
+                        $flash = ['type' => 'error', 'msg' => 'Template not found.'];
+                    } else {
+                        Database::query("UPDATE studiobuilder_pages SET status = 'draft', published_revision_id = NULL, published_at = NULL WHERE id = ? AND tenant_id = ?", [$pageId, $tenantId]);
+                        StudioRuntimeFactory::build()->invalidator->invalidatePage($pageId);
+                        AuditLog::record('studio.page.unpublished', (string) $pageId, ['via' => 'theme-builder']);
+                        $flash = ['type' => 'success', 'msg' => "Template unpublished (reverted to draft)."];
+                    }
                 } catch (\Throwable $e) {
                     $flash = ['type' => 'error', 'msg' => 'Failed to unpublish template: ' . $e->getMessage()];
                 }
             }
         } elseif ($action === 'delete_template') {
             $templateId = (int) ($_POST['template_id'] ?? 0);
-            if ($templateId > 0) {
+            $doomed = $templateId > 0
+                ? Database::row("SELECT id, template_key FROM studiobuilder_templates WHERE tenant_id = ? AND id = ? AND is_system = 0", [$tenantId, $templateId])
+                : null;
+            if ($doomed === null) {
+                $flash = ['type' => 'error', 'msg' => 'Template not found.'];
+            } else {
                 try {
-                    $doomed = Database::row("SELECT template_key FROM studiobuilder_templates WHERE tenant_id = ? AND id = ? AND is_system = 0", [$tenantId, $templateId]);
-                    Database::delete('studiobuilder_templates', 'tenant_id = ? AND id = ? AND is_system = 0', [$tenantId, $templateId]);
-                    // Clean up linked backing page and revisions (found by the link written at creation, or by its slug once published)
-                    $backingPage = Database::row("SELECT id FROM studiobuilder_pages WHERE tenant_id = ? AND (settings_json LIKE ? OR slug = ?)", [$tenantId, '%"template_id":' . $templateId . '%', 'template-' . (string) ($doomed['template_key'] ?? "\0")]);
-                    if ($backingPage) {
-                        $pId = (int) $backingPage['id'];
-                        Database::delete('studiobuilder_revisions', 'tenant_id = ? AND page_id = ?', [$tenantId, $pId]);
-                        Database::delete('studiobuilder_compilations', 'tenant_id = ? AND page_id = ?', [$tenantId, $pId]);
-                        Database::delete('studiobuilder_pages', 'tenant_id = ? AND id = ?', [$tenantId, $pId]);
+                    $runtime = StudioRuntimeFactory::build();
+                    $actor = StudioActor::fromCurrentSession();
+                    $templateKey = (string) $doomed['template_key'];
+                    // The backing page is the one created with this template: its
+                    // slug, or settings_json.template_id equal to this id exactly
+                    // (a LIKE on the number alone also matched 50, 512, ...).
+                    $candidates = Database::all(
+                        "SELECT id, slug, settings_json FROM studiobuilder_pages WHERE tenant_id = ? AND status <> 'archived' AND (slug = ? OR settings_json LIKE ?)",
+                        [$tenantId, 'template-' . $templateKey, '%"template_id":' . $templateId . '%']
+                    );
+                    $backingIds = [];
+                    foreach ($candidates as $c) {
+                        $settings = json_decode((string) ($c['settings_json'] ?? ''), true);
+                        $linked = is_array($settings) && !empty($settings['is_theme_template'])
+                            && isset($settings['template_id']) && (int) $settings['template_id'] === $templateId;
+                        if ($linked || (string) $c['slug'] === 'template-' . $templateKey) {
+                            $backingIds[] = (int) $c['id'];
+                        }
+                    }
+                    // Through the Studio services: admin permission, audit log, cache
+                    // invalidation. The backing page is archived, not deleted, so its
+                    // revision history is kept (revisions are never deleted).
+                    $runtime->app->deleteTemplate($actor, $templateKey);
+                    foreach ($backingIds as $pId) {
+                        $runtime->app->archivePage($actor, $pId);
                     }
                     $flash = ['type' => 'success', 'msg' => 'Template deleted successfully.'];
                 } catch (\Throwable $e) {

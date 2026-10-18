@@ -694,3 +694,61 @@ unit('states: focus follows focus inside the block, a state colour reaches the t
     assert_true(!str_contains($c2->css(), 'color:inherit'), 'an opacity-only state leaves the text alone');
     assert_true($withColor !== '', 'a class is returned');
 });
+
+// ── Per-device alignment and border styles (CL-03, W-F2) ──────────────────
+
+unit('per-device alignment: desktop is the base, tablet and mobile apply only at their widths and below', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    $tabletAt = strpos($css, '@media (max-width:1023.98px){.sb-align-tablet-');
+    $mobileAt = strpos($css, '@media (max-width:767.98px){.sb-align-mobile-');
+    assert_true($tabletAt !== false && $mobileAt !== false, 'tablet and mobile alignment sit in their own media queries');
+    foreach (CanonicalDocumentSchema::ALLOWED_ALIGNMENTS as $a) {
+        foreach (['desktop', 'tablet', 'mobile'] as $device) {
+            assert_eq(1, substr_count($css, ".sb-align-{$device}-{$a}{"), "one rule for {$device} {$a}");
+        }
+        $desktopAt = strpos($css, ".sb-align-desktop-{$a}{text-align:{$a}}");
+        assert_true($desktopAt !== false && $desktopAt < $tabletAt, "desktop {$a} is a base rule, before the tablet query");
+        assert_true(strpos($css, ".sb-align-tablet-{$a}{") > $tabletAt && strpos($css, ".sb-align-tablet-{$a}{") < $mobileAt, "tablet {$a} only inside the tablet query");
+        assert_true(strpos($css, ".sb-align-mobile-{$a}{") > $mobileAt, "mobile {$a} only inside the mobile query");
+    }
+    // The mobile value can no longer win on a desktop screen: no mobile rule outside a query.
+    assert_false((bool) preg_match('/^[^@]*\.sb-align-mobile-/', substr($css, 0, $tabletAt)), 'no mobile alignment before the queries');
+});
+
+unit('border styles: every offered style has a rule, so a solid, dotted or double border shows', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    foreach (CanonicalDocumentSchema::ALLOWED_BORDER_STYLES as $style) {
+        $rule = $style === 'none' ? '.sb-border-none{border:none}' : ".sb-border-{$style}{border-style:{$style}}";
+        assert_true(str_contains($css, $rule), "{$style} has its rule");
+    }
+    $r = sbss_render(['border' => ['style' => 'solid', 'width' => '2px', 'color' => '#ff0000']]);
+    assert_true(str_contains($r['html'], 'sb-border-solid'), 'the block carries the style class');
+    assert_true(str_contains($r['html'] . $r['css'], 'border-width:2px'), 'and its width: ' . $r['html'] . ' ' . $r['css']);
+});
+
+// ── Dimensions per device (CL-04) ─────────────────────────────────────────
+
+unit('dimensions: width, height, min-height and max-width can differ on tablet and mobile', function (): void {
+    $tenants   = new TenantContext();
+    $renderer  = new DocumentRenderer(BlockRegistry::withAllCoreBlocks(), BlockRendererRegistry::withCoreRenderers(), new CoreMediaResolver($tenants), new ProviderBindingResolver(new DataProviderRegistry(), $tenants));
+    $collector = new RenderCollector();
+    $html = $renderer->renderBlock([
+        'id' => 'blk_dddddddddddddddddddddddd', 'type' => 'core.heading', 'version' => 1,
+        'props' => ['text' => 'Sized', 'level' => 'h2'],
+        'style' => ['dimensions' => ['width' => '600px']] + CanonicalDocumentSchema::defaultBlockStyle(),
+        'responsive' => ['tablet' => ['style' => ['dimensions' => ['max_width' => '80%']]], 'mobile' => ['style' => ['dimensions' => ['width' => '100%', 'min_height' => '10rem']]]],
+        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+        'bindings' => [], 'children' => [], 'animation' => [], 'interactions' => [],
+    ], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), $collector, false);
+    $css = $collector->css();
+    assert_true(str_contains($html, 'width:600px'), 'the desktop width stays on the element: ' . $html);
+    assert_true((bool) preg_match('/@media \(max-width:767\.98px\)\{\.sb-x-[0-9a-f]{16}\{[^}]*width:100% !important/', $css), 'the mobile width is a media rule that beats it: ' . $css);
+    assert_true(str_contains($css, 'min-height:10rem !important'), 'min-height too');
+    assert_true((bool) preg_match('/@media \(max-width:1023\.98px\)\{\.sb-x-[0-9a-f]{16}\{[^}]*max-width:80% !important/', $css), 'and a tablet max-width');
+
+    assert_eq([], StyleSurface::responsiveIssues(['dimensions' => ['width' => '100%', 'height' => 'auto', 'min_height' => '0', 'max_width' => '40rem']], '$.r'), 'lengths and auto are accepted per device');
+    assert_true(StyleSurface::responsiveIssues(['dimensions' => ['width' => 'calc(1px);color:red']], '$.r') !== [], 'anything else is refused');
+    assert_true(StyleSurface::responsiveIssues(['dimensions' => ['aspect_ratio' => '16/9']], '$.r') !== [], 'only the four sizes can differ per device');
+});
