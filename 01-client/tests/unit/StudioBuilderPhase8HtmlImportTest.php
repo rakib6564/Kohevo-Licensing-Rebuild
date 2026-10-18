@@ -46,6 +46,8 @@ use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 use Slate\Module\StudioBuilder\StudioPermissions;
 
+require_once SLATE_ROOT . '/tests/support/css_defaults.php';
+
 const SB8H_CORE_TYPES = ['core.hero', 'core.heading', 'core.rich_text', 'core.image', 'core.button', 'core.feature_list', 'core.container'];
 
 /** @return array<string, mixed> */
@@ -483,11 +485,11 @@ unit('phase8b unit: the quantization scales are exactly StudioStylesheet\'s', fu
     $css = StudioStylesheet::css();
     foreach (HtmlCssValues::PADDING_SCALE as $name => $rem) {
         $value = $rem == 0 ? '0' : ltrim(rtrim(rtrim(number_format($rem, 2, '.', ''), '0'), '.'), '0') . 'rem';
-        assert_true(str_contains($css, ".sb-py-{$name}{padding-top:{$value};"), "padding {$name} = {$value}");
+        assert_true((bool) preg_match('/\.sb-py-' . preg_quote((string) $name, '/') . '\{padding-top:([^;]+);/', $css, $m) && in_array(sb_css_default($m[1]), [$value, '0' . $value], true), "padding {$name} = {$value}");
     }
     foreach (HtmlCssValues::GAP_SCALE as $name => $rem) {
         $value = $rem == 0 ? '0' : ltrim(rtrim(rtrim(number_format($rem, 2, '.', ''), '0'), '.'), '0') . 'rem';
-        assert_true(str_contains($css, ".sb-gap-{$name}{gap:{$value}}"), "gap {$name} = {$value}");
+        assert_true((bool) preg_match('/\.sb-gap-' . preg_quote((string) $name, '/') . '\{gap:([^}]+)\}/', $css, $m) && in_array(sb_css_default($m[1]), [$value, '0' . $value], true), "gap {$name} = {$value}");
     }
     foreach (HtmlCssValues::WIDTH_SCALE as $name => $rem) {
         assert_true(str_contains($css, '.sb-w-' . $name . '{max-width:' . (int) $rem . 'rem') || str_contains($css, '.sb-w-' . $name . '{max-width:var(--sb-layout-' . $name . ',' . (int) $rem . 'rem)'), "width {$name}");
