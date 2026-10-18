@@ -1561,4 +1561,8 @@ return [
     'studio_prev' => 'Précédent',
     'studio_next' => 'Suivant',
     'studio_search' => 'Rechercher',
+    'studio_ui_section_bg_overridden' => "L’onglet Arrière-plan définit une couleur ou une image, qui est utilisée à la place. Effacez-la là-bas pour utiliser ce jeton.",
+    'studio_ui_section_padding_overridden' => "La marge intérieure haute ou basse de l’onglet Avancé est utilisée à la place. Effacez-la là-bas pour utiliser ce réglage.",
+    'studio_ui_device_overrides_legacy' => "Défini dans une version précédente. Pour masquer ce bloc sur un appareil, utilisez « Afficher sur » ci-dessus ; décochez ceci pour le retirer.",
+    'studio_ui_ss_tk_block_only' => "Utilisé uniquement par les blocs qui choisissent ce jeton.",
 ];
