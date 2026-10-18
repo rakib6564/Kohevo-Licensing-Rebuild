@@ -16,7 +16,7 @@ import { syncLiveStructure } from '../core/liveStructure.mjs';
 import { adoptFragment, applyFragment, clearFragments } from '../core/liveFragment.mjs';
 import { STATUS } from '../core/sync.mjs';
 import { t } from '../core/messages.mjs';
-import { ancestorPath, asList, canInsertBlock, canMoveBlock, findNode } from '../core/doc.mjs';
+import { ancestorPath, asList, blockDefinition, canInsertBlock, canMoveBlock, findNode } from '../core/doc.mjs';
 import { effectivelyLocked, lockIndex } from '../core/layerLock.mjs';
 import { canvasMenuItems, pasteState, rowFor } from '../core/rowMenu.mjs';
 import { frameScale } from '../core/overlayGeometry.mjs';
@@ -470,6 +470,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
         return info && info.kind !== 'section' ? inlineSpecsFor(manifest, info.node) : [];
       },
       isLocked: (id) => effectivelyLocked(lockIndex(workingRef.current), id),
+      allowsChildren: (type) => Boolean(blockDefinition(manifest, type)?.allows_children),
     });
     markSelected(doc, selectionRef.current, { scroll: false, ids: selectedIdsRef.current });
   };

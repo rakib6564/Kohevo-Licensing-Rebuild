@@ -87,13 +87,8 @@ final class ThemeResolver
         }
         $resolved = self::DEFAULT_TOKENS;
 
-        foreach ($this->brandingValues() as $brandKey => $value) {
-            foreach (self::BRANDING_TOKEN_MAP[$brandKey] ?? [] as $ref) {
-                $clean = self::sanitizeValue($ref, $value);
-                if ($clean !== null) {
-                    $resolved[$ref] = $clean;
-                }
-            }
+        foreach ($this->brandingLayer() as $ref => $value) {
+            $resolved[$ref] = $value;
         }
 
         foreach ($this->storedTokens($tokenGroup) as $ref => $value) {
@@ -121,15 +116,7 @@ final class ThemeResolver
         if (preg_match(CanonicalDocumentSchema::TOKEN_GROUP_PATTERN, $tokenGroup) !== 1) {
             $tokenGroup = self::DEFAULT_GROUP;
         }
-        $branding = [];
-        foreach ($this->brandingValues() as $brandKey => $value) {
-            foreach (self::BRANDING_TOKEN_MAP[$brandKey] ?? [] as $ref) {
-                $clean = self::sanitizeValue($ref, $value);
-                if ($clean !== null) {
-                    $branding[$ref] = $clean;
-                }
-            }
-        }
+        $branding = $this->brandingLayer();
         $stored = [];
         foreach ($this->storedTokens($tokenGroup) as $ref => $value) {
             $clean = is_string($ref) ? self::sanitizeValue($ref, $value) : null;
@@ -148,6 +135,49 @@ final class ThemeResolver
      * surrounding <style> element (`;{}<>\`, comments, url(), expressions) can
      * pass any of these patterns.
      */
+    /**
+     * The tokens Settings › Branding supplies, sanitized. A primary button is text.inverse on
+     * surface.accent, so with a brand accent that text is whichever of white or ink reads better on it,
+     * as the admin theme already does; a stored text.inverse still wins over it.
+     *
+     * @return array<string, string>
+     */
+    private function brandingLayer(): array
+    {
+        $out = [];
+        foreach ($this->brandingValues() as $brandKey => $value) {
+            foreach (self::BRANDING_TOKEN_MAP[$brandKey] ?? [] as $ref) {
+                $clean = self::sanitizeValue($ref, $value);
+                if ($clean !== null) {
+                    $out[$ref] = $clean;
+                }
+            }
+            if ($brandKey === 'accent' && isset($out['surface.accent']) && ($onAccent = self::onAccent((string) $value)) !== null) {
+                $out['text.inverse'] = $onAccent;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * White or ink (#15181E), whichever has the higher contrast on a #RGB / #RRGGBB accent; null for
+     * anything else. The same measure as slate_brand_accent_tokens() in includes/brand_tokens.php.
+     */
+    public static function onAccent(string $hex): ?string
+    {
+        if (preg_match('/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', trim($hex), $m) !== 1) {
+            return null;
+        }
+        $h = strlen($m[1]) === 3 ? $m[1][0] . $m[1][0] . $m[1][1] . $m[1][1] . $m[1][2] . $m[1][2] : $m[1];
+        $lum = static function (array $c): float {
+            $f = static fn(float $v): float => $v <= 0.03928 ? $v / 12.92 : (($v + 0.055) / 1.055) ** 2.4;
+            return 0.2126 * $f($c[0] / 255) + 0.7152 * $f($c[1] / 255) + 0.0722 * $f($c[2] / 255);
+        };
+        $ratio = static fn(float $x, float $y): float => (max($x, $y) + 0.05) / (min($x, $y) + 0.05);
+        $accent = $lum([hexdec(substr($h, 0, 2)), hexdec(substr($h, 2, 2)), hexdec(substr($h, 4, 2))]);
+        return $ratio($lum([255, 255, 255]), $accent) >= $ratio($lum([21, 24, 30]), $accent) ? '#ffffff' : '#15181e';
+    }
+
     public static function sanitizeValue(string $ref, mixed $value): ?string
     {
         if (!is_string($value) || preg_match(CanonicalDocumentSchema::TOKEN_REF_PATTERN, $ref) !== 1) {
