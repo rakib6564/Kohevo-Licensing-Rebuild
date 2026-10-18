@@ -314,6 +314,58 @@ if (Auth::can('licensing.manage') || Auth::isSuperAdmin()):
     </div>
 <?php endif; ?>
 
+<?php
+// Platform tenants. Platform admins see platform-wide counts; an ordinary
+// tenant admin sees only their own tenant's plan, licence and features, from
+// the same services that decide what the tenant may use (per-plan gating).
+if (Auth::isPlatformSuperAdmin()):
+    $tenantCounts = Database::row(
+        "SELECT
+            (SELECT COUNT(*) FROM tenants) AS total_tenants,
+            (SELECT COUNT(*) FROM tenant_profiles WHERE lifecycle_status = 'active') AS active_tenants,
+            (SELECT COUNT(*) FROM tenant_profiles WHERE lifecycle_status = 'trial') AS trial_tenants,
+            (SELECT COUNT(*) FROM tenant_profiles WHERE lifecycle_status = 'suspended') AS suspended_tenants"
+    ) ?: ['total_tenants' => 0, 'active_tenants' => 0, 'trial_tenants' => 0, 'suspended_tenants' => 0];
+    $licenseCounts = Database::row(
+        "SELECT
+            (SELECT COUNT(*) FROM licenses WHERE status = 'active') AS active_licenses,
+            (SELECT COUNT(*) FROM licenses WHERE status = 'expired') AS expired_licenses"
+    ) ?: ['active_licenses' => 0, 'expired_licenses' => 0];
+    $planCount = (int) Database::value("SELECT COUNT(*) FROM platform_plans WHERE is_active = 1");
+    $platformAdminCount = (int) Database::value("SELECT COUNT(*) FROM platform_admins");
+    ?>
+    <div class="page-header" style="margin-top:24px;">
+        <div><h2><?= __('platform_overview', 'Platform overview') ?></h2></div>
+        <a href="<?= e(SLATE_URL) ?>/admin/tenants.php" class="btn"><?= __('manage_tenants', 'Manage tenants') ?></a>
+    </div>
+    <div class="dash-stats">
+        <?php slate_stat_card(['icon' => 'building-2', 'number' => (int)$tenantCounts['total_tenants'], 'label' => __('total_tenants', 'Total tenants')]); ?>
+        <?php slate_stat_card(['icon' => 'check-circle', 'number' => (int)$tenantCounts['active_tenants'], 'label' => __('active_tenants', 'Active tenants')]); ?>
+        <?php slate_stat_card(['icon' => 'clock', 'number' => (int)$tenantCounts['trial_tenants'], 'label' => __('trial_tenants', 'Trial tenants')]); ?>
+        <?php slate_stat_card(['icon' => 'pause-circle', 'number' => (int)$tenantCounts['suspended_tenants'], 'label' => __('suspended_tenants', 'Suspended tenants')]); ?>
+        <?php slate_stat_card(['icon' => 'key', 'number' => (int)$licenseCounts['active_licenses'], 'label' => __('active_licenses', 'Active licenses')]); ?>
+        <?php slate_stat_card(['icon' => 'alert-triangle', 'number' => (int)$licenseCounts['expired_licenses'], 'label' => __('expired_licenses', 'Expired licenses')]); ?>
+        <?php slate_stat_card(['icon' => 'tag', 'number' => $planCount, 'label' => __('active_plans', 'Active plans')]); ?>
+        <?php slate_stat_card(['icon' => 'shield', 'number' => $platformAdminCount, 'label' => __('platform_admins', 'Platform Administrators')]); ?>
+    </div>
+<?php else:
+    $myTenantId = current_tenant_id();
+    $myLicense  = \Slate\Services\Licensing\LicenseService::forTenant($myTenantId);
+    $myPlanId   = Database::value("SELECT plan_id FROM tenant_profiles WHERE tenant_id = ?", [$myTenantId]);
+    $myPlan     = $myPlanId ? \Slate\Services\Licensing\PlanService::find((int)$myPlanId) : null;
+    $myFeatures = \Slate\Services\Licensing\EntitlementService::enabledFeaturesFor($myTenantId);
+    ?>
+    <div class="page-header" style="margin-top:24px;">
+        <div><h2><?= __('your_plan', 'Your plan') ?></h2></div>
+    </div>
+    <div class="dash-stats">
+        <?php slate_stat_card(['icon' => 'tag', 'number' => $myPlan['name'] ?? __('no_plan', 'No plan'), 'label' => __('plan', 'Plan')]); ?>
+        <?php slate_stat_card(['icon' => 'key', 'number' => $myLicense ? ucfirst((string)\Slate\Services\Licensing\LicenseService::effectiveStatus($myTenantId)) : __('none', 'None'), 'label' => __('license_status', 'License Status')]); ?>
+        <?php slate_stat_card(['icon' => 'clock', 'number' => ($myLicense['expires_at'] ?? null) ? slate_format_date($myLicense['expires_at']) : __('never', 'Never'), 'label' => __('license_expiry', 'License Expiry')]); ?>
+        <?php slate_stat_card(['icon' => 'check-circle', 'number' => count($myFeatures), 'label' => __('enabled_features', 'Enabled Features'), 'caption' => $myFeatures ? implode(', ', $myFeatures) : '']); ?>
+    </div>
+<?php endif; ?>
+
 <div class="dash-layout">
     <div class="dash-main">
         <?php if ($pluginWidgets): ?>

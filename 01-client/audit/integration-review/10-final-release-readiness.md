@@ -32,8 +32,8 @@
 ## Decisions needed
 
 1. ~~**D1:** approve per-plan gating in central.~~ **Approved 2026-10-18.**
-2. **R2:** confirm that a retired plan keeps granting its modules to tenants already on it.
-3. **R5:** restore the central dashboard sections removed by `0d48565`, or retire `DashboardMetricsTest`.
+2. ~~**R2:** confirm that a retired plan keeps granting its modules to tenants already on it.~~ **Confirmed 2026-10-18:** tenants already on a retired plan keep its modules; new assignments are refused. No code change.
+3. ~~**R5:** restore the central dashboard sections removed by `0d48565`, or retire `DashboardMetricsTest`.~~ **Restored 2026-10-18** (`fix/central-dashboard-sections`): "Platform overview" for platform admins and "Your plan" for tenant admins, next to the Licensing overview that `0d48565` added. `DashboardMetricsTest` 3/3.
 4. ~~**Pushes**~~ authorised and done 2026-10-18 (PRs open, not merged).
 5. **N1–N5 behaviour changes:** confirm that MCP may only change general settings, and that template delete needs Studio admin and publish/unpublish needs Studio publish.
 
