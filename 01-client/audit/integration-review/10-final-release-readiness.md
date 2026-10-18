@@ -21,7 +21,9 @@
 | Tests order-independent, state restored, no bypass, no silent skip | ✅ both trees, 2 shuffle seeds each, same results as alphabetical; three order bugs fixed (`19c9a55`, `444c531`, `234b4d6`); 2 remaining failures are R5 (decision) |
 | Mutation tests | ✅ 15/15 (release set) and 11/11 (N1–N5) caught on the combined tree |
 | High findings N1–N5 | ✅ fixed on separate local branches (`pr-high-fixes.md`); ⏳ not pushed |
-| Studio Builder audit (widgets/controls, containers/layout, Theme Builder, templates, tokens, settings) | ✅ written: `studio/`, `settings/`, register `12-…`. Source-read; nothing run in a browser |
+| Studio Builder audit (widgets/controls, containers/layout, Theme Builder, templates, tokens, settings) | ✅ written: `studio/`, `settings/`, consolidated gap report `13-…` (63 findings, 6 fixed, 8 High open), register `12-…`. Source-read; nothing run in a browser; system-plugin widget render paths, performance and a full accessibility pass **not yet audited** |
+| Cross-tree parity of changed files | ✅ `14-…`: no security code change applied to one tree only; test-coverage gap P-01 open |
+| State leaks between tests | ✅ full licensing + client runs leave plans, toggles, entitlements, roles and Studio rows unchanged (`04-…`); T-10 (identity singleton) already on `main` |
 | Required CI on each PR head | ⏳ #102 green; the seven new PRs were just opened, CI pending |
 | Live providers (Stripe, Google, Microsoft, Twilio, AI, translation) | ⚠️ not called by any test; sandbox plan in `11-…` §4 |
 | Studio Playwright on the combined tree | ⚠️ not run locally (drops `slate_sbx_e2e`) |

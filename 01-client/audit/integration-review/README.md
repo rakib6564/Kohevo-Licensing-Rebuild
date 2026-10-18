@@ -1,4 +1,4 @@
-# Integration review, 2026-10-17 (release-check)
+# Integration review, 2026-10-18 (release-check plus High fixes)
 
 Base is `origin/main` `ba4c9a5`. The combined tree tested is `integration/release-check` (local, test only, never pushed): PR #102 `6fed518` plus `audit/settings-hardening-next` `49c1fd4` plus `fix/licensing-module-guard` `d77b076`. The earlier combined tree `integration/final-check` is superseded. The five High-fix branches were tested on top of it as `integration/release-check-highs` (also local, never pushed).
 
@@ -16,6 +16,8 @@ Base is `origin/main` `ba4c9a5`. The combined tree tested is `integration/releas
 | `10-final-release-readiness.md` | Verdict, status per area, PR order, next action |
 | `11-runbooks.md` | Deploying plan gating, `APP_SECRET` rotation and rollback, PR rollback, live-provider sandbox checks |
 | `12-findings-register.md` | Every finding with ID, severity, status and evidence (security, licensing, test infrastructure, Studio Builder, settings) |
+| `13-studio-builder-gap-report.md` | Studio Builder product gap report (separate from the security audit): coverage, 63 findings with evidence, current/expected behaviour, fix and reproducible test, recommended order |
+| `14-cross-tree-parity-changes.md` | Parity of every changed file across `01-client` and `02-licensing`; test-coverage gap P-01 |
 | `studio/` | Fresh Studio Builder audit: widgets and controls (60 types, `studio-widget-controls.csv` 333 rows), containers and layout, design tokens (`studio-design-tokens.csv` 60 rows), Theme Builder, templates import/export |
 | `settings/` | Full settings inventory (`settings-full-inventory.csv`, 482 rows across both trees) and audit; `tools/` rebuilds the CSV |
 | `inventory-claims-verify.py`, `verification/` | Independent check of the widget matrix and the inventory's claims, with per-row output |

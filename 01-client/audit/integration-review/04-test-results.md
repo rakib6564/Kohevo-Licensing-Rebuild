@@ -109,6 +109,34 @@ The only merge conflict was in the Sprint6 unit test, where two new cases were b
 - **Studio UI:** the first UI run in the new worktree reported 22 skipped. `node_modules` was missing there, so the esbuild-based tests skip themselves; this is an environment gap, not a code change. With the dependencies linked, the suite passes 368/368 with 0 skipped. That re-run's log replaces the first one.
 - **Database state:** after the mutation runs the database was checked. No rows from these tests remain, and `smtp_host` is unchanged.
 
+## Database state after a full run (state-leak check, 2026-10-18)
+
+**Tree.** `integration/release-check-highs` `9122b15`; its code is identical to `5e4963c`.
+
+**Method.**
+1. Snapshot 15 tables in each test database: tenants, tenant profiles, plans and entitlements, settings, licence cache and installation identity, roles, users, plugins, platform admins and Studio rows.
+2. Run the full licensing integration suite and then the full client integration suite, one after the other.
+3. Snapshot again and compare row by row.
+
+The script is `test-logs/release-highs/state-leak-check/db-snapshot.php`; the diff is `snapshot-diff.txt` in the same folder.
+
+**Results:**
+- licensing **417/419**: only the 2 `DashboardMetricsTest` cases (R5);
+- client **666/666**.
+
+**What changed:**
+
+| Change | Assessment |
+|---|---|
+| Settings rows rewritten with the **same value** (`site_name`, `*.schema_verified`, `*.applied_version`, all Stripe key slots); only `id`/`updated_at` changed | Restored correctly: the tests save, then put the original value back |
+| `users id=1 last_login_at`; `plugins` `activated_at`/`deactivated_at` on one row per tree | Expected side effects of logging in and of plugin activation tests, which restore the active state |
+| Licensing `97301:licensing.schema_verified` removed | A leftover row from an earlier run, cleaned up by the test that owns that tenant |
+| Client `installation_identity` `7777…` → `5555…` | **Already on `main` (T-10, Low).** Several test files (here `Phase9ExpiryGraceTest`) set the identity they need and don't restore it; the last one wins. It doesn't make results depend on order, because every test that relies on the identity sets it first. The new tests in this work restore it |
+| Tenant 1's plan | Back to `NULL` after the run: the shared entitled-tenant setup restores it at shutdown |
+| Tenant plans, toggles, entitlements, roles, Studio rows | **Unchanged** |
+
+The Professional plan, the tests' default, grants `booking, coaching, forms, media-library, membership, multilang-translate`. Only Enterprise has `white_label`.
+
 ## Earlier runs
 
 Runs r8–r10 on the superseded `integration/final-check` are in `test-logs/final/`.

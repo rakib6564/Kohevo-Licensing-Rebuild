@@ -53,7 +53,9 @@ These already existed on `origin/main`; they are not regressions from PRs #102, 
 |---|---|---|
 | R3 | Low | PR #102's `SecretHandlingGapsTest` has 2 skip-as-pass guards (not taken; `APP_SECRET` is set locally and in CI). |
 | R4 | Medium | CI doesn't run either tree's `tests/unit/run.php` or `tests/integration/run.php`; most security tests run only locally. Both are now order-independent and green apart from R5, so they can be added. **Client and licensing integration suites must not run at the same time** against the same MySQL: client Phase 10 tests reset the licensing test tables. |
+| P-01 | Medium | Five security integration tests exist only in the client tree although the code is byte-identical in central (`14-cross-tree-parity-changes.md`). |
+| T-10 | Low | Older tests overwrite the shared client `installation_identity` without restoring it; harmless today (each user sets it first). |
 | R6 | Low | AI requests honour HTTPS proxy environment variables (the proxy resolves DNS). |
 | R7 | Low | Anti-drift: 12 client + 1 central findings, identical to `origin/main`. |
 | R9 | Info | Studio Playwright e2e not run locally (its sandbox drops `slate_sbx_e2e`); runs in CI on push. |
-| — | Medium/Low | Studio Builder product gaps (inert controls, duplicate controls, responsive gaps, dead branding keys, settings saved but unused): `12-findings-register.md`. |
+| — | High/Medium/Low | Studio Builder product gaps: 57 open of 63 in `13-studio-builder-gap-report.md` (8 High: CL-01–CL-04, W-F2, W-F3, DT-01, DT-02), led by competing layout values and Theme Builder conditions. Not security issues; product correctness. |

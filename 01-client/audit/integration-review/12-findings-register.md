@@ -1,4 +1,4 @@
-# Findings register (2026-10-17)
+# Findings register (2026-10-18)
 
 One row per finding, across the security work, licensing, test infrastructure and the fresh Studio Builder and settings audits.
 
@@ -51,15 +51,19 @@ One row per finding, across the security work, licensing, test infrastructure an
 | T-07 | Skip-as-pass guards in PR #102's `SecretHandlingGapsTest` (2) | Open (Low) | not taken while `APP_SECRET` is set |
 | T-08 | Studio Playwright e2e not run locally (its sandbox drops `slate_sbx_e2e`) | Open | runs in CI on push |
 | T-09 | `Phase10ZAutoRefreshTest` used helpers defined in `Phase10SynchronizationTest` and relied on loading after it; failed alone or in other orders | Fixed | `234b4d6` (`tests/support/phase10.php`); a scan of every integration file in both trees found no other cross-file helper use |
+| P-01 | Five security integration tests (`RekeySecretsCliTest`, `SettingsEncryptFirstTest`, `SecretHandlingGapsTest`, `StripeWriteOnlySecretTest`, `FormsCaptchaSecretSaveTest`) exist only in the client tree, although the code they test is byte-identical in central | Open (Medium) | `14-cross-tree-parity-changes.md`; copy them to `02-licensing` in a follow-up |
+| T-10 | Shared client `installation_identity` is overwritten without restore by several older tests (e.g. `Phase9ExpiryGraceTest`); harmless because each user sets its own value first | Open (Low, already on `main`) | `04-test-results.md` › state-leak check |
 
 ## Studio Builder: widgets and controls (60 block types, 333 control rows)
+
+The consolidated product gap report, with current and expected behaviour, recommendation and a reproducible test for every finding, is `13-studio-builder-gap-report.md`: 63 findings, of which 6 are fixed.
 
 | ID | Severity | Finding | Status | Evidence |
 |---|---|---|---|---|
 | W-F1 | **High** | Stored XSS: `theme.post_content` "Fallback Content" is a plain text field whose filter misses event-handler attributes (`<img src=x onerror=…>` passes); the renderer outputs any value containing a tag unescaped. Studio has no raw-HTML block, so this lets an editor run script on public pages and in admin previews | **Fixed** (N1) | `fix/studio-post-content-xss` `c19c9d5`: markup goes through `RichTextSanitizer`; new Sprint6 case, 6 payloads |
 | W-F2 | High | Border styles "Solid", "Dotted", "Double" have no CSS | Open | audit; `StyleControls.jsx:475-484`, `StudioStylesheet.php:243` |
 | W-F3 | High | Query Loop pager is hard-coded (always page 1, link to `?page=2`), on by default | Open | audit; `QueryLoopRenderer.php:155-162` |
-| W-F4 | Medium | Per-device alignment unscoped (same root cause as CL-03) | Open | **verified** |
+| W-F4 | High (as CL-03) | Per-device alignment unscoped (same root cause as CL-03; the gap report rates it under CL-03) | Open | **verified** |
 | W-F5…F7 | Medium | Off-canvas top/bottom, tabs "bottom" and the "scroll" interaction trigger have no CSS/runtime | Open | audit |
 | W-F8, F9, F10 | Medium | Block field labels not translated; runtime replaces translated carousel labels with English; hard-coded English in public output | Open | audit |
 | W-F11 | Medium | `theme.post_title` / `post_content` "Fallback" overrides live post data | Open | audit |
@@ -82,6 +86,8 @@ One row per finding, across the security work, licensing, test infrastructure an
 | TB-07 | Medium (latent) | Search box would cache the first query for every visitor once TB-05 is fixed | Open | audit; `SearchBoxRenderer.php:21-23` |
 | TB-08 | Medium | "Single" templates never applied, yet published as public pages and listed in the sitemap | Open | audit |
 | TB-09 | Medium | Candidate queries `LIMIT` before filtering; templates silently drop out on larger sites | Open | audit; `PageRepository.php:56-65` |
+| TI-02 | High | Draft settings written by import, apply or rollback reached live template selection | **Fixed** (N4, same root cause as TB-01) | `72fd527`; no test yet drives import/apply/rollback (sketch in `13-…`) |
+| TB-01r | Low | Residual: `resolveChrome` still reads the rendered page's own category/tags from its draft `settings_json` | Open | `13-studio-builder-gap-report.md` |
 | TI-04 | Medium | `applyTemplate` copies the template's conditions and type onto the target page | Open | audit; `StudioTemplateService.php:312-314` |
 | TB-10…16, TI-05…07 | Low/Info | Ties decided by title, exclusion typos, archive term length, preview vs live, no package migration path | Open | audit |
 | TI-OK | — | Import/export: no finding (strict envelope, CSRF, size/depth caps, ids re-minted, no URL fetch, no code execution path) | — | audit |

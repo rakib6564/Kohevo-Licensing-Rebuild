@@ -54,3 +54,44 @@ The 100-row inventory passes the checks above, which confirm each row's key, loc
 - `business_hours`, `currency` and `default_language` are filed under plugins but are core keys written by `admin/settings.php`.
 
 Use `settings/settings-full-inventory.csv` as the complete inventory; the 100-row file remains as the reviewed subset.
+
+## Mechanical check of the full inventory (`settings/settings-full-inventory.csv`, 482 rows)
+
+**What was checked.** `settings/tools/verify-full-inventory.py` checks every row against the tree the audit read (`71d4e83`):
+- the owner file exists, and the key appears within 6 lines of the cited line;
+- each reader `file:line` exists and mentions the key there.
+
+The full output is in `settings/full-inventory-verification.txt`.
+
+**Owner citations:**
+
+| Result | Rows |
+|---|---|
+| Key at the cited line | 336 |
+| Key in the file, but the line moved | 33 |
+| Key built in code from a prefix, with its name at the cited line | 25 |
+| Key built in code, with its name elsewhere in the file | 8 |
+| Dynamic key, not checkable | 6 |
+| No owner recorded (keys that are read but never written) | 46 |
+| Not found by text search | 28 |
+
+**Reader citations:**
+
+| Result | Count |
+|---|---|
+| At the cited line | 779 |
+| Line moved | 157 |
+| Built in code | 107 |
+| Not found by text search | 84 |
+
+**The rows not found by text search** were checked by hand, one per pattern. All are keys built at run time, so the citations are right:
+- SMTP keys read through `'smtp_' . $prefix . $k` (`Mailer.php:100-101`);
+- Stripe slots through `'stripe-payment.' . $prefix . '_' . $name` (`StripePaymentAPI.php:79`);
+- the Multilang key through `MLT_AutoTranslate::API_KEY_SETTING`;
+- MCP rate limits through a variable `$settingKey`;
+- `booking.cap.*` through `PluginLoader::setCapabilityEnabled()`.
+
+**Other checks:**
+- **CSV shape:** parses with Python `csv`; all 482 rows have 14 fields.
+- **Classification:** 342 normal, 90 sensitive, 41 secret, 9 mixed.
+- **Disposition:** 307 used; 58 internal state; 52 display-only; 46 read but never written; 10 dead; 9 dynamic.
