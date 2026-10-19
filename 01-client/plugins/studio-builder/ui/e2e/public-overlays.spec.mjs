@@ -54,6 +54,56 @@ test('a modal and a drawer on one page do not disturb each other', async ({ page
   await expect(page.locator('#other')).toBeHidden();
 });
 
+test('a drawer and a modal open again after being closed, by the close button, Escape or the backdrop', async ({ page }) => {
+  // Closing used to leave the panel's close() behind, so every later click on the trigger called that stale close()
+  // and the panel never opened again.
+  await load(page, drawer('menu') + modal('enquiry'));
+  for (const [id, kind] of [['menu', 'offcanvas'], ['enquiry', 'modal']]) {
+    const trigger = page.locator(`[data-sb-${kind}-open="${id}"]`);
+    const closers = [
+      () => page.locator(`#${id} [data-sb-${kind}-close]`).last().click(),
+      () => page.keyboard.press('Escape'),
+      // This page's CSS gives the backdrop no box, so the click is dispatched on it rather than aimed at it.
+      () => page.locator(`#${id} .sb-${kind}__backdrop`).dispatchEvent('click'),
+    ];
+    for (const close of closers) {
+      await trigger.click();
+      await expect(page.locator(`#${id}`)).toBeVisible();
+      await close();
+      await expect(page.locator(`#${id}`)).toBeHidden();
+    }
+    await trigger.click();
+    await expect(page.locator(`#${id}`)).toBeVisible();
+    await page.keyboard.press('Escape');
+  }
+});
+
+test('a hash that names a panel opens it the normal way and is removed, so the close button works', async ({ page }) => {
+  // With `#menu` in the address the `:target` fallback kept the panel on screen after the runtime closed it, so the
+  // close button seemed to do nothing. The hash can be there before the runtime runs (a reload, a shared link, a click
+  // while the page loads) or arrive later.
+  // A real http page (history.replaceState cannot rewrite about:blank), loaded with the hash already in the address.
+  const html = `<!doctype html><html><head><style>${CSS}.sb-offcanvas:target{display:block}</style></head><body>${drawer('menu')}`
+    + `<script src="/studio-runtime.js"></script></body></html>`;
+  await page.route('http://overlays.test/**', (route) => (route.request().url().endsWith('/studio-runtime.js')
+    ? route.fulfill({ path: runtimePath, contentType: 'text/javascript' })
+    : route.fulfill({ body: html, contentType: 'text/html' })));
+  await page.goto('http://overlays.test/page#menu');
+  await expect(page.locator('#menu')).toBeVisible();
+  await expect(page.locator('#menu')).toHaveAttribute('data-sb-open', '');
+  expect(await page.evaluate(() => location.hash)).toBe('');
+  await page.locator('#menu .sb-offcanvas__close').click();
+  await expect(page.locator('#menu')).toBeHidden();
+
+  await page.evaluate(() => { location.hash = '#menu'; });
+  await expect(page.locator('#menu')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => location.hash)).toBe('');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#menu')).toBeHidden();
+  await page.locator('[data-sb-offcanvas-open="menu"]').click();
+  await expect(page.locator('#menu')).toBeVisible();
+});
+
 test('a modal or drawer inside a transformed or blurred block still covers the page, and goes back when the runtime is disabled', async ({ page }) => {
   await page.setViewportSize({ width: 1000, height: 700 });
   await load(page, `<div style="transform:translateY(0);width:300px;height:120px">${modal('boxed')}</div><header style="position:sticky;top:0;height:60px;backdrop-filter:blur(8px)">${drawer('menu')}</header>`);
