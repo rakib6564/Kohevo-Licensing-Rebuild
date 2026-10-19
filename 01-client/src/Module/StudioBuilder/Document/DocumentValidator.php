@@ -727,10 +727,15 @@ final class DocumentValidator
                     if (!is_array($bpVal) && !is_scalar($bpVal) && $bpVal !== null) {
                         $errors[] = ValidationResult::issue("{$path}.responsive.{$bpKey}", 'invalid_responsive_value', "Responsive breakpoint '{$bpKey}' value must be an object, array, or scalar.");
                     }
-                    // A per-device style override (tablet / mobile only) goes through the closed style table.
-                    if (is_array($bpVal) && array_key_exists('style', $bpVal) && array_key_exists((string) $bpKey, StyleSurface::RESPONSIVE_DEVICES)) {
-                        foreach (StyleSurface::responsiveIssues($bpVal['style'], "{$path}.responsive.{$bpKey}.style") as $issue) {
-                            $errors[] = ValidationResult::issue($issue['path'], $issue['code'], $issue['message']);
+                    // A per-device style override (tablet / mobile only) goes through the closed style table. Desktop is the
+                    // block's own style and the other keys have no media query, so a style there would be stored and never drawn.
+                    if (is_array($bpVal) && array_key_exists('style', $bpVal)) {
+                        if (!array_key_exists((string) $bpKey, StyleSurface::RESPONSIVE_DEVICES)) {
+                            $errors[] = ValidationResult::issue("{$path}.responsive.{$bpKey}.style", 'invalid_style_value', "Only tablet and mobile take a style override; '{$bpKey}' uses the block's own style.");
+                        } else {
+                            foreach (StyleSurface::responsiveIssues($bpVal['style'], "{$path}.responsive.{$bpKey}.style") as $issue) {
+                                $errors[] = ValidationResult::issue($issue['path'], $issue['code'], $issue['message']);
+                            }
                         }
                     }
                 }
@@ -1136,21 +1141,7 @@ final class DocumentValidator
             }
         }
 
-        // 4. spacing
-        if (isset($style['spacing'])) {
-            $sp = $style['spacing'];
-            if (is_array($sp) && !array_is_list($sp)) {
-                foreach ($sp as $sKey => $sVal) {
-                    if (!StyleValueGuard::isLengthOrToken($sVal)) {
-                        $errors[] = ValidationResult::issue("{$path}.spacing.{$sKey}", 'invalid_style_value', "Invalid spacing {$sKey}.");
-                    }
-                }
-            } else {
-                $errors[] = ValidationResult::issue("{$path}.spacing", 'invalid_style_value', 'style.spacing must be an object.');
-            }
-        }
-
-        // 5. border
+        // 4. border
         if (isset($style['border'])) {
             $bd = $style['border'];
             if (is_array($bd) && !array_is_list($bd)) {
@@ -1177,7 +1168,7 @@ final class DocumentValidator
             }
         }
 
-        // 6. shadow
+        // 5. shadow
         if (isset($style['shadow'])) {
             $sh = $style['shadow'];
             if (is_string($sh)) {
@@ -1195,7 +1186,7 @@ final class DocumentValidator
             }
         }
 
-        // 7. dimensions
+        // 6. dimensions
         if (isset($style['dimensions'])) {
             $dim = $style['dimensions'];
             if (is_array($dim) && !array_is_list($dim)) {
@@ -1209,12 +1200,12 @@ final class DocumentValidator
             }
         }
 
-        // 8. opacity
+        // 7. opacity
         if (isset($style['opacity']) && (!is_numeric($style['opacity']) || $style['opacity'] < 0 || $style['opacity'] > 1)) {
             $errors[] = ValidationResult::issue("{$path}.opacity", 'invalid_opacity', 'style.opacity must be a number between 0 and 1.');
         }
 
-        // 9. z_index
+        // 8. z_index
         if (isset($style['z_index']) && (!is_int($style['z_index']) || $style['z_index'] < CanonicalDocumentSchema::Z_INDEX_MIN || $style['z_index'] > CanonicalDocumentSchema::Z_INDEX_MAX)) {
             $errors[] = ValidationResult::issue("{$path}.z_index", 'invalid_z_index', 'style.z_index must be an integer between ' . CanonicalDocumentSchema::Z_INDEX_MIN . ' and ' . CanonicalDocumentSchema::Z_INDEX_MAX . '.');
         }

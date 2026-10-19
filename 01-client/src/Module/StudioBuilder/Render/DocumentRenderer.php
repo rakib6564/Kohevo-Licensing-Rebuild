@@ -415,7 +415,8 @@ final class DocumentRenderer
                 $classes[] = 'sb-font-' . $typo['weight'];
             }
             if (isset($typo['transform']) && in_array((string) $typo['transform'], CanonicalDocumentSchema::ALLOWED_TEXT_TRANSFORMS, true)) {
-                $classes[] = 'sb-' . $typo['transform'];
+                // `none` is the stylesheet's `sb-normal-case`: a bare `sb-none` has no rule, so an inherited uppercase would stay.
+                $classes[] = $typo['transform'] === 'none' ? 'sb-normal-case' : 'sb-' . $typo['transform'];
             }
         }
         if (isset($style['border']) && is_array($style['border'])) {

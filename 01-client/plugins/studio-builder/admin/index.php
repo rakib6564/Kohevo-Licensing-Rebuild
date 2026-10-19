@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once __DIR__ . '/_nav.php';
+require_once __DIR__ . '/_page_bulk.php';
 
 use Slate\Module\StudioBuilder\Admin\PageListView;
 use Slate\Module\StudioBuilder\Application\StudioActor;
@@ -23,6 +24,19 @@ $studioApp   = StudioRuntimeFactory::build()->app;
 $studioActor = StudioActor::fromCurrentSession();
 $pageTitle   = __('studio_overview', 'Studio Overview');
 $currentNav  = 'studio-overview';
+$flash       = null;
+
+// The Recent Studio Pages list has the same selection bar as the Pages screen, so it deletes the same way.
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    if (!csrf_verify()) {
+        $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
+    } elseif (($_POST['bulk_action'] ?? '') === 'delete') {
+        $result = sb_archive_pages($studioApp, $studioActor, $_POST['ids'] ?? []);
+        header('Location: index.php?' . http_build_query($result), true, 303);
+        exit;
+    }
+}
+$flash = $flash ?? sb_bulk_delete_flash($_GET);
 
 $pages = [];
 $templates = [];
@@ -64,6 +78,10 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
 <div class="sb-admin-wrapper">
     <?php sb_render_admin_nav('overview', $portfolioPageId); ?>
+
+    <?php if ($flash): ?>
+        <div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div>
+    <?php endif; ?>
 
     <?php if ($listError !== null): ?>
         <div class="alert alert-error" role="status"><?= e($listError) ?></div>
@@ -195,7 +213,10 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <p class="text-sm"><?= e(__('studio_no_pages_hint', 'Create a page above to open it in the builder.')) ?></p>
             </div>
         <?php else: ?>
-            <?= PageListView::render($pages, $canEdit, plugin_url('studio-builder', 'admin/builder.php'), plugin_url('studio-builder', 'admin/preview.php')) ?>
+            <form method="post" id="studio-bulk-form">
+                <?= csrf_field() ?>
+                <?= PageListView::render($pages, $canEdit, plugin_url('studio-builder', 'admin/builder.php'), plugin_url('studio-builder', 'admin/preview.php'), $canEdit, 'page-edit.php') ?>
+            </form>
             <?php slate_data_list_script(); ?>
             <?= PageListView::selectionScript() ?>
         <?php endif; ?>

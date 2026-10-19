@@ -57,7 +57,7 @@ test('token classes get their rule so an unused token still paints', () => {
 });
 
 test('managed classes are the ones this file writes and nothing a theme or author adds', () => {
-  for (const c of ['sb-fg--text-primary', 'sb-font-bold', 'sb-uppercase', 'sb-radius-lg', 'sb-border-solid', 'sb-shadow-md', 'sb-ty-size', 'sb-x-0123456789abcdef']) assert.ok(MANAGED_CLASS.test(c), c);
+  for (const c of ['sb-fg--text-primary', 'sb-font-bold', 'sb-uppercase', 'sb-normal-case', 'sb-radius-lg', 'sb-border-solid', 'sb-shadow-md', 'sb-ty-size', 'sb-x-0123456789abcdef']) assert.ok(MANAGED_CLASS.test(c), c);
   for (const c of ['sb-block', 'sb-block--core-heading', 'sb-align-center', 'sbx-selected', 'my-class', 'sb-heading', 'sb-hide-tablet']) assert.ok(!MANAGED_CLASS.test(c), c);
 });
 
