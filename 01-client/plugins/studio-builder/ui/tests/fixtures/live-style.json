@@ -612,6 +612,27 @@
             }
         },
         {
+            "name": "typography transform none",
+            "covered": true,
+            "block": {
+                "style": {
+                    "typography": {
+                        "transform": "none"
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [],
+                "inline": [],
+                "classes": [
+                    "sb-normal-case",
+                    "sb-ty-tt"
+                ],
+                "media": [],
+                "reduceMotion": false
+            }
+        },
+        {
             "name": "typography numeric weight",
             "covered": true,
             "block": {
