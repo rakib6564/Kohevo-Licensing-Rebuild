@@ -78,6 +78,32 @@ test('a drawer and a modal open again after being closed, by the close button, E
   }
 });
 
+test('a hash that names a panel opens it the normal way and is removed, so the close button works', async ({ page }) => {
+  // With `#menu` in the address the `:target` fallback kept the panel on screen after the runtime closed it, so the
+  // close button seemed to do nothing. The hash can be there before the runtime runs (a reload, a shared link, a click
+  // while the page loads) or arrive later.
+  // A real http page (history.replaceState cannot rewrite about:blank), loaded with the hash already in the address.
+  const html = `<!doctype html><html><head><style>${CSS}.sb-offcanvas:target{display:block}</style></head><body>${drawer('menu')}`
+    + `<script src="/studio-runtime.js"></script></body></html>`;
+  await page.route('http://overlays.test/**', (route) => (route.request().url().endsWith('/studio-runtime.js')
+    ? route.fulfill({ path: runtimePath, contentType: 'text/javascript' })
+    : route.fulfill({ body: html, contentType: 'text/html' })));
+  await page.goto('http://overlays.test/page#menu');
+  await expect(page.locator('#menu')).toBeVisible();
+  await expect(page.locator('#menu')).toHaveAttribute('data-sb-open', '');
+  expect(await page.evaluate(() => location.hash)).toBe('');
+  await page.locator('#menu .sb-offcanvas__close').click();
+  await expect(page.locator('#menu')).toBeHidden();
+
+  await page.evaluate(() => { location.hash = '#menu'; });
+  await expect(page.locator('#menu')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => location.hash)).toBe('');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#menu')).toBeHidden();
+  await page.locator('[data-sb-offcanvas-open="menu"]').click();
+  await expect(page.locator('#menu')).toBeVisible();
+});
+
 test('a modal or drawer inside a transformed or blurred block still covers the page, and goes back when the runtime is disabled', async ({ page }) => {
   await page.setViewportSize({ width: 1000, height: 700 });
   await load(page, `<div style="transform:translateY(0);width:300px;height:120px">${modal('boxed')}</div><header style="position:sticky;top:0;height:60px;backdrop-filter:blur(8px)">${drawer('menu')}</header>`);
