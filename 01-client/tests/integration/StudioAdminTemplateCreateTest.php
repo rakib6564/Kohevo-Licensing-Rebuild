@@ -132,6 +132,48 @@ unit('theme builder create: every type is created through the Studio services as
     }
 });
 
+unit('theme builder create: a header can start from a built-in design; an unknown design starts blank', function (): void {
+    $unentitle = stcre_entitle();
+    $tag = 'stcre' . bin2hex(random_bytes(3));
+    $registry = ModuleBlockDefinitions::studioRegistry();
+    $types = static function (array $doc): array {
+        $out = [];
+        $walk = static function (array $blocks) use (&$walk, &$out): void {
+            foreach ($blocks as $b) { $out[] = (string) $b['type']; $walk(is_array($b['children'] ?? null) ? $b['children'] : []); }
+        };
+        foreach ($doc['sections'] as $sec) { $walk($sec['blocks']); }
+        return $out;
+    };
+    try {
+        foreach (\Slate\Module\StudioBuilder\Presets\HeaderPresetCatalog::all() as $design) {
+            [$status, $body] = stcre_post(['_action' => 'create_template', 'name' => "Design {$design['slug']} {$tag}", 'template_type' => 'header', 'header_design' => $design['key']]);
+            assert_eq(200, $status, $design['key']);
+            assert_true(str_contains(stcre_flash($body), 'created as draft'), "{$design['key']}: success flash, got: " . stcre_flash($body));
+        }
+        [$status] = stcre_post(['_action' => 'create_template', 'name' => "Design unknown {$tag}", 'template_type' => 'header', 'header_design' => 'system-section-hero-classic']);
+        assert_eq(200, $status);
+        $made = [];
+        foreach (stcre_created($tag) as $m) { $made[(string) $m['template']['name']] = $m; }
+        assert_eq(6, count($made), 'five designs and one blank');
+        foreach (\Slate\Module\StudioBuilder\Presets\HeaderPresetCatalog::all() as $design) {
+            $m = $made["Design {$design['slug']} {$tag}"];
+            $rev = Database::row('SELECT document_json FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [current_tenant_id(), (int) $m['page']['active_draft_revision_id']]);
+            $draft = json_decode((string) $rev['document_json'], true);
+            assert_eq($draft, ValidatedDocument::from($draft, $registry)->toArray(), "{$design['key']}: the header draft is canonical");
+            assert_eq($types($design['document']), $types($draft), "{$design['key']}: the header holds the design's blocks");
+            assert_eq('header', $draft['settings']['template_type'] ?? null, "{$design['key']}: still a header");
+            assert_true(!empty($draft['settings']['conditions']['rules']), "{$design['key']}: keeps the display condition chosen on the form");
+            $catalogueIds = array_column($design['document']['sections'], 'id');
+            assert_eq([], array_values(array_intersect($catalogueIds, array_column($draft['sections'], 'id'))), "{$design['key']}: the copy has its own ids");
+        }
+        $rev = Database::row('SELECT document_json FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [current_tenant_id(), (int) $made["Design unknown {$tag}"]['page']['active_draft_revision_id']]);
+        assert_eq(['core.heading'], $types(json_decode((string) $rev['document_json'], true)), 'a key that is not a header design starts from the blank header');
+    } finally {
+        stcre_cleanup($tag);
+        $unentitle();
+    }
+});
+
 unit('theme builder create: an over-long or marked-up name is refused with a plain message, and nothing is written', function (): void {
     $unentitle = stcre_entitle();
     $tag = 'stcre' . bin2hex(random_bytes(3));

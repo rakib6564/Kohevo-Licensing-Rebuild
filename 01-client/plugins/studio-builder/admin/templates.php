@@ -14,7 +14,9 @@ require_once __DIR__ . '/_nav.php';
 use Slate\Data\Database;
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\DocumentCopier;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
+use Slate\Module\StudioBuilder\Presets\HeaderPresetCatalog;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 use Slate\Module\StudioBuilder\StudioPermissions;
 
@@ -125,6 +127,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $condition = trim((string) ($_POST['condition_rule'] ?? 'entire_site'));
             $description = trim((string) ($_POST['description'] ?? ''));
             $publishNow = !empty($_POST['publish_now']);
+            // A header may start from one of the built-in designs (HeaderPresetCatalog); anything else starts blank.
+            $headerDesign = HeaderPresetCatalog::find(trim((string) ($_POST['header_design'] ?? '')));
 
             if (!isset($typeConfigs[$uiType])) {
                 $uiType = 'header';
@@ -171,7 +175,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $secId = CanonicalDocumentSchema::newSectionId();
                 $blkId = CanonicalDocumentSchema::newBlockId();
 
-                if ($uiType === 'header') {
+                if ($uiType === 'header' && $headerDesign !== null) {
+                    // The built-in design's sections, copied with new ids (the catalogue's ids are shared by every site).
+                    $starterDoc['sections'] = array_map(
+                        static fn(array $section): array => DocumentCopier::copySection($section),
+                        $headerDesign['document']['sections'],
+                    );
+                } elseif ($uiType === 'header') {
                     $starterDoc['sections'] = [
                         [
                             'id'         => $secId,
@@ -560,6 +570,26 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     </select>
                 </div>
             </div>
+            <div class="sb-field" data-header-only>
+                <label class="sb-field__label" for="sb-header-design"><?= e(__('studio_tpl_header_design', 'Header design')) ?></label>
+                <select name="header_design" id="sb-header-design" class="form-control" style="background: #ffffff;">
+                    <option value=""><?= e(__('studio_tpl_header_design_blank', 'Blank: start from an empty header')) ?></option>
+                    <?php foreach (HeaderPresetCatalog::all() as $design):
+                        $designSlug = str_replace('-', '_', $design['slug']); ?>
+                        <option value="<?= e($design['key']) ?>"><?= e(__("studio_header_preset_{$designSlug}_name", $design['name'])) ?> — <?= e(__("studio_header_preset_{$designSlug}_desc", $design['description'])) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <script>
+            (function () {
+                var type = document.querySelector('select[name="template_type"]');
+                var only = document.querySelector('[data-header-only]');
+                if (!type || !only) return;
+                var sync = function () { only.hidden = type.value !== 'header'; };
+                type.addEventListener('change', sync);
+                sync();
+            }());
+            </script>
             <div class="sb-field">
                 <label class="sb-field__label">Description / Notes</label>
                 <input type="text" name="description" class="form-control" placeholder="Optional notes about design intent or typography...">
