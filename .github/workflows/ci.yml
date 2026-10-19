@@ -150,6 +150,8 @@ jobs:
           mysql -h 127.0.0.1 -uroot -proot root_slate_t9 < 01-client/plugins/studio-builder/install.sql
 
           # Central serves every module, so its full suite (R4) needs every plugin's schema installed and active.
+          # Except licensing: it runs on the license server only, never beside the modules (see its install.sql),
+          # and the Phase 10 fixture drops and recreates its tables itself.
           for d in 02-licensing/plugins/*/; do
             if [ -f "$d/install.sql" ]; then mysql -h 127.0.0.1 -uroot -proot root_slate_t20 < "$d/install.sql"; fi
           done
@@ -157,6 +159,7 @@ jobs:
           php -r '
             foreach (glob("02-licensing/plugins/*/plugin.json") as $f) {
               $m = json_decode(file_get_contents($f), true);
+              if ($m["slug"] === "licensing") continue;
               $q = fn($v) => "\x27" . addslashes((string) $v) . "\x27";
               echo "INSERT INTO plugins (slug,name,version,status,manifest_json) VALUES (" . $q($m["slug"]) . "," . $q($m["name"]) . "," . $q($m["version"]) . ",\x27active\x27," . $q(json_encode(["slug" => $m["slug"], "name" => $m["name"]])) . ") ON DUPLICATE KEY UPDATE status=VALUES(status), version=VALUES(version), manifest_json=VALUES(manifest_json);\n";
             }' | mysql -h 127.0.0.1 -uroot -proot root_slate_t20
