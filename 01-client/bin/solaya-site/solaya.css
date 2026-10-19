@@ -111,9 +111,13 @@ html.sb-scroll-lock, html.sb-scroll-lock body { overflow: hidden; }
 .sb-body .sb-hero { align-items: center; gap: clamp(2rem, 6vw, 6rem); }
 .sb-body .sb-hero__heading { font-size: clamp(3.1rem, 6.4vw, 6rem); font-weight: 300; line-height: 1.02; margin: 1.4rem 0 1.6rem; }
 .sb-body .sb-hero__subheading { font-size: 1.15rem; line-height: 1.75; color: var(--sl-muted); max-width: 31rem; margin-bottom: 2.4rem; }
-.sb-body .sb-hero__media img, .sb-body .sl-arch .sb-image img, .sb-body .sl-arch img {
+.sb-body .sb-hero__media img {
   aspect-ratio: 4 / 5; width: 100%; height: auto; object-fit: cover; border-radius: 999px 999px 6px 6px; }
-.sb-body .sl-arch .sb-image { max-width: 30rem; margin-inline: auto; }
+/* An arched image block: its width (up to 30rem), centring and 4:5 crop are only defaults. :where() keeps them
+   at zero specificity, so a width, height, aspect ratio or fit set on the block in the editor always wins. */
+:where(.sb-body .sl-arch) { width: min(100%, 30rem); margin-inline: auto; }
+:where(.sb-body .sl-arch) img { aspect-ratio: 4 / 5; width: 100%; object-fit: cover; }
+.sb-body .sl-arch .sb-image img, .sb-body .sl-arch img { border-radius: 999px 999px 6px 6px; }
 
 /* ── Statement ────────────────────────────────────────────────────────── */
 .sb-body .sl-statement .sb-heading, .sb-body .sl-statement h2 {
