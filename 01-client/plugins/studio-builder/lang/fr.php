@@ -591,6 +591,8 @@ return [
     'studio_ui_cond_problem_row' => 'Corrigez les conditions signalées.',
     'studio_ui_cond_problem_many' => '30 conditions au maximum.',
     'studio_ui_cond_needs_include' => 'Ajoutez au moins une règle Inclure : les règles Exclure ne font que retirer des pages d’une sélection.',
+    'studio_ui_width_template_cap' => 'Sur le site en ligne, cette page est mise en page par le modèle « {title} », dont le contenu est {width} : cette section ne s’affiche donc pas plus large.',
+    'studio_ui_width_template_edit' => 'Modifier le modèle',
     'studio_ui_cond_conflict' => 'Mêmes conditions que : {titles}. Quand plusieurs modèles correspondent autant à une page, c’est le dernier publié qui s’affiche.',
     'studio_ui_bg_overlay_note' => 'Superposition de {percent} % sur l’image',
     'studio_ui_bg_overlay_remove' => 'Retirer la superposition',

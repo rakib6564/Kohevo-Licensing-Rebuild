@@ -806,6 +806,35 @@ final class StudioApplicationService
         return ['role' => $role, 'peers' => (new ThemeTemplateResolver($this->pageRepo, $this->revisionRepo))->peers($role, $pageId)];
     }
 
+    /**
+     * The published Single template that lays this page out on the live site, from its working draft's category and
+     * content type, with the width of the section the page's content sits in: `{id, title, content_width}`, or null.
+     * The editing canvas shows the page on its own (no Single template in Editor mode), so the section Inspector uses
+     * this to say when the template keeps a wider section narrower. Read-only.
+     *
+     * @return array{id: int, title: string, content_width: ?string}|null
+     */
+    public function layoutTemplate(StudioActor $actor, int $pageId): ?array
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::VIEW);
+        [$page, $document] = $this->currentDocument($pageId);
+        $settings = is_array($document['settings'] ?? null) ? $document['settings'] : [];
+        if (($settings['template_type'] ?? '') !== '' || !in_array((string) $page['page_type'], ChromeResolver::CHROMED_PAGE_TYPES, true)) {
+            return null;
+        }
+        $hit = (new ThemeTemplateResolver($this->pageRepo, $this->revisionRepo))
+            ->resolveSingle(PageAddress::fromRow($page), ThemeTemplateResolver::singleContext($settings, $tenantId, $pageId));
+        if ($hit === null || (int) ($hit['page']['id'] ?? 0) === $pageId) {
+            return null;
+        }
+        $template = json_decode((string) ($hit['revision']['document_json'] ?? ''), true);
+        return [
+            'id'            => (int) $hit['page']['id'],
+            'title'         => (string) ($hit['page']['title'] ?? ''),
+            'content_width' => is_array($template) ? ThemeTemplateResolver::contentWidth($template) : null,
+        ];
+    }
+
     // ── Design tokens ───────────────────────────────────────────────────────
 
     /**

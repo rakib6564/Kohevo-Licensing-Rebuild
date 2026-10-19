@@ -340,7 +340,7 @@ unit('phase6 api: the new commands are POST-only, allowlisted, CSRF-guarded, and
         assert_eq(405, $api->handle(new StudioApiRequest('GET', $cmd), $editor)->status, "{$cmd} is POST-only");
         assert_eq(403, $api->handle($post($cmd, ['template_key' => 'x'], false), $editor)->status, "{$cmd} needs CSRF");
     }
-    foreach (['components', 'chrome', 'template_peers', 'tokens'] as $q) {
+    foreach (['components', 'chrome', 'template_peers', 'layout_template', 'tokens'] as $q) {
         assert_eq(405, $api->handle($post($q, []), $editor)->status, "{$q} is a GET query");
     }
 
@@ -375,6 +375,18 @@ unit('phase6 api: the new commands are POST-only, allowlisted, CSRF-guarded, and
     assert_eq('invalid_token_group', $first($r)['code']);
     $r = $api->handle($post('save_tokens', ['group' => 'default', 'tokens' => ['<style>' => '#fff']]), $editor);
     assert_eq('invalid_tokens', $first($r)['code'], 'token refs are symbolic names');
+});
+
+unit('phase6 single templates: the content width is the width of the section holding Post content, at any depth', function (): void {
+    $section = static fn(array $blocks, ?string $width = null): array => ['layout' => $width === null ? [] : ['width' => $width], 'blocks' => $blocks];
+    $content = ['type' => 'theme.post_content', 'props' => []];
+    $title   = ['type' => 'theme.post_title', 'props' => []];
+    assert_eq('narrow', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['sections' => [$section([$title], 'full'), $section([$content], 'narrow')]]), 'the section with the content, not the first one');
+    assert_eq('normal', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['sections' => [$section([['type' => 'layout.container', 'children' => [$content]]], 'normal')]]), 'nested in a container');
+    assert_eq('wide', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['sections' => [$section([$content])]]), 'a section with no width is wide, as rendered');
+    assert_eq('wide', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['sections' => [$section([$content], 'huge')]]), 'an unknown width renders wide');
+    assert_null(\Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['sections' => [$section([$title], 'narrow')]]), 'no Post content block: no content width');
+    assert_null(\Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth([]), 'an empty document');
 });
 
 unit('phase6 manifest: the UI fixture carries the Phase 6 vocabulary (permissions.tokens, template types, component types)', function (): void {

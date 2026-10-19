@@ -6,6 +6,7 @@
 // to edit the component, "Detach" (server command → local copy), and only the
 // visibility controls (where THIS page shows it).
 
+import { useEffect, useState } from 'react';
 import { useEditor, useEngineState } from '../EditorContext.jsx';
 import { ResponsiveSelect, VisibilityControls } from './controls.jsx';
 import { TokenSelect } from '../fields/FieldControl.jsx';
@@ -22,6 +23,7 @@ import { getPath, sectionStyleOverrides, setPath, setPaths } from '../../core/st
 import { asList, asObject, isGlobalSection, sectionsOf } from '../../core/doc.mjs';
 import { tokensFor } from '../../core/fields.mjs';
 import { componentByRef } from '../../core/library.mjs';
+import { templateCapsWidth } from '../../core/layoutTemplate.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
 import { sizedLabel, sizedLabeller } from '../../core/optionValues.mjs';
@@ -58,10 +60,28 @@ function GlobalSectionPanel({ section, label }) {
   );
 }
 
+/** The Single template that lays the open page out on the live site, re-read with each revision (its category can change). */
+function useLayoutTemplate(page) {
+  const { transport, boot } = useEditor();
+  const revisionId = useEngineState((s) => (s.revision ? s.revision.id : 0));
+  const chromed = !!page && ['page', 'landing'].includes(page.page_type);
+  const [template, setTemplate] = useState(null);
+  useEffect(() => {
+    if (!chromed || !transport || typeof transport.layoutTemplate !== 'function') { setTemplate(null); return undefined; }
+    let alive = true;
+    transport.layoutTemplate(boot.pageId).then((res) => {
+      if (alive) setTemplate(res && res.ok && res.data ? res.data.template || null : null);
+    }).catch(() => { if (alive) setTemplate(null); });
+    return () => { alive = false; };
+  }, [transport, boot.pageId, revisionId, chromed]);
+  return template;
+}
+
 export function SectionInspector({ info }) {
   const { manifest, applyOp, removeNode, moveSectionTo, insertSection, viewport, openSaveTemplate, openComponentDialog, boot } = useEditor();
   const working = useEngineState((s) => s.working);
   const page = useEngineState((s) => s.page);
+  const layoutTemplate = useLayoutTemplate(page);
   const perms = (manifest && manifest.permissions) || {};
   const pageType = page ? page.page_type : 'page';
   const canReference = asList(manifest && manifest.components && manifest.components.referencing_types).includes(pageType);
@@ -120,6 +140,13 @@ export function SectionInspector({ info }) {
                   {asList(vocab.container_widths).map((w) => <option key={w} value={w}>{sizedLabel('section.width', w)}</option>)}
                 </select>
               </Field>
+              {templateCapsWidth(layoutTemplate, layout.width) && (
+                <p className="sbx-hint" role="note" data-testid="width-template-cap">
+                  {t('width_template_cap', { title: layoutTemplate.title, width: sizedLabel('section.width', layoutTemplate.content_width) })}
+                  {' '}
+                  <a href={`${boot.builderUrl || ''}?page=${layoutTemplate.id}`} target="_blank" rel="noopener">{t('width_template_edit')}</a>
+                </p>
+              )}
               <Field label={t('gap')} htmlFor={`${idPrefix}-gap`}>
                 <select id={`${idPrefix}-gap`} value={layout.gap || 'md'} onChange={(e) => setLayout({ gap: e.target.value })}>
                   {asList(vocab.spacing_scale).map((s) => <option key={s} value={s}>{sizedLabel('section.gap', s)}</option>)}
