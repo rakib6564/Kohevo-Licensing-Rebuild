@@ -47,10 +47,11 @@ $typeConfigs = [
         'role'          => 'footer',
         'label'         => 'Footer',
     ],
+    // A Single template is a system page: it lays out the pages its conditions match and is never public itself.
     'single' => [
         'template_type' => 'page_template',
-        'page_type'     => 'page',
-        'doc_type'      => 'page',
+        'page_type'     => 'system',
+        'doc_type'      => 'system',
         'category'      => 'single',
         'role'          => 'single',
         'label'         => 'Single Page',
@@ -124,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Map condition rules into structured format evaluated by TemplateConditionMatcher
                 $conditionRules = match($condition) {
-                    'front_page'     => [['type' => 'include', 'condition' => 'front_page'], ['type' => 'include', 'condition' => 'slug', 'value' => 'home']],
+                    'front_page'     => [['type' => 'include', 'condition' => 'front_page']],
                     'all_portfolio'  => [['type' => 'include', 'condition' => 'singular', 'value' => 'portfolio']],
                     'all_posts'      => [['type' => 'include', 'condition' => 'singular', 'value' => 'post']],
                     'all_services'   => [['type' => 'include', 'condition' => 'singular', 'value' => 'services']],

@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '20';
+    public const VERSION = '22';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -311,10 +311,13 @@ final class StudioStylesheet
             // for keyboard users, so :focus-visible gets the same affordance.
             . '.sb-interaction-focus{transition:transform .25s ease,box-shadow .25s ease,outline-color .25s ease}'
             . '.sb-interaction-focus:focus-visible{transform:translateY(-3px) scale(1.02);outline:2px solid currentColor;outline-offset:3px}'
-            // Click/load are CSS-only affordances; the behavioural part of a
-            // click trigger needs the Phase 2 runtime, so nothing here claims
-            // to deliver it.
-            . '.sb-interaction-click,.sb-interaction-load{transition:transform .25s ease,box-shadow .25s ease}'
+            // Click: the block's chosen animation plays on each click (studio-runtime.js sets data-sb-play),
+            // never on load; a block with no animation presses in while held.
+            . '.sb-interaction-click{transition:transform .15s ease}'
+            . '.sb-interaction-click:not([class*="sb-animate-"]):active{transform:scale(.97)}'
+            . '.sb-interaction-click[class*="sb-animate-"]:not([data-sb-play]){animation:none}'
+            // Load: the chosen animation plays once as the page loads (its .sb-animate-* rule); with none, the block fades in.
+            . '.sb-interaction-load:not([class*="sb-animate-"]){animation:sb-fade-in var(--sb-anim-duration,.5s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
             // Scroll-driven reveal. Guarded by @supports so browsers without
             // scroll-driven animations show the block NORMALLY rather than
             // leaving it stuck at opacity:0 — a content-invisible fallback is
@@ -331,9 +334,15 @@ final class StudioStylesheet
             . '.sb-interaction-viewport-enter.sb-animate-reveal-left{animation-name:sb-reveal-left}'
             . '.sb-interaction-viewport-enter.sb-animate-reveal-up{animation-name:sb-reveal-up}'
             . '}'
-            // `scroll` is a continuous/parallax trigger; it is exposed in the
-            // inspector but intentionally renders no CSS until the runtime
-            // ships, so nothing here can imply behaviour that does not exist.
+            // Scroll: tied to the scroll position for as long as the block crosses the screen. With no
+            // animation the block drifts gently against the scroll; with one, the animation follows the
+            // scroll. Browsers without scroll timelines get the drift from studio-runtime.js instead.
+            . '@keyframes sb-scroll-drift{from{transform:translateY(32px)}to{transform:translateY(-32px)}}'
+            . '@supports (animation-timeline:view()){'
+            . '.sb-interaction-scroll{animation-timeline:view();animation-range:cover 0% cover 100%;animation-fill-mode:both}'
+            . '.sb-interaction-scroll:not([class*="sb-animate-"]){animation:sb-scroll-drift linear both;animation-timeline:view();animation-range:cover 0% cover 100%}'
+            . '.sb-interaction-scroll[class*="sb-animate-"]{animation-range:entry 0% cover 50%}'
+            . '}'
             . '@media (prefers-reduced-motion:reduce){[class*="sb-animate-"],[class*="sb-interaction-"]{animation:none!important;transition:none!important;transform:none!important;clip-path:none!important}}'
             // ── Interaction runtime (Phase 2) ────────────────────────────────────
             // Styles for the behaviours `studio-runtime.js` adds on top of the
