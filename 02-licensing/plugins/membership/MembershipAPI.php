@@ -123,6 +123,27 @@ class MembershipAPI {
         ];
     }
 
+    /**
+     * A terms & consent URL as it may be stored: '' (none) or an absolute http(s) address. Anything else
+     * (`javascript:`, `data:`, a relative path, control characters) is null, which Membership → Settings refuses.
+     */
+    public static function cleanTermsUrl(string $url): ?string {
+        $url = trim($url);
+        if ($url === '') {
+            return '';
+        }
+        if (strlen($url) > 500 || preg_match('/[\x00-\x20\x7F]/', $url) === 1 || filter_var($url, FILTER_VALIDATE_URL) === false) {
+            return null;
+        }
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+        return in_array($scheme, ['http', 'https'], true) && (string) parse_url($url, PHP_URL_HOST) !== '' ? $url : null;
+    }
+
+    /** The terms & consent URL to link to, or '' when none is set or the stored value is not a safe http(s) address. */
+    public static function termsUrl(): string {
+        return self::cleanTermsUrl((string) Database::setting('membership.terms_url')) ?? '';
+    }
+
     /** The single global insurance add-on fee, in cents (Membership → Settings). */
     public static function insuranceFeeCents(): int {
         return max(0, (int) Database::setting('membership.insurance_fee_cents'));

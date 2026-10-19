@@ -29,10 +29,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $insSvcs = array_filter(array_map('intval', (array)($_POST['insurance_services'] ?? [])));
         Database::setSetting('membership.insurance_required_services', implode(',', array_unique($insSvcs)));
         Database::setSetting('membership.expiry_reminder_days', preg_replace('/[^0-9,]/', '', (string)($_POST['expiry_reminder_days'] ?? '7,3')) ?: '7,3');
-        Database::setSetting('membership.terms_url', trim((string)($_POST['terms_url'] ?? '')));
+        // The terms URL is printed as a link on the customer onboarding page, so only an http(s) address is kept.
+        $termsUrl = MembershipAPI::cleanTermsUrl((string)($_POST['terms_url'] ?? ''));
+        if ($termsUrl !== null) {
+            Database::setSetting('membership.terms_url', $termsUrl);
+        }
 
         AuditLog::record('membership.settings_updated', 'membership');
-        $flash = ['type' => 'success', 'msg' => 'Settings saved.'];
+        $flash = $termsUrl === null
+            ? ['type' => 'error', 'msg' => __('mb_err_terms_url', 'The other settings were saved, but not the Terms & consent URL: it must be a full address starting with http:// or https://.')]
+            : ['type' => 'success', 'msg' => 'Settings saved.'];
     }
 }
 
