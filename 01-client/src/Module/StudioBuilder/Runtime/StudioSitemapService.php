@@ -119,6 +119,11 @@ final class StudioSitemapService
             if ($seo === null || str_starts_with(SeoHead::effectiveRobots($seo), 'noindex')) {
                 continue;
             }
+            // A theme template lays out other pages and is never listed as a page of its own.
+            $templateType = is_array($document) && is_array($document['settings'] ?? null) ? ($document['settings']['template_type'] ?? '') : '';
+            if ((is_string($templateType) && $templateType !== '') || \Slate\Module\StudioBuilder\Runtime\StudioPublicRuntime::isThemeTemplate($row)) {
+                continue;
+            }
             $own = $site->absoluteUrl($candidate['path']);
             $canonical = SeoHead::canonical($seo['canonical_url'] ?? null, $site, $candidate['path']);
             if ($canonical === null || !self::sameUrl($canonical, $own)) {

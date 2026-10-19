@@ -52,6 +52,23 @@ final class ChromeResolver
         private readonly ?ThemeTemplateResolver $themeResolver = null,
     ) {}
 
+    /**
+     * The published Single template whose display conditions match this page, if any (Theme Builder). Only
+     * pages that get chrome can have one.
+     *
+     * @param array<string, mixed> $context what the conditions may ask about the page (category, content_type…)
+     * @return ?array{page: array<string, mixed>, revision: array<string, mixed>}
+     */
+    public function single(PageAddress $page, array $context = []): ?array
+    {
+        if ($this->themeResolver === null || !in_array($page->pageType, self::CHROMED_PAGE_TYPES, true)) {
+            return null;
+        }
+        $hit = $this->themeResolver->resolveSingle($page, $context);
+        // A template is never applied to itself.
+        return ($hit !== null && (int) ($hit['page']['id'] ?? 0) !== (int) $page->id) ? $hit : null;
+    }
+
     public function resolve(string $region, string $mode, PageAddress $page, array $context = []): ChromeSource
     {
         if (!isset(self::REGION_PAGE_TYPE[$region]) || !in_array($page->pageType, self::CHROMED_PAGE_TYPES, true) || $mode === 'hidden') {
