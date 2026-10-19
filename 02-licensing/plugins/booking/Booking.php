@@ -902,7 +902,7 @@ class Booking extends Plugin {
             }
 
             $meta = BookingPlusAPI::getAppointmentMeta((int)($appt['id'] ?? 0));
-            $zoom = trim((string)($meta['zoom_join_url'] ?? '')) ?: trim((string)($cfg['zoom_join_url'] ?? ''));
+            $zoom = (BookingPlusAPI::cleanLinkUrl((string)($meta['zoom_join_url'] ?? '')) ?? '') ?: BookingPlusAPI::serviceLinkUrl($cfg, 'zoom_join_url');
 
             $ctx = [
                 'customer_name' => $appt['customer_name'] ?? '',
@@ -910,7 +910,7 @@ class Booking extends Plugin {
                 'provider_name' => $appt['provider_name'] ?? '',
                 'starts_at'     => $appt['starts_at']     ?? 'now',
                 'ref'           => $appt['ref']           ?? '',
-                'prep_url'      => (string)($cfg['prep_page_url'] ?? ''),
+                'prep_url'      => BookingPlusAPI::serviceLinkUrl($cfg, 'prep_page_url'),
                 'whatsapp_url'  => $whatsapp,
                 'zoom_url'      => $zoom,
                 'payment_link'  => $paymentLink,
@@ -952,7 +952,7 @@ class Booking extends Plugin {
                 'provider_name' => $appt['provider_name'] ?? '',
                 'starts_at'     => $appt['starts_at']     ?? 'now',
                 'ref'           => $appt['ref']           ?? '',
-                'prep_url'      => (string)($cfg['prep_page_url'] ?? ''),
+                'prep_url'      => BookingPlusAPI::serviceLinkUrl($cfg, 'prep_page_url'),
                 'whatsapp_url'  => $whatsapp,
                 'payment_note'  => BookingPlusAPI::paymentNote($appt),
                 'message_url'   => $messageUrl,

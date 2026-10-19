@@ -669,6 +669,8 @@ return [
     'booking_service_rule_disabled_body' => 'Les règles de service sont actuellement désactivées. Activez-les dans Réservation &rarr; Paramètres.',
     'booking_service_rule_saved' => 'Enregistré.',
     'booking_whatsapp_url_invalid' => 'Le lien WhatsApp doit être une adresse complète commençant par http:// ou https://, par exemple https://wa.me/32470000000. Rien n’a été enregistré.',
+    'booking_prep_page_url_invalid' => 'L’URL de la page de préparation doit être une adresse complète commençant par http:// ou https://. Rien n’a été enregistré.',
+    'booking_zoom_join_url_invalid' => 'L’URL de la salle Zoom doit être une adresse complète commençant par http:// ou https://. Rien n’a été enregistré.',
     'booking_service_rule_stat_duration' => 'Durée',
     'booking_service_rule_stat_min_advance' => 'Délai min.',
     'booking_service_rule_stat_prereq' => 'Prérequis',

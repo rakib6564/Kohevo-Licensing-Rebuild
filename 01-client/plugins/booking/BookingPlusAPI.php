@@ -132,8 +132,15 @@ SQL;
             foreach ($allowed as $k) {
                 if (array_key_exists($k, $fields)) $data[$k] = $fields[$k];
             }
-            if (isset($data['whatsapp_url']) && self::cleanWhatsappUrl((string) $data['whatsapp_url']) === null) {
-                throw new \InvalidArgumentException(__('booking_whatsapp_url_invalid', 'The WhatsApp link must be a full address starting with http:// or https://, such as https://wa.me/32470000000. Nothing was saved.'));
+            // Each of these is sent to clients as a link, so it must be an http(s) address; one bad link saves nothing.
+            foreach ([
+                'whatsapp_url'  => fn() => __('booking_whatsapp_url_invalid', 'The WhatsApp link must be a full address starting with http:// or https://, such as https://wa.me/32470000000. Nothing was saved.'),
+                'prep_page_url' => fn() => __('booking_prep_page_url_invalid', 'The preparation page URL must be a full address starting with http:// or https://. Nothing was saved.'),
+                'zoom_join_url' => fn() => __('booking_zoom_join_url_invalid', 'The Zoom room URL must be a full address starting with http:// or https://. Nothing was saved.'),
+            ] as $field => $message) {
+                if (isset($data[$field]) && self::cleanLinkUrl((string) $data[$field]) === null) {
+                    throw new \InvalidArgumentException($message());
+                }
             }
             if (isset($data['zoom_mode']) && !in_array($data['zoom_mode'], ['manual','fallback_message','api'], true)) {
                 $data['zoom_mode'] = 'fallback_message';
@@ -256,11 +263,16 @@ SQL;
             return self::cleanWhatsappUrl((string) (Database::setting('bookingplus.whatsapp_url') ?? Database::setting('booking.whatsapp_url') ?? '')) ?? '';
         }
 
-        /**
-         * A WhatsApp link as it may be stored and sent to a client: '' (none) or an absolute http(s) address such as
-         * https://wa.me/32470000000. Anything else (`javascript:`, `data:`, a relative path, control characters) is null.
-         */
+        /** A WhatsApp link as it may be stored and sent to a client; see cleanLinkUrl(). */
         public static function cleanWhatsappUrl(string $url): ?string {
+            return self::cleanLinkUrl($url);
+        }
+
+        /**
+         * A link as it may be stored and sent to a client (WhatsApp, preparation page, Zoom room): '' (none) or an
+         * absolute http(s) address. Anything else (`javascript:`, `data:`, a relative path, control characters) is null.
+         */
+        public static function cleanLinkUrl(string $url): ?string {
             $url = trim($url);
             if ($url === '') {
                 return '';
@@ -275,6 +287,11 @@ SQL;
         /** The WhatsApp link for a service: its own when set and valid, else the global one. */
         public static function whatsappUrlFor(?array $cfg): string {
             return self::cleanWhatsappUrl((string) ($cfg['whatsapp_url'] ?? '')) ?: self::globalWhatsappUrl();
+        }
+
+        /** A service's link field (prep_page_url, zoom_join_url) as it may be sent: '' when unset or not an http(s) address. */
+        public static function serviceLinkUrl(?array $cfg, string $field): string {
+            return self::cleanLinkUrl((string) ($cfg[$field] ?? '')) ?? '';
         }
 
         public static function globalNudgeHours(): int {

@@ -230,6 +230,38 @@ unit('S-14 WhatsApp link: a service rule refuses a bad link, and the emails use 
     assert_false(str_contains($booking, "trim((string)(\$cfg['whatsapp_url']"), 'no raw service link is used');
 });
 
+unit('S-14 preparation page and Zoom room: a service rule refuses a bad link, and emails and the rules list use only checked ones', function (): void {
+    foreach (['prep_page_url' => 'preparation page', 'zoom_join_url' => 'Zoom room'] as $field => $label) {
+        foreach (['javascript:alert(1)', 'data:text/html,x', '/prep', 'https://'] as $bad) {
+            $threw = false;
+            try {
+                BookingPlusAPI::saveServiceConfig(987654, [$field => $bad]);
+            } catch (\InvalidArgumentException $e) {
+                $threw = true;
+                assert_true(str_contains($e->getMessage(), 'http'), $e->getMessage());
+            } finally {
+                try {
+                    Database::query('DELETE FROM bookingplus_service_config WHERE tenant_id = ? AND service_id = ?', [current_tenant_id(), 987654]);
+                } catch (\Throwable $e) {
+                    // no table on a bare schema: nothing to clean
+                }
+            }
+            assert_true($threw, "{$label}: {$bad} stops the save before any write");
+        }
+        assert_eq('', BookingPlusAPI::serviceLinkUrl([$field => 'javascript:alert(1)'], $field), "{$label}: a stored bad link is never sent");
+        assert_eq('https://example.com/x', BookingPlusAPI::serviceLinkUrl([$field => ' https://example.com/x '], $field), "{$label}: a good link is kept");
+        assert_eq('', BookingPlusAPI::serviceLinkUrl(null, $field), "{$label}: no service config means no link");
+    }
+    $root = dirname(__DIR__, 2) . '/plugins/booking';
+    $booking = (string) file_get_contents($root . '/Booking.php');
+    assert_eq(2, substr_count($booking, "'prep_url'      => BookingPlusAPI::serviceLinkUrl(\$cfg, 'prep_page_url'),"), 'both emails take the checked preparation link');
+    assert_true(str_contains($booking, "\$zoom = (BookingPlusAPI::cleanLinkUrl((string)(\$meta['zoom_join_url'] ?? '')) ?? '') ?: BookingPlusAPI::serviceLinkUrl(\$cfg, 'zoom_join_url');"), 'the reminder takes a checked Zoom link');
+    assert_false((bool) preg_match("/\\(string\\)\\(\\\$cfg\\['prep_page_url'\\]|trim\\(\\(string\\)\\(\\\$(cfg|meta)\\['zoom_join_url'\\]/", $booking), 'no raw service link is used');
+    $rules = (string) file_get_contents($root . '/admin/service-rules.php');
+    assert_true(str_contains($rules, "\$prepUrl = BookingPlusAPI::serviceLinkUrl(\$s, 'prep_page_url');"), 'the rules list links only a checked preparation page');
+    assert_false(str_contains($rules, "e(\$s['prep_page_url'])"), 'and never the raw value');
+});
+
 unit('the seam does not let a contributor write Booking\'s reminder_leads', function (): void {
     $tid = slate_tenant_id();
 
