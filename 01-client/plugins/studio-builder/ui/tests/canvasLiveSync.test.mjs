@@ -78,6 +78,8 @@ test('every other style edit repaints from the server, because its CSS is writte
     ['a style state', doc({ style: { typography: { font_size: '2rem' } }, style_states: { hover: { effects: { opacity: 0.5 } } } })],
     ['the wrapper tag', doc({ style: { typography: { font_size: '2rem' } }, tag: 'section' })],
     ['class names', doc({ style: { typography: { font_size: '2rem' } }, classNames: ['x'] })],
+    ['an entrance animation', doc({ style: { typography: { font_size: '2rem' } }, animation: { type: 'fade_up' } })],
+    ['an interaction', doc({ style: { typography: { font_size: '2rem' } }, interactions: { trigger: 'hover', animation: { type: 'fade_in' } } })],
   ]) {
     assert.equal(isStructuralChange(base, next), true, what);
   }
