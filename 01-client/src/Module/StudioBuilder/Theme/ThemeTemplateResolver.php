@@ -17,6 +17,9 @@ use Slate\Module\StudioBuilder\Render\Chrome\ChromeSource;
 
 final class ThemeTemplateResolver
 {
+    /** The site-wide header or footer (ChromeResolver::SITE_PARTIAL_SLUG): the fallback, never chosen by conditions. */
+    private const SITE_PARTIAL_SLUG = 'default';
+
     private const REGION_PAGE_TYPES = [
         'header' => 'header_partial',
         'footer' => 'footer_partial',
@@ -76,20 +79,13 @@ final class ThemeTemplateResolver
             }
 
             // Exclude default partial from conditional scoring (it serves as fallback)
-            if (($row['slug'] ?? '') === 'default') {
+            if (($row['slug'] ?? '') === self::SITE_PARTIAL_SLUG) {
                 continue;
             }
 
             $settings = $this->publishedSettings($row);
 
-            $conditions = $settings['conditions'] ?? null;
-            if (empty($conditions)) {
-                // If no explicit conditions, check if category or target was configured
-                if (!empty($settings['category'])) {
-                    $conditions = [['scope' => 'category', 'value' => $settings['category']]];
-                }
-            }
-
+            $conditions = self::chromeConditions($settings);
             if (!empty($conditions)) {
                 $score = TemplateConditionMatcher::score($conditions, $evalContext);
                 if ($score > 0 && self::outranks($score, $row, $bestScore, $bestRow)) {
@@ -213,13 +209,7 @@ final class ThemeTemplateResolver
             $slug = (string) ($row['slug'] ?? '');
             $settings = $this->publishedSettings($row);
 
-            $templateType = (string) ($settings['template_type'] ?? '');
-            $isRoleMatch = ($templateType === $role)
-                || ($role === '404' && ($templateType === 'not_found' || $templateType === '404'))
-                || ($slug === $role)
-                || ($slug === "theme-{$role}");
-
-            if (!$isRoleMatch) {
+            if (!self::isRoleMatch($role, $settings, $slug)) {
                 continue;
             }
 
@@ -255,6 +245,107 @@ final class ThemeTemplateResolver
         }
 
         return null;
+    }
+
+    /**
+     * The Theme Builder role of a page: 'header' or 'footer' for a header or footer partial, 'single', 'archive',
+     * 'search' or '404' for a template (from its `template_type` or conventional slug), else null.
+     *
+     * @param array<string, mixed> $settings the page document's settings
+     */
+    public static function roleOf(string $pageType, array $settings, string $slug): ?string
+    {
+        $region = array_search($pageType, self::REGION_PAGE_TYPES, true);
+        if (is_string($region)) {
+            return $region;
+        }
+        if (!in_array($pageType, ['system', 'page'], true)) {
+            return null;
+        }
+        return TemplatePreviewContext::kind(is_string($settings['template_type'] ?? null) ? $settings['template_type'] : '', $slug);
+    }
+
+    /**
+     * Whether the live site would consider a template with these settings for a page: its display conditions
+     * match the page (a header or footer with none is only ever the site default; a single, archive, search or 404
+     * template with none applies everywhere). Whether a more specific template then wins is not part of the answer.
+     *
+     * @param array<string, mixed> $settings the template's settings
+     * @param array<string, mixed> $context  what the conditions may ask about the page (category, tags, author_id…)
+     */
+    public static function appliesTo(string $role, string $templateSlug, array $settings, PageAddress $page, array $context = []): bool
+    {
+        $evalContext = array_merge(self::pageContext($page), $context);
+        if (isset(self::REGION_PAGE_TYPES[$role])) {
+            if ($templateSlug === self::SITE_PARTIAL_SLUG) {
+                return true;
+            }
+            $conditions = self::chromeConditions($settings);
+            return !empty($conditions) && TemplateConditionMatcher::score($conditions, $evalContext) > 0;
+        }
+        $conditions = $settings['conditions'] ?? null;
+        return empty($conditions) || TemplateConditionMatcher::score($conditions, $evalContext) > 0;
+    }
+
+    /**
+     * The other published templates of one role, with the display conditions they were PUBLISHED with, so the
+     * editor can say which of them would tie with the one being edited. The site default header or footer is
+     * left out (it is the fallback, never in a tie).
+     *
+     * @return list<array{id: int, title: string, published_at: ?string, conditions: mixed}>
+     */
+    public function peers(string $role, int $exceptPageId): array
+    {
+        if ($this->pages === null || $this->revisions === null) {
+            return [];
+        }
+        $partialType = self::REGION_PAGE_TYPES[$role] ?? null;
+        $rows = $partialType !== null ? $this->candidates($partialType) : array_merge($this->candidates('system'), $this->candidates('page'));
+        $out = [];
+        foreach ($rows as $row) {
+            if ((int) ($row['id'] ?? 0) === $exceptPageId || ($row['status'] ?? null) !== 'published' || empty($row['published_revision_id'])) {
+                continue;
+            }
+            $slug = (string) ($row['slug'] ?? '');
+            $settings = $this->publishedSettings($row);
+            if ($partialType !== null ? $slug === self::SITE_PARTIAL_SLUG : !self::isRoleMatch($role, $settings, $slug)) {
+                continue;
+            }
+            $out[] = [
+                'id'           => (int) $row['id'],
+                'title'        => mb_substr((string) ($row['title'] ?? ''), 0, 191),
+                'published_at' => isset($row['published_at']) ? (string) $row['published_at'] : null,
+                'conditions'   => $partialType !== null ? self::chromeConditions($settings) : ($settings['conditions'] ?? null),
+            ];
+            if (count($out) >= 100) {
+                break;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * A header or footer's display conditions; an older one that names only a `category` setting applies there.
+     *
+     * @param array<string, mixed> $settings
+     */
+    private static function chromeConditions(array $settings): mixed
+    {
+        $conditions = $settings['conditions'] ?? null;
+        if (empty($conditions) && !empty($settings['category'])) {
+            $conditions = [['scope' => 'category', 'value' => $settings['category']]];
+        }
+        return $conditions;
+    }
+
+    /** @param array<string, mixed> $settings */
+    private static function isRoleMatch(string $role, array $settings, string $slug): bool
+    {
+        $templateType = (string) ($settings['template_type'] ?? '');
+        return ($templateType === $role)
+            || ($role === '404' && ($templateType === 'not_found' || $templateType === '404'))
+            || ($slug === $role)
+            || ($slug === "theme-{$role}");
     }
 
     /**

@@ -995,6 +995,7 @@ const EN = {
   cond_problem_row: 'Fix the highlighted conditions.',
   cond_problem_many: 'At most 30 conditions.',
   cond_needs_include: 'Add at least one Include rule: Exclude rules only remove pages from a selection.',
+  cond_conflict: 'Same conditions as: {titles}. When templates match a page equally, the one published most recently is shown.',
   bg_overlay_note: 'Overlay {percent}% on top of the image',
   bg_overlay_remove: 'Remove overlay',
   bg_image_covers: 'An image is set and is drawn over this colour.',

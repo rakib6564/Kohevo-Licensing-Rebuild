@@ -86,6 +86,7 @@ export function createTransport({ apiUrl, csrfToken, fetchImpl, timeoutMs = TIME
     duplicatePage: (body) => call('POST', 'duplicate_page', { body }),
     archivePage: (body) => call('POST', 'archive_page', { body }),
     chrome: (pageId) => call('GET', 'chrome', { query: { page: pageId } }),
+    templatePeers: (pageId) => call('GET', 'template_peers', { query: { page: pageId } }),
     tokens: (group = 'default') => call('GET', 'tokens', { query: { group } }),
     applyTemplate: (body) => call('POST', 'apply_template', { body }),
     insertTemplate: (body) => call('POST', 'insert_template', { body }),
