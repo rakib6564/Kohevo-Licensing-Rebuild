@@ -339,10 +339,22 @@ unit('phase2 integration: StudioTemplateService saves/updates templates, protect
             ));
             assert_eq('hero-minimal', $saved['template_key']);
 
-            // Update path: saving the same key again updates in place rather than duplicating
+            // TI-05: saving an existing key without asking to overwrite is refused, and the first template stays as it was
             $updatedDoc = sbp2_doc($registry, 'Preset Heading v2');
+            $refused = null;
+            try {
+                $tenants->runAs($tenantId, static fn(): array => $templateService->saveTemplate(
+                    'hero-minimal', 'section_preset', 'hero', 'Minimal Hero v2', null, $updatedDoc, 1
+                ));
+            } catch (StudioValidationException $e) {
+                $refused = $e->errors()[0]['code'] ?? null;
+            }
+            assert_eq('template_exists', $refused, 'a second save under the same key needs an explicit overwrite');
+            assert_eq('Minimal Hero', (string) $tenants->runAs($tenantId, static fn() => $templates->findByKey('hero-minimal'))['name'], 'the refused save changed nothing');
+
+            // Update path: an explicit overwrite updates in place rather than duplicating
             $savedAgain = $tenants->runAs($tenantId, static fn(): array => $templateService->saveTemplate(
-                'hero-minimal', 'section_preset', 'hero', 'Minimal Hero v2', null, $updatedDoc, 1
+                'hero-minimal', 'section_preset', 'hero', 'Minimal Hero v2', null, $updatedDoc, 1, overwrite: true
             ));
             assert_eq((int) $saved['id'], (int) $savedAgain['id'], 'saving an existing template_key must update, not duplicate');
             assert_eq('Minimal Hero v2', $savedAgain['name']);
@@ -352,7 +364,7 @@ unit('phase2 integration: StudioTemplateService saves/updates templates, protect
                 $templates->update((int) $saved['id'], ['is_system' => 1]);
             });
             assert_throws(StudioValidationException::class, function () use ($tenants, $tenantId, $templateService, $templateDoc): void {
-                $tenants->runAs($tenantId, static fn() => $templateService->saveTemplate('hero-minimal', 'section_preset', 'hero', 'Hacked', null, $templateDoc, 1));
+                $tenants->runAs($tenantId, static fn() => $templateService->saveTemplate('hero-minimal', 'section_preset', 'hero', 'Hacked', null, $templateDoc, 1, overwrite: true));
             });
 
             // Apply a (new, non-system) template onto a page

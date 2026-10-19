@@ -211,6 +211,14 @@ final class CustomWidgetDefinition
      */
     public function toBlockDefinition(): BlockDefinitionInterface
     {
+        // The widget's migration handler becomes the block's upgrade steps, so imports and
+        // template use upgrade SDK widgets through the same path as core blocks.
+        $upgrades = [];
+        if ($this->migrationHandler !== null) {
+            for ($from = 1; $from < $this->version; $from++) {
+                $upgrades[$from] = fn(array $props): array => $this->migrate($from, $from + 1, $props);
+            }
+        }
         return new DeclarativeBlockDefinition(
             type: $this->type,
             version: $this->version,
@@ -224,6 +232,7 @@ final class CustomWidgetDefinition
             requiredPermission: $this->requiredPermission,
             allowedBindingProviders: $this->allowedBindingProviders,
             bindingSlots: $this->bindingSlots,
+            upgrades: $upgrades,
         );
     }
 

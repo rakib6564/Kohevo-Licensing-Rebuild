@@ -312,6 +312,14 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
                 $secTpl = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $admin, 'POST', 'save_template', ['page_id' => $S->about, 'node_id' => $S->aboutSection, 'template_key' => 'intro-section', 'template_type' => 'section_preset', 'category' => 'intro', 'name' => 'Intro section', 'description' => null, 'thumbnail_media_id' => null]), 'section preset')['template'];
                 assert_eq('section_preset', $secTpl['template_type']);
                 $blkTpl = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $admin, 'POST', 'save_template', ['page_id' => $S->about, 'node_id' => $S->aboutHeading, 'template_key' => 'brand-heading', 'template_type' => 'block_preset', 'category' => 'general', 'name' => 'Brand heading', 'description' => null, 'thumbnail_media_id' => null]), 'block preset')['template'];
+                // TI-05: the same key again is refused unless the caller asks to overwrite; then it is updated in place.
+                $r = sbp6_call($rt, SBP6_TENANT_A, $admin, 'POST', 'save_template', ['page_id' => $S->about, 'node_id' => $S->aboutSection, 'template_key' => 'intro-section', 'template_type' => 'section_preset', 'name' => 'Someone else\'s intro']);
+                assert_eq(422, $r->status, 'an existing key without overwrite');
+                assert_eq('template_exists', sbp6_first_code($r));
+                assert_eq('Intro section', (string) Database::value('SELECT name FROM studiobuilder_templates WHERE tenant_id = ? AND template_key = ?', [SBP6_TENANT_A, 'intro-section']), 'the first admin\'s template is untouched');
+                $again = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $admin, 'POST', 'save_template', ['page_id' => $S->about, 'node_id' => $S->aboutSection, 'template_key' => 'intro-section', 'template_type' => 'section_preset', 'category' => 'intro', 'name' => 'Intro section', 'overwrite' => true]), 'explicit overwrite')['template'];
+                assert_eq($secTpl['template_key'], $again['template_key']);
+                assert_eq(1, sbp6_count('SELECT COUNT(*) FROM studiobuilder_templates WHERE tenant_id = ? AND template_key = ?', [SBP6_TENANT_A, 'intro-section']), 'updated in place, not duplicated');
                 assert_eq(['sections' => 1, 'blocks' => 1, 'block_labels' => ['Heading']], $blkTpl['summary']);
 
                 // Node/kind mismatches and wrong page types are refused.

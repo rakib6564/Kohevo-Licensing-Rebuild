@@ -52,6 +52,7 @@ namespace Slate\Module\StudioBuilder\Application;
 use Slate\Module\StudioBuilder\Dependency\DependencyExtractor;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Exception\StudioConcurrencyException;
 use Slate\Module\StudioBuilder\Exception\StudioNotFoundException;
@@ -205,7 +206,7 @@ final class StudioPackageService
     /** @param array<string, mixed> $row @return array<string, mixed> */
     private function templateItem(string $key, array $row): array
     {
-        [$doc, $media] = $this->exportMedia(CanonicalJson::decode((string) $row['document_json']));
+        [$doc, $media] = $this->exportMedia($this->upgraded(CanonicalJson::decode((string) $row['document_json'])));
         return self::withHash([
             'kind' => StudioPackageFormat::KIND_TEMPLATE, 'key' => $key,
             'template_key' => (string) $row['template_key'], 'template_type' => (string) $row['template_type'],
@@ -573,6 +574,14 @@ final class StudioPackageService
             return null;
         }
 
+        // Blocks saved by an older Studio are stepped up to this site's block versions first, so
+        // everything after (media rewrite, validation) sees current props. No upgrade: the validator refuses.
+        $upgrade = DocumentUpgrader::upgrade($doc, $this->registry);
+        $doc = $upgrade['document'];
+        foreach ($upgrade['upgraded'] as $u) {
+            $report->warning('block_upgraded', $key, $base . substr($u['path'], 1), "Block '{$u['type']}' was saved at version {$u['from']} and was upgraded to version {$u['to']}.");
+        }
+
         // Global references -> package components / explicit map, else an empty owned section.
         foreach (PackageDocumentMapper::globalRefs($doc) as $ref) {
             $componentUse[$ref][] = $key;
@@ -759,7 +768,7 @@ final class StudioPackageService
         $draftId = isset($page['active_draft_revision_id']) ? (int) $page['active_draft_revision_id'] : 0;
         $revision = $draftId > 0 ? $this->revisionRepo->findByIdForPage((int) $page['id'], $draftId) : null;
         return $revision !== null
-            ? CanonicalJson::decode((string) $revision['document_json'])
+            ? $this->upgraded(CanonicalJson::decode((string) $revision['document_json']))
             : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
     }
 
@@ -768,6 +777,12 @@ final class StudioPackageService
     {
         $publishedId = !empty($component['published_revision_id']) ? (int) $component['published_revision_id'] : 0;
         $revision = $publishedId > 0 ? $this->revisionRepo->findByIdForPage((int) $component['id'], $publishedId) : null;
-        return $revision !== null ? CanonicalJson::decode((string) $revision['document_json']) : $this->workingDocument($component);
+        return $revision !== null ? $this->upgraded(CanonicalJson::decode((string) $revision['document_json'])) : $this->workingDocument($component);
+    }
+
+    /** Exports carry this site's current block versions: older stored blocks are upgraded on the way out. @param array<string, mixed> $document @return array<string, mixed> */
+    private function upgraded(array $document): array
+    {
+        return DocumentUpgrader::upgrade($document, $this->registry)['document'];
     }
 }
