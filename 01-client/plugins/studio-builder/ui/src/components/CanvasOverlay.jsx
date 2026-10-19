@@ -6,6 +6,7 @@
 // node's overflow, is reachable by keyboard, and renders names as plain text.
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { asList, blockDefinition, childrenOf, findNode, sectionsOf } from '../core/doc.mjs';
 import * as ops from '../core/operations.mjs';
@@ -16,6 +17,8 @@ import { t } from '../core/messages.mjs';
 const NODE_ATTR = 'data-sb-node';
 const FALLBACK_BAR = { width: 280, height: 30 };
 const MAX_AID_NODES = 300;
+/** Longest the box follows a moving canvas frame by frame after an animation or transition starts there. */
+const FOLLOW_MS = 4000;
 /** Layout blocks that are an invitation when empty: an empty one says "drag a widget here" and offers Add. */
 const ZONE_TYPES = new Set(['core.container', 'layout.container', 'layout.flex', 'layout.grid']);
 /** An empty box shorter than this only has room for the Add button. */
@@ -164,7 +167,8 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
     const key = JSON.stringify([items.map((i) => [i.id, i.visible]), outlineBoxes.map((i) => [i.id, i.visible]), labelTags.map((i) => [i.id, i.text, i.visible]), zones.map((i) => [i.id, i.visible]), bounds]);
     if (key === lastKey.current) return;
     lastKey.current = key;
-    setGeo({ items, bounds, outlines: outlineBoxes, labels: labelTags, zones });
+    // Commit before this frame paints: a deferred render leaves the box a frame behind the canvas while it scrolls.
+    flushSync(() => setGeo({ items, bounds, outlines: outlineBoxes, labels: labelTags, zones }));
   }, [frameRef, enabled, selectedIds, outlines, labels, zoneKey]);
 
   const schedule = useCallback(() => {
@@ -181,23 +185,62 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
     const root = rootRef.current;
     if (!frame || !root) return undefined;
     let win = null;
+    let doc = null;
     let observer = null;
+    // An entrance animation or a transition moves nodes without touching the DOM: measure every frame while one runs.
+    let followRaf = 0;
+    let followUntil = 0;
+    const moving = () => {
+      try {
+        // A CSS animation is still `pending` on its first frame; an endless one (a spinner) is not followed.
+        return doc.getAnimations().some((a) => (a.playState === 'running' || a.pending) && Number.isFinite(a.effect?.getComputedTiming?.().endTime));
+      } catch { return false; }
+    };
+    const followStep = () => {
+      followRaf = 0;
+      measure();
+      if (doc && performance.now() < followUntil && moving()) followRaf = requestAnimationFrame(followStep);
+    };
+    const follow = () => {
+      followUntil = performance.now() + FOLLOW_MS;
+      if (!followRaf) followRaf = requestAnimationFrame(followStep);
+    };
+    const MOTION_START = ['animationstart', 'transitionrun'];
+    const MOTION_END = ['animationend', 'animationcancel', 'transitionend', 'transitioncancel'];
+    const onFonts = () => schedule();
     const attach = () => {
       try {
         win = frame.contentWindow;
         if (win) win.addEventListener('scroll', schedule, { passive: true });
-        const doc = frame.contentDocument;
+        doc = frame.contentDocument;
         if (doc && doc.body && typeof MutationObserver !== 'undefined') {
           observer = new MutationObserver(schedule);
           observer.observe(doc.body, { childList: true, subtree: true, attributes: true, characterData: true });
+        }
+        if (doc) {
+          for (const type of MOTION_START) doc.addEventListener(type, follow, true);
+          for (const type of MOTION_END) doc.addEventListener(type, schedule, true);
+          doc.addEventListener('load', schedule, true); // an image arriving resizes the nodes around it
+          if (doc.fonts && doc.fonts.addEventListener) doc.fonts.addEventListener('loadingdone', onFonts);
+          if (moving()) follow();
         }
       } catch { /* cross-origin frame: nothing to measure */ }
       schedule();
     };
     const detach = () => {
       try { if (win) win.removeEventListener('scroll', schedule); } catch { /* ignore */ }
+      try {
+        if (doc) {
+          for (const type of MOTION_START) doc.removeEventListener(type, follow, true);
+          for (const type of MOTION_END) doc.removeEventListener(type, schedule, true);
+          doc.removeEventListener('load', schedule, true);
+          if (doc.fonts && doc.fonts.removeEventListener) doc.fonts.removeEventListener('loadingdone', onFonts);
+        }
+      } catch { /* ignore */ }
       if (observer) observer.disconnect();
+      if (followRaf) { cancelAnimationFrame(followRaf); followRaf = 0; }
       win = null;
+      doc = null;
       observer = null;
     };
     const onLoad = () => { detach(); attach(); };
@@ -222,7 +265,7 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
       detach();
       if (frameRaf.current) { cancelAnimationFrame(frameRaf.current); frameRaf.current = 0; }
     };
-  }, [frameRef, stageRef, schedule]);
+  }, [frameRef, stageRef, schedule, measure]);
 
   const single = selectedIds.length === 1;
   const primary = useMemo(() => geo.items.find((i) => i.id === selection) || null, [geo.items, selection]);
