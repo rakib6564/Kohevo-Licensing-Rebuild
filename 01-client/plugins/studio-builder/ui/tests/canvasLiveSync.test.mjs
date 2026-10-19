@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isServerRenderedType, isStructuralChange, syncLiveDOM } from '../src/core/canvasLiveSync.mjs';
+import { contentChanged, isServerRenderedType, isStructuralChange, syncLiveDOM } from '../src/core/canvasLiveSync.mjs';
 
 function fakeEl(tag = 'div', classes = [], text = '') {
   const classList = new Set(classes);
@@ -163,4 +163,25 @@ test('a property edit on a module or custom block repaints from the server; core
   assert.equal(isStructuralChange(doc('layout.container', { padding: 'sm' }), doc('layout.container', { padding: 'md' })), false, 'a layout container is patched in place');
   assert.equal(isServerRenderedType('core.quote'), true);
   assert.equal(isServerRenderedType('core.text'), false);
+});
+
+test('contentChanged: a saved prop change at any depth, or a section field, merges the server render; style alone does not', () => {
+  const doc = (heroProps, accordionItems, style = {}, sectionExtra = {}) => ({
+    sections: [{
+      id: 's1', ...sectionExtra, style: { padding: style.padding || 'md' },
+      blocks: [
+        { id: 'h1', type: 'core.hero', props: heroProps, style },
+        { id: 'c1', type: 'layout.container', props: {}, children: [{ id: 'a1', type: 'core.accordion', props: { items: accordionItems } }] },
+      ],
+    }],
+  });
+  const base = doc({ heading: 'Hi', eyebrow: '' }, [{ question: 'Q', answer: 'A' }]);
+  assert.equal(contentChanged(base, doc({ heading: 'Hi', eyebrow: '' }, [{ question: 'Q', answer: 'A' }])), false, 'an equal document changes nothing');
+  // The two cases the live patch missed: an eyebrow that was empty (no element to fill) and a nested accordion question.
+  assert.equal(contentChanged(base, doc({ heading: 'Hi', eyebrow: 'New' }, [{ question: 'Q', answer: 'A' }])), true, 'a hero eyebrow that was empty');
+  assert.equal(contentChanged(base, doc({ heading: 'Hi', eyebrow: '' }, [{ question: 'Q2', answer: 'A' }])), true, 'an accordion question inside a container');
+  assert.equal(contentChanged(base, doc({ heading: 'Hi', eyebrow: '' }, [{ question: 'Q', answer: 'A' }], { color: 'red' })), false, 'a block style edit is not content');
+  assert.equal(contentChanged(base, doc({ heading: 'Hi', eyebrow: '' }, [{ question: 'Q', answer: 'A' }], { padding: 'lg' })), false, 'a section style edit is not content');
+  assert.equal(contentChanged(base, doc({ heading: 'Hi', eyebrow: '' }, [{ question: 'Q', answer: 'A' }], {}, { label: 'Intro' })), true, 'a section field');
+  assert.equal(contentChanged(null, base), true, 'no rendered document yet: merge');
 });
