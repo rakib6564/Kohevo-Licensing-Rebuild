@@ -21,7 +21,9 @@ body.sb-body { background: var(--sl-paper); color: var(--sl-ink); font-family: v
 .sb-body h1, .sb-body .sb-post-title { font-size: clamp(2.9rem, 5.4vw, 4.6rem); font-weight: 300; }
 .sb-body h2 { font-size: clamp(2.2rem, 3.6vw, 3.2rem); }
 .sb-body h3 { font-size: clamp(1.45rem, 2vw, 1.75rem); line-height: 1.2; }
-.sb-body .sb-hl, .sb-body .sb-hl--italic { font-style: italic; color: var(--sl-clay); font-weight: 300; }
+/* A highlight's default colour; italic (and the lighter weight that suits it) only where the editor asks for italic. */
+.sb-body .sb-hl { color: var(--sl-clay); }
+.sb-body .sb-hl--italic { font-style: italic; font-weight: 300; }
 .sb-body .sb-text--lg { font-size: 1.2rem; line-height: 1.7; color: var(--sl-muted); max-width: 40rem; }
 .sb-body .sb-text--sm { font-size: .92rem; }
 .sb-body .sb-rich-text a, .sb-body .sb-post-body a { color: var(--sl-clay-deep); text-underline-offset: .2em; }
