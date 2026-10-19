@@ -29,6 +29,7 @@ use Slate\Data\Database;
 use Slate\Module\StudioBuilder\Dependency\DependencyExtractor;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Document\DocumentNormalizer;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Exception\StudioConcurrencyException;
@@ -236,9 +237,10 @@ final class StudioRevisionService
                 throw new StudioNotFoundException("Working draft revision {$currentDraftId} not found for page {$pageId}.");
             }
 
-            // Re-validate and normalize the working revision's canonical document before publishing
+            // Re-validate and normalize the working revision's canonical document before publishing (blocks saved at an
+            // older block version are upgraded first; the published revision is a new row, history is never rewritten)
             $normalizedDoc = DocumentNormalizer::validateAndNormalize(
-                (string) $workingRev['document_json'],
+                DocumentUpgrader::upgrade(CanonicalJson::decode((string) $workingRev['document_json']), $this->registry)['document'],
                 $this->registry,
                 $validationOptions
             );
@@ -351,7 +353,7 @@ final class StudioRevisionService
             }
 
             $normalizedDoc = DocumentNormalizer::validateAndNormalize(
-                (string) $targetRev['document_json'],
+                DocumentUpgrader::upgrade(CanonicalJson::decode((string) $targetRev['document_json']), $this->registry)['document'],
                 $this->registry,
                 $validationOptions
             );

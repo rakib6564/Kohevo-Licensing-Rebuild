@@ -91,7 +91,7 @@ final class StudioAuthoringApi
         // Phase 6 commands (every document write carries expected_revision_id)
         'apply_template'   => ['POST', ['page_id', 'template_key', 'expected_revision_id']],
         'insert_template'  => ['POST', ['page_id', 'template_key', 'index', 'parent_id', 'expected_revision_id']],
-        'save_template'    => ['POST', ['page_id', 'node_id', 'template_key', 'template_type', 'category', 'name', 'description', 'thumbnail_media_id']],
+        'save_template'    => ['POST', ['page_id', 'node_id', 'template_key', 'template_type', 'category', 'name', 'description', 'thumbnail_media_id', 'overwrite']],
         'delete_template'  => ['POST', ['template_key']],
         'create_component' => ['POST', ['title', 'slug', 'page_id', 'section_id', 'expected_revision_id']],
         'detach_component' => ['POST', ['page_id', 'section_id', 'expected_revision_id']],
@@ -352,6 +352,7 @@ final class StudioAuthoringApi
             self::string($input, 'name', 191),
             self::optionalString($input, 'description', 1000),
             $thumb,
+            self::flag($input, 'overwrite', false),
         );
         $library = $this->app->templateLibrary($actor, (string) $row['template_type']);
         foreach ($library as $view) {

@@ -36,6 +36,9 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
      * @param list<array{prop: string, selector: string}> $inlineText The text the canvas may edit in place: a `string`/`text`
      *                                            prop (or `<link field>.label`) and the CSS class selector of the element
      *                                            that renders it. Declared, never guessed from the markup.
+     * @param array<int, callable(array<string, mixed>): array<string, mixed>> $upgrades One step per older version:
+     *                                            `[1 => fn(array $props): array => ...]` turns version-1 props into
+     *                                            version-2 props. A version without a step cannot be upgraded.
      */
     public function __construct(
         private readonly string $type,
@@ -54,6 +57,7 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
         private readonly ?string $title = null,
         private readonly string $description = '',
         private readonly array $inlineText = [],
+        private readonly array $upgrades = [],
     ) {
         if (preg_match(CanonicalDocumentSchema::BLOCK_TYPE_PATTERN, $this->type) !== 1) {
             throw new \InvalidArgumentException("Invalid namespaced block type '{$this->type}'. Expected 'namespace.name'.");
@@ -73,6 +77,11 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
         foreach ($this->allowedBindingProviders as $provider) {
             if (!is_string($provider) || preg_match(CanonicalDocumentSchema::PROVIDER_KEY_PATTERN, $provider) !== 1) {
                 throw new \InvalidArgumentException("Block '{$this->type}' declares invalid binding provider '{$provider}'.");
+            }
+        }
+        foreach ($this->upgrades as $from => $step) {
+            if (!is_int($from) || $from < 1 || $from >= $this->version || !is_callable($step)) {
+                throw new \InvalidArgumentException("Block '{$this->type}' declares an invalid upgrade step '{$from}'.");
             }
         }
         $this->assertInlineText();
@@ -195,6 +204,16 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
     public function normalizeProps(array $props): array
     {
         return $this->schema->normalize($props);
+    }
+
+    public function upgrade(array $props, int $fromVersion): ?array
+    {
+        $step = $this->upgrades[$fromVersion] ?? null;
+        if ($step === null) {
+            return null;
+        }
+        $upgraded = $step($props);
+        return is_array($upgraded) ? $upgraded : null;
     }
 
     public function extractDependencies(string $nodeId, array $normalizedProps, array $bindings): array

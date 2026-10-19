@@ -862,7 +862,9 @@ final class DocumentValidator
             $errors[] = ValidationResult::issue(
                 "{$path}.version",
                 'invalid_block_version',
-                "Block '{$type}' version must be integer {$definition->version()}."
+                is_int($version) && $version >= 1 && $version < $definition->version()
+                    ? "Block '{$type}' is version {$version}; this site supports version {$definition->version()} and has no upgrade from version {$version}."
+                    : "Block '{$type}' version must be integer {$definition->version()}" . (is_int($version) ? " (got {$version})." : '.')
             );
         }
 

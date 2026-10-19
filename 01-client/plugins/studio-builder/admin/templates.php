@@ -14,7 +14,7 @@ require_once __DIR__ . '/_nav.php';
 use Slate\Data\Database;
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
-use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 use Slate\Module\StudioBuilder\StudioPermissions;
 
@@ -28,6 +28,22 @@ $pageTitle = __('studio_templates', 'Theme Builder');
 $currentNav = 'studio-templates';
 
 $flash = null;
+
+/**
+ * What a failed action may tell the user: a Studio validation message is written for people and is shown;
+ * anything else (a database or runtime error) is logged and replaced by the generic text.
+ */
+function sb_templates_error_message(\Throwable $e, string $generic): string
+{
+    if ($e instanceof StudioValidationException) {
+        $first = $e->errors()[0]['message'] ?? '';
+        if (is_string($first) && $first !== '') {
+            return $first;
+        }
+    }
+    error_log('[studio-builder] theme builder: ' . $e::class . ': ' . $e->getMessage());
+    return $generic;
+}
 
 // Template type configuration mapping
 $typeConfigs = [
@@ -110,18 +126,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $description = trim((string) ($_POST['description'] ?? ''));
             $publishNow = !empty($_POST['publish_now']);
 
+            if (!isset($typeConfigs[$uiType])) {
+                $uiType = 'header';
+            }
+
+            // The same name and description rules the template service applies, checked first so the
+            // message is a translated one and nothing is touched.
             if ($name === '') {
                 $flash = ['type' => 'error', 'msg' => 'Template name is required.'];
+            } elseif (mb_strlen($name, 'UTF-8') > 191 || preg_match('/[<>]/', $name) === 1) {
+                $flash = ['type' => 'error', 'msg' => __('studio_tpl_invalid_name', 'A template name is plain text of at most 191 characters, without < or >.')];
+            } elseif (mb_strlen($description, 'UTF-8') > 1000 || preg_match('/[<>]/', $description) === 1) {
+                $flash = ['type' => 'error', 'msg' => __('studio_tpl_invalid_description', 'A description is plain text of at most 1000 characters, without < or >.')];
             } else {
-                $cfg = $typeConfigs[$uiType] ?? $typeConfigs['header'];
+                $cfg = $typeConfigs[$uiType];
 
-                // Clean slug for template_key conforming to TEMPLATE_KEY_PATTERN
+                // Clean slug for template_key conforming to TEMPLATE_KEY_PATTERN, with a 32-bit random suffix.
                 $slug = preg_replace('/[^a-z0-9]+/', '-', strtolower($name));
-                $slug = trim((string) $slug, '-');
+                $slug = trim(substr(trim((string) $slug, '-'), 0, 100), '-');
                 if ($slug === '') {
                     $slug = 'theme';
                 }
-                $templateKey = $slug . '-' . substr(bin2hex(random_bytes(3)), 0, 4);
+                $templateKey = $slug . '-' . bin2hex(random_bytes(4));
 
                 // Map condition rules into structured format evaluated by TemplateConditionMatcher
                 $conditionRules = match($condition) {
@@ -135,8 +161,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Canonical starter document
                 $starterDoc = CanonicalDocumentSchema::emptyDocument($cfg['doc_type'], 'default', $name);
-                $starterDoc['settings']['conditions'] = ['rules' => $conditionRules];
-                $starterDoc['settings']['template_type'] = $cfg['role'];
+                $starterDoc['seo']['robots'] = 'noindex,nofollow';
+                // A section preset is inserted into pages; it has no display conditions and no theme role.
+                if ($uiType !== 'section_preset') {
+                    $starterDoc['settings']['conditions'] = ['rules' => $conditionRules];
+                    $starterDoc['settings']['template_type'] = $cfg['role'];
+                }
 
                 $secId = CanonicalDocumentSchema::newSectionId();
                 $blkId = CanonicalDocumentSchema::newBlockId();
@@ -223,94 +253,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ];
                 }
 
+                // Through the Studio services, as the editor saves: the template and the backing page's draft are
+                // validated and normalized as canonical documents, uuids come from random_bytes, and each write is
+                // audited. A refused step undoes the earlier ones (as duplicatePage does), so neither the template
+                // nor a half-made page is left behind.
+                $actor = StudioActor::fromCurrentSession();
+                $created = null;
+                $savedTemplate = false;
+                $pageId = 0;
                 try {
-                    $genUuid = static fn(): string => sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-                        mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-                        mt_rand(0, 0xffff),
-                        mt_rand(0, 0x0fff) | 0x4000,
-                        mt_rand(0, 0x3fff) | 0x8000,
-                        mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-                    );
-                    $tplUuid = $genUuid();
-                    $pageUuid = $genUuid();
-
-                    // 1. Create in studiobuilder_templates
-                    $templateId = Database::insert('studiobuilder_templates', [
-                        'tenant_id'          => $tenantId,
-                        'uuid'               => $tplUuid,
-                        'template_key'       => $templateKey,
-                        'template_type'      => $cfg['template_type'],
-                        'category'           => $cfg['category'],
-                        'name'               => $name,
-                        'description'        => $description !== '' ? $description : "Theme {$uiType} template: {$name}",
-                        'schema_version'     => CanonicalDocumentSchema::SCHEMA_VERSION,
-                        'document_json'      => CanonicalJson::encode($starterDoc),
-                        'is_system'          => 0,
-                        'created_by'         => (int) (Auth::userId() ?? 1),
-                        'created_at'         => date('Y-m-d H:i:s'),
-                        'updated_at'         => date('Y-m-d H:i:s'),
-                    ]);
-
-                    // 2. Create linked backing page so it can be edited in builder.php and resolved by ThemeTemplateResolver
-                    $pageSlug = 'template-' . $templateKey;
-                    $pageSettings = [
-                        'is_theme_template' => true,
-                        'template_id'       => $templateId,
-                        'template_type'     => $cfg['role'],
-                        'condition_rule'    => $condition,
-                        'conditions'        => ['rules' => $conditionRules],
-                    ];
-
-                    $pageId = Database::insert('studiobuilder_pages', [
-                        'tenant_id'                => $tenantId,
-                        'uuid'                     => $pageUuid,
-                        'slug'                     => $pageSlug,
-                        'title'                    => "[Theme] {$name}",
-                        'page_type'                => $cfg['page_type'],
-                        'route_mode'               => 'standalone',
-                        'status'                   => 'draft',
-                        'active_draft_revision_id' => null,
-                        'published_revision_id'    => null,
-                        'seo_json'                 => json_encode(['noindex' => true]),
-                        'settings_json'            => CanonicalJson::encode($pageSettings),
-                        'created_by'               => (int) (Auth::userId() ?? 1),
-                        'updated_by'               => (int) (Auth::userId() ?? 1),
-                        'created_at'               => date('Y-m-d H:i:s'),
-                        'updated_at'               => date('Y-m-d H:i:s'),
-                    ]);
-
-                    // 3. Create revision #1 for the page
-                    $revId = Database::insert('studiobuilder_revisions', [
-                        'tenant_id'          => $tenantId,
-                        'page_id'            => $pageId,
-                        'revision_number'    => 1,
-                        'revision_kind'      => 'manual',
-                        'schema_version'     => CanonicalDocumentSchema::SCHEMA_VERSION,
-                        'document_json'      => CanonicalJson::encode($starterDoc),
-                        'summary'            => "Theme template created: {$name} ({$uiType})",
-                        'parent_revision_id' => null,
-                        'created_by'         => (int) (Auth::userId() ?? 1),
-                        'created_at'         => date('Y-m-d H:i:s'),
-                    ]);
-
-                    // Update active_draft_revision_id pointer on the page
-                    Database::query("UPDATE studiobuilder_pages SET active_draft_revision_id = ? WHERE id = ? AND tenant_id = ?", [$revId, $pageId, $tenantId]);
-
-                    // 4. Optionally publish immediately
-                    if ($publishNow) {
-                        try {
-                            $runtime = StudioRuntimeFactory::build();
-                            $actor = StudioActor::fromCurrentSession();
-                            $runtime->app->publish($actor, (int) $pageId, (int) $revId, "Initial publish of {$name}");
-                            $flash = ['type' => 'success', 'msg' => "Theme template '{$name}' created and published! It is now active on the site."];
-                        } catch (\Throwable $pubEx) {
-                            $flash = ['type' => 'warning', 'msg' => "Template created as draft. Note on auto-publish: " . $pubEx->getMessage() . ". You can publish it in the Canvas editor."];
-                        }
-                    } else {
-                        $flash = ['type' => 'success', 'msg' => "Theme template '{$name}' created as draft. Click 'Edit in Canvas' to design and publish."];
-                    }
+                    $runtime = StudioRuntimeFactory::build();
+                    $runtime->app->saveTemplate($actor, $templateKey, $cfg['template_type'], $cfg['category'], $name, $description !== '' ? $description : "Theme {$uiType} template: {$name}", $starterDoc);
+                    $savedTemplate = true;
+                    // The backing page the Canvas editor opens, at the `template-<key>` address this page's list and
+                    // delete action look for. Its first draft is the starter document.
+                    $page = $runtime->app->createPage($actor, "[Theme] {$name}", 'template-' . $templateKey, $cfg['page_type'], 'standalone');
+                    $pageId = (int) $page['page']['id'];
+                    $draft = $runtime->app->saveDraft($actor, $pageId, $starterDoc, (int) $page['revision']['id'], 'manual', "Theme template created: {$name} ({$uiType})");
+                    $created = ['page_id' => $pageId, 'revision_id' => (int) $draft['revision']['id']];
                 } catch (\Throwable $e) {
-                    $flash = ['type' => 'error', 'msg' => 'Failed to create template: ' . $e->getMessage()];
+                    try {
+                        if ($pageId > 0) {
+                            $runtime->app->archivePage($actor, $pageId);
+                        }
+                        if ($savedTemplate) {
+                            $runtime->app->deleteTemplate($actor, $templateKey);
+                        }
+                    } catch (\Throwable $ignored) {
+                        // the original failure is the one worth reporting
+                    }
+                    $flash = ['type' => 'error', 'msg' => sb_templates_error_message($e, __('studio_tpl_create_failed', 'The template could not be created. Nothing was saved.'))];
+                }
+
+                // Optionally publish immediately
+                if ($created !== null && $publishNow) {
+                    try {
+                        $runtime->app->publish($actor, $created['page_id'], $created['revision_id'], "Initial publish of {$name}");
+                        $flash = ['type' => 'success', 'msg' => "Theme template '{$name}' created and published! It is now active on the site."];
+                    } catch (\Throwable $pubEx) {
+                        $flash = ['type' => 'warning', 'msg' => rtrim(__('studio_tpl_created_not_published', 'Template created as draft, but it could not be published automatically. You can publish it in the Canvas editor.') . ' ' . sb_templates_error_message($pubEx, ''))];
+                    }
+                } elseif ($created !== null) {
+                    $flash = ['type' => 'success', 'msg' => "Theme template '{$name}' created as draft. Click 'Edit in Canvas' to design and publish."];
                 }
             }
         } elseif ($action === 'publish_template') {
@@ -328,7 +312,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                 } catch (\Throwable $e) {
-                    $flash = ['type' => 'error', 'msg' => 'Failed to publish template: ' . $e->getMessage()];
+                    $flash = ['type' => 'error', 'msg' => sb_templates_error_message($e, __('studio_tpl_publish_failed', 'The template could not be published.'))];
                 }
             }
         } elseif ($action === 'unpublish_template') {
@@ -350,7 +334,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $flash = ['type' => 'success', 'msg' => "Template unpublished (reverted to draft)."];
                     }
                 } catch (\Throwable $e) {
-                    $flash = ['type' => 'error', 'msg' => 'Failed to unpublish template: ' . $e->getMessage()];
+                    $flash = ['type' => 'error', 'msg' => sb_templates_error_message($e, __('studio_tpl_unpublish_failed', 'The template could not be unpublished.'))];
                 }
             }
         } elseif ($action === 'delete_template') {
@@ -390,7 +374,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     $flash = ['type' => 'success', 'msg' => 'Template deleted successfully.'];
                 } catch (\Throwable $e) {
-                    $flash = ['type' => 'error', 'msg' => 'Error deleting template: ' . $e->getMessage()];
+                    $flash = ['type' => 'error', 'msg' => sb_templates_error_message($e, __('studio_tpl_delete_failed', 'The template could not be deleted.'))];
                 }
             }
         }

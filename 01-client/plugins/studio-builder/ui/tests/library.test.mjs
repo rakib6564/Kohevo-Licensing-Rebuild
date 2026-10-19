@@ -160,3 +160,13 @@ test('filterTemplates needs every word, in the name, description or block labels
   assert.deepEqual(filterTemplates(items, 'heading').length, 2);
   assert.equal(filterTemplates(items, 'nothing here').length, 0);
 });
+
+test('library: saving over a taken template key needs an explicit confirmation for that key (TI-05)', () => {
+  const lib0 = [{ template_key: 'hero' }];
+  assert.deepEqual(lib.templateOverwriteFor('fresh', lib0, null, null), { needsConfirm: false, overwrite: false }, 'a new key saves without asking');
+  assert.deepEqual(lib.templateOverwriteFor('hero', lib0, null, null), { needsConfirm: true, overwrite: false }, 'a listed key asks first');
+  assert.deepEqual(lib.templateOverwriteFor('hero', lib0, null, 'hero'), { needsConfirm: true, overwrite: true }, 'confirmed: overwrite is sent');
+  assert.deepEqual(lib.templateOverwriteFor('hero-2', lib0, null, 'hero'), { needsConfirm: false, overwrite: false }, 'a confirmation never carries over to another key');
+  assert.deepEqual(lib.templateOverwriteFor('late', lib0, 'late', null), { needsConfirm: true, overwrite: false }, 'a server template_exists for a key the library did not list also asks');
+  assert.deepEqual(lib.templateOverwriteFor('', lib0, '', ''), { needsConfirm: false, overwrite: false });
+});
