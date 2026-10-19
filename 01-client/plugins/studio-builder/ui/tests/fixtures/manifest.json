@@ -4298,10 +4298,11 @@
                 {
                     "key": "field",
                     "type": "string",
-                    "label": "Field key",
+                    "label": "Field",
                     "required": false,
                     "default": "",
-                    "max_length": 64
+                    "max_length": 64,
+                    "format": "meta_field"
                 },
                 {
                     "key": "show_label",
