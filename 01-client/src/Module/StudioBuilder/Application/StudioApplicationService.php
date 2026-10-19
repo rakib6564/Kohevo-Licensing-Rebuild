@@ -115,6 +115,7 @@ use Slate\Module\StudioBuilder\Repository\PageRepository;
 use Slate\Module\StudioBuilder\Repository\RevisionRepository;
 use Slate\Module\StudioBuilder\Repository\TemplateRepository;
 use Slate\Module\StudioBuilder\Presets\ElementVariantCatalog;
+use Slate\Module\StudioBuilder\Presets\HeaderPresetCatalog;
 use Slate\Module\StudioBuilder\Presets\SectionPresetCatalog;
 use Slate\Module\StudioBuilder\Presets\WireframeOutline;
 use Slate\Module\StudioBuilder\Runtime\StudioLog;
@@ -476,6 +477,26 @@ final class StudioApplicationService
     }
 
     /**
+     * The built-in headers (HeaderPresetCatalog) as library rows, in catalogue order. Like the section presets, the first
+     * call for a tenant seeds them and later calls only read; they are seeded on their own so a header never waits on,
+     * or adds to, the section presets.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function headerPresets(StudioActor $actor): array
+    {
+        $this->authorize($actor, StudioPermissions::VIEW);
+        $this->ensureSystemHeaders();
+        $order = array_flip(array_column(HeaderPresetCatalog::all(), 'key'));
+        $presets = array_values(array_filter(
+            $this->templateLibrary($actor, 'header_preset', true),
+            static fn(array $t): bool => !empty($t['is_system']) && isset($order[(string) $t['template_key']]),
+        ));
+        usort($presets, static fn(array $a, array $b): int => $order[(string) $a['template_key']] <=> $order[(string) $b['template_key']]);
+        return $presets;
+    }
+
+    /**
      * Template library listing: transport-safe rows plus a structural summary
      * and the tenant-scoped thumbnail URL (never a document body).
      *
@@ -519,7 +540,8 @@ final class StudioApplicationService
 
     /**
      * Translate the name and description of a built-in preset for the active admin locale
-     * (`studio_preset_<slug>_name|desc`). Tenant templates are left exactly as written.
+     * (`studio_preset_<slug>_name|desc` for sections, `studio_header_preset_<slug>_name|desc` for headers).
+     * Tenant templates are left exactly as written.
      *
      * @param array<string, mixed> $view
      * @return array<string, mixed>
@@ -527,17 +549,28 @@ final class StudioApplicationService
     private static function translatePresetCopy(array $view): array
     {
         $key = (string) ($view['template_key'] ?? '');
-        if (empty($view['is_system']) || !str_starts_with($key, SectionPresetCatalog::KEY_PREFIX) || !\function_exists('__')) {
+        if (empty($view['is_system']) || !\function_exists('__')) {
             return $view;
         }
-        $slug = str_replace('-', '_', substr($key, strlen(SectionPresetCatalog::KEY_PREFIX)));
+        $families = [SectionPresetCatalog::KEY_PREFIX => 'studio_preset_', HeaderPresetCatalog::KEY_PREFIX => 'studio_header_preset_'];
+        $langPrefix = null;
+        foreach ($families as $keyPrefix => $candidate) {
+            if (str_starts_with($key, $keyPrefix)) {
+                $langPrefix = $candidate;
+                $slug = str_replace('-', '_', substr($key, strlen($keyPrefix)));
+                break;
+            }
+        }
+        if ($langPrefix === null) {
+            return $view;
+        }
         foreach (['name' => 'name', 'description' => 'desc'] as $field => $suffix) {
             $default = (string) ($view[$field] ?? '');
             if ($default === '') {
                 continue;
             }
             try {
-                $view[$field] = (string) \__("studio_preset_{$slug}_{$suffix}", $default);
+                $view[$field] = (string) \__("{$langPrefix}{$slug}_{$suffix}", $default);
             } catch (\Throwable $ignored) {
                 $view[$field] = $default;
             }
@@ -568,6 +601,9 @@ final class StudioApplicationService
     /** Tenant ids whose built-in presets were already synced during this request. */
     private static array $presetsSynced = [];
 
+    /** @var array<int, true> tenants whose built-in headers this request already synced */
+    private static array $headersSynced = [];
+
     /**
      * Make sure the active tenant has the built-in section presets (system templates).
      * Idempotent and cheap after the first call; a failure never blocks the library.
@@ -583,6 +619,21 @@ final class StudioApplicationService
             $this->templates->syncSystemTemplates('section_preset', SectionPresetCatalog::all());
         } catch (\Throwable $e) {
             StudioLog::failure('presets', 'sync_system_templates', $e, 'warning');
+        }
+    }
+
+    /** Make sure the active tenant has the built-in headers (system templates). Idempotent; a failure never blocks the library. */
+    private function ensureSystemHeaders(): void
+    {
+        $tenant = $this->tenants->id();
+        if ($tenant <= 0 || isset(self::$headersSynced[$tenant])) {
+            return;
+        }
+        self::$headersSynced[$tenant] = true;
+        try {
+            $this->templates->syncSystemTemplates('header_preset', HeaderPresetCatalog::all());
+        } catch (\Throwable $e) {
+            StudioLog::failure('presets', 'sync_system_headers', $e, 'warning');
         }
     }
 
@@ -753,6 +804,35 @@ final class StudioApplicationService
             return ['role' => null, 'peers' => []];
         }
         return ['role' => $role, 'peers' => (new ThemeTemplateResolver($this->pageRepo, $this->revisionRepo))->peers($role, $pageId)];
+    }
+
+    /**
+     * The published Single template that lays this page out on the live site, from its working draft's category and
+     * content type, with the width of the section the page's content sits in: `{id, title, content_width}`, or null.
+     * The editing canvas shows the page on its own (no Single template in Editor mode), so the section Inspector uses
+     * this to say when the template keeps a wider section narrower. Read-only.
+     *
+     * @return array{id: int, title: string, content_width: ?string}|null
+     */
+    public function layoutTemplate(StudioActor $actor, int $pageId): ?array
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::VIEW);
+        [$page, $document] = $this->currentDocument($pageId);
+        $settings = is_array($document['settings'] ?? null) ? $document['settings'] : [];
+        if (($settings['template_type'] ?? '') !== '' || !in_array((string) $page['page_type'], ChromeResolver::CHROMED_PAGE_TYPES, true)) {
+            return null;
+        }
+        $hit = (new ThemeTemplateResolver($this->pageRepo, $this->revisionRepo))
+            ->resolveSingle(PageAddress::fromRow($page), ThemeTemplateResolver::singleContext($settings, $tenantId, $pageId));
+        if ($hit === null || (int) ($hit['page']['id'] ?? 0) === $pageId) {
+            return null;
+        }
+        $template = json_decode((string) ($hit['revision']['document_json'] ?? ''), true);
+        return [
+            'id'            => (int) $hit['page']['id'],
+            'title'         => (string) ($hit['page']['title'] ?? ''),
+            'content_width' => is_array($template) ? ThemeTemplateResolver::contentWidth($template) : null,
+        ];
     }
 
     // ── Design tokens ───────────────────────────────────────────────────────

@@ -48,6 +48,34 @@ unit('inline text: a declaration must name a string/text prop, or a link label, 
     assert_eq([], sbit_def([])->toEditorManifest()['inline_text'], 'declaring nothing is allowed');
 });
 
+unit('inline text: a repeater declares one text field of every item, and `unless` names a prop of the block', function (): void {
+    $fields = [
+        ['key' => 'menu', 'type' => 'string', 'label' => 'Menu', 'required' => false, 'default' => '', 'max_length' => 60],
+        ['key' => 'items', 'type' => 'repeater', 'label' => 'Items', 'required' => false, 'default' => [], 'max_items' => 5,
+            'item_schema' => FieldSchema::define([
+                ['key' => 'label', 'type' => 'string', 'label' => 'Label', 'required' => true, 'max_length' => 80],
+                ['key' => 'note', 'type' => 'text', 'label' => 'Note', 'required' => false, 'max_length' => 200],
+                ['key' => 'url', 'type' => 'url', 'label' => 'URL', 'required' => true, 'max_length' => 200],
+            ])],
+    ];
+    $def = sbit_def([['prop' => 'items.*.label', 'selector' => '.sb-x', 'unless' => 'menu'], ['prop' => 'items.*.note', 'selector' => '.sb-y']], $fields);
+    assert_eq(
+        [['prop' => 'items.*.label', 'selector' => '.sb-x', 'multiline' => false, 'unless' => 'menu'], ['prop' => 'items.*.note', 'selector' => '.sb-y', 'multiline' => true]],
+        $def->toEditorManifest()['inline_text'],
+        'an item\'s text field is multiline, its string is not'
+    );
+    foreach ([
+        'an item field that does not exist' => ['prop' => 'items.*.nope', 'selector' => '.sb-x'],
+        'an item url' => ['prop' => 'items.*.url', 'selector' => '.sb-x'],
+        'a fixed index' => ['prop' => 'items.0.label', 'selector' => '.sb-x'],
+        'a wildcard on a non-repeater' => ['prop' => 'menu.*.label', 'selector' => '.sb-x'],
+        'unless an unknown prop' => ['prop' => 'items.*.label', 'selector' => '.sb-x', 'unless' => 'nope'],
+        'unless not a string' => ['prop' => 'items.*.label', 'selector' => '.sb-x', 'unless' => ['menu']],
+    ] as $why => $entry) {
+        assert_throws(\InvalidArgumentException::class, static fn() => sbit_def([$entry], $fields), $why);
+    }
+});
+
 unit('inline text: a text field is multiline, a string is not', function (): void {
     $def = sbit_def(
         [['prop' => 'body', 'selector' => '.sb-b'], ['prop' => 'title', 'selector' => '.sb-t']],
@@ -62,15 +90,18 @@ unit('inline text: a text field is multiline, a string is not', function (): voi
 unit('inline text: the core blocks declare the elements their renderers write', function (): void {
     $registry = ModuleBlockDefinitions::studioRegistry();
     $declared = [];
-    foreach (['core.hero', 'core.heading', 'core.button', 'core.text', 'core.quote', 'core.feature_list'] as $type) {
+    foreach (['core.hero', 'core.heading', 'core.button', 'core.text', 'core.quote', 'core.feature_list', 'core.link', 'core.nav_menu'] as $type) {
         $declared[$type] = array_column($registry->get($type)->toEditorManifest()['inline_text'], 'prop');
     }
     assert_eq(['heading', 'eyebrow', 'subheading'], $declared['core.hero']);
     assert_eq(['link.label'], $declared['core.button']);
+    assert_eq(['link.label'], $declared['core.link']);
+    assert_eq(['items.*.label'], $declared['core.nav_menu']);
+    assert_eq('menu', $registry->get('core.nav_menu')->toEditorManifest()['inline_text'][0]['unless'], 'a chosen site menu is not edited in place');
     assert_eq([], $registry->get('core.image')->toEditorManifest()['inline_text'], 'an image has no text to edit in place');
     // Each declared selector's class is one the block's renderer actually writes.
     $renderers = dirname(__DIR__, 2) . '/src/Module/StudioBuilder/Render/Block/CoreRenderers/';
-    $files = ['core.hero' => 'HeroRenderer', 'core.heading' => 'HeadingRenderer', 'core.button' => 'ButtonRenderer', 'core.text' => 'TextRenderer', 'core.quote' => 'QuoteRenderer', 'core.feature_list' => 'FeatureListRenderer'];
+    $files = ['core.hero' => 'HeroRenderer', 'core.heading' => 'HeadingRenderer', 'core.button' => 'ButtonRenderer', 'core.text' => 'TextRenderer', 'core.quote' => 'QuoteRenderer', 'core.feature_list' => 'FeatureListRenderer', 'core.link' => 'LinkRenderer', 'core.nav_menu' => 'NavMenuRenderer'];
     foreach ($files as $type => $file) {
         $source = (string) file_get_contents($renderers . $file . '.php');
         foreach ($registry->get($type)->toEditorManifest()['inline_text'] as $entry) {

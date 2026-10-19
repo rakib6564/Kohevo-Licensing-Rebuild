@@ -63,12 +63,14 @@ final class StudioAuthoringApi
         'templates'    => ['GET', ['type']],
         // B2-P2a: the built-in section presets (seeded as system templates on first use)
         'section_presets' => ['GET', []],
+        'header_presets'  => ['GET', []],
         'pages'        => ['GET', []],
         // Phase 6 queries
         'components'   => ['GET', []],
         'chrome'       => ['GET', ['page']],
         // Theme Builder: the other published templates of this page's role and their conditions (the "same conditions as" note)
         'template_peers' => ['GET', ['page']],
+        'layout_template' => ['GET', ['page']],
         'tokens'       => ['GET', ['group']],
         // Element Manager (administrators): which blocks the site offers, and where each is used
         'elements'     => ['GET', []],
@@ -247,6 +249,7 @@ final class StudioAuthoringApi
             'revisions'    => StudioApiResponse::ok(['revisions' => $this->app->listRevisions($actor, self::id($input, 'page'), self::optionalInt($input, 'limit') ?? 30)]),
             'templates'    => $this->templates($actor, $input),
             'section_presets' => StudioApiResponse::ok(['presets' => $this->app->sectionPresets($actor)]),
+            'header_presets'  => StudioApiResponse::ok(['presets' => $this->app->headerPresets($actor)]),
             'pages'        => StudioApiResponse::ok(['pages' => $this->app->listPages($actor)]),
             'operations'   => $this->operations($actor, $input),
             'render_block' => $this->renderBlock($actor, $input),
@@ -264,6 +267,7 @@ final class StudioAuthoringApi
             'components'   => StudioApiResponse::ok(['components' => $this->app->listGlobalComponents($actor)]),
             'chrome'       => StudioApiResponse::ok(['chrome' => $this->app->chromeBindings($actor, self::id($input, 'page'))]),
             'template_peers' => StudioApiResponse::ok($this->app->templatePeers($actor, self::id($input, 'page'))),
+            'layout_template' => StudioApiResponse::ok(['template' => $this->app->layoutTemplate($actor, self::id($input, 'page'))]),
             'elements'     => StudioApiResponse::ok($this->app->elementManager($actor)),
             'custom_css'   => StudioApiResponse::ok($this->app->customCss($actor)),
             'tokens'       => StudioApiResponse::ok(['tokens' => $this->app->designTokens($actor, self::tokenGroup($input))]),

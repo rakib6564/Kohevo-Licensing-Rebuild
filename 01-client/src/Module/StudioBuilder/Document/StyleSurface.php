@@ -732,7 +732,13 @@ final class StyleSurface
         }
         self::emitBackgroundImage($style, $backgroundUrl, $out);
         if (isset($style['padding']) && is_array($style['padding'])) {
-            self::emitFields($style['padding'], self::moreFields()['padding'], $out);
+            // `!important`: padding the author set on a section in the Inspector must show even when the site's CSS
+            // spaces sections with a stronger selector (`.sb-main .sb-section{padding:…}`), as for a background image.
+            $padding = [];
+            self::emitFields($style['padding'], self::moreFields()['padding'], $padding);
+            foreach ($padding as $declaration) {
+                $out[] = $declaration . ' !important';
+            }
         }
         return implode(';', $out);
     }

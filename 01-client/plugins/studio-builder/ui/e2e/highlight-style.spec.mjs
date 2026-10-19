@@ -46,6 +46,9 @@ test('the highlighted phrase takes its own colour, italic and underline, and a b
     await expect(span).toHaveClass(/sb-hl--w-bold/);
     await expect.poll(async () => span.evaluate((el) => getComputedStyle(el).color), { timeout: 20_000 }).toBe('rgb(212, 98, 61)');
     await expect.poll(async () => span.evaluate((el) => getComputedStyle(el).fontStyle)).toBe('italic');
+    // The look is also inline, so a site's own highlight CSS (often more specific than the look classes) cannot hide it.
+    await expect(span).toHaveAttribute('style', /font-style:italic/);
+    await expect(span).toHaveAttribute('style', /font-weight:700/);
   } finally {
     await restoreLayers(page, before);
   }

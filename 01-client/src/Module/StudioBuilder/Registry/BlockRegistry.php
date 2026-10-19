@@ -466,7 +466,7 @@ final class BlockRegistry
             category: 'theme',
             icon: 'list-check',
             schema: FieldSchema::define([
-                ['key' => 'field', 'type' => 'string', 'label' => 'Field key', 'required' => false, 'default' => '', 'max_length' => 64, 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
+                ['key' => 'field', 'type' => 'string', 'label' => 'Field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
                 ['key' => 'show_label', 'type' => 'boolean', 'label' => 'Show the field name', 'required' => false, 'default' => false],
                 ['key' => 'fallback', 'type' => 'string', 'label' => 'Text when empty', 'required' => false, 'default' => '', 'max_length' => 255],
                 ['key' => 'tag', 'type' => 'enum', 'label' => 'HTML tag', 'required' => false, 'allowed_values' => ['div', 'p', 'span', 'h2', 'h3', 'h4'], 'default' => 'div'],
@@ -870,6 +870,7 @@ final class BlockRegistry
             ]),
             allowsChildren: false,
             allowedBindingProviders: [],
+            inlineText: [['prop' => 'link.label', 'selector' => '.sb-link']],
         ));
 
         // 33. core.card — a padded surface that holds other blocks.
@@ -996,6 +997,8 @@ final class BlockRegistry
                 ],
             ]),
             allowsChildren: false,
+            // Each link's text edits the matching item; a menu chosen on the Menus screen shows its own links, so not then.
+            inlineText: [['prop' => 'items.*.label', 'selector' => '.sb-nav__link', 'unless' => 'menu']],
         ));
 
         // 39. core.map — an OpenStreetMap embed centred on a point (no key, no tracking cookies).

@@ -110,6 +110,27 @@ try {
     // Graceful fallback
 }
 
+// The site's custom meta fields, for the Field value block's dropdown (Types & fields screen).
+$sbMetaFields = [];
+try {
+    $sbTenant = current_tenant_id();
+    $sbMetaTypes = \Slate\Module\StudioBuilder\Meta\PageMeta::postTypes($sbTenant);
+    foreach (\Slate\Module\StudioBuilder\Meta\PageMeta::allFields($sbTenant) as $f) {
+        $pt = (string) ($f['post_type'] ?? '');
+        if (isset($sbMetaTypes[$pt]) && preg_match('/^[a-z0-9_]{1,64}$/', (string) ($f['key'] ?? '')) === 1) {
+            $sbMetaFields[] = [
+                'key' => (string) $f['key'],
+                'label' => (string) ($f['label'] ?? $f['key']),
+                'type' => (string) ($f['type'] ?? 'text'),
+                'postType' => $pt,
+                'postTypeLabel' => (string) ($sbMetaTypes[$pt]['singular'] ?? $pt),
+            ];
+        }
+    }
+} catch (\Throwable $e) {
+    // The block falls back to an empty list.
+}
+
 $sbBoot = [
     'pageId'     => $sbPageId,
     'allPages'   => $sbAllPages,
@@ -121,6 +142,7 @@ $sbBoot = [
     'csrfToken'  => csrf_token(),
     'canvasSandbox' => StudioCanvasPolicy::IFRAME_SANDBOX,
     'mediaPicker'   => $sbMediaPicker,
+    'metaFields'    => $sbMetaFields,
     'mediaApiUrl'   => plugin_url('studio-builder', 'admin/media-api.php'),
     'builderUrl'    => plugin_url('studio-builder', 'admin/builder.php'),
     'brandingUrl'   => rtrim((string) SLATE_URL, '/') . '/admin/settings.php?tab=branding',
@@ -545,6 +567,8 @@ $sbBoot = [
         'cond_problem_many' => __('studio_ui_cond_problem_many', 'At most 30 conditions.'),
         'cond_needs_include' => __('studio_ui_cond_needs_include', 'Add at least one Include rule: Exclude rules only remove pages from a selection.'),
         'cond_conflict' => __('studio_ui_cond_conflict', 'Same conditions as: {titles}. When templates match a page equally, the one published most recently is shown.'),
+        'width_template_cap' => __('studio_ui_width_template_cap', 'On the live site this page is laid out by the template “{title}”, whose content is {width}, so this section shows no wider than that.'),
+        'width_template_edit' => __('studio_ui_width_template_edit', 'Edit template'),
         'bg_overlay_note' => __('studio_ui_bg_overlay_note', 'Overlay {percent}% on top of the image'),
         'bg_overlay_remove' => __('studio_ui_bg_overlay_remove', 'Remove overlay'),
         'bg_image_covers' => __('studio_ui_bg_image_covers', 'An image is set and is drawn over this colour.'),
@@ -697,6 +721,9 @@ $sbBoot = [
         'theme_source_branding' => __('studio_ui_theme_source_branding', 'from branding'),
         'theme_source_studio' => __('studio_ui_theme_source_studio', 'Studio override'),
         'theme_reset' => __('studio_ui_theme_reset', 'Use inherited'),
+        'meta_field_none' => __('studio_ui_meta_field_none', 'Choose a field…'),
+        'meta_field_missing' => __('studio_ui_meta_field_missing', '{key} (no longer defined)'),
+        'meta_field_empty' => __('studio_ui_meta_field_empty', 'No custom fields yet. Add them under Types & fields.'),
         'theme_save' => __('studio_ui_theme_save', 'Save tokens'),
         'theme_invalid' => __('studio_ui_theme_invalid', 'Some values were rejected. Fix the highlighted tokens.'),
         'theme_group' => __('studio_ui_theme_group', 'Token group'),

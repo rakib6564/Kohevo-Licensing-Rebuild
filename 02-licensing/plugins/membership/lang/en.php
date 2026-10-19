@@ -356,6 +356,7 @@ return [
     'mb_err_could_not_start_purchase' => 'Could not start purchase.',
     'mb_err_could_not_start_payment' => 'Could not start payment.',
     'mb_err_security_check_failed' => 'Security check failed.',
+    'mb_err_terms_url' => 'The other settings were saved, but not the Terms & consent URL: it must be a full address starting with http:// or https://.',
     'mb_err_name_is_required' => 'Name is required.',
     'mb_err_you_do_not_have_permission_to_manage_members' => 'You do not have permission to manage members.',
     'mb_err_membership_activated_manually' => 'Membership activated manually.',
