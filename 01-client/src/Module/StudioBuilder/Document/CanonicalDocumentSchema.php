@@ -278,7 +278,6 @@ final class CanonicalDocumentSchema
         'typography',
         'color',
         'background',
-        'spacing',
         'border',
         'shadow',
         'dimensions',

@@ -144,7 +144,7 @@ unit('style guard: the values the inspector writes still validate', function ():
         'border'     => ['style' => 'solid', 'width' => '2px', 'color' => '#2b3358', 'radius' => '1.25rem'],
         'shadow'     => '0 10px 25px rgba(0,0,0,.15)',
         'dimensions' => ['width' => '100%', 'min_height' => '20rem', 'max_width' => '60rem'],
-        'spacing'    => ['top' => '1rem', 'bottom' => '1rem 2rem'],
+        'padding'    => ['top' => '1rem', 'bottom' => '2rem'],
         'opacity'    => 0.9,
         'z_index'    => 10,
     ]);

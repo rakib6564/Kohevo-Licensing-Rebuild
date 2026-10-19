@@ -22,7 +22,7 @@ use Slate\Tenancy\TenantContext;
 const LIVE_STYLE_FIXTURE = __DIR__ . '/../../plugins/studio-builder/ui/tests/fixtures/live-style.json';
 
 /** The classes the live compiler owns (the same family list as `MANAGED_CLASS` in core/liveStyle.mjs). */
-const LIVE_STYLE_MANAGED = '/^(sb-(font|rad|shd|pad|bg|fg|bd)--[\w-]+|sb-font-(normal|medium|semibold|bold|extrabold|\d{3})|sb-(none|uppercase|lowercase|capitalize)|sb-radius-\w+|sb-border-(none|solid|dashed|dotted|double)|sb-shadow-\w+|sb-ty-[a-z]+)$/';
+const LIVE_STYLE_MANAGED = '/^(sb-(font|rad|shd|pad|bg|fg|bd)--[\w-]+|sb-font-(normal|medium|semibold|bold|extrabold|\d{3})|sb-(normal-case|uppercase|lowercase|capitalize)|sb-radius-\w+|sb-border-(none|solid|dashed|dotted|double)|sb-shadow-\w+|sb-ty-[a-z]+)$/';
 
 /** @return list<string> the theme's token refs */
 function live_style_tokens(): array
