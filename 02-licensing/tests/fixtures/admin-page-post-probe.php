@@ -87,6 +87,7 @@ $fields['_csrf'] = csrf_token();
 
 $_POST = $fields;
 parse_str($pageQuery, $_GET);
+$_REQUEST = array_merge($_GET, $_POST); // PHP default request_order "GP": POST overrides GET
 $_SERVER['REQUEST_METHOD'] = 'POST';
 $_SERVER['REQUEST_URI']    = '/' . ltrim($pagePath, '/') . ($pageQuery !== '' ? '?' . $pageQuery : '');
 $_SERVER['HTTP_HOST']      = 'localhost';
