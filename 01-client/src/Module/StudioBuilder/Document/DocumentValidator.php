@@ -340,8 +340,17 @@ final class DocumentValidator
                     $errors[] = ValidationResult::issue("{$rp}.{$nameKey}", 'invalid_condition_scope', "Unknown display condition '" . (is_string($rule[$nameKey]) ? mb_substr($rule[$nameKey], 0, 40, 'UTF-8') : '') . "'.");
                 }
             }
+            // `action` is include or exclude. The older `type` is too, or (on a rule with no `condition`/`scope`)
+            // the display condition itself. A misspelling is an error rather than a silent inclusion.
+            $hasScope = isset($rule['condition']) || isset($rule['scope']);
             foreach (['action', 'type'] as $actKey) {
-                if (isset($rule[$actKey]) && (!is_string($rule[$actKey]) || preg_match('/^[a-z_0-9]{1,40}$/i', $rule[$actKey]) !== 1)) {
+                if (!isset($rule[$actKey])) {
+                    continue;
+                }
+                $name = is_string($rule[$actKey]) ? strtolower(trim($rule[$actKey])) : null;
+                $known = $name !== null && (in_array($name, ['include', 'exclude'], true)
+                    || ($actKey === 'type' && !$hasScope && in_array($name, CanonicalDocumentSchema::ALLOWED_CONDITION_SCOPES, true)));
+                if (!$known) {
                     $errors[] = ValidationResult::issue("{$rp}.{$actKey}", 'invalid_condition_action', 'A condition action must be include or exclude.');
                 }
             }

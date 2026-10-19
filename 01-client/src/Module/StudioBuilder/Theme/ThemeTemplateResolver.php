@@ -48,7 +48,10 @@ final class ThemeTemplateResolver
         // Merge page attributes into evaluation context
         $evalContext = array_merge(self::pageContext($page), $context);
 
-        if ((!isset($evalContext['category']) || !isset($evalContext['author_id'])) && $this->pages !== null) {
+        // The page's author comes from its row. Its category and tags come only from the caller, which reads them
+        // from the PUBLISHED document: pages.settings_json mirrors the draft, and an unpublished category must not
+        // change the live header or footer.
+        if (!isset($evalContext['author_id'])) {
             $pageRow = null;
             if ($page->id !== null && method_exists($this->pages, 'find')) {
                 $pageRow = $this->pages->find($page->id);
@@ -56,21 +59,8 @@ final class ThemeTemplateResolver
             if ($pageRow === null && method_exists($this->pages, 'findBySlug')) {
                 $pageRow = $this->pages->findBySlug($page->slug, $page->pageType);
             }
-            if ($pageRow !== null && !isset($evalContext['author_id']) && (int) ($pageRow['created_by'] ?? 0) > 0) {
+            if ($pageRow !== null && (int) ($pageRow['created_by'] ?? 0) > 0) {
                 $evalContext['author_id'] = (int) $pageRow['created_by'];
-            }
-            if ($pageRow !== null && !isset($evalContext['category']) && !empty($pageRow['settings_json'])) {
-                try {
-                    $decoded = CanonicalJson::decode((string) $pageRow['settings_json']);
-                    if (is_array($decoded)) {
-                        if (!empty($decoded['category'])) {
-                            $evalContext['category'] = (string) $decoded['category'];
-                        }
-                        if (!empty($decoded['tags'])) {
-                            $evalContext['tags'] = $decoded['tags'];
-                        }
-                    }
-                } catch (\Throwable) {}
             }
         }
 
@@ -102,7 +92,7 @@ final class ThemeTemplateResolver
 
             if (!empty($conditions)) {
                 $score = TemplateConditionMatcher::score($conditions, $evalContext);
-                if ($score > $bestScore) {
+                if ($score > 0 && self::outranks($score, $row, $bestScore, $bestRow)) {
                     $bestScore = $score;
                     $bestRow   = $row;
                 }
@@ -246,7 +236,7 @@ final class ThemeTemplateResolver
                 }
             }
 
-            if ($score > $bestScore) {
+            if (self::outranks($score, $row, $bestScore, $bestRow)) {
                 $bestScore = $score;
                 $bestRow   = $row;
             }
@@ -265,6 +255,26 @@ final class ThemeTemplateResolver
         }
 
         return null;
+    }
+
+    /**
+     * Whether a candidate beats the best one so far. The more specific match wins; between equally specific
+     * ones, the most recently published, then the newer template (higher id). Never the title: renaming a
+     * template must not change which one the site shows.
+     *
+     * @param array<string, mixed>  $row
+     * @param ?array<string, mixed> $bestRow
+     */
+    private static function outranks(int $score, array $row, int $bestScore, ?array $bestRow): bool
+    {
+        if ($bestRow === null || $score !== $bestScore) {
+            return $score > $bestScore;
+        }
+        $published = strcmp((string) ($row['published_at'] ?? ''), (string) ($bestRow['published_at'] ?? ''));
+        if ($published !== 0) {
+            return $published > 0;
+        }
+        return (int) ($row['id'] ?? 0) > (int) ($bestRow['id'] ?? 0);
     }
 
     /**
