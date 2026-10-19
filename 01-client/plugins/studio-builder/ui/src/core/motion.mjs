@@ -10,6 +10,11 @@
 // `.sb-interaction-*` classes plus `data-sb-interaction-trigger`, and
 // `StudioStylesheet` owns the actual keyframes — so the inspector never emits
 // CSS or an animation name the renderer does not already understand.
+// Every trigger offered here does something: click replays the chosen
+// animation (studio-runtime.js), load plays it as the page loads, and scroll
+// ties it (or a gentle drift) to the scroll position.
+
+import { t } from './messages.mjs';
 
 /** `animation.type` — must match DocumentValidator's list, in order. */
 export const ANIMATION_TYPES = Object.freeze([
@@ -61,6 +66,18 @@ export const MOTION_PRESETS = Object.freeze([
   { value: 'reveal_left', label: 'Reveal', hint: 'Wipes into view from the left' },
   { value: 'reveal_up', label: 'Reveal up', hint: 'Wipes into view from the bottom' },
 ]);
+
+/**
+ * An option's label in the editor's language. Each option has a message key (`motion_anim_*`,
+ * `motion_trigger_*`, `motion_ease_*`, `motion_preset_*`); the English `label` / `hint` above are the defaults.
+ */
+const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+export function motionLabel(kind, option, part = 'label') {
+  const id = kind === 'ease' ? slug(option.label) : (slug(option.value) || 'none');
+  const key = `motion_${kind}_${id}${part === 'hint' ? '_hint' : ''}`;
+  const text = t(key);
+  return text === key ? (part === 'hint' ? option.hint : option.label) : text;
+}
 
 const ANIMATION_VALUES = new Set(ANIMATION_TYPES.map((o) => o.value));
 const TRIGGER_VALUES = new Set(INTERACTION_TRIGGERS.map((o) => o.value).filter(Boolean));

@@ -40,7 +40,7 @@ final class VideoRenderer implements BlockRendererInterface
 
         $embedUrl = self::buildEmbedUrl($url, $autoplay, $controls, $muted, $loop);
         if ($embedUrl === null) {
-            return '<div class="sb-video-wrapper sb-video--aspect-' . str_replace(':', '-', $aspect) . '"><div class="sb-video__placeholder" style="background:#1f2937;color:#9ca3af;display:flex;align-items:center;justify-content:center;height:100%;">Video unavailable</div></div>';
+            return '<div class="sb-video-wrapper sb-video--aspect-' . str_replace(':', '-', $aspect) . '"><div class="sb-video__placeholder" style="background:#1f2937;color:#9ca3af;display:flex;align-items:center;justify-content:center;height:100%;">' . Html::e(Html::t('studio_video_unavailable', 'Video unavailable')) . '</div></div>';
         }
 
         $classes = ['sb-video-wrapper', 'sb-video--aspect-' . str_replace(':', '-', $aspect)];
@@ -63,7 +63,7 @@ final class VideoRenderer implements BlockRendererInterface
         }
 
         return '<div' . Html::classAttr($classes) . '>'
-            . '<iframe src="' . Html::e($embedUrl) . '" loading="lazy" title="Video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'
+            . '<iframe src="' . Html::e($embedUrl) . '" loading="lazy" title="' . Html::e(Html::t('studio_video', 'Video')) . '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'
             . '</div>';
     }
 

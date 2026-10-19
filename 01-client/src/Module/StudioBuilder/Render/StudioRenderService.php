@@ -67,7 +67,7 @@ final class StudioRenderService
         if ($context->mode->isPublic()) {
             throw new \LogicException('renderRevision() serves authoring contexts only; public output comes from renderPublished().');
         }
-        $context = $this->withPageMeta($page, $context);
+        $context = $this->withPageMeta($page, $context->withAttributes($this->compiler->singleAttributes($page, $revision, $context)));
         $compiled = $this->compiler->compile($page, $revision, $context);
         $html = $this->assembler->assemble($compiled, $this->slots->fill($compiled, $context), $context);
         return new RenderResult($context->mode, $html, StudioCachePolicy::headersFor($context->mode));
@@ -91,7 +91,7 @@ final class StudioRenderService
             return null;
         }
 
-        $context = $this->withPageMeta($page, $context);
+        $context = $this->withPageMeta($page, $context->withAttributes($this->compiler->singleAttributes($page, $revision, $context)));
         $compiled = $this->compiler->publishedArtifact($page, $revision, $context);
         $html = $this->assembler->assemble($compiled, $this->slots->fill($compiled, $context), $context);
 

@@ -14,7 +14,7 @@
 import { asObject } from '../../core/doc.mjs';
 import {
   ANIMATION_TYPES, DELAY_RANGE, DURATION_RANGE, EASINGS, INTERACTION_TRIGGERS,
-  MOTION_PRESETS, clampMs, normalizeAnimation, normalizeInteractions,
+  MOTION_PRESETS, clampMs, motionLabel, normalizeAnimation, normalizeInteractions,
 } from '../../core/motion.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
@@ -64,12 +64,12 @@ export function MotionInspector({ block, applyOp, label, section = false }) {
                   type="button"
                   role="radio"
                   aria-checked={active}
-                  title={preset.hint}
+                  title={motionLabel('preset', preset, 'hint')}
                   className={`sbx-motion-preset${active ? ' is-active' : ''}`}
                   onClick={() => choosePreset(preset.value)}
                 >
-                  <span className="sbx-motion-preset__label">{preset.label}</span>
-                  <span className="sbx-motion-preset__hint">{preset.hint}</span>
+                  <span className="sbx-motion-preset__label">{motionLabel('preset', preset)}</span>
+                  <span className="sbx-motion-preset__hint">{motionLabel('preset', preset, 'hint')}</span>
                 </button>
               );
             })}
@@ -84,7 +84,7 @@ export function MotionInspector({ block, applyOp, label, section = false }) {
             value={animation.type}
             onChange={(e) => choosePreset(e.target.value)}
           >
-            {ANIMATION_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {ANIMATION_TYPES.map((o) => <option key={o.value} value={o.value}>{motionLabel('anim', o)}</option>)}
           </select>
         </Field>
 
@@ -113,7 +113,7 @@ export function MotionInspector({ block, applyOp, label, section = false }) {
                 value={animation.easing || EASINGS[0].value}
                 onChange={(e) => commitAnimation({ ...animation, easing: e.target.value })}
               >
-                {EASINGS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {EASINGS.map((o) => <option key={o.value} value={o.value}>{motionLabel('ease', o)}</option>)}
               </select>
             </Field>
           </fieldset>
@@ -173,7 +173,7 @@ function InteractionSection({ idPrefix, interactions, onChange }) {
           onChange={(e) => onChange(normalizeInteractions({ trigger: e.target.value }))}
         >
           {INTERACTION_TRIGGERS.map((o) => (
-            <option key={o.value || 'none'} value={o.value}>{o.label}</option>
+            <option key={o.value || 'none'} value={o.value}>{motionLabel('trigger', o)}</option>
           ))}
         </select>
         {trigger === 'scroll' && <p className="sbx-hint">{t('motion_scroll_hint')}</p>}
@@ -189,7 +189,7 @@ function InteractionSection({ idPrefix, interactions, onChange }) {
               animation: { type: e.target.value },
             }))}
           >
-            {ANIMATION_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {ANIMATION_TYPES.map((o) => <option key={o.value} value={o.value}>{motionLabel('anim', o)}</option>)}
           </select>
         </Field>
       )}
@@ -218,7 +218,7 @@ export function EntranceSelect({ block, applyOp, label, section = false }) {
           commit(next);
         }}
       >
-        {MOTION_PRESETS.map((preset) => <option key={preset.value} value={preset.value}>{preset.label}</option>)}
+        {MOTION_PRESETS.map((preset) => <option key={preset.value} value={preset.value}>{motionLabel('preset', preset)}</option>)}
       </select>
     </Field>
   );

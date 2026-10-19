@@ -68,6 +68,20 @@ class StudioFreelancerPortfolio extends Plugin
                 ['key' => 'copyright', 'type' => 'string', 'label' => 'Copyright Text', 'required' => false, 'default' => '© 2026 Elena Rostova. Crafted with high-performance elegance.', 'max_length' => 200],
                 ['key' => 'status', 'type' => 'string', 'label' => 'Availability Status', 'required' => false, 'default' => 'Available for Select Q4 Engagements', 'max_length' => 120],
                 ['key' => 'location', 'type' => 'string', 'label' => 'Location / Work Mode', 'required' => false, 'default' => 'San Francisco, CA · Remote Worldwide', 'max_length' => 120],
+                // Social and contact links are the site owner's own, so they start empty and only filled ones show.
+                [
+                    'key'         => 'links',
+                    'type'        => 'repeater',
+                    'label'       => 'Social Links',
+                    'required'    => false,
+                    'default'     => [],
+                    'max_items'   => 8,
+                    'item_schema' => \Slate\Module\StudioBuilder\Schema\FieldSchema::define([
+                        ['key' => 'label', 'type' => 'string', 'label' => 'Label', 'required' => false, 'default' => '', 'max_length' => 40],
+                        ['key' => 'url', 'type' => 'url', 'label' => 'URL', 'required' => false, 'default' => null],
+                    ]),
+                ],
+                ['key' => 'email', 'type' => 'string', 'label' => 'Contact Email', 'required' => false, 'default' => '', 'max_length' => 190, 'pattern' => '/^$|^[^@\\s<>\"\']+@[^@\\s<>\"\']+\\.[^@\\s<>\"\']+$/'],
             ],
             'renderer'    => [self::class, 'renderFooter'],
         ]);
@@ -282,13 +296,27 @@ class StudioFreelancerPortfolio extends Plugin
             . '<span class="sb-portfolio-footer-status"><span class="sb-portfolio-status-dot"></span> ' . Html::e($status) . '</span>'
             . '<span class="sb-portfolio-footer-copy">' . Html::e($copyright) . ' · ' . Html::e($location) . '</span>'
             . '</div>'
-            . '<div class="sb-portfolio-footer-socials">'
-            . '<a href="https://github.com" target="_blank" rel="noopener" class="sb-portfolio-social-link">GitHub ↗</a>'
-            . '<a href="https://linkedin.com" target="_blank" rel="noopener" class="sb-portfolio-social-link">LinkedIn ↗</a>'
-            . '<a href="https://twitter.com" target="_blank" rel="noopener" class="sb-portfolio-social-link">X / Twitter ↗</a>'
-            . '<a href="mailto:contact@rakibhasaan.com" class="sb-portfolio-social-link">Email ↗</a>'
-            . '</div>'
+            . self::footerLinks($scope)
             . '</footer>';
+    }
+
+    /** The footer's social links and email: only the ones filled in, each with a checked address. */
+    private static function footerLinks(BlockRenderScope $scope): string
+    {
+        $links = '';
+        foreach ((array) $scope->prop('links', []) as $link) {
+            $url = is_array($link) ? Html::safeUrl($link['url'] ?? null) : null;
+            $label = is_array($link) && is_string($link['label'] ?? null) ? trim($link['label']) : '';
+            if ($url === null || $label === '') {
+                continue;
+            }
+            $links .= '<a href="' . Html::e($url) . '" target="_blank" rel="noopener" class="sb-portfolio-social-link">' . Html::e($label) . ' ↗</a>';
+        }
+        $email = trim($scope->string('email', ''));
+        if (filter_var($email, FILTER_VALIDATE_EMAIL) !== false) {
+            $links .= '<a href="mailto:' . Html::e($email) . '" class="sb-portfolio-social-link">' . Html::e(Html::t('studio_email', 'Email')) . ' ↗</a>';
+        }
+        return $links !== '' ? '<div class="sb-portfolio-footer-socials">' . $links . '</div>' : '';
     }
 
     public static function renderStatusPill(BlockRenderScope $scope): string

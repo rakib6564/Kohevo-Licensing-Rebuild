@@ -295,6 +295,64 @@
       els.forEach(function (el) { el.style.transform = ''; });
     });
   }
+/* ── Feature: click and scroll interaction triggers ──────────────────────
+   * The renderer marks a block with `data-sb-interaction-trigger`.
+   *   click:  each click (re)plays the block's chosen animation: data-sb-play is removed, a reflow restarts
+   *           the animation, and it is set again. The stylesheet holds the animation until then.
+   *   scroll: where the browser has no scroll timelines (animation-timeline: view()), a block with no
+   *           animation of its own drifts against the scroll here instead, transform-only.
+   * Reduced motion: nothing plays and nothing moves.
+   */
+
+  function initInteractions(root) {
+    var clicks = qsa(root, '[data-sb-interaction-trigger="click"]');
+    var offs = [];
+    if (!reducedMotion()) {
+      clicks.forEach(function (el) {
+        offs.push(on(el, 'click', function () {
+          el.removeAttribute('data-sb-play');
+          void el.offsetWidth; // restart the animation, also when it is clicked again mid-play
+          el.setAttribute('data-sb-play', '');
+        }));
+        offs.push(on(el, 'animationend', function () { el.removeAttribute('data-sb-play'); }));
+      });
+    }
+
+    var timelines = global.CSS && global.CSS.supports && global.CSS.supports('animation-timeline: view()');
+    var drifters = (timelines || reducedMotion()) ? [] : qsa(root, '[data-sb-interaction-trigger="scroll"]').filter(function (el) {
+      return !/(^|\s)sb-animate-/.test(el.className || '');
+    });
+    var ticking = false;
+    function update() {
+      ticking = false;
+      var vh = global.innerHeight || 1;
+      drifters.forEach(function (el) {
+        var rect = el.getBoundingClientRect();
+        if (rect.bottom < 0 || rect.top > vh) return;
+        // 0 as the block enters at the bottom, 1 as it leaves at the top: the same range as the CSS rule.
+        var progress = clamp((vh - rect.top) / (vh + rect.height), 0, 1);
+        el.style.transform = 'translate3d(0,' + (32 - 64 * progress).toFixed(2) + 'px,0)';
+      });
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      global.requestAnimationFrame(update);
+    }
+    if (drifters.length) {
+      offs.push(on(global, 'scroll', onScroll, { passive: true }));
+      offs.push(on(global, 'resize', onScroll, { passive: true }));
+      update();
+    }
+
+    if (!offs.length) return;
+    mount(function () {
+      offs.forEach(function (off) { off(); });
+      clicks.forEach(function (el) { el.removeAttribute('data-sb-play'); });
+      drifters.forEach(function (el) { el.style.transform = ''; });
+    });
+  }
+
 /* ── Feature: overlay focus trap ────────────────────────────────────────
    * Shared by modal, offcanvas and lightbox. The current Kohevo modal relies on
    * CSS `:target`, which cannot trap focus, cannot close on Escape, and leaves
@@ -793,12 +851,15 @@
       var timer = null;
       var dots = [];
 
+      // Labels come from the server (translated); the English ones are only for markup that has none.
+      var label = function (name, fallback) { return group.getAttribute('data-sb-label-' + name) || fallback; };
+      var paused = false;
       group.setAttribute('role', 'region');
-      group.setAttribute('aria-roledescription', 'carousel');
+      if (!group.hasAttribute('aria-roledescription')) group.setAttribute('aria-roledescription', 'carousel');
       slides.forEach(function (s, i) {
         s.setAttribute('role', 'group');
-        s.setAttribute('aria-roledescription', 'slide');
-        s.setAttribute('aria-label', (i + 1) + ' of ' + slides.length);
+        s.setAttribute('aria-roledescription', label('slide', 'slide'));
+        s.setAttribute('aria-label', label('slide-of', '%1$s of %2$s').replace('%1$s', String(i + 1)).replace('%2$s', String(slides.length)));
         if (!s.id) s.id = uid('slide');
       });
 
@@ -818,7 +879,7 @@
           });
         });
         dots.forEach(function (d, i) {
-          d.setAttribute('aria-selected', i === index ? 'true' : 'false');
+          d.setAttribute('aria-current', i === index ? 'true' : 'false');
           if (d.classList) d.classList.toggle('is-active', i === index);
         });
       }
@@ -834,6 +895,15 @@
         if (e.target.closest('[data-sb-car-next]')) { e.preventDefault(); stop(); go(index + 1); restart(); }
         var dot = e.target.closest('[data-sb-car-dot]');
         if (dot) { e.preventDefault(); stop(); go(parseInt(dot.getAttribute('data-sb-car-dot'), 10)); restart(); }
+        var pause = e.target.closest('[data-sb-car-pause]');
+        if (pause) {
+          e.preventDefault();
+          paused = !paused;
+          pause.setAttribute('aria-pressed', paused ? 'true' : 'false');
+          pause.setAttribute('aria-label', paused ? (pause.getAttribute('data-sb-label-play') || 'Play slideshow') : (pause.getAttribute('data-sb-label-pause') || 'Pause slideshow'));
+          pause.innerHTML = paused ? '&#9654;' : '&#10073;&#10073;';
+          if (paused) stop(); else restart();
+        }
       }));
       off.push(on(group, 'keydown', function (e) {
         if (e.key === 'ArrowLeft') { e.preventDefault(); go(index - 1); }
@@ -862,25 +932,32 @@
         startX = null; delta = 0; restart();
       }));
 // Dots
+      // The server renders one dot per slide; with several slides per view there are fewer positions, so the
+      // dots are rebuilt then, with the server's (translated) label.
       var dotsHost = qs(group, '[data-sb-car-dots]');
       if (dotsHost) {
-        dotsHost.innerHTML = '';
-        for (var i = 0; i <= max; i++) {
-          var b = document.createElement('button');
-          b.type = 'button';
-          b.className = 'sb-carousel__dot';
-          b.setAttribute('data-sb-car-dot', String(i));
-          b.setAttribute('role', 'tab');
-          b.setAttribute('aria-label', 'Go to slide ' + (i + 1));
-          dotsHost.appendChild(b);
-          dots.push(b);
+        var existing = qsa(dotsHost, '[data-sb-car-dot]');
+        if (existing.length === max + 1) {
+          dots = existing;
+        } else {
+          dotsHost.innerHTML = '';
+          for (var i = 0; i <= max; i++) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'sb-carousel__dot';
+            b.setAttribute('data-sb-car-dot', String(i));
+            b.setAttribute('aria-label', label('go', 'Go to slide') + ' ' + (i + 1));
+            dotsHost.appendChild(b);
+            dots.push(b);
+          }
         }
       }
+      group.setAttribute('data-sb-car-ready', '');
 
       function stop() { if (timer) { global.clearInterval(timer); timer = null; } }
       function restart() {
         stop();
-        if (!auto || reducedMotion() || !loop) return;
+        if (!auto || reducedMotion() || !loop || paused) return;
         timer = global.setInterval(function () { go(index + 1); }, auto || CONFIG.carouselInterval);
       }
 
@@ -901,6 +978,7 @@
         document.removeEventListener('visibilitychange', onVisibility);
         off.forEach(function (un) { un(); });
         track.style.transform = '';
+        group.removeAttribute('data-sb-car-ready');
       });
     });
 
@@ -1073,6 +1151,7 @@
     ['stagger', initStagger],
     ['counters', initCounters],
     ['parallax', initParallax],
+    ['interactions', initInteractions],
     ['stickyHeader', initStickyHeader],
     ['overlays', initOverlays],
     ['galleryLightbox', initGalleryLightbox],
