@@ -69,3 +69,24 @@ test('a block takes a reveal preset and a section takes its own motion; both rea
     await restore(page, before);
   }
 });
+
+test('a block\'s interaction and its animation reach the canvas without a reload', async ({ page }) => {
+  await openBuilder(page);
+  await settled(page);
+  const before = await layerCount(page);
+  try {
+    await insertBlock(page, 'core.heading');
+    await page.locator('[id^="sbx-blk-"][id$="-tab-style"]').click();
+    await openSection(page, 'motion');
+    await page.locator('select[id^="sbx-motion-"][id$="-trigger"]').selectOption('hover');
+    await page.locator('select[id^="sbx-motion-"][id$="-trigger-anim"]').selectOption('fade_in');
+    await settled(page);
+    // Painted by the server (the live patch cannot write motion classes), and merged into the open canvas.
+    const heading = (await frameDocument(page)).locator('[data-sb-type="core.heading"].sb-interaction-hover.sb-animate-fade-in');
+    await expect(heading).toHaveCount(1, { timeout: 20_000 });
+    await expect(heading).toHaveAttribute('data-sb-interaction-trigger', 'hover');
+    await expect(page.getByRole('alert')).toHaveCount(0);
+  } finally {
+    await restore(page, before);
+  }
+});

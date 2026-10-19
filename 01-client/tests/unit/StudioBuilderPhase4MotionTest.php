@@ -34,7 +34,7 @@ use Slate\Tenancy\TenantContext;
 const SBP4M_TENANT = 101;
 
 /** Render one heading block carrying the given animation / interactions. */
-function sbp4m_render(array $animation, array $interactions = []): string
+function sbp4m_render(array $animation, array $interactions = [], array $style = []): string
 {
     $registry  = BlockRegistry::withAllCoreBlocks();
     $renderers = BlockRendererRegistry::withCoreRenderers();
@@ -52,7 +52,7 @@ function sbp4m_render(array $animation, array $interactions = []): string
         'type'         => 'core.heading',
         'version'      => 1,
         'props'        => ['text' => 'Motion', 'level' => 'h2'],
-        'style'        => CanonicalDocumentSchema::defaultBlockStyle(),
+        'style'        => $style + CanonicalDocumentSchema::defaultBlockStyle(),
         'visibility'   => CanonicalDocumentSchema::defaultVisibility(),
         'bindings'     => [],
         'children'     => [],
@@ -85,6 +85,16 @@ unit('phase4: the block emits exactly one style attribute', function (): void {
     // `style=` would silently discard one of them in the browser.
     $html = sbp4m_render(['type' => 'fade_in', 'duration_ms' => 600], ['trigger' => 'hover']);
     assert_eq(1, preg_match_all('/\sstyle="/', $html), 'exactly one style attribute: ' . $html);
+});
+
+unit('phase4: the block\'s own inline styles and the motion variables are separate declarations', function (): void {
+    // They used to run together ("z-index:-5--sb-anim-delay:150ms"), so the browser dropped the block's last inline style.
+    $html = sbp4m_render(['type' => 'fade_up', 'delay_ms' => 150], [], ['z_index' => -5]);
+    assert_true(preg_match('/\sstyle="([^"]*)"/', $html, $m) === 1, 'a style attribute: ' . $html);
+    $declarations = array_map('trim', explode(';', html_entity_decode($m[1])));
+    assert_true(in_array('z-index:-5', $declarations, true), 'the z-index is its own declaration: ' . $m[1]);
+    assert_true(in_array('--sb-anim-delay:150ms', $declarations, true), 'and so is the delay: ' . $m[1]);
+    assert_eq(1, preg_match_all('/\sstyle="/', sbp4m_render([], [], ['z_index' => 3])), 'no motion: the inline style alone');
 });
 
 unit('phase4: a block with motion timing but no type emits no variables', function (): void {

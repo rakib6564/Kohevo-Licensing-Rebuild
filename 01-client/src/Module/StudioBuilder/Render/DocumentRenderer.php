@@ -196,7 +196,9 @@ final class DocumentRenderer
         // One `style` attribute only: the motion variables ride along with the
         // block's own inline styles rather than opening a second one.
         $inlineStyles = $this->buildInlineStyles(is_array($block['style'] ?? null) ? $block['style'] : []);
-        $combined     = trim($inlineStyles . $motionVars);
+        // Joined with a `;`: the inline styles end without one, and run together with the timing variables the last
+        // inline declaration (often the z-index) became invalid and was dropped as soon as a block had animation timing.
+        $combined     = implode(';', array_filter([trim($inlineStyles, " ;"), trim($motionVars, " ;")], static fn(string $part): bool => $part !== ''));
         $styleAttr    = $combined !== '' ? ' style="' . Html::e($combined) . '"' : '';
 
         $metadata = empty($block[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($block['id'] ?? ''), $type) : '';
