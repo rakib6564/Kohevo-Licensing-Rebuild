@@ -35,19 +35,51 @@ body.sb-body { background: var(--sl-paper); color: var(--sl-ink); font-family: v
   font-family: var(--sl-sans); font-size: .72rem; line-height: 1.4; font-weight: 400; letter-spacing: .3em;
   text-transform: uppercase; color: var(--sl-clay); margin-bottom: 0; }
 
-/* ── Header ───────────────────────────────────────────────────────────── */
-.sb-site-header { position: sticky; top: 0; z-index: 40; background: rgba(246, 241, 234, .9);
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--sl-line); }
-.sb-site-header .sb-section { padding-top: 1.1rem; padding-bottom: 1.1rem; background: transparent; }
+/* ── Header: Menu · wordmark · Book, centred on every screen ─────────── */
+/* No backdrop-filter here: it would make the header the containing block of the fixed overlay and clip it. */
+.sb-site-header { position: sticky; top: 0; z-index: 40; background: var(--sl-paper); border-bottom: 1px solid var(--sl-line); }
+.sb-site-header > .sb-section { padding-top: 1.15rem; padding-bottom: 1.15rem; background: transparent; }
 .sb-site-header p, .sb-site-header ul { margin: 0; }
-.sb-site-header .sb-link { font-family: var(--sl-serif); font-size: 1.85rem; font-weight: 500; letter-spacing: .14em;
-  text-transform: uppercase; color: var(--sl-ink); text-decoration: none; line-height: 1; }
-.sb-body .sb-nav__link { font-size: .74rem; font-weight: 400; letter-spacing: .2em; text-transform: uppercase;
-  color: var(--sl-ink); text-decoration: none; transition: color .25s; }
-.sb-body .sb-nav__link:hover, .sb-body .sb-nav__link[aria-current] { color: var(--sl-clay); }
-.sb-site-header .sb-nav__list { gap: 2.25rem; }
-.sb-offcanvas__panel { background: var(--sl-paper); }
-.sb-offcanvas__panel .sb-nav__link { font-family: var(--sl-serif); font-size: 1.8rem; letter-spacing: .02em; text-transform: none; }
+.sb-body .sl-header { display: flex; align-items: center; }
+.sb-body .sl-header > .sb-block { flex: 1 1 0; min-width: 0; margin: 0; }
+.sb-body .sl-hdr-brand, .sb-body .sl-hdr-brand .sb-link-row { display: flex; justify-content: center; text-align: center; }
+.sb-body .sl-hdr-book, .sb-body .sl-hdr-book .sb-button-row { display: flex; justify-content: flex-end; }
+.sb-body .sl-hdr-brand .sb-link { font-family: var(--sl-serif); font-size: 1.9rem; font-weight: 500; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--sl-ink); text-decoration: none; line-height: 1; padding-left: .2em; }
+
+/* The trigger: two hairlines and a tracked word. */
+.sb-body .sl-hdr-menu > .sb-button { display: inline-flex; align-items: center; gap: .9rem; background: none; border: 0;
+  padding: .55rem 0; border-radius: 0; color: var(--sl-ink); font-size: .74rem; letter-spacing: .26em; }
+.sb-body .sl-hdr-menu > .sb-button::before { content: ""; width: 28px; height: 7px; border-top: 1px solid currentColor;
+  border-bottom: 1px solid currentColor; transition: width .3s; }
+.sb-body .sl-hdr-menu > .sb-button:hover { background: none; color: var(--sl-clay); }
+.sb-body .sl-hdr-menu > .sb-button:hover::before { width: 36px; }
+
+/* The overlay, by id: the runtime moves an open dialog to the end of <body>, out of the header. */
+#solaya-menu .sb-offcanvas__backdrop { background: var(--sl-deep); }
+#solaya-menu .sb-offcanvas__panel { inset: 0; width: 100%; max-width: none; height: 100%; max-height: none;
+  background: var(--sl-deep); color: var(--sl-on-deep); box-shadow: none; animation: sl-overlay-in .45s ease both; }
+@keyframes sl-overlay-in { from { opacity: 0; transform: translateY(-1.5rem); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { #solaya-menu .sb-offcanvas__panel { animation: none; } }
+#solaya-menu .sb-offcanvas__header { border: 0; padding: 1.15rem clamp(1.25rem, 4vw, 3rem);
+  border-bottom: 1px solid rgba(246, 241, 234, .12); }
+#solaya-menu .sb-offcanvas__header h3 { margin: 0 auto; font-family: var(--sl-serif); font-size: 1.9rem; font-weight: 500;
+  letter-spacing: .2em; text-transform: uppercase; color: var(--sl-paper); line-height: 1; padding-left: .2em; }
+#solaya-menu .sb-offcanvas__close { position: absolute; right: clamp(1.25rem, 4vw, 3rem); color: var(--sl-paper);
+  font-size: 2.6rem; font-weight: 200; line-height: 1; }
+#solaya-menu .sb-offcanvas__close:hover { color: #d9b79f; }
+#solaya-menu .sb-offcanvas__body { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: clamp(2.5rem, 7vw, 7rem); align-items: end; padding: clamp(2.5rem, 7vh, 5rem) clamp(1.25rem, 7vw, 7rem) clamp(2.5rem, 9vh, 6rem); }
+.sb-body .sl-overlay-nav .sb-nav__list { display: flex; flex-direction: column; gap: .15rem; }
+.sb-body .sl-overlay-nav .sb-nav__link { font-family: var(--sl-serif); font-weight: 300; font-size: clamp(2.5rem, 6.2vw, 5.4rem);
+  line-height: 1.08; letter-spacing: -.01em; text-transform: none; color: var(--sl-paper); }
+.sb-body .sl-overlay-nav .sb-nav__link:hover { color: #d9b79f; font-style: italic; }
+.sb-body .sl-overlay-aside { border-top: 1px solid rgba(246, 241, 234, .16); padding-top: 1.75rem; max-width: 24rem; }
+.sb-body .sl-overlay-aside .sb-text { color: var(--sl-on-deep); }
+.sb-body .sl-overlay-aside .sl-eyebrow .sb-text, .sb-body .sl-overlay-aside .sl-eyebrow { color: #d9b79f; }
+.sb-body .sl-overlay-aside .sb-button--primary { background: var(--sl-paper); color: var(--sl-ink); border-color: var(--sl-paper); }
+.sb-body .sl-overlay-aside .sb-button--primary:hover { background: #d9b79f; border-color: #d9b79f; }
+.sb-body .sl-overlay-aside .sb-link { color: var(--sl-paper); }
 
 /* ── Buttons ──────────────────────────────────────────────────────────── */
 .sb-body .sb-button { border-radius: 999px; font-family: var(--sl-sans); font-size: .76rem; font-weight: 400;
@@ -177,5 +209,8 @@ body.sb-body { background: var(--sl-paper); color: var(--sl-ink); font-family: v
   .sb-body .sb-hero__media { order: -1; }
   .sb-body .sb-hero__media img { border-radius: 999px 999px 6px 6px; max-height: 70vh; }
   .sb-body .sb-stat { border-left: 0; border-top: 1px solid var(--sl-line); padding: 1.2rem 0 0; }
-  .sb-site-header .sb-link { font-size: 1.5rem; }
+  .sb-body .sl-hdr-brand .sb-link { font-size: 1.45rem; letter-spacing: .16em; }
+  .sb-body .sl-hdr-book .sb-button { display: none; }
+  #solaya-menu .sb-offcanvas__body { grid-template-columns: 1fr; align-items: start; align-content: space-between; }
+  #solaya-menu .sb-offcanvas__header h3 { font-size: 1.45rem; }
 }

@@ -134,8 +134,6 @@ function centered(): array { return ['style' => ['align' => ['base' => 'center']
 /** Shown only to signed-in staff until a human supplies the missing fact (see the list at the end). */
 function staff_only(): array { return ['visibility' => ['auth_state' => 'authenticated', 'devices' => ['base', 'sm', 'md', 'lg']]]; }
 
-const PHONE = ['base', 'sm'];
-const WIDE  = ['md', 'lg'];
 
 // ── 1. Images: soft generated artwork (no stock photos), registered in the media library ────────────────────────
 // Under /uploads/media/: the image renderer only serves files from the media library's managed folders.
@@ -302,16 +300,21 @@ $menu = [
     ['label' => 'Contact', 'url' => '/contact'],
 ];
 
+// Menu · wordmark · Book, the same on every screen. "Menu" opens a full-width overlay (styled in solaya.css).
 $header = [SEC('Header', [
     B('layout.flex', ['direction' => 'row', 'justify' => 'between', 'align' => 'center', 'gap' => 'md', 'wrap' => 'nowrap'], [
-        B('core.link', ['link' => link_to('Solaya', '/'), 'style' => 'plain']),
-        B('core.nav_menu', ['items' => $menu, 'layout' => 'horizontal', 'aria_label' => 'Main menu', 'align' => 'center'], [], ['visibility' => ['auth_state' => 'any', 'devices' => WIDE]]),
-        B('core.button', ['link' => link_to('Book a free call', '/book-a-call'), 'variant' => 'primary', 'size' => 'sm'], [], ['visibility' => ['auth_state' => 'any', 'devices' => WIDE]]),
-        B('layout.offcanvas', ['drawer_id' => 'solaya-menu', 'position' => 'right', 'title' => 'Menu', 'trigger_text' => 'Menu', 'trigger_variant' => 'outline'], [
-            B('core.nav_menu', ['items' => $menu, 'layout' => 'vertical', 'aria_label' => 'Main menu']),
-            B('core.button', ['link' => link_to('Book a free call', '/book-a-call'), 'variant' => 'primary', 'full_width' => true]),
-        ], ['visibility' => ['auth_state' => 'any', 'devices' => PHONE]]),
-    ]),
+        B('layout.offcanvas', ['drawer_id' => 'solaya-menu', 'position' => 'top', 'title' => 'Solaya', 'trigger_text' => 'Menu', 'trigger_variant' => 'ghost'], [
+            B('core.nav_menu', ['items' => $menu, 'layout' => 'vertical', 'aria_label' => 'Main menu'], [], ['classNames' => ['sl-overlay-nav']]),
+            B('core.container', ['direction' => 'vertical', 'gap' => 'md'], [
+                EYEBROW('Begin here'),
+                B('core.text', ['content' => 'Every path starts with a free 20-minute discovery call, online, with nothing to prepare.']),
+                B('core.button', ['link' => link_to('Book a free discovery call', '/book-a-call'), 'variant' => 'primary']),
+                B('core.link', ['link' => link_to('Or send a message', '/contact'), 'style' => 'underline']),
+            ], ['classNames' => ['sl-overlay-aside']]),
+        ], ['classNames' => ['sl-hdr-menu']]),
+        B('core.link', ['link' => link_to('Solaya', '/'), 'style' => 'plain'], [], ['classNames' => ['sl-hdr-brand']]),
+        B('core.button', ['link' => link_to('Book a free call', '/book-a-call'), 'variant' => 'primary', 'size' => 'sm'], [], ['classNames' => ['sl-hdr-book']]),
+    ], ['classNames' => ['sl-header']]),
 ], 'wide', 'surface.primary', ['base' => 'sm'])];
 
 $year = date('Y');
