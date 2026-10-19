@@ -12,17 +12,19 @@ if (count($langs) < 2) return ''; // nothing to switch between
 
 $active = MLT_I18nBridge::activeLocale($tid);
 
-$style    = $this->setting('switcher_style', 'dropdown');   // dropdown | flags | list
-$position = $this->setting('switcher_position', 'bottom-right');
+// Stored values are printed into class names and an inline style, so anything not on the allowed lists
+// (a value saved before they were checked) falls back to the default.
+$style    = MLT_SwitcherSettings::printable('switcher_style', $this->setting('switcher_style', 'dropdown'));   // dropdown | flags | list
+$position = MLT_SwitcherSettings::printable('switcher_position', $this->setting('switcher_position', 'bottom-right'));
 // 'header' has no floating CSS rule (mlt-pos-header doesn't exist) — it only
 // means something to the admin-topbar/customer-portal-bar hooks. If this
 // floating widget is still being rendered while that's selected, it's on a
 // page with no header-bar slot (public site, embeds, login screens, etc.),
 // so fall back to a sane floating corner instead of an unpositioned widget.
 if ($position === 'header') $position = 'bottom-right';
-$bg       = $this->setting('switcher_bg', '#111827');
-$fg       = $this->setting('switcher_fg', '#ffffff');
-$accent   = $this->setting('switcher_accent', '#111111');
+$bg       = MLT_SwitcherSettings::printable('switcher_bg', $this->setting('switcher_bg', '#111827'));
+$fg       = MLT_SwitcherSettings::printable('switcher_fg', $this->setting('switcher_fg', '#ffffff'));
+$accent   = MLT_SwitcherSettings::printable('switcher_accent', $this->setting('switcher_accent', '#111111'));
 
 $baseUrl = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
 $qs = $_GET ?? [];
