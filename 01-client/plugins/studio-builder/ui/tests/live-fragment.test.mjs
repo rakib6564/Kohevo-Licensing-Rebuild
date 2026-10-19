@@ -20,7 +20,7 @@ class El {
     const a = /^\[([\w-]+)\]$/.exec(sel)[1];
     return this.all().filter((e) => e.attrs.has(a));
   }
-  querySelector(sel) { if (sel === 'main') return this.all().find((e) => e.tagName === 'main') || null; return this.querySelectorAll(sel)[0] || null; }
+  querySelector(sel) { if (sel === '#main') return this.all().find((e) => e.id === 'main') || null; return this.querySelectorAll(sel)[0] || null; }
   get textContent() { return this.text; }
   set textContent(v) { this.text = v; }
   remove() { if (this.parentNode) this.parentNode.kids.splice(this.parentNode.kids.indexOf(this), 1); this.parentNode = null; }
@@ -30,8 +30,8 @@ const canvasDoc = () => {
   const head = new El('head');
   return { head, importNode: (e) => e, createElement: (t) => new El(t), querySelectorAll: (sel) => head.all().filter((e) => sel.startsWith('style[id^=') && e.isStyle && (e.attrs.get('id') || '').startsWith('sbx-frag-')) };
 };
-const serverPage = (blockAttrs, kids = [], css = '.sb-x-aaaaaaaaaaaaaaaa{padding:1rem}.sb-x-bbbbbbbbbbbbbbbb{margin:0}') => {
-  const page = new El('html'); const main = page.add(new El('main'));
+const serverPage = (blockAttrs, kids = [], css = '.sb-x-aaaaaaaaaaaaaaaa{padding:1rem}.sb-x-bbbbbbbbbbbbbbbb{margin:0}', wrapper = 'main') => {
+  const page = new El('html'); const main = page.add(new El(wrapper, { id: 'main' }));
   const section = main.add(new El('section', { 'data-sb-node': 'sec_server' }));
   const block = section.add(new El('div', blockAttrs));
   for (const k of kids) block.add(new El('div', k));
@@ -82,7 +82,7 @@ test('the CSS of the fragment rides in an editor-owned sheet that the server ren
 });
 
 test('a section comes out as the section itself, with the document ids for it and its blocks', () => {
-  const page = new El('html'); const main = page.add(new El('main'));
+  const page = new El('html'); const main = page.add(new El('main', { id: 'main' }));
   const section = main.add(new El('section', { 'data-sb-node': 'sec_server', class: 'sb-section sb-x-aaaaaaaaaaaaaaaa' }));
   const block = section.add(new El('div', { 'data-sb-node': 'blk_server1', class: 'sb-block sb-x-bbbbbbbbbbbbbbbb' }));
   block.add(new El('div', { 'data-sb-node': 'blk_server2' }));
@@ -98,4 +98,10 @@ test('a section render with a different number of nodes than the document is not
   const page = new El('html'); const main = page.add(new El('main'));
   main.add(new El('section', { 'data-sb-node': 'sec_server' }));
   assert.equal(adoptFromPage(page, '', { id: 'tmp_sec', blocks: [{ id: 'tmp_a', children: [] }] }, canvasDoc(), 'section'), null);
+});
+
+test('a header page render is read from its header wrapper, which stands where <main> does', () => {
+  const page = serverPage({ 'data-sb-node': 'blk_server1', class: 'sb-block' }, [{ 'data-sb-node': 'blk_server2' }], '', 'header');
+  const out = adoptFromPage(page, '<header id="main">', node, canvasDoc());
+  assert.equal(out.element.getAttribute('data-sb-node'), 'tmp_new');
 });

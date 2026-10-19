@@ -78,6 +78,7 @@ export function createTransport({ apiUrl, csrfToken, fetchImpl, timeoutMs = TIME
     manifest: () => call('GET', 'manifest'),
     templates: (type = null) => call('GET', 'templates', { query: type ? { type } : {} }),
     sectionPresets: () => call('GET', 'section_presets'),
+    headerPresets: () => call('GET', 'header_presets'),
     components: () => call('GET', 'components'),
     // Pages: the tenant's list and the page commands (rename = title and/or slug, duplicate, archive).
     pages: () => call('GET', 'pages'),

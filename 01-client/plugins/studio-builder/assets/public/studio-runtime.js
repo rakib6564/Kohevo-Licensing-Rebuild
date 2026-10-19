@@ -431,6 +431,11 @@
     function close() {
       if (!el.hasAttribute('data-sb-open')) return;
       el.removeAttribute('data-sb-open');
+      // Triggers (and the lightbox) open a panel only when it has no close() of its own, so a closed panel must not
+      // keep this one: a stale close() is a no-op, and the panel would never open again.
+      if (el.__sbClose === close) delete el.__sbClose;
+      // The no-JS fallback opens a panel with `:target`, so a hash that still names it would keep it on screen.
+      clearOverlayHash(el);
       // Closed state is aria-hidden="true". Open state removes the attribute
       // entirely — aria-hidden="false" is redundant and is announced oddly by
       // some screen readers.
@@ -476,6 +481,14 @@
     el.__sbClose = close;
     el.dispatchEvent(new CustomEvent('sb:open', { bubbles: true }));
     return close;
+  }
+
+  /** Drop `#<panel id>` from the address without navigating or scrolling (see the `:target` fallback). */
+  function clearOverlayHash(el) {
+    if (!el.id || global.location.hash !== '#' + el.id || !global.history || !global.history.replaceState) return;
+    try {
+      global.history.replaceState(global.history.state, '', global.location.pathname + global.location.search);
+    } catch (err) { /* a sandboxed frame may refuse; the panel still closes once the hash changes */ }
   }
 
   function closeAllOverlays() {
@@ -576,7 +589,35 @@
     });
 
     if (!teardowns.length) return;
+
+    // A hash that names a panel (a click before this script ran, a reload, a shared link) shows it through `:target`,
+    // which the runtime cannot close. Take it over: open the panel the normal way and drop the hash, so every close
+    // path works.
+    function adoptHash() {
+      var id = (global.location.hash || '').slice(1);
+      if (!id) return;
+      var el = null;
+      try { el = document.getElementById(decodeURIComponent(id)); } catch (err) { return; }
+      if (!el || !el.hasAttribute('data-sb-overlay')) return;
+      clearOverlayHash(el);
+      var esc = global.CSS && global.CSS.escape ? global.CSS.escape(el.id) : el.id;
+      if (!el.__sbClose) openOverlay(el, document.querySelector('[aria-controls="' + esc + '"]'));
+    }
+    // `:target` is only the no-JS fallback. Once the runtime owns a panel (`data-sb-overlay`), `data-sb-open` alone
+    // decides whether it shows: removing the hash with replaceState does not update `:target`, so without this rule a
+    // panel the address once named would stay on screen after it closed.
+    var guard = document.createElement('style');
+    guard.setAttribute('data-sb-overlay-guard', '');
+    guard.textContent = '.sb-modal[data-sb-overlay]:target:not([data-sb-open]),'
+      + '.sb-offcanvas[data-sb-overlay]:target:not([data-sb-open]){display:none}';
+    (document.head || document.documentElement).appendChild(guard);
+
+    adoptHash();
+    var offHash = on(global, 'hashchange', adoptHash);
+
     mount(function () {
+      offHash();
+      if (guard.parentNode) guard.parentNode.removeChild(guard);
       closeAllOverlays();
       teardowns.forEach(function (fn) { fn(); });
       qsa(root, '[aria-haspopup="dialog"]').forEach(function (el) {

@@ -26,6 +26,7 @@ export function highlightMissing(props) {
 
 export function controlFor(field) {
   if (field && field.type === 'string' && field.format === 'color') return 'color';
+  if (field && field.type === 'string' && field.format === 'meta_field') return 'metafield';
   return CONTROL[field && field.type] || null;
 }
 
