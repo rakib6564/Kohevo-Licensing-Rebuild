@@ -136,6 +136,12 @@ final class BlockRenderScope
         return $this->collector->tokenClass($kind, $ref, $this->theme);
     }
 
+    /** `var(--…)` for a theme token this page's theme has, or '' (for a value written inline, where a class could lose). */
+    public function tokenVar(mixed $ref): string
+    {
+        return is_string($ref) && $this->theme->has($ref) ? 'var(' . \Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme::cssVarName($ref) . ')' : '';
+    }
+
     public function childrenHtml(): string
     {
         return $this->childrenHtml;
