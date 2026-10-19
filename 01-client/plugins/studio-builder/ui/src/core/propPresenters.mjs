@@ -35,7 +35,7 @@ export const presentersFor = (type) => PROP_PRESENTERS[type] || null;
 export const LAYOUT_OWNED_PROPS = Object.freeze({
   'layout.flex': { direction: 'direction', wrap: 'wrap', justify: 'justify', align: 'align', gap: 'gap' },
   'layout.grid': { columns: 'columns', align: 'align', gap: 'gap' },
-  'core.container': { direction: 'direction', gap: 'gap' },
+  'core.container': { direction: 'direction', wrap: 'wrap', gap: 'gap' },
 });
 
 /** The prop keys of `type` whose value `style.layout` currently overrides. */

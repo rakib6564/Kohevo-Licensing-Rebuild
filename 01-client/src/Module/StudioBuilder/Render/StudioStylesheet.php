@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '21';
+    public const VERSION = '22';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -62,7 +62,7 @@ final class StudioStylesheet
         }
 
         $css = '*,*::before,*::after{box-sizing:border-box}'
-            . 'body.sb-body{margin:0;background:var(--sb-surface-page);color:var(--sb-text-primary);font-family:var(--sb-font-body);line-height:1.6}'
+            . 'body.sb-body{margin:0;background:var(--sb-surface-page);color:var(--sb-text-primary);font-family:var(--sb-font-body);line-height:1.6;overflow-x:clip}'
             . '.sb-body h1,.sb-body h2,.sb-body h3,.sb-body h4,.sb-body h5,.sb-body h6{font-family:var(--sb-font-heading);line-height:1.2;margin:0 0 .5em}'
             . '.sb-body img{max-width:100%;height:auto}'
             // Buttons are links too: the generic link colour must not reach them (it would equal
@@ -71,9 +71,10 @@ final class StudioStylesheet
             . '.sb-main{display:block}'
             . '.sb-section__inner{margin:0 auto;padding-left:1rem;padding-right:1rem;display:grid}'
             . '.sb-section__inner>*{min-width:0}'
-            . '.sb-site-header,.sb-site-footer{padding:1rem;border-color:var(--sb-border-default)}'
-            . '.sb-site-header{border-bottom:1px solid var(--sb-border-default)}'
-            . '.sb-site-footer{border-top:1px solid var(--sb-border-default);color:var(--sb-text-muted);font-size:.875rem}'
+            // The default chrome's padding and rule; a custom header or footer partial renders exactly as designed.
+            . '.sb-site-header:not(.sb-site-header--partial),.sb-site-footer:not(.sb-site-footer--partial){padding:1rem;border-color:var(--sb-border-default)}'
+            . '.sb-site-header:not(.sb-site-header--partial){border-bottom:1px solid var(--sb-border-default)}'
+            . '.sb-site-footer:not(.sb-site-footer--partial){border-top:1px solid var(--sb-border-default);color:var(--sb-text-muted);font-size:.875rem}'
             . '.sb-site-brand{display:inline-flex;align-items:center;gap:.5rem;font-weight:600;text-decoration:none;color:var(--sb-text-primary)}'
             . '.sb-site-brand img{height:2rem;width:auto}'
             . '.sb-hero{display:grid;gap:2rem;align-items:center}'
@@ -167,7 +168,7 @@ final class StudioStylesheet
             . '.sb-stat__label{font-size:.875rem;line-height:1.4;color:var(--sb-text-muted)}'
             . '.sb-catalog__meta{color:var(--sb-text-muted);display:flex;gap:1rem;margin:.25rem 0 0}'
             . '.sb-catalog__price{font-weight:600;color:var(--sb-text-primary)}'
-            . '.sb-stack{display:flex}.sb-stack--vertical{flex-direction:column}.sb-stack--horizontal{flex-direction:row;flex-wrap:wrap}'
+            . '.sb-stack{display:flex}.sb-stack--vertical{flex-direction:column}.sb-stack--horizontal{flex-direction:row;flex-wrap:wrap}.sb-stack--horizontal.sb-stack--nowrap{flex-wrap:nowrap}'
             . '.sb-embed-card__kind{margin:0 0 .25rem;font-size:.75rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--sb-text-muted)}'
             . '.sb-embed-card__fields{margin:.75rem 0 0;padding-left:1.25rem;color:var(--sb-text-muted)}'
             . '.sb-embed-card__note{margin:.75rem 0 0;font-size:.8125rem;color:var(--sb-text-muted)}'
@@ -184,7 +185,7 @@ final class StudioStylesheet
             . '.sb-platform-signature img{height:1rem;width:auto;vertical-align:middle}'
             . '.sb-layout-section{position:relative;width:100%}'
             . '.sb-layout-section--boxed{max-width:var(--sb-layout-wide,80rem);margin-left:auto;margin-right:auto}'
-            . '.sb-layout-section--full{width:100%}'
+            . '.sb-layout-section--full{width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw)}'
             . '.sb-layout-section--narrow{max-width:var(--sb-layout-narrow,42rem);margin-left:auto;margin-right:auto}'
             . '.sb-layout-section--min-screen{min-height:100vh}'
             . '.sb-layout-section--min-half-screen{min-height:50vh}'

@@ -219,7 +219,8 @@ unit('sprint2 integration: visual styling (typography, border, shadow, responsiv
                 ],
                 'style' => [
                     'typography' => [
-                        'size' => ['desktop' => '64px', 'tablet' => '48px', 'mobile' => '36px'],
+                        // Per-device sizes are tablet and mobile overrides; a size breakpoint map is refused.
+                        'size' => '64px',
                         'weight' => 'bold',
                         'transform' => 'capitalize',
                         'color' => '#0f172a',
@@ -236,8 +237,8 @@ unit('sprint2 integration: visual styling (typography, border, shadow, responsiv
                 ],
                 'responsive' => [
                     'desktop' => ['align' => 'center'],
-                    'tablet' => ['align' => 'center'],
-                    'mobile' => ['align' => 'left'],
+                    'tablet' => ['align' => 'center', 'style' => ['typography' => ['size' => '48px']]],
+                    'mobile' => ['align' => 'left', 'style' => ['typography' => ['size' => '36px']]],
                 ],
             ];
 
@@ -290,8 +291,8 @@ unit('sprint2 integration: visual styling (typography, border, shadow, responsiv
             // 4. Test dedicated operations: update_block_responsive, update_block_class_names, update_block_attributes
             $opResp = DocumentOperation::updateBlockResponsive($actualHeadingId, [
                 'desktop' => ['align' => 'center'],
-                'tablet' => ['align' => 'center'],
-                'mobile' => ['align' => 'center'], // Override to center on mobile
+                'tablet' => ['align' => 'center', 'style' => ['typography' => ['size' => '48px']]],
+                'mobile' => ['align' => 'center', 'style' => ['typography' => ['size' => '36px']]], // Override to center on mobile
             ]);
             $opClasses = DocumentOperation::updateBlockClassNames($actualHeadingId, ['hero-headline', 'tracking-tight', 'display-title']);
             $opAttrs = DocumentOperation::updateBlockAttributes($actualHeadingId, [
@@ -334,6 +335,11 @@ unit('sprint2 integration: visual styling (typography, border, shadow, responsiv
             assert_true(str_contains($html, 'data-hero-el="headline"'), 'emits custom attribute data-hero-el');
             assert_true(str_contains($html, 'aria-label="Main Page Title"'), 'emits custom attribute aria-label');
             assert_true(str_contains($html, 'data-analytics="cta-click"'), 'emits custom attribute data-analytics');
+
+            // Verify the per-device heading sizes
+            assert_true(str_contains($html, '64px'), 'emits the desktop heading size');
+            assert_true(str_contains($html, '48px'), 'emits the tablet heading size');
+            assert_true(str_contains($html, '36px'), 'emits the mobile heading size');
 
             // Verify responsive alignment override
             assert_true(str_contains($html, 'sb-align-mobile-center'), 'emits overridden mobile align center');
