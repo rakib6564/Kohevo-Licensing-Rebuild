@@ -545,7 +545,7 @@ unit('phase4 integration: server renderer, preview and public runtime (real MySQ
                 $promoDoc['template_key'] = 'promo';
                 [$S->promoA] = sbp4_publish_page($rt, SBP4_TENANT_A, $publisher, 'promo', $promoDoc);
                 assert_eq(1, sbp4_count('SELECT COUNT(*) FROM studiobuilder_compilations WHERE tenant_id = ? AND page_id = ?', [SBP4_TENANT_A, $S->promoA]));
-                $rt->tenants->runAs(SBP4_TENANT_A, static fn() => $rt->app->saveTemplate($admin, 'promo', 'page_template', 'general', 'Promo v2', null, sbp4_doc([sbp4_heading('Promo template v2')])));
+                $rt->tenants->runAs(SBP4_TENANT_A, static fn() => $rt->app->saveTemplate($admin, 'promo', 'page_template', 'general', 'Promo v2', null, sbp4_doc([sbp4_heading('Promo template v2')]), overwrite: true));
                 assert_eq(0, sbp4_count('SELECT COUNT(*) FROM studiobuilder_compilations WHERE tenant_id = ? AND page_id = ?', [SBP4_TENANT_A, $S->promoA]), 'saving a template drops artifacts of pages that depend on it');
                 assert_eq(1, sbp4_count('SELECT COUNT(*) FROM studiobuilder_compilations WHERE tenant_id = ? AND page_id = ?', [SBP4_TENANT_A, $S->aboutA]), 'unrelated pages keep their artifacts');
                 assert_true(str_contains(sbp4_public($rt, SBP4_TENANT_A, '/promo')->body, 'Promo page'), 'and the next request recompiles it');

@@ -508,6 +508,10 @@ unit('phase7 integration: AI + MCP through the real gateway (real MySQL, tenants
                 $adm = sbp7_ctx($S->tokAdminA);
                 $tpl = sbp7_ok(sbp7_call($adm, 'studio_save_template', ['page_id' => $S->home['id'], 'template_key' => 'home-page', 'template_type' => 'page_template', 'name' => 'Home page']), 'A saves template')['template'];
                 assert_eq('home-page', $tpl['template_key']);
+                // TI-05: the same key again is refused unless the tool call asks to overwrite.
+                $e = sbp7_err(sbp7_call($adm, 'studio_save_template', ['page_id' => $S->home['id'], 'template_key' => 'home-page', 'template_type' => 'page_template', 'name' => 'Home page again']), 'A saves the same key');
+                assert_eq('template_exists', $e['details']['errors'][0]['code']);
+                assert_eq('Home page again', sbp7_ok(sbp7_call($adm, 'studio_save_template', ['page_id' => $S->home['id'], 'template_key' => 'home-page', 'template_type' => 'page_template', 'name' => 'Home page again', 'overwrite' => true]), 'A overwrites on purpose')['template']['name']);
                 assert_eq([], sbp7_ok(sbp7_call($b, 'studio_get_templates'), 'B templates')['templates']);
                 $e = sbp7_err(sbp7_call($b, 'studio_apply_template', ['page_id' => $S->beta['id'], 'template_key' => 'home-page', 'expected_revision_id' => $S->beta['rev']]), 'B applies A template');
                 assert_eq('not_found', $e['error']);

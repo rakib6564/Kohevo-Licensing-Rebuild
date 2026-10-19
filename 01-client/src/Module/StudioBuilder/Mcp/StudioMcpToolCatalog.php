@@ -239,6 +239,7 @@ final class StudioMcpToolCatalog
                     'category'      => ['type' => 'string', 'maxLength' => 64],
                     'name'          => ['type' => 'string', 'minLength' => 1, 'maxLength' => 191],
                     'description'   => ['type' => 'string', 'maxLength' => 1000],
+                    'overwrite'     => ['type' => 'boolean', 'description' => 'Default false: an existing template key is refused (template_exists). True replaces that tenant template.'],
                 ], ['page_id', 'template_key', 'template_type', 'name']),
                 'scope' => StudioMcpScopes::ADMIN, 'permission' => StudioPermissions::ADMIN,
                 'access' => self::ACCESS_WRITE, 'requires_confirmation' => true, 'rate' => self::RATE_WRITE,

@@ -8,7 +8,7 @@ import { MediaControl } from './fields/MediaControl.jsx';
 import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { t, errorMessage } from '../core/messages.mjs';
 import { asList } from '../core/doc.mjs';
-import { saveScopesFor, slugify } from '../core/library.mjs';
+import { saveScopesFor, slugify, templateOverwriteFor } from '../core/library.mjs';
 
 const THUMB_FIELD = Object.freeze({ key: 'thumbnail', type: 'media_ref', label: 'Thumbnail', required: false });
 
@@ -27,11 +27,13 @@ export function SaveTemplateDialog({ onClose, onSaved }) {
   const [thumb, setThumb] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [conflictKey, setConflictKey] = useState(null);
+  const [confirmedKey, setConfirmedKey] = useState(null);
 
   const effectiveKey = keyTouched ? key : slugify(name);
   const chosen = scopes.find((s) => s.type === scope) || null;
-  const exists = asList(library && library.templates).some((x) => x.template_key === effectiveKey);
-  const valid = !!chosen && name.trim() !== '' && /^[a-z0-9][a-z0-9_-]{0,119}$/.test(effectiveKey);
+  const { needsConfirm, overwrite } = templateOverwriteFor(effectiveKey, library && library.templates, conflictKey, confirmedKey);
+  const valid = !!chosen && name.trim() !== '' && /^[a-z0-9][a-z0-9_-]{0,119}$/.test(effectiveKey) && (!needsConfirm || overwrite);
 
   const submit = async () => {
     if (!valid || busy) return;
@@ -46,10 +48,12 @@ export function SaveTemplateDialog({ onClose, onSaved }) {
       name: name.trim(),
       description: description.trim() || null,
       thumbnail_media_id: thumb && Number.isInteger(thumb.media_id) ? thumb.media_id : null,
+      overwrite,
     });
     setBusy(false);
     if (!res.ok) {
       const detail = res.error && res.error.details && asList(res.error.details.errors)[0];
+      if (detail && detail.code === 'template_exists') setConflictKey(effectiveKey);
       setError(detail && detail.message ? detail.message : errorMessage(res.error));
       return;
     }
@@ -82,7 +86,14 @@ export function SaveTemplateDialog({ onClose, onSaved }) {
       <div className="sbx-field">
         <label className="sbx-field__label" htmlFor="sbx-tpl-key">{t('template_key')}</label>
         <input id="sbx-tpl-key" type="text" maxLength={120} value={effectiveKey} onChange={(e) => { setKeyTouched(true); setKey(slugify(e.target.value, 120)); }} />
-        {exists && <p className="sbx-hint" role="note">{t('template_replace_existing')}</p>}
+        {needsConfirm && (
+          <>
+            <p className="sbx-hint" role="note">{t('template_replace_existing')}</p>
+            <label className="sbx-field">
+              <input type="checkbox" checked={overwrite} onChange={(e) => setConfirmedKey(e.target.checked ? effectiveKey : null)} /> {t('template_replace_confirm')}
+            </label>
+          </>
+        )}
       </div>
       <div className="sbx-field">
         <label className="sbx-field__label" htmlFor="sbx-tpl-cat">{t('template_category')}</label>

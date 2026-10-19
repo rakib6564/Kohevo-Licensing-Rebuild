@@ -367,6 +367,7 @@ final class StudioMcpAdapter
             self::string($a, 'name', 191),
             self::optionalString($a, 'description', 1000),
             null,
+            self::bool($a, 'overwrite'),
         );
         return ['template' => StudioEditorViews::template($row)];
     }

@@ -72,6 +72,11 @@ final class StudioTemplateService
      * supplied document before persisting it. System templates (`is_system = 1`)
      * can never be overwritten through this path.
      *
+     * An existing tenant template is replaced only when the caller asks for it
+     * with `$overwrite`; otherwise the save is refused with `template_exists`,
+     * so a second admin saving under the same key cannot silently replace the
+     * first admin's template.
+     *
      * @param array<string, mixed> $document Raw or already-normalized canonical document.
      * @param array<string, mixed> $validationOptions Forwarded to `ValidatedDocument::from()`.
      * @return array<string, mixed>
@@ -86,6 +91,7 @@ final class StudioTemplateService
         int $actorId,
         array $validationOptions = [],
         ?int $thumbnailMediaId = null,
+        bool $overwrite = false,
     ): array {
         $this->requireTenantId();
 
@@ -99,6 +105,11 @@ final class StudioTemplateService
         if ($existing !== null && (bool) $existing['is_system']) {
             throw new StudioValidationException([
                 ['path' => '$.template_key', 'code' => 'system_template_immutable', 'message' => "System template '{$templateKey}' cannot be overwritten."],
+            ]);
+        }
+        if ($existing !== null && !$overwrite) {
+            throw new StudioValidationException([
+                ['path' => '$.template_key', 'code' => 'template_exists', 'message' => "A template with the key '{$templateKey}' already exists. Choose another key, or confirm that it should be replaced."],
             ]);
         }
 
