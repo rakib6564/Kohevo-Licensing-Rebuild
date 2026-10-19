@@ -80,6 +80,7 @@ use Slate\Module\StudioBuilder\Dependency\DependencyExtractor;
 use Slate\Module\StudioBuilder\Diff\RevisionDiff;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
 use Slate\Module\StudioBuilder\Domain\StudioTemplate;
@@ -356,11 +357,12 @@ final class StudioApplicationService
         ?string $description,
         array $document,
         ?int $thumbnailMediaId = null,
+        bool $overwrite = false,
     ): array {
         // Template/system administration — StudioPermissions::ADMIN, not EDIT
         // (target architecture example: "system/template administration -> studio-builder.admin").
         $this->authorize($actor, StudioPermissions::ADMIN);
-        $result = $this->templates->saveTemplate($templateKey, $templateType, $category, $name, $description, $document, (int) $actor->userId, $this->buildValidationOptions($actor), $thumbnailMediaId);
+        $result = $this->templates->saveTemplate($templateKey, $templateType, $category, $name, $description, $document, (int) $actor->userId, $this->buildValidationOptions($actor), $thumbnailMediaId, $overwrite);
         // Pages whose document names this template (template_key) recompile on next request.
         $this->invalidator?->invalidateTemplate($templateKey);
         $this->audit($actor, 'studio.template.saved', $templateKey, ['template_type' => $templateType]);
@@ -371,7 +373,7 @@ final class StudioApplicationService
      * Save a template FROM a page's current working document: the whole page
      * (page/header/footer templates), one section (section_preset) or one
      * block (block_preset). The content is read from the stored revision,
-     * never from the client.
+     * never from the client. An existing key is replaced only with `$overwrite`.
      *
      * @return array<string, mixed>
      */
@@ -385,6 +387,7 @@ final class StudioApplicationService
         string $name,
         ?string $description,
         ?int $thumbnailMediaId = null,
+        bool $overwrite = false,
     ): array {
         $this->authorize($actor, StudioPermissions::ADMIN);
         [$page, $document] = $this->currentDocument($pageId);
@@ -400,7 +403,7 @@ final class StudioApplicationService
             ]);
         }
         $templateDocument = StudioTemplateService::extractTemplateDocument($document, $nodeId, $templateType);
-        return $this->saveTemplate($actor, $templateKey, $templateType, $category, $name, $description, $templateDocument, $thumbnailMediaId);
+        return $this->saveTemplate($actor, $templateKey, $templateType, $category, $name, $description, $templateDocument, $thumbnailMediaId, $overwrite);
     }
 
     /**
@@ -1311,8 +1314,9 @@ final class StudioApplicationService
 
         $draftId  = isset($page['active_draft_revision_id']) ? (int) $page['active_draft_revision_id'] : 0;
         $revision = $draftId > 0 ? $this->revisionRepo->findByIdForPage($pageId, $draftId) : null;
+        // A draft saved at an older block version is read at the current one, so the next edit saves it upgraded.
         $document = $revision !== null
-            ? CanonicalJson::decode((string) $revision['document_json'])
+            ? DocumentUpgrader::upgrade(CanonicalJson::decode((string) $revision['document_json']), $this->registry)['document']
             : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
 
         return [
@@ -1796,8 +1800,9 @@ final class StudioApplicationService
         }
         $draftId  = isset($page['active_draft_revision_id']) ? (int) $page['active_draft_revision_id'] : 0;
         $revision = $draftId > 0 ? $this->revisionRepo->findByIdForPage($pageId, $draftId) : null;
+        // A draft saved at an older block version is read at the current one, so the next edit saves it upgraded.
         $document = $revision !== null
-            ? CanonicalJson::decode((string) $revision['document_json'])
+            ? DocumentUpgrader::upgrade(CanonicalJson::decode((string) $revision['document_json']), $this->registry)['document']
             : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
         return [$page, $document];
     }

@@ -90,7 +90,7 @@ final class StudioRuntimeFactory
         $reserved        = new StudioReservedRoutes($overrides['known_prefixes'] ?? null);
         $pageService     = new StudioPageAddressService($tenants, $pages, $revisionService, $registry, $reserved);
         $templateService = new StudioTemplateService($tenants, $templates, $pages, $revisionService, $registry, $dependencies);
-        $componentService = new StudioGlobalComponentService($tenants, $pages, $revisions, $dependencies);
+        $componentService = new StudioGlobalComponentService($tenants, $pages, $revisions, $dependencies, $registry);
 
         $themes    = new ThemeResolver($tokens, $overrides['branding'] ?? null);
         $media     = $overrides['media'] ?? new CoreMediaResolver($tenants);

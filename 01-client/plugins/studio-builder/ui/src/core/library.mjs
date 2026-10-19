@@ -63,6 +63,19 @@ export function saveScopesFor(doc, pageType, selectedId) {
 }
 
 /**
+ * Whether "Save as template" must ask before it replaces a template, and
+ * whether the save asks the server to overwrite. A key is taken when the
+ * loaded library lists it, or when the server answered `template_exists`
+ * for it (someone saved it after the library loaded). Only an explicit
+ * confirmation for that same key sends `overwrite`; the server refuses an
+ * existing key without it.
+ */
+export function templateOverwriteFor(key, templates, conflictKey, confirmedKey) {
+  const taken = !!key && (key === conflictKey || asList(templates).some((x) => x.template_key === key));
+  return { needsConfirm: taken, overwrite: taken && key === confirmedKey };
+}
+
+/**
  * Where an inserted preset goes, from the current selection: a section preset
  * after the selected section (or at the end); a block preset at the block
  * insertion point (parent + index) — null when the page needs a section first.
