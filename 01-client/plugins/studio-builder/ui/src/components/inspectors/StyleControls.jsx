@@ -563,6 +563,14 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
             onCommit={(v) => patchNested('dimensions', 'width', v)}
           />
           <DraftText
+            id={`${id}-h`}
+            kind="length"
+            label={t('dimension_height')}
+            value={dims.height}
+            placeholder="20rem"
+            onCommit={(v) => patchNested('dimensions', 'height', v)}
+          />
+          <DraftText
             id={`${id}-minh`}
             kind="length"
             label={t('dimension_min_height')}

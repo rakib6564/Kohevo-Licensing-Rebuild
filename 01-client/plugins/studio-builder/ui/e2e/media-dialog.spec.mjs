@@ -82,3 +82,31 @@ test('the dialog searches, refuses a file that is not an image, and closes with 
     await restoreLayers(page, before);
   }
 });
+
+test('an Image block sets its width, height and fit on the Content tab, and the picture on the canvas follows', async ({ page }) => {
+  await openBuilder(page);
+  await settled(page);
+  const before = await layerCount(page);
+  try {
+    await addImageBlock(page);
+    const host = page.locator('.sbx-inspector-host');
+    await expect(host.getByRole('tab', { name: 'Content', selected: true })).toBeVisible();
+    const width = host.getByLabel('Width', { exact: true }).first();
+    const height = host.getByLabel('Height', { exact: true }).first();
+    await expect(width).toBeVisible();
+    await expect(height).toBeVisible();
+    await width.fill('240px');
+    await width.blur();
+    await height.fill('120px');
+    await height.blur();
+    await host.getByLabel('Image fit', { exact: true }).first().selectOption('contain');
+    await settled(page);
+    const frame = page.frameLocator('iframe.sbx-canvas__frame');
+    await expect.poll(async () => frame.locator('[data-sb-type="core.image"] img').last().evaluate((img) => {
+      const r = img.getBoundingClientRect();
+      return `${Math.round(r.width)}x${Math.round(r.height)} ${getComputedStyle(img).objectFit}`;
+    }), { timeout: 20_000 }).toBe('240x120 contain');
+  } finally {
+    await restoreLayers(page, before);
+  }
+});
