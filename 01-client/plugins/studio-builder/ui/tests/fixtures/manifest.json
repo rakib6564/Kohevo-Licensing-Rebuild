@@ -1865,7 +1865,13 @@
                 }
             ],
             "icon": "link",
-            "inline_text": [],
+            "inline_text": [
+                {
+                    "prop": "link.label",
+                    "selector": ".sb-link",
+                    "multiline": false
+                }
+            ],
             "label": "Link",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",
@@ -2307,7 +2313,14 @@
                 }
             ],
             "icon": "menu",
-            "inline_text": [],
+            "inline_text": [
+                {
+                    "prop": "items.*.label",
+                    "selector": ".sb-nav__link",
+                    "multiline": false,
+                    "unless": "menu"
+                }
+            ],
             "label": "Nav menu",
             "required_entitlement": null,
             "required_permission": "studio-builder.edit",

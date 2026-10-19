@@ -42,7 +42,7 @@ import {
   EMPTY_SELECTION, actionIds, clickSelect, pruneSelection, remapSelection, selectOnly, selectionCount, setFocus as focusNode, setHover as hoverNode,
 } from '../core/selection.mjs';
 import { defaultBindings, setupFields } from '../core/fields.mjs';
-import { insertTargetFor, referenceIndexFor, slugify } from '../core/library.mjs';
+import { insertTargetFor, mergeTemplates, referenceIndexFor, slugify } from '../core/library.mjs';
 import * as ops from '../core/operations.mjs';
 import { lockViolation } from '../core/layerLock.mjs';
 import { buildEnvelope, peekMemory, planPaste, readClipboard, regenerateIds, writeClipboard } from '../core/clipboard.mjs';
@@ -139,13 +139,16 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   // ── Library (templates + global components): server data, refreshed on demand ─
   const refreshLibrary = useCallback(async () => {
     if (typeof transport.templates !== 'function') return;
-    const [tpl, cmp] = await Promise.all([transport.templates(), transport.components()]);
+    // The built-in headers are offered only while a header is open (the first call seeds them for this tenant).
+    const snapshot = engine.getSnapshot();
+    const wantsHeaders = snapshot.page && snapshot.page.page_type === 'header_partial' && typeof transport.headerPresets === 'function';
+    const [tpl, cmp, hdr] = await Promise.all([transport.templates(), transport.components(), wantsHeaders ? transport.headerPresets() : null]);
     setLibrary({
-      templates: tpl.ok ? tpl.data.templates : [],
+      templates: mergeTemplates(tpl.ok ? tpl.data.templates : [], hdr && hdr.ok ? hdr.data.presets : []),
       components: cmp.ok ? cmp.data.components : [],
       error: tpl.ok && cmp.ok ? null : errorMessage((tpl.ok ? cmp : tpl).error),
     });
-  }, [transport]);
+  }, [transport, engine]);
 
   useEffect(() => { if (manifest) refreshLibrary(); }, [manifest, refreshLibrary]);
 

@@ -17,7 +17,7 @@ import { memo } from 'react';
 import { useEditor, useEngineState } from './EditorContext.jsx';
 import { t } from '../core/messages.mjs';
 import { asList } from '../core/doc.mjs';
-import { groupTemplates } from '../core/library.mjs';
+import { groupTemplates, templateAction } from '../core/library.mjs';
 import { STATUS } from '../core/sync.mjs';
 
 export const LibraryPanel = memo(function LibraryPanel() {
@@ -67,7 +67,7 @@ export const LibraryPanel = memo(function LibraryPanel() {
                       </p>
                     )}
                     <div className="sbx-library__actions">
-                      {tpl.template_type === 'page_template'
+                      {templateAction(tpl) === 'apply'
                         ? <button type="button" className="sbx-btn sbx-btn--xs" disabled={blocked} onClick={() => applyTemplate(tpl)}>{t('library_apply')}</button>
                         : <button type="button" className="sbx-btn sbx-btn--xs" disabled={blocked} onClick={() => insertTemplate(tpl)}>{t('library_insert')}</button>}
                       {perms.admin && !tpl.is_system && (

@@ -335,7 +335,9 @@ export function compileSectionStyle(section) {
   const scoped = [];
   if ('color' in bg && typeof bg.color === 'string' && isColor(bg.color) && !isToken(bg.color.trim())) scoped.push(`background-color:${String(bg.color).trim()}`);
   if ('gradient' in bg && !isObj(bg.image) && isGradient(bg.gradient)) scoped.push(`background-image:${String(bg.gradient).trim()}`);
-  emitSides('padding', style.padding, scoped);
+  const padding = [];
+  emitSides('padding', style.padding, padding);
+  scoped.push(...padding.map((d) => `${d} !important`)); // as the server: the author's section padding beats site CSS
   return { covered, scoped };
 }
 

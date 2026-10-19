@@ -149,7 +149,7 @@ test('command: a command that returns no document (component created without a s
   assert.equal(engine.getSnapshot().undo.length, 0);
 });
 
-import { filterTemplates } from '../src/core/library.mjs';
+import { filterTemplates, mergeTemplates, templateAction } from '../src/core/library.mjs';
 test('filterTemplates needs every word, in the name, description or block labels', () => {
   const items = [
     { name: 'Hero with image', description: 'big banner', summary: { block_labels: ['Heading', 'Button'] } },
@@ -169,4 +169,21 @@ test('library: saving over a taken template key needs an explicit confirmation f
   assert.deepEqual(lib.templateOverwriteFor('hero-2', lib0, null, 'hero'), { needsConfirm: false, overwrite: false }, 'a confirmation never carries over to another key');
   assert.deepEqual(lib.templateOverwriteFor('late', lib0, 'late', null), { needsConfirm: true, overwrite: false }, 'a server template_exists for a key the library did not list also asks');
   assert.deepEqual(lib.templateOverwriteFor('', lib0, '', ''), { needsConfirm: false, overwrite: false });
+});
+
+test('templateAction: page, header and footer templates replace; section and block presets are inserted', () => {
+  assert.equal(templateAction({ template_type: 'page_template' }), 'apply');
+  assert.equal(templateAction({ template_type: 'header_preset' }), 'apply', 'a header inserted into a header would stack two');
+  assert.equal(templateAction({ template_type: 'footer_preset' }), 'apply');
+  assert.equal(templateAction({ template_type: 'section_preset' }), 'insert');
+  assert.equal(templateAction({ template_type: 'block_preset' }), 'insert');
+  assert.equal(templateAction(null), 'insert');
+});
+
+test('mergeTemplates: the tenant\'s templates first, then built-in ones it does not already list', () => {
+  const own = [{ template_key: 'mine', template_type: 'header_preset' }, { template_key: 'system-header-classic', template_type: 'header_preset', name: 'kept' }];
+  const builtIn = [{ template_key: 'system-header-classic', name: 'dropped' }, { template_key: 'system-header-split' }, null];
+  assert.deepEqual(mergeTemplates(own, builtIn).map((tpl) => tpl.template_key), ['mine', 'system-header-classic', 'system-header-split']);
+  assert.equal(mergeTemplates(own, builtIn)[1].name, 'kept', 'the listed row wins');
+  assert.deepEqual(mergeTemplates(undefined, undefined), []);
 });
