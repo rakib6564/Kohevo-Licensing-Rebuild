@@ -1,0 +1,19 @@
+<style>.sb-carousel{position:relative;overflow:hidden}
+.sb-carousel__track{display:flex;gap:1rem;transition:transform .45s cubic-bezier(.22,1,.36,1);will-change:transform;scrollbar-width:none}
+.sb-carousel__track::-webkit-scrollbar{display:none}
+.sb-carousel__slide{flex:0 0 100%;min-width:0;margin:0}
+[data-sb-per-view="2"]>.sb-carousel__track>.sb-carousel__slide{flex-basis:calc((100% - 1rem)/2)}
+[data-sb-per-view="3"]>.sb-carousel__track>.sb-carousel__slide{flex-basis:calc((100% - 2rem)/3)}
+.sb-carousel__image{display:block;width:100%;height:auto}
+.sb-carousel__quote{margin:0}
+.sb-carousel__author{display:block;margin-top:.75rem}
+.sb-carousel__caption{margin-top:.5rem}
+.sb-carousel__nav{display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:1rem}
+.sb-carousel__dots{display:flex;align-items:center;gap:.5rem}
+.sb-carousel__btn{width:2.25rem;height:2.25rem;border-radius:50%;border:1px solid var(--sb-border-default,#e2e8f0);background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:inherit}
+.sb-carousel__btn:disabled{opacity:.35;cursor:default}
+.sb-carousel__btn:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.sb-carousel__pause{display:none;font-size:.7rem}
+.sb-carousel__dot{width:.55rem;height:.55rem;padding:0;border:0;border-radius:50%;background:currentColor;opacity:.3;cursor:pointer}
+.sb-carousel__dot[aria-current="true"],.sb-carousel__dot[aria-selected="true"],.sb-carousel__dot.is-active{opacity:1}</style>
+<div class="sb-carousel" data-sb-carousel data-sb-per-view="1" data-sb-loop aria-roledescription="carousel" data-sb-label-slide="slide" data-sb-label-slide-of="%1$s of %2$s" data-sb-label-go="Go to slide" aria-label="Slideshow"><div class="sb-carousel__track" data-sb-carousel-track><figure class="sb-carousel__slide" data-sb-slide><blockquote class="sb-carousel__quote"><p>A conversation comes before any plan.</p><cite class="sb-carousel__author">Listen first</cite></blockquote></figure><figure class="sb-carousel__slide" data-sb-slide><blockquote class="sb-carousel__quote"><p>Body and mind are looked after as one.</p><cite class="sb-carousel__author">The whole person</cite></blockquote></figure><figure class="sb-carousel__slide" data-sb-slide><blockquote class="sb-carousel__quote"><p>Support continues between sessions, not only during them.</p><cite class="sb-carousel__author">Follow through</cite></blockquote></figure></div><div class="sb-carousel__nav"><button type="button" class="sb-carousel__btn" data-sb-car-prev aria-label="Previous slide">&#8249;</button><div class="sb-carousel__dots" data-sb-car-dots role="group" aria-label="Choose slide"><button type="button" class="sb-carousel__dot" data-sb-car-dot="0" aria-label="Go to slide 1" aria-current="true"></button><button type="button" class="sb-carousel__dot" data-sb-car-dot="1" aria-label="Go to slide 2" aria-current="false"></button><button type="button" class="sb-carousel__dot" data-sb-car-dot="2" aria-label="Go to slide 3" aria-current="false"></button></div><button type="button" class="sb-carousel__btn" data-sb-car-next aria-label="Next slide">&#8250;</button></div></div>

@@ -568,7 +568,7 @@ unit('phase4 stylesheet: the generic link colour never reaches .sb-button links,
     assert_true(str_contains($css, '.sb-body a:not(.sb-button){color:var(--sb-color-accent)}'), 'ordinary links keep the accent colour');
     assert_true(str_contains($css, '.sb-button--primary{background:var(--sb-surface-accent);color:var(--sb-text-inverse)}'), 'primary: inverse text on the accent surface');
     assert_true(str_contains($css, '.sb-button--secondary{background:var(--sb-surface-secondary);color:var(--sb-text-primary)'), 'secondary keeps its own text colour');
-    assert_eq('23', \Slate\Module\StudioBuilder\Render\StudioStylesheet::VERSION, 'stylesheet version bumped so compiled pages are rebuilt');
+    assert_eq('25', \Slate\Module\StudioBuilder\Render\StudioStylesheet::VERSION, 'stylesheet version bumped so compiled pages are rebuilt');
 });
 
 unit('phase4 stylesheet: in a row (horizontal flex or grid) a link, button, text, menu or icon keeps no margin of its own, so a header\'s items share one centre line', function (): void {
