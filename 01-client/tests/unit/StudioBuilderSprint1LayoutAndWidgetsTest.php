@@ -63,8 +63,8 @@ function s1_scope(array $block, string $children = ''): BlockRenderScope
 
 // ── 1. WidgetRegistry ─────────────────────────────────────────────────────────
 
-unit('sprint1: WidgetRegistry withCoreWidgets has layout and content primitives with manifests', function (): void {
-    $wr = WidgetRegistry::withCoreWidgets();
+unit('sprint1: WidgetRegistry built from BlockRegistry has layout and content primitives with manifests', function (): void {
+    $wr = WidgetRegistry::fromBlockRegistry(BlockRegistry::withAllCoreBlocks());
     assert_true($wr->has('layout.section'));
     assert_true($wr->has('layout.container'));
     assert_true($wr->has('layout.flex'));
@@ -80,8 +80,9 @@ unit('sprint1: WidgetRegistry withCoreWidgets has layout and content primitives 
     $section = $wr->resolve('layout.section');
     assert_eq('layout.section', $section->type());
     assert_true($section->allowsChildren());
-    assert_true(!empty($section->description()));
-    assert_true(is_array($section->controls()));
+    $manifest = $section->toEditorManifest();
+    assert_true(!empty($manifest['description']));
+    assert_true(is_array($manifest['field_schema']));
 
     $manifests = $wr->editorManifests();
     $types = array_column($manifests, 'type');
@@ -90,6 +91,25 @@ unit('sprint1: WidgetRegistry withCoreWidgets has layout and content primitives 
     assert_true(in_array('layout.flex', $types, true));
     assert_true(in_array('layout.grid', $types, true));
     assert_true(in_array('core.text', $types, true));
+});
+
+unit('sprint1: WidgetRegistry has no block definitions of its own, so it cannot drift from BlockRegistry', function (): void {
+    // Every way to get a filled WidgetRegistry starts from a BlockRegistry; a constructor that
+    // wrote its own definitions would be a second, drifting copy of the real registration.
+    foreach ((new \ReflectionClass(WidgetRegistry::class))->getMethods(\ReflectionMethod::IS_STATIC) as $method) {
+        if (!in_array((string) $method->getReturnType(), ['self', 'static', WidgetRegistry::class], true)) {
+            continue;
+        }
+        $params = array_map(static fn (\ReflectionParameter $p): string => (string) $p->getType(), $method->getParameters());
+        assert_true(in_array(BlockRegistry::class, $params, true), "WidgetRegistry::{$method->getName()}() must be built from a BlockRegistry");
+    }
+
+    $br = BlockRegistry::withAllCoreBlocks();
+    $wr = WidgetRegistry::fromBlockRegistry($br);
+    assert_eq(array_keys($br->all()), array_keys($wr->all()), 'the same block types');
+    foreach ($br->all() as $type => $definition) {
+        assert_true($wr->resolve($type) === $definition, "{$type} is the BlockRegistry definition itself");
+    }
 });
 
 // ── 2. BlockRegistry ──────────────────────────────────────────────────────────

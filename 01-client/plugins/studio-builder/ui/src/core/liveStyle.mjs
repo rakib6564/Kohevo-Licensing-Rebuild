@@ -239,7 +239,8 @@ export function styleClasses(style, tokens) {
   }
   const typo = isObj(style.typography) ? style.typography : {};
   if (typo.weight !== undefined && FONT_WEIGHTS.includes(String(typo.weight))) classes.push(`sb-font-${typo.weight}`);
-  if (typo.transform !== undefined && TEXT_TRANSFORMS.includes(String(typo.transform))) classes.push(`sb-${typo.transform}`);
+  // `none` is the stylesheet's `sb-normal-case` (DocumentRenderer maps it the same way).
+  if (typo.transform !== undefined && TEXT_TRANSFORMS.includes(String(typo.transform))) classes.push(String(typo.transform) === 'none' ? 'sb-normal-case' : `sb-${typo.transform}`);
   const border = isObj(style.border) ? style.border : {};
   if (border.radius !== undefined && RADIUS_PRESETS.includes(String(border.radius))) classes.push(`sb-radius-${border.radius}`);
   if (border.style !== undefined && BORDER_STYLES.includes(String(border.style))) classes.push(`sb-border-${border.style}`);
@@ -269,7 +270,7 @@ export function typographyMarkers(block) {
 }
 
 /** Classes this file owns on a wrapper: a live update removes these (and only these) before adding the new set. */
-export const MANAGED_CLASS = /^(sb-x-[0-9a-f]{16}|sb-(font|rad|shd|pad|bg|fg|bd)--[\w-]+|sb-font-(normal|medium|semibold|bold|extrabold|\d{3})|sb-(none|uppercase|lowercase|capitalize)|sb-radius-[\w]+|sb-border-(none|solid|dashed|dotted|double)|sb-shadow-[\w]+|sb-ty-[a-z]+)$/;
+export const MANAGED_CLASS = /^(sb-x-[0-9a-f]{16}|sb-(font|rad|shd|pad|bg|fg|bd)--[\w-]+|sb-font-(normal|medium|semibold|bold|extrabold|\d{3})|sb-(normal-case|uppercase|lowercase|capitalize)|sb-radius-[\w]+|sb-border-(none|solid|dashed|dotted|double)|sb-shadow-[\w]+|sb-ty-[a-z]+)$/;
 
 // ── per-device overrides: StyleSurface::responsiveRules ─────────────────────
 

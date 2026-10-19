@@ -53,3 +53,29 @@ test('Delete is offered once rows are ticked, asks first, and removes only the t
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(row(page, c)).toHaveCount(0);
 });
+
+test('the Overview\'s Recent Studio Pages list deletes ticked pages too, and stays on the Overview', async ({ page }) => {
+  test.setTimeout(120_000);
+  const stamp = Date.now();
+  const a = `Overview A ${stamp}`; const b = `Overview B ${stamp}`;
+  await create(page, a, `overview-a-${stamp}`);
+  await create(page, b, `overview-b-${stamp}`);
+
+  await page.goto('/plugins/studio-builder/admin/index.php');
+  const del = page.getByRole('button', { name: 'Delete', exact: true });
+  await expect(del).toBeHidden();
+  await row(page, a).locator('.data-row-select').check();
+  await expect(del).toBeVisible();
+
+  page.once('dialog', (d) => { expect(d.message()).toContain('1'); d.accept(); });
+  await del.click();
+  await expect(page).toHaveURL(/\/admin\/index\.php\?/);
+  await expect(page.locator('.alert-success')).toContainText('1 page(s) deleted');
+  await expect(row(page, a)).toHaveCount(0);
+  await expect(row(page, b)).toHaveCount(1);
+
+  await row(page, b).locator('.data-row-select').check();
+  page.once('dialog', (d) => d.accept());
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(row(page, b)).toHaveCount(0);
+});
