@@ -431,6 +431,9 @@
     function close() {
       if (!el.hasAttribute('data-sb-open')) return;
       el.removeAttribute('data-sb-open');
+      // Triggers (and the lightbox) open a panel only when it has no close() of its own, so a closed panel must not
+      // keep this one: a stale close() is a no-op, and the panel would never open again.
+      if (el.__sbClose === close) delete el.__sbClose;
       // Closed state is aria-hidden="true". Open state removes the attribute
       // entirely — aria-hidden="false" is redundant and is announced oddly by
       // some screen readers.
