@@ -15,6 +15,9 @@
  * inert `unavailable` marker the renderer turns into a non-executable
  * fallback; it is never rendered from raw, unvalidated input.
  *
+ * Before either path, blocks saved at an older block version are upgraded in
+ * memory by DocumentUpgrader; only a block without an upgrade path falls back.
+ *
  * An undecodable document or an invalid envelope is a hard render failure.
  * This is a READ path only — nothing here ever persists a "repaired" document.
  */
@@ -26,6 +29,7 @@ namespace Slate\Module\StudioBuilder\Render;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
 use Slate\Module\StudioBuilder\Document\DocumentNormalizer;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Document\DocumentValidator;
 use Slate\Module\StudioBuilder\Exception\StudioRenderException;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
@@ -50,6 +54,8 @@ final class RenderDocumentPreparer
             throw new StudioRenderException('Studio document could not be decoded.', ['reason' => 'undecodable'], $e);
         }
         $decoded = DocumentNormalizer::stripTransientMetadata($decoded);
+        // Blocks saved at an older block version render at the current one (upgraded in memory, never persisted).
+        $decoded = DocumentUpgrader::upgrade($decoded, $registry)['document'];
 
         if (DocumentValidator::validate($decoded, $registry)->isValid()) {
             return ['document' => DocumentNormalizer::normalize($decoded, $registry), 'degraded' => false];

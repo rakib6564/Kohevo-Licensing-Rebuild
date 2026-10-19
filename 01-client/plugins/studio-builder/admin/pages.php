@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once __DIR__ . '/_nav.php';
+require_once __DIR__ . '/_page_bulk.php';
 
 use Slate\Module\StudioBuilder\Admin\PageListView;
 use Slate\Module\StudioBuilder\Application\StudioActor;
@@ -30,33 +31,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
     } else {
         if (($_POST['bulk_action'] ?? '') === 'delete') {
-            // Deleting a page is archiving it: it leaves the site and the list, and its history stays. A page that cannot go
-            // (a Global Component other pages still use) is skipped and counted, not allowed to stop the rest.
-            $ids = array_values(array_unique(array_filter(array_map('intval', (array) ($_POST['ids'] ?? [])), static fn(int $i): bool => $i > 0)));
-            $deleted = 0;
-            $failed = 0;
-            foreach (array_slice($ids, 0, 200) as $pageId) {
-                try {
-                    $studioApp->archivePage($studioActor, $pageId);
-                    $deleted++;
-                } catch (StudioException $e) {
-                    $failed++;
-                }
-            }
+            $result = sb_archive_pages($studioApp, $studioActor, $_POST['ids'] ?? []);
             $keep = (string) ($_POST['filter'] ?? 'all');
-            header('Location: pages.php?' . http_build_query(['filter' => $keep, 'deleted' => $deleted, 'failed' => $failed]), true, 303);
+            header('Location: pages.php?' . http_build_query(['filter' => $keep] + $result), true, 303);
             exit;
         }
     }
 }
 
-if (isset($_GET['deleted']) || isset($_GET['failed'])) {
-    $nDeleted = (int) ($_GET['deleted'] ?? 0);
-    $nFailed  = (int) ($_GET['failed'] ?? 0);
-    $flash = $nFailed > 0
-        ? ['type' => 'error', 'msg' => sprintf(__('studio_pages_deleted_some', '%1$d page(s) deleted, %2$d could not be (a shared component that other pages still use).'), $nDeleted, $nFailed)]
-        : ['type' => 'success', 'msg' => sprintf(__('studio_pages_deleted', '%d page(s) deleted.'), $nDeleted)];
-}
+$flash = $flash ?? sb_bulk_delete_flash($_GET);
 
 $pages = [];
 $listError = null;

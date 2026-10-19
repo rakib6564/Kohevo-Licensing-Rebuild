@@ -13,6 +13,7 @@
  * - Allowed dynamic data-provider keys (`list<string>`)
  * - Children / nesting capability (`allowsChildren`, `allowedChildTypes`)
  * - Dependency extraction hook (`extractDependencies`)
+ * - Version upgrade hook (`upgrade`), one version step at a time
  */
 
 declare(strict_types=1);
@@ -107,6 +108,17 @@ interface BlockDefinitionInterface
      * @return array<string, mixed>
      */
     public function normalizeProps(array $props): array;
+
+    /**
+     * Rewrite the `props` of this block as saved at `$fromVersion` into the props of
+     * version `$fromVersion + 1`, or null when the block has no upgrade from that
+     * version. Pure and deterministic: DocumentUpgrader calls it one step at a time
+     * before a stored or imported document is validated.
+     *
+     * @param array<string, mixed> $props
+     * @return array<string, mixed>|null
+     */
+    public function upgrade(array $props, int $fromVersion): ?array;
 
     /**
      * Extract block-level dependencies from normalized `props` and `bindings`.

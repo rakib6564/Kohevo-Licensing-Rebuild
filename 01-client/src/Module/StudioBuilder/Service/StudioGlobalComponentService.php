@@ -22,6 +22,8 @@ namespace Slate\Module\StudioBuilder\Service;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
+use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Document\DocumentCopier;
 use Slate\Module\StudioBuilder\Exception\StudioNotFoundException;
 use Slate\Module\StudioBuilder\Exception\StudioTenantScopeException;
@@ -41,6 +43,7 @@ final class StudioGlobalComponentService
         private readonly PageRepository $pages,
         private readonly RevisionRepository $revisions,
         private readonly DependencyRepository $dependencies,
+        private readonly ?BlockRegistry $registry = null,
     ) {}
 
     /**
@@ -103,6 +106,10 @@ final class StudioGlobalComponentService
             return [];
         }
         $document = CanonicalJson::decode((string) $revision['document_json']);
+        if ($this->registry !== null) {
+            // Detached copies are written into a page: older block versions are upgraded first.
+            $document = DocumentUpgrader::upgrade($document, $this->registry)['document'];
+        }
         $sections = [];
         foreach ((array) ($document['sections'] ?? []) as $section) {
             if (is_array($section) && empty($section['global_ref'])) {

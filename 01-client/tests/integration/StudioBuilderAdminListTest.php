@@ -152,12 +152,52 @@ unit('studio admin list: the selection bar offers Delete only when allowed, as a
     assert_true(str_contains($js, 'window.confirm') && str_contains($js, 'preventDefault'), 'the script asks before submitting and cancels on No');
 });
 
-unit('studio admin pages: the bulk delete is a CSRF-checked POST that archives each id, skips what cannot go, and redirects', function (): void {
-    $src = (string) file_get_contents(dirname(__DIR__, 2) . '/plugins/studio-builder/admin/pages.php');
-    assert_true(str_contains($src, "'bulk_action'") && str_contains($src, 'archivePage($studioActor, $pageId)'), 'archives each ticked page');
-    assert_true(str_contains($src, 'csrf_verify()'), 'behind the CSRF check');
-    assert_true(str_contains($src, '303'), 'redirects after the POST so a refresh does not repeat it');
-    assert_true(str_contains($src, '<form method="post" id="studio-bulk-form">') && str_contains($src, 'csrf_field()'), 'the list sits in a form with the CSRF field');
+foreach (['pages.php' => 'pages.php?', 'index.php' => 'index.php?'] as $sbalScreen => $sbalBack) {
+    unit("studio admin {$sbalScreen}: the bulk delete is a CSRF-checked POST through the shared helper, and redirects back", function () use ($sbalScreen, $sbalBack): void {
+        $src = (string) file_get_contents(dirname(__DIR__, 2) . '/plugins/studio-builder/admin/' . $sbalScreen);
+        assert_true(str_contains($src, "require_once __DIR__ . '/_page_bulk.php';"), 'loads the shared helper');
+        assert_true(str_contains($src, "'bulk_action'") && str_contains($src, 'sb_archive_pages($studioApp, $studioActor, $_POST[\'ids\'] ?? [])'), 'archives the ticked pages');
+        assert_true((bool) preg_match('/if \(!csrf_verify\(\)\) \{.*?sb_archive_pages/s', $src), 'only after the CSRF check');
+        assert_true(str_contains($src, "header('Location: {$sbalBack}") && str_contains($src, '303'), 'redirects back to the same screen so a refresh does not repeat it');
+        assert_true(str_contains($src, 'sb_bulk_delete_flash($_GET)'), 'and says how it went');
+        assert_true(str_contains($src, '<form method="post" id="studio-bulk-form">') && str_contains($src, 'csrf_field()'), 'the list sits in a form with the CSRF field');
+        assert_true(str_contains($src, "plugin_url('studio-builder', 'admin/preview.php'), \$canEdit, 'page-edit.php')"), 'the selection bar offers Delete to an editor');
+    });
+}
+
+require_once dirname(__DIR__, 2) . '/plugins/studio-builder/admin/_page_bulk.php';
+
+unit('studio admin bulk delete: each distinct positive id is archived once, failures are counted, at most 200 per request', function (): void {
+    $app = new class {
+        /** @var list<int> */
+        public array $calls = [];
+        public function archivePage(\Slate\Module\StudioBuilder\Application\StudioActor $actor, int $pageId): array
+        {
+            $this->calls[] = $pageId;
+            if ($pageId === 5) {
+                throw new \Slate\Module\StudioBuilder\Exception\StudioException('in use', 'STUDIO_PAGE_IN_USE', 409);
+            }
+            return [];
+        }
+    };
+    $actor = \Slate\Module\StudioBuilder\Application\StudioActor::authenticated(42, [\Slate\Module\StudioBuilder\StudioPermissions::EDIT]);
+    assert_eq(['deleted' => 2, 'failed' => 1], sb_archive_pages($app, $actor, ['3', '3', '-1', 'x', '0', '5', 7]));
+    assert_eq([3, 5, 7], $app->calls, 'duplicates, zero, negatives and junk are dropped');
+    $app->calls = [];
+    assert_eq(['deleted' => 0, 'failed' => 0], sb_archive_pages($app, $actor, 'not-a-list'), 'a junk ids value deletes nothing');
+    assert_eq([], $app->calls);
+    sb_archive_pages($app, $actor, range(1000, 1300));
+    assert_eq(200, count($app->calls), 'one request deletes at most 200 pages');
+});
+
+unit('studio admin bulk delete: the message after the redirect says how many went and how many could not', function (): void {
+    assert_null(sb_bulk_delete_flash([]), 'no message on a plain visit');
+    $ok = sb_bulk_delete_flash(['deleted' => '3', 'failed' => '0']);
+    assert_eq('success', $ok['type']);
+    assert_true(str_contains($ok['msg'], '3'), $ok['msg']);
+    $some = sb_bulk_delete_flash(['deleted' => '2', 'failed' => '1']);
+    assert_eq('error', $some['type']);
+    assert_true(str_contains($some['msg'], '2') && str_contains($some['msg'], '1'), $some['msg']);
 });
 
 if (!empty($studioAdminListStandalone)) {

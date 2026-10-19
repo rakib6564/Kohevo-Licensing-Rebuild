@@ -248,9 +248,6 @@ final class StyleValueGuard
             $check('background.color', $bg['color'] ?? null, [self::class, 'isColor']);
             $check('background.gradient', $bg['gradient'] ?? null, [self::class, 'isGradient']);
         }
-        foreach (is_array($style['spacing'] ?? null) ? $style['spacing'] : [] as $k => $v) {
-            $check('spacing.' . $k, $v, [self::class, 'isLengthOrToken']);
-        }
         $bd = is_array($style['border'] ?? null) ? $style['border'] : [];
         $check('border.width', $bd['width'] ?? null, [self::class, 'isBorderWidth']);
         $check('border.color', $bd['color'] ?? null, [self::class, 'isColor']);

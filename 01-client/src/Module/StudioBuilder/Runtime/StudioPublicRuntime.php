@@ -33,6 +33,8 @@ use Slate\Module\StudioBuilder\Domain\PageAddress;
 use Slate\Module\StudioBuilder\Render\RenderContext;
 use Slate\Module\StudioBuilder\Render\StudioRenderService;
 use Slate\Module\StudioBuilder\Repository\PageRepository;
+use Slate\Module\StudioBuilder\Theme\TemplatePreviewContext;
+use Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver;
 use Slate\Services\Licensing\EntitlementService;
 use Slate\Tenancy\TenantContext;
 
@@ -52,7 +54,7 @@ final class StudioPublicRuntime
         private readonly StudioReservedRoutes $reserved,
         ?\Closure $entitlementCheck = null,
         private readonly ?StudioSitemapService $sitemap = null,
-        private readonly ?\Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver $themeTemplates = null,
+        private readonly ?ThemeTemplateResolver $themeTemplates = null,
     ) {
         $this->entitlementCheck = $entitlementCheck
             ?? static fn(int $tenantId, string $moduleKey): bool => EntitlementService::canAccess($tenantId, $moduleKey);
@@ -103,10 +105,7 @@ final class StudioPublicRuntime
 
     public function handleNotFound(?string $ifNoneMatch = null): ?PublicResponse
     {
-        if ($this->themeTemplates === null || !$this->tenants->isScoped()) {
-            return null;
-        }
-        $tpl = $this->themeTemplates->resolveNotFound();
+        $tpl = $this->resolveThemeTemplate(fn(ThemeTemplateResolver $t): ?array => $t->resolveNotFound());
         if ($tpl === null) {
             return null;
         }
@@ -114,12 +113,17 @@ final class StudioPublicRuntime
         return $this->serveTemplate($page, $ifNoneMatch, 404, ['is_404' => true]);
     }
 
+    /**
+     * A category, tag or author archive. The term comes from the address: control characters are dropped and a
+     * term that is empty, not UTF-8 or longer than a stored term can be is the ordinary 404.
+     */
     public function handleArchive(string $type, string $term, ?string $ifNoneMatch = null): ?PublicResponse
     {
-        if ($this->themeTemplates === null || !$this->tenants->isScoped()) {
+        $term = self::archiveTerm($term);
+        if ($term === null) {
             return null;
         }
-        $tpl = $this->themeTemplates->resolveArchive($type, $term);
+        $tpl = $this->resolveThemeTemplate(fn(ThemeTemplateResolver $t): ?array => $t->resolveArchive($type, $term));
         if ($tpl === null) {
             return null;
         }
@@ -134,10 +138,7 @@ final class StudioPublicRuntime
 
     public function handleSearch(string $query, ?string $ifNoneMatch = null): ?PublicResponse
     {
-        if ($this->themeTemplates === null || !$this->tenants->isScoped()) {
-            return null;
-        }
-        $tpl = $this->themeTemplates->resolveSearch($query);
+        $tpl = $this->resolveThemeTemplate(fn(ThemeTemplateResolver $t): ?array => $t->resolveSearch($query));
         if ($tpl === null) {
             return null;
         }
@@ -146,6 +147,44 @@ final class StudioPublicRuntime
             'search_query' => $query,
             'is_search'    => true,
         ]);
+    }
+
+    /**
+     * A theme template lookup behind the same gate as a page: a scoped tenant licensed for Studio, checked BEFORE
+     * any template query runs. A lookup error is "not ours" (the ordinary 404), never an exception.
+     *
+     * @param \Closure(ThemeTemplateResolver): ?array<string, mixed> $resolve
+     * @return ?array{page: array<string, mixed>, revision: array<string, mixed>}
+     */
+    private function resolveThemeTemplate(\Closure $resolve): ?array
+    {
+        if ($this->themeTemplates === null || !$this->tenants->isScoped()) {
+            return null;
+        }
+        $tenantId = $this->tenants->id();
+        if ($tenantId <= 0 || !$this->isEntitled($tenantId, self::ENTITLEMENT_KEY)) {
+            return null;
+        }
+        try {
+            $tpl = $resolve($this->themeTemplates);
+        } catch (\Throwable $e) {
+            self::log('template lookup', $e);
+            return null;
+        }
+        return is_array($tpl) && is_array($tpl['page'] ?? null) ? $tpl : null;
+    }
+
+    /** An archive term from the address, cleaned like a preview sample; null when it cannot be a real term. */
+    private static function archiveTerm(string $term): ?string
+    {
+        if (!mb_check_encoding($term, 'UTF-8')) {
+            return null;
+        }
+        $clean = trim(preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $term) ?? '');
+        if ($clean === '' || mb_strlen($clean, 'UTF-8') > TemplatePreviewContext::MAX_TEXT) {
+            return null;
+        }
+        return $clean;
     }
 
     /** A routable slug, or null for anything Studio must not claim. */

@@ -274,6 +274,43 @@ function sbp8_block(string $type, array $props, array $extra = []): array
     ];
 }
 
+/**
+ * A runtime whose registry is this site's plus two probe blocks at version 2 (TI-07): `probe.note`
+ * declares the 1 -> 2 step (`caption` became `text`), `probe.legacy` declares none.
+ */
+function sbp8_probe_runtime(): StudioRuntime
+{
+    $registry = \Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions::studioRegistry();
+    $probe = static fn(string $type, array $upgrades): \Slate\Module\StudioBuilder\Registry\DeclarativeBlockDefinition => new \Slate\Module\StudioBuilder\Registry\DeclarativeBlockDefinition(
+        type: $type, version: 2, label: 'Probe', category: 'test', icon: 'box',
+        schema: \Slate\Module\StudioBuilder\Schema\FieldSchema::define([['key' => 'text', 'type' => 'string', 'label' => 'Text', 'required' => false, 'default' => '', 'max_length' => 200]]),
+        upgrades: $upgrades,
+    );
+    $registry->register($probe('probe.note', [1 => static fn(array $p): array => ['text' => (string) ($p['caption'] ?? '')]]));
+    $registry->register($probe('probe.legacy', []));
+    return StudioRuntimeFactory::build(['registry' => $registry]);
+}
+
+/**
+ * A page as an older Studio left it: rows written directly, its draft (and, if published, its published
+ * revision) holding `$document` as stored then. @return array{id: int, rev: int, uuid: string}
+ */
+function sbp8_stored_page(int $tenantId, string $slug, string $pageType, array $document, bool $published): array
+{
+    $uuid = sprintf('%08x-6666-4000-8000-%012x', random_int(0, 0x7fffffff), random_int(0, 0x7fffffff));
+    $pageId = (int) Database::insert('studiobuilder_pages', [
+        'tenant_id' => $tenantId, 'uuid' => $uuid, 'slug' => $slug, 'title' => $slug, 'page_type' => $pageType, 'route_mode' => 'standalone',
+        'status' => $published ? 'published' : 'draft', 'seo_json' => '{}', 'settings_json' => '{}', 'created_by' => 1, 'updated_by' => 1,
+        'created_at' => slate_db_now(), 'updated_at' => slate_db_now(), 'published_at' => $published ? slate_db_now() : null,
+    ]);
+    $revId = (int) Database::insert('studiobuilder_revisions', [
+        'tenant_id' => $tenantId, 'page_id' => $pageId, 'revision_number' => 1, 'revision_kind' => 'manual', 'schema_version' => CanonicalDocumentSchema::SCHEMA_VERSION,
+        'document_json' => CanonicalJson::encode($document), 'summary' => 'stored before the bump', 'created_by' => 1, 'created_at' => slate_db_now(),
+    ]);
+    Database::query('UPDATE studiobuilder_pages SET active_draft_revision_id = ?, published_revision_id = ? WHERE id = ? AND tenant_id = ?', [$revId, $published ? $revId : null, $pageId, $tenantId]);
+    return ['id' => $pageId, 'rev' => $revId, 'uuid' => $uuid];
+}
+
 /** Rewrite media ids in a document through a map (for round-trip comparison). */
 function sbp8_map_media(array $document, array $map): array
 {
@@ -783,6 +820,107 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 $expected['sections'][1]['global_ref'] = $newComponent;
                 assert_eq(sbp8_shape($expected), sbp8_shape($imported), 'semantically identical after the explicit mapping');
                 assert_eq([], array_values(array_intersect(sbp8_ids($source), sbp8_ids($imported))), 'with fresh ids');
+            });
+
+            // ── TI-07: blocks saved at an older block version ───────────────
+            unit('phase8a int 12: a block exported at an older version is upgraded on import and when a stored template is applied or inserted; without an upgrade path it is refused by name', function () use ($editor, $admin, $S): void {
+                $rt2 = sbp8_probe_runtime();
+                $one = static fn(array $item): array => sbp8_rehash(['package_format' => 'kohevo-studio-package', 'package_version' => '1.0', 'exported_at' => '2026-09-30T00:00:00Z', 'items' => [$item]]);
+                $withBlock = static function (string $slug, array $block) use ($S): array {
+                    $item = array_merge($S->minPkg['items'][0], ['slug' => $slug]);
+                    $item['document']['template_key'] = 'default';
+                    $item['document']['sections'] = [array_merge($item['document']['sections'][0], ['blocks' => [$block]])];
+                    return $item;
+                };
+
+                // Import: the version-1 block arrives as version 2 with its props rewritten, and the report says so.
+                $pkg = $one($withBlock('upgraded-import', sbp8_block('probe.note', ['caption' => 'Exported at v1'])));
+                $dry = sbp8_report(sbp8_import($rt2, SBP8_B, $editor, $pkg, true));
+                assert_eq([], sbp8_codes($dry, 'error'), 'the dry run accepts it');
+                assert_true(in_array('block_upgraded', sbp8_codes($dry, 'warning'), true), 'and reports the upgrade');
+                $data = sbp8_ok(sbp8_import($rt2, SBP8_B, $editor, $pkg, false), 'commit upgraded import');
+                $block = sbp8_draft($rt2, SBP8_B, (int) $data['report']['committed']['pages'][0]['page_id'])['sections'][0]['blocks'][0];
+                assert_eq(['probe.note', 2, ['text' => 'Exported at v1']], [$block['type'], $block['version'], $block['props']], 'stored at the current version');
+
+                // No upgrade path: refused, and the report names the block and both versions.
+                $rep = sbp8_report(sbp8_import($rt2, SBP8_B, $editor, $one($withBlock('legacy-import', sbp8_block('probe.legacy', ['text' => 'Old']))), true));
+                assert_eq(['invalid_block_version'], sbp8_codes($rep, 'error'));
+                $messages = array_column(array_filter($rep['issues'], static fn(array $i): bool => $i['code'] === 'invalid_block_version'), 'message');
+                assert_true(str_contains((string) ($messages[0] ?? ''), "Block 'probe.legacy' is version 1; this site supports version 2"), 'named in the report: ' . json_encode($messages));
+
+                // Stored templates written by an older Studio: applied and inserted at the current version.
+                $section = static fn(string $caption): array => [
+                    'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'Old', 'global_ref' => null,
+                    'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+                    'blocks' => [sbp8_block('probe.note', ['caption' => $caption])],
+                ];
+                $pageTpl = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Old page template');
+                $pageTpl['sections'] = [$section('Applied from v1')];
+                $presetTpl = CanonicalDocumentSchema::emptyDocument('section_preset', 'default', 'Old preset');
+                $presetTpl['sections'] = [$section('Inserted from v1')];
+                foreach ([['old-page-tpl', 'page_template', $pageTpl], ['old-section-tpl', 'section_preset', $presetTpl]] as [$key, $type, $doc]) {
+                    $rt2->tenants->runAs(SBP8_B, static fn() => $rt2->templates->insert([
+                        'uuid' => sprintf('%08x-5555-4000-8000-%012x', random_int(0, 0x7fffffff), random_int(0, 0x7fffffff)), 'template_key' => $key, 'template_type' => $type, 'category' => 'general',
+                        'name' => $key, 'schema_version' => CanonicalDocumentSchema::SCHEMA_VERSION, 'document_json' => CanonicalJson::encode($doc), 'is_system' => 0,
+                    ]));
+                }
+                $created = sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'create_page', ['title' => 'Old templates', 'slug' => 'old-templates', 'page_type' => 'page', 'route_mode' => 'standalone']), 'target page');
+                $pageId = (int) $created['page']['id'];
+                $r = sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'apply_template', ['page_id' => $pageId, 'template_key' => 'old-page-tpl', 'expected_revision_id' => (int) $created['page']['active_draft_revision_id']]), 'apply old template');
+                $applied = sbp8_draft($rt2, SBP8_B, $pageId)['sections'][0]['blocks'][0];
+                assert_eq([2, ['text' => 'Applied from v1']], [$applied['version'], $applied['props']], 'apply upgrades the stored template');
+                sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'insert_template', ['page_id' => $pageId, 'template_key' => 'old-section-tpl', 'index' => 1, 'parent_id' => null, 'expected_revision_id' => (int) $r['revision']['id']]), 'insert old preset');
+                $inserted = sbp8_draft($rt2, SBP8_B, $pageId)['sections'][1]['blocks'][0];
+                assert_eq([2, ['text' => 'Inserted from v1']], [$inserted['version'], $inserted['props']], 'insert upgrades the stored preset');
+            });
+
+            // ── TI-07 (option C): content stored before a block-version bump ───────────
+            unit('phase8a int 13: drafts and published pages stored at an older block version load, edit, publish, roll back, export and detach at the current version; the stored revision is never rewritten', function () use ($editor, $publisher, $viewer): void {
+                $rt2 = sbp8_probe_runtime();
+                $old = static function (string $caption, array $extra = []): array {
+                    $doc = CanonicalDocumentSchema::emptyDocument($extra['type'] ?? 'page', 'default', 'Stored at v1');
+                    $doc['sections'] = [[
+                        'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'Old', 'global_ref' => null,
+                        'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+                        'blocks' => [sbp8_block('probe.note', ['caption' => $caption])],
+                    ]];
+                    return $doc;
+                };
+                $probeOf = static fn(array $doc, int $s = 0): array => [$doc['sections'][$s]['blocks'][0]['version'], $doc['sections'][$s]['blocks'][0]['props']];
+                $page = $rt2->tenants->runAs(SBP8_B, static fn(): array => sbp8_stored_page(SBP8_B, 'stored-v1', 'page', $old('Saved at v1'), true));
+                $storedJson = (string) Database::value('SELECT document_json FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [SBP8_B, $page['rev']]);
+
+                // Editor load: the draft reads at the current version.
+                $loaded = sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'GET', 'document', ['page' => $page['id']]), 'load stored page');
+                assert_eq([2, ['text' => 'Saved at v1']], $probeOf($loaded['document']), 'loaded at v2');
+
+                // An edit saves a NEW revision at the current version; the stored one is untouched.
+                $r = sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'operations', ['page_id' => $page['id'], 'expected_revision_id' => $page['rev'], 'operations' => [
+                    ['op' => 'update_settings', 'payload' => ['settings' => ['token_group' => 'default']]],
+                ]]), 'edit stored page');
+                assert_eq([2, ['text' => 'Saved at v1']], $probeOf($r['document']), 'the edit saved the upgraded block');
+                assert_eq($storedJson, (string) Database::value('SELECT document_json FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [SBP8_B, $page['rev']]), 'history is never rewritten');
+
+                // Publish, then roll back to the version-1 revision: both write current versions.
+                $pub = sbp8_ok(sbp8_call($rt2, SBP8_B, $publisher, 'POST', 'publish', ['page_id' => $page['id'], 'expected_revision_id' => (int) $r['revision']['id']]), 'publish');
+                $published = CanonicalJson::decode((string) Database::value('SELECT r.document_json FROM studiobuilder_revisions r JOIN studiobuilder_pages p ON p.published_revision_id = r.id AND p.tenant_id = r.tenant_id WHERE p.tenant_id = ? AND p.id = ?', [SBP8_B, $page['id']]));
+                assert_eq([2, ['text' => 'Saved at v1']], $probeOf($published), 'published at v2');
+                $rb = sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'rollback', ['page_id' => $page['id'], 'target_revision_id' => $page['rev'], 'expected_revision_id' => (int) ($pub['revision']['id'] ?? 0)]), 'roll back to the v1 revision');
+                assert_eq([2, ['text' => 'Saved at v1']], $probeOf(sbp8_draft($rt2, SBP8_B, $page['id'])), 'rolled back at v2');
+
+                // Export carries the current version.
+                $pkg = sbp8_ok(sbp8_call($rt2, SBP8_B, $viewer, 'GET', 'export_package', ['page' => $page['id'], 'include_components' => '0', 'include_template' => '0']), 'export')['package'];
+                assert_eq([2, ['text' => 'Saved at v1']], $probeOf($pkg['items'][0]['document']), 'exported at v2');
+
+                // Detaching a component stored at v1 copies its content at v2.
+                $component = $rt2->tenants->runAs(SBP8_B, static fn(): array => sbp8_stored_page(SBP8_B, 'stored-component', 'section_preset', $old('Component at v1', ['type' => 'section_preset']), true));
+                $host = $old('Host');
+                $host['sections'][] = ['id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'Ref', 'global_ref' => $component['uuid'], 'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'blocks' => []];
+                $hostPage = $rt2->tenants->runAs(SBP8_B, static fn(): array => sbp8_stored_page(SBP8_B, 'stored-host', 'page', $host, false));
+                sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'detach_component', ['page_id' => $hostPage['id'], 'section_id' => $host['sections'][1]['id'], 'expected_revision_id' => $hostPage['rev']]), 'detach stored component');
+                $detached = sbp8_draft($rt2, SBP8_B, $hostPage['id']);
+                assert_eq([2, ['text' => 'Component at v1']], $probeOf($detached, 1), 'detached copy at v2');
+                assert_eq([2, ['text' => 'Host']], $probeOf($detached, 0), 'and the host page\'s own block too');
             });
 
             // ── Rate limit: packages have their own small bucket ─────────────
