@@ -223,6 +223,43 @@ unit('an archive address with an over-long, empty or malformed term is the ordin
     });
 });
 
+unit('the editor learns which published templates share these conditions, and whether a previewed page would use one (TB-10, TB-14)', function (): void {
+    assert_eq('header', ThemeTemplateResolver::roleOf('header_partial', [], 'x'));
+    assert_eq('footer', ThemeTemplateResolver::roleOf('footer_partial', [], 'default'));
+    assert_eq('single', ThemeTemplateResolver::roleOf('system', ['template_type' => 'single'], 'x'));
+    assert_eq('404', ThemeTemplateResolver::roleOf('system', ['template_type' => 'not_found'], 'x'));
+    assert_eq('archive', ThemeTemplateResolver::roleOf('system', [], 'theme-archive'));
+    assert_null(ThemeTemplateResolver::roleOf('page', [], 'about'), 'an ordinary page has no role');
+    assert_null(ThemeTemplateResolver::roleOf('global_component', ['template_type' => 'single'], 'x'));
+
+    $site = ['template_type' => 'header', 'conditions' => ['rules' => [['action' => 'include', 'condition' => 'entire_site']]]];
+    $rows = [
+        ['id' => 51, 'title' => 'Site header', 'slug' => 'site', 'page_type' => 'header_partial', 'status' => 'published', 'published_revision_id' => 151, 'published_at' => '2026-10-01 09:00:00', 'settings_json' => json_encode($site)],
+        ['id' => 52, 'title' => 'Default header', 'slug' => 'default', 'page_type' => 'header_partial', 'status' => 'published', 'published_revision_id' => 152, 'settings_json' => json_encode($site)],
+        ['id' => 53, 'title' => 'This one', 'slug' => 'mine', 'page_type' => 'header_partial', 'status' => 'published', 'published_revision_id' => 153, 'settings_json' => json_encode($site)],
+        ['id' => 54, 'title' => 'Legacy', 'slug' => 'legacy', 'page_type' => 'header_partial', 'status' => 'published', 'published_revision_id' => 154, 'settings_json' => json_encode(['category' => 'News'])],
+        ['id' => 61, 'title' => 'Archive', 'slug' => 'archive', 'page_type' => 'system', 'status' => 'published', 'published_revision_id' => 161, 'settings_json' => json_encode(['template_type' => 'archive'])],
+        ['id' => 62, 'title' => 'Search', 'slug' => 'search', 'page_type' => 'system', 'status' => 'published', 'published_revision_id' => 162, 'settings_json' => json_encode(['template_type' => 'search'])],
+    ];
+    $resolver = new ThemeTemplateResolver(sbtm_pages($rows), sbtm_revisions($rows));
+    $peers = $resolver->peers('header', 53);
+    assert_eq([54, 51], array_column($peers, 'id'), 'other published headers, in title order; not itself and not the site default');
+    assert_eq($site['conditions'], $peers[1]['conditions'], 'with the conditions they were published with');
+    assert_eq([['scope' => 'category', 'value' => 'News']], $peers[0]['conditions'], 'an older category-only header shows as its category rule');
+    assert_eq('2026-10-01 09:00:00', $peers[1]['published_at']);
+    assert_eq([61], array_column($resolver->peers('archive', 0), 'id'), 'templates of the same role only');
+
+    $page = sbtm_page();
+    $tech = ['conditions' => ['rules' => [['action' => 'include', 'condition' => 'category', 'value' => 'Tech']]]];
+    assert_true(ThemeTemplateResolver::appliesTo('header', 'tech', $tech, $page, ['category' => 'Tech']), 'matching conditions');
+    assert_false(ThemeTemplateResolver::appliesTo('header', 'tech', $tech, $page, ['category' => 'Design']), 'conditions that do not match the page');
+    assert_false(ThemeTemplateResolver::appliesTo('footer', 'plain', [], $page), 'a header or footer with no conditions is never chosen by them');
+    assert_true(ThemeTemplateResolver::appliesTo('footer', 'default', [], $page), 'the site default applies wherever nothing else does');
+    assert_true(ThemeTemplateResolver::appliesTo('header', 'legacy', ['category' => 'News'], $page, ['category' => 'news']), 'an older category-only header');
+    assert_true(ThemeTemplateResolver::appliesTo('single', 'single', [], $page), 'a single template with no conditions applies everywhere');
+    assert_false(ThemeTemplateResolver::appliesTo('single', 'single', $tech, $page, ['category' => '']), 'one whose conditions do not match does not');
+});
+
 if (!empty($studioTplMatchUnitStandalone)) {
     exit(unit_summary());
 }

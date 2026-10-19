@@ -544,6 +544,7 @@ $sbBoot = [
         'cond_problem_row' => __('studio_ui_cond_problem_row', 'Fix the highlighted conditions.'),
         'cond_problem_many' => __('studio_ui_cond_problem_many', 'At most 30 conditions.'),
         'cond_needs_include' => __('studio_ui_cond_needs_include', 'Add at least one Include rule: Exclude rules only remove pages from a selection.'),
+        'cond_conflict' => __('studio_ui_cond_conflict', 'Same conditions as: {titles}. When templates match a page equally, the one published most recently is shown.'),
         'bg_overlay_note' => __('studio_ui_bg_overlay_note', 'Overlay {percent}% on top of the image'),
         'bg_overlay_remove' => __('studio_ui_bg_overlay_remove', 'Remove overlay'),
         'bg_image_covers' => __('studio_ui_bg_image_covers', 'An image is set and is drawn over this colour.'),

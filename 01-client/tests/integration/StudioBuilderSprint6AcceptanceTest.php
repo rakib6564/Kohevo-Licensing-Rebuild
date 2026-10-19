@@ -506,6 +506,15 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             assert_false(str_contains($ftrOnBare->html, 'Tenant A Global Footer'), 'and without the previewed footer');
             $hdrOnDesign = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->renderPreview($actorA, $hdrEngId, null, $p2Id));
             assert_true(str_contains($hdrOnDesign->html, 'Engineering Hub Special Header'), 'a page with a header still previews the edited one');
+            assert_true(str_contains($hdrOnDesign->html, 'its display conditions do not match it'), 'and says the live Design page would not use this Engineering header');
+            $hdrOnEng = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->renderPreview($actorA, $hdrEngId, null, $p1Id));
+            assert_true(str_contains($hdrOnEng->html, 'Engineering Hub Special Header') && !str_contains($hdrOnEng->html, 'display conditions do not match'), 'no note on a page the conditions select');
+            $ftrOnDesign = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->renderPreview($actorA, $ftrDefId, null, $p2Id));
+            assert_false(str_contains($ftrOnDesign->html, 'display conditions do not match'), 'the site default footer applies everywhere: no note');
+            $singleOnDesign = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->renderPreview($actorA, $tplSingleId, null, $p2Id));
+            assert_true(str_contains($singleOnDesign->html, 'On the live site this page does not use this template'), 'a single template previewed on a page it does not match says so');
+            $singleOnEng = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->renderPreview($actorA, $tplSingleId, null, $p1Id));
+            assert_false(str_contains($singleOnEng->html, 'display conditions do not match'), 'and not on one it matches');
 
             // TB-10: two "entire site" footers tie; the one published last wins, and renaming either changes nothing.
             $siteFooter = static function (string $title, string $slug, string $text) use ($rt, $actorA): int {
@@ -527,6 +536,12 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             $pdo->prepare('UPDATE studiobuilder_pages SET title = ? WHERE id = ?')->execute(['Alpha Footer', $zuluId]);
             $tieRenamed = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/design-post'));
             assert_true($tieRenamed !== null && str_contains($tieRenamed->body, 'Zulu footer text'), 'swapping the titles keeps the same footer');
+            // The editor is told which published footers share these conditions (the "same conditions as" note).
+            $peers = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->templatePeers($actorA, $zuluId));
+            assert_eq('footer', $peers['role']);
+            assert_eq([$alphaId], array_column($peers['peers'], 'id'), 'the other entire-site footer, not itself or the site default');
+            assert_eq([['action' => 'include', 'condition' => 'entire_site']], $peers['peers'][0]['conditions']['rules'] ?? null, 'with its published conditions');
+            assert_eq(['role' => null, 'peers' => []], $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->templatePeers($actorA, $p2Id)), 'an ordinary page has none');
 
             // An older Single template stored as a page is not a public page and is not in the sitemap.
             $legacy = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->createPage($actorA, 'Old Single', 'template-old-single', 'page', 'standalone'));

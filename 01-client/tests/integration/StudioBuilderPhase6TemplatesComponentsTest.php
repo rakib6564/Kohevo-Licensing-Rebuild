@@ -616,6 +616,8 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
                 assert_eq(['mode' => 'inherit', 'resolved' => 'builtin', 'site' => null, 'custom' => null], $chrome['header'], 'no partial yet → built-in chrome');
                 $cc = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'GET', 'chrome', ['page' => $S->componentId]), 'component chrome')['chrome'];
                 assert_false($cc['chromed'], 'a component has no chrome of its own');
+                $peers = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'GET', 'template_peers', ['page' => $S->about]), 'template peers');
+                assert_eq(['role' => null, 'peers' => []], $peers, 'an ordinary page has no templates to tie with');
 
                 // Site header (slug default): a DRAFT partial does not count.
                 $hdr = sbp6_make_page($rt, SBP6_TENANT_A, $editor, 'Site header', 'default', 'header_partial', [sbp6_heading('Alpha Site Header')]);

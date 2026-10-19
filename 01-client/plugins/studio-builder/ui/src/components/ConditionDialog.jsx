@@ -7,7 +7,7 @@
 import { useId, useState } from 'react';
 import { Dialog } from './Dialog.jsx';
 import { t } from '../core/messages.mjs';
-import { CONTENT_TYPES, KINDS, MAX_RULES, fromRows, rowProblem, setProblem } from '../core/conditions.mjs';
+import { CONTENT_TYPES, KINDS, MAX_RULES, fromRows, rowProblem, sameConditionsAs, setProblem } from '../core/conditions.mjs';
 
 const kindInput = (kind) => (KINDS.find((k) => k.id === kind) || {}).input || null;
 
@@ -57,9 +57,11 @@ function Row({ row, index, onChange, onRemove }) {
   );
 }
 
-export function ConditionDialog({ initialRows, onClose, onSave }) {
+export function ConditionDialog({ initialRows, peers = [], onClose, onSave }) {
   const [rows, setRows] = useState(initialRows);
   const problem = setProblem(rows);
+  // Live: the published templates these rows would tie with (the most recently published of them is shown).
+  const ties = problem ? [] : sameConditionsAs(fromRows(rows), peers);
   const update = (i, next) => setRows((list) => list.map((r, j) => (j === i ? next : r)));
   return (
     <Dialog
@@ -82,6 +84,7 @@ export function ConditionDialog({ initialRows, onClose, onSave }) {
           ))}
         </ul>
         {problem && rows.length > 0 && !rows.some((r) => rowProblem(r)) && <p className="sbx-field__error" role="alert">{t(problem)}</p>}
+        {ties.length > 0 && <p className="sbx-hint" role="note" data-testid="cond-dialog-conflict">{t('cond_conflict', { titles: ties.map((p) => p.title).join(', ') })}</p>}
         <button type="button" className="sbx-btn sbx-btn--xs" data-testid="cond-add" disabled={rows.length >= MAX_RULES} onClick={() => setRows((list) => [...list, { action: 'include', kind: 'entire_site', value: '' }])}>{t('cond_add')}</button>
       </div>
     </Dialog>
