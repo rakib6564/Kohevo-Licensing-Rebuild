@@ -1,7 +1,7 @@
 // Built-in headers (HeaderPresetCatalog): while a header is open, the library window lists the five designs, and
 // applying one replaces the header's content with that design on the canvas (a header is never stacked inside another).
 import { test, expect } from '@playwright/test';
-import { settled } from './helpers.mjs';
+import { frameDocument, settled } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'library window (desktop)');
@@ -53,5 +53,46 @@ test('a header page offers the five built-in headers, and applying one replaces 
     const brands = await canvas(page).locator('.sb-link', { hasText: 'Your brand' }).count();
     expect(brands, `${key}: the header was replaced, not stacked`).toBeLessThanOrEqual(2);
   }
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+/** The saved canvas render of the open page (what a reload would show). */
+async function canvasHtml(page) {
+  const src = await page.locator('iframe.sbx-canvas__frame').getAttribute('src');
+  return (await page.request.get(`${src}9`)).text();
+}
+
+async function editInPlace(page, locator, text) {
+  await locator.dblclick();
+  await expect(locator).toHaveAttribute('contenteditable', 'true');
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.type(text);
+  await page.keyboard.press('Enter');
+  await settled(page);
+}
+
+test('Theme Builder opens a built-in header in the canvas, where the brand, a menu link and the button edit in place', async ({ page }) => {
+  page.on('dialog', (dialog) => dialog.accept());
+  await page.goto('/plugins/studio-builder/admin/templates.php?type=header');
+  const card = page.locator('[data-header-design="system-header-classic"]');
+  await expect(card).toContainText('Header — Classic');
+  await card.getByRole('button', { name: /Edit in canvas/ }).click();
+  await page.waitForURL(/builder\.php\?page=\d+/);
+  await page.locator('iframe.sbx-canvas__frame').waitFor();
+  await settled(page);
+
+  const frame = await frameDocument(page);
+  await editInPlace(page, frame.locator('[data-sb-type="core.link"] .sb-link', { hasText: 'Your brand' }).first(), 'Studio North');
+  await expect.poll(async () => (await canvasHtml(page)).includes('Studio North'), { timeout: 20_000 }).toBe(true);
+
+  const about = frame.locator('[data-sb-type="core.nav_menu"] .sb-nav__link', { hasText: 'About' }).first();
+  await editInPlace(page, about, 'Our story');
+  await expect.poll(async () => {
+    const html = await canvasHtml(page);
+    return html.includes('Our story') && html.includes('Services') && html.includes('Contact');
+  }, { timeout: 20_000 }).toBe(true);
+
+  await editInPlace(page, frame.locator('[data-sb-type="core.button"] .sb-button', { hasText: 'Get in touch' }).first(), 'Say hello');
+  await expect.poll(async () => (await canvasHtml(page)).includes('Say hello'), { timeout: 20_000 }).toBe(true);
   await expect(page.getByRole('alert')).toHaveCount(0);
 });

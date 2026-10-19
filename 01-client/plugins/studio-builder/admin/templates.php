@@ -121,6 +121,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $action = '';
         }
 
+        // "Edit in canvas" on a built-in header: a new draft header from that design (not live until it is published),
+        // opened straight in the builder. The built-in design itself stays as it is, for the next one.
+        $openInCanvas = false;
+        if ($action === 'use_header_design') {
+            $design = HeaderPresetCatalog::find(trim((string) ($_POST['header_design'] ?? '')));
+            if ($design === null) {
+                $flash = ['type' => 'error', 'msg' => __('studio_tpl_header_design_unknown', 'That header design does not exist.')];
+                $action = '';
+            } else {
+                $designSlug = str_replace('-', '_', $design['slug']);
+                $_POST['name'] = (string) __("studio_header_preset_{$designSlug}_name", $design['name']);
+                $_POST['description'] = (string) __("studio_header_preset_{$designSlug}_desc", $design['description']);
+                $_POST['template_type'] = 'header';
+                $_POST['condition_rule'] = 'entire_site';
+                $_POST['header_design'] = $design['key'];
+                unset($_POST['publish_now']);
+                $action = 'create_template';
+                $openInCanvas = true;
+            }
+        }
+
         if ($action === 'create_template') {
             $name = trim((string) ($_POST['name'] ?? ''));
             $uiType = trim((string) ($_POST['template_type'] ?? 'header'));
@@ -303,6 +324,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } catch (\Throwable $pubEx) {
                         $flash = ['type' => 'warning', 'msg' => rtrim(__('studio_tpl_created_not_published', 'Template created as draft, but it could not be published automatically. You can publish it in the Canvas editor.') . ' ' . sb_templates_error_message($pubEx, ''))];
                     }
+                } elseif ($created !== null && $openInCanvas) {
+                    header('Location: ' . plugin_url('studio-builder', 'admin/builder.php') . '?page=' . (int) $created['page_id'], true, 303);
+                    exit;
                 } elseif ($created !== null) {
                     $flash = ['type' => 'success', 'msg' => "Theme template '{$name}' created as draft. Click 'Edit in Canvas' to design and publish."];
                 }
@@ -528,6 +552,33 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <?= sb_svg('plus', 14) ?> New Theme Template
         </button>
     </div>
+
+    <?php if ($typeFilter === 'all' || $typeFilter === 'header'): ?>
+    <!-- Built-in headers: each opens as an editable header in the builder -->
+    <div class="sb-card" data-builtin-headers style="margin-bottom: 24px;">
+        <div class="sb-card__head">
+            <div class="sb-card__title"><?= e(__('studio_tpl_builtin_headers', 'Built-in headers')) ?></div>
+            <p class="sb-muted" style="margin: 4px 0 0;"><?= e(__('studio_tpl_builtin_headers_hint', 'Pick a design to edit it in the canvas. It starts as a draft header for the whole site and goes live when you publish it.')) ?></p>
+        </div>
+        <ul style="list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;">
+            <?php foreach (HeaderPresetCatalog::all() as $design):
+                $designSlug = str_replace('-', '_', $design['slug']); ?>
+                <li data-header-design="<?= e($design['key']) ?>" style="border: 1px solid var(--sb-border); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+                    <strong><?= e(__("studio_header_preset_{$designSlug}_name", $design['name'])) ?></strong>
+                    <span class="sb-muted" style="font-size: .85rem; flex: 1;"><?= e(__("studio_header_preset_{$designSlug}_desc", $design['description'])) ?></span>
+                    <?php if (StudioActor::fromCurrentSession()->can(StudioPermissions::ADMIN)): ?>
+                    <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/templates.php')) ?>" style="margin: 0;">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="_action" value="use_header_design">
+                        <input type="hidden" name="header_design" value="<?= e($design['key']) ?>">
+                        <button type="submit" class="btn btn-sm btn-primary"><?= sb_svg('edit', 14) ?> <?= e(__('studio_tpl_edit_in_canvas', 'Edit in canvas')) ?></button>
+                    </form>
+                    <?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+    <?php endif; ?>
 
     <!-- Create Template Drawer / Form -->
     <div id="sb-tpl-drawer" class="sb-card sb-drawer" style="display: none;">

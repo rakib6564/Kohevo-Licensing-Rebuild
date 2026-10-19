@@ -7,9 +7,10 @@
  * header is open and as the starting design of a new Theme Builder header.
  *
  * Pure and deterministic: no database, no clock, no randomness. Ids are derived from the preset key, so a rebuild is
- * byte-identical and the seeder can tell "unchanged" from "changed" by comparing JSON. Every menu names the site's
- * `header` menu (Menus screen) and carries its own links too, which NavMenuRenderer uses until that menu exists, so a
- * header never renders empty. Copy is neutral placeholder text the site owner replaces.
+ * byte-identical and the seeder can tell "unchanged" from "changed" by comparing JSON. Everything in a header is edited
+ * in place: the brand, buttons and text by double-clicking them on the canvas, and each menu carries its own links
+ * (no site menu chosen), so every link's text is edited on the canvas too and its address in the Inspector. Choosing a
+ * menu from the Menus screen in the Inspector switches a menu to that one. Copy is neutral placeholder text.
  *
  * Each section is one column wide: a section's blocks are equal-width columns, and the phone-only and wide-only rows a
  * header needs would otherwise split it in half. Grids that centre the brand keep three columns on a phone (a grid of
@@ -30,9 +31,6 @@ final class HeaderPresetCatalog
     public const KEY_PREFIX = 'system-header-';
 
     public const CATEGORY = 'header';
-
-    /** The named menu every preset shows (StudioMenus::SUGGESTED's header menu). */
-    public const MENU_KEY = 'header';
 
     private const PHONE = ['base', 'sm'];
     private const WIDE  = ['md', 'lg'];
@@ -113,9 +111,9 @@ final class HeaderPresetCatalog
             static fn(callable $id): array => [
                 self::section($id, 'Header', [
                     self::threeColumns($id, [
-                        self::menu($id, 'horizontal', 'left', [['label' => 'Home', 'url' => '/'], ['label' => 'About', 'url' => '/about']], ''),
+                        self::menu($id, 'horizontal', 'left', [['label' => 'Home', 'url' => '/'], ['label' => 'About', 'url' => '/about']]),
                         self::brand($id, 'center'),
-                        self::menu($id, 'horizontal', 'right', [['label' => 'Services', 'url' => '/services'], ['label' => 'Contact', 'url' => '/contact']], ''),
+                        self::menu($id, 'horizontal', 'right', [['label' => 'Services', 'url' => '/services'], ['label' => 'Contact', 'url' => '/contact']]),
                     ], self::WIDE),
                     self::block($id, 'layout.flex', ['direction' => 'row', 'wrap' => 'nowrap', 'justify' => 'between', 'align' => 'center', 'gap' => 'md'], [
                         self::brand($id),
@@ -232,16 +230,15 @@ final class HeaderPresetCatalog
     }
 
     /**
-     * The `header` menu, with fallback links until the site has one. `$menu = ''` keeps only the given links (the split
-     * header shows two halves of a menu, which one named menu cannot express).
+     * A menu with its own links, edited in place (no site menu chosen).
      *
      * @param list<array{label: string, url: string}>|null $items
      * @return array<string, mixed>
      */
-    private static function menu(callable $id, string $layout, string $align, ?array $items = null, string $menu = self::MENU_KEY): array
+    private static function menu(callable $id, string $layout, string $align, ?array $items = null): array
     {
         return self::block($id, 'core.nav_menu', [
-            'menu'       => $menu,
+            'menu'       => '',
             'aria_label' => 'Main menu',
             'layout'     => $layout,
             'align'      => $align,

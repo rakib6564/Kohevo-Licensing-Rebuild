@@ -3,8 +3,8 @@
  * Unit tests for Kohevo Studio (studio-builder) — the built-in header catalogue (HeaderPresetCatalog).
  *
  * Autoloader only, no database. Five headers, each a real, valid, deterministic header document built from registered
- * blocks; each reaches the whole menu on a phone and on a wide screen; menus name the site's header menu and keep
- * their own links as the fallback; names and descriptions have French.
+ * blocks; each reaches the whole menu on a phone and on a wide screen; everything in it is edited in place (menus carry
+ * their own links); names and descriptions have French.
  */
 
 declare(strict_types=1);
@@ -97,20 +97,20 @@ unit('header presets: each header reaches the whole menu on a phone and on a wid
     }
 });
 
-unit('header presets: menus name the site header menu and keep their own links as the fallback', function (): void {
+unit('header presets: every text in a header is edited in place, menus included (they carry their own links)', function (): void {
+    $registry = ModuleBlockDefinitions::studioRegistry();
+    $inline = static fn(string $type): array => array_column($registry->get($type)->toEditorManifest()['inline_text'], 'prop');
     foreach (HeaderPresetCatalog::all() as $p) {
         foreach (sbhp_blocks($p['document']) as $entry) {
             $b = $entry['block'];
-            if ($b['type'] !== 'core.nav_menu') {
-                continue;
+            if ($b['type'] === 'core.nav_menu') {
+                assert_eq('', $b['props']['menu'], "{$p['key']}: no site menu is chosen, so the links shown are the block's own");
+                assert_true(count($b['props']['items']) >= 2, "{$p['key']}: a menu has links");
+                assert_eq(['items.*.label'], $inline('core.nav_menu'), 'each link edits in place');
             }
-            assert_true(count($b['props']['items']) >= 2, "{$p['key']}: a menu renders even before the site has a header menu");
-            // The split header shows two halves of a menu, which one named menu cannot express.
-            if ($p['slug'] === 'split' && $b['props']['layout'] === 'horizontal') {
-                assert_eq('', $b['props']['menu']);
-                continue;
+            if (in_array($b['type'], ['core.link', 'core.button', 'core.text'], true)) {
+                assert_true($inline($b['type']) !== [], "{$p['key']}: {$b['type']} edits in place");
             }
-            assert_eq(HeaderPresetCatalog::MENU_KEY, $b['props']['menu'], "{$p['key']} uses the site's header menu");
         }
     }
 });

@@ -870,6 +870,7 @@ final class BlockRegistry
             ]),
             allowsChildren: false,
             allowedBindingProviders: [],
+            inlineText: [['prop' => 'link.label', 'selector' => '.sb-link']],
         ));
 
         // 33. core.card — a padded surface that holds other blocks.
@@ -996,6 +997,8 @@ final class BlockRegistry
                 ],
             ]),
             allowsChildren: false,
+            // Each link's text edits the matching item; a menu chosen on the Menus screen shows its own links, so not then.
+            inlineText: [['prop' => 'items.*.label', 'selector' => '.sb-nav__link', 'unless' => 'menu']],
         ));
 
         // 39. core.map — an OpenStreetMap embed centred on a point (no key, no tracking cookies).

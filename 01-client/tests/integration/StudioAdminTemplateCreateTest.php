@@ -174,6 +174,52 @@ unit('theme builder create: a header can start from a built-in design; an unknow
     }
 });
 
+unit('theme builder: "Edit in canvas" on a built-in header makes a draft header from it and opens the builder; an unknown design changes nothing', function (): void {
+    $unentitle = stcre_entitle();
+    $tid = current_tenant_id();
+    $before = (int) Database::value('SELECT COALESCE(MAX(id), 0) FROM studiobuilder_templates WHERE tenant_id = ?', [$tid]);
+    $beforePages = (int) Database::value('SELECT COALESCE(MAX(id), 0) FROM studiobuilder_pages WHERE tenant_id = ?', [$tid]);
+    try {
+        $design = \Slate\Module\StudioBuilder\Presets\HeaderPresetCatalog::find('system-header-split');
+        [$status] = stcre_post(['_action' => 'use_header_design', 'header_design' => $design['key']]);
+        assert_eq(303, $status, 'redirects to the builder (See Other)');
+        $rows = Database::all('SELECT * FROM studiobuilder_templates WHERE tenant_id = ? AND id > ?', [$tid, $before]);
+        assert_eq(1, count($rows), 'one header template');
+        $tpl = $rows[0];
+        assert_eq('header_preset', $tpl['template_type']);
+        assert_eq($design['name'], $tpl['name'], 'named after the design');
+        assert_eq(0, (int) $tpl['is_system'], 'an editable copy, not the built-in design');
+        $page = Database::row('SELECT * FROM studiobuilder_pages WHERE tenant_id = ? AND slug = ?', [$tid, 'template-' . $tpl['template_key']]);
+        assert_true(is_array($page) && $page['page_type'] === 'header_partial', 'a header page to edit in the canvas');
+        assert_true($page['published_revision_id'] === null, 'a draft: not live until it is published');
+        $draft = json_decode((string) Database::value('SELECT document_json FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [$tid, (int) $page['active_draft_revision_id']]), true);
+        assert_eq(array_column($design['document']['sections'], 'label'), array_column($draft['sections'], 'label'), 'the design\'s sections');
+        assert_eq('entire_site', $draft['settings']['conditions']['rules'][0]['condition'] ?? null, 'for the whole site once published');
+        $system = Database::value("SELECT COUNT(*) FROM studiobuilder_templates WHERE tenant_id = ? AND template_key = 'system-header-split' AND is_system = 0", [$tid]);
+        assert_eq(0, (int) $system, 'the built-in design itself is untouched');
+
+        [$status, $body] = stcre_post(['_action' => 'use_header_design', 'header_design' => 'system-section-hero-classic']);
+        assert_eq(200, $status);
+        assert_true(str_contains(stcre_flash($body), 'does not exist'), 'an unknown design is refused: ' . stcre_flash($body));
+        assert_eq(1, (int) Database::value('SELECT COUNT(*) FROM studiobuilder_templates WHERE tenant_id = ? AND id > ?', [$tid, $before]), 'nothing more was created');
+    } finally {
+        foreach (Database::all('SELECT id, template_key FROM studiobuilder_templates WHERE tenant_id = ? AND id > ?', [$tid, $before]) as $row) {
+            Database::query('DELETE FROM studiobuilder_templates WHERE tenant_id = ? AND id = ?', [$tid, (int) $row['id']]);
+            Database::query("DELETE FROM audit_log WHERE action = 'studio.template.saved' AND target = ?", [(string) $row['template_key']]);
+        }
+        foreach (Database::all('SELECT id FROM studiobuilder_pages WHERE tenant_id = ? AND id > ?', [$tid, $beforePages]) as $p) {
+            $pid = (int) $p['id'];
+            Database::query('DELETE FROM studiobuilder_compilations WHERE tenant_id = ? AND page_id = ?', [$tid, $pid]);
+            Database::query('DELETE FROM studiobuilder_dependencies WHERE tenant_id = ? AND page_id = ?', [$tid, $pid]);
+            Database::query('UPDATE studiobuilder_pages SET active_draft_revision_id = NULL, published_revision_id = NULL WHERE tenant_id = ? AND id = ?', [$tid, $pid]);
+            Database::query('DELETE FROM studiobuilder_revisions WHERE tenant_id = ? AND page_id = ?', [$tid, $pid]);
+            Database::query('DELETE FROM studiobuilder_pages WHERE tenant_id = ? AND id = ?', [$tid, $pid]);
+            Database::query("DELETE FROM audit_log WHERE action LIKE 'studio.page.%' AND target = ?", [(string) $pid]);
+        }
+        $unentitle();
+    }
+});
+
 unit('theme builder create: an over-long or marked-up name is refused with a plain message, and nothing is written', function (): void {
     $unentitle = stcre_entitle();
     $tag = 'stcre' . bin2hex(random_bytes(3));
