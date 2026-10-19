@@ -136,7 +136,8 @@ jobs:
             ('booking','Booking Plus','1.0.0','active','{"slug":"booking","name":"Booking Plus"}'),
             ('forms','Forms','1.0.0','active','{"slug":"forms","name":"Forms"}'),
             ('membership','Membership','1.0.0','active','{"slug":"membership","name":"Membership"}'),
-            ('stripe-payment','Stripe Payment Gateway','1.0.0','active','{"slug":"stripe-payment","name":"Stripe Payment Gateway"}')
+            ('stripe-payment','Stripe Payment Gateway','1.0.0','active','{"slug":"stripe-payment","name":"Stripe Payment Gateway"}'),
+            ('studio-builder','Kohevo Studio','1.0.0','active','{"slug":"studio-builder","name":"Kohevo Studio"}')
             ON DUPLICATE KEY UPDATE status=VALUES(status), manifest_json=VALUES(manifest_json);
           SQL
 
@@ -145,8 +146,20 @@ jobs:
           (cd 01-client && php tests/fixtures/booking-schema.php)
           mysql -h 127.0.0.1 -uroot -proot root_slate_t9 < 01-client/plugins/membership/install.sql
           mysql -h 127.0.0.1 -uroot -proot root_slate_t9 < 01-client/plugins/stripe-payment/install.sql
-          # Studio tests outside the Studio runner (templates, permissions) need its tables too.
+          # Studio tests outside the Studio runner (templates, permissions) need its tables, and the plugin active.
           mysql -h 127.0.0.1 -uroot -proot root_slate_t9 < 01-client/plugins/studio-builder/install.sql
+
+          # Central serves every module, so its full suite (R4) needs every plugin's schema installed and active.
+          for d in 02-licensing/plugins/*/; do
+            if [ -f "$d/install.sql" ]; then mysql -h 127.0.0.1 -uroot -proot root_slate_t20 < "$d/install.sql"; fi
+          done
+          (cd 02-licensing && php tests/fixtures/booking-schema.php)
+          php -r '
+            foreach (glob("02-licensing/plugins/*/plugin.json") as $f) {
+              $m = json_decode(file_get_contents($f), true);
+              $q = fn($v) => "\x27" . addslashes((string) $v) . "\x27";
+              echo "INSERT INTO plugins (slug,name,version,status,manifest_json) VALUES (" . $q($m["slug"]) . "," . $q($m["name"]) . "," . $q($m["version"]) . ",\x27active\x27," . $q(json_encode(["slug" => $m["slug"], "name" => $m["name"]])) . ") ON DUPLICATE KEY UPDATE status=VALUES(status), version=VALUES(version), manifest_json=VALUES(manifest_json);\n";
+            }' | mysql -h 127.0.0.1 -uroot -proot root_slate_t20
 
       - name: Run 01-client smoke & licensing suites
         run: |
@@ -166,8 +179,10 @@ jobs:
           php 01-client/tests/run-phase11-security.php
           php 01-client/tests/run-phase13-legacy.php
 
-      - name: Install 01-client Composer packages (PHPMailer, for the SMTP OAuth tests)
-        run: composer install --working-dir=01-client --no-interaction --no-progress --prefer-dist
+      - name: Install Composer packages (PHPMailer, for the SMTP OAuth tests in both trees)
+        run: |
+          composer install --working-dir=01-client --no-interaction --no-progress --prefer-dist
+          composer install --working-dir=02-licensing --no-interaction --no-progress --prefer-dist
 
       - name: Run 01-client full unit & integration suites
         run: |
