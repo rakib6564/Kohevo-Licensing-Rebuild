@@ -68,6 +68,37 @@ export function isStructuralChange(prevDoc, nextDoc, tokens = null) {
   return false;
 }
 
+/**
+ * Whether any content differs between the document the server last rendered and the one now saved: a block's props
+ * (at any depth) or a section's own fields other than its blocks and style. The live patch paints the content it can
+ * find a place for, by guessing selectors; when it cannot (an eyebrow that was empty has no element yet, an accordion
+ * item's question, a field the patch does not know), nothing on the canvas changes. So a saved content change always
+ * merges the server's render in place; only a save that changed no content may rely on the patch alone.
+ */
+export function contentChanged(prevDoc, nextDoc) {
+  if (!prevDoc || !nextDoc) return true;
+  const prevSections = Array.isArray(prevDoc.sections) ? prevDoc.sections : [];
+  const nextSections = Array.isArray(nextDoc.sections) ? nextDoc.sections : [];
+  if (prevSections.length !== nextSections.length) return true;
+  const sectionFields = (sec) => {
+    if (!isPlainObject(sec)) return null;
+    const { blocks, style, ...rest } = sec; // eslint-disable-line no-unused-vars
+    return rest;
+  };
+  for (let s = 0; s < nextSections.length; s += 1) {
+    if (differs(sectionFields(prevSections[s]), sectionFields(nextSections[s]))) return true;
+  }
+  const prevBlocks = indexAllBlocks(prevDoc);
+  const nextBlocks = indexAllBlocks(nextDoc);
+  if (prevBlocks.size !== nextBlocks.size) return true;
+  for (const [id, nextBlock] of nextBlocks) {
+    const prevBlock = prevBlocks.get(id);
+    if (!prevBlock) return true;
+    if (prevBlock !== nextBlock && differs(prevBlock.props, nextBlock.props)) return true;
+  }
+  return false;
+}
+
 const asHighlight = (block) => isPlainObject(block.props) && typeof block.props.highlight === 'string' && block.props.highlight.trim() !== '';
 
 function differs(a, b) {

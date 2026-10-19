@@ -85,8 +85,12 @@ final class Html
     /**
      * `$value` with the first occurrence of `$highlight` wrapped in a span.
      *
-     * @param array{color_class?: string, color?: string, italic?: bool, weight?: string, underline?: bool} $look how the span looks
-     *        (all optional; the colour is a theme token's class or a checked literal, never raw author text)
+     * @param array{color_class?: string, color_var?: string, color?: string, italic?: bool, weight?: string, underline?: bool} $look how the span looks
+     *        (all optional; the colour is a theme token's class and `var()`, or a checked literal, never raw author text)
+     *
+     * What the author set is also written inline on the span, so it wins over a site's own CSS for highlights (a
+     * stylesheet rule such as `.sb-body .sb-hl{…}` is more specific than the look classes); what they did not set
+     * adds nothing, so the site's default look for a highlight still applies.
      */
     public static function highlighted(string $value, string $highlight, array $look = []): string
     {
@@ -108,12 +112,25 @@ final class Html
             $classes[] = 'sb-hl--w-' . $look['weight'];
         }
         $custom = (string) ($look['color'] ?? '');
-        $style = '';
+        $declarations = [];
         if ($custom !== '' && preg_match(self::HIGHLIGHT_COLOR_PATTERN, $custom) === 1) {
-            $style = ' style="color:' . self::e($custom) . '"'; // a custom colour wins over a theme one
+            $declarations[] = 'color:' . $custom; // a custom colour wins over a theme one
         } elseif (($look['color_class'] ?? '') !== '') {
             $classes[] = (string) $look['color_class'];
+            if (preg_match('/^var\(--[a-z0-9-]+\)$/', (string) ($look['color_var'] ?? '')) === 1) {
+                $declarations[] = 'color:' . $look['color_var'];
+            }
         }
+        if (!empty($look['italic'])) {
+            $declarations[] = 'font-style:italic';
+        }
+        if (in_array($look['weight'] ?? '', self::HIGHLIGHT_WEIGHTS, true)) {
+            $declarations[] = 'font-weight:' . ['normal' => '400', 'medium' => '500', 'bold' => '700'][$look['weight']];
+        }
+        if (!empty($look['underline'])) {
+            $declarations[] = 'text-decoration:underline;text-underline-offset:.15em';
+        }
+        $style = $declarations === [] ? '' : ' style="' . self::e(implode(';', $declarations)) . '"';
 
         return self::e(mb_substr($value, 0, $at, 'UTF-8'))
             . '<span' . self::classAttr($classes) . $style . '>' . self::e($highlight) . '</span>'
@@ -125,6 +142,7 @@ final class Html
     {
         return [
             'color_class' => $scope->tokenClass('fg', $scope->prop('highlight_color_token')),
+            'color_var'   => $scope->tokenVar($scope->prop('highlight_color_token')),
             'color'       => $scope->string('highlight_color'),
             'italic'      => $scope->bool('highlight_italic'),
             'weight'      => $scope->string('highlight_weight', 'inherit'),

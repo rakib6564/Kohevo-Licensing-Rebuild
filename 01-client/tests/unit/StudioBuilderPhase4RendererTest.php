@@ -568,7 +568,14 @@ unit('phase4 stylesheet: the generic link colour never reaches .sb-button links,
     assert_true(str_contains($css, '.sb-body a:not(.sb-button){color:var(--sb-color-accent)}'), 'ordinary links keep the accent colour');
     assert_true(str_contains($css, '.sb-button--primary{background:var(--sb-surface-accent);color:var(--sb-text-inverse)}'), 'primary: inverse text on the accent surface');
     assert_true(str_contains($css, '.sb-button--secondary{background:var(--sb-surface-secondary);color:var(--sb-text-primary)'), 'secondary keeps its own text colour');
-    assert_eq('22', \Slate\Module\StudioBuilder\Render\StudioStylesheet::VERSION, 'stylesheet version bumped so compiled pages are rebuilt');
+    assert_eq('23', \Slate\Module\StudioBuilder\Render\StudioStylesheet::VERSION, 'stylesheet version bumped so compiled pages are rebuilt');
+});
+
+unit('phase4 stylesheet: in a row (horizontal flex or grid) a link, button, text, menu or icon keeps no margin of its own, so a header\'s items share one centre line', function (): void {
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    assert_true(str_contains($css, '.sb-flex--row>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-text,.sb-nav,.sb-icon),.sb-grid>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-text,.sb-nav,.sb-icon){margin:0}'), 'row items lose the stacked-layout margins');
+    assert_true(str_contains($css, '.sb-button-row{margin:1rem 0 0}') && str_contains($css, '.sb-link-row{margin:0 0 1rem}'), 'stacked links and buttons keep their spacing');
+    assert_true(strpos($css, '{margin:0}', strpos($css, '.sb-flex--row>.sb-block>:is(')) > strpos($css, '.sb-button-row{margin:1rem 0 0}'), 'the row rule comes after the stacked rules');
 });
 
 if (!empty($studioP4UnitStandalone)) {
