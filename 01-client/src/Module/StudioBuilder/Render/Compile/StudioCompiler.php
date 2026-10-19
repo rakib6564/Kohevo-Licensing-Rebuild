@@ -33,7 +33,7 @@ use Slate\Module\StudioBuilder\Exception\StudioTenantScopeException;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions;
 use Slate\Module\StudioBuilder\Menu\StudioMenus;
-use Slate\Module\StudioBuilder\Meta\PageMeta;
+use Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeResolver;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeSource;
@@ -404,20 +404,8 @@ final class StudioCompiler
         if ($context->mode === RenderMode::Editor || ($settings['template_type'] ?? '') !== '' || $page->id === null) {
             return null;
         }
-        $conditionContext = [];
-        if (($settings['category'] ?? '') !== '') {
-            $conditionContext['category'] = $settings['category'];
-        }
         try {
-            $type = PageMeta::read($context->tenantId, (int) $page->id)['type'];
-            if ($type !== '') {
-                $conditionContext['content_type'] = $type;
-            }
-        } catch (\Throwable) {
-            // No custom content type: the page type stands in for it.
-        }
-        try {
-            return $this->chrome->single($page, $conditionContext);
+            return $this->chrome->single($page, ThemeTemplateResolver::singleContext($settings, $context->tenantId, (int) $page->id));
         } catch (\Throwable $e) {
             StudioLog::failure('render', 'single_template', $e, 'warning');
             return null;

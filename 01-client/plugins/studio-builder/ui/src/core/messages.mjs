@@ -993,6 +993,8 @@ const EN = {
   cond_problem_many: 'At most 30 conditions.',
   cond_needs_include: 'Add at least one Include rule: Exclude rules only remove pages from a selection.',
   cond_conflict: 'Same conditions as: {titles}. When templates match a page equally, the one published most recently is shown.',
+  width_template_cap: 'On the live site this page is laid out by the template “{title}”, whose content is {width}, so this section shows no wider than that.',
+  width_template_edit: 'Edit template',
   bg_overlay_note: 'Overlay {percent}% on top of the image',
   bg_overlay_remove: 'Remove overlay',
   bg_image_covers: 'An image is set and is drawn over this colour.',

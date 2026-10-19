@@ -69,6 +69,7 @@ final class StudioAuthoringApi
         'chrome'       => ['GET', ['page']],
         // Theme Builder: the other published templates of this page's role and their conditions (the "same conditions as" note)
         'template_peers' => ['GET', ['page']],
+        'layout_template' => ['GET', ['page']],
         'tokens'       => ['GET', ['group']],
         // Element Manager (administrators): which blocks the site offers, and where each is used
         'elements'     => ['GET', []],
@@ -264,6 +265,7 @@ final class StudioAuthoringApi
             'components'   => StudioApiResponse::ok(['components' => $this->app->listGlobalComponents($actor)]),
             'chrome'       => StudioApiResponse::ok(['chrome' => $this->app->chromeBindings($actor, self::id($input, 'page'))]),
             'template_peers' => StudioApiResponse::ok($this->app->templatePeers($actor, self::id($input, 'page'))),
+            'layout_template' => StudioApiResponse::ok(['template' => $this->app->layoutTemplate($actor, self::id($input, 'page'))]),
             'elements'     => StudioApiResponse::ok($this->app->elementManager($actor)),
             'custom_css'   => StudioApiResponse::ok($this->app->customCss($actor)),
             'tokens'       => StudioApiResponse::ok(['tokens' => $this->app->designTokens($actor, self::tokenGroup($input))]),
