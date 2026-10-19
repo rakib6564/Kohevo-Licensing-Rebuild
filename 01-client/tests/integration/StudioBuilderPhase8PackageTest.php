@@ -785,6 +785,67 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 assert_eq([], array_values(array_intersect(sbp8_ids($source), sbp8_ids($imported))), 'with fresh ids');
             });
 
+            // ── TI-07: blocks saved at an older block version ───────────────
+            unit('phase8a int 12: a block exported at an older version is upgraded on import and when a stored template is applied or inserted; without an upgrade path it is refused by name', function () use ($editor, $admin, $S): void {
+                // This site's registry with two probe blocks at version 2: one declares the 1 -> 2 step, one does not.
+                $registry = \Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions::studioRegistry();
+                $probe = static fn(string $type, array $upgrades): \Slate\Module\StudioBuilder\Registry\DeclarativeBlockDefinition => new \Slate\Module\StudioBuilder\Registry\DeclarativeBlockDefinition(
+                    type: $type, version: 2, label: 'Probe', category: 'test', icon: 'box',
+                    schema: \Slate\Module\StudioBuilder\Schema\FieldSchema::define([['key' => 'text', 'type' => 'string', 'label' => 'Text', 'required' => false, 'default' => '', 'max_length' => 200]]),
+                    upgrades: $upgrades,
+                );
+                $registry->register($probe('probe.note', [1 => static fn(array $p): array => ['text' => (string) ($p['caption'] ?? '')]]));
+                $registry->register($probe('probe.legacy', []));
+                $rt2 = StudioRuntimeFactory::build(['registry' => $registry]);
+                $one = static fn(array $item): array => sbp8_rehash(['package_format' => 'kohevo-studio-package', 'package_version' => '1.0', 'exported_at' => '2026-09-30T00:00:00Z', 'items' => [$item]]);
+                $withBlock = static function (string $slug, array $block) use ($S): array {
+                    $item = array_merge($S->minPkg['items'][0], ['slug' => $slug]);
+                    $item['document']['template_key'] = 'default';
+                    $item['document']['sections'] = [array_merge($item['document']['sections'][0], ['blocks' => [$block]])];
+                    return $item;
+                };
+
+                // Import: the version-1 block arrives as version 2 with its props rewritten, and the report says so.
+                $pkg = $one($withBlock('upgraded-import', sbp8_block('probe.note', ['caption' => 'Exported at v1'])));
+                $dry = sbp8_report(sbp8_import($rt2, SBP8_B, $editor, $pkg, true));
+                assert_eq([], sbp8_codes($dry, 'error'), 'the dry run accepts it');
+                assert_true(in_array('block_upgraded', sbp8_codes($dry, 'warning'), true), 'and reports the upgrade');
+                $data = sbp8_ok(sbp8_import($rt2, SBP8_B, $editor, $pkg, false), 'commit upgraded import');
+                $block = sbp8_draft($rt2, SBP8_B, (int) $data['report']['committed']['pages'][0]['page_id'])['sections'][0]['blocks'][0];
+                assert_eq(['probe.note', 2, ['text' => 'Exported at v1']], [$block['type'], $block['version'], $block['props']], 'stored at the current version');
+
+                // No upgrade path: refused, and the report names the block and both versions.
+                $rep = sbp8_report(sbp8_import($rt2, SBP8_B, $editor, $one($withBlock('legacy-import', sbp8_block('probe.legacy', ['text' => 'Old']))), true));
+                assert_eq(['invalid_block_version'], sbp8_codes($rep, 'error'));
+                $messages = array_column(array_filter($rep['issues'], static fn(array $i): bool => $i['code'] === 'invalid_block_version'), 'message');
+                assert_true(str_contains((string) ($messages[0] ?? ''), "Block 'probe.legacy' is version 1; this site supports version 2"), 'named in the report: ' . json_encode($messages));
+
+                // Stored templates written by an older Studio: applied and inserted at the current version.
+                $section = static fn(string $caption): array => [
+                    'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'Old', 'global_ref' => null,
+                    'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+                    'blocks' => [sbp8_block('probe.note', ['caption' => $caption])],
+                ];
+                $pageTpl = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Old page template');
+                $pageTpl['sections'] = [$section('Applied from v1')];
+                $presetTpl = CanonicalDocumentSchema::emptyDocument('section_preset', 'default', 'Old preset');
+                $presetTpl['sections'] = [$section('Inserted from v1')];
+                foreach ([['old-page-tpl', 'page_template', $pageTpl], ['old-section-tpl', 'section_preset', $presetTpl]] as [$key, $type, $doc]) {
+                    $rt2->tenants->runAs(SBP8_B, static fn() => $rt2->templates->insert([
+                        'uuid' => sprintf('%08x-5555-4000-8000-%012x', random_int(0, 0x7fffffff), random_int(0, 0x7fffffff)), 'template_key' => $key, 'template_type' => $type, 'category' => 'general',
+                        'name' => $key, 'schema_version' => CanonicalDocumentSchema::SCHEMA_VERSION, 'document_json' => CanonicalJson::encode($doc), 'is_system' => 0,
+                    ]));
+                }
+                $created = sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'create_page', ['title' => 'Old templates', 'slug' => 'old-templates', 'page_type' => 'page', 'route_mode' => 'standalone']), 'target page');
+                $pageId = (int) $created['page']['id'];
+                $r = sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'apply_template', ['page_id' => $pageId, 'template_key' => 'old-page-tpl', 'expected_revision_id' => (int) $created['page']['active_draft_revision_id']]), 'apply old template');
+                $applied = sbp8_draft($rt2, SBP8_B, $pageId)['sections'][0]['blocks'][0];
+                assert_eq([2, ['text' => 'Applied from v1']], [$applied['version'], $applied['props']], 'apply upgrades the stored template');
+                sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'insert_template', ['page_id' => $pageId, 'template_key' => 'old-section-tpl', 'index' => 1, 'parent_id' => null, 'expected_revision_id' => (int) $r['revision']['id']]), 'insert old preset');
+                $inserted = sbp8_draft($rt2, SBP8_B, $pageId)['sections'][1]['blocks'][0];
+                assert_eq([2, ['text' => 'Inserted from v1']], [$inserted['version'], $inserted['props']], 'insert upgrades the stored preset');
+            });
+
             // ── Rate limit: packages have their own small bucket ─────────────
             unit('phase8a int 11: the package actions count against their own rate-limit bucket on top of the command bucket', function (): void {
                 $limiter = new \Slate\Module\StudioBuilder\Http\StudioApiRateLimiter(static fn(): int => 1000);

@@ -52,6 +52,7 @@ namespace Slate\Module\StudioBuilder\Application;
 use Slate\Module\StudioBuilder\Dependency\DependencyExtractor;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Exception\StudioConcurrencyException;
 use Slate\Module\StudioBuilder\Exception\StudioNotFoundException;
@@ -571,6 +572,14 @@ final class StudioPackageService
         if ($expectedType !== null && ($doc['document_type'] ?? null) !== $expectedType) {
             $report->error('page_type_mismatch', $key, "{$base}.document_type", "The document must be a '{$expectedType}' document.");
             return null;
+        }
+
+        // Blocks saved by an older Studio are stepped up to this site's block versions first, so
+        // everything after (media rewrite, validation) sees current props. No upgrade: the validator refuses.
+        $upgrade = DocumentUpgrader::upgrade($doc, $this->registry);
+        $doc = $upgrade['document'];
+        foreach ($upgrade['upgraded'] as $u) {
+            $report->warning('block_upgraded', $key, $base . substr($u['path'], 1), "Block '{$u['type']}' was saved at version {$u['from']} and was upgraded to version {$u['to']}.");
         }
 
         // Global references -> package components / explicit map, else an empty owned section.

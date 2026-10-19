@@ -34,6 +34,7 @@ namespace Slate\Module\StudioBuilder\Service;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
 use Slate\Module\StudioBuilder\Document\DocumentCopier;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Domain\StudioTemplate;
 use Slate\Module\StudioBuilder\Exception\StudioNotFoundException;
@@ -321,7 +322,8 @@ final class StudioTemplateService
 
         // A template only supplies content structure; the target page keeps its own
         // address identity. Set BEFORE validation, not after — see F2 fix above.
-        $rawDocument = $template->document;
+        // A template stored by an older Studio is brought up to this site's block versions first.
+        $rawDocument = DocumentUpgrader::upgrade($template->document, $this->registry)['document'];
         $rawDocument['document_type'] = (string) $page['page_type'];
         // It also keeps its own settings (display conditions, template type, category…) and SEO: a
         // template saved from a header or search template must not turn the page into one.
@@ -401,7 +403,7 @@ final class StudioTemplateService
         $sections = [];
         foreach ((array) ($template->document['sections'] ?? []) as $section) {
             if (is_array($section)) {
-                $sections[] = DocumentCopier::copySection($section);
+                $sections[] = DocumentCopier::copySection(DocumentUpgrader::upgradeSection($section, $this->registry));
             }
         }
         if ($sections === []) {

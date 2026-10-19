@@ -35,6 +35,8 @@ final class DeclarativeWidgetDefinition implements WidgetDefinitionInterface
      * @param array<string, string> $bindingSlots
      * @param array{css?: list<string>, js?: list<string>, fonts?: list<string>, icons?: list<string>} $assets
      * @param list<string> $supports
+     * @param array<int, callable(array<string, mixed>): array<string, mixed>> $upgrades One step per older version,
+     *                                            as on DeclarativeBlockDefinition.
      */
     public function __construct(
         private readonly string $type,
@@ -54,6 +56,7 @@ final class DeclarativeWidgetDefinition implements WidgetDefinitionInterface
         private readonly array $bindingSlots = [],
         private readonly array $assets = [],
         private readonly array $supports = [],
+        private readonly array $upgrades = [],
     ) {
         if (preg_match(CanonicalDocumentSchema::BLOCK_TYPE_PATTERN, $this->type) !== 1) {
             throw new \InvalidArgumentException("Invalid namespaced block type '{$this->type}'. Expected 'namespace.name'.");
@@ -69,6 +72,11 @@ final class DeclarativeWidgetDefinition implements WidgetDefinitionInterface
         }
         if (!$this->allowsChildren && $this->allowedChildTypes !== []) {
             throw new \InvalidArgumentException("Block '{$this->type}' cannot specify allowedChildTypes when allowsChildren is false.");
+        }
+        foreach ($this->upgrades as $from => $step) {
+            if (!is_int($from) || $from < 1 || $from >= $this->version || !is_callable($step)) {
+                throw new \InvalidArgumentException("Block '{$this->type}' declares an invalid upgrade step '{$from}'.");
+            }
         }
     }
 
@@ -163,6 +171,16 @@ final class DeclarativeWidgetDefinition implements WidgetDefinitionInterface
     public function normalizeProps(array $props): array
     {
         return $this->schema->normalize($props);
+    }
+
+    public function upgrade(array $props, int $fromVersion): ?array
+    {
+        $step = $this->upgrades[$fromVersion] ?? null;
+        if ($step === null) {
+            return null;
+        }
+        $upgraded = $step($props);
+        return is_array($upgraded) ? $upgraded : null;
     }
 
     public function extractDependencies(string $nodeId, array $normalizedProps, array $bindings): array
