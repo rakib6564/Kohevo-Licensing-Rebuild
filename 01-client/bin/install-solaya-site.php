@@ -14,7 +14,7 @@
  *   php bin/install-solaya-site.php --apply    remove the current Studio site and build this one
  *
  * "Remove" is reversible: each Studio page is renamed `archived-<date>-<id>-<slug>` (so its address is free)
- * and archived, so it can be restored from Studio. Studio templates are deleted. Media, forms submissions,
+ * and archived, so it can be restored from Studio. Studio templates are deleted, except the built-in Library sections. Media, forms submissions,
  * bookings and membership data are never touched. Back up the database before --apply on a live site.
  */
 
@@ -222,6 +222,10 @@ foreach ($current as $p) {
 }
 $templates = Database::rows('SELECT template_key, template_type FROM studiobuilder_templates WHERE tenant_id = ? ORDER BY id', [$tid]);
 foreach ($templates as $t) {
+    // The built-in Library sections are Studio's own (reserved, kept in sync by Studio), not site content.
+    if (str_starts_with((string) $t['template_key'], \Slate\Module\StudioBuilder\Presets\SectionPresetCatalog::KEY_PREFIX)) {
+        continue;
+    }
     say("  - template  {$t['template_key']} ({$t['template_type']})");
     if ($APPLY) {
         $runtime->app->deleteTemplate($actor, (string) $t['template_key']);
