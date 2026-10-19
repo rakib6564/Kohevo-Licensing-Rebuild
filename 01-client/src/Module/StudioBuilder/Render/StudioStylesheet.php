@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '24';
+    public const VERSION = '25';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -389,8 +389,17 @@ final class StudioStylesheet
             . '.sb-carousel{position:relative;overflow:hidden}'
             . '.sb-carousel__track{display:flex;gap:1rem;transition:transform .45s cubic-bezier(.22,1,.36,1);will-change:transform;scrollbar-width:none}'
             . '.sb-carousel__track::-webkit-scrollbar{display:none}'
-            . '.sb-carousel__slide{flex:0 0 100%;min-width:0}'
+            // Slides are <figure>s and quotes <blockquote>s: the browser's own side margins (40px) would push
+            // each slide off its place, so they are zeroed. With several per view, each takes its share less the gaps.
+            . '.sb-carousel__slide{flex:0 0 100%;min-width:0;margin:0}'
+            . '[data-sb-per-view="2"]>.sb-carousel__track>.sb-carousel__slide{flex-basis:calc((100% - 1rem)/2)}'
+            . '[data-sb-per-view="3"]>.sb-carousel__track>.sb-carousel__slide{flex-basis:calc((100% - 2rem)/3)}'
+            . '.sb-carousel__image{display:block;width:100%;height:auto}'
+            . '.sb-carousel__quote{margin:0}'
+            . '.sb-carousel__author{display:block;margin-top:.75rem}'
+            . '.sb-carousel__caption{margin-top:.5rem}'
             . '.sb-carousel__nav{display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:1rem}'
+            . '.sb-carousel__dots{display:flex;align-items:center;gap:.5rem}'
             . '.sb-carousel__btn{width:2.25rem;height:2.25rem;border-radius:50%;border:1px solid var(--sb-border-default,#e2e8f0);background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:inherit}'
             . '.sb-carousel__btn:disabled{opacity:.35;cursor:default}'
             . '.sb-carousel__btn:focus-visible{outline:2px solid currentColor;outline-offset:2px}'

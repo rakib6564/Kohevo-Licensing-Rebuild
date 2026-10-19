@@ -149,11 +149,28 @@ html.sb-scroll-lock, html.sb-scroll-lock body { overflow: hidden; }
 .sb-body .sb-quote__caption, .sb-body .sb-carousel__author { font-size: .72rem; letter-spacing: .24em; text-transform: uppercase;
   color: var(--sl-clay); }
 .sb-body .sb-carousel__quote { font-family: var(--sl-serif); font-style: italic; font-weight: 300;
-  font-size: clamp(1.7rem, 3vw, 2.5rem); line-height: 1.3; text-align: center; }
+  font-size: clamp(1.7rem, 3vw, 2.5rem); line-height: 1.3; text-align: center; color: var(--sl-ink); }
 .sb-body .sb-carousel__quote::before, .sb-body .sb-carousel__quote::after { content: none; }
-.sb-body .sb-carousel__slide { text-align: center; }
-.sb-body .sb-carousel__btn { border-color: var(--sl-line); background: transparent; }
-.sb-body .sb-carousel__dot[aria-current="true"], .sb-body .sb-carousel__dot.is-active { background: var(--sl-clay); }
+/* One quote at a time, centred on a comfortable line length and balanced over its lines. */
+.sb-body .sb-carousel__quote p { max-width: 22ch; margin: 0 auto; text-wrap: balance; }
+.sb-body .sb-carousel__slide { text-align: center; padding: 0 .75rem; box-sizing: border-box; }
+/* The attribution sits under a short clay rule, upright and tracked like the eyebrow. */
+.sb-body .sb-carousel__author { margin-top: 2rem; font-family: var(--sl-sans); font-style: normal; font-weight: 400;
+  font-size: .7rem; letter-spacing: .28em; color: var(--sl-clay); }
+.sb-body .sb-carousel__author::before { content: ""; display: block; width: 2.5rem; height: 1px; margin: 0 auto 1.25rem;
+  background: var(--sl-clay); opacity: .5; }
+/* Controls: quiet outlined arrows, and dots that stretch into a pill for the current slide. */
+.sb-body .sb-carousel__nav { margin-top: clamp(2.5rem, 5vw, 3.5rem); gap: 1.25rem; }
+.sb-body .sb-carousel__btn { width: 2.75rem; height: 2.75rem; border-color: var(--sl-line); background: transparent;
+  color: var(--sl-ink); font-size: 1.1rem; line-height: 1; transition: border-color .25s, color .25s, background-color .25s; }
+.sb-body .sb-carousel__btn:hover { border-color: var(--sl-clay); color: var(--sl-clay); }
+.sb-body .sb-carousel__dots { gap: .5rem; }
+.sb-body .sb-carousel__dot { width: .4rem; height: .4rem; border-radius: 999px; background: var(--sl-ink); opacity: .22;
+  transition: width .35s cubic-bezier(.22,1,.36,1), opacity .25s, background-color .25s; }
+.sb-body .sb-carousel__dot:hover { opacity: .45; }
+.sb-body .sb-carousel__dot[aria-current="true"], .sb-body .sb-carousel__dot.is-active { width: 1.5rem; opacity: 1;
+  background: var(--sl-clay); }
+@media (prefers-reduced-motion: reduce) { .sb-body .sb-carousel__dot { transition: none; } }
 
 /* ── Cards, call to action ────────────────────────────────────────────── */
 .sb-body .sb-card { border-radius: 6px; border: 0; box-shadow: none; }

@@ -906,9 +906,13 @@
 
       var max = Math.max(0, slides.length - perView);
 
+      // How far the track moves to bring slide `i` to the start: measured, so the gap between slides and any
+      // margin a theme gives them are counted (a percentage of the track's width left them out and each step fell short).
+      function offsetOf(i) { return slides[i].offsetLeft - slides[0].offsetLeft; }
+      function place(extra) { track.style.transform = 'translate3d(' + (extra - offsetOf(index)) + 'px,0,0)'; }
+
       function render() {
-        var offset = -(index * (100 / perView));
-        track.style.transform = 'translate3d(' + offset + '%,0,0)';
+        place(0);
         slides.forEach(function (s, i) {
           var visible = i >= index && i < index + perView;
           s.setAttribute('aria-hidden', visible ? 'false' : 'true');
@@ -962,7 +966,7 @@
         var dy = e.touches[0].clientY - startY;
         // Only take over once the gesture is clearly horizontal.
         if (Math.abs(delta) > 8 && Math.abs(delta) > Math.abs(dy)) {
-          track.style.transform = 'translate3d(calc(' + -(index * (100 / perView)) + '% + ' + delta + 'px),0,0)';
+          place(delta);
         }
       }, { passive: true }));
       off.push(on(track, 'touchend', function () {
@@ -1011,6 +1015,9 @@
         off.push(on(group, 'focusin', stop));
         off.push(on(group, 'focusout', restart));
       }
+
+      // Slide widths follow the carousel's, so the offset is measured again when the window changes size.
+      off.push(on(global, 'resize', function () { if (startX === null) place(0); }, { passive: true }));
 
       render();
       restart();

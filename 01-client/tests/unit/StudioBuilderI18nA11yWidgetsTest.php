@@ -154,6 +154,26 @@ unit('carousel: dots are a plain group, translated labels reach the runtime, and
     assert_false(str_contains($carousel, "'role', 'tab'"), 'nor tab roles on carousel dots');
 });
 
+unit('carousel: the browser fixture is the renderer\'s markup with the stylesheet\'s carousel rules', function (): void {
+    $slides = [
+        ['quote' => 'A conversation comes before any plan.', 'author' => 'Listen first'],
+        ['quote' => 'Body and mind are looked after as one.', 'author' => 'The whole person'],
+        ['quote' => 'Support continues between sessions, not only during them.', 'author' => 'Follow through'],
+    ];
+    $html = (new CarouselRenderer())->render(sbia_scope('core.carousel', ['slides' => $slides, 'options' => ['loop' => true]]));
+    preg_match_all('~(?<=^|})(?:\.sb-carousel|\[data-sb-per-view)[^{}]*\{[^{}]*\}~', \Slate\Module\StudioBuilder\Render\StudioStylesheet::css(), $m);
+    $css = implode("\n", $m[0]);
+    foreach (['.sb-carousel__slide{flex:0 0 100%;min-width:0;margin:0}', '.sb-carousel__quote{margin:0}', '.sb-carousel__dots{'] as $rule) {
+        assert_true(str_contains($css, $rule), "the stylesheet has {$rule}");
+    }
+    $fixture = SLATE_ROOT . '/plugins/studio-builder/ui/tests/fixtures/carousel.html';
+    $expected = '<style>' . $css . "</style>\n" . $html;
+    if (getenv('SBEL_WRITE_FIXTURE') === '1') {
+        file_put_contents($fixture, $expected . "\n");
+    }
+    assert_eq(trim((string) file_get_contents($fixture)), $expected, 'ui/tests/fixtures/carousel.html is stale — regenerate with SBEL_WRITE_FIXTURE=1');
+});
+
 unit('portfolio showcase: contact links are empty by default, the URL is checked, and the owner\'s address never shows (W-F18)', function (): void {
     // The widget registry is shared by every test in this run: take a copy and put it back afterwards.
     $sdk = WidgetSdk::instance();
