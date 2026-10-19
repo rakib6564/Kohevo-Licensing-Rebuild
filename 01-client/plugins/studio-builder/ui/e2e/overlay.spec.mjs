@@ -178,3 +178,78 @@ test('Cmd/Ctrl+K opens Add and focuses its search', async ({ page }) => {
   await page.keyboard.press('ControlOrMeta+k');
   await expect(page.locator('.sbx-palette__search-input:visible')).toBeFocused();
 });
+
+/** Where the selection box is drawn vs where the node is, in parent pixels: the larger of the left and top gaps. */
+async function boxDrift(page, id) {
+  return page.evaluate((nodeId) => {
+    const f = document.querySelector('iframe.sbx-canvas__frame');
+    const el = f.contentDocument.querySelector(`[data-sb-node="${nodeId}"]`);
+    const box = document.querySelector(`[data-overlay-for="${nodeId}"]`);
+    if (!el || !box) return Infinity;
+    const fr = f.getBoundingClientRect();
+    const s = fr.width / f.clientWidth;
+    const r = el.getBoundingClientRect();
+    const b = box.getBoundingClientRect();
+    return Math.max(Math.abs(b.left - (fr.left + r.left * s)), Math.abs(b.top - (fr.top + r.top * s)));
+  }, id);
+}
+
+test('the box lands on a node that is still animating in, and follows it until the animation ends', async ({ page }) => {
+  const id = await selectSection(page);
+  // An entrance animation starting under the selection (what a canvas repaint does to an animated block).
+  await page.evaluate((nodeId) => {
+    const doc = document.querySelector('iframe.sbx-canvas__frame').contentDocument;
+    const style = doc.createElement('style');
+    style.id = 'zz-test-anim';
+    style.textContent = '@keyframes zz-in{from{transform:translateY(160px)}to{transform:none}}.zz-in{animation:zz-in .6s linear both}';
+    doc.head.appendChild(style);
+    doc.querySelector(`[data-sb-node="${nodeId}"]`).classList.add('zz-in');
+  }, id);
+  await page.waitForTimeout(300);
+  const mid = await boxDrift(page, id);
+  await page.waitForTimeout(600);
+  const end = await boxDrift(page, id);
+  expect(mid, 'mid-animation').toBeLessThan(20);
+  expect(end, 'after the animation').toBeLessThan(2);
+  await page.evaluate((nodeId) => {
+    const doc = document.querySelector('iframe.sbx-canvas__frame').contentDocument;
+    doc.getElementById('zz-test-anim')?.remove();
+    doc.querySelector(`[data-sb-node="${nodeId}"]`)?.classList.remove('zz-in');
+  }, id);
+});
+
+test('the box moves in the same frame as the canvas scrolls, not a frame behind', async ({ page }) => {
+  const id = await selectSection(page);
+  const lags = await page.evaluate(async (nodeId) => {
+    const f = document.querySelector('iframe.sbx-canvas__frame');
+    const win = f.contentWindow;
+    const doc = f.contentDocument;
+    const el = doc.querySelector(`[data-sb-node="${nodeId}"]`);
+    const tall = doc.createElement('style');
+    tall.id = 'zz-test-tall';
+    tall.textContent = 'body{min-height:5000px}';
+    doc.head.appendChild(tall);
+    await new Promise((r) => setTimeout(r, 200));
+    const out = [];
+    const frame = () => new Promise((r) => requestAnimationFrame(r));
+    for (let i = 0; i < 6; i++) {
+      await frame();
+      win.scrollBy(0, 30);
+      // A callback queued after the scroll runs after the overlay's own frame callback: by then the box must be where the node is.
+      await new Promise((resolve) => {
+        win.addEventListener('scroll', () => requestAnimationFrame(() => {
+          const box = document.querySelector(`[data-overlay-for="${nodeId}"]`);
+          const fr = f.getBoundingClientRect();
+          const s = fr.width / f.clientWidth;
+          const r = el.getBoundingClientRect();
+          out.push(box ? Math.abs(box.getBoundingClientRect().top - Math.max(fr.top + r.top * s, document.querySelector('[data-testid="canvas-overlay"]').getBoundingClientRect().top)) : -1);
+          resolve();
+        }), { once: true });
+      });
+    }
+    win.scrollTo(0, 0);
+    tall.remove();
+    return out;
+  }, id);
+  for (const lag of lags) expect(lag).toBeLessThan(2);
+});
