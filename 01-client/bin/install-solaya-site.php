@@ -76,10 +76,28 @@ function B(string $type, array $props = [], array $children = [], array $opt = [
         'bindings'   => $opt['bindings'] ?? [],
         'children'   => $children,
     ];
-    if (isset($opt['responsive'])) {
-        $block['responsive'] = $opt['responsive'];
+    foreach (['responsive', 'classNames', 'animation'] as $key) {
+        if (isset($opt[$key])) {
+            $block[$key] = $opt[$key];
+        }
     }
     return $block;
+}
+
+/** A small tracked label above a heading (styled by `.sl-eyebrow` in solaya.css). */
+function EYEBROW(string $text, bool $center = false): array
+{
+    return B('core.text', ['content' => $text, 'size' => 'sm', 'align' => $center ? 'center' : 'left'], [], ['classNames' => ['sl-eyebrow']]);
+}
+
+/** One numbered step: an italic serif numeral over a short heading and line. */
+function STEP(string $num, string $heading, string $text): array
+{
+    return B('core.container', ['direction' => 'vertical', 'gap' => 'sm'], [
+        B('core.text', ['content' => $num], [], ['classNames' => ['sl-step__num']]),
+        B('core.heading', ['text' => $heading, 'level' => 'h3']),
+        B('core.text', ['content' => $text]),
+    ], ['classNames' => ['sl-step']]);
 }
 
 /** Two columns side by side from tablet width up, stacked on a phone (a two-column grid otherwise stays two columns everywhere). */
@@ -96,7 +114,7 @@ function GRID2(string $align, array $children): array
  */
 function SEC(string $label, array $blocks, string $width = 'wide', string $surface = 'surface.primary', array $padding = ['base' => 'md', 'md' => 'lg'], string $audience = 'any'): array
 {
-    return [
+    $section = [
         'id'         => CanonicalDocumentSchema::newSectionId(),
         'label'      => $label,
         'global_ref' => null,
@@ -104,6 +122,10 @@ function SEC(string $label, array $blocks, string $width = 'wide', string $surfa
         'visibility' => ['auth_state' => $audience, 'devices' => ['base', 'sm', 'md', 'lg']],
         'blocks'     => $blocks,
     ];
+    if (!in_array($label, ['Header', 'Footer', 'Hero', 'Intro', 'About', 'Contact', 'Book', 'Journal', 'Article'], true)) {
+        $section['animation'] = ['type' => 'fade_up'];
+    }
+    return $section;
 }
 
 function link_to(string $label, string $href): array { return ['label' => $label, 'href' => $href, 'target' => '_self']; }
@@ -119,30 +141,31 @@ const WIDE  = ['md', 'lg'];
 // Under /uploads/media/: the image renderer only serves files from the media library's managed folders.
 $artDir = SLATE_ROOT . '/uploads/media/solaya-site';
 $art = [
-    'hero'      => [[244, 226, 205], [222, 160, 120], 'Warm sunrise colours over soft sand tones'],
-    'about'     => [[232, 236, 224], [150, 170, 140], 'Calm sage-green abstract light'],
-    'nutrition' => [[246, 236, 214], [196, 168, 92], 'Golden abstract tones suggesting nourishment'],
-    'hypnosis'  => [[226, 228, 240], [130, 128, 176], 'Soft lavender abstract light, quiet and restful'],
-    'programme' => [[240, 230, 222], [176, 120, 104], 'Terracotta abstract light'],
-    'journal-1' => [[236, 232, 220], [170, 150, 120], 'Neutral abstract light'],
-    'journal-2' => [[230, 236, 230], [120, 150, 130], 'Green abstract light'],
-    'journal-3' => [[238, 230, 236], [160, 120, 150], 'Rose abstract light'],
+    // name => [top colour, bottom colour, glow colour, portrait?, alt text]
+    'hero-v2'      => [[241, 228, 212], [205, 160, 128], [255, 246, 232], true, 'Warm morning light over soft sand tones'],
+    'about-v2'     => [[233, 236, 226], [143, 160, 132], [250, 248, 236], true, 'Calm sage-green light'],
+    'programme-v2' => [[240, 229, 219], [170, 118, 98], [255, 241, 228], true, 'Soft terracotta light'],
+    'nutrition-v2' => [[245, 236, 216], [190, 160, 96], [255, 248, 230], false, 'Golden light suggesting nourishment'],
+    'hypnosis-v2'  => [[229, 228, 236], [128, 122, 158], [246, 242, 250], false, 'Quiet lavender light'],
+    'journal-1-v2' => [[238, 232, 222], [168, 146, 120], [252, 247, 238], false, 'Neutral morning light'],
+    'journal-2-v2' => [[231, 236, 229], [118, 146, 126], [246, 250, 242], false, 'Soft green light'],
+    'journal-3-v2' => [[239, 230, 233], [158, 118, 134], [252, 244, 246], false, 'Soft rose light'],
 ];
 $media = [];
 if ($APPLY) {
     if (!is_dir($artDir) && !mkdir($artDir, 0755, true)) {
         throw new RuntimeException("Cannot create {$artDir}");
     }
-    foreach ($art as $name => [$from, $to]) {
+    foreach ($art as $name => [$from, $to, $glow, $portrait]) {
         $file = "{$artDir}/{$name}.jpg";
         if (!is_file($file)) {
-            solaya_paint($file, $from, $to);
+            solaya_paint($file, $from, $to, $glow, $portrait);
         }
     }
     Media::ensureSchema();
     Media::importFolder('media/solaya-site');
 }
-foreach ($art as $name => [, , $alt]) {
+foreach ($art as $name => [, , , , $alt]) {
     $path = "/uploads/media/solaya-site/{$name}.jpg";
     $id = $APPLY ? (int) Database::value('SELECT id FROM media_files WHERE tenant_id = ? AND path = ?', [$tid, $path]) : 1;
     if ($APPLY && $id <= 0) {
@@ -151,27 +174,64 @@ foreach ($art as $name => [, , $alt]) {
     $media[$name] = ['id' => $id, 'path' => $path, 'alt' => $alt];
 }
 say('  + images    ' . count($art) . ' generated in /uploads/media/solaya-site/');
-$img = static fn(string $n): array => ['media_id' => $media[$n]['id'], 'alt' => $media[$n]['alt'], 'focal_point' => [0.5, 0.5]];
-$imgUrl = static fn(string $n): string => (defined('SLATE_URL') ? rtrim((string) SLATE_URL, '/') : '') . $media[$n]['path'];
+$img = static fn(string $n): array => ['media_id' => $media[$n . '-v2']['id'], 'alt' => $media[$n . '-v2']['alt'], 'focal_point' => [0.5, 0.5]];
+$imgUrl = static fn(string $n): string => (defined('SLATE_URL') ? rtrim((string) SLATE_URL, '/') : '') . $media[$n . '-v2']['path'];
+$alt = static fn(string $n): string => $media[$n . '-v2']['alt'];
 
-/** A soft diagonal gradient with a pale sun, as a JPEG. */
-function solaya_paint(string $file, array $from, array $to): void
+/** Layered soft light: a vertical wash, two drifting glows and a low sun, finished with fine grain, as a JPEG. */
+function solaya_paint(string $file, array $from, array $to, array $glow, bool $portrait): void
 {
-    $w = 1600; $h = 1000;
+    [$w, $h] = $portrait ? [1200, 1500] : [1600, 1000];
     $im = imagecreatetruecolor($w, $h);
     for ($y = 0; $y < $h; $y++) {
-        $t = $y / ($h - 1);
+        $t = ($y / ($h - 1)) ** 1.15;
         $c = imagecolorallocate($im, (int) ($from[0] + ($to[0] - $from[0]) * $t), (int) ($from[1] + ($to[1] - $from[1]) * $t), (int) ($from[2] + ($to[2] - $from[2]) * $t));
         imageline($im, 0, $y, $w, $y, $c);
     }
     imagealphablending($im, true);
-    for ($r = 420; $r > 0; $r -= 6) {
-        $a = (int) max(0, min(127, 127 - (420 - $r) / 6));
-        imagefilledellipse($im, (int) ($w * 0.72), (int) ($h * 0.42), $r * 2, $r * 2, imagecolorallocatealpha($im, 255, 248, 236, $a));
+    $soft = static function (int $cx, int $cy, int $radius, array $rgb, int $strength) use ($im): void {
+        for ($r = $radius; $r > 0; $r -= 4) {
+            $a = (int) max(0, min(127, 127 - $strength * (1 - $r / $radius) ** 2));
+            imagefilledellipse($im, $cx, $cy, $r * 2, (int) ($r * 1.7), imagecolorallocatealpha($im, $rgb[0], $rgb[1], $rgb[2], $a));
+        }
+    };
+    $soft((int) ($w * 0.22), (int) ($h * 0.30), (int) ($w * 0.55), $glow, 40);
+    $soft((int) ($w * 0.85), (int) ($h * 0.75), (int) ($w * 0.45), $to, 30);
+    $soft((int) ($w * 0.62), (int) ($h * ($portrait ? 0.46 : 0.40)), (int) ($w * ($portrait ? 0.24 : 0.17)), [255, 250, 242], 110);
+    mt_srand(crc32($file));
+    for ($i = 0, $n = (int) ($w * $h * 0.06); $i < $n; $i++) {
+        $v = mt_rand(0, 1) ? 255 : 0;
+        imagesetpixel($im, mt_rand(0, $w - 1), mt_rand(0, $h - 1), imagecolorallocatealpha($im, $v, $v, $v, 118));
     }
-    imagejpeg($im, $file, 86);
+    imagejpeg($im, $file, 88);
     imagedestroy($im);
 }
+
+// ── Theme: tokens, fonts and the site stylesheet (replaces the previous ones; the database backup keeps them) ──────
+$tokens = [
+    'surface.page' => '#f6f1ea', 'surface.primary' => '#f6f1ea', 'surface.secondary' => '#ede4d8', 'surface.muted' => '#e6dbcd',
+    'surface.accent' => '#9a6a4f', 'surface.inverse' => '#2f2620',
+    'text.primary' => '#2a211c', 'text.muted' => '#74665c', 'text.accent' => '#9a6a4f', 'text.inverse' => '#f6f1ea',
+    'color.accent' => '#9a6a4f', 'border.default' => '#ddd0c0',
+    'font.heading' => '"Cormorant Garamond", Georgia, "Times New Roman", serif',
+    'font.body' => 'Jost, "Helvetica Neue", Arial, sans-serif',
+    'radius.sm' => '3px', 'radius.md' => '6px', 'radius.lg' => '10px', 'radius.full' => '999px',
+    'shadow.sm' => '0 1px 2px rgba(42,33,28,0.05)', 'shadow.md' => '0 18px 40px rgba(42,33,28,0.08)',
+];
+$fonts = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+       . '<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">';
+// Comments are dropped here, so `changed` below means the cleaner removed real CSS.
+$css = \Slate\Module\StudioBuilder\Http\StudioCodePolicy::prepareCustomCss(trim((string) preg_replace('~/\*.*?\*/~s', '', (string) file_get_contents(__DIR__ . '/solaya-site/solaya.css'))));
+$head = \Slate\Module\StudioBuilder\Http\StudioCodePolicy::prepareSnippet($fonts, 'head');
+if ($css['changed']) {
+    throw new RuntimeException('The Solaya stylesheet lost something to the CSS cleaner; fix bin/solaya-site/solaya.css.');
+}
+if ($APPLY) {
+    $runtime->app->saveDesignTokens($actor, 'default', $tokens);
+    Database::setSetting(\Slate\Module\StudioBuilder\Http\StudioCodePolicy::SETTING_CUSTOM_CSS, $css['css'], $tid);
+    Database::setSetting(\Slate\Module\StudioBuilder\Http\StudioCodePolicy::SETTING_HEAD_SNIPPET, $head, $tid);
+}
+say('  + theme     ' . count($tokens) . ' tokens, Cormorant Garamond + Jost, site stylesheet (' . $css['bytes'] . ' bytes)' . ($APPLY ? '' : ' (on --apply)'));
 
 // ── 2. The contact form (Forms plugin) ───────────────────────────────────────────────────────────────────────────
 $formSlug = 'solaya-contact';
@@ -243,8 +303,7 @@ $menu = [
 ];
 
 $header = [SEC('Header', [
-    // Top-aligned: the brand link and the menu keep the base paragraph/list margin below them, so centring would drop the button.
-    B('layout.flex', ['direction' => 'row', 'justify' => 'between', 'align' => 'start', 'gap' => 'md', 'wrap' => 'nowrap'], [
+    B('layout.flex', ['direction' => 'row', 'justify' => 'between', 'align' => 'center', 'gap' => 'md', 'wrap' => 'nowrap'], [
         B('core.link', ['link' => link_to('Solaya', '/'), 'style' => 'plain']),
         B('core.nav_menu', ['items' => $menu, 'layout' => 'horizontal', 'aria_label' => 'Main menu', 'align' => 'center'], [], ['visibility' => ['auth_state' => 'any', 'devices' => WIDE]]),
         B('core.button', ['link' => link_to('Book a free call', '/book-a-call'), 'variant' => 'primary', 'size' => 'sm'], [], ['visibility' => ['auth_state' => 'any', 'devices' => WIDE]]),
@@ -261,7 +320,7 @@ $footer = [SEC('Footer', [
         B('core.container', ['direction' => 'vertical', 'gap' => 'sm'], [
             B('core.heading', ['text' => 'Solaya', 'level' => 'h3']),
             B('core.text', ['content' => 'Nutrition and hypnosis with Stéphanie Giambertone: support for body and mind, in person and online.', 'size' => 'sm']),
-        ]),
+        ], ['classNames' => ['sl-wordmark']]),
         B('core.container', ['direction' => 'vertical', 'gap' => 'sm'], [
             B('core.heading', ['text' => 'Explore', 'level' => 'h3']),
             B('core.nav_menu', ['items' => $menu, 'layout' => 'vertical', 'aria_label' => 'Footer menu']),
@@ -276,10 +335,10 @@ $footer = [SEC('Footer', [
             B('core.link', ['link' => link_to('Send a message', '/contact'), 'style' => 'underline']),
         ]),
     ]),
-    B('core.spacer', ['size' => 'md']),
+    B('core.spacer', ['size' => 'lg']),
     B('core.divider', ['style' => 'solid', 'weight' => 'thin', 'width' => 'full']),
-    B('core.text', ['content' => "© {$year} Solaya. All rights reserved.", 'size' => 'sm', 'align' => 'center']),
-], 'wide', 'surface.secondary')];
+    B('core.text', ['content' => "© {$year} Solaya", 'size' => 'sm', 'align' => 'center'], [], ['classNames' => ['sl-legal']]),
+], 'wide', 'surface.inverse')];
 
 // ── 5. Pages ─────────────────────────────────────────────────────────────────────────────────────────────────────
 $serviceCards = [
@@ -303,51 +362,62 @@ $pages['home'] = ['title' => 'Solaya: nutrition and hypnosis for body and mind',
             'primary_cta' => link_to('Book a free discovery call', '/book-a-call'),
             'media' => $img('hero'),
         ])], 'wide', 'surface.secondary', ['base' => 'lg', 'md' => 'xl']),
+        SEC('Approach', [
+            EYEBROW('The Solaya approach', true),
+            B('core.heading', ['text' => 'What we eat, how we rest and the stories we tell ourselves all shape how we feel.', 'level' => 'h2', 'highlight' => 'how we feel', 'highlight_italic' => true], [], ['classNames' => ['sl-statement'], 'style' => ['align' => ['base' => 'center']]]),
+        ], 'normal'),
         SEC('Ways to work together', [
-            B('core.heading', ['text' => 'Ways to work together', 'level' => 'h2'], [], centered()),
-            B('core.text', ['content' => 'Every path starts the same way: a free conversation to understand what you need.', 'align' => 'center']),
+            GRID2('end', [
+                B('core.container', ['direction' => 'vertical', 'gap' => 'sm'], [
+                    EYEBROW('Ways to work together'),
+                    B('core.heading', ['text' => 'Five ways to begin', 'level' => 'h2']),
+                ]),
+                B('core.text', ['content' => 'Every path starts the same way: a free conversation to understand what you need.', 'size' => 'lg']),
+            ]),
             B('core.feature_list', ['columns' => 3, 'items' => $serviceCards]),
         ]),
+        SEC('How it works', [GRID2('center', [
+            B('core.image', ['media' => $img('about'), 'aspect_ratio' => 'auto', 'rounded' => false], [], ['classNames' => ['sl-arch']]),
+            B('core.container', ['direction' => 'vertical', 'gap' => 'md'], [
+                EYEBROW('How it works'),
+                B('core.heading', ['text' => 'A first conversation, then a path that fits you', 'level' => 'h2', 'highlight' => 'fits you', 'highlight_italic' => true]),
+                B('core.rich_text', ['content' => '<p>You start with a <strong>free 20-minute discovery call</strong>. Together you decide what would help most: a nutrition assessment, a hypnosis session, or the three-month Body &amp; Soul programme.</p><p>Some sessions have preparation: a 7-day food diary before a nutrition assessment, and a discovery call before spiritual regressive hypnosis.</p>']),
+                B('core.button', ['link' => link_to('See all services', '/services'), 'variant' => 'secondary']),
+            ]),
+        ])], 'wide', 'surface.secondary'),
         SEC('Solaya in numbers', [B('core.stats', ['items' => [
             ['value' => 20, 'decimals' => 0, 'prefix' => '', 'suffix' => ' min', 'label' => 'Free discovery call'],
             ['value' => 5, 'decimals' => 0, 'prefix' => '', 'suffix' => '', 'label' => 'Ways to work together'],
             ['value' => 3, 'decimals' => 0, 'prefix' => '', 'suffix' => ' months', 'label' => 'Body & Soul programme'],
-            ['value' => 21, 'decimals' => 0, 'prefix' => '', 'suffix' => ' days', 'label' => 'Notice for a regressive hypnosis session'],
-        ]])], 'wide', 'surface.secondary'),
-        SEC('How it works', [
-            GRID2('center', [
-                B('core.image', ['media' => $img('about'), 'aspect_ratio' => '4:3', 'rounded' => true]),
-                B('core.container', ['direction' => 'vertical', 'gap' => 'md'], [
-                    B('core.heading', ['text' => 'How it works', 'level' => 'h2']),
-                    B('core.rich_text', ['content' => '<p>You start with a <strong>free 20-minute discovery call</strong>. Together you decide what would help most: a nutrition assessment, a hypnosis session, or the three-month Body &amp; Soul programme.</p><p>Some sessions have preparation: a 7-day food diary before a nutrition assessment, and a discovery call before spiritual regressive hypnosis.</p>']),
-                    B('core.button', ['link' => link_to('See all services', '/services'), 'variant' => 'secondary']),
-                ]),
+            ['value' => 21, 'decimals' => 0, 'prefix' => '', 'suffix' => ' days', 'label' => 'Notice for regressive hypnosis'],
+        ]])]),
+        SEC('Three steps', [
+            EYEBROW('Three steps', true),
+            B('core.heading', ['text' => 'Simple from the start', 'level' => 'h2'], [], centered()),
+            B('core.spacer', ['size' => 'sm']),
+            B('layout.grid', ['columns' => 3, 'gap' => 'lg', 'align' => 'start'], [
+                STEP('01', 'Talk', 'A free 20-minute discovery call, online, with nothing to prepare.'),
+                STEP('02', 'Choose', 'A nutrition assessment, a hypnosis session or the three-month Body & Soul programme.'),
+                STEP('03', 'Follow through', 'Follow-up sessions and, in the programme, daily tracking and a 1:1 chat.'),
             ]),
         ]),
-        SEC('Three steps', [
-            B('core.heading', ['text' => 'Three steps', 'level' => 'h2'], [], centered()),
-            B('core.carousel', ['options' => ['autoplay_ms' => 0, 'loop' => true, 'per_view' => 1], 'slides' => [
-                ['image' => $img('journal-1'), 'quote' => 'Talk: a free 20-minute discovery call.', 'author' => 'Step 1', 'caption' => ''],
-                ['image' => $img('nutrition'), 'quote' => 'Choose: a session or the three-month programme.', 'author' => 'Step 2', 'caption' => ''],
-                ['image' => $img('programme'), 'quote' => 'Follow through, with support between sessions.', 'author' => 'Step 3', 'caption' => ''],
-            ]]),
-        ], 'normal'),
-        SEC('Approach', [B('core.quote', ['text' => 'What we eat, how we rest and the stories we tell ourselves all shape how we feel.', 'author' => 'Solaya', 'role' => 'Our approach', 'align' => 'center'])], 'normal', 'surface.secondary'),
-        SEC('Start here', [B('layout.section', ['tag' => 'section', 'content_width' => 'boxed', 'padding_y' => 'md', 'min_height' => 'auto'], [
-            B('layout.container', ['width' => 'compact', 'alignment' => 'center', 'padding' => 'none'], [
+        SEC('Start here', [B('layout.section', ['tag' => 'section', 'content_width' => 'boxed', 'padding_y' => 'none', 'min_height' => 'auto'], [
+            B('layout.container', ['width' => 'constrained', 'alignment' => 'center', 'padding' => 'none'], [
                 B('core.card', ['variant' => 'filled', 'padding' => 'lg'], [
-                    B('core.heading', ['text' => 'Not sure where to start?', 'level' => 'h2']),
-                    B('core.text', ['content' => 'Book the free discovery call. It takes 20 minutes and there is nothing to prepare.']),
+                    EYEBROW('Begin here', true),
+                    B('core.heading', ['text' => 'Not sure where to start?', 'level' => 'h2'], [], centered()),
+                    B('core.text', ['content' => 'Book the free discovery call. It takes 20 minutes and there is nothing to prepare.', 'align' => 'center']),
                     B('core.button', ['link' => link_to('Book a free discovery call', '/book-a-call'), 'variant' => 'primary', 'size' => 'lg']),
-                ], centered()),
+                ], ['classNames' => ['sl-cta'], 'style' => ['align' => ['base' => 'center']]]),
             ]),
-        ])], 'normal'),
+        ])]),
     ]];
 
 $pages['services'] = ['title' => 'Services', 'route' => 'standalone',
     'description' => 'Discovery call, nutrition assessment, emotional serenity hypnosis, spiritual regressive hypnosis and Body & Soul follow-up: durations, payment and booking rules.',
     'sections' => [
         SEC('Intro', [
+            EYEBROW('What we offer'),
             B('core.heading', ['text' => 'Services', 'level' => 'h1']),
             B('core.text', ['content' => 'Five ways to work with Solaya. Each one starts with a conversation, and the free discovery call is open to everyone.', 'size' => 'lg']),
             B('layout.flex', ['direction' => 'row', 'gap' => 'lg', 'wrap' => 'wrap', 'align' => 'center'], [
@@ -396,13 +466,14 @@ $pages['programme'] = ['title' => 'Body & Soul Programme', 'route' => 'standalon
         SEC('Intro', [
             GRID2('center', [
                 B('core.container', ['direction' => 'vertical', 'gap' => 'md'], [
-                    B('core.heading', ['text' => 'Body & Soul Programme', 'level' => 'h1', 'highlight' => 'Body & Soul']),
+                    EYEBROW('Three months'),
+                    B('core.heading', ['text' => 'Body & Soul Programme', 'level' => 'h1', 'highlight' => 'Body & Soul', 'highlight_italic' => true]),
                     B('core.text', ['content' => 'Three months of support for lasting change, with a downloadable app and regular follow-up sessions.', 'size' => 'lg']),
                     B('core.modal', ['modal_id' => 'programme-app', 'title' => 'What the app includes', 'trigger_text' => 'What does the app include?', 'trigger_variant' => 'outline', 'size' => 'md'], [
                         B('core.rich_text', ['content' => '<p>The programme app gives you daily tracking, your goals, a 1:1 chat, your meal structure and recipes, and a summary at the end of the programme.</p>']),
                     ]),
                 ]),
-                B('core.image', ['media' => $img('programme'), 'aspect_ratio' => '4:3', 'rounded' => true]),
+                B('core.image', ['media' => $img('programme'), 'aspect_ratio' => 'auto', 'rounded' => false], [], ['classNames' => ['sl-arch']]),
             ]),
         ], 'wide', 'surface.secondary'),
         SEC('What is included', [
@@ -425,22 +496,33 @@ $todo[] = 'Programme: set the programme price in Membership → Plans. The "Next
 $pages['about'] = ['title' => 'About', 'route' => 'standalone',
     'description' => 'Solaya is the practice of Stéphanie Giambertone, bringing together nutrition and hypnosis.',
     'sections' => [
-        SEC('About', [
-            B('core.heading', ['text' => 'About Solaya', 'level' => 'h1']),
-            GRID2('start', [
-                B('core.image', ['media' => $img('about'), 'aspect_ratio' => '4:3', 'rounded' => true, 'caption' => '']),
+        SEC('About', [GRID2('center', [
+            B('core.container', ['direction' => 'vertical', 'gap' => 'md'], [
+                EYEBROW('About'),
+                B('core.heading', ['text' => 'A practice for body and mind', 'level' => 'h1', 'highlight' => 'body and mind', 'highlight_italic' => true]),
                 B('core.rich_text', ['content' => '<p>Solaya is the practice of <strong>Stéphanie Giambertone</strong>. It brings nutrition and hypnosis together, so that body and mind are looked after as one.</p><p>Every client starts with a free discovery call. From there, Stéphanie suggests a nutrition assessment, a hypnosis session or the three-month Body &amp; Soul programme, and follows each person through it.</p>']),
             ]),
-        ]),
+            B('core.image', ['media' => $img('about'), 'aspect_ratio' => 'auto', 'rounded' => false], [], ['classNames' => ['sl-arch']]),
+        ])], 'wide', 'surface.secondary', ['base' => 'lg', 'md' => 'xl']),
+        SEC('Approach', [B('core.quote', ['text' => 'Nutrition and hypnosis, brought together so that body and mind are looked after as one.', 'author' => 'Solaya', 'role' => 'Our approach', 'align' => 'center'])], 'normal'),
+        SEC('Principles', [
+            EYEBROW('Principles', true),
+            B('core.carousel', ['options' => ['autoplay_ms' => 0, 'loop' => true, 'per_view' => 1], 'slides' => [
+                ['image' => null, 'quote' => 'A conversation comes before any plan.', 'author' => 'Listen first', 'caption' => ''],
+                ['image' => null, 'quote' => 'Body and mind are looked after as one.', 'author' => 'The whole person', 'caption' => ''],
+                ['image' => null, 'quote' => 'Support continues between sessions, not only during them.', 'author' => 'Follow through', 'caption' => ''],
+            ]]),
+        ], 'normal', 'surface.secondary'),
         SEC('Video', [B('core.video', ['url' => 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', 'aspect_ratio' => '16:9', 'controls' => true], [], staff_only())], 'normal', 'surface.primary', ['base' => 'md', 'md' => 'lg'], 'authenticated'),
         SEC('Gallery', [
-            B('core.heading', ['text' => 'The feel of Solaya', 'level' => 'h2']),
+            EYEBROW('The feel of Solaya'),
+            B('core.heading', ['text' => 'Quiet, warm, unhurried', 'level' => 'h2']),
             B('core.gallery', ['columns' => '3', 'gap' => 'md', 'aspect_ratio' => '4:3', 'rounded' => true, 'images' => [
-                ['url' => $imgUrl('nutrition'), 'alt' => $media['nutrition']['alt'], 'caption' => 'Nutrition'],
-                ['url' => $imgUrl('hypnosis'), 'alt' => $media['hypnosis']['alt'], 'caption' => 'Hypnosis'],
-                ['url' => $imgUrl('programme'), 'alt' => $media['programme']['alt'], 'caption' => 'Body & Soul'],
+                ['url' => $imgUrl('nutrition'), 'alt' => $alt('nutrition'), 'caption' => 'Nutrition'],
+                ['url' => $imgUrl('hypnosis'), 'alt' => $alt('hypnosis'), 'caption' => 'Hypnosis'],
+                ['url' => $imgUrl('programme'), 'alt' => $alt('programme'), 'caption' => 'Body & Soul'],
             ]]),
-        ], 'wide', 'surface.secondary'),
+        ]),
     ]];
 $todo[] = 'About: the video block shows a placeholder video to staff only. Replace it with a real Solaya video and make it public, or remove it. Add Stéphanie\'s own biography and a real photo when available.';
 
@@ -448,6 +530,7 @@ $pages['journal'] = ['title' => 'Journal', 'route' => 'standalone',
     'description' => 'Notes from Solaya on preparing for sessions and getting the most from them.',
     'sections' => [
         SEC('Journal', [
+            EYEBROW('Notes from Solaya'),
             B('core.heading', ['text' => 'Journal', 'level' => 'h1']),
             B('core.text', ['content' => 'Practical notes on preparing for your sessions.', 'size' => 'lg']),
             B('core.query_loop', ['source' => 'posts', 'category' => 'journal', 'columns' => 3, 'per_page' => 6, 'show_author' => false, 'read_more_text' => 'Read', 'empty_message' => 'No articles yet.']),
@@ -458,6 +541,7 @@ $pages['contact'] = ['title' => 'Contact', 'route' => 'standalone',
     'description' => 'Send Solaya a message, or book a free 20-minute discovery call.',
     'sections' => [
         SEC('Contact', [
+            EYEBROW('Get in touch'),
             B('core.heading', ['text' => 'Contact', 'level' => 'h1']),
             GRID2('start', [
                 B('core.container', ['direction' => 'vertical', 'gap' => 'md'], [
@@ -486,6 +570,7 @@ $pages['book-a-call'] = ['title' => 'Book a discovery call', 'route' => 'standal
     'description' => 'Book a free 20-minute discovery call with Solaya.',
     'sections' => [
         SEC('Book', [
+            EYEBROW('Free · 20 minutes · Online'),
             B('core.heading', ['text' => 'Book a free discovery call', 'level' => 'h1']),
             B('core.text', ['content' => 'Twenty minutes, free, online. Choose a time that suits you.']),
             B('booking.embed', ['min_height' => 640], [], ['bindings' => ['service' => ['provider' => 'booking.embed_target', 'params' => ['id' => $discovery]]]]),
