@@ -535,10 +535,13 @@ unit('site menus: a Nav menu block shows the chosen menu, falls back to its own 
 
 unit('heading highlight: the highlighted part has its own colour, italic, weight and underline, and nothing unsafe reaches the page', function (): void {
     $html = sbel_render([sbel_block('core.heading', ['text' => 'Three steps, in order.', 'highlight' => 'in order.', 'highlight_color' => '#d4623d', 'highlight_italic' => true, 'highlight_weight' => 'bold', 'highlight_underline' => true])]);
-    assert_true(str_contains($html, 'Three steps, <span class="sb-hl sb-hl--italic sb-hl--underline sb-hl--w-bold" style="color:#d4623d">in order.</span>'), 'the phrase carries its own look');
+    assert_true(str_contains($html, 'Three steps, <span class="sb-hl sb-hl--italic sb-hl--underline sb-hl--w-bold" style="color:#d4623d;font-style:italic;font-weight:700;text-decoration:underline;text-underline-offset:.15em">in order.</span>'), 'the phrase carries its own look, also inline so a site\'s own highlight CSS cannot override it');
 
     $token = sbel_render([sbel_block('core.heading', ['text' => 'Hello world', 'highlight' => 'world', 'highlight_color_token' => 'text.accent'])]);
-    assert_true(str_contains($token, '<span class="sb-hl sb-fg--text-accent">world</span>'), 'a theme colour is a token class, no inline style');
+    $var = 'var(' . \Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme::cssVarName('text.accent') . ')';
+    assert_true(str_contains($token, '<span class="sb-hl sb-fg--text-accent" style="color:' . $var . '">world</span>'), 'a theme colour is its token class and, inline, its variable');
+    $upright = sbel_render([sbel_block('core.heading', ['text' => 'Hello world', 'highlight' => 'world', 'highlight_color_token' => 'text.accent', 'highlight_weight' => 'inherit'])]);
+    assert_false(str_contains($upright, 'font-style') || str_contains($upright, 'font-weight'), 'italic off and weight Inherit write nothing: the site default look stays');
 
     $both = sbel_render([sbel_block('core.heading', ['text' => 'Hello world', 'highlight' => 'world', 'highlight_color_token' => 'text.accent', 'highlight_color' => '#112233'])]);
     assert_true(str_contains($both, 'style="color:#112233"') && !str_contains($both, 'sb-fg--text-accent">world'), 'a custom colour wins over the theme one');
@@ -557,5 +560,5 @@ unit('heading highlight: the highlighted part has its own colour, italic, weight
     assert_false($block->validateProps(['text' => 'x', 'highlight_weight' => 'ultra'])->isValid(), 'only the listed weights');
 
     $hero = sbel_render([sbel_block('core.hero', ['heading' => 'Build in order', 'highlight' => 'in order', 'highlight_italic' => true, 'highlight_color' => '#d4623d'])]);
-    assert_true(str_contains($hero, '<span class="sb-hl sb-hl--italic" style="color:#d4623d">in order</span>'), 'the hero heading takes the same look');
+    assert_true(str_contains($hero, '<span class="sb-hl sb-hl--italic" style="color:#d4623d;font-style:italic">in order</span>'), 'the hero heading takes the same look');
 });

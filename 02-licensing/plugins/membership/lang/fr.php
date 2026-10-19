@@ -373,6 +373,7 @@ return [
     'mb_err_could_not_start_purchase' => 'L’achat n’a pas pu être démarré.',
     'mb_err_could_not_start_payment' => 'Le paiement n’a pas pu être démarré.',
     'mb_err_security_check_failed' => 'Le contrôle de sécurité a échoué.',
+    'mb_err_terms_url' => 'Les autres réglages ont été enregistrés, mais pas l’URL des conditions et consentements : elle doit être une adresse complète commençant par http:// ou https://.',
     'mb_err_name_is_required' => 'Le nom est obligatoire.',
     'mb_err_you_do_not_have_permission_to_manage_members' => 'Vous n’avez pas l’autorisation de gérer les membres.',
     'mb_err_membership_activated_manually' => 'Adhésion activée manuellement.',

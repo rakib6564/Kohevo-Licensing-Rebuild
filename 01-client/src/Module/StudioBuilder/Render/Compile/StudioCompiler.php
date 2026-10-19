@@ -33,7 +33,7 @@ use Slate\Module\StudioBuilder\Exception\StudioTenantScopeException;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions;
 use Slate\Module\StudioBuilder\Menu\StudioMenus;
-use Slate\Module\StudioBuilder\Meta\PageMeta;
+use Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeResolver;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeSource;
@@ -102,7 +102,12 @@ final class StudioCompiler
             $width = $single['width'] ?? ($document['settings']['container_width'] ?? 'wide');
             $width = in_array($width, CanonicalDocumentSchema::ALLOWED_CONTAINER_WIDTHS, true) ? $width : 'wide';
 
-            $html = $header . '<main class="sb-main sb-main--' . $width . '" id="main">' . $main . '</main>' . $footer;
+            // A header or footer opened on its own (canvas, preview) sits in the same wrapper it has on a live page, so
+            // the site's CSS for its header or footer applies, and none meant for page content (section spacing) does.
+            $region = ['header_partial' => 'header', 'footer_partial' => 'footer'][$page->pageType] ?? null;
+            $html = $region !== null && $single === null
+                ? $header . '<' . $region . ' class="sb-site-' . $region . ' sb-site-' . $region . '--partial" id="main">' . $main . '</' . $region . '>' . $footer
+                : $header . '<main class="sb-main sb-main--' . $width . '" id="main">' . $main . '</main>' . $footer;
             $css  = StudioStylesheet::css() . $theme->rootCss() . $collector->css();
             $seo  = SeoHead::build(is_array($document['seo'] ?? null) ? $document['seo'] : [], $page, $context->site, $context->mode, $this->media);
         } catch (StudioRenderException $e) {
@@ -404,20 +409,8 @@ final class StudioCompiler
         if ($context->mode === RenderMode::Editor || ($settings['template_type'] ?? '') !== '' || $page->id === null) {
             return null;
         }
-        $conditionContext = [];
-        if (($settings['category'] ?? '') !== '') {
-            $conditionContext['category'] = $settings['category'];
-        }
         try {
-            $type = PageMeta::read($context->tenantId, (int) $page->id)['type'];
-            if ($type !== '') {
-                $conditionContext['content_type'] = $type;
-            }
-        } catch (\Throwable) {
-            // No custom content type: the page type stands in for it.
-        }
-        try {
-            return $this->chrome->single($page, $conditionContext);
+            return $this->chrome->single($page, ThemeTemplateResolver::singleContext($settings, $context->tenantId, (int) $page->id));
         } catch (\Throwable $e) {
             StudioLog::failure('render', 'single_template', $e, 'warning');
             return null;

@@ -37,6 +37,21 @@ export function templateGroupsFor(pageType) {
   });
 }
 
+/**
+ * What a library card does with a template: a page, header or footer template REPLACES what the page holds (a header
+ * inserted into a header would stack two of them); a section or block preset is inserted.
+ */
+export function templateAction(tpl) {
+  return tpl && ['page_template', 'header_preset', 'footer_preset'].includes(tpl.template_type) ? 'apply' : 'insert';
+}
+
+/** The tenant's templates followed by built-in ones it does not already list (same key = same template). */
+export function mergeTemplates(templates, builtIn) {
+  const list = asList(templates);
+  const seen = new Set(list.map((tpl) => tpl.template_key));
+  return [...list, ...asList(builtIn).filter((tpl) => tpl && !seen.has(tpl.template_key))];
+}
+
 export function groupTemplates(templates, pageType) {
   const groups = templateGroupsFor(pageType).map((g) => ({ ...g, items: [] }));
   for (const t of asList(templates)) {

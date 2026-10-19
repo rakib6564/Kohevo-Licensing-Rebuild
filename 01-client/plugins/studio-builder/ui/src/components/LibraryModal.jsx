@@ -7,7 +7,7 @@ import { Dialog } from './Dialog.jsx';
 import { useEditor, useEngineState } from './EditorContext.jsx';
 import { t } from '../core/messages.mjs';
 import { asList } from '../core/doc.mjs';
-import { filterTemplates, groupTemplates } from '../core/library.mjs';
+import { filterTemplates, groupTemplates, templateAction } from '../core/library.mjs';
 import { STATUS } from '../core/sync.mjs';
 
 export const LibraryModal = memo(function LibraryModal({ onClose }) {
@@ -55,8 +55,8 @@ export const LibraryModal = memo(function LibraryModal({ onClose }) {
                     {tpl.summary && <span className="sbx-muted">{t('library_summary', { sections: tpl.summary.sections, blocks: tpl.summary.blocks })}</span>}
                   </div>
                   <button type="button" className="sbx-btn sbx-btn--primary sbx-btn--xs sbx-libmodal__action" data-testid="library-insert" disabled={blocked}
-                    onClick={() => run(() => (tpl.template_type === 'page_template' ? applyTemplate(tpl) : insertTemplate(tpl)))}>
-                    {tpl.template_type === 'page_template' ? t('library_apply') : t('library_insert')}
+                    onClick={() => run(() => (templateAction(tpl) === 'apply' ? applyTemplate(tpl) : insertTemplate(tpl)))}>
+                    {templateAction(tpl) === 'apply' ? t('library_apply') : t('library_insert')}
                   </button>
                 </li>
               )) : shown.map((c) => (

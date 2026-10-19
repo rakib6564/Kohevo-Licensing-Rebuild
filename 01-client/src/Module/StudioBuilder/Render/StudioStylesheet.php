@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '22';
+    public const VERSION = '23';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -153,6 +153,9 @@ final class StudioStylesheet
             . '.sb-nav--underline .sb-nav__link{text-decoration:underline;text-underline-offset:.25em}'
             . '.sb-nav--pill .sb-nav__link{padding:.35rem .9rem;border-radius:999px}.sb-nav--pill .sb-nav__link:hover{background:var(--sb-border-default)}'
             . '.sb-link-row{margin:0 0 1rem}.sb-link-row--center{text-align:center}.sb-link-row--right{text-align:right}'
+            // In a row (a horizontal flex or a grid) the gap spaces the items; a link's, button's, text's, menu's or
+            // icon's own margin would push it off the row's centre line (a header's button sat lower than its menu).
+            . '.sb-flex--row>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-text,.sb-nav,.sb-icon),.sb-grid>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-text,.sb-nav,.sb-icon){margin:0}'
             . '.sb-link{color:var(--sb-color-accent);font-weight:600}.sb-link--plain{text-decoration:none}'
             . '.sb-link--arrow{text-decoration:none}.sb-link--arrow::after{content:" \\2192"}'
             . '.sb-feature-list__items,.sb-catalog__list{list-style:none;margin:0;padding:0;display:grid;gap:1rem}'

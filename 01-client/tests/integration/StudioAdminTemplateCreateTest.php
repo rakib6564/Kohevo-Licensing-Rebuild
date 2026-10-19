@@ -132,6 +132,94 @@ unit('theme builder create: every type is created through the Studio services as
     }
 });
 
+unit('theme builder create: a header can start from a built-in design; an unknown design starts blank', function (): void {
+    $unentitle = stcre_entitle();
+    $tag = 'stcre' . bin2hex(random_bytes(3));
+    $registry = ModuleBlockDefinitions::studioRegistry();
+    $types = static function (array $doc): array {
+        $out = [];
+        $walk = static function (array $blocks) use (&$walk, &$out): void {
+            foreach ($blocks as $b) { $out[] = (string) $b['type']; $walk(is_array($b['children'] ?? null) ? $b['children'] : []); }
+        };
+        foreach ($doc['sections'] as $sec) { $walk($sec['blocks']); }
+        return $out;
+    };
+    try {
+        foreach (\Slate\Module\StudioBuilder\Presets\HeaderPresetCatalog::all() as $design) {
+            [$status, $body] = stcre_post(['_action' => 'create_template', 'name' => "Design {$design['slug']} {$tag}", 'template_type' => 'header', 'header_design' => $design['key']]);
+            assert_eq(200, $status, $design['key']);
+            assert_true(str_contains(stcre_flash($body), 'created as draft'), "{$design['key']}: success flash, got: " . stcre_flash($body));
+        }
+        [$status] = stcre_post(['_action' => 'create_template', 'name' => "Design unknown {$tag}", 'template_type' => 'header', 'header_design' => 'system-section-hero-classic']);
+        assert_eq(200, $status);
+        $made = [];
+        foreach (stcre_created($tag) as $m) { $made[(string) $m['template']['name']] = $m; }
+        assert_eq(6, count($made), 'five designs and one blank');
+        foreach (\Slate\Module\StudioBuilder\Presets\HeaderPresetCatalog::all() as $design) {
+            $m = $made["Design {$design['slug']} {$tag}"];
+            $rev = Database::row('SELECT document_json FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [current_tenant_id(), (int) $m['page']['active_draft_revision_id']]);
+            $draft = json_decode((string) $rev['document_json'], true);
+            assert_eq($draft, ValidatedDocument::from($draft, $registry)->toArray(), "{$design['key']}: the header draft is canonical");
+            assert_eq($types($design['document']), $types($draft), "{$design['key']}: the header holds the design's blocks");
+            assert_eq('header', $draft['settings']['template_type'] ?? null, "{$design['key']}: still a header");
+            assert_true(!empty($draft['settings']['conditions']['rules']), "{$design['key']}: keeps the display condition chosen on the form");
+            $catalogueIds = array_column($design['document']['sections'], 'id');
+            assert_eq([], array_values(array_intersect($catalogueIds, array_column($draft['sections'], 'id'))), "{$design['key']}: the copy has its own ids");
+        }
+        $rev = Database::row('SELECT document_json FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [current_tenant_id(), (int) $made["Design unknown {$tag}"]['page']['active_draft_revision_id']]);
+        assert_eq(['core.heading'], $types(json_decode((string) $rev['document_json'], true)), 'a key that is not a header design starts from the blank header');
+    } finally {
+        stcre_cleanup($tag);
+        $unentitle();
+    }
+});
+
+unit('theme builder: "Edit in canvas" on a built-in header makes a draft header from it and opens the builder; an unknown design changes nothing', function (): void {
+    $unentitle = stcre_entitle();
+    $tid = current_tenant_id();
+    $before = (int) Database::value('SELECT COALESCE(MAX(id), 0) FROM studiobuilder_templates WHERE tenant_id = ?', [$tid]);
+    $beforePages = (int) Database::value('SELECT COALESCE(MAX(id), 0) FROM studiobuilder_pages WHERE tenant_id = ?', [$tid]);
+    try {
+        $design = \Slate\Module\StudioBuilder\Presets\HeaderPresetCatalog::find('system-header-split');
+        [$status] = stcre_post(['_action' => 'use_header_design', 'header_design' => $design['key']]);
+        assert_eq(303, $status, 'redirects to the builder (See Other)');
+        $rows = Database::all('SELECT * FROM studiobuilder_templates WHERE tenant_id = ? AND id > ?', [$tid, $before]);
+        assert_eq(1, count($rows), 'one header template');
+        $tpl = $rows[0];
+        assert_eq('header_preset', $tpl['template_type']);
+        assert_eq($design['name'], $tpl['name'], 'named after the design');
+        assert_eq(0, (int) $tpl['is_system'], 'an editable copy, not the built-in design');
+        $page = Database::row('SELECT * FROM studiobuilder_pages WHERE tenant_id = ? AND slug = ?', [$tid, 'template-' . $tpl['template_key']]);
+        assert_true(is_array($page) && $page['page_type'] === 'header_partial', 'a header page to edit in the canvas');
+        assert_true($page['published_revision_id'] === null, 'a draft: not live until it is published');
+        $draft = json_decode((string) Database::value('SELECT document_json FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [$tid, (int) $page['active_draft_revision_id']]), true);
+        assert_eq(array_column($design['document']['sections'], 'label'), array_column($draft['sections'], 'label'), 'the design\'s sections');
+        assert_eq('entire_site', $draft['settings']['conditions']['rules'][0]['condition'] ?? null, 'for the whole site once published');
+        $system = Database::value("SELECT COUNT(*) FROM studiobuilder_templates WHERE tenant_id = ? AND template_key = 'system-header-split' AND is_system = 0", [$tid]);
+        assert_eq(0, (int) $system, 'the built-in design itself is untouched');
+
+        [$status, $body] = stcre_post(['_action' => 'use_header_design', 'header_design' => 'system-section-hero-classic']);
+        assert_eq(200, $status);
+        assert_true(str_contains(stcre_flash($body), 'does not exist'), 'an unknown design is refused: ' . stcre_flash($body));
+        assert_eq(1, (int) Database::value('SELECT COUNT(*) FROM studiobuilder_templates WHERE tenant_id = ? AND id > ?', [$tid, $before]), 'nothing more was created');
+    } finally {
+        foreach (Database::all('SELECT id, template_key FROM studiobuilder_templates WHERE tenant_id = ? AND id > ?', [$tid, $before]) as $row) {
+            Database::query('DELETE FROM studiobuilder_templates WHERE tenant_id = ? AND id = ?', [$tid, (int) $row['id']]);
+            Database::query("DELETE FROM audit_log WHERE action = 'studio.template.saved' AND target = ?", [(string) $row['template_key']]);
+        }
+        foreach (Database::all('SELECT id FROM studiobuilder_pages WHERE tenant_id = ? AND id > ?', [$tid, $beforePages]) as $p) {
+            $pid = (int) $p['id'];
+            Database::query('DELETE FROM studiobuilder_compilations WHERE tenant_id = ? AND page_id = ?', [$tid, $pid]);
+            Database::query('DELETE FROM studiobuilder_dependencies WHERE tenant_id = ? AND page_id = ?', [$tid, $pid]);
+            Database::query('UPDATE studiobuilder_pages SET active_draft_revision_id = NULL, published_revision_id = NULL WHERE tenant_id = ? AND id = ?', [$tid, $pid]);
+            Database::query('DELETE FROM studiobuilder_revisions WHERE tenant_id = ? AND page_id = ?', [$tid, $pid]);
+            Database::query('DELETE FROM studiobuilder_pages WHERE tenant_id = ? AND id = ?', [$tid, $pid]);
+            Database::query("DELETE FROM audit_log WHERE action LIKE 'studio.page.%' AND target = ?", [(string) $pid]);
+        }
+        $unentitle();
+    }
+});
+
 unit('theme builder create: an over-long or marked-up name is refused with a plain message, and nothing is written', function (): void {
     $unentitle = stcre_entitle();
     $tag = 'stcre' . bin2hex(random_bytes(3));

@@ -35,6 +35,7 @@ use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Http\StudioApiRequest;
 use Slate\Module\StudioBuilder\Http\StudioApiResponse;
 use Slate\Module\StudioBuilder\Http\StudioAuthoringApi;
+use Slate\Module\StudioBuilder\Presets\HeaderPresetCatalog;
 use Slate\Module\StudioBuilder\Presets\SectionPresetCatalog;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntime;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
@@ -326,6 +327,82 @@ unit('section presets integration: seeding, protection, isolation and insertion 
             $html = sbpa_canvas($rt, SBPA_TENANT_A, $editor, $page['id']);
             assert_true(str_contains($html, 'A clear promise for your customers') && str_contains($html, 'Frequently asked questions') && str_contains($html, 'Simple pricing'), 'the presets render real content in the canvas');
             assert_true(!str_contains($html, '<script'), 'no script in rendered presets');
+        });
+    } finally {
+        sbpa_drop_db($dbName);
+    }
+});
+
+unit('header presets integration: seeded on first use apart from the sections, immutable, and each applies to a header page (real MySQL)', function (): void {
+    $dbName = 'slate_sbhp_' . slate_test_ns();
+    $pdo = sbpa_fresh_db($dbName);
+
+    try {
+        sbpa_with_pdo($pdo, static function (): void {
+            $core = InstallationService::provisionCore();
+            $owner = (int) $core['tenant_id'];
+            $iid = (string) $core['installation_id'];
+            InstallationService::createAdminAccount($owner, 'Studio Admin', 'studio-admin-hp@example.test', password_hash('password123', PASSWORD_DEFAULT));
+            Database::query('INSERT INTO tenants (id, name, slug, status) VALUES (?,?,?,\'active\') ON DUPLICATE KEY UPDATE name = VALUES(name)', [SBPA_TENANT_A, 'Tenant A', 'tenant-a-hp']);
+            sbpa_seed($owner, $iid, ['studio-builder']);
+            $act = \PluginLoader::installFromDisk('studio-builder');
+            assert_true(!empty($act['ok']), 'installFromDisk(studio-builder): ' . json_encode($act));
+            Media::ensureSchema();
+            sbpa_seed(SBPA_TENANT_A, $iid, ['studio-builder']);
+
+            $rt = StudioRuntimeFactory::build();
+            $viewer = StudioActor::authenticated(60, [StudioPermissions::VIEW]);
+            $editor = StudioActor::authenticated(61, [StudioPermissions::VIEW, StudioPermissions::EDIT]);
+            $admin  = StudioActor::authenticated(64, [StudioPermissions::VIEW, StudioPermissions::EDIT, StudioPermissions::ADMIN]);
+            $expected = array_column(HeaderPresetCatalog::all(), 'key');
+            $count = static fn(string $type): int => $rt->tenants->runAs(SBPA_TENANT_A, static fn(): int => sbpa_count("SELECT COUNT(*) FROM studiobuilder_templates WHERE tenant_id = ? AND is_system = 1 AND template_type = ?", [SBPA_TENANT_A, $type]));
+            $resetMemos = static function (): void {
+                foreach (['presetsSynced', 'headersSynced'] as $memo) {
+                    (new \ReflectionProperty(\Slate\Module\StudioBuilder\Application\StudioApplicationService::class, $memo))->setValue(null, []);
+                }
+            };
+            $resetMemos();
+
+            // 1. Nothing until asked; the first call seeds the five headers, in catalogue order, as system rows.
+            sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'GET', 'templates'), 'plain library');
+            assert_eq(0, $count('header_preset'), 'listing the library does not seed headers');
+            $first = sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $viewer, 'GET', 'header_presets'), 'first call (a viewer may read)')['presets'];
+            assert_eq($expected, array_column($first, 'template_key'));
+            foreach ($first as $row) {
+                assert_true($row['is_system'] === true && $row['template_type'] === 'header_preset' && $row['category'] === 'header', "{$row['template_key']} is a system header");
+                assert_true(!isset($row['document_json']) && !isset($row['document']), 'no document body reaches the panel');
+            }
+            assert_eq(5, $count('header_preset'));
+            assert_eq(0, $count('section_preset'), 'headers are seeded on their own, not with the sections');
+
+            // 2. Idempotent, and the sections' seeding leaves the headers alone (and the other way round).
+            $rows = static fn() => $rt->tenants->runAs(SBPA_TENANT_A, static fn() => Database::all("SELECT template_key, updated_at FROM studiobuilder_templates WHERE tenant_id = ? AND is_system = 1 AND template_type = 'header_preset' ORDER BY template_key", [SBPA_TENANT_A]));
+            $before = $rows();
+            $resetMemos();
+            sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'GET', 'header_presets'), 'second call');
+            sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'GET', 'section_presets'), 'section presets');
+            assert_eq($before, $rows(), 'unchanged headers are not rewritten');
+            assert_eq(5, $count('header_preset'), 'no duplicates');
+            assert_eq(count(SectionPresetCatalog::all()), $count('section_preset'), 'the sections seed only sections');
+
+            // 3. Immutable, even for an admin.
+            assert_eq('system_template_immutable', sbpa_first_code(sbpa_call($rt, SBPA_TENANT_A, $admin, 'POST', 'delete_template', ['template_key' => 'system-header-classic'])), 'cannot delete a system header');
+
+            // 4. Each header replaces a header page's content with its own sections and renders in the canvas.
+            $page = sbpa_make_page($rt, SBPA_TENANT_A, $editor, 'Header', 'default', 'header_partial', [sbpa_heading('Old header')]);
+            foreach (HeaderPresetCatalog::all() as $preset) {
+                $status = sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'GET', 'status', ['page' => $page['id']]), 'status')['page'];
+                $r = sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'POST', 'apply_template', ['page_id' => $page['id'], 'template_key' => $preset['key'], 'expected_revision_id' => (int) $status['active_draft_revision_id']]), "apply {$preset['key']}");
+                $doc = $r['document'];
+                assert_eq('header_partial', $doc['document_type']);
+                assert_eq(count($preset['document']['sections']), count($doc['sections']), "{$preset['key']} replaced the header's sections");
+                assert_eq(array_column($preset['document']['sections'], 'label'), array_column($doc['sections'], 'label'));
+                $ids = sbpa_ids($doc);
+                assert_eq(count($ids), count(array_unique($ids)), "{$preset['key']}: ids are unique");
+                $html = sbpa_canvas($rt, SBPA_TENANT_A, $editor, $page['id']);
+                assert_true(str_contains($html, 'Your brand') && str_contains($html, 'sb-nav') && !str_contains($html, 'Old header'), "{$preset['key']} renders its brand and menu");
+                assert_true(!str_contains($html, '<script'), "{$preset['key']}: no script");
+            }
         });
     } finally {
         sbpa_drop_db($dbName);

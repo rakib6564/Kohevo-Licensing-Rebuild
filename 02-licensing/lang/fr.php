@@ -1337,4 +1337,5 @@ return array (
     'mlt_autotranslate_key' => 'Clé API de traduction automatique',
     'mlt_autotranslate_key_placeholder' => 'Facultatif : la clé API de votre service de traduction',
     'mlt_autotranslate_key_encryption_failed' => 'La clé API n’a pas été enregistrée : le chiffrement est indisponible (vérifiez APP_SECRET). Les clés ne sont jamais stockées en clair.',
+    'mlt_switcher_invalid' => 'Non enregistré : les couleurs doivent être des valeurs hexadécimales comme #111827, et le style et la position doivent faire partie des options proposées.',
 );

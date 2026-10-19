@@ -1,5 +1,5 @@
 // The Field value block: set a custom field on the page's settings screen, then add the block in the builder, name the
-// field, and the canvas shows the page's value for it.
+// field from the dropdown, and the canvas shows the page's value for it.
 import { test, expect } from '@playwright/test';
 import { openBuilder, settled, sandboxPageId, showEdit, frameEval, restoreLayers, layerCount } from './helpers.mjs';
 
@@ -45,9 +45,9 @@ test('a custom field value of the page shows in the Field value block on the can
     const id = await box.getAttribute('data-overlay-for');
 
     await showEdit(page);
-    const field = page.getByLabel('Field key', { exact: true });
-    await field.fill(key);
-    await field.blur();
+    const field = page.getByTestId('meta-field-select');
+    await expect(field.locator(`option[value="${key}"]`)).toHaveCount(1); // the field defined above is in the list
+    await field.selectOption(key);
     await expect.poll(() => frameEval(page, `[data-sb-node="${id}"] .sb-field-value`, (el) => el.textContent), { timeout: 20_000 }).toContain(value);
   } finally {
     await restoreLayers(page, before);

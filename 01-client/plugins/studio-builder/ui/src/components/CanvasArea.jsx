@@ -10,7 +10,7 @@ import { attachCanvas, markSelected } from '../core/canvas.mjs';
 import { inlineSpecsFor, propsWithInlineText } from '../core/inlineText.mjs';
 import { patchCanvas } from '../core/canvasPatch.mjs';
 import { isInlineEditing, morphDocument } from '../core/canvasMorph.mjs';
-import { ghostNodeIds, isStructuralChange, syncLiveDOM } from '../core/canvasLiveSync.mjs';
+import { contentChanged, ghostNodeIds, isStructuralChange, syncLiveDOM } from '../core/canvasLiveSync.mjs';
 import { releaseLive, syncLiveStyles, tokensOfDoc } from '../core/liveStyleSync.mjs';
 import { syncLiveStructure } from '../core/liveStructure.mjs';
 import { adoptFragment, applyFragment, clearFragments } from '../core/liveFragment.mjs';
@@ -223,7 +223,9 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
 
     // A style the editor painted ahead of the server still gets the server's render merged in, so the canvas never
     // drifts from what the page will really look like.
-    if (!structural && revisionId !== lastLoadedRevRef.current && liveRef.current.size === 0) {
+    // A content change is merged from the server too: the live patch paints only the content it finds a place for, so
+    // it can leave the canvas behind (see contentChanged).
+    if (!structural && revisionId !== lastLoadedRevRef.current && liveRef.current.size === 0 && !contentChanged(serverBaseRef.current, working)) {
       // The canvas DOM is already updated in 0ms via syncLiveDOM!
       lastLoadedRevRef.current = revisionId;
       paintedRef.current = working;
