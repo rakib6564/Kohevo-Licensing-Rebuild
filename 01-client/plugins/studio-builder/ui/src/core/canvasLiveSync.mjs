@@ -112,8 +112,12 @@ function styleWithoutAlign(style) {
   return Object.keys(rest).length ? rest : null;
 }
 
-/** Block fields whose effect is CSS, a wrapper tag or attributes written only by the server's renderer. */
-const SERVER_PAINTED_FIELDS = ['style_states', 'tag', 'classNames', 'attributes'];
+/**
+ * Block fields whose effect is CSS, a wrapper tag, attributes or motion classes and variables written only by the server's
+ * renderer. Motion is here as it is for sections: the live patch cannot add an interaction's classes or its animation, so
+ * an entrance animation, its timing or an interaction showed only after a reload.
+ */
+const SERVER_PAINTED_FIELDS = ['style_states', 'tag', 'classNames', 'attributes', 'animation', 'interactions'];
 
 /**
  * Blocks whose markup is built only on the server (no heuristic live patch exists for them): any
@@ -130,6 +134,25 @@ export const isServerRenderedType = (type) => {
   const t = String(type || '');
   return SERVER_RENDERED_TYPES.has(t) || !(t.startsWith('core.') || t.startsWith('layout.'));
 };
+
+/**
+ * The blocks, at any depth, that kept their id and type but whose props changed, and whose markup only the server
+ * builds (isServerRenderedType). The live patch cannot paint them, so the canvas fetches each one's render on its own
+ * (`render_block`) the moment it is edited, instead of waiting for the save and the page's full render.
+ *
+ * @returns {string[]} block ids, in document order
+ */
+export function serverRenderedEdits(prevDoc, nextDoc) {
+  if (!prevDoc || !nextDoc || prevDoc === nextDoc) return [];
+  const prev = indexAllBlocks(prevDoc);
+  const out = [];
+  for (const [id, block] of indexAllBlocks(nextDoc)) {
+    const before = prev.get(id);
+    if (!before || before === block || before.type !== block.type || !isServerRenderedType(block.type)) continue;
+    if (differs(before.props, block.props)) out.push(id);
+  }
+  return out;
+}
 
 /**
  * Types whose heading can carry a highlighted word: the server wraps it in a span, which the text patch

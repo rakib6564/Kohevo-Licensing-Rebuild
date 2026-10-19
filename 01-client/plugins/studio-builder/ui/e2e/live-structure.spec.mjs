@@ -85,3 +85,31 @@ test('a section preset shows its real content before the save returns', async ({
     await restoreLayers(page, before);
   }
 });
+
+test('an edit to a server-rendered block shows on the canvas from its own render, before the save returns', async ({ page }) => {
+  await openBuilder(page);
+  await settled(page);
+  const before = await layerCount(page);
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  try {
+    await addQuote(page);
+    await settled(page);
+    const field = page.getByRole('textbox', { name: 'Quote', exact: true });
+    await expect(field).toBeVisible({ timeout: 15_000 });
+
+    // The save is held: the only way the new text reaches the canvas is the block's own render (render_block).
+    await page.route(OPERATIONS, async (route) => { await gate; await route.continue(); });
+    const rendered = page.waitForRequest((r) => r.url().includes('action=render_block') && r.method() === 'POST');
+    await field.fill('Shown before the save');
+    await rendered;
+    await expect(canvas(page).locator('figure.sb-quote', { hasText: 'Shown before the save' })).toHaveCount(1, { timeout: 5_000 });
+    await expect(canvas(page).locator('[data-sb-type="core.quote"]')).toHaveCount(1);
+  } finally {
+    release();
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await settled(page);
+    await expect(canvas(page).locator('figure.sb-quote', { hasText: 'Shown before the save' })).toHaveCount(1, { timeout: 20_000 });
+    await restoreLayers(page, before);
+  }
+});
