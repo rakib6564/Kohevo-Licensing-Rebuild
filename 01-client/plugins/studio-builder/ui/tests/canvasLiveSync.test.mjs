@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { contentChanged, isServerRenderedType, isStructuralChange, syncLiveDOM } from '../src/core/canvasLiveSync.mjs';
+import { contentChanged, isServerRenderedType, isStructuralChange, serverRenderedEdits, syncLiveDOM } from '../src/core/canvasLiveSync.mjs';
 
 function fakeEl(tag = 'div', classes = [], text = '') {
   const classList = new Set(classes);
@@ -184,4 +184,20 @@ test('contentChanged: a saved prop change at any depth, or a section field, merg
   assert.equal(contentChanged(base, doc({ heading: 'Hi', eyebrow: '' }, [{ question: 'Q', answer: 'A' }], { padding: 'lg' })), false, 'a section style edit is not content');
   assert.equal(contentChanged(base, doc({ heading: 'Hi', eyebrow: '' }, [{ question: 'Q', answer: 'A' }], {}, { label: 'Intro' })), true, 'a section field');
   assert.equal(contentChanged(null, base), true, 'no rendered document yet: merge');
+});
+
+test('serverRenderedEdits: a server-rendered block whose props changed is shown from its own render, at any depth', () => {
+  const card = (label) => ({ id: 'blk_card', type: 'forms.form_card', props: { button_label: label, show_description: true }, children: [] });
+  const quote = (text) => ({ id: 'blk_quote', type: 'core.quote', props: { text }, children: [] });
+  const heading = (text) => ({ id: 'blk_head', type: 'core.heading', props: { text, level: 'h2' }, children: [] });
+  const doc = (blocks) => ({ sections: [{ id: 'sec_a', blocks: [{ id: 'blk_box', type: 'layout.container', props: {}, children: blocks }] }] });
+  const before = doc([card('Ask'), quote('Old'), heading('Same')]);
+  assert.deepEqual(serverRenderedEdits(before, doc([card('Ask a question'), quote('Old'), heading('Same')])), ['blk_card'], 'a module block nested in a container');
+  assert.deepEqual(serverRenderedEdits(before, doc([card('Ask'), quote('New'), heading('Same')])), ['blk_quote'], 'a core block with no live patch');
+  assert.deepEqual(serverRenderedEdits(before, doc([card('Ask'), quote('Old'), heading('Changed')])), [], 'a heading is patched live, not fetched');
+  assert.deepEqual(serverRenderedEdits(before, before), [], 'nothing changed');
+  const retyped = doc([{ ...card('Ask'), type: 'forms.embed' }, quote('Old'), heading('Same')]);
+  assert.deepEqual(serverRenderedEdits(before, retyped), [], 'a changed type is a structural change, repainted from the server');
+  assert.deepEqual(serverRenderedEdits(before, doc([quote('Old'), heading('Same')])), [], 'a removed block is not fetched');
+  assert.deepEqual(serverRenderedEdits(null, before), []);
 });

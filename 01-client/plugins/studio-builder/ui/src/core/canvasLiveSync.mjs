@@ -132,6 +132,25 @@ export const isServerRenderedType = (type) => {
 };
 
 /**
+ * The blocks, at any depth, that kept their id and type but whose props changed, and whose markup only the server
+ * builds (isServerRenderedType). The live patch cannot paint them, so the canvas fetches each one's render on its own
+ * (`render_block`) the moment it is edited, instead of waiting for the save and the page's full render.
+ *
+ * @returns {string[]} block ids, in document order
+ */
+export function serverRenderedEdits(prevDoc, nextDoc) {
+  if (!prevDoc || !nextDoc || prevDoc === nextDoc) return [];
+  const prev = indexAllBlocks(prevDoc);
+  const out = [];
+  for (const [id, block] of indexAllBlocks(nextDoc)) {
+    const before = prev.get(id);
+    if (!before || before === block || before.type !== block.type || !isServerRenderedType(block.type)) continue;
+    if (differs(before.props, block.props)) out.push(id);
+  }
+  return out;
+}
+
+/**
  * Types whose heading can carry a highlighted word: the server wraps it in a span, which the text patch
  * (textContent) would erase, so while a highlight is set any prop change repaints from the server.
  */

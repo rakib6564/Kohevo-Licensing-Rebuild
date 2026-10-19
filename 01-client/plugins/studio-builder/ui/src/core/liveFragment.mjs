@@ -72,8 +72,12 @@ export function applyFragment(canvasDoc, placeholder, fragment, key) {
   if (!placeholder || !placeholder.parentNode || !fragment) return false;
   placeholder.parentNode.replaceChild(fragment.element, placeholder);
   if (fragment.css && canvasDoc.head) {
+    const id = `${FRAGMENT_SHEET}${String(key).replace(/[^\w-]/g, '')}`;
+    // A block shown again (each edit of a server-rendered block) keeps one sheet: the newest render's rules.
+    const old = canvasDoc.getElementById ? canvasDoc.getElementById(id) : null;
+    if (old) old.remove();
     const style = canvasDoc.createElement('style');
-    style.id = `${FRAGMENT_SHEET}${String(key).replace(/[^\w-]/g, '')}`;
+    style.id = id;
     style.setAttribute('data-sbx-owned', '1');
     style.textContent = fragment.css;
     canvasDoc.head.appendChild(style);
