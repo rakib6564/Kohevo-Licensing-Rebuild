@@ -614,7 +614,7 @@ $themeTemplates = [
             B('theme.post_meta', ['show_author' => false, 'show_category' => true, 'show_date' => true]),
             B('theme.field_value', ['field' => 'summary', 'fallback' => '', 'show_label' => false, 'tag' => 'div']),
             B('theme.post_content'),
-        ], 'narrow'),
+        ], 'wide'), // wide, so an article's own section width decides how wide it reads
     ]],
     'solaya-archive' => ['Archive and search', 'archive', [['type' => 'include', 'condition' => 'archive'], ['type' => 'include', 'condition' => 'search']], [
         SEC('Archive', [
