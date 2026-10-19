@@ -385,6 +385,8 @@ final class StudioStylesheet
             . '.sb-carousel__btn{width:2.25rem;height:2.25rem;border-radius:50%;border:1px solid var(--sb-border-default,#e2e8f0);background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:inherit}'
             . '.sb-carousel__btn:disabled{opacity:.35;cursor:default}'
             . '.sb-carousel__btn:focus-visible{outline:2px solid currentColor;outline-offset:2px}'
+            // The pause control only does something with the runtime running, which marks the carousel ready.
+            . '.sb-carousel__pause{display:none;font-size:.7rem}[data-sb-car-ready] .sb-carousel__pause{display:inline-flex}'
             . '.sb-carousel__dot{width:.55rem;height:.55rem;padding:0;border:0;border-radius:50%;background:currentColor;opacity:.3;cursor:pointer}'
             // Two active-state spellings must both light up: the server marks the
             // first dot with `aria-current` so a no-JS page is truthful, while the

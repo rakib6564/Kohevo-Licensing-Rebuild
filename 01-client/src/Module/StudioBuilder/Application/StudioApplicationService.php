@@ -1345,7 +1345,45 @@ final class StudioApplicationService
                 $block[$field] = $default;
             }
         }
+        if (is_array($block['field_schema'] ?? null)) {
+            $block['field_schema'] = self::translateFieldLabels($block['field_schema']);
+        }
         return $block;
+    }
+
+    /** The translation key of an Inspector field label: one key per label text, shared by every block that uses it. */
+    public static function fieldLabelKey(string $label): string
+    {
+        return 'studio_field_' . trim((string) preg_replace('/[^a-z0-9]+/', '_', strtolower($label)), '_');
+    }
+
+    /**
+     * Inspector field labels in the admin locale, nested fields (repeater items) included. A label with no
+     * translation keeps its English text.
+     *
+     * @param list<array<string, mixed>> $fields
+     * @return list<array<string, mixed>>
+     */
+    private static function translateFieldLabels(array $fields): array
+    {
+        foreach ($fields as $i => $field) {
+            if (!is_array($field)) {
+                continue;
+            }
+            $label = $field['label'] ?? null;
+            if (is_string($label) && $label !== '' && \function_exists('__')) {
+                try {
+                    $fields[$i]['label'] = (string) \__(self::fieldLabelKey($label), $label);
+                } catch (\Throwable $ignored) {
+                }
+            }
+            foreach ($field as $k => $v) {
+                if (is_array($v) && array_is_list($v) && isset($v[0]) && is_array($v[0]) && isset($v[0]['key'])) {
+                    $fields[$i][$k] = self::translateFieldLabels($v);
+                }
+            }
+        }
+        return $fields;
     }
 
     /**

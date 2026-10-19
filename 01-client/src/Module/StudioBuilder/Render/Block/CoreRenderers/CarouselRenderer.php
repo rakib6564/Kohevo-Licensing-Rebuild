@@ -101,10 +101,18 @@ final class CarouselRenderer implements BlockRendererInterface
             $controls = '<div class="sb-carousel__nav">'
                 . '<button type="button" class="sb-carousel__btn" data-sb-car-prev aria-label="'
                 . Html::e(Html::t('studio_carousel_prev', 'Previous slide')) . '">&#8249;</button>'
-                . '<div class="sb-carousel__dots" data-sb-car-dots role="tablist" aria-label="'
+                // A plain group of buttons (each with aria-current), valid with or without the runtime.
+                . '<div class="sb-carousel__dots" data-sb-car-dots role="group" aria-label="'
                 . Html::e(Html::t('studio_carousel_choose', 'Choose slide')) . '">' . $dots . '</div>'
                 . '<button type="button" class="sb-carousel__btn" data-sb-car-next aria-label="'
                 . Html::e(Html::t('studio_carousel_next', 'Next slide')) . '">&#8250;</button>'
+                // Autoplay can always be stopped, on touch screens too (WCAG 2.2.2). The runtime shows it.
+                . ($autoplay > 0 && $loop
+                    ? '<button type="button" class="sb-carousel__btn sb-carousel__pause" data-sb-car-pause aria-pressed="false"'
+                        . ' data-sb-label-pause="' . Html::e(Html::t('studio_carousel_pause', 'Pause slideshow')) . '"'
+                        . ' data-sb-label-play="' . Html::e(Html::t('studio_carousel_play', 'Play slideshow')) . '"'
+                        . ' aria-label="' . Html::e(Html::t('studio_carousel_pause', 'Pause slideshow')) . '">&#10073;&#10073;</button>'
+                    : '')
                 . '</div>';
         }
 
@@ -120,6 +128,10 @@ final class CarouselRenderer implements BlockRendererInterface
             . ($loop && $interactive ? ' data-sb-loop' : '')
             . ($autoplay > 0 && $interactive ? ' data-sb-autoplay="' . $autoplay . '"' : '')
             . ' aria-roledescription="' . Html::e(Html::t('studio_carousel_desc', 'carousel')) . '"'
+            // The runtime labels slides and rebuilt dots with these, so a translated page stays translated.
+            . ' data-sb-label-slide="' . Html::e(Html::t('studio_carousel_slide', 'slide')) . '"'
+            . ' data-sb-label-slide-of="' . Html::e(Html::t('studio_carousel_slide_of', '%1$s of %2$s')) . '"'
+            . ' data-sb-label-go="' . Html::e(Html::t('studio_carousel_go', 'Go to slide')) . '"'
             . ' aria-label="' . Html::e($label) . '"'
             . '>'
             . '<div class="sb-carousel__track" data-sb-carousel-track>' . $track . '</div>'
