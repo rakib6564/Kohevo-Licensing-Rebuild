@@ -160,7 +160,10 @@ unit('sprint1: GridRenderer compiles with columns and alignment classes', functi
     $html = $renderer->render($scope);
 
     assert_eq('<div>A</div><div>B</div><div>C</div>', $html, 'the children go straight into the block wrapper');
-    assert_eq(['sb-grid', 'sb-cols-3', 'sb-grid--align-stretch', 'sb-gap-md'], $renderer->wrapperClasses($scope));
+    // More than two columns collapse to one on a phone and take the chosen count from tablet width up (CL-M3).
+    assert_eq(['sb-grid', 'sb-cols-1', 'sb-md-cols-3', 'sb-grid--align-stretch', 'sb-gap-md'], $renderer->wrapperClasses($scope));
+    $two = s1_scope(['type' => 'layout.grid', 'props' => ['columns' => 2, 'gap' => 'md', 'align' => 'stretch']], '');
+    assert_eq(['sb-grid', 'sb-cols-2', 'sb-grid--align-stretch', 'sb-gap-md'], $renderer->wrapperClasses($two), 'two columns stay two');
 });
 
 unit('sprint1: TextRenderer compiles paragraph text with size and alignment', function (): void {

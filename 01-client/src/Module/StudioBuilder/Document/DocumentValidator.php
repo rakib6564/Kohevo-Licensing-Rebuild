@@ -1083,16 +1083,10 @@ final class DocumentValidator
                         if (!StyleValueGuard::isLength($size)) {
                             $errors[] = ValidationResult::issue("{$path}.typography.size", 'invalid_style_value', 'Unsafe typography size value.');
                         }
-                    } elseif (is_array($size) && !array_is_list($size)) {
-                        foreach ($size as $bp => $sVal) {
-                            if (!in_array((string) $bp, CanonicalDocumentSchema::ALLOWED_RESPONSIVE_BREAKPOINTS, true)) {
-                                $errors[] = ValidationResult::issue("{$path}.typography.size.{$bp}", 'invalid_breakpoint', "Unknown breakpoint '{$bp}'.");
-                            } elseif (!is_string($sVal) || !StyleValueGuard::isLength($sVal)) {
-                                $errors[] = ValidationResult::issue("{$path}.typography.size.{$bp}", 'invalid_style_value', 'Unsafe responsive typography size.');
-                            }
-                        }
                     } else {
-                        $errors[] = ValidationResult::issue("{$path}.typography.size", 'invalid_style_value', 'typography.size must be a string or responsive map.');
+                        // A {base,sm,md,lg} map used to be accepted and then rendered as no size at all. Per-device
+                        // sizes are set as tablet and mobile overrides (responsive.<device>.style.typography.size).
+                        $errors[] = ValidationResult::issue("{$path}.typography.size", 'invalid_style_value', 'typography.size must be one length; set a different size per device with a tablet or mobile override.');
                     }
                 }
                 if (isset($typo['weight']) && (!is_string($typo['weight']) && !is_int($typo['weight']) || !in_array((string) $typo['weight'], CanonicalDocumentSchema::ALLOWED_FONT_WEIGHTS, true))) {

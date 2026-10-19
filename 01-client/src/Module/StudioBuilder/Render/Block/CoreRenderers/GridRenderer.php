@@ -51,9 +51,12 @@ final class GridRenderer implements BlockRendererInterface, WrapperClassesInterf
             $align = 'stretch';
         }
 
+        // More than two columns collapse to one on a phone, as section columns and the Query Loop do; the
+        // chosen count applies from tablet width up.
+        $colClasses = $cols > 2 ? ['sb-cols-1', 'sb-md-cols-' . $cols] : ['sb-cols-' . $cols];
         $classes = [
             'sb-grid',
-            'sb-cols-' . $cols,
+            ...$colClasses,
             'sb-grid--align-' . $align,
             'sb-gap-' . $gap,
         ];

@@ -382,9 +382,9 @@ unit('states: they render as pseudo-class rules scoped to the block, with the ba
     $css = $collector->css();
     $c = '.' . sbss_class($html);
     assert_true(str_contains($css, $c . '{transition:all 200ms ease;cursor:pointer}'), $css);
-    assert_true(str_contains($css, $c . ':hover{background-color:#e8734a;transform:scale(1.05)}'), $css);
-    assert_true(str_contains($css, $c . ':focus-within{box-shadow:0 0 0 3px #e8734a}'), 'a spread without a blur keeps the blur slot: ' . $css);
-    assert_true(str_contains($css, $c . ':has(:disabled){opacity:0.5}'), 'the bad colour is dropped, the opacity stays: ' . $css);
+    assert_true(str_contains($css, $c . ':hover{background-color:#e8734a !important;transform:scale(1.05) !important}'), $css);
+    assert_true(str_contains($css, $c . ':focus-within{box-shadow:0 0 0 3px #e8734a !important}'), 'a spread without a blur keeps the blur slot: ' . $css);
+    assert_true(str_contains($css, $c . ':has(:disabled){opacity:0.5 !important}'), 'the bad colour is dropped, the opacity stays: ' . $css);
     assert_false(str_contains($css, 'url('), 'no url() anywhere: ' . $css);
     assert_true(str_contains($css, '@media (prefers-reduced-motion:reduce)'), 'transitions respect reduced motion');
     assert_false(str_contains($html, 'hover'), 'states never touch the markup');
@@ -392,7 +392,7 @@ unit('states: they render as pseudo-class rules scoped to the block, with the ba
 
 unit('states: a state with only invalid values produces no rule at all', function (): void {
     assert_eq([], StyleSurface::stateRules(['hover' => ['color' => 'url(x)'], 'focus' => []]));
-    assert_eq(['hover' => 'opacity:0.5'], StyleSurface::stateRules(['hover' => ['opacity' => 0.5]]));
+    assert_eq(['hover' => 'opacity:0.5 !important'], StyleSurface::stateRules(['hover' => ['opacity' => 0.5]]));
 });
 
 unit('states: the normalizer drops empty states and keeps keys sorted', function (): void {
@@ -866,6 +866,61 @@ unit('tabs: "Tab position: bottom" puts the tab strip under the panels', functio
         'bindings' => [], 'children' => [], 'animation' => [], 'interactions' => [],
     ], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), new RenderCollector(), false);
     assert_true(str_contains($html, 'sb-tabs-block--bottom'), 'the renderer writes the class: ' . $html);
+});
+
+// ── Layout and colour rendering (CL-M4, CL-M12, CL-M2, CL-M9) ─────────────
+
+/** @param array<string, mixed> $block */
+function sbss_render_block(array $block): array
+{
+    $tenants   = new TenantContext();
+    $renderer  = new DocumentRenderer(BlockRegistry::withAllCoreBlocks(), BlockRendererRegistry::withCoreRenderers(), new CoreMediaResolver($tenants), new ProviderBindingResolver(new DataProviderRegistry(), $tenants));
+    $collector = new RenderCollector();
+    $html = $renderer->renderBlock($block + [
+        'id' => 'blk_eeeeeeeeeeeeeeeeeeeeeeee', 'version' => 1,
+        'style' => CanonicalDocumentSchema::defaultBlockStyle(),
+        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+        'bindings' => [], 'children' => [], 'animation' => [], 'interactions' => [],
+    ], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), $collector, false);
+    return ['html' => $html, 'css' => $collector->css()];
+}
+
+unit('states: a hover colour beats a literal base colour, wherever the base colour is written (CL-M4)', function (): void {
+    $r = sbss_render_block([
+        'type' => 'core.heading', 'props' => ['text' => 'Hover me', 'level' => 'h2'],
+        'style' => ['background' => ['color' => '#ffffff'], 'color' => '#111111', 'opacity' => 1] + CanonicalDocumentSchema::defaultBlockStyle(),
+        'style_states' => ['hover' => ['background' => ['color' => '#000000'], 'color' => '#ffffff', 'opacity' => 0.5]],
+    ]);
+    $class = sbss_class($r['html']);
+    assert_true(str_contains($r['css'], '.' . $class . ':hover{'), 'the hover rule is emitted: ' . $r['css']);
+    foreach (['background-color:#000000 !important', 'color:#ffffff !important', 'opacity:0.5 !important'] as $decl) {
+        assert_true(str_contains($r['css'], $decl), "{$decl}, so it beats an inline base value: " . $r['css']);
+    }
+});
+
+unit('core.container: a horizontal container wraps unless Wrap is "nowrap" (CL-M12)', function (): void {
+    $row = static fn(array $props): string => sbss_render_block(['type' => 'core.container', 'props' => $props + ['direction' => 'horizontal']])['html'];
+    assert_false(str_contains($row([]), 'sb-stack--nowrap'), 'wraps by default, as before');
+    assert_true(str_contains($row(['wrap' => 'nowrap']), 'sb-stack--nowrap'), 'nowrap keeps one row');
+    assert_false(str_contains(sbss_render_block(['type' => 'core.container', 'props' => ['direction' => 'vertical', 'wrap' => 'nowrap']])['html'], 'sb-stack--nowrap'), 'a vertical container has nothing to wrap');
+    assert_true(str_contains(\Slate\Module\StudioBuilder\Render\StudioStylesheet::css(), '.sb-stack--horizontal.sb-stack--nowrap{flex-wrap:nowrap}'), 'the stylesheet has the rule');
+    $field = array_values(array_filter(BlockRegistry::withAllCoreBlocks()->get('core.container')->toEditorManifest()['field_schema'], static fn(array $f): bool => $f['key'] === 'wrap'))[0] ?? null;
+    assert_eq(['wrap', 'nowrap'], $field['allowed_values'] ?? null, 'the Inspector offers it');
+});
+
+unit('layout.section: "Full width" reaches both window edges without a sideways scroll (CL-M2)', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    assert_true(str_contains($css, '.sb-layout-section--full{width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw)}'), 'full width breaks out of the section column');
+    assert_true((bool) preg_match('/body\.sb-body\{[^}]*overflow-x:clip/', $css), 'and the page clips the scrollbar sliver instead of scrolling sideways');
+});
+
+unit('chrome: a custom header or footer partial gets none of the default chrome\'s padding or rule (CL-M9)', function (): void {
+    \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    assert_true(str_contains($css, '.sb-site-header:not(.sb-site-header--partial){border-bottom:'), 'the header rule skips partials');
+    assert_true(str_contains($css, '.sb-site-footer:not(.sb-site-footer--partial){border-top:'), 'the footer rule skips partials');
+    assert_false((bool) preg_match('/(^|[},])\.sb-site-(header|footer)[{,]/', $css), 'no rule reaches every header or footer');
 });
 
 // ── Interaction triggers (W-F7) ───────────────────────────────────────────
