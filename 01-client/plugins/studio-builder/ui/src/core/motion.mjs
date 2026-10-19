@@ -10,6 +10,9 @@
 // `.sb-interaction-*` classes plus `data-sb-interaction-trigger`, and
 // `StudioStylesheet` owns the actual keyframes — so the inspector never emits
 // CSS or an animation name the renderer does not already understand.
+// Every trigger offered here does something: click replays the chosen
+// animation (studio-runtime.js), load plays it as the page loads, and scroll
+// ties it (or a gentle drift) to the scroll position.
 
 import { t } from './messages.mjs';
 

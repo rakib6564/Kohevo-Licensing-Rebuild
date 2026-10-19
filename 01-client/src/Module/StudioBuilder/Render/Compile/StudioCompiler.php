@@ -33,6 +33,7 @@ use Slate\Module\StudioBuilder\Exception\StudioTenantScopeException;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions;
 use Slate\Module\StudioBuilder\Menu\StudioMenus;
+use Slate\Module\StudioBuilder\Meta\PageMeta;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeResolver;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeSource;
@@ -50,6 +51,7 @@ use Slate\Module\StudioBuilder\Render\StudioStylesheet;
 use Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme;
 use Slate\Module\StudioBuilder\Render\Theme\ThemeResolver;
 use Slate\Module\StudioBuilder\Repository\CompilationRepository;
+use Slate\Module\StudioBuilder\Runtime\StudioLog;
 use Slate\Tenancy\TenantContext;
 
 final class StudioCompiler
@@ -93,10 +95,11 @@ final class StudioCompiler
             $collector = new RenderCollector();
 
             $header = $this->renderChrome('header', $plan['header'], $context, $theme, $collector);
-            $main   = $this->documents->renderSections($document['sections'] ?? [], $context, $theme, $collector, true, $this->prepareComponents($plan['components']));
+            $single = $plan['single'] !== null ? $this->renderSingle($plan['single'], $document, $plan['components'], $context, $theme, $collector) : null;
+            $main   = $single['html'] ?? $this->documents->renderSections($document['sections'] ?? [], $context, $theme, $collector, true, $this->prepareComponents($plan['components']));
             $footer = $this->renderChrome('footer', $plan['footer'], $context, $theme, $collector);
 
-            $width = $document['settings']['container_width'] ?? 'wide';
+            $width = $single['width'] ?? ($document['settings']['container_width'] ?? 'wide');
             $width = in_array($width, CanonicalDocumentSchema::ALLOWED_CONTAINER_WIDTHS, true) ? $width : 'wide';
 
             $html = $header . '<main class="sb-main sb-main--' . $width . '" id="main">' . $main . '</main>' . $footer;
@@ -115,7 +118,7 @@ final class StudioCompiler
             html: $html,
             css: $css,
             dynamicManifest: [
-                'nodes' => $collector->deferred(),
+                'nodes' => $single !== null ? array_replace($collector->deferred(), $single['replaced']) : $collector->deferred(),
                 'nonce' => $collector->nonce,
                 'theme' => ['group' => $theme->tokenGroup, 'tokens' => $theme->tokens()],
             ],
@@ -294,7 +297,12 @@ final class StudioCompiler
             $componentKeys[(string) $ref] = $source->key();
         }
 
+        // Theme Builder: a published Single template whose conditions match lays out this page. Its identity
+        // and published revision are part of the fingerprint, so publishing the template rebuilds the page.
+        $single = $this->singleFor($page, $settings, $context);
+
         $inputs = [
+            'single'      => $single !== null ? (int) $single['page']['id'] . ':' . (int) $single['revision']['id'] : '',
             'compiler'    => self::COMPILER_VERSION,
             'components'  => $componentKeys,
             'document'    => hash('sha256', $documentJson),
@@ -316,8 +324,127 @@ final class StudioCompiler
             'header'     => $header,
             'footer'     => $footer,
             'components' => $components,
+            'single'     => $single,
             'inputs'     => $inputs,
             'hash'       => hash('sha256', CanonicalJson::encode($inputs)),
+        ];
+    }
+
+    /**
+     * What the theme blocks of a page's Single template show about the page (title, address, category, author,
+     * date), or [] when no Single template applies. Those blocks are dynamic, so the render service puts these
+     * on the context the page is both compiled and filled with.
+     *
+     * @param array<string, mixed> $revision the page revision being rendered
+     * @return array<string, mixed>
+     */
+    public function singleAttributes(PageAddress $page, array $revision, RenderContext $context): array
+    {
+        $decoded = json_decode((string) ($revision['document_json'] ?? ''), true, CanonicalDocumentSchema::MAX_JSON_DEPTH);
+        $settings = [];
+        foreach ((is_array($decoded) && is_array($decoded['settings'] ?? null)) ? $decoded['settings'] : [] as $k => $v) {
+            if (is_string($k) && is_string($v)) {
+                $settings[$k] = $v;
+            }
+        }
+        if ($this->singleFor($page, $settings, $context) === null) {
+            return [];
+        }
+        $author = '';
+        try {
+            $createdBy = (int) \Slate\Data\Database::value('SELECT created_by FROM studiobuilder_pages WHERE id = ? AND tenant_id = ?', [(int) $page->id, $context->tenantId]);
+            if ($createdBy > 0) {
+                $author = (string) (\Slate\Data\Database::value('SELECT name FROM users WHERE id = ? AND tenant_id = ?', [$createdBy, $context->tenantId]) ?? '');
+            }
+        } catch (\Throwable) {
+            // No author line rather than a wrong one.
+        }
+        $published = $page->publishedAt !== null ? strtotime($page->publishedAt) : false;
+        return [
+            'post_title'  => $page->title,
+            'post_url'    => $context->site->absoluteUrl($page->routeMode === 'homepage' ? '/' : '/' . $page->slug),
+            'category'    => $settings['category'] ?? '',
+            'author_name' => mb_substr(trim($author), 0, 120),
+            'date'        => $published !== false ? date('M j, Y', $published) : '',
+            'is_single'   => true,
+        ];
+    }
+
+    /**
+     * The Single template for a page on a public or preview render, or null. Never in the editor (the canvas
+     * edits the page's own document), never for a page that is itself a theme template.
+     *
+     * @param array<string, string> $settings the page document's string settings
+     * @return ?array{page: array<string, mixed>, revision: array<string, mixed>}
+     */
+    private function singleFor(PageAddress $page, array $settings, RenderContext $context): ?array
+    {
+        if ($context->mode === RenderMode::Editor || ($settings['template_type'] ?? '') !== '' || $page->id === null) {
+            return null;
+        }
+        $conditionContext = [];
+        if (($settings['category'] ?? '') !== '') {
+            $conditionContext['category'] = $settings['category'];
+        }
+        try {
+            $type = PageMeta::read($context->tenantId, (int) $page->id)['type'];
+            if ($type !== '') {
+                $conditionContext['content_type'] = $type;
+            }
+        } catch (\Throwable) {
+            // No custom content type: the page type stands in for it.
+        }
+        try {
+            return $this->chrome->single($page, $conditionContext);
+        } catch (\Throwable $e) {
+            StudioLog::failure('render', 'single_template', $e, 'warning');
+            return null;
+        }
+    }
+
+    /**
+     * The page laid out by its Single template: the template's sections, with every Post content block replaced
+     * by the page's own sections. Both render into one collector, so the page's live blocks are filled per
+     * request like any other; the Post content placeholders are dropped from the dynamic manifest. Post title,
+     * meta and other theme blocks stay dynamic and read the page from the render context
+     * (StudioRenderService::singleAttributes()).
+     *
+     * @param array{page: array<string, mixed>, revision: array<string, mixed>} $single
+     * @param array<string, mixed> $document the page's prepared document
+     * @param array<string, ComponentSource> $components the page's resolved global components
+     * @return array{html: string, width: string, replaced: array<int, null>}
+     */
+    private function renderSingle(array $single, array $document, array $components, RenderContext $context, ResolvedTheme $theme, RenderCollector $collector): array
+    {
+        $templateJson = (string) ($single['revision']['document_json'] ?? '');
+        $template = RenderDocumentPreparer::prepare($templateJson, $this->registry)['document'];
+        $decoded = json_decode($templateJson, true, CanonicalDocumentSchema::MAX_JSON_DEPTH);
+        $templateComponents = is_array($decoded) ? $this->components->resolveDocument($decoded) : [];
+
+        $first = count($collector->deferred());
+        $html = $this->documents->renderSections($template['sections'] ?? [], $context, $theme, $collector, true, $this->prepareComponents($templateComponents));
+        $slots = [];
+        foreach (array_slice($collector->deferred(), $first, null, true) as $index => $node) {
+            if (($node['type'] ?? '') === 'theme.post_content') {
+                $slots[] = $index;
+            }
+        }
+        $replaced = [];
+        if ($slots !== []) {
+            $body = '<div class="sb-block sb-block--theme-post-content sb-post-body">'
+                . $this->documents->renderSections($document['sections'] ?? [], $context, $theme, $collector, true, $this->prepareComponents($components))
+                . '</div>';
+            foreach ($slots as $i => $index) {
+                // The page's content appears once; a second Post content block in the template shows nothing.
+                $html = str_replace(RenderCollector::marker($collector->nonce, $index), $i === 0 ? $body : '', $html);
+                $replaced[$index] = null;
+            }
+        }
+        $width = $template['settings']['container_width'] ?? 'wide';
+        return [
+            'html'     => $html,
+            'width'    => in_array($width, CanonicalDocumentSchema::ALLOWED_CONTAINER_WIDTHS, true) ? $width : 'wide',
+            'replaced' => $replaced,
         ];
     }
 

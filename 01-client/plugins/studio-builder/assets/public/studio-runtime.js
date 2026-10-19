@@ -295,6 +295,64 @@
       els.forEach(function (el) { el.style.transform = ''; });
     });
   }
+/* ── Feature: click and scroll interaction triggers ──────────────────────
+   * The renderer marks a block with `data-sb-interaction-trigger`.
+   *   click:  each click (re)plays the block's chosen animation: data-sb-play is removed, a reflow restarts
+   *           the animation, and it is set again. The stylesheet holds the animation until then.
+   *   scroll: where the browser has no scroll timelines (animation-timeline: view()), a block with no
+   *           animation of its own drifts against the scroll here instead, transform-only.
+   * Reduced motion: nothing plays and nothing moves.
+   */
+
+  function initInteractions(root) {
+    var clicks = qsa(root, '[data-sb-interaction-trigger="click"]');
+    var offs = [];
+    if (!reducedMotion()) {
+      clicks.forEach(function (el) {
+        offs.push(on(el, 'click', function () {
+          el.removeAttribute('data-sb-play');
+          void el.offsetWidth; // restart the animation, also when it is clicked again mid-play
+          el.setAttribute('data-sb-play', '');
+        }));
+        offs.push(on(el, 'animationend', function () { el.removeAttribute('data-sb-play'); }));
+      });
+    }
+
+    var timelines = global.CSS && global.CSS.supports && global.CSS.supports('animation-timeline: view()');
+    var drifters = (timelines || reducedMotion()) ? [] : qsa(root, '[data-sb-interaction-trigger="scroll"]').filter(function (el) {
+      return !/(^|\s)sb-animate-/.test(el.className || '');
+    });
+    var ticking = false;
+    function update() {
+      ticking = false;
+      var vh = global.innerHeight || 1;
+      drifters.forEach(function (el) {
+        var rect = el.getBoundingClientRect();
+        if (rect.bottom < 0 || rect.top > vh) return;
+        // 0 as the block enters at the bottom, 1 as it leaves at the top: the same range as the CSS rule.
+        var progress = clamp((vh - rect.top) / (vh + rect.height), 0, 1);
+        el.style.transform = 'translate3d(0,' + (32 - 64 * progress).toFixed(2) + 'px,0)';
+      });
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      global.requestAnimationFrame(update);
+    }
+    if (drifters.length) {
+      offs.push(on(global, 'scroll', onScroll, { passive: true }));
+      offs.push(on(global, 'resize', onScroll, { passive: true }));
+      update();
+    }
+
+    if (!offs.length) return;
+    mount(function () {
+      offs.forEach(function (off) { off(); });
+      clicks.forEach(function (el) { el.removeAttribute('data-sb-play'); });
+      drifters.forEach(function (el) { el.style.transform = ''; });
+    });
+  }
+
 /* ── Feature: overlay focus trap ────────────────────────────────────────
    * Shared by modal, offcanvas and lightbox. The current Kohevo modal relies on
    * CSS `:target`, which cannot trap focus, cannot close on Escape, and leaves
@@ -1093,6 +1151,7 @@
     ['stagger', initStagger],
     ['counters', initCounters],
     ['parallax', initParallax],
+    ['interactions', initInteractions],
     ['stickyHeader', initStickyHeader],
     ['overlays', initOverlays],
     ['galleryLightbox', initGalleryLightbox],
