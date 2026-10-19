@@ -851,12 +851,15 @@
       var timer = null;
       var dots = [];
 
+      // Labels come from the server (translated); the English ones are only for markup that has none.
+      var label = function (name, fallback) { return group.getAttribute('data-sb-label-' + name) || fallback; };
+      var paused = false;
       group.setAttribute('role', 'region');
-      group.setAttribute('aria-roledescription', 'carousel');
+      if (!group.hasAttribute('aria-roledescription')) group.setAttribute('aria-roledescription', 'carousel');
       slides.forEach(function (s, i) {
         s.setAttribute('role', 'group');
-        s.setAttribute('aria-roledescription', 'slide');
-        s.setAttribute('aria-label', (i + 1) + ' of ' + slides.length);
+        s.setAttribute('aria-roledescription', label('slide', 'slide'));
+        s.setAttribute('aria-label', label('slide-of', '%1$s of %2$s').replace('%1$s', String(i + 1)).replace('%2$s', String(slides.length)));
         if (!s.id) s.id = uid('slide');
       });
 
@@ -876,7 +879,7 @@
           });
         });
         dots.forEach(function (d, i) {
-          d.setAttribute('aria-selected', i === index ? 'true' : 'false');
+          d.setAttribute('aria-current', i === index ? 'true' : 'false');
           if (d.classList) d.classList.toggle('is-active', i === index);
         });
       }
@@ -892,6 +895,15 @@
         if (e.target.closest('[data-sb-car-next]')) { e.preventDefault(); stop(); go(index + 1); restart(); }
         var dot = e.target.closest('[data-sb-car-dot]');
         if (dot) { e.preventDefault(); stop(); go(parseInt(dot.getAttribute('data-sb-car-dot'), 10)); restart(); }
+        var pause = e.target.closest('[data-sb-car-pause]');
+        if (pause) {
+          e.preventDefault();
+          paused = !paused;
+          pause.setAttribute('aria-pressed', paused ? 'true' : 'false');
+          pause.setAttribute('aria-label', paused ? (pause.getAttribute('data-sb-label-play') || 'Play slideshow') : (pause.getAttribute('data-sb-label-pause') || 'Pause slideshow'));
+          pause.innerHTML = paused ? '&#9654;' : '&#10073;&#10073;';
+          if (paused) stop(); else restart();
+        }
       }));
       off.push(on(group, 'keydown', function (e) {
         if (e.key === 'ArrowLeft') { e.preventDefault(); go(index - 1); }
@@ -920,25 +932,32 @@
         startX = null; delta = 0; restart();
       }));
 // Dots
+      // The server renders one dot per slide; with several slides per view there are fewer positions, so the
+      // dots are rebuilt then, with the server's (translated) label.
       var dotsHost = qs(group, '[data-sb-car-dots]');
       if (dotsHost) {
-        dotsHost.innerHTML = '';
-        for (var i = 0; i <= max; i++) {
-          var b = document.createElement('button');
-          b.type = 'button';
-          b.className = 'sb-carousel__dot';
-          b.setAttribute('data-sb-car-dot', String(i));
-          b.setAttribute('role', 'tab');
-          b.setAttribute('aria-label', 'Go to slide ' + (i + 1));
-          dotsHost.appendChild(b);
-          dots.push(b);
+        var existing = qsa(dotsHost, '[data-sb-car-dot]');
+        if (existing.length === max + 1) {
+          dots = existing;
+        } else {
+          dotsHost.innerHTML = '';
+          for (var i = 0; i <= max; i++) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'sb-carousel__dot';
+            b.setAttribute('data-sb-car-dot', String(i));
+            b.setAttribute('aria-label', label('go', 'Go to slide') + ' ' + (i + 1));
+            dotsHost.appendChild(b);
+            dots.push(b);
+          }
         }
       }
+      group.setAttribute('data-sb-car-ready', '');
 
       function stop() { if (timer) { global.clearInterval(timer); timer = null; } }
       function restart() {
         stop();
-        if (!auto || reducedMotion() || !loop) return;
+        if (!auto || reducedMotion() || !loop || paused) return;
         timer = global.setInterval(function () { go(index + 1); }, auto || CONFIG.carouselInterval);
       }
 
@@ -959,6 +978,7 @@
         document.removeEventListener('visibilitychange', onVisibility);
         off.forEach(function (un) { un(); });
         track.style.transform = '';
+        group.removeAttribute('data-sb-car-ready');
       });
     });
 

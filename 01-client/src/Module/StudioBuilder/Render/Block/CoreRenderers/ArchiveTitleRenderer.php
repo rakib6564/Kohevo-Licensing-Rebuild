@@ -39,16 +39,18 @@ final class ArchiveTitleRenderer implements BlockRendererInterface
 
         $title = $scope->string('title');
         if ($title === '') {
+            // `%s` is replaced, not sprintf'd, so a stray % in a translation or a term cannot break the title.
+            $fill = static fn(string $key, string $english, string $value): string => str_replace('%s', $value, Html::t($key, $english));
             if ($isSearch) {
-                $title = $searchQuery !== '' ? "Search Results: {$searchQuery}" : 'Search';
+                $title = $searchQuery !== '' ? $fill('studio_archive_search_results', 'Search Results: %s', $searchQuery) : Html::t('studio_archive_search', 'Search');
             } elseif ($archiveType === 'category') {
-                $title = "Category: {$term}";
+                $title = $fill('studio_archive_category', 'Category: %s', $term);
             } elseif ($archiveType === 'tag') {
-                $title = "Tag: #{$term}";
+                $title = $fill('studio_archive_tag', 'Tag: #%s', $term);
             } elseif ($archiveType === 'author') {
-                $title = "Author: {$term}";
+                $title = $fill('studio_archive_author', 'Author: %s', $term);
             } else {
-                $title = 'Archive';
+                $title = Html::t('studio_archive', 'Archive');
             }
         }
 

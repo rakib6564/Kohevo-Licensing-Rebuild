@@ -48,11 +48,11 @@ final class ModalRenderer implements BlockRendererInterface
 
         $modalClasses = ['sb-modal', 'sb-modal--' . $size];
         $html .= '<div' . Html::classAttr($modalClasses) . ' id="' . Html::e($modalId) . '" role="dialog" aria-labelledby="' . Html::e($modalId) . '-title" aria-modal="true" aria-hidden="true">'
-            . '<a href="#" class="sb-modal__backdrop" aria-label="Close"></a>'
+            . '<a href="#" class="sb-modal__backdrop" aria-label="' . Html::e(Html::t('studio_close', 'Close')) . '"></a>'
             . '<div class="sb-modal__dialog">'
             . '<header class="sb-modal__header">'
             . '<h3 id="' . Html::e($modalId) . '-title">' . Html::e($title) . '</h3>'
-            . '<a href="#" class="sb-modal__close" data-sb-modal-close aria-label="Close">&times;</a>'
+            . '<a href="#" class="sb-modal__close" data-sb-modal-close aria-label="' . Html::e(Html::t('studio_close', 'Close')) . '">&times;</a>'
             . '</header>'
             . '<div class="sb-modal__body">'
             . $scope->childrenHtml()

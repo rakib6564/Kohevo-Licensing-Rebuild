@@ -11,6 +11,7 @@ namespace Slate\Module\StudioBuilder;
 
 use Slate\Kernel\Event\Hook;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
+use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Sdk\WidgetSdk;
 
 final class StudioBuilderPortfolioWidgets
@@ -47,9 +48,11 @@ final class StudioBuilderPortfolioWidgets
                     ['key' => 'vertical_text', 'type' => 'string', 'label' => 'Side Accent Text', 'required' => false, 'default' => 'Digital design • Development'],
                     ['key' => 'location', 'type' => 'text', 'label' => 'Location', 'required' => false, 'default' => "Based in\nBangladesh"],
                     ['key' => 'coordinates', 'type' => 'text', 'label' => 'Coordinates', 'required' => false, 'default' => "23.8103° N\n90.4125° E"],
-                    ['key' => 'domain', 'type' => 'string', 'label' => 'Domain Name', 'required' => false, 'default' => 'rakibhasaan.com'],
-                    ['key' => 'domain_url', 'type' => 'string', 'label' => 'Domain URL', 'required' => false, 'default' => 'https://rakibhasaan.com'],
-                    ['key' => 'email', 'type' => 'string', 'label' => 'Contact Email', 'required' => false, 'default' => 'hello@rakibhasaan.com'],
+                    // Contact links are empty by default, so a new block never shows someone else's address;
+                    // the address is a checked URL and the email a plain address.
+                    ['key' => 'domain', 'type' => 'string', 'label' => 'Domain Name', 'required' => false, 'default' => '', 'max_length' => 120],
+                    ['key' => 'domain_url', 'type' => 'url', 'label' => 'Domain URL', 'required' => false, 'default' => null],
+                    ['key' => 'email', 'type' => 'string', 'label' => 'Contact Email', 'required' => false, 'default' => '', 'max_length' => 190, 'pattern' => '/^$|^[^@\\s<>\"\']+@[^@\\s<>\"\']+\\.[^@\\s<>\"\']+$/'],
                 ],
                 'renderer'    => [self::class, 'renderShowcase'],
             ]);
@@ -80,9 +83,12 @@ final class StudioBuilderPortfolioWidgets
         $verticalText = htmlspecialchars($scope->string('vertical_text', 'Digital design • Development'), ENT_QUOTES, 'UTF-8');
         $location     = nl2br(htmlspecialchars($scope->string('location', "Based in\nBangladesh"), ENT_QUOTES, 'UTF-8'));
         $coordinates  = nl2br(htmlspecialchars($scope->string('coordinates', "23.8103° N\n90.4125° E"), ENT_QUOTES, 'UTF-8'));
-        $domain       = htmlspecialchars($scope->string('domain', 'rakibhasaan.com'), ENT_QUOTES, 'UTF-8');
-        $domainUrl    = htmlspecialchars($scope->string('domain_url', 'https://rakibhasaan.com'), ENT_QUOTES, 'UTF-8');
-        $email        = htmlspecialchars($scope->string('email', 'hello@rakibhasaan.com'), ENT_QUOTES, 'UTF-8');
+        $domain       = htmlspecialchars($scope->string('domain', ''), ENT_QUOTES, 'UTF-8');
+        // Checked again here: a document stored before the field was typed may hold any string.
+        $safeUrl      = Html::safeUrl($scope->string('domain_url', ''));
+        $domainUrl    = $safeUrl !== null && preg_match('#^https?://#i', $safeUrl) === 1 ? htmlspecialchars($safeUrl, ENT_QUOTES, 'UTF-8') : '';
+        $rawEmail     = trim($scope->string('email', ''));
+        $email        = filter_var($rawEmail, FILTER_VALIDATE_EMAIL) !== false ? htmlspecialchars($rawEmail, ENT_QUOTES, 'UTF-8') : '';
 
         $html = str_replace(
             '<span class="e-pf a c t" style="left:7%;top:4%">Portfolio / 2026</span>',
@@ -116,19 +122,27 @@ final class StudioBuilderPortfolioWidgets
         );
         $html = str_replace(
             '<a class="e-dom a c t dom" href="https://rakibhasaan.com" style="left:16.8%;top:94.5%">rakibhasaan.com</a>',
-            '<a class="e-dom a c t dom" href="' . $domainUrl . '" style="left:16.8%;top:94.5%">' . $domain . '</a>',
+            $domainUrl !== '' && $domain !== '' ? '<a class="e-dom a c t dom" href="' . $domainUrl . '" style="left:16.8%;top:94.5%">' . $domain . '</a>' : '',
             $html
         );
         $html = str_replace(
             '<a href="mailto:hello@rakibhasaan.com" data-m>hello@rakibhasaan.com</a>',
-            '<a href="mailto:' . $email . '" data-m>' . $email . '</a>',
+            $email !== '' ? '<a href="mailto:' . $email . '" data-m>' . $email . '</a>' : '',
             $html
         );
         $html = str_replace(
             '<a href="mailto:hello@rakibhasaan.com">hello@rakibhasaan.com</a>',
-            '<a href="mailto:' . $email . '">' . $email . '</a>',
+            $email !== '' ? '<a href="mailto:' . $email . '">' . $email . '</a>' : '',
             $html
         );
+        $html = str_replace(
+            '<a href="https://rakibhasaan.com">rakibhasaan.com</a>',
+            $domainUrl !== '' && $domain !== '' ? '<a href="' . $domainUrl . '">' . $domain . '</a>' : '',
+            $html
+        );
+        // The contact form opens the visitor's mail app addressed to the email above (none set: no recipient).
+        // $email is HTML-escaped, so it cannot close the script's string.
+        $html = str_replace("mailto:hello@rakibhasaan.com?subject=", 'mailto:' . $email . '?subject=', $html);
 
         return self::stylesheetTag() . $html;
     }

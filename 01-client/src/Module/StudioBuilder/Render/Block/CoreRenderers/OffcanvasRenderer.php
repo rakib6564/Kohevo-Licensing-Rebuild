@@ -48,11 +48,11 @@ final class OffcanvasRenderer implements BlockRendererInterface
 
         $offcanvasClasses = ['sb-offcanvas', 'sb-offcanvas--' . $position];
         $html .= '<div' . Html::classAttr($offcanvasClasses) . ' id="' . Html::e($drawerId) . '" role="dialog" aria-labelledby="' . Html::e($drawerId) . '-title" aria-modal="true" aria-hidden="true">'
-            . '<a href="#" class="sb-offcanvas__backdrop" data-sb-offcanvas-close aria-label="Close"></a>'
+            . '<a href="#" class="sb-offcanvas__backdrop" data-sb-offcanvas-close aria-label="' . Html::e(Html::t('studio_close', 'Close')) . '"></a>'
             . '<aside class="sb-offcanvas__panel">'
             . '<header class="sb-offcanvas__header">'
             . '<h3 id="' . Html::e($drawerId) . '-title">' . Html::e($title) . '</h3>'
-            . '<a href="#" class="sb-offcanvas__close" data-sb-offcanvas-close aria-label="Close">&times;</a>'
+            . '<a href="#" class="sb-offcanvas__close" data-sb-offcanvas-close aria-label="' . Html::e(Html::t('studio_close', 'Close')) . '">&times;</a>'
             . '</header>'
             . '<div class="sb-offcanvas__body">'
             . $scope->childrenHtml()
