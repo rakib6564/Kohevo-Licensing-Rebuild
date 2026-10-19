@@ -35,7 +35,8 @@ test('a header page offers the five built-in headers, and applying one replaces 
     await page.getByTestId('open-library').click();
     await expect(modal).toBeVisible();
     const headerTab = modal.locator('[data-lib-tab="header_preset"]');
-    await expect(headerTab).toContainText('5');
+    // At least the five built-in designs (headers other tests saved as presets are listed too).
+    await expect.poll(async () => Number((await headerTab.textContent()).match(/\d+/)?.[0] || 0)).toBeGreaterThanOrEqual(5);
     await headerTab.click();
     const card = modal.locator(`[data-template="${key}"]`);
     await expect(card).toContainText(name);
