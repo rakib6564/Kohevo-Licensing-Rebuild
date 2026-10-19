@@ -49,7 +49,7 @@ final class PageDocumentAssembler
         $analyticsBody = StudioCodePolicy::bodyMarkup($tenantId, $context->mode);
 
         $banner = $context->mode === RenderMode::Preview
-            ? '<div class="sb-preview-banner" role="status">' . Html::e(Html::t('studio_preview_banner', 'Preview — this version is not published')) . '</div>'
+            ? '<div class="sb-preview-banner" role="status">' . Html::e(Html::t('studio_preview_banner', 'Preview — this version is not published') . self::unmatchedNote($context)) . '</div>'
             : '';
 
         $signature = $this->signature();
@@ -116,5 +116,21 @@ final class PageDocumentAssembler
         } catch (\Throwable $ignored) {
             return '';
         }
+    }
+
+    /**
+     * " — …" when "Preview as page" shows a template its display conditions would not select for that page on the
+     * live site (StudioApplicationService::renderPreview sets `preview_unmatched` to the role), else ''. Only these
+     * fixed sentences are ever shown.
+     */
+    private static function unmatchedNote(RenderContext $context): string
+    {
+        $note = match ($context->attribute('preview_unmatched')) {
+            'header' => Html::t('studio_preview_unmatched_header', 'On the live site this page does not use this header: its display conditions do not match it.'),
+            'footer' => Html::t('studio_preview_unmatched_footer', 'On the live site this page does not use this footer: its display conditions do not match it.'),
+            'single' => Html::t('studio_preview_unmatched_single', 'On the live site this page does not use this template: its display conditions do not match it.'),
+            default  => '',
+        };
+        return $note !== '' ? ' — ' . $note : '';
     }
 }

@@ -21,7 +21,7 @@ import { SeoImageControl } from './SeoImageControl.jsx';
 import { optionLabel } from '../../core/optionLabels.mjs';
 import { Field } from '../ui/index.js';
 import { ConditionDialog } from '../ConditionDialog.jsx';
-import { toRows } from '../../core/conditions.mjs';
+import { sameConditionsAs, toRows } from '../../core/conditions.mjs';
 
 function TextSetting({ label, value, maxLength, multiline = false, onCommit, counter = false }) {
   const id = useId();
@@ -120,7 +120,14 @@ function ChromeRegion({ region, binding, settings, onMode, onCreatePartial, buil
 const TEMPLATE_TYPES = ['header', 'footer', 'single', 'archive', 'search', '404', 'not_found'];
 export const hasDisplayConditions = (page, settings) => !!page && (['header_partial', 'footer_partial'].includes(page.page_type) || TEMPLATE_TYPES.includes(settings.template_type));
 
-function ConditionsSetting({ page, settings, onSave }) {
+/** "Same conditions as …": the published templates this one would tie with, or nothing. */
+function ConflictNote({ conditions, peers }) {
+  const ties = sameConditionsAs(conditions, peers);
+  if (ties.length === 0) return null;
+  return <p className="sbx-hint" role="note" data-testid="cond-conflict">{t('cond_conflict', { titles: ties.map((p) => p.title).join(', ') })}</p>;
+}
+
+function ConditionsSetting({ page, settings, onSave, peers }) {
   const [open, setOpen] = useState(false);
   const rows = toRows(settings.conditions);
   const fallback = page && page.slug === 'default';
@@ -129,10 +136,11 @@ function ConditionsSetting({ page, settings, onSave }) {
       <h3 className="sbx-inspector__subtitle">{t('cond_title')}</h3>
       {fallback && <p className="sbx-hint" data-testid="cond-fallback">{t('cond_fallback')}</p>}
       <p className="sbx-hint" data-testid="cond-summary">{rows.length === 0 ? t('cond_summary_none') : t('cond_summary_count', { count: rows.length })}</p>
+      {!fallback && <ConflictNote conditions={settings.conditions} peers={peers} />}
       <div className="sbx-inspector__actions">
         <button type="button" className="sbx-btn sbx-btn--xs" data-testid="cond-edit" onClick={() => setOpen(true)}>{t('cond_edit')}</button>
       </div>
-      {open && <ConditionDialog initialRows={rows} onClose={() => setOpen(false)} onSave={(next) => { onSave(next); setOpen(false); }} />}
+      {open && <ConditionDialog initialRows={rows} peers={fallback ? [] : peers} onClose={() => setOpen(false)} onSave={(next) => { onSave(next); setOpen(false); }} />}
     </>
   );
 }
@@ -169,13 +177,25 @@ export function PageInspector() {
     </Field>
   );
 
+  // The published templates of the same role, for the "same conditions as" note (re-read with each revision).
+  const conditioned = hasDisplayConditions(page, settings);
+  const [peers, setPeers] = useState([]);
+  useEffect(() => {
+    if (!conditioned || !transport || typeof transport.templatePeers !== 'function') return undefined;
+    let alive = true;
+    transport.templatePeers(boot.pageId).then((res) => {
+      if (alive && res && res.ok) setPeers(asList(res.data.peers));
+    });
+    return () => { alive = false; };
+  }, [transport, boot.pageId, revisionId, conditioned]);
+
   const regionBinding = (region) => (chrome ? { ...chrome[region], site_slug: chrome.site_slug, page_slug: chrome.page_slug } : null);
 
   return (
     <div className="sbx-inspector">
       <h2 className="sbx-inspector__title">{t('page_settings')}</h2>
-      {hasDisplayConditions(page, settings) && (
-        <ConditionsSetting page={page} settings={settings} onSave={(conditions) => applyOp(ops.updateSettings({ conditions }), { label: t('cond_title') })} />
+      {conditioned && (
+        <ConditionsSetting page={page} settings={settings} peers={peers} onSave={(conditions) => applyOp(ops.updateSettings({ conditions }), { label: t('cond_title') })} />
       )}
 
       <h3 className="sbx-inspector__subtitle">{t('chrome_title')}</h3>

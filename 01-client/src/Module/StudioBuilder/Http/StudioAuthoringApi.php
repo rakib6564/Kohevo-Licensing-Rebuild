@@ -67,6 +67,8 @@ final class StudioAuthoringApi
         // Phase 6 queries
         'components'   => ['GET', []],
         'chrome'       => ['GET', ['page']],
+        // Theme Builder: the other published templates of this page's role and their conditions (the "same conditions as" note)
+        'template_peers' => ['GET', ['page']],
         'tokens'       => ['GET', ['group']],
         // Element Manager (administrators): which blocks the site offers, and where each is used
         'elements'     => ['GET', []],
@@ -261,6 +263,7 @@ final class StudioAuthoringApi
             'lock_release' => StudioApiResponse::ok(['released' => $this->app->releaseEditLock($actor, self::id($input, 'page_id'), self::string($input, 'lock_token', 64))]),
             'components'   => StudioApiResponse::ok(['components' => $this->app->listGlobalComponents($actor)]),
             'chrome'       => StudioApiResponse::ok(['chrome' => $this->app->chromeBindings($actor, self::id($input, 'page'))]),
+            'template_peers' => StudioApiResponse::ok($this->app->templatePeers($actor, self::id($input, 'page'))),
             'elements'     => StudioApiResponse::ok($this->app->elementManager($actor)),
             'custom_css'   => StudioApiResponse::ok($this->app->customCss($actor)),
             'tokens'       => StudioApiResponse::ok(['tokens' => $this->app->designTokens($actor, self::tokenGroup($input))]),

@@ -29,10 +29,18 @@ export const CONTENT_TYPES = Object.freeze(['all', 'page', 'post', 'portfolio', 
 
 const KIND_IDS = new Set(KINDS.map((k) => k.id));
 
-/** The action a stored rule carries: `action`, or the older `type` when that says include/exclude. */
+/**
+ * The action a stored rule carries: `action`, or the older `type` when that says include/exclude (a `type` that names
+ * a scope is an include). An action the server does not know (a misspelled "excludes") is null: the server ignores
+ * that rule, so the dialog keeps it as a custom row instead of showing it as an include.
+ */
 function actionOf(rule) {
-  const a = String(rule.action ?? rule.type ?? 'include').trim().toLowerCase();
-  return a === 'exclude' ? 'exclude' : 'include';
+  const known = (a) => (a === 'include' || a === 'exclude' ? a : null);
+  if (rule.action !== undefined) return known(String(rule.action).trim().toLowerCase());
+  if (rule.type === undefined) return 'include';
+  const type = String(rule.type).trim().toLowerCase();
+  if (known(type)) return type;
+  return String(rule.condition ?? rule.scope ?? '').trim() !== '' ? null : 'include';
 }
 
 /** The scope a stored rule names (`condition`, `scope`, or a `type` that is not include/exclude). */
@@ -55,6 +63,7 @@ export function rulesOf(conditions) {
 /** One stored rule as an editable row. */
 export function toRow(rule) {
   const action = actionOf(rule);
+  if (action === null) return { action: 'include', kind: 'custom', value: '', raw: rule };
   const scope = scopeOf(rule);
   const value = rule.value ?? '';
   const row = (kind, v = '') => ({ action, kind, value: String(v) });
@@ -116,4 +125,22 @@ export function setProblem(rows) {
   if (list.some((r) => rowProblem(r))) return 'cond_problem_row';
   if (list.length > 0 && !list.some((r) => r.action === 'include')) return 'cond_needs_include';
   return null;
+}
+
+/** A rule set as one comparable text: the same rules in any order and letter case give the same key ('' for none). */
+export function conditionsKey(conditions) {
+  return toRows(conditions)
+    .map((r) => (r.kind === 'custom' ? `custom|${JSON.stringify(r.raw)}` : `${r.action}|${r.kind}|${String(r.value ?? '').trim().toLowerCase()}`))
+    .sort()
+    .join('\n');
+}
+
+/**
+ * The published templates of the same role (`peers` from the server) whose conditions are the same as these: they
+ * would tie with this one, and the site shows the one published most recently (ThemeTemplateResolver).
+ */
+export function sameConditionsAs(conditions, peers) {
+  const key = conditionsKey(conditions);
+  if (key === '') return [];
+  return asList(peers).filter((p) => p && conditionsKey(p.conditions) === key);
 }

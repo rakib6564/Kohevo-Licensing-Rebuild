@@ -340,7 +340,7 @@ unit('phase6 api: the new commands are POST-only, allowlisted, CSRF-guarded, and
         assert_eq(405, $api->handle(new StudioApiRequest('GET', $cmd), $editor)->status, "{$cmd} is POST-only");
         assert_eq(403, $api->handle($post($cmd, ['template_key' => 'x'], false), $editor)->status, "{$cmd} needs CSRF");
     }
-    foreach (['components', 'chrome', 'tokens'] as $q) {
+    foreach (['components', 'chrome', 'template_peers', 'tokens'] as $q) {
         assert_eq(405, $api->handle($post($q, []), $editor)->status, "{$q} is a GET query");
     }
 

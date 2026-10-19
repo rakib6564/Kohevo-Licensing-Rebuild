@@ -83,6 +83,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalJson;
 use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
+use Slate\Module\StudioBuilder\Meta\PageMeta;
 use Slate\Module\StudioBuilder\Domain\StudioTemplate;
 use Slate\Module\StudioBuilder\Exception\StudioAuthenticationException;
 use Slate\Module\StudioBuilder\Exception\StudioAuthorizationException;
@@ -127,6 +128,7 @@ use Slate\Module\StudioBuilder\Service\StudioTemplateService;
 use Slate\Module\StudioBuilder\Service\StudioThemeService;
 use Slate\Module\StudioBuilder\StudioPermissions;
 use Slate\Module\StudioBuilder\Theme\TemplatePreviewContext;
+use Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver;
 use Slate\Data\Database;
 use Slate\Services\Audit\AuditLog;
 use Slate\Services\Licensing\EntitlementService;
@@ -734,6 +736,25 @@ final class StudioApplicationService
         return ['chromed' => $chromed, 'page_slug' => (string) $page['slug'], 'site_slug' => ChromeResolver::SITE_PARTIAL_SLUG, 'header' => $regions['header'], 'footer' => $regions['footer']];
     }
 
+    /**
+     * For a header, footer or theme template: the other PUBLISHED templates of the same role and the display
+     * conditions they were published with. The conditions dialog compares them with the rules being edited and names
+     * the templates that would tie (the most recently published of those is shown: ThemeTemplateResolver). Read-only.
+     *
+     * @return array{role: ?string, peers: list<array{id: int, title: string, published_at: ?string, conditions: mixed}>}
+     */
+    public function templatePeers(StudioActor $actor, int $pageId): array
+    {
+        $this->authorize($actor, StudioPermissions::VIEW);
+        [$page, $document] = $this->currentDocument($pageId);
+        $settings = is_array($document['settings'] ?? null) ? $document['settings'] : [];
+        $role = ThemeTemplateResolver::roleOf((string) $page['page_type'], $settings, (string) $page['slug']);
+        if ($role === null) {
+            return ['role' => null, 'peers' => []];
+        }
+        return ['role' => $role, 'peers' => (new ThemeTemplateResolver($this->pageRepo, $this->revisionRepo))->peers($role, $pageId)];
+    }
+
     // ── Design tokens ───────────────────────────────────────────────────────
 
     /**
@@ -1153,7 +1174,9 @@ final class StudioApplicationService
             if ($row === null || !in_array((string) ($row['page_type'] ?? ''), ChromeResolver::CHROMED_PAGE_TYPES, true)) {
                 throw new StudioNotFoundException('That page cannot be shown in a single template.', ['page_id' => $asPageId]);
             }
-            return $renderer->renderRevision($page, $revision, $plain(TemplatePreviewContext::attributes('single', $sample, $row, $renderer->siteContext())));
+            [$host, $hostRevision] = $this->loadPageRevision($asPageId, null);
+            return $renderer->renderRevision($page, $revision, $plain(TemplatePreviewContext::attributes('single', $sample, $row, $renderer->siteContext())
+                + $this->previewMatchNote('single', $page, $settings, $host, $hostRevision, $tenantId)));
         }
 
         // "Preview as a page": the header or footer being edited (its saved draft, or the revision asked for), shown on a
@@ -1167,7 +1190,39 @@ final class StudioApplicationService
             throw new StudioNotFoundException('That page does not carry a header or a footer.', ['page_id' => $asPageId]);
         }
         $override = [$region => ChromeSource::partial((int) $revision['id'], (string) $revision['document_json'])];
-        return $renderer->renderRevision($host, $hostRevision, $plain(['chrome_override' => $override]));
+        return $renderer->renderRevision($host, $hostRevision, $plain(['chrome_override' => $override]
+            + $this->previewMatchNote($region, $page, $settings, $host, $hostRevision, $tenantId)));
+    }
+
+    /**
+     * "Preview as page" shows a template on any page the author picks. When its display conditions would not select
+     * it for that page on the live site, the preview says so (`preview_unmatched` names the role; the banner turns
+     * it into a fixed sentence). The conditions are the template's previewed revision; the page is the one shown.
+     *
+     * @param array<string, mixed> $templateSettings
+     * @param array<string, mixed> $hostRevision
+     * @return array<string, string>
+     */
+    private function previewMatchNote(string $role, PageAddress $template, array $templateSettings, PageAddress $host, array $hostRevision, int $tenantId): array
+    {
+        $decoded = json_decode((string) ($hostRevision['document_json'] ?? ''), true);
+        $hostSettings = is_array($decoded) && is_array($decoded['settings'] ?? null) ? $decoded['settings'] : [];
+        $context = ['category' => is_string($hostSettings['category'] ?? null) ? $hostSettings['category'] : ''];
+        $tags = $hostSettings['tags'] ?? [];
+        $context['tags'] = array_values(array_filter(array_map('trim', is_string($tags) ? explode(',', $tags) : (is_array($tags) ? array_filter($tags, 'is_string') : [])), static fn(string $t): bool => $t !== ''));
+        $row = $host->id !== null ? $this->pageRepo->find($host->id) : null;
+        if ($row !== null && (int) ($row['created_by'] ?? 0) > 0) {
+            $context['author_id'] = (int) $row['created_by'];
+        }
+        try {
+            $type = $host->id !== null ? PageMeta::read($tenantId, (int) $host->id)['type'] : '';
+            if ($type !== '') {
+                $context['content_type'] = $type;
+            }
+        } catch (\Throwable) {
+            // No custom content type: the page type stands in for it.
+        }
+        return ThemeTemplateResolver::appliesTo($role, $template->slug, $templateSettings, $host, $context) ? [] : ['preview_unmatched' => $role];
     }
 
     /**
