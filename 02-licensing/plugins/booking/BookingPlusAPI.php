@@ -132,6 +132,9 @@ SQL;
             foreach ($allowed as $k) {
                 if (array_key_exists($k, $fields)) $data[$k] = $fields[$k];
             }
+            if (isset($data['whatsapp_url']) && self::cleanWhatsappUrl((string) $data['whatsapp_url']) === null) {
+                throw new \InvalidArgumentException(__('booking_whatsapp_url_invalid', 'The WhatsApp link must be a full address starting with http:// or https://, such as https://wa.me/32470000000. Nothing was saved.'));
+            }
             if (isset($data['zoom_mode']) && !in_array($data['zoom_mode'], ['manual','fallback_message','api'], true)) {
                 $data['zoom_mode'] = 'fallback_message';
             }
@@ -250,7 +253,28 @@ SQL;
         // ── Global settings helpers ──────────────────────────────────────────
 
         public static function globalWhatsappUrl(): string {
-            return (string) (Database::setting('bookingplus.whatsapp_url') ?? Database::setting('booking.whatsapp_url') ?? '');
+            return self::cleanWhatsappUrl((string) (Database::setting('bookingplus.whatsapp_url') ?? Database::setting('booking.whatsapp_url') ?? '')) ?? '';
+        }
+
+        /**
+         * A WhatsApp link as it may be stored and sent to a client: '' (none) or an absolute http(s) address such as
+         * https://wa.me/32470000000. Anything else (`javascript:`, `data:`, a relative path, control characters) is null.
+         */
+        public static function cleanWhatsappUrl(string $url): ?string {
+            $url = trim($url);
+            if ($url === '') {
+                return '';
+            }
+            if (strlen($url) > 500 || preg_match('/[\x00-\x20\x7F]/', $url) === 1 || filter_var($url, FILTER_VALIDATE_URL) === false) {
+                return null;
+            }
+            $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+            return in_array($scheme, ['http', 'https'], true) && (string) parse_url($url, PHP_URL_HOST) !== '' ? $url : null;
+        }
+
+        /** The WhatsApp link for a service: its own when set and valid, else the global one. */
+        public static function whatsappUrlFor(?array $cfg): string {
+            return self::cleanWhatsappUrl((string) ($cfg['whatsapp_url'] ?? '')) ?: self::globalWhatsappUrl();
         }
 
         public static function globalNudgeHours(): int {
@@ -266,7 +290,11 @@ SQL;
             if (!Auth::can('booking.manage_settings') && !Auth::isSuperAdmin()) return;
 
             if (array_key_exists('bookingplus_whatsapp_url', $post)) {
-                Database::setSetting('bookingplus.whatsapp_url', trim((string) $post['bookingplus_whatsapp_url']));
+                // Sent to clients as a link: only an http(s) address is kept; anything else leaves the stored value as it was.
+                $whatsapp = self::cleanWhatsappUrl((string) $post['bookingplus_whatsapp_url']);
+                if ($whatsapp !== null) {
+                    Database::setSetting('bookingplus.whatsapp_url', $whatsapp);
+                }
             }
             if (array_key_exists('bookingplus_nudge_hours', $post)) {
                 Database::setSetting('bookingplus.nudge_hours', (string) max(1, min(72, (int) $post['bookingplus_nudge_hours'])));
