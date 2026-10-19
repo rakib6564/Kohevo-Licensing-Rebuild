@@ -1,6 +1,6 @@
 # Studio Builder feature-gap report (consolidated)
 
-> **Status, 2026-10-19 (main `a9eacc2`):** every High and Medium finding below is fixed, merged and deployed (PRs #105, #107-#109 and #112-#128; each finding names its PR and commit). The open items are the ten Low findings (TB-10, TB-11, TB-12, TB-13, TB-14, TI-05, TI-06, TI-07, W-F23, W-F32) and the TB-01 residual. Evidence lines below describe the tree as audited, not the fixed code.
+> **Status, 2026-10-19 (main `de7c64b`):** every finding below is fixed and merged: High and Medium in PRs #105, #107-#109 and #112-#128, Low in #130, #132 and #133 (each finding names its PR and commit). Two small editor follow-ups (the TB-10 tie note and the TB-14 preview conditions note) are in a separate PR. Evidence lines below describe the tree as audited, not the fixed code.
 
 ## 1. Scope
 
@@ -230,7 +230,7 @@ PHP tests use the repo's `unit('…', function (): void { … })` harness with `
 - **Evidence:**
   - `src/Module/StudioBuilder/Theme/ThemeTemplateResolver.php:96` and `:237` now call `publishedSettings()` (`:298-313`). It reads the published revision's settings whenever the working draft differs.
   - Test: `tests/unit/StudioBuilderSprint6ThemeBuilderTest.php:410`.
-- **Residual (Open, Low):**
+- **Residual (Low, Fixed in #133, `2f5c9c2`):**
   - When the host page's published settings carry no `category`, `resolveChrome` still falls back to the host page's draft `settings_json` for `category` and `tags`: `ThemeTemplateResolver.php:55-76`.
   - The context from `StudioCompiler.php:259-267` keeps string settings only, so `tags` always come from that draft row.
 - **Fix for residual:** pass `tags` from the published document in `StudioCompiler::plan`, and drop the `settings_json` fallback.
@@ -367,7 +367,7 @@ PHP tests use the repo's `unit('…', function (): void { … })` harness with `
 - **Test:** `tests/unit/StudioBuilderPhase4RendererTest.php`: assert `(new SearchBoxRenderer())->isDynamic() === true`.
 
 #### TB-10: Ties between templates are decided by title
-- **Sev / status:** Low · Open.
+- **Sev / status:** Low · **Fixed** in #133 (`2f5c9c2`): the higher-specificity template wins, then the most recently published. The editor note that names tying templates is a follow-up PR.
 - **Evidence:** strict `>` at `ThemeTemplateResolver.php:108,262`, over `ORDER BY title, id` (`PageRepository.php:59-60`).
 - **Now:** of two "entire site" headers, the one first alphabetically wins, and renaming one can flip the live header.
 - **Expected:** a stable, explicit tie-break.
@@ -375,7 +375,7 @@ PHP tests use the repo's `unit('…', function (): void { … })` harness with `
 - **Test:** two published headers with equal conditions. Assert the winner is unchanged after swapping their titles.
 
 #### TB-12: A misspelled exclusion becomes an inclusion
-- **Sev / status:** Low · Open.
+- **Sev / status:** Low · **Fixed** in #133 (`2f5c9c2`).
 - **Evidence:**
   - The validator accepts any `action`/`type` matching `^[a-z_0-9]{1,40}$`: `DocumentValidator.php:343-347`.
   - The matcher treats only `exclude` as exclusion (`TemplateConditionMatcher.php:59-60`), and a non-include/exclude `type` becomes the scope (`:85-91`).
@@ -385,7 +385,7 @@ PHP tests use the repo's `unit('…', function (): void { … })` harness with `
 - **Test:** `tests/unit/StudioBuilderPhase2DocumentDomainTest.php`: `{action:'excludes'}` and `{type:'categroy'}` both fail validation.
 
 #### TB-11: Archive and search templates are resolved before the entitlement check
-- **Sev / status:** Low · Open.
+- **Sev / status:** Low · **Fixed** in #133 (`2f5c9c2`).
 - **Evidence:** `StudioPublicRuntime.php:117-126,135-144` resolve first. `serveTemplate` checks entitlement at `:286-294`.
 - **Now:** unentitled tenants still run the candidate queries, and repository exceptions are not caught.
 - **Expected:** check entitlement first, inside try/catch, as `serve()` does.
@@ -393,7 +393,7 @@ PHP tests use the repo's `unit('…', function (): void { … })` harness with `
 - **Test:** a stub tenant with no entitlement and a pages repository that throws. Assert `handleArchive('category','x')` returns null without throwing.
 
 #### TB-13: The archive route accepts any term, uncapped
-- **Sev / status:** Low · Open.
+- **Sev / status:** Low · **Fixed** in #133 (`2f5c9c2`).
 - **Evidence:** `StudioPublicRuntime.php:78-79` (`urldecode($m[2])`, no cap). Preview caps at 191 (`TemplatePreviewContext.php:45-83`).
 - **Now:** `/category/<anything>` returns 200 with that text in the title (escaped).
 - **Expected:** capped, control characters stripped.
@@ -401,7 +401,7 @@ PHP tests use the repo's `unit('…', function (): void { … })` harness with `
 - **Test:** `handleArchive('category', str_repeat('a', 300))` gives a title of at most 191 characters.
 
 #### TB-14: Preview ignores conditions and the host page's hidden chrome
-- **Sev / status:** Low · Open.
+- **Sev / status:** Low · **Fixed** in #133 (`2f5c9c2`) for the hidden chrome. Preview still shows a chosen template on any page (an authoring choice); a note when its conditions would not match is a follow-up PR.
 - **Evidence:** `StudioCompiler.php:279-285` swaps in `chrome_override` after checking only the page type, not `header_mode='hidden'`. Preview never evaluates conditions (`StudioApplicationService::renderPreview`).
 - **Now:** "Preview as page" can show a header the live page hides, and a template the live site would never select.
 - **Expected:** preview matches the live behaviour.
@@ -409,7 +409,7 @@ PHP tests use the repo's `unit('…', function (): void { … })` harness with `
 - **Test:** preview a header on a host with `header_mode=hidden`; assert no `<header` in the output.
 
 #### TI-05: `saveTemplate` silently overwrites an existing key
-- **Sev / status:** Low · Open.
+- **Sev / status:** Low · **Fixed** in #132 (`de7c64b`): an existing key is refused unless the caller asks to replace it.
 - **Evidence:** `StudioTemplateService.php:97-119` (update when the key exists; no version check).
 - **Now:** a second admin saving under the same key replaces the first admin's template.
 - **Expected:** the overwrite is refused unless it is explicit.
@@ -417,7 +417,7 @@ PHP tests use the repo's `unit('…', function (): void { … })` harness with `
 - **Test:** two `saveTemplate` calls with the same key; the second without the flag raises `template_exists`.
 
 #### TI-06: The admin create path still skips canonical validation
-- **Sev / status:** Low · Open (the permission part was fixed in `4aa8550`, merged in #109).
+- **Sev / status:** Low · **Fixed** in #132 (`de7c64b`): the admin create path goes through the Studio services and canonical validation (the permission part was fixed earlier in `4aa8550`, merged in #109).
 - **Evidence:**
   - Raw inserts; uuids from `mt_rand` (`templates.php:226-232`).
   - A 16-bit key suffix (`:123`).
@@ -429,7 +429,7 @@ PHP tests use the repo's `unit('…', function (): void { … })` harness with `
 - **Test:** `tests/integration/StudioAdminPermissionsTest.php`: an admin POSTs `create_template` with a 300-character name; assert refusal and a flash without SQL text.
 
 #### TI-07: There is no upgrade path for older packages or block versions
-- **Sev / status:** Low · Open.
+- **Sev / status:** Low · **Fixed** in #132 (`de7c64b`). Owner decision: older block versions are upgraded on package import and template apply (option B) and when stored drafts and published pages are read (option C); revisions are never rewritten.
 - **Evidence:**
   - `StudioPackageFormat.php:105-106` (exactly "1.0").
   - `DocumentValidator.php:107-113` (schema exactly "1.0") and `:846-850` (`invalid_block_version`).
@@ -684,7 +684,7 @@ PHP tests use the repo's `unit('…', function (): void { … })` harness with `
 - **Test:** `ui/tests/site-settings.test.mjs`: these rows render the hint.
 
 #### W-F23: Accepted style values that never render
-- **Sev / status:** Low · Open.
+- **Sev / status:** Low · **Fixed** in #130 (`b447079`): every accepted style key now reaches the output or is refused.
 - **Evidence:**
   - The `style.spacing` key is allowed (`CanonicalDocumentSchema.php:281`) but has no emitter.
   - `transform:"none"` becomes `sb-none`, but the CSS defines `sb-normal-case` (`StudioStylesheet.php:238`).
@@ -695,7 +695,7 @@ PHP tests use the repo's `unit('…', function (): void { … })` harness with `
 - **Test:** `StudioBuilderPhase2DocumentDomainTest.php`: `style.spacing` fails validation.
 
 #### W-F32: `WidgetRegistry::withCoreWidgets()` is a drifted duplicate
-- **Sev / status:** Low · Open.
+- **Sev / status:** Low · **Fixed** in #130 (`b447079`): `withCoreWidgets()` and `DeclarativeWidgetDefinition` are gone; one registry.
 - **Evidence:** `src/Module/StudioBuilder/Registry/WidgetRegistry.php:137` onward; only `tests/unit/StudioBuilderSprint1LayoutAndWidgetsTest.php:66-67` uses it.
 - **Now:** a second, outdated definition of seven blocks.
 - **Expected:** one registry.
@@ -704,7 +704,7 @@ PHP tests use the repo's `unit('…', function (): void { … })` harness with `
 
 ## 4. Recommended order of work
 
-All ten steps below are done (see the status line of each finding). The remaining work is the Low findings and the TB-01 residual.
+All ten steps below are done, and so are the Low findings (see the status line of each finding).
 
 1. **CL-03 and W-F2.** Each is a one-line CSS fix (media-scope the align classes; add the solid, dotted and double border rules), plus a CSS-string unit test.
 2. **CL-02.** Make the prop control read-only when `style.layout` owns the value, so the Inspector stops showing a value that does not apply.
