@@ -276,14 +276,18 @@ final class StudioCompiler
         }
 
         $theme  = $this->themes->resolve((string) $settings['token_group']);
-        $header = $this->chrome->resolve('header', (string) $settings['header_mode'], $page, $settings);
-        $footer = $this->chrome->resolve('footer', (string) $settings['footer_mode'], $page, $settings);
-        // "Preview as a page": an authoring preview may swap in the draft of a header or footer being edited.
+        // Header and footer display conditions read this revision's own category and tags, never the draft row.
+        $chromeContext = $settings + ['category' => ''];
+        $chromeContext['tags'] = self::tagsOf($decoded);
+        $header = $this->chrome->resolve('header', (string) $settings['header_mode'], $page, $chromeContext);
+        $footer = $this->chrome->resolve('footer', (string) $settings['footer_mode'], $page, $chromeContext);
+        // "Preview as a page": an authoring preview may swap in the draft of a header or footer being edited. A page
+        // that hides its header or footer (or gets no chrome at all) keeps it hidden, as on the live site.
         $override = $context->mode === RenderMode::Preview ? $context->attribute('chrome_override') : null;
-        if (is_array($override) && ($override['header'] ?? null) instanceof ChromeSource && in_array($page->pageType, ChromeResolver::CHROMED_PAGE_TYPES, true)) {
+        if (is_array($override) && ($override['header'] ?? null) instanceof ChromeSource && $header->kind !== ChromeSource::HIDDEN) {
             $header = $override['header'];
         }
-        if (is_array($override) && ($override['footer'] ?? null) instanceof ChromeSource && in_array($page->pageType, ChromeResolver::CHROMED_PAGE_TYPES, true)) {
+        if (is_array($override) && ($override['footer'] ?? null) instanceof ChromeSource && $footer->kind !== ChromeSource::HIDDEN) {
             $footer = $override['footer'];
         }
         // Live references resolve to the referenced components' PUBLISHED revisions; their
@@ -328,6 +332,24 @@ final class StudioCompiler
             'inputs'     => $inputs,
             'hash'       => hash('sha256', CanonicalJson::encode($inputs)),
         ];
+    }
+
+    /**
+     * The tags of a decoded page document (`settings.tags`: a list of text, or one comma-separated text), at most 50.
+     *
+     * @return list<string>
+     */
+    private static function tagsOf(mixed $decoded): array
+    {
+        $tags = is_array($decoded) && is_array($decoded['settings'] ?? null) ? ($decoded['settings']['tags'] ?? []) : [];
+        $tags = is_string($tags) ? explode(',', $tags) : (is_array($tags) ? $tags : []);
+        $out = [];
+        foreach ($tags as $tag) {
+            if (is_string($tag) && trim($tag) !== '') {
+                $out[] = mb_substr(trim($tag), 0, 100);
+            }
+        }
+        return array_slice($out, 0, 50);
     }
 
     /**

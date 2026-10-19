@@ -458,6 +458,76 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             $again = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/eng-post'));
             assert_true($again !== null && str_contains($again->body, 'Engineering layout v2') && !str_contains($again->body, 'Engineering single layout'), 'the page shows the republished template');
 
+            // TB-01 residual: header conditions read the PUBLISHED page's category and tags. A page published with
+            // neither, whose unpublished draft adds category=Engineering and tag "launch", keeps the default header.
+            $hdrTag = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->createPage($actorA, 'Launch Header', 'launch-header', 'header_partial', 'standalone'));
+            $hdrTagEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, (int) $hdrTag['page']['id'], [
+                new DocumentOperation('insert_section', ['index' => 0, 'section' => s6_section([s6_block('core.heading', ['text' => 'Launch Tag Header', 'level' => 'h2'])], 'Launch Header')]),
+                new DocumentOperation('update_settings', ['settings' => ['template_type' => 'header', 'conditions' => ['rules' => [['action' => 'include', 'condition' => 'tag', 'value' => 'launch']]]]]),
+            ], (int) $hdrTag['revision']['id'], 'Launch header'));
+            $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, (int) $hdrTag['page']['id'], (int) $hdrTagEdit['revision']['id']));
+
+            $plain = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->createPage($actorA, 'Plain Post', 'plain-post', 'page', 'standalone'));
+            $plainEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, (int) $plain['page']['id'], [
+                new DocumentOperation('insert_section', ['index' => 0, 'section' => s6_section([s6_block('core.text', ['content' => 'Plain post body.'])], 'Plain')]),
+            ], (int) $plain['revision']['id'], 'Plain content'));
+            $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, (int) $plain['page']['id'], (int) $plainEdit['revision']['id']));
+            $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, (int) $plain['page']['id'], [
+                new DocumentOperation('update_settings', ['settings' => ['category' => 'Engineering', 'tags' => ['launch']]]),
+            ], (int) $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->loadEditorDocument($actorA, (int) $plain['page']['id']))['revision']['id'], 'Draft category and tag'));
+            $plainDraftSettings = (string) $pdo->query('SELECT settings_json FROM studiobuilder_pages WHERE id = ' . (int) $plain['page']['id'])->fetchColumn();
+            assert_true(str_contains($plainDraftSettings, 'Engineering'), 'precondition: the draft category is in the page row');
+            $plainLive = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/plain-post'));
+            assert_true($plainLive !== null && str_contains($plainLive->body, 'Tenant A Global Header'), 'the live page keeps the default header');
+            assert_false(str_contains($plainLive->body, 'Engineering Hub Special Header'), 'a draft category does not pick the live header');
+            assert_false(str_contains($plainLive->body, 'Launch Tag Header'), 'nor does a draft tag');
+
+            $tagged = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->createPage($actorA, 'Tagged Post', 'tagged-post', 'page', 'standalone'));
+            $taggedEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, (int) $tagged['page']['id'], [
+                new DocumentOperation('update_settings', ['settings' => ['tags' => ['launch']]]),
+            ], (int) $tagged['revision']['id'], 'Tag'));
+            $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, (int) $tagged['page']['id'], (int) $taggedEdit['revision']['id']));
+            $taggedLive = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/tagged-post'));
+            assert_true($taggedLive !== null && str_contains($taggedLive->body, 'Launch Tag Header'), 'a published tag picks its header');
+
+            // TB-14: "Preview as page" on a page that hides its header and footer keeps them hidden, as the live site does.
+            $bare = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->createPage($actorA, 'Bare Landing', 'bare-landing', 'page', 'standalone'));
+            $bareEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, (int) $bare['page']['id'], [
+                new DocumentOperation('insert_section', ['index' => 0, 'section' => s6_section([s6_block('core.text', ['content' => 'Bare landing body.'])], 'Bare')]),
+                new DocumentOperation('update_settings', ['settings' => ['header_mode' => 'hidden', 'footer_mode' => 'hidden']]),
+            ], (int) $bare['revision']['id'], 'No chrome'));
+            $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, (int) $bare['page']['id'], (int) $bareEdit['revision']['id']));
+            $bareLive = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/bare-landing'));
+            assert_true($bareLive !== null && !str_contains($bareLive->body, 'Tenant A Global Header'), 'precondition: the live page has no header');
+            $hdrOnBare = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->renderPreview($actorA, $hdrEngId, null, (int) $bare['page']['id']));
+            assert_true(str_contains($hdrOnBare->html, 'Bare landing body.'), 'the host page is shown');
+            assert_false(str_contains($hdrOnBare->html, 'Engineering Hub Special Header'), 'without the previewed header');
+            $ftrOnBare = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->renderPreview($actorA, $ftrDefId, null, (int) $bare['page']['id']));
+            assert_false(str_contains($ftrOnBare->html, 'Tenant A Global Footer'), 'and without the previewed footer');
+            $hdrOnDesign = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->renderPreview($actorA, $hdrEngId, null, $p2Id));
+            assert_true(str_contains($hdrOnDesign->html, 'Engineering Hub Special Header'), 'a page with a header still previews the edited one');
+
+            // TB-10: two "entire site" footers tie; the one published last wins, and renaming either changes nothing.
+            $siteFooter = static function (string $title, string $slug, string $text) use ($rt, $actorA): int {
+                $f = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->createPage($actorA, $title, $slug, 'footer_partial', 'standalone'));
+                $e = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, (int) $f['page']['id'], [
+                    new DocumentOperation('insert_section', ['index' => 0, 'section' => s6_section([s6_block('core.text', ['content' => $text])], $title)]),
+                    new DocumentOperation('update_settings', ['settings' => ['template_type' => 'footer', 'conditions' => ['rules' => [['action' => 'include', 'condition' => 'entire_site']]]]]),
+                ], (int) $f['revision']['id'], $title));
+                $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, (int) $f['page']['id'], (int) $e['revision']['id']));
+                return (int) $f['page']['id'];
+            };
+            $alphaId = $siteFooter('Alpha Footer', 'alpha-footer', 'Alpha footer text');
+            $zuluId  = $siteFooter('Zulu Footer', 'zulu-footer', 'Zulu footer text');
+            $pdo->prepare('UPDATE studiobuilder_pages SET published_at = ? WHERE id = ?')->execute(['2026-01-01 10:00:00', $alphaId]);
+            $pdo->prepare('UPDATE studiobuilder_pages SET published_at = ? WHERE id = ?')->execute(['2026-02-01 10:00:00', $zuluId]);
+            $tie = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/design-post'));
+            assert_true($tie !== null && str_contains($tie->body, 'Zulu footer text') && !str_contains($tie->body, 'Alpha footer text'), 'the footer published last wins the tie');
+            $pdo->prepare('UPDATE studiobuilder_pages SET title = ? WHERE id = ?')->execute(['Zulu Footer', $alphaId]);
+            $pdo->prepare('UPDATE studiobuilder_pages SET title = ? WHERE id = ?')->execute(['Alpha Footer', $zuluId]);
+            $tieRenamed = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/design-post'));
+            assert_true($tieRenamed !== null && str_contains($tieRenamed->body, 'Zulu footer text'), 'swapping the titles keeps the same footer');
+
             // An older Single template stored as a page is not a public page and is not in the sitemap.
             $legacy = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->createPage($actorA, 'Old Single', 'template-old-single', 'page', 'standalone'));
             $legacyEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, (int) $legacy['page']['id'], [
@@ -468,6 +538,7 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             assert_null($rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/template-old-single')), 'an old Single template page is not served');
             $sitemap = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('sitemap.xml?format=xml'));
             assert_true($sitemap !== null && !str_contains($sitemap->body, 'template-old-single') && !str_contains($sitemap->body, 'single-eng'), 'and not listed in the sitemap');
+
         });
     } finally {
         $port = defined('DB_PORT') ? trim((string) DB_PORT) : '';

@@ -56,7 +56,11 @@ final class TemplateConditionMatcher
         $excluded = false;
 
         foreach ($rules as $rule) {
-            $action = strtolower(trim((string) ($rule['action'] ?? $rule['type'] ?? 'include')));
+            $action = self::actionOf($rule);
+            if ($action === null) {
+                // A misspelled action ("excludes") never includes the page; the rule is ignored.
+                continue;
+            }
             $isExclude = ($action === 'exclude');
 
             $ruleScore = self::evaluateRule($rule, $context);
@@ -74,6 +78,30 @@ final class TemplateConditionMatcher
         }
 
         return $highest;
+    }
+
+    /**
+     * 'include' or 'exclude', or null for an action the matcher does not know. `action` names it; the older
+     * `type` does when it says include/exclude, and otherwise names the scope of a rule that has none (an
+     * include). A `type` next to a `condition`/`scope` can only be the action.
+     *
+     * @param array<string, mixed> $rule
+     */
+    private static function actionOf(array $rule): ?string
+    {
+        if (array_key_exists('action', $rule)) {
+            $action = strtolower(trim((string) $rule['action']));
+            return in_array($action, ['include', 'exclude'], true) ? $action : null;
+        }
+        if (!array_key_exists('type', $rule)) {
+            return 'include';
+        }
+        $type = strtolower(trim((string) $rule['type']));
+        if (in_array($type, ['include', 'exclude'], true)) {
+            return $type;
+        }
+        $hasScope = trim((string) ($rule['condition'] ?? $rule['scope'] ?? '')) !== '';
+        return $hasScope ? null : 'include';
     }
 
     /**
