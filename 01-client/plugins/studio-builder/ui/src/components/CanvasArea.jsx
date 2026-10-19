@@ -10,7 +10,7 @@ import { attachCanvas, markSelected } from '../core/canvas.mjs';
 import { inlineSpecsFor, propsWithInlineText } from '../core/inlineText.mjs';
 import { patchCanvas } from '../core/canvasPatch.mjs';
 import { isInlineEditing, morphDocument } from '../core/canvasMorph.mjs';
-import { contentChanged, ghostNodeIds, isStructuralChange, syncLiveDOM } from '../core/canvasLiveSync.mjs';
+import { contentChanged, ghostNodeIds, isStructuralChange, serverRenderedEdits, syncLiveDOM } from '../core/canvasLiveSync.mjs';
 import { releaseLive, syncLiveStyles, tokensOfDoc } from '../core/liveStyleSync.mjs';
 import { syncLiveStructure } from '../core/liveStructure.mjs';
 import { adoptFragment, applyFragment, clearFragments } from '../core/liveFragment.mjs';
@@ -32,6 +32,8 @@ import { useIsMobileShell } from '../hooks/useIsMobileShell.mjs';
 const REPAINT_DEBOUNCE_MS = 80;
 const BUSY_RETRY_MS = 300;
 const BUSY_RETRIES = 15;
+/** A server-rendered block's edit is shown from its own render this long after the last change (typing coalesces). */
+const BLOCK_PREVIEW_MS = 250;
 
 /** Read-only canvas: links and forms must not navigate the frame away from the page being edited. */
 function blockNavigation(doc) {
@@ -186,6 +188,50 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     }
   }, [transport, boot.pageId]);
 
+  // A server-rendered block (a module block, a quote, a list, ...) was edited: show its own render now, instead of after the save
+  // and the page's full render. One request per block at a time; a newer edit made meanwhile is sent when it returns, and an
+  // answer for an older edit is dropped. The full render after the save still confirms it.
+  const previewRef = useRef(new Map()); // id -> { timer, inFlight, dirty, seq }
+  const previewServerBlocks = useCallback((ids) => {
+    if (!transport || typeof transport.renderBlock !== 'function') return;
+    const send = (id) => {
+      const entry = previewRef.current.get(id);
+      if (!entry) return;
+      entry.timer = 0;
+      if (entry.inFlight) { entry.dirty = true; return; }
+      const info = findNode(workingRef.current, id);
+      if (!info || info.kind === 'section') { previewRef.current.delete(id); return; }
+      const node = info.node;
+      const seq = (entry.seq || 0) + 1;
+      entry.seq = seq;
+      entry.inFlight = true;
+      entry.dirty = false;
+      const done = () => {
+        entry.inFlight = false;
+        if (entry.dirty) send(id); else if (!entry.timer) previewRef.current.delete(id);
+      };
+      transport.renderBlock(boot.pageId, node).then((res) => {
+        if (entry.seq !== seq || entry.dirty || !res || !res.ok || !res.data) return;
+        let doc = null;
+        try { doc = frameRef.current && frameRef.current.contentDocument; } catch { doc = null; }
+        if (!doc || doc.readyState === 'loading' || isInlineEditing(doc)) return;
+        const now = findNode(workingRef.current, id);
+        if (!now || now.node !== node) return; // edited again since: that edit's render follows
+        const el = doc.querySelector(`[data-sb-node="${String(id).replace(/[^\w-]/g, '')}"]`);
+        if (!el || el.classList.contains('sbx-pending')) return;
+        const fragment = adoptFragment(res.data.html, node, doc, undefined, 'block');
+        if (fragment && applyFragment(doc, el, fragment, id)) markSelected(doc, selectionRef.current, { scroll: false, ids: selectedIdsRef.current });
+      }).catch(() => { /* the server's render after the save shows it */ }).then(done, done);
+    };
+    for (const id of ids) {
+      const entry = previewRef.current.get(id) || { timer: 0, inFlight: false, dirty: false, seq: 0 };
+      previewRef.current.set(id, entry);
+      if (entry.timer) clearTimeout(entry.timer);
+      entry.timer = setTimeout(() => send(id), BLOCK_PREVIEW_MS);
+    }
+  }, [transport, boot.pageId]);
+  useEffect(() => () => { for (const e of previewRef.current.values()) if (e.timer) clearTimeout(e.timer); previewRef.current.clear(); }, []);
+
   // The server's render of `renderedFrom` has just been merged into the canvas: the canvas is now painted to that document,
   // and everything the author has done since (structure, text, classes, styles) is painted again on top of it.
   settleRef.current = (doc, renderedFrom) => {
@@ -279,11 +325,25 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     // Synchronize all live DOM elements (props, text, styles, typography, colors, surfaces, cards) in 0ms!
     syncLiveDOM(doc, prev, working, viewport.key);
 
+
     // A change the live patch cannot express (a server-rendered element's props, or the tree itself) must
     // stay "unpainted", so the reload that follows the next save still sees it as structural.
     if (!isStructuralChange(prev, working, tokens)) paintedRef.current = working;
     markSelected(doc, selectionRef.current, { scroll: false });
   }, [working, loading, viewport.key, showFragments]);
+
+  // What the live patch cannot paint (a server-rendered block's props) is fetched block by block the moment it changes,
+  // compared with the document before this edit (not with what the canvas last painted, which a reload or a render resets).
+  const previewBaseRef = useRef(null);
+  useEffect(() => {
+    const before = previewBaseRef.current;
+    previewBaseRef.current = working;
+    if (!before || !working || before === working) return;
+    try {
+      const edited = serverRenderedEdits(before, working);
+      if (edited.length) previewServerBlocks(edited);
+    } catch (_) { /* the server's render after the save shows it */ }
+  }, [working, previewServerBlocks]);
 
   // Integrity check: once the canvas has settled, any node on it that the document does not have means the live
   // patch and the server's paint disagree. Repaint from the server once (a node the server tags for some other

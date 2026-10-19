@@ -105,3 +105,16 @@ test('a header page render is read from its header wrapper, which stands where <
   const out = adoptFromPage(page, '<header id="main">', node, canvasDoc());
   assert.equal(out.element.getAttribute('data-sb-node'), 'tmp_new');
 });
+
+test('showing a block again keeps one style sheet for it: the newest render rules', () => {
+  const head = new El('head');
+  const doc = { head, createElement: (t) => new El(t), getElementById: (id) => head.all().find((e) => e.getAttribute('id') === id) || null };
+  const parent = new El('div');
+  const first = parent.add(new El('div', { 'data-sb-node': 'blk_a' }));
+  assert.equal(applyFragment(doc, first, { element: new El('div', { 'data-sb-node': 'blk_a' }), css: '.sb-x-1{color:red}' }, 'blk_a'), true);
+  const second = parent.kids[0];
+  assert.equal(applyFragment(doc, second, { element: new El('div', { 'data-sb-node': 'blk_a' }), css: '.sb-x-2{color:blue}' }, 'blk_a'), true);
+  const sheets = head.all().filter((e) => e.isStyle);
+  assert.equal(sheets.length, 1);
+  assert.equal(sheets[0].textContent, '.sb-x-2{color:blue}');
+});

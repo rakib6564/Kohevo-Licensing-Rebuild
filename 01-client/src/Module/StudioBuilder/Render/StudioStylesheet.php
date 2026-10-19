@@ -90,6 +90,12 @@ final class StudioStylesheet
             . '.sb-button--ghost{background:transparent;border-color:transparent;color:var(--sb-color-accent)}'
             . '.sb-button--full{display:block;text-align:center}'
             . '.sb-image{margin:0}.sb-image img{display:block;width:100%;object-fit:cover}'
+            // An Image block's size (Inspector > Content > Dimensions) is set on its wrapper: a height or an aspect ratio there is the picture's
+            // box, and the wrapper's object-fit and object-position reach the picture (cover unless the author picks another; a focal
+            // point set on the image itself still wins).
+            . '.sb-block--core-image{object-fit:cover}'
+            . '.sb-block--core-image>.sb-image{height:100%;display:flex;flex-direction:column;object-fit:inherit;object-position:inherit}'
+            . '.sb-block--core-image>.sb-image>img{flex:1 1 auto;min-height:0;height:100%;object-fit:inherit;object-position:inherit}'
             . '.sb-image--rounded img{border-radius:var(--sb-radius-md)}'
             . '.sb-image--ratio-16-9 img{aspect-ratio:16/9}.sb-image--ratio-4-3 img{aspect-ratio:4/3}'
             . '.sb-image--ratio-1-1 img{aspect-ratio:1/1}.sb-image--ratio-3-4 img{aspect-ratio:3/4}'

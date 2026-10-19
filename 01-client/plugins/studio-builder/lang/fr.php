@@ -511,6 +511,7 @@ return [
     'studio_ui_gradient_hint' => 'Un dégradé linéaire à deux couleurs. Choisissez les couleurs et la direction.',
     'studio_ui_dimensions_label' => 'Dimensions',
     'studio_ui_dimension_width' => 'Largeur',
+    'studio_ui_dimension_height' => 'Hauteur',
     'studio_ui_dimension_min_height' => 'Hauteur min.',
     'studio_ui_dimension_max_width' => 'Largeur max.',
     'studio_ui_opacity_label' => 'Opacité',

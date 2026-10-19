@@ -59,7 +59,7 @@ test('the Data section appears only for a block with binding slots', () => {
 test('sections start open where they matter: content always; typography for text; dimensions for an image', () => {
   assert.deepEqual(defaultOpenIds('content', ctxOf('core.heading')), ['content']);
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.heading')), ['typography']);
-  assert.deepEqual(defaultOpenIds('style', ctxOf('core.image')), ['dimensions']);
+  assert.deepEqual(defaultOpenIds('content', ctxOf('core.image')), ['content', 'dimensions']);
   assert.deepEqual(defaultOpenIds('advanced', ctxOf('core.heading')), ['advanced']);
 });
 
@@ -125,7 +125,7 @@ test('applicableSections groups the non-empty tabs', () => {
 test('each kind of block opens the sections an author reaches for first', () => {
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.button')), ['typography', 'background', 'border']);
   assert.deepEqual(defaultOpenIds('content', ctxOf('layout.grid')), ['content']);
-  assert.deepEqual(defaultOpenIds('style', ctxOf('core.image')), ['dimensions']);
+  assert.deepEqual(defaultOpenIds('content', ctxOf('core.image')), ['content', 'dimensions']);
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.heading')), ['typography']);
   assert.deepEqual(defaultOpenIds('content', ctxOf('core.card')), ['content']);
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.card')), ['background', 'border', 'dimensions']);
@@ -169,4 +169,16 @@ test('States: every block offers Hover; only blocks a visitor can focus or press
   assert.deepEqual(statesFor('core.image', {}), ['hover']);
   assert.deepEqual(statesFor('core.button', {}), ['hover', 'focus', 'active']);
   assert.deepEqual(statesFor('core.heading', { disabled: { opacity: 0.5 }, hover: { opacity: 1 } }), ['hover', 'disabled']);
+});
+
+test('an image, video or gallery has its size with its other settings: Dimensions is on the Content tab, after Content', () => {
+  for (const type of ['core.image', 'core.video', 'core.gallery']) {
+    const ctx = ctxOf(type);
+    const content = ids('content', ctx);
+    assert.ok(content.includes('dimensions'), `${type}: Dimensions on Content`);
+    assert.ok(content.indexOf('content') < content.indexOf('dimensions'), `${type}: after the block's own fields`);
+    assert.ok(!ids('style', ctx).includes('dimensions') && !ids('advanced', ctx).includes('dimensions'), `${type}: only once`);
+  }
+  assert.ok(ids('style', ctxOf('core.card')).includes('dimensions'), 'a container keeps it under Style');
+  assert.ok(ids('advanced', ctxOf('core.heading')).includes('dimensions'), 'a text block keeps it under Advanced');
 });

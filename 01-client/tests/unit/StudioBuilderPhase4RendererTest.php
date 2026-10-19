@@ -571,6 +571,14 @@ unit('phase4 stylesheet: the generic link colour never reaches .sb-button links,
     assert_eq('25', \Slate\Module\StudioBuilder\Render\StudioStylesheet::VERSION, 'stylesheet version bumped so compiled pages are rebuilt');
 });
 
+unit('phase4 stylesheet: an Image block\'s height, aspect ratio, object-fit and object-position reach the picture, cover by default', function (): void {
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    assert_true(str_contains($css, '.sb-block--core-image{object-fit:cover}'), 'cover unless the author picks another fit');
+    assert_true(str_contains($css, '.sb-block--core-image>.sb-image{height:100%;display:flex;flex-direction:column;object-fit:inherit;object-position:inherit}'), 'the figure fills a sized wrapper and passes the fit on');
+    assert_true(str_contains($css, '.sb-block--core-image>.sb-image>img{flex:1 1 auto;min-height:0;height:100%;object-fit:inherit;object-position:inherit}'), 'the picture fills it');
+    assert_true(strpos($css, '.sb-image img{display:block;width:100%;object-fit:cover}') < strpos($css, '.sb-block--core-image{object-fit:cover}'), 'after the base image rule');
+});
+
 unit('phase4 stylesheet: in a row (horizontal flex or grid) a link, button, text, menu or icon keeps no margin of its own, so a header\'s items share one centre line', function (): void {
     $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
     assert_true(str_contains($css, '.sb-flex--row>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-text,.sb-nav,.sb-icon),.sb-grid>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-text,.sb-nav,.sb-icon){margin:0}'), 'row items lose the stacked-layout margins');
