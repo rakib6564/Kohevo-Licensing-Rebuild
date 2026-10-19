@@ -139,3 +139,17 @@ unit('block upgrade: steps are declared for older versions only, and SDK widget 
     assert_eq(['steps' => '2>3;'], $block->upgrade([], 2));
     assert_null($block->upgrade([], 3), 'nothing above the current version');
 });
+
+unit('block upgrade: rendering upgrades older blocks in memory; only a block without a path falls back to unavailable', function (): void {
+    $registry = sbup_registry();
+    $doc = sbup_doc([sbup_block('probe.note', 1, ['caption' => 'Published at v1']), sbup_block('core.heading', 1, ['text' => 'Current', 'level' => 'h2'])]);
+    $prepared = \Slate\Module\StudioBuilder\Render\RenderDocumentPreparer::prepare(\Slate\Module\StudioBuilder\Document\CanonicalJson::encode($doc), $registry);
+    assert_false($prepared['degraded'], 'the whole document validates after the upgrade');
+    $block = $prepared['document']['sections'][0]['blocks'][0];
+    assert_eq([3, ['text' => 'Published at v1']], [$block['version'], $block['props']]);
+
+    $gap = \Slate\Module\StudioBuilder\Render\RenderDocumentPreparer::prepare(sbup_doc([sbup_block('probe.gap', 1, ['text' => 'x']), sbup_block('core.heading', 1, ['text' => 'Kept', 'level' => 'h2'])]), $registry);
+    assert_true($gap['degraded'], 'no path: degraded');
+    assert_true(isset($gap['document']['sections'][0]['blocks'][0][\Slate\Module\StudioBuilder\Render\RenderDocumentPreparer::UNAVAILABLE_KEY]), 'that block alone is unavailable');
+    assert_eq('Kept', $gap['document']['sections'][0]['blocks'][1]['props']['text'], 'the rest of the page still renders');
+});

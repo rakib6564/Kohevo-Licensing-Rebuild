@@ -3,9 +3,19 @@
  * Kohevo Studio (studio-builder) — Block Version Upgrader.
  *
  * Brings the blocks of a document saved by an older Studio up to the block
- * versions this site registers, BEFORE the document is validated: package
- * import and template apply/insert call it, so raising a block's version
- * does not make earlier exports and stored templates unusable.
+ * versions this site registers, BEFORE the document is validated, so raising
+ * a block's version does not make earlier content unusable. Called on every
+ * read of stored or imported content:
+ *   - package import, and package export (exports carry current versions);
+ *   - template apply/insert, and detaching a global component;
+ *   - the editor's load and every edit (StudioApplicationService), publish
+ *     and rollback (StudioRevisionService);
+ *   - rendering (RenderDocumentPreparer), for published pages, previews,
+ *     partials and templates.
+ * Upgrades happen in memory: a stored revision is never rewritten. The next
+ * draft, publish or rollback writes a NEW revision at the current versions,
+ * and the compilation fingerprint (ModuleBlockDefinitions::registryFingerprint,
+ * type@version) makes every page recompile after a bump.
  *
  * - Every block (section blocks and nested children) whose integer `version`
  *   is below its definition's version is stepped up one version at a time
@@ -16,9 +26,6 @@
  *   supported one).
  * - Unknown types, newer versions and malformed blocks are left alone for
  *   the validator to report. Nothing else in the document is touched.
- *
- * Stored drafts and published pages are not upgraded here (gap report
- * TI-07, option B); that is for the first real block-version bump.
  */
 
 declare(strict_types=1);

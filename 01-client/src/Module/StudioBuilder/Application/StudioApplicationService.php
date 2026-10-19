@@ -80,6 +80,7 @@ use Slate\Module\StudioBuilder\Dependency\DependencyExtractor;
 use Slate\Module\StudioBuilder\Diff\RevisionDiff;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
 use Slate\Module\StudioBuilder\Domain\StudioTemplate;
@@ -1313,8 +1314,9 @@ final class StudioApplicationService
 
         $draftId  = isset($page['active_draft_revision_id']) ? (int) $page['active_draft_revision_id'] : 0;
         $revision = $draftId > 0 ? $this->revisionRepo->findByIdForPage($pageId, $draftId) : null;
+        // A draft saved at an older block version is read at the current one, so the next edit saves it upgraded.
         $document = $revision !== null
-            ? CanonicalJson::decode((string) $revision['document_json'])
+            ? DocumentUpgrader::upgrade(CanonicalJson::decode((string) $revision['document_json']), $this->registry)['document']
             : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
 
         return [
@@ -1798,8 +1800,9 @@ final class StudioApplicationService
         }
         $draftId  = isset($page['active_draft_revision_id']) ? (int) $page['active_draft_revision_id'] : 0;
         $revision = $draftId > 0 ? $this->revisionRepo->findByIdForPage($pageId, $draftId) : null;
+        // A draft saved at an older block version is read at the current one, so the next edit saves it upgraded.
         $document = $revision !== null
-            ? CanonicalJson::decode((string) $revision['document_json'])
+            ? DocumentUpgrader::upgrade(CanonicalJson::decode((string) $revision['document_json']), $this->registry)['document']
             : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
         return [$page, $document];
     }
