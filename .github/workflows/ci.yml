@@ -164,6 +164,12 @@ jobs:
           php 01-client/tests/run-phase11-security.php
           php 01-client/tests/run-phase13-legacy.php
 
+      - name: Run 01-client full unit & integration suites
+        run: |
+          # Every client test, not only the focused runners above: most security and settings tests live here (R4).
+          php 01-client/tests/unit/run.php
+          php 01-client/tests/integration/run.php
+
       - name: Run Kohevo Studio (studio-builder) unit & integration suites
         run: |
           php 01-client/tests/run-studio-builder.php unit
@@ -197,6 +203,12 @@ jobs:
           php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/Phase10CheckInSyncTest.php'; exit(unit_summary());"
           php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/Phase13LegacyAdminTest.php'; exit(unit_summary());"
           php 02-licensing/tests/run-phase2-race.php
+
+      - name: Run 02-licensing full unit & integration suites
+        run: |
+          # Every central test, including the security tests shared with the client tree (R4, P-01).
+          php 02-licensing/tests/unit/run.php
+          php 02-licensing/tests/integration/run.php
 
   studio-e2e:
     name: Studio builder e2e (Playwright)
