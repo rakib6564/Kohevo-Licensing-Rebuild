@@ -225,10 +225,31 @@ unit('p3b render: tag, section style and states reach the page through the real 
     $bClass = $bm[1];
     assert_true(str_contains($out->html, '<article class="sb-block'), 'the block wrapper is an <article>: ' . $out->html);
     assert_true(str_contains($out->html, '</article>'), 'and closes as one');
-    assert_true(str_contains($out->css, '.' . $sClass . '{background-image:linear-gradient(rgba(0,0,0,.4),rgba(0,0,0,.4)),url("/uploads/t101/hero.jpg") !important;background-size:cover !important;background-repeat:no-repeat !important;background-position:center !important;padding-top:2rem}'), $out->css);
+    assert_true(str_contains($out->css, '.' . $sClass . '{background-image:linear-gradient(rgba(0,0,0,.4),rgba(0,0,0,.4)),url("/uploads/t101/hero.jpg") !important;background-size:cover !important;background-repeat:no-repeat !important;background-position:center !important;padding-top:2rem !important}'), $out->css);
     assert_true(str_contains($out->css, '.' . $bClass . ':hover{opacity:0.8 !important}'), 'the state rule survives normalization: ' . substr($out->css, -400));
     assert_true(str_contains($out->css, 'cursor:pointer'), 'the base rule survives normalization');
     assert_false(str_contains($out->html, 'hero.jpg'), 'the image URL is only in the stylesheet');
+});
+
+unit('p3b render: a header or footer page sits in its live wrapper, not in <main>, so page-content CSS never spaces it', function (): void {
+    $tenants = new \Slate\Tenancy\TenantContext();
+    $reg     = \Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions::studioRegistry();
+    $rr      = \Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry::withStudioRenderers();
+    $media   = new SbopMedia([]);
+    $docr    = new \Slate\Module\StudioBuilder\Render\DocumentRenderer($reg, $rr, $media, new \Slate\Module\StudioBuilder\Render\ProviderBindingResolver(new \Slate\Module\StudioBuilder\Provider\DataProviderRegistry(), $tenants));
+    $comp    = new \Slate\Module\StudioBuilder\Render\Compile\StudioCompiler($tenants, $reg, $rr, $docr, new \Slate\Module\StudioBuilder\Render\Theme\ThemeResolver(null, static fn () => []), new \Slate\Module\StudioBuilder\Render\Chrome\ChromeResolver(), $media);
+    $ctx     = \Slate\Module\StudioBuilder\Render\RenderContext::forPublic(101, new \Slate\Module\StudioBuilder\Render\SiteContext('https://a.test', 'A', 'https://a.test/l.png', 'https://a.test/f.png', 'en'), static fn () => true);
+    $wrapped = [];
+    foreach (['header_partial' => '<header class="sb-site-header sb-site-header--partial" id="main">', 'footer_partial' => '<footer class="sb-site-footer sb-site-footer--partial" id="main">', 'page' => '<main class="sb-main sb-main--wide" id="main">'] as $type => $open) {
+        $page = new \Slate\Module\StudioBuilder\Domain\PageAddress(5, '11111111-2222-4333-8444-555555555555', 'T', 't', $type, 'published', 'standalone', 9, 9);
+        $doc  = sbop_doc([], [], []);
+        $doc['document_type'] = $type;
+        $out  = $tenants->runAs(101, static fn () => $comp->compile($page, ['id' => 9, 'page_id' => 5, 'document_json' => CanonicalJson::encode($doc)], $ctx));
+        assert_true(str_contains($out->html, $open), "{$type} opens with {$open}: " . substr($out->html, 0, 300));
+        assert_eq(1, substr_count($out->html, 'id="main"'), "{$type}: one #main, for the skip link and the canvas");
+        $wrapped[$type] = str_contains($out->html, '<main');
+    }
+    assert_eq(['header_partial' => false, 'footer_partial' => false, 'page' => true], $wrapped);
 });
 
 unit('p3b render: a stored block with a refused value is left out of the page entirely', function (): void {

@@ -42,7 +42,7 @@ const UNAVAILABLE = /class="[^"]*\bsb-unavailable\b/;
  */
 export function adoptFromPage(page, html, node, canvasDoc, kind = 'block') {
   if (!page || !node || !canvasDoc || UNAVAILABLE.test(html || '')) return null;
-  const main = page.querySelector('main');
+  const main = page.querySelector('#main'); // <main>, or the header/footer wrapper of a header or footer page
   const section = main && main.querySelector(`[${ATTR}]`); // the one fresh section
   const root = kind === 'section' ? section : section && section.querySelector(`[${ATTR}]`); // the section, or the block first inside it
   if (!root) return null;
