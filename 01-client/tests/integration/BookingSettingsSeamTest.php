@@ -175,6 +175,93 @@ unit('the absorbed Booking+ fields save through the settings seam', function ():
     }
 });
 
+// S-14: the WhatsApp link is sent to clients in booking emails, so only an http(s) address is stored or used.
+
+unit('S-14 WhatsApp link: only an absolute http(s) address is accepted', function (): void {
+    assert_eq('', BookingPlusAPI::cleanWhatsappUrl('  '), 'blank means none');
+    assert_eq('https://wa.me/32470000000', BookingPlusAPI::cleanWhatsappUrl(' https://wa.me/32470000000 '));
+    assert_eq('http://example.com/chat?x=1', BookingPlusAPI::cleanWhatsappUrl('http://example.com/chat?x=1'));
+    foreach (['javascript:alert(1)', 'JAVASCRIPT:alert(1)', "java\tscript:alert(1)", 'data:text/html,x', 'whatsapp://send?phone=1', '/chat', '//evil.example', 'wa.me/1', 'https://', 'https://wa.me/' . str_repeat('1', 500)] as $bad) {
+        assert_null(BookingPlusAPI::cleanWhatsappUrl($bad), 'refused: ' . json_encode($bad));
+    }
+});
+
+unit('S-14 WhatsApp link: a refused global value is not saved, and a stored bad one is never used', function (): void {
+    $restore = bss_snapshot();
+    $logout = bss_login();
+    try {
+        Database::setSetting('bookingplus.whatsapp_url', 'https://wa.me/111');
+        BookingPlusAPI::saveSettings(['bookingplus_whatsapp_url' => 'javascript:alert(1)', 'bookingplus_nudge_hours' => '9']);
+        assert_eq('https://wa.me/111', (string) Database::setting('bookingplus.whatsapp_url'), 'the previous link stays');
+        assert_eq('9', (string) Database::setting('bookingplus.nudge_hours'), 'the other field still saves');
+        BookingPlusAPI::saveSettings(['bookingplus_whatsapp_url' => '']);
+        assert_eq('', (string) Database::setting('bookingplus.whatsapp_url'), 'clearing it is allowed');
+
+        Database::setSetting('bookingplus.whatsapp_url', 'javascript:alert(document.cookie)');
+        assert_eq('', BookingPlusAPI::globalWhatsappUrl(), 'a stored bad global link reads as none');
+        assert_eq('https://wa.me/222', BookingPlusAPI::whatsappUrlFor(['whatsapp_url' => 'https://wa.me/222']), 'a service link wins');
+        Database::setSetting('bookingplus.whatsapp_url', 'https://wa.me/333');
+        assert_eq('https://wa.me/333', BookingPlusAPI::whatsappUrlFor(['whatsapp_url' => 'javascript:x']), 'a bad service link falls back to the global one');
+        assert_eq('https://wa.me/333', BookingPlusAPI::whatsappUrlFor(null), 'no service config uses the global one');
+    } finally {
+        $logout();
+        $restore();
+    }
+});
+
+unit('S-14 WhatsApp link: a service rule refuses a bad link, and the emails use the checked one', function (): void {
+    $threw = false;
+    try {
+        BookingPlusAPI::saveServiceConfig(987654, ['whatsapp_url' => 'javascript:alert(1)']);
+    } catch (\InvalidArgumentException $e) {
+        $threw = true;
+        assert_true(str_contains($e->getMessage(), 'http'), $e->getMessage());
+    } finally {
+        // Without the check this would have written a row; never leave one behind.
+        try {
+            Database::query('DELETE FROM bookingplus_service_config WHERE tenant_id = ? AND service_id = ?', [current_tenant_id(), 987654]);
+        } catch (\Throwable $e) {
+            // no table on a bare schema: nothing to clean
+        }
+    }
+    assert_true($threw, 'a bad per-service link stops the save before any write');
+    $booking = (string) file_get_contents(dirname(__DIR__, 2) . '/plugins/booking/Booking.php');
+    assert_eq(2, substr_count($booking, '$whatsapp = BookingPlusAPI::whatsappUrlFor($cfg);'), 'both reminder and confirmation emails take the checked link');
+    assert_false(str_contains($booking, "trim((string)(\$cfg['whatsapp_url']"), 'no raw service link is used');
+});
+
+unit('S-14 preparation page and Zoom room: a service rule refuses a bad link, and emails and the rules list use only checked ones', function (): void {
+    foreach (['prep_page_url' => 'preparation page', 'zoom_join_url' => 'Zoom room'] as $field => $label) {
+        foreach (['javascript:alert(1)', 'data:text/html,x', '/prep', 'https://'] as $bad) {
+            $threw = false;
+            try {
+                BookingPlusAPI::saveServiceConfig(987654, [$field => $bad]);
+            } catch (\InvalidArgumentException $e) {
+                $threw = true;
+                assert_true(str_contains($e->getMessage(), 'http'), $e->getMessage());
+            } finally {
+                try {
+                    Database::query('DELETE FROM bookingplus_service_config WHERE tenant_id = ? AND service_id = ?', [current_tenant_id(), 987654]);
+                } catch (\Throwable $e) {
+                    // no table on a bare schema: nothing to clean
+                }
+            }
+            assert_true($threw, "{$label}: {$bad} stops the save before any write");
+        }
+        assert_eq('', BookingPlusAPI::serviceLinkUrl([$field => 'javascript:alert(1)'], $field), "{$label}: a stored bad link is never sent");
+        assert_eq('https://example.com/x', BookingPlusAPI::serviceLinkUrl([$field => ' https://example.com/x '], $field), "{$label}: a good link is kept");
+        assert_eq('', BookingPlusAPI::serviceLinkUrl(null, $field), "{$label}: no service config means no link");
+    }
+    $root = dirname(__DIR__, 2) . '/plugins/booking';
+    $booking = (string) file_get_contents($root . '/Booking.php');
+    assert_eq(2, substr_count($booking, "'prep_url'      => BookingPlusAPI::serviceLinkUrl(\$cfg, 'prep_page_url'),"), 'both emails take the checked preparation link');
+    assert_true(str_contains($booking, "\$zoom = (BookingPlusAPI::cleanLinkUrl((string)(\$meta['zoom_join_url'] ?? '')) ?? '') ?: BookingPlusAPI::serviceLinkUrl(\$cfg, 'zoom_join_url');"), 'the reminder takes a checked Zoom link');
+    assert_false((bool) preg_match("/\\(string\\)\\(\\\$cfg\\['prep_page_url'\\]|trim\\(\\(string\\)\\(\\\$(cfg|meta)\\['zoom_join_url'\\]/", $booking), 'no raw service link is used');
+    $rules = (string) file_get_contents($root . '/admin/service-rules.php');
+    assert_true(str_contains($rules, "\$prepUrl = BookingPlusAPI::serviceLinkUrl(\$s, 'prep_page_url');"), 'the rules list links only a checked preparation page');
+    assert_false(str_contains($rules, "e(\$s['prep_page_url'])"), 'and never the raw value');
+});
+
 unit('the seam does not let a contributor write Booking\'s reminder_leads', function (): void {
     $tid = slate_tenant_id();
 

@@ -104,8 +104,9 @@ slate_breadcrumbs([
             __('booking_service_rule_auto_response_label', 'Auto-response')   => !empty(trim((string)$s['auto_response_body'])) ? __('booking_service_rule_configured', 'configured') : __('booking_service_rule_not_set', 'not set'),
             __('booking_service_rule_zoom', 'Zoom')            => $zoomLabel,
         ];
-        if (!empty($s['prep_page_url'])) {
-            $detail['Prep page'] = ['label' => __('booking_service_rule_prep_page_detail_label', 'Prep page'), 'html' => '<a href="' . e($s['prep_page_url']) . '" target="_blank" rel="noopener">' . e($s['prep_page_url']) . '</a>'];
+        $prepUrl = BookingPlusAPI::serviceLinkUrl($s, 'prep_page_url');
+        if ($prepUrl !== '') {
+            $detail['Prep page'] = ['label' => __('booking_service_rule_prep_page_detail_label', 'Prep page'), 'html' => '<a href="' . e($prepUrl) . '" target="_blank" rel="noopener">' . e($prepUrl) . '</a>'];
         }
 
         $editUrl = plugin_url('booking', 'admin/service-rule.php') . '?id=' . (int)$s['id'];
