@@ -33,9 +33,13 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
      *                                            provider that feeds it (e.g. ['items' => 'booking.services']).
      * @param ?string $title       Add-panel card title (defaults to the label); translated at the application boundary.
      * @param string $description  One-line Add-panel card description; translated at the application boundary.
-     * @param list<array{prop: string, selector: string}> $inlineText The text the canvas may edit in place: a `string`/`text`
-     *                                            prop (or `<link field>.label`) and the CSS class selector of the element
-     *                                            that renders it. Declared, never guessed from the markup.
+     * @param list<array{prop: string, selector: string, unless?: string}> $inlineText The text the canvas may edit in
+     *                                            place: a `string`/`text` prop, a `<link field>.label`, or one field of
+     *                                            every repeater item (`<repeater>.*.<field>`: the n-th element matching
+     *                                            the selector edits item n), and the CSS class selector of the element
+     *                                            that renders it. `unless` names a prop that, when set, means the
+     *                                            element shows something else (a nav menu chosen on the Menus screen),
+     *                                            so it is not edited in place. Declared, never guessed from the markup.
      * @param array<int, callable(array<string, mixed>): array<string, mixed>> $upgrades One step per older version:
      *                                            `[1 => fn(array $props): array => ...]` turns version-1 props into
      *                                            version-2 props. A version without a step cannot be upgraded.
@@ -96,8 +100,10 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
     private function assertInlineText(): void
     {
         $types = [];
+        $fields = [];
         foreach ($this->schema->fields() as $field) {
             $types[(string) ($field['key'] ?? '')] = (string) ($field['type'] ?? '');
+            $fields[(string) ($field['key'] ?? '')] = $field;
         }
         foreach ($this->inlineText as $entry) {
             $prop = is_array($entry) ? ($entry['prop'] ?? null) : null;
@@ -105,26 +111,51 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
             if (!is_string($prop) || !is_string($selector) || preg_match('/^\.[a-z][a-z0-9_-]*(?: [>] \.[a-z][a-z0-9_-]*| \.[a-z][a-z0-9_-]*| [a-z][a-z0-9]*)*$/i', $selector) !== 1) {
                 throw new \InvalidArgumentException("Block '{$this->type}' declares an invalid inline text entry.");
             }
-            $field = explode('.', $prop, 2);
+            $field = explode('.', $prop, 3);
             $ok = isset($types[$field[0]]) && (
                 (count($field) === 1 && in_array($types[$field[0]], ['string', 'text'], true))
                 || (count($field) === 2 && $field[1] === 'label' && $types[$field[0]] === 'link')
+                || (count($field) === 3 && $field[1] === '*' && $types[$field[0]] === 'repeater'
+                    && in_array(self::itemFieldType($fields[$field[0]], $field[2]), ['string', 'text'], true))
             );
             if (!$ok) {
                 throw new \InvalidArgumentException("Block '{$this->type}' declares inline text '{$prop}', which is not a text prop of its schema.");
             }
+            $unless = $entry['unless'] ?? null;
+            if ($unless !== null && (!is_string($unless) || !isset($types[$unless]))) {
+                throw new \InvalidArgumentException("Block '{$this->type}' declares inline text '{$prop}' unless '{$unless}', which is not a prop of its schema.");
+            }
         }
     }
 
-    /** The schema type of an inline text prop (`link.label` counts as a one-line string). */
+    /** The schema type of an inline text prop (`link.label` counts as a one-line string; `items.*.label` is the item field's). */
     private function inlineTextType(string $prop): string
     {
+        $parts = explode('.', $prop, 3);
         foreach ($this->schema->fields() as $field) {
             if (($field['key'] ?? null) === $prop) {
                 return (string) ($field['type'] ?? '');
             }
+            if (count($parts) === 3 && ($field['key'] ?? null) === $parts[0]) {
+                return self::itemFieldType($field, $parts[2]) ?? 'string';
+            }
         }
         return 'string';
+    }
+
+    /** The type of field `$key` in a repeater field's item schema, or null. */
+    private static function itemFieldType(array $repeater, string $key): ?string
+    {
+        $items = $repeater['item_schema'] ?? null;
+        if (!$items instanceof FieldSchema) {
+            return null;
+        }
+        foreach ($items->fields() as $item) {
+            if (($item['key'] ?? null) === $key) {
+                return (string) ($item['type'] ?? '');
+            }
+        }
+        return null;
     }
 
     public function type(): string
@@ -263,7 +294,7 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
                     'prop' => $e['prop'],
                     'selector' => $e['selector'],
                     'multiline' => $this->inlineTextType($e['prop']) === 'text',
-                ],
+                ] + (isset($e['unless']) ? ['unless' => $e['unless']] : []),
                 $this->inlineText,
             ),
             'label'                     => $this->label,

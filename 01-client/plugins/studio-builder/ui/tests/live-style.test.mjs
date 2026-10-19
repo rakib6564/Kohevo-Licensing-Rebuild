@@ -64,7 +64,7 @@ test('managed classes are the ones this file writes and nothing a theme or autho
 test('a section: background and padding are predicted, an image is left to the server', () => {
   const ok = compileSectionStyle({ style: { background: { color: '#112233', gradient: 'linear-gradient(#000,#fff)' }, padding: { top: '4rem', bottom: '2rem' } } });
   assert.equal(ok.covered, true);
-  assert.deepEqual(ok.scoped, ['background-color:#112233', 'background-image:linear-gradient(#000,#fff)', 'padding-top:4rem', 'padding-bottom:2rem']);
+  assert.deepEqual(ok.scoped, ['background-color:#112233', 'background-image:linear-gradient(#000,#fff)', 'padding-top:4rem !important', 'padding-bottom:2rem !important']);
   assert.equal(compileSectionStyle({ style: { background: { image: { media_id: 3 } } } }).covered, false);
   assert.equal(compileSectionStyle({ style: {} }).covered, true);
 });

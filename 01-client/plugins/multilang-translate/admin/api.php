@@ -174,10 +174,12 @@ switch ($action) {
     case 'save_switcher_settings':
         Auth::requirePerm('mlt.manage');
         $plugin = PluginLoader::activePlugins()['multilang-translate'] ?? null;
-        $fields = ['switcher_enabled', 'switcher_style', 'switcher_position', 'switcher_bg', 'switcher_fg', 'switcher_accent'];
-        foreach ($fields as $f) {
-            if (!isset($_POST[$f])) continue;
-            $val = (string)$_POST[$f];
+        // The colours are printed into the widget's inline style: hex only. Style and position are fixed lists.
+        [$values, $errors] = MLT_SwitcherSettings::clean($_POST);
+        if ($errors !== []) {
+            mlt_json(['error' => __('mlt_switcher_invalid', 'Not saved: colours must be hex values such as #111827, and style and position must be one of the listed options.'), 'fields' => $errors], 422);
+        }
+        foreach ($values as $f => $val) {
             if ($plugin) $plugin->setSetting($f, $val);
             else Database::setSetting('multilang-translate.' . $f, $val);
         }

@@ -424,6 +424,7 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
                 s6_block('theme.post_meta', ['show_category' => true, 'show_author' => false, 'show_date' => false]),
                 s6_block('theme.post_content', []),
             ], 'Single Section');
+            $singleSection['layout']['width'] = 'narrow';
             $tplSingleEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, $tplSingleId, [
                 new DocumentOperation('insert_section', ['index' => 0, 'section' => $singleSection]),
                 new DocumentOperation('update_settings', ['settings' => [
@@ -447,6 +448,11 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             assert_null($rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/single-eng')), 'the template is not a public page');
             $editor = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->renderForEditor($actorA, $p1Id));
             assert_false(str_contains($editor->html, 'Engineering single layout'), 'the editor canvas edits the page itself, without the template');
+            // So the editor asks which template lays the page out live, and how wide its content is (the width note).
+            $layout = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->layoutTemplate($actorA, $p1Id));
+            assert_eq(['id' => $tplSingleId, 'title' => 'Engineering Single', 'content_width' => 'narrow'], $layout, 'the matching Single template and its content width');
+            assert_null($rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->layoutTemplate($actorA, $p2Id)), 'a page its conditions do not match has none');
+            assert_null($rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->layoutTemplate($actorA, $tplSingleId)), 'nor has the template itself');
 
             // Publishing a change to the template reaches the page without republishing the page.
             $tplSingleDraft = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->loadEditorDocument($actorA, $tplSingleId));

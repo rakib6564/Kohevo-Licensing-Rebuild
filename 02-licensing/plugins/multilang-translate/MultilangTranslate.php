@@ -21,6 +21,7 @@ require_once __DIR__ . '/includes/StringRepo.php';
 require_once __DIR__ . '/includes/Harvester.php';
 require_once __DIR__ . '/includes/Replacer.php';
 require_once __DIR__ . '/includes/Crawler.php';
+require_once __DIR__ . '/includes/SwitcherSettings.php';
 require_once __DIR__ . '/MultilangTranslateMcpHandler.php';
 
 class MultilangTranslate extends Plugin {

@@ -13,6 +13,7 @@ namespace Slate\Module\StudioBuilder\Theme;
 
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
+use Slate\Module\StudioBuilder\Meta\PageMeta;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeSource;
 
 final class ThemeTemplateResolver
@@ -127,6 +128,59 @@ final class ThemeTemplateResolver
     public function resolveFooter(PageAddress $page, array $context = []): ?ChromeSource
     {
         return $this->resolveChrome('footer', $page, $context);
+    }
+
+    /**
+     * The condition context a page's Single template is chosen by, beyond the page itself: the document's category,
+     * and its custom content type when it has one (otherwise the page type stands in for it). The compiler and the
+     * editor's `layout_template` query both use it, so the editor names the template the live page really gets.
+     *
+     * @param array<string, mixed> $settings the page document's settings
+     * @return array<string, string>
+     */
+    public static function singleContext(array $settings, int $tenantId, int $pageId): array
+    {
+        $context = [];
+        if (is_string($settings['category'] ?? null) && $settings['category'] !== '') {
+            $context['category'] = $settings['category'];
+        }
+        try {
+            $type = PageMeta::read($tenantId, $pageId)['type'];
+            if ($type !== '') {
+                $context['content_type'] = $type;
+            }
+        } catch (\Throwable) {
+            // No custom content type: the page type stands in for it.
+        }
+        return $context;
+    }
+
+    /**
+     * The width of the section a Single template puts the page's content in (the section holding its first Post
+     * content block, at any depth), or null when the template has no Post content block.
+     *
+     * @param array<string, mixed> $template the template's document
+     */
+    public static function contentWidth(array $template): ?string
+    {
+        $holds = static function (array $blocks) use (&$holds): bool {
+            foreach ($blocks as $block) {
+                if (!is_array($block)) {
+                    continue;
+                }
+                if (($block['type'] ?? '') === 'theme.post_content' || $holds(is_array($block['children'] ?? null) ? $block['children'] : [])) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        foreach (is_array($template['sections'] ?? null) ? $template['sections'] : [] as $section) {
+            if (is_array($section) && $holds(is_array($section['blocks'] ?? null) ? $section['blocks'] : [])) {
+                $width = $section['layout']['width'] ?? 'wide';
+                return in_array($width, \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::ALLOWED_CONTAINER_WIDTHS, true) ? $width : 'wide';
+            }
+        }
+        return null;
     }
 
     /**

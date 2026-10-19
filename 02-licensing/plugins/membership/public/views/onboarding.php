@@ -96,7 +96,7 @@ $steps   = [
             </div>
 
         <?php else: /* step 4 */
-            $termsUrl = (string) Database::setting('membership.terms_url');
+            $termsUrl = MembershipAPI::termsUrl();
             $siteName  = (string) (Database::setting('site_name') ?: 'Solaya');
             // Build the anchor: linked when a URL is configured, plain bold fallback otherwise
             $termsLink = $termsUrl !== ''
