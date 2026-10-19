@@ -136,7 +136,8 @@ jobs:
             ('booking','Booking Plus','1.0.0','active','{"slug":"booking","name":"Booking Plus"}'),
             ('forms','Forms','1.0.0','active','{"slug":"forms","name":"Forms"}'),
             ('membership','Membership','1.0.0','active','{"slug":"membership","name":"Membership"}'),
-            ('stripe-payment','Stripe Payment Gateway','1.0.0','active','{"slug":"stripe-payment","name":"Stripe Payment Gateway"}')
+            ('stripe-payment','Stripe Payment Gateway','1.0.0','active','{"slug":"stripe-payment","name":"Stripe Payment Gateway"}'),
+            ('studio-builder','Kohevo Studio','1.0.0','active','{"slug":"studio-builder","name":"Kohevo Studio"}')
             ON DUPLICATE KEY UPDATE status=VALUES(status), manifest_json=VALUES(manifest_json);
           SQL
 
@@ -145,6 +146,23 @@ jobs:
           (cd 01-client && php tests/fixtures/booking-schema.php)
           mysql -h 127.0.0.1 -uroot -proot root_slate_t9 < 01-client/plugins/membership/install.sql
           mysql -h 127.0.0.1 -uroot -proot root_slate_t9 < 01-client/plugins/stripe-payment/install.sql
+          # Studio tests outside the Studio runner (templates, permissions) need its tables, and the plugin active.
+          mysql -h 127.0.0.1 -uroot -proot root_slate_t9 < 01-client/plugins/studio-builder/install.sql
+
+          # Central serves every module, so its full suite (R4) needs every plugin's schema installed and active.
+          # Except licensing: it runs on the license server only, never beside the modules (see its install.sql),
+          # and the Phase 10 fixture drops and recreates its tables itself.
+          for d in 02-licensing/plugins/*/; do
+            if [ -f "$d/install.sql" ]; then mysql -h 127.0.0.1 -uroot -proot root_slate_t20 < "$d/install.sql"; fi
+          done
+          (cd 02-licensing && php tests/fixtures/booking-schema.php)
+          php -r '
+            foreach (glob("02-licensing/plugins/*/plugin.json") as $f) {
+              $m = json_decode(file_get_contents($f), true);
+              if ($m["slug"] === "licensing") continue;
+              $q = fn($v) => "\x27" . addslashes((string) $v) . "\x27";
+              echo "INSERT INTO plugins (slug,name,version,status,manifest_json) VALUES (" . $q($m["slug"]) . "," . $q($m["name"]) . "," . $q($m["version"]) . ",\x27active\x27," . $q(json_encode(["slug" => $m["slug"], "name" => $m["name"]])) . ") ON DUPLICATE KEY UPDATE status=VALUES(status), version=VALUES(version), manifest_json=VALUES(manifest_json);\n";
+            }' | mysql -h 127.0.0.1 -uroot -proot root_slate_t20
 
       - name: Run 01-client smoke & licensing suites
         run: |
@@ -163,6 +181,17 @@ jobs:
           php 01-client/tests/run-phase10-licensing.php
           php 01-client/tests/run-phase11-security.php
           php 01-client/tests/run-phase13-legacy.php
+
+      - name: Install Composer packages (PHPMailer, for the SMTP OAuth tests in both trees)
+        run: |
+          composer install --working-dir=01-client --no-interaction --no-progress --prefer-dist
+          composer install --working-dir=02-licensing --no-interaction --no-progress --prefer-dist
+
+      - name: Run 01-client full unit & integration suites
+        run: |
+          # Every client test, not only the focused runners above: most security and settings tests live here (R4).
+          php 01-client/tests/unit/run.php
+          php 01-client/tests/integration/run.php
 
       - name: Run Kohevo Studio (studio-builder) unit & integration suites
         run: |
@@ -197,6 +226,12 @@ jobs:
           php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/Phase10CheckInSyncTest.php'; exit(unit_summary());"
           php -r "require '02-licensing/config.php'; require '02-licensing/tests/guard.php'; slate_require_test_database(); require '02-licensing/tests/unit/harness.php'; require '02-licensing/tests/integration/Phase13LegacyAdminTest.php'; exit(unit_summary());"
           php 02-licensing/tests/run-phase2-race.php
+
+      - name: Run 02-licensing full unit & integration suites
+        run: |
+          # Every central test, including the security tests shared with the client tree (R4, P-01).
+          php 02-licensing/tests/unit/run.php
+          php 02-licensing/tests/integration/run.php
 
   studio-e2e:
     name: Studio builder e2e (Playwright)
