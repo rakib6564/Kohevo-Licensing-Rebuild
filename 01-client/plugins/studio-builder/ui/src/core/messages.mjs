@@ -108,6 +108,7 @@ const EN = {
   gradient_hint: 'A two-colour linear gradient. Pick the colours and the direction.',
   dimensions_label: 'Dimensions',
   dimension_width: 'Width',
+  dimension_height: 'Height',
   dimension_min_height: 'Min Height',
   dimension_max_width: 'Max Width',
   opacity_label: 'Opacity',

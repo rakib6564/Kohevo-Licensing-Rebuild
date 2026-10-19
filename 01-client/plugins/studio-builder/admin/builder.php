@@ -486,6 +486,7 @@ $sbBoot = [
         'gradient_hint' => __('studio_ui_gradient_hint', 'A two-colour linear gradient. Pick the colours and the direction.'),
         'dimensions_label' => __('studio_ui_dimensions_label', 'Dimensions'),
         'dimension_width' => __('studio_ui_dimension_width', 'Width'),
+        'dimension_height' => __('studio_ui_dimension_height', 'Height'),
         'dimension_min_height' => __('studio_ui_dimension_min_height', 'Min Height'),
         'dimension_max_width' => __('studio_ui_dimension_max_width', 'Max Width'),
         'opacity_label' => __('studio_ui_opacity_label', 'Opacity'),
