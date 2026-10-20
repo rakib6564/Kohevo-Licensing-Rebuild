@@ -73,12 +73,13 @@ export function IconChoice({ label, kind, value, options, onChange }) {
   );
 }
 
-export function SelectField({ id, label, value, options, onChange, emptyLabel }) {
+/** `emptyLabel: null` offers no empty choice (the field always has a value); `optionLabels` names options differently. */
+export function SelectField({ id, label, value, options, onChange, emptyLabel, optionLabels = null }) {
   return (
     <Field label={label} htmlFor={id}>
       <select id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value || undefined)}>
-        <option value="">{emptyLabel ?? t('inherit')}</option>
-        {options.map((o) => <option key={o} value={o}>{optLabel(o)}</option>)}
+        {emptyLabel !== null && <option value="">{emptyLabel ?? t('inherit')}</option>}
+        {options.map((o) => <option key={o} value={o}>{(optionLabels && optionLabels[o]) || optLabel(o)}</option>)}
       </select>
     </Field>
   );
@@ -163,16 +164,21 @@ function ThemeColor({ id, label, value, onChange, tokens, fallback }) {
   );
 }
 
-/** Four sides of margin or padding, optionally linked so one value sets all four. */
-export function SpacingBox({ id, group, label, get, putAll, placeholder = '0' }) {
-  const values = SIDES.map((s) => get(`${group}.${s}`));
+/**
+ * Four values (the sides of margin or padding; or, with `keys` and `pathOf`, a border's side widths or its corners),
+ * optionally linked so one value sets all four.
+ */
+export function SpacingBox({ id, group, label, get, putAll, placeholder = '0', keys = SIDES, pathOf = null, labelOf = null }) {
+  const at = pathOf || ((k) => `${group}.${k}`);
+  const nameOf = labelOf || ((k) => t(`side_${k}`));
+  const values = keys.map((k) => get(at(k)));
   const [linked, setLinked] = useState(() => values.every((v) => v === values[0]));
   const shown = values.map(unitOf).find(Boolean);
   const [unit, setUnit] = useState(shown || 'px');
   // One unit for all four sides, like the reference: a bare number takes it, and choosing another converts what is set.
   const chooseUnit = (next) => {
     setUnit(next);
-    const converted = SIDES.map((side, i) => [`${group}.${side}`, unitOf(values[i]) ? values[i].replace(/[a-z%]+$/i, next) : values[i]]);
+    const converted = keys.map((k, i) => [at(k), unitOf(values[i]) ? values[i].replace(/[a-z%]+$/i, next) : values[i]]);
     if (converted.some(([, v], i) => v !== values[i])) putAll(converted);
   };
   return (
@@ -184,16 +190,16 @@ export function SpacingBox({ id, group, label, get, putAll, placeholder = '0' })
         ))}
       </div>
       <div className="sbx-spacing__grid">
-        {SIDES.map((side) => (
+        {keys.map((k) => (
           <DraftText
-            key={side}
-            id={pathId(id, `${group}.${side}`)}
-            path={`${group}.${side}`}
-            label={t(`side_${side}`)}
-            value={get(`${group}.${side}`)}
+            key={k}
+            id={pathId(id, at(k))}
+            path={at(k)}
+            label={nameOf(k)}
+            value={get(at(k))}
             placeholder={placeholder}
             bareUnit={unit}
-            onCommit={(v) => putAll((linked ? SIDES : [side]).map((s) => [`${group}.${s}`, v]))}
+            onCommit={(v) => putAll((linked ? keys : [k]).map((x) => [at(x), v]))}
           />
         ))}
         <button
@@ -261,13 +267,23 @@ function ItemFields({ id, style, onChange }) {
   );
 }
 
-/** `defaultDisplay`: what the block is when it has no display of its own (a Container is a flex box from the start). */
-export function LayoutPane({ style, onChange, deviceScope, defaultDisplay }) {
+/**
+ * `defaultDisplay`: what the block is when it has no display of its own (a Container is a flex box from the start).
+ * `itemOnly`: only how the block sits in its parent (a Container sets its own layout in its Container section).
+ */
+export function LayoutPane({ style, onChange, deviceScope, defaultDisplay, itemOnly = false }) {
   const id = useId();
   const f = useFields(style, onChange);
   const display = f.get('layout.display') || defaultDisplay;
   const flex = display === 'flex' || display === 'inline-flex';
   const grid = display === 'grid';
+  if (itemOnly) {
+    return deviceScope ? (
+      <DeviceStyle scope={deviceScope} paths={RESPONSIVE_SCOPES.item} label={t('layout_as_item')}>
+        {(view) => <ItemFields id={id} style={view.style} onChange={view.onChange} />}
+      </DeviceStyle>
+    ) : <ItemFields id={id} style={style} onChange={onChange} />;
+  }
   return (
     <>
       <Segmented label={t('layout_display')} value={display} options={OPTIONS.display} onChange={(v) => f.put('layout.display', v)} />
@@ -372,18 +388,14 @@ export function BorderExtras({ style, onChange, tokens }) {
   const f = useFields(style, onChange);
   return (
     <>
-      <fieldset className="sbx-fieldset sbx-spacing">
-        <legend>{t('border_corners')}</legend>
-        <div className="sbx-spacing__grid">
-          {CORNERS.map((c) => <Length key={c} id={id} path={`border.radius_corners.${c}`} label={t(`corner_${c}`)} get={f.get} put={f.put} placeholder="0" />)}
-        </div>
-      </fieldset>
+      {/* Each side's width and each corner's radius, linked by default like margin and padding. */}
+      <SpacingBox id={`${id}-bw`} label={t('border_side_widths')} get={f.get} putAll={f.putAll} placeholder="0" pathOf={(s) => `border.${s}.width`} />
+      <SpacingBox id={`${id}-br`} label={t('border_corners')} get={f.get} putAll={f.putAll} placeholder="0" keys={CORNERS} pathOf={(c) => `border.radius_corners.${c}`} labelOf={(c) => t(`corner_${c}`)} />
       <details className="sbx-more">
         <summary>{t('border_per_side')}</summary>
         {SIDES.map((s) => (
           <fieldset key={s} className="sbx-fieldset">
             <legend>{t(`side_${s}`)}</legend>
-            <Length id={id} path={`border.${s}.width`} label={t('border_width')} get={f.get} put={f.put} placeholder="1px" />
             <SelectField id={pathId(id, `border.${s}.style`)} label={t('border_style')} value={f.get(`border.${s}.style`)} options={OPTIONS.borderStyle} onChange={(v) => f.put(`border.${s}.style`, v)} />
             <ThemeColor id={pathId(id, `border.${s}.color`)} label={t('border_color')} value={f.get(`border.${s}.color`)} onChange={(v) => f.put(`border.${s}.color`, v)} tokens={tokens} />
           </fieldset>

@@ -203,7 +203,16 @@ final class DocumentRenderer
 
         $metadata = empty($block[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($block['id'] ?? ''), $type) : '';
         $tag = isset($block['tag']) && is_string($block['tag']) && in_array($block['tag'], CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS, true) ? $block['tag'] : 'div';
-        return '<' . $tag . Html::classAttr($classes) . $metadata . $attrs . $styleAttr . '>' . $inner . '</' . $tag . '>';
+        $href = '';
+        if ($tag === 'a') {
+            // A linked wrapper: its address passes the URL allowlist again here; without one it is a plain anchor.
+            $link = is_array($block['link'] ?? null) ? $block['link'] : [];
+            $url = Html::safeUrl($link['url'] ?? null);
+            if ($url !== null) {
+                $href = ' href="' . Html::e($url) . '"' . (($link['new_tab'] ?? false) === true ? ' target="_blank" rel="noopener noreferrer"' : '');
+            }
+        }
+        return '<' . $tag . $href . Html::classAttr($classes) . $metadata . $attrs . $styleAttr . '>' . $inner . '</' . $tag . '>';
     }
 
     /**

@@ -93,6 +93,19 @@ function emitTable(group, values, table, out) {
   }
 }
 
+/** StyleSurface::emitBoxed: a boxed block holds its children to `layout.content_max` with side padding, one declaration a side. */
+function emitBoxed(style, out) {
+  const layout = isObj(style.layout) ? style.layout : {};
+  if (layout.content_width !== 'boxed' || !ok('layout.content_max', layout.content_max)) return;
+  const max = String(layout.content_max).trim();
+  const padding = isObj(style.padding) ? style.padding : {};
+  for (const side of ['left', 'right']) {
+    const own = side in padding && ok(`padding.${side}`, padding[side]) ? String(padding[side]).trim() : '0px';
+    for (let i = out.length - 1; i >= 0; i--) if (out[i].startsWith(`padding-${side}:`)) out.splice(i, 1);
+    out.push(`padding-${side}:max(${own},calc((100% - ${max})/2))`);
+  }
+}
+
 function emitSides(group, values, out) {
   if (!isObj(values)) return;
   for (const side of SIDES) {
@@ -157,6 +170,7 @@ export function scopedDeclarations(style) {
   }
   emitSides('margin', style.margin, out);
   emitSides('padding', style.padding, out);
+  emitBoxed(style, out);
   emitTable('dimensions', style.dimensions, DIMENSIONS, out);
   if (isObj(style.border)) {
     for (const side of SIDES) {

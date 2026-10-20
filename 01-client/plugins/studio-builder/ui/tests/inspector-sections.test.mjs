@@ -64,8 +64,9 @@ test('sections start open where they matter: content always; typography for text
 });
 
 test('a tab with nothing flagged opens its first section, never a wall of closed headers', () => {
-  const ctx = ctxOf('core.container');
+  const ctx = ctxOf('layout.flex');
   assert.deepEqual(defaultOpenIds('content', ctx), ['content']); // a container's own Layout props; flex/grid options stay closed
+  assert.deepEqual(defaultOpenIds('content', ctxOf('core.container')), ['container']); // the Container section
   assert.deepEqual(defaultOpenIds('style', inspectorContext({ id: 'b', type: 'x.y', style: {} }, { style_capabilities: [] })), ['states']);
 });
 
@@ -143,7 +144,7 @@ test('a page section has the same three tabs, with its own smaller list of group
 });
 
 test('a container shows its flex and grid options under Content (closed) and titles its props Layout; a leaf block keeps Layout under Advanced', () => {
-  const container = ctxOf('core.container');
+  const container = ctxOf('layout.flex');
   assert.ok(ids('content', container).includes('layout'));
   assert.ok(!defaultOpenIds('content', container).includes('layout'));
   assert.equal(titleKeyOf(SECTIONS.find((x) => x.id === 'content'), container), 'section_layout');
@@ -151,6 +152,29 @@ test('a container shows its flex and grid options under Content (closed) and tit
   assert.equal(titleKeyOf(SECTIONS.find((x) => x.id === 'layout'), ctxOf('core.heading')), 'section_layout');
   assert.ok(!ids('advanced', container).includes('layout'));
   assert.ok(ids('advanced', ctxOf('core.heading')).includes('layout'));
+});
+
+test('the Container block has one Container section under Content, like the reference editor, and the panes it replaces step aside', () => {
+  const box = ctxOf('core.container');
+  assert.deepEqual(ids('content', box), ['container']);
+  assert.equal(titleKeyOf(SECTIONS.find((x) => x.id === 'container'), box), 'section_container');
+  // How it sits in its own parent stays, under Advanced; the HTML element is in the Container section.
+  assert.ok(ids('advanced', box).includes('layout'));
+  assert.equal(titleKeyOf(SECTIONS.find((x) => x.id === 'layout'), box), 'layout_as_item');
+  assert.ok(!ids('advanced', box).includes('tag'));
+  // Text alignment and typography are not container options, but a value already set keeps its section.
+  assert.ok(!ids('style', box).includes('align'));
+  assert.ok(!ids('style', ctxOf('core.container', { style: { align: { base: 'left' } } })).includes('align'), 'the default alignment is not a setting');
+  assert.ok(!ids('style', box).includes('typography'));
+  const styled = ctxOf('core.container', { style: { align: { base: 'center' }, typography: { size: '2rem' } } });
+  assert.ok(ids('style', styled).includes('align'));
+  assert.ok(ids('style', styled).includes('typography'));
+  assert.ok(!defaultOpenIds('style', box).includes('dimensions'));
+  const summary = SECTIONS.find((x) => x.id === 'container').summary;
+  assert.equal(summary(box), 'flex');
+  assert.equal(summary(ctxOf('core.container', { style: { layout: { display: 'grid', content_width: 'boxed', content_max: '1300px' } } })), 'grid · 1300px');
+  // Other containers keep their panes.
+  assert.ok(!ids('content', ctxOf('layout.flex')).includes('container'));
 });
 
 test('Style Alignment is named so it cannot be mistaken for the block\'s own Alignment field', () => {

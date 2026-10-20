@@ -3446,3 +3446,13 @@ html, body.sbx-body {
 .sbx-colorfield__swatch { flex: 0 0 auto; width: 32px; height: 32px; padding: 0; border: 1px solid var(--sbx-border); border-radius: var(--sbx-r-md); background: none; cursor: pointer; }
 .sbx-colorfield__swatch[data-empty="true"] { opacity: 0.45; }
 .sbx-colorfield__text { flex: 1 1 auto; min-width: 0; }
+
+/* Container section (ContainerPane): column and row gap side by side with their link, each label under its box. */
+.sbx-gaps__row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; align-items: start; }
+.sbx-inspector .sbx-gaps .sbx-gaps__row .sbx-field.sbx-field { display: flex !important; flex-direction: column-reverse; margin: 0; }
+.sbx-inspector .sbx-gaps .sbx-gaps__row .sbx-field > .sbx-field__label { margin: 4px 0 0; text-align: center; font-weight: 400; font-size: var(--sbx-fs-xs); }
+.sbx-gaps__row input { text-align: center; }
+.sbx-gaps__row .sbx-spacing__link { margin: 0; }
+.sbx-containerpane__head { margin: 14px 0 8px; font-size: var(--sbx-fs-sm); font-weight: 700; color: var(--sbx-text); }
+/* Corner names ("Top left") are longer than side names: they may take two lines under their box. */
+.sbx-spacing--box .sbx-spacing__grid > .sbx-field .sbx-field__label { white-space: normal; line-height: 1.15; }

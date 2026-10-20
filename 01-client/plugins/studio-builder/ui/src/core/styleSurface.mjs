@@ -28,7 +28,9 @@ export const OPTIONS = Object.freeze({
   cursor: ['auto', 'default', 'pointer', 'text', 'move', 'not-allowed', 'grab'],
   easing: ['ease', 'ease-in', 'ease-out', 'ease-in-out', 'linear'],
   states: ['hover', 'focus', 'active', 'disabled'],
-  tags: ['div', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'figure'],
+  tags: ['div', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'figure', 'main', 'a'],
+  contentWidth: ['boxed', 'full'],
+  attachment: ['scroll', 'fixed'],
 });
 
 /** Numeric `effects` groups: field => [min, max, unit]. */
@@ -90,6 +92,8 @@ add('layout.grow', int(0, 10));
 add('layout.shrink', int(0, 10));
 add('layout.columns', int(1, 12));
 add('layout.rows', int(1, 12));
+add('layout.content_width', enumOf(OPTIONS.contentWidth));
+add('layout.content_max', measure(false));
 
 add('position.mode', enumOf(OPTIONS.position));
 for (const s of SIDES) {

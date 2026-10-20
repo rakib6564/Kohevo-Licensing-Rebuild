@@ -241,6 +241,10 @@ final class DocumentNormalizer
         if (isset($block['tag']) && is_string($block['tag']) && $block['tag'] !== 'div') {
             $normalizedBlock['tag'] = $block['tag'];
         }
+        // Where an `a` wrapper points: kept with that tag only.
+        if (($normalizedBlock['tag'] ?? null) === 'a' && is_array($block['link'] ?? null) && $block['link'] !== []) {
+            $normalizedBlock['link'] = CanonicalJson::sortKeysRecursively($block['link']);
+        }
         // Interaction states: empty states (and an empty map) are dropped, so the canonical form has no `style_states` unless one does something.
         if (array_key_exists('style_states', $block) && is_array($block['style_states'])) {
             $states = [];

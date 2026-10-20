@@ -18,12 +18,14 @@ import { BorderExtras, DimensionsExtras, EffectsPane, LayoutPane, PositionPane, 
 import { COLOUR_TOKEN_CATEGORIES, OPTIONS } from '../../core/styleSurface.mjs';
 import { EntranceSelect, MotionInspector } from './MotionInspector.jsx';
 import { ClassNamesField, DataAttributes, IdentityFields } from './AdvancedControls.jsx';
+import { ContainerPane } from './ContainerPane.jsx';
+import { BackgroundStates } from './BackgroundStates.jsx';
 import { InspectorShell } from './InspectorShell.jsx';
 import { InspectorHeader } from './InspectorHeader.jsx';
 import { InspectorBar } from './InspectorBar.jsx';
 import { asList, asObject, blockDefinition, blockIndentTarget, blockMoveTarget, blockOutdentTarget } from '../../core/doc.mjs';
 import { STYLE_TOKEN_CATEGORIES, tokensFor } from '../../core/fields.mjs';
-import { MEDIA_TYPES, alignTitleKey } from '../../core/inspectorSections.mjs';
+import { CONTAINER_TYPE, MEDIA_TYPES, alignTitleKey } from '../../core/inspectorSections.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
 import { IconButton } from './InspectorIcons.jsx';
@@ -153,7 +155,27 @@ export function BlockInspector({ info }) {
         </Popover>
       );
     },
-    background: () => <StyleControls style={style} capabilities={capabilities} only="background" mediaPicker={boot.mediaPicker} onChange={saveStyle} tokens={manifest && manifest.tokens} />,
+    container: () => (
+      <ContainerPane
+        key={block.id}
+        block={block}
+        style={style}
+        onChange={saveStyle}
+        deviceScope={deviceScope}
+        onTag={(tag, link) => save(ops.updateBlockTag(block.id, tag, link))}
+      />
+    ),
+    // Normal is the block's own background; Hover is its hover state's, beside the transition that eases into it.
+    background: () => (
+      <BackgroundStates
+        style={style}
+        states={block.style_states}
+        onStyle={saveStyle}
+        onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))}
+      >
+        <StyleControls style={style} capabilities={capabilities} only="background" mediaPicker={boot.mediaPicker} onChange={saveStyle} tokens={manifest && manifest.tokens} />
+      </BackgroundStates>
+    ),
     border: () => (
       <Popover
         label={t('edit_border')}
@@ -181,7 +203,7 @@ export function BlockInspector({ info }) {
         <DimensionsExtras style={style} media={MEDIA_TYPES.has(block.type)} onChange={saveStyle} />
       </>
     ),
-    layout: () => <LayoutPane style={style} onChange={saveStyle} deviceScope={deviceScope} defaultDisplay={LAYOUT_DISPLAY[block.type]} />,
+    layout: () => <LayoutPane style={style} onChange={saveStyle} deviceScope={deviceScope} defaultDisplay={LAYOUT_DISPLAY[block.type]} itemOnly={block.type === CONTAINER_TYPE} />,
     position: () => <PositionPane style={style} onChange={saveStyle} />,
     effects: () => <EffectsPane style={style} onChange={saveStyle} />,
     states: () => <StatesPane type={block.type} states={block.style_states} onChange={(next) => save(ops.updateBlockStyleStates(block.id, next))} />,

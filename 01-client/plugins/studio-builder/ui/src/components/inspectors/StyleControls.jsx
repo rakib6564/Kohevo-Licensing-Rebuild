@@ -28,7 +28,8 @@ import { parseOverlay } from '../../core/overlayColor.mjs';
 import { t } from '../../core/messages.mjs';
 import { Pills, Field, Popover } from '../ui/index.js';
 import { acceptsDraft } from '../../core/styleValues.mjs';
-import { acceptsSurfaceDraft, setPath } from '../../core/styleSurface.mjs';
+import { OPTIONS, acceptsSurfaceDraft, setPath } from '../../core/styleSurface.mjs';
+import { optionLabel } from '../../core/optionLabels.mjs';
 import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
 import { DeviceStyle } from './DeviceStyle.jsx';
 import { MediaControl } from '../fields/MediaControl.jsx';
@@ -425,6 +426,13 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
                 <Field label={t('bg_repeat')} htmlFor={`${id}-bg-repeat`}>
                   <select id={`${id}-bg-repeat`} value={BG_REPEAT.includes(bg.repeat) ? bg.repeat : 'no-repeat'} onChange={(e) => patchBackground({ repeat: e.target.value })}>
                     {BG_REPEAT.map((r) => <option key={r} value={r}>{t(`repeat_${r.replace('-', '_')}`)}</option>)}
+                  </select>
+                </Field>
+                {/* Fixed keeps the picture still while the page scrolls past it. */}
+                <Field label={t('bg_attachment')} htmlFor={`${id}-bg-attachment`}>
+                  <select id={`${id}-bg-attachment`} value={OPTIONS.attachment.includes(bg.attachment) ? bg.attachment : ''} onChange={(e) => patchBackground({ attachment: e.target.value || undefined })}>
+                    <option value="">{t('tag_default')}</option>
+                    {OPTIONS.attachment.map((a) => <option key={a} value={a}>{optionLabel(a)}</option>)}
                   </select>
                 </Field>
                 <FocalPad

@@ -139,7 +139,7 @@ unit('p3b schema: block tag is an allow-listed element name', function (): void 
     foreach (CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS as $tag) {
         assert_true(DocumentValidator::validate(sbop_doc([], ['tag' => $tag]), $registry)->isValid(), "tag {$tag} is valid");
     }
-    foreach (['script', 'iframe', 'a', 'div onclick=x', 'DIV', '', 5, ['div'], null] as $bad) {
+    foreach (['script', 'iframe', 'button', 'form', 'div onclick=x', 'DIV', '', 5, ['div'], null] as $bad) {
         assert_false(DocumentValidator::validate(sbop_doc([], ['tag' => $bad]), $registry)->isValid(), 'tag ' . json_encode($bad) . ' must be refused');
     }
 });

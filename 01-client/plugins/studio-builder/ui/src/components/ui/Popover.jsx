@@ -21,10 +21,19 @@ export function Popover({ label, row, children }) {
 
   useEffect(() => {
     if (!open) return undefined;
-    const away = (e) => { if (root.current && !root.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('pointerdown', away);
+    // Closed on the click, not the press: closing the card shortens the Inspector, and a scrolled panel then moved under the
+    // pointer between press and release, so the control the author was reaching for never got its click. Where the press
+    // began decides: a click inside the card may re-render it and detach its own target, which is not a click outside.
+    let pressedInside = false;
+    const press = (e) => { pressedInside = !!(root.current && root.current.contains(e.target)); };
+    const away = (e) => { if (!pressedInside && root.current && !root.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('pointerdown', press, true);
+    document.addEventListener('click', away);
     if (card.current) card.current.focus();
-    return () => document.removeEventListener('pointerdown', away);
+    return () => {
+      document.removeEventListener('pointerdown', press, true);
+      document.removeEventListener('click', away);
+    };
   }, [open]);
 
   const close = () => { setOpen(false); if (trigger.current) trigger.current.focus(); };

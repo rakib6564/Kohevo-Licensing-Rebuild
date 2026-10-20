@@ -1,5 +1,5 @@
-// The flex container: a Container block is a flex box whose direction, wrap, alignment and gaps are set from the Layout
-// pane, differ per device, and show on the canvas at once; its children carry their own flex item settings.
+// The flex container: a Container block is a flex box whose direction, wrap, alignment and gaps are set from its Container
+// section, differ per device, and show on the canvas at once; its children carry their own flex item settings.
 import { test, expect } from '@playwright/test';
 import { openBuilder, settled, sandboxPageId, openSection, undoReady } from './helpers.mjs';
 
@@ -52,14 +52,14 @@ test('a Container is a flex box: its direction, wrap and alignment are set and d
     await expect(box).toHaveCount(1);
     expect(await css(box, 'display')).toBe('flex');
 
-    const body = await openSection(page, 'layout');
+    const body = await openSection(page, 'container');
     const group = (name) => body.getByRole('group', { name, exact: true });
     await group('Direction').getByRole('button', { name: 'Row', exact: true }).click();
     await group('Wrap').getByRole('button', { name: 'Wrap', exact: true }).click();
     await group('Justify').getByRole('button', { name: 'Space between', exact: true }).click();
     await group('Align items').getByRole('button', { name: 'Center', exact: true }).click();
     await body.getByLabel('Align content', { exact: true }).selectOption('between');
-    const gap = body.getByLabel('Gap', { exact: true });
+    const gap = body.getByRole('textbox', { name: 'Column', exact: true }); // linked with Row
     await gap.fill('3rem');
     await gap.press('Enter');
     await settled(page);
@@ -71,14 +71,14 @@ test('a Container is a flex box: its direction, wrap and alignment are set and d
     expect(await css(box, 'alignContent')).toBe('space-between');
 
     // the phone gets its own direction: pick Mobile in the layout's device bar, then Column
-    await body.getByRole('group', { name: /Flex container/ }).getByRole('button', { name: 'Mobile', exact: true }).click();
+    await body.getByRole('group', { name: /^Items/ }).getByRole('button', { name: 'Mobile', exact: true }).click();
     await group('Direction').getByRole('button', { name: 'Column', exact: true }).click();
     await settled(page);
     await expect.poll(() => css(box, 'flexDirection'), { timeout: 15_000 }).toBe('column');
     expect(await css(box, 'justifyContent')).toBe('space-between'); // everything not overridden stays
 
     // back on desktop the row is still there
-    await body.getByRole('group', { name: /Flex container/ }).getByRole('button', { name: 'Desktop', exact: true }).click();
+    await body.getByRole('group', { name: /^Items/ }).getByRole('button', { name: 'Desktop', exact: true }).click();
     await expect.poll(() => css(box, 'flexDirection'), { timeout: 15_000 }).toBe('row');
   } finally {
     await restore(page, before).catch(() => {});

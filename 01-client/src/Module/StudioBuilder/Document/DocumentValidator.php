@@ -810,6 +810,14 @@ final class DocumentValidator
             $errors[] = ValidationResult::issue("{$path}.tag", 'invalid_tag', 'block.tag must be one of: ' . implode(', ', CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS) . '.');
         }
 
+        // Where an `a` wrapper points.
+        if (array_key_exists('link', $block)) {
+            $linkIssue = CanonicalDocumentSchema::blockLinkIssue($block['link']);
+            if ($linkIssue !== null) {
+                $errors[] = ValidationResult::issue("{$path}.link", 'invalid_link', $linkIssue);
+            }
+        }
+
         // Interaction-state overlays (hover/focus/active/disabled).
         if (array_key_exists('style_states', $block)) {
             foreach (StyleSurface::stateIssues($block['style_states'], "{$path}.style_states") as $issue) {
