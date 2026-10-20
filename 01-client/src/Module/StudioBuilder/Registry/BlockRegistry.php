@@ -144,17 +144,22 @@ final class BlockRegistry
             icon: 'heading',
             schema: FieldSchema::define([
                 ['key' => 'text', 'type' => 'string', 'label' => 'Heading Text', 'required' => true, 'default' => 'Section Heading', 'max_length' => 300],
+                // Title, Link, HTML Tag, then the highlight, in the order the reference editor shows them.
+                ['key' => 'url', 'type' => 'url', 'label' => 'Link', 'required' => false, 'default' => null],
+                ['key' => 'new_tab', 'type' => 'boolean', 'label' => 'Open in a new tab', 'required' => false, 'default' => false],
+                // The HTML element: a heading level, or div / span / p for text styled as a heading that is not one.
+                ['key' => 'level', 'type' => 'enum', 'label' => 'HTML Tag', 'required' => false, 'allowed_values' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'span', 'p'], 'default' => 'h2'],
                 ['key' => 'highlight', 'type' => 'string', 'label' => 'Highlighted Word', 'required' => false, 'default' => '', 'max_length' => 100],
                 ['key' => 'highlight_color_token', 'type' => 'token_ref', 'label' => 'Highlight colour (theme)', 'required' => false, 'default' => null],
                 ['key' => 'highlight_color', 'type' => 'string', 'label' => 'Highlight colour (custom)', 'required' => false, 'default' => '', 'max_length' => 40, 'format' => 'color', 'pattern' => Html::HIGHLIGHT_COLOR_PATTERN],
                 ['key' => 'highlight_italic', 'type' => 'boolean', 'label' => 'Highlight in italic', 'required' => false, 'default' => false],
                 ['key' => 'highlight_weight', 'type' => 'enum', 'label' => 'Highlight weight', 'required' => false, 'allowed_values' => ['inherit', 'normal', 'medium', 'bold'], 'default' => 'inherit'],
                 ['key' => 'highlight_underline', 'type' => 'boolean', 'label' => 'Highlight underlined', 'required' => false, 'default' => false],
-                ['key' => 'level', 'type' => 'enum', 'label' => 'Heading Level', 'required' => false, 'allowed_values' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], 'default' => 'h2'],
             ]),
             allowsChildren: false,
             allowedBindingProviders: ['content.posts', 'content.authors', 'content.taxonomy', 'booking.services', 'membership.plans', 'forms.form'],
-            inlineText: [['prop' => 'text', 'selector' => '.sb-heading']],
+            // A linked heading's text is inside its link; editing in place edits that text, never the link around it.
+            inlineText: [['prop' => 'text', 'selector' => '.sb-heading__link'], ['prop' => 'text', 'selector' => '.sb-heading']],
         ));
 
         // 3. core.rich_text
@@ -206,10 +211,14 @@ final class BlockRegistry
                 ['key' => 'variant', 'type' => 'enum', 'label' => 'Button Variant', 'required' => false, 'allowed_values' => ['primary', 'secondary', 'outline', 'ghost'], 'default' => 'primary'],
                 ['key' => 'size', 'type' => 'enum', 'label' => 'Button Size', 'required' => false, 'allowed_values' => ['sm', 'md', 'lg'], 'default' => 'md'],
                 ['key' => 'full_width', 'type' => 'boolean', 'label' => 'Full Width', 'required' => false, 'default' => false],
+                ['key' => 'icon', 'type' => 'enum', 'label' => 'Icon', 'required' => false, 'allowed_values' => ['none', ...IconLibrary::names()], 'default' => 'none'],
+                ['key' => 'icon_position', 'type' => 'enum', 'label' => 'Icon Position', 'required' => false, 'allowed_values' => ['before', 'after'], 'default' => 'before'],
+                ['key' => 'icon_spacing', 'type' => 'number', 'label' => 'Icon Spacing', 'required' => false, 'default' => 8, 'min' => 0, 'max' => 50, 'integer_only' => true],
             ]),
             allowsChildren: false,
             allowedBindingProviders: ['content.posts', 'content.authors', 'content.taxonomy', 'booking.services', 'membership.plans', 'forms.form'],
-            inlineText: [['prop' => 'link.label', 'selector' => '.sb-button']],
+            // With an icon the label has its own span, which is what is edited in place (the icon stays).
+            inlineText: [['prop' => 'link.label', 'selector' => '.sb-button__label'], ['prop' => 'link.label', 'selector' => '.sb-button']],
         ));
 
         // 6. core.feature_list (exercises repeater + object field types)

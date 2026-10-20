@@ -3456,3 +3456,8 @@ html, body.sbx-body {
 .sbx-containerpane__head { margin: 14px 0 8px; font-size: var(--sbx-fs-sm); font-weight: 700; color: var(--sbx-text); }
 /* Corner names ("Top left") are longer than side names: they may take two lines under their box. */
 .sbx-spacing--box .sbx-spacing__grid > .sbx-field .sbx-field__label { white-space: normal; line-height: 1.15; }
+/* A Button's and Heading's Text Shadow and Text Stroke: the name and its pencil on one row, like the reference editor. */
+.sbx-textfx { display: grid; grid-template-columns: minmax(70px, 38%) minmax(0, 1fr); align-items: center; column-gap: 10px; margin-bottom: 0.7rem; }
+.sbx-textfx > .sbx-field__label { margin: 0; }
+.sbx-normalhover { margin: 4px 0 10px; }
+.sbx-normalhover > .sbx-segmented-pills { margin-bottom: 8px; }

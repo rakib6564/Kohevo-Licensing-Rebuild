@@ -37,8 +37,9 @@ final class Html
      *
      * @param array<string, mixed>|null $link
      */
-    public static function link(?array $link, string $class = ''): string
+    public static function link(?array $link, string $class = '', ?string $innerHtml = null): string
     {
+        // `$innerHtml` replaces the escaped label: markup the server built itself (a button's icon and label spans).
         if ($link === null) {
             return '';
         }
@@ -48,7 +49,7 @@ final class Html
         }
         $href = self::safeUrl($link['href'] ?? null);
         if ($href === null) {
-            return '<span' . ($class !== '' ? ' class="' . self::e($class) . '"' : '') . '>' . self::e($label) . '</span>';
+            return '<span' . ($class !== '' ? ' class="' . self::e($class) . '"' : '') . '>' . ($innerHtml ?? self::e($label)) . '</span>';
         }
         $target = ($link['target'] ?? '_self') === '_blank' ? '_blank' : '_self';
         $relParts = [];
@@ -68,7 +69,7 @@ final class Html
             . ' href="' . self::e($href) . '"'
             . ($target === '_blank' ? ' target="_blank"' : '')
             . ($relParts !== [] ? ' rel="' . self::e(implode(' ', $relParts)) . '"' : '')
-            . '>' . self::e($label) . '</a>';
+            . '>' . ($innerHtml ?? self::e($label)) . '</a>';
     }
 
     /** The one class a highlight span carries; the only attribute a rich-text `span` may have. */

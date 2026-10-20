@@ -70,6 +70,16 @@ const isContainer = (ctx) => !!ctx.def && ctx.def.allows_children === true;
  */
 export const CONTAINER_TYPE = 'core.container';
 const isBoxContainer = (ctx) => ctx.node.type === CONTAINER_TYPE;
+/**
+ * A Button and a Heading each have one Style section, like the reference editor, that holds what the generic sections
+ * would: position or alignment, typography, the colours (Normal / Hover), and for a button its surface (background,
+ * border, corners, shadow, padding). Those generic sections step aside for them.
+ */
+export const BUTTON_TYPE = 'core.button';
+export const HEADING_TYPE = 'core.heading';
+const OWN_STYLE = { [BUTTON_TYPE]: ['align', 'typography', 'background', 'border', 'shadow'], [HEADING_TYPE]: ['align', 'typography'] };
+const inOwnStyle = (ctx, id) => (OWN_STYLE[ctx.node.type] || []).includes(id);
+
 /** A section a Container no longer offers is still shown while it holds a value, so nothing set is ever hidden. */
 const setOn = (ctx, key) => {
   const v = ctx.style[key];
@@ -91,18 +101,20 @@ const surfaceTab = () => 'style';
  * collapsed header (empty when the section holds nothing). `openFor(ctx)` marks the sections that start open.
  */
 export const SECTIONS = Object.freeze([
-  { id: 'content', tab: 'content', titleKey: 'section_content', titleFor: (ctx) => (isContainer(ctx) ? 'section_layout' : 'section_content'), appliesTo: (ctx) => !isBoxContainer(ctx), summary: () => '', openFor: () => true },
+  { id: 'content', tab: 'content', titleKey: 'section_content', titleFor: (ctx) => (isContainer(ctx) ? 'section_layout' : ctx.node.type === BUTTON_TYPE ? 'section_button' : ctx.node.type === HEADING_TYPE ? 'section_heading' : 'section_content'), appliesTo: (ctx) => !isBoxContainer(ctx), summary: () => '', openFor: () => true },
   { id: 'container', tab: 'content', titleKey: 'section_container', keywords: ['flex', 'grid', 'width', 'boxed', 'full width', 'min height', 'height', 'direction', 'justify', 'align', 'gap', 'wrap', 'overflow', 'html tag', 'link'], appliesTo: isBoxContainer, summary: (ctx) => containerSummary(ctx.style.layout), openFor: () => true },
   { id: 'data', tab: 'content', titleKey: 'tab_data', appliesTo: (ctx) => asList(ctx.def.binding_slots).length > 0, summary: (ctx) => (count(ctx.node.bindings) ? String(count(ctx.node.bindings)) : ''), openFor: () => false },
   // One group with what every element needs: margin, padding, z-index, entrance animation, CSS ID and classes.
   { id: 'advanced', tab: 'advanced', titleKey: 'section_advanced', keywords: ['margin', 'padding', 'spacing', 'z-index', 'stacking', 'entrance', 'animation', 'css id', 'class'], appliesTo: () => true, summary: (ctx) => advancedSummary(ctx), openFor: () => true },
   { id: 'layout', tab: (ctx) => (isContainer(ctx) && !isBoxContainer(ctx) ? 'content' : 'advanced'), titleKey: 'section_layout', titleFor: (ctx) => (isBoxContainer(ctx) ? 'layout_as_item' : isContainer(ctx) ? 'section_flex_grid' : 'section_layout'), keywords: ['flex', 'grid', 'display', 'order', 'grow', 'shrink', 'basis'], appliesTo: (ctx) => has(ctx, 'layout'), summary: (ctx) => layoutSummary(ctx.style.layout), openFor: () => false },
 
-  { id: 'align', tab: 'style', titleKey: 'align', titleFor: alignTitleKey, appliesTo: (ctx) => has(ctx, 'align') && (!isBoxContainer(ctx) || setOn(ctx, 'align')), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
-  { id: 'typography', tab: 'style', titleKey: 'typography', appliesTo: (ctx) => (has(ctx, 'typography') || has(ctx, 'color')) && !MEDIA_TYPES.has(ctx.node.type) && !NO_TEXT_TYPES.has(ctx.node.type) && (!isBoxContainer(ctx) || setOn(ctx, 'typography') || setOn(ctx, 'color')), summary: (ctx) => typographySummary(ctx.style), openFor: (ctx) => TEXT_TYPES.has(ctx.node.type) },
-  { id: 'background', tab: surfaceTab, titleKey: 'background_label', appliesTo: (ctx) => has(ctx, 'background') && !NO_BACKGROUND_TYPES.has(ctx.node.type), summary: (ctx) => backgroundSummary(ctx.style.background), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
-  { id: 'border', tab: surfaceTab, titleKey: 'border', appliesTo: (ctx) => has(ctx, 'border'), summary: (ctx) => borderSummary(ctx.style.border), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
-  { id: 'shadow', tab: 'style', titleKey: 'box_shadow', appliesTo: (ctx) => has(ctx, 'shadow'), summary: (ctx) => (typeof ctx.style.shadow === 'string' ? ctx.style.shadow : (ctx.style.shadow ? '…' : '')), openFor: () => false },
+  { id: 'button_style', tab: 'style', titleKey: 'section_button', keywords: ['position', 'typography', 'text shadow', 'colour', 'color', 'hover', 'background', 'box shadow', 'border', 'radius', 'padding'], appliesTo: (ctx) => ctx.node.type === BUTTON_TYPE, summary: () => '', openFor: () => true },
+  { id: 'heading_style', tab: 'style', titleKey: 'section_heading', keywords: ['alignment', 'typography', 'text stroke', 'text shadow', 'blend', 'colour', 'color', 'hover'], appliesTo: (ctx) => ctx.node.type === HEADING_TYPE, summary: () => '', openFor: () => true },
+  { id: 'align', tab: 'style', titleKey: 'align', titleFor: alignTitleKey, appliesTo: (ctx) => has(ctx, 'align') && !inOwnStyle(ctx, 'align') && (!isBoxContainer(ctx) || setOn(ctx, 'align')), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
+  { id: 'typography', tab: 'style', titleKey: 'typography', appliesTo: (ctx) => (has(ctx, 'typography') || has(ctx, 'color')) && !MEDIA_TYPES.has(ctx.node.type) && !NO_TEXT_TYPES.has(ctx.node.type) && !inOwnStyle(ctx, 'typography') && (!isBoxContainer(ctx) || setOn(ctx, 'typography') || setOn(ctx, 'color')), summary: (ctx) => typographySummary(ctx.style), openFor: (ctx) => TEXT_TYPES.has(ctx.node.type) },
+  { id: 'background', tab: surfaceTab, titleKey: 'background_label', appliesTo: (ctx) => has(ctx, 'background') && !NO_BACKGROUND_TYPES.has(ctx.node.type) && !inOwnStyle(ctx, 'background'), summary: (ctx) => backgroundSummary(ctx.style.background), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
+  { id: 'border', tab: surfaceTab, titleKey: 'border', appliesTo: (ctx) => has(ctx, 'border') && !inOwnStyle(ctx, 'border'), summary: (ctx) => borderSummary(ctx.style.border), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
+  { id: 'shadow', tab: 'style', titleKey: 'box_shadow', appliesTo: (ctx) => has(ctx, 'shadow') && !inOwnStyle(ctx, 'shadow'), summary: (ctx) => (typeof ctx.style.shadow === 'string' ? ctx.style.shadow : (ctx.style.shadow ? '…' : '')), openFor: () => false },
   // An image's, video's or gallery's size sits with its other settings (Content), where authors look for it.
   { id: 'dimensions', tab: (ctx) => (MEDIA_TYPES.has(ctx.node.type) ? 'content' : isContainer(ctx) ? 'style' : 'advanced'), titleKey: 'dimensions_label', appliesTo: (ctx) => has(ctx, 'dimensions'), summary: (ctx) => dimensionsSummary(ctx.style.dimensions), openFor: (ctx) => ctx.node.type === 'core.image' || (isContainer(ctx) && !isBoxContainer(ctx)) },
   { id: 'opacity', tab: 'style', titleKey: 'opacity_label', appliesTo: (ctx) => has(ctx, 'opacity'), summary: (ctx) => (typeof ctx.style.opacity === 'number' ? `${Math.round(ctx.style.opacity * 100)}%` : ''), openFor: () => false },

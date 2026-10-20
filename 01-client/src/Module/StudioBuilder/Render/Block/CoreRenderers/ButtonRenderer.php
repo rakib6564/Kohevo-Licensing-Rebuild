@@ -10,6 +10,7 @@ namespace Slate\Module\StudioBuilder\Render\Block\CoreRenderers;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
 use Slate\Module\StudioBuilder\Render\Html;
+use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
 
 final class ButtonRenderer implements BlockRendererInterface
 {
@@ -57,6 +58,23 @@ final class ButtonRenderer implements BlockRendererInterface
         }
         $sizeClass = $size !== 'md' ? ' sb-button--' . $size : '';
         $class = 'sb-button sb-button--' . $variant . $sizeClass . ($scope->bool('full_width') ? ' sb-button--full' : '');
-        return '<p class="sb-button-row">' . Html::link($link, $class) . '</p>';
+        return '<p class="sb-button-row">' . Html::link($link, $class, $this->withIcon($scope, (string) ($link['label'] ?? ''))) . '</p>';
+    }
+
+    /** The label with its icon before or after it, `$spacing` px apart; null (the plain label) without an icon. */
+    private function withIcon(BlockRenderScope $scope, string $label): ?string
+    {
+        $name = $scope->string('icon', 'none');
+        if ($name === 'none' || !IconLibrary::has($name) || trim($label) === '') {
+            return null;
+        }
+        $after = $scope->string('icon_position', 'before') === 'after';
+        $spacing = $scope->prop('icon_spacing');
+        $spacing = is_int($spacing) && $spacing >= 0 && $spacing <= 50 ? $spacing : 8;
+        $icon = '<span class="sb-button__icon" aria-hidden="true" style="margin-' . ($after ? 'left' : 'right') . ':' . $spacing . 'px">'
+            . '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">'
+            . IconLibrary::markup($name) . '</svg></span>';
+        $text = '<span class="sb-button__label">' . Html::e($label) . '</span>';
+        return $after ? $text . $icon : $icon . $text;
     }
 }

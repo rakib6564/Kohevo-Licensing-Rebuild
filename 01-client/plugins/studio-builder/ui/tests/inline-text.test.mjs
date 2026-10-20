@@ -8,8 +8,12 @@ const node = (type) => ({ id: 'blk_1', type, props: {} });
 test('only the blocks that declare inline text are editable in place, and each names its prop and element', () => {
   const declared = manifest.blocks.filter((b) => (b.inline_text || []).length > 0).map((b) => b.type).sort();
   assert.deepEqual(declared, ['core.button', 'core.feature_list', 'core.heading', 'core.hero', 'core.link', 'core.nav_menu', 'core.quote', 'core.text']);
-  assert.deepEqual(inlineSpecsFor(manifest, node('core.heading')), [{ prop: 'text', selector: '.sb-heading', multiline: false }]);
-  assert.deepEqual(inlineSpecsFor(manifest, node('core.button')).map((s) => s.prop), ['link.label']);
+  // A linked heading's text sits in its link, and a button with an icon has a label span: those come first, the element is the fallback.
+  assert.deepEqual(inlineSpecsFor(manifest, node('core.heading')), [
+    { prop: 'text', selector: '.sb-heading__link', multiline: false },
+    { prop: 'text', selector: '.sb-heading', multiline: false },
+  ]);
+  assert.deepEqual(inlineSpecsFor(manifest, node('core.button')).map((s) => s.selector), ['.sb-button__label', '.sb-button']);
   assert.equal(inlineSpecsFor(manifest, node('core.text'))[0].multiline, true, 'a text field keeps its line breaks');
   assert.deepEqual(inlineSpecsFor(manifest, node('core.image')), []);
   assert.deepEqual(inlineSpecsFor(manifest, node('core.card')), []);

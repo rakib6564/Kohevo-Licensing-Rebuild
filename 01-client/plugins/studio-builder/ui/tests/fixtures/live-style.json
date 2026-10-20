@@ -1587,6 +1587,76 @@
                 "media": [],
                 "reduceMotion": false
             }
+        },
+        {
+            "name": "text shadow and stroke",
+            "covered": true,
+            "block": {
+                "style": {
+                    "text_shadow": {
+                        "x": "1px",
+                        "y": "2px",
+                        "blur": "4px",
+                        "color": "rgba(0,0,0,0.4)"
+                    },
+                    "typography": {
+                        "stroke_width": "1px",
+                        "stroke_color": "#ff0000"
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [
+                    "-webkit-text-stroke-color:#ff0000",
+                    "-webkit-text-stroke-width:1px",
+                    "text-shadow:1px 2px 4px rgba(0,0,0,0.4)"
+                ],
+                "inline": [],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
+        },
+        {
+            "name": "text shadow without blur, theme colour",
+            "covered": true,
+            "block": {
+                "style": {
+                    "text_shadow": {
+                        "x": "0",
+                        "y": "1px",
+                        "color": "color.accent"
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [
+                    "text-shadow:0 1px var(--sb-color-accent)"
+                ],
+                "inline": [],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
+        },
+        {
+            "name": "text shadow missing its colour is dropped",
+            "covered": true,
+            "block": {
+                "style": {
+                    "text_shadow": {
+                        "x": "1px",
+                        "y": "1px"
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [],
+                "inline": [],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
         }
     ]
 }

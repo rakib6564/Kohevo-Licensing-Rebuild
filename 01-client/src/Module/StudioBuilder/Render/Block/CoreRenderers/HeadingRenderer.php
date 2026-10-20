@@ -13,7 +13,7 @@ use Slate\Module\StudioBuilder\Render\Html;
 
 final class HeadingRenderer implements BlockRendererInterface
 {
-    private const LEVELS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+    private const LEVELS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'span', 'p'];
     private const SIZES  = ['xs', 'sm', 'base', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl'];
     private const ALIGN  = ['left', 'center', 'right'];
 
@@ -49,6 +49,12 @@ final class HeadingRenderer implements BlockRendererInterface
                 $classes[] = $colorClass;
             }
         }
-        return '<' . $level . Html::classAttr($classes) . '>' . Html::highlighted($scope->string('text'), $scope->string('highlight'), Html::highlightLook($scope)) . '</' . $level . '>';
+        $text = Html::highlighted($scope->string('text'), $scope->string('highlight'), Html::highlightLook($scope));
+        // A linked heading: the link sits inside the heading (the element keeps its meaning), and only after the URL allowlist.
+        $url = Html::safeUrl($scope->prop('url'));
+        if ($url !== null) {
+            $text = '<a class="sb-heading__link" href="' . Html::e($url) . '"' . ($scope->bool('new_tab') ? ' target="_blank" rel="noopener noreferrer"' : '') . '>' . $text . '</a>';
+        }
+        return '<' . $level . Html::classAttr($classes) . '>' . $text . '</' . $level . '>';
     }
 }

@@ -49,7 +49,7 @@ export const DEVICE_QUERIES = { tablet: '(max-width:1023.98px)', mobile: '(max-w
 /** Every top-level `style` key this file knows how to predict. */
 const HANDLED_KEYS = new Set([
   'layout', 'position', 'margin', 'padding', 'dimensions', 'background', 'border', 'typography', 'color', 'shadow', 'effects',
-  'opacity', 'z_index', 'align', ...Object.keys(TOKEN_KEYS),
+  'opacity', 'z_index', 'align', 'text_shadow', ...Object.keys(TOKEN_KEYS),
 ]);
 
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -77,6 +77,7 @@ const DIMENSIONS = [
 const TYPO_EXTRAS = [
   ['style', 'font-style'], ['decoration', 'text-decoration-line'], ['decoration_style', 'text-decoration-style'], ['decoration_color', 'text-decoration-color'],
   ['decoration_thickness', 'text-decoration-thickness'], ['decoration_offset', 'text-underline-offset'],
+  ['stroke_width', '-webkit-text-stroke-width'], ['stroke_color', '-webkit-text-stroke-color'],
 ];
 
 function emitTable(group, values, table, out) {
@@ -88,7 +89,7 @@ function emitTable(group, values, table, out) {
     if (map) css = map[v];
     else if (template) css = template.replace('%d', String(v));
     else css = typeof v === 'string' ? v.trim() : String(v);
-    if (prop === 'text-decoration-color') css = colourCss(v);
+    if (prop === 'text-decoration-color' || prop === '-webkit-text-stroke-color') css = colourCss(v);
     out.push(`${prop}:${css}`);
   }
 }
@@ -192,6 +193,16 @@ export function scopedDeclarations(style) {
   if (isObj(style.shadow)) {
     const shadow = shadowValue(style.shadow);
     if (shadow !== null) out.push(`box-shadow:${shadow}`);
+  }
+  if (isObj(style.text_shadow)) {
+    const ts = style.text_shadow;
+    // StyleSurface::textShadowValue: x, y and the colour are required; blur is optional.
+    if (['x', 'y', 'color'].every((f) => f in ts && ok(`text_shadow.${f}`, ts[f]))) {
+      const parts = [String(ts.x).trim(), String(ts.y).trim()];
+      if ('blur' in ts && ok('text_shadow.blur', ts.blur)) parts.push(String(ts.blur).trim());
+      parts.push(colourCss(ts.color));
+      out.push(`text-shadow:${parts.join(' ')}`);
+    }
   }
   if (isObj(style.effects)) emitEffects(style.effects, out);
   return out;

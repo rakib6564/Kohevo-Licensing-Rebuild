@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '25';
+    public const VERSION = '26';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -89,6 +89,9 @@ final class StudioStylesheet
             . '.sb-button--outline{background:transparent;color:var(--sb-color-accent)}'
             . '.sb-button--ghost{background:transparent;border-color:transparent;color:var(--sb-color-accent)}'
             . '.sb-button--full{display:block;text-align:center}'
+            // A button's icon sits on the text line at the text's size; a linked heading keeps the heading's own look.
+            . '.sb-button__icon{display:inline-flex;vertical-align:-.125em}.sb-button__icon svg{width:1em;height:1em}'
+            . '.sb-heading__link{color:inherit;text-decoration:inherit}'
             . '.sb-image{margin:0}.sb-image img{display:block;width:100%;object-fit:cover}'
             // An Image block's size (Inspector > Content > Dimensions) is set on its wrapper: a height or an aspect ratio there is the picture's
             // box, and the wrapper's object-fit and object-position reach the picture (cover unless the author picks another; a focal

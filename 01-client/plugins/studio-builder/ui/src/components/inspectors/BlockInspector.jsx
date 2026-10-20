@@ -20,6 +20,7 @@ import { EntranceSelect, MotionInspector } from './MotionInspector.jsx';
 import { ClassNamesField, DataAttributes, IdentityFields } from './AdvancedControls.jsx';
 import { ContainerPane } from './ContainerPane.jsx';
 import { BackgroundStates } from './BackgroundStates.jsx';
+import { BlendField, CornersBox, NormalHover, PaddingBox, TextColorField, TextShadowField, TextStrokeField } from './TextBlockStyle.jsx';
 import { InspectorShell } from './InspectorShell.jsx';
 import { InspectorHeader } from './InspectorHeader.jsx';
 import { InspectorBar } from './InspectorBar.jsx';
@@ -95,10 +96,11 @@ export function BlockInspector({ info }) {
         <BindingsEditor block={block} def={def} manifest={manifest} applyOp={applyOp} />
       </>
     ),
-    align: () => (
+    // Inside a Button's or Heading's own section the row is named (Position, Alignment); as its own section the header names it.
+    align: ({ label = null } = {}) => (
       <ResponsiveSelect
-        label={t(alignTitleKey({ def, node: block }))}
-        hideLegend
+        label={label || t(alignTitleKey({ def, node: block }))}
+        hideLegend={!label}
         icons="text"
         value={style.align ?? null}
         options={asList(manifest.vocabulary.alignments)}
@@ -106,7 +108,7 @@ export function BlockInspector({ info }) {
         onChange={(align) => saveStyle({ ...style, align: Object.keys(align).length ? align : null })}
       />
     ),
-    typography: () => {
+    typography: ({ noTextColor = false } = {}) => {
       const weight = capabilities.includes('typography') && (
         <Field label={t('font_weight')} htmlFor={`${idPrefix}-typo-weight`}>
           <select
@@ -145,7 +147,7 @@ export function BlockInspector({ info }) {
           row={(
             <>
               {weight}
-              <StyleControls style={style} capabilities={capabilities} only="typography" typoPart="main" mediaPicker={boot.mediaPicker} onChange={saveStyle} deviceScope={deviceScope} tokens={tokens} />
+              <StyleControls style={style} capabilities={capabilities} only="typography" typoPart="main" mediaPicker={boot.mediaPicker} onChange={saveStyle} deviceScope={deviceScope} tokens={tokens} noTextColor={noTextColor} />
             </>
           )}
         >
@@ -207,6 +209,35 @@ export function BlockInspector({ info }) {
     position: () => <PositionPane style={style} onChange={saveStyle} />,
     effects: () => <EffectsPane style={style} onChange={saveStyle} />,
     states: () => <StatesPane type={block.type} states={block.style_states} onChange={(next) => save(ops.updateBlockStyleStates(block.id, next))} />,
+    // A Button's one Style section: position, typography, text shadow, the colours and surface per state, shadow, border, padding.
+    button_style: () => (
+      <>
+        {sections.align({ label: t('button_position') })}
+        {sections.typography({ noTextColor: true })}
+        <TextShadowField style={style} onChange={saveStyle} tokens={colourTokens} />
+        <NormalHover label={def.label} style={style} states={block.style_states} onStyle={saveStyle} onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))} withSurface>
+          <TextColorField style={style} onChange={saveStyle} tokens={capabilities.includes('text_token') ? tokensFor(manifest, STYLE_TOKEN_CATEGORIES.text_token) : undefined} />
+          <StyleControls style={style} capabilities={capabilities} only="background" mediaPicker={boot.mediaPicker} onChange={saveStyle} tokens={manifest && manifest.tokens} />
+        </NormalHover>
+        {sections.shadow()}
+        {sections.border()}
+        <CornersBox style={style} onChange={saveStyle} />
+        <PaddingBox deviceScope={deviceScope} />
+      </>
+    ),
+    // A Heading's one Style section: alignment, typography, text stroke and shadow, blend mode, the text colour per state.
+    heading_style: () => (
+      <>
+        {sections.align({ label: t('align') })}
+        {sections.typography({ noTextColor: true })}
+        <TextStrokeField style={style} onChange={saveStyle} tokens={colourTokens} />
+        <TextShadowField style={style} onChange={saveStyle} tokens={colourTokens} />
+        <BlendField style={style} onChange={saveStyle} />
+        <NormalHover label={def.label} style={style} states={block.style_states} onStyle={saveStyle} onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))}>
+          <TextColorField style={style} onChange={saveStyle} tokens={capabilities.includes('text_token') ? tokensFor(manifest, STYLE_TOKEN_CATEGORIES.text_token) : undefined} />
+        </NormalHover>
+      </>
+    ),
     tag: () => (
       <Field label={t('wrapper_tag')} htmlFor={`${idPrefix}-tag`}>
         <select id={`${idPrefix}-tag`} value={block.tag || 'div'} onChange={(e) => save(ops.updateBlockTag(block.id, e.target.value === 'div' ? null : e.target.value))}>
