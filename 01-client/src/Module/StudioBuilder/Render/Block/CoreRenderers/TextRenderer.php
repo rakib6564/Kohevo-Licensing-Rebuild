@@ -58,6 +58,7 @@ final class TextRenderer implements BlockRendererInterface
             }
         }
 
-        return '<p' . Html::classAttr($classes) . '>' . Html::text($content) . '</p>';
+        $flow = Html::textFlow($scope, $classes);
+        return '<p' . Html::classAttr($classes) . $flow . '>' . Html::text($content) . '</p>';
     }
 }

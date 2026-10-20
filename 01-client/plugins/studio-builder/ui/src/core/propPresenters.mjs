@@ -33,7 +33,32 @@ export const PROP_PRESENTERS = Object.freeze({
   'core.heading': {
     new_tab: { showIf: (p) => typeof p.url === 'string' && p.url.trim() !== '' },
   },
+  // The Text Editor's columns gap matters only with more than one column.
+  'core.rich_text': {
+    columns_gap: { showIf: (p) => typeof p.columns === 'number' && p.columns > 1 },
+  },
+  'core.text': {
+    columns_gap: { showIf: (p) => typeof p.columns === 'number' && p.columns > 1 },
+  },
+  'core.image': {
+    url: { showIf: (p) => p.link_to === 'custom' },
+    new_tab: { showIf: (p) => p.link_to === 'media' || p.link_to === 'custom' },
+  },
+  // The Icon's colours, size, frame and rotation are set from its Style section, not here.
+  'core.icon': {
+    view: { pills: true },
+    shape: { pills: true, showIf: (p) => p.view === 'stacked' || p.view === 'framed' },
+    new_tab: { showIf: (p) => typeof p.url === 'string' && p.url.trim() !== '' },
+    secondary_token: { showIf: () => false },
+    size_px: { showIf: () => false },
+    frame_padding: { showIf: () => false },
+    frame_border: { showIf: () => false },
+    rotate: { showIf: () => false },
+  },
 });
+
+/** The Icon props its Style section edits (hidden from Content). */
+export const ICON_STYLE_PROPS = Object.freeze(['secondary_token', 'size_px', 'frame_padding', 'frame_border', 'rotate']);
 
 export const presentersFor = (type) => PROP_PRESENTERS[type] || null;
 

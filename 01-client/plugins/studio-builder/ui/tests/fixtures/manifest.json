@@ -1724,9 +1724,18 @@
             "default_props": {
                 "align": "left",
                 "color_token": null,
+                "frame_border": 0,
+                "frame_padding": 0,
                 "label": "",
                 "name": "star",
-                "size": "md"
+                "new_tab": false,
+                "rotate": 0,
+                "secondary_token": null,
+                "shape": "circle",
+                "size": "md",
+                "size_px": 0,
+                "url": null,
+                "view": "default"
             },
             "description": "A single icon, sized and tinted",
             "field_schema": [
@@ -1763,6 +1772,43 @@
                         "leaf",
                         "dollar"
                     ]
+                },
+                {
+                    "key": "view",
+                    "type": "enum",
+                    "label": "View",
+                    "required": false,
+                    "default": "default",
+                    "allowed_values": [
+                        "default",
+                        "stacked",
+                        "framed"
+                    ]
+                },
+                {
+                    "key": "shape",
+                    "type": "enum",
+                    "label": "Shape",
+                    "required": false,
+                    "default": "circle",
+                    "allowed_values": [
+                        "circle",
+                        "square"
+                    ]
+                },
+                {
+                    "key": "url",
+                    "type": "url",
+                    "label": "Link",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "new_tab",
+                    "type": "boolean",
+                    "label": "Open in a new tab",
+                    "required": false,
+                    "default": false
                 },
                 {
                     "key": "size",
@@ -1803,6 +1849,53 @@
                     "required": false,
                     "default": "",
                     "max_length": 120
+                },
+                {
+                    "key": "secondary_token",
+                    "type": "token_ref",
+                    "label": "Secondary Colour",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "size_px",
+                    "type": "number",
+                    "label": "Size (px)",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 300,
+                    "integer_only": true
+                },
+                {
+                    "key": "frame_padding",
+                    "type": "number",
+                    "label": "Padding",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 100,
+                    "integer_only": true
+                },
+                {
+                    "key": "frame_border",
+                    "type": "number",
+                    "label": "Border Width",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 20,
+                    "integer_only": true
+                },
+                {
+                    "key": "rotate",
+                    "type": "number",
+                    "label": "Rotate",
+                    "required": false,
+                    "default": 0,
+                    "min": -360,
+                    "max": 360,
+                    "integer_only": true
                 }
             ],
             "icon": "star",
@@ -1849,8 +1942,11 @@
             "default_props": {
                 "aspect_ratio": "auto",
                 "caption": "",
+                "link_to": "none",
                 "media": null,
-                "rounded": true
+                "new_tab": false,
+                "rounded": true,
+                "url": null
             },
             "description": "Media library asset",
             "field_schema": [
@@ -1889,6 +1985,32 @@
                     "label": "Rounded Corners",
                     "required": false,
                     "default": true
+                },
+                {
+                    "key": "link_to",
+                    "type": "enum",
+                    "label": "Link",
+                    "required": false,
+                    "default": "none",
+                    "allowed_values": [
+                        "none",
+                        "media",
+                        "custom"
+                    ]
+                },
+                {
+                    "key": "url",
+                    "type": "url",
+                    "label": "Link URL",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "new_tab",
+                    "type": "boolean",
+                    "label": "Open in a new tab",
+                    "required": false,
+                    "default": false
                 }
             ],
             "icon": "image",
@@ -2797,7 +2919,10 @@
             "binding_slots": [],
             "category": "content",
             "default_props": {
-                "content": "<p></p>"
+                "columns": 1,
+                "columns_gap": 20,
+                "content": "<p></p>",
+                "drop_cap": false
             },
             "description": "Formatted copy & body content",
             "field_schema": [
@@ -2807,6 +2932,33 @@
                     "label": "Content",
                     "required": true,
                     "default": "<p></p>"
+                },
+                {
+                    "key": "drop_cap",
+                    "type": "boolean",
+                    "label": "Drop Cap",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "columns",
+                    "type": "number",
+                    "label": "Columns",
+                    "required": false,
+                    "default": 1,
+                    "min": 1,
+                    "max": 10,
+                    "integer_only": true
+                },
+                {
+                    "key": "columns_gap",
+                    "type": "number",
+                    "label": "Columns Gap",
+                    "required": false,
+                    "default": 20,
+                    "min": 0,
+                    "max": 200,
+                    "integer_only": true
                 }
             ],
             "icon": "pilcrow",
@@ -3305,7 +3457,10 @@
             "default_props": {
                 "align": "left",
                 "color_token": null,
+                "columns": 1,
+                "columns_gap": 20,
                 "content": "",
+                "drop_cap": false,
                 "size": "base"
             },
             "description": "Plain-text body copy",
@@ -3352,6 +3507,33 @@
                     "label": "Color Token",
                     "required": false,
                     "default": null
+                },
+                {
+                    "key": "drop_cap",
+                    "type": "boolean",
+                    "label": "Drop Cap",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "columns",
+                    "type": "number",
+                    "label": "Columns",
+                    "required": false,
+                    "default": 1,
+                    "min": 1,
+                    "max": 10,
+                    "integer_only": true
+                },
+                {
+                    "key": "columns_gap",
+                    "type": "number",
+                    "label": "Columns Gap",
+                    "required": false,
+                    "default": 20,
+                    "min": 0,
+                    "max": 200,
+                    "integer_only": true
                 }
             ],
             "icon": "pilcrow",

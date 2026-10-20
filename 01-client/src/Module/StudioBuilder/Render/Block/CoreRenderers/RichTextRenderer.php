@@ -9,6 +9,7 @@ namespace Slate\Module\StudioBuilder\Render\Block\CoreRenderers;
 
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
+use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Render\RichTextSanitizer;
 
 final class RichTextRenderer implements BlockRendererInterface
@@ -25,6 +26,8 @@ final class RichTextRenderer implements BlockRendererInterface
 
     public function render(BlockRenderScope $scope): string
     {
-        return '<div class="sb-rich-text">' . RichTextSanitizer::sanitize($scope->string('content')) . '</div>';
+        $classes = ['sb-rich-text'];
+        $flow = Html::textFlow($scope, $classes);
+        return '<div' . Html::classAttr($classes) . $flow . '>' . RichTextSanitizer::sanitize($scope->string('content')) . '</div>';
     }
 }

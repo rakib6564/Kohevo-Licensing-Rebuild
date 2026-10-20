@@ -83,7 +83,7 @@ test('the dialog searches, refuses a file that is not an image, and closes with 
   }
 });
 
-test('an Image block sets its width, height and fit on the Content tab, and the picture on the canvas follows', async ({ page }) => {
+test('an Image block sets its width, height and fit in its Image section (Style), and the picture on the canvas follows', async ({ page }) => {
   await openBuilder(page);
   await settled(page);
   const before = await layerCount(page);
@@ -91,6 +91,9 @@ test('an Image block sets its width, height and fit on the Content tab, and the 
     await addImageBlock(page);
     const host = page.locator('.sbx-inspector-host');
     await expect(host.getByRole('tab', { name: 'Content', selected: true })).toBeVisible();
+    // Like the reference editor, an image's size and fit are in its one Image section under Style.
+    await host.getByRole('tab', { name: 'Style' }).click();
+    await expect(host.locator('[data-section="image_style"]')).toBeVisible();
     const width = host.getByLabel('Width', { exact: true }).first();
     const height = host.getByLabel('Height', { exact: true }).first();
     await expect(width).toBeVisible();

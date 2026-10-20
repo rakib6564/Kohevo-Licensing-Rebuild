@@ -43,8 +43,20 @@ final class ImageRenderer implements BlockRendererInterface
         $ratio   = self::RATIOS[$scope->string('aspect_ratio', 'auto')] ?? 'auto';
         $caption = $scope->string('caption');
 
+        $img = self::img($image->url, $alt, $image->width, $image->height, $ref);
+        // Link: none, the image file itself, or a custom address (after the URL allowlist).
+        $linkTo = $scope->string('link_to', 'none');
+        $href = match ($linkTo) {
+            'media'  => Html::safeUrl($image->url),
+            'custom' => Html::safeUrl($scope->prop('url')),
+            default  => null,
+        };
+        if ($href !== null) {
+            $img = '<a class="sb-image__link" href="' . Html::e($href) . '"' . ($scope->bool('new_tab') ? ' target="_blank" rel="noopener noreferrer"' : '') . '>' . $img . '</a>';
+        }
+
         return '<figure' . Html::classAttr(['sb-image', 'sb-image--ratio-' . $ratio, $scope->bool('rounded', true) ? 'sb-image--rounded' : '']) . '>'
-            . self::img($image->url, $alt, $image->width, $image->height, $ref)
+            . $img
             . ($caption !== '' ? '<figcaption>' . Html::e($caption) . '</figcaption>' : '')
             . '</figure>';
     }
