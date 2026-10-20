@@ -151,6 +151,27 @@ final class Html
         ];
     }
 
+    /**
+     * A text block's flow, as the reference editor's Text Editor sets it: a drop cap adds a class, and more than one column
+     * returns a style attribute built only from the clamped integers (never authored text).
+     *
+     * @param list<string> $classes
+     */
+    public static function textFlow(\Slate\Module\StudioBuilder\Render\Block\BlockRenderScope $scope, array &$classes): string
+    {
+        if ($scope->bool('drop_cap')) {
+            $classes[] = 'sb-dropcap';
+        }
+        $columns = $scope->prop('columns', 1);
+        $columns = is_int($columns) ? max(1, min(10, $columns)) : 1;
+        if ($columns === 1) {
+            return '';
+        }
+        $gap = $scope->prop('columns_gap', 20);
+        $gap = is_int($gap) ? max(0, min(200, $gap)) : 20;
+        return ' style="column-count:' . $columns . ';column-gap:' . $gap . 'px"';
+    }
+
     /** Escaped multi-line text with newlines as `<br>`. */
     public static function text(string $value): string
     {

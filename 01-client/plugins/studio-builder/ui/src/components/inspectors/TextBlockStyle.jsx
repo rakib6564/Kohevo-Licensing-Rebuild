@@ -75,13 +75,13 @@ export function BlendField({ style, onChange }) {
 }
 
 /** The text colour (one value: typography.color, or a theme text token). */
-export function TextColorField({ style, onChange, tokens }) {
+export function TextColorField({ style, onChange, tokens, label = null }) {
   const id = useId();
   const typo = asObject(style.typography);
   return (
     <ColorField
       id={`${id}-text`}
-      label={t('text_color')}
+      label={label || t('text_color')}
       value={typo.color ?? style.color}
       onChange={(v) => onChange(setTextLiteral(style, v))}
       tokens={tokens}
@@ -95,7 +95,7 @@ export function TextColorField({ style, onChange, tokens }) {
  * Normal / Hover. Normal is the children (the block's own colours). Hover edits the hover state: the text colour, and with
  * `withSurface` the background and border colours, beside the transition duration that eases into it.
  */
-export function NormalHover({ label, style, states, onStyle, onStates, withSurface = false, children }) {
+export function NormalHover({ label, style, states, onStyle, onStates, withSurface = false, colorLabel = null, children }) {
   const id = useId();
   const [tab, setTab] = useState('normal');
   const all = asObject(states);
@@ -117,7 +117,7 @@ export function NormalHover({ label, style, states, onStyle, onStates, withSurfa
       />
       {tab === 'normal' ? children : (
         <>
-          <ColorField id={`${id}-hc`} label={t('text_color')} value={getPath(hover, 'color')} onChange={(v) => putHover('color', v)} />
+          <ColorField id={`${id}-hc`} label={colorLabel || t('text_color')} value={getPath(hover, 'color')} onChange={(v) => putHover('color', v)} />
           {withSurface && (
             <>
               <ColorField id={`${id}-hbg`} label={t('background_color')} value={getPath(hover, 'background.color')} onChange={(v) => putHover('background.color', v)} />

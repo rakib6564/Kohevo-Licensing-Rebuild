@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { PROP_PRESENTERS, presentersFor } from '../src/core/propPresenters.mjs';
+import { ICON_STYLE_PROPS, PROP_PRESENTERS, presentersFor } from '../src/core/propPresenters.mjs';
 
 const manifest = JSON.parse(readFileSync(new URL('./fixtures/manifest.json', import.meta.url), 'utf8'));
 
@@ -48,7 +48,7 @@ test('an icon presenter has an icon for each allowed value', () => {
 });
 
 test('presentersFor returns null for blocks that keep plain selects', () => {
-  assert.equal(presentersFor('core.text'), null);
+  assert.equal(presentersFor('core.quote'), null);
   assert.ok(presentersFor('layout.flex').direction);
 });
 
@@ -60,4 +60,20 @@ test('a field that means nothing yet is hidden: the icon position and spacing, t
   const heading = presentersFor('core.heading');
   assert.equal(heading.new_tab.showIf({ url: '' }), false);
   assert.equal(heading.new_tab.showIf({ url: '/menu' }), true);
+});
+
+test('an image link, a text column gap and an icon frame show only when they mean something; the icon style props stay off Content', () => {
+  const image = presentersFor('core.image');
+  assert.equal(image.url.showIf({ link_to: 'media' }), false);
+  assert.equal(image.url.showIf({ link_to: 'custom' }), true);
+  assert.equal(image.new_tab.showIf({ link_to: 'none' }), false);
+  assert.equal(image.new_tab.showIf({ link_to: 'media' }), true);
+  for (const type of ['core.rich_text', 'core.text']) {
+    assert.equal(presentersFor(type).columns_gap.showIf({ columns: 1 }), false);
+    assert.equal(presentersFor(type).columns_gap.showIf({ columns: 3 }), true);
+  }
+  const icon = presentersFor('core.icon');
+  assert.equal(icon.shape.showIf({ view: 'default' }), false);
+  assert.equal(icon.shape.showIf({ view: 'framed' }), true);
+  for (const key of ICON_STYLE_PROPS) assert.equal(icon[key].showIf({ view: 'stacked' }), false, `${key} is in the Style section`);
 });

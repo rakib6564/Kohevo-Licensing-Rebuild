@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '26';
+    public const VERSION = '27';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -99,12 +99,21 @@ final class StudioStylesheet
             . '.sb-block--core-image{object-fit:cover}'
             . '.sb-block--core-image>.sb-image{height:100%;display:flex;flex-direction:column;object-fit:inherit;object-position:inherit}'
             . '.sb-block--core-image>.sb-image>img{flex:1 1 auto;min-height:0;height:100%;object-fit:inherit;object-position:inherit}'
+            // A linked image: the link takes the picture's place in the box, so sizes and fit still reach the picture.
+            . '.sb-image__link{display:block}.sb-block--core-image>.sb-image>.sb-image__link{flex:1 1 auto;min-height:0;object-fit:inherit;object-position:inherit}'
+            . '.sb-block--core-image>.sb-image>.sb-image__link>img{height:100%;object-fit:inherit;object-position:inherit}'
+            // A text block's drop cap: its first letter spans about three lines.
+            . '.sb-dropcap::first-letter{float:left;font-size:3.4em;line-height:.85;margin:.06em .12em 0 0;font-weight:600}'
             . '.sb-image--rounded img{border-radius:var(--sb-radius-md)}'
             . '.sb-image--ratio-16-9 img{aspect-ratio:16/9}.sb-image--ratio-4-3 img{aspect-ratio:4/3}'
             . '.sb-image--ratio-1-1 img{aspect-ratio:1/1}.sb-image--ratio-3-4 img{aspect-ratio:3/4}'
             . '.sb-image figcaption{font-size:.875rem;color:var(--sb-text-muted);margin-top:.5rem}'
             // Icon, list, quote and link elements (P2b).
-            . '.sb-icon{display:flex;color:var(--sb-color-accent);margin:0 0 1rem}'
+            . ':where(.sb-block--core-icon){color:var(--sb-color-accent)}.sb-icon{display:flex;margin:0 0 1rem}'
+            // The Icon's views: stacked fills its frame with the icon colour (the icon takes the secondary colour), framed outlines it.
+            . '.sb-icon__link{display:inline-flex;color:inherit}.sb-icon__frame{display:inline-flex;padding:.5em;line-height:0}'
+            . '.sb-icon--stacked .sb-icon__frame{background:currentColor}:where(.sb-icon--stacked .sb-icon__svg){color:var(--sb-surface-primary,#fff)}'
+            . '.sb-icon--framed .sb-icon__frame{border:2px solid currentColor}.sb-icon--circle .sb-icon__frame{border-radius:50%}'
             . '.sb-icon--center{justify-content:center}.sb-icon--right{justify-content:flex-end}'
             . '.sb-icon__svg{display:block;width:2rem;height:2rem}'
             . '.sb-icon--sm .sb-icon__svg{width:1.25rem;height:1.25rem}.sb-icon--lg .sb-icon__svg{width:3rem;height:3rem}.sb-icon--xl .sb-icon__svg{width:4.5rem;height:4.5rem}'

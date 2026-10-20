@@ -23,7 +23,7 @@ test('the registry has unique ids, known tabs and a title key for every section'
 });
 
 test('a text block shows content, the full style stack and the advanced fields, in order', () => {
-  const ctx = ctxOf('core.text');
+  const ctx = ctxOf('core.quote');
   assert.deepEqual(ids('content', ctx), ['content']);
   assert.deepEqual(ids('style', ctx), ['align', 'typography', 'background', 'border', 'shadow', 'opacity', 'states', 'tokens']);
   // Background and Border are Style for every block; a leaf block keeps Layout and Dimensions under Advanced, after the one group of everyday fields.
@@ -36,9 +36,11 @@ test('a block with no text of its own has no Typography section, a text block do
   for (const type of ['core.image', 'core.video', 'core.gallery', 'core.divider', 'core.spacer', 'core.icon', 'core.map']) {
     assert.ok(!ids('style', ctxOf(type)).includes('typography'), `${type} has no typography`);
   }
-  for (const type of ['core.text', 'core.quote']) {
+  for (const type of ['core.quote', 'core.list']) {
     assert.ok(ids('style', ctxOf(type)).includes('typography'), `${type} has typography`);
   }
+  // A Text Editor's and a Text's typography is in their own Style section.
+  for (const type of ['core.rich_text', 'core.text']) assert.ok(ids('style', ctxOf(type)).includes('text_style'), `${type} has its own section`);
   // A heading's and a button's typography is in their own Style section.
   assert.ok(ids('style', ctxOf('core.heading')).includes('heading_style'));
   assert.ok(ids('style', ctxOf('core.button')).includes('button_style'));
@@ -59,10 +61,10 @@ test('the Data section appears only for a block with binding slots', () => {
   assert.ok(!ids('content', ctxOf('core.heading')).includes('data'));
 });
 
-test('sections start open where they matter: content always; typography for text; dimensions for an image', () => {
+test('sections start open where they matter: content always; typography for text; an image\'s own Image section', () => {
   assert.deepEqual(defaultOpenIds('content', ctxOf('core.heading')), ['content']);
-  assert.deepEqual(defaultOpenIds('style', ctxOf('core.text')), ['typography']);
-  assert.deepEqual(defaultOpenIds('content', ctxOf('core.image')), ['content', 'dimensions']);
+  assert.deepEqual(defaultOpenIds('style', ctxOf('core.quote')), ['typography']);
+  assert.deepEqual(defaultOpenIds('style', ctxOf('core.image')), ['image_style']);
   assert.deepEqual(defaultOpenIds('advanced', ctxOf('core.heading')), ['advanced']);
 });
 
@@ -95,7 +97,7 @@ test('summaries describe what is set, and are empty when nothing is', () => {
 });
 
 test('search finds sections by title or summary across tabs, case-insensitively, and an empty query finds none', () => {
-  const ctx = ctxOf('core.text', { classNames: ['hero-title'] });
+  const ctx = ctxOf('core.quote', { classNames: ['hero-title'] });
   const title = (s) => ({ typography: 'Typography', section_advanced: 'Advanced' }[s.titleKey] || s.titleKey);
   assert.deepEqual(searchSections(ctx, '', title), []);
   assert.deepEqual(searchSections(ctx, '   ', title), []);
@@ -129,7 +131,10 @@ test('applicableSections groups the non-empty tabs', () => {
 test('each kind of block opens the sections an author reaches for first', () => {
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.button')), ['button_style']);
   assert.deepEqual(defaultOpenIds('content', ctxOf('layout.grid')), ['content']);
-  assert.deepEqual(defaultOpenIds('content', ctxOf('core.image')), ['content', 'dimensions']);
+  assert.deepEqual(defaultOpenIds('content', ctxOf('core.image')), ['content']);
+  assert.deepEqual(defaultOpenIds('style', ctxOf('core.image')), ['image_style']);
+  assert.deepEqual(defaultOpenIds('style', ctxOf('core.icon')), ['icon_style']);
+  assert.deepEqual(defaultOpenIds('style', ctxOf('core.rich_text')), ['text_style']);
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.heading')), ['heading_style']);
   assert.deepEqual(defaultOpenIds('content', ctxOf('core.card')), ['content']);
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.card')), ['background', 'border', 'dimensions']);
@@ -189,7 +194,7 @@ test('the Container block has one Container section under Content, like the refe
 });
 
 test('Style Alignment is named so it cannot be mistaken for the block\'s own Alignment field', () => {
-  const text = inspectorContext({ id: 'blk_1', type: 'core.text', style: {} }, { style_capabilities: ['align', 'opacity'], binding_slots: [], field_schema: [{ key: 'align', type: 'enum', allowed_values: ['left', 'center', 'right'] }] });
+  const text = inspectorContext({ id: 'blk_1', type: 'core.quote', style: {} }, { style_capabilities: ['align', 'opacity'], binding_slots: [], field_schema: [{ key: 'align', type: 'enum', allowed_values: ['left', 'center', 'right'] }] });
   const flex = inspectorContext({ id: 'blk_2', type: 'layout.flex', style: {} }, { style_capabilities: ['align'], binding_slots: [], allows_children: true, field_schema: [{ key: 'align', type: 'enum', allowed_values: ['start', 'center', 'end', 'stretch'] }] });
   const heading = inspectorContext({ id: 'blk_3', type: 'core.heading', style: {} }, { style_capabilities: ['align'], binding_slots: [], field_schema: [{ key: 'text', type: 'string' }] });
   const align = SECTIONS.find((s) => s.id === 'align');
@@ -206,8 +211,8 @@ test('States: every block offers Hover; only blocks a visitor can focus or press
   assert.deepEqual(statesFor('core.heading', { disabled: { opacity: 0.5 }, hover: { opacity: 1 } }), ['hover', 'disabled']);
 });
 
-test('an image, video or gallery has its size with its other settings: Dimensions is on the Content tab, after Content', () => {
-  for (const type of ['core.image', 'core.video', 'core.gallery']) {
+test('a video or gallery has its size with its other settings: Dimensions is on the Content tab, after Content', () => {
+  for (const type of ['core.video', 'core.gallery']) {
     const ctx = ctxOf(type);
     const content = ids('content', ctx);
     assert.ok(content.includes('dimensions'), `${type}: Dimensions on Content`);
@@ -215,5 +220,21 @@ test('an image, video or gallery has its size with its other settings: Dimension
     assert.ok(!ids('style', ctx).includes('dimensions') && !ids('advanced', ctx).includes('dimensions'), `${type}: only once`);
   }
   assert.ok(ids('style', ctxOf('core.card')).includes('dimensions'), 'a container keeps it under Style');
+  const image = ctxOf('core.image');
+  assert.ok(!['content', 'style', 'advanced'].some((tab) => ids(tab, image).includes('dimensions')), 'an image has it inside its own Image section');
   assert.ok(ids('advanced', ctxOf('core.heading')).includes('dimensions'), 'a text block keeps it under Advanced');
+});
+
+test('a Text Editor, a Text, an Image and an Icon have one Style section each, like the reference editor, holding the sections it replaces', () => {
+  assert.deepEqual(ids('style', ctxOf('core.rich_text')), ['text_style', 'background', 'border', 'shadow', 'opacity', 'states', 'tokens']);
+  assert.deepEqual(ids('style', ctxOf('core.text')), ['text_style', 'background', 'border', 'shadow', 'opacity', 'states', 'tokens']);
+  assert.deepEqual(ids('style', ctxOf('core.image')), ['image_style', 'background', 'states', 'tokens']);
+  assert.ok(ids('style', ctxOf('core.icon')).includes('icon_style'));
+  const section = (id) => SECTIONS.find((x) => x.id === id);
+  assert.equal(titleKeyOf(section('text_style'), ctxOf('core.rich_text')), 'section_text_editor');
+  assert.equal(titleKeyOf(section('text_style'), ctxOf('core.text')), 'section_text');
+  assert.equal(titleKeyOf(section('content'), ctxOf('core.image')), 'section_image');
+  assert.equal(titleKeyOf(section('content'), ctxOf('core.icon')), 'section_icon');
+  const title = (s) => ({ section_image: 'Image' }[s.titleKey] || s.titleKey);
+  assert.ok(searchSections(ctxOf('core.image'), 'filters', title).map((s) => s.id).includes('image_style'), 'its keywords find it');
 });

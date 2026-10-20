@@ -21,6 +21,7 @@ import { ClassNamesField, DataAttributes, IdentityFields } from './AdvancedContr
 import { ContainerPane } from './ContainerPane.jsx';
 import { BackgroundStates } from './BackgroundStates.jsx';
 import { BlendField, CornersBox, NormalHover, PaddingBox, TextColorField, TextShadowField, TextStrokeField } from './TextBlockStyle.jsx';
+import { IconProps, ImageStates } from './MediaBlockStyle.jsx';
 import { InspectorShell } from './InspectorShell.jsx';
 import { InspectorHeader } from './InspectorHeader.jsx';
 import { InspectorBar } from './InspectorBar.jsx';
@@ -236,6 +237,35 @@ export function BlockInspector({ info }) {
         <NormalHover label={def.label} style={style} states={block.style_states} onStyle={saveStyle} onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))}>
           <TextColorField style={style} onChange={saveStyle} tokens={capabilities.includes('text_token') ? tokensFor(manifest, STYLE_TOKEN_CATEGORIES.text_token) : undefined} />
         </NormalHover>
+      </>
+    ),
+    // A Text Editor's (or Text's) one Style section: alignment, text colour, typography, text shadow.
+    text_style: () => (
+      <>
+        {sections.align({ label: t('align') })}
+        <TextColorField style={style} onChange={saveStyle} tokens={capabilities.includes('text_token') ? tokensFor(manifest, STYLE_TOKEN_CATEGORIES.text_token) : undefined} />
+        {sections.typography({ noTextColor: true })}
+        <TextShadowField style={style} onChange={saveStyle} tokens={colourTokens} />
+      </>
+    ),
+    // An Image's one Style section: alignment, its size and fit, opacity and filters per state, border, corners, shadow.
+    image_style: () => (
+      <>
+        {sections.align({ label: t('align') })}
+        {sections.dimensions()}
+        <ImageStates style={style} states={block.style_states} onStyle={saveStyle} onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))} />
+        {sections.border()}
+        <CornersBox style={style} onChange={saveStyle} />
+        {sections.shadow()}
+      </>
+    ),
+    // An Icon's one Style section: its primary colour per state, then the frame's secondary colour, size, padding, rotation and border.
+    icon_style: () => (
+      <>
+        <NormalHover label={def.label} colorLabel={t('icon_primary_color')} style={style} states={block.style_states} onStyle={saveStyle} onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))}>
+          <TextColorField label={t('icon_primary_color')} style={style} onChange={saveStyle} tokens={capabilities.includes('text_token') ? tokensFor(manifest, STYLE_TOKEN_CATEGORIES.text_token) : undefined} />
+        </NormalHover>
+        <IconProps props={props} onProps={(next) => save(ops.updateBlockProps(block.id, next))} tokens={colourTokens} />
       </>
     ),
     tag: () => (
