@@ -26,7 +26,8 @@ test('every presenter names a real field of its block, with a matching kind', ()
       const f = fields.find((x) => x.key === key);
       assert.ok(f, `${type}.${key} exists`);
       if (p.tiles) assert.equal(f.type, 'number');
-      else assert.equal(f.type, 'enum');
+      else if (p.icons || p.pills) assert.equal(f.type, 'enum');
+      else assert.equal(typeof p.showIf, 'function', `${type}.${key} only decides when the field shows`);
     }
   }
 });
@@ -47,6 +48,16 @@ test('an icon presenter has an icon for each allowed value', () => {
 });
 
 test('presentersFor returns null for blocks that keep plain selects', () => {
-  assert.equal(presentersFor('core.heading'), null);
+  assert.equal(presentersFor('core.text'), null);
   assert.ok(presentersFor('layout.flex').direction);
+});
+
+test('a field that means nothing yet is hidden: the icon position and spacing, the new tab of a heading link', () => {
+  const button = presentersFor('core.button');
+  assert.equal(button.icon_position.showIf({ icon: 'none' }), false);
+  assert.equal(button.icon_spacing.showIf({}), false);
+  assert.equal(button.icon_position.showIf({ icon: 'star' }), true);
+  const heading = presentersFor('core.heading');
+  assert.equal(heading.new_tab.showIf({ url: '' }), false);
+  assert.equal(heading.new_tab.showIf({ url: '/menu' }), true);
 });

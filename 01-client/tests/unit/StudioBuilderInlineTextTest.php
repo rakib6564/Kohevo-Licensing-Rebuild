@@ -94,7 +94,7 @@ unit('inline text: the core blocks declare the elements their renderers write', 
         $declared[$type] = array_column($registry->get($type)->toEditorManifest()['inline_text'], 'prop');
     }
     assert_eq(['heading', 'eyebrow', 'subheading'], $declared['core.hero']);
-    assert_eq(['link.label'], $declared['core.button']);
+    assert_eq(['link.label', 'link.label'], $declared['core.button']); // the label span with an icon, else the button itself
     assert_eq(['link.label'], $declared['core.link']);
     assert_eq(['items.*.label'], $declared['core.nav_menu']);
     assert_eq('menu', $registry->get('core.nav_menu')->toEditorManifest()['inline_text'][0]['unless'], 'a chosen site menu is not edited in place');

@@ -191,7 +191,8 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
 
 /** Controls for a map of fields (object properties, repeater items, block props). */
 export function ObjectFields({ schema, value, onChange, manifest, mediaPicker, presenters = null, blockType = null, owned = [] }) {
-  return asList(schema).map((f) => {
+  // A presenter's `showIf(props)` hides a field that means nothing yet (an icon's position before there is an icon).
+  return asList(schema).filter((f) => !(presenters && presenters[f.key] && presenters[f.key].showIf) || presenters[f.key].showIf(asObject(value))).map((f) => {
     const field = objectField(f, value, onChange, manifest, mediaPicker, presenters, blockType);
     if (!owned.includes(f.key)) return field;
     // Another control owns this value: show it, read-only, and say where to change it.

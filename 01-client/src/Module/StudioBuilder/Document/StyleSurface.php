@@ -95,7 +95,7 @@ final class StyleSurface
     private const CORNERS = ['tl' => 'top-left', 'tr' => 'top-right', 'br' => 'bottom-right', 'bl' => 'bottom-left'];
 
     /** Sub-fields B2-P3b adds to `typography` (size, weight, ... keep their existing handling). */
-    public const TYPOGRAPHY_EXTRAS = ['style', 'decoration', 'decoration_style', 'decoration_color', 'decoration_thickness', 'decoration_offset'];
+    public const TYPOGRAPHY_EXTRAS = ['style', 'decoration', 'decoration_style', 'decoration_color', 'decoration_thickness', 'decoration_offset', 'stroke_width', 'stroke_color'];
 
     /** Pseudo-classes an author may style, keyed by the `style_states` name. */
     public const STATE_SELECTORS = ['hover' => ':hover', 'focus' => ':focus-within', 'active' => ':active', 'disabled' => ':has(:disabled)'];
@@ -133,6 +133,15 @@ final class StyleSurface
                 'decoration_color'     => ['tcolor', 'text-decoration-color'],
                 'decoration_thickness' => ['length', 'text-decoration-thickness'],
                 'decoration_offset'    => ['length', 'text-underline-offset'],
+                // Text stroke: an outline drawn around each letter.
+                'stroke_width'         => ['length', '-webkit-text-stroke-width'],
+                'stroke_color'         => ['tcolor', '-webkit-text-stroke-color'],
+            ],
+            'text_shadow' => [
+                'x'     => ['length', 'x'],
+                'y'     => ['length', 'y'],
+                'blur'  => ['length', 'blur'],
+                'color' => ['tcolor', 'color'],
             ],
             'shadow' => [
                 'x'      => ['length', 'x'],
@@ -313,6 +322,9 @@ final class StyleSurface
                 self::checkField($style['typography'][$field], $def, "{$path}.typography.{$field}", $errors);
             }
         }
+        if (array_key_exists('text_shadow', $style) && $style['text_shadow'] !== null) {
+            self::checkTextShadow($style['text_shadow'], "{$path}.text_shadow", $errors);
+        }
         if (isset($style['shadow']) && is_array($style['shadow'])) {
             self::checkShadowObject($style['shadow'], "{$path}.shadow", $errors);
         }
@@ -441,6 +453,42 @@ final class StyleSurface
                 $errors[] = self::issue("{$path}.{$required}", "A custom shadow needs '{$required}'.");
             }
         }
+    }
+
+    /**
+     * A text shadow `{x, y, blur?, color}`: x, y and the colour are required, nothing else is accepted.
+     *
+     * @param list<array{path: string, code: string, message: string}> $errors
+     */
+    private static function checkTextShadow(mixed $ts, string $path, array &$errors): void
+    {
+        if (!is_array($ts) || ($ts !== [] && array_is_list($ts))) {
+            $errors[] = self::issue($path, 'A text shadow must be an object {x, y, blur, color}.');
+            return;
+        }
+        self::checkObject($ts, self::moreFields()['text_shadow'], $path, $errors);
+        foreach (['x', 'y', 'color'] as $required) {
+            if (!array_key_exists($required, $ts)) {
+                $errors[] = self::issue("{$path}.{$required}", "A text shadow needs '{$required}'.");
+            }
+        }
+    }
+
+    /** `text-shadow` for a valid text shadow, or null. @param array<string, mixed> $ts */
+    private static function textShadowValue(array $ts): ?string
+    {
+        $defs = self::moreFields()['text_shadow'];
+        foreach (['x', 'y', 'color'] as $required) {
+            if (!array_key_exists($required, $ts) || !self::fieldAccepts($ts[$required], $defs[$required])) {
+                return null;
+            }
+        }
+        $parts = [trim((string) $ts['x']), trim((string) $ts['y'])];
+        if (array_key_exists('blur', $ts) && self::fieldAccepts($ts['blur'], $defs['blur'])) {
+            $parts[] = trim((string) $ts['blur']);
+        }
+        $parts[] = self::colourCss((string) $ts['color']);
+        return implode(' ', $parts);
     }
 
     /** @param array<string, mixed> $sh */
@@ -604,6 +652,12 @@ final class StyleSurface
             $shadow = self::shadowValue($style['shadow']);
             if ($shadow !== null) {
                 $out[] = 'box-shadow:' . $shadow;
+            }
+        }
+        if (isset($style['text_shadow']) && is_array($style['text_shadow'])) {
+            $textShadow = self::textShadowValue($style['text_shadow']);
+            if ($textShadow !== null) {
+                $out[] = 'text-shadow:' . $textShadow;
             }
         }
         if (isset($style['effects']) && is_array($style['effects'])) {

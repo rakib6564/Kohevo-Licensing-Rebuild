@@ -55,7 +55,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Booking",
             "type": "booking.embed",
@@ -131,7 +132,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Booking Services",
             "type": "booking.services",
@@ -235,7 +237,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Accordion",
             "type": "core.accordion",
@@ -256,6 +259,9 @@
             "category": "content",
             "default_props": {
                 "full_width": false,
+                "icon": "none",
+                "icon_position": "before",
+                "icon_spacing": 8,
                 "link": null,
                 "size": "md",
                 "variant": "primary"
@@ -300,10 +306,71 @@
                     "label": "Full Width",
                     "required": false,
                     "default": false
+                },
+                {
+                    "key": "icon",
+                    "type": "enum",
+                    "label": "Icon",
+                    "required": false,
+                    "default": "none",
+                    "allowed_values": [
+                        "none",
+                        "check",
+                        "check-circle",
+                        "star",
+                        "heart",
+                        "arrow-right",
+                        "mail",
+                        "phone",
+                        "map-pin",
+                        "clock",
+                        "calendar",
+                        "user",
+                        "users",
+                        "shield",
+                        "zap",
+                        "globe",
+                        "message",
+                        "gift",
+                        "award",
+                        "camera",
+                        "home",
+                        "search",
+                        "sparkle",
+                        "play",
+                        "leaf",
+                        "dollar"
+                    ]
+                },
+                {
+                    "key": "icon_position",
+                    "type": "enum",
+                    "label": "Icon Position",
+                    "required": false,
+                    "default": "before",
+                    "allowed_values": [
+                        "before",
+                        "after"
+                    ]
+                },
+                {
+                    "key": "icon_spacing",
+                    "type": "number",
+                    "label": "Icon Spacing",
+                    "required": false,
+                    "default": 8,
+                    "min": 0,
+                    "max": 50,
+                    "integer_only": true
                 }
             ],
             "icon": "arrow-up-right",
             "inline_text": [
+                {
+                    "prop": "link.label",
+                    "selector": ".sb-button__label",
+                    "multiline": false
+                },
                 {
                     "prop": "link.label",
                     "selector": ".sb-button",
@@ -334,7 +401,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Button",
             "type": "core.button",
@@ -411,7 +479,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Card",
             "type": "core.card",
@@ -579,7 +648,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Carousel",
             "type": "core.carousel",
@@ -663,7 +733,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Container",
             "type": "core.container",
@@ -733,7 +804,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Countdown",
             "type": "core.countdown",
@@ -829,7 +901,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Divider",
             "type": "core.divider",
@@ -962,7 +1035,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Feature list",
             "type": "core.feature_list",
@@ -1057,7 +1131,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Form",
             "type": "core.form",
@@ -1172,7 +1247,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Form Field",
             "type": "core.form_field",
@@ -1301,7 +1377,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Gallery",
             "type": "core.gallery",
@@ -1328,7 +1405,9 @@
                 "highlight_underline": false,
                 "highlight_weight": "inherit",
                 "level": "h2",
-                "text": "Section Heading"
+                "new_tab": false,
+                "text": "Section Heading",
+                "url": null
             },
             "description": "Create hierarchy",
             "field_schema": [
@@ -1339,6 +1418,38 @@
                     "required": true,
                     "default": "Section Heading",
                     "max_length": 300
+                },
+                {
+                    "key": "url",
+                    "type": "url",
+                    "label": "Link",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "new_tab",
+                    "type": "boolean",
+                    "label": "Open in a new tab",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "level",
+                    "type": "enum",
+                    "label": "HTML Tag",
+                    "required": false,
+                    "default": "h2",
+                    "allowed_values": [
+                        "h1",
+                        "h2",
+                        "h3",
+                        "h4",
+                        "h5",
+                        "h6",
+                        "div",
+                        "span",
+                        "p"
+                    ]
                 },
                 {
                     "key": "highlight",
@@ -1390,25 +1501,15 @@
                     "label": "Highlight underlined",
                     "required": false,
                     "default": false
-                },
-                {
-                    "key": "level",
-                    "type": "enum",
-                    "label": "Heading Level",
-                    "required": false,
-                    "default": "h2",
-                    "allowed_values": [
-                        "h1",
-                        "h2",
-                        "h3",
-                        "h4",
-                        "h5",
-                        "h6"
-                    ]
                 }
             ],
             "icon": "heading",
             "inline_text": [
+                {
+                    "prop": "text",
+                    "selector": ".sb-heading__link",
+                    "multiline": false
+                },
                 {
                     "prop": "text",
                     "selector": ".sb-heading",
@@ -1439,7 +1540,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Heading",
             "type": "core.heading",
@@ -1606,7 +1708,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Hero",
             "type": "core.hero",
@@ -1728,7 +1831,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Icon",
             "type": "core.icon",
@@ -1813,7 +1917,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Image",
             "type": "core.image",
@@ -1896,7 +2001,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Link",
             "type": "core.link",
@@ -1992,7 +2098,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "List",
             "type": "core.list",
@@ -2088,7 +2195,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Map",
             "type": "core.map",
@@ -2186,7 +2294,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Modal",
             "type": "core.modal",
@@ -2345,7 +2454,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Nav menu",
             "type": "core.nav_menu",
@@ -2580,7 +2690,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Services grid",
             "type": "core.query_loop",
@@ -2668,7 +2779,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Quote",
             "type": "core.quote",
@@ -2723,7 +2835,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Rich text",
             "type": "core.rich_text",
@@ -2782,7 +2895,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Spacer",
             "type": "core.spacer",
@@ -2937,7 +3051,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Stats",
             "type": "core.stats",
@@ -3045,7 +3160,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Table",
             "type": "core.table",
@@ -3166,7 +3282,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Tabs",
             "type": "core.tabs",
@@ -3269,7 +3386,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Text",
             "type": "core.text",
@@ -3366,7 +3484,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Video",
             "type": "core.video",
@@ -3414,7 +3533,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Form",
             "type": "forms.embed",
@@ -3481,7 +3601,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Form Card",
             "type": "forms.form_card",
@@ -3567,7 +3688,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Width container",
             "type": "layout.container",
@@ -3685,7 +3807,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Flex",
             "type": "layout.flex",
@@ -3770,7 +3893,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Grid",
             "type": "layout.grid",
@@ -3868,7 +3992,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Offcanvas",
             "type": "layout.offcanvas",
@@ -3982,7 +4107,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Section",
             "type": "layout.section",
@@ -4058,7 +4184,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Membership Plans",
             "type": "membership.plans",
@@ -4160,7 +4287,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Payment Button",
             "type": "payment.button",
@@ -4221,7 +4349,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Stripe Payment Link",
             "type": "payment.link",
@@ -4288,7 +4417,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Archive title",
             "type": "theme.archive_title",
@@ -4374,7 +4504,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Field value",
             "type": "theme.field_value",
@@ -4428,7 +4559,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Post content",
             "type": "theme.post_content",
@@ -4507,7 +4639,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Post meta",
             "type": "theme.post_meta",
@@ -4590,7 +4723,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Post title",
             "type": "theme.post_title",
@@ -4651,7 +4785,8 @@
                 "position",
                 "effects",
                 "margin",
-                "padding"
+                "padding",
+                "text_shadow"
             ],
             "title": "Search box",
             "type": "theme.search_box",

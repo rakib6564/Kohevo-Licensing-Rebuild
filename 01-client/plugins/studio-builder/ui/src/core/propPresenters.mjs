@@ -26,6 +26,13 @@ export const PROP_PRESENTERS = Object.freeze({
   'core.card': {
     variant: { pills: true },
   },
+  'core.button': {
+    icon_position: { pills: true, showIf: (p) => !!p.icon && p.icon !== 'none' },
+    icon_spacing: { showIf: (p) => !!p.icon && p.icon !== 'none' },
+  },
+  'core.heading': {
+    new_tab: { showIf: (p) => typeof p.url === 'string' && p.url.trim() !== '' },
+  },
 });
 
 export const presentersFor = (type) => PROP_PRESENTERS[type] || null;

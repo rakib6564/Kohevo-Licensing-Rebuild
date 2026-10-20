@@ -242,7 +242,8 @@ function GradientField({ value, onChange }) {
  * @param {string} [props.only]                  render just this section (typography, background, border, shadow, dimensions, opacity)
  * @param {boolean} [props.mediaPicker]            whether the media library picker is available to this user
  */
-export function StyleControls({ style, capabilities, onChange, mediaPicker, only, deviceScope, tokens, typoPart = 'all' }) {
+/** `noTextColor`: the text colour is edited elsewhere (a Button's or Heading's Normal / Hover tabs). */
+export function StyleControls({ style, capabilities, onChange, mediaPicker, only, deviceScope, tokens, typoPart = 'all', noTextColor = false }) {
   const id = useId();
   const mainTypo = typoPart !== 'more';
   const moreTypo = typoPart !== 'main';
@@ -376,7 +377,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
             />
             </>
           )}
-          {mainTypo && (
+          {mainTypo && !noTextColor && (
             <ColorField
               id={`${id}-tcolor`}
               label={t('text_color')}

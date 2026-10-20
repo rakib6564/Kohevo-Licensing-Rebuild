@@ -22,8 +22,8 @@ test('the registry has unique ids, known tabs and a title key for every section'
   }
 });
 
-test('a heading shows content, the full style stack and the advanced fields, in order', () => {
-  const ctx = ctxOf('core.heading');
+test('a text block shows content, the full style stack and the advanced fields, in order', () => {
+  const ctx = ctxOf('core.text');
   assert.deepEqual(ids('content', ctx), ['content']);
   assert.deepEqual(ids('style', ctx), ['align', 'typography', 'background', 'border', 'shadow', 'opacity', 'states', 'tokens']);
   // Background and Border are Style for every block; a leaf block keeps Layout and Dimensions under Advanced, after the one group of everyday fields.
@@ -36,9 +36,12 @@ test('a block with no text of its own has no Typography section, a text block do
   for (const type of ['core.image', 'core.video', 'core.gallery', 'core.divider', 'core.spacer', 'core.icon', 'core.map']) {
     assert.ok(!ids('style', ctxOf(type)).includes('typography'), `${type} has no typography`);
   }
-  for (const type of ['core.heading', 'core.text', 'core.button', 'core.quote']) {
+  for (const type of ['core.text', 'core.quote']) {
     assert.ok(ids('style', ctxOf(type)).includes('typography'), `${type} has typography`);
   }
+  // A heading's and a button's typography is in their own Style section.
+  assert.ok(ids('style', ctxOf('core.heading')).includes('heading_style'));
+  assert.ok(ids('style', ctxOf('core.button')).includes('button_style'));
 });
 
 test('a block whose definition narrows style_capabilities hides the sections it cannot take', () => {
@@ -58,7 +61,7 @@ test('the Data section appears only for a block with binding slots', () => {
 
 test('sections start open where they matter: content always; typography for text; dimensions for an image', () => {
   assert.deepEqual(defaultOpenIds('content', ctxOf('core.heading')), ['content']);
-  assert.deepEqual(defaultOpenIds('style', ctxOf('core.heading')), ['typography']);
+  assert.deepEqual(defaultOpenIds('style', ctxOf('core.text')), ['typography']);
   assert.deepEqual(defaultOpenIds('content', ctxOf('core.image')), ['content', 'dimensions']);
   assert.deepEqual(defaultOpenIds('advanced', ctxOf('core.heading')), ['advanced']);
 });
@@ -92,7 +95,7 @@ test('summaries describe what is set, and are empty when nothing is', () => {
 });
 
 test('search finds sections by title or summary across tabs, case-insensitively, and an empty query finds none', () => {
-  const ctx = ctxOf('core.heading', { classNames: ['hero-title'] });
+  const ctx = ctxOf('core.text', { classNames: ['hero-title'] });
   const title = (s) => ({ typography: 'Typography', section_advanced: 'Advanced' }[s.titleKey] || s.titleKey);
   assert.deepEqual(searchSections(ctx, '', title), []);
   assert.deepEqual(searchSections(ctx, '   ', title), []);
@@ -124,10 +127,10 @@ test('applicableSections groups the non-empty tabs', () => {
 });
 
 test('each kind of block opens the sections an author reaches for first', () => {
-  assert.deepEqual(defaultOpenIds('style', ctxOf('core.button')), ['typography', 'background', 'border']);
+  assert.deepEqual(defaultOpenIds('style', ctxOf('core.button')), ['button_style']);
   assert.deepEqual(defaultOpenIds('content', ctxOf('layout.grid')), ['content']);
   assert.deepEqual(defaultOpenIds('content', ctxOf('core.image')), ['content', 'dimensions']);
-  assert.deepEqual(defaultOpenIds('style', ctxOf('core.heading')), ['typography']);
+  assert.deepEqual(defaultOpenIds('style', ctxOf('core.heading')), ['heading_style']);
   assert.deepEqual(defaultOpenIds('content', ctxOf('core.card')), ['content']);
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.card')), ['background', 'border', 'dimensions']);
 });
@@ -152,6 +155,14 @@ test('a container shows its flex and grid options under Content (closed) and tit
   assert.equal(titleKeyOf(SECTIONS.find((x) => x.id === 'layout'), ctxOf('core.heading')), 'section_layout');
   assert.ok(!ids('advanced', container).includes('layout'));
   assert.ok(ids('advanced', ctxOf('core.heading')).includes('layout'));
+});
+
+test('a Button and a Heading have one Style section each, like the reference editor, holding the sections it replaces', () => {
+  assert.deepEqual(ids('style', ctxOf('core.button')), ['button_style', 'opacity', 'states', 'tokens']);
+  assert.deepEqual(ids('style', ctxOf('core.heading')), ['heading_style', 'background', 'border', 'shadow', 'opacity', 'states', 'tokens']);
+  assert.equal(titleKeyOf(SECTIONS.find((x) => x.id === 'button_style'), ctxOf('core.button')), 'section_button');
+  const title = (s) => ({ section_heading: 'Heading' }[s.titleKey] || s.titleKey);
+  assert.ok(searchSections(ctxOf('core.heading'), 'stroke', title).map((s) => s.id).includes('heading_style'), 'its keywords find it');
 });
 
 test('the Container block has one Container section under Content, like the reference editor, and the panes it replaces step aside', () => {

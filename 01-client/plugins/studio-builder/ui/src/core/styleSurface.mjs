@@ -119,6 +119,11 @@ add('typography.decoration_style', enumOf(OPTIONS.decorationStyle));
 add('typography.decoration_color', tcolour);
 add('typography.decoration_thickness', measure(false));
 add('typography.decoration_offset', measure(false));
+add('typography.stroke_width', measure(false));
+add('typography.stroke_color', tcolour);
+
+for (const f of ['x', 'y', 'blur']) add(`text_shadow.${f}`, measure(false));
+add('text_shadow.color', tcolour);
 
 for (const f of ['x', 'y', 'blur', 'spread']) add(`shadow.${f}`, measure(false));
 add('shadow.color', tcolour);
