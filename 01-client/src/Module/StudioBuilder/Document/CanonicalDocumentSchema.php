@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Document;
 
+use Slate\Module\StudioBuilder\Schema\FieldSchema;
+
 final class CanonicalDocumentSchema
 {
     public const SCHEMA_VERSION = '1.0';
@@ -130,7 +132,7 @@ final class CanonicalDocumentSchema
     public const ALLOWED_INTERACTION_TRIGGERS = ['hover', 'focus', 'click', 'viewport-enter', 'scroll', 'load'];
 
     /** Wrapper elements an author may choose for a block (`tag`); `div` is the default and is not stored. */
-    public const ALLOWED_BLOCK_TAGS = ['div', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'figure'];
+    public const ALLOWED_BLOCK_TAGS = ['div', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'figure', 'main', 'a'];
 
     /**
      * The only keys a block's optional `metadata` object may carry: an editor
@@ -197,6 +199,7 @@ final class CanonicalDocumentSchema
         'animation',
         'style_states',
         'tag',
+        'link',
     ];
 
     /** Exact attribute names an author may set on a block wrapper. */
@@ -244,6 +247,29 @@ final class CanonicalDocumentSchema
     }
 
     /**
+     * Why a block's `link` (where an `a` wrapper points) is refused, or null when it is fine: `{url, new_tab?}`, with
+     * the same URL allowlist as every other link in a document. `href` itself is never an author attribute.
+     */
+    public static function blockLinkIssue(mixed $link): ?string
+    {
+        if (!is_array($link) || array_is_list($link)) {
+            return 'block.link must be an object {url, new_tab}.';
+        }
+        foreach (array_keys($link) as $key) {
+            if (!in_array($key, ['url', 'new_tab'], true)) {
+                return "block.link cannot have '{$key}'.";
+            }
+        }
+        if (!is_string($link['url'] ?? null) || !FieldSchema::isSafeUrl($link['url'])) {
+            return 'block.link.url must be a safe URL (http, https, mailto, tel, a path or an #anchor).';
+        }
+        if (array_key_exists('new_tab', $link) && !is_bool($link['new_tab'])) {
+            return 'block.link.new_tab must be true or false.';
+        }
+        return null;
+    }
+
+    /**
      * Optional extension keys for blocks.
      */
     public const OPTIONAL_BLOCK_KEYS = [
@@ -256,6 +282,7 @@ final class CanonicalDocumentSchema
         'animation',
         'style_states',
         'tag',
+        'link',
     ];
 
     /**

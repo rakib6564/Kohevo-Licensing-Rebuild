@@ -64,6 +64,22 @@ export const alignTitleKey = (ctx) => (isContainer(ctx) ? 'align_text' : (hasTex
 
 const isContainer = (ctx) => !!ctx.def && ctx.def.allows_children === true;
 
+/**
+ * The Container block: its own section (ContainerPane) holds its layout, width, min height, items, overflow and HTML
+ * element, like the reference editor, so the separate panes for those step aside for it.
+ */
+export const CONTAINER_TYPE = 'core.container';
+const isBoxContainer = (ctx) => ctx.node.type === CONTAINER_TYPE;
+/** A section a Container no longer offers is still shown while it holds a value, so nothing set is ever hidden. */
+const setOn = (ctx, key) => {
+  const v = ctx.style[key];
+  if (key === 'align') {
+    // Every new block starts aligned left (the default block style): only another alignment counts as set.
+    return Object.entries(asObject(v)).some(([bp, a]) => a && !(bp === 'base' && a === 'left'));
+  }
+  return v !== undefined && v !== null && v !== '' && !(typeof v === 'object' && Object.keys(v).length === 0);
+};
+
 /** Background and border are how a block looks, so they live under Style for every block (not buried in Advanced). */
 const surfaceTab = () => 'style';
 
@@ -75,19 +91,20 @@ const surfaceTab = () => 'style';
  * collapsed header (empty when the section holds nothing). `openFor(ctx)` marks the sections that start open.
  */
 export const SECTIONS = Object.freeze([
-  { id: 'content', tab: 'content', titleKey: 'section_content', titleFor: (ctx) => (isContainer(ctx) ? 'section_layout' : 'section_content'), appliesTo: () => true, summary: () => '', openFor: () => true },
+  { id: 'content', tab: 'content', titleKey: 'section_content', titleFor: (ctx) => (isContainer(ctx) ? 'section_layout' : 'section_content'), appliesTo: (ctx) => !isBoxContainer(ctx), summary: () => '', openFor: () => true },
+  { id: 'container', tab: 'content', titleKey: 'section_container', keywords: ['flex', 'grid', 'width', 'boxed', 'full width', 'min height', 'height', 'direction', 'justify', 'align', 'gap', 'wrap', 'overflow', 'html tag', 'link'], appliesTo: isBoxContainer, summary: (ctx) => containerSummary(ctx.style.layout), openFor: () => true },
   { id: 'data', tab: 'content', titleKey: 'tab_data', appliesTo: (ctx) => asList(ctx.def.binding_slots).length > 0, summary: (ctx) => (count(ctx.node.bindings) ? String(count(ctx.node.bindings)) : ''), openFor: () => false },
   // One group with what every element needs: margin, padding, z-index, entrance animation, CSS ID and classes.
   { id: 'advanced', tab: 'advanced', titleKey: 'section_advanced', keywords: ['margin', 'padding', 'spacing', 'z-index', 'stacking', 'entrance', 'animation', 'css id', 'class'], appliesTo: () => true, summary: (ctx) => advancedSummary(ctx), openFor: () => true },
-  { id: 'layout', tab: (ctx) => (isContainer(ctx) ? 'content' : 'advanced'), titleKey: 'section_layout', titleFor: (ctx) => (isContainer(ctx) ? 'section_flex_grid' : 'section_layout'), keywords: ['flex', 'grid', 'display', 'order', 'grow', 'shrink', 'basis'], appliesTo: (ctx) => has(ctx, 'layout'), summary: (ctx) => layoutSummary(ctx.style.layout), openFor: () => false },
+  { id: 'layout', tab: (ctx) => (isContainer(ctx) && !isBoxContainer(ctx) ? 'content' : 'advanced'), titleKey: 'section_layout', titleFor: (ctx) => (isBoxContainer(ctx) ? 'layout_as_item' : isContainer(ctx) ? 'section_flex_grid' : 'section_layout'), keywords: ['flex', 'grid', 'display', 'order', 'grow', 'shrink', 'basis'], appliesTo: (ctx) => has(ctx, 'layout'), summary: (ctx) => layoutSummary(ctx.style.layout), openFor: () => false },
 
-  { id: 'align', tab: 'style', titleKey: 'align', titleFor: alignTitleKey, appliesTo: (ctx) => has(ctx, 'align'), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
-  { id: 'typography', tab: 'style', titleKey: 'typography', appliesTo: (ctx) => (has(ctx, 'typography') || has(ctx, 'color')) && !MEDIA_TYPES.has(ctx.node.type) && !NO_TEXT_TYPES.has(ctx.node.type), summary: (ctx) => typographySummary(ctx.style), openFor: (ctx) => TEXT_TYPES.has(ctx.node.type) },
+  { id: 'align', tab: 'style', titleKey: 'align', titleFor: alignTitleKey, appliesTo: (ctx) => has(ctx, 'align') && (!isBoxContainer(ctx) || setOn(ctx, 'align')), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
+  { id: 'typography', tab: 'style', titleKey: 'typography', appliesTo: (ctx) => (has(ctx, 'typography') || has(ctx, 'color')) && !MEDIA_TYPES.has(ctx.node.type) && !NO_TEXT_TYPES.has(ctx.node.type) && (!isBoxContainer(ctx) || setOn(ctx, 'typography') || setOn(ctx, 'color')), summary: (ctx) => typographySummary(ctx.style), openFor: (ctx) => TEXT_TYPES.has(ctx.node.type) },
   { id: 'background', tab: surfaceTab, titleKey: 'background_label', appliesTo: (ctx) => has(ctx, 'background') && !NO_BACKGROUND_TYPES.has(ctx.node.type), summary: (ctx) => backgroundSummary(ctx.style.background), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
   { id: 'border', tab: surfaceTab, titleKey: 'border', appliesTo: (ctx) => has(ctx, 'border'), summary: (ctx) => borderSummary(ctx.style.border), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
   { id: 'shadow', tab: 'style', titleKey: 'box_shadow', appliesTo: (ctx) => has(ctx, 'shadow'), summary: (ctx) => (typeof ctx.style.shadow === 'string' ? ctx.style.shadow : (ctx.style.shadow ? '…' : '')), openFor: () => false },
   // An image's, video's or gallery's size sits with its other settings (Content), where authors look for it.
-  { id: 'dimensions', tab: (ctx) => (MEDIA_TYPES.has(ctx.node.type) ? 'content' : isContainer(ctx) ? 'style' : 'advanced'), titleKey: 'dimensions_label', appliesTo: (ctx) => has(ctx, 'dimensions'), summary: (ctx) => dimensionsSummary(ctx.style.dimensions), openFor: (ctx) => ctx.node.type === 'core.image' || isContainer(ctx) },
+  { id: 'dimensions', tab: (ctx) => (MEDIA_TYPES.has(ctx.node.type) ? 'content' : isContainer(ctx) ? 'style' : 'advanced'), titleKey: 'dimensions_label', appliesTo: (ctx) => has(ctx, 'dimensions'), summary: (ctx) => dimensionsSummary(ctx.style.dimensions), openFor: (ctx) => ctx.node.type === 'core.image' || (isContainer(ctx) && !isBoxContainer(ctx)) },
   { id: 'opacity', tab: 'style', titleKey: 'opacity_label', appliesTo: (ctx) => has(ctx, 'opacity'), summary: (ctx) => (typeof ctx.style.opacity === 'number' ? `${Math.round(ctx.style.opacity * 100)}%` : ''), openFor: () => false },
   { id: 'states', tab: 'style', titleKey: 'section_states', appliesTo: () => true, summary: (ctx) => Object.keys(asObject(ctx.node.style_states)).join(' · '), openFor: () => false },
   { id: 'tokens', tab: 'style', titleKey: 'section_tokens', appliesTo: (ctx) => Object.keys(STYLE_TOKEN_CATEGORIES).some((k) => has(ctx, k)), summary: (ctx) => String(Object.keys(STYLE_TOKEN_CATEGORIES).filter((k) => ctx.style[k]).length || ''), openFor: () => false },
@@ -97,13 +114,18 @@ export const SECTIONS = Object.freeze([
   { id: 'motion', tab: 'advanced', titleKey: 'section_motion_effects', appliesTo: () => true, summary: (ctx) => motionSummary(ctx.node), openFor: () => false },
   { id: 'responsive', tab: 'advanced', titleKey: 'tab_responsive', appliesTo: () => true, summary: (ctx) => responsiveSummary(ctx.node), openFor: () => false },
   { id: 'identity', tab: 'advanced', titleKey: 'section_a11y', appliesTo: () => true, summary: (ctx) => a11ySummary(ctx.node.attributes), openFor: () => false },
-  { id: 'tag', tab: 'advanced', titleKey: 'wrapper_tag', appliesTo: () => true, summary: (ctx) => (typeof ctx.node.tag === 'string' ? ctx.node.tag : ''), openFor: () => false },
+  { id: 'tag', tab: 'advanced', titleKey: 'wrapper_tag', appliesTo: (ctx) => !isBoxContainer(ctx), summary: (ctx) => (typeof ctx.node.tag === 'string' ? ctx.node.tag : ''), openFor: () => false },
   { id: 'attributes', tab: 'advanced', titleKey: 'section_data_attributes', appliesTo: () => true, summary: (ctx) => dataAttributeSummary(ctx.node.attributes), openFor: () => false },
 ]);
 
 /** The tab a section sits under for this block. */
 export function tabOf(section, ctx) {
   return typeof section.tab === 'function' ? section.tab(ctx) : section.tab;
+}
+
+function containerSummary(layout) {
+  const l = asObject(layout);
+  return [l.display === 'grid' ? 'grid' : 'flex', l.content_width === 'boxed' && l.content_max ? l.content_max : ''].filter(Boolean).join(' · ');
 }
 
 function advancedSummary(ctx) {

@@ -434,6 +434,41 @@
    "path": "typography.decoration_color",
    "value": "shadow.lg",
    "ok": false
+  },
+  {
+   "path": "layout.content_width",
+   "value": "boxed",
+   "ok": true
+  },
+  {
+   "path": "layout.content_width",
+   "value": "full",
+   "ok": true
+  },
+  {
+   "path": "layout.content_width",
+   "value": "wide",
+   "ok": false
+  },
+  {
+   "path": "layout.content_max",
+   "value": "1300px",
+   "ok": true
+  },
+  {
+   "path": "layout.content_max",
+   "value": "80%",
+   "ok": true
+  },
+  {
+   "path": "layout.content_max",
+   "value": "auto",
+   "ok": false
+  },
+  {
+   "path": "layout.content_max",
+   "value": "1300",
+   "ok": false
   }
  ]
 }

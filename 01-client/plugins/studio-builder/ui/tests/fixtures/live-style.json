@@ -1494,6 +1494,99 @@
                 ],
                 "reduceMotion": false
             }
+        },
+        {
+            "name": "boxed content width",
+            "covered": true,
+            "block": {
+                "style": {
+                    "layout": {
+                        "display": "flex",
+                        "content_width": "boxed",
+                        "content_max": "1300px"
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [
+                    "display:flex",
+                    "padding-left:max(0px,calc((100% - 1300px)/2))",
+                    "padding-right:max(0px,calc((100% - 1300px)/2))"
+                ],
+                "inline": [],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
+        },
+        {
+            "name": "boxed content width keeps the author's side padding as a minimum",
+            "covered": true,
+            "block": {
+                "style": {
+                    "layout": {
+                        "content_width": "boxed",
+                        "content_max": "80rem"
+                    },
+                    "padding": {
+                        "left": "2rem",
+                        "top": "1rem"
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [
+                    "padding-left:max(2rem,calc((100% - 80rem)/2))",
+                    "padding-right:max(0px,calc((100% - 80rem)/2))",
+                    "padding-top:1rem"
+                ],
+                "inline": [],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
+        },
+        {
+            "name": "full width and boxed without a width add nothing",
+            "covered": true,
+            "block": {
+                "style": {
+                    "layout": {
+                        "content_width": "full",
+                        "content_max": "900px"
+                    },
+                    "dimensions": {
+                        "min_height": "100vh"
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [],
+                "inline": [
+                    "min-height:100vh"
+                ],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
+        },
+        {
+            "name": "boxed without a width adds nothing",
+            "covered": true,
+            "block": {
+                "style": {
+                    "layout": {
+                        "content_width": "boxed"
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [],
+                "inline": [],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
         }
     ]
 }

@@ -854,7 +854,8 @@ final class DocumentOperationApplier
     }
 
     /**
-     * Set the block's wrapper element; null or `div` (the default) removes the key.
+     * Set the block's wrapper element; null or `div` (the default) removes the key. An `a` wrapper takes `payload.link`
+     * ({url, new_tab}); any other tag drops the block's link, so a stale address never lingers.
      *
      * @param array<string, mixed> $document
      * @param array<string, mixed> $payload
@@ -869,11 +870,23 @@ final class DocumentOperationApplier
                 ['path' => '$.payload.tag', 'code' => 'invalid_tag', 'message' => 'payload.tag must be null or one of: ' . implode(', ', CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS) . '.'],
             ]);
         }
-        return self::changeBlockInDocument($document, $blockId, static function (array $block) use ($tag): array {
+        $link = $payload['link'] ?? null;
+        if ($link !== null) {
+            $linkIssue = $tag === 'a' ? CanonicalDocumentSchema::blockLinkIssue($link) : 'payload.link is only for the a tag.';
+            if ($linkIssue !== null) {
+                throw new StudioValidationException([['path' => '$.payload.link', 'code' => 'invalid_link', 'message' => $linkIssue]]);
+            }
+        }
+        return self::changeBlockInDocument($document, $blockId, static function (array $block) use ($tag, $link): array {
             if ($tag === null || $tag === 'div') {
                 unset($block['tag']);
             } else {
                 $block['tag'] = $tag;
+            }
+            if ($tag === 'a' && $link !== null) {
+                $block['link'] = $link;
+            } else {
+                unset($block['link']);
             }
             return $block;
         });

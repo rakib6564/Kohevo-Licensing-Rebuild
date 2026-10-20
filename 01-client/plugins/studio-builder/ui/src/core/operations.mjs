@@ -13,6 +13,7 @@
 // UI re-renders just what changed.
 
 import { asList, asObject } from './doc.mjs';
+import { isLikelySafeUrl } from './fields.mjs';
 
 export const OPS = Object.freeze({
   UPDATE_SETTINGS: 'update_settings',
@@ -129,7 +130,8 @@ export const updateBlockMeta = (blockId, meta) => op(OPS.UPDATE_BLOCK_META, { bl
 /** Replace a block's interaction states ({hover, focus, active, disabled}); `{}` clears them. */
 export const updateBlockStyleStates = (blockId, styleStates) => op(OPS.UPDATE_BLOCK_STYLE_STATES, { block_id: blockId, style_states: styleStates });
 /** Choose the block's wrapper element; null (or `div`) is the default. */
-export const updateBlockTag = (blockId, tag) => op(OPS.UPDATE_BLOCK_TAG, { block_id: blockId, tag });
+/** `link` ({url, new_tab}) is only for the `a` tag: where the linked wrapper points. */
+export const updateBlockTag = (blockId, tag, link) => op(OPS.UPDATE_BLOCK_TAG, link ? { block_id: blockId, tag, link } : { block_id: blockId, tag });
 /** Replace a section's style ({background, padding}); `{}` clears it. */
 /** Replace a section's entrance animation; `{}` clears it. */
 export const updateSectionAnimation = (sectionId, animation) => op(OPS.UPDATE_SECTION_ANIMATION, { section_id: sectionId, animation });
@@ -422,12 +424,19 @@ export function applyLocal(doc, operation, ctx = {}) {
     }
     case OPS.UPDATE_BLOCK_TAG: {
       if (p.tag !== null && p.tag !== undefined && !BLOCK_TAGS.includes(p.tag)) throw new Error(`Invalid tag ${p.tag}`);
+      const link = p.link ?? null;
+      if (link !== null) {
+        if (p.tag !== 'a') throw new Error('A link is only for the a tag');
+        const issue = blockLinkIssue(link);
+        if (issue) throw new Error(issue);
+      }
       let hit = false;
       const next = mapBlocks(doc, (b) => {
         if (b.id !== p.block_id) return b;
         hit = true;
-        const { tag: _old, ...rest } = b;
-        return p.tag && p.tag !== 'div' ? { ...rest, tag: p.tag } : rest;
+        const { tag: _old, link: _oldLink, ...rest } = b;
+        const tagged = p.tag && p.tag !== 'div' ? { ...rest, tag: p.tag } : rest;
+        return p.tag === 'a' && link ? { ...tagged, link } : tagged;
       });
       if (!hit) throw notFound(p.block_id);
       return next;
@@ -497,7 +506,16 @@ function notFound(id) {
 
 /** Map every block (depth-first), copying only the paths that changed. */
 // Mirrors CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS / ALLOWED_STYLE_KEYS and StyleSurface::STATE_KEYS / STATE_SELECTORS.
-const BLOCK_TAGS = ['div', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'figure'];
+const BLOCK_TAGS = ['div', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'figure', 'main', 'a'];
+
+/** Mirrors CanonicalDocumentSchema::blockLinkIssue: why a linked wrapper's `{url, new_tab}` is refused, or ''. */
+export function blockLinkIssue(link) {
+  if (!link || typeof link !== 'object' || Array.isArray(link)) return 'A link must be an object {url, new_tab}.';
+  if (Object.keys(link).some((k) => k !== 'url' && k !== 'new_tab')) return 'A link holds only url and new_tab.';
+  if (!isLikelySafeUrl(link.url)) return 'The link needs a safe URL (https, mailto, tel, a path or an #anchor).';
+  if ('new_tab' in link && typeof link.new_tab !== 'boolean') return 'new_tab must be true or false.';
+  return '';
+}
 const STATES = ['hover', 'focus', 'active', 'disabled'];
 const STATE_KEYS = ['color', 'typography', 'background', 'border', 'shadow', 'opacity', 'effects'];
 const STYLE_KEYS = [

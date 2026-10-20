@@ -83,7 +83,7 @@ test('a side border, the custom shadow and the text decoration take theme colour
     await border.getByRole('button', { name: 'Edit border' }).click();
     const card = border.getByRole('dialog', { name: 'Edit border' });
     await card.locator('details.sbx-more summary').click();
-    const top = card.locator('fieldset', { has: page.getByText('Top', { exact: true }) }).first().locator('.sbx-color__theme');
+    const top = card.locator('details.sbx-more fieldset', { has: page.getByText('Top', { exact: true }) }).first().locator('.sbx-color__theme');
     await pickTheme(page, top);
     await settled(page);
     await expect.poll(() => canvasCss(page), { timeout: 15_000 }).toMatch(/border-top-color:\s*var\(--sb-/);

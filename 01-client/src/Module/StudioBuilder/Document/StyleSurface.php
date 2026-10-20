@@ -68,6 +68,10 @@ final class StyleSurface
                 'align_self' => ['map', 'align-self', self::ALIGN_SELF],
                 'columns'   => ['int', 'grid-template-columns', 1, 12, 'repeat(%d,minmax(0,1fr))'],
                 'rows'      => ['int', 'grid-template-rows', 1, 12, 'repeat(%d,minmax(0,1fr))'],
+                // Boxed content width: the block stays full width (its background too) and its children are held to
+                // `content_max` by side padding (see emitBoxed). No CSS property of their own, so the property is ''.
+                'content_width' => ['enum', '', ['boxed', 'full']],
+                'content_max'   => ['length', ''],
             ],
             'position' => [
                 'mode'   => ['enum', 'position', ['static', 'relative', 'absolute', 'sticky']],
@@ -141,6 +145,7 @@ final class StyleSurface
     }
 
     private const REPEATS = ['no-repeat', 'repeat', 'repeat-x', 'repeat-y'];
+    private const ATTACHMENTS = ['scroll', 'fixed'];
     private const FITS    = ['cover', 'contain', 'auto'];
 
     /**
@@ -182,6 +187,9 @@ final class StyleSurface
         }
         if (array_key_exists('position', $bg) && !(is_string($bg['position']) && isset(self::POSITIONS[$bg['position']]))) {
             $errors[] = self::issue("{$path}.position", 'Unknown position.');
+        }
+        if (array_key_exists('attachment', $bg) && !(is_string($bg['attachment']) && in_array($bg['attachment'], self::ATTACHMENTS, true))) {
+            $errors[] = self::issue("{$path}.attachment", 'attachment must be scroll or fixed.');
         }
         if (array_key_exists('overlay', $bg)) {
             self::checkLimitedObject($bg['overlay'], ['color' => ['color', 'color']], "{$path}.overlay", $errors);
@@ -225,6 +233,33 @@ final class StyleSurface
             $position = self::POSITIONS[$bg['position']];
         }
         $out[] = 'background-position:' . $position . ' !important';
+        if (isset($bg['attachment']) && is_string($bg['attachment']) && in_array($bg['attachment'], self::ATTACHMENTS, true)) {
+            $out[] = 'background-attachment:' . $bg['attachment'] . ' !important';
+        }
+    }
+
+    /**
+     * A boxed block keeps its full width (and its background) and holds its children to `layout.content_max`: each side's
+     * padding becomes the larger of the author's padding and half the room left over, as a centred inner box would give.
+     * The percentage is the parent's width, which is the block's own while it is boxed (its width is never set then).
+     *
+     * @param array<string, mixed> $style
+     * @param list<string> $out
+     */
+    private static function emitBoxed(array $style, array &$out): void
+    {
+        $layout = is_array($style['layout'] ?? null) ? $style['layout'] : [];
+        if (($layout['content_width'] ?? null) !== 'boxed' || !isset($layout['content_max']) || !self::fieldAccepts($layout['content_max'], ['length', ''])) {
+            return;
+        }
+        $max = trim((string) $layout['content_max']);
+        $padding = is_array($style['padding'] ?? null) ? $style['padding'] : [];
+        foreach (['left', 'right'] as $side) {
+            $own = isset($padding[$side]) && self::fieldAccepts($padding[$side], ['padlen', '']) ? trim((string) $padding[$side]) : '0px';
+            // One declaration per side: the author's own padding is folded into this one, never left beside it.
+            $out = array_values(array_filter($out, static fn (string $d): bool => !str_starts_with($d, 'padding-' . $side . ':')));
+            $out[] = 'padding-' . $side . ':max(' . $own . ',calc((100% - ' . $max . ')/2))';
+        }
     }
 
     /** Numeric parts of `effects`: group => field => [min, max, unit]. */
@@ -547,6 +582,7 @@ final class StyleSurface
                 self::emitFields($style[$key], $more[$key], $out);
             }
         }
+        self::emitBoxed($style, $out);
         if (isset($style['dimensions']) && is_array($style['dimensions'])) {
             self::emitFields($style['dimensions'], self::fields()['dimensions'], $out);
         }
@@ -585,7 +621,7 @@ final class StyleSurface
     {
         // Emit in table order, not document order, so the CSS is deterministic.
         foreach ($defs as $field => $def) {
-            if (!array_key_exists($field, $values) || !self::fieldAccepts($values[$field], $def)) {
+            if ($def[1] === '' || !array_key_exists($field, $values) || !self::fieldAccepts($values[$field], $def)) {
                 continue;
             }
             $v = $values[$field];
@@ -699,7 +735,7 @@ final class StyleSurface
                         if (!is_string($bgVal) || !StyleValueGuard::isGradient($bgVal)) {
                             $errors[] = self::issue("{$p}.gradient", 'Invalid gradient.');
                         }
-                    } elseif (!in_array($bgKey, ['image', 'fit', 'repeat', 'position', 'overlay'], true)) {
+                    } elseif (!in_array($bgKey, ['image', 'fit', 'repeat', 'position', 'overlay', 'attachment'], true)) {
                         $errors[] = self::issue("{$p}.{$bgKey}", "Unknown field '{$bgKey}'.");
                     }
                 }
@@ -922,7 +958,8 @@ final class StyleSurface
     private static function responsiveFields(): array
     {
         $more   = self::moreFields();
-        $layout = array_diff_key(self::fields()['layout'], ['display' => 1]);
+        // The display type and the boxed content width are set for every device at once.
+        $layout = array_diff_key(self::fields()['layout'], ['display' => 1, 'content_width' => 1, 'content_max' => 1]);
         return [
             'typography' => ['size' => ['length', 'font-size']],
             'padding'    => $more['padding'],

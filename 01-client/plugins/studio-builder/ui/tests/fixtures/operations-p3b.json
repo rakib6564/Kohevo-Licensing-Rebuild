@@ -292,6 +292,123 @@
    "error": true
   },
   {
+   "name": "tag main",
+   "op": "update_block_tag",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "tag": "main"
+   },
+   "set": [
+    {
+     "path": [
+      "sections",
+      0,
+      "blocks",
+      0,
+      "tag"
+     ],
+     "value": "main"
+    }
+   ],
+   "unset": []
+  },
+  {
+   "name": "tag a with its link",
+   "op": "update_block_tag",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "tag": "a",
+    "link": {
+     "url": "https://example.test/menu",
+     "new_tab": true
+    }
+   },
+   "set": [
+    {
+     "path": [
+      "sections",
+      0,
+      "blocks",
+      0,
+      "tag"
+     ],
+     "value": "a"
+    },
+    {
+     "path": [
+      "sections",
+      0,
+      "blocks",
+      0,
+      "link"
+     ],
+     "value": {
+      "url": "https://example.test/menu",
+      "new_tab": true
+     }
+    }
+   ],
+   "unset": []
+  },
+  {
+   "name": "tag a without a link is a plain anchor",
+   "op": "update_block_tag",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "tag": "a"
+   },
+   "set": [
+    {
+     "path": [
+      "sections",
+      0,
+      "blocks",
+      0,
+      "tag"
+     ],
+     "value": "a"
+    }
+   ],
+   "unset": []
+  },
+  {
+   "name": "a link is only for the a tag",
+   "op": "update_block_tag",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "tag": "section",
+    "link": {
+     "url": "https://example.test/"
+    }
+   },
+   "error": true
+  },
+  {
+   "name": "an unsafe link is refused",
+   "op": "update_block_tag",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "tag": "a",
+    "link": {
+     "url": "javascript:alert(1)"
+    }
+   },
+   "error": true
+  },
+  {
+   "name": "a link holds only url and new_tab",
+   "op": "update_block_tag",
+   "payload": {
+    "block_id": "blk_aaaaaaaaaaaaaaaa",
+    "tag": "a",
+    "link": {
+     "url": "/x",
+     "onclick": "y"
+    }
+   },
+   "error": true
+  },
+  {
    "name": "section style set",
    "op": "update_section_style",
    "payload": {
