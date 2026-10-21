@@ -56,7 +56,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Booking",
             "type": "booking.embed",
@@ -133,7 +134,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Booking Services",
             "type": "booking.services",
@@ -238,7 +240,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Accordion",
             "type": "core.accordion",
@@ -402,7 +405,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Button",
             "type": "core.button",
@@ -480,7 +484,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Card",
             "type": "core.card",
@@ -649,7 +654,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Carousel",
             "type": "core.carousel",
@@ -662,8 +668,21 @@
             "binding_slots": [],
             "category": "layout",
             "default_props": {
+                "bg_video": null,
                 "direction": "vertical",
                 "gap": "md",
+                "shape_bottom": "none",
+                "shape_bottom_color": null,
+                "shape_bottom_flip": false,
+                "shape_bottom_front": false,
+                "shape_bottom_height": 0,
+                "shape_bottom_width": 100,
+                "shape_top": "none",
+                "shape_top_color": null,
+                "shape_top_flip": false,
+                "shape_top_front": false,
+                "shape_top_height": 0,
+                "shape_top_width": 100,
                 "wrap": "wrap"
             },
             "description": "Inner constraint container",
@@ -705,6 +724,125 @@
                         "wrap",
                         "nowrap"
                     ]
+                },
+                {
+                    "key": "bg_video",
+                    "type": "url",
+                    "label": "Background Video",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "shape_top",
+                    "type": "enum",
+                    "label": "Top Shape",
+                    "required": false,
+                    "default": "none",
+                    "allowed_values": [
+                        "none",
+                        "wave",
+                        "curve",
+                        "tilt",
+                        "triangle",
+                        "mountains"
+                    ]
+                },
+                {
+                    "key": "shape_top_color",
+                    "type": "token_ref",
+                    "label": "Top Shape Colour",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "shape_top_width",
+                    "type": "number",
+                    "label": "Top Shape Width",
+                    "required": false,
+                    "default": 100,
+                    "min": 100,
+                    "max": 300,
+                    "integer_only": true
+                },
+                {
+                    "key": "shape_top_height",
+                    "type": "number",
+                    "label": "Top Shape Height",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 500,
+                    "integer_only": true
+                },
+                {
+                    "key": "shape_top_flip",
+                    "type": "boolean",
+                    "label": "Flip Top Shape",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "shape_top_front",
+                    "type": "boolean",
+                    "label": "Top Shape in Front",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "shape_bottom",
+                    "type": "enum",
+                    "label": "Bottom Shape",
+                    "required": false,
+                    "default": "none",
+                    "allowed_values": [
+                        "none",
+                        "wave",
+                        "curve",
+                        "tilt",
+                        "triangle",
+                        "mountains"
+                    ]
+                },
+                {
+                    "key": "shape_bottom_color",
+                    "type": "token_ref",
+                    "label": "Bottom Shape Colour",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "shape_bottom_width",
+                    "type": "number",
+                    "label": "Bottom Shape Width",
+                    "required": false,
+                    "default": 100,
+                    "min": 100,
+                    "max": 300,
+                    "integer_only": true
+                },
+                {
+                    "key": "shape_bottom_height",
+                    "type": "number",
+                    "label": "Bottom Shape Height",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 500,
+                    "integer_only": true
+                },
+                {
+                    "key": "shape_bottom_flip",
+                    "type": "boolean",
+                    "label": "Flip Bottom Shape",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "shape_bottom_front",
+                    "type": "boolean",
+                    "label": "Bottom Shape in Front",
+                    "required": false,
+                    "default": false
                 }
             ],
             "icon": "box",
@@ -734,7 +872,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Container",
             "type": "core.container",
@@ -805,7 +944,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Countdown",
             "type": "core.countdown",
@@ -902,7 +1042,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Divider",
             "type": "core.divider",
@@ -1036,7 +1177,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Feature list",
             "type": "core.feature_list",
@@ -1132,7 +1274,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Form",
             "type": "core.form",
@@ -1248,7 +1391,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Form Field",
             "type": "core.form_field",
@@ -1378,7 +1522,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Gallery",
             "type": "core.gallery",
@@ -1541,7 +1686,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Heading",
             "type": "core.heading",
@@ -1709,7 +1855,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Hero",
             "type": "core.hero",
@@ -1925,7 +2072,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Icon",
             "type": "core.icon",
@@ -2040,7 +2188,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Image",
             "type": "core.image",
@@ -2124,7 +2273,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Link",
             "type": "core.link",
@@ -2221,7 +2371,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "List",
             "type": "core.list",
@@ -2318,7 +2469,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Map",
             "type": "core.map",
@@ -2417,7 +2569,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Modal",
             "type": "core.modal",
@@ -2577,7 +2730,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Nav menu",
             "type": "core.nav_menu",
@@ -2813,7 +2967,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Services grid",
             "type": "core.query_loop",
@@ -2902,7 +3057,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Quote",
             "type": "core.quote",
@@ -2988,7 +3144,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Rich text",
             "type": "core.rich_text",
@@ -3048,7 +3205,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Spacer",
             "type": "core.spacer",
@@ -3204,7 +3362,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Stats",
             "type": "core.stats",
@@ -3313,7 +3472,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Table",
             "type": "core.table",
@@ -3435,7 +3595,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Tabs",
             "type": "core.tabs",
@@ -3569,7 +3730,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Text",
             "type": "core.text",
@@ -3667,7 +3829,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Video",
             "type": "core.video",
@@ -3716,7 +3879,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Form",
             "type": "forms.embed",
@@ -3784,7 +3948,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Form Card",
             "type": "forms.form_card",
@@ -3871,7 +4036,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Width container",
             "type": "layout.container",
@@ -3990,7 +4156,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Flex",
             "type": "layout.flex",
@@ -4076,7 +4243,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Grid",
             "type": "layout.grid",
@@ -4175,7 +4343,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Offcanvas",
             "type": "layout.offcanvas",
@@ -4290,7 +4459,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Section",
             "type": "layout.section",
@@ -4367,7 +4537,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Membership Plans",
             "type": "membership.plans",
@@ -4470,7 +4641,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Payment Button",
             "type": "payment.button",
@@ -4532,7 +4704,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Stripe Payment Link",
             "type": "payment.link",
@@ -4600,7 +4773,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Archive title",
             "type": "theme.archive_title",
@@ -4687,7 +4861,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Field value",
             "type": "theme.field_value",
@@ -4742,7 +4917,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Post content",
             "type": "theme.post_content",
@@ -4822,7 +4998,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Post meta",
             "type": "theme.post_meta",
@@ -4906,7 +5083,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Post title",
             "type": "theme.post_title",
@@ -4968,7 +5146,8 @@
                 "effects",
                 "margin",
                 "padding",
-                "text_shadow"
+                "text_shadow",
+                "overlay"
             ],
             "title": "Search box",
             "type": "theme.search_box",

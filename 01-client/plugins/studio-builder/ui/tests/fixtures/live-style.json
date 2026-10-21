@@ -1657,6 +1657,104 @@
                 "media": [],
                 "reduceMotion": false
             }
+        },
+        {
+            "name": "overlay colour with opacity and blend: custom properties, its own stacking context, positioned",
+            "covered": true,
+            "block": {
+                "style": {
+                    "overlay": {
+                        "color": "rgba(0,0,0,0.5)",
+                        "opacity": 0.8,
+                        "blend": "multiply"
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [
+                    "--sb-ov-bg:rgba(0,0,0,0.5)",
+                    "--sb-ov-blend:multiply",
+                    "--sb-ov-display:block",
+                    "--sb-ov-op:0.8",
+                    "isolation:isolate",
+                    "position:relative"
+                ],
+                "inline": [],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
+        },
+        {
+            "name": "overlay theme colour, written as the theme custom property",
+            "covered": true,
+            "block": {
+                "style": {
+                    "overlay": {
+                        "color": "color.accent"
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [
+                    "--sb-ov-bg:var(--sb-color-accent)",
+                    "--sb-ov-display:block",
+                    "isolation:isolate",
+                    "position:relative"
+                ],
+                "inline": [],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
+        },
+        {
+            "name": "overlay gradient keeps an author's position mode",
+            "covered": true,
+            "block": {
+                "style": {
+                    "overlay": {
+                        "gradient": "linear-gradient(135deg, #000000, #ffffff)",
+                        "opacity": 0.5
+                    },
+                    "position": {
+                        "mode": "sticky",
+                        "top": "0"
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [
+                    "--sb-ov-bg:linear-gradient(135deg, #000000, #ffffff)",
+                    "--sb-ov-display:block",
+                    "--sb-ov-op:0.5",
+                    "isolation:isolate",
+                    "position:sticky",
+                    "top:0"
+                ],
+                "inline": [],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
+        },
+        {
+            "name": "overlay with no colour or gradient paints nothing",
+            "covered": true,
+            "block": {
+                "style": {
+                    "overlay": {
+                        "opacity": 0.5
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [],
+                "inline": [],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
         }
     ]
 }

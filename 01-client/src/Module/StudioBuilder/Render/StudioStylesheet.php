@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '27';
+    public const VERSION = '28';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -102,6 +102,16 @@ final class StudioStylesheet
             // A linked image: the link takes the picture's place in the box, so sizes and fit still reach the picture.
             . '.sb-image__link{display:block}.sb-block--core-image>.sb-image>.sb-image__link{flex:1 1 auto;min-height:0;object-fit:inherit;object-position:inherit}'
             . '.sb-block--core-image>.sb-image>.sb-image__link>img{height:100%;object-fit:inherit;object-position:inherit}'
+            // A Container's layers, behind its children: a background video, the overlay (custom properties its style sets,
+            // so a hover state can change them), then the shape dividers, which can be brought in front instead.
+            . '.sb-block--core-container::before{content:"";display:var(--sb-ov-display,none);position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;background:var(--sb-ov-bg,transparent);opacity:var(--sb-ov-op,1);mix-blend-mode:var(--sb-ov-blend,normal);transition:inherit}'
+            . '.sb-layered{isolation:isolate}:where(.sb-layered){position:relative}'
+            . '.sb-bg-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;pointer-events:none;border-radius:inherit}'
+            . '@media (prefers-reduced-motion:reduce){.sb-bg-video{display:none}}'
+            . '.sb-shape{position:absolute;left:0;right:0;overflow:hidden;line-height:0;pointer-events:none;z-index:-1;color:var(--sb-surface-primary,#fff)}'
+            . '.sb-shape--front{z-index:2}.sb-shape--top{top:-1px}.sb-shape--bottom{bottom:-1px;transform:rotate(180deg)}'
+            . '.sb-shape svg{display:block;position:relative;left:50%;width:var(--sb-shape-w,100%);height:var(--sb-shape-h,60px);transform:translateX(-50%);fill:currentColor}'
+            . '.sb-shape--flip svg{transform:translateX(-50%) scaleX(-1)}'
             // A text block's drop cap: its first letter spans about three lines.
             . '.sb-dropcap::first-letter{float:left;font-size:3.4em;line-height:.85;margin:.06em .12em 0 0;font-weight:600}'
             . '.sb-image--rounded img{border-radius:var(--sb-radius-md)}'

@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Registry;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\ContainerRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\CountdownRenderer;
 use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
@@ -280,6 +281,20 @@ final class BlockRegistry
                 ['key' => 'gap', 'type' => 'enum', 'label' => 'Gap', 'required' => false, 'allowed_values' => CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, 'default' => 'md'],
                 ['key' => 'direction', 'type' => 'enum', 'label' => 'Direction', 'required' => false, 'allowed_values' => ['vertical', 'horizontal'], 'default' => 'vertical'],
                 ['key' => 'wrap', 'type' => 'enum', 'label' => 'Wrap', 'required' => false, 'allowed_values' => ['wrap', 'nowrap'], 'default' => 'wrap'],
+                // Set from the Style tab: a video behind the children, and a shape divider at the top and the bottom edge.
+                ['key' => 'bg_video', 'type' => 'url', 'label' => 'Background Video', 'required' => false],
+                ['key' => 'shape_top', 'type' => 'enum', 'label' => 'Top Shape', 'required' => false, 'allowed_values' => ContainerRenderer::SHAPE_NAMES, 'default' => 'none'],
+                ['key' => 'shape_top_color', 'type' => 'token_ref', 'label' => 'Top Shape Colour', 'required' => false, 'default' => null],
+                ['key' => 'shape_top_width', 'type' => 'number', 'label' => 'Top Shape Width', 'required' => false, 'default' => 100, 'min' => 100, 'max' => 300, 'integer_only' => true],
+                ['key' => 'shape_top_height', 'type' => 'number', 'label' => 'Top Shape Height', 'required' => false, 'default' => 0, 'min' => 0, 'max' => 500, 'integer_only' => true],
+                ['key' => 'shape_top_flip', 'type' => 'boolean', 'label' => 'Flip Top Shape', 'required' => false, 'default' => false],
+                ['key' => 'shape_top_front', 'type' => 'boolean', 'label' => 'Top Shape in Front', 'required' => false, 'default' => false],
+                ['key' => 'shape_bottom', 'type' => 'enum', 'label' => 'Bottom Shape', 'required' => false, 'allowed_values' => ContainerRenderer::SHAPE_NAMES, 'default' => 'none'],
+                ['key' => 'shape_bottom_color', 'type' => 'token_ref', 'label' => 'Bottom Shape Colour', 'required' => false, 'default' => null],
+                ['key' => 'shape_bottom_width', 'type' => 'number', 'label' => 'Bottom Shape Width', 'required' => false, 'default' => 100, 'min' => 100, 'max' => 300, 'integer_only' => true],
+                ['key' => 'shape_bottom_height', 'type' => 'number', 'label' => 'Bottom Shape Height', 'required' => false, 'default' => 0, 'min' => 0, 'max' => 500, 'integer_only' => true],
+                ['key' => 'shape_bottom_flip', 'type' => 'boolean', 'label' => 'Flip Bottom Shape', 'required' => false, 'default' => false],
+                ['key' => 'shape_bottom_front', 'type' => 'boolean', 'label' => 'Bottom Shape in Front', 'required' => false, 'default' => false],
             ]),
             allowsChildren: true,
         ));

@@ -83,6 +83,7 @@ function sbsv_samples(): array
         'border'        => ['style' => 'solid', 'width' => '2px'],
         'shadow'        => 'md',
         'text_shadow'   => ['x' => '1px', 'y' => '2px', 'blur' => '4px', 'color' => 'rgba(0,0,0,0.4)'],
+        'overlay'       => ['color' => 'rgba(0,0,0,0.5)', 'opacity' => 0.8, 'blend' => 'multiply'],
         'dimensions'    => ['max_width' => '40rem'],
         'opacity'       => 0.5,
         'z_index'       => 3,

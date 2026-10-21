@@ -517,10 +517,10 @@ export function blockLinkIssue(link) {
   return '';
 }
 const STATES = ['hover', 'focus', 'active', 'disabled'];
-const STATE_KEYS = ['color', 'typography', 'background', 'border', 'shadow', 'opacity', 'effects'];
+const STATE_KEYS = ['color', 'typography', 'background', 'border', 'shadow', 'opacity', 'effects', 'overlay'];
 const STYLE_KEYS = [
   'align', 'surface_token', 'text_token', 'spacing_token', 'radius_token', 'shadow_token', 'font_token', 'border_token', 'typography', 'color',
-  'background', 'border', 'shadow', 'dimensions', 'opacity', 'z_index', 'layout', 'position', 'effects', 'margin', 'padding', 'text_shadow',
+  'background', 'border', 'shadow', 'dimensions', 'opacity', 'z_index', 'layout', 'position', 'effects', 'margin', 'padding', 'text_shadow', 'overlay',
 ];
 const PROPERTY_PATH = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){0,3}$/;
 

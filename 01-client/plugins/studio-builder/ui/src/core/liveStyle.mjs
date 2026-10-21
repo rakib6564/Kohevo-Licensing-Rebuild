@@ -49,7 +49,7 @@ export const DEVICE_QUERIES = { tablet: '(max-width:1023.98px)', mobile: '(max-w
 /** Every top-level `style` key this file knows how to predict. */
 const HANDLED_KEYS = new Set([
   'layout', 'position', 'margin', 'padding', 'dimensions', 'background', 'border', 'typography', 'color', 'shadow', 'effects',
-  'opacity', 'z_index', 'align', 'text_shadow', ...Object.keys(TOKEN_KEYS),
+  'opacity', 'z_index', 'align', 'text_shadow', 'overlay', ...Object.keys(TOKEN_KEYS),
 ]);
 
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -202,6 +202,21 @@ export function scopedDeclarations(style) {
       if ('blur' in ts && ok('text_shadow.blur', ts.blur)) parts.push(String(ts.blur).trim());
       parts.push(colourCss(ts.color));
       out.push(`text-shadow:${parts.join(' ')}`);
+    }
+  }
+  if (isObj(style.overlay)) {
+    // StyleSurface::overlayDeclarations: custom properties for the Container's overlay layer, once it has a colour or a gradient.
+    const ov = style.overlay;
+    let paint = null;
+    if ('color' in ov && ok('overlay.color', ov.color)) paint = colourCss(ov.color);
+    else if ('gradient' in ov && ok('overlay.gradient', ov.gradient)) paint = String(ov.gradient).trim();
+    if (paint !== null) {
+      out.push('--sb-ov-display:block', `--sb-ov-bg:${paint}`);
+      if ('opacity' in ov && ok('overlay.opacity', ov.opacity)) out.push(`--sb-ov-op:${ov.opacity}`);
+      if ('blend' in ov && ok('overlay.blend', ov.blend)) out.push(`--sb-ov-blend:${ov.blend}`);
+      out.push('isolation:isolate');
+      const mode = isObj(style.position) ? style.position.mode : undefined;
+      if (mode === undefined || mode === null || mode === 'static') out.push('position:relative');
     }
   }
   if (isObj(style.effects)) emitEffects(style.effects, out);
