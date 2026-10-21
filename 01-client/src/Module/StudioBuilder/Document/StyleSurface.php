@@ -325,6 +325,9 @@ final class StyleSurface
         if (array_key_exists('text_shadow', $style) && $style['text_shadow'] !== null) {
             self::checkTextShadow($style['text_shadow'], "{$path}.text_shadow", $errors);
         }
+        if (array_key_exists('overlay', $style) && $style['overlay'] !== null) {
+            self::checkOverlay($style['overlay'], "{$path}.overlay", $errors, false);
+        }
         if (isset($style['shadow']) && is_array($style['shadow'])) {
             self::checkShadowObject($style['shadow'], "{$path}.shadow", $errors);
         }
@@ -489,6 +492,86 @@ final class StyleSurface
         }
         $parts[] = self::colourCss((string) $ts['color']);
         return implode(' ', $parts);
+    }
+
+    /**
+     * A Container's background overlay `{color | gradient, opacity?, blend?}`, a layer between its background and its
+     * children. The base style needs a colour (a literal or a theme colour) or a gradient, not both; a state may change
+     * any part, and takes a literal colour, as every state colour does.
+     *
+     * @param list<array{path: string, code: string, message: string}> $errors
+     */
+    private static function checkOverlay(mixed $ov, string $path, array &$errors, bool $state): void
+    {
+        if (!is_array($ov) || ($ov !== [] && array_is_list($ov))) {
+            $errors[] = self::issue($path, 'An overlay must be an object {color, gradient, opacity, blend}.');
+            return;
+        }
+        foreach ($ov as $key => $value) {
+            $p = "{$path}.{$key}";
+            switch ((string) $key) {
+                case 'color':
+                    if (!self::fieldAccepts($value, [$state ? 'color' : 'tcolor', 'color'])) {
+                        $errors[] = self::issue($p, $state ? 'An overlay colour in a state must be a literal colour.' : 'Invalid overlay colour.');
+                    }
+                    break;
+                case 'gradient':
+                    if (!StyleValueGuard::isGradient($value)) {
+                        $errors[] = self::issue($p, 'Invalid overlay gradient.');
+                    }
+                    break;
+                case 'opacity':
+                    if (!self::inRange($value, 0, 1)) {
+                        $errors[] = self::issue($p, 'opacity must be a number from 0 to 1.');
+                    }
+                    break;
+                case 'blend':
+                    if (!is_string($value) || !in_array($value, self::BLENDS, true)) {
+                        $errors[] = self::issue($p, 'Unknown blend mode.');
+                    }
+                    break;
+                default:
+                    $errors[] = self::issue($p, "An overlay cannot set '{$key}'.");
+            }
+        }
+        if (isset($ov['color'], $ov['gradient'])) {
+            $errors[] = self::issue("{$path}.gradient", 'Choose a colour or a gradient for the overlay, not both.');
+        }
+        if (!$state && !isset($ov['color']) && !isset($ov['gradient'])) {
+            $errors[] = self::issue("{$path}.color", 'An overlay needs a colour or a gradient.');
+        }
+    }
+
+    /**
+     * The overlay as custom properties the stylesheet's Container layer reads (`.sb-block--core-container::before`).
+     *
+     * @param array<string, mixed> $ov
+     * @return list<string>
+     */
+    private static function overlayDeclarations(array $ov, bool $state): array
+    {
+        $out = [];
+        $paint = null;
+        if (isset($ov['color']) && self::fieldAccepts($ov['color'], [$state ? 'color' : 'tcolor', 'color'])) {
+            $paint = self::colourCss(trim((string) $ov['color']));
+        } elseif (isset($ov['gradient']) && StyleValueGuard::isGradient($ov['gradient'])) {
+            $paint = trim((string) $ov['gradient']);
+        }
+        if ($paint !== null) {
+            $out[] = '--sb-ov-bg:' . $paint;
+        }
+        if (isset($ov['opacity']) && self::inRange($ov['opacity'], 0, 1)) {
+            $out[] = '--sb-ov-op:' . self::num($ov['opacity']);
+        }
+        if (isset($ov['blend']) && is_string($ov['blend']) && in_array($ov['blend'], self::BLENDS, true)) {
+            $out[] = '--sb-ov-blend:' . $ov['blend'];
+        }
+        if ($out !== [] && ($state || $paint !== null)) {
+            array_unshift($out, '--sb-ov-display:block');
+        } else {
+            $out = [];
+        }
+        return $out;
     }
 
     /** @param array<string, mixed> $sh */
@@ -658,6 +741,19 @@ final class StyleSurface
             $textShadow = self::textShadowValue($style['text_shadow']);
             if ($textShadow !== null) {
                 $out[] = 'text-shadow:' . $textShadow;
+            }
+        }
+        if (isset($style['overlay']) && is_array($style['overlay'])) {
+            $overlay = self::overlayDeclarations($style['overlay'], false);
+            if ($overlay !== []) {
+                // The layer is absolutely placed under the children: the block is its own stacking context, and its box
+                // anchors the layer unless the author already positioned it.
+                array_push($out, ...$overlay);
+                $out[] = 'isolation:isolate';
+                $mode = is_array($style['position'] ?? null) ? ($style['position']['mode'] ?? null) : null;
+                if ($mode === null || $mode === 'static') {
+                    $out[] = 'position:relative';
+                }
             }
         }
         if (isset($style['effects']) && is_array($style['effects'])) {
@@ -836,7 +932,7 @@ final class StyleSurface
     // ── interaction states ────────────────────────────────────────────────────
 
     /** Style keys a state overlay may carry (a deliberately small, safe subset). */
-    public const STATE_KEYS = ['color', 'typography', 'background', 'border', 'shadow', 'opacity', 'effects'];
+    public const STATE_KEYS = ['color', 'typography', 'background', 'border', 'shadow', 'opacity', 'effects', 'overlay'];
 
     /**
      * Issues for a block's `style_states`: {hover|focus|active|disabled: partial style}.
@@ -886,6 +982,9 @@ final class StyleSurface
                         break;
                     case 'typography':
                         self::checkLimitedObject($value, ['color' => ['color', 'color']] + $more['typography'], $kp, $errors);
+                        break;
+                    case 'overlay':
+                        self::checkOverlay($value, $kp, $errors, true);
                         break;
                     case 'effects':
                         self::checkEffects($value, $kp, $errors);
@@ -959,6 +1058,9 @@ final class StyleSurface
         }
         if (isset($p['opacity']) && self::inRange($p['opacity'], 0, 1)) {
             $out[] = 'opacity:' . self::num($p['opacity']);
+        }
+        if (isset($p['overlay']) && is_array($p['overlay'])) {
+            array_push($out, ...self::overlayDeclarations($p['overlay'], true));
         }
         // Typography extras, a custom shadow object and effects reuse the base emitter.
         $reuse = [];

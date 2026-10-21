@@ -22,6 +22,7 @@ import { ContainerPane } from './ContainerPane.jsx';
 import { BackgroundStates } from './BackgroundStates.jsx';
 import { BlendField, CornersBox, NormalHover, PaddingBox, TextColorField, TextShadowField, TextStrokeField } from './TextBlockStyle.jsx';
 import { IconProps, ImageStates } from './MediaBlockStyle.jsx';
+import { OverlayStates, ShapeDividers } from './ContainerLayers.jsx';
 import { InspectorShell } from './InspectorShell.jsx';
 import { InspectorHeader } from './InspectorHeader.jsx';
 import { InspectorBar } from './InspectorBar.jsx';
@@ -177,8 +178,17 @@ export function BlockInspector({ info }) {
         onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))}
       >
         <StyleControls style={style} capabilities={capabilities} only="background" mediaPicker={boot.mediaPicker} onChange={saveStyle} tokens={manifest && manifest.tokens} />
+        {block.type === CONTAINER_TYPE && (
+          <>
+            {/* A Container's background video: its own prop, kept with the rest of its background. */}
+            <ObjectFields schema={asList(def.field_schema).filter((f) => f.key === 'bg_video')} value={props} manifest={manifest} blockType={block.type} onChange={(next) => save(ops.updateBlockProps(block.id, next))} />
+            <p className="sbx-hint">{t('bg_video_hint')}</p>
+          </>
+        )}
       </BackgroundStates>
     ),
+    overlay: () => <OverlayStates style={style} states={block.style_states} onStyle={saveStyle} onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))} tokens={manifest && manifest.tokens} />,
+    shape_divider: () => <ShapeDividers props={props} onProps={(next) => save(ops.updateBlockProps(block.id, next))} tokens={colourTokens} />,
     border: () => (
       <Popover
         label={t('edit_border')}

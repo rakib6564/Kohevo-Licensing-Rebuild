@@ -317,6 +317,7 @@ final class CanonicalDocumentSchema
         'margin',
         'padding',
         'text_shadow',
+        'overlay',
     ];
 
     public const ALLOWED_FONT_WEIGHTS = ['normal', 'medium', 'semibold', 'bold', 'extrabold', '100', '200', '300', '400', '500', '600', '700', '800', '900'];

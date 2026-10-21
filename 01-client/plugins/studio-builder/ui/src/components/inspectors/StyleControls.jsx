@@ -193,7 +193,7 @@ const isMediaRef = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
  * an angle. A free-text gradient string is never accepted — that would let any
  * CSS function through, not just the one this understands.
  */
-function GradientField({ value, onChange }) {
+export function GradientField({ value, onChange }) {
   const id = useId();
   const raw = typeof value === 'string' ? value : '';
   const parsed = /linear-gradient\(\s*(\d+)deg\s*,\s*(#[0-9a-f]{3,8})\s*,\s*(#[0-9a-f]{3,8})\s*\)/i.exec(raw);

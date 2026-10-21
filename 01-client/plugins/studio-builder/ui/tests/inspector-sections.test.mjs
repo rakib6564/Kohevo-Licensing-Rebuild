@@ -244,3 +244,14 @@ test('an Icon\'s alignment is its own field under Content: the generic Style Ali
   assert.ok(!ids('style', ctxOf('core.icon', { style: { align: { base: 'left' } } })).includes('align'), 'the default left is not a value');
   assert.ok(ids('style', ctxOf('core.icon', { style: { align: { base: 'center' } } })).includes('align'), 'a stored alignment is never hidden');
 });
+
+test('a Container has a Background Overlay and a Shape Divider section under Style, after Background; other blocks do not', () => {
+  const style = ids('style', ctxOf('core.container'));
+  assert.ok(style.indexOf('background') < style.indexOf('overlay') && style.indexOf('overlay') < style.indexOf('shape_divider'), style.join(' '));
+  for (const type of ['layout.flex', 'core.card', 'core.heading']) {
+    assert.ok(!ids('style', ctxOf(type)).includes('overlay') && !ids('style', ctxOf(type)).includes('shape_divider'), type);
+  }
+  const section = (id) => SECTIONS.find((x) => x.id === id);
+  assert.equal(section('shape_divider').summary(ctxOf('core.container', { props: { shape_top: 'wave', shape_bottom: 'none' } })), 'wave');
+  assert.equal(section('overlay').summary(ctxOf('core.container', { style: { overlay: { gradient: 'linear-gradient(90deg, #000000, #ffffff)' } } })), 'gradient');
+});

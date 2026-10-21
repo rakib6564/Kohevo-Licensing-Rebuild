@@ -3,7 +3,7 @@
 // an author sees an inline error instead of a block that goes "unavailable". `tests/style-surface.test.mjs` and
 // `tests/unit/StudioBuilderStyleSurfaceParityTest.php` both pin this file against `fixtures/style-surface.json`.
 
-import { isColor, isLength, isToken } from './styleValues.mjs';
+import { isColor, isGradient, isLength, isToken } from './styleValues.mjs';
 
 export const SIDES = Object.freeze(['top', 'right', 'bottom', 'left']);
 export const CORNERS = Object.freeze(['tl', 'tr', 'br', 'bl']);
@@ -124,6 +124,12 @@ add('typography.stroke_color', tcolour);
 
 for (const f of ['x', 'y', 'blur']) add(`text_shadow.${f}`, measure(false));
 add('text_shadow.color', tcolour);
+
+// A Container's background overlay: a colour or a gradient, its opacity and blend mode (StyleSurface::checkOverlay).
+add('overlay.color', tcolour);
+add('overlay.gradient', (v) => isGradient(v));
+add('overlay.opacity', num(0, 1));
+add('overlay.blend', enumOf(OPTIONS.blend));
 
 for (const f of ['x', 'y', 'blur', 'spread']) add(`shadow.${f}`, measure(false));
 add('shadow.color', tcolour);
