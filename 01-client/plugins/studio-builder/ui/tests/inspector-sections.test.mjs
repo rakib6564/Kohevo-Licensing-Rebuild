@@ -238,3 +238,9 @@ test('a Text Editor, a Text, an Image and an Icon have one Style section each, l
   const title = (s) => ({ section_image: 'Image' }[s.titleKey] || s.titleKey);
   assert.ok(searchSections(ctxOf('core.image'), 'filters', title).map((s) => s.id).includes('image_style'), 'its keywords find it');
 });
+
+test('an Icon\'s alignment is its own field under Content: the generic Style Alignment shows only while it holds a value', () => {
+  assert.ok(!ids('style', ctxOf('core.icon')).includes('align'));
+  assert.ok(!ids('style', ctxOf('core.icon', { style: { align: { base: 'left' } } })).includes('align'), 'the default left is not a value');
+  assert.ok(ids('style', ctxOf('core.icon', { style: { align: { base: 'center' } } })).includes('align'), 'a stored alignment is never hidden');
+});

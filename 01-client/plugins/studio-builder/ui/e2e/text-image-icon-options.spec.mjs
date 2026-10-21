@@ -113,13 +113,16 @@ test('Icon: stacked or framed views under Content; size and rotation in its one 
   const panel = page.locator('#sbx-leftpanel-inspector');
   await expect(panel.getByRole('group', { name: 'Shape' })).toHaveCount(0);
   await expect(panel.getByLabel('Size (px)')).toHaveCount(0); // set from the Style tab
+  await expect(panel.getByLabel('Size', { exact: true })).toHaveCount(0); // one size: the Style slider
   await panel.getByRole('group', { name: 'View' }).getByText('Stacked', { exact: true }).click();
   await expect.poll(() => nodeIn(page, id).locator('.sb-icon--stacked .sb-icon__frame svg').count(), { timeout: 20_000 }).toBe(1);
   await expect(panel.getByRole('group', { name: 'Shape' })).toBeVisible();
 
   await page.locator(`#sbx-blk-${id}-tab-style`).click();
   await expect(page.locator('[data-section="icon_style"]')).toBeVisible();
+  await expect(page.locator('[data-section="align"]')).toHaveCount(0); // alignment is under Content
   const props = panel.getByTestId('icon-props');
+  await expect(sliderNumber(props, 'Size')).toHaveValue('32'); // the preset, until a pixel size is set
   await sliderNumber(props, 'Size').fill('48');
   await expect.poll(() => nodeIn(page, id).locator('.sb-icon__svg').evaluate((el) => getComputedStyle(el).width), { timeout: 20_000 }).toBe('48px');
   await sliderNumber(props, 'Rotate').fill('45');

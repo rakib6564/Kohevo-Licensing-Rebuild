@@ -92,7 +92,7 @@ const OWN_STYLE = {
 const OWN_TITLE = { [BUTTON_TYPE]: 'section_button', [HEADING_TYPE]: 'section_heading', 'core.rich_text': 'section_text_editor', 'core.text': 'section_text', [IMAGE_TYPE]: 'section_image', [ICON_TYPE]: 'section_icon' };
 const inOwnStyle = (ctx, id) => (OWN_STYLE[ctx.node.type] || []).includes(id);
 
-/** A section a Container no longer offers is still shown while it holds a value, so nothing set is ever hidden. */
+/** A section a Container (or an Icon, whose alignment is under Content) no longer offers is still shown while it holds a value, so nothing set is ever hidden. */
 const setOn = (ctx, key) => {
   const v = ctx.style[key];
   if (key === 'align') {
@@ -125,7 +125,7 @@ export const SECTIONS = Object.freeze([
   { id: 'text_style', tab: 'style', titleKey: 'section_text_editor', titleFor: (ctx) => OWN_TITLE[ctx.node.type], keywords: ['alignment', 'typography', 'text shadow', 'colour', 'color'], appliesTo: (ctx) => TEXT_EDITOR_TYPES.has(ctx.node.type), summary: () => '', openFor: () => true },
   { id: 'image_style', tab: 'style', titleKey: 'section_image', keywords: ['alignment', 'width', 'max width', 'height', 'object fit', 'opacity', 'css filters', 'blur', 'hover', 'zoom', 'border', 'radius', 'box shadow'], appliesTo: (ctx) => ctx.node.type === IMAGE_TYPE, summary: () => '', openFor: () => true },
   { id: 'icon_style', tab: 'style', titleKey: 'section_icon', keywords: ['primary', 'secondary', 'colour', 'color', 'hover', 'size', 'padding', 'rotate', 'border width'], appliesTo: (ctx) => ctx.node.type === ICON_TYPE, summary: () => '', openFor: () => true },
-  { id: 'align', tab: 'style', titleKey: 'align', titleFor: alignTitleKey, appliesTo: (ctx) => has(ctx, 'align') && !inOwnStyle(ctx, 'align') && (!isBoxContainer(ctx) || setOn(ctx, 'align')), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
+  { id: 'align', tab: 'style', titleKey: 'align', titleFor: alignTitleKey, appliesTo: (ctx) => has(ctx, 'align') && !inOwnStyle(ctx, 'align') && (!(isBoxContainer(ctx) || ctx.node.type === ICON_TYPE) || setOn(ctx, 'align')), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
   { id: 'typography', tab: 'style', titleKey: 'typography', appliesTo: (ctx) => (has(ctx, 'typography') || has(ctx, 'color')) && !MEDIA_TYPES.has(ctx.node.type) && !NO_TEXT_TYPES.has(ctx.node.type) && !inOwnStyle(ctx, 'typography') && (!isBoxContainer(ctx) || setOn(ctx, 'typography') || setOn(ctx, 'color')), summary: (ctx) => typographySummary(ctx.style), openFor: (ctx) => TEXT_TYPES.has(ctx.node.type) },
   { id: 'background', tab: surfaceTab, titleKey: 'background_label', appliesTo: (ctx) => has(ctx, 'background') && !NO_BACKGROUND_TYPES.has(ctx.node.type) && !inOwnStyle(ctx, 'background'), summary: (ctx) => backgroundSummary(ctx.style.background), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
   { id: 'border', tab: surfaceTab, titleKey: 'border', appliesTo: (ctx) => has(ctx, 'border') && !inOwnStyle(ctx, 'border'), summary: (ctx) => borderSummary(ctx.style.border), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
