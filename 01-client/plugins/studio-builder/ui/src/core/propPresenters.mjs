@@ -44,8 +44,11 @@ export const PROP_PRESENTERS = Object.freeze({
     url: { showIf: (p) => p.link_to === 'custom' },
     new_tab: { showIf: (p) => p.link_to === 'media' || p.link_to === 'custom' },
   },
-  // The Icon's colours, size, frame and rotation are set from its Style section, not here.
+  // The Icon's colours, size, frame and rotation are set from its Style section, not here. The older preset size and
+  // colour token stay visible only while they hold a value the Style section does not show.
   'core.icon': {
+    size: { showIf: (p) => !(p.size_px > 0) && typeof p.size === 'string' && p.size !== 'md' },
+    color_token: { showIf: (p) => !!p.color_token },
     view: { pills: true },
     shape: { pills: true, showIf: (p) => p.view === 'stacked' || p.view === 'framed' },
     new_tab: { showIf: (p) => typeof p.url === 'string' && p.url.trim() !== '' },

@@ -77,3 +77,12 @@ test('an image link, a text column gap and an icon frame show only when they mea
   assert.equal(icon.shape.showIf({ view: 'framed' }), true);
   for (const key of ICON_STYLE_PROPS) assert.equal(icon[key].showIf({ view: 'stacked' }), false, `${key} is in the Style section`);
 });
+
+test('an icon has one size and one colour, in its Style section; the older preset and token show only while they hold a value it does not show', () => {
+  const icon = presentersFor('core.icon');
+  assert.equal(icon.size.showIf({ size: 'md' }), false, 'the default preset is the slider\'s starting point');
+  assert.equal(icon.size.showIf({ size: 'lg' }), true, 'another preset stays visible');
+  assert.equal(icon.size.showIf({ size: 'lg', size_px: 40 }), false, 'a pixel size replaces it');
+  assert.equal(icon.color_token.showIf({ color_token: null }), false);
+  assert.equal(icon.color_token.showIf({ color_token: 'color.accent' }), true);
+});

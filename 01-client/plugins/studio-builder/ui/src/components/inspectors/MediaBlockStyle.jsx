@@ -13,6 +13,8 @@ import { FILTER, getPath, setPath } from '../../core/styleSurface.mjs';
 import { t } from '../../core/messages.mjs';
 
 const FILTER_NEUTRAL = { blur: 0, brightness: 100, contrast: 100, saturate: 100, grayscale: 0 };
+/** The pixel size of each preset (StudioStylesheet: sm 1.25rem, md 2rem, lg 3rem, xl 4.5rem), shown while no pixel size is set. */
+export const ICON_PRESET_PX = Object.freeze({ sm: 20, md: 32, lg: 48, xl: 72 });
 
 /** Opacity and the CSS filters of one style object (the block's own, or its hover state). */
 function LookSliders({ id, look, put }) {
@@ -86,7 +88,7 @@ export function IconProps({ props, onProps, tokens }) {
           <TokenSelect id={`${id}-secondary`} label={t('icon_secondary_color')} value={props.secondary_token ?? null} tokens={tokens} onChange={(v) => put('secondary_token', v)} />
         </div>
       )}
-      <SliderField id={`${id}-size`} label={t('icon_size')} value={props.size_px || undefined} min={0} max={300} unit="px" neutral={0} onChange={(v) => put('size_px', v)} />
+      <SliderField id={`${id}-size`} label={t('icon_size')} value={props.size_px || ICON_PRESET_PX[props.size] || ICON_PRESET_PX.md} min={0} max={300} unit="px" neutral={0} onChange={(v) => put('size_px', v)} />
       {framed && <SliderField id={`${id}-pad`} label={t('padding_label')} value={props.frame_padding || undefined} min={0} max={100} unit="px" neutral={0} onChange={(v) => put('frame_padding', v)} />}
       <SliderField id={`${id}-rotate`} label={t('icon_rotate')} value={props.rotate || undefined} min={-360} max={360} unit="°" neutral={0} onChange={(v) => put('rotate', v)} />
       {props.view === 'framed' && <SliderField id={`${id}-border`} label={t('icon_border_width')} value={props.frame_border || undefined} min={0} max={20} unit="px" neutral={0} onChange={(v) => put('frame_border', v)} />}
