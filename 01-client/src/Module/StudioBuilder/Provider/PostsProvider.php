@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Provider;
 
 use Slate\Data\Database;
-use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Runtime\PublishedPageData;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 use Slate\Module\StudioBuilder\StudioPermissions;
 use Slate\Tenancy\TenantContext;
@@ -20,6 +20,10 @@ use Slate\Tenancy\TenantContext;
 final class PostsProvider implements PublicDataProviderInterface
 {
     public const MAX_RESULTS = 50;
+
+    /** Rows read per query, and the most read for one request (a page deeper than that comes back short). */
+    public const BATCH = 100;
+    public const MAX_SCANNED = 2000;
 
     public function key(): string
     {
@@ -73,14 +77,19 @@ final class PostsProvider implements PublicDataProviderInterface
         $search   = trim((string) ($params['search'] ?? ''));
         $category = trim((string) ($params['category'] ?? ''));
 
-        $sql = "SELECT p.id, p.title, p.slug, p.page_type, p.status, p.published_at, p.created_at, p.created_by,
-                       p.seo_json, p.settings_json, u.name AS author_name
+        // Only what is LIVE: the published revision's settings and SEO (the row's columns mirror the draft),
+        // never a theme template's backing page (its `template-…` address is not a page), and SQL does the
+        // tenant, type, author, search and order work before anything is decoded.
+        $sql = "SELECT p.id, p.title, p.slug, p.published_at, p.created_at, p.created_by,
+                       p.published_revision_id, p.active_draft_revision_id, p.seo_json, p.settings_json, u.name AS author_name
                 FROM studiobuilder_pages p
                 LEFT JOIN users u ON u.id = p.created_by
                 WHERE p.tenant_id = ?
                   AND p.status = 'published'
-                  AND p.page_type IN ('page', 'landing')";
-        
+                  AND p.published_revision_id IS NOT NULL
+                  AND p.page_type IN ('page', 'landing')
+                  AND p.slug NOT LIKE 'template-%'";
+
         $sqlParams = [$tenantId];
 
         if ($authorId > 0) {
@@ -89,53 +98,59 @@ final class PostsProvider implements PublicDataProviderInterface
         }
 
         if ($search !== '') {
+            $like = '%' . addcslashes($search, '%_\\') . '%';
             $sql .= ' AND (p.title LIKE ? OR p.slug LIKE ?)';
-            $sqlParams[] = '%' . $search . '%';
-            $sqlParams[] = '%' . $search . '%';
+            $sqlParams[] = $like;
+            $sqlParams[] = $like;
         }
 
-        $sql .= " ORDER BY p.{$orderBy} {$order}";
+        $sql .= " ORDER BY p.{$orderBy} {$order}, p.id {$order}";
 
-        $pdo = Database::get();
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($sqlParams);
-        $rawRows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        // Category and featured live in the published settings, so they are filtered after decoding. Rows are
+        // read in batches and reading stops once this page is filled, so page 1 never reads the whole site;
+        // a very deep page stops after MAX_SCANNED rows.
+        $want = $offset + $limit;
+        $matched = [];
+        for ($scanned = 0; $scanned < self::MAX_SCANNED && count($matched) < $want; $scanned += self::BATCH) {
+            $rawRows = Database::rows($sql . ' LIMIT ' . self::BATCH . ' OFFSET ' . $scanned, $sqlParams);
+            if ($rawRows === []) {
+                break;
+            }
+            $published = PublishedPageData::forRows($tenantId, $rawRows);
+            foreach ($rawRows as $row) {
+                $live = $published[(int) $row['id']] ?? null;
+                if ($live === null) {
+                    continue;
+                }
+                $settings = $live['settings'];
+                if (!empty($settings['is_theme_template']) || (is_string($settings['template_type'] ?? null) && $settings['template_type'] !== '')) {
+                    continue;
+                }
+                $postCategory = (string) ($settings['category'] ?? 'General');
+                if ($category !== '' && strcasecmp($postCategory, $category) !== 0) {
+                    continue;
+                }
+                if (!empty($params['featured_only']) && empty($settings['featured'])) {
+                    continue;
+                }
+                $matched[] = [$row, $live['seo'], $settings, $postCategory];
+                if (count($matched) >= $want) {
+                    break;
+                }
+            }
+            if (count($rawRows) < self::BATCH) {
+                break;
+            }
+        }
 
         $out = [];
-        foreach ($rawRows as $row) {
-            $seo = [];
-            if (!empty($row['seo_json'])) {
-                try {
-                    $decoded = CanonicalJson::decode((string) $row['seo_json']);
-                    if (is_array($decoded)) {
-                        $seo = $decoded;
-                    }
-                } catch (\Throwable) {}
-            }
-
-            $settings = [];
-            if (!empty($row['settings_json'])) {
-                try {
-                    $decoded = CanonicalJson::decode((string) $row['settings_json']);
-                    if (is_array($decoded)) {
-                        $settings = $decoded;
-                    }
-                } catch (\Throwable) {}
-            }
-
-            $postCategory = (string) ($settings['category'] ?? 'General');
-            if ($category !== '' && strcasecmp($postCategory, $category) !== 0) {
-                continue;
-            }
-
-            if (!empty($params['featured_only']) && empty($settings['featured'])) {
-                continue;
-            }
-
+        foreach (array_slice($matched, $offset, $limit) as [$row, $seo, $settings, $postCategory]) {
             $pubDate = !empty($row['published_at']) ? (string) $row['published_at'] : (string) $row['created_at'];
             $timestamp = strtotime($pubDate) ?: time();
 
-            $excerpt = (string) ($seo['description'] ?? ($settings['excerpt'] ?? ''));
+            // The SEO description when it has text, else the page's own excerpt (an empty description is the default).
+            $description = trim(is_string($seo['description'] ?? null) ? $seo['description'] : '');
+            $excerpt = $description !== '' ? $description : (is_string($settings['excerpt'] ?? null) ? $settings['excerpt'] : '');
             if ($excerpt === '') {
                 $excerpt = 'Read the full story: ' . (string) $row['title'];
             }
@@ -155,6 +170,6 @@ final class PostsProvider implements PublicDataProviderInterface
             ];
         }
 
-        return array_slice($out, $offset, $limit);
+        return $out;
     }
 }

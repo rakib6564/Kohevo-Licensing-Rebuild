@@ -224,4 +224,70 @@ final class LayerLock
             ]);
         }
     }
+
+    /**
+     * Whole-document writes (a saved document, a template applied, a rollback or undo, a package or HTML import that
+     * replaces the draft) do not go through the operation applier, so they are checked here instead: every OUTERMOST
+     * locked node of `$current` must still be in `$next` with the same content, children included. Only its own lock
+     * flag may differ, so undoing the step that locked it (or an unlock) is still possible; editing, emptying or
+     * removing a locked layer is not.
+     *
+     * @param array<string, mixed> $current the page's current working draft
+     * @param array<string, mixed> $next    the document about to become the draft
+     */
+    public static function assertPreserved(array $current, array $next): void
+    {
+        $nodes = self::nodesById($next);
+        $index = self::index($current);
+        foreach (self::nodesById($current) as $id => $node) {
+            if (!self::isLocked($node) || self::ancestorLocked($index, $id)) {
+                continue;
+            }
+            if (!isset($nodes[$id]) || self::withoutOwnLock($nodes[$id]) !== self::withoutOwnLock($node)) {
+                throw new StudioValidationException([
+                    ['path' => '$.document', 'code' => 'node_locked', 'message' => "This change would edit or remove a locked layer ({$id}). Unlock it first."],
+                ]);
+            }
+        }
+    }
+
+    /** @return array<string, array<string, mixed>> every section and block by id */
+    private static function nodesById(array $document): array
+    {
+        $out = [];
+        $stack = [];
+        foreach ((array) ($document['sections'] ?? []) as $section) {
+            if (is_array($section) && is_string($section['id'] ?? null)) {
+                $out[$section['id']] = $section;
+                foreach ((array) ($section['blocks'] ?? []) as $block) {
+                    $stack[] = $block;
+                }
+            }
+        }
+        while ($stack !== []) {
+            $block = array_pop($stack);
+            if (!is_array($block) || !is_string($block['id'] ?? null)) {
+                continue;
+            }
+            $out[$block['id']] = $block;
+            foreach ((array) ($block['children'] ?? []) as $child) {
+                $stack[] = $child;
+            }
+        }
+        return $out;
+    }
+
+    /** @param array<string, mixed> $node */
+    private static function withoutOwnLock(array $node): string
+    {
+        unset($node['locked']);
+        if (is_array($node['metadata'] ?? null)) {
+            unset($node['metadata']['locked']);
+            if ($node['metadata'] === []) {
+                unset($node['metadata']);
+            }
+        }
+        // Key order is not meaningful (a stored draft and a freshly normalized document may differ): compare sorted.
+        return json_encode(CanonicalJson::sortKeysRecursively($node), JSON_PRESERVE_ZERO_FRACTION | JSON_UNESCAPED_UNICODE) ?: '';
+    }
 }

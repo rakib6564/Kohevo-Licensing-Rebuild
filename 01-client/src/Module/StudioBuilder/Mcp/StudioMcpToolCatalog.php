@@ -224,7 +224,7 @@ final class StudioMcpToolCatalog
                 'access' => self::ACCESS_WRITE, 'requires_confirmation' => true, 'rate' => self::RATE_WRITE,
             ],
             'studio_archive_page' => [
-                'description' => 'Archive a page (it leaves the page list and stops being served). Refused while a global component is still referenced. There is no unarchive tool.',
+                'description' => 'Archive a page that was never published (it leaves the page list). A published page is refused: taking it off the site is for a person with publish permission. Also refused while a global component is still referenced. There is no unarchive tool.',
                 'inputSchema' => self::schema(['page_id' => self::ID], ['page_id']),
                 'scope' => StudioMcpScopes::EDIT, 'permission' => StudioPermissions::EDIT,
                 'access' => self::ACCESS_DESTRUCTIVE, 'requires_confirmation' => true, 'rate' => self::RATE_WRITE,

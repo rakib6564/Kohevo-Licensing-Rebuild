@@ -25,6 +25,8 @@ require_once dirname(__DIR__, 3) . '/config.php';
 
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Exception\StudioException;
+use Slate\Module\StudioBuilder\Http\StudioPreviewPolicy;
+use Slate\Module\StudioBuilder\Render\RenderResult;
 use Slate\Module\StudioBuilder\Runtime\StudioHttpResponder;
 use Slate\Module\StudioBuilder\Runtime\StudioLog;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
@@ -60,7 +62,8 @@ if ($pageId === false || $pageId === null || $revisionId === false || $asPageId 
 
 try {
     $result = StudioRuntimeFactory::build()->app->renderPreview(StudioActor::fromCurrentSession(), $pageId, $revisionId, $asPageId, $sample);
-    StudioHttpResponder::sendRender($result);
+    // The builder frames this with scripts allowed: only the platform's own script files may run (see StudioPreviewPolicy).
+    StudioHttpResponder::sendRender(new RenderResult($result->mode, $result->html, StudioPreviewPolicy::headers($result), $result->etag));
 } catch (StudioException $e) {
     if ($e->httpStatus() >= 500) {
         StudioLog::failure('preview', 'render', $e);

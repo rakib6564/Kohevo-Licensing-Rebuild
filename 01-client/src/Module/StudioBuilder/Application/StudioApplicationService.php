@@ -202,6 +202,14 @@ final class StudioApplicationService
     public function updatePageAddress(StudioActor $actor, int $pageId, array $changes): array
     {
         $this->authorize($actor, StudioPermissions::EDIT);
+        $current = $this->pageRepo->find($pageId);
+        if ($current !== null) {
+            $changed = array_filter($changes, static fn(mixed $v, string $k): bool => in_array($k, ['title', 'slug', 'route_mode'], true) && (string) $v !== (string) ($current[$k] ?? ''), ARRAY_FILTER_USE_BOTH);
+            if ($changed !== []) {
+                // A live page's title, address and homepage role change on the site at once, not through a draft.
+                $this->authorizeLiveChange($actor, $current);
+            }
+        }
         $result = $this->pages->updateAddress($pageId, $changes, (int) $actor->userId);
         $this->audit($actor, 'studio.page.address_updated', (string) $pageId, $changes);
         return $result;
@@ -217,6 +225,8 @@ final class StudioApplicationService
         if ($current === null) {
             throw new StudioNotFoundException("Studio page {$pageId} was not found in the active tenant.", ['page_id' => $pageId]);
         }
+        // Archiving a published page takes it off the site at once.
+        $this->authorizeLiveChange($actor, $current);
         // Deletion/archive safety: a Global Component still referenced by a page's
         // current draft or published document cannot be archived.
         $this->components?->assertNotReferenced($current);
@@ -1827,6 +1837,38 @@ final class StudioApplicationService
      * -> RBAC permission. Every command calls this first, before touching any
      * domain service. Returns the active tenant id for convenience.
      */
+    /**
+     * A change that reaches the LIVE site at once instead of through a draft (archiving a published page, changing its
+     * title, address or homepage role) is publishing in all but name: it needs the publish permission, and is never
+     * made by an AI origin (an AI writes drafts, a human publishes). A page that was never published has nothing live,
+     * so the edit permission is enough there.
+     *
+     * @param array<string, mixed> $page
+     */
+    private function authorizeLiveChange(StudioActor $actor, array $page): void
+    {
+        if (empty($page['published_revision_id'])) {
+            return;
+        }
+        if ($actor->isAiOrigin()) {
+            throw new StudioAuthorizationException(StudioPermissions::PUBLISH, 'An AI assistant cannot change a published page directly; a person with publish permission must do it.');
+        }
+        if (!$actor->can(StudioPermissions::PUBLISH)) {
+            throw new StudioAuthorizationException(StudioPermissions::PUBLISH, 'Changing a published page this way needs the publish permission.');
+        }
+    }
+
+    /** Whether `$actor` may make a change that reaches the live site of this page at once (see authorizeLiveChange). @param array<string, mixed> $page */
+    public function canChangeLive(StudioActor $actor, array $page): bool
+    {
+        try {
+            $this->authorizeLiveChange($actor, $page);
+            return true;
+        } catch (StudioAuthorizationException) {
+            return false;
+        }
+    }
+
     private function authorize(StudioActor $actor, string $permission): int
     {
         $tenantId = $this->requireTenantId();

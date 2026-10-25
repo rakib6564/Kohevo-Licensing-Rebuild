@@ -38,6 +38,9 @@ $errorFor = static function (StudioException $e, string $fallback): string {
         $first = $e->errors()[0]['message'] ?? '';
         return $fallback . ($first !== '' ? ' ' . $first : '');
     }
+    if ($e->httpStatus() === 403 && ($e->details()['required_permission'] ?? '') === StudioPermissions::PUBLISH) {
+        return __('studio_page_live_denied', 'This page is published, so this change would go live at once. Ask someone who can publish pages.');
+    }
     return $e->httpStatus() === 403 ? __('studio_page_edit_denied', 'You cannot change this page.') : $fallback;
 };
 
@@ -99,6 +102,9 @@ if ($page !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $page['slug'] = $slug !== '' ? $slug : $page['slug'];
             $page['route_mode'] = $route !== '' ? $route : $page['route_mode'];
         }
+    } elseif ($action === 'save_meta' && $hasMeta && !$studioApp->canChangeLive($studioActor, $page)) {
+        // Custom field values are read by the live page on every request: on a published page they are a live change.
+        $flash = ['type' => 'error', 'msg' => __('studio_page_live_denied', 'This page is published, so this change would go live at once. Ask someone who can publish pages.')];
     } elseif ($action === 'save_meta' && $hasMeta) {
         $postedType = trim((string) ($_POST['post_type'] ?? ''));
         $posted = is_array($_POST['meta'] ?? null) ? $_POST['meta'] : [];

@@ -278,7 +278,7 @@ unit('phase9c integration: SEO settings, sitemap.xml, robots.txt and slug hygien
             sbs9_sql('UPDATE studiobuilder_pages SET slug = ? WHERE tenant_id = ? AND id = ?', ['twin', SBS9_A, $S->twinLanding]);
             $rt->tenants->runAs(SBS9_A, static fn() => $rt->app->createPage($editor, 'Draft only', 'draftonly', 'page', 'standalone'));
             [$S->gone] = sbs9_publish($rt, SBS9_A, $publisher, 'gone', sbs9_doc('Gone'));
-            $rt->tenants->runAs(SBS9_A, static fn() => $rt->app->archivePage($editor, $S->gone));
+            $rt->tenants->runAs(SBS9_A, static fn() => $rt->app->archivePage($publisher, $S->gone));
             [$S->offline] = sbs9_publish($rt, SBS9_A, $publisher, 'offline', sbs9_doc('Offline'));
             sbs9_sql("UPDATE studiobuilder_pages SET status = 'draft' WHERE tenant_id = ? AND id = ?", [SBS9_A, $S->offline]);
             [$S->sysres] = sbs9_publish($rt, SBS9_A, $publisher, 'sysres', sbs9_doc('Reserved'));
@@ -362,7 +362,7 @@ unit('phase9c integration: SEO settings, sitemap.xml, robots.txt and slug hygien
                 $locs = sbs9_sitemap($rt, SBS9_A);
                 assert_eq(1, count(array_keys($locs, SBS9_SITE . '/', true)), 'still once with two homepage pages');
                 assert_true(!in_array(SBS9_SITE . '/home', $locs, true) && !in_array(SBS9_SITE . '/home2', $locs, true), 'neither homepage page is ALSO listed by its slug');
-                $rt->tenants->runAs(SBS9_A, static fn() => $rt->app->archivePage($editor, $home2));
+                $rt->tenants->runAs(SBS9_A, static fn() => $rt->app->archivePage($publisher, $home2));
                 sbs9_sql("UPDATE studiobuilder_pages SET route_mode = 'standalone' WHERE tenant_id = ? AND id = ?", [SBS9_A, $home2]);
                 assert_eq(1, count(array_keys(sbs9_sitemap($rt, SBS9_A), SBS9_SITE . '/', true)));
             });
@@ -602,7 +602,7 @@ unit('phase9c integration: SEO settings, sitemap.xml, robots.txt and slug hygien
                 assert_true($res->errorCode() === 'validation_error' && str_contains($res->body(), 'route_collision'), 'API: ' . substr($res->body(), 0, 300));
             });
 
-            unit('phase9c int 14: import and address updates obey the same address rules', function () use ($rt, $editor, $S): void {
+            unit('phase9c int 14: import and address updates obey the same address rules', function () use ($rt, $editor, $publisher, $S): void {
                 $api = new StudioAuthoringApi($rt->app);
                 $html = static function (string $slug, string $type, bool $dry) use ($rt, $api, $editor): \Slate\Module\StudioBuilder\Http\StudioApiResponse {
                     $req = new StudioApiRequest('POST', 'import_html', [], (string) json_encode(['html' => '<section><h2>Imported</h2></section>', 'title' => 'Imported', 'slug' => $slug, 'page_type' => $type, 'dry_run' => $dry, 'mode' => 'create']), 'application/json', true, 'same-origin');
@@ -619,7 +619,7 @@ unit('phase9c integration: SEO settings, sitemap.xml, robots.txt and slug hygien
                 assert_true($fine->isOk(), 'a free address imports: ' . substr($fine->body(), 0, 300));
 
                 // Address updates (application layer; not exposed by the Builder or MCP today).
-                $update = static fn(int $id, array $changes) => $rt->tenants->runAs(SBS9_A, static fn() => $rt->app->updatePageAddress($editor, $id, $changes));
+                $update = static fn(int $id, array $changes) => $rt->tenants->runAs(SBS9_A, static fn() => $rt->app->updatePageAddress($publisher, $id, $changes));
                 $target = (int) Database::value("SELECT id FROM studiobuilder_pages WHERE tenant_id = ? AND slug = 'valid-slug' AND page_type = 'page'", [SBS9_A]);
                 assert_eq('reserved_route', sbs9_refusal(fn() => $update($target, ['slug' => 'admin']))[0], 'address update: reserved');
                 assert_eq('route_collision', sbs9_refusal(fn() => $update($target, ['slug' => 'promo']))[0], 'address update: landing collision');
