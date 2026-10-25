@@ -21,6 +21,7 @@ require_once __DIR__ . '/_nav.php';
 
 use Slate\Data\Database;
 use Slate\Module\StudioBuilder\Application\StudioActor;
+use Slate\Module\StudioBuilder\StudioPermissions;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 
 Auth::require();
@@ -33,26 +34,41 @@ $pageTitle   = __('studio_content', 'Studio Content');
 $currentNav  = 'studio-content';
 $flash       = null;
 
-$tenantId = (int) (Auth::user()['tenant_id'] ?? (defined('TENANT_ID') ? TENANT_ID : 1));
+// The tenant being worked on, not the user's home tenant (a platform admin may have switched).
+$tenantId = current_tenant_id();
+$canPublish = $studioActor->can(StudioPermissions::PUBLISH);
 $typeFilter = (string) ($_GET['type'] ?? 'portfolio');
 if (!in_array($typeFilter, ['portfolio', 'service', 'testimonial', 'case_study', 'profile'], true)) {
     $typeFilter = 'portfolio';
 }
 
-// ── Handle Action: Sync & Publish Entire Site ───────────────────────────────
+// ── Handle Action: Create the missing portfolio pages ───────────────────────
+// Publishing needs the publish permission, and runs as the signed-in user.
+// A slug that already has a page is never touched, so a site's own pages survive.
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action_publish_site'])) {
     if (!csrf_verify()) {
         $flash = ['type' => 'error', 'msg' => 'Security check failed. Please refresh and try again.'];
+    } elseif (!$canPublish) {
+        $flash = ['type' => 'error', 'msg' => __('studio_portfolio_pages_no_permission', 'You need permission to publish pages to create the portfolio pages.')];
     } else {
         try {
-            $results = StudioFreelancerPortfolio::publishEntireSite($tenantId, $studioActor->userId());
+            $results = StudioFreelancerPortfolio::publishEntireSite($tenantId, null, $studioActor, true);
+            $created = array_keys(array_filter($results, static fn (array $r): bool => !$r['skipped']));
+            $skipped = array_keys(array_filter($results, static fn (array $r): bool => $r['skipped']));
+            $msg = $created === []
+                ? __('studio_portfolio_pages_none_created', 'Every portfolio page already exists, so nothing was changed.')
+                : sprintf(__('studio_portfolio_pages_created', 'Created and published %d portfolio page(s).'), count($created));
+            if ($created !== [] && $skipped !== []) {
+                $msg .= ' ' . sprintf(__('studio_portfolio_pages_kept', 'Kept your existing pages: %s.'), '/' . implode(', /', $skipped));
+            }
             $flash = [
                 'type' => 'success',
-                'msg'  => 'Entire site compiled and published successfully with live dynamic data! All 5 routes are active.',
-                'published_routes' => array_keys($results),
+                'msg'  => $msg,
+                'published_routes' => $created,
             ];
         } catch (\Throwable $e) {
-            $flash = ['type' => 'error', 'msg' => 'Site publication failed: ' . $e->getMessage()];
+            error_log('[studio-builder] portfolio pages: ' . $e::class . ': ' . $e->getMessage());
+            $flash = ['type' => 'error', 'msg' => __('studio_portfolio_pages_failed', 'The portfolio pages could not be created. Nothing else on your site was changed.')];
         }
     }
 }
@@ -241,14 +257,16 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <h1 style="margin: 0 0 4px 0; font-size: 1.4rem; font-weight: 700; color: #0f172a;">Dynamic Content & Data Engine</h1>
             <p style="margin: 0; font-size: 0.88rem; color: #64748b;">Manage portfolio items, client reviews, services, and profile settings that dynamically power your live site.</p>
         </div>
-        <form method="post" style="margin: 0;">
+        <?php if ($canPublish): ?>
+        <form method="post" style="margin: 0;" onsubmit="return window.confirm(this.getAttribute('data-confirm'));" data-confirm="<?= e(__('studio_portfolio_pages_confirm', 'Create and publish the portfolio pages that are missing (/portfolio, /services, /case-studies, /testimonials, /contact)? Pages that already exist are not changed.')) ?>">
             <input type="hidden" name="action_publish_site" value="1">
             <?= csrf_field() ?>
             <button type="submit" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600; padding: 10px 18px;">
-                <?= sb_svg('cloud-upload', 16) ?>
-                <span>Sync & Publish Entire Site (5 Pages)</span>
+                <?= sb_svg('upload', 16) ?>
+                <span><?= e(__('studio_portfolio_pages_button', 'Create missing portfolio pages')) ?></span>
             </button>
         </form>
+        <?php endif; ?>
     </div>
 
     <!-- Content Type Selector Pills -->

@@ -61,6 +61,7 @@ export class SyncEngine {
     this.timer = null;
     this.retryIndex = 0;
     this.busy = null;
+    this.stepping = false;
     this.state = {
       status: STATUS.LOADING, base: null, page: null, revision: null,
       pending: [], inflight: [], working: null,
@@ -115,7 +116,13 @@ export class SyncEngine {
       this.set({ status: STATUS.ERROR, error: res.error });
       return false;
     }
+    // Undo/redo are server rollbacks between revisions. When the server is
+    // still on the revision this history was built on and nothing local is
+    // waiting, the history stays valid, so a plain refresh keeps it.
+    const { undo, redo, revision } = this.state;
+    const same = !this.hasUnsavedChanges && revision && res.data.revision && revision.id === res.data.revision.id;
     this.load(res.data);
+    if (same) this.set({ undo, redo });
     this.onEvent({ type: 'reloaded' });
     return true;
   }
@@ -168,11 +175,15 @@ export class SyncEngine {
 
   /** Run one server command at a time. */
   exclusive(task) {
+    // Only the last queued command may clear `busy`. When an earlier one
+    // cleared it, a command queued behind it was still running and the next
+    // call started alongside it (two writes on one expected revision: a 409).
     const run = async () => {
-      try { return await task(); } finally { this.busy = null; }
+      try { return await task(); } finally { if (this.busy === queued) this.busy = null; }
     };
-    this.busy = (this.busy || Promise.resolve()).then(run, run);
-    return this.busy;
+    const queued = (this.busy || Promise.resolve()).then(run, run);
+    this.busy = queued;
+    return queued;
   }
 
   /** Send pending operations; `kind` is `autosave` (automatic) or `manual` (explicit save). */
@@ -310,22 +321,36 @@ export class SyncEngine {
   get canUndo() { return this.state.undo.length > 0 && this.state.status !== STATUS.CONFLICT; }
   get canRedo() { return this.state.redo.length > 0 && this.state.status !== STATUS.CONFLICT; }
 
+  // One undo or redo at a time: the entry is read before its rollback and
+  // popped after it, so a second press during the first would read the same
+  // entry and pop two (one step lost from the history). A press while a step
+  // is running is ignored.
   async undo() {
-    if (!(await this.drain())) return false;
-    const entry = this.state.undo[this.state.undo.length - 1];
-    if (!entry) return false;
-    const ok = await this.rollbackTo(entry.before, 'undo');
-    if (ok) this.set({ undo: this.state.undo.slice(0, -1), redo: [...this.state.redo, entry].slice(-MAX_HISTORY) });
-    return ok;
+    return this.historyStep(async () => {
+      if (!(await this.drain())) return false;
+      const entry = this.state.undo[this.state.undo.length - 1];
+      if (!entry) return false;
+      const ok = await this.rollbackTo(entry.before, 'undo');
+      if (ok) this.set({ undo: this.state.undo.slice(0, -1), redo: [...this.state.redo, entry].slice(-MAX_HISTORY) });
+      return ok;
+    });
   }
 
   async redo() {
-    if (!(await this.drain())) return false;
-    const entry = this.state.redo[this.state.redo.length - 1];
-    if (!entry) return false;
-    const ok = await this.rollbackTo(entry.after, 'redo');
-    if (ok) this.set({ redo: this.state.redo.slice(0, -1), undo: [...this.state.undo, entry].slice(-MAX_HISTORY) });
-    return ok;
+    return this.historyStep(async () => {
+      if (!(await this.drain())) return false;
+      const entry = this.state.redo[this.state.redo.length - 1];
+      if (!entry) return false;
+      const ok = await this.rollbackTo(entry.after, 'redo');
+      if (ok) this.set({ redo: this.state.redo.slice(0, -1), undo: [...this.state.undo, entry].slice(-MAX_HISTORY) });
+      return ok;
+    });
+  }
+
+  async historyStep(step) {
+    if (this.stepping) return false;
+    this.stepping = true;
+    try { return await step(); } finally { this.stepping = false; }
   }
 
   /** Restore an earlier revision (history panel, undo, redo) — a server `rollback`. */

@@ -233,3 +233,55 @@ test('remove, move and section reorder are canonical operations and survive a re
   assert.deepEqual(r, engine.getSnapshot().working);
   assert.ok(!nodeIds(r).has(a.id));
 });
+
+const tick = () => new Promise((r) => setTimeout(r, 0));
+const gate = () => { let open; const p = new Promise((r) => { open = r; }); return { p, open }; };
+
+test('one server command at a time: a command queued behind another never runs alongside the next one', async () => {
+  const { engine } = setup();
+  const log = [];
+  const a = gate();
+  const b = gate();
+  const pa = engine.exclusive(async () => { log.push('a+'); await a.p; log.push('a-'); });
+  const pb = engine.exclusive(async () => { log.push('b+'); await b.p; log.push('b-'); });
+  a.open(); await pa; await tick();
+  // B is running now. A command that arrives meanwhile must wait for it, not start beside it.
+  const pc = engine.exclusive(async () => { log.push('c+'); });
+  await tick();
+  assert.deepEqual(log, ['a+', 'a-', 'b+']);
+  b.open(); await pb; await pc;
+  assert.deepEqual(log, ['a+', 'a-', 'b+', 'b-', 'c+']);
+  assert.equal(engine.busy, null, 'the queue empties once the last command is done');
+});
+
+test('a second undo pressed while one is running is ignored, so no history step is lost', async () => {
+  const { engine, sched } = setup();
+  const id = firstBlock(engine.getSnapshot().working).id;
+  for (const text of ['v1', 'v2', 'v3']) {
+    engine.apply(ops.updateBlockProps(id, { level: 'h2', text }));
+    await sched.runAll(); await engine.busy;
+  }
+  assert.equal(engine.getSnapshot().undo.length, 3);
+  const [first, second] = await Promise.all([engine.undo(), engine.undo()]);
+  assert.deepEqual([first, second], [true, false]);
+  const s = engine.getSnapshot();
+  assert.equal(firstBlock(s.working).props.text, 'v2');
+  assert.equal(s.undo.length, 2, 'exactly one step was undone');
+  assert.equal(s.redo.length, 1);
+  assert.equal(await engine.undo(), true);
+  assert.equal(firstBlock(engine.getSnapshot().working).props.text, 'v1', 'the next undo goes back one step, not two');
+});
+
+test('a plain refresh from the server keeps undo/redo when the revision is unchanged, and clears it when it moved on', async () => {
+  const { engine, server, sched } = setup();
+  const id = firstBlock(engine.getSnapshot().working).id;
+  engine.apply(ops.updateBlockProps(id, { level: 'h2', text: 'v1' }));
+  await sched.runAll(); await engine.busy;
+  assert.equal(await engine.reloadFromServer(), true);
+  assert.equal(engine.getSnapshot().undo.length, 1, 'same revision: history still valid');
+
+  server.externalEdit((d) => { d.sections[0].blocks[0].props.text = 'theirs'; });
+  assert.equal(await engine.reloadFromServer(), true);
+  assert.equal(engine.getSnapshot().undo.length, 0, 'another revision: history no longer applies');
+  assert.equal(firstBlock(engine.getSnapshot().working).props.text, 'theirs');
+});

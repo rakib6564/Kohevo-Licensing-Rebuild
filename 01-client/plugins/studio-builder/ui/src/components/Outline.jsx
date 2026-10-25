@@ -216,14 +216,18 @@ export const Outline = memo(function Outline() {
   }, [startRename, duplicateNode, setLocked, toggleHidden, copyNode, cutNode, pasteNode, keyboardMove, select, openSaveTemplate, removeNode, focusRow]);
 
   const onKeyDown = (e, row, i) => {
+    // Row keys belong to the row itself. A key typed in the rename box or
+    // pressed on a row button bubbles here too, and Backspace must never
+    // delete the layer whose name is being edited.
+    if (e.target !== e.currentTarget) return;
     if (e.altKey && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
       e.preventDefault();
       keyboardMove(row, e.key);
       focusRow(row.id);
       return;
     }
-    // Copy / Cut / Paste act on the focused row (not while its name is being edited: that is an input, not the row).
-    if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.target === e.currentTarget && /^[cxv]$/i.test(e.key)) {
+    // Copy / Cut / Paste act on the focused row.
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && /^[cxv]$/i.test(e.key)) {
       e.preventDefault();
       e.stopPropagation();
       const k = e.key.toLowerCase();

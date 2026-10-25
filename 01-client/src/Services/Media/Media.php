@@ -451,13 +451,17 @@ class Media {
         if (!class_exists('DOMDocument')) return false;
         $svg = @file_get_contents($absPath);
         if ($svg === false || trim($svg) === '') return false;
+        // A DOCTYPE can declare entities the browser expands into markup
+        // (a <script> hidden inside an entity survives a tree walk), so an
+        // SVG with any DOCTYPE or ENTITY declaration is refused outright.
+        if (preg_match('/<!\s*(?:DOCTYPE|ENTITY)/i', $svg) === 1) return false;
 
         $prev = libxml_use_internal_errors(true);
         $doc  = new \DOMDocument();
         $ok   = $doc->loadXML($svg, LIBXML_NONET);
         libxml_clear_errors();
         libxml_use_internal_errors($prev);
-        if (!$ok || !$doc->documentElement) return false;
+        if (!$ok || !$doc->documentElement || $doc->doctype !== null) return false;
         if (strtolower($doc->documentElement->localName ?? '') !== 'svg') return false;
 
         $blockedTags = [
@@ -474,16 +478,22 @@ class Media {
                 $el->parentNode?->removeChild($el);
             }
         }
-        // Strip dangerous attributes from everything that remains.
+        // Processing instructions (such as xml-stylesheet) can pull in content; drop them all.
+        foreach (iterator_to_array($xpath->query('//processing-instruction()')) as $pi) {
+            $pi->parentNode?->removeChild($pi);
+        }
+        // Strip dangerous attributes from everything that remains. Attributes
+        // are judged by their local name, never the prefix as written, so
+        // `x:href` with `x` bound to the XLink namespace counts as `href`.
         foreach (iterator_to_array($xpath->query('//*')) as $el) {
             if (!$el->hasAttributes()) continue;
             foreach (iterator_to_array($el->attributes) as $attr) {
-                $name = strtolower($attr->nodeName);
-                $val  = strtolower(preg_replace('/\s+/', '', $attr->nodeValue ?? ''));
+                $name = strtolower($attr->localName ?? $attr->nodeName);
+                $val  = strtolower(preg_replace('/[\s\x00-\x1f]+/', '', html_entity_decode($attr->nodeValue ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8')));
                 if (str_starts_with($name, 'on')
-                    || in_array($name, ['href','xlink:href','src','from','to','values'], true)
-                       && (str_starts_with($val, 'javascript:') || str_starts_with($val, 'data:text/html'))) {
-                    $el->removeAttribute($attr->nodeName);
+                    || in_array($name, ['href','src','from','to','values'], true)
+                       && (str_starts_with($val, 'javascript:') || str_starts_with($val, 'vbscript:') || str_starts_with($val, 'data:text/html'))) {
+                    $el->removeAttributeNode($attr);
                 }
             }
         }

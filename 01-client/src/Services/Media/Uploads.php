@@ -22,6 +22,21 @@ class Uploads
 {
     public const DEFAULT_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 
+    /** Marks the SVG sandbox block in an upload folder's .htaccess. */
+    public const SVG_SANDBOX_MARKER = '# kohevo: svg sandbox';
+
+    /** Apache rules that serve SVGs with a sandboxed, script-free CSP. */
+    public static function svgSandboxRules(): string
+    {
+        return self::SVG_SANDBOX_MARKER . "\n" .
+            "<IfModule mod_headers.c>\n" .
+            "    <FilesMatch \"\\.svgz?$\">\n" .
+            "        Header set Content-Security-Policy \"default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox\"\n" .
+            "        Header set X-Content-Type-Options \"nosniff\"\n" .
+            "    </FilesMatch>\n" .
+            "</IfModule>\n";
+    }
+
     public const IMAGE_MIMES = [
         'image/jpeg', 'image/png', 'image/gif', 'image/webp',
     ];
@@ -125,6 +140,13 @@ class Uploads
                 "</IfModule>\n" .
                 "AddHandler default-handler .php .phtml .php3 .php4 .php5 .php7 .phps\n"
             );
+        }
+        // An SVG opened directly is a document of this origin: serve it
+        // sandboxed with no scripts, in case anything slipped past the
+        // sanitizer. Added to folders made before this rule as well.
+        $existing = (string) @file_get_contents($htaccess);
+        if (!str_contains($existing, self::SVG_SANDBOX_MARKER)) {
+            @file_put_contents($htaccess, rtrim($existing, "\n") . "\n" . self::svgSandboxRules(), LOCK_EX);
         }
         return $dir;
     }

@@ -1244,9 +1244,16 @@ class StudioFreelancerPortfolio extends Plugin
      * - `/testimonials` (Dedicated Client Reviews Page)
      * - `/contact` (Dedicated Contact & Inquiry Page)
      *
-     * @return array<string, array{page_id: int, revision_id: int, path: string}>
+     * The command-line installer passes no actor: it acts with every Studio
+     * permission and rewrites the five pages. A signed-in user passes their own
+     * session actor and `$keepExisting`: the service then checks that user's
+     * permissions, and a slug that already has a page (live, draft or deleted)
+     * is left alone and reported as skipped, so a site's own pages are never
+     * overwritten.
+     *
+     * @return array<string, array{page_id: int, revision_id: int, path: string, skipped: bool}>
      */
-    public static function publishEntireSite(int $tenantId, ?int $userId = null): array
+    public static function publishEntireSite(int $tenantId, ?int $userId = null, ?StudioActor $actor = null, bool $keepExisting = false): array
     {
         if (!Studio::widgets()->has('portfolio.project_card')) {
             $plugin = new self('studio-freelancer-portfolio', ['version' => '1.0.0'], __DIR__);
@@ -1254,8 +1261,10 @@ class StudioFreelancerPortfolio extends Plugin
         }
 
         $rt = StudioRuntimeFactory::build();
-        $uid = $userId ?? (int) (Database::value('SELECT id FROM users WHERE tenant_id = ? ORDER BY id ASC LIMIT 1', [$tenantId]) ?: 1);
-        $actor = StudioActor::authenticated($uid, StudioPermissions::ALL);
+        if ($actor === null) {
+            $uid = $userId ?? (int) (Database::value('SELECT id FROM users WHERE tenant_id = ? ORDER BY id ASC LIMIT 1', [$tenantId]) ?: 1);
+            $actor = StudioActor::authenticated($uid, StudioPermissions::ALL);
+        }
 
         $pagesToBuild = [
             [
@@ -1297,10 +1306,20 @@ class StudioFreelancerPortfolio extends Plugin
 
         $results = [];
 
-        $rt->tenants->runAs($tenantId, static function () use ($rt, $actor, $pagesToBuild, $tenantId, &$results): void {
+        $rt->tenants->runAs($tenantId, static function () use ($rt, $actor, $pagesToBuild, $tenantId, $keepExisting, &$results): void {
             foreach ($pagesToBuild as $cfg) {
                 $slug = $cfg['slug'];
                 $existing = $rt->pages->findBySlug($slug, 'page');
+
+                if ($existing !== null && $keepExisting) {
+                    $results[$slug] = [
+                        'page_id'     => (int) $existing['id'],
+                        'revision_id' => 0,
+                        'path'        => '/' . $slug,
+                        'skipped'     => true,
+                    ];
+                    continue;
+                }
 
                 if ($existing !== null) {
                     $pageId = (int) $existing['id'];
@@ -1321,6 +1340,7 @@ class StudioFreelancerPortfolio extends Plugin
                     'page_id'     => $pageId,
                     'revision_id' => $newRevId,
                     'path'        => '/' . $slug,
+                    'skipped'     => false,
                 ];
             }
         });

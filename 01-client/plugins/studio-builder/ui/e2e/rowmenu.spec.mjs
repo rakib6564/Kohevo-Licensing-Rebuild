@@ -124,7 +124,17 @@ test.describe('desktop', () => {
     await selectRow(page, id);
     await menuOf(page, id).click();
     await item(page, 'rename').click();
-    await expect(page.locator(`${ROWS}[data-row="${id}"] .sbx-tree__rename-input`)).toBeFocused();
+    const renameInput = page.locator(`${ROWS}[data-row="${id}"] .sbx-tree__rename-input`);
+    await expect(renameInput).toBeFocused();
+    // Keys typed in the rename box stay in it: Backspace and Delete edit the
+    // name and never delete the layer, End and Space never leave the box.
+    await renameInput.press('End');
+    await renameInput.press('Backspace');
+    await renameInput.press('Delete');
+    await renameInput.press('Space');
+    await expect(page.locator(`${ROWS}[data-row="${id}"]`)).toHaveCount(1);
+    await expect(renameInput).toBeFocused();
+    await expect(renameInput).toHaveValue(/ $/);
     await page.keyboard.press('Escape');
 
     await selectRow(page, id);
