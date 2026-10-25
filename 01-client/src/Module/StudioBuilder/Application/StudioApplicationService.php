@@ -282,7 +282,7 @@ final class StudioApplicationService
     ): array {
         $this->authorize($actor, StudioPermissions::EDIT);
         $revisionKind = $this->draftKind($actor, $revisionKind);
-        $validated = ValidatedDocument::from($rawDocument, $this->registry, $this->buildValidationOptions($actor));
+        $validated = ValidatedDocument::from($rawDocument, $this->registry, $this->buildValidationOptions($actor, $pageId));
         $result = $this->revisions->createDraftRevision($pageId, $validated, $expectedRevisionId, (int) $actor->userId, $revisionKind, $summary);
         $this->audit($actor, 'studio.page.draft_saved', (string) $pageId, ['revision_kind' => $revisionKind, 'deduplicated' => $result['deduplicated'], 'revision_id' => (int) ($result['revision']['id'] ?? 0)]);
         return $result;
@@ -340,7 +340,7 @@ final class StudioApplicationService
         $this->assertBlocksAvailable($operations);
         [$page, $currentDocument] = $this->currentDocument($pageId);
         $mutatedDocument = DocumentOperationApplier::apply($currentDocument, $operations, $this->registry);
-        $validated = ValidatedDocument::from($mutatedDocument, $this->registry, $this->buildValidationOptions($actor));
+        $validated = ValidatedDocument::from($mutatedDocument, $this->registry, $this->buildValidationOptions($actor, $pageId));
 
         return $this->revisions->createDraftRevision($pageId, $validated, $expectedRevisionId, (int) $actor->userId, $revisionKind, $summary);
     }
@@ -990,7 +990,7 @@ final class StudioApplicationService
         $tenantId = $this->authorize($actor, StudioPermissions::PUBLISH);
 
         if ($this->renderer === null) {
-            $result = $this->revisions->publishWorkingRevision($pageId, $expectedRevisionId, (int) $actor->userId, $summary, $this->buildValidationOptions($actor));
+            $result = $this->revisions->publishWorkingRevision($pageId, $expectedRevisionId, (int) $actor->userId, $summary, $this->buildValidationOptions($actor, $pageId));
             $this->invalidateSharedContent($result['page']);
             $this->audit($actor, 'studio.page.published', (string) $pageId, ['revision_id' => (int) ($result['revision']['id'] ?? 0), 'source_revision_id' => (int) ($result['revision']['parent_revision_id'] ?? 0)]);
             return $result;
@@ -1007,7 +1007,7 @@ final class StudioApplicationService
             $pdo->beginTransaction();
         }
         try {
-            $result = $this->revisions->publishWorkingRevision($pageId, $expectedRevisionId, (int) $actor->userId, $summary, $this->buildValidationOptions($actor));
+            $result = $this->revisions->publishWorkingRevision($pageId, $expectedRevisionId, (int) $actor->userId, $summary, $this->buildValidationOptions($actor, $pageId));
             // The stored artifact is the one public visitors get, so it is compiled
             // for the tenant's public site locale — never the publisher's own
             // session locale (Phase 9A), or the first public request would
@@ -1051,7 +1051,7 @@ final class StudioApplicationService
     public function rollback(StudioActor $actor, int $pageId, int $targetRevisionId, ?int $expectedRevisionId, ?string $summary = null): array
     {
         $this->authorize($actor, StudioPermissions::EDIT);
-        $result = $this->revisions->rollbackToRevision($pageId, $targetRevisionId, $expectedRevisionId, (int) $actor->userId, $summary, $this->buildValidationOptions($actor));
+        $result = $this->revisions->rollbackToRevision($pageId, $targetRevisionId, $expectedRevisionId, (int) $actor->userId, $summary, $this->buildValidationOptions($actor, $pageId));
         $this->audit($actor, 'studio.page.rolled_back', (string) $pageId, ['target_revision_id' => $targetRevisionId, 'revision_id' => (int) ($result['revision']['id'] ?? 0)]);
         return $result;
     }
@@ -2021,7 +2021,7 @@ final class StudioApplicationService
      * `entitlement_check` / `permission_check` are wired into
      * `DocumentValidator` (via `ValidatedDocument::from()`). None of these
      * trust a caller-supplied id or tenant claim: each resolves through an
-     * already tenant-scoped repository or service (`Media::get()`,
+     * already tenant-scoped repository or service (a `media_files` row of the tenant,
      * `TemplateRepository::findByKey()`, `EntitlementService::canAccess()`)
      * bound to the CURRENT `TenantContext`, never a value read out of the
      * document itself.
@@ -2033,13 +2033,38 @@ final class StudioApplicationService
      *
      * @return array<string, mixed>
      */
-    private function buildValidationOptions(StudioActor $actor): array
+    private function buildValidationOptions(StudioActor $actor, ?int $pageId = null): array
     {
         $tenantId = $this->requireTenantId();
+        $pageMedia = null;
 
         return [
-            'media_exists' => static function (int $mediaId) use ($tenantId): bool {
-                return class_exists(Media::class) && Media::get($mediaId) !== null;
+            // A media id passes when the file is in this tenant's library, or —
+            // when saving a page — when that page already referenced it in one of
+            // its own revisions: that reference was checked when it was added, and
+            // a file deleted since renders as "Image unavailable" instead of making
+            // every later save of the page fail. A NEW reference to a missing or
+            // another tenant's file is still refused. A plain row check, not
+            // Media::get(), which builds the whole usage map on every call.
+            'media_exists' => static function (int $mediaId) use ($tenantId, $pageId, &$pageMedia): bool {
+                if (!class_exists(Media::class)) {
+                    return false;
+                }
+                try {
+                    if (Database::value('SELECT 1 FROM media_files WHERE tenant_id = ? AND id = ? LIMIT 1', [$tenantId, $mediaId])) {
+                        return true;
+                    }
+                    if ($pageId === null) {
+                        return false;
+                    }
+                    $pageMedia ??= array_flip(array_map('intval', array_column(Database::rows(
+                        "SELECT DISTINCT dependency_key FROM studiobuilder_dependencies WHERE tenant_id = ? AND page_id = ? AND dependency_type = 'media'",
+                        [$tenantId, $pageId]
+                    ), 'dependency_key')));
+                    return isset($pageMedia[$mediaId]);
+                } catch (\Throwable) {
+                    return false;
+                }
             },
             'template_exists' => function (string $key): bool {
                 return $this->templateRepo->findByKey($key) !== null;

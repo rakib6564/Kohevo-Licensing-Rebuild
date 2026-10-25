@@ -500,6 +500,12 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
       if (selectionRef.current && !findNode(working, selectionRef.current)) setSelection(null);
     }
   }, [engine]);
+  // The canvas Reload button always repaints the frame (CanvasArea does that). It
+  // refetches the document only when nothing local is waiting to be saved:
+  // throwing unsaved edits away is the conflict banner's job, never a repaint's.
+  const reloadCanvas = useCallback(() => {
+    if (!engine.hasUnsavedChanges) reload();
+  }, [engine, reload]);
 
   const changeViewport = useCallback((key) => {
     setViewportKey(key);
@@ -693,6 +699,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
         onRedo={redo}
         onPublish={publish}
         onReload={reload}
+        onReloadCanvas={reloadCanvas}
         announcement={announcement}
         notice={notice}
         lockState={lockState}
@@ -740,12 +747,12 @@ const SHEET_TABS = ['theme', 'more'];
 
 /** The unified one-sided builder shell (rendered inside an EditorContext). */
 export function ShellLayout({
-  viewportKey, onViewport, onSave, onUndo, onRedo, onPublish, onReload, announcement, notice = '', lockState,
+  viewportKey, onViewport, onSave, onUndo, onRedo, onPublish, onReload, onReloadCanvas = null, announcement, notice = '', lockState,
   historyOpen = false, setHistoryOpen = () => {}, pendingInsert = null, onCancelInsert = () => {}, onConfirmInsert = () => {},
   onTheme = null, dialogs = null, onAiReview = null, onPackages = null,
 }) {
   const { selection, select } = useSelection();
-  const { canvasView, structureOpen, setStructureOpen, toggleStructure, openLibraryModal } = useEditor();
+  const { canvasView, structureOpen, setStructureOpen, toggleStructure, openLibraryModal, tokensSaved } = useEditor();
   // A phone keeps Layers as the first sheet; the docked desktop panel opens on Add.
   const [activeTab, setActiveTab] = useState(() => (selection ? 'inspector' : (isMobileShellNow() ? 'structure' : 'blocks')));
   const isMobile = useIsMobileShell();
@@ -872,7 +879,7 @@ export function ShellLayout({
           interactive={editing}
           collapsed={collapsed}
           onToggleCollapse={() => setCollapsed((c) => !c)}
-          onReloadCanvas={onReload}
+          onReloadCanvas={onReloadCanvas}
         />
       </div>
       {visitor && (
@@ -908,7 +915,7 @@ export function ShellLayout({
       {mobileOpen && activeTab === 'theme' && (
         <ThemeBottomSheet
           onClose={() => setMobileOpen(false)}
-          onSaved={() => onReload && onReload()}
+          onSaved={() => tokensSaved && tokensSaved()}
         />
       )}
       {isMobile && responsiveOpen && (

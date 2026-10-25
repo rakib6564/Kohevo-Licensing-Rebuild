@@ -81,11 +81,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'delete') {
             $mediaId = (int) ($_POST['media_id'] ?? 0);
             if ($mediaId > 0) {
+                // Media::delete refuses a file that is still in use, removes it
+                // from disk and writes the audit log; a raw row delete did none of that.
                 try {
-                    Database::delete('media_files', 'tenant_id = ? AND id = ?', [$tenantId, $mediaId]);
-                    $flash = ['type' => 'success', 'msg' => "Asset #{$mediaId} deleted."];
+                    $res = Media::delete($mediaId);
+                    $flash = !empty($res['ok'])
+                        ? ['type' => 'success', 'msg' => "Asset #{$mediaId} deleted."]
+                        : ['type' => 'error', 'msg' => (string) ($res['error'] ?? 'The asset could not be deleted.')];
                 } catch (\Throwable $e) {
-                    $flash = ['type' => 'error', 'msg' => 'Failed to delete asset: ' . $e->getMessage()];
+                    error_log('[studio-builder] media delete: ' . $e::class . ': ' . $e->getMessage());
+                    $flash = ['type' => 'error', 'msg' => 'The asset could not be deleted.'];
                 }
             }
         }
@@ -99,15 +104,17 @@ $searchQuery = trim((string) ($_GET['q'] ?? ''));
 $sql = "SELECT * FROM media_files WHERE tenant_id = ?";
 $params = [$tenantId];
 
-if ($kindFilter !== 'all' && in_array($kindFilter, ['image', 'document', 'video', 'audio'], true)) {
+// The values of media_files.kind (ENUM image, document, other).
+if ($kindFilter !== 'all' && in_array($kindFilter, ['image', 'document', 'other'], true)) {
     $sql .= " AND kind = ?";
     $params[] = $kindFilter;
 }
 
 if ($searchQuery !== '') {
-    $sql .= " AND (filename LIKE ? OR original_filename LIKE ?)";
-    $params[] = '%' . $searchQuery . '%';
-    $params[] = '%' . $searchQuery . '%';
+    $like = '%' . addcslashes($searchQuery, '%_\\') . '%';
+    $sql .= " AND (path LIKE ? OR original_name LIKE ?)";
+    $params[] = $like;
+    $params[] = $like;
 }
 
 $sql .= " ORDER BY id DESC LIMIT 100";
@@ -115,7 +122,10 @@ $sql .= " ORDER BY id DESC LIMIT 100";
 try {
     $mediaAssets = Database::all($sql, $params);
 } catch (\Throwable $e) {
+    // Log it: an empty grid must never hide a broken query.
+    error_log('[studio-builder] media list: ' . $e::class . ': ' . $e->getMessage());
     $mediaAssets = [];
+    $flash ??= ['type' => 'error', 'msg' => 'The media library could not be loaded.'];
 }
 
 // Portfolio page ID
@@ -145,8 +155,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <a href="<?= e(plugin_url('studio-builder', 'admin/media.php?kind=document')) ?>" class="sb-pill-item <?= $kindFilter === 'document' ? 'active' : '' ?>">
                 <?= sb_svg('pages', 14) ?> Documents
             </a>
-            <a href="<?= e(plugin_url('studio-builder', 'admin/media.php?kind=video')) ?>" class="sb-pill-item <?= $kindFilter === 'video' ? 'active' : '' ?>">
-                <?= sb_svg('zap', 14) ?> Video & Audio
+            <a href="<?= e(plugin_url('studio-builder', 'admin/media.php?kind=other')) ?>" class="sb-pill-item <?= $kindFilter === 'other' ? 'active' : '' ?>">
+                <?= sb_svg('zap', 14) ?> Other
             </a>
         </div>
 
@@ -211,7 +221,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <?php foreach ($mediaAssets as $asset):
                 $id = (int) $asset['id'];
                 $path = (string) ($asset['path'] ?? '');
-                $filename = (string) ($asset['filename'] ?? "asset-{$id}");
+                $filename = (string) (($asset['original_name'] ?? '') !== '' ? $asset['original_name'] : (basename($path) ?: "asset-{$id}"));
                 $kind = (string) ($asset['kind'] ?? 'image');
                 $size = isset($asset['size_bytes']) ? number_format((int) $asset['size_bytes'] / 1024, 1) . ' KB' : '—';
                 $url = defined('SLATE_URL') ? rtrim(SLATE_URL, '/') . '/' . ltrim($path, '/') : '/' . ltrim($path, '/');

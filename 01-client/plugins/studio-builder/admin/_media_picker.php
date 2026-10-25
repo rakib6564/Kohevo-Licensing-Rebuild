@@ -278,7 +278,7 @@ if (!function_exists('sb_render_media_picker_modal')) {
                         form.appendChild(fAction);
 
                         var fCsrf = document.createElement('input');
-                        fCsrf.type = 'hidden'; fCsrf.name = 'csrf_token'; fCsrf.value = <?= json_encode(csrf_token()) ?>;
+                        fCsrf.type = 'hidden'; fCsrf.name = '_csrf'; fCsrf.value = <?= json_encode(csrf_token()) ?>;
                         form.appendChild(fCsrf);
 
                         var fType = document.createElement('input');
