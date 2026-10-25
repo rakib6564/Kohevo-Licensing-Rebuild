@@ -112,6 +112,16 @@ server {
         return 403;
     }
 
+    # 2c. Uploaded SVGs. An SVG opened directly is a document of this site, so serve it sandboxed with no scripts
+    #     in case anything slipped past the upload sanitizer. Apache gets the same headers from the `.htaccess`
+    #     Kohevo writes into each upload folder; Nginx ignores .htaccess, so set them here. Images embedded with
+    #     <img> are unaffected.
+    location ~* ^/uploads/.+\.svgz?$ {
+        add_header Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        try_files $uri =404;
+    }
+
     # 3. Serve existing files or route public module URLs (/book, /forms/*, /membership/*, Kohevo Studio pages,
     #    /robots.txt and /sitemap.xml) to public.php. Do NOT ship static robots.txt / sitemap.xml files or add
     #    `location = /robots.txt` blocks: a real file wins over this fallback and would hide Studio's per-tenant ones.

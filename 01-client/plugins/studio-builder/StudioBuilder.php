@@ -59,6 +59,11 @@ class StudioBuilder extends Plugin
         \Hook::addFilter('public_homepage', [self::class, 'servePublicHomepage'], 10, 1);
         \Hook::addFilter('admin_nav_items', [$this, 'addAdminNav']);
         \Hook::addFilter('i18n_lang_paths', [$this, 'addLangPath']);
+        // The media library will not delete a file a Studio page still uses.
+        // Registered once even if the plugin boots again: a second copy would count every use twice.
+        $mediaUsage = [\Slate\Module\StudioBuilder\Dependency\StudioMediaUsage::class, 'filter'];
+        \Hook::removeFilter('media_usage', $mediaUsage);
+        \Hook::addFilter('media_usage', $mediaUsage);
 
         // MCP AI Gateway integration (Phase 7): Studio scopes + tools for AI
         // assistants. Registered unconditionally, like the other modules; the

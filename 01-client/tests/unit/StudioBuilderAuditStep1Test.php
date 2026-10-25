@@ -103,3 +103,17 @@ unit('card image picker: it posts the CSRF field csrf_verify() reads', function 
     assert_true(str_contains($picker, "fCsrf.name = '_csrf';"));
     assert_false(str_contains($picker, "'csrf_token'"), 'the old field name is gone');
 });
+
+unit('media usage: Studio adds its page counts to the media library map and leaves other entries alone', function (): void {
+    $map = \Slate\Module\StudioBuilder\Dependency\StudioMediaUsage::merge(
+        ['/uploads/shop/a.png' => 2, '/uploads/media/b.png' => 1],
+        [['path' => '/uploads/media/b.png', 'c' => '3'], ['path' => '/uploads/media/c.png', 'c' => 1], ['path' => '', 'c' => 5], ['path' => '/x.png', 'c' => 0]]
+    );
+    assert_eq(['/uploads/shop/a.png' => 2, '/uploads/media/b.png' => 4, '/uploads/media/c.png' => 1], $map);
+    $sql = \Slate\Module\StudioBuilder\Dependency\StudioMediaUsage::SQL;
+    assert_true(str_contains($sql, "p.status <> 'archived'"), 'an archived page holds no file');
+    assert_true(str_contains($sql, 'p.active_draft_revision_id = d.revision_id OR p.published_revision_id = d.revision_id'), 'only the current draft and live revision count');
+    assert_true(str_contains($sql, 'f.tenant_id = d.tenant_id') && str_contains($sql, 'WHERE d.tenant_id = ?'), 'one tenant only');
+    $plugin = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/StudioBuilder.php');
+    assert_true(str_contains($plugin, "\\Hook::removeFilter('media_usage', \$mediaUsage);"), 'registered once even when booted twice');
+});
