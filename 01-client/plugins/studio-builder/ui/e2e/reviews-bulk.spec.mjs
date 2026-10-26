@@ -21,10 +21,16 @@ test('the history pages by 25, and bulk Delete removes the ticked revisions', as
   const rollbacksBefore = await countRollbacks();
   await page.goto(REVIEWS);
 
-  // Restoring a snapshot adds a "rollback" revision: do it 26 times, so the Rollbacks filter has two pages.
+  // Restoring a snapshot adds a "rollback" revision: do it 26 times, so the Rollbacks filter has two pages. A Restore
+  // button carries the page's draft as the screen showed it (`restore:<revision>:<draft>`); each restore makes a new draft,
+  // which the next list shows on its newest row (that restore), so every request names the draft it is replacing.
+  let draft = (await page.locator(`button[value^="restore:${someRevision}:"]`).getAttribute('value')).split(':')[2];
   for (let i = 0; i < 26; i++) {
-    const r = await request.post(REVIEWS, { form: { _csrf: token, row_action: `restore:${someRevision}` } });
+    const r = await request.post(REVIEWS, { form: { _csrf: token, row_action: `restore:${someRevision}:${draft}` } });
     expect(r.ok()).toBe(true);
+    const html = await r.text();
+    expect(html).toContain('alert-success');
+    draft = html.match(/value="restore:\d+:(\d+)"/)[1];
   }
 
   await page.goto(`${REVIEWS}?kind=rollback&per=25`);
