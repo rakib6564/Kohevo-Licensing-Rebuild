@@ -121,7 +121,7 @@ final class StudioSitemapService
             }
             // A theme template lays out other pages and is never listed as a page of its own.
             $templateType = is_array($document) && is_array($document['settings'] ?? null) ? ($document['settings']['template_type'] ?? '') : '';
-            if ((is_string($templateType) && $templateType !== '') || \Slate\Module\StudioBuilder\Runtime\StudioPublicRuntime::isThemeTemplate($row)) {
+            if ((is_string($templateType) && $templateType !== '') || \Slate\Module\StudioBuilder\Runtime\StudioPublicRuntime::isThemeTemplate($row, is_array($document) && is_array($document['settings'] ?? null) ? $document['settings'] : [])) {
                 continue;
             }
             $own = $site->absoluteUrl($candidate['path']);

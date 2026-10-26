@@ -43,6 +43,9 @@ use Slate\Tenancy\TenantContext;
 
 const SBPB_TENANT = 101;
 const SBPB_SECRET = 'unit-test-secret';
+const SBPB_BLOCK = 'blk_aaaaaaaaaaaaaaaaaaaaaaaa';
+const SBPB_NOW = 1_800_000_000;
+const SBPB_PROPS = ['amount' => 49.99, 'currency' => 'EUR', 'description' => 'Consulting', 'success_path' => 'thank-you'];
 
 // The renderer signs the form with slate_sign(). Once another test has
 // loaded includes/helpers.php, that is the real helper, which returns null
@@ -71,12 +74,19 @@ if (!function_exists('slate_sign')) {
 function sbpb_signer(): callable { return static fn(string $c, string $v): ?string => slate_sign($c, $v); }
 function sbpb_verifier(): callable { return static fn(string $c, string $v, string $s): bool => hash_equals((string) slate_sign($c, $v), $s); }
 
-/** The form fields a button would post for these props. @return array<string, string> */
-function sbpb_post(array $props = ['amount' => 49.99, 'currency' => 'EUR', 'description' => 'Consulting', 'success_path' => 'thank-you']): array
+/** The form fields block SBPB_BLOCK would post for these props, rendered at SBPB_NOW. @return array<string, string> */
+function sbpb_post(array $props = SBPB_PROPS, string $blockId = SBPB_BLOCK, int $now = SBPB_NOW): array
 {
-    $offer = PaymentOffer::fromProps($props, SBPB_TENANT);
+    $offer = PaymentOffer::bind((array) PaymentOffer::fromProps($props, SBPB_TENANT), $blockId, $now);
     assert_true($offer !== null, 'the props make an offer');
-    return ['t' => (string) $offer['t'], 'a' => (string) $offer['a'], 'c' => $offer['c'], 'd' => $offer['d'], 's' => $offer['s'], 'g' => (string) PaymentOffer::sign($offer, sbpb_signer())];
+    return ['t' => (string) $offer['t'], 'a' => (string) $offer['a'], 'c' => $offer['c'], 'd' => $offer['d'], 's' => $offer['s'],
+            'n' => $offer['n'], 'x' => (string) $offer['x'], 'g' => (string) PaymentOffer::sign($offer, sbpb_signer())];
+}
+
+/** The published-block lookup: block SBPB_BLOCK is live with `$props`, nothing else is. */
+function sbpb_live(array $props = SBPB_PROPS): callable
+{
+    return static fn(string $id): ?array => $id === SBPB_BLOCK ? $props : null;
 }
 
 unit('payment blocks: an offer is made from the props in cents, only when it can be offered', function (): void {
@@ -99,7 +109,7 @@ unit('payment blocks: only a signature the server made verifies, and changing an
     $offer = PaymentOffer::fromPost($post, sbpb_verifier());
     assert_true($offer !== null && $offer['a'] === 4999 && $offer['c'] === 'EUR', 'the genuine form verifies');
 
-    foreach (['a' => '1', 'c' => 'USD', 'd' => 'Free', 's' => 'other', 't' => '202'] as $key => $value) {
+    foreach (['a' => '1', 'c' => 'USD', 'd' => 'Free', 's' => 'other', 't' => '202', 'n' => 'blk_bbbbbbbbbbbbbbbbbbbbbbbb', 'x' => '1900000000'] as $key => $value) {
         $tampered = $post;
         $tampered[$key] = $value;
         assert_true(PaymentOffer::fromPost($tampered, sbpb_verifier()) === null, "changing '{$key}' is refused");
@@ -116,13 +126,17 @@ unit('payment blocks: only a signature the server made verifies, and changing an
     $hugeAmount = $post;
     $hugeAmount['a'] = '999999999999';
     assert_true(PaymentOffer::fromPost($hugeAmount, static fn(): bool => true) === null, 'out-of-range terms are refused even if a signature were accepted');
-    assert_true(PaymentOffer::sign(['t' => 1, 'a' => 100, 'c' => 'USD', 'd' => '', 's' => ''], static fn(): ?string => null) === null, 'no secret, no signature');
+    assert_true(PaymentOffer::sign(['t' => 1, 'a' => 100, 'c' => 'USD', 'd' => '', 's' => '', 'n' => SBPB_BLOCK, 'x' => 1], static fn(): ?string => null) === null, 'no secret, no signature');
+    assert_true(PaymentOffer::bind(['t' => 1, 'a' => 100, 'c' => 'USD', 'd' => '', 's' => ''], 'bad id"', SBPB_NOW) === null, 'a block id that is not a plain id makes no offer');
+    $old = $post;
+    unset($old['n'], $old['x']);
+    assert_true(PaymentOffer::fromPost($old, sbpb_verifier()) === null, 'a form from before offers named their block is refused');
 });
 
-/** @return array{tenantId: int, siteUrl: string, referer: string, visitor: string, configured: bool} */
+/** @return array{tenantId: int, siteUrl: string, referer: string, visitor: string, configured: bool, now: int} */
 function sbpb_env(array $over = []): array
 {
-    return $over + ['tenantId' => SBPB_TENANT, 'siteUrl' => 'https://acme.test/solaya', 'referer' => 'https://acme.test/solaya/pricing', 'visitor' => '203.0.113.7', 'configured' => true];
+    return $over + ['tenantId' => SBPB_TENANT, 'siteUrl' => 'https://acme.test/solaya', 'referer' => 'https://acme.test/solaya/pricing', 'visitor' => '203.0.113.7', 'configured' => true, 'now' => SBPB_NOW + 60];
 }
 
 unit('payment blocks: the pay request builds the Stripe session from the signed terms only', function (): void {
@@ -134,27 +148,39 @@ unit('payment blocks: the pay request builds the Stripe session from the signed 
     $allow = static fn(string $v): bool => true;
 
     $post = sbpb_post() + ['amount' => '1', 'price' => '1', 'currency' => 'USD'];
-    $r = PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), $checkout, $allow);
+    $r = PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), $checkout, $allow, sbpb_live());
     assert_eq(303, $r['status']);
     assert_eq('https://checkout.stripe.com/c/pay/cs_test_abc', $r['location']);
     assert_eq([[4999, 'EUR', 'Consulting', 'https://acme.test/solaya/thank-you', 'https://acme.test/solaya/pricing']], $calls, 'extra posted fields change nothing; return URLs are on this site (a subfolder install keeps its folder)');
 
     $calls = [];
-    $r = PayRequest::handle('POST', sbpb_post(['amount' => 10]), sbpb_env(['referer' => 'https://evil.test/phish']), sbpb_verifier(), $checkout, $allow);
+    $r = PayRequest::handle('POST', sbpb_post(['amount' => 10]), sbpb_env(['referer' => 'https://evil.test/phish']), sbpb_verifier(), $checkout, $allow, sbpb_live(['amount' => 10]));
     assert_eq(303, $r['status']);
     assert_eq('https://acme.test/solaya/', $calls[0][4], 'a referer from another site is not used as the cancel address');
     assert_eq('https://acme.test/solaya/', $calls[0][3], 'no thank-you page set: back to the site');
     assert_eq('Payment', $calls[0][2], 'no description: a neutral product name');
 
-    assert_eq(405, PayRequest::handle('GET', $post, sbpb_env(), sbpb_verifier(), $checkout, $allow)['status'], 'GET is refused');
-    assert_eq(503, PayRequest::handle('POST', $post, sbpb_env(['configured' => false]), sbpb_verifier(), $checkout, $allow)['status'], 'Stripe not set up');
-    assert_eq(429, PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), $checkout, static fn(string $v): bool => false)['status'], 'throttled');
+    assert_eq(405, PayRequest::handle('GET', $post, sbpb_env(), sbpb_verifier(), $checkout, $allow, sbpb_live())['status'], 'GET is refused');
+    assert_eq(503, PayRequest::handle('POST', $post, sbpb_env(['configured' => false]), sbpb_verifier(), $checkout, $allow, sbpb_live())['status'], 'Stripe not set up');
+    assert_eq(429, PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), $checkout, static fn(string $v): bool => false, sbpb_live())['status'], 'throttled');
     $forged = $post;
     $forged['a'] = '100';
-    assert_eq(400, PayRequest::handle('POST', $forged, sbpb_env(), sbpb_verifier(), $checkout, $allow)['status'], 'a changed amount');
-    assert_eq(400, PayRequest::handle('POST', $post, sbpb_env(['tenantId' => 202]), sbpb_verifier(), $checkout, $allow)['status'], 'an offer for another tenant');
-    assert_eq(502, PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), static fn(): string => 'https://evil.test/pay', $allow)['status'], 'a checkout URL that is not Stripe is never followed');
-    assert_eq(502, PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), static function (): string { throw new RuntimeException('Stripe down'); }, $allow)['status'], 'Stripe failing');
+    assert_eq(400, PayRequest::handle('POST', $forged, sbpb_env(), sbpb_verifier(), $checkout, $allow, sbpb_live())['status'], 'a changed amount');
+    assert_eq(400, PayRequest::handle('POST', $post, sbpb_env(['tenantId' => 202]), sbpb_verifier(), $checkout, $allow, sbpb_live())['status'], 'an offer for another tenant');
+    assert_eq(502, PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), static fn(): string => 'https://evil.test/pay', $allow, sbpb_live())['status'], 'a checkout URL that is not Stripe is never followed');
+    assert_eq(502, PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), static function (): string { throw new RuntimeException('Stripe down'); }, $allow, sbpb_live())['status'], 'Stripe failing');
+
+    // The offer is only honoured while the published block still makes exactly these terms.
+    $calls = [];
+    assert_eq(400, PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), $checkout, $allow, static fn(string $id): ?array => null)['status'], 'a block that is not published (a draft or preview) cannot be paid');
+    assert_eq(400, PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), $checkout, $allow, sbpb_live(['amount' => 99] + SBPB_PROPS))['status'], 'the price was changed and published: the old form is retired');
+    assert_eq(400, PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), $checkout, $allow, sbpb_live(['description' => 'Gold plan'] + SBPB_PROPS))['status'], 'a different description');
+    assert_eq(400, PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), $checkout, $allow, static function (): ?array { throw new RuntimeException('db down'); })['status'], 'a failing lookup refuses');
+    assert_eq(400, PayRequest::handle('POST', $post, sbpb_env(['now' => PaymentOffer::expiry(SBPB_NOW) + 1]), sbpb_verifier(), $checkout, $allow, sbpb_live())['status'], 'an expired form');
+    assert_eq(303, PayRequest::handle('POST', $post, sbpb_env(['now' => PaymentOffer::expiry(SBPB_NOW)]), sbpb_verifier(), $checkout, $allow, sbpb_live())['status'], 'still valid up to its expiry');
+    assert_eq(1, count($calls), 'only the valid one reached Stripe');
+    assert_eq(PaymentOffer::expiry(intdiv(SBPB_NOW, 3600) * 3600), PaymentOffer::expiry(intdiv(SBPB_NOW, 3600) * 3600 + 3599), 'the expiry is stable within an hour, so the page HTML (and its ETag) is too');
+    assert_true(PaymentOffer::expiry(SBPB_NOW) >= SBPB_NOW + PaymentOffer::TTL_SECONDS, 'a form works for at least TTL_SECONDS');
 });
 
 unit('payment blocks: the throttle allows a burst, then waits for the window', function (): void {
@@ -195,9 +221,10 @@ function sbpb_render(string $type, array $props, string $mode): string
     $entitled = static fn(string $m): bool => true;
     $ctx = match ($mode) {
         'public' => RenderContext::forPublic(SBPB_TENANT, $site, $entitled),
+        'preview' => RenderContext::forPreview(SBPB_TENANT, $site, StudioActor::authenticated(3, [StudioPermissions::VIEW, StudioPermissions::EDIT]), $entitled),
         'editor' => RenderContext::forEditor(SBPB_TENANT, $site, StudioActor::authenticated(3, [StudioPermissions::VIEW, StudioPermissions::EDIT]), $entitled),
     };
-    $block = ['id' => CanonicalDocumentSchema::newBlockId(), 'type' => $type, 'version' => 1, 'props' => $props, 'style' => CanonicalDocumentSchema::defaultBlockStyle(),
+    $block = ['id' => SBPB_BLOCK, 'type' => $type, 'version' => 1, 'props' => $props, 'style' => CanonicalDocumentSchema::defaultBlockStyle(),
               'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [], 'animation' => [], 'interactions' => []];
     return $tenants->runAs(SBPB_TENANT, static fn(): string => $documents->renderBlock($block, $ctx, (new ThemeResolver())->resolve('default'), new RenderCollector(), false));
 }
@@ -216,7 +243,15 @@ unit('payment blocks: the button renders a signed form publicly, a card in the e
     foreach ($m as $row) {
         $fields[$row[1]] = html_entity_decode($row[2], ENT_QUOTES);
     }
-    assert_true(PaymentOffer::fromPost($fields, sbpb_verifier()) !== null, 'the rendered form verifies at the endpoint');
+    $rendered = PaymentOffer::fromPost($fields, sbpb_verifier());
+    assert_true($rendered !== null, 'the rendered form verifies at the endpoint');
+    assert_eq(SBPB_BLOCK, $rendered['n'], 'the offer names its block');
+    assert_true($rendered['x'] > time(), 'and expires in the future');
+    assert_true(PaymentOffer::matchesProps($rendered, $props, SBPB_TENANT), 'its terms are the block\'s props');
+
+    $preview = sbpb_render('payment.button', $props, 'preview');
+    assert_true(!str_contains($preview, '<form') && !str_contains($preview, '<input'), 'a preview (which may be a draft) gets no payable form');
+    assert_true(str_contains($preview, 'disabled') && str_contains($preview, 'Buy &lt;now&gt;'), 'it shows the button, disabled');
 
     $editor = sbpb_render('payment.button', $props, 'editor');
     assert_true(!str_contains($editor, '<form') && !str_contains($editor, '<input'), 'the editor canvas gets no form');

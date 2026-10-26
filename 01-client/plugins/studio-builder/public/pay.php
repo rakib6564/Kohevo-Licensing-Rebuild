@@ -13,6 +13,7 @@ require $root . '/config.php';
 slate_public_entry('studio-builder');
 slate_public_entry('stripe-payment');
 
+use Slate\Module\StudioBuilder\Payment\LivePaymentBlocks;
 use Slate\Module\StudioBuilder\Payment\PayRequest;
 use Slate\Module\StudioBuilder\Payment\PayThrottle;
 
@@ -28,6 +29,7 @@ $result = PayRequest::handle(
         'referer'    => (string) ($_SERVER['HTTP_REFERER'] ?? ''),
         'visitor'    => (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
         'configured' => class_exists('StripePaymentAPI') && StripePaymentAPI::isConfigured(),
+        'now'        => time(),
     ],
     static fn (string $context, string $value, string $candidate): bool => slate_sign_equals($context, $value, $candidate),
     static function (int $cents, string $currency, string $name, string $successUrl, string $cancelUrl): string {
@@ -42,7 +44,8 @@ $result = PayRequest::handle(
         );
         return (string) $session['url'];
     },
-    static fn (string $visitor): bool => (new PayThrottle(sys_get_temp_dir() . '/kohevo-studio-pay'))->allow($visitor)
+    static fn (string $visitor): bool => (new PayThrottle(sys_get_temp_dir() . '/kohevo-studio-pay'))->allow($visitor),
+    static fn (string $blockId): ?array => LivePaymentBlocks::propsOf((int) current_tenant_id(), $blockId)
 );
 
 if ($result['status'] === 303 && isset($result['location'])) {

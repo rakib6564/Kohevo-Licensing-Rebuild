@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Provider;
 
 use Slate\Data\Database;
-use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Runtime\PublishedPageData;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 use Slate\Module\StudioBuilder\StudioPermissions;
 use Slate\Tenancy\TenantContext;
@@ -54,29 +54,32 @@ final class TaxonomyProvider implements PublicDataProviderInterface
         $type = (string) ($params['type'] ?? 'category');
         $limit = max(1, min(50, (int) ($params['limit'] ?? 20)));
 
-        $pdo = Database::get();
-        $stmt = $pdo->prepare("SELECT settings_json FROM studiobuilder_pages WHERE tenant_id = ? AND status = 'published'");
-        $stmt->execute([$tenantId]);
-        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        // Count what is LIVE: published public pages (not headers, footers, components or theme templates),
+        // by the category or tag they were published with (the row's settings column mirrors the draft).
+        $rows = Database::rows(
+            "SELECT id, published_revision_id, active_draft_revision_id, settings_json, seo_json
+               FROM studiobuilder_pages
+              WHERE tenant_id = ? AND status = 'published' AND published_revision_id IS NOT NULL
+                AND page_type IN ('page', 'landing') AND slug NOT LIKE 'template-%'",
+            [$tenantId]
+        );
 
         $counts = [];
-        foreach ($rows as $row) {
-            if (empty($row['settings_json'])) {
+        $pages = 0;
+        foreach (PublishedPageData::forRows($tenantId, $rows) as $live) {
+            $settings = $live['settings'];
+            if (!empty($settings['is_theme_template']) || (is_string($settings['template_type'] ?? null) && $settings['template_type'] !== '')) {
                 continue;
             }
-            try {
-                $settings = CanonicalJson::decode((string) $row['settings_json']);
-                if (is_array($settings)) {
-                    $val = trim((string) ($settings[$type] ?? ''));
-                    if ($val !== '') {
-                        $counts[$val] = ($counts[$val] ?? 0) + 1;
-                    }
-                }
-            } catch (\Throwable) {}
+            $pages++;
+            $val = trim((string) (is_scalar($settings[$type] ?? null) ? $settings[$type] : ''));
+            if ($val !== '') {
+                $counts[$val] = ($counts[$val] ?? 0) + 1;
+            }
         }
 
         if ($counts === []) {
-            $counts = ['General' => count($rows)];
+            $counts = ['General' => $pages];
         }
 
         arsort($counts, SORT_NUMERIC);

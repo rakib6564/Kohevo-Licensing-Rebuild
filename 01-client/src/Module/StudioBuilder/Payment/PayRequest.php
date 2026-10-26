@@ -4,7 +4,8 @@
  *
  * Pure flow with its collaborators passed in, so every outcome is testable without Stripe, a database or HTTP: only a
  * POST, only when Stripe is set up, only within the visitor's limit, only an offer that verifies (see PaymentOffer),
- * only one made for this tenant. The Stripe session is created from the offer's own terms, never from anything else in
+ * only one made for this tenant, not yet expired, and only while a published Studio document still holds the block it
+ * names with exactly its terms (a draft-only or since-repriced button cannot be paid). The Stripe session is created from the offer's own terms, never from anything else in
  * the request, and the visitor is sent on with a 303 to the checkout URL Stripe returned.
  */
 
@@ -16,13 +17,14 @@ final class PayRequest
 {
     /**
      * @param array<string, mixed> $post
-     * @param array{tenantId: int, siteUrl: string, referer: string, visitor: string, configured: bool} $env
+     * @param array{tenantId: int, siteUrl: string, referer: string, visitor: string, configured: bool, now: int} $env
      * @param callable(string, string, string): bool $verifier `slate_sign_equals`
      * @param callable(int, string, string, string, string): string $checkout (cents, currency, name, successUrl, cancelUrl) -> hosted checkout URL; throws on failure
      * @param callable(string): bool $allow per-visitor limit
+     * @param callable(string): ?array $liveProps block id -> the props of that payment button as PUBLISHED now, or null
      * @return array{status: int, location?: string, message?: string}
      */
-    public static function handle(string $method, array $post, array $env, callable $verifier, callable $checkout, callable $allow): array
+    public static function handle(string $method, array $post, array $env, callable $verifier, callable $checkout, callable $allow, callable $liveProps): array
     {
         if (strtoupper($method) !== 'POST') {
             return ['status' => 405, 'message' => 'Use the payment button on the page.'];
@@ -34,7 +36,15 @@ final class PayRequest
             return ['status' => 429, 'message' => 'Too many attempts. Please wait a minute and try again.'];
         }
         $offer = PaymentOffer::fromPost($post, $verifier);
-        if ($offer === null || $offer['t'] !== $env['tenantId']) {
+        if ($offer === null || $offer['t'] !== $env['tenantId'] || $offer['x'] < $env['now']) {
+            return ['status' => 400, 'message' => 'This payment button is out of date. Reload the page and try again.'];
+        }
+        try {
+            $live = $liveProps($offer['n']);
+        } catch (\Throwable) {
+            $live = null;
+        }
+        if (!is_array($live) || !PaymentOffer::matchesProps($offer, $live, $env['tenantId'])) {
             return ['status' => 400, 'message' => 'This payment button is out of date. Reload the page and try again.'];
         }
 

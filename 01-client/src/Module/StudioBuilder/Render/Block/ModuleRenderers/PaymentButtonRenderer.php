@@ -5,6 +5,8 @@
  * The page is anonymous and cacheable, so the amount cannot be looked up when the visitor clicks: the form carries its
  * terms and a signature only this server can make (Payment/PaymentOffer), and the pay endpoint creates the Stripe session
  * from those signed terms alone. The authoring canvas never receives a form: it shows a card with what visitors will see.
+ * Only a PUBLIC render signs an offer, bound to this block and an expiry: a preview shows the button without a form, so
+ * a price that exists only in a draft can never be paid (the endpoint also checks the published block, see PayRequest).
  */
 
 declare(strict_types=1);
@@ -42,6 +44,15 @@ final class PaymentButtonRenderer implements BlockRendererInterface
         if ($offer === null || !self::stripeReady()) {
             return $scope->showsDiagnostics() ? $this->card($label, $offer) : '';
         }
+        if ($scope->mode() !== RenderMode::Public) {
+            // A preview looks like the page but never carries a payable form.
+            return '<div class="sb-pay"><button type="button" class="sb-button sb-button--primary sb-pay__button" disabled title="'
+                . Html::e(Html::t('studio_pay_preview_note', 'Payments work on the published page.')) . '">' . Html::e($label) . '</button></div>';
+        }
+        $offer = PaymentOffer::bind($offer, $scope->nodeId(), time());
+        if ($offer === null) {
+            return '';
+        }
         $signature = PaymentOffer::sign($offer, static fn(string $context, string $value): ?string => function_exists('slate_sign') ? \slate_sign($context, $value) : null);
         if ($signature === null) {
             return '';
@@ -49,7 +60,7 @@ final class PaymentButtonRenderer implements BlockRendererInterface
 
         $action = $scope->site()->absoluteUrl('plugins/studio-builder/public/pay.php');
         $hidden = '';
-        foreach (['t' => $offer['t'], 'a' => $offer['a'], 'c' => $offer['c'], 'd' => $offer['d'], 's' => $offer['s'], 'g' => $signature] as $name => $value) {
+        foreach (['t' => $offer['t'], 'a' => $offer['a'], 'c' => $offer['c'], 'd' => $offer['d'], 's' => $offer['s'], 'n' => $offer['n'], 'x' => $offer['x'], 'g' => $signature] as $name => $value) {
             $hidden .= '<input type="hidden" name="' . $name . '" value="' . Html::e((string) $value) . '">';
         }
         return '<form class="sb-pay" method="post" action="' . Html::e($action) . '">' . $hidden
@@ -70,7 +81,7 @@ final class PaymentButtonRenderer implements BlockRendererInterface
             ? Html::t('studio_pay_incomplete', 'Set an amount from 0.50 up and a currency in the Inspector.')
             : PaymentOffer::display($offer['a'], $offer['c']) . ($offer['d'] !== '' ? ' · ' . $offer['d'] : '');
         $note = self::stripeReady()
-            ? Html::t('studio_pay_card_note', 'Visitors who click this go to a Stripe Checkout page. Preview the page to see the live button.')
+            ? Html::t('studio_pay_card_note', 'Visitors who click this go to a Stripe Checkout page. The button takes payments once the page is published.')
             : Html::t('studio_pay_not_ready', 'Stripe is not set up yet, so visitors will not see this button. Add your Stripe keys in the Stripe Payment settings.');
         return '<div class="sb-pay-card sb-embed-card">'
             . '<p class="sb-embed-card__kind">' . Html::e(Html::t('studio_pay_kind', 'Payment')) . '</p>'

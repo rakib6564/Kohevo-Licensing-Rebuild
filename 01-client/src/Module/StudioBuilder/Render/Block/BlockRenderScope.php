@@ -36,6 +36,12 @@ final class BlockRenderScope
         return (string) ($this->block['type'] ?? '');
     }
 
+    /** This block's node id as stored in the document ('' for a block built without one). */
+    public function nodeId(): string
+    {
+        return is_string($this->block['id'] ?? null) ? $this->block['id'] : '';
+    }
+
     /**
      * A DOM-id-safe form of this block's node id.
      *

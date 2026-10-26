@@ -18,7 +18,8 @@ if (!function_exists('slate_data_row')) {
 Auth::require();
 Auth::requirePerm('studio-builder.view');
 
-$canEdit    = Auth::can('studio-builder.edit') || Auth::isSuperAdmin();
+// Menus are read by the live site on every request: changing one is publishing, so it needs the publish permission.
+$canEdit    = Auth::can('studio-builder.publish') || Auth::isSuperAdmin();
 $tenantId   = current_tenant_id();
 $pageTitle  = __('studio_menus', 'Menus');
 $currentNav = 'studio-menus';

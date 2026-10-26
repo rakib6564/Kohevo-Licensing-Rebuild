@@ -29,6 +29,7 @@ use Slate\Data\Database;
 use Slate\Module\StudioBuilder\Dependency\DependencyExtractor;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Document\LayerLock;
 use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Document\DocumentNormalizer;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
@@ -118,6 +119,7 @@ final class StudioRevisionService
                 : null;
 
             $this->assertExpectedRevision($pageId, $currentDraftId, $expectedRevisionId);
+            $this->assertLocksKept($pageId, $currentDraftId, $normalizedDocument);
 
             // Autosave deduplication: if the working draft already has the exact same SHA-256 fingerprint,
             // return the existing working revision without inserting a redundant row.
@@ -357,6 +359,7 @@ final class StudioRevisionService
                 $this->registry,
                 $validationOptions
             );
+            $this->assertLocksKept($pageId, $currentDraftId, $normalizedDoc);
             $canonicalJson = CanonicalJson::encode($normalizedDoc);
             $fingerprint   = hash('sha256', $canonicalJson);
             $deps          = DependencyExtractor::extract($normalizedDoc, $this->registry);
@@ -420,6 +423,37 @@ final class StudioRevisionService
      *
      * @return array<string, mixed>
      */
+    /**
+     * Whole-document draft writes (a saved document, a template applied, a rollback or undo, an import replacing the
+     * draft) must leave the current draft's locked layers as they are; operations are checked one by one in the
+     * applier, these here (see LayerLock::assertPreserved). A draft without any lock is not decoded.
+     *
+     * @param array<string, mixed> $next
+     */
+    private function assertLocksKept(int $pageId, ?int $currentDraftId, array $next): void
+    {
+        if ($currentDraftId === null) {
+            return;
+        }
+        $current = $this->revisions->findByIdForPage($pageId, $currentDraftId);
+        $json = (string) ($current['document_json'] ?? '');
+        if ($json === '' || !str_contains($json, '"locked":true')) {
+            return;
+        }
+        $decoded = CanonicalJson::decode($json);
+        if (!is_array($decoded)) {
+            return;
+        }
+        // Compare like with like: the new document is upgraded and normalized, so the stored draft is too (a draft
+        // saved by an older block version would otherwise look changed everywhere).
+        try {
+            $decoded = DocumentNormalizer::normalize(DocumentUpgrader::upgrade($decoded, $this->registry)['document'], $this->registry);
+        } catch (\Throwable) {
+            // compare the stored form as it is
+        }
+        LayerLock::assertPreserved($decoded, $next);
+    }
+
     private function lockPageRow(int $tenantId, int $pageId): array
     {
         $row = Database::row(

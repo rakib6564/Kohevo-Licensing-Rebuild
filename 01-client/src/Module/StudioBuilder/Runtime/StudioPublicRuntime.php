@@ -382,7 +382,10 @@ final class StudioPublicRuntime
     {
         foreach (StudioRenderService::PUBLIC_PAGE_TYPES as $type) {
             $row = $this->pages->findBySlug($slug, $type);
-            if ($row !== null && ($row['status'] ?? null) === 'published' && !empty($row['published_revision_id']) && !self::isThemeTemplate($row)) {
+            // Template-ness is read from what was PUBLISHED: a draft that names a template_type must not take the
+            // live page offline before anyone publishes it.
+            if ($row !== null && ($row['status'] ?? null) === 'published' && !empty($row['published_revision_id'])
+                && !self::isThemeTemplate($row, PublishedPageData::settingsOf($this->tenants->id(), $row))) {
                 return $row;
             }
         }
@@ -393,11 +396,15 @@ final class StudioPublicRuntime
      * A theme template (a Single template stored as a page, older rows) lays out other pages; it is never a page
      * of its own at its `template-…` address.
      *
+     * Pass `$settings` as the page was PUBLISHED with (`PublishedPageData`); without it the row's settings column is
+     * read, which mirrors the current draft.
+     *
      * @param array<string, mixed> $row
+     * @param ?array<string, mixed> $settings
      */
-    public static function isThemeTemplate(array $row): bool
+    public static function isThemeTemplate(array $row, ?array $settings = null): bool
     {
-        $settings = json_decode((string) ($row['settings_json'] ?? ''), true);
+        $settings ??= json_decode((string) ($row['settings_json'] ?? ''), true);
         return is_array($settings) && (!empty($settings['is_theme_template']) || (is_string($settings['template_type'] ?? null) && $settings['template_type'] !== ''));
     }
 

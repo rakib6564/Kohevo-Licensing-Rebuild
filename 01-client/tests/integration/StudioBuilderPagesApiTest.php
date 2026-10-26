@@ -264,17 +264,20 @@ unit('page commands integration: rename, duplicate, archive, permissions and iso
             sbpg_publish($rt, SBPG_TENANT_A, $publisher, $src['id']);
 
             // ── rename ────────────────────────────────────────────────────────────
-            $r = sbpg_ok(sbpg_call($rt, SBPG_TENANT_A, $editor, 'POST', 'update_page', ['page_id' => $src['id'], 'title' => 'About Kohevo']), 'rename title');
+            // The page is published: its title and address change on the live site at once, so that needs publish.
+            assert_eq(403, sbpg_call($rt, SBPG_TENANT_A, $editor, 'POST', 'update_page', ['page_id' => $src['id'], 'title' => 'About Kohevo'])->status, 'an editor cannot rename a published page');
+            assert_eq(403, sbpg_call($rt, SBPG_TENANT_A, $editor, 'POST', 'archive_page', ['page_id' => $src['id']])->status, 'nor take it off the site');
+            $r = sbpg_ok(sbpg_call($rt, SBPG_TENANT_A, $publisher, 'POST', 'update_page', ['page_id' => $src['id'], 'title' => 'About Kohevo']), 'rename title');
             assert_eq('About Kohevo', $r['page']['title']);
             assert_eq('about', $r['page']['slug'], 'a title-only rename keeps the address');
             assert_true($r['page']['is_published'] === true, 'a rename does not unpublish');
-            $r = sbpg_ok(sbpg_call($rt, SBPG_TENANT_A, $editor, 'POST', 'update_page', ['page_id' => $src['id'], 'slug' => 'about-kohevo']), 'rename slug');
+            $r = sbpg_ok(sbpg_call($rt, SBPG_TENANT_A, $publisher, 'POST', 'update_page', ['page_id' => $src['id'], 'slug' => 'about-kohevo']), 'rename slug');
             assert_eq('/about-kohevo', $r['page']['public_path']);
             assert_eq('invalid_field', sbpg_first_code(sbpg_call($rt, SBPG_TENANT_A, $editor, 'POST', 'update_page', ['page_id' => $src['id']])), 'nothing to change is refused');
             assert_true(!sbpg_call($rt, SBPG_TENANT_A, $viewer, 'POST', 'update_page', ['page_id' => $src['id'], 'title' => 'x'])->isOk(), 'a viewer cannot rename');
             assert_true(!sbpg_call($rt, SBPG_TENANT_A, $editor, 'POST', 'update_page', ['page_id' => $src['id'], 'title' => 'x'], false)->isOk(), 'a rename needs the CSRF token');
-            assert_true(!sbpg_call($rt, SBPG_TENANT_A, $editor, 'POST', 'update_page', ['page_id' => $src['id'], 'slug' => 'Not A Slug!'])->isOk(), 'an invalid slug is refused');
-            assert_true(!sbpg_call($rt, SBPG_TENANT_A, $editor, 'POST', 'update_page', ['page_id' => $src['id'], 'slug' => 'admin'])->isOk(), 'a reserved slug is refused');
+            assert_true(!sbpg_call($rt, SBPG_TENANT_A, $publisher, 'POST', 'update_page', ['page_id' => $src['id'], 'slug' => 'Not A Slug!'])->isOk(), 'an invalid slug is refused');
+            assert_true(!sbpg_call($rt, SBPG_TENANT_A, $publisher, 'POST', 'update_page', ['page_id' => $src['id'], 'slug' => 'admin'])->isOk(), 'a reserved slug is refused');
             $other = sbpg_make_page($rt, SBPG_TENANT_A, $editor, 'Contact', 'contact', 'page', []);
             assert_eq('duplicate_slug', sbpg_first_code(sbpg_call($rt, SBPG_TENANT_A, $editor, 'POST', 'update_page', ['page_id' => $other['id'], 'slug' => 'about-kohevo'])), 'a taken slug is refused');
 

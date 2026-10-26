@@ -45,6 +45,7 @@ use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
 use Slate\Module\StudioBuilder\Exception\StudioConcurrencyException;
+use Slate\Module\StudioBuilder\Exception\StudioAuthorizationException;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Http\StudioApiRequest;
 use Slate\Module\StudioBuilder\Http\StudioApiResponse;
@@ -586,7 +587,8 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
                 $secondRev = (int) $r['revision']['id'];
                 $secondRefSection = (string) $r['document']['sections'][1]['id'];
                 assert_eq(2, sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'GET', 'components'), 'components')['components'][0]['usage_count'], 'usage counts current dependents');
-                assert_throws(StudioValidationException::class, static fn() => $rt->tenants->runAs(SBP6_TENANT_A, static fn() => $rt->app->archivePage($editor, $S->componentId)), 'a referenced component cannot be archived');
+                assert_throws(StudioAuthorizationException::class, static fn() => $rt->tenants->runAs(SBP6_TENANT_A, static fn() => $rt->app->archivePage($editor, $S->componentId)), 'a published component is taken off the site only with publish permission');
+                assert_throws(StudioValidationException::class, static fn() => $rt->tenants->runAs(SBP6_TENANT_A, static fn() => $rt->app->archivePage($publisher, $S->componentId)), 'a referenced component cannot be archived');
                 assert_eq('published', (string) $rt->tenants->runAs(SBP6_TENANT_A, static fn() => $rt->pages->find($S->componentId))['status'], 'the refused archive changed nothing');
 
                 // Detach on the second page: the reference becomes an owned copy of the PUBLISHED content; stale detach is refused.
@@ -607,7 +609,7 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
                 assert_eq(0, $blank['component']['usage_count']);
                 assert_eq('duplicate_slug', sbp6_first_code(sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'create_component', ['title' => 'Blank comp', 'slug' => 'blank-comp'])));
                 $blankId = (int) $blank['component']['id'];
-                $archived = $rt->tenants->runAs(SBP6_TENANT_A, static fn() => $rt->app->archivePage($editor, $blankId));
+                $archived = $rt->tenants->runAs(SBP6_TENANT_A, static fn() => $rt->app->archivePage($publisher, $blankId));
                 assert_eq('archived', $archived['status'], 'an unreferenced component can be archived');
                 assert_eq([$S->ref], array_column(sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'GET', 'components'), 'components')['components'], 'ref'), 'archived components leave the library');
                 $r = sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'operations', ['page_id' => $second['id'], 'expected_revision_id' => $secondRev, 'operations' => [
@@ -669,7 +671,7 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
                 assert_eq('builtin', sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'GET', 'chrome', ['page' => $S->about]), 'chrome')['chrome']['footer']['resolved'], 'the footer is independent');
 
                 // Archiving the site header partial invalidates chromed pages too; public falls back safely.
-                $rt->tenants->runAs(SBP6_TENANT_A, static fn() => $rt->app->archivePage($editor, $custom['id']));
+                $rt->tenants->runAs(SBP6_TENANT_A, static fn() => $rt->app->archivePage($publisher, $custom['id']));
                 assert_eq(0, sbp6_count('SELECT COUNT(*) FROM studiobuilder_compilations WHERE tenant_id = ? AND page_id = ?', [SBP6_TENANT_A, $S->about]));
                 assert_eq(404, sbp6_call($rt, SBP6_TENANT_B, $editor, 'GET', 'chrome', ['page' => $S->about])->status, 'chrome bindings are tenant-scoped');
             });
