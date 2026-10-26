@@ -55,13 +55,29 @@ final class PageRepository extends StudioRepository
      */
     public function allOfType(string $pageType, int $limit = 500): array
     {
-        $rows = $this->query()
+        return $this->query()
             ->where('page_type', $pageType)
+            ->where('status', '<>', 'archived')
             ->orderBy('title', 'ASC')
             ->orderBy('id', 'ASC')
             ->limit(max(1, $limit))
             ->get();
-        return array_values(array_filter($rows, static fn(array $r): bool => ($r['status'] ?? null) !== 'archived'));
+    }
+
+    /**
+     * Every page that is not archived, newest change first. Archived pages are left out in SQL, before the limit: filtering
+     * them afterwards let a run of recently archived pages (a bulk delete) use up the limit and hide live ones.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function allLive(int $limit): array
+    {
+        return array_map([$this, 'hydrate'], $this->query()
+            ->where('status', '<>', 'archived')
+            ->orderBy('updated_at', 'DESC')
+            ->orderBy('id', 'DESC')
+            ->limit(max(1, $limit))
+            ->get());
     }
 
     /**
@@ -80,6 +96,25 @@ final class PageRepository extends StudioRepository
             ->orderBy('title', 'ASC')
             ->orderBy('id', 'ASC')
             ->limit(max(1, $limit))
+            ->get();
+    }
+
+    /**
+     * The other non-archived pages of the given types that are also marked as the homepage.
+     *
+     * @param list<string> $pageTypes
+     * @return list<array<string, mixed>>
+     */
+    public function otherHomepages(int $exceptPageId, array $pageTypes): array
+    {
+        if ($pageTypes === []) {
+            return [];
+        }
+        return $this->query()
+            ->where('route_mode', 'homepage')
+            ->whereIn('page_type', $pageTypes)
+            ->where('status', '<>', 'archived')
+            ->where('id', '<>', $exceptPageId)
             ->get();
     }
 

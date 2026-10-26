@@ -81,6 +81,7 @@ use Slate\Module\StudioBuilder\Diff\RevisionDiff;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
 use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
+use Slate\Module\StudioBuilder\Document\DocumentValidator;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
 use Slate\Module\StudioBuilder\Meta\PageMeta;
@@ -212,7 +213,20 @@ final class StudioApplicationService
         }
         $result = $this->pages->updateAddress($pageId, $changes, (int) $actor->userId);
         $this->audit($actor, 'studio.page.address_updated', (string) $pageId, $changes);
+        $this->claimHomepage($actor, $pageId);
         return $result;
+    }
+
+    /** A page that is now live as the homepage moves every other homepage to its own address (see `claimHomepage()`). */
+    private function claimHomepage(StudioActor $actor, int $pageId): void
+    {
+        $moved = $this->pages->claimHomepage($pageId, (int) $actor->userId);
+        foreach ($moved as $movedId) {
+            $this->invalidator?->invalidatePage($movedId);
+        }
+        if ($moved !== []) {
+            $this->audit($actor, 'studio.page.homepage_claimed', (string) $pageId, ['moved_page_ids' => $moved]);
+        }
     }
 
     /**
@@ -892,12 +906,9 @@ final class StudioApplicationService
         $disabled = $this->availability?->disabled($tenantId) ?? [];
 
         $documents = [];
-        $rows = $this->pageRepo->all([], 'updated_at DESC', self::MAX_SCANNED_PAGES + 1);
+        $rows = $this->pageRepo->allLive(self::MAX_SCANNED_PAGES + 1);
         $truncated = count($rows) > self::MAX_SCANNED_PAGES;
         foreach (array_slice($rows, 0, self::MAX_SCANNED_PAGES) as $row) {
-            if (($row['status'] ?? '') === 'archived') {
-                continue;
-            }
             $draftId = isset($row['active_draft_revision_id']) ? (int) $row['active_draft_revision_id'] : 0;
             $revision = $draftId > 0 ? $this->revisionRepo->findByIdForPage((int) $row['id'], $draftId) : null;
             if ($revision === null) {
@@ -1001,6 +1012,7 @@ final class StudioApplicationService
 
         if ($this->renderer === null) {
             $result = $this->revisions->publishWorkingRevision($pageId, $expectedRevisionId, (int) $actor->userId, $summary, $this->buildValidationOptions($actor, $pageId));
+            $this->claimHomepage($actor, $pageId);
             $this->invalidateSharedContent($result['page']);
             $this->audit($actor, 'studio.page.published', (string) $pageId, ['revision_id' => (int) ($result['revision']['id'] ?? 0), 'source_revision_id' => (int) ($result['revision']['parent_revision_id'] ?? 0)]);
             return $result;
@@ -1036,6 +1048,8 @@ final class StudioApplicationService
             }
             throw $e;
         }
+
+        $this->claimHomepage($actor, $pageId);
 
         // A republished Global Component / header / footer partial: drop the
         // artifacts of every dependent page (they recompile on next request).
@@ -1413,17 +1427,7 @@ final class StudioApplicationService
     public function listPages(StudioActor $actor): array
     {
         $this->authorize($actor, StudioPermissions::VIEW);
-        $out = [];
-        foreach ($this->pageRepo->all([], 'updated_at DESC', self::MAX_LISTED_PAGES + 50) as $row) {
-            if (($row['status'] ?? '') === 'archived') {
-                continue;
-            }
-            $out[] = StudioEditorViews::page($row);
-            if (count($out) >= self::MAX_LISTED_PAGES) {
-                break;
-            }
-        }
-        return $out;
+        return array_map([StudioEditorViews::class, 'page'], $this->pageRepo->allLive(self::MAX_LISTED_PAGES));
     }
 
     /**
@@ -2079,6 +2083,7 @@ final class StudioApplicationService
     {
         $tenantId = $this->requireTenantId();
         $pageMedia = null;
+        $keptBlocks = null;
 
         return [
             // A media id passes when the file is in this tenant's library, or —
@@ -2119,6 +2124,27 @@ final class StudioApplicationService
             },
             'permission_check' => static function (string $permKey) use ($actor): bool {
                 return $actor->can($permKey);
+            },
+            // A block the page's current draft already has, unchanged, is not re-checked for entitlement or permission:
+            // losing the forms or booking module (or a role) must not make the whole page unsaveable.
+            'kept_block' => function (array $block) use ($pageId, &$keptBlocks): bool {
+                if ($pageId === null) {
+                    return false;
+                }
+                if ($keptBlocks === null) {
+                    $keptBlocks = [];
+                    try {
+                        $page    = $this->pageRepo->find($pageId);
+                        $draftId = (int) ($page['active_draft_revision_id'] ?? 0);
+                        $draft   = $draftId > 0 ? $this->revisionRepo->findByIdForPage($pageId, $draftId) : null;
+                        if ($draft !== null) {
+                            $keptBlocks = DocumentValidator::blockFingerprints(CanonicalJson::decode((string) $draft['document_json']));
+                        }
+                    } catch (\Throwable) {
+                        $keptBlocks = [];
+                    }
+                }
+                return isset($keptBlocks[DocumentValidator::blockFingerprint($block)]);
             },
         ];
     }

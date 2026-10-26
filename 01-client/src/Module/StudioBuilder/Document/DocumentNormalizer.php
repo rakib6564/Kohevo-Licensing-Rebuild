@@ -15,6 +15,7 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Document;
 
+use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 
 final class DocumentNormalizer
@@ -51,7 +52,42 @@ final class DocumentNormalizer
         $cleaned = self::stripTransientMetadata($decoded);
         DocumentValidator::assertValid($cleaned, $registry, $validationOptions);
 
-        return self::normalize($cleaned, $registry);
+        $normalized = self::normalize($cleaned, $registry);
+        self::assertReadable($normalized);
+        return $normalized;
+    }
+
+    /**
+     * Refuse a document whose stored form could not be read back.
+     *
+     * Every read decodes `document_json` with `CanonicalJson::decode()` (1 MiB, depth 32), but the validator measures the
+     * document before normalization fills in defaults, and only bounds the depth of the block tree. A document just under
+     * the size limit, or with a deep value under a key the validator does not walk (`responsive.tablet.extra`), was
+     * accepted and committed, and then every open, publish and preview of the page failed. Checking the exact encoding
+     * that will be stored, against the limits the reads use, keeps "saved" and "can be opened" the same thing.
+     *
+     * @param array<string, mixed> $normalized
+     */
+    private static function assertReadable(array $normalized): void
+    {
+        $encoded = CanonicalJson::encode($normalized);
+        $bytes   = strlen($encoded);
+        if ($bytes > CanonicalDocumentSchema::MAX_DOCUMENT_BYTES) {
+            throw new StudioValidationException([[
+                'path'    => '$',
+                'code'    => 'document_too_large',
+                'message' => 'Document is ' . $bytes . ' bytes once saved; the limit is ' . CanonicalDocumentSchema::MAX_DOCUMENT_BYTES . ' bytes.',
+            ]]);
+        }
+        try {
+            json_decode($encoded, true, CanonicalDocumentSchema::MAX_JSON_DEPTH, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw new StudioValidationException([[
+                'path'    => '$',
+                'code'    => 'document_too_deep',
+                'message' => 'Document nests deeper than ' . CanonicalDocumentSchema::MAX_JSON_DEPTH . ' levels once saved.',
+            ]]);
+        }
     }
 
     /**

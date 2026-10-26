@@ -25,6 +25,50 @@ use Slate\Module\StudioBuilder\Schema\ValidationResult;
 final class DocumentValidator
 {
     /**
+     * What makes a block the same block for `kept_block`: its id, type, content and bindings. Style and position are left
+     * out, so a kept block can still be restyled or moved.
+     *
+     * @param array<string, mixed> $block
+     */
+    public static function blockFingerprint(array $block): string
+    {
+        return hash('sha256', (string) json_encode(CanonicalJson::sortKeysRecursively([
+            'id'       => $block['id'] ?? null,
+            'type'     => $block['type'] ?? null,
+            'props'    => is_array($block['props'] ?? null) ? $block['props'] : [],
+            'bindings' => is_array($block['bindings'] ?? null) ? $block['bindings'] : [],
+        ]), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * The fingerprints of every block in a document, nested ones included.
+     *
+     * @param array<string, mixed> $document
+     * @return array<string, true>
+     */
+    public static function blockFingerprints(array $document): array
+    {
+        $out  = [];
+        $walk = static function (array $blocks) use (&$walk, &$out): void {
+            foreach ($blocks as $block) {
+                if (!is_array($block)) {
+                    continue;
+                }
+                $out[self::blockFingerprint($block)] = true;
+                if (is_array($block['children'] ?? null)) {
+                    $walk($block['children']);
+                }
+            }
+        };
+        foreach ((array) ($document['sections'] ?? []) as $section) {
+            if (is_array($section) && is_array($section['blocks'] ?? null)) {
+                $walk($section['blocks']);
+            }
+        }
+        return $out;
+    }
+
+    /**
      * Validate a canonical Studio document (passed as raw JSON string or decoded array).
      *
      * Optional callbacks allow `StudioApplicationService` to bind tenant-scoped reference
@@ -41,7 +85,8 @@ final class DocumentValidator
      *   partial_exists?: callable(string $globalRef): bool,
      *   template_exists?: callable(string $templateKey): bool,
      *   entitlement_check?: callable(string $moduleKey): bool,
-     *   permission_check?: callable(string $permissionKey): bool
+     *   permission_check?: callable(string $permissionKey): bool,
+     *   kept_block?: callable(array $block): bool
      * } $options
      */
     public static function validate(
@@ -850,15 +895,18 @@ final class DocumentValidator
             return;
         }
 
-        // Block entitlement & permission checks if callbacks provided
+        // Block entitlement & permission checks if callbacks provided. A block the page already had, unchanged, is not
+        // re-checked (`kept_block`): it passed when it was added, and losing a module or a permission since then must not
+        // make every later save of the page fail. The public renderer still hides a block the site is not entitled to.
+        $kept = isset($options['kept_block']) && is_callable($options['kept_block']) && ($options['kept_block'])($block);
         $reqEntitlement = $definition->requiredEntitlement();
-        if ($reqEntitlement !== null && isset($options['entitlement_check']) && is_callable($options['entitlement_check'])) {
+        if (!$kept && $reqEntitlement !== null && isset($options['entitlement_check']) && is_callable($options['entitlement_check'])) {
             if (!($options['entitlement_check'])($reqEntitlement)) {
                 $errors[] = ValidationResult::issue("{$path}.type", 'block_module_not_entitled', "Block '{$type}' requires commercial entitlement '{$reqEntitlement}'.");
             }
         }
         $reqPerm = $definition->requiredPermission();
-        if (isset($options['permission_check']) && is_callable($options['permission_check'])) {
+        if (!$kept && isset($options['permission_check']) && is_callable($options['permission_check'])) {
             if (!($options['permission_check'])($reqPerm)) {
                 $errors[] = ValidationResult::issue("{$path}.type", 'block_permission_denied', "Block '{$type}' requires permission '{$reqPerm}'.");
             }
