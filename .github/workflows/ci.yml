@@ -213,6 +213,21 @@ jobs:
           npm ci --no-audit --no-fund
           npm test
 
+      - name: Check the committed builder bundle matches its source
+        if: matrix.db_label == 'MySQL 8.0'
+        working-directory: 01-client/plugins/studio-builder/ui
+        run: |
+          # Installs serve the committed assets/builder and never run Node, so a source change without a rebuild
+          # never reaches anyone. Build from a real node_modules (a symlinked one changes the chunk names).
+          npm run build
+          changed="$(git status --porcelain -- ../assets/builder)"
+          if [ -n "$changed" ]; then
+            echo "$changed"
+            echo "::error::assets/builder is not what ui/src builds to. Run 'npm ci && npm run build' in 01-client/plugins/studio-builder/ui and commit assets/builder."
+            exit 1
+          fi
+          echo "assets/builder matches ui/src."
+
       - name: Run 02-licensing smoke & licensing suites
         run: |
           php 02-licensing/tests/smoke.php
