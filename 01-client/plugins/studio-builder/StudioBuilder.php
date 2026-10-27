@@ -71,9 +71,8 @@ class StudioBuilder extends Plugin
         require_once __DIR__ . '/StudioBuilderMcpHandler.php';
         StudioBuilderMcpHandler::register();
 
-        // Custom Portfolio Widgets
-        require_once __DIR__ . '/StudioBuilderPortfolioWidgets.php';
-        \Slate\Module\StudioBuilder\StudioBuilderPortfolioWidgets::register();
+        // The portfolio showcase widget is one person's site: the Studio Freelancer Portfolio plugin registers it
+        // (StudioBuilderPortfolioWidgets), so it is only offered where that plugin is active.
     }
 
     /**

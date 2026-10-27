@@ -40,6 +40,14 @@ class StudioFreelancerPortfolio extends Plugin
 {
     public function boot(): void
     {
+        // The full-page portfolio showcase lives with the Studio plugin's assets; it is offered only where this
+        // portfolio plugin is active, never to every tenant of the platform.
+        $showcase = dirname(__DIR__) . '/studio-builder/StudioBuilderPortfolioWidgets.php';
+        if (is_file($showcase)) {
+            require_once $showcase;
+            \Slate\Module\StudioBuilder\StudioBuilderPortfolioWidgets::onRegisterWidgets(Studio::widgets());
+        }
+
         // 1. Register `portfolio.nav_header`
         Studio::widgets()->register([
             'type'        => 'portfolio.nav_header',

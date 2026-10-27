@@ -2,7 +2,8 @@
 /**
  * Kohevo Studio — Rakib Hasan Portfolio Widget Extension.
  *
- * Registers custom StudioBuilder widget for the complete portfolio experience.
+ * Registers custom StudioBuilder widget for the complete portfolio experience. Registered by the Studio Freelancer
+ * Portfolio plugin's boot (not by Studio itself), so only installations running that plugin offer it.
  */
 
 declare(strict_types=1);

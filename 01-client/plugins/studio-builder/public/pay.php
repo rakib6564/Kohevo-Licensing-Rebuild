@@ -27,7 +27,8 @@ $result = PayRequest::handle(
         'tenantId'   => (int) current_tenant_id(),
         'siteUrl'    => (string) SLATE_URL,
         'referer'    => (string) ($_SERVER['HTTP_REFERER'] ?? ''),
-        'visitor'    => (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
+        // The client address; a proxy's forwarding header counts only from STUDIO_TRUSTED_PROXIES (e.g. the CDN's ranges).
+        'visitor'    => PayThrottle::visitor($_SERVER, (string) env('STUDIO_TRUSTED_PROXIES', '')),
         'configured' => class_exists('StripePaymentAPI') && StripePaymentAPI::isConfigured(),
         'now'        => time(),
     ],
@@ -44,7 +45,8 @@ $result = PayRequest::handle(
         );
         return (string) $session['url'];
     },
-    static fn (string $visitor): bool => (new PayThrottle(sys_get_temp_dir() . '/kohevo-studio-pay'))->allow($visitor),
+    // The temp directory first, the app's own storage as a fallback; when neither can be written the start is refused.
+    static fn (string $visitor): bool => (new PayThrottle(sys_get_temp_dir() . '/kohevo-studio-pay', $root . '/data/studio-pay'))->allow($visitor),
     static fn (string $blockId): ?array => LivePaymentBlocks::propsOf((int) current_tenant_id(), $blockId)
 );
 
