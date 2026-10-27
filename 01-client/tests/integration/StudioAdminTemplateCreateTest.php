@@ -54,7 +54,7 @@ function stcre_post(array $fields, int $roleId = 1): array
     return [(int) ($m[1] ?? 0), $out];
 }
 
-/** The flash message the page rendered, as text. */
+/** The flash message the page rendered, as text (after a success, the short body of the 303 that carries it). */
 function stcre_flash(string $body): string
 {
     return preg_match('/<div class="alert[^"]*"\s*>\s*(.*?)\s*<\/div>/s', $body, $m) === 1 ? html_entity_decode(trim($m[1]), ENT_QUOTES) : '';
@@ -102,7 +102,7 @@ unit('theme builder create: every type is created through the Studio services as
     try {
         foreach (['header', 'footer', 'single', 'archive', 'not_found', 'section_preset'] as $uiType) {
             [$status, $body] = stcre_post(['_action' => 'create_template', 'name' => "Made {$uiType} {$tag}", 'template_type' => $uiType, 'condition_rule' => 'all_posts']);
-            assert_eq(200, $status, $uiType);
+            assert_eq(303, $status, "{$uiType}: back to the list (POST/redirect/GET)");
             assert_true(str_contains(stcre_flash($body), 'created as draft'), "{$uiType}: success flash, got: " . stcre_flash($body));
         }
         $made = stcre_created($tag);
@@ -147,11 +147,11 @@ unit('theme builder create: a header can start from a built-in design; an unknow
     try {
         foreach (\Slate\Module\StudioBuilder\Presets\HeaderPresetCatalog::all() as $design) {
             [$status, $body] = stcre_post(['_action' => 'create_template', 'name' => "Design {$design['slug']} {$tag}", 'template_type' => 'header', 'header_design' => $design['key']]);
-            assert_eq(200, $status, $design['key']);
+            assert_eq(303, $status, $design['key']);
             assert_true(str_contains(stcre_flash($body), 'created as draft'), "{$design['key']}: success flash, got: " . stcre_flash($body));
         }
         [$status] = stcre_post(['_action' => 'create_template', 'name' => "Design unknown {$tag}", 'template_type' => 'header', 'header_design' => 'system-section-hero-classic']);
-        assert_eq(200, $status);
+        assert_eq(303, $status, 'created (from the blank header)');
         $made = [];
         foreach (stcre_created($tag) as $m) { $made[(string) $m['template']['name']] = $m; }
         assert_eq(6, count($made), 'five designs and one blank');

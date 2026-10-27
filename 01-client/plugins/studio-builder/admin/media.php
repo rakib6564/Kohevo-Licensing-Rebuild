@@ -33,6 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
     } elseif (!$canEdit) {
         $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to manage media.')];
+    } elseif (!sb_studio_entitled()) {
+        $flash = ['type' => 'error', 'msg' => __('studio_pages_forbidden', 'Kohevo Studio is not available for your account on this site.')];
     } else {
         $action = (string) ($_POST['_action'] ?? '');
 
@@ -48,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     $name = $_FILES['files']['name'][$i] ?? "file $i";
                     if ($err !== UPLOAD_ERR_OK) {
-                        $uploadErrors[] = "{$name}: upload error {$err}";
+                        $uploadErrors[] = sprintf(__('studio_media_upload_error', '%1$s: upload error %2$d'), $name, $err);
                         continue;
                     }
                     $_FILES['__sb_media_upload'] = [
@@ -64,17 +66,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             if (!empty($res['id']) || !empty($res['path'])) {
                                 $uploadedCount++;
                             } else {
-                                $uploadErrors[] = $name . ': ' . ($res['error'] ?? 'upload failed');
+                                $uploadErrors[] = $name . ': ' . ($res['error'] ?? __('studio_media_upload_failed', 'upload failed'));
                             }
                         }
                     } catch (\Throwable $e) {
-                        $uploadErrors[] = "{$name}: " . $e->getMessage();
+                        sb_log_error('media upload', $e);
+                        $uploadErrors[] = $name . ': ' . __('studio_media_upload_failed', 'upload failed');
                     }
                 }
             }
 
             if ($uploadedCount > 0) {
-                $flash = ['type' => 'success', 'msg' => "Successfully uploaded {$uploadedCount} asset(s)."];
+                // Files that failed next to ones that went in are still named.
+                $msg = sprintf(__('studio_media_uploaded', 'Successfully uploaded %d asset(s).'), $uploadedCount);
+                sb_flash_redirect('media.php', ['type' => 'success', 'msg' => $uploadErrors === [] ? $msg : $msg . ' ' . implode(' | ', $uploadErrors)]);
             } elseif (!empty($uploadErrors)) {
                 $flash = ['type' => 'error', 'msg' => implode(' | ', $uploadErrors)];
             }
@@ -85,17 +90,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // from disk and writes the audit log; a raw row delete did none of that.
                 try {
                     $res = Media::delete($mediaId);
-                    $flash = !empty($res['ok'])
-                        ? ['type' => 'success', 'msg' => "Asset #{$mediaId} deleted."]
-                        : ['type' => 'error', 'msg' => (string) ($res['error'] ?? 'The asset could not be deleted.')];
+                    if (!empty($res['ok'])) {
+                        sb_flash_redirect('media.php', ['type' => 'success', 'msg' => sprintf(__('studio_media_deleted', 'Asset #%d deleted.'), $mediaId)]);
+                    }
+                    $flash = ['type' => 'error', 'msg' => (string) ($res['error'] ?? __('studio_media_delete_failed', 'The asset could not be deleted.'))];
                 } catch (\Throwable $e) {
-                    error_log('[studio-builder] media delete: ' . $e::class . ': ' . $e->getMessage());
-                    $flash = ['type' => 'error', 'msg' => 'The asset could not be deleted.'];
+                    sb_log_error('media delete', $e);
+                    $flash = ['type' => 'error', 'msg' => __('studio_media_delete_failed', 'The asset could not be deleted.')];
                 }
             }
         }
     }
 }
+
+$flash = $flash ?? sb_take_flash();
 
 // Filters & Query
 $kindFilter = trim((string) ($_GET['kind'] ?? 'all'));
@@ -123,9 +131,9 @@ try {
     $mediaAssets = Database::all($sql, $params);
 } catch (\Throwable $e) {
     // Log it: an empty grid must never hide a broken query.
-    error_log('[studio-builder] media list: ' . $e::class . ': ' . $e->getMessage());
+    sb_log_error('media list', $e);
     $mediaAssets = [];
-    $flash ??= ['type' => 'error', 'msg' => 'The media library could not be loaded.'];
+    $flash ??= ['type' => 'error', 'msg' => __('studio_media_list_failed', 'The media library could not be loaded.')];
 }
 
 
