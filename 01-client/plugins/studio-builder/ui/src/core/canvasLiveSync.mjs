@@ -23,16 +23,6 @@ const BREAKPOINTS = ['base', 'sm', 'md', 'lg'];
 const HIDE_PREFIX = 'sb-hide-';
 const ALIGN_PREFIX = 'sb-align-';
 
-function escapeHtml(str) {
-  if (typeof str !== 'string') return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
 function cssEscape(id) {
   return String(id).replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`);
 }
@@ -278,7 +268,7 @@ export function syncLiveDOM(canvasDoc, prevDoc, nextDoc, activeBreakpoint = 'bas
       const prevBlock = prevBlocks.get(id);
       if (prevBlock === nextBlock) continue;
 
-      if (SERVER_RENDERED_TYPES.has(nextBlock.type)) continue; // repainted from the server (see isStructuralChange)
+      if (isServerRenderedType(nextBlock.type)) continue; // repainted from the server (see isStructuralChange)
       if (HIGHLIGHT_TYPES.has(nextBlock.type) && (asHighlight(nextBlock) || (prevBlock && asHighlight(prevBlock)))) continue;
 
       const el = canvasDoc.querySelector(`[data-sb-node="${cssEscape(id)}"]`);
@@ -414,39 +404,6 @@ export function syncLiveDOM(canvasDoc, prevDoc, nextDoc, activeBreakpoint = 'bas
           imgEl.src = srcVal;
           updateCount += 1;
         }
-      }
-
-      // Rakib Portfolio custom showcase widget
-      if (nextBlock.type === 'portfolio.rakib_showcase') {
-        if (nextProps.brand_text) {
-          const pf = el.querySelector('.e-pf');
-          if (pf) pf.textContent = nextProps.brand_text;
-        }
-        if (nextProps.first_name || nextProps.last_name) {
-          const name = el.querySelector('.e-name');
-          if (name) name.innerHTML = `${escapeHtml(nextProps.first_name || 'rakib')}<br>${escapeHtml(nextProps.last_name || 'hasan')}`;
-        }
-        if (nextProps.role) {
-          const role = el.querySelector('.e-role');
-          if (role) role.innerHTML = escapeHtml(nextProps.role).replace(/\n/g, '<br>');
-        }
-        if (nextProps.location) {
-          const loc = el.querySelector('.e-loc');
-          if (loc) loc.innerHTML = escapeHtml(nextProps.location).replace(/\n/g, '<br>');
-        }
-        if (nextProps.coordinates) {
-          const coord = el.querySelector('.e-coord');
-          if (coord) coord.innerHTML = escapeHtml(nextProps.coordinates).replace(/\n/g, '<br>');
-        }
-        if (nextProps.domain) {
-          const dom = el.querySelector('.e-dom');
-          if (dom) dom.textContent = nextProps.domain;
-        }
-        if (nextProps.email) {
-          const mail = el.querySelector('.e-mail');
-          if (mail) mail.textContent = nextProps.email;
-        }
-        updateCount += 1;
       }
 
       // ── STYLES ──
