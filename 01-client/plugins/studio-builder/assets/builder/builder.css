@@ -3287,6 +3287,9 @@ html, body.sbx-body {
 .sbx-lock-fieldset > .sbx-inspector { flex: 1 0 auto; display: flex; flex-direction: column; }
 .sbx-inspector > * { flex: none; }
 .sbx-inspector > .sbx-inspector__bar { margin-top: auto; }
+/* In a phone or tablet sheet the bar is the sheet's footer: flush with its bottom edge and full width, over the body's
+   padding, so nothing scrolls into a gap under it. */
+.sbx-bottom-sheet__body .sbx-inspector__bar { bottom: -16px; margin: 12px -18px -16px; padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px)); }
 .sbx-left__body--inspector:not([hidden]) { display: flex; flex-direction: column; }
 .sbx-left__body--inspector > .sbx-inspector-host { flex: 1 0 auto; }
 
