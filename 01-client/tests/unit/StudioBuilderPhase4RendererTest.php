@@ -568,7 +568,21 @@ unit('phase4 stylesheet: the generic link colour never reaches .sb-button links,
     assert_true(str_contains($css, '.sb-body a:not(.sb-button){color:var(--sb-color-accent)}'), 'ordinary links keep the accent colour');
     assert_true(str_contains($css, '.sb-button--primary{background:var(--sb-surface-accent);color:var(--sb-text-inverse)}'), 'primary: inverse text on the accent surface');
     assert_true(str_contains($css, '.sb-button--secondary{background:var(--sb-surface-secondary);color:var(--sb-text-primary)'), 'secondary keeps its own text colour');
-    assert_eq('28', \Slate\Module\StudioBuilder\Render\StudioStylesheet::VERSION, 'stylesheet version bumped so compiled pages are rebuilt');
+});
+
+// Compiled pages are keyed on StudioStylesheet::VERSION, not on the CSS itself, so CSS that changes without a new
+// VERSION keeps serving pages compiled against the old stylesheet. Each VERSION pins the hash of the CSS it shipped.
+// Changed the CSS? Bump VERSION and add a line here with the new hash; never edit an existing line.
+unit('phase4 stylesheet: the generated CSS is the CSS its VERSION shipped, so a CSS change cannot reach compiled pages without a new VERSION', function (): void {
+    $shipped = [
+        '28' => 'bf52b98b8587ea0df8cade457ee0f84d0200e921',
+    ];
+    $version = \Slate\Module\StudioBuilder\Render\StudioStylesheet::VERSION;
+    $hash = sha1(\Slate\Module\StudioBuilder\Render\StudioStylesheet::css());
+    assert_true(isset($shipped[$version]), "VERSION {$version} has no pinned hash: add '{$version}' => '{$hash}'");
+    assert_eq($shipped[$version] ?? null, $hash, "the CSS changed but VERSION is still {$version}: bump VERSION and pin '{$hash}' under it");
+    assert_eq((string) max(array_map('intval', array_keys($shipped))), $version, 'VERSION is the newest pinned version');
+    assert_eq(count($shipped), count(array_unique($shipped)), 'each VERSION shipped different CSS');
 });
 
 unit('phase4 stylesheet: an Image block\'s height, aspect ratio, object-fit and object-position reach the picture, cover by default', function (): void {

@@ -117,3 +117,32 @@ export async function showEdit(page) {
   await page.getByRole('tab', { name: /^(Edit|Éditer)$/ }).click();
   await expect(page.locator('#sbx-leftpanel-inspector')).toBeVisible();
 }
+
+/**
+ * Create and publish a throwaway page through the builder API (the builder must be open). Returns its id, public path
+ * and the site URL; archive it with `archivePage` when done.
+ */
+export async function publishThrowawayPage(page, title, slug) {
+  return page.evaluate(async ({ title, slug }) => {
+    const boot = JSON.parse(document.getElementById('sb-builder-boot').textContent);
+    const call = async (action, body) => {
+      const u = new URL(boot.apiUrl, location.href);
+      u.searchParams.set('action', action);
+      const r = await fetch(u, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': boot.csrfToken }, body: JSON.stringify(body) });
+      return { s: r.status, j: await r.json() };
+    };
+    const created = (await call('create_page', { title, slug, page_type: 'page', route_mode: 'standalone' })).j.data.page;
+    const p = await call('publish', { page_id: created.id, expected_revision_id: created.active_draft_revision_id });
+    return { id: created.id, path: created.public_path, published: p.s, siteUrl: boot.siteUrl };
+  }, { title, slug });
+}
+
+/** Archive a page through the builder API (the builder must be open). */
+export async function archivePage(page, id) {
+  await page.evaluate(async ({ id }) => {
+    const boot = JSON.parse(document.getElementById('sb-builder-boot').textContent);
+    const u = new URL(boot.apiUrl, location.href);
+    u.searchParams.set('action', 'archive_page');
+    await fetch(u, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': boot.csrfToken }, body: JSON.stringify({ page_id: id }) });
+  }, { id });
+}
