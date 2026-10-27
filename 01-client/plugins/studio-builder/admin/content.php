@@ -18,6 +18,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__, 2) . '/studio-freelancer-portfolio/StudioFreelancerPortfolio.php';
 require_once __DIR__ . '/_nav.php';
+require_once __DIR__ . '/_content_items.php';
 
 use Slate\Data\Database;
 use Slate\Module\StudioBuilder\Application\StudioActor;
@@ -42,13 +43,27 @@ if (!in_array($typeFilter, ['portfolio', 'service', 'testimonial', 'case_study',
     $typeFilter = 'portfolio';
 }
 
+// After a change the screen is shown again on the same tab (POST/redirect/GET), so a refresh repeats nothing.
+$self = 'content.php' . ($typeFilter !== 'portfolio' ? '?' . http_build_query(['type' => $typeFilter]) : '');
+
+// Every action below writes this site's Studio content, so it needs a valid form and a licence that includes Studio.
+$isPost = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST';
+$writable = false;
+if ($isPost) {
+    if (!csrf_verify()) {
+        $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
+    } elseif (!sb_studio_entitled()) {
+        $flash = ['type' => 'error', 'msg' => __('studio_pages_forbidden', 'Kohevo Studio is not available for your account on this site.')];
+    } else {
+        $writable = true;
+    }
+}
+
 // ── Handle Action: Create the missing portfolio pages ───────────────────────
 // Publishing needs the publish permission, and runs as the signed-in user.
 // A slug that already has a page is never touched, so a site's own pages survive.
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action_publish_site'])) {
-    if (!csrf_verify()) {
-        $flash = ['type' => 'error', 'msg' => 'Security check failed. Please refresh and try again.'];
-    } elseif (!$canPublish) {
+if ($writable && isset($_POST['action_publish_site'])) {
+    if (!$canPublish) {
         $flash = ['type' => 'error', 'msg' => __('studio_portfolio_pages_no_permission', 'You need permission to publish pages to create the portfolio pages.')];
     } else {
         try {
@@ -61,165 +76,148 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action_pub
             if ($created !== [] && $skipped !== []) {
                 $msg .= ' ' . sprintf(__('studio_portfolio_pages_kept', 'Kept your existing pages: %s.'), '/' . implode(', /', $skipped));
             }
-            $flash = [
+            sb_flash_redirect($self, [
                 'type' => 'success',
                 'msg'  => $msg,
                 'published_routes' => $created,
-            ];
+            ]);
         } catch (\Throwable $e) {
-            error_log('[studio-builder] portfolio pages: ' . $e::class . ': ' . $e->getMessage());
+            sb_log_error('portfolio pages', $e);
             $flash = ['type' => 'error', 'msg' => __('studio_portfolio_pages_failed', 'The portfolio pages could not be created. Nothing else on your site was changed.')];
         }
     }
 }
 
 // ── Handle Action: Save Profile ─────────────────────────────────────────────
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action_save_profile'])) {
-    if (!csrf_verify()) {
-        $flash = ['type' => 'error', 'msg' => 'Security check failed.'];
+if ($writable && isset($_POST['action_save_profile'])) {
+    $name = trim((string) ($_POST['name'] ?? ''));
+    if ($name === '') {
+        $flash = ['type' => 'error', 'msg' => __('studio_content_name_required', 'Full Name is required.')];
     } else {
-        $name = trim((string) ($_POST['name'] ?? ''));
-        if ($name === '') {
-            $flash = ['type' => 'error', 'msg' => 'Full Name is required.'];
-        } else {
-            $profileData = [
-                'name'          => $name,
-                'monogram'      => strtoupper(trim((string) ($_POST['monogram'] ?? '')) ?: substr($name, 0, 2)),
-                'role'          => trim((string) ($_POST['role'] ?? 'Principal Product Engineer & Architect')),
-                'status'        => trim((string) ($_POST['status'] ?? 'Available for Select Product Engagements')),
-                'hero_heading'  => trim((string) ($_POST['hero_heading'] ?? 'Designing & Engineering Category-Defining Digital Products.')),
-                'hero_subtext'  => trim((string) ($_POST['hero_subtext'] ?? '')),
-                'stat_years'    => trim((string) ($_POST['stat_years'] ?? '9+')),
-                'stat_apps'     => trim((string) ($_POST['stat_apps'] ?? '42+')),
-                'stat_val'      => trim((string) ($_POST['stat_val'] ?? '$180M+')),
-                'stat_delivery' => trim((string) ($_POST['stat_delivery'] ?? '100%')),
-                'location'      => trim((string) ($_POST['location'] ?? 'San Francisco, CA · Remote Worldwide')),
-                'email'         => trim((string) ($_POST['email'] ?? 'contact@rakibhasaan.com')),
-                'avatar_url'    => trim((string) ($_POST['avatar_url'] ?? '')),
-            ];
-            Database::setSetting('studio_profile', json_encode($profileData), $tenantId);
-            $flash = ['type' => 'success', 'msg' => 'Brand profile and bio updated successfully.'];
-        }
+        $profileData = [
+            'name'          => $name,
+            'monogram'      => strtoupper(trim((string) ($_POST['monogram'] ?? '')) ?: substr($name, 0, 2)),
+            'role'          => trim((string) ($_POST['role'] ?? 'Principal Product Engineer & Architect')),
+            'status'        => trim((string) ($_POST['status'] ?? 'Available for Select Product Engagements')),
+            'hero_heading'  => trim((string) ($_POST['hero_heading'] ?? 'Designing & Engineering Category-Defining Digital Products.')),
+            'hero_subtext'  => trim((string) ($_POST['hero_subtext'] ?? '')),
+            'stat_years'    => trim((string) ($_POST['stat_years'] ?? '9+')),
+            'stat_apps'     => trim((string) ($_POST['stat_apps'] ?? '42+')),
+            'stat_val'      => trim((string) ($_POST['stat_val'] ?? '$180M+')),
+            'stat_delivery' => trim((string) ($_POST['stat_delivery'] ?? '100%')),
+            'location'      => trim((string) ($_POST['location'] ?? 'San Francisco, CA · Remote Worldwide')),
+            'email'         => trim((string) ($_POST['email'] ?? 'contact@rakibhasaan.com')),
+            'avatar_url'    => trim((string) ($_POST['avatar_url'] ?? '')),
+        ];
+        Database::setSetting('studio_profile', json_encode($profileData), $tenantId);
+        sb_flash_redirect($self, ['type' => 'success', 'msg' => __('studio_content_profile_saved', 'Brand profile and bio updated successfully.')]);
     }
 }
 
 // ── Handle Action: Add Item ─────────────────────────────────────────────────
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action_add_item'])) {
-    if (!csrf_verify()) {
-        $flash = ['type' => 'error', 'msg' => 'Security check failed.'];
+if ($writable && isset($_POST['action_add_item'])) {
+    $title = trim((string) ($_POST['title'] ?? ''));
+    if ($title === '' && $typeFilter !== 'testimonial') {
+        $flash = ['type' => 'error', 'msg' => __('studio_content_title_required', 'Title is required.')];
+    } elseif ($typeFilter === 'testimonial' && trim((string) ($_POST['author'] ?? '')) === '') {
+        $flash = ['type' => 'error', 'msg' => __('studio_content_author_required', 'Author name is required.')];
     } else {
-        $title = trim((string) ($_POST['title'] ?? ''));
-        if ($title === '' && $typeFilter !== 'testimonial') {
-            $flash = ['type' => 'error', 'msg' => 'Title is required.'];
-        } elseif ($typeFilter === 'testimonial' && trim((string) ($_POST['author'] ?? '')) === '') {
-            $flash = ['type' => 'error', 'msg' => 'Author name is required.'];
-        } else {
-            if ($typeFilter === 'portfolio' || $typeFilter === 'case_study') {
-                $items = StudioFreelancerPortfolio::getProjects($tenantId);
-                $newItem = [
-                    'title'       => $title,
-                    'category'    => trim((string) ($_POST['category'] ?? 'Fintech / SaaS')),
-                    'year'        => trim((string) ($_POST['year'] ?? date('Y'))),
-                    'metric'      => trim((string) ($_POST['metric'] ?? '')),
-                    'description' => trim((string) ($_POST['description'] ?? '')),
-                    'image_url'   => trim((string) ($_POST['image_url'] ?? '')),
-                    'tags'        => trim((string) ($_POST['tags'] ?? '')),
-                    'link_url'    => trim((string) ($_POST['link_url'] ?? '/case-studies')),
-                    'link_text'   => 'View Case Study →',
-                ];
-                array_unshift($items, $newItem);
-                Database::setSetting('studio_content_portfolio', json_encode($items), $tenantId);
-                $flash = ['type' => 'success', 'msg' => "Project '{$title}' saved to dynamic data repository."];
-            } elseif ($typeFilter === 'service') {
-                $items = StudioFreelancerPortfolio::getServicesList($tenantId);
-                $nextNum = str_pad((string) (count($items) + 1), 2, '0', STR_PAD_LEFT);
-                $newItem = [
-                    'number'       => trim((string) ($_POST['number'] ?? $nextNum)),
-                    'title'        => $title,
-                    'description'  => trim((string) ($_POST['description'] ?? '')),
-                    'deliverables' => trim((string) ($_POST['deliverables'] ?? '')),
-                ];
-                $items[] = $newItem;
-                Database::setSetting('studio_content_service', json_encode($items), $tenantId);
-                $flash = ['type' => 'success', 'msg' => "Service '{$title}' added successfully."];
-            } elseif ($typeFilter === 'testimonial') {
-                $items = StudioFreelancerPortfolio::getTestimonialsList($tenantId);
-                $newItem = [
-                    'author'     => trim((string) ($_POST['author'] ?? 'Verified Client')),
-                    'role'       => trim((string) ($_POST['role'] ?? 'Executive Leader')),
-                    'quote'      => trim((string) ($_POST['quote'] ?? '')),
-                    'rating'     => max(1, min(5, (int) ($_POST['rating'] ?? 5))),
-                    'avatar_url' => trim((string) ($_POST['avatar_url'] ?? '')),
-                ];
-                array_unshift($items, $newItem);
-                Database::setSetting('studio_content_testimonial', json_encode($items), $tenantId);
-                $flash = ['type' => 'success', 'msg' => "Client endorsement from '{$newItem['author']}' added."];
-            }
+        if ($typeFilter === 'portfolio' || $typeFilter === 'case_study') {
+            $items = StudioFreelancerPortfolio::getProjects($tenantId);
+            $newItem = [
+                'title'       => $title,
+                'category'    => trim((string) ($_POST['category'] ?? 'Fintech / SaaS')),
+                'year'        => trim((string) ($_POST['year'] ?? date('Y'))),
+                'metric'      => trim((string) ($_POST['metric'] ?? '')),
+                'description' => trim((string) ($_POST['description'] ?? '')),
+                'image_url'   => trim((string) ($_POST['image_url'] ?? '')),
+                'tags'        => trim((string) ($_POST['tags'] ?? '')),
+                'link_url'    => trim((string) ($_POST['link_url'] ?? '/case-studies')),
+                'link_text'   => 'View Case Study →',
+            ];
+            array_unshift($items, $newItem);
+            Database::setSetting('studio_content_portfolio', json_encode($items), $tenantId);
+            sb_flash_redirect($self, ['type' => 'success', 'msg' => sprintf(__('studio_content_project_added', "Project '%s' saved to dynamic data repository."), $title)]);
+        } elseif ($typeFilter === 'service') {
+            $items = StudioFreelancerPortfolio::getServicesList($tenantId);
+            $nextNum = str_pad((string) (count($items) + 1), 2, '0', STR_PAD_LEFT);
+            $newItem = [
+                'number'       => trim((string) ($_POST['number'] ?? $nextNum)),
+                'title'        => $title,
+                'description'  => trim((string) ($_POST['description'] ?? '')),
+                'deliverables' => trim((string) ($_POST['deliverables'] ?? '')),
+            ];
+            $items[] = $newItem;
+            Database::setSetting('studio_content_service', json_encode($items), $tenantId);
+            sb_flash_redirect($self, ['type' => 'success', 'msg' => sprintf(__('studio_content_service_added', "Service '%s' added successfully."), $title)]);
+        } elseif ($typeFilter === 'testimonial') {
+            $items = StudioFreelancerPortfolio::getTestimonialsList($tenantId);
+            $newItem = [
+                'author'     => trim((string) ($_POST['author'] ?? 'Verified Client')),
+                'role'       => trim((string) ($_POST['role'] ?? 'Executive Leader')),
+                'quote'      => trim((string) ($_POST['quote'] ?? '')),
+                'rating'     => max(1, min(5, (int) ($_POST['rating'] ?? 5))),
+                'avatar_url' => trim((string) ($_POST['avatar_url'] ?? '')),
+            ];
+            array_unshift($items, $newItem);
+            Database::setSetting('studio_content_testimonial', json_encode($items), $tenantId);
+            sb_flash_redirect($self, ['type' => 'success', 'msg' => sprintf(__('studio_content_testimonial_added', "Client endorsement from '%s' added."), $newItem['author'])]);
         }
     }
 }
 
+// The setting and the list of each kind of item, by the type a form names.
+$contentLists = [
+    'portfolio'   => ['studio_content_portfolio', static fn (): array => StudioFreelancerPortfolio::getProjects($tenantId)],
+    'case_study'  => ['studio_content_portfolio', static fn (): array => StudioFreelancerPortfolio::getProjects($tenantId)],
+    'service'     => ['studio_content_service', static fn (): array => StudioFreelancerPortfolio::getServicesList($tenantId)],
+    'testimonial' => ['studio_content_testimonial', static fn (): array => StudioFreelancerPortfolio::getTestimonialsList($tenantId)],
+];
+
 // ── Handle Action: Delete Item ──────────────────────────────────────────────
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action_delete_item'])) {
-    if (!csrf_verify()) {
-        $flash = ['type' => 'error', 'msg' => 'Security check failed.'];
+// By the item's key, never its position: a stale or repeated form deletes nothing rather than the item now in that place.
+if ($writable && isset($_POST['action_delete_item']) && isset($contentLists[$typeFilter])) {
+    [$settingKey, $load] = $contentLists[$typeFilter];
+    $items = array_values($load());
+    $index = sb_content_item_index($items, trim((string) ($_POST['item_key'] ?? '')));
+    if ($index === null) {
+        $flash = ['type' => 'error', 'msg' => __('studio_content_item_gone', 'That item was changed or deleted since this page was loaded. Nothing was deleted.')];
     } else {
-        $index = (int) ($_POST['item_index'] ?? -1);
-        if ($index >= 0) {
-            if ($typeFilter === 'portfolio' || $typeFilter === 'case_study') {
-                $items = StudioFreelancerPortfolio::getProjects($tenantId);
-                if (isset($items[$index])) {
-                    array_splice($items, $index, 1);
-                    Database::setSetting('studio_content_portfolio', json_encode($items), $tenantId);
-                    $flash = ['type' => 'success', 'msg' => 'Item deleted from dynamic repository.'];
-                }
-            } elseif ($typeFilter === 'service') {
-                $items = StudioFreelancerPortfolio::getServicesList($tenantId);
-                if (isset($items[$index])) {
-                    array_splice($items, $index, 1);
-                    Database::setSetting('studio_content_service', json_encode($items), $tenantId);
-                    $flash = ['type' => 'success', 'msg' => 'Service offering deleted.'];
-                }
-            } elseif ($typeFilter === 'testimonial') {
-                $items = StudioFreelancerPortfolio::getTestimonialsList($tenantId);
-                if (isset($items[$index])) {
-                    array_splice($items, $index, 1);
-                    Database::setSetting('studio_content_testimonial', json_encode($items), $tenantId);
-                    $flash = ['type' => 'success', 'msg' => 'Endorsement deleted.'];
-                }
-            }
-        }
+        array_splice($items, $index, 1);
+        Database::setSetting($settingKey, json_encode($items), $tenantId);
+        $deletedMsg = match ($typeFilter) {
+            'service'     => __('studio_content_service_deleted', 'Service offering deleted.'),
+            'testimonial' => __('studio_content_testimonial_deleted', 'Endorsement deleted.'),
+            default       => __('studio_content_item_deleted', 'Item deleted from dynamic repository.'),
+        };
+        sb_flash_redirect($self, ['type' => 'success', 'msg' => $deletedMsg]);
     }
 }
 
 // ── Handle Action: Update Item Image ─────────────────────────────────────────
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action_update_item_image'])) {
-    if (!csrf_verify()) {
-        $flash = ['type' => 'error', 'msg' => 'Security check failed.'];
-    } else {
-        $index    = (int) ($_POST['item_index'] ?? -1);
-        $imgUrl   = trim((string) ($_POST['image_url'] ?? ''));
-        $itemType = trim((string) ($_POST['item_type'] ?? 'portfolio'));
+if ($writable && isset($_POST['action_update_item_image'])) {
+    $imgUrl   = trim((string) ($_POST['image_url'] ?? ''));
+    $itemType = trim((string) ($_POST['item_type'] ?? 'portfolio'));
 
-        if ($index >= 0 && $imgUrl !== '') {
-            if ($itemType === 'portfolio' || $itemType === 'case_study') {
-                $items = StudioFreelancerPortfolio::getProjects($tenantId);
-                if (isset($items[$index])) {
-                    $items[$index]['image_url'] = $imgUrl;
-                    Database::setSetting('studio_content_portfolio', json_encode($items), $tenantId);
-                    $flash = ['type' => 'success', 'msg' => "Cover image for '{$items[$index]['title']}' updated from Media Library!"];
-                }
-            } elseif ($itemType === 'testimonial') {
-                $items = StudioFreelancerPortfolio::getTestimonialsList($tenantId);
-                if (isset($items[$index])) {
-                    $items[$index]['avatar_url'] = $imgUrl;
-                    Database::setSetting('studio_content_testimonial', json_encode($items), $tenantId);
-                    $flash = ['type' => 'success', 'msg' => "Avatar for '{$items[$index]['author']}' updated from Media Library!"];
-                }
-            }
+    if ($imgUrl !== '' && in_array($itemType, ['portfolio', 'case_study', 'testimonial'], true)) {
+        [$settingKey, $load] = $contentLists[$itemType];
+        $items = array_values($load());
+        $index = sb_content_item_index($items, trim((string) ($_POST['item_key'] ?? '')));
+        if ($index === null) {
+            $flash = ['type' => 'error', 'msg' => __('studio_content_item_gone_image', 'That item was changed or deleted since this page was loaded. Its image was not changed.')];
+        } elseif ($itemType === 'testimonial') {
+            $items[$index]['avatar_url'] = $imgUrl;
+            Database::setSetting($settingKey, json_encode($items), $tenantId);
+            sb_flash_redirect($self, ['type' => 'success', 'msg' => sprintf(__('studio_content_avatar_updated', "Avatar for '%s' updated from Media Library!"), (string) ($items[$index]['author'] ?? ''))]);
+        } else {
+            $items[$index]['image_url'] = $imgUrl;
+            Database::setSetting($settingKey, json_encode($items), $tenantId);
+            sb_flash_redirect($self, ['type' => 'success', 'msg' => sprintf(__('studio_content_cover_updated', "Cover image for '%s' updated from Media Library!"), (string) ($items[$index]['title'] ?? ''))]);
         }
     }
 }
+
+$flash = $flash ?? sb_take_flash();
 
 // Retrieve data for active view
 $currentProfile = StudioFreelancerPortfolio::getProfile($tenantId);
@@ -288,7 +286,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <span>Case Studies (<?= count($projects) ?>)</span>
         </a>
         <a href="content.php?type=profile" class="sb-pill-item <?= $typeFilter === 'profile' ? 'active' : '' ?>">
-            <?= sb_svg('site-seo', 14) ?>
+            <?= sb_svg('seo', 14) ?>
             <span>Profile & Brand Bio</span>
         </a>
     </div>
@@ -442,20 +440,20 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 </div>
             </div>
             <div class="sb-feature-grid" style="margin-top: 16px;">
-                <?php foreach ($projects as $idx => $item): ?>
+                <?php foreach ($projects as $item): ?>
                 <div class="sb-feature-card">
                     <div>
                         <?php if (!empty($item['image_url'])): ?>
                             <div style="position: relative; margin-bottom: 14px;">
                                 <img src="<?= e($item['image_url']) ?>" alt="<?= e($item['title'] ?? '') ?>" style="width: 100%; height: 160px; object-fit: cover; border-radius: 10px; display: block;">
-                                <button type="button" class="btn btn-sm btn-outline" style="position: absolute; bottom: 8px; right: 8px; background: rgba(255,255,255,0.95); backdrop-filter: blur(4px); box-shadow: 0 2px 6px rgba(0,0,0,0.15); font-size: 0.75rem; padding: 4px 10px; border-radius: 6px;" onclick="SbMediaPicker.openForCard(<?= $idx ?>, 'portfolio');">
+                                <button type="button" class="btn btn-sm btn-outline" style="position: absolute; bottom: 8px; right: 8px; background: rgba(255,255,255,0.95); backdrop-filter: blur(4px); box-shadow: 0 2px 6px rgba(0,0,0,0.15); font-size: 0.75rem; padding: 4px 10px; border-radius: 6px;" onclick="SbMediaPicker.openForCard('<?= e(sb_content_item_key($item)) ?>', 'portfolio');">
                                     <?= sb_svg('media', 12) ?>
                                     <span>Change Image</span>
                                 </button>
                             </div>
                         <?php else: ?>
                             <div style="height: 110px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
-                                <button type="button" class="btn btn-sm btn-outline" onclick="SbMediaPicker.openForCard(<?= $idx ?>, 'portfolio');">
+                                <button type="button" class="btn btn-sm btn-outline" onclick="SbMediaPicker.openForCard('<?= e(sb_content_item_key($item)) ?>', 'portfolio');">
                                     <?= sb_svg('media', 12) ?>
                                     <span>Select Cover Image</span>
                                 </button>
@@ -479,7 +477,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         <span style="font-size: 0.78rem; color: #94a3b8;">Year: <strong><?= e($item['year'] ?? '2026') ?></strong></span>
                         <form method="post" onsubmit="return confirm('Delete this project entry?');" style="margin: 0;">
                             <input type="hidden" name="action_delete_item" value="1">
-                            <input type="hidden" name="item_index" value="<?= $idx ?>">
+                            <input type="hidden" name="item_key" value="<?= e(sb_content_item_key($item)) ?>">
                             <?= csrf_field() ?>
                             <button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444;">
                                 <?= sb_svg('trash', 12) ?>
@@ -538,7 +536,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 </div>
             </div>
             <div class="sb-feature-grid" style="margin-top: 16px;">
-                <?php foreach ($services as $idx => $s): ?>
+                <?php foreach ($services as $s): ?>
                 <div class="sb-feature-card">
                     <div>
                         <div style="font-size: 1.2rem; font-weight: 800; color: #6366f1; margin-bottom: 8px;"><?= e($s['number'] ?? '01') ?></div>
@@ -559,7 +557,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         <span></span>
                         <form method="post" onsubmit="return confirm('Delete this service?');" style="margin: 0;">
                             <input type="hidden" name="action_delete_item" value="1">
-                            <input type="hidden" name="item_index" value="<?= $idx ?>">
+                            <input type="hidden" name="item_key" value="<?= e(sb_content_item_key($s)) ?>">
                             <?= csrf_field() ?>
                             <button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444;">
                                 <?= sb_svg('trash', 12) ?>
@@ -630,7 +628,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 </div>
             </div>
             <div class="sb-feature-grid" style="margin-top: 16px;">
-                <?php foreach ($testimonials as $idx => $t): ?>
+                <?php foreach ($testimonials as $t): ?>
                 <div class="sb-feature-card">
                     <div>
                         <div style="color: #f59e0b; margin-bottom: 8px; display: flex; gap: 3px; align-items: center;">
@@ -653,7 +651,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                                     <span style="font-size: 0.78rem; color: #64748b;"><?= e($t['role'] ?? '') ?></span>
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline" style="font-size: 0.72rem; padding: 4px 8px;" onclick="SbMediaPicker.openForCard(<?= $idx ?>, 'testimonial');" title="Change Avatar Image">
+                            <button type="button" class="btn btn-sm btn-outline" style="font-size: 0.72rem; padding: 4px 8px;" onclick="SbMediaPicker.openForCard('<?= e(sb_content_item_key($t)) ?>', 'testimonial');" title="Change Avatar Image">
                                 <?= sb_svg('media', 12) ?>
                                 <span>Avatar</span>
                             </button>
@@ -663,7 +661,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         <span class="badge badge-active" style="background: #ecfdf5; color: #059669;">Verified Client</span>
                         <form method="post" onsubmit="return confirm('Delete this endorsement?');" style="margin: 0;">
                             <input type="hidden" name="action_delete_item" value="1">
-                            <input type="hidden" name="item_index" value="<?= $idx ?>">
+                            <input type="hidden" name="item_key" value="<?= e(sb_content_item_key($t)) ?>">
                             <?= csrf_field() ?>
                             <button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444;">
                                 <?= sb_svg('trash', 12) ?>

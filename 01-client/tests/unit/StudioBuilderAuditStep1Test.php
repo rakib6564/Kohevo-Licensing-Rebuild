@@ -70,7 +70,7 @@ unit('portfolio pages: the button runs as the signed-in user, needs publish, con
     $admin = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/admin/content.php');
     assert_false(str_contains($admin, '->userId()'), 'StudioActor has a userId property, no userId() method');
     assert_true(str_contains($admin, '$canPublish = $studioActor->can(StudioPermissions::PUBLISH);'));
-    assert_true(str_contains($admin, "} elseif (!\$canPublish) {"), 'refused without publish');
+    assert_true(str_contains($admin, "if (!\$canPublish) {"), 'refused without publish');
     assert_true(str_contains($admin, 'publishEntireSite($tenantId, null, $studioActor, true)'), 'the session actor, keeping existing pages');
     assert_true(str_contains($admin, "studio_portfolio_pages_confirm"), 'the button asks first');
     assert_true(str_contains($admin, '$tenantId = current_tenant_id();'), 'the tenant being worked on');

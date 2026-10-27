@@ -267,7 +267,7 @@ if (!function_exists('sb_render_media_picker_modal')) {
                 /**
                  * Opens the built-in Slate Media Library picker for updating an existing card in one click.
                  */
-                openForCard: function(itemIndex, itemType) {
+                openForCard: function(itemKey, itemType) {
                     var onSelect = function(url) {
                         var form = document.createElement('form');
                         form.method = 'POST';
@@ -286,7 +286,7 @@ if (!function_exists('sb_render_media_picker_modal')) {
                         form.appendChild(fType);
 
                         var fIdx = document.createElement('input');
-                        fIdx.type = 'hidden'; fIdx.name = 'item_index'; fIdx.value = itemIndex;
+                        fIdx.type = 'hidden'; fIdx.name = 'item_key'; fIdx.value = itemKey;
                         form.appendChild(fIdx);
 
                         var fUrl = document.createElement('input');

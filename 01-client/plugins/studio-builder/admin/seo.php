@@ -43,6 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
     } elseif (!$canEdit) {
         $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to edit SEO settings.')];
+    } elseif (!sb_studio_entitled()) {
+        $flash = ['type' => 'error', 'msg' => __('studio_pages_forbidden', 'Kohevo Studio is not available for your account on this site.')];
     } else {
         $seoTitleFormat = trim((string) ($_POST['title_format'] ?? ''));
         $seoDescription = trim((string) ($_POST['description'] ?? ''));
@@ -60,9 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Database::setSetting('studio_seo_google_verify', $seoGoogleVerification, $tenantId);
         Database::setSetting('studio_seo_bing_verify', $seoBingVerification, $tenantId);
 
-        $flash = ['type' => 'success', 'msg' => __('studio_seo_saved', 'Saved. Published pages use these settings from their next visit.')];
+        sb_flash_redirect('seo.php', ['type' => 'success', 'msg' => __('studio_seo_saved', 'Saved. Published pages use these settings from their next visit.')]);
     }
 }
+$flash = $flash ?? sb_take_flash();
 
 
 // Resolve OG image preview if ID exists

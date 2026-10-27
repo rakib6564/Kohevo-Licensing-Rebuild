@@ -42,13 +42,11 @@ $removedTypes = is_array($removedTypes) ? array_values(array_filter($removedType
 $visibleDefaults = fn(array $removed): array => array_diff_key($defaultTypes, array_flip($removed));
 $allPostTypes = array_merge($visibleDefaults($removedTypes), $customTypes);
 
-// Load Meta Fields from Settings
-$metaFieldsRaw = Database::setting('studio_meta_fields', $tenantId);
-$metaFields = $metaFieldsRaw ? json_decode((string) $metaFieldsRaw, true) : [];
-if (!is_array($metaFields)) {
-    // Default starter fields for portfolio
-    $metaFields = PageMeta::starterFields();
-}
+// The field definitions, read exactly as the pages read them: the starter fields until a list was ever saved. Adding the
+// first field of a new site saves the starters with it, so no page loses them.
+$metaFields = PageMeta::allFields($tenantId);
+// After a change the screen is shown again (POST/redirect/GET), on the same type filter.
+$self = 'types-fields.php' . (isset($_GET['type']) && $_GET['type'] !== 'all' ? '?' . http_build_query(['type' => (string) $_GET['type']]) : '');
 
 // POST Actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -56,6 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
     } elseif (!$canEdit) {
         $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to manage types and fields.')];
+    } elseif (!sb_studio_entitled()) {
+        $flash = ['type' => 'error', 'msg' => __('studio_pages_forbidden', 'Kohevo Studio is not available for your account on this site.')];
     } else {
         $action = (string) ($_POST['_action'] ?? '');
 
@@ -69,9 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $key = preg_replace('/[^a-z0-9_-]/', '', $key);
 
             if ($key === '' || $singular === '') {
-                $flash = ['type' => 'error', 'msg' => 'Post type key and singular name are required.'];
+                $flash = ['type' => 'error', 'msg' => __('studio_tf_type_required', 'Post type key and singular name are required.')];
             } elseif (isset($allPostTypes[$key])) {
-                $flash = ['type' => 'error', 'msg' => "Post type '{$key}' already exists."];
+                $flash = ['type' => 'error', 'msg' => sprintf(__('studio_tf_type_exists', "Post type '%s' already exists."), $key)];
             } else {
                 $customTypes[$key] = [
                     'key' => $key,
@@ -82,8 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'description' => $desc,
                 ];
                 Database::setSetting('studio_custom_post_types', json_encode($customTypes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
-                $allPostTypes = array_merge($visibleDefaults($removedTypes), $customTypes);
-                $flash = ['type' => 'success', 'msg' => "Custom post type '{$singular}' created successfully!"];
+                sb_flash_redirect($self, ['type' => 'success', 'msg' => sprintf(__('studio_tf_type_created', "Custom post type '%s' created successfully!"), $singular)]);
             }
         } elseif ($action === 'delete_post_type') {
             // Any type can go, built-in or custom. A built-in is hidden (its key is remembered); a custom one is removed. Fields
@@ -98,17 +97,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $removedTypes[] = $key;
                     Database::setSetting('studio_removed_post_types', json_encode(array_values(array_unique($removedTypes)), JSON_UNESCAPED_SLASHES), $tenantId);
                 }
-                $allPostTypes = array_merge($visibleDefaults($removedTypes), $customTypes);
                 $metaFields = array_values(array_filter($metaFields, fn($f) => ($f['post_type'] ?? '') !== $key));
                 Database::setSetting('studio_meta_fields', json_encode($metaFields, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
                 AuditLog::record('studio.post_type_deleted', (string) $tenantId, ['key' => $key, 'system' => isset($defaultTypes[$key])]);
-                $flash = ['type' => 'success', 'msg' => "Post type '{$label}' deleted."];
+                sb_flash_redirect($self, ['type' => 'success', 'msg' => sprintf(__('studio_tf_type_deleted', "Post type '%s' deleted."), $label)]);
             }
         } elseif ($action === 'restore_post_types') {
             Database::setSetting('studio_removed_post_types', '[]', $tenantId);
-            $removedTypes = [];
-            $allPostTypes = array_merge($visibleDefaults([]), $customTypes);
-            $flash = ['type' => 'success', 'msg' => 'Built-in post types restored.'];
+            sb_flash_redirect($self, ['type' => 'success', 'msg' => __('studio_tf_types_restored', 'Built-in post types restored.')]);
         } elseif ($action === 'create_meta_field') {
             $pType = trim((string) ($_POST['post_type'] ?? 'portfolio'));
             $label = mb_substr(trim((string) ($_POST['label'] ?? '')), 0, 120);
@@ -123,15 +119,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $duplicate = array_filter($metaFields, fn($f) => ($f['post_type'] ?? '') === $pType && ($f['key'] ?? '') === $fKey);
 
             if ($label === '' || $fKey === '') {
-                $flash = ['type' => 'error', 'msg' => 'Field label and field key are required.'];
+                $flash = ['type' => 'error', 'msg' => __('studio_tf_field_required', 'Field label and field key are required.')];
             } elseif (!isset($allPostTypes[$pType])) {
-                $flash = ['type' => 'error', 'msg' => 'Choose a post type that exists.'];
+                $flash = ['type' => 'error', 'msg' => __('studio_tf_field_bad_type', 'Choose a post type that exists.')];
             } elseif ($duplicate !== []) {
-                $flash = ['type' => 'error', 'msg' => "A field with the key '{$fKey}' already exists on {$pType}."];
+                $flash = ['type' => 'error', 'msg' => sprintf(__('studio_tf_field_exists', "A field with the key '%1\$s' already exists on %2\$s."), $fKey, $pType)];
             } elseif (in_array($fType, ['select', 'radio', 'multiselect', 'checkboxes'], true) && empty($fOptions['choices'])) {
-                $flash = ['type' => 'error', 'msg' => 'Add at least one choice (one per line, as value or value : Label).'];
+                $flash = ['type' => 'error', 'msg' => __('studio_tf_field_choices', 'Add at least one choice (one per line, as value or value : Label).')];
             } elseif (in_array($fType, ['relation', 'relations'], true) && empty($fOptions['target'])) {
-                $flash = ['type' => 'error', 'msg' => 'Pick the post type this relation links to.'];
+                $flash = ['type' => 'error', 'msg' => __('studio_tf_field_target', 'Pick the post type this relation links to.')];
             } else {
                 $fieldId = 'f_' . bin2hex(random_bytes(4));
                 $metaFields[] = [
@@ -146,18 +142,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'options' => $fOptions,
                 ];
                 Database::setSetting('studio_meta_fields', json_encode($metaFields, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
-                $flash = ['type' => 'success', 'msg' => "Meta field '{$label}' added to {$pType}!"];
+                sb_flash_redirect($self, ['type' => 'success', 'msg' => sprintf(__('studio_tf_field_added', "Meta field '%1\$s' added to %2\$s!"), $label, $pType)]);
             }
         } elseif ($action === 'delete_meta_field') {
             $fieldId = trim((string) ($_POST['field_id'] ?? ''));
             if ($fieldId !== '') {
                 $metaFields = array_values(array_filter($metaFields, fn($f) => ($f['id'] ?? '') !== $fieldId));
                 Database::setSetting('studio_meta_fields', json_encode($metaFields, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
-                $flash = ['type' => 'success', 'msg' => 'Meta field deleted.'];
+                sb_flash_redirect($self, ['type' => 'success', 'msg' => __('studio_tf_field_deleted', 'Meta field deleted.')]);
             }
         }
     }
 }
+
+$flash = $flash ?? sb_take_flash();
 
 // Post type filter for fields list
 $selectedType = trim((string) ($_GET['type'] ?? 'all'));

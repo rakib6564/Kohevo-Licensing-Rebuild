@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/_nav.php';
+require_once __DIR__ . '/_revisions.php';
 
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Exception\StudioConcurrencyException;
@@ -36,8 +37,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
     } elseif (!$canEdit) {
         $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to manage revisions.')];
+    } elseif (!sb_studio_entitled()) {
+        $flash = ['type' => 'error', 'msg' => __('studio_pages_forbidden', 'Kohevo Studio is not available for your account on this site.')];
     } else {
         $action = (string) ($_POST['_action'] ?? '');
+        // Back to the list as it was shown (POST/redirect/GET).
+        $listQuery = ['kind' => (string) ($_POST['kind'] ?? 'all'), 'per' => (int) ($_POST['per'] ?? 25), 'p' => (int) ($_POST['p'] ?? 1)];
         $bulk = (string) ($_POST['bulk_action'] ?? '');
         $rowAction = (string) ($_POST['row_action'] ?? '');
 
@@ -51,8 +56,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['page_id'] = (int) Database::value('SELECT page_id FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [$tenantId, $restoreRev]);
         }
 
-        // Deleting history is permanent, so it is administrators only. A page's published revision and its current draft are
-        // never deleted (the live page and the editor read them), whatever was ticked; they are counted as skipped.
+        // Deleting history is permanent, so it is administrators only. A page's published revision, its current draft and the
+        // draft's recent lineage (the review diff and the builder's Undo read them) are never deleted, whatever was ticked;
+        // they are counted as skipped.
         if ($bulk === 'delete_revisions' || str_starts_with($rowAction, 'delete:')) {
             if (!$canDelete) {
                 $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to manage revisions.')];
@@ -62,12 +68,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $deleted = 0;
                 if ($ids !== []) {
                     $marks = implode(',', array_fill(0, count($ids), '?'));
-                    $inUse = [];
-                    foreach (Database::all('SELECT active_draft_revision_id AS d, published_revision_id AS p FROM studiobuilder_pages WHERE tenant_id = ?', [$tenantId]) as $pg) {
-                        $inUse[(int) $pg['d']] = true;
-                        $inUse[(int) $pg['p']] = true;
-                    }
-                    $mine = array_map('intval', array_column(Database::all("SELECT id FROM studiobuilder_revisions WHERE tenant_id = ? AND id IN ($marks)", array_merge([$tenantId], $ids)), 'id'));
+                    $mineRows = Database::all("SELECT id, page_id FROM studiobuilder_revisions WHERE tenant_id = ? AND id IN ($marks)", array_merge([$tenantId], $ids));
+                    $mine = array_map('intval', array_column($mineRows, 'id'));
+                    $inUse = sb_revisions_kept_for($tenantId, array_map('intval', array_column($mineRows, 'page_id')));
                     $deletable = array_values(array_filter($mine, static fn(int $i): bool => !isset($inUse[$i])));
                     if ($deletable !== []) {
                         $dm = implode(',', array_fill(0, count($deletable), '?'));
@@ -80,8 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 $skipped = count($ids) - $deleted;
-                header('Location: reviews.php?' . http_build_query([
-                    'kind' => (string) ($_POST['kind'] ?? 'all'), 'per' => (int) ($_POST['per'] ?? 25), 'p' => (int) ($_POST['p'] ?? 1),
+                header('Location: reviews.php?' . http_build_query($listQuery + [
                     'deleted' => $deleted, 'skipped' => $skipped,
                 ]), true, 303);
                 exit;
@@ -100,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($revId > 0 && $pageId > 0) {
                 try {
                     $result = StudioRuntimeFactory::build()->app->rollback(StudioActor::fromCurrentSession(), $pageId, $revId, $expected > 0 ? $expected : null);
-                    $flash = ['type' => 'success', 'msg' => sprintf(
+                    $restored = ['type' => 'success', 'msg' => sprintf(
                         __('studio_review_restored', 'Page restored to that snapshot as a new draft (revision #%d). Open it in the builder to review and publish.'),
                         (int) ($result['revision']['revision_number'] ?? 0)
                     )];
@@ -110,8 +112,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $first = $e instanceof StudioValidationException ? (string) ($e->errors()[0]['message'] ?? '') : '';
                     $flash = ['type' => 'error', 'msg' => trim(__('studio_review_restore_failed', 'This snapshot could not be restored.') . ' ' . $first)];
                 } catch (\Throwable $e) {
-                    error_log('[studio reviews] restore failed: ' . $e->getMessage());
+                    sb_log_error('reviews restore', $e);
                     $flash = ['type' => 'error', 'msg' => __('studio_review_restore_failed', 'This snapshot could not be restored.')];
+                }
+                if (isset($restored)) {
+                    sb_flash_redirect('reviews.php?' . http_build_query($listQuery), $restored);
                 }
             } else {
                 $flash = ['type' => 'error', 'msg' => __('studio_review_restore_failed', 'This snapshot could not be restored.')];
@@ -120,11 +125,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$flash = $flash ?? sb_take_flash();
 if (isset($_GET['deleted']) || isset($_GET['skipped'])) {
     $nDeleted = (int) ($_GET['deleted'] ?? 0);
     $nSkipped = (int) ($_GET['skipped'] ?? 0);
     $flash = $nSkipped > 0
-        ? ['type' => $nDeleted > 0 ? 'success' : 'error', 'msg' => sprintf(__('studio_revisions_deleted_some', '%1$d revision(s) deleted, %2$d kept (a page\'s published revision and current draft are never deleted).'), $nDeleted, $nSkipped)]
+        ? ['type' => $nDeleted > 0 ? 'success' : 'error', 'msg' => sprintf(__('studio_revisions_deleted_some', '%1$d revision(s) deleted, %2$d kept (a page\'s published revision, current draft and recent history are never deleted).'), $nDeleted, $nSkipped)]
         : ['type' => 'success', 'msg' => sprintf(__('studio_revisions_deleted', '%d revision(s) deleted.'), $nDeleted)];
 }
 
@@ -159,15 +165,18 @@ try {
     $pageNo = 1;
 }
 
-// Revisions the live page and the editor are using: shown as "In use" and never deleted.
+// Revisions the live page, the editor and its Undo are using: shown as "In use" and never deleted.
 $inUseIds = [];
 try {
-    foreach (Database::all('SELECT active_draft_revision_id AS d, published_revision_id AS p FROM studiobuilder_pages WHERE tenant_id = ?', [$tenantId]) as $pg) {
-        $inUseIds[(int) $pg['d']] = 'current draft';
-        $inUseIds[(int) $pg['p']] = 'published';
-    }
+    $inUseIds = sb_revisions_kept_for($tenantId, array_map('intval', array_column($revisions, 'page_id')));
 } catch (\Throwable $e) {
+    sb_log_error('reviews in use', $e);
 }
+$inUseNote = [
+    'published'     => __('studio_review_in_use_published', 'This is the page\'s published revision, so it cannot be deleted.'),
+    'current draft' => __('studio_review_in_use_draft', 'This is the page\'s current draft revision, so it cannot be deleted.'),
+    'history'       => __('studio_review_in_use_history', 'This is in the recent history of the page\'s current draft (its review diff and the builder\'s Undo use it), so it cannot be deleted.'),
+];
 
 $self = plugin_url('studio-builder', 'admin/reviews.php');
 $kindUrl = static fn(string $k): string => e($self . ($k === 'all' ? '' : '?kind=' . $k));
@@ -251,7 +260,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         'when'    => ['label' => 'Timestamp', 'value' => $createdAt !== '' ? date('M j, Y H:i', strtotime($createdAt)) : '—'],
                     ];
                     if ($use !== null) {
-                        $detail['use'] = ['label' => 'In use', 'value' => 'This is the page\'s ' . $use . ' revision, so it cannot be deleted.'];
+                        $detail['use'] = ['label' => __('studio_review_in_use', 'In use'), 'value' => $inUseNote[$use] ?? $inUseNote['current draft']];
                     }
 
                     slate_data_row([

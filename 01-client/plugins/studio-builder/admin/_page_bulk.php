@@ -12,26 +12,31 @@ declare(strict_types=1);
 
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Exception\StudioException;
+use Slate\Module\StudioBuilder\Meta\PageMeta;
 
 if (!function_exists('sb_archive_pages')) {
     /**
      * Deleting a page is archiving it: it leaves the site and the list, and its history stays. Every id goes through
      * `archivePage()`, which checks the actor's Edit permission and the tenant, so a forged id or a viewer deletes
      * nothing. A page that cannot go (a Global Component other pages still use) is skipped and counted, not allowed
-     * to stop the rest. At most 200 ids are taken from one request.
+     * to stop the rest. At most 200 ids are taken from one request. A deleted page's custom field values go with it, as
+     * on its own Delete (`PageMeta::forget`), so no settings row is left behind.
      *
-     * @param object $app        the Studio application service (anything with `archivePage(StudioActor, int)`)
-     * @param mixed  $postedIds  `$_POST['ids']` as posted
+     * @param object   $app        the Studio application service (anything with `archivePage(StudioActor, int)`)
+     * @param mixed    $postedIds  `$_POST['ids']` as posted
+     * @param ?\Closure $forget    fn(int $pageId): void, run for each deleted page; defaults to `PageMeta::forget()`
      * @return array{deleted: int, failed: int}
      */
-    function sb_archive_pages(object $app, StudioActor $actor, mixed $postedIds): array
+    function sb_archive_pages(object $app, StudioActor $actor, mixed $postedIds, ?\Closure $forget = null): array
     {
+        $forget ??= static fn(int $pageId) => PageMeta::forget(current_tenant_id(), $pageId);
         $ids = array_values(array_unique(array_filter(array_map('intval', (array) $postedIds), static fn(int $i): bool => $i > 0)));
         $deleted = 0;
         $failed = 0;
         foreach (array_slice($ids, 0, 200) as $pageId) {
             try {
                 $app->archivePage($actor, $pageId);
+                $forget($pageId);
                 $deleted++;
             } catch (StudioException $e) {
                 $failed++;
