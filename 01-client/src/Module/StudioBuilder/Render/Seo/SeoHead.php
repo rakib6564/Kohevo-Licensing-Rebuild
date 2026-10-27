@@ -29,6 +29,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
 use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Render\Media\MediaResolverInterface;
+use Slate\Module\StudioBuilder\Render\RenderContext;
 use Slate\Module\StudioBuilder\Render\RenderMode;
 use Slate\Module\StudioBuilder\Render\SiteContext;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
@@ -130,6 +131,36 @@ final class SeoHead
             }
         }
         return $default;
+    }
+
+    /**
+     * One compiled template serves every archive term and every search, so the head it was compiled with names the
+     * template page. For an archive the title is the term and the canonical is that archive's own address (a
+     * `/category/*` page is no longer a duplicate of one canonical); a search or 404 result is never indexed and
+     * declares no canonical. Any other page is returned unchanged.
+     */
+    public function forListing(RenderContext $context): self
+    {
+        $type = $context->attribute('archive_type');
+        $term = $context->attribute('term');
+        if (is_string($type) && in_array($type, ['category', 'tag', 'author'], true) && is_string($term) && trim($term) !== '') {
+            $term = trim($term);
+            return new self(
+                $term . ($this->siteName !== '' ? ' | ' . $this->siteName : ''),
+                $this->description,
+                $this->robots,
+                $context->site->baseUrl !== '' ? $context->site->absoluteUrl('/' . $type . '/' . rawurlencode($term)) : null,
+                $this->ogImageUrl,
+                $this->siteName,
+                $this->verification,
+            );
+        }
+        if ($context->attribute('is_search') === true || $context->attribute('is_404') === true) {
+            $query = $context->attribute('search_query');
+            $title = is_string($query) && trim($query) !== '' ? trim($query) . ($this->siteName !== '' ? ' | ' . $this->siteName : '') : $this->title;
+            return new self($title, $this->description, 'noindex,follow', null, $this->ogImageUrl, $this->siteName, $this->verification);
+        }
+        return $this;
     }
 
     /** Preview/Editor output is never indexable and never declares a canonical. */

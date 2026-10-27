@@ -26,6 +26,14 @@ final class ThemeTemplateResolver
         'footer' => 'footer_partial',
     ];
 
+    /** The page types a single, archive, search or 404 template can be, and the slugs that name one by convention. */
+    private const TEMPLATE_PAGE_TYPES = ['system', 'page'];
+    private const TEMPLATE_SLUGS = ['single', 'archive', 'search', '404', 'theme-single', 'theme-archive', 'theme-search', 'theme-404'];
+
+    /** @var ?list<array{row: array<string, mixed>, settings: array<string, mixed>}> the template candidates, with their published settings */
+    private ?array $templateIndex = null;
+    private string $templateStamp = '';
+
     public function __construct(
         private readonly ?object $pages = null,
         private readonly ?object $revisions = null,
@@ -131,18 +139,34 @@ final class ThemeTemplateResolver
     }
 
     /**
-     * The condition context a page's Single template is chosen by, beyond the page itself: the document's category,
-     * and its custom content type when it has one (otherwise the page type stands in for it). The compiler and the
-     * editor's `layout_template` query both use it, so the editor names the template the live page really gets.
+     * The condition context a page's Single template is chosen by, beyond the page itself: the document's category and
+     * tags, its author (who created the page), and its custom content type when it has one (otherwise the page type
+     * stands in for it). The compiler and the editor's `layout_template` query both use it, so the editor names the
+     * template the live page really gets. Without tags and author here, a template's tag and author conditions (and the
+     * excludes written with them) never matched.
      *
      * @param array<string, mixed> $settings the page document's settings
-     * @return array<string, string>
+     * @return array<string, mixed>
      */
     public static function singleContext(array $settings, int $tenantId, int $pageId): array
     {
         $context = [];
         if (is_string($settings['category'] ?? null) && $settings['category'] !== '') {
             $context['category'] = $settings['category'];
+        }
+        $tags = $settings['tags'] ?? [];
+        $tags = is_string($tags) ? explode(',', $tags) : (is_array($tags) ? $tags : []);
+        $tags = array_values(array_filter(array_map(static fn(mixed $t): string => is_scalar($t) ? trim((string) $t) : '', $tags), static fn(string $t): bool => $t !== ''));
+        if ($tags !== []) {
+            $context['tags'] = array_slice($tags, 0, 50);
+        }
+        try {
+            $author = (int) \Slate\Data\Database::value('SELECT created_by FROM studiobuilder_pages WHERE tenant_id = ? AND id = ?', [$tenantId, $pageId]);
+            if ($author > 0) {
+                $context['author_id'] = $author;
+            }
+        } catch (\Throwable) {
+            // No author known: author conditions do not match.
         }
         try {
             $type = PageMeta::read($tenantId, $pageId)['type'];
@@ -249,19 +273,11 @@ final class ThemeTemplateResolver
             return null;
         }
 
-        // Query published pages of type 'system' or 'page'
-        $candidates = array_merge($this->candidates('system'), $this->candidates('page'));
-
         $bestScore = 0;
         $bestRow   = null;
 
-        foreach ($candidates as $row) {
-            if (($row['status'] ?? null) !== 'published' || empty($row['published_revision_id'])) {
-                continue;
-            }
-
+        foreach ($this->templateIndex() as ['row' => $row, 'settings' => $settings]) {
             $slug = (string) ($row['slug'] ?? '');
-            $settings = $this->publishedSettings($row);
 
             if (!self::isRoleMatch($role, $settings, $slug)) {
                 continue;
@@ -354,14 +370,15 @@ final class ThemeTemplateResolver
             return [];
         }
         $partialType = self::REGION_PAGE_TYPES[$role] ?? null;
-        $rows = $partialType !== null ? $this->candidates($partialType) : array_merge($this->candidates('system'), $this->candidates('page'));
+        $entries = $partialType !== null
+            ? array_map(fn(array $row): array => ['row' => $row, 'settings' => $this->publishedSettings($row)], $this->candidates($partialType))
+            : $this->templateIndex();
         $out = [];
-        foreach ($rows as $row) {
+        foreach ($entries as ['row' => $row, 'settings' => $settings]) {
             if ((int) ($row['id'] ?? 0) === $exceptPageId || ($row['status'] ?? null) !== 'published' || empty($row['published_revision_id'])) {
                 continue;
             }
             $slug = (string) ($row['slug'] ?? '');
-            $settings = $this->publishedSettings($row);
             if ($partialType !== null ? $slug === self::SITE_PARTIAL_SLUG : !self::isRoleMatch($role, $settings, $slug)) {
                 continue;
             }
@@ -437,6 +454,58 @@ final class ThemeTemplateResolver
             'content_type'  => $page->pageType,
             'is_front_page' => $page->routeMode === 'homepage',
         ];
+    }
+
+    /**
+     * The published single/archive/search/404 template candidates with the settings they were published with, built
+     * once and reused by every lookup while nothing they depend on changes (a public page looks up its Single template
+     * more than once). Only pages that could be templates are loaded, and published settings that differ from the
+     * draft are read in one batch, not one revision query per page.
+     *
+     * @return list<array{row: array<string, mixed>, settings: array<string, mixed>}>
+     */
+    private function templateIndex(): array
+    {
+        if (!method_exists($this->pages, 'templateCandidates')) {
+            $rows = array_merge($this->candidates('system'), $this->candidates('page'));
+            return array_map(fn(array $row): array => ['row' => $row, 'settings' => $this->publishedSettings($row)], array_values(array_filter(
+                $rows,
+                static fn(array $row): bool => ($row['status'] ?? null) === 'published' && !empty($row['published_revision_id']),
+            )));
+        }
+        $stamp = (string) $this->pages->templateStamp(self::TEMPLATE_PAGE_TYPES);
+        if ($this->templateIndex !== null && $stamp !== '' && $stamp === $this->templateStamp) {
+            return $this->templateIndex;
+        }
+
+        $rows = $this->pages->templateCandidates(self::TEMPLATE_PAGE_TYPES, self::TEMPLATE_SLUGS);
+        $behind = [];
+        foreach ($rows as $row) {
+            $draft = (int) ($row['active_draft_revision_id'] ?? 0);
+            if ($draft !== 0 && $draft !== (int) $row['published_revision_id']) {
+                $behind[] = (int) $row['published_revision_id'];
+            }
+        }
+        $documents = $behind !== [] && method_exists($this->revisions, 'documentsByIds') ? $this->revisions->documentsByIds($behind) : [];
+
+        $index = [];
+        foreach ($rows as $row) {
+            $published = (int) $row['published_revision_id'];
+            $draft = (int) ($row['active_draft_revision_id'] ?? 0);
+            if ($draft === 0 || $draft === $published) {
+                $settings = self::decodeObject((string) ($row['settings_json'] ?? ''));
+            } else {
+                $doc = self::decodeObject((string) ($documents[$published] ?? ''));
+                $settings = is_array($doc['settings'] ?? null) ? $doc['settings'] : [];
+            }
+            if (self::roleOf((string) $row['page_type'], $settings, (string) ($row['slug'] ?? '')) === null && !in_array((string) ($row['slug'] ?? ''), self::TEMPLATE_SLUGS, true)) {
+                continue; // a page with a pending draft that is not a template after all
+            }
+            $index[] = ['row' => $row, 'settings' => $settings];
+        }
+        $this->templateIndex = $index;
+        $this->templateStamp = $stamp;
+        return $index;
     }
 
     /**

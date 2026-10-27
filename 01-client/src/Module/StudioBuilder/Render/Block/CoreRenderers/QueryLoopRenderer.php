@@ -41,11 +41,13 @@ final class QueryLoopRenderer implements BlockRendererInterface
         if ($rows === null) {
             try {
                 $provider = new PostsProvider();
+                $listing = self::listing($scope);
                 $params = [
                     'source'    => $scope->string('source', 'posts'),
-                    'category'  => $scope->string('category', ''),
-                    'tag'       => $scope->string('tag', ''),
-                    'author_id' => (int) $scope->prop('author_id', 0),
+                    'category'  => $scope->string('category', '') !== '' ? $scope->string('category', '') : $listing['category'],
+                    'tag'       => $scope->string('tag', '') !== '' ? $scope->string('tag', '') : $listing['tag'],
+                    'author_id' => (int) $scope->prop('author_id', 0) > 0 ? (int) $scope->prop('author_id', 0) : $listing['author_id'],
+                    'search'    => $listing['search'],
                     'order_by'  => $scope->string('order_by', 'published_at'),
                     'order'     => $scope->string('order', 'desc'),
                     'limit'     => $perPage,
@@ -162,11 +164,11 @@ final class QueryLoopRenderer implements BlockRendererInterface
         if ($enablePagination && ($hasPrev || $hasNext)) {
             $paginationHtml = '<nav class="sb-pagination" aria-label="' . Html::t('studio_pagination', 'Pagination') . '">'
                 . ($hasPrev
-                    ? '<a href="?page=' . ($currentPage - 1) . '" class="sb-pagination__prev" rel="prev">' . Html::t('studio_prev', 'Previous') . '</a>'
+                    ? '<a href="' . Html::e(self::pageHref($scope, $currentPage - 1)) . '" class="sb-pagination__prev" rel="prev">' . Html::t('studio_prev', 'Previous') . '</a>'
                     : '<span class="sb-pagination__prev sb-pagination__disabled">' . Html::t('studio_prev', 'Previous') . '</span>')
                 . '<span class="sb-pagination__page sb-pagination__current" aria-current="page">' . $currentPage . '</span>'
                 . ($hasNext
-                    ? '<a href="?page=' . ($currentPage + 1) . '" class="sb-pagination__next" rel="next">' . Html::t('studio_next', 'Next') . '</a>'
+                    ? '<a href="' . Html::e(self::pageHref($scope, $currentPage + 1)) . '" class="sb-pagination__next" rel="next">' . Html::t('studio_next', 'Next') . '</a>'
                     : '<span class="sb-pagination__next sb-pagination__disabled">' . Html::t('studio_next', 'Next') . '</span>')
                 . '</nav>';
         }
@@ -175,6 +177,33 @@ final class QueryLoopRenderer implements BlockRendererInterface
             . $gridHtml
             . $paginationHtml
             . '</div>';
+    }
+
+    /**
+     * What the page being shown is a listing of, when it is an archive or search template: its category, tag or author
+     * term and its search query (render attributes set by the public runtime). A loop with its own filter keeps it;
+     * one without lists the archive's or the search's posts instead of every post.
+     *
+     * @return array{category: string, tag: string, author_id: int, search: string}
+     */
+    private static function listing(BlockRenderScope $scope): array
+    {
+        $context = $scope->context();
+        $str = static fn(string $key): string => is_string($context->attribute($key)) ? mb_substr(trim((string) $context->attribute($key)), 0, 120) : '';
+        $type = $str('archive_type');
+        return [
+            'category'  => mb_substr($str('category'), 0, 80),
+            'tag'       => mb_substr($str('tag'), 0, 80),
+            'author_id' => $type === 'author' && ctype_digit($str('term')) ? (int) $str('term') : 0,
+            'search'    => $str('search_query'),
+        ];
+    }
+
+    /** A pager link: `?page=N`, keeping a search's `q` so the next page is still the same search. */
+    private static function pageHref(BlockRenderScope $scope, int $page): string
+    {
+        $query = self::listing($scope)['search'];
+        return '?' . http_build_query($query !== '' ? ['q' => $query, 'page' => $page] : ['page' => $page]);
     }
 
     /**

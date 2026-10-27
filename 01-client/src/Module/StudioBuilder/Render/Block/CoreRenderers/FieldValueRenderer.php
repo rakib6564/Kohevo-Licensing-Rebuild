@@ -119,9 +119,14 @@ final class FieldValueRenderer implements BlockRendererInterface
             case 'daterange':
                 return is_array($value) ? $e(($value['start'] ?? '') . ' – ' . ($value['end'] ?? '')) : '';
             case 'color':
-                return '<span class="sb-field-value__swatch" style="background:' . $e($value) . '"></span> ' . $e($value);
+                // Re-checked here: the value goes into inline CSS, and a stored value may predate the save-time check.
+                if (!is_string($value) || preg_match('/^#[0-9a-fA-F]{6}$/', $value) !== 1) {
+                    return $e($value);
+                }
+                return '<span class="sb-field-value__swatch" style="background:' . $value . '"></span> ' . $e($value);
             case 'rating':
-                $max = (int) ($field['options']['max'] ?? 5);
+                // One star per point: the scale is kept to 1-10 whatever is stored, so a huge max cannot exhaust memory.
+                $max = max(1, min(MetaFieldTypes::MAX_RATING, (int) ($field['options']['max'] ?? 5)));
                 $n = max(0, min($max, (int) round((float) $value)));
                 return '<span aria-label="' . $n . ' / ' . $max . '">' . str_repeat('★', $n) . str_repeat('☆', max(0, $max - $n)) . '</span>';
             case 'price':

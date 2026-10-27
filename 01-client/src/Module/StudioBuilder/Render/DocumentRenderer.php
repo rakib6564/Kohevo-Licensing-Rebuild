@@ -47,6 +47,9 @@ use Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme;
 
 final class DocumentRenderer
 {
+    /** Render attribute: leave out a block whose renderer throws instead of failing the render (see StudioCompiler). */
+    public const ISOLATE_FAILURES = 'isolate_block_failures';
+
     /** Marker key on a block rendered as part of an embedded Global Component (never a canonical document key). */
     public const EMBEDDED_KEY = '__sb_embedded';
 
@@ -126,13 +129,24 @@ final class DocumentRenderer
             }
         }
 
-        $rows = (is_array($block['bindings'] ?? null) && $block['bindings'] !== [])
-            ? $this->bindings->resolve($block, $definition, $context)
-            : [];
+        // When the compiler asks for it (a visitor's request rebuilding a page with no good stored copy), one block that
+        // fails is left out instead of answering the visitor with a 500. Otherwise the failure propagates, so publishing
+        // a page with a broken block fails and the author sees why.
+        try {
+            $rows = (is_array($block['bindings'] ?? null) && $block['bindings'] !== [])
+                ? $this->bindings->resolve($block, $definition, $context)
+                : [];
 
-        $scope = new BlockRenderScope($block, $context, $this->media, $theme, $collector, $children, $rows);
-        $inner = $renderer->render($scope);
-        $wrapperClasses = $renderer instanceof WrapperClassesInterface ? $renderer->wrapperClasses($scope) : [];
+            $scope = new BlockRenderScope($block, $context, $this->media, $theme, $collector, $children, $rows);
+            $inner = $renderer->render($scope);
+            $wrapperClasses = $renderer instanceof WrapperClassesInterface ? $renderer->wrapperClasses($scope) : [];
+        } catch (\Throwable $e) {
+            if ($context->attribute(self::ISOLATE_FAILURES) !== true) {
+                throw $e;
+            }
+            error_log('[studio-builder] block ' . preg_replace('/[^a-z0-9._-]/i', '', $type) . ' failed to render: ' . $e::class . ': ' . $e->getMessage());
+            return $this->unavailable('render_failed', $context);
+        }
 
         $customClasses = [];
         if (isset($block['classNames']) && is_array($block['classNames'])) {
