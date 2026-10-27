@@ -59,7 +59,7 @@ final class CustomWidgetDefinition
             'label'               => $this->label,
             'category'            => $this->category,
             'icon'                => $this->icon,
-            'schema'              => is_array($schema) ? $schema : null,
+            'schema'              => $schema,
             'renderer'            => $renderer,
             'required_permission' => $this->requiredPermission,
         ]);

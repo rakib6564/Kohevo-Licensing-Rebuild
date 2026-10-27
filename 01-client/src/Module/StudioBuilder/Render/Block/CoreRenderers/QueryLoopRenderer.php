@@ -89,7 +89,9 @@ final class QueryLoopRenderer implements BlockRendererInterface
 
         if (trim($childrenHtml) !== '') {
             // Repeat custom child template for each row with token substitution
+            $copy = 0;
             foreach ($rows as $row) {
+                $copy++;
                 $tokens = [
                     '{title}'          => Html::e((string) ($row['title'] ?? '')),
                     '{post.title}'     => Html::e((string) ($row['title'] ?? '')),
@@ -104,7 +106,7 @@ final class QueryLoopRenderer implements BlockRendererInterface
                     '{date}'           => Html::e((string) ($row['date_formatted'] ?? '')),
                     '{post.date}'      => Html::e((string) ($row['date_formatted'] ?? '')),
                 ];
-                $cardItem = strtr($childrenHtml, $tokens);
+                $cardItem = self::uniqueIds(strtr($childrenHtml, $tokens), $copy);
                 $itemsHtml .= '<div class="sb-query-loop__item">' . $cardItem . '</div>';
             }
         } else {
@@ -116,14 +118,15 @@ final class QueryLoopRenderer implements BlockRendererInterface
                 $category  = (string) ($row['category'] ?? '');
                 $author    = (string) ($row['author_name'] ?? '');
                 $date      = (string) ($row['date_formatted'] ?? '');
+                $datetime  = self::isoDate($row['published_at'] ?? null);
                 $image     = (string) ($row['featured_image'] ?? '');
 
+                // One link per card: the title. The image sits beside the title (so its alt would only repeat it) and the
+                // button repeats the title's link, so both stay out of the tab order and the screen reader's link list.
                 $mediaHtml = '';
                 if ($showImage && $image !== '') {
                     $mediaHtml = '<div class="sb-post-card__media">'
-                        . '<a href="' . Html::e($url) . '">'
-                        . '<img src="' . Html::e($image) . '" alt="' . Html::e($title) . '" loading="lazy">'
-                        . '</a>'
+                        . '<img src="' . Html::e($image) . '" alt="" loading="lazy">'
                         . '</div>';
                 }
 
@@ -134,7 +137,7 @@ final class QueryLoopRenderer implements BlockRendererInterface
                         $metaHtml .= '<span class="sb-post-card__author">' . Html::e($author) . '</span>';
                     }
                     if ($showDate && $date !== '') {
-                        $metaHtml .= '<time class="sb-post-card__date">' . Html::e($date) . '</time>';
+                        $metaHtml .= '<time class="sb-post-card__date"' . ($datetime !== '' ? ' datetime="' . Html::e($datetime) . '"' : '') . '>' . Html::e($date) . '</time>';
                     }
                     $metaHtml .= '</div>';
                 }
@@ -146,7 +149,7 @@ final class QueryLoopRenderer implements BlockRendererInterface
                     . '<h3 class="sb-post-card__title"><a href="' . Html::e($url) . '">' . Html::e($title) . '</a></h3>'
                     . ($showExcerpt && $excerpt !== '' ? '<p class="sb-post-card__excerpt">' . Html::e($excerpt) . '</p>' : '')
                     . $metaHtml
-                    . '<p class="sb-button-row"><a class="sb-button sb-button--primary sb-button--sm" href="' . Html::e($url) . '">' . Html::e($readMoreText) . '</a></p>'
+                    . '<p class="sb-button-row"><a class="sb-button sb-button--primary sb-button--sm" href="' . Html::e($url) . '" tabindex="-1" aria-hidden="true">' . Html::e($readMoreText) . '</a></p>'
                     . '</div>'
                     . '</article>';
             }
@@ -197,6 +200,43 @@ final class QueryLoopRenderer implements BlockRendererInterface
             'author_id' => $type === 'author' && ctype_digit($str('term')) ? (int) $str('term') : 0,
             'search'    => $str('search_query'),
         ];
+    }
+
+    /**
+     * The child template is repeated once per post, so every `id` in it would repeat too (two tabs, accordions or form
+     * fields with the same id break their labels and controls). Copies after the first get `-N` ids, and the attributes
+     * in that copy that point at those ids (`for`, `aria-*`, `href="#…"`, `data-sb-*`) follow.
+     */
+    private static function uniqueIds(string $html, int $copy): string
+    {
+        if ($copy <= 1 || preg_match_all('/\sid="([^"]+)"/', $html, $found) === 0) {
+            return $html;
+        }
+        $ids = array_flip($found[1]);
+        return (string) preg_replace_callback(
+            '/(\s(?:id|for|headers|list|href|aria-[a-z]+|data-sb-[a-z-]+)=")([^"]*)"/',
+            static function (array $m) use ($ids, $copy): string {
+                $tokens = explode(' ', $m[2]);
+                foreach ($tokens as $i => $token) {
+                    $hash = str_starts_with($token, '#');
+                    $bare = $hash ? substr($token, 1) : $token;
+                    if ($bare !== '' && isset($ids[$bare])) {
+                        $tokens[$i] = ($hash ? '#' : '') . $bare . '-' . $copy;
+                    }
+                }
+                return $m[1] . implode(' ', $tokens) . '"';
+            },
+            $html
+        );
+    }
+
+    /** A machine-readable date (`Y-m-d`) for `<time datetime>`, or '' when the value is not a date. */
+    private static function isoDate(mixed $value): string
+    {
+        if (!is_string($value) || preg_match('/^(\d{4}-\d{2}-\d{2})(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$/', trim($value), $m) !== 1) {
+            return '';
+        }
+        return $m[1];
     }
 
     /** A pager link: `?page=N`, keeping a search's `q` so the next page is still the same search. */

@@ -19,6 +19,10 @@
  * 7. Rollback creates a NEW revision (`revision_kind = 'rollback'`) with `parent_revision_id`
  *    pointing to the target historical revision; historical revisions are never mutated.
  * 8. `published_revision_id` is only modified by `publishWorkingRevision()` / `unpublishPage()`.
+ * 9. Publishing a document identical to the one already published (or to a publish revision that is the working
+ *    draft) reuses that revision instead of storing another copy.
+ * 10. Old autosaves are pruned (see `pruneAutosaves()`): only autosave revisions beyond the page's newest
+ *     AUTOSAVE_KEEP that are also older than AUTOSAVE_KEEP_DAYS, and never one the page or another row still uses.
  */
 
 declare(strict_types=1);
@@ -60,6 +64,15 @@ final class StudioRevisionService
         'ai_operation',
         'import',
     ];
+
+    /** Autosaves always kept per page (the newest ones), whatever their age. */
+    public const AUTOSAVE_KEEP = 30;
+
+    /** Autosaves younger than this are always kept. */
+    public const AUTOSAVE_KEEP_DAYS = 30;
+
+    /** At most this many old autosaves are pruned per save, so a save never pays for a large backlog at once. */
+    public const AUTOSAVE_PRUNE_BATCH = 50;
 
     public function __construct(
         private readonly TenantContext $tenants,
@@ -120,7 +133,9 @@ final class StudioRevisionService
                 : null;
 
             $this->assertExpectedRevision($pageId, $currentDraftId, $expectedRevisionId);
+            $this->assertDocumentType($lockedPage, $normalizedDocument);
             $this->assertLocksKept($pageId, $currentDraftId, $normalizedDocument);
+            $this->lockNewComponentRefs($tenantId, $pageId, $currentDraftId, $deps);
 
             // Autosave deduplication: if the working draft already has the exact same SHA-256 fingerprint,
             // return the existing working revision without inserting a redundant row.
@@ -167,6 +182,12 @@ final class StudioRevisionService
                 'updated_by'               => $actorId > 0 ? $actorId : null,
             ]);
 
+            // Autosaves are the bulk of history: each one prunes this page's old ones, a bounded batch at a time, under
+            // the page row lock it already holds.
+            if ($revisionKind === 'autosave') {
+                $this->pruneAutosaves($tenantId, $pageId);
+            }
+
             $updatedPage = $this->pages->find($pageId);
             $createdRev  = $this->revisions->findByIdForPage($pageId, $newRevisionId);
 
@@ -201,7 +222,8 @@ final class StudioRevisionService
      * @return array{
      *   revision: array<string, mixed>,
      *   page: array<string, mixed>,
-     *   fingerprint: string
+     *   fingerprint: string,
+     *   deduplicated: bool
      * }
      */
     public function publishWorkingRevision(
@@ -244,13 +266,47 @@ final class StudioRevisionService
             // Re-validate and normalize the working revision's canonical document before publishing (blocks saved at an
             // older block version are upgraded first; the published revision is a new row, history is never rewritten)
             $normalizedDoc = DocumentNormalizer::validateAndNormalize(
-                DocumentUpgrader::upgrade(CanonicalJson::decode((string) $workingRev['document_json']), $this->registry)['document'],
+                self::withPageType(DocumentUpgrader::upgrade(CanonicalJson::decode((string) $workingRev['document_json']), $this->registry)['document'], $lockedPage),
                 $this->registry,
                 $validationOptions
             );
             $canonicalJson = CanonicalJson::encode($normalizedDoc);
             $fingerprint   = hash('sha256', $canonicalJson);
-            $deps          = DependencyExtractor::extract($normalizedDoc, $this->registry);
+
+            // anti-drift-ignore: CLOCK — slate_db_now() (MySQL's own clock) is always
+            // preferred; the gmdate() fallback only runs in an isolated context (e.g. a
+            // unit test) where includes/helpers.php was never loaded, and is never reached
+            // in a real request.
+            $now = \function_exists('slate_db_now') ? \slate_db_now() : gmdate('Y-m-d H:i:s');
+
+            // Nothing changed since the last publish: reuse that publish revision (the page's published one, or the
+            // working draft when it is itself a publish revision, e.g. after an unpublish) instead of storing a copy.
+            $reusable = $this->reusablePublishRevision($pageId, $lockedPage, $workingRev, $canonicalJson);
+            if ($reusable !== null) {
+                $reuseId = (int) $reusable['id'];
+                $alreadyLive = ($lockedPage['status'] ?? null) === 'published' && (int) ($lockedPage['published_revision_id'] ?? 0) === $reuseId;
+                $this->pages->update($pageId, [
+                    'active_draft_revision_id' => $reuseId,
+                    'published_revision_id'    => $reuseId,
+                    'status'                   => 'published',
+                    'published_at'             => $alreadyLive && !empty($lockedPage['published_at']) ? $lockedPage['published_at'] : $now,
+                    'seo_json'                 => CanonicalJson::encode($normalizedDoc['seo'] ?? CanonicalDocumentSchema::defaultSeo()),
+                    'settings_json'            => CanonicalJson::encode($normalizedDoc['settings'] ?? CanonicalDocumentSchema::defaultSettings()),
+                    'updated_by'               => $actorId > 0 ? $actorId : null,
+                ]);
+                $updatedPage = $this->pages->find($pageId);
+                if ($ownsTx) {
+                    $pdo->commit();
+                }
+                return [
+                    'revision'     => $reusable,
+                    'page'         => $updatedPage ?? $lockedPage,
+                    'fingerprint'  => $fingerprint,
+                    'deduplicated' => true,
+                ];
+            }
+
+            $deps = DependencyExtractor::extract($normalizedDoc, $this->registry);
 
             $nextNumber = $this->nextRevisionNumber($tenantId, $pageId);
             $cleanSummary = $summary !== null && trim($summary) !== ''
@@ -270,11 +326,6 @@ final class StudioRevisionService
 
             $this->dependencies->replaceForPageRevision($pageId, $publishRevId, $deps);
 
-            // anti-drift-ignore: CLOCK — slate_db_now() (MySQL's own clock) is always
-            // preferred; the gmdate() fallback only runs in an isolated context (e.g. a
-            // unit test) where includes/helpers.php was never loaded, and is never reached
-            // in a real request.
-            $now = \function_exists('slate_db_now') ? \slate_db_now() : gmdate('Y-m-d H:i:s');
             $this->pages->update($pageId, [
                 'active_draft_revision_id' => $publishRevId,
                 'published_revision_id'    => $publishRevId,
@@ -293,9 +344,10 @@ final class StudioRevisionService
             }
 
             return [
-                'revision'    => $createdRev ?? [],
-                'page'        => $updatedPage ?? $lockedPage,
-                'fingerprint' => $fingerprint,
+                'revision'     => $createdRev ?? [],
+                'page'         => $updatedPage ?? $lockedPage,
+                'fingerprint'  => $fingerprint,
+                'deduplicated' => false,
             ];
         } catch (\Throwable $e) {
             if ($ownsTx && $pdo->inTransaction()) {
@@ -358,7 +410,7 @@ final class StudioRevisionService
             }
 
             $normalizedDoc = DocumentNormalizer::validateAndNormalize(
-                DocumentUpgrader::upgrade(CanonicalJson::decode((string) $targetRev['document_json']), $this->registry)['document'],
+                self::withPageType(DocumentUpgrader::upgrade(CanonicalJson::decode((string) $targetRev['document_json']), $this->registry)['document'], $lockedPage),
                 $this->registry,
                 $validationOptions
             );
@@ -366,6 +418,7 @@ final class StudioRevisionService
             $canonicalJson = CanonicalJson::encode($normalizedDoc);
             $fingerprint   = hash('sha256', $canonicalJson);
             $deps          = DependencyExtractor::extract($normalizedDoc, $this->registry);
+            $this->lockNewComponentRefs($tenantId, $pageId, $currentDraftId, $deps);
 
             $nextNumber = $this->nextRevisionNumber($tenantId, $pageId);
             $cleanSummary = $summary !== null && trim($summary) !== ''
@@ -418,6 +471,172 @@ final class StudioRevisionService
                 );
             }
             throw $e;
+        }
+    }
+
+    /**
+     * A draft's `document_type` must be its page's type. Callers set it from the page (the client never decides it);
+     * this is the last check before anything is stored.
+     *
+     * @param array<string, mixed> $lockedPage
+     * @param array<string, mixed> $document
+     */
+    private function assertDocumentType(array $lockedPage, array $document): void
+    {
+        $pageType = (string) ($lockedPage['page_type'] ?? '');
+        if ($pageType !== '' && (string) ($document['document_type'] ?? '') !== $pageType) {
+            throw new StudioValidationException([
+                ['path' => '$.document_type', 'code' => 'document_type_mismatch', 'message' => "This page is a '{$pageType}', so its document must be one too."],
+            ]);
+        }
+    }
+
+    /**
+     * A stored document read back for publish or rollback takes its page's type (an older draft may say otherwise).
+     *
+     * @param mixed $document
+     * @param array<string, mixed> $lockedPage
+     * @return mixed
+     */
+    private static function withPageType(mixed $document, array $lockedPage): mixed
+    {
+        if (is_array($document) && !empty($lockedPage['page_type'])) {
+            $document['document_type'] = (string) $lockedPage['page_type'];
+        }
+        return $document;
+    }
+
+    /**
+     * Component references this draft ADDS (not already in the current draft) are re-checked under a shared lock on
+     * the component's row: archiving a component holds an exclusive lock on that row while it checks for references,
+     * so either the archive sees this draft's reference, or this draft sees the component archived — never neither.
+     *
+     * @param list<\Slate\Module\StudioBuilder\Dependency\DependencyRecord> $deps
+     */
+    private function lockNewComponentRefs(int $tenantId, int $pageId, ?int $currentDraftId, array $deps): void
+    {
+        $refs = [];
+        foreach ($deps as $dep) {
+            // Section component references only (a uuid); `chrome:*` and `template:*` keys are not components.
+            if ($dep->dependencyType === 'partial' && preg_match(CanonicalDocumentSchema::COMPONENT_REF_PATTERN, $dep->dependencyKey) === 1) {
+                $refs[$dep->dependencyKey] = true;
+            }
+        }
+        if ($refs === []) {
+            return;
+        }
+        if ($currentDraftId !== null) {
+            foreach ($this->dependencies->forPageRevision($pageId, $currentDraftId) as $row) {
+                if (($row['dependency_type'] ?? null) === 'partial') {
+                    unset($refs[(string) $row['dependency_key']]);
+                }
+            }
+        }
+        foreach (array_keys($refs) as $ref) {
+            $status = Database::value(
+                'SELECT `status` FROM `studiobuilder_pages` WHERE `tenant_id` = ? AND `uuid` = ? AND `page_type` = ? LOCK IN SHARE MODE',
+                [$tenantId, (string) $ref, CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE]
+            );
+            if ($status === null || $status === false || $status === 'archived') {
+                throw new StudioValidationException([
+                    ['path' => '$.sections', 'code' => 'cross_tenant_or_missing_partial', 'message' => "Referenced global_ref '{$ref}' does not exist in the active tenant."],
+                ]);
+            }
+        }
+    }
+
+    /**
+     * The publish revision a publish can reuse because it already holds exactly this document: the page's published
+     * revision, or the working draft when it is a publish revision itself. Null when the document is new.
+     *
+     * @param array<string, mixed> $lockedPage
+     * @param array<string, mixed> $workingRev
+     * @return array<string, mixed>|null
+     */
+    private function reusablePublishRevision(int $pageId, array $lockedPage, array $workingRev, string $canonicalJson): ?array
+    {
+        if (($workingRev['revision_kind'] ?? null) === 'publish' && hash_equals((string) $workingRev['document_json'], $canonicalJson)) {
+            return $workingRev;
+        }
+        $publishedId = (int) ($lockedPage['published_revision_id'] ?? 0);
+        if ($publishedId <= 0 || $publishedId === (int) $workingRev['id']) {
+            return null;
+        }
+        $published = $this->revisions->findByIdForPage($pageId, $publishedId);
+        if ($published !== null && ($published['revision_kind'] ?? null) === 'publish' && hash_equals((string) $published['document_json'], $canonicalJson)) {
+            return $published;
+        }
+        return null;
+    }
+
+    /**
+     * Delete a bounded batch of this page's old autosaves. A revision is pruned only when ALL of these hold:
+     *   - it is an autosave (manual saves, publishes, rollbacks, AI operations and imports are kept for good);
+     *   - it is not among the page's newest AUTOSAVE_KEEP autosaves, and is older than AUTOSAVE_KEEP_DAYS;
+     *   - it is not the page's working draft or published revision, nor the parent of either (the default diff of
+     *     the draft compares it with its parent);
+     *   - no revision of another kind names it as its parent (a rollback's target, a publish's source);
+     *   - no compiled artifact was built from it.
+     * Its dependency rows go with it. Runs inside the caller's transaction, under the page row lock; it is housekeeping,
+     * so a failure here never fails the save. Returns how many revisions were deleted.
+     */
+    public function pruneAutosaves(int $tenantId, int $pageId): int
+    {
+        try {
+            $cutoffNumber = Database::value(
+                'SELECT `revision_number` FROM `studiobuilder_revisions` WHERE `tenant_id` = ? AND `page_id` = ? AND `revision_kind` = \'autosave\'
+                  ORDER BY `revision_number` DESC LIMIT 1 OFFSET ' . (self::AUTOSAVE_KEEP - 1),
+                [$tenantId, $pageId]
+            );
+            if ($cutoffNumber === null || $cutoffNumber === false) {
+                return 0; // no more than AUTOSAVE_KEEP autosaves yet
+            }
+            $page = Database::row(
+                'SELECT `active_draft_revision_id`, `published_revision_id` FROM `studiobuilder_pages` WHERE `tenant_id` = ? AND `id` = ?',
+                [$tenantId, $pageId]
+            );
+            $keep = [];
+            foreach (['active_draft_revision_id', 'published_revision_id'] as $pointer) {
+                $id = (int) ($page[$pointer] ?? 0);
+                if ($id > 0) {
+                    $keep[$id] = true;
+                    $parent = (int) Database::value('SELECT `parent_revision_id` FROM `studiobuilder_revisions` WHERE `tenant_id` = ? AND `id` = ?', [$tenantId, $id]);
+                    if ($parent > 0) {
+                        $keep[$parent] = true;
+                    }
+                }
+            }
+            $rows = Database::rows(
+                'SELECT r.`id` FROM `studiobuilder_revisions` r
+                  WHERE r.`tenant_id` = ? AND r.`page_id` = ? AND r.`revision_kind` = \'autosave\'
+                    AND r.`revision_number` < ?
+                    AND r.`created_at` < (NOW() - INTERVAL ' . self::AUTOSAVE_KEEP_DAYS . ' DAY)
+                    AND NOT EXISTS (SELECT 1 FROM `studiobuilder_revisions` c
+                                     WHERE c.`tenant_id` = r.`tenant_id` AND c.`page_id` = r.`page_id`
+                                       AND c.`parent_revision_id` = r.`id` AND c.`revision_kind` <> \'autosave\')
+                    AND NOT EXISTS (SELECT 1 FROM `studiobuilder_compilations` m
+                                     WHERE m.`tenant_id` = r.`tenant_id` AND m.`revision_id` = r.`id`)
+                  ORDER BY r.`revision_number` ASC
+                  LIMIT ' . (self::AUTOSAVE_PRUNE_BATCH + count($keep)),
+                [$tenantId, $pageId, (int) $cutoffNumber]
+            );
+            $ids = [];
+            foreach ($rows as $row) {
+                $id = (int) $row['id'];
+                if (!isset($keep[$id]) && count($ids) < self::AUTOSAVE_PRUNE_BATCH) {
+                    $ids[] = $id;
+                }
+            }
+            if ($ids === []) {
+                return 0;
+            }
+            $marks = implode(',', array_fill(0, count($ids), '?'));
+            $args  = array_merge([$tenantId, $pageId], $ids);
+            Database::query("DELETE FROM `studiobuilder_dependencies` WHERE `tenant_id` = ? AND `page_id` = ? AND `revision_id` IN ({$marks})", $args);
+            Database::query("DELETE FROM `studiobuilder_revisions` WHERE `tenant_id` = ? AND `page_id` = ? AND `id` IN ({$marks})", $args);
+            return count($ids);
+        } catch (\PDOException) {
+            return 0; // housekeeping only: the save stands, the next autosave tries again
         }
     }
 

@@ -10,6 +10,7 @@ namespace Slate\Module\StudioBuilder\Render\Block\CoreRenderers;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
 use Slate\Module\StudioBuilder\Render\Html;
+use Slate\Module\StudioBuilder\Render\RenderMode;
 use Slate\Module\StudioBuilder\Render\RichTextSanitizer;
 
 final class PostContentRenderer implements BlockRendererInterface
@@ -29,7 +30,15 @@ final class PostContentRenderer implements BlockRendererInterface
         // The post being shown wins; the block's own content is the fallback for when there is none.
         $content = (string) $scope->context()->attribute('content', $scope->context()->attribute('post_content', ''));
         if ($content === '') {
-            $content = $scope->string('content', 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.');
+            $content = $scope->string('content', '');
+        }
+        if ($content === '') {
+            // Placeholder text is for the author on the canvas only: a visitor (an archive template with no post, say)
+            // never sees "Lorem ipsum".
+            if ($scope->context()->mode !== RenderMode::Editor) {
+                return '';
+            }
+            $content = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.';
         }
 
         // Plain text keeps its line breaks. Anything with markup goes through

@@ -123,7 +123,9 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
             }
             $unless = $entry['unless'] ?? null;
             if ($unless !== null && (!is_string($unless) || !isset($types[$unless]))) {
-                throw new \InvalidArgumentException("Block '{$this->type}' declares inline text '{$prop}' unless '{$unless}', which is not a prop of its schema.");
+                // `unless` may be any value here (an array, say): describe it, never interpolate it.
+                $what = is_string($unless) ? "'{$unless}'" : 'a ' . get_debug_type($unless);
+                throw new \InvalidArgumentException("Block '{$this->type}' declares inline text '{$prop}' unless {$what}, which is not a prop of its schema.");
             }
         }
     }
