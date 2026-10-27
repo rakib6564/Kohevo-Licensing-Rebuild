@@ -422,6 +422,8 @@ final class BlockRegistry
                 ['key' => 'columns', 'type' => 'number', 'label' => 'Grid Columns', 'required' => false, 'default' => 3, 'min' => 1, 'max' => 6, 'integer_only' => true],
                 ['key' => 'gap', 'type' => 'enum', 'label' => 'Gap', 'required' => false, 'allowed_values' => CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, 'default' => 'md'],
                 ['key' => 'card_variant', 'type' => 'enum', 'label' => 'Card Variant', 'required' => false, 'allowed_values' => ['card', 'minimal', 'horizontal'], 'default' => 'card'],
+                // The cards' heading level, so a loop under an h2 section heading can follow the page's outline.
+                ['key' => 'title_level', 'type' => 'enum', 'label' => 'Title Heading Level', 'required' => false, 'allowed_values' => ['h2', 'h3', 'h4', 'h5', 'h6'], 'default' => 'h3'],
                 ['key' => 'show_featured_image', 'type' => 'boolean', 'label' => 'Show Image', 'required' => false, 'default' => true],
                 ['key' => 'show_date', 'type' => 'boolean', 'label' => 'Show Date', 'required' => false, 'default' => true],
                 ['key' => 'show_author', 'type' => 'boolean', 'label' => 'Show Author', 'required' => false, 'default' => true],

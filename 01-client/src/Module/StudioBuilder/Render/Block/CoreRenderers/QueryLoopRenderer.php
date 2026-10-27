@@ -75,6 +75,8 @@ final class QueryLoopRenderer implements BlockRendererInterface
         $columns = max(1, min(6, (int) $scope->prop('columns', 3)));
         $gap = $scope->string('gap', 'md');
         $variant = $scope->string('card_variant', 'card');
+        $titleTag = $scope->string('title_level', 'h3');
+        $titleTag = in_array($titleTag, ['h2', 'h3', 'h4', 'h5', 'h6'], true) ? $titleTag : 'h3';
         $showImage = $scope->bool('show_featured_image', true);
         $showDate = $scope->bool('show_date', true);
         $showAuthor = $scope->bool('show_author', true);
@@ -146,7 +148,7 @@ final class QueryLoopRenderer implements BlockRendererInterface
                     . $mediaHtml
                     . '<div class="sb-post-card__body">'
                     . ($showCategory && $category !== '' ? '<span class="sb-post-card__category">' . Html::e($category) . '</span>' : '')
-                    . '<h3 class="sb-post-card__title"><a href="' . Html::e($url) . '">' . Html::e($title) . '</a></h3>'
+                    . '<' . $titleTag . ' class="sb-post-card__title"><a href="' . Html::e($url) . '">' . Html::e($title) . '</a></' . $titleTag . '>'
                     . ($showExcerpt && $excerpt !== '' ? '<p class="sb-post-card__excerpt">' . Html::e($excerpt) . '</p>' : '')
                     . $metaHtml
                     . '<p class="sb-button-row"><a class="sb-button sb-button--primary sb-button--sm" href="' . Html::e($url) . '" tabindex="-1" aria-hidden="true">' . Html::e($readMoreText) . '</a></p>'

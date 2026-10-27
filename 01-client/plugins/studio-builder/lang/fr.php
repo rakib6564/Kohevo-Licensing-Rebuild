@@ -1751,6 +1751,7 @@ return [
     'studio_field_caption' => 'Légende',
     'studio_field_card_options' => 'Options de la carte',
     'studio_field_card_variant' => 'Variante de carte',
+    'studio_field_title_heading_level' => 'Niveau de titre des cartes',
     'studio_field_category' => 'Catégorie',
     'studio_field_cells_separate_with' => 'Cellules (séparées par |)',
     'studio_field_color_token' => 'Jeton de couleur',
@@ -2088,4 +2089,5 @@ return [
     'studio_code_nothing_saved' => 'Rien n’a été enregistré.',
     'studio_code_saved_admin' => 'Balises, vérifications, extraits de code et CSS enregistrés.',
     'studio_code_saved' => 'Identifiants d’analyse et CSS personnalisé enregistrés.',
+    'studio_menu_conflict' => 'Quelqu’un d’autre a modifié ce menu pendant que vous le modifiiez. Rechargez-le et refaites votre modification.',
 ];

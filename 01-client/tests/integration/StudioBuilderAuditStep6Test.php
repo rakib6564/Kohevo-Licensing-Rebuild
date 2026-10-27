@@ -234,10 +234,10 @@ unit('audit step 6 integration: revisions, menus, document type, component refer
             $refused = false;
             try {
                 StudioMenus::save(SBA6_A, 'main', 'Old tab', [['label' => 'Home', 'url' => '/']], 'main', $stale);
-            } catch (\InvalidArgumentException) {
-                $refused = true;
+            } catch (\InvalidArgumentException $e) {
+                $refused = $e->getCode() === StudioMenus::CONFLICT;
             }
-            assert_true($refused, 'a save from a form showing an older version of the menu is refused, not silently applied');
+            assert_true($refused, 'a save from a form showing an older version of the menu is refused as a conflict, not silently applied');
             assert_eq('Main menu', StudioMenus::find(SBA6_A, 'main')['name'] ?? null);
 
             // ── document_type follows the page, never the client ───────────────────────────────────────

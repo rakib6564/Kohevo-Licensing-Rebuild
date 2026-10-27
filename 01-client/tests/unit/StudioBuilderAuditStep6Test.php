@@ -171,9 +171,9 @@ final class _SbA6NoMedia implements MediaResolverInterface
     }
 }
 
-function sba6_loop(array $rows, string $childrenHtml = '', ?RenderContext $context = null): string
+function sba6_loop(array $rows, string $childrenHtml = '', ?RenderContext $context = null, array $props = []): string
 {
-    $block = ['id' => 'loop_a6', 'type' => 'core.query_loop', 'props' => ['enable_pagination' => false], 'bindings' => ['items' => ['provider' => 'content.posts']]];
+    $block = ['id' => 'loop_a6', 'type' => 'core.query_loop', 'props' => ['enable_pagination' => false] + $props, 'bindings' => ['items' => ['provider' => 'content.posts']]];
     $context ??= RenderContext::forPublic(1, new SiteContext('https://example.test', 'Test Site', 'en'));
     $scope = new BlockRenderScope($block, $context, new _SbA6NoMedia(), new ResolvedTheme('default', []), new RenderCollector('nonce'), $childrenHtml, ['items' => $rows]);
     return (new QueryLoopRenderer())->render($scope);
@@ -187,6 +187,13 @@ unit('query loop cards: one link per card in the tab order, and a machine-readab
     assert_true(str_contains($html, '<time class="sb-post-card__date" datetime="2026-10-01">Oct 1, 2026</time>'));
     $odd = sba6_loop([['id' => 2, 'title' => 'X', 'url' => '/x', 'date_formatted' => 'Today', 'published_at' => 'not a date']]);
     assert_true(str_contains($odd, '<time class="sb-post-card__date">Today</time>'), 'no datetime when the value is not a date');
+});
+
+unit('query loop cards: the title is an h3 unless the author picks another level, and an unknown level falls back to h3', function (): void {
+    $row = [['id' => 1, 'title' => 'Hello', 'url' => '/hello']];
+    assert_true(str_contains(sba6_loop($row), '<h3 class="sb-post-card__title"><a href="/hello">Hello</a></h3>'), 'unchanged by default');
+    assert_true(str_contains(sba6_loop($row, '', null, ['title_level' => 'h2']), '<h2 class="sb-post-card__title"><a href="/hello">Hello</a></h2>'));
+    assert_true(str_contains(sba6_loop($row, '', null, ['title_level' => 'script']), '<h3 class="sb-post-card__title">'), 'only heading tags are used');
 });
 
 unit('query loop child template: ids are unique across the repeated copies, and what points at them follows', function (): void {

@@ -27,6 +27,9 @@ use Slate\Module\StudioBuilder\Schema\FieldSchema;
 
 final class StudioMenus
 {
+    /** The exception code of a write refused because the menu changed since the form was loaded. */
+    public const CONFLICT = 409;
+
     public const SETTING_KEY     = 'studio_menus';
     public const MAX_MENUS       = 15;
     public const MAX_ITEMS       = 30;
@@ -272,7 +275,7 @@ final class StudioMenus
             return;
         }
         if ($menu === null || !hash_equals(self::version($menu), $expectedVersion)) {
-            throw new \InvalidArgumentException('Someone else changed this menu while you were editing it. Reload it and make your change again.');
+            throw new \InvalidArgumentException('Someone else changed this menu while you were editing it. Reload it and make your change again.', self::CONFLICT);
         }
     }
 

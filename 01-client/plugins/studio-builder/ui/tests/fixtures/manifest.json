@@ -2770,7 +2770,8 @@
                 "show_excerpt": true,
                 "show_featured_image": true,
                 "source": "posts",
-                "tag": ""
+                "tag": "",
+                "title_level": "h3"
             },
             "description": "Live Service & dynamic posts",
             "field_schema": [
@@ -2879,6 +2880,20 @@
                         "card",
                         "minimal",
                         "horizontal"
+                    ]
+                },
+                {
+                    "key": "title_level",
+                    "type": "enum",
+                    "label": "Title Heading Level",
+                    "required": false,
+                    "default": "h3",
+                    "allowed_values": [
+                        "h2",
+                        "h3",
+                        "h4",
+                        "h5",
+                        "h6"
                     ]
                 },
                 {
