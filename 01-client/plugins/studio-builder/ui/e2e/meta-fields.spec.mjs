@@ -1,5 +1,6 @@
 // Meta fields: a long list of types in groups, each type asks only for its own options, and what is saved is shown back.
 import { test, expect } from '@playwright/test';
+import { ensurePostType } from './helpers.mjs';
 
 const TYPES = '/plugins/studio-builder/admin/types-fields.php';
 
@@ -9,6 +10,7 @@ test.beforeEach(async ({}, info) => {
 
 test('the type chooser is grouped, each type shows only its options, and a saved field is listed with them', async ({ page }) => {
   const key = `workmode_${Date.now()}`;
+  await ensurePostType(page, 'services', 'Service');
   await page.goto(TYPES);
   await page.evaluate(() => { document.getElementById('sb-field-drawer').style.display = 'block'; });
   const type = page.locator('#sb-meta-type');
@@ -34,6 +36,7 @@ test('the type chooser is grouped, each type shows only its options, and a saved
   // Save a select with two choices: it is listed with its type and options.
   await type.selectOption('select');
   const drawer = page.locator('#sb-field-drawer');
+  await drawer.locator('select[name="post_type"]').selectOption('services');
   await drawer.locator('input[name="label"]').fill('Work mode');
   await drawer.locator('input[name="key"]').fill(key);
   await drawer.locator('textarea[name="choices"]').fill('remote : Remote\nonsite : On-site');

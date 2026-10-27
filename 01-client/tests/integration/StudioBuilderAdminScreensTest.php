@@ -5,7 +5,7 @@
  * Driven through the real screens in child processes (tests/fixtures/admin-page-post-probe.php), as super admin, on the
  * test database. Each setting a test touches is put back as it was.
  *
- * - Types & fields: the first field a site adds keeps the starter fields every page already shows.
+ * - Types & fields: a new site has no post types or fields until it creates them; there is nothing to restore.
  * - Redirects: an empty address is refused as missing, not normalised to "/".
  */
 
@@ -44,17 +44,23 @@ function sbasi_with_setting(string $key, ?string $value, callable $fn): void
     }
 }
 
-unit('types & fields: the first field added to a new site keeps the starter fields', function (): void {
-    sbasi_with_setting('studio_meta_fields', null, function (int $tid): void {
-        $starterKeys = array_column(PageMeta::starterFields(), 'key');
-        assert_eq($starterKeys, array_column(PageMeta::allFields($tid), 'key'), 'a new site shows the starters');
-        [$status] = sbasi_post('types-fields.php', [
-            '_action' => 'create_meta_field', 'post_type' => 'portfolio', 'label' => 'Budget', 'key' => 'budget', 'type' => 'text',
-        ]);
-        assert_eq(303, $status, 'back to the screen after the change');
-        $keys = array_column(PageMeta::allFields($tid), 'key');
-        assert_eq(array_merge($starterKeys, ['budget']), $keys, 'the starters are still there, with the new field after them');
-        assert_eq($keys, array_column(PageMeta::fieldsFor($tid, 'portfolio'), 'key'), 'and the pages read the same list');
+unit('types & fields: a new site starts with no post types and no fields, and its own type takes its fields', function (): void {
+    sbasi_with_setting('studio_custom_post_types', null, function (int $tid): void {
+        sbasi_with_setting('studio_meta_fields', null, function (int $tid): void {
+            assert_eq([], PageMeta::postTypes($tid), 'no built-in types');
+            assert_eq([], PageMeta::allFields($tid), 'no starter fields');
+            [, $out] = sbasi_post('types-fields.php', ['_action' => 'noop']);
+            assert_false(str_contains($out, 'restore_post_types') || str_contains($out, 'built-in type'), 'nothing to restore');
+
+            [$status] = sbasi_post('types-fields.php', ['_action' => 'create_post_type', 'singular' => 'Project', 'plural' => 'Projects', 'key' => 'project']);
+            assert_eq(303, $status, 'back to the screen after the change');
+            assert_eq(['project'], array_keys(PageMeta::postTypes($tid)));
+            [$status] = sbasi_post('types-fields.php', [
+                '_action' => 'create_meta_field', 'post_type' => 'project', 'label' => 'Budget', 'key' => 'budget', 'type' => 'text',
+            ]);
+            assert_eq(303, $status);
+            assert_eq(['budget'], array_column(PageMeta::fieldsFor($tid, 'project'), 'key'), 'the pages read the same list');
+        });
     });
 });
 

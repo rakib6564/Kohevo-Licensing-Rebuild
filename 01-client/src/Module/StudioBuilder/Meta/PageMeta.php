@@ -3,7 +3,7 @@
  * Kohevo Studio — a page's content type and the values of that type's meta fields.
  *
  * The types and field definitions are tenant settings (`studio_custom_post_types`, `studio_meta_fields`); this class holds
- * the built-in types, the starter fields, and the values a page carries. Values are stored per page in the tenant setting
+ * the values a page carries. A site has no types until it creates them: Studio ships none built in. Values are stored per page in the tenant setting
  * `studio_page_meta_<page id>` as `{"type": "<post type>", "values": {"<field key>": value}}`. They are not kept in the
  * page's `settings_json` because every builder save rewrites that column from the document.
  *
@@ -24,54 +24,17 @@ final class PageMeta
     /** Page types that carry a content type. */
     public const PAGE_TYPES = ['page', 'landing'];
 
-    /** @return array<string, array<string, mixed>> */
-    public static function defaultTypes(): array
-    {
-        return [
-            'portfolio'    => ['key' => 'portfolio', 'singular' => 'Portfolio Item', 'plural' => 'Portfolio Items', 'route' => '/portfolio', 'is_system' => true,
-                'description' => 'Showcase client work, case studies, technologies, and project metrics.'],
-            'services'     => ['key' => 'services', 'singular' => 'Service', 'plural' => 'Services', 'route' => '/services', 'is_system' => true,
-                'description' => 'Service packages, deliverables, tech stacks, and freelance pricing tiers.'],
-            'testimonials' => ['key' => 'testimonials', 'singular' => 'Testimonial', 'plural' => 'Testimonials', 'route' => '/testimonials', 'is_system' => true,
-                'description' => 'Social proof, client reviews, ratings, and endorsements.'],
-            'case_studies' => ['key' => 'case_studies', 'singular' => 'Case Study', 'plural' => 'Case Studies', 'route' => '/case-studies', 'is_system' => true,
-                'description' => 'In-depth project breakdown with challenge, solution, and quantifiable results.'],
-        ];
-    }
-
-    /** @return list<array<string, mixed>> The fields a site has before anyone saves a field of its own. */
-    public static function starterFields(): array
-    {
-        $f = static fn(string $key, string $label, string $type, bool $required, string $placeholder): array => [
-            'id' => 'f_' . $key, 'post_type' => 'portfolio', 'label' => $label, 'key' => $key, 'type' => $type,
-            'required' => $required, 'placeholder' => $placeholder,
-        ];
-        return [
-            $f('client', 'Client / Organization', 'text', true, 'e.g. Acme Corp, FinTech Labs'),
-            $f('year', 'Completion Year', 'number', false, 'e.g. 2026'),
-            $f('role', 'Role & Scope', 'text', false, 'e.g. Lead Full-Stack Architect'),
-            $f('project_url', 'Live Project URL', 'url', false, 'https://...'),
-            $f('featured', 'Featured Highlight', 'boolean', false, ''),
-        ];
-    }
-
-    /** @return array<string, array<string, mixed>> key => type, built-ins not removed plus custom ones */
+    /** @return array<string, array<string, mixed>> key => type, the ones this site created */
     public static function postTypes(int $tenantId): array
     {
         $custom = self::json((string) Database::setting('studio_custom_post_types', $tenantId));
-        $removed = array_filter(self::json((string) Database::setting('studio_removed_post_types', $tenantId)), 'is_string');
-        $custom = array_filter($custom, static fn($t): bool => is_array($t) && isset($t['key']));
-        return array_merge(array_diff_key(self::defaultTypes(), array_flip($removed)), $custom);
+        return array_filter($custom, static fn($t): bool => is_array($t) && isset($t['key']));
     }
 
-    /** @return list<array<string, mixed>> every field definition, starters when none was ever saved */
+    /** @return list<array<string, mixed>> every field definition this site saved */
     public static function allFields(int $tenantId): array
     {
-        $raw = Database::setting('studio_meta_fields', $tenantId);
-        if ($raw === null || $raw === false || !is_array(json_decode((string) $raw, true))) {
-            return self::starterFields();
-        }
-        return array_values(array_filter(self::json((string) $raw), 'is_array'));
+        return array_values(array_filter(self::json((string) Database::setting('studio_meta_fields', $tenantId)), 'is_array'));
     }
 
     /** @return list<array<string, mixed>> */

@@ -2031,7 +2031,6 @@ return [
     'studio_tf_type_exists' => 'Le type de contenu « %s » existe déjà.',
     'studio_tf_type_created' => 'Type de contenu « %s » créé.',
     'studio_tf_type_deleted' => 'Type de contenu « %s » supprimé.',
-    'studio_tf_types_restored' => 'Types de contenu intégrés restaurés.',
     'studio_tf_field_required' => 'Le libellé et la clé du champ sont obligatoires.',
     'studio_tf_field_bad_type' => 'Choisissez un type de contenu existant.',
     'studio_tf_field_exists' => 'Un champ avec la clé « %1$s » existe déjà sur %2$s.',

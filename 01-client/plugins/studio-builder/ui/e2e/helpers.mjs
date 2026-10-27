@@ -146,3 +146,15 @@ export async function archivePage(page, id) {
     await fetch(u, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': boot.csrfToken }, body: JSON.stringify({ page_id: id }) });
   }, { id });
 }
+
+/** Make sure the site has a post type with this key (Studio ships none built in); creates it on Types & fields if missing. */
+export async function ensurePostType(page, key, singular) {
+  await page.goto('/plugins/studio-builder/admin/types-fields.php');
+  if (await page.locator(`[data-post-type="${key}"]`).count()) return;
+  await page.evaluate(() => { document.getElementById('sb-cpt-drawer').style.display = 'block'; });
+  const d = page.locator('#sb-cpt-drawer');
+  await d.locator('input[name="key"]').fill(key);
+  await d.locator('input[name="singular"]').fill(singular);
+  await d.getByRole('button', { name: /Save Post Type/ }).click();
+  await expect(page.locator(`[data-post-type="${key}"]`)).toHaveCount(1);
+}
