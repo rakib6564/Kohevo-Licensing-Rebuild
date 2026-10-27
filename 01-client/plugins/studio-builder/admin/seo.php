@@ -24,13 +24,18 @@ $flash = null;
 
 // Read existing settings
 $seoTitleFormat = (string) (Database::setting('studio_seo_title_format', $tenantId) ?: '%title% | %site_name%');
-$seoDescription = (string) (Database::setting('studio_seo_description', $tenantId) ?: 'Full-stack software architect & freelancer portfolio crafting high-performance digital products.');
+$seoDescription = (string) (Database::setting('studio_seo_description', $tenantId) ?: '');
 $seoOgMediaId   = (string) (Database::setting('studio_seo_og_media_id', $tenantId) ?: '');
 $seoOgImageUrl  = (string) (Database::setting('studio_seo_og_image_url', $tenantId) ?: '');
 $seoRobots      = (string) (Database::setting('studio_seo_robots', $tenantId) ?: 'index,follow');
 $seoGoogleVerification = (string) (Database::setting('studio_seo_google_verify', $tenantId) ?: '');
 $seoBingVerification   = (string) (Database::setting('studio_seo_bing_verify', $tenantId) ?: '');
-$siteName       = (string) (Database::setting('site_name', $tenantId) ?: 'Rakib Hasan');
+// The name the live pages use for %site_name%.
+try {
+    $siteName = \Slate\Services\Content\TenantBranding::siteName();
+} catch (\Throwable $e) {
+    $siteName = '';
+}
 
 // POST handler
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -55,13 +60,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Database::setSetting('studio_seo_google_verify', $seoGoogleVerification, $tenantId);
         Database::setSetting('studio_seo_bing_verify', $seoBingVerification, $tenantId);
 
-        $flash = ['type' => 'success', 'msg' => 'Global SEO settings and meta directives saved successfully!'];
+        $flash = ['type' => 'success', 'msg' => __('studio_seo_saved', 'Saved. Published pages use these settings from their next visit.')];
     }
 }
 
-// Portfolio page ID
-$portfolioPage = Database::row("SELECT id FROM studiobuilder_pages WHERE tenant_id = ? AND slug = 'portfolio' LIMIT 1", [$tenantId]);
-$portfolioPageId = $portfolioPage ? (int) $portfolioPage['id'] : null;
 
 // Resolve OG image preview if ID exists
 $ogImageUrl = $seoOgImageUrl;
@@ -76,7 +78,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
 <div class="content-wrapper">
-    <?php sb_render_admin_nav('seo', $portfolioPageId); ?>
+    <?php sb_render_admin_nav('seo'); ?>
 
     <?php if ($flash): ?>
         <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?> sb-alert">
@@ -86,7 +88,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
     <div class="sb-page-head">
         <h2>Site &amp; Search Engine Optimization</h2>
-        <p>Configure global metadata, search bot indexing directives, and social card sharing previews.</p>
+        <p><?= e(__('studio_seo_intro', 'Site-wide defaults for every Studio page. The title format, description and share image are used when a page leaves its own SEO fields empty. A site set to noindex keeps every page out of search and out of the sitemap. Verification codes are added to every public page.')) ?></p>
     </div>
 
     <!-- Quick links -->
@@ -193,10 +195,10 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <div style="font-family: Arial, sans-serif;">
                     <div style="font-size: 0.82rem; color: #202124; display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
                         <span><?= e(parse_url(SLATE_URL, PHP_URL_HOST) ?: 'rakibhasaan.com') ?></span>
-                        <span style="color: #5f6368;">› portfolio</span>
+                        <span style="color: #5f6368;">› about</span>
                     </div>
                     <div style="font-size: 1.15rem; color: #1a0dab; line-height: 1.3; font-weight: 400; margin-bottom: 4px;">
-                        <?= e(str_replace(['%title%', '%site_name%'], ['Portfolio', $siteName], $seoTitleFormat)) ?>
+                        <?= e(str_replace(['%title%', '%site_name%'], ['About', $siteName], $seoTitleFormat)) ?>
                     </div>
                     <div style="font-size: 0.85rem; color: #4d5156; line-height: 1.4;">
                         <?= e($seoDescription) ?>
@@ -225,7 +227,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                             <?= e(parse_url(SLATE_URL, PHP_URL_HOST) ?: 'rakibhasaan.com') ?>
                         </div>
                         <div style="font-weight: 700; font-size: 0.95rem; color: var(--sb-text); margin-bottom: 4px;">
-                            <?= e(str_replace(['%title%', '%site_name%'], ['Portfolio', $siteName], $seoTitleFormat)) ?>
+                            <?= e(str_replace(['%title%', '%site_name%'], ['About', $siteName], $seoTitleFormat)) ?>
                         </div>
                         <div style="font-size: 0.82rem; color: var(--sb-muted); line-height: 1.4;">
                             <?= e(mb_strimwidth($seoDescription, 0, 110, '...')) ?>

@@ -64,6 +64,10 @@ final class StudioSitemapService
         if ($site->baseUrl === '' || !$this->tenants->isScoped() || $this->tenants->id() <= 0) {
             return [];
         }
+        // A site set to noindex on the Site & SEO screen keeps every page out of search, so none is listed.
+        if (str_starts_with($site->seo->robotsFor('index,follow'), 'noindex')) {
+            return [];
+        }
 
         $rows = $this->pages->publishedForSitemap(StudioRenderService::PUBLIC_PAGE_TYPES, self::MAX_URLS + 1);
 

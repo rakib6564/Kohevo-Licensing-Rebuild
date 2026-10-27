@@ -128,15 +128,12 @@ try {
     $flash ??= ['type' => 'error', 'msg' => 'The media library could not be loaded.'];
 }
 
-// Portfolio page ID
-$portfolioPage = Database::row("SELECT id FROM studiobuilder_pages WHERE tenant_id = ? AND slug = 'portfolio' LIMIT 1", [$tenantId]);
-$portfolioPageId = $portfolioPage ? (int) $portfolioPage['id'] : null;
 
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
 <div class="content-wrapper">
-    <?php sb_render_admin_nav('media', $portfolioPageId); ?>
+    <?php sb_render_admin_nav('media'); ?>
 
     <?php if ($flash): ?>
         <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" >

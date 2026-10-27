@@ -35,6 +35,16 @@ final class PublicResponse
         return new self(304, $headers, '');
     }
 
+    /** A Redirects-screen rule: 301 (cacheable for an hour) or 302 (never cached). */
+    public static function redirect(int $status, string $location): self
+    {
+        $status = $status === 302 ? 302 : 301;
+        return new self($status, [
+            'Location'      => $location,
+            'Cache-Control' => $status === 301 ? 'public, max-age=3600' : 'no-store',
+        ], '');
+    }
+
     public static function error(): self
     {
         return new self(500, ['Cache-Control' => 'no-store'], '');

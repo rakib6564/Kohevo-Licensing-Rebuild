@@ -1,9 +1,10 @@
 <?php
 /**
- * Kohevo Studio — AI & MCP Gateway Hub.
+ * Kohevo Studio — AI & MCP.
  *
- * Dedicated admin page for AI engine controls, Gemini model selection,
- * Model Context Protocol (MCP) tools registry, and interactive prompt sandbox.
+ * What an AI assistant connected through the MCP gateway can do on this Studio site: every tool, straight from
+ * `StudioMcpToolCatalog`, with what it can change and the permission it needs, and where its tokens are managed.
+ * Read only: there is no model or prompt configuration here, because Studio does not call an AI model itself.
  */
 
 declare(strict_types=1);
@@ -11,272 +12,102 @@ declare(strict_types=1);
 require __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/_nav.php';
 
+use Slate\Module\StudioBuilder\Mcp\StudioMcpToolCatalog;
+
 Auth::require();
 Auth::requirePerm('studio-builder.view');
-
-$canEdit = Auth::can('studio-builder.edit') || Auth::isSuperAdmin();
-$tenantId = current_tenant_id();
 
 $pageTitle = __('studio_ai_mcp', 'AI & MCP');
 $currentNav = 'studio-ai-mcp';
 
-$flash = null;
-
-// Read existing settings
-$aiModel = (string) (Database::setting('studio_ai_model', $tenantId) ?: 'gemini-2.5-flash');
-$aiTone = (string) (Database::setting('studio_ai_tone', $tenantId) ?: 'executive_modern');
-$aiTemperature = (float) (Database::setting('studio_ai_temperature', $tenantId) ?: 0.7);
-$aiMaxTokens = (int) (Database::setting('studio_ai_max_tokens', $tenantId) ?: 4096);
-
-// Sandbox response state
-$sandboxResult = null;
-
-// POST handler
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!csrf_verify()) {
-        $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
-    } elseif (!$canEdit) {
-        $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to configure AI.')];
-    } else {
-        $action = (string) ($_POST['_action'] ?? '');
-
-        if ($action === 'save_ai_config') {
-            $aiModel = trim((string) ($_POST['ai_model'] ?? 'gemini-2.5-flash'));
-            $aiTone = trim((string) ($_POST['ai_tone'] ?? 'executive_modern'));
-            $aiTemperature = max(0.0, min(1.0, (float) ($_POST['ai_temperature'] ?? 0.7)));
-            $aiMaxTokens = max(1000, min(16000, (int) ($_POST['ai_max_tokens'] ?? 4096)));
-
-            Database::setSetting('studio_ai_model', $aiModel, $tenantId);
-            Database::setSetting('studio_ai_tone', $aiTone, $tenantId);
-            Database::setSetting('studio_ai_temperature', (string) $aiTemperature, $tenantId);
-            Database::setSetting('studio_ai_max_tokens', (string) $aiMaxTokens, $tenantId);
-
-            $flash = ['type' => 'success', 'msg' => 'AI Gateway model and brand tone configuration saved!'];
-        } elseif ($action === 'test_sandbox') {
-            $prompt = trim((string) ($_POST['sandbox_prompt'] ?? ''));
-            if ($prompt === '') {
-                $flash = ['type' => 'error', 'msg' => 'Please provide a prompt for the sandbox.'];
-            } else {
-                // Simulate an AI generated blueprint with canonical Studio node structure
-                $sandboxResult = [
-                    'prompt' => $prompt,
-                    'model' => $aiModel,
-                    'generated_nodes' => [
-                        'type' => 'layout.section',
-                        'label' => 'AI Generated Section',
-                        'props' => ['padding_y' => 'large', 'background' => 'surface'],
-                        'children' => [
-                            [
-                                'type' => 'layout.container',
-                                'label' => 'Main Container',
-                                'props' => ['max_width' => 'boxed'],
-                                'children' => [
-                                    ['type' => 'core.heading', 'props' => ['content' => 'High-Converting Digital Strategy', 'level' => 2]],
-                                    ['type' => 'core.text', 'props' => ['content' => 'Crafted automatically based on your prompt: ' . htmlspecialchars($prompt)]],
-                                    ['type' => 'core.button', 'props' => ['label' => 'Explore Solutions', 'variant' => 'primary', 'link' => '#contact']]
-                                ]
-                            ]
-                        ]
-                    ],
-                    'token_usage' => ['prompt_tokens' => 240, 'completion_tokens' => 380, 'total' => 620]
-                ];
-            }
-        }
-    }
+$tools = StudioMcpToolCatalog::tools();
+ksort($tools);
+$byAccess = [StudioMcpToolCatalog::ACCESS_READ => 0, StudioMcpToolCatalog::ACCESS_WRITE => 0, StudioMcpToolCatalog::ACCESS_DESTRUCTIVE => 0];
+$confirmed = 0;
+foreach ($tools as $tool) {
+    $byAccess[$tool['access']] = ($byAccess[$tool['access']] ?? 0) + 1;
+    $confirmed += $tool['requires_confirmation'] ? 1 : 0;
 }
 
-// Portfolio page ID
-$portfolioPage = Database::row("SELECT id FROM studiobuilder_pages WHERE tenant_id = ? AND slug = 'portfolio' LIMIT 1", [$tenantId]);
-$portfolioPageId = $portfolioPage ? (int) $portfolioPage['id'] : null;
+$gatewayActive = class_exists('PluginLoader') && PluginLoader::isActive('mcp-gateway');
+$gatewayUrl = $gatewayActive ? plugin_url('mcp-gateway', 'admin/index.php') : null;
+
+$accessLabel = static fn(string $access): array => match ($access) {
+    StudioMcpToolCatalog::ACCESS_READ        => [__('studio_ai_access_read', 'Reads'), 'muted'],
+    StudioMcpToolCatalog::ACCESS_DESTRUCTIVE => [__('studio_ai_access_destructive', 'Can remove or overwrite'), 'danger'],
+    default                                  => [__('studio_ai_access_write', 'Changes drafts'), 'info'],
+};
 
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
 <div class="content-wrapper">
-    <?php sb_render_admin_nav('ai-mcp', $portfolioPageId); ?>
-
-    <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" >
-            <?= e($flash['msg']) ?>
-        </div>
-    <?php endif; ?>
+    <?php sb_render_admin_nav('ai-mcp'); ?>
 
     <div class="sb-page-head">
-        <h2>AI Gateway & Model Context Protocol (MCP)</h2>
-        <p>Configure autonomous AI page generation, reasoning models, and review tool capabilities.</p>
+        <h2><?= e(__('studio_ai_heading', 'AI assistants (MCP)')) ?></h2>
+        <p><?= e(__('studio_ai_intro', 'An AI assistant connected through the MCP gateway works on this site with the tools below, within the permissions of the token it uses. Studio does not run an AI model itself.')) ?></p>
     </div>
 
-    <!-- KPI / Status Cards -->
     <div class="sb-kpi-grid">
         <div class="sb-kpi-card">
-            <div class="sb-kpi-top">
-                <span class="sb-kpi-label">Gateway Status</span>
-                <?= sb_svg('check', 16, 'text-success') ?>
-            </div>
-            <div class="sb-kpi-value" style="color: #10b981; font-size: 1.5rem;">Online</div>
-            <div class="sb-kpi-meta">Google Gemini API Connected</div>
+            <div class="sb-kpi-top"><span class="sb-kpi-label"><?= e(__('studio_ai_tools', 'Tools')) ?></span><?= sb_svg('terminal', 16, 'text-accent') ?></div>
+            <div class="sb-kpi-value"><?= count($tools) ?></div>
+            <div class="sb-kpi-meta"><?= e(sprintf(__('studio_ai_tools_meta', '%1$d read, %2$d change drafts, %3$d can remove or overwrite'), $byAccess['read'], $byAccess['write'], $byAccess['destructive'])) ?></div>
         </div>
-
         <div class="sb-kpi-card">
-            <div class="sb-kpi-top">
-                <span class="sb-kpi-label">Active Model</span>
-                <?= sb_svg('sparkles', 16, 'text-accent') ?>
-            </div>
-            <div class="sb-kpi-value" style="font-size: 1.25rem; font-family: monospace;"><?= e($aiModel) ?></div>
-            <div class="sb-kpi-meta">High-throughput visual drafting</div>
+            <div class="sb-kpi-top"><span class="sb-kpi-label"><?= e(__('studio_ai_confirm', 'Need confirmation')) ?></span><?= sb_svg('shield', 16, 'text-accent') ?></div>
+            <div class="sb-kpi-value"><?= $confirmed ?></div>
+            <div class="sb-kpi-meta"><?= e(__('studio_ai_confirm_meta', 'The assistant must ask you before using these')) ?></div>
         </div>
-
         <div class="sb-kpi-card">
-            <div class="sb-kpi-top">
-                <span class="sb-kpi-label">MCP Server</span>
-                <?= sb_svg('terminal', 16, 'text-accent') ?>
-            </div>
-            <div class="sb-kpi-value" style="color: var(--sb-accent); font-size: 1.5rem;">Ready</div>
-            <div class="sb-kpi-meta">5 Studio tools exposed</div>
-        </div>
-
-        <div class="sb-kpi-card">
-            <div class="sb-kpi-top">
-                <span class="sb-kpi-label">Safety & Sandbox</span>
-                <?= sb_svg('shield', 16, 'text-accent') ?>
-            </div>
-            <div class="sb-kpi-value" style="font-size: 1.5rem;">Enforced</div>
-            <div class="sb-kpi-meta">Draft-only human reviews</div>
-        </div>
-    </div>
-
-    <!-- AI Settings & MCP Registry Grid -->
-    <div class="sb-two-up">
-        <!-- Left: Model & Generation Configuration -->
-        <div class="sb-card">
-            <div class="sb-card__head">
-                <span class="sb-card__icon"><?= sb_svg('sparkles', 18) ?></span>
-                <h3 class="sb-card__title">AI Engine Configuration</h3>
-            </div>
-
-            <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/ai-mcp.php')) ?>">
-                <?= csrf_field() ?>
-                <input type="hidden" name="_action" value="save_ai_config">
-
-                <div class="sb-field">
-                    <label class="sb-field__label">Foundation Model</label>
-                    <select name="ai_model" class="form-control">
-                        <option value="gemini-2.5-flash" <?= $aiModel === 'gemini-2.5-flash' ? 'selected' : '' ?>>Gemini 2.5 Flash (Ultra-fast visual drafting & iterations)</option>
-                        <option value="gemini-1.5-pro" <?= $aiModel === 'gemini-1.5-pro' ? 'selected' : '' ?>>Gemini 1.5 Pro (Deep architectural reasoning & long context)</option>
-                        <option value="gemini-2.0-flash" <?= $aiModel === 'gemini-2.0-flash' ? 'selected' : '' ?>>Gemini 2.0 Flash (Agentic tool-calling & structured output)</option>
-                    </select>
-                </div>
-
-                <div class="sb-field">
-                    <label class="sb-field__label">Brand Voice & Copywriting Tone</label>
-                    <select name="ai_tone" class="form-control">
-                        <option value="executive_modern" <?= $aiTone === 'executive_modern' ? 'selected' : '' ?>>Executive & Modern (Crisp, authoritative, sophisticated)</option>
-                        <option value="tech_minimalist" <?= $aiTone === 'tech_minimalist' ? 'selected' : '' ?>>High-Tech & Minimalist (Concise, engineering-focused)</option>
-                        <option value="creative_portfolio" <?= $aiTone === 'creative_portfolio' ? 'selected' : '' ?>>Creative Freelancer (Engaging, personal, compelling)</option>
-                        <option value="bold_agency" <?= $aiTone === 'bold_agency' ? 'selected' : '' ?>>Bold & Expressive (High energy, dynamic, conversion-oriented)</option>
-                    </select>
-                </div>
-
-                <div class="sb-form-grid">
-                    <div class="sb-field">
-                        <label class="sb-field__label">Creativity Temperature (0.0 – 1.0)</label>
-                        <input type="number" step="0.1" min="0" max="1" name="ai_temperature" value="<?= e($aiTemperature) ?>" class="form-control">
-                    </div>
-                    <div class="sb-field">
-                        <label class="sb-field__label">Max Tokens</label>
-                        <input type="number" step="512" min="1000" max="16000" name="ai_max_tokens" value="<?= e($aiMaxTokens) ?>" class="form-control">
-                    </div>
-                </div>
-
-                <div class="sb-card-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <?= sb_svg('save', 14) ?> Save AI Preferences
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Right: MCP Tools Registry -->
-        <div class="sb-card">
-            <div class="sb-card__head">
-                <span class="sb-card__icon"><?= sb_svg('terminal', 18) ?></span>
-                <h3 class="sb-card__title">Registered MCP Tools</h3>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 14px;">
-                <div style="padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid var(--sb-border);">
-                    <div style="font-family: monospace; font-size: 0.85rem; font-weight: 700; color: var(--sb-accent); margin-bottom: 2px;">
-                        studio_create_page
-                    </div>
-                    <div style="font-size: 0.8rem; color: var(--sb-muted);">
-                        Creates a page atomically with schema validation and reserved-route enforcement.
-                    </div>
-                </div>
-
-                <div style="padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid var(--sb-border);">
-                    <div style="font-family: monospace; font-size: 0.85rem; font-weight: 700; color: var(--sb-accent); margin-bottom: 2px;">
-                        studio_apply_diff
-                    </div>
-                    <div style="font-size: 0.8rem; color: var(--sb-muted);">
-                        Applies structural operations, prop mutations, and style overrides with rollback tracking.
-                    </div>
-                </div>
-
-                <div style="padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid var(--sb-border);">
-                    <div style="font-family: monospace; font-size: 0.85rem; font-weight: 700; color: var(--sb-accent); margin-bottom: 2px;">
-                        studio_inspect_element
-                    </div>
-                    <div style="font-size: 0.8rem; color: var(--sb-muted);">
-                        Performs deep tree walk, responsive control inspection, and layout diagnostic checks.
-                    </div>
-                </div>
-
-                <div style="padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid var(--sb-border);">
-                    <div style="font-family: monospace; font-size: 0.85rem; font-weight: 700; color: var(--sb-accent); margin-bottom: 2px;">
-                        studio_query_items
-                    </div>
-                    <div style="font-size: 0.8rem; color: var(--sb-muted);">
-                        Feeds dynamic items to <code>core.query_loop</code> with parameter filtering and pagination.
-                    </div>
-                </div>
+            <div class="sb-kpi-top"><span class="sb-kpi-label"><?= e(__('studio_ai_gateway', 'MCP gateway')) ?></span><?= sb_svg($gatewayActive ? 'check' : 'close', 16, $gatewayActive ? 'text-success' : '') ?></div>
+            <div class="sb-kpi-value" style="font-size: 1.25rem;"><?= e($gatewayActive ? __('studio_ai_gateway_on', 'Installed') : __('studio_ai_gateway_off', 'Not installed')) ?></div>
+            <div class="sb-kpi-meta">
+                <?php if ($gatewayUrl !== null): ?>
+                    <a href="<?= e($gatewayUrl) ?>"><?= e(__('studio_ai_gateway_tokens', 'Create and revoke tokens')) ?></a>
+                <?php else: ?>
+                    <?= e(__('studio_ai_gateway_none', 'Install the MCP Gateway plugin to connect an assistant')) ?>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 
-    <!-- AI Interactive Sandbox -->
     <div class="sb-card">
         <div class="sb-card__head">
-                <span class="sb-card__icon"><?= sb_svg('zap', 18) ?></span>
-                <h3 class="sb-card__title">Interactive Layout Generation Sandbox</h3>
-            </div>
-
-        <p style="font-size: 0.85rem; color: var(--sb-muted); margin-bottom: 16px;">
-            Test layout prompts to preview how the AI gateway plans section structure, typography, and child widgets before applying to live pages.
-        </p>
-
-        <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/ai-mcp.php')) ?>">
-            <?= csrf_field() ?>
-            <input type="hidden" name="_action" value="test_sandbox">
-            <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-                <input type="text" name="sandbox_prompt" class="form-control" placeholder="e.g. Design a sleek 3-column pricing card matrix with monthly/annual toggle..." required>
-                <button type="submit" class="btn btn-primary" style="white-space: nowrap;">
-                    <?= sb_svg('sparkles', 14) ?> Generate Blueprint
-                </button>
-            </div>
-        </form>
-
-        <?php if ($sandboxResult): ?>
-            <div style="margin-top: 20px; border-top: 1px solid var(--sb-border); padding-top: 18px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span style="font-weight: 700; font-size: 0.9rem; color: var(--sb-text);">Generated Canonical Document Blueprint</span>
-                    <span style="font-size: 0.75rem; color: var(--sb-muted); font-family: monospace;">Model: <?= e($sandboxResult['model']) ?></span>
-                </div>
-                <div class="sb-code-box">
-                    <?= e(json_encode($sandboxResult['generated_nodes'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) ?>
-                </div>
-            </div>
-        <?php endif; ?>
+            <span class="sb-card__icon"><?= sb_svg('shield', 18) ?></span>
+            <h3 class="sb-card__title"><?= e(__('studio_ai_rules', 'What an assistant can never do')) ?></h3>
+        </div>
+        <ul style="margin: 0; padding-left: 18px; font-size: 0.88rem; color: var(--sb-muted); line-height: 1.6;">
+            <li><?= e(__('studio_ai_rule_drafts', 'Its changes are saved as drafts. A person reviews them in Reviews and publishes.')) ?></li>
+            <li><?= e(__('studio_ai_rule_live', 'It cannot rename, move or delete a published page, whatever its token allows.')) ?></li>
+            <li><?= e(__('studio_ai_rule_locks', 'It cannot change a locked section or block.')) ?></li>
+            <li><?= e(__('studio_ai_rule_stale', 'Every change names the revision it is based on; a stale change is refused and nothing is overwritten.')) ?></li>
+        </ul>
     </div>
+
+    <div class="data-list is-columnar" data-single-open style="margin-bottom: 32px;">
+        <?php
+        slate_data_list_head(['main' => __('studio_ai_tool', 'Tool'), 'value' => __('studio_ai_permission', 'Permission'), 'badge' => __('studio_ai_access', 'Access')]);
+        foreach ($tools as $name => $tool) {
+            [$label, $tone] = $accessLabel($tool['access']);
+            slate_data_row([
+                'avatar'       => strtoupper(substr($tool['access'], 0, 1)),
+                'avatar_color' => $tone === 'danger' ? 'danger' : ($tone === 'info' ? 'info' : 'success'),
+                'title'        => $name,
+                'meta'         => $tool['description'],
+                'value'        => $tool['permission'],
+                'badge'        => [$label, $tone === 'danger' ? 'danger' : ($tone === 'info' ? 'info' : 'muted')],
+                'detail'       => [
+                    'description' => ['label' => __('studio_ai_what', 'What it does'), 'value' => $tool['description']],
+                    'confirm'     => ['label' => __('studio_ai_confirm', 'Need confirmation'), 'value' => $tool['requires_confirmation'] ? __('yes', 'Yes') : __('no', 'No')],
+                    'scope'       => ['label' => __('studio_ai_scope', 'Token scope'), 'html' => '<code>' . e($tool['scope']) . '</code>'],
+                ],
+            ]);
+        }
+        ?>
+    </div>
+    <?php slate_data_list_script(); ?>
 </div>
 
 <?php require SLATE_ROOT . '/admin/partials/footer.php'; ?>

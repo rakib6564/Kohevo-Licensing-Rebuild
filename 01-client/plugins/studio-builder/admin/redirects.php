@@ -11,6 +11,8 @@ declare(strict_types=1);
 require __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/_nav.php';
 
+use Slate\Module\StudioBuilder\Runtime\StudioRedirects;
+
 Auth::require();
 Auth::requirePerm('studio-builder.view');
 
@@ -60,6 +62,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $flash = ['type' => 'error', 'msg' => 'Source and destination cannot be identical (redirect loop).'];
             } elseif (in_array($fromPath, $reserved, true)) {
                 $flash = ['type' => 'error', 'msg' => "Cannot redirect system reserved route '{$fromPath}'."];
+            } elseif (StudioRedirects::key($fromPath) === null || StudioRedirects::key($fromPath) === '/') {
+                $flash = ['type' => 'error', 'msg' => __('studio_redirect_bad_source', 'Enter the old address as a path such as /old-page. The home page cannot be redirected.')];
+            } elseif (array_filter($redirects, static fn($r): bool => is_array($r) && StudioRedirects::key((string) ($r['from'] ?? '')) === StudioRedirects::key($fromPath)) !== []) {
+                $flash = ['type' => 'error', 'msg' => __('studio_redirect_duplicate', 'There is already a rule for that address. Delete it first to change where it goes.')];
+            } elseif (!preg_match('~^(https?://|/)[^\s<>"\']*$~i', $toPath) || str_starts_with($toPath, '//')) {
+                $flash = ['type' => 'error', 'msg' => __('studio_redirect_bad_target', 'The destination must be a path on this site (/new-page) or a full http(s) address.')];
             } else {
                 $ruleId = 'r_' . bin2hex(random_bytes(4));
                 $redirects[] = [
@@ -86,15 +94,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Portfolio page ID
-$portfolioPage = Database::row("SELECT id FROM studiobuilder_pages WHERE tenant_id = ? AND slug = 'portfolio' LIMIT 1", [$tenantId]);
-$portfolioPageId = $portfolioPage ? (int) $portfolioPage['id'] : null;
 
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
 <div class="content-wrapper">
-    <?php sb_render_admin_nav('redirects', $portfolioPageId); ?>
+    <?php sb_render_admin_nav('redirects'); ?>
 
     <?php if ($flash): ?>
         <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" >
@@ -105,7 +110,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
         <div>
             <h2 style="font-size: 1.3rem; font-weight: 800; color: var(--sb-text); margin: 0 0 4px 0;">URL Redirects & Link Hygiene</h2>
-            <p style="font-size: 0.88rem; color: var(--sb-muted); margin: 0;">Set up 301 Permanent and 302 Temporary redirects to preserve SEO equity and route old URLs.</p>
+            <p style="font-size: 0.88rem; color: var(--sb-muted); margin: 0;"><?= e(__('studio_redirects_intro', 'Send visitors from an old address to a new one: 301 for a permanent move, 302 for a temporary one. A rule applies to any address on your Studio site, including a page that still exists, but not to the home page or to admin, login and other system addresses.')) ?></p>
         </div>
 
         <button type="button" class="btn btn-primary" onclick="document.getElementById('sb-redirect-drawer').style.display='block'">

@@ -55,6 +55,7 @@ final class StudioPublicRuntime
         ?\Closure $entitlementCheck = null,
         private readonly ?StudioSitemapService $sitemap = null,
         private readonly ?ThemeTemplateResolver $themeTemplates = null,
+        private readonly ?StudioRedirects $redirects = null,
     ) {
         $this->entitlementCheck = $entitlementCheck
             ?? static fn(int $tenantId, string $moduleKey): bool => EntitlementService::canAccess($tenantId, $moduleKey);
@@ -68,6 +69,11 @@ final class StudioPublicRuntime
             // `?format=xml` is the raw XML for anyone, whatever their browser asks for.
             $rawXml = preg_match('/[?&]format=xml(?:&|$)/', $path) === 1;
             return $this->serveSeoFile($file, $ifNoneMatch, $rawXml ? null : $accept);
+        }
+
+        $redirect = $this->redirectFor($path);
+        if ($redirect !== null) {
+            return $redirect;
         }
 
         // Theme Builder: Taxonomy archive routing (e.g. category/Engineering, tag/dev, author/10)
@@ -96,6 +102,26 @@ final class StudioPublicRuntime
             return null;
         }
         return $this->serve(fn(): ?array => $this->findPublishedBySlug($slug), $ifNoneMatch);
+    }
+
+    /** A Redirects-screen rule for this address, for an entitled tenant (a test may inject the rules; otherwise the tenant's setting). */
+    private function redirectFor(string $path): ?PublicResponse
+    {
+        if (!$this->tenants->isScoped() || $this->tenants->id() <= 0 || !$this->isEntitled($this->tenants->id(), self::ENTITLEMENT_KEY)) {
+            return null;
+        }
+        try {
+            $redirects = $this->redirects ?? StudioRedirects::fromSettings($this->tenants->id());
+            if (!$redirects->matches($path)) {
+                return null;
+            }
+            // The site context reads the locale, so it is built (only for a matching rule) the way a page render builds it:
+            // pinned to the site's locale, so a visitor's ?lang= is never written to their session.
+            return StudioPublicLocale::run(fn(): ?PublicResponse => $redirects->responseFor($path, $this->renderer->siteContext()));
+        } catch (\Throwable $e) {
+            self::log('redirect', $e);
+            return null;
+        }
     }
 
     public function handleHomepage(?string $ifNoneMatch = null): ?PublicResponse
