@@ -21,6 +21,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Render;
 
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Render\Seo\SiteSeoDefaults;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 use Slate\Services\Content\TenantBranding;
 
@@ -33,6 +34,8 @@ final class SiteContext
     public readonly string $logoUrl;
     public readonly string $faviconUrl;
     public readonly string $locale;
+    /** The site-wide SEO settings (title format, defaults, robots, verification). */
+    public readonly SiteSeoDefaults $seo;
 
     public function __construct(
         string $baseUrl,
@@ -41,6 +44,7 @@ final class SiteContext
         string $faviconUrl = '',
         string $locale = 'en',
         public readonly string $siteKey = self::DEFAULT_SITE_KEY,
+        ?SiteSeoDefaults $seo = null,
     ) {
         $baseUrl = rtrim(trim($baseUrl), '/');
         if ($baseUrl !== '' && preg_match(self::BASE_URL_PATTERN, $baseUrl) !== 1) {
@@ -53,6 +57,7 @@ final class SiteContext
         $this->logoUrl    = self::safeAssetUrl($logoUrl);
         $this->faviconUrl = self::safeAssetUrl($faviconUrl);
         $this->locale     = preg_match('/^[a-z]{2}([_-][A-Za-z]{2})?$/', $locale) === 1 ? $locale : 'en';
+        $this->seo        = $seo ?? SiteSeoDefaults::none();
     }
 
     /**
@@ -79,7 +84,7 @@ final class SiteContext
             }
         } catch (\Throwable $ignored) {
         }
-        return new self($base, $name, $logo, $favicon, $locale);
+        return new self($base, $name, $logo, $favicon, $locale, self::DEFAULT_SITE_KEY, SiteSeoDefaults::fromSettings());
     }
 
     /**
@@ -124,6 +129,7 @@ final class SiteContext
             'favicon_url' => $this->faviconUrl,
             'locale'      => $this->locale,
             'logo_url'    => $this->logoUrl,
+            'seo'         => $this->seo->toArray(),
             'site_key'    => $this->siteKey,
             'site_name'   => $this->siteName,
         ]));

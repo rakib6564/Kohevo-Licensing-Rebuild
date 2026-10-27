@@ -256,7 +256,8 @@ unit('phase9c integration: SEO settings, sitemap.xml, robots.txt and slug hygien
             sbs9_seed(SBS9_B, $iid, ['studio-builder']);
             sbs9_seed(SBS9_C, $iid, []);
 
-            $site = static fn(): SiteContext => new SiteContext(SBS9_SITE, 'Site');
+            // The test's stand-in for SLATE_URL, with the tenant's Site & SEO settings read the way SiteContext::fromEnvironment() reads them.
+            $site = static fn(): SiteContext => new SiteContext(SBS9_SITE, 'Site', '', '', 'en', SiteContext::DEFAULT_SITE_KEY, \Slate\Module\StudioBuilder\Render\Seo\SiteSeoDefaults::fromSettings());
             $rt = StudioRuntimeFactory::build(['site' => $site, 'known_prefixes' => static fn(): array => ['custom-module', 'forms']]);
             $rtNoBase = StudioRuntimeFactory::build(['site' => static fn(): SiteContext => new SiteContext(SiteContext::configuredBaseUrl(''), 'Site')]);
             $editor    = StudioActor::authenticated(81, [StudioPermissions::VIEW, StudioPermissions::EDIT]);
@@ -651,6 +652,44 @@ unit('phase9c integration: SEO settings, sitemap.xml, robots.txt and slug hygien
                 assert_true(count($entries) >= 7, 'a realistic page count: ' . count($entries));
                 assert_eq(2, $delta, 'one page query + one revision query');
                 assert_eq($c0, $compilations(), 'no compilation was created or refreshed');
+            });
+
+            unit('audit step 4 int: the Site & SEO settings reach live pages and the sitemap, and the Redirects rules answer public requests', function () use ($rt): void {
+                $set = static fn(string $k, string $v) => Database::setSetting($k, $v, SBS9_A);
+                $before = sbs9_page_public($rt, SBS9_A, 'about');
+                $set('studio_seo_title_format', '%title% | %site_name%');
+                $set('studio_seo_description', 'Site-wide description');
+                $set('studio_seo_google_verify', 'gv_123');
+                $html = sbs9_page_public($rt, SBS9_A, 'about');
+                assert_true($html !== $before, 'a saved setting changes the live page without a republish');
+                assert_true(str_contains($html, '<meta name="google-site-verification" content="gv_123">'), 'verification tag');
+                $team = sbs9_page_public($rt, SBS9_A, 'team');
+                assert_true(str_contains($team, '<title>Team | Site</title>'), 'a page without its own SEO title uses the format: ' . (preg_match('~<title>[^<]*</title>~', $team, $m) ? $m[0] : '(none)'));
+                assert_true(str_contains($team, 'content="Site-wide description"'), 'and the site description');
+
+                $listed = count(sbs9_sitemap($rt, SBS9_A));
+                assert_true($listed > 0);
+                $set('studio_seo_robots', 'noindex,follow');
+                assert_eq([], sbs9_sitemap($rt, SBS9_A), 'a noindex site lists nothing');
+                assert_true(str_contains(sbs9_page_public($rt, SBS9_A, 'about'), '<meta name="robots" content="noindex,follow">'), 'and every page says noindex');
+                $set('studio_seo_robots', 'index,follow');
+                assert_eq($listed, count(sbs9_sitemap($rt, SBS9_A)), 'back to normal');
+
+                $set('studio_redirects', (string) json_encode([
+                    ['id' => 'r1', 'from' => '/old-about', 'to' => '/about', 'code' => 301],
+                    ['id' => 'r2', 'from' => '/team', 'to' => 'https://elsewhere.test/team', 'code' => 302],
+                ]));
+                $r = sbs9_file($rt, SBS9_A, '/Old-About/');
+                assert_true($r !== null && $r->status === 301 && $r->headers['Location'] === SBS9_SITE . '/about', 'a 301 to the page: ' . json_encode($r?->headers));
+                $t = sbs9_file($rt, SBS9_A, '/team');
+                assert_true($t !== null && $t->status === 302, 'a rule takes over an address that is still a page');
+                assert_null(sbs9_file($rt, SBS9_B, '/old-about'), 'another tenant\'s rules do not apply');
+                assert_eq(200, sbs9_file($rt, SBS9_A, '/about')?->status, 'other addresses are served as before');
+
+                foreach (['studio_seo_title_format', 'studio_seo_description', 'studio_seo_google_verify', 'studio_seo_robots', 'studio_redirects'] as $k) {
+                    Database::query('DELETE FROM settings WHERE tenant_id = ? AND setting_key = ?', [SBS9_A, $k]);
+                }
+                assert_eq($before, sbs9_page_public($rt, SBS9_A, 'about'), 'with the settings gone the page is exactly as before');
             });
         });
     } finally {

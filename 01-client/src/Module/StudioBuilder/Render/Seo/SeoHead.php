@@ -44,6 +44,8 @@ final class SeoHead
         public readonly ?string $canonicalUrl,
         public readonly ?string $ogImageUrl,
         public readonly string $siteName,
+        /** @var array<string, string> site-verification meta name => code (public output only) */
+        public readonly array $verification = [],
     ) {}
 
     /**
@@ -51,16 +53,25 @@ final class SeoHead
      */
     public static function build(array $seo, PageAddress $page, SiteContext $site, RenderMode $mode, MediaResolverInterface $media): self
     {
+        // The Site & SEO screen's settings fill in what the page leaves empty, and its robots can only make a page stricter.
+        $defaults = $site->seo;
         $title = trim(is_string($seo['title'] ?? null) ? $seo['title'] : '');
         if ($title === '') {
-            $title = $page->title;
+            $title = $defaults->title($page->title, $site->siteName);
         }
         $description = is_string($seo['description'] ?? null) ? trim($seo['description']) : '';
+        if ($description === '') {
+            $description = $defaults->description;
+        }
 
-        $robots = self::effectiveRobots($seo);
+        $robots = $defaults->robotsFor(self::effectiveRobots($seo));
 
         $ogImage = null;
         $ogId = $seo['og_image_media_id'] ?? null;
+        if (!is_int($ogId) || $ogId <= 0) {
+            $ogId = $defaults->ogImageMediaId;
+            $ogImage = $ogId === null && $defaults->ogImageUrl !== '' ? $defaults->ogImageUrl : null;
+        }
         if (is_int($ogId) && $ogId > 0) {
             $resolved = $media->resolveImage($ogId);
             if ($resolved !== null) {
@@ -79,6 +90,7 @@ final class SeoHead
             self::canonical($seo['canonical_url'] ?? null, $site, self::publicPath($page)),
             $ogImage,
             $site->siteName,
+            $defaults->verification,
         );
 
         return $head->forMode($mode);
@@ -142,6 +154,9 @@ final class SeoHead
             . ($this->canonicalUrl !== null ? '<meta property="og:url" content="' . Html::e($this->canonicalUrl) . '">' : '')
             . ($this->ogImageUrl !== null ? '<meta property="og:image" content="' . Html::e($this->ogImageUrl) . '">' : '')
             . '<meta name="twitter:card" content="' . ($this->ogImageUrl !== null ? 'summary_large_image' : 'summary') . '">';
+        foreach ($this->verification as $name => $code) {
+            $tags .= '<meta name="' . Html::e($name) . '" content="' . Html::e($code) . '">';
+        }
         return $tags;
     }
 
@@ -155,6 +170,7 @@ final class SeoHead
             'robots'        => $this->robots,
             'site_name'     => $this->siteName,
             'title'         => $this->title,
+            'verification'  => $this->verification,
         ];
     }
 
@@ -176,6 +192,20 @@ final class SeoHead
             Html::safeUrl($data['canonical_url'] ?? null),
             Html::safeUrl($data['og_image_url'] ?? null),
             is_string($data['site_name'] ?? null) ? $data['site_name'] : '',
+            self::verificationFrom($data['verification'] ?? null),
         );
+    }
+
+    /** @return array<string, string> only the two known verification tags, with codes of the allowed shape */
+    private static function verificationFrom(mixed $stored): array
+    {
+        $out = [];
+        foreach (['google-site-verification', 'msvalidate.01'] as $name) {
+            $code = is_array($stored) ? ($stored[$name] ?? null) : null;
+            if (is_string($code) && preg_match(SiteSeoDefaults::VERIFICATION_PATTERN, $code) === 1) {
+                $out[$name] = $code;
+            }
+        }
+        return $out;
     }
 }

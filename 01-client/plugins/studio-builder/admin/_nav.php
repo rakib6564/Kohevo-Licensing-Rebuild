@@ -4,7 +4,7 @@
  *
  * Provides:
  * - `sb_svg(string $name, int $size = 18)`: Zero-dependency SVG stroke outline icon renderer.
- * - `sb_render_admin_nav(string $activeSlug, ?int $portfolioPageId = null)`: Cohesive header and sub-nav.
+ * - `sb_render_admin_nav(string $activeSlug, ?int $builderPageId = null)`: Cohesive header and sub-nav.
  */
 
 declare(strict_types=1);
@@ -79,7 +79,7 @@ if (!function_exists('sb_render_admin_nav')) {
     /**
      * Render the executive top header and 13 individual page navigation items.
      */
-    function sb_render_admin_nav(string $activePage, ?int $portfolioPageId = null): void
+    function sb_render_admin_nav(string $activePage, ?int $builderPageId = null): void
     {
         $items = [
             ['id' => 'overview',        'label' => 'Overview',         'file' => 'index.php',          'icon' => 'overview'],
@@ -101,7 +101,22 @@ if (!function_exists('sb_render_admin_nav')) {
             $items = array_values(array_filter($items, static fn (array $item): bool => $item['id'] !== 'code-tracking'));
         }
 
-        $targetPageId = $portfolioPageId ?? 1;
+        // "Open Canvas Builder" opens the site's homepage (or its first live page); with no pages yet it goes to the page list.
+        $targetPageId = $builderPageId;
+        if ($targetPageId === null) {
+            try {
+                $found = Database::value(
+                    "SELECT id FROM studiobuilder_pages WHERE tenant_id = ? AND page_type IN ('page','landing') AND status <> 'archived' ORDER BY (route_mode = 'homepage') DESC, (status = 'published') DESC, id ASC LIMIT 1",
+                    [current_tenant_id()]
+                );
+                $targetPageId = $found ? (int) $found : null;
+            } catch (\Throwable $e) {
+                $targetPageId = null;
+            }
+        }
+        $builderHref = $targetPageId !== null
+            ? plugin_url('studio-builder', 'admin/builder.php') . '?page=' . $targetPageId
+            : plugin_url('studio-builder', 'admin/pages.php');
         ?>
         <style>
             :root {
@@ -492,11 +507,11 @@ if (!function_exists('sb_render_admin_nav')) {
                 <p class="page-header-sub">Visual theme builder, dynamic query loop engine, custom post types & meta fields, and AI workflow hub.</p>
             </div>
             <div class="sb-admin-header-actions">
-                <a href="<?= e(plugin_url('studio-builder', 'admin/builder.php') . '?page=' . $targetPageId) ?>" class="btn btn-primary" target="_blank" rel="noopener">
+                <a href="<?= e($builderHref) ?>" class="btn btn-primary"<?= $targetPageId !== null ? ' target="_blank" rel="noopener"' : '' ?>>
                     <?= sb_svg('zap', 16) ?>
                     <span>Open Canvas Builder</span>
                 </a>
-                <a href="<?= e(SLATE_URL . '/portfolio') ?>" class="btn btn-outline" target="_blank" rel="noopener">
+                <a href="<?= e(rtrim(SLATE_URL, '/') . '/') ?>" class="btn btn-outline" target="_blank" rel="noopener">
                     <?= sb_svg('external-link', 16) ?>
                     <span>View Live Site</span>
                 </a>

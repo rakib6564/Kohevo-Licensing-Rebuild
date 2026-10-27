@@ -3,7 +3,8 @@ import { test, expect } from '@playwright/test';
 
 const ADMIN = '/plugins/studio-builder/admin';
 
-for (const [file, reveal] of [['seo.php', null], ['code-tracking.php', null], ['ai-mcp.php', null], ['types-fields.php', 'sb-cpt-drawer'], ['redirects.php', 'sb-redirect-drawer']]) {
+// ai-mcp.php is not listed: it is a read-only list of the MCP tools, with no form.
+for (const [file, reveal] of [['seo.php', null], ['code-tracking.php', null], ['types-fields.php', 'sb-cpt-drawer'], ['redirects.php', 'sb-redirect-drawer']]) {
   test(`${file}: labels sit above their controls, which are wide enough to use`, async ({ page }) => {
     await page.goto(`${ADMIN}/${file}`);
     if (reveal) await page.evaluate((id) => { document.getElementById(id).style.display = 'block'; }, reveal);

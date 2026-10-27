@@ -15,6 +15,8 @@ require_once __DIR__ . '/_page_bulk.php';
 use Slate\Module\StudioBuilder\Admin\PageListView;
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Exception\StudioException;
+use Slate\Module\StudioBuilder\Mcp\StudioMcpToolCatalog;
+use Slate\Module\StudioBuilder\Meta\MetaFieldTypes;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 use Slate\Module\StudioBuilder\StudioPermissions;
 
@@ -51,15 +53,15 @@ try {
 }
 $canEdit = $studioActor->can(StudioPermissions::EDIT) && $listError === null;
 
-// Find Portfolio page for quick launch
-$portfolioPage = null;
+// The site's homepage (the page that serves `/`), for the homepage card. Pages come newest first, so a published one wins.
+$homePage = null;
 foreach ($pages as $p) {
-    if (($p['slug'] ?? '') === 'portfolio') {
-        $portfolioPage = $p;
-        break;
+    if (($p['route_mode'] ?? '') === 'homepage' && ($homePage === null || (!empty($p['is_published']) && empty($homePage['is_published'])))) {
+        $homePage = $p;
     }
 }
-$portfolioPageId = (int) ($portfolioPage['id'] ?? ($pages[0]['id'] ?? 1));
+$mcpTools = count(StudioMcpToolCatalog::tools());
+$mcpGateway = class_exists('PluginLoader') && PluginLoader::isActive('mcp-gateway');
 
 // Stats calculations
 $totalPages = count($pages);
@@ -77,7 +79,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
 <div class="sb-admin-wrapper">
-    <?php sb_render_admin_nav('overview', $portfolioPageId); ?>
+    <?php sb_render_admin_nav('overview', $homePage !== null ? (int) $homePage['id'] : null); ?>
 
     <?php if ($flash): ?>
         <div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div>
@@ -99,27 +101,27 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </div>
         <div class="sb-kpi-card">
             <div class="sb-kpi-top">
-                <span class="sb-kpi-label">Theme Templates</span>
+                <span class="sb-kpi-label"><?= e(__('studio_overview_templates', 'Page templates')) ?></span>
                 <?= sb_svg('templates', 20, 'sb-muted') ?>
             </div>
-            <div class="sb-kpi-value"><?= count($templates) + 5 ?></div>
-            <div class="sb-kpi-meta">Headers, Footers, Archives, Loop Grids</div>
+            <div class="sb-kpi-value"><?= count($templates) ?></div>
+            <div class="sb-kpi-meta"><?= e(__('studio_overview_templates_meta', 'In your template library')) ?></div>
         </div>
         <div class="sb-kpi-card">
             <div class="sb-kpi-top">
-                <span class="sb-kpi-label">Active Theme</span>
+                <span class="sb-kpi-label"><?= e(__('studio_overview_homepage', 'Homepage')) ?></span>
                 <?= sb_svg('themes', 20, 'sb-muted') ?>
             </div>
-            <div class="sb-kpi-value" style="font-size: 1.3rem; font-weight: 700; color: #6366f1;">Obsidian Dark</div>
-            <div class="sb-kpi-meta">Ultra-Luxury Portfolio Edition</div>
+            <div class="sb-kpi-value" style="font-size: 1.3rem; font-weight: 700;"><?= e($homePage !== null ? (string) $homePage['title'] : __('studio_overview_no_homepage', 'None yet')) ?></div>
+            <div class="sb-kpi-meta"><?= e($homePage === null ? __('studio_overview_no_homepage_meta', 'Set one in a page\'s settings') : (!empty($homePage['is_published']) ? __('studio_overview_home_live', 'Live at /') : __('studio_overview_home_draft', 'Not published yet'))) ?></div>
         </div>
         <div class="sb-kpi-card">
             <div class="sb-kpi-top">
-                <span class="sb-kpi-label">AI & MCP Gateway</span>
+                <span class="sb-kpi-label"><?= e(__('studio_overview_ai', 'AI assistant tools')) ?></span>
                 <?= sb_svg('ai-mcp', 20, 'sb-muted') ?>
             </div>
-            <div class="sb-kpi-value" style="color: #10b981; font-size: 1.3rem;">Connected</div>
-            <div class="sb-kpi-meta">5 Assistant tools registered</div>
+            <div class="sb-kpi-value"><?= $mcpTools ?></div>
+            <div class="sb-kpi-meta"><?= e($mcpGateway ? __('studio_overview_ai_on', 'MCP gateway installed') : __('studio_overview_ai_off', 'MCP gateway not installed')) ?></div>
         </div>
     </div>
 
@@ -130,23 +132,29 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <div class="sb-feature-header">
                     <div class="sb-feature-icon-box"><?= sb_svg('zap', 22) ?></div>
                     <div>
-                        <h3 class="sb-feature-title">Freelancer Portfolio Website</h3>
-                        <p class="sb-feature-desc">Active flagship portfolio with hero status indicator, case studies, areas of expertise, and consultation brief form.</p>
+                        <h3 class="sb-feature-title"><?= e($homePage !== null ? (string) $homePage['title'] : __('studio_overview_homepage', 'Homepage')) ?></h3>
+                        <p class="sb-feature-desc"><?= e($homePage !== null ? __('studio_overview_home_desc', 'The page visitors see at your site\'s address.') : __('studio_overview_home_none_desc', 'No page is set as the homepage yet. Open a page\'s settings and choose Site Homepage.')) ?></p>
                     </div>
                 </div>
-                <div style="font-size: 0.85rem; color: #64748b; margin-top: 8px;">
-                    Path: <code>/portfolio</code> · Status: <span class="badge badge-active">Live Published</span>
-                </div>
+                <?php if ($homePage !== null): ?>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 8px;">
+                        <?= e(__('studio_overview_path', 'Path')) ?>: <code>/</code> · <span class="badge <?= !empty($homePage['is_published']) ? 'badge-active' : 'badge-muted' ?>"><?= e(!empty($homePage['is_published']) ? __('studio_status_published', 'Published') : __('studio_status_draft', 'Draft')) ?></span>
+                    </div>
+                <?php endif; ?>
             </div>
             <div class="sb-feature-footer">
-                <a href="<?= e(plugin_url('studio-builder', 'admin/builder.php') . '?page=' . $portfolioPageId) ?>" class="btn btn-sm btn-primary">
-                    <?= sb_svg('edit', 14) ?>
-                    <span>Edit in Canvas</span>
-                </a>
-                <a href="<?= e(SLATE_URL . '/portfolio') ?>" class="btn btn-sm btn-outline" target="_blank" rel="noopener">
-                    <?= sb_svg('external-link', 14) ?>
-                    <span>Preview Live</span>
-                </a>
+                <?php if ($homePage !== null): ?>
+                    <a href="<?= e(plugin_url('studio-builder', 'admin/builder.php') . '?page=' . (int) $homePage['id']) ?>" class="btn btn-sm btn-primary">
+                        <?= sb_svg('edit', 14) ?>
+                        <span><?= e(__('studio_overview_edit', 'Edit in Canvas')) ?></span>
+                    </a>
+                    <a href="<?= e(rtrim(SLATE_URL, '/') . '/') ?>" class="btn btn-sm btn-outline" target="_blank" rel="noopener">
+                        <?= sb_svg('external-link', 14) ?>
+                        <span><?= e(__('studio_overview_view', 'View live')) ?></span>
+                    </a>
+                <?php else: ?>
+                    <a href="pages.php" class="btn btn-sm btn-primary"><?= sb_svg('pages', 14) ?> <span><?= e(__('studio_pages', 'Pages')) ?></span></a>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -182,7 +190,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     </div>
                 </div>
                 <div style="font-size: 0.85rem; color: #64748b; margin-top: 8px;">
-                    Supports 10 field types: Text, Textarea, Number, Image, Gallery, Select, Relation, Date, Boolean, URL.
+                    <?= e(sprintf(__('studio_overview_field_types', '%d field types, from text and numbers to images, relations and repeaters.'), count(MetaFieldTypes::all()))) ?>
                 </div>
             </div>
             <div class="sb-feature-footer">
