@@ -152,12 +152,13 @@ final class SeoHead
                 $context->site->baseUrl !== '' ? $context->site->absoluteUrl('/' . $type . '/' . rawurlencode($term)) : null,
                 $this->ogImageUrl,
                 $this->siteName,
+                $this->verification,
             );
         }
         if ($context->attribute('is_search') === true || $context->attribute('is_404') === true) {
             $query = $context->attribute('search_query');
             $title = is_string($query) && trim($query) !== '' ? trim($query) . ($this->siteName !== '' ? ' | ' . $this->siteName : '') : $this->title;
-            return new self($title, $this->description, 'noindex,follow', null, $this->ogImageUrl, $this->siteName);
+            return new self($title, $this->description, 'noindex,follow', null, $this->ogImageUrl, $this->siteName, $this->verification);
         }
         return $this;
     }

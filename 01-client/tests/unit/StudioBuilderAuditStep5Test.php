@@ -48,6 +48,11 @@ unit('listing heads: an archive is titled by its term with its own canonical; se
 
     $page = sba5_head();
     assert_true($page->forListing(sba5_ctx([])) === $page, 'an ordinary page is unchanged');
+
+    $verified = new SeoHead('T', '', 'index,follow', null, null, 'Acme', ['google-site-verification' => 'gv_1']);
+    foreach ([['archive_type' => 'tag', 'term' => 'x'], ['is_search' => true]] as $attributes) {
+        assert_eq(['google-site-verification' => 'gv_1'], $verified->forListing(sba5_ctx($attributes))->verification, 'the site verification tag stays on listing pages');
+    }
 });
 
 unit('single templates: tag and author conditions, and their excludes, now see the page', function (): void {
