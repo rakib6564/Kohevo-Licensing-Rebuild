@@ -377,7 +377,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 // Count fields
                 $fieldCount = count(array_filter($metaFields, fn($f) => ($f['post_type'] ?? '') === $tKey));
             ?>
-                <div class="card" style="border-radius: 14px; border: 1px solid var(--sb-border); padding: 18px; display: flex; flex-direction: column; justify-content: space-between;">
+                <div class="card" data-post-type="<?= e($tKey) ?>" style="border-radius: 14px; border: 1px solid var(--sb-border); padding: 18px; display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                             <span style="font-size: 0.72rem; font-weight: 700; background: rgba(99, 102, 241, 0.1); color: var(--sb-accent); padding: 2px 7px; border-radius: 6px; text-transform: uppercase;">
@@ -393,9 +393,6 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         </p>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--sb-border); padding-top: 12px;">
-                        <a href="<?= e(plugin_url('studio-builder', 'admin/content.php?type=' . $tKey)) ?>" class="btn btn-sm btn-outline">
-                            <?= sb_svg('content', 12) ?> Manage Items
-                        </a>
                         <?php if ($canEdit): ?>
                             <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>" onsubmit="return confirm('Delete the post type <?= e(addslashes($pt['singular'])) ?>? Its meta fields are deleted too. Content already created is kept.');" style="margin: 0;">
                                 <?= csrf_field() ?>

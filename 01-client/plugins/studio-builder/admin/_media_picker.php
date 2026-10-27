@@ -264,60 +264,6 @@ if (!function_exists('sb_render_media_picker_modal')) {
                     }
                 },
 
-                /**
-                 * Opens the built-in Slate Media Library picker for updating an existing card in one click.
-                 */
-                openForCard: function(itemKey, itemType) {
-                    var onSelect = function(url) {
-                        var form = document.createElement('form');
-                        form.method = 'POST';
-                        form.style.display = 'none';
-
-                        var fAction = document.createElement('input');
-                        fAction.type = 'hidden'; fAction.name = 'action_update_item_image'; fAction.value = '1';
-                        form.appendChild(fAction);
-
-                        var fCsrf = document.createElement('input');
-                        fCsrf.type = 'hidden'; fCsrf.name = '_csrf'; fCsrf.value = <?= json_encode(csrf_token()) ?>;
-                        form.appendChild(fCsrf);
-
-                        var fType = document.createElement('input');
-                        fType.type = 'hidden'; fType.name = 'item_type'; fType.value = itemType;
-                        form.appendChild(fType);
-
-                        var fIdx = document.createElement('input');
-                        fIdx.type = 'hidden'; fIdx.name = 'item_key'; fIdx.value = itemKey;
-                        form.appendChild(fIdx);
-
-                        var fUrl = document.createElement('input');
-                        fUrl.type = 'hidden'; fUrl.name = 'image_url'; fUrl.value = url;
-                        form.appendChild(fUrl);
-
-                        document.body.appendChild(form);
-                        form.submit();
-                    };
-
-                    if (window.SlateMedia && typeof window.SlateMedia.open === 'function') {
-                        window.SlateMedia.open({
-                            types: 'image',
-                            multiple: false,
-                            onPick: function(item) {
-                                if (!item) return;
-                                var url = item.url || (item.path ? ('/' + item.path.replace(/^\/+/, '')) : '');
-                                onSelect(url);
-                            }
-                        });
-                    } else if (window.MediaPicker && typeof window.MediaPicker.open === 'function') {
-                        window.MediaPicker.open({
-                            mode: 'single',
-                            onPick: function(path, item) {
-                                var url = (item && item.url) ? item.url : (path ? ('/' + path.replace(/^\/+/, '')) : '');
-                                onSelect(url);
-                            }
-                        });
-                    }
-                },
-
                 updatePreview: function(fieldId, url) {
                     var previewBox = document.getElementById('preview_' + fieldId);
                     var clearBtn = document.getElementById('clear_' + fieldId);

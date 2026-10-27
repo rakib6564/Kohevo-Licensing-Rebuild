@@ -20,7 +20,6 @@ require_once SLATE_ROOT . '/src/autoload.php';
 if (!function_exists('unit')) {
     require_once __DIR__ . '/harness.php';
 }
-require_once SLATE_ROOT . '/plugins/studio-builder/admin/_content_items.php';
 require_once SLATE_ROOT . '/plugins/studio-builder/admin/_revisions.php';
 require_once SLATE_ROOT . '/plugins/studio-builder/admin/_nav.php';
 
@@ -28,28 +27,6 @@ function sbas_admin(string $file): string
 {
     return (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/admin/' . $file);
 }
-
-unit('content items: a key names the item, not its place, so a stale or repeated form deletes nothing', function (): void {
-    $a = ['title' => 'Alpha', 'year' => '2025'];
-    $b = ['title' => 'Beta', 'year' => '2026'];
-    $c = ['title' => 'Gamma', 'year' => '2026'];
-    $keyB = sb_content_item_key($b);
-    assert_eq($keyB, sb_content_item_key(['title' => 'Beta', 'year' => '2026']), 'the same fields give the same key');
-    assert_true($keyB !== sb_content_item_key($a), 'other items have other keys');
-    assert_eq(1, sb_content_item_index([$a, $b, $c], $keyB));
-    assert_eq(0, sb_content_item_index([$b, $c], $keyB), 'after an item before it went, the key still finds it');
-    assert_null(sb_content_item_index([$a, $c], $keyB), 'once it is deleted, the same form finds nothing (it would have deleted Gamma by position)');
-    assert_null(sb_content_item_index([$a, $b], ''), 'no key, no item');
-    assert_null(sb_content_item_index([['title' => 'Beta', 'year' => '2027']], $keyB), 'a changed item is not the one the screen showed');
-});
-
-unit('content screen: delete and "change image" post the item key; the media picker sends it', function (): void {
-    $src = sbas_admin('content.php');
-    assert_false(str_contains($src, "'item_index'") || str_contains($src, 'name="item_index"'), 'no position is posted or read');
-    assert_eq(3, substr_count($src, '<input type="hidden" name="item_key" value="<?= e(sb_content_item_key('), 'each Delete form names its item');
-    assert_true(str_contains($src, "sb_content_item_index(\$items, trim((string) (\$_POST['item_key'] ?? '')))"));
-    assert_true(str_contains(sbas_admin('_media_picker.php'), "fIdx.name = 'item_key'; fIdx.value = itemKey;"));
-});
 
 unit('reviews: the draft, the live revision and the draft\'s recent lineage are kept; older history is not', function (): void {
     // Page 1: 1 <- 2 <- 3 <- 4 (draft); 2 is published. Page 2: draft 10, nothing published.
@@ -84,7 +61,7 @@ unit('reviews: the screen deletes and marks "in use" with the same rule', functi
 });
 
 unit('admin screens: each change redirects (303) with its message in the session, and the screen shows it once', function (): void {
-    foreach (['content.php', 'templates.php', 'types-fields.php', 'redirects.php', 'media.php', 'seo.php', 'code-tracking.php', 'reviews.php'] as $file) {
+    foreach (['templates.php', 'types-fields.php', 'redirects.php', 'media.php', 'seo.php', 'code-tracking.php', 'reviews.php'] as $file) {
         $src = sbas_admin($file);
         assert_true(str_contains($src, 'sb_flash_redirect('), "{$file} redirects after a change");
         assert_true(str_contains($src, '$flash = $flash ?? sb_take_flash();'), "{$file} shows the message after the redirect");
@@ -101,7 +78,7 @@ unit('admin screens: each change redirects (303) with its message in the session
 });
 
 unit('admin screens: a screen that writes settings or rows itself checks the Studio licence first', function (): void {
-    foreach (['content.php', 'templates.php', 'types-fields.php', 'redirects.php', 'media.php', 'seo.php', 'code-tracking.php', 'reviews.php', 'menu-new.php', 'menu-edit.php'] as $file) {
+    foreach (['templates.php', 'types-fields.php', 'redirects.php', 'media.php', 'seo.php', 'code-tracking.php', 'reviews.php', 'menu-new.php', 'menu-edit.php'] as $file) {
         assert_true(str_contains(sbas_admin($file), '!sb_studio_entitled()'), "{$file} checks the entitlement");
     }
     assert_true(str_contains(sbas_admin('_nav.php'), "ModuleGuard::allows('studio-builder')"), 'the same entitlement the application service asks for');

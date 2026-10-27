@@ -1,13 +1,11 @@
 <?php
 /**
- * Studio permission levels on two admin pages that wrote rows directly:
+ * Studio permission levels on an admin page that wrote rows directly:
  *
  * - plugins/studio-builder/admin/templates.php let anyone with
  *   studio-builder.edit create and delete templates (the services require
  *   studio-builder.admin) and unpublish ANY page in the tenant with a raw
  *   UPDATE, unaudited and leaving the compiled page cached.
- * - plugins/studio-builder/admin/content.php checked only that someone was
- *   signed in, so any admin user could rewrite the public portfolio content.
  *
  * Driven through the real pages in child processes, as a real role with
  * only view+edit, as a view-only role, and as super admin. Everything
@@ -127,21 +125,5 @@ unit('theme builder: unpublish touches only Theme Builder pages, and is audit-lo
         Database::query("DELETE FROM audit_log WHERE action = 'studio.page.unpublished' AND target IN (?, ?)", [(string) $sitePage, (string) $tplPage]);
         sap_drop_page($sitePage);
         sap_drop_page($tplPage);
-    }
-});
-
-unit('studio content page requires studio-builder.edit', function (): void {
-    $viewer = sap_role(['studio-builder.view']);
-    $editor = sap_role(['studio-builder.view', 'studio-builder.edit']);
-    try {
-        [$status] = sap_probe('admin-page-probe.php', 'plugins/studio-builder/admin/content.php', '', $viewer);
-        assert_eq(403, $status, 'a view-only user cannot open or post the content editor');
-        [$status] = sap_probe('admin-page-post-probe.php', 'plugins/studio-builder/admin/content.php', (string) json_encode(['_action' => 'save_profile']), $viewer);
-        assert_eq(403, $status, 'and cannot post to it');
-        [$status] = sap_probe('admin-page-probe.php', 'plugins/studio-builder/admin/content.php', '', $editor);
-        assert_eq(200, $status, 'an editor can');
-    } finally {
-        sap_drop_role($viewer);
-        sap_drop_role($editor);
     }
 });

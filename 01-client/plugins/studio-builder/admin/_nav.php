@@ -84,7 +84,6 @@ if (!function_exists('sb_render_admin_nav')) {
         $items = [
             ['id' => 'overview',        'label' => __('studio_nav_overview', 'Overview'), 'file' => 'index.php',          'icon' => 'overview'],
             ['id' => 'pages',           'label' => __('studio_nav_pages', 'Pages'), 'file' => 'pages.php',          'icon' => 'pages'],
-            ['id' => 'content',         'label' => __('studio_nav_content', 'Content'), 'file' => 'content.php',        'icon' => 'content'],
             ['id' => 'media',           'label' => __('studio_nav_media', 'Media'), 'file' => 'media.php',          'icon' => 'media'],
             ['id' => 'templates',       'label' => __('studio_nav_templates', 'Templates'), 'file' => 'templates.php',      'icon' => 'templates'],
             ['id' => 'menus',           'label' => __('studio_nav_menus', 'Menus'), 'file' => 'menus.php',          'icon' => 'menus'],

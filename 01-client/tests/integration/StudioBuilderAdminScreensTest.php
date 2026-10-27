@@ -6,7 +6,6 @@
  * test database. Each setting a test touches is put back as it was.
  *
  * - Types & fields: the first field a site adds keeps the starter fields every page already shows.
- * - Content: an item is deleted by its key, the screen redirects (303), and the same form sent again deletes nothing.
  * - Redirects: an empty address is refused as missing, not normalised to "/".
  */
 
@@ -14,7 +13,6 @@ declare(strict_types=1);
 
 use Slate\Module\StudioBuilder\Meta\PageMeta;
 
-require_once dirname(__DIR__, 2) . '/plugins/studio-builder/admin/_content_items.php';
 
 /** POST to an admin screen as super admin; returns [status, output]. */
 function sbasi_post(string $screen, array $fields, string $query = ''): array
@@ -57,27 +55,6 @@ unit('types & fields: the first field added to a new site keeps the starter fiel
         $keys = array_column(PageMeta::allFields($tid), 'key');
         assert_eq(array_merge($starterKeys, ['budget']), $keys, 'the starters are still there, with the new field after them');
         assert_eq($keys, array_column(PageMeta::fieldsFor($tid, 'portfolio'), 'key'), 'and the pages read the same list');
-    });
-});
-
-unit('content: an item is deleted by its key, and the same form sent twice deletes nothing more', function (): void {
-    $items = [
-        ['number' => '01', 'title' => 'Audit', 'description' => '', 'deliverables' => ''],
-        ['number' => '02', 'title' => 'Build', 'description' => '', 'deliverables' => ''],
-        ['number' => '03', 'title' => 'Care', 'description' => '', 'deliverables' => ''],
-    ];
-    sbasi_with_setting('studio_content_service', (string) json_encode($items), function (int $tid) use ($items): void {
-        $form = ['action_delete_item' => '1', 'item_key' => sb_content_item_key($items[1])];
-        [$status, $out] = sbasi_post('content.php', $form, 'type=service');
-        assert_eq(303, $status, 'a delete redirects (POST/redirect/GET): ' . substr($out, 0, 300));
-        $left = json_decode((string) Database::setting('studio_content_service', $tid), true);
-        assert_eq(['Audit', 'Care'], array_column($left, 'title'), 'the item the form named went');
-
-        [$status, $out] = sbasi_post('content.php', $form, 'type=service');
-        assert_eq(200, $status, 'the stale form is refused on the screen');
-        assert_true(str_contains($out, 'changed or deleted since this page was loaded'), 'and says why');
-        $left = json_decode((string) Database::setting('studio_content_service', $tid), true);
-        assert_eq(['Audit', 'Care'], array_column($left, 'title'), 'nothing else was deleted (by position it would have taken Care)');
     });
 });
 

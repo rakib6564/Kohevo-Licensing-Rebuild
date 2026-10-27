@@ -128,13 +128,6 @@ unit('widget SDK: a FieldSchema object is checked like a field list, nested sche
     assert_true(str_contains($doc, 'Not enforced here: renderer isolation'), 'the docblock no longer promises isolation it does not enforce');
 });
 
-unit('portfolio showcase: registered by the portfolio plugin only, not by Studio for every tenant', function (): void {
-    $studio = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/StudioBuilder.php');
-    assert_false(str_contains($studio, 'StudioBuilderPortfolioWidgets::register'), 'Studio does not register it');
-    $portfolio = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-freelancer-portfolio/StudioFreelancerPortfolio.php');
-    assert_true(str_contains($portfolio, 'StudioBuilderPortfolioWidgets::onRegisterWidgets'), 'the portfolio plugin does');
-});
-
 unit('MCP: every result opens with the untrusted-content notice', function (): void {
     $src = (string) file_get_contents(SLATE_ROOT . '/src/Module/StudioBuilder/Mcp/StudioMcpAdapter.php');
     assert_true(str_contains($src, "return ['untrusted_content' => ['notice' => self::UNTRUSTED_NOTICE]] + \$this->dispatch("));

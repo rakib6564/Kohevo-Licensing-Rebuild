@@ -9,7 +9,7 @@ test.beforeEach(async ({}, info) => {
 
 test('a built-in post type can be deleted, asks first, and is restored from the button', async ({ page }) => {
   await page.goto(TYPES);
-  const cards = page.locator('.card:has(a:text("Manage Items")), .sb-card:has(a:text("Manage Items"))');
+  const cards = page.locator('[data-post-type]');
   const before = await cards.count();
   expect(before).toBeGreaterThanOrEqual(4);
   const target = cards.filter({ hasText: 'Testimonial' }).first();
