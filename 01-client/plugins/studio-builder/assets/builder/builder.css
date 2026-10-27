@@ -3099,7 +3099,8 @@ html, body.sbx-body {
 .sbx-ss__text { flex: 1; min-width: 0; }
 .sbx-ss__reset { flex: none; width: 20px; height: 20px; padding: 0; border: 0; border-radius: var(--sbx-r-sm); background: transparent; color: inherit; cursor: pointer; opacity: 0.6; }
 .sbx-ss__reset:hover { opacity: 1; background: var(--sbx-panel); }
-.sbx-ss__bar { position: sticky; bottom: 0; padding: 0.6rem 0; background: var(--sbx-bg, inherit); }
+.sbx-ss__bar { position: sticky; bottom: 0; margin-top: 0.75rem; padding: 0.75rem 0; background: var(--sbx-panel); border-top: 1px solid var(--sbx-border); }
+.sbx-ss__foot { display: contents; }
 .sbx-ss__actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; }
 
 /* ── Element Manager ── */
