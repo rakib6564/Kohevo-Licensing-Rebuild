@@ -1466,7 +1466,7 @@ final class StudioApplicationService
         // A draft saved at an older block version is read at the current one, so the next edit saves it upgraded.
         $document = $revision !== null
             ? DocumentUpgrader::upgrade(CanonicalJson::decode((string) $revision['document_json']), $this->registry)['document']
-            : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
+            : CanonicalDocumentSchema::emptyDocument((string) $page['page_type']);
 
         return [
             'page'     => StudioEditorViews::page($page),
@@ -1737,7 +1737,7 @@ final class StudioApplicationService
             }
         }
 
-        $baseDocument     = $base !== null ? CanonicalJson::decode((string) $base['document_json']) : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
+        $baseDocument     = $base !== null ? CanonicalJson::decode((string) $base['document_json']) : CanonicalDocumentSchema::emptyDocument((string) $page['page_type']);
         $proposedDocument = CanonicalJson::decode((string) $proposed['document_json']);
 
         $depsBefore = $this->dependencySignatures($baseDocument);
@@ -1984,7 +1984,7 @@ final class StudioApplicationService
         // A draft saved at an older block version is read at the current one, so the next edit saves it upgraded.
         $document = $revision !== null
             ? DocumentUpgrader::upgrade(CanonicalJson::decode((string) $revision['document_json']), $this->registry)['document']
-            : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
+            : CanonicalDocumentSchema::emptyDocument((string) $page['page_type']);
         return [$page, $document];
     }
 
