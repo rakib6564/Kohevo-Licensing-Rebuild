@@ -11,6 +11,12 @@ declare(strict_types=1);
 require __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/_nav.php';
 
+use Slate\Module\StudioBuilder\Application\StudioActor;
+use Slate\Module\StudioBuilder\Exception\StudioConcurrencyException;
+use Slate\Module\StudioBuilder\Exception\StudioException;
+use Slate\Module\StudioBuilder\Exception\StudioValidationException;
+use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
+
 Auth::require();
 Auth::requirePerm('studio-builder.view');
 
@@ -35,11 +41,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bulk = (string) ($_POST['bulk_action'] ?? '');
         $rowAction = (string) ($_POST['row_action'] ?? '');
 
-        // A row's Restore button names its revision (`restore:<id>`); the page is read from the revision itself.
+        // A row's Restore button names its revision and the page's draft as the screen showed it (`restore:<id>:<draft>`);
+        // the page is read from the revision itself.
         if (str_starts_with($rowAction, 'restore:')) {
             $action = 'rollback_revision';
-            $_POST['revision_id'] = (int) substr($rowAction, 8);
-            $_POST['page_id'] = (int) Database::value('SELECT page_id FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [$tenantId, (int) $_POST['revision_id']]);
+            [$restoreRev, $restoreDraft] = array_map('intval', array_pad(explode(':', substr($rowAction, 8), 2), 2, '0'));
+            $_POST['revision_id'] = $restoreRev;
+            $_POST['expected_revision_id'] = $restoreDraft;
+            $_POST['page_id'] = (int) Database::value('SELECT page_id FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [$tenantId, $restoreRev]);
         }
 
         // Deleting history is permanent, so it is administrators only. A page's published revision and its current draft are
@@ -82,40 +91,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($action === 'rollback_revision') {
             $revId = (int) ($_POST['revision_id'] ?? 0);
             $pageId = (int) ($_POST['page_id'] ?? 0);
+            $expected = (int) ($_POST['expected_revision_id'] ?? 0);
 
+            // Through the revision service, like the builder's own rollback: the snapshot is upgraded and validated, written
+            // under the page lock against the draft this screen showed, keeps locked layers, records its dependencies (so a
+            // component or template it uses cannot then be deleted) and is audited. It becomes the page's draft; the live page is
+            // untouched until that draft is published.
             if ($revId > 0 && $pageId > 0) {
                 try {
-                    $targetRev = Database::row("SELECT * FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ? AND page_id = ? LIMIT 1", [$tenantId, $revId, $pageId]);
-
-                    if (!$targetRev) {
-                        $flash = ['type' => 'error', 'msg' => 'Revision not found or belongs to another tenant.'];
-                    } else {
-                        // Find current max revision number for this page
-                        $maxRev = (int) Database::value("SELECT MAX(revision_number) FROM studiobuilder_revisions WHERE tenant_id = ? AND page_id = ?", [$tenantId, $pageId]);
-                        $nextRevNum = $maxRev + 1;
-
-                        // The restored copy is a new revision, and it becomes the page's current draft so the builder opens it.
-                        // The live page is untouched until that draft is published.
-                        $newId = Database::insert('studiobuilder_revisions', [
-                            'tenant_id' => $tenantId,
-                            'page_id' => $pageId,
-                            'revision_number' => $nextRevNum,
-                            'revision_kind' => 'rollback',
-                            'schema_version' => (string) ($targetRev['schema_version'] ?? '1.0'),
-                            'document_json' => $targetRev['document_json'],
-                            'summary' => "Rollback to revision #{$targetRev['revision_number']} (from ID #{$revId})",
-                            'parent_revision_id' => $revId,
-                            'created_by' => (int) (Auth::userId() ?? 1),
-                            'created_at' => date('Y-m-d H:i:s'),
-                        ]);
-
-                        Database::query('UPDATE studiobuilder_pages SET active_draft_revision_id = ?, updated_at = NOW(), updated_by = ? WHERE tenant_id = ? AND id = ?', [$newId, (int) (Auth::userId() ?? 1), $tenantId, $pageId]);
-
-                        $flash = ['type' => 'success', 'msg' => "Page restored to snapshot #{$targetRev['revision_number']} as a new draft (revision #{$nextRevNum}). Open it in the builder to review and publish."];
-                    }
+                    $result = StudioRuntimeFactory::build()->app->rollback(StudioActor::fromCurrentSession(), $pageId, $revId, $expected > 0 ? $expected : null);
+                    $flash = ['type' => 'success', 'msg' => sprintf(
+                        __('studio_review_restored', 'Page restored to that snapshot as a new draft (revision #%d). Open it in the builder to review and publish.'),
+                        (int) ($result['revision']['revision_number'] ?? 0)
+                    )];
+                } catch (StudioConcurrencyException) {
+                    $flash = ['type' => 'error', 'msg' => __('studio_review_restore_stale', 'The page changed since this list was loaded. Reload and try again.')];
+                } catch (StudioException $e) {
+                    $first = $e instanceof StudioValidationException ? (string) ($e->errors()[0]['message'] ?? '') : '';
+                    $flash = ['type' => 'error', 'msg' => trim(__('studio_review_restore_failed', 'This snapshot could not be restored.') . ' ' . $first)];
                 } catch (\Throwable $e) {
-                    $flash = ['type' => 'error', 'msg' => 'Rollback failed: ' . $e->getMessage()];
+                    error_log('[studio reviews] restore failed: ' . $e->getMessage());
+                    $flash = ['type' => 'error', 'msg' => __('studio_review_restore_failed', 'This snapshot could not be restored.')];
                 }
+            } else {
+                $flash = ['type' => 'error', 'msg' => __('studio_review_restore_failed', 'This snapshot could not be restored.')];
             }
         }
     }
@@ -151,7 +150,7 @@ try {
     $total = (int) Database::value('SELECT COUNT(*) FROM studiobuilder_revisions r INNER JOIN studiobuilder_pages p ON r.page_id = p.id' . $where, $params);
     $pageNo = min(max(1, (int) ($_GET['p'] ?? 1)), max(1, (int) ceil($total / $perPage)));
     $revisions = Database::all(
-        'SELECT r.*, p.title AS page_title, p.slug AS page_slug FROM studiobuilder_revisions r INNER JOIN studiobuilder_pages p ON r.page_id = p.id'
+        'SELECT r.*, p.title AS page_title, p.slug AS page_slug, p.active_draft_revision_id AS page_draft_id, p.status AS page_status FROM studiobuilder_revisions r INNER JOIN studiobuilder_pages p ON r.page_id = p.id'
         . $where . ' ORDER BY r.id DESC LIMIT ' . $perPage . ' OFFSET ' . (($pageNo - 1) * $perPage),
         $params
     );
@@ -241,8 +240,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
                     $actions = '<a href="' . e(plugin_url('studio-builder', 'admin/builder.php?page=' . $pId)) . '" target="_blank" rel="noopener" class="btn btn-sm btn-ghost">'
                         . sb_svg('eye', 12) . ' Open in Builder</a>';
-                    if ($canEdit) {
-                        $actions .= ' <button type="submit" name="row_action" value="restore:' . $rId . '" class="btn btn-sm btn-primary" data-row-confirm="Restore page to snapshot #' . $revNum . '?" title="Roll the page back to this snapshot">'
+                    if ($canEdit && ($rev['page_status'] ?? '') !== 'archived') {
+                        $actions .= ' <button type="submit" name="row_action" value="restore:' . $rId . ':' . (int) ($rev['page_draft_id'] ?? 0) . '" class="btn btn-sm btn-primary" data-row-confirm="Restore page to snapshot #' . $revNum . '?" title="Roll the page back to this snapshot">'
                             . sb_svg('refresh', 12) . ' Restore</button>';
                     }
                     if ($canDelete && $use === null) {

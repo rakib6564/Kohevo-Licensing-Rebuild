@@ -339,7 +339,7 @@ unit('phase9c integration: SEO settings, sitemap.xml, robots.txt and slug hygien
                 }
                 assert_eq(1, substr_count($locs, SBS9_SITE . '/twin'), 'the page of a page/landing pair is listed once');
                 // The excluded pages really exist (they are excluded, not missing).
-                assert_eq(9, (int) Database::value("SELECT COUNT(*) FROM studiobuilder_pages WHERE tenant_id = ? AND slug IN ('draftonly','gone','offline','team','shop','moved','twin','home')", [SBS9_A]), 'the excluded fixtures exist (twin = page + landing)');
+                assert_eq(9, (int) Database::value("SELECT COUNT(*) FROM studiobuilder_pages WHERE tenant_id = ? AND (slug IN ('draftonly','offline','team','shop','moved','twin','home') OR slug LIKE 'archived-%-gone')", [SBS9_A]), 'the excluded fixtures exist (twin = page + landing; an archived page keeps its slug after an archived-<id>- prefix)');
             });
 
             unit('phase9c int 3: canonical policy — a foreign canonical never reaches the sitemap, a same-host self canonical does, a canonical pointing elsewhere on the site drops the duplicate', function () use ($rt): void {
@@ -358,12 +358,18 @@ unit('phase9c integration: SEO settings, sitemap.xml, robots.txt and slug hygien
                 $locs = sbs9_sitemap($rt, SBS9_A);
                 assert_eq(1, count(array_keys($locs, SBS9_SITE . '/', true)), 'the root once');
                 assert_eq(SBS9_SITE . '/', $locs[0], 'and first');
+                // Publishing another page as the homepage moves the old one to its own address: one homepage per site.
                 [$home2] = sbs9_publish($rt, SBS9_A, $publisher, 'home2', sbs9_doc('Home two'), 'homepage');
+                assert_eq('standalone', (string) Database::value('SELECT route_mode FROM studiobuilder_pages WHERE tenant_id = ? AND id = ?', [SBS9_A, $S->home]), 'the old homepage became a normal page');
+                $locs = sbs9_sitemap($rt, SBS9_A);
+                assert_eq(1, count(array_keys($locs, SBS9_SITE . '/', true)), 'the root once');
+                assert_true(in_array(SBS9_SITE . '/home', $locs, true) && !in_array(SBS9_SITE . '/home2', $locs, true), 'the old homepage at its slug, the new one only as the root');
+                // Two homepage-designated pages left over from before still give one root and no slug entries.
+                sbs9_sql("UPDATE studiobuilder_pages SET route_mode = 'homepage' WHERE tenant_id = ? AND id = ?", [SBS9_A, $S->home]);
                 $locs = sbs9_sitemap($rt, SBS9_A);
                 assert_eq(1, count(array_keys($locs, SBS9_SITE . '/', true)), 'still once with two homepage pages');
                 assert_true(!in_array(SBS9_SITE . '/home', $locs, true) && !in_array(SBS9_SITE . '/home2', $locs, true), 'neither homepage page is ALSO listed by its slug');
                 $rt->tenants->runAs(SBS9_A, static fn() => $rt->app->archivePage($publisher, $home2));
-                sbs9_sql("UPDATE studiobuilder_pages SET route_mode = 'standalone' WHERE tenant_id = ? AND id = ?", [SBS9_A, $home2]);
                 assert_eq(1, count(array_keys(sbs9_sitemap($rt, SBS9_A), SBS9_SITE . '/', true)));
             });
 
@@ -561,8 +567,8 @@ unit('phase9c integration: SEO settings, sitemap.xml, robots.txt and slug hygien
                 assert_eq('route_collision', sbs9_refusal(fn() => $create(SBS9_A, 'about', 'landing'))[0], 'landing over an existing page');
                 assert_eq('route_collision', sbs9_refusal(fn() => $create(SBS9_A, 'promo', 'page'))[0], 'page over an existing landing');
                 assert_eq('duplicate_slug', sbs9_refusal(fn() => $create(SBS9_A, 'about', 'page'))[0], 'the same-type duplicate keeps its own code');
-                // archived pages still hold their address (it could be restored).
-                assert_eq('route_collision', sbs9_refusal(fn() => $create(SBS9_A, 'gone', 'landing'))[0], 'archived page keeps its address');
+                // An archived page frees its address (there is no unarchive): a landing can take 'gone'.
+                assert_eq('landing', (string) $create(SBS9_A, 'gone', 'landing')['page']['page_type'], 'an archived page no longer holds its address');
                 // draft-only pages count too.
                 $create(SBS9_A, 'fresh-page', 'page');
                 assert_eq('route_collision', sbs9_refusal(fn() => $create(SBS9_A, 'fresh-page', 'landing'))[0]);

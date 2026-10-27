@@ -77,7 +77,7 @@ final class StudioPageAddressService
             if ($other === $pageType) {
                 continue;
             }
-            $existing = $this->pages->findBySlug($slug, $other);
+            $existing = $this->liveBySlug($slug, $other);
             if ($existing !== null && (int) $existing['id'] !== $exceptPageId) {
                 throw new StudioValidationException([
                     ['path' => '$.slug', 'code' => 'route_collision', 'message' => "A {$other} with slug '{$slug}' already exists in this tenant; a {$pageType} cannot share its public address."],
@@ -112,7 +112,7 @@ final class StudioPageAddressService
     ): array {
         $this->requireTenantId();
 
-        if ($this->pages->findBySlug($slug, $pageType) !== null) {
+        if ($this->liveBySlug($slug, $pageType) !== null) {
             throw new StudioValidationException([
                 ['path' => '$.slug', 'code' => 'duplicate_slug', 'message' => "A page with slug '{$slug}' and page_type '{$pageType}' already exists in this tenant."],
             ]);
@@ -210,7 +210,7 @@ final class StudioPageAddressService
         ]));
 
         if ($slug !== $current['slug']) {
-            $existing = $this->pages->findBySlug($slug, (string) $current['page_type']);
+            $existing = $this->liveBySlug($slug, (string) $current['page_type']);
             if ($existing !== null && (int) $existing['id'] !== $pageId) {
                 throw new StudioValidationException([
                     ['path' => '$.slug', 'code' => 'duplicate_slug', 'message' => "A page with slug '{$slug}' and page_type '{$current['page_type']}' already exists in this tenant."],
@@ -246,12 +246,69 @@ final class StudioPageAddressService
             throw new StudioNotFoundException("Studio page {$pageId} was not found in the active tenant.", ['page_id' => $pageId]);
         }
 
+        // The unique key is (tenant, slug, type) and there is no unarchive, so an archived page that kept its slug held that
+        // address for good: no new page, rename or failed duplicate could ever use it again. The archived row moves to a slug
+        // of its own (`archived-<id>-<slug>`, which keeps the old address readable in the list).
         $this->pages->update($pageId, [
             'status'     => 'archived',
+            'slug'       => self::archivedSlug($pageId, (string) $current['slug']),
             'updated_by' => $actorId > 0 ? $actorId : null,
         ]);
 
         return $this->pages->find($pageId) ?? [];
+    }
+
+    /**
+     * Keep the site to one homepage: once this page is live as the homepage, every other page marked as the homepage
+     * becomes a normal page at its own address. Before, several could be marked; the newest published one served `/`,
+     * so "Set as homepage" on an older page did nothing while its canonical still said `/`. Done only when the page is
+     * live, so marking a draft as the homepage never leaves `/` empty.
+     *
+     * @return list<int> The pages moved off the homepage.
+     */
+    public function claimHomepage(int $pageId, int $actorId): array
+    {
+        $this->requireTenantId();
+        $page = $this->pages->find($pageId);
+        if ($page === null
+            || ($page['route_mode'] ?? null) !== 'homepage'
+            || ($page['status'] ?? null) !== 'published'
+            || !in_array((string) ($page['page_type'] ?? ''), StudioRenderService::PUBLIC_PAGE_TYPES, true)
+        ) {
+            return [];
+        }
+        $moved = [];
+        foreach ($this->pages->otherHomepages($pageId, StudioRenderService::PUBLIC_PAGE_TYPES) as $other) {
+            $this->pages->update((int) $other['id'], ['route_mode' => 'standalone', 'updated_by' => $actorId > 0 ? $actorId : null]);
+            $moved[] = (int) $other['id'];
+        }
+        return $moved;
+    }
+
+    /**
+     * The page that holds this address, or null when it is free. A page archived before archiving freed its slug still
+     * holds it in the unique key; it is moved off now, so the address can be used.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function liveBySlug(string $slug, string $pageType): ?array
+    {
+        $row = $this->pages->findBySlug($slug, $pageType);
+        if ($row === null || ($row['status'] ?? null) !== 'archived') {
+            return $row;
+        }
+        $this->pages->update((int) $row['id'], ['slug' => self::archivedSlug((int) $row['id'], $slug)]);
+        return null;
+    }
+
+    /** `archived-<id>-<slug>`, cut to the slug column; already-archived slugs are not prefixed twice. */
+    public static function archivedSlug(int $pageId, string $slug): string
+    {
+        $prefix = 'archived-' . $pageId . '-';
+        if (str_starts_with($slug, $prefix)) {
+            return $slug;
+        }
+        return rtrim(substr($prefix . $slug, 0, 191), '-');
     }
 
     public function findAddress(int $pageId): ?PageAddress

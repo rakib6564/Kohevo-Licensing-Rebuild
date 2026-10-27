@@ -114,6 +114,7 @@ final class StudioRevisionService
 
         try {
             $lockedPage = $this->lockPageRow($tenantId, $pageId);
+            $this->assertNotArchived($lockedPage);
             $currentDraftId = $lockedPage['active_draft_revision_id'] !== null
                 ? (int) $lockedPage['active_draft_revision_id']
                 : null;
@@ -220,6 +221,7 @@ final class StudioRevisionService
 
         try {
             $lockedPage = $this->lockPageRow($tenantId, $pageId);
+            $this->assertNotArchived($lockedPage);
             $currentDraftId = $lockedPage['active_draft_revision_id'] !== null
                 ? (int) $lockedPage['active_draft_revision_id']
                 : null;
@@ -340,6 +342,7 @@ final class StudioRevisionService
 
         try {
             $lockedPage = $this->lockPageRow($tenantId, $pageId);
+            $this->assertNotArchived($lockedPage);
             $currentDraftId = $lockedPage['active_draft_revision_id'] !== null
                 ? (int) $lockedPage['active_draft_revision_id']
                 : null;
@@ -469,6 +472,21 @@ final class StudioRevisionService
         }
 
         return $row;
+    }
+
+    /**
+     * An archived page takes no new revisions. Without this, a builder tab left open on a page that was then archived
+     * could save or publish it, and publishing put it back on the site (with its custom fields already deleted).
+     *
+     * @param array<string, mixed> $lockedPage
+     */
+    private function assertNotArchived(array $lockedPage): void
+    {
+        if (($lockedPage['status'] ?? null) === 'archived') {
+            throw new StudioValidationException([
+                ['path' => '$.page_id', 'code' => 'page_archived', 'message' => 'This page has been deleted, so it can no longer be changed or published.'],
+            ]);
+        }
     }
 
     /**

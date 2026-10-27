@@ -380,9 +380,15 @@ unit('phase3 integration: application boundary, entitlement, RBAC, data provider
                 'expires_at'      => null,
                 'fetched_at'      => gmdate('Y-m-d H:i:s'),
             ]);
+            // The page already holds that block, so it still saves unchanged (losing a module must not lock the page);
+            // ADDING another gated block is refused at once, which is what proves the revocation is not cached.
+            $keptSave = $tenants->runAs(SBP3_TENANT_A, static fn(): array => $app->saveDraft($editor, $pageIdA, $gatedDoc, $savedGated['revision']['id']));
+            assert_true($keptSave['revision']['id'] > 0, 'a page keeping a gated block it already had still saves after the module is revoked');
+            $moreGated = $gatedDoc;
+            $moreGated['sections'][0]['blocks'][] = array_merge(end($gatedDoc['sections'][0]['blocks']), ['id' => CanonicalDocumentSchema::newBlockId()]);
             $revokedRejected = false;
             try {
-                $tenants->runAs(SBP3_TENANT_A, static fn() => $app->saveDraft($editor, $pageIdA, $gatedDoc, $savedGated['revision']['id']));
+                $tenants->runAs(SBP3_TENANT_A, static fn() => $app->saveDraft($editor, $pageIdA, $moreGated, $keptSave['revision']['id']));
             } catch (StudioValidationException $e) {
                 $codes = array_column($e->errors(), 'code');
                 $revokedRejected = in_array('block_module_not_entitled', $codes, true);
@@ -498,7 +504,7 @@ unit('phase3 integration: application boundary, entitlement, RBAC, data provider
             $docWithMedia = sbp3_doc($registry, 'Has Media');
             $docWithMedia['seo']['og_image_media_id'] = $mediaIdA;
 
-            $savedWithMedia = $tenants->runAs(SBP3_TENANT_A, static fn(): array => $app->saveDraft($editor, $pageIdA, $docWithMedia, $savedGated['revision']['id']));
+            $savedWithMedia = $tenants->runAs(SBP3_TENANT_A, static fn(): array => $app->saveDraft($editor, $pageIdA, $docWithMedia, $keptSave['revision']['id']));
             assert_true($savedWithMedia['revision']['id'] > 0, 'tenant A must be able to reference its own media');
 
             $crossTenantMediaRejected = false;
