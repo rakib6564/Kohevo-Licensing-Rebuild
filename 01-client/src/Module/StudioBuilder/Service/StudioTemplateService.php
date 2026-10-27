@@ -133,7 +133,25 @@ final class StudioTemplateService
 
         $data['uuid']       = self::newUuidV4();
         $data['created_by'] = $actorId > 0 ? $actorId : null;
-        $templateId = $this->templates->insert($data);
+        try {
+            $templateId = $this->templates->insert($data);
+        } catch (\PDOException $e) {
+            if ((string) $e->getCode() !== '23000') {
+                throw $e;
+            }
+            // Someone saved a template with this key between the lookup above and this insert: the unique key refused
+            // ours. Same answer as when the lookup had seen it — replace it when asked to (never a system one), else
+            // say the key is taken — instead of a 500.
+            $raced = $this->templates->findByKey($templateKey);
+            if ($raced === null || (bool) $raced['is_system'] || !$overwrite) {
+                throw new StudioValidationException([
+                    ['path' => '$.template_key', 'code' => 'template_exists', 'message' => "A template with the key '{$templateKey}' already exists. Choose another key, or confirm that it should be replaced."],
+                ]);
+            }
+            unset($data['uuid'], $data['created_by']);
+            $this->templates->update((int) $raced['id'], $data);
+            return $this->templates->find((int) $raced['id']) ?? [];
+        }
 
         return $this->templates->find($templateId) ?? [];
     }
@@ -325,6 +343,18 @@ final class StudioTemplateService
         // A template stored by an older Studio is brought up to this site's block versions first.
         $rawDocument = DocumentUpgrader::upgrade($template->document, $this->registry)['document'];
         $rawDocument['document_type'] = (string) $page['page_type'];
+        // Every page that applies the template gets its own section and block ids, so the same ids never appear in two
+        // documents (a page and a component made from the same template, say). A section's live component reference
+        // is kept: only the ids are new.
+        if (is_array($rawDocument['sections'] ?? null)) {
+            foreach ($rawDocument['sections'] as $i => $section) {
+                if (is_array($section)) {
+                    $ref = $section['global_ref'] ?? null;
+                    $rawDocument['sections'][$i] = DocumentCopier::copySection($section);
+                    $rawDocument['sections'][$i]['global_ref'] = $ref;
+                }
+            }
+        }
         // It also keeps its own settings (display conditions, template type, category…) and SEO: a
         // template saved from a header or search template must not turn the page into one.
         $own = $this->currentDocument($page);
