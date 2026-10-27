@@ -36,6 +36,7 @@ use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
 use Slate\Module\StudioBuilder\Operation\DocumentOperation;
+use Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 use Slate\Module\StudioBuilder\StudioPermissions;
 use Slate\Services\Installation\InstallationService;
@@ -560,6 +561,35 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             $sitemap = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('sitemap.xml?format=xml'));
             assert_true($sitemap !== null && !str_contains($sitemap->body, 'template-old-single') && !str_contains($sitemap->body, 'single-eng'), 'and not listed in the sitemap');
 
+            // ── Audit step 5 ─────────────────────────────────────────────────
+            // An archive page has its own title (the term), never the template page's, and no canonical pointing at the template.
+            $arcLive = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/category/Engineering'));
+            assert_true($arcLive !== null && (bool) preg_match('~<title>Engineering( \| [^<]*)?</title>~', $arcLive->body), 'the archive is titled by its term: ' . (preg_match('~<title>[^<]*</title>~', (string) $arcLive?->body, $m) ? $m[0] : '(none)'));
+            assert_false((bool) preg_match('~rel="canonical" href="[^"]*/archive"~', $arcLive->body), 'its canonical is not the template page');
+
+            // A Query loop on the archive template lists that category's posts, not every post.
+            $arcDoc = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->loadEditorDocument($actorA, $tplArchiveId));
+            $arcLoop = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, $tplArchiveId, [
+                new DocumentOperation('insert_section', ['index' => 1, 'section' => s6_section([s6_block('core.query_loop', ['per_page' => 12])], 'Posts')]),
+            ], (int) $arcDoc['revision']['id'], 'Add a loop'));
+            $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, $tplArchiveId, (int) $arcLoop['revision']['id']));
+            $cats = static fn(string $html): array => array_values(array_unique(preg_match_all('~<span class="sb-post-card__category">([^<]*)</span>~', $html, $m) ? $m[1] : []));
+            $eng = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/category/Engineering'));
+            assert_eq(['Engineering'], $cats((string) $eng?->body), 'the Engineering archive lists only Engineering posts');
+            assert_false(str_contains((string) $eng?->body, 'Design Systems in 2026'), 'not the Design post');
+            $des = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/category/Design'));
+            assert_eq(['Design'], $cats((string) $des?->body), 'and the Design archive only Design posts');
+            assert_true(str_contains((string) $des?->body, 'Design Systems in 2026'), 'including the Design post');
+
+            // A Single template's tag and author conditions see the page's tags and author.
+            $ctx = ThemeTemplateResolver::singleContext(['category' => 'Engineering', 'tags' => 'launch, beta '], S6_TENANT_A, $p1Id);
+            assert_eq(['launch', 'beta'], $ctx['tags'] ?? null, 'tags, from a comma-separated setting');
+            assert_eq((int) $pdo->query('SELECT created_by FROM studiobuilder_pages WHERE id = ' . $p1Id)->fetchColumn(), $ctx['author_id'] ?? null, 'the author is who created the page');
+
+            // Template lookup loads only pages that could be templates, not every published page.
+            $candidates = array_column($rt->tenants->runAs(S6_TENANT_A, static fn() => (new \Slate\Module\StudioBuilder\Repository\PageRepository($rt->tenants))->templateCandidates(['system', 'page'], ['single', 'archive', 'search', '404'])), 'slug');
+            assert_true(in_array('archive', $candidates, true) && in_array('template-old-single', $candidates, true), 'templates are candidates: ' . json_encode($candidates));
+            assert_false(in_array('design-post', $candidates, true) || in_array('eng-post', $candidates, true), 'ordinary published pages are not');
         });
     } finally {
         $port = defined('DB_PORT') ? trim((string) DB_PORT) : '';

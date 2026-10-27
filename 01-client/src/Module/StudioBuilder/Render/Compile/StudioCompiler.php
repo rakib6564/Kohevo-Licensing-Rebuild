@@ -165,6 +165,7 @@ final class StudioCompiler
         }
 
         $expected = $this->fingerprint($page, $revision, $context);
+        $row = null;
         if ($this->compilations !== null) {
             $row = $this->compilations->findByPageAndMode((int) $page->id, self::MODE_PUBLISHED);
             if ($row !== null && $this->isCurrent($row, (int) $revision['id'], $expected)) {
@@ -175,7 +176,16 @@ final class StudioCompiler
             }
         }
 
-        $compiled = $this->compile($page, $revision, $context);
+        try {
+            $compiled = $this->compile($page, $revision, $context);
+        } catch (\Throwable $e) {
+            // A visitor's request rebuilding a stale page never gets a 500 for one failing block. The last stored version
+            // of this revision is served if there is one; otherwise the page is built with that block left out (and not
+            // stored, so it is tried again). Publishing still fails outright (compileAndStorePublished), so the author sees it.
+            error_log('[studio-builder] page ' . (int) $page->id . ' could not be rebuilt: ' . $e::class . ': ' . $e->getMessage());
+            $stale = $row !== null && (int) ($row['revision_id'] ?? 0) === (int) $revision['id'] ? CompiledPage::fromRow($row) : null;
+            return $stale ?? $this->compile($page, $revision, $context->withAttributes([DocumentRenderer::ISOLATE_FAILURES => true]));
+        }
         $this->store($compiled);
         return $compiled;
     }
@@ -309,6 +319,16 @@ final class StudioCompiler
         // Theme Builder: a published Single template whose conditions match lays out this page. Its identity
         // and published revision are part of the fingerprint, so publishing the template rebuilds the page.
         $single = $this->singleFor($page, $settings, $context);
+        // The global components the Single template uses are rendered into this page too, so their published revisions
+        // are part of its identity as well: republishing one rebuilds every page the template lays out.
+        if ($single !== null) {
+            $templateDoc = json_decode((string) ($single['revision']['document_json'] ?? ''), true, CanonicalDocumentSchema::MAX_JSON_DEPTH);
+            if (is_array($templateDoc) && in_array((string) ($templateDoc['document_type'] ?? ''), CanonicalDocumentSchema::GLOBAL_REF_DOCUMENT_TYPES, true)) {
+                foreach ($this->components->resolveDocument($templateDoc) as $ref => $source) {
+                    $componentKeys['single:' . $ref] = $source->key();
+                }
+            }
+        }
 
         $inputs = [
             'single'      => $single !== null ? (int) $single['page']['id'] . ':' . (int) $single['revision']['id'] : '',

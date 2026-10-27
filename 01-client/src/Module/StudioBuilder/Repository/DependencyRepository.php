@@ -34,14 +34,22 @@ final class DependencyRepository extends StudioRepository
             ->where('revision_id', $revisionId)
             ->delete();
 
-        foreach ($records as $record) {
-            $this->insert([
-                'page_id'         => $pageId,
-                'revision_id'     => $revisionId,
-                'node_id'         => $record->nodeId,
-                'dependency_type' => $record->dependencyType,
-                'dependency_key'  => $record->dependencyKey,
-            ]);
+        if ($records === []) {
+            return;
+        }
+        // One multi-row INSERT per 200 records instead of one statement per record (a large page has hundreds).
+        $tenantId = $this->tenants->id();
+        foreach (array_chunk($records, 200) as $chunk) {
+            $values = [];
+            $args = [];
+            foreach ($chunk as $record) {
+                $values[] = '(?, ?, ?, ?, ?, ?)';
+                array_push($args, $tenantId, $pageId, $revisionId, $record->nodeId, $record->dependencyType, $record->dependencyKey);
+            }
+            \Slate\Data\Database::query(
+                'INSERT INTO studiobuilder_dependencies (tenant_id, page_id, revision_id, node_id, dependency_type, dependency_key) VALUES ' . implode(', ', $values),
+                $args
+            );
         }
     }
 

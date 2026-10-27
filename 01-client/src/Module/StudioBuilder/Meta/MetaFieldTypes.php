@@ -16,6 +16,8 @@ namespace Slate\Module\StudioBuilder\Meta;
 final class MetaFieldTypes
 {
     /** group => label */
+    public const MAX_RATING = 10;
+
     public const GROUPS = [
         'text'     => 'Text',
         'number'   => 'Numbers',
@@ -116,6 +118,10 @@ final class MetaFieldTypes
         }
         if (isset($out['step']) && $out['step'] <= 0) {
             unset($out['step']);
+        }
+        // A rating is drawn as one star per point, so its scale is kept to 1-10 stars (a huge max ran the page out of memory).
+        if ($type === 'rating' && isset($out['max'])) {
+            $out['max'] = max(1, min(self::MAX_RATING, (int) $out['max']));
         }
         if (isset($out['min'], $out['max']) && $out['min'] > $out['max']) {
             [$out['min'], $out['max']] = [$out['max'], $out['min']];

@@ -140,6 +140,54 @@ final class PageRepository extends StudioRepository
     }
 
     /**
+     * The published pages of the given types that could be Theme Builder templates: a `template_type` in their current
+     * settings, a conventional template slug, or a draft that differs from the published revision (whose published
+     * settings then have to be read). Every other published page is left out in SQL, so template lookup no longer loads
+     * the whole site on each request.
+     *
+     * @param list<string> $pageTypes
+     * @param list<string> $slugs
+     * @return list<array<string, mixed>>
+     */
+    public function templateCandidates(array $pageTypes, array $slugs, int $limit = 5000): array
+    {
+        if ($pageTypes === [] || !$this->tenants->isScoped()) {
+            return [];
+        }
+        $types = implode(',', array_fill(0, count($pageTypes), '?'));
+        $slugMarks = $slugs === [] ? "''" : implode(',', array_fill(0, count($slugs), '?'));
+        return \Slate\Data\Database::all(
+            "SELECT * FROM studiobuilder_pages WHERE tenant_id = ? AND status = 'published' AND published_revision_id IS NOT NULL"
+            . " AND page_type IN ({$types})"
+            . " AND ((settings_json LIKE '%\"template_type\":\"%' AND settings_json NOT LIKE '%\"template_type\":\"\"%')"
+            . " OR slug IN ({$slugMarks})"
+            . ' OR (active_draft_revision_id IS NOT NULL AND active_draft_revision_id <> published_revision_id))'
+            . ' ORDER BY id ASC LIMIT ' . max(1, $limit),
+            array_merge([$this->tenants->id()], $pageTypes, $slugs)
+        );
+    }
+
+    /**
+     * A cheap stamp that changes whenever anything a template lookup reads changes for these page types: a page is
+     * published, unpublished, archived or saved (revision ids only grow). Lets a lookup reuse what it built.
+     *
+     * @param list<string> $pageTypes
+     */
+    public function templateStamp(array $pageTypes): string
+    {
+        if ($pageTypes === [] || !$this->tenants->isScoped()) {
+            return '';
+        }
+        $types = implode(',', array_fill(0, count($pageTypes), '?'));
+        $row = \Slate\Data\Database::row(
+            "SELECT COUNT(*) AS n, COALESCE(SUM(published_revision_id), 0) AS p, COALESCE(SUM(active_draft_revision_id), 0) AS d"
+            . " FROM studiobuilder_pages WHERE tenant_id = ? AND status = 'published' AND page_type IN ({$types})",
+            array_merge([$this->tenants->id()], $pageTypes)
+        );
+        return $this->tenants->id() . ':' . (int) ($row['n'] ?? 0) . ':' . (string) ($row['p'] ?? 0) . ':' . (string) ($row['d'] ?? 0);
+    }
+
+    /**
      * Address metadata of every published, publicly routable page of the active
      * tenant — the sitemap's candidate set. Identity/lifecycle columns only:
      * no `seo_json`, no document.

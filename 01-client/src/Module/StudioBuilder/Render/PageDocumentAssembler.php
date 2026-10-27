@@ -31,6 +31,7 @@ final class PageDocumentAssembler
     public function assemble(CompiledPage $compiled, FilledPage $filled, RenderContext $context): string
     {
         $seo = SeoHead::fromArray(is_array($compiled->headAssets['seo'] ?? null) ? $compiled->headAssets['seo'] : [])
+            ->forListing($context)
             ->forMode($context->mode);
 
         $favicon = $context->site->faviconUrl;
