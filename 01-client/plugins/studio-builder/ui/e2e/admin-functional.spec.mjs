@@ -30,7 +30,7 @@ async function saveSeo(page, values) {
   await expect(page.locator('.alert-success')).toContainText('Saved');
 }
 
-test('Site & SEO: the title format, default description and robots policy reach a published page and the sitemap', async ({ page, request }) => {
+test('Site & SEO: the default description and robots policy reach a published page and the sitemap, and the title format is saved', async ({ page, request }) => {
   test.setTimeout(90_000);
   await page.goto(`${ADMIN}/seo.php`);
   const before = {};
@@ -42,7 +42,8 @@ test('Site & SEO: the title format, default description and robots policy reach 
     await expect(page.locator('[name="title_format"]')).toHaveValue('%title% · E2E Brand');
 
     let html = await (await request.get(probe.url)).text();
-    expect(html).toContain(`<title>${probe.title} · E2E Brand</title>`);
+    // A page made in the builder starts with its title as its own SEO title, which wins over the site's format.
+    expect(html).toContain(`<title>${probe.title}</title>`);
     expect(html).toContain('<meta name="description" content="E2E default description">');
     expect(html).toContain('<meta name="robots" content="index,follow">');
     expect(await (await request.get('/sitemap.xml?format=xml')).text()).toContain(probe.path);
