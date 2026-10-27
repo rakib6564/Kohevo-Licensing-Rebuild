@@ -407,7 +407,7 @@ final class BlockRegistry
             type: 'core.query_loop',
             version: 1,
             label: 'Query Loop',
-            title: 'Services grid',
+            title: 'Posts grid',
             description: 'Live Service & dynamic posts',
             category: 'layout',
             icon: 'grid-panes',

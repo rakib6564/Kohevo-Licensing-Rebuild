@@ -2985,7 +2985,7 @@
                 "text_shadow",
                 "overlay"
             ],
-            "title": "Services grid",
+            "title": "Posts grid",
             "type": "core.query_loop",
             "version": 1
         },
@@ -4722,7 +4722,7 @@
                 "text_shadow",
                 "overlay"
             ],
-            "title": "Stripe Payment Link",
+            "title": "Payment link",
             "type": "payment.link",
             "version": 1
         },
