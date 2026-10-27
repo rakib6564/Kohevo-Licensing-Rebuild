@@ -576,7 +576,10 @@ final class BlockRegistry
                 ['key' => 'title', 'type' => 'string', 'label' => 'Drawer Title', 'required' => false, 'default' => 'Menu', 'max_length' => 255],
                 ['key' => 'position', 'type' => 'enum', 'label' => 'Drawer Position', 'required' => false, 'allowed_values' => ['left', 'right', 'top', 'bottom'], 'default' => 'right'],
                 ['key' => 'trigger_text', 'type' => 'string', 'label' => 'Trigger Button Text', 'required' => false, 'default' => 'Open Menu', 'max_length' => 100],
-                ['key' => 'trigger_variant', 'type' => 'enum', 'label' => 'Trigger Variant', 'required' => false, 'allowed_values' => ['primary', 'secondary', 'outline', 'ghost'], 'default' => 'outline'],
+                ['key' => 'trigger_variant', 'type' => 'enum', 'label' => 'Trigger Variant', 'required' => false, 'allowed_values' => ['primary', 'secondary', 'outline', 'ghost', 'plain'], 'default' => 'outline'],
+                ['key' => 'trigger_icon', 'type' => 'enum', 'label' => 'Trigger Icon', 'required' => false, 'allowed_values' => ['none', ...IconLibrary::names()], 'default' => 'none'],
+                ['key' => 'trigger_icon_size', 'type' => 'number', 'label' => 'Trigger Icon Size', 'required' => false, 'default' => 24, 'min' => 12, 'max' => 64, 'integer_only' => true],
+                ['key' => 'trigger_show_text', 'type' => 'boolean', 'label' => 'Show the trigger text', 'required' => false, 'default' => true],
             ]),
             allowsChildren: true,
         ));

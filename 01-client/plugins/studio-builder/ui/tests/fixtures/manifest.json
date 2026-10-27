@@ -342,7 +342,18 @@
                         "sparkle",
                         "play",
                         "leaf",
-                        "dollar"
+                        "dollar",
+                        "menu",
+                        "menu-short",
+                        "close",
+                        "facebook",
+                        "twitter",
+                        "x-social",
+                        "instagram",
+                        "youtube",
+                        "linkedin",
+                        "whatsapp",
+                        "tiktok"
                     ]
                 },
                 {
@@ -1917,7 +1928,18 @@
                         "sparkle",
                         "play",
                         "leaf",
-                        "dollar"
+                        "dollar",
+                        "menu",
+                        "menu-short",
+                        "close",
+                        "facebook",
+                        "twitter",
+                        "x-social",
+                        "instagram",
+                        "youtube",
+                        "linkedin",
+                        "whatsapp",
+                        "tiktok"
                     ]
                 },
                 {
@@ -4275,6 +4297,9 @@
                 "drawer_id": "drawer-1",
                 "position": "right",
                 "title": "Menu",
+                "trigger_icon": "none",
+                "trigger_icon_size": 24,
+                "trigger_show_text": true,
                 "trigger_text": "Open Menu",
                 "trigger_variant": "outline"
             },
@@ -4327,8 +4352,72 @@
                         "primary",
                         "secondary",
                         "outline",
-                        "ghost"
+                        "ghost",
+                        "plain"
                     ]
+                },
+                {
+                    "key": "trigger_icon",
+                    "type": "enum",
+                    "label": "Trigger Icon",
+                    "required": false,
+                    "default": "none",
+                    "allowed_values": [
+                        "none",
+                        "check",
+                        "check-circle",
+                        "star",
+                        "heart",
+                        "arrow-right",
+                        "mail",
+                        "phone",
+                        "map-pin",
+                        "clock",
+                        "calendar",
+                        "user",
+                        "users",
+                        "shield",
+                        "zap",
+                        "globe",
+                        "message",
+                        "gift",
+                        "award",
+                        "camera",
+                        "home",
+                        "search",
+                        "sparkle",
+                        "play",
+                        "leaf",
+                        "dollar",
+                        "menu",
+                        "menu-short",
+                        "close",
+                        "facebook",
+                        "twitter",
+                        "x-social",
+                        "instagram",
+                        "youtube",
+                        "linkedin",
+                        "whatsapp",
+                        "tiktok"
+                    ]
+                },
+                {
+                    "key": "trigger_icon_size",
+                    "type": "number",
+                    "label": "Trigger Icon Size",
+                    "required": false,
+                    "default": 24,
+                    "min": 12,
+                    "max": 64,
+                    "integer_only": true
+                },
+                {
+                    "key": "trigger_show_text",
+                    "type": "boolean",
+                    "label": "Show the trigger text",
+                    "required": false,
+                    "default": true
                 }
             ],
             "icon": "layout-section",
