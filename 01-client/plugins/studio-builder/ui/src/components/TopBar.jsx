@@ -154,7 +154,7 @@ export const TopBar = memo(function TopBar({
                   const targetId = e.target.value;
                   if (targetId && Number(targetId) !== Number(boot.pageId)) {
                     if (pendingCount > 0) {
-                      if (!window.confirm('You have unsaved changes. Switch page anyway?')) {
+                      if (!window.confirm(t('nav_page_unsaved'))) {
                         e.target.value = boot.pageId;
                         return;
                       }
