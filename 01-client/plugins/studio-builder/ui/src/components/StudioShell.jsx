@@ -29,6 +29,7 @@ import { ThemeDialog } from './ThemeDialog.jsx';
 import { ThemeBottomSheet } from './ThemeBottomSheet.jsx';
 import { MoreBottomSheet } from './MoreBottomSheet.jsx';
 import { PackageDialog } from './PackageDialog.jsx';
+import { DuplicatePageDialog } from './PagesPanel.jsx';
 import { MediaHost } from './MediaDialog.jsx';
 import { createMediaApi } from '../core/mediaApi.mjs';
 import { ResponsiveViewSheet } from './sheets/ResponsiveViewSheet.jsx';
@@ -49,6 +50,7 @@ import { buildEnvelope, peekMemory, planPaste, readClipboard, regenerateIds, wri
 import { viewportByKey } from '../core/viewport.mjs';
 import { useIsMobileShell, isMobileShellNow } from '../hooks/useIsMobileShell.mjs';
 import { isEditing, keyboardInset, normalizeViewMode } from '../core/shellState.mjs';
+import { isTyping, shortcutFor } from '../core/shortcuts.mjs';
 import { zoomPercent } from '../core/zoom.mjs';
 
 export function StudioShell({ boot, transport: injectedTransport = null, lockEnabled = true }) {
@@ -164,8 +166,11 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   }, [transport]);
 
   // ── Advisory edit lock ─────────────────────────────────────────────────
+  // Held once the builder has loaded, for as long as it stays open: a refreshed manifest (tokens saved, a field added)
+  // is a new object and must not release and re-acquire it.
+  const loaded = !!manifest;
   useEffect(() => {
-    if (!lockEnabled || !manifest) return undefined;
+    if (!lockEnabled || !loaded) return undefined;
     const lock = new EditLock({ transport, pageId: boot.pageId, onChange: setLockState });
     lock.start();
     const release = () => { lock.stop(); };
@@ -174,7 +179,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
       window.removeEventListener('pagehide', release);
       lock.stop();
     };
-  }, [lockEnabled, manifest, transport, boot.pageId]);
+  }, [lockEnabled, loaded, transport, boot.pageId]);
 
   // ── Warn before leaving with unsent edits (nothing is kept in the browser) ─
   useEffect(() => {
@@ -325,8 +330,10 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     if (!info) return;
     const label = nodeLabel(info.node, manifest, info.kind);
     const operation = info.kind === 'section' ? ops.duplicateSection(id) : ops.duplicateBlock(id);
-    if (engine.apply(operation, { label: `${label} (Copy)` })) {
-      announce(t('announce_inserted', { label: `${label} (Copy)` }));
+    // The copy (and every node in it) gets a provisional id that holds until the server mints the real ones.
+    const copyLabel = `${label}${t('nav_page_copy_suffix')}`;
+    if (engine.apply(operation, { provisionalId: ops.provisionalId(info.kind === 'section' ? 'sec' : 'blk'), label: copyLabel })) {
+      announce(t('announce_inserted', { label: copyLabel }));
     }
   }, [engine, manifest, announce]);
 
@@ -626,34 +633,41 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   }, [transport, announce, engine]);
 
   // ── Keyboard shortcuts (never while typing in a field, except save) ────
+  // The canvas frame forwards its keys here too (`editorShortcut`), so they work with the focus in the page.
+  /** Run the shortcut a key means; returns true when it took the key. */
+  const editorShortcut = useCallback((e) => {
+    const action = shortcutFor(e, { hasSelection: !!selectionRef.current });
+    if (!action || (action === 'structure' && isMobileShellNow())) return false;
+    if (action !== 'deselect') e.preventDefault();
+    switch (action) {
+      case 'save': save(); break;
+      case 'structure': toggleStructure(); break;
+      case 'duplicate': actionIds(selModelRef.current, documentRows(engine.getSnapshot().working)).forEach((id) => duplicateNode(id)); break;
+      case 'undo': undo(); break;
+      case 'redo': redo(); break;
+      case 'deselect': setSelection(null); break;
+      default: return false;
+    }
+    return true;
+  }, [engine, save, undo, redo, duplicateNode, toggleStructure]);
+
   useEffect(() => {
     const onKey = (e) => {
       const mod = e.metaKey || e.ctrlKey;
-      const typing = e.target && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName));
-      if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); save(); return; }
-      if (typing) return;
-      if (mod && e.key.toLowerCase() === 'i' && !isMobileShellNow()) { e.preventDefault(); toggleStructure(); return; }
       // Copy / Cut / Paste when the canvas side has focus (Layers rows handle their own keys, on the focused row).
-      if (mod && /^[cxv]$/i.test(e.key) && e.target && (e.target === document.body || (e.target.closest && e.target.closest('.sbx-canvas'))) && clipboardShortcut(e)) return;
-      if (mod && e.key.toLowerCase() === 'd' && selectionRef.current) {
-        e.preventDefault();
-        actionIds(selModelRef.current, documentRows(engine.getSnapshot().working)).forEach((id) => duplicateNode(id));
-        return;
-      }
-      if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
-      if (mod && ((e.key.toLowerCase() === 'z' && e.shiftKey) || e.key.toLowerCase() === 'y')) { e.preventDefault(); redo(); return; }
-      if (e.key === 'Escape' && selectionRef.current) { setSelection(null); }
+      if (mod && !isTyping(e.target) && /^[cxv]$/i.test(e.key) && e.target && (e.target === document.body || (e.target.closest && e.target.closest('.sbx-canvas'))) && clipboardShortcut(e)) return;
+      editorShortcut(e);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [engine, save, undo, redo, duplicateNode, clipboardShortcut, toggleStructure]);
+  }, [clipboardShortcut, editorShortcut]);
 
   const libraryWithPresets = useMemo(() => (library ? { ...library, presets: presets === null ? undefined : presets } : library), [library, presets]);
 
   const ctx = useMemo(() => ({
     boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView,
     insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf,
-    copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, peekClipboard: peekMemory,
+    copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, editorShortcut, peekClipboard: peekMemory,
     viewport: viewportByKey(viewportKey), setViewport: changeViewport, tokensSaved: onTokensSaved, refreshManifest, panelRequest, requestPanel, requestEdit, layoutChooser, setLayoutChooser, structureOpen, setStructureOpen, toggleStructure,
     library: libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate,
     insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion,
@@ -665,7 +679,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     openHistory: () => setHistoryOpen(true),
     openTheme: manifest && manifest.permissions && (manifest.permissions.tokens || manifest.permissions.view) ? () => setDialog('theme') : null,
     openPackages: manifest && manifest.permissions && manifest.permissions.view ? () => setDialog('package') : null,
-  }), [boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, viewportKey, changeViewport, onTokensSaved, refreshManifest, panelRequest, requestPanel, requestEdit, layoutChooser, setLayoutChooser, structureOpen, setStructureOpen, toggleStructure,
+  }), [boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, editorShortcut, viewportKey, changeViewport, onTokensSaved, refreshManifest, panelRequest, requestPanel, requestEdit, layoutChooser, setLayoutChooser, structureOpen, setStructureOpen, toggleStructure,
     libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
 
   const selectionCtx = useMemo(() => ({
@@ -715,6 +729,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
         onTheme={manifest.permissions && (manifest.permissions.tokens || manifest.permissions.view) ? () => setDialog('theme') : null}
         onAiReview={() => setDialog('ai_review')}
         onPackages={manifest.permissions && manifest.permissions.view ? () => setDialog('package') : null}
+        onDuplicatePage={() => setDialog('duplicate_page')}
         dialogs={(
           <>
             {dialog === 'library' && <LibraryModal onClose={() => setDialog(null)} />}
@@ -728,6 +743,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
             {dialog === 'component' && <ComponentDialog onClose={() => setDialog(null)} onCreate={createComponent} />}
             {dialog === 'theme' && <ThemeDialog onClose={() => setDialog(null)} onSaved={onTokensSaved} />}
             {dialog === 'ai_review' && <AiReviewDialog onClose={() => setDialog(null)} onPublish={publishReviewed} />}
+            {dialog === 'duplicate_page' && <DuplicatePageDialog onClose={() => setDialog(null)} />}
             {dialog === 'package' && (
               <PackageDialog
                 onClose={() => setDialog(null)}
@@ -749,10 +765,11 @@ const SHEET_TABS = ['theme', 'more'];
 export function ShellLayout({
   viewportKey, onViewport, onSave, onUndo, onRedo, onPublish, onReload, onReloadCanvas = null, announcement, notice = '', lockState,
   historyOpen = false, setHistoryOpen = () => {}, pendingInsert = null, onCancelInsert = () => {}, onConfirmInsert = () => {},
-  onTheme = null, dialogs = null, onAiReview = null, onPackages = null,
+  onTheme = null, dialogs = null, onAiReview = null, onPackages = null, onDuplicatePage = null,
 }) {
   const { selection, select } = useSelection();
-  const { canvasView, structureOpen, setStructureOpen, toggleStructure, openLibraryModal, tokensSaved } = useEditor();
+  const { manifest, canvasView, structureOpen, setStructureOpen, toggleStructure, openLibraryModal, tokensSaved } = useEditor();
+  const [settingsView, setSettingsView] = useState('page');
   // A phone keeps Layers as the first sheet; the docked desktop panel opens on Add.
   const [activeTab, setActiveTab] = useState(() => (selection ? 'inspector' : (isMobileShellNow() ? 'structure' : 'blocks')));
   const isMobile = useIsMobileShell();
@@ -872,6 +889,8 @@ export function ShellLayout({
           onTabChange={setActiveTab}
           collapsed={collapsed}
           onToggleCollapse={() => setCollapsed((c) => !c)}
+          settingsView={settingsView}
+          onSettingsViewChange={setSettingsView}
           mobileOpen={mobileOpen && !SHEET_TABS.includes(activeTab)}
           onCloseMobile={() => setMobileOpen(false)}
         />
@@ -934,11 +953,22 @@ export function ShellLayout({
             setMobileOpen(true);
           }}
           onOpenSettings={() => {
+            setSettingsView('page');
             setActiveTab('settings');
             setMobileOpen(true);
           }}
+          onOpenLibrary={() => {
+            setActiveTab('library');
+            setMobileOpen(true);
+          }}
+          onDuplicatePage={onDuplicatePage}
           onOpenHistory={() => setHistoryOpen(true)}
           onOpenPackages={onPackages}
+          onOpenCustomCode={manifest && manifest.permissions && manifest.permissions.admin ? () => {
+            setSettingsView('site');
+            setActiveTab('settings');
+            setMobileOpen(true);
+          } : null}
         />
       )}
       {dialogs}

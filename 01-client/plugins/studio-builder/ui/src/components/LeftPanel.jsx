@@ -41,6 +41,8 @@ export const LeftPanel = memo(function LeftPanel({
   onTabChange,
   collapsed: controlledCollapsed,
   onToggleCollapse,
+  settingsView: controlledSettingsView,
+  onSettingsViewChange,
   mobileOpen = false,
   onCloseMobile = () => {},
 }) {
@@ -59,7 +61,9 @@ export const LeftPanel = memo(function LeftPanel({
   const [localCollapsed, setLocalCollapsed] = useState(false);
   // The Layers tab holds two views: this page's structure, and the site's pages.
   const [navView, setNavView] = useState('layers');
-  const [settingsView, setSettingsView] = useState('page');
+  const [localSettingsView, setLocalSettingsView] = useState('page');
+  const settingsView = controlledSettingsView !== undefined ? controlledSettingsView : localSettingsView;
+  const setSettingsView = onSettingsViewChange || setLocalSettingsView;
   const elementsAllowed = !!(manifest && manifest.permissions && manifest.permissions.admin);
   const siteAllowed = !!(manifest && manifest.permissions && (manifest.permissions.tokens || manifest.permissions.view));
 

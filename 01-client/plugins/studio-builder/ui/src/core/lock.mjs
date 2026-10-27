@@ -16,6 +16,7 @@ export class EditLock {
     this.clearIntervalImpl = clearIntervalImpl || ((h) => clearInterval(h));
     this.token = null;
     this.handle = null;
+    this.stopped = false;
     this.state = { held: false, otherEditor: false };
   }
 
@@ -27,19 +28,28 @@ export class EditLock {
     this.onChange(this.state);
   }
 
+  // stop() may come while the first acquire is still on its way: the heartbeat must then never start, and a lock
+  // granted meanwhile is given back at once (otherwise its interval would run forever, and the row would be held).
   async start() {
-    this.apply(await this.transport.lockAcquire(this.pageId));
-    this.handle = this.setIntervalImpl(() => this.beat(), this.intervalMs);
+    const res = await this.transport.lockAcquire(this.pageId);
+    if (this.stopped) {
+      const lock = res && res.ok && res.data.lock;
+      if (lock && lock.held && lock.lock_token) this.transport.lockRelease(this.pageId, lock.lock_token);
+      return;
+    }
+    this.apply(res);
+    if (this.handle === null) this.handle = this.setIntervalImpl(() => this.beat(), this.intervalMs);
   }
 
   async beat() {
     const res = this.token
       ? await this.transport.lockRefresh(this.pageId, this.token)
       : await this.transport.lockAcquire(this.pageId);
-    this.apply(res);
+    if (!this.stopped) this.apply(res);
   }
 
   stop() {
+    this.stopped = true;
     if (this.handle !== null) {
       this.clearIntervalImpl(this.handle);
       this.handle = null;

@@ -9,7 +9,7 @@ import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
 import { attachCanvas, markSelected } from '../core/canvas.mjs';
 import { inlineSpecsFor, propsWithInlineText } from '../core/inlineText.mjs';
 import { patchCanvas } from '../core/canvasPatch.mjs';
-import { isInlineEditing, morphDocument } from '../core/canvasMorph.mjs';
+import { isInlineEditing, morphDocument, repaintNext } from '../core/canvasMorph.mjs';
 import { contentChanged, ghostNodeIds, isStructuralChange, serverRenderedEdits, syncLiveDOM } from '../core/canvasLiveSync.mjs';
 import { releaseLive, syncLiveStyles, tokensOfDoc } from '../core/liveStyleSync.mjs';
 import { syncLiveStructure } from '../core/liveStructure.mjs';
@@ -31,7 +31,6 @@ import { useIsMobileShell } from '../hooks/useIsMobileShell.mjs';
 /** A repaint is a fetch and a morph, not a navigation: it can follow the edit closely. */
 const REPAINT_DEBOUNCE_MS = 80;
 const BUSY_RETRY_MS = 300;
-const BUSY_RETRIES = 15;
 /** A server-rendered block's edit is shown from its own render this long after the last change (typing coalesces). */
 const BLOCK_PREVIEW_MS = 250;
 
@@ -50,7 +49,7 @@ function blockNavigation(doc) {
 }
 
 export const CanvasArea = memo(function CanvasArea({ interactive = true, collapsed = false, onToggleCollapse = null, onReloadCanvas = null }) {
-  const { boot, transport, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode, applyOp, canvasView, setCanvasView, copyNode, cutNode, pasteNode, setLocked, toggleHidden, clipboardShortcut, peekClipboard, labelOf, requestEdit } = useEditor();
+  const { boot, transport, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode, applyOp, canvasView, setCanvasView, copyNode, cutNode, pasteNode, setLocked, toggleHidden, clipboardShortcut, editorShortcut, peekClipboard, labelOf, requestEdit } = useEditor();
   const isMobile = useIsMobileShell();
   const { selection, selectedIds, select, pick } = useSelection();
   const working = useEngineState((s) => s.working);
@@ -152,6 +151,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     let doc = null;
     try { doc = frameRef.current && frameRef.current.contentDocument; } catch { doc = null; }
     if (!doc || doc.readyState === 'loading') return false;
+    if (isInlineEditing(doc)) return 'busy';
     try {
       const res = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'text/html' } });
       if (!res.ok) return false;
@@ -282,15 +282,16 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
 
     let cancelled = false;
     let timer = 0;
-    let tries = 0;
     const baseAtStart = baseRef.current;
     const run = async () => {
       const done = await repaintInPlace(next, baseAtStart);
       if (cancelled) return;
-      if (done === 'busy' && tries < BUSY_RETRIES) { tries += 1; timer = setTimeout(run, BUSY_RETRY_MS); return; }
+      // While the author types on the canvas, wait (no fetch is made meanwhile): a reload would cut the typing off.
+      const step = repaintNext(done);
+      if (step === 'wait') { timer = setTimeout(run, BUSY_RETRY_MS); return; }
       shownRef.current = next;
       lastLoadedRevRef.current = revisionId;
-      if (done !== true) reloadFrame(next);
+      if (step === 'reload') reloadFrame(next);
     };
     timer = setTimeout(run, REPAINT_DEBOUNCE_MS);
     return () => { cancelled = true; clearTimeout(timer); };
@@ -479,7 +480,9 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       return;
     }
     const view = e.target && e.target.ownerDocument ? e.target.ownerDocument.defaultView : null;
-    clipboardShortcut && clipboardShortcut(e, null, view);
+    if (clipboardShortcut && clipboardShortcut(e, null, view)) return;
+    // Save, undo, redo, duplicate and Escape: the same shortcuts as with the focus in the builder.
+    if (editorShortcut) editorShortcut(e);
   };
   const frameKeyRef = useRef(frameKey);
   frameKeyRef.current = frameKey;

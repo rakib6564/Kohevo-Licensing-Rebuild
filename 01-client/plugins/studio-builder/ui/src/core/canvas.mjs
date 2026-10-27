@@ -9,6 +9,7 @@
 
 import { asList } from './doc.mjs';
 import { resolveInlineTarget } from './inlineText.mjs';
+import { t } from './messages.mjs';
 export const NODE_ATTR = 'data-sb-node';
 export const TYPE_ATTR = 'data-sb-type';
 const STYLE_ID = 'sbx-canvas-overlay';
@@ -228,9 +229,14 @@ export function attachCanvas(doc, handlers) {
     const bubble = doc.createElement('div');
     bubble.className = BUBBLE_CLASS;
     bubble.setAttribute('contenteditable', 'false');
-    bubble.innerHTML = `
-      <button type="button" class="${BUBBLE_CLASS}__btn ${BUBBLE_CLASS}__btn--done" data-fmt="done" title="Done">✓ Done</button>
-    `;
+    // Built as nodes, not markup: the label is translated text.
+    const done = doc.createElement('button');
+    done.type = 'button';
+    done.className = `${BUBBLE_CLASS}__btn ${BUBBLE_CLASS}__btn--done`;
+    done.setAttribute('data-fmt', 'done');
+    done.title = t('popover_done');
+    done.textContent = `✓ ${t('popover_done')}`;
+    bubble.appendChild(done);
 
     bubble.addEventListener('click', (ev) => {
       ev.preventDefault();
@@ -328,9 +334,14 @@ export function attachCanvas(doc, handlers) {
     onContextMenu(el.getAttribute(NODE_ATTR), { x: e.clientX, y: e.clientY }, nodeIdChain(e.target));
   };
 
-  // Keys pressed while the canvas has focus do not reach the builder's window: hand them over, unless text is being edited.
+  // Keys pressed while the canvas has focus do not reach the builder's window: hand them over, unless text is being
+  // edited. Save is the exception: the text typed so far is kept first, then saved (never the browser's own Save).
   const keydown = (e) => {
-    if (activeEditingEl || !onKeyDown) return;
+    if (!onKeyDown) return;
+    if (activeEditingEl) {
+      if (!((e.metaKey || e.ctrlKey) && String(e.key).toLowerCase() === 's')) return;
+      finishInlineEdit(true);
+    }
     onKeyDown(e);
   };
 

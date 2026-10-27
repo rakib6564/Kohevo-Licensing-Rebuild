@@ -43,6 +43,8 @@ export const StructureWindow = memo(function StructureWindow({ onClose }) {
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== 'Escape' || !ref.current || !ref.current.contains(document.activeElement)) return;
+      // Escape in a layer's rename box cancels the rename only; the window stays open.
+      if (document.activeElement.classList && document.activeElement.classList.contains('sbx-tree__rename-input')) return;
       e.stopPropagation();
       onClose();
     };
