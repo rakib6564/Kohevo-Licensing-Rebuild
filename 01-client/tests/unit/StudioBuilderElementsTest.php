@@ -469,6 +469,8 @@ unit('site links: rebase is idempotent, skips //host, mailto, tel and fragments,
     assert_eq('<a href="//cdn.test/a">x</a>', $r('<a href="//cdn.test/a">x</a>'), '//host is another site');
     assert_eq('<a href="mailto:a@b.test">x</a><a href="tel:+32123">y</a><a href="#s">z</a>', $r('<a href="mailto:a@b.test">x</a><a href="tel:+32123">y</a><a href="#s">z</a>'));
     assert_eq('<form action="/site/contact" method="post">', $r('<form action="/contact" method="post">'));
+    assert_eq('<img src="/site/uploads/a.png" alt=""><video poster="/site/uploads/p.jpg">', $r('<img src="/uploads/a.png" alt=""><video poster="/uploads/p.jpg">'), 'an image stored as /uploads/... loads from the install, not the parent site');
+    assert_eq('<img src="https://acme.test/site/uploads/a.png">', $r('<img src="https://acme.test/site/uploads/a.png">'), 'an absolute image address is left alone');
     assert_eq('<a href="/a">x</a>', $r('<a href="/a">x</a>', ''), 'no folder, no change');
     assert_eq('<a href="/a">x</a>', $r('<a href="/a">x</a>', '/'), 'a bare slash is no folder');
     assert_eq('/site', (new \Slate\Module\StudioBuilder\Render\SiteContext('https://acme.test/site/', 'A'))->basePath());
