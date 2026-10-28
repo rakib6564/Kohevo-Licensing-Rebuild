@@ -63,8 +63,9 @@ foreach ($pages as $p) {
 $mcpTools = count(StudioMcpToolCatalog::tools());
 $mcpGateway = class_exists('PluginLoader') && PluginLoader::isActive('mcp-gateway');
 
-// The recent list shows 10 pages a screen, newest first; View All Pages has the search and the filters.
-$recent = sb_page_slice($pages, $_GET['page'] ?? 1, 10);
+// The recent list shows 10 pages and content items a screen, newest first (headers, footers and theme templates are on
+// Templates); View All Pages has the search and the filters.
+$recent = sb_page_slice(array_values(array_filter($pages, static fn(array $p): bool => in_array((string) ($p['page_type'] ?? ''), ['page', 'landing'], true))), $_GET['page'] ?? 1, 10);
 
 // Stats calculations
 $totalPages = count($pages);

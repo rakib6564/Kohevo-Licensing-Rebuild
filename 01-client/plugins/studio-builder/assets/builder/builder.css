@@ -3483,3 +3483,9 @@ html, body.sbx-body {
 
 /* Parts (PartStyles): the part picker and Normal / Hover, then the part's own controls. */
 .sbx-parts { display: grid; gap: 10px; }
+
+/* A content item's fields in the page settings (read-only; edited on the page's settings screen). */
+.sbx-content-fields { margin: 0 0 .75rem; display: grid; gap: .4rem; }
+.sbx-content-fields__row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: .5rem; padding: .35rem 0; border-bottom: 1px solid var(--sbx-border); font-size: .8rem; }
+.sbx-content-fields__row dt { color: var(--sbx-muted); margin: 0; }
+.sbx-content-fields__row dd { margin: 0; overflow-wrap: anywhere; }

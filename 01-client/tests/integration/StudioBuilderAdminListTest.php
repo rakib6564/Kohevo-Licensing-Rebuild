@@ -161,7 +161,7 @@ foreach (['pages.php' => 'pages.php?', 'index.php' => 'index.php?'] as $sbalScre
         assert_true(str_contains($src, "header('Location: {$sbalBack}") && str_contains($src, '303'), 'redirects back to the same screen so a refresh does not repeat it');
         assert_true(str_contains($src, 'sb_bulk_delete_flash($_GET)'), 'and says how it went');
         assert_true(str_contains($src, '<form method="post" id="studio-bulk-form">') && str_contains($src, 'csrf_field()'), 'the list sits in a form with the CSRF field');
-        assert_true(str_contains($src, "plugin_url('studio-builder', 'admin/preview.php'), \$canEdit, 'page-edit.php')"), 'the selection bar offers Delete to an editor');
+        assert_true(str_contains($src, "plugin_url('studio-builder', 'admin/preview.php'), \$canEdit, 'page-edit.php'"), 'the selection bar offers Delete to an editor');
     });
 }
 
@@ -226,4 +226,29 @@ unit('studio admin lists: one page at a time; a page past the end shows the last
         assert_true(str_contains($src, 'slate_pagination('), "{$screen}: shows the pager");
         assert_true(str_contains($src, 'name="page" value='), "{$screen}: a bulk delete comes back to the same page");
     }
+});
+
+unit('studio admin content lists: an item row names its type and offers Fields; a plain page row does not', function (): void {
+    $html = PageListView::render([sbal_page(7, 'Boxe Molenbeek', true, false), sbal_page(8, 'Contact', true, false)], true, '/b', '/p', true, 'page-edit.php', [7 => 'Cours']);
+    $x = sbal_xpath($html);
+    assert_eq(1, $x->query('//a[@href="page-edit.php?id=7#sb-meta-form"]')->length, 'the item links to its fields');
+    assert_eq(0, $x->query('//a[@href="page-edit.php?id=8#sb-meta-form"]')->length, 'a plain page has no Fields button');
+    assert_true(str_contains($html, '>Cours<'), 'the item shows its type name: ' . $html);
+});
+
+unit('studio admin content lists: Pages lists plain pages, ?type= one type; templates and the sidebar find the rest', function (): void {
+    $dir = dirname(__DIR__, 2) . '/plugins/studio-builder';
+    $pages = (string) file_get_contents($dir . '/admin/pages.php');
+    assert_true(str_contains($pages, 'PageMeta::typesByPage($tenantId)') && str_contains($pages, "in_array((string) (\$p['page_type'] ?? ''), PageMeta::PAGE_TYPES, true)")
+        && str_contains($pages, "(\$typesByPage[(int) \$p['id']] ?? '') === \$typeKey"), 'pages and landing pages of the chosen type only (none: the plain ones)');
+    assert_false(str_contains($pages, "'header_partial' => __('studio_filter_headers'"), 'no Headers or Footers tab on Pages');
+    assert_true(str_contains($pages, "'page-new.php' . (\$typeKey !== '' ? '?type='"), 'New <type> starts a new item of that type');
+    $new = (string) file_get_contents($dir . '/admin/page-new.php');
+    assert_true(str_contains($new, 'PageMeta::assignType($tenantId, $newId, $formValues[\'content_type\'])'), 'the new item gets its type');
+    $tpl = (string) file_get_contents($dir . '/admin/templates.php');
+    assert_true(str_contains($tpl, "['header_partial', 'footer_partial', 'system']") && str_contains($tpl, 'data-testid="site-parts"'), 'Templates lists the site\'s headers, footers and theme templates');
+    $plugin = (string) file_get_contents($dir . '/StudioBuilder.php');
+    assert_true(str_contains($plugin, "'admin/pages.php?type=' . rawurlencode((string) \$key)") && str_contains($plugin, 'PageMeta::showsInMenu($type)'), 'each type the site keeps in the sidebar has its own entry');
+    $types = (string) file_get_contents($dir . '/admin/types-fields.php');
+    assert_true(str_contains($types, "\$action === 'toggle_menu'") && str_contains($types, 'name="show_in_menu" value="1" checked'), 'Types & fields sets it, on by default');
 });

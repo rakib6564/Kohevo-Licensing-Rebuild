@@ -71,9 +71,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'route' => $route,
                     'is_system' => false,
                     'description' => $desc,
+                    'show_in_menu' => !empty($_POST['show_in_menu']),
                 ];
                 Database::setSetting('studio_custom_post_types', json_encode($customTypes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
                 sb_flash_redirect($self, ['type' => 'success', 'msg' => sprintf(__('studio_tf_type_created', "Custom post type '%s' created successfully!"), $singular)]);
+            }
+        } elseif ($action === 'toggle_menu') {
+            // A type's own list in the admin sidebar, on or off. Its items and the list itself stay either way.
+            $key = trim((string) ($_POST['key'] ?? ''));
+            if (isset($customTypes[$key])) {
+                $customTypes[$key]['show_in_menu'] = !empty($_POST['show_in_menu']);
+                Database::setSetting('studio_custom_post_types', json_encode($customTypes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
+                sb_flash_redirect($self, ['type' => 'success', 'msg' => sprintf($customTypes[$key]['show_in_menu']
+                    ? __('studio_tf_menu_on', '%s now has its own entry in the sidebar.')
+                    : __('studio_tf_menu_off', '%s left the sidebar. Its list is still here, under View items.'), (string) ($customTypes[$key]['plural'] ?? $key))]);
             }
         } elseif ($action === 'delete_post_type') {
             // Fields attached to the type go with it; content items already created are not touched.
@@ -209,6 +220,10 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <div class="sb-field">
                 <label class="sb-field__label">Description</label>
                 <input type="text" name="description" class="form-control" placeholder="Purpose and data description...">
+            </div>
+            <div class="sb-field">
+                <label class="sb-field__label" style="display: flex; gap: 8px; align-items: center; font-weight: 500;"><input type="checkbox" name="show_in_menu" value="1" checked> <?= e(__('studio_tf_show_in_menu', 'Show in the sidebar')) ?></label>
+                <p class="sb-field__hint"><?= e(__('studio_tf_show_in_menu_hint', 'Gives the type its own list in the Studio sidebar, under Pages.')) ?></p>
             </div>
             <div class="sb-card-actions">
                 <button type="button" class="btn btn-outline" onclick="document.getElementById('sb-cpt-drawer').style.display='none'">Cancel</button>
@@ -366,7 +381,20 @@ require SLATE_ROOT . '/admin/partials/header.php';
                             <?= e($pt['description'] ?? 'Custom content collection.') ?>
                         </p>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--sb-border); padding-top: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--sb-border); padding-top: 12px;">
+                        <a class="btn btn-sm btn-primary" href="<?= e(plugin_url('studio-builder', 'admin/pages.php?type=' . rawurlencode((string) $tKey))) ?>" data-testid="type-items-<?= e((string) $tKey) ?>"><?= e(__('studio_tf_view_items', 'View items')) ?></a>
+                        <?php if ($canEdit): ?>
+                            <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>" style="margin: 0;">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="_action" value="toggle_menu">
+                                <input type="hidden" name="key" value="<?= e($tKey) ?>">
+                                <?php $inMenu = \Slate\Module\StudioBuilder\Meta\PageMeta::showsInMenu($pt); ?>
+                                <input type="hidden" name="show_in_menu" value="<?= $inMenu ? '0' : '1' ?>">
+                                <button type="submit" class="btn btn-sm btn-outline" aria-pressed="<?= $inMenu ? 'true' : 'false' ?>" data-testid="type-menu-<?= e((string) $tKey) ?>">
+                                    <?= e($inMenu ? __('studio_tf_in_menu_on', 'In sidebar: on') : __('studio_tf_in_menu_off', 'In sidebar: off')) ?>
+                                </button>
+                            </form>
+                        <?php endif; ?>
                         <?php if ($canEdit): ?>
                             <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>" onsubmit="return confirm('Delete the post type <?= e(addslashes($pt['singular'])) ?>? Its meta fields are deleted too. Content already created is kept.');" style="margin: 0;">
                                 <?= csrf_field() ?>
