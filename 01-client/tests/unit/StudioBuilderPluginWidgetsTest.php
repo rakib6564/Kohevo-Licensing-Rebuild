@@ -169,6 +169,10 @@ unit('plugin widgets: each module plugin declares its own widgets, gated by its 
         'booking.embed' => 'booking', 'booking.service' => 'booking', 'booking.services' => 'booking',
         'forms.embed' => 'forms', 'forms.form_card' => 'forms',
         'membership.member_links' => 'membership', 'membership.plan' => 'membership', 'membership.plans' => 'membership',
+        'shop.cart' => 'shop', 'shop.checkout' => 'shop', 'shop.mini_cart' => 'shop', 'shop.order_confirmation' => 'shop',
+        'shop.product_add_to_cart' => 'shop', 'shop.product_description' => 'shop', 'shop.product_image' => 'shop',
+        'shop.product_meta' => 'shop', 'shop.product_price' => 'shop', 'shop.product_stock' => 'shop',
+        'shop.product_title' => 'shop', 'shop.products' => 'shop',
     ], $byType);
     foreach (PluginWidgetCatalog::blocks() as $block) {
         assert_eq('business', $block->category(), $block->type() . ' is a Kohevo component (Add › Components)');
@@ -205,6 +209,53 @@ unit('plugin widgets: a broken or wrong-shaped file is logged and skipped; the g
     }
     assert_eq(['acme.thing'], $types);
     assert_eq(3, count($logged), 'one log line per skipped file');
+});
+
+unit('plugin widgets: a plugin may declare style parts for its own blocks only, and content types it keeps itself', function (): void {
+    $block = static fn(string $type): string => 'new Slate\Module\StudioBuilder\Registry\DeclarativeBlockDefinition(type: "' . $type . '", version: 1, label: "Thing", category: "business", icon: "box", schema: Slate\Module\StudioBuilder\Schema\FieldSchema::define([]))';
+    $single = 'new class implements Slate\Module\StudioBuilder\Registry\PluginSingleInterface {
+        public function contentType(): string { return "gadget"; }
+        public function label(): string { return "Gadgets"; }
+        public function requiredEntitlement(): string { return "acme"; }
+        public function prefix(int $t): string { return "gadget"; }
+        public function find(int $t, string $s): ?array { return null; }
+        public function sitemap(int $t): array { return []; }
+    }';
+    $dir = sbpw_plugins_dir([
+        'a-good'    => '<?php return ["blocks" => [' . $block('acme.thing') . '], "parts" => ["acme.thing" => ["title" => ["label" => "Title", "selectors" => [".acme-thing__title", ".acme-thing a"]], "badge" => ["label" => "Badge", "selectors" => [".acme-badge::before"], "states" => false]]], "singles" => [' . $single . ']];',
+        'b-foreign' => '<?php return ["blocks" => [' . $block('beta.thing') . '], "parts" => ["core.text" => ["x" => ["label" => "X", "selectors" => [".sb-text"]]]]];',
+        'c-css'     => '<?php return ["blocks" => [' . $block('gamma.thing') . '], "parts" => ["gamma.thing" => ["x" => ["label" => "X", "selectors" => [".a{color:red}"]]]]];',
+        'd-type'    => '<?php return ["blocks" => [' . $block('delta.thing') . '], "singles" => [new class implements Slate\Module\StudioBuilder\Registry\PluginSingleInterface {
+            public function contentType(): string { return "Bad Type"; } public function label(): string { return ""; } public function requiredEntitlement(): string { return "x"; }
+            public function prefix(int $t): string { return "x"; } public function find(int $t, string $s): ?array { return null; } public function sitemap(int $t): array { return []; } }]];',
+    ]);
+    $logged = [];
+    StudioLog::useSink(static function (string $line) use (&$logged): void { $logged[] = $line; });
+    try {
+        $types = array_map(static fn($b): string => $b->type(), PluginWidgetCatalog::blocks($dir));
+        $parts = PluginWidgetCatalog::parts($dir);
+        $singles = array_map(static fn($s): string => $s->contentType(), PluginWidgetCatalog::singles($dir));
+    } finally {
+        StudioLog::useSink(null);
+        PluginWidgetCatalog::reset();
+    }
+    assert_eq(['acme.thing'], $types, 'a file whose parts name another type, carry CSS, or whose content type is not a key is skipped whole');
+    assert_eq(['acme.thing'], array_keys($parts));
+    assert_eq(['label' => 'Badge', 'selectors' => ['.acme-badge::before'], 'states' => false], $parts['acme.thing']['badge']);
+    assert_eq(['gadget'], $singles);
+    assert_eq(3, count($logged), 'one log line per skipped file');
+});
+
+unit('plugin widgets: Shop\'s parts reach BlockParts and the editor, and its products are a content type Studio serves', function (): void {
+    assert_eq(['card', 'image', 'title', 'price', 'button', 'badge', 'filter', 'pager', 'grid'], array_keys(\Slate\Module\StudioBuilder\Registry\BlockParts::for('shop.products')));
+    assert_true(in_array('shop.cart', \Slate\Module\StudioBuilder\Registry\BlockParts::types(), true));
+    $manifest = ModuleBlockDefinitions::studioRegistry()->get('shop.product_add_to_cart')->toEditorManifest();
+    assert_eq(['button', 'quantity', 'message'], array_column($manifest['style_parts'], 'key'));
+    $single = PluginWidgetCatalog::single('product');
+    assert_true($single !== null, 'Shop declares products');
+    assert_eq('shop', $single->requiredEntitlement());
+    assert_eq('Products', $single->label());
+    assert_true(PluginWidgetCatalog::single('nothing') === null);
 });
 
 unit('plugin widgets: an unlicensed (or switched-off) plugin\'s widgets are listed locked, never dropped', function (): void {

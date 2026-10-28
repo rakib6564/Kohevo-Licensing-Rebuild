@@ -41,7 +41,7 @@ unit('lock: changes are locked by default, unlock is time-limited and tied to th
 });
 
 unit('icons: every bundled plugin has its own icon, unknown slugs get a neutral one, and the slug is never echoed', function () {
-    $known = ['booking', 'forms', 'membership', 'coaching', 'stripe-payment', 'multilang-translate', 'media-library', 'mcp-gateway', 'backups'];
+    $known = ['booking', 'forms', 'membership', 'shop', 'coaching', 'stripe-payment', 'multilang-translate', 'media-library', 'mcp-gateway', 'backups'];
     $seen = [];
     foreach ($known as $slug) {
         $svg = slate_plugin_icon_svg($slug);

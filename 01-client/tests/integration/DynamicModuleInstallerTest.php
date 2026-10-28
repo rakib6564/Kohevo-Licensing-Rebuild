@@ -227,7 +227,7 @@ unit('client module registry: defines required fields and exact V1 commercial / 
     }
 
     $definitions = CommercialModuleRegistry::definitions();
-    assert_eq(['forms', 'membership', 'booking', 'mcp-gateway', 'coaching', 'studio-builder'], array_keys($definitions));
+    assert_eq(['forms', 'membership', 'booking', 'shop', 'mcp-gateway', 'coaching', 'studio-builder'], array_keys($definitions));
     assert_eq([], $definitions['forms']['required_infrastructure']);
     assert_eq(['stripe-payment'], $definitions['membership']['required_infrastructure']);
     assert_eq(['stripe-payment'], $definitions['booking']['required_infrastructure']);
@@ -271,7 +271,7 @@ unit('client module registry (§17.1): arbitrary plugin folder on disk is never 
 
         $definitions = CommercialModuleRegistry::definitions();
         assert_false(isset($definitions['arbitrary-test-plugin']), 'Arbitrary plugin must never appear in commercial definitions');
-        assert_eq(['forms', 'membership', 'booking', 'mcp-gateway', 'coaching', 'studio-builder'], array_keys($definitions));
+        assert_eq(['forms', 'membership', 'booking', 'shop', 'mcp-gateway', 'coaching', 'studio-builder'], array_keys($definitions));
 
         $entitled = CommercialModuleRegistry::entitledDefinitions(['forms', 'membership', 'booking', 'arbitrary-test-plugin']);
         assert_false(isset($entitled['arbitrary-test-plugin']), 'Arbitrary plugin must never appear in entitled definitions');

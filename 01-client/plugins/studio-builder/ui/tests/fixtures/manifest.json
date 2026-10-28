@@ -5686,6 +5686,953 @@
             "version": 1
         },
         {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "business",
+            "default_props": [],
+            "description": "The visitor's cart, for your Cart page",
+            "field_schema": [],
+            "icon": "table",
+            "inline_text": [],
+            "label": "Cart",
+            "required_entitlement": "shop",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "table",
+                    "label": "Table"
+                },
+                {
+                    "key": "title",
+                    "label": "Product names"
+                },
+                {
+                    "key": "totals",
+                    "label": "Totals"
+                },
+                {
+                    "key": "button",
+                    "label": "Checkout button"
+                }
+            ],
+            "title": "Cart",
+            "type": "shop.cart",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "business",
+            "default_props": [],
+            "description": "Details, delivery and payment, for your Checkout page",
+            "field_schema": [],
+            "icon": "form",
+            "inline_text": [],
+            "label": "Checkout",
+            "required_entitlement": "shop",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "fields",
+                    "label": "Fields"
+                },
+                {
+                    "key": "labels",
+                    "label": "Labels"
+                },
+                {
+                    "key": "summary",
+                    "label": "Order summary"
+                },
+                {
+                    "key": "button",
+                    "label": "Pay button"
+                }
+            ],
+            "title": "Checkout",
+            "type": "shop.checkout",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "business",
+            "default_props": {
+                "label": "",
+                "show_total": false
+            },
+            "description": "A cart link with the item count, for your header",
+            "field_schema": [
+                {
+                    "key": "label",
+                    "type": "string",
+                    "label": "Label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40
+                },
+                {
+                    "key": "show_total",
+                    "type": "boolean",
+                    "label": "Show the cart total",
+                    "required": false,
+                    "default": false
+                }
+            ],
+            "icon": "box",
+            "inline_text": [],
+            "label": "Mini Cart",
+            "required_entitlement": "shop",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "link",
+                    "label": "Link"
+                },
+                {
+                    "key": "count",
+                    "label": "Count"
+                },
+                {
+                    "key": "total",
+                    "label": "Total"
+                }
+            ],
+            "title": "Mini Cart",
+            "type": "shop.mini_cart",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "business",
+            "default_props": {
+                "heading": ""
+            },
+            "description": "The order just placed, for your order-received page",
+            "field_schema": [
+                {
+                    "key": "heading",
+                    "type": "string",
+                    "label": "Heading",
+                    "required": false,
+                    "default": "",
+                    "max_length": 200
+                }
+            ],
+            "icon": "list-check",
+            "inline_text": [],
+            "label": "Order Confirmation",
+            "required_entitlement": "shop",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "heading",
+                    "label": "Heading"
+                },
+                {
+                    "key": "lead",
+                    "label": "Message"
+                },
+                {
+                    "key": "total",
+                    "label": "Total"
+                }
+            ],
+            "title": "Order Confirmation",
+            "type": "shop.order_confirmation",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "business",
+            "default_props": {
+                "button_label": "",
+                "go_to_cart": false,
+                "show_quantity": true
+            },
+            "description": "Quantity and the Add to cart button",
+            "field_schema": [
+                {
+                    "key": "button_label",
+                    "type": "string",
+                    "label": "Button label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                },
+                {
+                    "key": "show_quantity",
+                    "type": "boolean",
+                    "label": "Show quantity",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "go_to_cart",
+                    "type": "boolean",
+                    "label": "Go to the cart after adding",
+                    "required": false,
+                    "default": false
+                }
+            ],
+            "icon": "arrow-up-right",
+            "inline_text": [],
+            "label": "Add to Cart",
+            "required_entitlement": "shop",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "button",
+                    "label": "Button"
+                },
+                {
+                    "key": "quantity",
+                    "label": "Quantity"
+                },
+                {
+                    "key": "message",
+                    "label": "Message"
+                }
+            ],
+            "title": "Add to Cart",
+            "type": "shop.product_add_to_cart",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "business",
+            "default_props": {
+                "source": "long"
+            },
+            "description": "The product's description",
+            "field_schema": [
+                {
+                    "key": "source",
+                    "type": "enum",
+                    "label": "Text",
+                    "required": false,
+                    "default": "long",
+                    "allowed_values": [
+                        "long",
+                        "short"
+                    ]
+                }
+            ],
+            "icon": "pilcrow",
+            "inline_text": [],
+            "label": "Product Description",
+            "required_entitlement": "shop",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Product Description",
+            "type": "shop.product_description",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "business",
+            "default_props": {
+                "ratio": "square",
+                "show_thumbnails": true
+            },
+            "description": "The product's image and its other images",
+            "field_schema": [
+                {
+                    "key": "ratio",
+                    "type": "enum",
+                    "label": "Image shape",
+                    "required": false,
+                    "default": "square",
+                    "allowed_values": [
+                        "square",
+                        "portrait",
+                        "landscape",
+                        "natural"
+                    ]
+                },
+                {
+                    "key": "show_thumbnails",
+                    "type": "boolean",
+                    "label": "Show other images",
+                    "required": false,
+                    "default": true
+                }
+            ],
+            "icon": "gallery",
+            "inline_text": [],
+            "label": "Product Images",
+            "required_entitlement": "shop",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "main",
+                    "label": "Main image"
+                },
+                {
+                    "key": "thumbs",
+                    "label": "Other images"
+                }
+            ],
+            "title": "Product Images",
+            "type": "shop.product_image",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "business",
+            "default_props": {
+                "show_categories": true,
+                "show_sku": true
+            },
+            "description": "SKU and categories",
+            "field_schema": [
+                {
+                    "key": "show_sku",
+                    "type": "boolean",
+                    "label": "Show SKU",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_categories",
+                    "type": "boolean",
+                    "label": "Show categories",
+                    "required": false,
+                    "default": true
+                }
+            ],
+            "icon": "list",
+            "inline_text": [],
+            "label": "Product Meta",
+            "required_entitlement": "shop",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "label",
+                    "label": "Labels"
+                },
+                {
+                    "key": "value",
+                    "label": "Values"
+                }
+            ],
+            "title": "Product Meta",
+            "type": "shop.product_meta",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "business",
+            "default_props": {
+                "show_vat_note": true
+            },
+            "description": "The price, and the sale price when on sale",
+            "field_schema": [
+                {
+                    "key": "show_vat_note",
+                    "type": "boolean",
+                    "label": "Show \"incl. VAT\"",
+                    "required": false,
+                    "default": true
+                }
+            ],
+            "icon": "list",
+            "inline_text": [],
+            "label": "Product Price",
+            "required_entitlement": "shop",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "regular",
+                    "label": "Regular price"
+                },
+                {
+                    "key": "sale",
+                    "label": "Sale price"
+                },
+                {
+                    "key": "vat",
+                    "label": "VAT note"
+                }
+            ],
+            "title": "Product Price",
+            "type": "shop.product_price",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "business",
+            "default_props": {
+                "low_stock": 5,
+                "show_in_stock": true
+            },
+            "description": "In stock, only a few left, or sold out",
+            "field_schema": [
+                {
+                    "key": "low_stock",
+                    "type": "number",
+                    "label": "Say \"only N left\" from",
+                    "required": false,
+                    "default": 5,
+                    "min": 0,
+                    "max": 100,
+                    "integer_only": true
+                },
+                {
+                    "key": "show_in_stock",
+                    "type": "boolean",
+                    "label": "Show \"In stock\"",
+                    "required": false,
+                    "default": true
+                }
+            ],
+            "icon": "list-check",
+            "inline_text": [],
+            "label": "Product Stock",
+            "required_entitlement": "shop",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "in",
+                    "label": "In stock"
+                },
+                {
+                    "key": "low",
+                    "label": "Few left"
+                },
+                {
+                    "key": "out",
+                    "label": "Sold out"
+                }
+            ],
+            "title": "Product Stock",
+            "type": "shop.product_stock",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "business",
+            "default_props": {
+                "tag": "h1"
+            },
+            "description": "The product's name",
+            "field_schema": [
+                {
+                    "key": "tag",
+                    "type": "enum",
+                    "label": "HTML Tag",
+                    "required": false,
+                    "default": "h1",
+                    "allowed_values": [
+                        "h1",
+                        "h2",
+                        "h3",
+                        "h4"
+                    ]
+                }
+            ],
+            "icon": "heading",
+            "inline_text": [],
+            "label": "Product Title",
+            "required_entitlement": "shop",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Product Title",
+            "type": "shop.product_title",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [
+                "shop.products"
+            ],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [
+                {
+                    "provider": "shop.products",
+                    "slot": "items"
+                }
+            ],
+            "category": "business",
+            "default_props": {
+                "button_label": "",
+                "columns": 3,
+                "empty_message": "",
+                "heading": "",
+                "order": "menu",
+                "per_page": 12,
+                "show_add_to_cart": true,
+                "show_filter": false,
+                "show_pager": true,
+                "show_price": true
+            },
+            "description": "Your products in a grid, with a category filter and pages",
+            "field_schema": [
+                {
+                    "key": "heading",
+                    "type": "string",
+                    "label": "Heading",
+                    "required": false,
+                    "default": "",
+                    "max_length": 200
+                },
+                {
+                    "key": "columns",
+                    "type": "number",
+                    "label": "Columns",
+                    "required": false,
+                    "default": 3,
+                    "min": 1,
+                    "max": 6,
+                    "integer_only": true
+                },
+                {
+                    "key": "order",
+                    "type": "enum",
+                    "label": "Order",
+                    "required": false,
+                    "default": "menu",
+                    "allowed_values": [
+                        "menu",
+                        "newest",
+                        "price_asc",
+                        "price_desc",
+                        "title"
+                    ]
+                },
+                {
+                    "key": "per_page",
+                    "type": "number",
+                    "label": "Products per page",
+                    "required": false,
+                    "default": 12,
+                    "min": 1,
+                    "max": 48,
+                    "integer_only": true
+                },
+                {
+                    "key": "show_filter",
+                    "type": "boolean",
+                    "label": "Show category filter",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "show_pager",
+                    "type": "boolean",
+                    "label": "Show pages",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_price",
+                    "type": "boolean",
+                    "label": "Show prices",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_add_to_cart",
+                    "type": "boolean",
+                    "label": "Show Add to cart",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "button_label",
+                    "type": "string",
+                    "label": "Button label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                },
+                {
+                    "key": "empty_message",
+                    "type": "string",
+                    "label": "Message when empty",
+                    "required": false,
+                    "default": "",
+                    "max_length": 200
+                }
+            ],
+            "icon": "grid-panes",
+            "inline_text": [],
+            "label": "Product Grid",
+            "required_entitlement": "shop",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "card",
+                    "label": "Card"
+                },
+                {
+                    "key": "image",
+                    "label": "Image"
+                },
+                {
+                    "key": "title",
+                    "label": "Title"
+                },
+                {
+                    "key": "price",
+                    "label": "Price"
+                },
+                {
+                    "key": "button",
+                    "label": "Button"
+                },
+                {
+                    "key": "badge",
+                    "label": "Badge"
+                },
+                {
+                    "key": "filter",
+                    "label": "Category filter"
+                },
+                {
+                    "key": "pager",
+                    "label": "Pages"
+                },
+                {
+                    "key": "grid",
+                    "label": "Cards layout"
+                }
+            ],
+            "title": "Product Grid",
+            "type": "shop.products",
+            "version": 1
+        },
+        {
             "allowed_binding_providers": [
                 "content.taxonomy"
             ],
@@ -6374,6 +7321,21 @@
             "key": "membership.plans",
             "max_results": 100,
             "params": []
+        },
+        {
+            "key": "shop.products",
+            "max_results": 48,
+            "params": [
+                {
+                    "key": "category",
+                    "type": "string",
+                    "label": "Category",
+                    "required": false,
+                    "default": "",
+                    "max_length": 120,
+                    "choices": []
+                }
+            ]
         }
     ],
     "tokens": [

@@ -1,0 +1,20 @@
+{
+    "slug": "shop",
+    "name": "Shop",
+    "version": "0.1.0",
+    "description": "Sell physical products from a Kohevo Studio site. Products (price, sale price, images, SKU, stock, categories), a cart kept in the visitor's session, guest checkout with a flat shipping rate or pickup, payment through Stripe Checkout via the stripe-payment plugin, and an orders screen with fulfilment and refunds. Prices include VAT. Its Studio widgets (product grid, single product parts, cart, mini cart, checkout and order confirmation) are in Add › Components, and a Single template with the Products condition lays out /product/{slug}.",
+    "author": "Kohevo",
+    "requires_core": ">=1.0.0",
+    "commercial_module": {
+        "entitlement": "shop",
+        "label": "Shop",
+        "description": "Products, cart, checkout and orders",
+        "requires_infrastructure": ["stripe-payment"]
+    },
+    "permissions": [
+        {"key": "shop.view",            "label": "View products and orders"},
+        {"key": "shop.manage_products", "label": "Create, edit and delete products and categories"},
+        {"key": "shop.manage_orders",   "label": "Fulfil, cancel and refund orders"},
+        {"key": "shop.manage_settings", "label": "Configure shop settings (shipping, pages, addresses)"}
+    ]
+}
