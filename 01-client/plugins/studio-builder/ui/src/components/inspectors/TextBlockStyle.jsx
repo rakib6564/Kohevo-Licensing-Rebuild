@@ -9,7 +9,7 @@ import { ColorField, DraftText } from './StyleControls.jsx';
 import { SelectField, SliderField, SpacingBox } from './SurfaceControls.jsx';
 import { DeviceStyle } from './DeviceStyle.jsx';
 import { asObject } from '../../core/doc.mjs';
-import { CORNERS, OPTIONS, getPath, isColourToken, setPath, setPaths } from '../../core/styleSurface.mjs';
+import { OPTIONS, getPath, isColourToken, setPath, setPaths } from '../../core/styleSurface.mjs';
 import { setTextLiteral, setTextToken } from '../../core/tokenStyle.mjs';
 import { t } from '../../core/messages.mjs';
 
@@ -139,13 +139,6 @@ export function NormalHover({ label, style, states, onStyle, onStates, withSurfa
       )}
     </div>
   );
-}
-
-/** Border radius as four linked corners. */
-export function CornersBox({ style, onChange }) {
-  const id = useId();
-  const f = fields(style, onChange);
-  return <SpacingBox id={`${id}-r`} label={t('border_corners')} get={f.get} putAll={f.putAll} keys={CORNERS} pathOf={(c) => `border.radius_corners.${c}`} labelOf={(c) => t(`corner_${c}`)} />;
 }
 
 const PADDING_PATHS = ['padding.top', 'padding.right', 'padding.bottom', 'padding.left'];
