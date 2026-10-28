@@ -568,7 +568,10 @@ unit('site menus: submenus nest up to two levels; only an item with links under 
     $navBlock = sbel_block('core.nav_menu', ['menu' => 'header', 'layout' => 'horizontal']);
     $html = sbel_render([$navBlock]);
     assert_true((bool) preg_match('~<li class="sb-nav__item sb-nav__item--parent"><button type="button" class="sb-nav__link sb-nav__parent" aria-expanded="false" aria-controls="([^"]+)">Projets<span class="sb-nav__caret" aria-hidden="true"></span></button><ul class="sb-nav__sub sb-nav__sub--1" id="\\1">~', $html), 'an item with no address is the toggle of its submenu: ' . $html);
-    assert_true((bool) preg_match('~<a class="sb-nav__link" href="/nos-actions/">Nos actions</a><button type="button" class="sb-nav__toggle" aria-expanded="false" aria-controls="([^"]+)" aria-label="[^"]*Nos actions"></button><ul class="sb-nav__sub sb-nav__sub--2" id="\\1">~', $html), 'an item with an address keeps its link and gets an arrow');
+    assert_true((bool) preg_match('~<a class="sb-nav__link" href="/nos-actions/">Nos actions<span class="sb-nav__caret" aria-hidden="true"></span></a><button type="button" class="sb-nav__toggle" aria-expanded="false" aria-controls="([^"]+)" aria-label="[^"]*Nos actions"></button><ul class="sb-nav__sub sb-nav__sub--2" id="\\1">~', $html), 'an item with an address keeps its link, the arrow drawn in it, and gets an arrow button');
+    assert_true(str_contains($html, '<a class="sb-nav__link" href="/gala/">Gala</a>'), 'a link with nothing under it has no arrow');
+    $parts = \Slate\Module\StudioBuilder\Registry\BlockParts::for('core.nav_menu');
+    assert_eq(['.sb-nav__list>.sb-nav__item>.sb-nav__link'], $parts['link']['selectors'], 'the Links part styles the menu\'s own row, never a submenu\'s links (a header link 90px tall made every submenu row 90px)');
     assert_true(str_contains($html, '>SmileBox</a>') && str_contains($html, '>Gala</a>') && str_contains($html, '>Evenements</a>'), 'every link is in the page, so it works without scripts');
     preg_match_all('~ id="([^"]+)"~', $html, $ids);
     assert_eq(count($ids[1]), count(array_unique($ids[1])), 'submenu ids are unique');

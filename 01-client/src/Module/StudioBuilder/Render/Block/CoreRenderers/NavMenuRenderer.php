@@ -3,8 +3,8 @@
  * Kohevo Studio — `core.nav_menu` renderer: a list of links in a `<nav>`.
  *
  * A site menu's item with `children` opens a submenu (`.sb-nav__sub`, nested up to StudioMenus::MAX_DEPTH levels). In a
- * horizontal menu it drops down on hover and keyboard focus with CSS alone, so the canvas (no scripts) shows it too; in
- * a vertical one (a drawer) it is listed indented. studio-runtime.js adds the toggle: its button sets `aria-expanded`
+ * horizontal menu it drops down on hover and keyboard focus with CSS alone, so the canvas (no scripts) shows it too, and
+ * the arrow is drawn in the link; in a vertical one (a drawer) it is listed indented, behind an arrow button. studio-runtime.js adds the toggle: its button sets `aria-expanded`
  * and `data-open`, a vertical menu folds its submenus away, and Escape or a click elsewhere closes them. An item with
  * no address of its own is the toggle itself.
  */
@@ -74,7 +74,9 @@ final class NavMenuRenderer implements BlockRendererInterface
             $label = (string) ($item['label'] ?? '');
             $children = $depth < StudioMenus::MAX_DEPTH && is_array($item['children'] ?? null) ? $item['children'] : [];
             $sub = $children !== [] ? $this->items($children, $scope, $depth + 1, $path . '-' . $i) : '';
-            $anchor = Html::link(['href' => $item['url'] ?? null, 'label' => $label, 'target' => !empty($item['new_tab']) ? '_blank' : '_self'], 'sb-nav__link');
+            $caret = '<span class="sb-nav__caret" aria-hidden="true"></span>';
+            // A link with a submenu carries the arrow inside it, so the arrow sits by its label whatever spacing the link is given.
+            $anchor = Html::link(['href' => $item['url'] ?? null, 'label' => $label, 'target' => !empty($item['new_tab']) ? '_blank' : '_self'], 'sb-nav__link', $sub !== '' ? Html::e($label) . $caret : null);
             if ($sub === '') {
                 if ($anchor !== '' && str_starts_with($anchor, '<a')) {
                     $html .= '<li class="sb-nav__item">' . $anchor . '</li>';
@@ -88,7 +90,7 @@ final class NavMenuRenderer implements BlockRendererInterface
             $expanded = ' aria-expanded="false" aria-controls="' . Html::e($id) . '"';
             $head = str_starts_with($anchor, '<a')
                 ? $anchor . '<button type="button" class="sb-nav__toggle"' . $expanded . ' aria-label="' . Html::e(sprintf(Html::t('studio_nav_submenu', 'Show the links under %s'), $label)) . '"></button>'
-                : '<button type="button" class="sb-nav__link sb-nav__parent"' . $expanded . '>' . Html::e($label) . '<span class="sb-nav__caret" aria-hidden="true"></span></button>';
+                : '<button type="button" class="sb-nav__link sb-nav__parent"' . $expanded . '>' . Html::e($label) . $caret . '</button>';
             $html .= '<li class="sb-nav__item sb-nav__item--parent">' . $head . '<ul class="sb-nav__sub sb-nav__sub--' . ($depth + 1) . '" id="' . Html::e($id) . '">' . $sub . '</ul></li>';
         }
         return $html;
