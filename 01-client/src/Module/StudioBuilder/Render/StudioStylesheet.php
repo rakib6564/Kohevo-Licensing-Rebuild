@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '37';
+    public const VERSION = '38';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -672,17 +672,17 @@ final class StudioStylesheet
             . '.sb-form__status{padding:.75rem 1rem;border-radius:.5rem;font-size:.9rem;background:var(--sb-surface-secondary)}'
             . '.sb-form__status[data-sb-state="success"]{background:#ecfdf5;color:#065f46}'
             . '.sb-form__status[data-sb-state="error"]{background:#fef2f2;color:#991b1b}'
-            . '.sb-form__note{font-size:.8rem;color:var(--sb-text-muted);margin:0}'
+            . '.sb-form__note{font-size:.8rem;color:var(--sb-text-muted);margin:.5rem 0 0}'
             . '.sb-form[aria-busy="true"] .sb-form__actions .sb-button{opacity:.6;cursor:progress}'
             // Hidden labels: out of sight, still read out (each field keeps its accessible name).
             . '.sb-form--labels-hidden :is(.sb-form-group>label,.sb-form-choices>legend){position:absolute!important;width:1px;height:1px;margin:0;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}'
             // Inline: the fields share the row and the button keeps its own width beside them, on every device; a status
-            // line or a note takes a row of its own. After the width rules above, so it wins over a field's width.
+            // line takes a row of its own. After the width rules above, so it wins over a field's width.
             . '.sb-form--inline{flex-wrap:wrap;align-items:flex-end}'
             . '.sb-form--inline>.sb-block{flex:1 1 0;min-width:0}'
             . '.sb-form--inline>.sb-form__actions{flex:0 0 auto;margin-top:0}'
             . '.sb-form--inline>.sb-form__actions .sb-button{width:auto}'
-            . '.sb-form--inline>:is(.sb-form__status,.sb-form__note){flex:0 0 100%;order:9}';
+            . '.sb-form--inline>.sb-form__status{flex:0 0 100%;order:9}';
     }
 
     public static function prefix(string $breakpoint): ?string

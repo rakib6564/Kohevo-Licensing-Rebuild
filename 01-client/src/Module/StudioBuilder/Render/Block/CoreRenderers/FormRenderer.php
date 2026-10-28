@@ -68,13 +68,14 @@ final class FormRenderer implements BlockRendererInterface
             // The runtime's own words, translated here so a French page stays French.
             . ' data-sb-label-sending="' . Html::e(Html::t('studio_form_sending', 'Sending…')) . '"'
             . ' data-sb-label-failed="' . Html::e(Html::t('studio_form_failed', 'The form could not be sent. Check your connection and try again.')) . '">'
-            . $note
             // Honeypot: hidden from people and assistive technology; Forms drops a submission that fills it.
             . '<div class="sb-hp" aria-hidden="true"><label>Website <input type="text" name="hp_field" tabindex="-1" autocomplete="off"></label></div>'
             . '<input type="hidden" name="return_to" value="" data-sb-return-to>'
             . $scope->childrenHtml()
             . '<div class="sb-form__status" role="status" aria-live="polite" data-sb-form-status'
             . ($success !== '' ? ' data-sb-success="' . Html::e($success) . '"' : '') . ' hidden></div>'
-            . $actions . '</form>';
+            . $actions . '</form>'
+            // The editor's note sits under the form, outside it, so a styled form (an inline pill) keeps its shape.
+            . $note;
     }
 }
