@@ -69,17 +69,18 @@ export function fakeServer(initialDoc, applyServer) {
   const page = () => ({ id: 1, title: 'P', public_path: '/p', is_published: false, has_unpublished_changes: true, active_draft_revision_id: current });
   const commit = (d, kind) => {
     nextId += 1;
-    revisions.set(nextId, { doc: JSON.parse(JSON.stringify(d)), kind, number: revisions.size + 1 });
+    revisions.set(nextId, { doc: JSON.parse(JSON.stringify(d)), kind, number: revisions.size + 1, parent: current });
     current = nextId;
     return nextId;
   };
   commit(initialDoc, 'manual');
-  const snapshot = () => ({ document: JSON.parse(JSON.stringify(revisions.get(current).doc)), page: page(), revision: { id: current, revision_kind: revisions.get(current).kind, revision_number: revisions.get(current).number } });
+  const snapshot = () => ({ document: JSON.parse(JSON.stringify(revisions.get(current).doc)), page: page(), revision: { id: current, parent_revision_id: revisions.get(current).parent, revision_kind: revisions.get(current).kind, revision_number: revisions.get(current).number } });
   const calls = [];
   const conflict = () => ({ ok: false, status: 409, error: { code: 'concurrency_conflict', message: '', details: { current_revision_id: current, expected_revision_id: null } } });
   const server = {
     calls,
     failNext: null,
+    loseAnswer: null,
     get currentId() { return current; },
     get currentDoc() { return revisions.get(current).doc; },
     /** Another editor saves a change behind our back. */
@@ -95,6 +96,9 @@ export function fakeServer(initialDoc, applyServer) {
         calls.push(['operations', JSON.parse(JSON.stringify(body))]);
         if (server.failNext) { const f = server.failNext; server.failNext = null; return f; }
         if (body.expected_revision_id !== current) return conflict();
+        // `loseAnswer`: the write lands but its answer never reaches the browser (a timeout after the server committed).
+        const lose = server.loseAnswer;
+        server.loseAnswer = null;
         let d = JSON.parse(JSON.stringify(revisions.get(current).doc));
         try {
           for (const o of body.operations) d = applyServer(d, o);
@@ -104,6 +108,7 @@ export function fakeServer(initialDoc, applyServer) {
         const same = JSON.stringify(d) === JSON.stringify(revisions.get(current).doc);
         if (body.revision_kind === 'autosave' && same) return { ok: true, status: 200, data: { ...snapshot(), deduplicated: true } };
         commit(d, body.revision_kind);
+        if (lose) return lose;
         return { ok: true, status: 200, data: { ...snapshot(), deduplicated: false } };
       },
       async rollback(body) {

@@ -3078,6 +3078,12 @@ html, body.sbx-body {
 .sbx-palette-card__title { font-size: 11.5px; line-height: 1.2; max-width: 100%; overflow-wrap: anywhere; }
 .sbx-palette-card__reason { font-size: var(--sbx-fs-2xs); }
 .sbx-palette-card { position: relative; }
+/* Notes span the whole grid instead of taking a tile's place; a tile's text stays inside it and its + sits on one
+   line with its neighbours'. */
+.sbx-palette__cards > .sbx-palette__note, .sbx-palette__cards > .sbx-muted, .sbx-palette__cards > .sbx-palette__cta { grid-column: 1 / -1; }
+.sbx-palette-card__content { width: 100%; align-items: center; }
+.sbx-palette-card__title, .sbx-palette-card__desc { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+.sbx-palette-card__plus-btn { margin-top: auto; }
 
 /* ── Site settings (design tokens, grouped) ── */
 .sbx-ss__views { margin: 0 0 0.6rem; }
@@ -3099,7 +3105,8 @@ html, body.sbx-body {
 .sbx-ss__text { flex: 1; min-width: 0; }
 .sbx-ss__reset { flex: none; width: 20px; height: 20px; padding: 0; border: 0; border-radius: var(--sbx-r-sm); background: transparent; color: inherit; cursor: pointer; opacity: 0.6; }
 .sbx-ss__reset:hover { opacity: 1; background: var(--sbx-panel); }
-.sbx-ss__bar { position: sticky; bottom: 0; padding: 0.6rem 0; background: var(--sbx-bg, inherit); }
+.sbx-ss__bar { position: sticky; bottom: 0; margin-top: 0.75rem; padding: 0.75rem 0; background: var(--sbx-panel); border-top: 1px solid var(--sbx-border); }
+.sbx-ss__foot { display: contents; }
 .sbx-ss__actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; }
 
 /* ── Element Manager ── */
@@ -3216,8 +3223,8 @@ html, body.sbx-body {
 .sbx-tile.is-disabled { opacity: 0.55; cursor: not-allowed; }
 .sbx-tile.is-disabled:hover { transform: none; border-color: var(--sbx-border); box-shadow: none; background: var(--sbx-card-bg); }
 .sbx-tile__icon { width: 32px; height: 32px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: var(--sbx-r-md); background: var(--sbx-accent-tint); border: 1px solid var(--sbx-accent-border); color: var(--sbx-accent-text); }
-.sbx-tile__label { max-width: 100%; font-size: var(--sbx-fs-xs); font-weight: 600; line-height: 1.2; color: var(--sbx-text-strong); overflow-wrap: anywhere; }
-.sbx-tile__reason { font-size: var(--sbx-fs-2xs); line-height: 1.3; color: var(--sbx-warn-text); white-space: normal; }
+.sbx-tile__label { max-width: 100%; font-size: var(--sbx-fs-xs); font-weight: 600; line-height: 1.2; color: var(--sbx-text-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sbx-tile__reason { font-size: var(--sbx-fs-2xs); line-height: 1.3; color: var(--sbx-warn-text); white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* Pills, quiet size: a switcher between views of one panel (Layers | Pages, Sections | Elements, Page | Site). */
 .sbx-segmented-pills--sm { gap: 2px; padding: 2px; border-radius: var(--sbx-r-lg); }
@@ -3280,6 +3287,11 @@ html, body.sbx-body {
 .sbx-lock-fieldset > .sbx-inspector { flex: 1 0 auto; display: flex; flex-direction: column; }
 .sbx-inspector > * { flex: none; }
 .sbx-inspector > .sbx-inspector__bar { margin-top: auto; }
+/* The bar is the panel's footer: flush with its bottom edge and full width, over the scrolling body's padding, so
+   nothing scrolls into a gap under it (in the docked panel and in the phone or tablet sheet alike). Its top margin is
+   left to the rules above (auto: short controls still leave the bar at the bottom). */
+.sbx-left__body--inspector .sbx-inspector__bar { bottom: -12px; margin-right: -14px; margin-bottom: -12px; margin-left: -14px; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)); }
+.sbx-bottom-sheet__body .sbx-inspector__bar { bottom: -16px; margin-right: -18px; margin-bottom: -16px; margin-left: -18px; padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px)); }
 .sbx-left__body--inspector:not([hidden]) { display: flex; flex-direction: column; }
 .sbx-left__body--inspector > .sbx-inspector-host { flex: 1 0 auto; }
 

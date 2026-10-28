@@ -195,8 +195,9 @@ unit('payment blocks: the throttle allows a burst, then waits for the window', f
     foreach (glob($dir . '/*') ?: [] as $f) {
         unlink($f);
     }
+    @unlink($dir . '/.pruned');
     rmdir($dir);
-    assert_true((new PayThrottle('/proc/definitely/not/writable'))->allow('x'), 'an unwritable directory never blocks a customer');
+    assert_false((new PayThrottle('/proc/definitely/not/writable'))->allow('x'), 'with nowhere to count, a start is refused rather than unthrottled');
 });
 
 unit('payment blocks: a payment link is only ever a Stripe-hosted https address', function (): void {

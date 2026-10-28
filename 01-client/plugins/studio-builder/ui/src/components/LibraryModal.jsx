@@ -38,13 +38,14 @@ export const LibraryModal = memo(function LibraryModal({ onClose }) {
           <div className="sbx-libmodal__bar">
             <div className="sbx-libmodal__tabs" role="tablist" aria-label={t('library_modal_title')}>
               {tabs.map((x) => (
-                <button key={x.key} type="button" role="tab" aria-selected={tab === x.key} data-lib-tab={x.key} className="sbx-libmodal__tab" onClick={() => setTab(x.key)}>
+                <button key={x.key} id={`sbx-libtab-${x.key}`} type="button" role="tab" aria-selected={tab === x.key} aria-controls="sbx-libpanel" data-lib-tab={x.key} className="sbx-libmodal__tab" onClick={() => setTab(x.key)}>
                   {x.label}<span className="sbx-libmodal__count">{x.count}</span>
                 </button>
               ))}
             </div>
             <input type="search" className="sbx-libmodal__search" data-testid="library-search" placeholder={t('library_search')} aria-label={t('library_search')} value={query} onChange={(e) => setQuery(e.target.value)} />
           </div>
+          <div id="sbx-libpanel" role="tabpanel" aria-labelledby={`sbx-libtab-${tab}`}>
           {shown.length === 0 ? <p className="sbx-hint">{query.trim() ? t('library_no_match') : t(group ? 'library_empty_templates' : 'library_empty_components')}</p> : (
             <ul className="sbx-libmodal__grid">
               {group ? shown.map((tpl) => (
@@ -71,6 +72,7 @@ export const LibraryModal = memo(function LibraryModal({ onClose }) {
               ))}
             </ul>
           )}
+          </div>
         </div>
       )}
     </Dialog>

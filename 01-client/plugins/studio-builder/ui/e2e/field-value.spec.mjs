@@ -1,7 +1,7 @@
 // The Field value block: set a custom field on the page's settings screen, then add the block in the builder, name the
 // field from the dropdown, and the canvas shows the page's value for it.
 import { test, expect } from '@playwright/test';
-import { openBuilder, settled, sandboxPageId, showEdit, frameEval, restoreLayers, layerCount } from './helpers.mjs';
+import { openBuilder, settled, sandboxPageId, showEdit, frameEval, restoreLayers, layerCount, ensurePostType } from './helpers.mjs';
 
 const TYPES = '/plugins/studio-builder/admin/types-fields.php';
 const EDIT = (id) => `/plugins/studio-builder/admin/page-edit.php?id=${id}`;
@@ -15,6 +15,7 @@ test('a custom field value of the page shows in the Field value block on the can
   const value = `Value ${Date.now()}`;
   const pageId = sandboxPageId();
 
+  await ensurePostType(page, 'services', 'Service');
   await page.goto(TYPES);
   await page.evaluate(() => { document.getElementById('sb-field-drawer').style.display = 'block'; });
   const d = page.locator('#sb-field-drawer');

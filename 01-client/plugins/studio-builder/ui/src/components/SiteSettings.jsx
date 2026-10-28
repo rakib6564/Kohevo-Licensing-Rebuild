@@ -3,6 +3,7 @@
 // through the same token endpoint, so only values the server's sanitizer accepts are stored.
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useEditor, useEngineState } from './EditorContext.jsx';
 import { t, errorMessage } from '../core/messages.mjs';
 import { asList, asObject } from '../core/doc.mjs';
@@ -52,7 +53,8 @@ function TokenRow({ tk, value, canEdit, problem, onChange, swatch, listId, fonts
   );
 }
 
-export function SiteSettingsForm({ onSaved, footer = null }) {
+// `actionsTarget`: an element outside the form (a dialog's footer) to show Save in, next to the host's own buttons.
+export function SiteSettingsForm({ onSaved, footer = null, actionsTarget = null }) {
   const { transport, boot, manifest } = useEditor();
   const working = useEngineState((s) => s.working);
   const group = (asObject(working && working.settings).token_group) || 'default';
@@ -187,7 +189,7 @@ export function SiteSettingsForm({ onSaved, footer = null }) {
         );
       })}
       {manifest && manifest.permissions && manifest.permissions.admin && <CustomCss />}
-      {footer ? footer(actions) : <div className="sbx-ss__bar">{actions}</div>}
+      {actionsTarget ? createPortal(actions, actionsTarget) : footer ? footer(actions) : <div className="sbx-ss__bar">{actions}</div>}
     </div>
   );
 }

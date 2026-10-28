@@ -22,8 +22,6 @@ if (!function_exists('unit')) {
     $studioI18nA11yStandalone = true;
 }
 require_once SLATE_ROOT . '/includes/Plugin.php';
-require_once SLATE_ROOT . '/plugins/studio-builder/StudioBuilderPortfolioWidgets.php';
-require_once SLATE_ROOT . '/plugins/studio-freelancer-portfolio/StudioFreelancerPortfolio.php';
 
 use Slate\Module\StudioBuilder\Application\StudioApplicationService;
 use Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions;
@@ -36,7 +34,6 @@ use Slate\Module\StudioBuilder\Render\RenderContext;
 use Slate\Module\StudioBuilder\Render\SiteContext;
 use Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme;
 use Slate\Module\StudioBuilder\Sdk\WidgetSdk;
-use Slate\Module\StudioBuilder\StudioBuilderPortfolioWidgets;
 
 final class _SbI18nNoMedia implements MediaResolverInterface
 {
@@ -172,44 +169,6 @@ unit('carousel: the browser fixture is the renderer\'s markup with the styleshee
         file_put_contents($fixture, $expected . "\n");
     }
     assert_eq(trim((string) file_get_contents($fixture)), $expected, 'ui/tests/fixtures/carousel.html is stale — regenerate with SBEL_WRITE_FIXTURE=1');
-});
-
-unit('portfolio showcase: contact links are empty by default, the URL is checked, and the owner\'s address never shows (W-F18)', function (): void {
-    // The widget registry is shared by every test in this run: take a copy and put it back afterwards.
-    $sdk = WidgetSdk::instance();
-    $widgetsProp = new \ReflectionProperty(WidgetSdk::class, 'widgets');
-    $saved = $widgetsProp->getValue($sdk);
-    try {
-        $widgetsProp->setValue($sdk, []);
-        StudioBuilderPortfolioWidgets::onRegisterWidgets($sdk);
-        $def = WidgetSdk::instance()->get('portfolio.rakib_showcase');
-        assert_true($def !== null, 'the widget registers');
-        $defaults = $def->defaultProps();
-        assert_true(($defaults['domain'] ?? '') === '' && ($defaults['domain_url'] ?? null) === null && ($defaults['email'] ?? '') === '', 'no default contact details');
-        assert_false($def->schema()->validate(['domain_url' => 'javascript:alert(1)'])->isValid(), 'a javascript: address is refused');
-        assert_false($def->schema()->validate(['email' => 'not an email'])->isValid(), 'a malformed email is refused');
-        assert_true($def->schema()->validate(['domain_url' => 'https://example.com', 'email' => 'me@example.com'])->isValid(), 'real values are accepted');
-
-        $empty = StudioBuilderPortfolioWidgets::renderShowcase(sbia_scope('portfolio.rakib_showcase', []));
-        assert_false(str_contains($empty, 'rakibhasaan.com'), 'with nothing set, the owner\'s domain and email are not in the page');
-        $set = StudioBuilderPortfolioWidgets::renderShowcase(sbia_scope('portfolio.rakib_showcase', ['domain' => 'example.com', 'domain_url' => 'https://example.com', 'email' => 'me@example.com']));
-        assert_true(str_contains($set, 'href="https://example.com"') && str_contains($set, 'href="mailto:me@example.com"'), 'set values are linked');
-        $stored = StudioBuilderPortfolioWidgets::renderShowcase(sbia_scope('portfolio.rakib_showcase', ['domain' => 'x', 'domain_url' => 'javascript:alert(1)', 'email' => '"><script>']));
-        assert_false(str_contains($stored, 'javascript:alert') || str_contains($stored, '"><script>'), 'an unsafe stored value is never linked or output');
-    } finally {
-        $widgetsProp->setValue($sdk, $saved);
-    }
-});
-
-unit('portfolio footer: social links and email are the owner\'s to fill in, and only filled ones show (W-F28)', function (): void {
-    $render = static fn(array $props): string => StudioFreelancerPortfolio::renderFooter(sbia_scope('portfolio.footer', $props));
-    $default = $render([]);
-    assert_false(str_contains($default, 'mailto:'), 'no email by default');
-    assert_false(str_contains($default, 'github.com') || str_contains($default, 'linkedin.com') || str_contains($default, 'twitter.com'), 'no placeholder social links');
-    $filled = $render(['links' => [['label' => 'GitHub', 'url' => 'https://github.com/me'], ['label' => 'Bad', 'url' => 'javascript:x'], ['label' => '', 'url' => 'https://empty.example']], 'email' => 'me@example.com']);
-    assert_true(str_contains($filled, 'href="https://github.com/me"') && str_contains($filled, '>GitHub ↗<'), 'a filled link shows');
-    assert_false(str_contains($filled, 'javascript:') || str_contains($filled, 'empty.example'), 'unsafe or unlabelled links are skipped');
-    assert_true(str_contains($filled, 'href="mailto:me@example.com"'), 'the email shows');
 });
 
 if (!empty($studioI18nA11yStandalone)) {

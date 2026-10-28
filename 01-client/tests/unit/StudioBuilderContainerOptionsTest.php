@@ -126,3 +126,17 @@ unit('container: saving keeps a linked wrapper\'s address, and only with the a t
     $dropped = DocumentNormalizer::normalize(sbco_doc(['tag' => 'section', 'link' => ['url' => '/menu']]), $registry);
     assert_false(array_key_exists('link', $dropped['sections'][0]['blocks'][0]), 'a stray link on another tag is not kept');
 });
+
+unit('a section takes a border like a block: one for every side, each side\'s width, style and colour, and each corner\'s radius', function (): void {
+    $border = ['style' => 'solid', 'width' => '1px', 'color' => 'color.accent', 'radius' => 'md',
+        'bottom' => ['width' => '4px', 'color' => '#123456'], 'radius_corners' => ['tl' => '0']];
+    assert_eq([], StyleSurface::sectionIssues(['border' => $border], '$'));
+    assert_eq(
+        'border-style:solid;border-width:1px;border-color:var(--sb-color-accent);border-radius:var(--sb-radius-md,.5rem);border-bottom-width:4px;border-bottom-color:#123456;border-top-left-radius:0',
+        StyleSurface::sectionDeclarations(['border' => $border]),
+        'all sides first, then the side and corner that win over them'
+    );
+    assert_eq(['$.border.width', '$.border.side', '$.border.top.width', '$.border.radius'], array_column(StyleSurface::sectionIssues(['border' => ['width' => 'red', 'side' => 1, 'top' => ['width' => 'x'], 'radius' => 'huge']], '$'), 'path'));
+    assert_eq('border-style:solid;border-top-width:2px', StyleSurface::sectionDeclarations(['border' => ['top' => ['width' => '2px']]]), 'a width with no style draws a solid line');
+    assert_eq('border-top-width:2px;border-top-style:dashed', StyleSurface::sectionDeclarations(['border' => ['top' => ['width' => '2px', 'style' => 'dashed']]]), 'a style the author chose is kept');
+});

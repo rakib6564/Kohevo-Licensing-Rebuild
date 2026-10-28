@@ -130,7 +130,7 @@ final class ModuleBlockDefinitions
                 type: 'payment.link',
                 version: 1,
                 label: 'Stripe Payment Link',
-                title: 'Stripe Payment Link',
+                title: 'Payment link',
                 description: 'A button to a Stripe Payment Link or Buy Button page',
                 category: 'business',
                 icon: 'link',

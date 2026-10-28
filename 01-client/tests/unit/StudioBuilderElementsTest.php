@@ -562,3 +562,28 @@ unit('heading highlight: the highlighted part has its own colour, italic, weight
     $hero = sbel_render([sbel_block('core.hero', ['heading' => 'Build in order', 'highlight' => 'in order', 'highlight_italic' => true, 'highlight_color' => '#d4623d'])]);
     assert_true(str_contains($hero, '<span class="sb-hl sb-hl--italic" style="color:#d4623d;font-style:italic">in order</span>'), 'the hero heading takes the same look');
 });
+
+unit('elements: layout.offcanvas opens from an icon trigger (a hamburger) with or without its text', function (): void {
+    $registry = ModuleBlockDefinitions::studioRegistry();
+    assert_true($registry->get('layout.offcanvas')->validateProps(['trigger_icon' => 'menu-short', 'trigger_variant' => 'plain', 'trigger_show_text' => false, 'trigger_icon_size' => 28])->isValid(), 'icon trigger props validate');
+    assert_false($registry->get('layout.offcanvas')->validateProps(['trigger_icon' => 'burger'])->isValid(), 'only library icons');
+    assert_false($registry->get('layout.offcanvas')->validateProps(['trigger_icon_size' => 200])->isValid(), 'icon size is bounded');
+
+    $iconOnly = sbel_render([sbel_block('layout.offcanvas', ['drawer_id' => 'site-menu', 'title' => '', 'trigger_text' => 'Menu "main"', 'trigger_icon' => 'menu-short', 'trigger_variant' => 'plain', 'trigger_show_text' => false, 'trigger_icon_size' => 28])]);
+    assert_true(str_contains($iconOnly, 'class="sb-offcanvas-trigger sb-button sb-button--plain sb-offcanvas-trigger--icon"'), 'plain icon trigger classes');
+    assert_true(str_contains($iconOnly, 'aria-label="Menu &quot;main&quot;"'), 'the hidden text names the link, escaped');
+    assert_true(str_contains($iconOnly, 'width="28" height="28"') && str_contains($iconOnly, IconLibrary::markup('menu-short')), 'the icon at its size');
+    assert_false(str_contains($iconOnly, 'sb-offcanvas-trigger__label'), 'no visible text');
+    assert_true(str_contains($iconOnly, 'sb-offcanvas__header--bare') && !str_contains($iconOnly, '<h3 id="site-menu-title"'), 'no title: a bare header');
+    assert_true(str_contains($iconOnly, 'role="dialog" aria-label="Menu"'), 'the untitled drawer is still named');
+
+    $noText = sbel_render([sbel_block('layout.offcanvas', ['trigger_text' => '', 'trigger_icon' => 'menu'])]);
+    assert_true(str_contains($noText, 'aria-label="Open menu"'), 'an icon with no text gets a default name');
+
+    $both = sbel_render([sbel_block('layout.offcanvas', ['trigger_text' => 'Menu', 'trigger_icon' => 'menu'])]);
+    assert_true(str_contains($both, '<span class="sb-offcanvas-trigger__label">Menu</span>') && !str_contains($both, 'aria-label="Menu"><svg'), 'icon and visible text, no duplicate name');
+
+    $text = sbel_render([sbel_block('layout.offcanvas', ['trigger_text' => 'Open Menu'])]);
+    assert_true(str_contains($text, '>Open Menu</span></a>') && !str_contains($text, '<svg class="sb-offcanvas-trigger__icon'), 'a text trigger as before, no icon');
+    assert_true(str_contains($text, 'aria-labelledby='), 'a titled drawer is labelled by its title');
+});

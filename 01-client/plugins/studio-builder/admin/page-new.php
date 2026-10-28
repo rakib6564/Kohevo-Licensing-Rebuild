@@ -40,7 +40,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $created = $studioApp->createPage($studioActor, $formValues['title'], $formValues['slug'], $formValues['page_type'], $formValues['route_mode']);
             $newId = (int) $created['page']['id'];
             if ($formValues['template_key'] !== '') {
-                $studioApp->applyTemplate($studioActor, $formValues['template_key'], $newId, (int) $created['revision']['id']);
+                // The page exists from here on: a template that cannot be applied leaves it blank, and says so on its
+                // settings screen (which links to the builder) instead of reporting that nothing was created.
+                try {
+                    $studioApp->applyTemplate($studioActor, $formValues['template_key'], $newId, (int) $created['revision']['id']);
+                } catch (\Throwable $e) {
+                    sb_log_error('new page template', $e);
+                    sb_flash_redirect('page-edit.php?id=' . $newId, ['type' => 'warning', 'msg' => __('studio_page_created_template_failed', 'The page was created, but the template could not be applied, so it starts blank. Open it in the builder to add content.')]);
+                }
             }
             header('Location: ' . plugin_url('studio-builder', 'admin/builder.php') . '?page=' . $newId, true, 303);
             exit;

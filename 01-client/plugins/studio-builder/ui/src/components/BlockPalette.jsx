@@ -21,9 +21,9 @@ import { DRAG_TYPE_NEW, renderBlockIcon } from './blockIcons.jsx';
 export { DRAG_TYPE_NEW };
 export { isDynamicBlock };
 
+// A card has room for a few words: where the data comes from, not the provider key (search still finds that).
 function providerNote(def) {
-  const providers = asList(def.binding_slots).map((b) => b.provider);
-  return providers.length ? `${t('dynamic_data_from')} ${providers.join(', ')}` : t('dynamic_page_context');
+  return asList(def.binding_slots).length ? t('dynamic_data_from') : t('dynamic_page_context');
 }
 
 function PaletteCard({ def, query, onInsert }) {
@@ -51,7 +51,7 @@ function PaletteCard({ def, query, onInsert }) {
 function DynamicPanel({ manifest, query, insertBlock }) {
   const q = query.trim().toLowerCase();
   const items = asList(manifest.blocks).filter((b) => isOffered(b) && isDynamicBlock(b)
-    && (!q || `${b.label} ${b.type} ${providerNote(b)}`.toLowerCase().includes(q)));
+    && (!q || `${b.label} ${b.title || ''} ${b.type} ${asList(b.binding_slots).map((s) => s.provider).join(' ')} ${providerNote(b)}`.toLowerCase().includes(q)));
   return (
     <div className="sbx-palette__cards" data-testid="palette-dynamic">
       <p className="sbx-palette__note">{t('dynamic_note')}</p>

@@ -142,6 +142,7 @@ if ($page !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 }
 
+$flash = $flash ?? sb_take_flash();
 if ($flash === null && isset($_GET['saved'])) {
     $flash = ['type' => 'success', 'msg' => __('studio_page_saved', 'Page saved.')];
 } elseif ($flash === null && isset($_GET['meta_saved'])) {
@@ -210,6 +211,10 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <select id="sb-route" name="route_mode"<?= $canEdit ? '' : ' disabled' ?>>
                     <option value="standalone"<?= $page['route_mode'] === 'standalone' ? ' selected' : '' ?>><?= e(__('studio_route_standalone', 'Dedicated URL Path')) ?></option>
                     <option value="homepage"<?= $page['route_mode'] === 'homepage' ? ' selected' : '' ?>><?= e(__('studio_route_homepage', 'Site Homepage (/)')) ?></option>
+                    <?php if (!in_array((string) $page['route_mode'], ['standalone', 'homepage'], true)): ?>
+                        <?php // A route this screen does not offer (a system override) is kept as it is: saving the form must not turn it into a normal page. ?>
+                        <option value="<?= e((string) $page['route_mode']) ?>" selected><?= e((string) $page['route_mode'] === 'system_override' ? __('studio_route_system_override', 'System page override') : (string) $page['route_mode']) ?></option>
+                    <?php endif; ?>
                 </select>
             </div>
         </div>

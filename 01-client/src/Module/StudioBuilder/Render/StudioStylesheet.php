@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '28';
+    public const VERSION = '29';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -471,6 +471,11 @@ final class StudioStylesheet
             . '.sb-offcanvas__header{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem;border-bottom:1px solid #e5e7eb}'
             . '.sb-offcanvas__close{background:none;border:none;font-size:1.5rem;text-decoration:none;cursor:pointer;line-height:1;color:#6b7280}'
             . '.sb-offcanvas__body{padding:1.25rem;flex:1;overflow-y:auto}'
+            . '.sb-offcanvas__header--bare{justify-content:flex-end;border-bottom:0;padding-bottom:0}'
+            // The drawer trigger: an icon (a hamburger) with or without its text; `plain` drops the button chrome.
+            . '.sb-offcanvas-trigger--icon{display:inline-flex;align-items:center;gap:.5rem;line-height:1}'
+            . '.sb-offcanvas-trigger__icon{flex:none;display:block}'
+            . '.sb-button.sb-button--plain{background:none;border:0;padding:0;border-radius:0;color:inherit}'
             . '.sb-form{display:flex;flex-direction:column;gap:1rem}'
             . '.sb-form-group{display:flex;flex-direction:column;gap:.375rem}'
             . '.sb-form-group label{font-weight:500;font-size:.875rem}'

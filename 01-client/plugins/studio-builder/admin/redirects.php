@@ -37,6 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
     } elseif (!$canEdit) {
         $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to manage redirects.')];
+    } elseif (!sb_studio_entitled()) {
+        $flash = ['type' => 'error', 'msg' => __('studio_pages_forbidden', 'Kohevo Studio is not available for your account on this site.')];
     } else {
         $action = (string) ($_POST['_action'] ?? '');
 
@@ -45,6 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $toPath = trim((string) ($_POST['to_path'] ?? ''));
             $statusCode = (int) ($_POST['status_code'] ?? 301);
             $notes = trim((string) ($_POST['notes'] ?? ''));
+            // Checked before the paths are normalised: an empty field would otherwise become "/".
+            $missing = $fromPath === '' || $toPath === '';
 
             // Normalise paths
             if (!str_starts_with($fromPath, 'http://') && !str_starts_with($fromPath, 'https://')) {
@@ -56,12 +60,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Reserved route check
             $reserved = ['/admin', '/login', '/logout', '/sitemap.xml', '/robots.txt'];
-            if ($fromPath === '' || $toPath === '') {
-                $flash = ['type' => 'error', 'msg' => 'Source and destination paths are required.'];
+            if ($missing) {
+                $flash = ['type' => 'error', 'msg' => __('studio_redirect_required', 'Enter both the old address and where it should go.')];
             } elseif ($fromPath === $toPath) {
-                $flash = ['type' => 'error', 'msg' => 'Source and destination cannot be identical (redirect loop).'];
+                $flash = ['type' => 'error', 'msg' => __('studio_redirect_loop', 'Source and destination cannot be identical (redirect loop).')];
             } elseif (in_array($fromPath, $reserved, true)) {
-                $flash = ['type' => 'error', 'msg' => "Cannot redirect system reserved route '{$fromPath}'."];
+                $flash = ['type' => 'error', 'msg' => sprintf(__('studio_redirect_reserved', "Cannot redirect system reserved route '%s'."), $fromPath)];
             } elseif (StudioRedirects::key($fromPath) === null || StudioRedirects::key($fromPath) === '/') {
                 $flash = ['type' => 'error', 'msg' => __('studio_redirect_bad_source', 'Enter the old address as a path such as /old-page. The home page cannot be redirected.')];
             } elseif (array_filter($redirects, static fn($r): bool => is_array($r) && StudioRedirects::key((string) ($r['from'] ?? '')) === StudioRedirects::key($fromPath)) !== []) {
@@ -81,19 +85,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
 
                 Database::setSetting('studio_redirects', json_encode($redirects, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
-                $flash = ['type' => 'success', 'msg' => "Redirect rule from '{$fromPath}' to '{$toPath}' saved."];
+                sb_flash_redirect('redirects.php', ['type' => 'success', 'msg' => sprintf(__('studio_redirect_saved', "Redirect rule from '%1\$s' to '%2\$s' saved."), $fromPath, $toPath)]);
             }
         } elseif ($action === 'delete_redirect') {
             $ruleId = trim((string) ($_POST['rule_id'] ?? ''));
             if ($ruleId !== '') {
                 $redirects = array_values(array_filter($redirects, fn($r) => ($r['id'] ?? '') !== $ruleId));
                 Database::setSetting('studio_redirects', json_encode($redirects, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
-                $flash = ['type' => 'success', 'msg' => 'Redirect rule removed.'];
+                sb_flash_redirect('redirects.php', ['type' => 'success', 'msg' => __('studio_redirect_removed', 'Redirect rule removed.')]);
             }
         }
     }
 }
 
+$flash = $flash ?? sb_take_flash();
 
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>

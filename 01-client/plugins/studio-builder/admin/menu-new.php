@@ -29,6 +29,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
     } elseif (!$canEdit) {
         $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to edit menus.')];
+    } elseif (!sb_studio_entitled()) {
+        $flash = ['type' => 'error', 'msg' => __('studio_pages_forbidden', 'Kohevo Studio is not available for your account on this site.')];
     } else {
         $name = trim((string) ($_POST['name'] ?? ''));
         $key  = trim((string) ($_POST['key'] ?? ''));

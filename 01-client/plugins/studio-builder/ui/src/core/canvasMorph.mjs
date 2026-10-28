@@ -131,3 +131,10 @@ export function morphDocument(liveDoc, nextDoc) {
 
 /** Is the author typing into the canvas right now (a morph would pull the text out from under the cursor)? */
 export const isInlineEditing = (doc) => !!(doc && doc.querySelector && doc.querySelector('.sbx-inline-editing'));
+
+/**
+ * What to do after an in-place repaint attempt: `true` is done, `'busy'` (the author is typing on the canvas) waits
+ * and tries again for as long as the typing lasts (reloading the frame would end it), anything else reloads the frame.
+ * @returns {'done'|'wait'|'reload'}
+ */
+export const repaintNext = (outcome) => (outcome === true ? 'done' : outcome === 'busy' ? 'wait' : 'reload');

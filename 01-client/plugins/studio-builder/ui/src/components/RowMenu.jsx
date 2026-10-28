@@ -50,9 +50,13 @@ export function RowMenu({ label, items, onChoose, testId }) {
       if (buttonRef.current && buttonRef.current.contains(e.target)) return;
       setOpen(false);
     };
+    const resized = () => setOpen(false);
     document.addEventListener('pointerdown', away, true);
-    window.addEventListener('resize', () => setOpen(false), { once: true });
-    return () => document.removeEventListener('pointerdown', away, true);
+    window.addEventListener('resize', resized, { once: true });
+    return () => {
+      document.removeEventListener('pointerdown', away, true);
+      window.removeEventListener('resize', resized);
+    };
   }, [open]);
 
   const choose = (item) => {

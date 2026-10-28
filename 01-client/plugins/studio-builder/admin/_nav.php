@@ -82,18 +82,17 @@ if (!function_exists('sb_render_admin_nav')) {
     function sb_render_admin_nav(string $activePage, ?int $builderPageId = null): void
     {
         $items = [
-            ['id' => 'overview',        'label' => 'Overview',         'file' => 'index.php',          'icon' => 'overview'],
-            ['id' => 'pages',           'label' => 'Pages',            'file' => 'pages.php',          'icon' => 'pages'],
-            ['id' => 'content',         'label' => 'Content',          'file' => 'content.php',        'icon' => 'content'],
-            ['id' => 'media',           'label' => 'Media',            'file' => 'media.php',          'icon' => 'media'],
-            ['id' => 'templates',       'label' => 'Templates',        'file' => 'templates.php',      'icon' => 'templates'],
-            ['id' => 'menus',           'label' => 'Menus',            'file' => 'menus.php',          'icon' => 'menus'],
-            ['id' => 'types-fields',    'label' => 'Types & fields',   'file' => 'types-fields.php',   'icon' => 'types-fields'],
-            ['id' => 'seo',             'label' => 'Site & SEO',       'file' => 'seo.php',            'icon' => 'seo'],
-            ['id' => 'ai-mcp',          'label' => 'AI & MCP',         'file' => 'ai-mcp.php',         'icon' => 'ai-mcp'],
-            ['id' => 'reviews',         'label' => 'Reviews',          'file' => 'reviews.php',        'icon' => 'reviews'],
-            ['id' => 'code-tracking',   'label' => 'Code & tracking',  'file' => 'code-tracking.php',  'icon' => 'code-tracking'],
-            ['id' => 'redirects',       'label' => 'Redirects',        'file' => 'redirects.php',      'icon' => 'redirects'],
+            ['id' => 'overview',        'label' => __('studio_nav_overview', 'Overview'), 'file' => 'index.php',          'icon' => 'overview'],
+            ['id' => 'pages',           'label' => __('studio_nav_pages', 'Pages'), 'file' => 'pages.php',          'icon' => 'pages'],
+            ['id' => 'media',           'label' => __('studio_nav_media', 'Media'), 'file' => 'media.php',          'icon' => 'media'],
+            ['id' => 'templates',       'label' => __('studio_nav_templates', 'Templates'), 'file' => 'templates.php',      'icon' => 'templates'],
+            ['id' => 'menus',           'label' => __('studio_nav_menus', 'Menus'), 'file' => 'menus.php',          'icon' => 'menus'],
+            ['id' => 'types-fields',    'label' => __('studio_nav_types_fields', 'Types & fields'), 'file' => 'types-fields.php',   'icon' => 'types-fields'],
+            ['id' => 'seo',             'label' => __('studio_nav_seo', 'Site & SEO'), 'file' => 'seo.php',            'icon' => 'seo'],
+            ['id' => 'ai-mcp',          'label' => __('studio_nav_ai_mcp', 'AI & MCP'), 'file' => 'ai-mcp.php',         'icon' => 'ai-mcp'],
+            ['id' => 'reviews',         'label' => __('studio_nav_reviews', 'Reviews'), 'file' => 'reviews.php',        'icon' => 'reviews'],
+            ['id' => 'code-tracking',   'label' => __('studio_nav_code_tracking', 'Code & tracking'), 'file' => 'code-tracking.php',  'icon' => 'code-tracking'],
+            ['id' => 'redirects',       'label' => __('studio_nav_redirects', 'Redirects'), 'file' => 'redirects.php',      'icon' => 'redirects'],
         ];
 
         // Code & tracking injects scripts and CSS into every public page: administrators only.
@@ -504,21 +503,21 @@ if (!function_exists('sb_render_admin_nav')) {
                     <h1>Kohevo Studio</h1>
                     <span class="sb-admin-badge-engine">v1.0 Pro</span>
                 </div>
-                <p class="page-header-sub">Visual theme builder, dynamic query loop engine, custom post types & meta fields, and AI workflow hub.</p>
+                <p class="page-header-sub"><?= e(__('studio_nav_tagline', 'Visual theme builder, dynamic query loop engine, custom post types & meta fields, and AI workflow hub.')) ?></p>
             </div>
             <div class="sb-admin-header-actions">
                 <a href="<?= e($builderHref) ?>" class="btn btn-primary"<?= $targetPageId !== null ? ' target="_blank" rel="noopener"' : '' ?>>
                     <?= sb_svg('zap', 16) ?>
-                    <span>Open Canvas Builder</span>
+                    <span><?= e(__('studio_nav_open_builder', 'Open Canvas Builder')) ?></span>
                 </a>
                 <a href="<?= e(rtrim(SLATE_URL, '/') . '/') ?>" class="btn btn-outline" target="_blank" rel="noopener">
                     <?= sb_svg('external-link', 16) ?>
-                    <span>View Live Site</span>
+                    <span><?= e(__('studio_nav_view_site', 'View Live Site')) ?></span>
                 </a>
             </div>
         </div>
 
-        <nav class="sb-admin-nav-bar" aria-label="Studio Navigation">
+        <nav class="sb-admin-nav-bar" aria-label="<?= e(__('studio_nav_aria', 'Studio Navigation')) ?>">
             <?php foreach ($items as $nav):
                 $isActive = ($activePage === $nav['id']);
                 $url = plugin_url('studio-builder', 'admin/' . $nav['file']);
@@ -594,5 +593,60 @@ if (!function_exists('sb_render_crumbs')) {
                 : '<span aria-current="page">' . e($label) . '</span>';
         }
         echo '</nav>';
+    }
+}
+
+if (!function_exists('sb_flash_redirect')) {
+    /**
+     * POST/redirect/GET for a Studio admin screen: the message is kept in the session for the next page view and the
+     * browser is sent there with a 303, so a refresh shows the result again instead of repeating the action. `$url` is
+     * the screen itself with the query string that matters (a filter, a tab), or wherever the action leads. The short
+     * body carries the message and a link, for a client that does not follow redirects.
+     *
+     * @param array{type: string, msg: string} $flash extra keys (links the message shows) are kept
+     */
+    function sb_flash_redirect(string $url, array $flash): never
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            $_SESSION['sb_flash'] = $flash;
+        }
+        header('Location: ' . $url, true, 303);
+        echo '<div class="alert alert-' . e((string) $flash['type']) . '">' . e((string) $flash['msg']) . '</div>'
+            . '<p><a href="' . e($url) . '">' . e(__('studio_continue', 'Continue')) . '</a></p>';
+        exit;
+    }
+}
+
+if (!function_exists('sb_take_flash')) {
+    /**
+     * The message `sb_flash_redirect()` left for this page view, once: it is removed as it is read.
+     *
+     * @return array{type: string, msg: string}|null
+     */
+    function sb_take_flash(): ?array
+    {
+        $flash = $_SESSION['sb_flash'] ?? null;
+        unset($_SESSION['sb_flash']);
+        return is_array($flash) && is_string($flash['type'] ?? null) && is_string($flash['msg'] ?? null) ? $flash : null;
+    }
+}
+
+if (!function_exists('sb_studio_entitled')) {
+    /**
+     * Whether this site's licence includes Kohevo Studio. The application service checks this before every write it
+     * makes; a screen that writes settings or rows itself checks it here first. `ModuleGuard::allows()` is the admin-route
+     * form of the same `EntitlementService::canAccess()` answer (with the test-runner bypass every module guard has).
+     */
+    function sb_studio_entitled(): bool
+    {
+        return \Slate\Services\Licensing\ModuleGuard::allows('studio-builder');
+    }
+}
+
+if (!function_exists('sb_log_error')) {
+    /** Log a failure an admin is shown only a generic message for: where it happened, the exception class and its text. */
+    function sb_log_error(string $where, \Throwable $e): void
+    {
+        error_log('[studio-builder] ' . $where . ': ' . $e::class . ': ' . $e->getMessage());
     }
 }

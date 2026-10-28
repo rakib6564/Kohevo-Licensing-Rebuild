@@ -128,7 +128,7 @@ final class FieldValueRenderer implements BlockRendererInterface
                 // One star per point: the scale is kept to 1-10 whatever is stored, so a huge max cannot exhaust memory.
                 $max = max(1, min(MetaFieldTypes::MAX_RATING, (int) ($field['options']['max'] ?? 5)));
                 $n = max(0, min($max, (int) round((float) $value)));
-                return '<span aria-label="' . $n . ' / ' . $max . '">' . str_repeat('★', $n) . str_repeat('☆', max(0, $max - $n)) . '</span>';
+                return '<span role="img" aria-label="' . $n . ' / ' . $max . '">' . str_repeat('★', $n) . str_repeat('☆', max(0, $max - $n)) . '</span>';
             case 'price':
                 return $e(number_format((float) $value, ((float) $value) == floor((float) $value) ? 0 : 2));
             case 'textarea':

@@ -396,11 +396,28 @@ export function BorderExtras({ style, onChange, tokens }) {
         {SIDES.map((s) => (
           <fieldset key={s} className="sbx-fieldset">
             <legend>{t(`side_${s}`)}</legend>
-            <SelectField id={pathId(id, `border.${s}.style`)} label={t('border_style')} value={f.get(`border.${s}.style`)} options={OPTIONS.borderStyle} onChange={(v) => f.put(`border.${s}.style`, v)} />
-            <ThemeColor id={pathId(id, `border.${s}.color`)} label={t('border_color')} value={f.get(`border.${s}.color`)} onChange={(v) => f.put(`border.${s}.color`, v)} tokens={tokens} />
+            <SelectField id={pathId(id, `border.${s}.style`)} label={`${t(`side_${s}`)} · ${t('border_style')}`} value={f.get(`border.${s}.style`)} options={OPTIONS.borderStyle} onChange={(v) => f.put(`border.${s}.style`, v)} />
+            <ThemeColor id={pathId(id, `border.${s}.color`)} label={`${t(`side_${s}`)} · ${t('border_color')}`} value={f.get(`border.${s}.color`)} onChange={(v) => f.put(`border.${s}.color`, v)} tokens={tokens} />
           </fieldset>
         ))}
       </details>
+    </>
+  );
+}
+
+const RADIUS_PRESETS = ['none', 'sm', 'md', 'lg', 'xl', '2xl', 'full'];
+
+/** A section's border (StyleSurface::sectionBorderFields): style, colour and radius for every side, then the side and corner boxes. */
+export function SectionBorder({ style, onChange, tokens }) {
+  const id = useId();
+  const f = useFields(style, onChange);
+  const radiusLabels = { none: t('none'), sm: t('size_sm'), md: t('size_md'), lg: t('size_lg'), xl: t('size_xl'), '2xl': t('size_2xl'), full: t('size_full_pill') };
+  return (
+    <>
+      <SelectField id={pathId(id, 'border.style')} label={t('border_style')} value={f.get('border.style')} options={OPTIONS.borderStyle} onChange={(v) => f.put('border.style', v)} />
+      <ThemeColor id={pathId(id, 'border.color')} label={t('border_color')} value={f.get('border.color')} onChange={(v) => f.put('border.color', v)} tokens={tokens} />
+      <SelectField id={pathId(id, 'border.radius')} label={t('border_radius')} value={f.get('border.radius')} options={RADIUS_PRESETS} optionLabels={radiusLabels} onChange={(v) => f.put('border.radius', v)} />
+      <BorderExtras style={style} onChange={onChange} tokens={tokens} />
     </>
   );
 }

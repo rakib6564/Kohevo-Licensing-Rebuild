@@ -18,13 +18,18 @@
 //    (insert/move/remove) flush immediately. Automatic flushes are recorded
 //    as `autosave` revisions (the server deduplicates identical ones); an
 //    explicit save flushes as `manual`.
-//  - A batch never contains more than one insert, so the single id the
-//    server mints can be matched to the provisional `tmp_` id unambiguously.
+//  - A batch never contains more than one insert or duplicate, so the one
+//    subtree the server creates can be matched to the provisional `tmp_` ids
+//    unambiguously (root and descendants, by position).
+//  - A save whose answer never came (timeout, dropped connection) may still
+//    have landed. Before it is sent again the server's draft is read back: if
+//    it is exactly that save on top of the revision it was sent against, it
+//    is taken as the answer instead of being re-sent into a 409.
 //  - Undo/redo never stores documents: each confirmed batch records only the
 //    revision ids before/after it, and undo/redo are server `rollback`
 //    commands to those immutable revisions (bounded stack).
 
-import { nodeIds, findNode } from './doc.mjs';
+import { asList, nodeIds, findNode } from './doc.mjs';
 import { lockViolation } from './layerLock.mjs';
 import { applyLocal, enqueueCoalesced, isProvisionalId, referencedIds, remapIds, STRUCTURAL, OPS } from './operations.mjs';
 
@@ -36,6 +41,71 @@ export const STATUS = Object.freeze({
 const MAX_BATCH = 50;
 const MAX_HISTORY = 50;
 const RETRY_DELAYS = [2000, 5000, 10000, 30000];
+// Operations that create nodes: a batch ends at (and includes) the first of them.
+const CREATES = new Set([OPS.INSERT_BLOCK, OPS.INSERT_SECTION, OPS.DUPLICATE_BLOCK, OPS.DUPLICATE_SECTION]);
+// Failures after which the request may or may not have reached the server.
+const UNCERTAIN = new Set(['timeout', 'network_error']);
+
+const kidsOf = (node) => asList(node && (node.blocks || node.children));
+
+/**
+ * Provisional id → server id for the one subtree a confirmed batch created.
+ * `local` is the working document (the subtree under its provisional ids),
+ * `server` the confirmed document, `beforeIds` the ids the server had before.
+ * The server's new subtree is the one created node whose parent is not new;
+ * its nodes are paired with the local copy's by position.
+ */
+export function provisionalMap(local, server, beforeIds, rootTmp) {
+  const map = new Map();
+  if (!rootTmp) return map;
+  const created = new Set([...nodeIds(server)].filter((id) => !beforeIds.has(id)));
+  const roots = [...created].filter((id) => !created.has((findNode(server, id) || {}).parentId));
+  if (roots.length !== 1) return map;
+  const serverRoot = findNode(server, roots[0]).node;
+  const localRoot = findNode(local, rootTmp);
+  if (!localRoot) { map.set(rootTmp, serverRoot.id); return map; }
+  const pair = (a, b) => {
+    if (isProvisionalId(a.id)) map.set(a.id, b.id);
+    const ak = kidsOf(a);
+    const bk = kidsOf(b);
+    for (let i = 0; i < Math.min(ak.length, bk.length); i += 1) pair(ak[i], bk[i]);
+  };
+  pair(localRoot.node, serverRoot);
+  return map;
+}
+
+/** JSON with object keys sorted, so two documents compare by content. */
+function stable(value) {
+  if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((k) => `${JSON.stringify(k)}:${stable(value[k])}`).join(',')}}`;
+  }
+  return JSON.stringify(value === undefined ? null : value);
+}
+
+/**
+ * Whether `server` (a draft whose parent is the revision `base` came from) is
+ * exactly `batch` applied to `base`: then a save whose answer was lost did land.
+ * Anything else (another editor's write, a server-side normalisation) is not
+ * claimed, and the save is re-sent as usual (a 409 if the draft moved on).
+ */
+export function landedAsSent(base, batch, server, manifest) {
+  let expected = base;
+  try {
+    for (const e of batch) expected = applyLocal(expected, e.op, { manifest, provisionalId: e.provisionalId });
+  } catch {
+    return false;
+  }
+  const insert = batch.find((e) => e.provisionalId);
+  const map = insert ? provisionalMap(expected, server, nodeIds(base), insert.provisionalId) : new Map();
+  if (insert && !map.has(insert.provisionalId)) return false;
+  // Name the new nodes as the server did; the rest must match exactly.
+  const text = stable(expected).replace(/"tmp_[A-Za-z0-9_]+"/g, (m) => {
+    const real = map.get(JSON.parse(m));
+    return real ? JSON.stringify(real) : m;
+  });
+  return text === stable(server);
+}
 
 export class SyncEngine {
   /**
@@ -62,6 +132,8 @@ export class SyncEngine {
     this.retryIndex = 0;
     this.busy = null;
     this.stepping = false;
+    // A sent batch whose answer was lost: {before, kind, base, batch} until the server is read back.
+    this.unanswered = null;
     this.state = {
       status: STATUS.LOADING, base: null, page: null, revision: null,
       pending: [], inflight: [], working: null,
@@ -103,6 +175,7 @@ export class SyncEngine {
   load({ document, page, revision }, manifest) {
     if (manifest) this.manifest = manifest;
     this.clearTimer();
+    this.unanswered = null;
     this.set({
       status: STATUS.IDLE, base: document, working: document, page, revision,
       pending: [], inflight: [], error: null, conflict: null, undo: [], redo: [],
@@ -194,8 +267,17 @@ export class SyncEngine {
   async flushNow(kind) {
     const s = this.state;
     if (s.status === STATUS.CONFLICT || !s.pending.length || s.inflight.length) return true;
+    if (this.unanswered) {
+      const settled = await this.settleUnanswered();
+      if (settled !== null) return settled;
+    }
+    return this.sendBatch(kind);
+  }
 
-    // Batch: up to MAX_BATCH operations, ending at (and including) the first insert.
+  async sendBatch(kind) {
+    const s = this.state;
+
+    // Batch: up to MAX_BATCH operations, ending at (and including) the first insert or duplicate.
     const batch = [];
     for (const entry of s.pending) {
       if (batch.length >= MAX_BATCH) break;
@@ -203,7 +285,7 @@ export class SyncEngine {
       // yet confirmed) cannot be sent; stop the batch before it.
       if (referencedIds(entry.op).some(isProvisionalId)) break;
       batch.push(entry);
-      if (entry.op.op === OPS.INSERT_BLOCK || entry.op.op === OPS.INSERT_SECTION) break;
+      if (CREATES.has(entry.op.op)) break;
     }
     if (!batch.length) {
       // Only edits of a node whose insert never got a server id remain: they
@@ -225,34 +307,57 @@ export class SyncEngine {
     });
 
     if (res.ok) {
-      this.retryIndex = 0;
-      const data = res.data;
-      // Match the one server-minted id to the provisional id of the batch's insert.
-      const insert = batch.find((e) => e.provisionalId);
-      const map = new Map();
-      if (insert) {
-        const created = [...nodeIds(data.document)].filter((id) => !beforeIds.has(id));
-        if (created.length === 1) map.set(insert.provisionalId, created[0]);
-      }
-      const pending = this.state.pending.map((e) => ({ ...e, op: map.size ? remapIds(e.op, map) : e.op }));
-      map.forEach((real, tmp) => this.onRemap(tmp, real));
-
-      const after = data.revision ? data.revision.id : before;
-      const undo = !data.deduplicated && before && after && after !== before
-        ? [...this.state.undo, { before, after, label: batch.map((e) => e.label).filter(Boolean).pop() || '' }].slice(-MAX_HISTORY)
-        : this.state.undo;
-      this.rebuild({
-        base: data.document, page: data.page, revision: data.revision || this.state.revision,
-        inflight: [], pending, undo,
-        status: pending.length ? STATUS.DIRTY : STATUS.SAVED,
-        lastSavedAt: Date.now(), error: null,
-      });
-      this.onEvent({ type: 'saved', revision: data.revision, deduplicated: !!data.deduplicated });
-      if (this.state.pending.length) this.scheduleFlush(this.state.pending.some((e) => STRUCTURAL.has(e.op.op)) ? 0 : this.debounceMs);
+      this.confirmBatch(batch, res.data, before, beforeIds, this.state.pending);
       return true;
     }
 
+    if (UNCERTAIN.has(res.error && res.error.code)) this.unanswered = { before, kind, base: s.base, batch };
     return this.handleFailure(res, batch);
+  }
+
+  /** The server took `batch`: its document becomes the base, `pending` is re-applied on top. */
+  confirmBatch(batch, data, before, beforeIds, pendingIn) {
+    this.retryIndex = 0;
+    // Match the subtree the server created to the provisional ids of the batch's insert or duplicate.
+    const insert = batch.find((e) => e.provisionalId);
+    const map = insert ? provisionalMap(this.state.working, data.document, beforeIds, insert.provisionalId) : new Map();
+    const pending = pendingIn.map((e) => ({ ...e, op: map.size ? remapIds(e.op, map) : e.op }));
+    map.forEach((real, tmp) => this.onRemap(tmp, real));
+
+    const after = data.revision ? data.revision.id : before;
+    const undo = !data.deduplicated && before && after && after !== before
+      ? [...this.state.undo, { before, after, label: batch.map((e) => e.label).filter(Boolean).pop() || '' }].slice(-MAX_HISTORY)
+      : this.state.undo;
+    this.rebuild({
+      base: data.document, page: data.page, revision: data.revision || this.state.revision,
+      inflight: [], pending, undo,
+      status: pending.length ? STATUS.DIRTY : STATUS.SAVED,
+      lastSavedAt: Date.now(), error: null,
+    });
+    this.onEvent({ type: 'saved', revision: data.revision, deduplicated: !!data.deduplicated });
+    if (this.state.pending.length) this.scheduleFlush(this.state.pending.some((e) => STRUCTURAL.has(e.op.op)) ? 0 : this.debounceMs);
+  }
+
+  /**
+   * Read the draft back after a save whose answer was lost. Returns true when
+   * that save had landed (taken as its answer), false when the read failed (a
+   * retry is scheduled), null when it had not landed (send as usual).
+   */
+  async settleUnanswered() {
+    const lost = this.unanswered;
+    const res = await this.transport.document(this.pageId);
+    if (!res.ok) return this.handleFailure(res, []);
+    this.unanswered = null;
+    const { document, revision, page } = res.data;
+    if (!revision || revision.id === lost.before) return null;
+    if (revision.parent_revision_id !== lost.before || revision.revision_kind !== lost.kind) return null;
+    if (!landedAsSent(lost.base, lost.batch, document, this.manifest)) return null;
+    // It landed. The batch went back to the front of the queue (later edits may have been coalesced into a
+    // copy of an entry, which then stays and is sent with its newer value).
+    const pending = this.state.pending.filter((e) => !lost.batch.includes(e));
+    this.set({ inflight: lost.batch, pending: [] });
+    this.confirmBatch(lost.batch, { document, revision, page, deduplicated: false }, lost.before, nodeIds(lost.base), pending);
+    return true;
   }
 
   handleFailure(res, batch) {

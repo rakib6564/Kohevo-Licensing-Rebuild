@@ -26,29 +26,18 @@ $currentNav = 'studio-types-fields';
 
 $flash = null;
 
-// Built-in Post Types
-$defaultTypes = PageMeta::defaultTypes();
-
-// Load Custom Post Types from Settings
+// The site's post types: Studio ships none built in, so every type here is one the site created.
 $customTypesRaw = Database::setting('studio_custom_post_types', $tenantId);
 $customTypes = $customTypesRaw ? json_decode((string) $customTypesRaw, true) : [];
 if (!is_array($customTypes)) {
     $customTypes = [];
 }
-// Built-in types an administrator has removed from this site (the list of their keys), so every type can be deleted.
-$removedRaw = Database::setting('studio_removed_post_types', $tenantId);
-$removedTypes = $removedRaw ? json_decode((string) $removedRaw, true) : [];
-$removedTypes = is_array($removedTypes) ? array_values(array_filter($removedTypes, 'is_string')) : [];
-$visibleDefaults = fn(array $removed): array => array_diff_key($defaultTypes, array_flip($removed));
-$allPostTypes = array_merge($visibleDefaults($removedTypes), $customTypes);
+$allPostTypes = $customTypes;
 
-// Load Meta Fields from Settings
-$metaFieldsRaw = Database::setting('studio_meta_fields', $tenantId);
-$metaFields = $metaFieldsRaw ? json_decode((string) $metaFieldsRaw, true) : [];
-if (!is_array($metaFields)) {
-    // Default starter fields for portfolio
-    $metaFields = PageMeta::starterFields();
-}
+// The field definitions, read exactly as the pages read them.
+$metaFields = PageMeta::allFields($tenantId);
+// After a change the screen is shown again (POST/redirect/GET), on the same type filter.
+$self = 'types-fields.php' . (isset($_GET['type']) && $_GET['type'] !== 'all' ? '?' . http_build_query(['type' => (string) $_GET['type']]) : '');
 
 // POST Actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -56,6 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
     } elseif (!$canEdit) {
         $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to manage types and fields.')];
+    } elseif (!sb_studio_entitled()) {
+        $flash = ['type' => 'error', 'msg' => __('studio_pages_forbidden', 'Kohevo Studio is not available for your account on this site.')];
     } else {
         $action = (string) ($_POST['_action'] ?? '');
 
@@ -69,9 +60,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $key = preg_replace('/[^a-z0-9_-]/', '', $key);
 
             if ($key === '' || $singular === '') {
-                $flash = ['type' => 'error', 'msg' => 'Post type key and singular name are required.'];
+                $flash = ['type' => 'error', 'msg' => __('studio_tf_type_required', 'Post type key and singular name are required.')];
             } elseif (isset($allPostTypes[$key])) {
-                $flash = ['type' => 'error', 'msg' => "Post type '{$key}' already exists."];
+                $flash = ['type' => 'error', 'msg' => sprintf(__('studio_tf_type_exists', "Post type '%s' already exists."), $key)];
             } else {
                 $customTypes[$key] = [
                     'key' => $key,
@@ -82,35 +73,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'description' => $desc,
                 ];
                 Database::setSetting('studio_custom_post_types', json_encode($customTypes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
-                $allPostTypes = array_merge($visibleDefaults($removedTypes), $customTypes);
-                $flash = ['type' => 'success', 'msg' => "Custom post type '{$singular}' created successfully!"];
+                sb_flash_redirect($self, ['type' => 'success', 'msg' => sprintf(__('studio_tf_type_created', "Custom post type '%s' created successfully!"), $singular)]);
             }
         } elseif ($action === 'delete_post_type') {
-            // Any type can go, built-in or custom. A built-in is hidden (its key is remembered); a custom one is removed. Fields
-            // attached to the type go with it; content items already created are not touched.
+            // Fields attached to the type go with it; content items already created are not touched.
             $key = trim((string) ($_POST['key'] ?? ''));
-            if (isset($customTypes[$key]) || (isset($defaultTypes[$key]) && !in_array($key, $removedTypes, true))) {
-                $label = (string) (($customTypes[$key] ?? $defaultTypes[$key])['singular'] ?? $key);
-                if (isset($customTypes[$key])) {
-                    unset($customTypes[$key]);
-                    Database::setSetting('studio_custom_post_types', json_encode($customTypes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
-                } else {
-                    $removedTypes[] = $key;
-                    Database::setSetting('studio_removed_post_types', json_encode(array_values(array_unique($removedTypes)), JSON_UNESCAPED_SLASHES), $tenantId);
-                }
-                $allPostTypes = array_merge($visibleDefaults($removedTypes), $customTypes);
+            if (isset($customTypes[$key])) {
+                $label = (string) ($customTypes[$key]['singular'] ?? $key);
+                unset($customTypes[$key]);
+                Database::setSetting('studio_custom_post_types', json_encode($customTypes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
                 $metaFields = array_values(array_filter($metaFields, fn($f) => ($f['post_type'] ?? '') !== $key));
                 Database::setSetting('studio_meta_fields', json_encode($metaFields, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
-                AuditLog::record('studio.post_type_deleted', (string) $tenantId, ['key' => $key, 'system' => isset($defaultTypes[$key])]);
-                $flash = ['type' => 'success', 'msg' => "Post type '{$label}' deleted."];
+                AuditLog::record('studio.post_type_deleted', (string) $tenantId, ['key' => $key]);
+                sb_flash_redirect($self, ['type' => 'success', 'msg' => sprintf(__('studio_tf_type_deleted', "Post type '%s' deleted."), $label)]);
             }
-        } elseif ($action === 'restore_post_types') {
-            Database::setSetting('studio_removed_post_types', '[]', $tenantId);
-            $removedTypes = [];
-            $allPostTypes = array_merge($visibleDefaults([]), $customTypes);
-            $flash = ['type' => 'success', 'msg' => 'Built-in post types restored.'];
         } elseif ($action === 'create_meta_field') {
-            $pType = trim((string) ($_POST['post_type'] ?? 'portfolio'));
+            $pType = trim((string) ($_POST['post_type'] ?? ''));
             $label = mb_substr(trim((string) ($_POST['label'] ?? '')), 0, 120);
             $fKey = strtolower(trim((string) ($_POST['key'] ?? '')));
             $fType = MetaFieldTypes::normalize((string) ($_POST['type'] ?? 'text'));
@@ -123,15 +101,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $duplicate = array_filter($metaFields, fn($f) => ($f['post_type'] ?? '') === $pType && ($f['key'] ?? '') === $fKey);
 
             if ($label === '' || $fKey === '') {
-                $flash = ['type' => 'error', 'msg' => 'Field label and field key are required.'];
+                $flash = ['type' => 'error', 'msg' => __('studio_tf_field_required', 'Field label and field key are required.')];
             } elseif (!isset($allPostTypes[$pType])) {
-                $flash = ['type' => 'error', 'msg' => 'Choose a post type that exists.'];
+                $flash = ['type' => 'error', 'msg' => __('studio_tf_field_bad_type', 'Choose a post type that exists.')];
             } elseif ($duplicate !== []) {
-                $flash = ['type' => 'error', 'msg' => "A field with the key '{$fKey}' already exists on {$pType}."];
+                $flash = ['type' => 'error', 'msg' => sprintf(__('studio_tf_field_exists', "A field with the key '%1\$s' already exists on %2\$s."), $fKey, $pType)];
             } elseif (in_array($fType, ['select', 'radio', 'multiselect', 'checkboxes'], true) && empty($fOptions['choices'])) {
-                $flash = ['type' => 'error', 'msg' => 'Add at least one choice (one per line, as value or value : Label).'];
+                $flash = ['type' => 'error', 'msg' => __('studio_tf_field_choices', 'Add at least one choice (one per line, as value or value : Label).')];
             } elseif (in_array($fType, ['relation', 'relations'], true) && empty($fOptions['target'])) {
-                $flash = ['type' => 'error', 'msg' => 'Pick the post type this relation links to.'];
+                $flash = ['type' => 'error', 'msg' => __('studio_tf_field_target', 'Pick the post type this relation links to.')];
             } else {
                 $fieldId = 'f_' . bin2hex(random_bytes(4));
                 $metaFields[] = [
@@ -146,18 +124,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'options' => $fOptions,
                 ];
                 Database::setSetting('studio_meta_fields', json_encode($metaFields, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
-                $flash = ['type' => 'success', 'msg' => "Meta field '{$label}' added to {$pType}!"];
+                sb_flash_redirect($self, ['type' => 'success', 'msg' => sprintf(__('studio_tf_field_added', "Meta field '%1\$s' added to %2\$s!"), $label, $pType)]);
             }
         } elseif ($action === 'delete_meta_field') {
             $fieldId = trim((string) ($_POST['field_id'] ?? ''));
             if ($fieldId !== '') {
                 $metaFields = array_values(array_filter($metaFields, fn($f) => ($f['id'] ?? '') !== $fieldId));
                 Database::setSetting('studio_meta_fields', json_encode($metaFields, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
-                $flash = ['type' => 'success', 'msg' => 'Meta field deleted.'];
+                sb_flash_redirect($self, ['type' => 'success', 'msg' => __('studio_tf_field_deleted', 'Meta field deleted.')]);
             }
         }
     }
 }
+
+$flash = $flash ?? sb_take_flash();
 
 // Post type filter for fields list
 $selectedType = trim((string) ($_GET['type'] ?? 'all'));
@@ -362,24 +342,16 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <div style="margin-bottom: 36px;">
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;">
             <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--sb-text); margin: 0;">Active Content Types</h3>
-            <?php if ($removedTypes !== [] && $canEdit): ?>
-                <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>" style="margin: 0;">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="_action" value="restore_post_types">
-                    <button type="submit" class="btn btn-sm btn-outline"><?= sb_svg('refresh', 12) ?> Restore <?= count($removedTypes) ?> built-in type(s)</button>
-                </form>
-            <?php endif; ?>
         </div>
         <?php if ($allPostTypes === []): ?>
-            <div class="sb-card" style="text-align: center; color: var(--sb-muted);">No post types. Create one with “New Post Type”<?= $removedTypes !== [] ? ', or restore the built-in ones' : '' ?>.</div>
+            <div class="sb-card" style="text-align: center; color: var(--sb-muted);">No post types. Create one with “New Post Type”.</div>
         <?php endif; ?>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px;">
             <?php foreach ($allPostTypes as $tKey => $pt):
-                $isSys = !empty($pt['is_system']);
                 // Count fields
                 $fieldCount = count(array_filter($metaFields, fn($f) => ($f['post_type'] ?? '') === $tKey));
             ?>
-                <div class="card" style="border-radius: 14px; border: 1px solid var(--sb-border); padding: 18px; display: flex; flex-direction: column; justify-content: space-between;">
+                <div class="card" data-post-type="<?= e($tKey) ?>" style="border-radius: 14px; border: 1px solid var(--sb-border); padding: 18px; display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                             <span style="font-size: 0.72rem; font-weight: 700; background: rgba(99, 102, 241, 0.1); color: var(--sb-accent); padding: 2px 7px; border-radius: 6px; text-transform: uppercase;">
@@ -395,9 +367,6 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         </p>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--sb-border); padding-top: 12px;">
-                        <a href="<?= e(plugin_url('studio-builder', 'admin/content.php?type=' . $tKey)) ?>" class="btn btn-sm btn-outline">
-                            <?= sb_svg('content', 12) ?> Manage Items
-                        </a>
                         <?php if ($canEdit): ?>
                             <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>" onsubmit="return confirm('Delete the post type <?= e(addslashes($pt['singular'])) ?>? Its meta fields are deleted too. Content already created is kept.');" style="margin: 0;">
                                 <?= csrf_field() ?>
@@ -442,7 +411,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     $fId = (string) ($f['id'] ?? '');
                     $fLabel = (string) ($f['label'] ?? '');
                     $fKey = (string) ($f['key'] ?? '');
-                    $fPType = (string) ($f['post_type'] ?? 'portfolio');
+                    $fPType = (string) ($f['post_type'] ?? '');
                     $fType = (string) ($f['type'] ?? 'text');
                     $fReq = !empty($f['required']);
 

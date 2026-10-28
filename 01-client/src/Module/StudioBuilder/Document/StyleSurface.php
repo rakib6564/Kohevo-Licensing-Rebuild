@@ -859,7 +859,7 @@ final class StyleSurface
     // ── section style ─────────────────────────────────────────────────────────
 
     /**
-     * Issues for a section's `style`: {background, padding}.
+     * Issues for a section's `style`: {background, padding, border}.
      *
      * @return list<array{path: string, code: string, message: string}>
      */
@@ -873,6 +873,8 @@ final class StyleSurface
             $p = "{$path}.{$key}";
             if ($key === 'padding') {
                 self::checkObject($value, self::moreFields()['padding'], $p, $errors);
+            } elseif ($key === 'border') {
+                self::sectionBorderIssues($value, $p, $errors);
             } elseif ($key === 'background') {
                 if (!is_array($value) || ($value !== [] && array_is_list($value))) {
                     $errors[] = self::issue($p, 'background must be an object.');
@@ -917,6 +919,9 @@ final class StyleSurface
             $out[] = 'background-image:' . trim((string) $bg['gradient']);
         }
         self::emitBackgroundImage($style, $backgroundUrl, $out);
+        if (isset($style['border']) && is_array($style['border'])) {
+            self::emitSectionBorder($style['border'], $out);
+        }
         if (isset($style['padding']) && is_array($style['padding'])) {
             // `!important`: padding the author set on a section in the Inspector must show even when the site's CSS
             // spaces sections with a stronger selector (`.sb-main .sb-section{padding:…}`), as for a background image.
@@ -927,6 +932,77 @@ final class StyleSurface
             }
         }
         return implode(';', $out);
+    }
+
+    /**
+     * A section's border: the same fields a block's border has — one style, width, colour and radius for every side,
+     * then each side's width, style and colour and each corner's radius, which win over the all-sides value.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    private static function sectionBorderFields(): array
+    {
+        return [
+            'style'  => ['enum', 'border-style', CanonicalDocumentSchema::ALLOWED_BORDER_STYLES],
+            'width'  => ['length', 'border-width'],
+            'color'  => ['tcolor', 'border-color'],
+            // The radius presets, as the block classes (.sb-radius-*) write them.
+            'radius' => ['map', 'border-radius', [
+                'none' => '0', 'sm' => 'var(--sb-radius-sm,.25rem)', 'md' => 'var(--sb-radius-md,.5rem)', 'lg' => 'var(--sb-radius-lg,1rem)',
+                'xl' => '1.5rem', '2xl' => '2rem', 'full' => 'var(--sb-radius-full,9999px)',
+            ]],
+        ];
+    }
+
+    /** @param list<array{path: string, code: string, message: string}> $errors */
+    private static function sectionBorderIssues(mixed $border, string $path, array &$errors): void
+    {
+        if (!is_array($border) || ($border !== [] && array_is_list($border))) {
+            $errors[] = self::issue($path, 'border must be an object.');
+            return;
+        }
+        $all = self::sectionBorderFields();
+        $more = self::moreFields();
+        foreach ($border as $field => $v) {
+            $p = "{$path}.{$field}";
+            if (isset($all[$field])) {
+                self::checkField($v, $all[$field], $p, $errors);
+            } elseif (isset($more['border'][$field])) {
+                self::checkObject($v, $more['border'][$field], $p, $errors);
+            } elseif ($field === 'radius_corners') {
+                self::checkObject($v, $more['corners'], $p, $errors);
+            } else {
+                $errors[] = self::issue($p, "Unknown field '{$field}'.");
+            }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $border
+     * @param list<string> $out
+     */
+    private static function emitSectionBorder(array $border, array &$out): void
+    {
+        // A width with no style anywhere would draw nothing (the CSS default is none): it means a solid line.
+        $styled = isset($border['style']);
+        $wide = isset($border['width']);
+        foreach (self::SIDES as $side) {
+            $styled = $styled || isset($border[$side]['style']);
+            $wide = $wide || isset($border[$side]['width']);
+        }
+        if ($wide && !$styled) {
+            $out[] = 'border-style:solid';
+        }
+        self::emitFields($border, self::sectionBorderFields(), $out);
+        $more = self::moreFields();
+        foreach (self::SIDES as $side) {
+            if (isset($border[$side]) && is_array($border[$side])) {
+                self::emitFields($border[$side], $more['border'][$side], $out);
+            }
+        }
+        if (isset($border['radius_corners']) && is_array($border['radius_corners'])) {
+            self::emitFields($border['radius_corners'], $more['corners'], $out);
+        }
     }
 
     // ── interaction states ────────────────────────────────────────────────────

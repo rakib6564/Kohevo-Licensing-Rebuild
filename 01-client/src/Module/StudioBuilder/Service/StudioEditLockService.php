@@ -42,7 +42,7 @@ final class StudioEditLockService
      *
      * @return array{held: bool, lock_token: ?string, ttl_seconds: int, other_editor: bool, other_expires_in: ?int}
      */
-    public function acquire(int $pageId, int $userId): array
+    public function acquire(int $pageId, int $userId, int $attempt = 1): array
     {
         $this->requirePage($pageId);
 
@@ -81,6 +81,12 @@ final class StudioEditLockService
             // the other one won — report it as held by someone else.
             if ((string) $e->getCode() === '23000') {
                 return self::notHeld(self::TTL_SECONDS);
+            }
+            // Two first-time acquirers can also deadlock: both `FOR UPDATE` reads of the missing row take the same gap
+            // lock, then both inserts wait on each other and the database rolls one back. That one simply tries again
+            // (it now finds the winner's row) instead of failing the request with a 500.
+            if ((string) $e->getCode() === '40001' && $ownsTx && $attempt < 3) {
+                return $this->acquire($pageId, $userId, $attempt + 1);
             }
             throw $e;
         } catch (\Throwable $e) {

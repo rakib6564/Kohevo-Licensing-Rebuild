@@ -121,8 +121,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
         <?php if ($filteredPages === []): ?>
         <div class="empty">
-            <div class="empty-title"><?= e($pages === [] ? __('studio_no_pages_yet', 'No pages yet') : __('studio_no_pages', 'No Studio pages match this filter')) ?></div>
-            <p class="text-sm"><?= e($pages === [] ? __('studio_no_pages_first', 'Create your first page to open it in the builder.') : __('studio_no_pages_hint', 'Try another filter or clear the search.')) ?></p>
+            <div class="empty-title"><?= e($pages === [] ? __('studio_no_pages_yet', 'No pages yet') : __('studio_no_pages_match', 'No Studio pages match this filter')) ?></div>
+            <p class="text-sm"><?= e($pages === [] ? __('studio_no_pages_first', 'Create your first page to open it in the builder.') : __('studio_no_pages_match_hint', 'Try another filter or clear the search.')) ?></p>
             <?php if ($canEdit && $pages === []): ?>
                 <a href="page-new.php" class="btn btn-primary"><?= sb_svg('plus', 14) ?> <span><?= e(__('studio_new_page_button', 'New page')) ?></span></a>
             <?php endif; ?>

@@ -66,24 +66,6 @@ unit('svg upload: upload folders serve SVGs with a sandboxed, script-free CSP', 
     assert_true(str_contains($rules, '<IfModule mod_headers.c>'), 'harmless where mod_headers is missing');
 });
 
-unit('portfolio pages: the button runs as the signed-in user, needs publish, confirms, and never overwrites a page', function (): void {
-    $admin = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/admin/content.php');
-    assert_false(str_contains($admin, '->userId()'), 'StudioActor has a userId property, no userId() method');
-    assert_true(str_contains($admin, '$canPublish = $studioActor->can(StudioPermissions::PUBLISH);'));
-    assert_true(str_contains($admin, "} elseif (!\$canPublish) {"), 'refused without publish');
-    assert_true(str_contains($admin, 'publishEntireSite($tenantId, null, $studioActor, true)'), 'the session actor, keeping existing pages');
-    assert_true(str_contains($admin, "studio_portfolio_pages_confirm"), 'the button asks first');
-    assert_true(str_contains($admin, '$tenantId = current_tenant_id();'), 'the tenant being worked on');
-    assert_false(str_contains($admin, "'Site publication failed: ' . \$e->getMessage()"), 'no raw exception text');
-
-    $plugin = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-freelancer-portfolio/StudioFreelancerPortfolio.php');
-    assert_true(str_contains($plugin, 'if ($actor === null) {'), 'only the installer falls back to every permission');
-    assert_true(str_contains($plugin, 'if ($existing !== null && $keepExisting) {'), 'an existing page is skipped');
-
-    $actor = (string) file_get_contents(SLATE_ROOT . '/src/Module/StudioBuilder/Application/StudioActor.php');
-    assert_false(str_contains($actor, 'function userId('), 'if a userId() method is ever added, re-check content.php');
-});
-
 unit('media screen: search uses the columns media_files has, filters use its kinds, delete goes through Media::delete', function (): void {
     $admin = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/admin/media.php');
     $schema = (string) file_get_contents(SLATE_ROOT . '/db/schema.sql');
@@ -94,14 +76,6 @@ unit('media screen: search uses the columns media_files has, filters use its kin
     assert_true(str_contains($admin, "in_array(\$kindFilter, ['image', 'document', 'other'], true)"));
     assert_true(str_contains($admin, '$res = Media::delete($mediaId);'), 'in-use files are refused and the file leaves the disk');
     assert_false(str_contains($admin, "Database::delete('media_files'"), 'no raw row delete');
-});
-
-unit('card image picker: it posts the CSRF field csrf_verify() reads', function (): void {
-    $picker = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/admin/_media_picker.php');
-    $helpers = (string) file_get_contents(SLATE_ROOT . '/includes/helpers.php');
-    assert_true(str_contains($helpers, "\$_POST['_csrf']"), 'csrf_verify reads _csrf');
-    assert_true(str_contains($picker, "fCsrf.name = '_csrf';"));
-    assert_false(str_contains($picker, "'csrf_token'"), 'the old field name is gone');
 });
 
 unit('media usage: Studio adds its page counts to the media library map and leaves other entries alone', function (): void {

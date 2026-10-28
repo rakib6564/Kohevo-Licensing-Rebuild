@@ -181,12 +181,17 @@ unit('studio admin bulk delete: each distinct positive id is archived once, fail
         }
     };
     $actor = \Slate\Module\StudioBuilder\Application\StudioActor::authenticated(42, [\Slate\Module\StudioBuilder\StudioPermissions::EDIT]);
-    assert_eq(['deleted' => 2, 'failed' => 1], sb_archive_pages($app, $actor, ['3', '3', '-1', 'x', '0', '5', 7]));
+    $forgotten = [];
+    $forget = static function (int $pageId) use (&$forgotten): void {
+        $forgotten[] = $pageId;
+    };
+    assert_eq(['deleted' => 2, 'failed' => 1], sb_archive_pages($app, $actor, ['3', '3', '-1', 'x', '0', '5', 7], $forget));
     assert_eq([3, 5, 7], $app->calls, 'duplicates, zero, negatives and junk are dropped');
+    assert_eq([3, 7], $forgotten, 'the custom field values of each deleted page go with it, not of one that stayed');
     $app->calls = [];
-    assert_eq(['deleted' => 0, 'failed' => 0], sb_archive_pages($app, $actor, 'not-a-list'), 'a junk ids value deletes nothing');
+    assert_eq(['deleted' => 0, 'failed' => 0], sb_archive_pages($app, $actor, 'not-a-list', $forget), 'a junk ids value deletes nothing');
     assert_eq([], $app->calls);
-    sb_archive_pages($app, $actor, range(1000, 1300));
+    sb_archive_pages($app, $actor, range(1000, 1300), $forget);
     assert_eq(200, count($app->calls), 'one request deletes at most 200 pages');
 });
 
