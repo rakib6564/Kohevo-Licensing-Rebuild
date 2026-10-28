@@ -1434,7 +1434,12 @@
     }
     function closeSiblings(li) {
       if (!li.parentNode) return;
-      Array.prototype.forEach.call(li.parentNode.children, function (sib) { if (sib !== li && sib.hasAttribute('data-open')) set(sib, false); });
+      Array.prototype.forEach.call(li.parentNode.children, function (sib) {
+        if (sib === li) return;
+        if (sib.hasAttribute('data-open')) set(sib, false);
+        // Focus left on its button (it was clicked) would keep it showing (:focus-within).
+        if (sib.classList.contains('sb-nav__item--parent') && sib.contains(document.activeElement)) sib.setAttribute('data-closed', '');
+      });
     }
     items.forEach(function (li) {
       var btn = li.querySelector(':scope > .sb-nav__toggle, :scope > .sb-nav__parent');
@@ -1447,7 +1452,10 @@
         if (!open) li.setAttribute('data-closed', '');
       }));
       // Pointing at another item of a horizontal menu shows only its submenu: one opened by a click closes.
-      off.push(on(li, 'mouseenter', function () { if (li.closest('.sb-nav--horizontal')) closeSiblings(li); }));
+      off.push(on(li, 'mouseenter', function () {
+        li.removeAttribute('data-closed');
+        if (li.closest('.sb-nav--horizontal')) closeSiblings(li);
+      }));
       off.push(on(li, 'mouseleave', function () { li.removeAttribute('data-closed'); }));
       off.push(on(li, 'focusout', function (e) {
         if (!li.contains(e.relatedTarget)) { li.removeAttribute('data-closed'); if (li.closest('.sb-nav--horizontal')) set(li, false); }
