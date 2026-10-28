@@ -55,7 +55,7 @@ export function isMeasure(v, allowAuto = false) {
  */
 export function isTracks(v) {
   if (typeof v !== 'string' || v.length > 200) return false;
-  const one = '(?:auto|min-content|max-content|0|\\d{1,4}(?:\\.\\d{1,3})?(?:fr|px|rem|em|%|vw))';
+  const one = '(?:auto|min-content|max-content|0|(?:\\d{1,4}(?:\\.\\d{1,3})?|\\.\\d{1,3})(?:fr|px|rem|em|%|vw))';
   const track = new RegExp(`^(?:${one}|minmax\\(\\s*${one}\\s*,\\s*${one}\\s*\\))$`);
   const tracks = v.trim().split(/\s+(?![^(]*\))/);
   return tracks.length >= 1 && tracks.length <= 12 && tracks[0] !== '' && tracks.every((t) => track.test(t));

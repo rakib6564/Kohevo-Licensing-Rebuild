@@ -5483,7 +5483,24 @@
                 "text_shadow",
                 "overlay"
             ],
-            "style_parts": [],
+            "style_parts": [
+                {
+                    "key": "value",
+                    "label": "Value"
+                },
+                {
+                    "key": "label",
+                    "label": "Label"
+                },
+                {
+                    "key": "paragraph",
+                    "label": "Paragraphs"
+                },
+                {
+                    "key": "list",
+                    "label": "Lists"
+                }
+            ],
             "title": "Field value",
             "type": "theme.field_value",
             "version": 1
@@ -5622,7 +5639,16 @@
                 "text_shadow",
                 "overlay"
             ],
-            "style_parts": [],
+            "style_parts": [
+                {
+                    "key": "meta",
+                    "label": "Meta line"
+                },
+                {
+                    "key": "item",
+                    "label": "Items"
+                }
+            ],
             "title": "Post meta",
             "type": "theme.post_meta",
             "version": 1

@@ -8,6 +8,8 @@
  *
  * Every part may also take a hover style (`<part>:hover`), except one marked `'states' => false` (a pseudo-element, whose
  * hover would be written on its element). Tablet and phone may override a part too (`responsive.<device>.style_parts`).
+ * A part marked `'portal' => true` is inside an element studio-runtime.js moves to <body> (the Off-canvas drawer): its
+ * rules also match under `[data-sb-scope~="<the block's class>"]`, which the runtime writes on what it moves.
  * The selectors are the renderers' own class names: a renderer that renames one must rename it here too (a unit test
  * renders each widget and checks every selector still matches).
  */
@@ -21,7 +23,7 @@ final class BlockParts
     /** States a part may take, with the pseudo-class each adds to every selector. */
     public const STATES = ['hover' => ':hover'];
 
-    /** @var array<string, array<string, array{label: string, selectors: list<string>, states?: bool}>> type => part => definition */
+    /** @var array<string, array<string, array{label: string, selectors: list<string>, states?: bool, portal?: bool}>> type => part => definition */
     private const PARTS = [
         'core.tabs' => [
             'tab'        => ['label' => 'Tab titles', 'selectors' => ['.sb-tabs__tab']],
@@ -110,11 +112,11 @@ final class BlockParts
         ],
         'layout.offcanvas' => [
             'trigger'  => ['label' => 'Open button', 'selectors' => ['.sb-offcanvas-trigger']],
-            'panel'    => ['label' => 'Panel', 'selectors' => ['.sb-offcanvas__panel']],
-            'header'   => ['label' => 'Panel header', 'selectors' => ['.sb-offcanvas__header']],
-            'close'    => ['label' => 'Close button', 'selectors' => ['.sb-offcanvas__close']],
-            'body'     => ['label' => 'Panel content', 'selectors' => ['.sb-offcanvas__body']],
-            'backdrop' => ['label' => 'Backdrop', 'selectors' => ['.sb-offcanvas__backdrop']],
+            'panel'    => ['label' => 'Panel', 'selectors' => ['.sb-offcanvas__panel'], 'portal' => true],
+            'header'   => ['label' => 'Panel header', 'selectors' => ['.sb-offcanvas__header'], 'portal' => true],
+            'close'    => ['label' => 'Close button', 'selectors' => ['.sb-offcanvas__close'], 'portal' => true],
+            'body'     => ['label' => 'Panel content', 'selectors' => ['.sb-offcanvas__body'], 'portal' => true],
+            'backdrop' => ['label' => 'Backdrop', 'selectors' => ['.sb-offcanvas__backdrop'], 'portal' => true],
         ],
         'core.button' => [
             'button' => ['label' => 'Button', 'selectors' => ['.sb-button']],
@@ -146,6 +148,16 @@ final class BlockParts
             'link' => ['label' => 'Icon link', 'selectors' => ['.sb-icon__link']],
             'svg'  => ['label' => 'Icon', 'selectors' => ['svg']],
         ],
+        'theme.post_meta' => [
+            'meta' => ['label' => 'Meta line', 'selectors' => ['.sb-post-meta']],
+            'item' => ['label' => 'Items', 'selectors' => ['.sb-post-meta > span']],
+        ],
+        'theme.field_value' => [
+            'value'     => ['label' => 'Value', 'selectors' => ['.sb-field-value']],
+            'label'     => ['label' => 'Label', 'selectors' => ['.sb-field-value__label']],
+            'paragraph' => ['label' => 'Paragraphs', 'selectors' => ['.sb-field-value p']],
+            'list'      => ['label' => 'Lists', 'selectors' => ['.sb-field-value ul', '.sb-field-value ol']],
+        ],
         'core.map' => [
             'frame' => ['label' => 'Map frame', 'selectors' => ['.sb-map']],
         ],
@@ -155,6 +167,12 @@ final class BlockParts
     public static function for(string $type): array
     {
         return self::PARTS[$type] ?? [];
+    }
+
+    /** True when the part is inside an element the runtime moves to <body> (see the class comment). */
+    public static function isPortal(array $definition): bool
+    {
+        return ($definition['portal'] ?? false) === true;
     }
 
     /** True unless the part is marked as taking no state (a pseudo-element). */

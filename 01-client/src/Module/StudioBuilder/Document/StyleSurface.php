@@ -19,6 +19,7 @@
  *   span    how many grid columns a child covers: 1-12, or `full` for the whole row
  *   gradient a StyleValueGuard gradient (`linear-gradient(...)`)
  *   opacity 0-100, written as a fraction
+ *   maxlen  a length, or `none`
  *
  * `position: fixed` is deliberately absent (it could cover the platform
  * signature); `layout.display: none` is absent too (visibility has its own control).
@@ -414,6 +415,8 @@ final class StyleSurface
                 return StyleValueGuard::isGradient($v);
             case 'opacity':
                 return is_int($v) && $v >= 0 && $v <= 100;
+            case 'maxlen':
+                return $v === 'none' || self::isMeasure($v, false);
         }
         return false;
     }
@@ -427,7 +430,7 @@ final class StyleSurface
         if (!is_string($v) || strlen($v) > 200) {
             return false;
         }
-        $one = '(?:auto|min-content|max-content|0|\d{1,4}(?:\.\d{1,3})?(?:fr|px|rem|em|%|vw))';
+        $one = '(?:auto|min-content|max-content|0|(?:\d{1,4}(?:\.\d{1,3})?|\.\d{1,3})(?:fr|px|rem|em|%|vw))';
         $track = '(?:' . $one . '|minmax\(\s*' . $one . '\s*,\s*' . $one . '\s*\))';
         $tracks = preg_split('/\s+(?![^(]*\))/', trim($v)) ?: [];
         if ($tracks === [] || count($tracks) > 12) {
@@ -1263,7 +1266,11 @@ final class StyleSurface
                 'style'  => ['enum', 'border-style', CanonicalDocumentSchema::ALLOWED_BORDER_STYLES],
                 'color'  => ['tcolor', 'border-color'],
                 'radius' => ['length', 'border-radius'],
+                // Which sides the width is drawn on (a line under each menu link, say); written by partDeclarations().
+                'sides'  => ['enum', '', array_keys(self::BORDER_SIDES)],
             ],
+            // A part placed against its widget (the close button in a drawer's corner). Never `fixed`, as for a block.
+            'position'   => self::fields()['position'],
             'padding'    => $more['padding'],
             'margin'     => $more['margin'],
             'shadow'     => $more['shadow'],
@@ -1272,8 +1279,9 @@ final class StyleSurface
                 'height'     => ['length', 'height', true],
                 'min_width'  => ['length', 'min-width', true],
                 'min_height' => ['length', 'min-height', true],
-                'max_width'  => ['length', 'max-width', true],
-                'max_height' => ['length', 'max-height', true],
+                // `none` lifts a cap the stylesheet sets (a drawer's panel is held to 85vw by default).
+                'max_width'  => ['maxlen', 'max-width'],
+                'max_height' => ['maxlen', 'max-height'],
                 'object_fit' => ['enum', 'object-fit', ['cover', 'contain', 'fill', 'none', 'scale-down']],
                 'overflow'   => ['enum', 'overflow', ['visible', 'hidden', 'auto']],
             ],
@@ -1294,6 +1302,9 @@ final class StyleSurface
             'effects'    => [],
         ];
     }
+
+    /** `border.sides` of a part => the `border-width` it writes, with W standing for the width. */
+    private const BORDER_SIDES = ['all' => 'W', 'top' => 'W 0 0 0', 'right' => '0 W 0 0', 'bottom' => '0 0 W 0', 'left' => '0 0 0 W', 'top_bottom' => 'W 0', 'left_right' => '0 W'];
 
     /**
      * The subset a part may set per device (`block.responsive.<tablet|mobile>.style_parts`): font size, padding, margin,
@@ -1382,7 +1393,7 @@ final class StyleSurface
      *
      * @param array<string, mixed> $parts
      * @param array<string, mixed> $responsive block.responsive
-     * @return list<array{selectors: list<string>, declarations: string, media?: string}>
+     * @return list<array{selectors: list<string>, declarations: string, media?: string, portal?: bool}>
      */
     public static function partRules(array $parts, string $type, array $responsive = []): array
     {
@@ -1403,7 +1414,7 @@ final class StyleSurface
                 $rules[] = [
                     'selectors'    => array_map(static fn(string $sel): string => self::withPseudo($sel, $pseudo), $definition['selectors']),
                     'declarations' => implode(';', array_map(static fn(string $d): string => $d . ' !important', $out)),
-                ];
+                ] + (BlockParts::isPortal($definition) ? ['portal' => true] : []);
             }
         }
         foreach (self::RESPONSIVE_DEVICES as $device => $query) {
@@ -1419,7 +1430,7 @@ final class StyleSurface
                         'selectors'    => $definition['selectors'],
                         'declarations' => implode(';', array_map(static fn(string $d): string => $d . ' !important', $out)),
                         'media'        => $query,
-                    ];
+                    ] + (BlockParts::isPortal($definition) ? ['portal' => true] : []);
                 }
             }
         }
@@ -1458,6 +1469,14 @@ final class StyleSurface
                 $out = array_merge($out, array_filter(explode(';', self::declarations(['shadow' => $partial['shadow']])), static fn(string $d): bool => $d !== ''));
             } elseif (is_array($partial[$group])) {
                 self::emitFields($partial[$group], $def, $out);
+            }
+        }
+        $sides = $partial['border']['sides'] ?? null;
+        if (is_string($sides) && isset(self::BORDER_SIDES[$sides]) && $sides !== 'all') {
+            foreach ($out as $i => $decl) {
+                if (str_starts_with($decl, 'border-width:')) {
+                    $out[$i] = 'border-width:' . str_replace('W', substr($decl, strlen('border-width:')), self::BORDER_SIDES[$sides]);
+                }
             }
         }
         return $out;

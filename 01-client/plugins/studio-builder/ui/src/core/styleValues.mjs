@@ -150,6 +150,8 @@ export function isFontFamily(value) {
 /** Field kind → checker, for controls that name what they edit. */
 export const CHECKS = {
   length: isLength,
+  // A part's max width or height (StyleSurface `maxlen`): a length, or `none` to lift the stylesheet's cap.
+  maxLength: (v) => (typeof v === 'string' && v.trim() === 'none') || isLength(v),
   lengthList: isLengthList,
   lengthOrToken: isLengthOrToken,
   lineHeight: isLineHeight,

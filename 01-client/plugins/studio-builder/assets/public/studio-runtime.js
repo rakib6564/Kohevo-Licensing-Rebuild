@@ -555,9 +555,14 @@
       // So it lives on <body> while the runtime is on, and goes back where the author put it when the runtime is disabled.
       var home = el.parentNode;
       var marker = home && home !== document.body && document.createComment('sb-overlay');
+      // Out of its block the block's part styles (Panel, Close button...) would no longer match: they are written under
+      // the block's scoped class, and also under `[data-sb-scope~="<that class>"]`, which the panel carries while moved.
+      var owner = home && home.closest && home.closest('.sb-block');
+      var scope = owner ? Array.prototype.filter.call(owner.classList, function (c) { return /^sb-x-[0-9a-f]{16}$/.test(c); }).join(' ') : '';
       if (marker) {
         home.insertBefore(marker, el);
         document.body.appendChild(el);
+        if (scope) el.setAttribute('data-sb-scope', scope);
       }
 
       var off = [];
@@ -615,6 +620,7 @@
         if (el.__sbClose) el.__sbClose();
         el.removeAttribute('data-sb-open');
         el.setAttribute('aria-hidden', 'true');
+        el.removeAttribute('data-sb-scope');
         if (marker && marker.parentNode) {
           marker.parentNode.insertBefore(el, marker);
           marker.parentNode.removeChild(marker);

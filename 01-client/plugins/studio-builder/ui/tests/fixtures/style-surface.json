@@ -544,6 +544,21 @@
    "path": "layout.column_span",
    "value": "2",
    "ok": false
+  },
+  {
+   "path": "layout.tracks",
+   "value": "auto 1fr minmax(320px,.95fr)",
+   "ok": true
+  },
+  {
+   "path": "layout.tracks",
+   "value": ".5fr .5fr",
+   "ok": true
+  },
+  {
+   "path": "layout.tracks",
+   "value": ".fr",
+   "ok": false
   }
  ]
 }

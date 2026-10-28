@@ -136,8 +136,16 @@ final class RenderCollector
         }
         // `$parts` is StyleSurface::partRules(): selectors inside the block (BlockParts), each written under its class, and a
         // device's rules under its media query (the query comes from StyleSurface::RESPONSIVE_DEVICES, never the document).
+        // A portal part (BlockParts) also matches inside what the runtime moved to <body>, by the scope it writes there.
         foreach ($parts as $rule) {
-            $css = implode(',', array_map(static fn(string $sel): string => ".\0 " . $sel, $rule['selectors'])) . '{' . $rule['declarations'] . '}';
+            $scopes = !empty($rule['portal']) ? [".\0 ", "[data-sb-scope~=\"\0\"] "] : [".\0 "];
+            $selectors = [];
+            foreach ($scopes as $scope) {
+                foreach ($rule['selectors'] as $sel) {
+                    $selectors[] = $scope . $sel;
+                }
+            }
+            $css = implode(',', $selectors) . '{' . $rule['declarations'] . '}';
             $template .= isset($rule['media']) ? '@media ' . $rule['media'] . '{' . $css . '}' : $css;
         }
         $class = 'sb-x-' . substr(hash('sha256', $template), 0, 16);

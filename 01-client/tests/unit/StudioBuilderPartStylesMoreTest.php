@@ -122,3 +122,29 @@ unit('list: dash markers, columns per device (one on a phone), inline items and 
     assert_true(str_contains($inline, '<ul class="sb-list sb-list--bullet sb-list--inline">'), 'inline ignores columns: ' . $inline);
     assert_true(str_contains(sbdc_render(sbdc_block('core.list', $items)), '<ul class="sb-list sb-list--bullet">'), 'the default list is unchanged');
 });
+
+unit('parts: a border on chosen sides only, and a part placed against its widget', function (): void {
+    $nav = sbdc_block('core.nav_menu', ['items' => [['label' => 'Home', 'url' => '/']]]);
+    $parts = ['link' => ['border' => ['width' => '1px', 'style' => 'solid', 'color' => '#eeeeee', 'sides' => 'bottom']], 'list' => ['border' => ['width' => '1px', 'sides' => 'top_bottom']]];
+    assert_true(sbpm_valid($nav + ['style_parts' => $parts]));
+    $rules = StyleSurface::partRules($parts, 'core.nav_menu');
+    assert_eq('border-width:1px 0 !important', $rules[0]['declarations'], 'the list: top and bottom');
+    assert_true(str_contains($rules[1]['declarations'], 'border-width:0 0 1px 0 !important'), $rules[1]['declarations']);
+    assert_false(sbpm_valid($nav + ['style_parts' => ['link' => ['border' => ['sides' => 'diagonal']]]]), 'an unknown side is refused');
+
+    $drawer = sbdc_block('layout.offcanvas', []);
+    assert_true(sbpm_valid($drawer + ['style_parts' => ['header' => ['position' => ['mode' => 'absolute', 'top' => '17px', 'right' => '22px']]]]));
+    assert_false(sbpm_valid($drawer + ['style_parts' => ['header' => ['position' => ['mode' => 'fixed']]]]), 'never fixed');
+    assert_eq('position:absolute !important;top:17px !important;right:22px !important', StyleSurface::partRules(['header' => ['position' => ['mode' => 'absolute', 'top' => '17px', 'right' => '22px']]], 'layout.offcanvas')[0]['declarations']);
+});
+
+unit('parts: a drawer\'s parts also match once the runtime has moved the drawer to <body>', function (): void {
+    $rules = StyleSurface::partRules(['panel' => ['size' => ['width' => '390px']], 'trigger' => ['size' => ['width' => '34px']]], 'layout.offcanvas', ['mobile' => ['style_parts' => ['body' => ['padding' => ['top' => '20px']]]]]);
+    $c = new RenderCollector();
+    $class = $c->scopedRule('blk_aaaaaaaaaaaaaaaa', '', false, [], [], $rules);
+    $css = $c->css();
+    assert_true(str_contains($css, '.' . $class . ' .sb-offcanvas__panel,[data-sb-scope~="' . $class . '"] .sb-offcanvas__panel{width:390px !important}'), $css);
+    assert_true(str_contains($css, '.' . $class . ' .sb-offcanvas-trigger{width:34px !important}'), 'the trigger stays in the block: ' . $css);
+    assert_true(str_contains($css, '@media (max-width:767.98px){.' . $class . ' .sb-offcanvas__body,[data-sb-scope~="' . $class . '"] .sb-offcanvas__body{padding-top:20px !important}}'), $css);
+    assert_true(StyleSurface::isTracks('auto 1fr minmax(320px,.95fr)'), 'a fraction may start with its point');
+});

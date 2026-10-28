@@ -29,6 +29,9 @@ const DISPLAYS = ['block', 'flex', 'grid', 'inline-flex', 'inline-block', 'none'
 const FITS = ['cover', 'contain', 'fill', 'none', 'scale-down'];
 const OVERFLOWS = ['visible', 'hidden', 'auto'];
 const SIZES = ['width', 'height', 'min_width', 'min_height', 'max_width', 'max_height'];
+const BORDER_SIDES = ['all', 'top', 'right', 'bottom', 'left', 'top_bottom', 'left_right'];
+const POSITIONS = ['relative', 'absolute'];
+const OFFSETS = ['top', 'right', 'bottom', 'left'];
 
 /** A group that opens on its own when it holds a value, and then stays as the author leaves it (a device switch included). */
 function Group({ title, initiallyOpen, children }) {
@@ -78,8 +81,8 @@ export function PartStyles({ blockId, parts, value, responsive, tokens, onChange
   const id = `sbx-part-${blockId}-${device}-${key.replace(':', '-')}`;
   const isSet = (k) => Object.keys(asObject(asObject(value)[k])).length > 0
     || OVERRIDE_DEVICES.some((d) => Object.keys(asObject(asObject(asObject(resp[d]).style_parts)[k])).length > 0);
-  const length = (path, label, placeholder = '') => (
-    <DraftText key={path} id={`${id}-${path.replace(/\./g, '-')}`} label={label} kind="length" value={get(path)} placeholder={placeholder} onCommit={(v) => put(path, v)} />
+  const length = (path, label, placeholder = '', kind = 'length') => (
+    <DraftText key={path} id={`${id}-${path.replace(/\./g, '-')}`} label={label} kind={kind} value={get(path)} placeholder={placeholder} onCommit={(v) => put(path, v)} />
   );
   const select = (path, label, options, labels = null) => (
     <SelectField key={path} id={`${id}-${path.replace(/\./g, '-')}`} label={label} value={get(path)} options={options} optionLabels={labels} onChange={(v) => put(path, v)} />
@@ -142,6 +145,7 @@ export function PartStyles({ blockId, parts, value, responsive, tokens, onChange
           <>
             {length('border.width', t('border_width'), '0px')}
             {select('border.style', t('border_style'), BORDER_STYLES)}
+            {select('border.sides', t('part_border_sides'), BORDER_SIDES, Object.fromEntries(BORDER_SIDES.map((k) => [k, t(`part_sides_${k}`)])))}
             <ThemeColor id={`${id}-bcolor`} label={t('border_color')} value={get('border.color')} tokens={tokens} onChange={(v) => put('border.color', v)} />
           </>
         )}
@@ -152,7 +156,7 @@ export function PartStyles({ blockId, parts, value, responsive, tokens, onChange
       {shownState === 'normal' && <SpacingBox id={`${id}-m`} group="margin" label={t('margin_label')} get={get} putAll={putAll} />}
 
       <Group title={t('part_size')} initiallyOpen={SIZES.some((s) => get(`size.${s}`) != null)}>
-        {SIZES.map((s) => length(`size.${s}`, t(`part_size_${s}`), 'auto'))}
+        {SIZES.map((s) => (s.startsWith('max_') ? length(`size.${s}`, t(`part_size_${s}`), 'none', 'maxLength') : length(`size.${s}`, t(`part_size_${s}`), 'auto')))}
         {select('size.object_fit', t('part_object_fit'), FITS)}
         {select('size.overflow', t('part_overflow'), OVERFLOWS)}
       </Group>
@@ -177,6 +181,13 @@ export function PartStyles({ blockId, parts, value, responsive, tokens, onChange
         {length('layout.row_gap', t('layout_row_gap'), '1rem')}
         {length('layout.column_gap', t('layout_column_gap'), '1rem')}
       </Group>
+
+      {!perDevice && (
+        <Group title={t('part_position')} initiallyOpen={get('position.mode') != null}>
+          {select('position.mode', t('position_mode'), POSITIONS)}
+          {get('position.mode') && OFFSETS.map((s) => length(`position.${s}`, t(`side_${s}`), 'auto'))}
+        </Group>
+      )}
 
       {!perDevice && (
         <Group title={t('effects_transform')} initiallyOpen={false}>
