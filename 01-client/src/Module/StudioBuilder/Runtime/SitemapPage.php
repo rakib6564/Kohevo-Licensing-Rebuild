@@ -44,8 +44,9 @@ final class SitemapPage
      * @param list<array{loc: string, lastmod: ?string}> $entries
      * @param string $siteName the site's name for the heading
      * @param string $homeUrl the absolute URL of the home page, to mark its row
+     * @param bool $hidden the site is set to noindex (Site & SEO), so it lists no page on purpose
      */
-    public static function html(array $entries, string $siteName, string $homeUrl): string
+    public static function html(array $entries, string $siteName, string $homeUrl, bool $hidden = false): string
     {
         $e = static fn(string $v): string => htmlspecialchars($v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
@@ -67,7 +68,9 @@ final class SitemapPage
                 . '<td class="d hide-s">' . ($entry['lastmod'] ? $e((string) $entry['lastmod']) : '—') . "</td></tr>\n";
         }
         $table = $rows === ''
-            ? '<div class="empty">No pages are published yet.</div>'
+            ? '<div class="empty">' . ($hidden
+                ? 'This site is hidden from search engines (Site &amp; SEO › Search robots policy is set to noindex), so no page is listed. Allow indexing there to list every published page.'
+                : 'No pages are published yet.') . '</div>'
             : '<table><thead><tr><th>#</th><th>Page</th><th class="hide-s">Last changed</th></tr></thead><tbody>' . $rows . '</tbody></table>';
 
         return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'

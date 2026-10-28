@@ -190,4 +190,6 @@ unit('phase9c sitemap page: a browser is told apart from a crawler by Accept, an
     assert_true(@$doc->loadHTML($html), 'parses');
     assert_eq(2, $doc->getElementsByTagName('tbody')->item(0)->getElementsByTagName('tr')->length, 'one row per page');
     assert_true(str_contains(\Slate\Module\StudioBuilder\Runtime\SitemapPage::html([], 'S', 'https://site.example/'), 'No pages are published yet.'));
+    $hidden = \Slate\Module\StudioBuilder\Runtime\SitemapPage::html([], 'S', 'https://site.example/', true);
+    assert_true(str_contains($hidden, 'hidden from search engines') && !str_contains($hidden, 'No pages are published yet.'), 'a noindex site says why it lists nothing');
 });
