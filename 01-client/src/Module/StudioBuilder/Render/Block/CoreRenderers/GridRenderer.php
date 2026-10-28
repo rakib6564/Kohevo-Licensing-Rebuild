@@ -12,9 +12,11 @@ namespace Slate\Module\StudioBuilder\Render\Block\CoreRenderers;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
+use Slate\Module\StudioBuilder\Render\Block\DeviceColumns;
 use Slate\Module\StudioBuilder\Render\Block\WrapperClassesInterface;
+use Slate\Module\StudioBuilder\Render\Block\WrapperStyleInterface;
 
-final class GridRenderer implements BlockRendererInterface, WrapperClassesInterface
+final class GridRenderer implements BlockRendererInterface, WrapperClassesInterface, WrapperStyleInterface
 {
     private const ALLOWED_ALIGN = ['start', 'center', 'end', 'stretch'];
 
@@ -52,8 +54,8 @@ final class GridRenderer implements BlockRendererInterface, WrapperClassesInterf
         }
 
         // More than two columns collapse to one on a phone, as section columns and the Query Loop do; the
-        // chosen count applies from tablet width up.
-        $colClasses = $cols > 2 ? ['sb-cols-1', 'sb-md-cols-' . $cols] : ['sb-cols-' . $cols];
+        // chosen count applies from tablet width up. A count the author set per device is wrapperStyle's.
+        $colClasses = $scope->hasDeviceValue('columns') ? ['sb-dcols'] : ($cols > 2 ? ['sb-cols-1', 'sb-md-cols-' . $cols] : ['sb-cols-' . $cols]);
         $classes = [
             'sb-grid',
             ...$colClasses,
@@ -62,5 +64,16 @@ final class GridRenderer implements BlockRendererInterface, WrapperClassesInterf
         ];
 
         return $classes;
+    }
+
+    public function wrapperStyle(BlockRenderScope $scope): string
+    {
+        if (!$scope->hasDeviceValue('columns')) {
+            return '';
+        }
+        $cols = (int) ($scope->prop('columns', 2));
+        $cols = $cols < 1 || $cols > 12 ? 2 : $cols;
+        $devices = $scope->deviceCounts('columns', 1, 12, $cols, $cols > 2 ? 1 : $cols);
+        return DeviceColumns::vars('dc', $cols, $devices['tablet'], $devices['mobile']);
     }
 }

@@ -21,6 +21,7 @@ namespace Slate\Module\StudioBuilder\Render\Block\CoreRenderers;
 
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
+use Slate\Module\StudioBuilder\Render\Block\DeviceColumns;
 use Slate\Module\StudioBuilder\Render\Html;
 
 final class CarouselRenderer implements BlockRendererInterface
@@ -121,10 +122,15 @@ final class CarouselRenderer implements BlockRendererInterface
             $label = Html::t('studio_carousel_label', 'Slideshow');
         }
 
+        // Several slides per view become one on a phone and at most two on a tablet, unless the author chose per device.
+        $devices = $scope->deviceCounts('options.per_view', 1, 3, min($perView, 2), 1);
+        $perDevice = $perView > 1 || $devices['tablet'] > 1 || $devices['mobile'] > 1;
+
         return '<div'
-            . Html::classAttr(['sb-carousel'])
+            . Html::classAttr(['sb-carousel', $perDevice ? 'sb-dpv' : ''])
             . ' data-sb-carousel'
             . ' data-sb-per-view="' . $perView . '"'
+            . ($perDevice ? ' style="' . DeviceColumns::vars('pv', $perView, $devices['tablet'], $devices['mobile']) . '"' : '')
             . ($loop && $interactive ? ' data-sb-loop' : '')
             . ($autoplay > 0 && $interactive ? ' data-sb-autoplay="' . $autoplay . '"' : '')
             . ' aria-roledescription="' . Html::e(Html::t('studio_carousel_desc', 'carousel')) . '"'

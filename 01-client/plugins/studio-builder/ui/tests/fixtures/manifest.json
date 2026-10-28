@@ -616,7 +616,8 @@
                             "default": 1,
                             "min": 1,
                             "max": 3,
-                            "integer_only": true
+                            "integer_only": true,
+                            "per_device": true
                         },
                         {
                             "key": "loop",
@@ -1093,7 +1094,8 @@
                     "default": 3,
                     "min": 1,
                     "max": 4,
-                    "integer_only": true
+                    "integer_only": true,
+                    "per_device": true
                 },
                 {
                     "key": "items",
@@ -1435,7 +1437,8 @@
                         "3",
                         "4",
                         "6"
-                    ]
+                    ],
+                    "per_device": true
                 },
                 {
                     "key": "gap",
@@ -2874,7 +2877,8 @@
                     "default": 3,
                     "min": 1,
                     "max": 6,
-                    "integer_only": true
+                    "integer_only": true,
+                    "per_device": true
                 },
                 {
                     "key": "gap",
@@ -3141,7 +3145,8 @@
                     "default": 1,
                     "min": 1,
                     "max": 10,
-                    "integer_only": true
+                    "integer_only": true,
+                    "per_device": true
                 },
                 {
                     "key": "columns_gap",
@@ -3721,7 +3726,8 @@
                     "default": 1,
                     "min": 1,
                     "max": 10,
-                    "integer_only": true
+                    "integer_only": true,
+                    "per_device": true
                 },
                 {
                     "key": "columns_gap",
@@ -4221,7 +4227,8 @@
                     "default": 2,
                     "min": 1,
                     "max": 12,
-                    "integer_only": true
+                    "integer_only": true,
+                    "per_device": true
                 },
                 {
                     "key": "gap",

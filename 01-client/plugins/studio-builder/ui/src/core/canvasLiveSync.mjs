@@ -156,6 +156,12 @@ function deviceStyles(block) {
   return { tablet: isPlainObject(r.tablet) ? r.tablet.style : undefined, mobile: isPlainObject(r.mobile) ? r.mobile.style : undefined };
 }
 
+/** The per-device prop values (`responsive.tablet|mobile.props`, DeviceProps): the server renders them into the markup. */
+function deviceProps(block) {
+  const r = isPlainObject(block.responsive) ? block.responsive : {};
+  return { tablet: isPlainObject(r.tablet) ? r.tablet.props : undefined, mobile: isPlainObject(r.mobile) ? r.mobile.props : undefined };
+}
+
 /** Compare two block lists to any depth: ids, types, child counts and the props of server-rendered types. */
 function liveStyle(prevEntry, nextEntry, tokens) {
   return !!tokens && styleChangeIsLive(prevEntry, nextEntry, tokens);
@@ -172,6 +178,7 @@ function blocksChanged(prev, next, tokens = null) {
     const styled = differs(styleWithoutAlign(pb.style), styleWithoutAlign(nb.style)) || differs(deviceStyles(pb), deviceStyles(nb));
     if (styled && !liveStyle({ kind: 'block', node: pb }, { kind: 'block', node: nb }, tokens)) return true;
     if (SERVER_PAINTED_FIELDS.some((f) => differs(pb[f], nb[f]))) return true;
+    if (differs(deviceProps(pb), deviceProps(nb))) return true;
     if (HIGHLIGHT_TYPES.has(nb.type) && (asHighlight(pb) || asHighlight(nb)) && differs(pb.props, nb.props)) return true;
     if (isServerRenderedType(nb.type) && pb.props !== nb.props && JSON.stringify(pb.props) !== JSON.stringify(nb.props)) return true;
     if (blocksChanged(pb.children, nb.children, tokens)) return true;

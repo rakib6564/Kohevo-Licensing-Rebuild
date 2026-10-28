@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '30';
+    public const VERSION = '31';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -521,6 +521,7 @@ final class StudioStylesheet
         $css .= '@media (min-width:768px) and (max-width:1023.98px){.sb-hide-tablet{display:none!important}}';
         $css .= '@media (max-width:767.98px){.sb-hide-mobile{display:none!important}}';
         $css .= self::scrollEffectsCss();
+        $css .= self::deviceCountsCss();
         // Per-device alignment, desktop first: the desktop value is the base, a tablet value
         // overrides it at tablet width and below, a mobile value overrides both on a phone.
         $css .= self::alignRules('desktop');
@@ -614,6 +615,22 @@ final class StudioStylesheet
             $css .= '@media ' . $query . '{.sb-sticky.sb-sticky-off-' . $device . '{position:relative;top:auto;bottom:auto;transform:none}}';
         }
         return $css;
+    }
+
+    /**
+     * Counts that differ per device (DeviceColumns): the element carries --sb-<family>-d/-t/-m, and these rules pick one
+     * per media query. They come after every column utility and are `!important`, so a count set per device wins over the
+     * block's own column classes (`.sb-gallery--cols-6`, `.sb-md-cols-3`).
+     */
+    public static function deviceCountsCss(): string
+    {
+        $rule = static fn (string $d): string => '.sb-dcols{grid-template-columns:repeat(var(--sb-dc-' . $d . '),minmax(0,1fr))!important}'
+            . '.sb-dtc{column-count:var(--sb-tc-' . $d . ')}'
+            . '.sb-dpv{--sb-pv:var(--sb-pv-' . $d . ')}';
+        return $rule('d')
+            . '.sb-dpv>.sb-carousel__track>.sb-carousel__slide{flex-basis:calc((100% - (var(--sb-pv) - 1)*1rem)/var(--sb-pv))!important}'
+            . '@media (max-width:1023.98px){' . $rule('t') . '}'
+            . '@media (max-width:767.98px){' . $rule('m') . '}';
     }
 
     public static function prefix(string $breakpoint): ?string

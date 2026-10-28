@@ -43,6 +43,7 @@ use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
 use Slate\Module\StudioBuilder\Render\Block\WrapperClassesInterface;
+use Slate\Module\StudioBuilder\Render\Block\WrapperStyleInterface;
 use Slate\Module\StudioBuilder\Render\Media\MediaResolverInterface;
 use Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme;
 
@@ -141,6 +142,7 @@ final class DocumentRenderer
             $scope = new BlockRenderScope($block, $context, $this->media, $theme, $collector, $children, $rows);
             $inner = $renderer->render($scope);
             $wrapperClasses = $renderer instanceof WrapperClassesInterface ? $renderer->wrapperClasses($scope) : [];
+            $wrapperStyle = $renderer instanceof WrapperStyleInterface ? $renderer->wrapperStyle($scope) : '';
         } catch (\Throwable $e) {
             if ($context->attribute(self::ISOLATE_FAILURES) !== true) {
                 throw $e;
@@ -215,7 +217,7 @@ final class DocumentRenderer
         $inlineStyles = $this->buildInlineStyles(is_array($block['style'] ?? null) ? $block['style'] : []);
         // Joined with a `;`: the inline styles end without one, and run together with the timing variables the last
         // inline declaration (often the z-index) became invalid and was dropped as soon as a block had animation timing.
-        $combined     = implode(';', array_filter([trim($inlineStyles, " ;"), trim($motionVars, " ;"), implode(';', $scroll['vars'])], static fn(string $part): bool => $part !== ''));
+        $combined     = implode(';', array_filter([trim($inlineStyles, " ;"), trim($motionVars, " ;"), implode(';', $scroll['vars']), $wrapperStyle], static fn(string $part): bool => $part !== ''));
         $styleAttr    = $combined !== '' ? ' style="' . Html::e($combined) . '"' : '';
 
         $metadata = empty($block[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($block['id'] ?? ''), $type) : '';

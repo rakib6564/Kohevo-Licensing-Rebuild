@@ -895,6 +895,17 @@ final class DocumentValidator
             return;
         }
 
+        // A device's own prop values (responsive.<tablet|mobile>.props): only the fields the definition marks per_device.
+        if (is_array($block['responsive'] ?? null)) {
+            foreach ($block['responsive'] as $bpKey => $bpVal) {
+                if (is_array($bpVal) && array_key_exists('props', $bpVal)) {
+                    foreach (DeviceProps::issues($definition, (string) $bpKey, $bpVal['props'], "{$path}.responsive.{$bpKey}.props") as $issue) {
+                        $errors[] = ValidationResult::issue($issue['path'], $issue['code'], $issue['message']);
+                    }
+                }
+            }
+        }
+
         // Block entitlement & permission checks if callbacks provided. A block the page already had, unchanged, is not
         // re-checked (`kept_block`): it passed when it was added, and losing a module or a permission since then must not
         // make every later save of the page fail. The public renderer still hides a block the site is not entitled to.

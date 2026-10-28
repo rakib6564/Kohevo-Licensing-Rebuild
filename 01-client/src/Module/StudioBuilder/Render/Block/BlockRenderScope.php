@@ -87,6 +87,22 @@ final class BlockRenderScope
         return array_key_exists($key, $props) && $props[$key] !== null ? $props[$key] : $default;
     }
 
+    /**
+     * The count tablet and mobile get for a prop that may differ per device (DeviceColumns::resolve).
+     *
+     * @return array{tablet: int, mobile: int}
+     */
+    public function deviceCounts(string $path, int $min, int $max, int $tabletDefault, int $mobileDefault): array
+    {
+        return DeviceColumns::resolve($this->block, $path, $min, $max, $tabletDefault, $mobileDefault);
+    }
+
+    /** True when the author gave `$path` its own value on tablet or mobile. */
+    public function hasDeviceValue(string $path): bool
+    {
+        return DeviceColumns::overridden($this->block, $path);
+    }
+
     public function string(string $key, string $default = ''): string
     {
         $v = $this->prop($key);

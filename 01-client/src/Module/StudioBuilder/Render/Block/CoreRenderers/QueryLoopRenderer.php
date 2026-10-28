@@ -17,6 +17,7 @@ namespace Slate\Module\StudioBuilder\Render\Block\CoreRenderers;
 use Slate\Module\StudioBuilder\Provider\PostsProvider;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
+use Slate\Module\StudioBuilder\Render\Block\DeviceColumns;
 use Slate\Module\StudioBuilder\Render\Html;
 
 final class QueryLoopRenderer implements BlockRendererInterface
@@ -157,7 +158,10 @@ final class QueryLoopRenderer implements BlockRendererInterface
             }
         }
 
-        $gridHtml = '<div class="sb-query-loop__grid sb-grid sb-cols-' . $columns . ' sb-gap-' . Html::e($gap) . '">'
+        // Two columns at most on a tablet and one on a phone, unless the author chose otherwise per device.
+        $devices = $scope->deviceCounts('columns', 1, 6, min($columns, 2), 1);
+        $gridHtml = '<div class="sb-query-loop__grid sb-grid sb-cols-' . $columns . ' sb-dcols sb-gap-' . Html::e($gap) . '" style="'
+            . DeviceColumns::vars('dc', $columns, $devices['tablet'], $devices['mobile']) . '">'
             . $itemsHtml
             . '</div>';
 

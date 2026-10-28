@@ -228,7 +228,7 @@ unit('sprint5 unit: QueryLoopRenderer renders post card grid and pagination', fu
 
     $html = $renderer->render($scope);
     assert_true(str_contains($html, 'sb-query-loop'), 'contains query loop container');
-    assert_true(preg_match('/sb-grid sb-cols-2 sb-gap-[a-z0-9]+"/', $html) === 1, 'the grid carries the column and gap classes the stylesheet defines');
+    assert_true(preg_match('/sb-grid sb-cols-2 sb-dcols sb-gap-[a-z0-9]+" style="--sb-dc-d:2;--sb-dc-t:2;--sb-dc-m:1"/', $html) === 1, 'the grid carries the column and gap classes the stylesheet defines, and one column on a phone');
     assert_true(str_contains($html, 'First Post'), 'renders first post title');
     assert_true(str_contains($html, 'Second Post'), 'renders second post title');
     assert_true(str_contains($html, 'Design'), 'renders category badge');

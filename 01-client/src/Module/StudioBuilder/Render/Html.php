@@ -153,7 +153,8 @@ final class Html
 
     /**
      * A text block's flow, as the reference editor's Text Editor sets it: a drop cap adds a class, and more than one column
-     * returns a style attribute built only from the clamped integers (never authored text).
+     * adds `sb-dtc` and returns a style attribute built only from the clamped integers (never authored text): the column
+     * count per device as custom properties, and the gap.
      *
      * @param list<string> $classes
      */
@@ -164,12 +165,15 @@ final class Html
         }
         $columns = $scope->prop('columns', 1);
         $columns = is_int($columns) ? max(1, min(10, $columns)) : 1;
-        if ($columns === 1) {
+        if ($columns === 1 && !$scope->hasDeviceValue('columns')) {
             return '';
         }
         $gap = $scope->prop('columns_gap', 20);
         $gap = is_int($gap) ? max(0, min(200, $gap)) : 20;
-        return ' style="column-count:' . $columns . ';column-gap:' . $gap . 'px"';
+        // Text in columns reads as one column on a phone unless the author set a count for it (and for a tablet).
+        $devices = $scope->deviceCounts('columns', 1, 10, $columns, 1);
+        $classes[] = 'sb-dtc';
+        return ' style="' . \Slate\Module\StudioBuilder\Render\Block\DeviceColumns::vars('tc', $columns, $devices['tablet'], $devices['mobile']) . ';column-gap:' . $gap . 'px"';
     }
 
     /** Escaped multi-line text with newlines as `<br>`. */
