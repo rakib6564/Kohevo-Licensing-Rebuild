@@ -622,7 +622,7 @@ const EN = {
   layout_row_span: 'Spans rows',
   sticky_header: 'Sticky header',
   sticky_header_on: 'On',
-  sticky_header_hint: 'Keeps the whole header at the top of the screen while visitors scroll. To keep only one part (the menu bar under a top bar), make that section sticky instead: select it, then Advanced › Motion effects.',
+  sticky_header_hint: 'Keeps the whole header at the top of the screen while visitors scroll. Use this switch rather than making a section inside the header sticky: a section cannot stay on screen past the end of its header.',
   layout_span_full: 'Whole row',
   section_parts_hint: 'Style one part of this widget on its own: its titles, its numbers, its inputs.',
   margin_label: 'Margin',

@@ -1150,7 +1150,7 @@ return [
     'studio_ui_layout_row_span' => 'Lignes occupées',
     'studio_ui_sticky_header' => 'En-tête fixe',
     'studio_ui_sticky_header_on' => 'Activé',
-    'studio_ui_sticky_header_hint' => 'Garde tout l\'en-tête en haut de l\'écran pendant le défilement. Pour ne garder qu\'une partie (la barre de menu sous une barre du haut), rendez plutôt cette section fixe : sélectionnez-la, puis Avancé › Effets de mouvement.',
+    'studio_ui_sticky_header_hint' => 'Garde tout l\'en-tête en haut de l\'écran pendant le défilement. Utilisez cet interrupteur plutôt que de rendre fixe une section de l\'en-tête : une section ne peut pas rester à l\'écran au-delà de la fin de son en-tête.',
     'studio_ui_layout_span_full' => 'Toute la ligne',
     'studio_ui_section_parts_hint' => 'Stylisez une partie de ce widget à part : ses titres, ses nombres, ses champs.',
     'studio_ui_margin_label' => 'Marge extérieure',

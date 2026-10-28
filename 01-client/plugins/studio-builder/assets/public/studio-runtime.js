@@ -1198,7 +1198,9 @@
     var offs = [];
 
     forms.forEach(function (form) {
-      var status = qs(form, '[data-sb-form-status]');
+      // An inline form keeps its status line just after it, outside the form.
+      var after = form.nextElementSibling;
+      var status = qs(form, '[data-sb-form-status]') || (after && after.hasAttribute('data-sb-form-status') ? after : null);
       var button = qs(form, 'button[type="submit"]');
       var back = qs(form, '[data-sb-return-to]');
       if (back) back.value = global.location.pathname + global.location.search;

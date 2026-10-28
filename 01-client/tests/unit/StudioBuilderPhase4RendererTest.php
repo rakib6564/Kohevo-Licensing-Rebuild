@@ -586,6 +586,7 @@ unit('phase4 stylesheet: the generated CSS is the CSS its VERSION shipped, so a 
         '36' => '10bfb4175dca4f9299988b8f9192b62681ebce16',
         '37' => '08066d499a0cc9b133f14c1aac54bf00be5b2c99',
         '38' => 'f53a17110f2d411c1fb693e11b1dcf008e266610',
+        '39' => '9582622fcf69e34360a54490be080673b2ebb4cd',
     ];
     $version = \Slate\Module\StudioBuilder\Render\StudioStylesheet::VERSION;
     $hash = sha1(\Slate\Module\StudioBuilder\Render\StudioStylesheet::css());

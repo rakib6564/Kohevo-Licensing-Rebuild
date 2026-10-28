@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '38';
+    public const VERSION = '39';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -682,7 +682,7 @@ final class StudioStylesheet
             . '.sb-form--inline>.sb-block{flex:1 1 0;min-width:0}'
             . '.sb-form--inline>.sb-form__actions{flex:0 0 auto;margin-top:0}'
             . '.sb-form--inline>.sb-form__actions .sb-button{width:auto}'
-            . '.sb-form--inline>.sb-form__status{flex:0 0 100%;order:9}';
+            . '.sb-form--inline+.sb-form__status{margin:.5rem 0 0}';
     }
 
     public static function prefix(string $breakpoint): ?string
