@@ -1042,7 +1042,8 @@ final class DocumentValidator
     }
 
     /**
-     * `animation` and `interactions` of a block or a section: shapes and enums only (the stylesheet owns the CSS).
+     * `animation` and `interactions` of a block or a section: shapes and enums only (the stylesheet owns the CSS), and the
+     * sticky and parallax settings `interactions` carries (ScrollEffects).
      *
      * @param array<string, mixed> $node
      * @param list<mixed> $errors
@@ -1063,6 +1064,9 @@ final class DocumentValidator
                 $errors[] = ValidationResult::issue("{$path}.interactions", 'invalid_interactions', ($isSection ? 'section' : 'block') . '.interactions must be a JSON object.');
             } elseif (isset($interactions['trigger']) && (!is_string($interactions['trigger']) || !in_array($interactions['trigger'], CanonicalDocumentSchema::ALLOWED_INTERACTION_TRIGGERS, true))) {
                 $errors[] = ValidationResult::issue("{$path}.interactions.trigger", 'invalid_interaction_trigger', 'Invalid interaction trigger.');
+            }
+            if (is_array($interactions) && ($interactions === [] || !array_is_list($interactions))) {
+                array_push($errors, ...ScrollEffects::issues($interactions, "{$path}.interactions"));
             }
         }
     }

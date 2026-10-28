@@ -297,7 +297,7 @@ export function BlockInspector({ info }) {
         />
       </Field>
     )),
-    motion: () => <MotionInspector block={block} applyOp={applyOp} label={def.label} />,
+    motion: () => <MotionInspector block={block} applyOp={applyOp} label={def.label} tokens={tokensFor(manifest, ['surface', 'color'])} />,
     responsive: () => (
       <>
       <VisibilityControls value={block.visibility} manifest={manifest} onChange={(v) => save(ops.updateBlockVisibility(block.id, v))} />

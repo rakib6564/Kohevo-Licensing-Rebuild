@@ -259,25 +259,58 @@
   }
 
   /* ── Feature: parallax ───────────────────────────────────────────────────
-   * Single shared rAF loop. Translates by a percentage of the element's
-   * travel, transform-only so it stays off the layout path.
+   * Single shared rAF loop, transform-only so it stays off the layout path.
+   *   [data-sb-parallax]     the element itself moves by a share of its distance from the viewport centre;
+   *   [data-sb-parallax-bg]  its background layer (::after, see .sb-parallax-bg) moves inside the node, through the
+   *                          room the stylesheet gives it, via the --sb-parallax-y custom property.
+   * A negative value moves the other way. [data-sb-parallax-off] names the devices it stays still on.
    */
+
+  var DEVICE_QUERIES = {
+    desktop: '(min-width: 1024px)',
+    tablet: '(min-width: 768px) and (max-width: 1023.98px)',
+    mobile: '(max-width: 767.98px)'
+  };
+
+  /** True when `el` names the current device in its `attr` list (space-separated). */
+  function offOnThisDevice(el, attr) {
+    var list = (el.getAttribute(attr) || '').split(/\s+/);
+    for (var i = 0; i < list.length; i++) {
+      var q = DEVICE_QUERIES[list[i]];
+      if (q && global.matchMedia && global.matchMedia(q).matches) return true;
+    }
+    return false;
+  }
 
   function initParallax(root) {
     var els = qsa(root, '[data-sb-parallax]');
-    if (!els.length || reducedMotion()) return;
+    var layers = qsa(root, '[data-sb-parallax-bg]');
+    if ((!els.length && !layers.length) || reducedMotion()) return;
 
     var ticking = false;
     function update() {
       ticking = false;
       var vh = global.innerHeight || 1;
       els.forEach(function (el) {
+        if (offOnThisDevice(el, 'data-sb-parallax-off')) { el.style.transform = ''; return; }
         var rect = el.getBoundingClientRect();
         if (rect.bottom < -200 || rect.top > vh + 200) return; // offscreen: skip
         var speed = parseFloat(el.getAttribute('data-sb-parallax') || '0.2');
         var centre = rect.top + rect.height / 2 - vh / 2;
         var shift = -centre * speed;
         el.style.transform = 'translate3d(0,' + shift.toFixed(2) + 'px,0)';
+      });
+      layers.forEach(function (el) {
+        if (offOnThisDevice(el, 'data-sb-parallax-off')) { el.style.removeProperty('--sb-parallax-y'); return; }
+        var rect = el.getBoundingClientRect();
+        if (rect.bottom < 0 || rect.top > vh) return;
+        var speed = parseFloat(el.getAttribute('data-sb-parallax-bg') || '0.3');
+        // 0 as the node enters at the bottom, 1 as it leaves at the top; the layer has |speed|/2 of the node's
+        // height spare above and below, and travels through it.
+        var progress = clamp((vh - rect.top) / (vh + rect.height), 0, 1);
+        var room = rect.height * Math.abs(speed) / 2;
+        var shift = (progress - 0.5) * 2 * room * (speed < 0 ? -1 : 1);
+        el.style.setProperty('--sb-parallax-y', shift.toFixed(2) + 'px');
       });
     }
     function onScroll() {
@@ -293,6 +326,7 @@
       global.removeEventListener('scroll', onScroll);
       global.removeEventListener('resize', onScroll);
       els.forEach(function (el) { el.style.transform = ''; });
+      layers.forEach(function (el) { el.style.removeProperty('--sb-parallax-y'); });
     });
   }
 /* ── Feature: click and scroll interaction triggers ──────────────────────
@@ -1058,37 +1092,65 @@
     if (teardowns.length) mount(function () { teardowns.forEach(function (fn) { fn(); }); });
   }
 
-/* ── Feature: sticky header ───────────────────────────────────────────────
-   * Adds a shadow + blur once the header has scrolled past its trigger point.
-   * Uses an IntersectionObserver sentinel rather than a scroll listener, so the
-   * main thread is never touched during scroll.
+/* ── Feature: sticky ──────────────────────────────────────────────────────
+   * Every [data-sb-sticky] node is already `position: sticky` in the stylesheet, so it sticks without this file.
+   * This only marks the stuck state (`is-stuck`, for the shadow and the stuck background) and, with the `hide`
+   * effect, slides a top-sticky node away while the page scrolls down and back as soon as it scrolls up.
+   * One rAF-throttled scroll listener reads every node first, then writes, so there is no layout thrash.
    */
 
-  function initStickyHeader(root) {
-    var header = qs(root, '[data-sb-sticky]');
-    if (!header) return;
+  function initSticky(root) {
+    var nodes = qsa(root, '[data-sb-sticky]');
+    if (!nodes.length) return;
 
-    var sentinel = document.createElement('div');
-    sentinel.setAttribute('data-sb-sticky-sentinel', '');
-    sentinel.setAttribute('aria-hidden', 'true');
-    header.parentNode.insertBefore(sentinel, header);
-
-    var off = [];
-    if ('IntersectionObserver' in global) {
-      var io = new IntersectionObserver(function (entries) {
-        var stuck = !entries[0].isIntersecting;
-        header.setAttribute('data-sb-stuck', stuck ? '' : 'off');
-        header.classList.toggle('is-stuck', stuck);
-      }, { threshold: 0 });
-      io.observe(sentinel);
-      off.push(function () { io.disconnect(); });
+    var lastY = global.pageYOffset || 0;
+    var ticking = false;
+    function update() {
+      ticking = false;
+      var y = global.pageYOffset || 0;
+      var vh = global.innerHeight || 1;
+      var down = y > lastY + 2;
+      var up = y < lastY - 2;
+      var states = nodes.map(function (el) {
+        var style = global.getComputedStyle(el);
+        if (style.position !== 'sticky') return { el: el, stuck: false, hide: false };
+        var rect = el.getBoundingClientRect();
+        var edge = el.getAttribute('data-sb-sticky');
+        var offset = parseFloat(style.getPropertyValue('--sb-sticky-offset')) || 0;
+        var stuck = edge === 'bottom'
+          ? rect.bottom >= vh - offset - 1 && y + vh < document.documentElement.scrollHeight - 1
+          : y > 0 && rect.top <= offset + 1;
+        var hides = stuck && edge !== 'bottom' && /(^|\s)hide(\s|$)/.test(el.getAttribute('data-sb-sticky-effect') || '');
+        var hidden = el.classList.contains('is-hidden');
+        if (hides && down && y > rect.height + offset) hidden = true;
+        else if (!hides || up) hidden = false;
+        return { el: el, stuck: stuck, hide: hidden };
+      });
+      states.forEach(function (s) {
+        s.el.classList.toggle('is-stuck', s.stuck);
+        s.el.classList.toggle('is-hidden', s.hide && !reducedMotion());
+        if (s.stuck) s.el.setAttribute('data-sb-stuck', ''); else s.el.removeAttribute('data-sb-stuck');
+      });
+      lastY = y;
     }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      global.requestAnimationFrame(update);
+    }
+    var offs = [on(global, 'scroll', onScroll, { passive: true }), on(global, 'resize', onScroll, { passive: true })];
+    // Keyboard users must never lose a hidden header: focus inside brings it back.
+    nodes.forEach(function (el) {
+      offs.push(on(el, 'focusin', function () { el.classList.remove('is-hidden'); }));
+    });
+    update();
 
     mount(function () {
-      off.forEach(function (fn) { fn(); });
-      header.removeAttribute('data-sb-stuck');
-      header.classList.remove('is-stuck');
-      if (sentinel.parentNode) sentinel.parentNode.removeChild(sentinel);
+      offs.forEach(function (off) { off(); });
+      nodes.forEach(function (el) {
+        el.classList.remove('is-stuck', 'is-hidden');
+        el.removeAttribute('data-sb-stuck');
+      });
     });
   }
 
@@ -1200,7 +1262,7 @@
     ['counters', initCounters],
     ['parallax', initParallax],
     ['interactions', initInteractions],
-    ['stickyHeader', initStickyHeader],
+    ['sticky', initSticky],
     ['overlays', initOverlays],
     ['galleryLightbox', initGalleryLightbox],
     ['lightbox', initLightbox],

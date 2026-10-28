@@ -114,17 +114,72 @@ export function normalizeAnimation(raw) {
   return out;
 }
 
-/** Coerce an arbitrary object into a document-valid `interactions` value. */
+/** Coerce an arbitrary object into a document-valid `interactions` value, keeping its sticky and parallax settings. */
 export function normalizeInteractions(raw) {
   const i = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const trigger = TRIGGER_VALUES.has(i.trigger) ? i.trigger : '';
-  if (!trigger) return {};
-  const out = { trigger };
-  if (i.animation && typeof i.animation === 'object' && !Array.isArray(i.animation)) {
-    const anim = normalizeAnimation(i.animation);
-    // A nested animation with no real type would be noise in the document.
-    if (anim.type !== 'none') out.animation = anim;
+  const out = {};
+  if (trigger) {
+    out.trigger = trigger;
+    if (i.animation && typeof i.animation === 'object' && !Array.isArray(i.animation)) {
+      const anim = normalizeAnimation(i.animation);
+      // A nested animation with no real type would be noise in the document.
+      if (anim.type !== 'none') out.animation = anim;
+    }
   }
+  const sticky = normalizeSticky(i.sticky);
+  if (sticky) out.sticky = sticky;
+  const parallax = normalizeParallax(i.parallax);
+  if (parallax) out.parallax = parallax;
+  return out;
+}
+
+// ── Scroll effects (ScrollEffects.php is the server's copy of these rules) ──
+
+export const SCROLL_DEVICES = Object.freeze(['desktop', 'tablet', 'mobile']);
+export const STICKY_EDGES = Object.freeze(['top', 'bottom']);
+export const STICKY_OFFSET = Object.freeze({ min: 0, max: 400 });
+export const PARALLAX_LAYERS = Object.freeze(['background', 'element']);
+export const PARALLAX_SPEED = Object.freeze({ min: 5, max: 80, default: 30 });
+
+const plainObject = (v) => v && typeof v === 'object' && !Array.isArray(v);
+
+/** A device list with only known devices, once each, in a fixed order; all three (or none) means "every device", so it is dropped. */
+function normalizeDevices(raw) {
+  if (!Array.isArray(raw)) return undefined;
+  const list = SCROLL_DEVICES.filter((d) => raw.includes(d));
+  return list.length > 0 && list.length < SCROLL_DEVICES.length ? list : undefined;
+}
+
+/** `interactions.sticky`, or null when it is off. */
+export function normalizeSticky(raw) {
+  if (!plainObject(raw) || !STICKY_EDGES.includes(raw.edge)) return null;
+  const out = { edge: raw.edge };
+  const offset = Number(raw.offset);
+  if (raw.offset !== undefined && raw.offset !== '' && Number.isFinite(offset)) {
+    const px = Math.max(STICKY_OFFSET.min, Math.min(STICKY_OFFSET.max, Math.round(offset)));
+    if (px > 0) out.offset = px;
+  }
+  const devices = normalizeDevices(raw.devices);
+  if (devices) out.devices = devices;
+  if (raw.shadow === true) out.shadow = true;
+  if (typeof raw.background === 'string' && raw.background.trim() !== '') out.background = raw.background.trim();
+  if (raw.hide_on_scroll === true && raw.edge === 'top') out.hide_on_scroll = true;
+  return out;
+}
+
+/** `interactions.parallax`, or null when it is off. */
+export function normalizeParallax(raw) {
+  if (!plainObject(raw)) return null;
+  const speed = Number(raw.speed);
+  if (raw.speed === undefined || raw.speed === '' || !Number.isFinite(speed)) return null;
+  const out = {
+    layer: PARALLAX_LAYERS.includes(raw.layer) ? raw.layer : 'background',
+    speed: Math.max(PARALLAX_SPEED.min, Math.min(PARALLAX_SPEED.max, Math.round(speed))),
+  };
+  if (raw.direction === 'down') out.direction = 'down';
+  const devices = normalizeDevices(raw.devices);
+  if (devices) out.devices = devices;
   return out;
 }
 
@@ -134,6 +189,6 @@ export function hasMotion(block) {
   const inter = block && block.interactions;
   return Boolean(
     (anim && anim.type && anim.type !== 'none')
-    || (inter && inter.trigger)
+    || (inter && (inter.trigger || inter.sticky || inter.parallax))
   );
 }

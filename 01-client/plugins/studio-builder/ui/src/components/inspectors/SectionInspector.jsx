@@ -200,7 +200,7 @@ export function SectionInspector({ info }) {
         <EntranceSelect block={section} applyOp={applyOp} label={label} section />
       </>
     ),
-    motion: () => <MotionInspector block={section} applyOp={applyOp} label={label} section />,
+    motion: () => <MotionInspector block={section} applyOp={applyOp} label={label} section tokens={tokensFor(manifest, ['surface', 'color'])} />,
     responsive: () => <VisibilityControls value={section.visibility} manifest={manifest} onChange={(v) => applyOp(ops.updateSectionVisibility(section.id, v), { label })} />,
   };
 

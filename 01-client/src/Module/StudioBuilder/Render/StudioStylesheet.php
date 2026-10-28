@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '29';
+    public const VERSION = '30';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -520,6 +520,7 @@ final class StudioStylesheet
         $css .= '@media (min-width:1024px){.sb-hide-desktop{display:none!important}}';
         $css .= '@media (min-width:768px) and (max-width:1023.98px){.sb-hide-tablet{display:none!important}}';
         $css .= '@media (max-width:767.98px){.sb-hide-mobile{display:none!important}}';
+        $css .= self::scrollEffectsCss();
         // Per-device alignment, desktop first: the desktop value is the base, a tablet value
         // overrides it at tablet width and below, a mobile value overrides both on a phone.
         $css .= self::alignRules('desktop');
@@ -586,6 +587,31 @@ final class StudioStylesheet
         // The accordion's header button sits deeper than the three levels above reach, and an accordion holds no nested blocks.
         foreach ($props as $mark => $prop) {
             $css .= '.sb-ty-' . $mark . ' :is(.sb-accordion__heading,.sb-accordion__button){' . $prop . ':inherit !important}';
+        }
+        return $css;
+    }
+
+    /**
+     * Sticky and parallax (ScrollEffects). A sticky node is plain `position: sticky`, so it sticks without JavaScript;
+     * studio-runtime.js adds `is-stuck` (for the shadow and the stuck background) and `is-hidden` (hide while scrolling
+     * down). A header or footer holding a sticky section lets it stick to the page, not inside its own wrapper.
+     * A parallax background is painted by `::after`, taller than the node by the room it moves in; the runtime moves it.
+     */
+    public static function scrollEffectsCss(): string
+    {
+        $css = '.sb-parallax-bg{position:relative;isolation:isolate;overflow:hidden}'
+            . '.sb-parallax-bg::after{content:"";position:absolute;left:0;right:0;top:calc(var(--sb-pbg-room,20%)*-1);bottom:calc(var(--sb-pbg-room,20%)*-1);z-index:-2;pointer-events:none;border-radius:inherit;'
+            . 'background-image:var(--sb-pbg-image,none);background-size:var(--sb-pbg-size,cover);background-repeat:var(--sb-pbg-repeat,no-repeat);background-position:var(--sb-pbg-position,center);'
+            . 'transform:translate3d(0,var(--sb-parallax-y,0px),0)}'
+            . '.sb-sticky{position:sticky;z-index:40;transition:box-shadow .2s ease,background-color .2s ease,transform .3s ease}'
+            . '.sb-sticky--top{top:var(--sb-sticky-offset,0px)}.sb-sticky--bottom{bottom:var(--sb-sticky-offset,0px)}'
+            . '.sb-sticky.is-stuck[data-sb-sticky-effect~="shadow"]{box-shadow:0 8px 24px -8px rgba(15,23,42,.25)}'
+            . '.sb-sticky.is-stuck[data-sb-sticky-effect~="background"]{background-color:var(--sb-stuck-bg)!important}'
+            . '.sb-sticky.is-hidden{transform:translate3d(0,calc(-100% - var(--sb-sticky-offset,0px)),0)}'
+            . '.sb-site-header--partial:has(>.sb-sticky),.sb-site-footer--partial:has(>.sb-sticky){display:contents}'
+            . '@media (prefers-reduced-motion:reduce){.sb-sticky{transition:none}}';
+        foreach (['desktop' => '(min-width:1024px)', 'tablet' => '(min-width:768px) and (max-width:1023.98px)', 'mobile' => '(max-width:767.98px)'] as $device => $query) {
+            $css .= '@media ' . $query . '{.sb-sticky.sb-sticky-off-' . $device . '{position:relative;top:auto;bottom:auto;transform:none}}';
         }
         return $css;
     }

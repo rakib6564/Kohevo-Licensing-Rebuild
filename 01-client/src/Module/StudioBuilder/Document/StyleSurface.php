@@ -210,12 +210,14 @@ final class StyleSurface
     }
 
     /**
-     * Declarations for a background image already resolved to a safe URL.
+     * Declarations for a background image already resolved to a safe URL. With `$parallax` (ScrollEffects) the node does
+     * not paint the image itself: it goes into custom properties for the parallax layer (`.sb-parallax-bg::after`), which
+     * studio-runtime.js moves as the page scrolls.
      *
      * @param array<string, mixed> $style
      * @param list<string> $out
      */
-    private static function emitBackgroundImage(array $style, ?string $url, array &$out): void
+    private static function emitBackgroundImage(array $style, ?string $url, array &$out, bool $parallax = false): void
     {
         $bg = is_array($style['background'] ?? null) ? $style['background'] : [];
         if ($url === null || !is_array($bg['image'] ?? null) || self::safeCssUrl($url) === null) {
@@ -230,9 +232,8 @@ final class StyleSurface
         $layers[] = 'url("' . $url . '")';
         // `!important`: an image the author chose in the Inspector must show even when a CSS class on the block (a `background:`
         // shorthand in the page's custom CSS, say) sets a background of its own, which would otherwise cover it.
-        $out[] = 'background-image:' . implode(',', $layers) . ' !important';
-        $out[] = 'background-size:' . (isset($bg['fit']) && is_string($bg['fit']) && in_array($bg['fit'], self::FITS, true) ? $bg['fit'] : 'cover') . ' !important';
-        $out[] = 'background-repeat:' . (isset($bg['repeat']) && is_string($bg['repeat']) && in_array($bg['repeat'], self::REPEATS, true) ? $bg['repeat'] : 'no-repeat') . ' !important';
+        $size = isset($bg['fit']) && is_string($bg['fit']) && in_array($bg['fit'], self::FITS, true) ? $bg['fit'] : 'cover';
+        $repeat = isset($bg['repeat']) && is_string($bg['repeat']) && in_array($bg['repeat'], self::REPEATS, true) ? $bg['repeat'] : 'no-repeat';
         $position = 'center';
         $fp = $bg['image']['focal_point'] ?? null;
         if (is_array($fp) && count($fp) === 2 && self::inRange($fp[0] ?? null, 0, 1) && self::inRange($fp[1] ?? null, 0, 1)) {
@@ -241,6 +242,13 @@ final class StyleSurface
         } elseif (isset($bg['position']) && is_string($bg['position']) && isset(self::POSITIONS[$bg['position']])) {
             $position = self::POSITIONS[$bg['position']];
         }
+        if ($parallax) {
+            array_push($out, '--sb-pbg-image:' . implode(',', $layers), '--sb-pbg-size:' . $size, '--sb-pbg-repeat:' . $repeat, '--sb-pbg-position:' . $position);
+            return;
+        }
+        $out[] = 'background-image:' . implode(',', $layers) . ' !important';
+        $out[] = 'background-size:' . $size . ' !important';
+        $out[] = 'background-repeat:' . $repeat . ' !important';
         $out[] = 'background-position:' . $position . ' !important';
         if (isset($bg['attachment']) && is_string($bg['attachment']) && in_array($bg['attachment'], self::ATTACHMENTS, true)) {
             $out[] = 'background-attachment:' . $bg['attachment'] . ' !important';
@@ -403,7 +411,7 @@ final class StyleSurface
     }
 
     /** What goes in the CSS for a colour field: the theme's custom property for a token, the colour as written otherwise. */
-    private static function colourCss(string $v): string
+    public static function colourCss(string $v): string
     {
         $v = trim($v);
         // The name is ResolvedTheme::cssVarName's (a unit test keeps the two the same); this layer does not depend on the renderer.
@@ -699,7 +707,7 @@ final class StyleSurface
      *
      * @param array<string, mixed> $style
      */
-    public static function declarations(array $style, ?string $backgroundUrl = null): string
+    public static function declarations(array $style, ?string $backgroundUrl = null, bool $parallax = false): string
     {
         $out = [];
         foreach (['layout', 'position'] as $key) {
@@ -717,7 +725,7 @@ final class StyleSurface
         if (isset($style['dimensions']) && is_array($style['dimensions'])) {
             self::emitFields($style['dimensions'], self::fields()['dimensions'], $out);
         }
-        self::emitBackgroundImage($style, $backgroundUrl, $out);
+        self::emitBackgroundImage($style, $backgroundUrl, $out, $parallax);
         if (isset($style['border']) && is_array($style['border'])) {
             foreach (self::SIDES as $side) {
                 if (isset($style['border'][$side]) && is_array($style['border'][$side])) {
@@ -908,7 +916,7 @@ final class StyleSurface
      *
      * @param array<string, mixed> $style
      */
-    public static function sectionDeclarations(array $style, ?string $backgroundUrl = null): string
+    public static function sectionDeclarations(array $style, ?string $backgroundUrl = null, bool $parallax = false): string
     {
         $out = [];
         $bg  = is_array($style['background'] ?? null) ? $style['background'] : [];
@@ -918,7 +926,7 @@ final class StyleSurface
         if (isset($bg['gradient']) && !is_array($bg['image'] ?? null) && StyleValueGuard::isGradient($bg['gradient'])) {
             $out[] = 'background-image:' . trim((string) $bg['gradient']);
         }
-        self::emitBackgroundImage($style, $backgroundUrl, $out);
+        self::emitBackgroundImage($style, $backgroundUrl, $out, $parallax);
         if (isset($style['border']) && is_array($style['border'])) {
             self::emitSectionBorder($style['border'], $out);
         }
