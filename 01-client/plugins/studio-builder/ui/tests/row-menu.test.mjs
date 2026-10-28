@@ -105,3 +105,8 @@ test('a header or footer region resolves to a reference: hidden, own, shared or 
   assert.deepEqual(partialRef({ resolved: 'custom', custom: page(9, 'About header'), site: page(7, 'Site header') }), { kind: 'custom', page: { id: 9, title: 'About header' } });
   assert.equal(partialRef({ resolved: 'site', site: null }).kind, 'builtin', 'a stale reference falls back to the built-in markup');
 });
+
+test('a header its display conditions pick is named, not the site default it outranks', () => {
+  const ref = partialRef({ resolved: 'template', template: { id: 191, title: '[Theme] Header · Two-tier' }, site: { id: 111, title: 'Header' } });
+  assert.deepEqual(ref, { kind: 'template', page: { id: 191, title: '[Theme] Header · Two-tier' } });
+});

@@ -798,9 +798,11 @@ final class StudioApplicationService
 
     /**
      * What a page's header/footer settings currently resolve to, following
-     * exactly the Phase 4 ChromeResolver rules (published partials only):
-     * the site partial (slug `default`) and the page-specific partial (slug =
-     * the page's slug) of each region, and which one the mode picks.
+     * exactly the ChromeResolver rules (published partials only): the site
+     * partial (slug `default`), the page-specific partial (slug = the page's
+     * slug) and the header or footer whose display conditions pick it for this
+     * page (`template`, resolved `template`) of each region, and which one the
+     * mode picks.
      *
      * @return array<string, mixed>
      */
@@ -810,6 +812,10 @@ final class StudioApplicationService
         [$page, $document] = $this->currentDocument($pageId);
         $settings = is_array($document['settings'] ?? null) ? $document['settings'] : [];
         $chromed  = in_array((string) $page['page_type'], ChromeResolver::CHROMED_PAGE_TYPES, true);
+        // Display conditions read the page's category and tags (the canvas shows the working draft, so its settings).
+        $themes   = new ThemeTemplateResolver($this->pageRepo, $this->revisionRepo);
+        $address  = PageAddress::fromRow($page);
+        $context  = ['category' => is_string($settings['category'] ?? null) ? $settings['category'] : '', 'tags' => self::settingTags($settings)];
 
         $regions = [];
         foreach (['header' => 'header_partial', 'footer' => 'footer_partial'] as $region => $partialType) {
@@ -821,10 +827,13 @@ final class StudioApplicationService
             $custom = (string) $page['slug'] !== ChromeResolver::SITE_PARTIAL_SLUG ? $this->pageRepo->findBySlug((string) $page['slug'], $partialType) : null;
             $isLive = static fn(?array $row): bool => $row !== null && ($row['status'] ?? null) === 'published' && !empty($row['published_revision_id']);
 
+            $template = null;
             if (!$chromed || $mode === 'hidden') {
                 $resolved = 'hidden';
             } elseif ($mode === 'custom' && $isLive($custom)) {
                 $resolved = 'custom';
+            } elseif (($template = $themes->chromeTemplate($region, $address, $context)['page'] ?? null) !== null) {
+                $resolved = 'template';
             } elseif ($isLive($site)) {
                 $resolved = 'site';
             } else {
@@ -835,6 +844,7 @@ final class StudioApplicationService
                 'resolved' => $resolved,
                 'site'     => $site !== null && ($site['status'] ?? null) !== 'archived' ? StudioEditorViews::page($site) : null,
                 'custom'   => $custom !== null && ($custom['status'] ?? null) !== 'archived' ? StudioEditorViews::page($custom) : null,
+                'template' => $template !== null ? StudioEditorViews::page($template) : null,
             ];
         }
         return ['chromed' => $chromed, 'page_slug' => (string) $page['slug'], 'site_slug' => ChromeResolver::SITE_PARTIAL_SLUG, 'header' => $regions['header'], 'footer' => $regions['footer']];
@@ -860,10 +870,51 @@ final class StudioApplicationService
     }
 
     /**
+     * The content type of a page and its fields' current values, as text, for the builder's page settings: `{type,
+     * type_label, fields: [{key, label, field_type, text}]}`, or null for a plain page (or a header, footer, template).
+     * The values are edited on the page's settings screen (admin/page-edit.php, the content-type card). Read-only.
+     *
+     * @return array{type: string, type_label: string, fields: list<array{key: string, label: string, field_type: string, text: string}>}|null
+     */
+    public function contentFields(StudioActor $actor, int $pageId): ?array
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::VIEW);
+        [$page] = $this->currentDocument($pageId);
+        if (!in_array((string) $page['page_type'], PageMeta::PAGE_TYPES, true)) {
+            return null;
+        }
+        $meta = PageMeta::read($tenantId, $pageId);
+        $type = PageMeta::postTypes($tenantId)[$meta['type']] ?? null;
+        if ($type === null) {
+            return null;
+        }
+        $text = static function (mixed $v) use (&$text): string {
+            if (is_bool($v)) {
+                return $v ? '✓' : '';
+            }
+            if (is_scalar($v)) {
+                return mb_substr(trim((string) $v), 0, 160);
+            }
+            if (is_array($v)) {
+                return mb_substr(implode(' · ', array_filter(array_map($text, $v), static fn(string $s): bool => $s !== '')), 0, 160);
+            }
+            return '';
+        };
+        $fields = [];
+        foreach (PageMeta::fieldsFor($tenantId, $meta['type']) as $f) {
+            $key = (string) ($f['key'] ?? '');
+            if ($key === '') {
+                continue;
+            }
+            $fields[] = ['key' => $key, 'label' => (string) ($f['label'] ?? $key), 'field_type' => (string) ($f['type'] ?? 'text'), 'text' => $text($meta['values'][$key] ?? null)];
+        }
+        return ['type' => $meta['type'], 'type_label' => (string) ($type['singular'] ?? $meta['type']), 'fields' => $fields];
+    }
+
+    /**
      * The published Single template that lays this page out on the live site, from its working draft's category and
      * content type, with the width of the section the page's content sits in: `{id, title, content_width}`, or null.
-     * The editing canvas shows the page on its own (no Single template in Editor mode), so the section Inspector uses
-     * this to say when the template keeps a wider section narrower. Read-only.
+     * The section Inspector uses this to say why the template keeps a wider section narrower. Read-only.
      *
      * @return array{id: int, title: string, content_width: ?string}|null
      */
@@ -1361,8 +1412,7 @@ final class StudioApplicationService
         $decoded = json_decode((string) ($hostRevision['document_json'] ?? ''), true);
         $hostSettings = is_array($decoded) && is_array($decoded['settings'] ?? null) ? $decoded['settings'] : [];
         $context = ['category' => is_string($hostSettings['category'] ?? null) ? $hostSettings['category'] : ''];
-        $tags = $hostSettings['tags'] ?? [];
-        $context['tags'] = array_values(array_filter(array_map('trim', is_string($tags) ? explode(',', $tags) : (is_array($tags) ? array_filter($tags, 'is_string') : [])), static fn(string $t): bool => $t !== ''));
+        $context['tags'] = self::settingTags($hostSettings);
         $row = $host->id !== null ? $this->pageRepo->find($host->id) : null;
         if ($row !== null && (int) ($row['created_by'] ?? 0) > 0) {
             $context['author_id'] = (int) $row['created_by'];
@@ -1376,6 +1426,18 @@ final class StudioApplicationService
             // No custom content type: the page type stands in for it.
         }
         return ThemeTemplateResolver::appliesTo($role, $template->slug, $templateSettings, $host, $context) ? [] : ['preview_unmatched' => $role];
+    }
+
+    /**
+     * A page document's tags (`settings.tags`: a list, or one comma-separated text), for display conditions.
+     *
+     * @param array<string, mixed> $settings
+     * @return list<string>
+     */
+    private static function settingTags(array $settings): array
+    {
+        $tags = $settings['tags'] ?? [];
+        return array_values(array_filter(array_map('trim', is_string($tags) ? explode(',', $tags) : (is_array($tags) ? array_filter($tags, 'is_string') : [])), static fn(string $t): bool => $t !== ''));
     }
 
     /**
@@ -1515,7 +1577,7 @@ final class StudioApplicationService
         // A draft saved at an older block version is read at the current one, so the next edit saves it upgraded.
         $document = $revision !== null
             ? DocumentUpgrader::upgrade(CanonicalJson::decode((string) $revision['document_json']), $this->registry)['document']
-            : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
+            : CanonicalDocumentSchema::emptyDocument((string) $page['page_type']);
 
         return [
             'page'     => StudioEditorViews::page($page),
@@ -1687,6 +1749,7 @@ final class StudioApplicationService
                 'breakpoints'      => CanonicalDocumentSchema::ALLOWED_BREAKPOINTS,
                 'chrome_modes'     => CanonicalDocumentSchema::ALLOWED_CHROME_MODES,
                 'container_widths' => CanonicalDocumentSchema::ALLOWED_CONTAINER_WIDTHS,
+                'section_widths'   => CanonicalDocumentSchema::ALLOWED_SECTION_WIDTHS,
                 'robots'           => CanonicalDocumentSchema::ALLOWED_ROBOTS_DIRECTIVES,
                 'spacing_scale'    => CanonicalDocumentSchema::ALLOWED_SPACING_SCALE,
                 'style_keys'       => CanonicalDocumentSchema::ALLOWED_STYLE_KEYS,
@@ -1790,7 +1853,7 @@ final class StudioApplicationService
             }
         }
 
-        $baseDocument     = $base !== null ? CanonicalJson::decode((string) $base['document_json']) : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
+        $baseDocument     = $base !== null ? CanonicalJson::decode((string) $base['document_json']) : CanonicalDocumentSchema::emptyDocument((string) $page['page_type']);
         $proposedDocument = CanonicalJson::decode((string) $proposed['document_json']);
 
         $depsBefore = $this->dependencySignatures($baseDocument);
@@ -2037,7 +2100,7 @@ final class StudioApplicationService
         // A draft saved at an older block version is read at the current one, so the next edit saves it upgraded.
         $document = $revision !== null
             ? DocumentUpgrader::upgrade(CanonicalJson::decode((string) $revision['document_json']), $this->registry)['document']
-            : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
+            : CanonicalDocumentSchema::emptyDocument((string) $page['page_type']);
         if (is_array($document)) {
             $document['document_type'] = (string) $page['page_type']; // the page decides, whatever an older draft said
         }

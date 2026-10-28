@@ -5,7 +5,7 @@
 // or full iframe reloads.
 //
 // This module inspects working document changes and directly syncs:
-//   1. Section surfaces, padding tokens, and colors.
+//   1. Section layout: width (and custom width), gap, columns and vertical padding.
 //   2. Block text props (heading, title, subtitle, eyebrow, text, content, buttonText, label, etc.)
 //   3. Complex block items (feature lists, cards, columns, portfolio items)
 //   4. Block alignment (classes). The rest of a block's style is CSS the server writes (scoped, content-addressed
@@ -18,6 +18,7 @@
 
 import { nodeIds } from './doc.mjs';
 import { styleChangeIsLive } from './liveStyleSync.mjs';
+import { isSize } from './styleValues.mjs';
 
 const BREAKPOINTS = ['base', 'sm', 'md', 'lg'];
 const HIDE_PREFIX = 'sb-hide-';
@@ -29,6 +30,48 @@ function cssEscape(id) {
 
 function isPlainObject(v) {
   return Boolean(v) && typeof v === 'object' && !Array.isArray(v);
+}
+
+const SPACING = ['none', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'];
+const SECTION_WIDTHS = ['default', 'narrow', 'normal', 'wide', 'full', 'custom'];
+
+/**
+ * Mirrors DocumentRenderer::renderSection's layout classes (width and custom width, gap, columns, vertical padding) onto a
+ * section already on the canvas. Returns 1 when painted.
+ */
+function syncSectionLayout(secEl, sec) {
+  const inner = secEl.querySelector(':scope > .sb-section__inner');
+  if (!inner) return 0;
+  const layout = isPlainObject(sec.layout) ? sec.layout : {};
+  const prefix = (bp) => (bp === 'base' ? '' : `${bp}-`);
+
+  // The background token's rule is written only for the tokens a render used, so it is left to the server's repaint.
+  Array.from(secEl.classList).forEach((cls) => { if (/^sb-(\w+-)?py-/.test(cls)) secEl.classList.remove(cls); });
+  if (isPlainObject(layout.padding_y)) {
+    for (const bp of BREAKPOINTS) if (SPACING.includes(layout.padding_y[bp])) secEl.classList.add(`sb-${prefix(bp)}py-${layout.padding_y[bp]}`);
+  }
+
+  const width = SECTION_WIDTHS.includes(layout.width) ? layout.width : 'default';
+  const gap = SPACING.includes(layout.gap) ? layout.gap : 'md';
+  Array.from(inner.classList).forEach((cls) => { if (/^sb-(w-|gap-|(\w+-)?cols-|\w+-cw$)/.test(cls)) inner.classList.remove(cls); });
+  inner.classList.add(`sb-w-${width}`, `sb-gap-${gap}`);
+  const blockCount = Math.max(1, Array.isArray(sec.blocks) ? sec.blocks.length : 0);
+  if (isPlainObject(layout.columns)) {
+    for (const bp of BREAKPOINTS) {
+      const cols = layout.columns[bp];
+      if (Number.isInteger(cols) && cols >= 1 && cols <= 12) inner.classList.add(`sb-${prefix(bp)}cols-${Math.min(cols, blockCount)}`);
+    }
+  }
+  for (const bp of BREAKPOINTS) inner.style.removeProperty(bp === 'base' ? '--sb-cw' : `--sb-cw-${bp}`);
+  if (width === 'custom' && isPlainObject(layout.custom_width)) {
+    for (const bp of BREAKPOINTS) {
+      const size = layout.custom_width[bp];
+      if (!isSize(size)) continue; // as DocumentRenderer::customWidthVars leaves a bad size out
+      inner.style.setProperty(bp === 'base' ? '--sb-cw' : `--sb-cw-${bp}`, size.trim());
+      if (bp !== 'base') inner.classList.add(`sb-${bp}-cw`);
+    }
+  }
+  return 1;
 }
 
 /**
@@ -233,37 +276,10 @@ export function syncLiveDOM(canvasDoc, prevDoc, nextDoc, activeBreakpoint = 'bas
       const secEl = canvasDoc.querySelector(`[data-sb-node="${cssEscape(sec.id)}"]`);
       if (!secEl) return;
 
-      // Surface token update
-      if (sec.surface_token !== (prevSec && prevSec.surface_token)) {
-        Array.from(secEl.classList).forEach((cls) => {
-          if (cls.startsWith('sb-bg--surface-') || cls.startsWith('sb-bg--accent-')) {
-            secEl.classList.remove(cls);
-          }
-        });
-        if (sec.surface_token) {
-          secEl.classList.add(`sb-bg--${sec.surface_token}`);
-        }
-        updateCount += 1;
-      }
-
-      // Section padding update
-      const padTop = sec.padding_top || 'lg';
-      const padBottom = sec.padding_bottom || 'lg';
-      const prevPadTop = prevSec ? (prevSec.padding_top || 'lg') : null;
-      const prevPadBottom = prevSec ? (prevSec.padding_bottom || 'lg') : null;
-
-      if (padTop !== prevPadTop || padBottom !== prevPadBottom) {
-        Array.from(secEl.classList).forEach((cls) => {
-          if (/^sb-(py|pt|pb)-/.test(cls)) {
-            secEl.classList.remove(cls);
-          }
-        });
-        if (padTop === padBottom) {
-          secEl.classList.add(`sb-py-${padTop}`);
-        } else {
-          secEl.classList.add(`sb-pt-${padTop}`, `sb-pb-${padBottom}`);
-        }
-        updateCount += 1;
+      // Section layout: the classes DocumentRenderer::renderSection writes, so a width (or gap, columns, padding)
+      // picked in the Inspector shows at once instead of after the save and the server's repaint.
+      if (differs(prevSec && prevSec.layout, sec.layout)) {
+        updateCount += syncSectionLayout(secEl, sec);
       }
     });
 

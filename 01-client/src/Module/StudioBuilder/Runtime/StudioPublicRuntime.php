@@ -4,6 +4,8 @@
  *
  *   incoming path (after every plugin prefix failed to match)
  *     -> single-segment slug, not reserved          else: not ours (null)
+ *        (or `{prefix}/{slug}` for a page of a content type with a URL route prefix — PageRoutes —
+ *         and a 301 from that page's `/{slug}` to it)
  *     -> tenant from the server-side TenantContext   (never the request)
  *     -> studio-builder entitlement (no bypass)      else: not ours (null)
  *     -> tenant-scoped page lookup: `page`, then `landing`, status=published
@@ -30,6 +32,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Runtime;
 
 use Slate\Module\StudioBuilder\Domain\PageAddress;
+use Slate\Module\StudioBuilder\Meta\PageRoutes;
 use Slate\Module\StudioBuilder\Render\RenderContext;
 use Slate\Module\StudioBuilder\Render\StudioRenderService;
 use Slate\Module\StudioBuilder\Repository\PageRepository;
@@ -97,11 +100,41 @@ final class StudioPublicRuntime
             return $this->handleSearch($query, $ifNoneMatch);
         }
 
+        // A page of a content type with a URL route prefix lives at `/{prefix}/{slug}`.
+        $typed = PageRoutes::split($trimmedPath);
+        if ($typed !== null) {
+            if ($this->reserved->isReserved(explode('/', $typed['prefix'])[0])) {
+                return null;
+            }
+            return $this->serve(fn(): ?array => $this->findPublishedTyped($typed['prefix'], $typed['slug']), $ifNoneMatch);
+        }
+
         $slug = $this->slugFromPath($path);
         if ($slug === null) {
             return null;
         }
-        return $this->serve(fn(): ?array => $this->findPublishedBySlug($slug), $ifNoneMatch);
+        return $this->movedUnderPrefix($slug)
+            ?? $this->serve(fn(): ?array => $this->findPublishedBySlug($slug), $ifNoneMatch);
+    }
+
+    /** A 301 from `/{slug}` to `/{prefix}/{slug}` when the published page there lives under its content type's prefix. */
+    private function movedUnderPrefix(string $slug): ?PublicResponse
+    {
+        if (!$this->tenants->isScoped() || $this->tenants->id() <= 0 || !$this->isEntitled($this->tenants->id(), self::ENTITLEMENT_KEY)) {
+            return null;
+        }
+        try {
+            $tenantId = $this->tenants->id();
+            $row = $this->findPublishedBySlug($slug);
+            if ($row === null || ($row['route_mode'] ?? '') === 'homepage' || PageRoutes::prefixForPage($tenantId, (int) $row['id']) === '') {
+                return null;
+            }
+            $path = PageRoutes::path($tenantId, (int) $row['id'], $slug, (string) ($row['route_mode'] ?? ''));
+            return StudioPublicLocale::run(fn(): PublicResponse => PublicResponse::redirect(301, $this->renderer->siteContext()->absoluteUrl($path)));
+        } catch (\Throwable $e) {
+            self::log('prefix-redirect', $e);
+            return null;
+        }
     }
 
     /** A Redirects-screen rule for this address, for an entitled tenant (a test may inject the rules; otherwise the tenant's setting). */
@@ -401,6 +434,20 @@ final class StudioPublicRuntime
     {
         $locale = str_replace('_', '-', StudioPublicLocale::resolve());
         return preg_match('/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/', $locale) === 1 ? ['Content-Language' => $locale] : [];
+    }
+
+    /**
+     * The published page `$slug` when its content type's route prefix is `$prefix`.
+     *
+     * @return ?array<string, mixed>
+     */
+    private function findPublishedTyped(string $prefix, string $slug): ?array
+    {
+        $row = $this->findPublishedBySlug($slug);
+        if ($row === null || ($row['route_mode'] ?? '') === 'homepage') {
+            return null;
+        }
+        return PageRoutes::prefixForPage($this->tenants->id(), (int) $row['id']) === $prefix ? $row : null;
     }
 
     /** @return ?array<string, mixed> */

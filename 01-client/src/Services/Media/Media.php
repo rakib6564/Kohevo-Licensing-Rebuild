@@ -63,6 +63,11 @@ class Media {
 
     public const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'];
     public const DOC_EXTS   = ['pdf', 'doc', 'docx', 'xls', 'xlsx'];
+    /** Video files a page can play in a <video> element. Stored with kind 'other' (the ENUM has no video value) and told apart by MIME. */
+    public const VIDEO_EXTS = ['mp4', 'm4v', 'webm', 'ogv', 'mov'];
+    public const VIDEO_MIMES = ['video/mp4', 'video/x-m4v', 'video/webm', 'video/ogg', 'video/quicktime'];
+    /** A video is bigger than an image or a document: its own upload ceiling. */
+    public const VIDEO_MAX_BYTES = 256 * 1024 * 1024;
 
     // ──────────────────────────────────────────────────────────
     // Config helpers
@@ -76,12 +81,27 @@ class Media {
         return Uploads::DOC_MIMES;
     }
 
+    public static function videoMimes(): array {
+        return self::VIDEO_MIMES;
+    }
+
     public static function allowedMimes(): array {
-        return array_values(array_unique(array_merge(self::imageMimes(), self::docMimes())));
+        return array_values(array_unique(array_merge(self::imageMimes(), self::docMimes(), self::videoMimes())));
     }
 
     public static function allowedExts(): array {
-        return array_values(array_unique(array_merge(self::IMAGE_EXTS, self::DOC_EXTS)));
+        return array_values(array_unique(array_merge(self::IMAGE_EXTS, self::DOC_EXTS, self::VIDEO_EXTS)));
+    }
+
+    /** Is this media record (or MIME + extension) a playable video file? */
+    public static function isVideo(array|string $rowOrMime, string $ext = ''): bool {
+        if (is_array($rowOrMime)) {
+            $ext = strtolower(pathinfo((string)($rowOrMime['path'] ?? ''), PATHINFO_EXTENSION));
+            $rowOrMime = (string)($rowOrMime['mime'] ?? '');
+        }
+        $mime = strtolower(trim($rowOrMime));
+        return in_array($mime, self::VIDEO_MIMES, true)
+            && in_array(strtolower(ltrim($ext, '.')), self::VIDEO_EXTS, true);
     }
 
     /** image | document | other — from MIME (preferred) or extension. */
@@ -266,6 +286,10 @@ class Media {
         $params = [$tid];
         if ($type === 'image') { $where[] = "kind = 'image'"; }
         elseif ($type === 'document') { $where[] = "kind <> 'image'"; }
+        elseif ($type === 'video') {
+            $where[] = "kind = 'other' AND mime IN (" . implode(',', array_fill(0, count(self::VIDEO_MIMES), '?')) . ')';
+            array_push($params, ...self::VIDEO_MIMES);
+        }
         if ($search !== '') {
             $where[] = '(original_name LIKE ? OR path LIKE ?)';
             $params[] = '%' . $search . '%';
@@ -399,10 +423,13 @@ class Media {
      */
     public static function upload(string $field, array $opts = []): array {
         $folder = self::FOLDER . '/' . date('Y/m');
+        // A video file gets the video ceiling unless the caller set one; everything else keeps the default.
+        $name = is_array($_FILES[$field] ?? null) && is_string($_FILES[$field]['name'] ?? null) ? $_FILES[$field]['name'] : '';
+        $isVideoName = in_array(strtolower(pathinfo($name, PATHINFO_EXTENSION)), self::VIDEO_EXTS, true);
         $res = Uploads::handle($field, $folder, [
             'allowed_mimes' => $opts['allowed_mimes'] ?? self::allowedMimes(),
             'allowed_exts'  => $opts['allowed_exts']  ?? self::allowedExts(),
-            'max_bytes'     => (int)($opts['max_bytes'] ?? Uploads::DEFAULT_MAX_BYTES),
+            'max_bytes'     => (int)($opts['max_bytes'] ?? ($isVideoName ? self::VIDEO_MAX_BYTES : Uploads::DEFAULT_MAX_BYTES)),
         ]);
         if (empty($res['ok'])) return $res;
 

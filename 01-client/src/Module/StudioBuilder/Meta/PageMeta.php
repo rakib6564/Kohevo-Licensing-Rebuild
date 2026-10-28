@@ -63,6 +63,7 @@ final class PageMeta
     {
         if ($postType === '') {
             Database::setSetting(self::SETTING_PREFIX . $pageId, json_encode(['type' => '', 'values' => new \stdClass()]), $tenantId);
+            PageRoutes::forget($tenantId);
             return ['errors' => []];
         }
         if (!isset(self::postTypes($tenantId)[$postType])) {
@@ -84,6 +85,7 @@ final class PageMeta
         }
         if ($errors === []) {
             Database::setSetting(self::SETTING_PREFIX . $pageId, json_encode(['type' => $postType, 'values' => (object) $values], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
+            PageRoutes::forget($tenantId);
         }
         return ['errors' => $errors];
     }
@@ -101,6 +103,39 @@ final class PageMeta
     public static function forget(int $tenantId, int $pageId): void
     {
         Database::query('DELETE FROM settings WHERE tenant_id = ? AND setting_key = ?', [$tenantId, self::SETTING_PREFIX . $pageId]);
+    }
+
+    /** Whether a type has its own entry in the admin sidebar (on unless the site turned it off). */
+    public static function showsInMenu(array $type): bool
+    {
+        return ($type['show_in_menu'] ?? true) !== false;
+    }
+
+    /**
+     * Give a new page its content type, with no values yet: its fields are filled on its Fields screen, so a required
+     * field does not stop the item from being created.
+     */
+    public static function assignType(int $tenantId, int $pageId, string $postType): bool
+    {
+        if (!isset(self::postTypes($tenantId)[$postType])) {
+            return false;
+        }
+        Database::setSetting(self::SETTING_PREFIX . $pageId, json_encode(['type' => $postType, 'values' => new \stdClass()]), $tenantId);
+        return true;
+    }
+
+    /** @return array<int, string> page id => content type key, for every page that has one (one query) */
+    public static function typesByPage(int $tenantId): array
+    {
+        $rows = Database::all('SELECT setting_key, setting_value FROM settings WHERE tenant_id = ? AND setting_key LIKE ?', [$tenantId, self::SETTING_PREFIX . '%']);
+        $types = [];
+        foreach ($rows as $row) {
+            $type = self::json((string) $row['setting_value'])['type'] ?? '';
+            if (is_string($type) && $type !== '') {
+                $types[(int) substr((string) $row['setting_key'], strlen(self::SETTING_PREFIX))] = $type;
+            }
+        }
+        return $types;
     }
 
     /** @return list<int> ids of the pages whose content type is `$postType` */

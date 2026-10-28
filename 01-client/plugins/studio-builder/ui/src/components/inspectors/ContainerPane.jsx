@@ -18,6 +18,7 @@ import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
 import { blockLinkIssue } from '../../core/operations.mjs';
 import { asObject } from '../../core/doc.mjs';
 import { optionLabel } from '../../core/optionLabels.mjs';
+import { siteContentPx } from '../../core/siteWidths.mjs';
 import { t } from '../../core/messages.mjs';
 
 /** What the Container's own `gap` prop (a spacing step) measures, so the gap fields can show it as their starting point. */
@@ -234,7 +235,8 @@ function TagFields({ id, block, onTag }) {
  */
 export function ContainerPane({ block, style, onChange, deviceScope, onTag }) {
   const id = useId();
-  const { layoutChooser, setLayoutChooser } = useEditor();
+  const { layoutChooser, setLayoutChooser, manifest } = useEditor();
+  const siteContentWidth = siteContentPx(manifest) || '1280';
   const layout = asObject(style.layout);
   const props = asObject(block.props);
   const grid = layout.display === 'grid';
@@ -243,9 +245,9 @@ export function ContainerPane({ block, style, onChange, deviceScope, onTag }) {
   const setContentWidth = (v) => {
     // Boxed holds the children to a width while the container itself stays full width, so its own width goes.
     const pairs = [['layout.content_width', v === 'full' ? undefined : v]];
+    // With no width of its own, Boxed keeps to the site's content width (Site settings › Layout), as in Elementor.
     if (v === 'boxed') {
       pairs.push(['dimensions.width', undefined]);
-      if (!layout.content_max) pairs.push(['layout.content_max', '1140px']);
     } else {
       pairs.push(['layout.content_max', undefined]);
     }
@@ -281,8 +283,9 @@ export function ContainerPane({ block, style, onChange, deviceScope, onTag }) {
           value={layout.content_max}
           units={['px', '%', 'vw', 'rem']}
           path="layout.content_max"
-          placeholder="1140"
-          onCommit={(v) => put('layout.content_max', v ?? '1140px')}
+          placeholder={siteContentWidth}
+          hint={layout.content_max ? undefined : t('container_width_site', { width: `${siteContentWidth}px` })}
+          onCommit={(v) => put('layout.content_max', v ?? undefined)}
         />
       ) : (
         <DeviceStyle scope={deviceScope} paths={['dimensions.width']} label={t('container_width')}>

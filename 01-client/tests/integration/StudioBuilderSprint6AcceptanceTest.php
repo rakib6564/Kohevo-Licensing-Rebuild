@@ -35,6 +35,7 @@ use Slate\Data\MigrationRunner;
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Http\StudioCodePolicy;
 use Slate\Module\StudioBuilder\Operation\DocumentOperation;
 use Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
@@ -292,6 +293,12 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             assert_eq(200, $respEng->status);
             assert_true(str_contains($respEng->body, 'Engineering Hub Special Header'), 'renders conditional Engineering header: ' . substr($respEng->body, 0, 500));
             assert_true(str_contains($respEng->body, 'Tenant A Global Footer'), 'renders Tenant A default footer');
+            // The page's Header & footer settings name the header shown, not the site default it outranks.
+            $bindings = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->chromeBindings($actorA, $p1Id));
+            assert_eq('template', $bindings['header']['resolved'], 'a header picked by display conditions is reported as such');
+            assert_eq($hdrEngId, (int) ($bindings['header']['template']['id'] ?? 0), 'and named');
+            assert_eq('site', $bindings['footer']['resolved'], 'the footer is the site default');
+            assert_null($bindings['footer']['template'], 'with no conditional footer');
 
             // ─────────────────────────────────────────────────────────────────
             // VERIFICATION 2: Default Header Fallback for Post 2 (Design)
@@ -448,12 +455,65 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             assert_true($other !== null && !str_contains($other->body, 'Engineering single layout'), 'a page the conditions do not match keeps its own layout');
             assert_null($rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/single-eng')), 'the template is not a public page');
             $editor = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->renderForEditor($actorA, $p1Id));
-            assert_false(str_contains($editor->html, 'Engineering single layout'), 'the editor canvas edits the page itself, without the template');
-            // So the editor asks which template lays the page out live, and how wide its content is (the width note).
+            // The canvas shows the page inside its Single template and header, as the live page has it. Only the page's own
+            // sections and blocks carry node metadata: the template and the header are the frame, never selectable.
+            assert_true(str_contains($editor->html, 'Engineering single layout'), 'the editor canvas lays the page out in its Single template');
+            assert_true(str_contains($editor->html, 'Engineering Hub Special Header'), 'under the header its display conditions pick');
+            assert_true(strpos($editor->html, 'Engineering single layout') < strpos($editor->html, 'Deep technical post content'), 'the template content comes first, as live');
+            assert_true((bool) preg_match('~<h1 class="sb-post-title[^"]*">Engineering Deep Dive</h1>~', $editor->html), 'the template\'s Post title shows the page');
+            $stored = static fn(int $pageId): array => json_decode((string) $pdo->query('SELECT r.document_json FROM studiobuilder_revisions r JOIN studiobuilder_pages p ON p.published_revision_id = r.id WHERE p.id = ' . $pageId)->fetchColumn(), true);
+            $ownSection = $stored($p1Id)['sections'][0];
+            assert_true(str_contains($editor->html, 'data-sb-node="' . $ownSection['id'] . '"'), 'the page\'s own section is selectable');
+            assert_true(str_contains($editor->html, 'data-sb-node="' . $ownSection['blocks'][2]['id'] . '"'), 'and its blocks');
+            $templateSection = $stored($tplSingleId)['sections'][0];
+            assert_false(str_contains($editor->html, 'data-sb-node="' . $templateSection['id'] . '"'), 'the template\'s section is not');
+            foreach ($templateSection['blocks'] as $templateBlock) {
+                assert_false(str_contains($editor->html, 'data-sb-node="' . $templateBlock['id'] . '"'), 'nor is any template block, dynamic ones included: ' . $templateBlock['type']);
+            }
+            assert_false(str_contains($editor->html, 'data-sb-node="' . $stored($hdrEngId)['sections'][0]['id'] . '"'), 'nor the header');
+            $preview = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->renderPreview($actorA, $p1Id));
+            assert_true(str_contains($preview->html, 'Engineering single layout') && str_contains($preview->html, 'Engineering Hub Special Header'), 'the preview has the same template and header');
+
+            // The site's fonts (font links of its head snippet) reach the canvas and the preview, never the snippet's script.
+            Database::setSetting(StudioCodePolicy::SETTING_HEAD_SNIPPET, '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne"><script>window.s6=1</script>', S6_TENANT_A);
+            try {
+                foreach (['canvas' => static fn() => $rt->app->renderForEditor($actorA, $p1Id), 'preview' => static fn() => $rt->app->renderPreview($actorA, $p1Id)] as $surface => $render) {
+                    $html = $rt->tenants->runAs(S6_TENANT_A, $render)->html;
+                    assert_true(str_contains($html, '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne">'), "the {$surface} loads the site's fonts");
+                    assert_false(str_contains($html, 'window.s6'), "the {$surface} runs none of the snippet's script");
+                }
+                assert_true(str_contains($rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->publicRuntime->handlePath('/eng-post'))->body, 'window.s6'), 'the live page has the whole snippet');
+            } finally {
+                $pdo->exec("DELETE FROM settings WHERE tenant_id = " . S6_TENANT_A . " AND setting_key = '" . StudioCodePolicy::SETTING_HEAD_SNIPPET . "'");
+            }
+            // Addresses on the canvas are kept as authored: a proxy's email obfuscation needs a script the canvas never runs.
+            assert_true(str_contains($editor->html, '<!--email_off-->') && str_contains($editor->html, '<!--/email_off-->'), 'the canvas opts out of email obfuscation');
+            assert_false(str_contains($preview->html, 'email_off'), 'the preview and the live page keep it');
+            // The template's width note still reads the template the page gets live (and how wide its content is).
             $layout = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->layoutTemplate($actorA, $p1Id));
             assert_eq(['id' => $tplSingleId, 'title' => 'Engineering Single', 'content_width' => 'narrow'], $layout, 'the matching Single template and its content width');
             assert_null($rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->layoutTemplate($actorA, $p2Id)), 'a page its conditions do not match has none');
             assert_null($rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->layoutTemplate($actorA, $tplSingleId)), 'nor has the template itself');
+
+            // A content item: its type's list (typesByPage), and its fields' values in the builder's page settings.
+            \Slate\Data\Database::setSetting('studio_custom_post_types', json_encode(['cours' => ['key' => 'cours', 'singular' => 'Cours', 'plural' => 'Cours', 'route' => '/', 'show_in_menu' => false]]), S6_TENANT_A);
+            \Slate\Data\Database::setSetting('studio_meta_fields', json_encode([
+                ['id' => 'f_lieu', 'post_type' => 'cours', 'label' => 'Lieu', 'key' => 'lieu', 'type' => 'text', 'required' => true, 'options' => []],
+                ['id' => 'f_tarifs', 'post_type' => 'cours', 'label' => 'Tarifs', 'key' => 'tarifs', 'type' => 'list', 'required' => false, 'options' => []],
+            ]), S6_TENANT_A);
+            assert_null($rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->contentFields($actorA, $p1Id)), 'a plain page has no content fields');
+            assert_false(\Slate\Module\StudioBuilder\Meta\PageMeta::assignType(S6_TENANT_A, $p2Id, 'nope'), 'a type that does not exist is refused');
+            assert_true(\Slate\Module\StudioBuilder\Meta\PageMeta::assignType(S6_TENANT_A, $p2Id, 'cours'), 'a new item gets its type although a required field is still empty');
+            assert_eq([$p2Id => 'cours'], array_intersect_key(\Slate\Module\StudioBuilder\Meta\PageMeta::typesByPage(S6_TENANT_A), [$p1Id => 1, $p2Id => 1]), 'only the item has a type');
+            $empty = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->contentFields($actorA, $p2Id));
+            assert_eq(['', ''], array_column($empty['fields'], 'text'), 'no values yet');
+            \Slate\Module\StudioBuilder\Meta\PageMeta::save(S6_TENANT_A, $p2Id, 'cours', ['lieu' => 'Molenbeek', 'tarifs' => "20 €\n50 €"]);
+            $filled = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->contentFields($actorA, $p2Id));
+            assert_eq('Cours', $filled['type_label'], 'the type name');
+            assert_eq([['key' => 'lieu', 'label' => 'Lieu', 'field_type' => 'text', 'text' => 'Molenbeek'], ['key' => 'tarifs', 'label' => 'Tarifs', 'field_type' => 'list', 'text' => '20 € · 50 €']], $filled['fields'], 'each field with its value as text');
+            assert_null($rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->contentFields($actorA, $tplSingleId)), 'a template has none');
+            assert_false(\Slate\Module\StudioBuilder\Meta\PageMeta::showsInMenu(['show_in_menu' => false]) || !\Slate\Module\StudioBuilder\Meta\PageMeta::showsInMenu([]), 'a type is in the sidebar unless the site turned it off');
+            \Slate\Module\StudioBuilder\Meta\PageMeta::forget(S6_TENANT_A, $p2Id);
 
             // Publishing a change to the template reaches the page without republishing the page.
             $tplSingleDraft = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->loadEditorDocument($actorA, $tplSingleId));

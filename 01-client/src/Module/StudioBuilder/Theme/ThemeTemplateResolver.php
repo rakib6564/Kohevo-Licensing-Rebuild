@@ -48,6 +48,19 @@ final class ThemeTemplateResolver
      */
     public function resolveChrome(string $region, PageAddress $page, array $context = []): ?ChromeSource
     {
+        $hit = $this->chromeTemplate($region, $page, $context);
+        return $hit !== null ? ChromeSource::partial((int) $hit['revision']['id'], (string) $hit['revision']['document_json']) : null;
+    }
+
+    /**
+     * The published header or footer whose display conditions pick it for this page over the site default, with its
+     * published revision, or null (the site default, or the built-in chrome, applies).
+     *
+     * @param array<string, mixed> $context
+     * @return ?array{page: array<string, mixed>, revision: array<string, mixed>}
+     */
+    public function chromeTemplate(string $region, PageAddress $page, array $context = []): ?array
+    {
         if ($this->pages === null || $this->revisions === null) {
             return null;
         }
@@ -109,7 +122,7 @@ final class ThemeTemplateResolver
                 ? $this->revisions->findByIdForPage((int) $bestRow['id'], (int) $bestRow['published_revision_id'])
                 : null;
             if ($rev !== null) {
-                return ChromeSource::partial((int) $rev['id'], (string) $rev['document_json']);
+                return ['page' => $bestRow, 'revision' => $rev];
             }
         }
 

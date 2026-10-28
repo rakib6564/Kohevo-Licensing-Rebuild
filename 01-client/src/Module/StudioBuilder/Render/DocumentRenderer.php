@@ -54,6 +54,8 @@ final class DocumentRenderer
 
     /** Marker key on a block rendered as part of an embedded Global Component (never a canonical document key). */
     public const EMBEDDED_KEY = '__sb_embedded';
+    /** Set on a deferred block of the canvas's frame (RenderContext::framing()), so it is filled as framing too. */
+    public const FRAMING_KEY = '__sb_framing';
 
     private const STYLE_UTILITIES = [
         'border_token'  => 'bd',
@@ -114,7 +116,14 @@ final class DocumentRenderer
         }
 
         if ($deferDynamic && self::isDynamicNode($block, $definition, $renderer)) {
+            // Filled later with the page's own context: a block of the canvas's frame stays framing (no node metadata).
+            if ($context->mode === RenderMode::Editor && $context->attribute(RenderContext::FRAME_ONLY) === true) {
+                $block[self::FRAMING_KEY] = true;
+            }
             return $collector->defer($block);
+        }
+        if (!empty($block[self::FRAMING_KEY])) {
+            $context = $context->framing();
         }
 
         $entitlement = $definition->requiredEntitlement();
@@ -308,9 +317,10 @@ final class DocumentRenderer
         }
         $outer = array_merge($outer, self::hideClasses($visibility), $animationClasses, $interactionClasses, $scroll['classes']);
 
-        $width = in_array($layout['width'] ?? null, CanonicalDocumentSchema::ALLOWED_CONTAINER_WIDTHS, true) ? $layout['width'] : 'wide';
+        $width = in_array($layout['width'] ?? null, CanonicalDocumentSchema::ALLOWED_SECTION_WIDTHS, true) ? $layout['width'] : 'default';
         $gap   = in_array($layout['gap'] ?? null, CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, true) ? $layout['gap'] : 'md';
         $innerClasses = ['sb-section__inner', 'sb-w-' . $width, 'sb-gap-' . $gap];
+        $innerVars = self::customWidthVars($width, $layout, $innerClasses);
 
         // Schema 1.0 has no per-block column spans: blocks are equal-width grid
         // items, and a breakpoint's track count is capped at the block count so
@@ -326,8 +336,36 @@ final class DocumentRenderer
         $metadata = empty($section[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($section['id'] ?? ''), 'section') : '';
         $sectionVars = $motionVars . implode(';', $scroll['vars']);
         $styleAttr = $sectionVars !== '' ? ' style="' . Html::e($sectionVars) . '"' : '';
+        $innerStyle = $innerVars !== '' ? ' style="' . Html::e($innerVars) . '"' : '';
         return '<section' . Html::classAttr($outer) . $metadata . $interactionAttrs . $scroll['attrs'] . $styleAttr . '>'
-            . '<div' . Html::classAttr($innerClasses) . '>' . $inner . '</div></section>';
+            . '<div' . Html::classAttr($innerClasses) . $innerStyle . '>' . $inner . '</div></section>';
+    }
+
+    /**
+     * A custom section width: each device's size becomes a custom property (`--sb-cw`, `--sb-cw-md`...) and a device
+     * other than the phone gets the class that reads its own (`sb-md-cw`), so a device with no size keeps the one below it.
+     * A size the validator would reject is left out, so nothing but a plain size reaches the style attribute.
+     *
+     * @param array<string, mixed> $layout
+     * @param list<string>         $classes
+     */
+    private static function customWidthVars(string $width, array $layout, array &$classes): string
+    {
+        if ($width !== 'custom' || !is_array($layout['custom_width'] ?? null)) {
+            return '';
+        }
+        $vars = [];
+        foreach (CanonicalDocumentSchema::ALLOWED_BREAKPOINTS as $bp) {
+            $size = $layout['custom_width'][$bp] ?? null;
+            if (!StyleSurface::isSize($size)) {
+                continue;
+            }
+            $vars[] = '--sb-cw' . ($bp === 'base' ? '' : '-' . $bp) . ':' . trim((string) $size);
+            if ($bp !== 'base') {
+                $classes[] = 'sb-' . $bp . '-cw';
+            }
+        }
+        return implode(';', $vars);
     }
 
     /**

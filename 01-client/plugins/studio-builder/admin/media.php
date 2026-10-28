@@ -197,7 +197,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <div style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 32px; text-align: center; background: #f8fafc; margin-bottom: 16px;">
                 <?= sb_svg('upload', 36, 'text-muted') ?>
                 <p style="margin: 12px 0 8px 0; font-weight: 600; color: var(--sb-text);">Select images or files to upload</p>
-                <p style="font-size: 0.8rem; color: var(--sb-muted); margin-bottom: 16px;">PNG, JPG, WebP, SVG, PDF up to 20MB</p>
+                <p style="font-size: 0.8rem; color: var(--sb-muted); margin-bottom: 16px;">PNG, JPG, WebP, SVG, PDF up to 10MB · MP4, WebM, MOV videos up to 256MB</p>
                 <input type="file" name="files[]" multiple required class="form-control" style="max-width: 320px; margin: 0 auto;">
             </div>
             <div class="sb-card-actions">
@@ -231,12 +231,15 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 $size = isset($asset['size_bytes']) ? number_format((int) $asset['size_bytes'] / 1024, 1) . ' KB' : '—';
                 $url = defined('SLATE_URL') ? rtrim(SLATE_URL, '/') . '/' . ltrim($path, '/') : '/' . ltrim($path, '/');
                 $isImg = ($kind === 'image' || preg_match('/\.(jpg|jpeg|png|webp|gif|svg)$/i', $path));
+                $isVideo = !$isImg && class_exists('Media') && Media::isVideo($asset);
             ?>
                 <div class="card" style="border-radius: 14px; overflow: hidden; border: 1px solid var(--sb-border); display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
                     <!-- Thumbnail Preview -->
                     <div style="height: 140px; background: #0f172a; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
                         <?php if ($isImg): ?>
                             <img src="<?= e($url) ?>" alt="<?= e($filename) ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                        <?php elseif ($isVideo): ?>
+                            <video src="<?= e($url) ?>" preload="metadata" muted playsinline aria-label="<?= e($filename) ?>" style="width: 100%; height: 100%; object-fit: cover;"></video>
                         <?php else: ?>
                             <div style="color: #94a3b8; display: flex; flex-direction: column; align-items: center; gap: 6px;">
                                 <?= sb_svg('pages', 32) ?>

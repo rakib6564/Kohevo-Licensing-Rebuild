@@ -76,10 +76,20 @@ final class PageDocumentAssembler
             . '</head>'
             . '<body' . Html::classAttr(['sb-body', 'sb-body--' . $context->mode->value]) . '>'
             . $banner
-            . $filled->html
+            . self::canvasBody($filled->html, $context)
             . ($signature !== '' ? '<div class="sb-platform-signature">' . $signature . '</div>' : '')
             . $analyticsBody
             . '</body></html>';
+    }
+
+    /**
+     * The canvas runs no script, so an address a proxy obfuscates on its way out (Cloudflare's Email Address Obfuscation
+     * swaps it for "[email protected]" and a decoding script) would stay obfuscated there. Its `email_off` comments
+     * keep the canvas's addresses as authored; preview and public pages keep the proxy's protection.
+     */
+    private static function canvasBody(string $html, RenderContext $context): string
+    {
+        return $context->mode === RenderMode::Editor ? '<!--email_off-->' . $html . '<!--/email_off-->' : $html;
     }
 
     /**

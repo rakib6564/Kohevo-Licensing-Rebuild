@@ -145,6 +145,16 @@ unit('media usage integration: a file a Studio page uses cannot be deleted; a pa
             $spare = $inA(static fn(): int => Media::register('/uploads/media/2026/10/mu-spare.png', ['mime' => 'image/png']));
             $other = $rt->tenants->runAs(SBMU_B, static fn(): int => Media::register('/uploads/media/2026/10/mu-other.png', ['mime' => 'image/png']));
 
+            // A video file (the Video widget's picker): kept as kind "other", listed only by the video filter, per tenant.
+            $clip = $inA(static fn(): int => Media::register('/uploads/media/2026/10/mu-clip.mp4', ['mime' => 'video/mp4']));
+            $rt->tenants->runAs(SBMU_B, static fn(): int => Media::register('/uploads/media/2026/10/mu-other.webm', ['mime' => 'video/webm']));
+            $videos = $inA(static fn(): array => Media::listAll(['type' => 'video']));
+            assert_eq([$clip], array_column($videos['items'], 'id'), 'tenant A sees its one video, not B\'s, and no image');
+            assert_eq('other', $videos['items'][0]['kind'] ?? null);
+            assert_false(in_array($clip, array_column($inA(static fn(): array => Media::listAll(['type' => 'image']))['items'], 'id'), true), 'a video is not in the image list');
+            $shaped = \Slate\Module\StudioBuilder\Http\StudioMediaApi::shapeList($videos, 'video');
+            assert_eq([$clip], array_column($shaped['items'], 'id'), 'the picker shapes it as a video');
+
             // A page with an image block and a section background image.
             $created = sbmu_ok(sbmu_call($rt, SBMU_A, $editor, 'create_page', ['title' => 'Uses media', 'slug' => 'uses-media', 'page_type' => 'page', 'route_mode' => 'standalone']), 'create');
             $pageId = (int) $created['page']['id'];

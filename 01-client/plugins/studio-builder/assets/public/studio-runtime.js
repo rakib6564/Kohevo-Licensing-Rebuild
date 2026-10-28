@@ -785,6 +785,105 @@
 
     mount(function () { off.forEach(function (un) { un(); }); });
   }
+/* ── Feature: video overlay ─────────────────────────────────────────────
+   * A video with an image overlay is a poster button plus the player the
+   * server rendered inside a <template>. A click swaps the poster for that
+   * player in place, or opens it in a lightbox; the visitor never leaves the
+   * page. Closing the lightbox empties it, which stops playback. With no JS
+   * the poster stays a poster.
+   */
+
+  function playerFrom(block) {
+    var tpl = qs(block, 'template[data-sb-video-player]');
+    if (!tpl || !tpl.content) return null;
+    var node = tpl.content.firstElementChild;
+    return node ? document.importNode(node, true) : null;
+  }
+
+  function startPlayer(player) {
+    // A self-hosted file: the click is the visitor's gesture, so play() is allowed with sound.
+    if (player && player.tagName === 'VIDEO' && player.play) {
+      try {
+        var p = player.play();
+        if (p && p.catch) p.catch(function () { /* the browser said no; the controls are still there */ });
+      } catch (err) { /* old browser */ }
+    }
+  }
+
+  function initVideos(root) {
+    var blocks = qsa(root, '[data-sb-video]');
+    if (!blocks.length) return;
+    var doc = root.ownerDocument || global.document;
+    var lb = null;
+
+    function lightbox() {
+      if (lb) return lb;
+      lb = doc.createElement('div');
+      lb.className = 'sb-lightbox sb-video-lightbox';
+      lb.setAttribute('role', 'dialog');
+      lb.setAttribute('aria-modal', 'true');
+      lb.setAttribute('aria-label', 'Video');
+      lb.setAttribute('aria-hidden', 'true');
+      lb.setAttribute('data-sb-overlay', '');
+      lb.innerHTML = '<div class="sb-video-wrapper sb-video-lightbox__frame" data-sb-video-frame></div>'
+        + '<button type="button" class="sb-lightbox__close" data-sb-close aria-label="Close">&times;</button>';
+      (doc.body || root).appendChild(lb);
+      lb.addEventListener('click', function (e) {
+        if (e.target.closest('[data-sb-close]') || e.target === lb) {
+          e.preventDefault();
+          if (lb.__sbClose) lb.__sbClose();
+        }
+      });
+      // However it closes (×, backdrop, Escape), the player goes, so the sound stops with it.
+      new MutationObserver(function () {
+        if (!lb.hasAttribute('data-sb-open')) {
+          var frame = qs(lb, '[data-sb-video-frame]');
+          if (frame) frame.innerHTML = '';
+        }
+      }).observe(lb, { attributes: true, attributeFilter: ['data-sb-open'] });
+      return lb;
+    }
+
+    var swapped = [];
+    var off = blocks.map(function (block) {
+      var button = qs(block, '[data-sb-video-play]');
+      if (!button) return function () {};
+      return on(button, 'click', function (e) {
+        e.preventDefault();
+        var player = playerFrom(block);
+        if (!player) return;
+        if (block.hasAttribute('data-sb-video-lightbox')) {
+          var box = lightbox();
+          var frame = qs(box, '[data-sb-video-frame]');
+          frame.className = 'sb-video-wrapper sb-video-lightbox__frame sb-video--aspect-' + (block.getAttribute('data-sb-video-aspect') || '16-9');
+          frame.innerHTML = '';
+          frame.appendChild(player);
+          openOverlay(box, button);
+          startPlayer(player);
+          return;
+        }
+        // In place: the player takes the poster's spot, and keyboard focus moves onto it.
+        button.parentNode.replaceChild(player, button);
+        block.setAttribute('data-sb-video-playing', '');
+        swapped.push({ block: block, button: button, player: player });
+        if (player.focus) { try { player.focus(); } catch (err) { /* detached */ } }
+        startPlayer(player);
+      });
+    });
+
+    mount(function () {
+      off.forEach(function (un) { un(); });
+      swapped.forEach(function (s) {
+        if (s.player.parentNode) s.player.parentNode.replaceChild(s.button, s.player);
+        s.block.removeAttribute('data-sb-video-playing');
+      });
+      if (lb) {
+        if (lb.__sbClose) lb.__sbClose();
+        if (lb.parentNode) lb.parentNode.removeChild(lb);
+      }
+    });
+  }
+
 /* ── Feature: tabs ──────────────────────────────────────────────────────
    * Full APG keyboard support: arrows move and activate, Home/End jump,
    * roving tabindex keeps a single tab stop for the whole strip.
@@ -1502,6 +1601,7 @@
     ['overlays', initOverlays],
     ['galleryLightbox', initGalleryLightbox],
     ['lightbox', initLightbox],
+    ['videos', initVideos],
     ['tabs', initTabs],
     ['accordion', initAccordion],
     ['carousel', initCarousel],

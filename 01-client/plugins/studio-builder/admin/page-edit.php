@@ -69,6 +69,8 @@ $tenantId = current_tenant_id();
 $hasMeta = $page !== null && in_array((string) $page['page_type'], PageMeta::PAGE_TYPES, true);
 $metaErrors = [];
 $metaPosted = null;
+// Read before any POST: a deleted item's type goes with it, and "Back" still returns to its list.
+$itemTypeKey = $page !== null ? PageMeta::read($tenantId, $pageId)['type'] : '';
 
 if ($page !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
@@ -134,7 +136,7 @@ if ($page !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         try {
             $studioApp->archivePage($studioActor, $pageId);
             PageMeta::forget($tenantId, $pageId);
-            header('Location: pages.php?' . http_build_query(['deleted' => 1, 'failed' => 0]), true, 303);
+            header('Location: pages.php?' . http_build_query(array_filter(['type' => $itemTypeKey]) + ['deleted' => 1, 'failed' => 0]), true, 303);
             exit;
         } catch (StudioException $e) {
             $flash = ['type' => 'error', 'msg' => $errorFor($e, __('studio_page_delete_failed', 'The page could not be deleted. A shared component that other pages still use cannot be deleted.'))];
@@ -153,14 +155,22 @@ if ($flash === null && isset($_GET['saved'])) {
 
 $pageTitle = $page !== null ? (string) $page['title'] : __('studio_pages', 'Studio Pages');
 $published = $page !== null && !empty($page['is_published']);
+// An item of a content type belongs to that type's list: the sidebar, the crumbs and "Back" go there.
+$itemTypeKey = $page !== null ? PageMeta::read($tenantId, $pageId)['type'] : $itemTypeKey;
+$itemType    = PageMeta::postTypes($tenantId)[$itemTypeKey] ?? null;
+$listHref    = $itemType !== null ? 'pages.php?type=' . rawurlencode($itemTypeKey) : 'pages.php';
+$listName    = $itemType !== null ? (string) ($itemType['plural'] ?? $itemType['singular']) : __('studio_pages', 'Studio Pages');
+if ($itemType !== null) {
+    $currentNav = 'studio-type-' . $itemTypeKey;
+}
 $typeLabels = ['page' => __('studio_type_page', 'Standard Page'), 'landing' => __('studio_type_landing', 'Landing Page'), 'header_partial' => __('studio_type_header', 'Site Header Partial'), 'footer_partial' => __('studio_type_footer', 'Site Footer Partial')];
 
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
 <div class="sb-admin-wrapper">
-    <?php sb_render_admin_nav('pages'); ?>
-    <?php sb_render_crumbs([[__('studio_pages', 'Studio Pages'), 'pages.php'], [$page !== null ? (string) $page['title'] : __('studio_page_settings', 'Settings'), null]]); ?>
+    <?php sb_render_admin_nav($itemType !== null ? 'type-' . $itemTypeKey : 'pages'); ?>
+    <?php sb_render_crumbs([[$listName, $listHref], [$page !== null ? (string) $page['title'] : __('studio_page_settings', 'Settings'), null]]); ?>
 
     <?php if ($flash): ?>
         <div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div>
@@ -221,7 +231,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <?php if ($canEdit): ?>
         <div class="sb-form-actions">
             <button type="submit" class="btn btn-primary"><?= sb_svg('save', 14) ?> <span><?= e(__('save', 'Save changes')) ?></span></button>
-            <a href="pages.php" class="btn btn-ghost"><?= e(__('studio_back_to_pages', 'Back to pages')) ?></a>
+            <a href="<?= e($listHref) ?>" class="btn btn-ghost"><?= e($itemType !== null ? sprintf(__('studio_back_to_list', 'Back to %s'), mb_strtolower($listName)) : __('studio_back_to_pages', 'Back to pages')) ?></a>
         </div>
         <?php endif; ?>
     </form>

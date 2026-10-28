@@ -68,10 +68,10 @@ test('the Container section sets boxed width, min height, direction and linked g
   await expect(pane.getByLabel('Container layout')).toHaveValue('flex');
 
   await pane.getByLabel('Content width').selectOption('boxed');
-  // Boxed: full width, children held to 1140px by side padding.
+  // Boxed with no width of its own: full width, children held to the site content width (80rem in the sandbox) by side padding.
   await expect.poll(async () => {
     const [pl, w] = await nodeIn(page, id).evaluate((el) => [parseFloat(getComputedStyle(el).paddingLeft), el.getBoundingClientRect().width]);
-    return Math.abs(pl - Math.max(0, (w - 1140) / 2));
+    return Math.abs(pl - Math.max(0, (w - 1280) / 2));
   }).toBeLessThan(1.5);
 
   const minHeight = pane.getByRole('spinbutton', { name: 'Min height', exact: true });
@@ -92,7 +92,7 @@ test('the Container section sets boxed width, min height, direction and linked g
   await settled(page);
   await expect.poll(async () => {
     const html = await canvasHtml(page);
-    return html.includes('max(0px,calc((100% - 1140px)/2))') && html.includes('min-height:50vh');
+    return html.includes('max(0px,calc((100% - var(--sb-layout-content,80rem))/2))') && html.includes('min-height:50vh');
   }, { timeout: 20_000 }).toBe(true);
   await expect(page.getByRole('alert')).toHaveCount(0);
 });
