@@ -1432,6 +1432,13 @@
       if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
       if (!open) qsa(li, '.sb-nav__item--parent[data-open]').forEach(function (child) { set(child, false); });
     }
+    // A submenu that would run past the right edge of the window opens the other way (`data-flip`).
+    function fit(li) {
+      var sub = li.querySelector(':scope > .sb-nav__sub');
+      if (!sub) return;
+      li.removeAttribute('data-flip');
+      if (sub.getBoundingClientRect().right > document.documentElement.clientWidth - 8) li.setAttribute('data-flip', '');
+    }
     function closeSiblings(li) {
       if (!li.parentNode) return;
       Array.prototype.forEach.call(li.parentNode.children, function (sib) {
@@ -1454,8 +1461,9 @@
       // Pointing at another item of a horizontal menu shows only its submenu: one opened by a click closes.
       off.push(on(li, 'mouseenter', function () {
         li.removeAttribute('data-closed');
-        if (li.closest('.sb-nav--horizontal')) closeSiblings(li);
+        if (li.closest('.sb-nav--horizontal')) { closeSiblings(li); fit(li); }
       }));
+      off.push(on(li, 'focusin', function () { if (li.closest('.sb-nav--horizontal')) fit(li); }));
       off.push(on(li, 'mouseleave', function () { li.removeAttribute('data-closed'); }));
       off.push(on(li, 'focusout', function (e) {
         if (!li.contains(e.relatedTarget)) { li.removeAttribute('data-closed'); if (li.closest('.sb-nav--horizontal')) set(li, false); }
@@ -1474,7 +1482,7 @@
     }));
     mount(function () {
       off.forEach(function (un) { un(); });
-      items.forEach(function (li) { set(li, false); li.removeAttribute('data-closed'); });
+      items.forEach(function (li) { set(li, false); li.removeAttribute('data-closed'); li.removeAttribute('data-flip'); });
     });
   }
 
