@@ -637,12 +637,24 @@ class StripePaymentAPI {
 
     // ── HTTP transport ───────────────────────────────────────
 
+    /**
+     * api.stripe.com, or a local stand-in (a stripe-mock, the Studio e2e sandbox's fake) named by STRIPE_API_BASE.
+     * Only a plain-http loopback address is honoured, so the setting can never send keys or payments to another host.
+     */
+    public static function apiBase(): string {
+        $override = function_exists('env') ? trim((string) env('STRIPE_API_BASE', '')) : '';
+        if ($override !== '' && preg_match('#^http://(127\.0\.0\.1|localhost)(:\d{1,5})?$#', $override) === 1) {
+            return $override;
+        }
+        return self::API_BASE;
+    }
+
     public static function httpRequest(string $method, string $path, array $params = []): array {
         $secret = self::secretKey();
         if ($secret === '') throw new \RuntimeException('Stripe secret key not configured.');
         if (!function_exists('curl_init')) throw new \RuntimeException('PHP cURL extension is required.');
 
-        $url = self::API_BASE . $path;
+        $url = self::apiBase() . $path;
         $ch  = curl_init();
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
