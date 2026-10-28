@@ -555,9 +555,14 @@
       // So it lives on <body> while the runtime is on, and goes back where the author put it when the runtime is disabled.
       var home = el.parentNode;
       var marker = home && home !== document.body && document.createComment('sb-overlay');
+      // Out of its block the block's part styles (Panel, Close button...) would no longer match: they are written under
+      // the block's scoped class, and also under `[data-sb-scope~="<that class>"]`, which the panel carries while moved.
+      var owner = home && home.closest && home.closest('.sb-block');
+      var scope = owner ? Array.prototype.filter.call(owner.classList, function (c) { return /^sb-x-[0-9a-f]{16}$/.test(c); }).join(' ') : '';
       if (marker) {
         home.insertBefore(marker, el);
         document.body.appendChild(el);
+        if (scope) el.setAttribute('data-sb-scope', scope);
       }
 
       var off = [];
@@ -615,6 +620,7 @@
         if (el.__sbClose) el.__sbClose();
         el.removeAttribute('data-sb-open');
         el.setAttribute('aria-hidden', 'true');
+        el.removeAttribute('data-sb-scope');
         if (marker && marker.parentNode) {
           marker.parentNode.insertBefore(el, marker);
           marker.parentNode.removeChild(marker);
@@ -1383,6 +1389,25 @@
     if (off.length) mount(function () { off.forEach(function (un) { un(); }); });
   }
 
+  /* A menu's link to the page being viewed. The header is rendered once for every page, so the server cannot mark it;
+   * this does, so `aria-current` tells a screen reader where the visitor is and the menu's "Current page link" part
+   * (BlockParts) can style it. A trailing slash and the query do not count; a link to another site never matches.
+   */
+  function initCurrentLinks(root) {
+    var here = location.pathname.replace(/\/+$/, '') || '/';
+    var marked = [];
+    qsa(root, 'a.sb-nav__link[href]').forEach(function (a) {
+      if (a.hasAttribute('aria-current')) return;
+      var url;
+      try { url = new URL(a.getAttribute('href'), location.href); } catch (err) { return; }
+      if (url.origin !== location.origin) return;
+      if ((url.pathname.replace(/\/+$/, '') || '/') !== here) return;
+      a.setAttribute('aria-current', 'page');
+      marked.push(a);
+    });
+    if (marked.length) mount(function () { marked.forEach(function (a) { a.removeAttribute('aria-current'); }); });
+  }
+
 /* ── Boot / teardown ─────────────────────────────────────────────────────
    * `StudioRuntime.mount()` and `.disable()` are what the A/B toggle calls.
    * disable() must leave the page byte-identical to a no-JS Studio render,
@@ -1405,6 +1430,7 @@
     ['marquee', initMarquee],
     ['countdown', initCountdown],
     ['forms', initForms],
+    ['currentLinks', initCurrentLinks],
     ['anchors', initAnchors]
   ];
 

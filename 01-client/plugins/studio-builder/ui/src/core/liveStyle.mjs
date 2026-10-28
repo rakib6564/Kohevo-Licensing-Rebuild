@@ -9,7 +9,7 @@
 // Anything this file cannot predict exactly (a style key it does not know, a background image, interaction states,
 // a token the theme does not have) reports `covered: false`, and the canvas falls back to the server's render.
 
-import { colourCss, isMeasure, surfaceAccepts } from './styleSurface.mjs';
+import { colourCss, isMeasure, surfaceAccepts, tracksCss } from './styleSurface.mjs';
 import {
   isBorderWidth, isColor, isFontFamily, isGradient, isLength, isLetterSpacing, isLengthList, isLineHeight, isShadow, isToken,
 } from './styleValues.mjs';
@@ -68,7 +68,8 @@ const ok = (path, v) => surfaceAccepts(path, v);
 const LAYOUT = [
   ['display', 'display'], ['direction', 'flex-direction'], ['wrap', 'flex-wrap'], ['justify', 'justify-content', JUSTIFY], ['align', 'align-items', ALIGN], ['align_content', 'align-content', ALIGN_CONTENT],
   ['gap', 'gap'], ['row_gap', 'row-gap'], ['column_gap', 'column-gap'], ['order', 'order'], ['grow', 'flex-grow'], ['shrink', 'flex-shrink'],
-  ['basis', 'flex-basis'], ['align_self', 'align-self', ALIGN_SELF], ['columns', 'grid-template-columns', null, 'repeat(%d,minmax(0,1fr))'], ['rows', 'grid-template-rows', null, 'repeat(%d,minmax(0,1fr))'],
+  ['basis', 'flex-basis'], ['align_self', 'align-self', ALIGN_SELF], ['columns', 'grid-template-columns', null, 'repeat(%d,minmax(0,1fr))'], ['tracks', 'grid-template-columns', tracksCss],
+  ['rows', 'grid-template-rows', null, 'repeat(%d,minmax(0,1fr))'], ['column_span', 'grid-column', (v) => (v === 'full' ? '1/-1' : `span ${v}`)],
 ];
 const DIMENSIONS = [
   ['min_width', 'min-width'], ['max_height', 'max-height'], ['aspect_ratio', 'aspect-ratio'], ['overflow', 'overflow'], ['object_fit', 'object-fit'],
@@ -86,7 +87,8 @@ function emitTable(group, values, table, out) {
     if (!(field in values) || !ok(`${group}.${field}`, values[field])) continue;
     const v = values[field];
     let css;
-    if (map) css = map[v];
+    if (typeof map === 'function') css = map(v);
+    else if (map) css = map[v];
     else if (template) css = template.replace('%d', String(v));
     else css = typeof v === 'string' ? v.trim() : String(v);
     if (prop === 'text-decoration-color' || prop === '-webkit-text-stroke-color') css = colourCss(v);

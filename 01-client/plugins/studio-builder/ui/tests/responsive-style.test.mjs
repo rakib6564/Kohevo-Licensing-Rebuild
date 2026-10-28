@@ -36,7 +36,8 @@ test('resetting removes the values, and empty shells with them', () => {
 test('every responsive path is one the server accepts for a device style', () => {
   const sample = { 'typography.size': '1rem', 'layout.gap': '8px', 'layout.row_gap': '8px', 'layout.column_gap': '8px',
     'layout.direction': 'column', 'layout.wrap': 'wrap', 'layout.justify': 'between', 'layout.align': 'center', 'layout.align_content': 'between',
-    'layout.columns': 2, 'layout.rows': 2, 'layout.order': 1, 'layout.grow': 1, 'layout.shrink': 1, 'layout.basis': '50%', 'layout.align_self': 'end' };
+    'layout.columns': 2, 'layout.rows': 2, 'layout.order': 1, 'layout.grow': 1, 'layout.shrink': 1, 'layout.basis': '50%', 'layout.align_self': 'end',
+    'layout.tracks': '2fr minmax(0,1fr)', 'layout.column_span': 2 };
   for (const path of Object.values(RESPONSIVE_SCOPES).flat()) {
     const value = sample[path] ?? '1rem';
     assert.equal(deviceAccepts(path, value), true, path);

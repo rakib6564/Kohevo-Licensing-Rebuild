@@ -15,6 +15,11 @@
  *   int     an integer within bounds
  *   number  an int/float within bounds, formatted by the server with a unit
  *   ratio   `w/h` with 1-3 digit integers
+ *   tracks  grid column sizes: up to 12 of `auto`, `<n>fr`, a length or `minmax(a,b)` (see isTracks)
+ *   span    how many grid columns a child covers: 1-12, or `full` for the whole row
+ *   gradient a StyleValueGuard gradient (`linear-gradient(...)`)
+ *   opacity 0-100, written as a fraction
+ *   maxlen  a length, or `none`
  *
  * `position: fixed` is deliberately absent (it could cover the platform
  * signature); `layout.display: none` is absent too (visibility has its own control).
@@ -68,7 +73,11 @@ final class StyleSurface
                 'basis'     => ['length', 'flex-basis', true],
                 'align_self' => ['map', 'align-self', self::ALIGN_SELF],
                 'columns'   => ['int', 'grid-template-columns', 1, 12, 'repeat(%d,minmax(0,1fr))'],
+                // Unequal or fixed columns (`2fr 1fr`, `300px auto`); after `columns`, so it wins when both are set.
+                'tracks'    => ['tracks', 'grid-template-columns'],
                 'rows'      => ['int', 'grid-template-rows', 1, 12, 'repeat(%d,minmax(0,1fr))'],
+                // On a grid's child: the columns it covers.
+                'column_span' => ['span', 'grid-column'],
                 // Boxed content width: the block stays full width (its background too) and its children are held to
                 // `content_max` by side padding (see emitBoxed). No CSS property of their own, so the property is ''.
                 'content_width' => ['enum', '', ['boxed', 'full']],
@@ -398,8 +407,41 @@ final class StyleSurface
             case 'tcolor':
                 // A literal colour, or a theme colour token that is written out as the theme's own custom property.
                 return is_string($v) && (self::isColourToken(trim($v)) || (StyleValueGuard::isColor($v) && !StyleValueGuard::isToken(trim($v))));
+            case 'tracks':
+                return self::isTracks($v);
+            case 'span':
+                return $v === 'full' || (is_int($v) && $v >= 1 && $v <= 12);
+            case 'gradient':
+                return StyleValueGuard::isGradient($v);
+            case 'opacity':
+                return is_int($v) && $v >= 0 && $v <= 100;
+            case 'maxlen':
+                return $v === 'none' || self::isMeasure($v, false);
         }
         return false;
+    }
+
+    /**
+     * Grid column sizes: 1-12 tracks separated by spaces, each `auto`, `min-content`, `max-content`, `<n>fr`, a plain
+     * length (px, rem, em, %, vw) or `minmax(a,b)` of two of those. A closed grammar, so nothing else reaches the CSS.
+     */
+    public static function isTracks(mixed $v): bool
+    {
+        if (!is_string($v) || strlen($v) > 200) {
+            return false;
+        }
+        $one = '(?:auto|min-content|max-content|0|(?:\d{1,4}(?:\.\d{1,3})?|\.\d{1,3})(?:fr|px|rem|em|%|vw))';
+        $track = '(?:' . $one . '|minmax\(\s*' . $one . '\s*,\s*' . $one . '\s*\))';
+        $tracks = preg_split('/\s+(?![^(]*\))/', trim($v)) ?: [];
+        if ($tracks === [] || count($tracks) > 12) {
+            return false;
+        }
+        foreach ($tracks as $t) {
+            if (preg_match('/^' . $track . '$/', $t) !== 1) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** The token categories that hold a colour. */
@@ -789,7 +831,10 @@ final class StyleSurface
                 'int'  => isset($def[4]) ? sprintf($def[4], $v) : (string) $v,
                 'length' => trim((string) $v),
                 'tcolor' => self::colourCss((string) $v),
-                default => (string) $v,
+                'tracks' => (string) preg_replace('/\s+/', ' ', preg_replace(['/\s*([(,])\s*/', '/\s*\)/'], ['$1', ')'], trim((string) $v)) ?? ''),
+                'span'   => $v === 'full' ? '1/-1' : 'span ' . $v,
+                'opacity' => self::num($v / 100),
+                default => trim((string) $v),
             };
             $out[] = $def[1] . ':' . $css;
         }
@@ -1190,17 +1235,23 @@ final class StyleSurface
     // ── parts (BlockParts) ────────────────────────────────────────────────────
 
     /**
-     * What one part of a widget may set: its text (colour, size, weight, line height, letter spacing, case, style and
-     * decoration), its background colour, border, corners, padding, margin and shadow. A closed table, like the rest.
+     * What one part of a widget may set: its text (colour, font, size, weight, line height, letter spacing, case, style
+     * and decoration), its background (a colour or a gradient), border, corners, padding, margin, shadow, size, its own
+     * flex or grid layout, opacity and effects (move, rotate, scale, filters, transition, cursor). A closed table, like the rest.
+     *
+     * `layout.display` may be `none` here, unlike a block's own style: a part is inside a widget, where the visibility
+     * control does not reach (the Read more button of a Query Loop card, say).
      *
      * @return array<string, array<string, array<int, mixed>>|array<int, mixed>>
      */
     private static function partFields(): array
     {
         $more = self::moreFields();
+        $layout = self::fields()['layout'];
         return [
             'color'      => ['tcolor', 'color'],
             'typography' => [
+                'family'         => ['map', 'font-family', ['heading' => 'var(--sb-font-heading)', 'body' => 'var(--sb-font-body)']],
                 'size'           => ['length', 'font-size'],
                 'weight'         => ['map', 'font-weight', ['normal' => '400', 'medium' => '500', 'semibold' => '600', 'bold' => '700', 'extrabold' => '800']],
                 'line_height'    => ['length', 'line-height'],
@@ -1209,16 +1260,68 @@ final class StyleSurface
                 'style'          => $more['typography']['style'],
                 'decoration'     => $more['typography']['decoration'],
             ],
-            'background' => ['color' => ['tcolor', 'background-color']],
+            'background' => ['color' => ['tcolor', 'background-color'], 'gradient' => ['gradient', 'background-image']],
             'border'     => [
                 'width'  => ['length', 'border-width'],
                 'style'  => ['enum', 'border-style', CanonicalDocumentSchema::ALLOWED_BORDER_STYLES],
                 'color'  => ['tcolor', 'border-color'],
                 'radius' => ['length', 'border-radius'],
+                // Which sides the width is drawn on (a line under each menu link, say); written by partDeclarations().
+                'sides'  => ['enum', '', array_keys(self::BORDER_SIDES)],
             ],
+            // A part placed against its widget (the close button in a drawer's corner). Never `fixed`, as for a block.
+            'position'   => self::fields()['position'],
             'padding'    => $more['padding'],
             'margin'     => $more['margin'],
             'shadow'     => $more['shadow'],
+            'size'       => [
+                'width'      => ['length', 'width', true],
+                'height'     => ['length', 'height', true],
+                'min_width'  => ['length', 'min-width', true],
+                'min_height' => ['length', 'min-height', true],
+                // `none` lifts a cap the stylesheet sets (a drawer's panel is held to 85vw by default).
+                'max_width'  => ['maxlen', 'max-width'],
+                'max_height' => ['maxlen', 'max-height'],
+                'object_fit' => ['enum', 'object-fit', ['cover', 'contain', 'fill', 'none', 'scale-down']],
+                'overflow'   => ['enum', 'overflow', ['visible', 'hidden', 'auto']],
+            ],
+            'layout'     => [
+                'display'     => ['enum', 'display', ['block', 'flex', 'grid', 'inline-flex', 'inline-block', 'none']],
+                'direction'   => $layout['direction'],
+                'wrap'        => $layout['wrap'],
+                'justify'     => $layout['justify'],
+                'align'       => $layout['align'],
+                'gap'         => $layout['gap'],
+                'row_gap'     => $layout['row_gap'],
+                'column_gap'  => $layout['column_gap'],
+                'columns'     => $layout['columns'],
+                'tracks'      => $layout['tracks'],
+            ],
+            'opacity'    => ['opacity', 'opacity'],
+            // Validated and written by checkEffects()/emitEffects(), as a block's own effects are.
+            'effects'    => [],
+        ];
+    }
+
+    /** `border.sides` of a part => the `border-width` it writes, with W standing for the width. */
+    private const BORDER_SIDES = ['all' => 'W', 'top' => 'W 0 0 0', 'right' => '0 W 0 0', 'bottom' => '0 0 W 0', 'left' => '0 0 0 W', 'top_bottom' => 'W 0', 'left_right' => '0 W'];
+
+    /**
+     * The subset a part may set per device (`block.responsive.<tablet|mobile>.style_parts`): font size, padding, margin,
+     * size, corners and layout.
+     *
+     * @return array<string, array<string, array<int, mixed>>>
+     */
+    private static function responsivePartFields(): array
+    {
+        $all = self::partFields();
+        return [
+            'typography' => ['size' => $all['typography']['size']],
+            'border'     => ['radius' => $all['border']['radius']],
+            'padding'    => $all['padding'],
+            'margin'     => $all['margin'],
+            'size'       => $all['size'],
+            'layout'     => $all['layout'],
         ];
     }
 
@@ -1230,16 +1333,35 @@ final class StyleSurface
      */
     public static function partIssues(mixed $parts, string $type, string $path): array
     {
+        return self::checkParts($parts, $type, $path, self::partFields(), true);
+    }
+
+    /**
+     * Issues for one device's part overrides (`block.responsive.<device>.style_parts`): parts without a state, each a
+     * partial style from responsivePartFields().
+     *
+     * @return list<array{path: string, code: string, message: string}>
+     */
+    public static function responsivePartIssues(mixed $parts, string $type, string $path): array
+    {
+        return self::checkParts($parts, $type, $path, self::responsivePartFields(), false);
+    }
+
+    /**
+     * @param array<string, mixed> $defs
+     * @return list<array{path: string, code: string, message: string}>
+     */
+    private static function checkParts(mixed $parts, string $type, string $path, array $defs, bool $states): array
+    {
         if (!is_array($parts) || ($parts !== [] && array_is_list($parts))) {
             return [self::issue($path, 'style_parts must be an object.')];
         }
         $known = BlockParts::for($type);
-        $defs = self::partFields();
         $errors = [];
         foreach ($parts as $key => $partial) {
             $p = "{$path}.{$key}";
             [$part, $state] = array_pad(explode(':', (string) $key, 2), 2, null);
-            if (!isset($known[$part]) || ($state !== null && !isset(BlockParts::STATES[$state]))) {
+            if (!isset($known[$part]) || ($state !== null && (!$states || !isset(BlockParts::STATES[$state]) || !BlockParts::takesStates($known[$part])))) {
                 $errors[] = self::issue($p, "'{$key}' is not a part of {$type}.");
                 continue;
             }
@@ -1251,6 +1373,8 @@ final class StyleSurface
                 $def = $defs[(string) $group] ?? null;
                 if ($def === null) {
                     $errors[] = self::issue("{$p}.{$group}", "A part cannot set '{$group}'.");
+                } elseif ($group === 'effects') {
+                    self::checkEffects($value, "{$p}.{$group}", $errors);
                 } elseif (array_is_list($def)) {
                     self::checkField($value, $def, "{$p}.{$group}", $errors);
                 } else {
@@ -1262,49 +1386,100 @@ final class StyleSurface
     }
 
     /**
-     * The rules of `block.style_parts`, for RenderCollector::scopedRule(): each is the part's selectors (with the state's
-     * pseudo-class) and its declarations. `!important`, because the base stylesheet makes a widget's inner text follow the
-     * widget's own typography with `inherit !important`, and an author's part style has to win over that.
+     * The rules of `block.style_parts` (and of each device's `responsive.<device>.style_parts`), for
+     * RenderCollector::scopedRule(): each is the part's selectors (with the state's pseudo-class), its declarations and,
+     * for a device, the media query it applies under. `!important`, because the base stylesheet makes a widget's inner
+     * text follow the widget's own typography with `inherit !important`, and an author's part style has to win over that.
      *
      * @param array<string, mixed> $parts
-     * @return list<array{selectors: list<string>, declarations: string}>
+     * @param array<string, mixed> $responsive block.responsive
+     * @return list<array{selectors: list<string>, declarations: string, media?: string, portal?: bool}>
      */
-    public static function partRules(array $parts, string $type): array
+    public static function partRules(array $parts, string $type, array $responsive = []): array
     {
         $known = BlockParts::for($type);
-        $defs = self::partFields();
         $rules = [];
-        // Base styles first, then states, so a hover wins over the base at equal weight.
+        // Base styles first, then states, then devices, so a hover wins over the base and a phone over both at equal weight.
         foreach ([null, ...array_keys(BlockParts::STATES)] as $state) {
             foreach ($known as $part => $definition) {
-                $partial = $parts[$state === null ? $part : $part . ':' . $state] ?? null;
-                if (!is_array($partial)) {
+                if ($state !== null && !BlockParts::takesStates($definition)) {
                     continue;
                 }
-                $out = [];
-                foreach ($defs as $group => $def) {
-                    if (!array_key_exists($group, $partial)) {
-                        continue;
-                    }
-                    if (array_is_list($def)) {
-                        self::emitFields([$group => $partial[$group]], [$group => $def], $out);
-                    } elseif ($group === 'shadow' && is_array($partial['shadow'])) {
-                        $out = array_merge($out, array_filter(explode(';', self::declarations(['shadow' => $partial['shadow']])), static fn(string $d): bool => $d !== ''));
-                    } elseif (is_array($partial[$group])) {
-                        self::emitFields($partial[$group], $def, $out);
-                    }
-                }
+                $partial = $parts[$state === null ? $part : $part . ':' . $state] ?? null;
+                $out = is_array($partial) ? self::partDeclarations($partial, self::partFields()) : [];
                 if ($out === []) {
                     continue;
                 }
                 $pseudo = $state === null ? '' : BlockParts::STATES[$state];
                 $rules[] = [
-                    'selectors'    => array_map(static fn(string $sel): string => $sel . $pseudo, $definition['selectors']),
+                    'selectors'    => array_map(static fn(string $sel): string => self::withPseudo($sel, $pseudo), $definition['selectors']),
                     'declarations' => implode(';', array_map(static fn(string $d): string => $d . ' !important', $out)),
-                ];
+                ] + (BlockParts::isPortal($definition) ? ['portal' => true] : []);
+            }
+        }
+        foreach (self::RESPONSIVE_DEVICES as $device => $query) {
+            $deviceParts = $responsive[$device]['style_parts'] ?? null;
+            if (!is_array($deviceParts)) {
+                continue;
+            }
+            foreach ($known as $part => $definition) {
+                $partial = $deviceParts[$part] ?? null;
+                $out = is_array($partial) ? self::partDeclarations($partial, self::responsivePartFields()) : [];
+                if ($out !== []) {
+                    $rules[] = [
+                        'selectors'    => $definition['selectors'],
+                        'declarations' => implode(';', array_map(static fn(string $d): string => $d . ' !important', $out)),
+                        'media'        => $query,
+                    ] + (BlockParts::isPortal($definition) ? ['portal' => true] : []);
+                }
             }
         }
         return $rules;
+    }
+
+    /** A state's pseudo-class goes before a pseudo-element (`li:hover::before`), never after it. */
+    private static function withPseudo(string $selector, string $pseudo): string
+    {
+        if ($pseudo === '') {
+            return $selector;
+        }
+        $at = strpos($selector, '::');
+        return $at === false ? $selector . $pseudo : substr($selector, 0, $at) . $pseudo . substr($selector, $at);
+    }
+
+    /**
+     * @param array<string, mixed> $partial
+     * @param array<string, mixed> $defs
+     * @return list<string>
+     */
+    private static function partDeclarations(array $partial, array $defs): array
+    {
+        $out = [];
+        foreach ($defs as $group => $def) {
+            if (!array_key_exists($group, $partial)) {
+                continue;
+            }
+            if ($group === 'effects') {
+                if (is_array($partial['effects'])) {
+                    self::emitEffects($partial['effects'], $out);
+                }
+            } elseif (array_is_list($def)) {
+                self::emitFields([$group => $partial[$group]], [$group => $def], $out);
+            } elseif ($group === 'shadow' && is_array($partial['shadow'])) {
+                $out = array_merge($out, array_filter(explode(';', self::declarations(['shadow' => $partial['shadow']])), static fn(string $d): bool => $d !== ''));
+            } elseif (is_array($partial[$group])) {
+                self::emitFields($partial[$group], $def, $out);
+            }
+        }
+        $sides = $partial['border']['sides'] ?? null;
+        if (is_string($sides) && isset(self::BORDER_SIDES[$sides]) && $sides !== 'all') {
+            foreach ($out as $i => $decl) {
+                if (str_starts_with($decl, 'border-width:')) {
+                    $out[$i] = 'border-width:' . str_replace('W', substr($decl, strlen('border-width:')), self::BORDER_SIDES[$sides]);
+                }
+            }
+        }
+        return $out;
     }
 
     // ── per-device overrides ──────────────────────────────────────────────────

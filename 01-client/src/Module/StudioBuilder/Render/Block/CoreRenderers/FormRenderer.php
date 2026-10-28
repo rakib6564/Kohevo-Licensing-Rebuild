@@ -46,8 +46,11 @@ final class FormRenderer implements BlockRendererInterface
             . '<button type="submit" class="sb-button sb-button--' . $submitVariant . '">' . Html::e($submitText) . '</button>'
             . '</div>';
 
+        $formClass = 'sb-form' . ($scope->string('labels', 'visible') === 'hidden' ? ' sb-form--labels-hidden' : '')
+            . ($scope->string('layout', 'stacked') === 'inline' ? ' sb-form--inline' : '');
+
         if (trim($action) !== '') {
-            return '<form class="sb-form" action="' . Html::e($action) . '" method="' . $method . '" data-sb-form="' . Html::e($formName) . '">'
+            return '<form class="' . $formClass . '" action="' . Html::e($action) . '" method="' . $method . '" data-sb-form="' . Html::e($formName) . '">'
                 . '<input type="hidden" name="form_name" value="' . Html::e($formName) . '">'
                 . $scope->childrenHtml() . $actions . '</form>';
         }
@@ -60,7 +63,7 @@ final class FormRenderer implements BlockRendererInterface
                 : Html::t('studio_form_note_off', 'Turn on the Forms module so this form can receive submissions.')) . '</p>';
         }
         $success = $scope->string('success_message', '');
-        return '<form class="sb-form" action="' . Html::e($scope->site()->absoluteUrl('forms/' . $slug)) . '" method="post"'
+        return '<form class="' . $formClass . '" action="' . Html::e($scope->site()->absoluteUrl('forms/' . $slug)) . '" method="post"'
             . ' data-sb-form="' . Html::e($formName) . '" data-sb-form-slug="' . Html::e($slug) . '" enctype="multipart/form-data"'
             // The runtime's own words, translated here so a French page stays French.
             . ' data-sb-label-sending="' . Html::e(Html::t('studio_form_sending', 'Sending…')) . '"'
