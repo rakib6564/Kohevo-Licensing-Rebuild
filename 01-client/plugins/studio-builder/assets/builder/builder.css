@@ -3288,9 +3288,10 @@ html, body.sbx-body {
 .sbx-inspector > * { flex: none; }
 .sbx-inspector > .sbx-inspector__bar { margin-top: auto; }
 /* The bar is the panel's footer: flush with its bottom edge and full width, over the scrolling body's padding, so
-   nothing scrolls into a gap under it (in the docked panel and in the phone or tablet sheet alike). */
-.sbx-left__body--inspector .sbx-inspector__bar { bottom: -12px; margin: 12px -14px -12px; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)); }
-.sbx-bottom-sheet__body .sbx-inspector__bar { bottom: -16px; margin: 12px -18px -16px; padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px)); }
+   nothing scrolls into a gap under it (in the docked panel and in the phone or tablet sheet alike). Its top margin is
+   left to the rules above (auto: short controls still leave the bar at the bottom). */
+.sbx-left__body--inspector .sbx-inspector__bar { bottom: -12px; margin-right: -14px; margin-bottom: -12px; margin-left: -14px; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)); }
+.sbx-bottom-sheet__body .sbx-inspector__bar { bottom: -16px; margin-right: -18px; margin-bottom: -16px; margin-left: -18px; padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px)); }
 .sbx-left__body--inspector:not([hidden]) { display: flex; flex-direction: column; }
 .sbx-left__body--inspector > .sbx-inspector-host { flex: 1 0 auto; }
 

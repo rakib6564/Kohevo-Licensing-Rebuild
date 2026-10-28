@@ -78,16 +78,13 @@ test('a side border, the custom shadow and the text decoration take theme colour
   try {
     await insertQuote(page);
 
-    // a side of the border, in the card
+    // a side of the border, in the Border group's per-side details
     const border = await openSection(page, 'border');
-    await border.getByRole('button', { name: 'Edit border' }).click();
-    const card = border.getByRole('dialog', { name: 'Edit border' });
-    await card.locator('details.sbx-more summary').click();
-    const top = card.locator('details.sbx-more fieldset', { has: page.getByText('Top', { exact: true }) }).first().locator('.sbx-color__theme');
+    await border.locator('details.sbx-more summary').click();
+    const top = border.locator('details.sbx-more fieldset', { has: page.getByText('Top', { exact: true }) }).first().locator('.sbx-color__theme');
     await pickTheme(page, top);
     await settled(page);
     await expect.poll(() => canvasCss(page), { timeout: 15_000 }).toMatch(/border-top-color:\s*var\(--sb-/);
-    await card.getByRole('button', { name: 'Done' }).click();
 
     // the custom shadow's colour
     const shadow = await openSection(page, 'shadow');

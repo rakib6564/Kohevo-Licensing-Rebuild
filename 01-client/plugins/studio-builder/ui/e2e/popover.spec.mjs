@@ -103,10 +103,10 @@ test('typography and border keep the common controls in the row and move the res
     await typo.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
 
     const border = await openSection(page, 'border');
+    // Border shows everything in view: the common row, then each side's width and each corner (no pencil card).
     await expect(border.getByLabel('Border Style', { exact: true })).toBeVisible();
-    await expect(border.getByText('Corners', { exact: false })).toHaveCount(0);
-    await border.getByRole('button', { name: 'Edit border' }).click();
-    await expect(border.getByRole('dialog', { name: 'Edit border' }).getByText(/Corners/)).toBeVisible();
+    await expect(border.getByText(/Corners/).first()).toBeVisible();
+    await expect(border.getByRole('button', { name: 'Edit border' })).toHaveCount(0);
   } finally {
     await restore(page, before);
   }
