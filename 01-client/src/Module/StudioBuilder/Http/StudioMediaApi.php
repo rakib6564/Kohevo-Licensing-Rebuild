@@ -12,16 +12,24 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Http;
 
+use Slate\Services\Media\Media;
+
 final class StudioMediaApi
 {
     public const PER_PAGE         = 24;
     public const MAX_IDS          = 24;
     public const MAX_SEARCH       = 100;
     public const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+    /** The Video widget's file picker: a video is far bigger than an image. */
+    public const MAX_VIDEO_UPLOAD_BYTES = Media::VIDEO_MAX_BYTES;
+    /** What the picker lists and accepts: images (every image field) or video files (the Video widget). */
+    public const TYPES = ['image', 'video'];
+    public const VIDEO_EXTS  = Media::VIDEO_EXTS;
+    public const VIDEO_MIMES = Media::VIDEO_MIMES;
 
     /**
      * @param array<string, mixed> $get the raw query string
-     * @return array{search: string, page: int, ids: list<int>}
+     * @return array{search: string, page: int, ids: list<int>, type: string}
      */
     public static function listQuery(array $get): array
     {
@@ -43,20 +51,27 @@ final class StudioMediaApi
             }
         }
 
-        return ['search' => $search, 'page' => $page === false ? 1 : $page, 'ids' => $ids];
+        return ['search' => $search, 'page' => $page === false ? 1 : $page, 'ids' => $ids, 'type' => self::type($get['type'] ?? null)];
+    }
+
+    /** `image` unless the request asked for `video`. */
+    public static function type(mixed $raw): string
+    {
+        return is_string($raw) && in_array($raw, self::TYPES, true) ? $raw : 'image';
     }
 
     /**
-     * One core media record as the editor sees it: an image only, an id, a URL to show it and its facts.
+     * One core media record as the editor sees it: an image (or, for `video`, a playable video file), an id, a URL to
+     * show it and its facts.
      *
      * @param array<string, mixed> $row a decorated Media record
-     * @return array<string, mixed>|null null for anything that is not a usable image
+     * @return array<string, mixed>|null null for anything that is not a usable item of that type
      */
-    public static function shapeItem(array $row): ?array
+    public static function shapeItem(array $row, string $type = 'image'): ?array
     {
         $id  = (int) ($row['id'] ?? 0);
         $url = (string) ($row['url'] ?? '');
-        if ($id <= 0 || ($row['kind'] ?? '') !== 'image' || preg_match('~^(https?://[^\s"\'<>]+|/[^/\s"\'<>][^\s"\'<>]*)$~i', $url) !== 1) {
+        if ($id <= 0 || !self::isType($row, $type) || preg_match('~^(https?://[^\s"\'<>]+|/[^/\s"\'<>][^\s"\'<>]*)$~i', $url) !== 1) {
             return null;
         }
         $dim = static fn(mixed $v): ?int => is_int($v) && $v > 0 ? $v : null;
@@ -74,14 +89,28 @@ final class StudioMediaApi
     }
 
     /**
+     * @param array<string, mixed> $row
+     */
+    private static function isType(array $row, string $type): bool
+    {
+        if ($type !== 'video') {
+            return ($row['kind'] ?? '') === 'image';
+        }
+        $ext = strtolower(pathinfo((string) ($row['path'] ?? $row['url'] ?? ''), PATHINFO_EXTENSION));
+        return ($row['kind'] ?? '') === 'other'
+            && in_array(strtolower((string) ($row['mime'] ?? '')), self::VIDEO_MIMES, true)
+            && in_array($ext, self::VIDEO_EXTS, true);
+    }
+
+    /**
      * @param array<string, mixed> $result Media::listAll() output
      * @return array{items: list<array<string, mixed>>, total: int, page: int, pages: int}
      */
-    public static function shapeList(array $result): array
+    public static function shapeList(array $result, string $type = 'image'): array
     {
         $items = [];
         foreach (is_array($result['items'] ?? null) ? $result['items'] : [] as $row) {
-            $item = is_array($row) ? self::shapeItem($row) : null;
+            $item = is_array($row) ? self::shapeItem($row, $type) : null;
             if ($item !== null) {
                 $items[] = $item;
             }

@@ -3,11 +3,13 @@
 // Allows typing/pasting an external or relative URL, or clicking "Media Library"
 // to pick/upload an asset via the builder's image picker. If the URL points to an image
 // (or the field represents an image/cover/avatar/mockup/photo), an image preview
-// is displayed.
+// is displayed. A video field (the Video widget's file) opens the picker on video files
+// and previews the chosen video.
 
 import { coerce } from '../../core/fields.mjs';
 import { t } from '../../core/messages.mjs';
 import { mediaPickerAvailable, openMediaPicker } from '../../core/mediaPicker.mjs';
+import { isVideoTarget } from '../../core/mediaApi.mjs';
 
 function isImageTarget(field, val) {
   const key = String((field && field.key) || '').toLowerCase();
@@ -23,12 +25,13 @@ function isImageTarget(field, val) {
 }
 
 export function UrlControl({ field, draft, update, problem, common, id, mediaPicker }) {
-  const isImage = isImageTarget(field, draft);
+  const isVideo = isVideoTarget(field, draft);
+  const isImage = !isVideo && isImageTarget(field, draft);
   const pickerAvailable = mediaPickerAvailable(mediaPicker);
 
   const pickMedia = () => {
     openMediaPicker({
-      types: isImage ? 'image' : 'all',
+      types: isVideo ? 'video' : (isImage ? 'image' : 'all'),
       onPick: (record) => {
         const pickedUrl = (record && (record.url || record.path)) || '';
         if (pickedUrl) {
@@ -55,6 +58,18 @@ export function UrlControl({ field, draft, update, problem, common, id, mediaPic
           />
         </div>
       ) : null}
+      {isVideo && draft && typeof draft === 'string' && draft.trim() ? (
+        <video
+          className="sbx-media__preview"
+          src={draft}
+          preload="metadata"
+          muted
+          playsInline
+          aria-hidden="true"
+          style={{ width: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '6px', display: 'block', background: '#0f172a', marginBottom: '8px' }}
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        />
+      ) : null}
 
       <div className="sbx-media__row" style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
         <input
@@ -71,7 +86,7 @@ export function UrlControl({ field, draft, update, problem, common, id, mediaPic
             type="button"
             className="sbx-btn"
             onClick={pickMedia}
-            title={draft ? t('change') : t('choose_image')}
+            title={draft ? t('change') : t(isVideo ? 'choose_video' : 'choose_image')}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', padding: '0.4rem 0.65rem' }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -79,7 +94,7 @@ export function UrlControl({ field, draft, update, problem, common, id, mediaPic
               <circle cx="8.5" cy="8.5" r="1.5"></circle>
               <polyline points="21 15 16 10 5 21"></polyline>
             </svg>
-            <span>{draft ? t('change') : t('choose_image')}</span>
+            <span>{draft ? t('change') : t(isVideo ? 'choose_video' : 'choose_image')}</span>
           </button>
         ) : null}
         {draft ? (

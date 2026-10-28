@@ -170,7 +170,7 @@ $tabUrl = static function (array $over) use ($type, $usage, $q): string {
 .media-card { position: relative; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; transition: border-color .14s ease, box-shadow .14s ease, transform .14s ease; }
 .media-card:hover { border-color: var(--border-stronger); box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .media-thumb { aspect-ratio: 1; background: var(--surface-2); display: flex; align-items: center; justify-content: center; }
-.media-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.media-thumb img, .media-thumb video { max-width: 100%; max-height: 100%; object-fit: contain; }
 .media-doc { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--muted); }
 .media-doc-ext { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); }
 .media-meta { padding: 8px 10px; }
@@ -229,7 +229,7 @@ $tabUrl = static function (array $over) use ($type, $usage, $q): string {
             <?= csrf_field() ?>
             <input type="hidden" name="_action" value="upload">
             <input type="file" name="files[]" multiple
-                   accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,application/pdf,.doc,.docx,.xls,.xlsx">
+                   accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,application/pdf,.doc,.docx,.xls,.xlsx,video/mp4,video/webm,video/ogg,video/quicktime,.mp4,.m4v,.webm,.ogv,.mov">
             <button type="submit" class="btn btn-sm btn-primary"><?= __('upload', 'Upload') ?></button>
         </form>
         <span class="media-spacer"></span>
@@ -272,6 +272,8 @@ $tabUrl = static function (array $over) use ($type, $usage, $q): string {
                 <div class="media-thumb">
                     <?php if ($f['kind'] === 'image'): ?>
                         <img src="<?= e($f['url']) ?>" alt="<?= e($f['original_name']) ?>" loading="lazy">
+                    <?php elseif (Media::isVideo($f)): ?>
+                        <video src="<?= e($f['url']) ?>" preload="metadata" muted playsinline aria-label="<?= e($f['original_name']) ?>"></video>
                     <?php else: ?>
                         <div class="media-doc">
                             <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
