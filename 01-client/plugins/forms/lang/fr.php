@@ -557,6 +557,8 @@ return [
     'fm_err_refused_webhook_url_is_not_a_public_http_s_endpoint' => 'Refusé : l’URL du webhook n’est pas un point d’accès http(s) public.',
     'fm_err_thanks_your_response_has_been_received' => 'Merci, votre réponse a bien été reçue.',
     'fm_err_security_check_failed_please_try_again' => 'Le contrôle de sécurité a échoué. Veuillez réessayer.',
+    'fm_err_fix_fields' => 'Veuillez vérifier les champs signalés.',
+    'fm_thanks_default' => 'Merci ! Votre envoi a bien été reçu.',
     'forms_js_required' => 'Ce champ est obligatoire.',
     'forms_js_email' => 'Saisissez une adresse e-mail valide.',
     'forms_js_url' => 'Saisissez une URL valide (https://…).',

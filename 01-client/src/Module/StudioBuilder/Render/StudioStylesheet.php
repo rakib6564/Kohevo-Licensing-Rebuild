@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '31';
+    public const VERSION = '32';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -476,7 +476,7 @@ final class StudioStylesheet
             . '.sb-offcanvas-trigger--icon{display:inline-flex;align-items:center;gap:.5rem;line-height:1}'
             . '.sb-offcanvas-trigger__icon{flex:none;display:block}'
             . '.sb-button.sb-button--plain{background:none;border:0;padding:0;border-radius:0;color:inherit}'
-            . '.sb-form{display:flex;flex-direction:column;gap:1rem}'
+            . '.sb-form{display:flex;flex-flow:row wrap;gap:1rem}.sb-form>*{flex:0 0 100%;min-width:0}'
             . '.sb-form-group{display:flex;flex-direction:column;gap:.375rem}'
             . '.sb-form-group label{font-weight:500;font-size:.875rem}'
             . '.sb-form-group input,.sb-form-group textarea,.sb-form-group select{padding:.5rem .75rem;border:1px solid #d1d5db;border-radius:.375rem;font-size:.875rem;width:100%;box-sizing:border-box}'
@@ -522,6 +522,7 @@ final class StudioStylesheet
         $css .= '@media (max-width:767.98px){.sb-hide-mobile{display:none!important}}';
         $css .= self::scrollEffectsCss();
         $css .= self::deviceCountsCss();
+        $css .= self::formCss();
         // Per-device alignment, desktop first: the desktop value is the base, a tablet value
         // overrides it at tablet width and below, a mobile value overrides both on a phone.
         $css .= self::alignRules('desktop');
@@ -631,6 +632,29 @@ final class StudioStylesheet
             . '.sb-dpv>.sb-carousel__track>.sb-carousel__slide{flex-basis:calc((100% - (var(--sb-pv) - 1)*1rem)/var(--sb-pv))!important}'
             . '@media (max-width:1023.98px){' . $rule('t') . '}'
             . '@media (max-width:767.98px){' . $rule('m') . '}';
+    }
+
+    /**
+     * A Studio form's fields share a row by their width (`--sb-fw-d/-t/-m`, a fraction of the row): the basis takes back
+     * its share of the gap, so two halves and the gap between them fill the row exactly. The rest is the states the
+     * runtime sets: a field's error, the status line, the honeypot kept out of sight.
+     */
+    public static function formCss(): string
+    {
+        $w = static fn (string $d): string => '.sb-form>.sb-fw{flex-basis:calc((100% + 1rem)*var(--sb-fw-' . $d . ',1) - 1rem)}';
+        return $w('d') . '@media (max-width:1023.98px){' . $w('t') . '}' . '@media (max-width:767.98px){' . $w('m') . '}'
+            . '.sb-form>.sb-form-hidden{display:none}'
+            . '.sb-hp{position:absolute!important;left:-9999px;width:1px;height:1px;overflow:hidden}'
+            . '.sb-form-choices{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:.375rem}'
+            . '.sb-form-choices legend{font-weight:500;font-size:.875rem;margin-bottom:.25rem;padding:0}'
+            . '.sb-form-check{display:flex;align-items:center;gap:.5rem;font-weight:400}'
+            . '.sb-form-error{font-size:.8rem;color:#b91c1c}'
+            . '.sb-form-group.is-invalid :is(input,select,textarea){border-color:#b91c1c}'
+            . '.sb-form__status{padding:.75rem 1rem;border-radius:.5rem;font-size:.9rem;background:var(--sb-surface-secondary)}'
+            . '.sb-form__status[data-sb-state="success"]{background:#ecfdf5;color:#065f46}'
+            . '.sb-form__status[data-sb-state="error"]{background:#fef2f2;color:#991b1b}'
+            . '.sb-form__note{font-size:.8rem;color:var(--sb-text-muted);margin:0}'
+            . '.sb-form[aria-busy="true"] .sb-form__actions .sb-button{opacity:.6;cursor:progress}';
     }
 
     public static function prefix(string $breakpoint): ?string

@@ -99,6 +99,15 @@ if ($action === 'pdf') {
     return;
 }
 
+// A form drawn on a cached page (a Kohevo Studio form block) has no session of its own: its script asks for a CSRF
+// token and a time-trap stamp here when the visitor starts on it, then posts with `Accept: application/json` and gets
+// the outcome as JSON (forms_public_json) instead of a page. Never cached: the token belongs to this visitor's session.
+if ($action === 'token') {
+    forms_public_json(['csrf' => csrf_token(), 'fts' => FormsSpamGuard::timeTrapValue()]);
+    return;
+}
+$wantsJson = str_contains((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json');
+
 $errors = [];
 $values = [];
 $spamCountry = '';
@@ -110,6 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ahead of the heavier checks). Silent drop: fake success, store nothing.
     // (Accept the legacy name too, in case a cached page is submitted.)
     if (!empty($_POST['hp_field']) || !empty($_POST['website_url'])) {
+        if ($wantsJson) { forms_public_json(forms_public_json_success($form)); return; }
         forms_public_finish_silent($form, $embed);
         return;
     }
@@ -123,6 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // the file/signature handlers or the database.
         $verdict = FormsSpamGuard::evaluate($form, $spam, $_POST, FormsAPI::clientIp());
         if (!$verdict['ok'] && $verdict['silent']) {
+            if ($wantsJson) { forms_public_json(forms_public_json_success($form)); return; }
             forms_public_finish_silent($form, $embed);
             return;
         }
@@ -190,7 +201,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (forms_is_bare()) $q['chrome'] = '0';
                     $dest = SLATE_URL . '/forms/' . $form['slug'] . '/thanks?' . http_build_query($q);
                 }
-                header('Location: ' . $dest, true, 303);
+                if ($wantsJson) {
+                    forms_public_json(forms_public_json_success($form, (string)$newRef), false);
+                } else {
+                    header('Location: ' . $dest, true, 303);
+                }
 
                 // Send the redirect to the browser now, then keep processing.
                 forms_public_finish_response();
@@ -200,6 +215,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors = $result['errors'];
         }
     }
+}
+
+if ($wantsJson && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $message = (string)($errors['_form'] ?? __('fm_err_fix_fields', 'Please check the highlighted fields.'));
+    unset($errors['_form']);
+    forms_public_json(['ok' => false, 'message' => $message, 'errors' => (object)$errors], true, 422);
+    return;
 }
 
 forms_public_render_form($form, $values, $errors, $embed);
@@ -216,6 +238,31 @@ forms_public_render_form($form, $values, $errors, $embed);
  * without the double-border / duplicate-title look. Opt-in; default embeds
  * keep their full chrome.
  */
+/**
+ * Answer a Studio form's script with JSON. `$end` false leaves the request running (the caller flushes the response and
+ * goes on to send the emails and webhooks).
+ */
+function forms_public_json(array $payload, bool $end = true, int $status = 200): void {
+    if (!headers_sent()) {
+        http_response_code($status);
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: private, no-store, max-age=0');
+    }
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($end) exit;
+}
+
+/** What a Studio form shows after a submit Forms accepted: its message, or where to go. */
+function forms_public_json_success(array $form, string $ref = ''): array {
+    $message = trim((string)($form['success_message'] ?? ''));
+    return [
+        'ok'       => true,
+        'message'  => $message !== '' ? $message : __('fm_thanks_default', 'Thanks! Your submission has been received.'),
+        'redirect' => !empty($form['redirect_url']) ? (string)$form['redirect_url'] : null,
+        'ref'      => $ref !== '' ? $ref : null,
+    ];
+}
+
 function forms_is_bare(): bool {
     return !empty($_GET['embed']) && (string)($_GET['chrome'] ?? '1') === '0';
 }
