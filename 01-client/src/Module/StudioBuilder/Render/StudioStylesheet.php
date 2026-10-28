@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '40';
+    public const VERSION = '41';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -50,7 +50,8 @@ final class StudioStylesheet
         'xl'   => 'calc(var(--sb-space-lg,3rem)*2/3)',
         '2xl'  => 'var(--sb-space-lg,3rem)',
     ];
-    private const WIDTHS  = ['narrow' => '42rem', 'normal' => '64rem', 'wide' => '80rem', 'full' => 'none'];
+    /** Section widths => [Site settings › Layout token, its default]; `full` is no limit. */
+    private const WIDTHS  = ['default' => ['content', '80rem'], 'narrow' => ['narrow', '42rem'], 'normal' => ['normal', '64rem'], 'wide' => ['wide', '80rem'], 'full' => null];
     private const ALIGN   = ['left' => 'left', 'center' => 'center', 'right' => 'right', 'justify' => 'justify'];
 
     private static ?string $cache = null;
@@ -529,11 +530,13 @@ final class StudioStylesheet
             . '.sb-video-lightbox__frame{width:min(92vw,151vh)}.sb-video-lightbox__frame.sb-video--aspect-4-3{width:min(92vw,113vh)}'
             . '.sb-video-lightbox__frame.sb-video--aspect-1-1{width:min(92vw,85vh)}.sb-video-lightbox__frame.sb-video--aspect-9-16{width:min(92vw,48vh)}';
 
-        foreach (self::WIDTHS as $name => $max) {
-            // The three real widths follow the site's Layout tokens (Site settings); `full` is no limit.
-            $limit = $max === 'none' ? 'none' : 'var(--sb-layout-' . $name . ',' . $max . ')';
+        foreach (self::WIDTHS as $name => $token) {
+            // The widths follow the site's Layout tokens (Site settings): `default` is its content width; `full` is no limit.
+            $limit = $token === null ? 'none' : 'var(--sb-layout-' . $token[0] . ',' . $token[1] . ')';
             $css .= '.sb-w-' . $name . '{max-width:' . $limit . ';margin-left:auto;margin-right:auto}';
         }
+        // A custom width (DocumentRenderer::customWidthVars): the phone's size, then each wider device's own (responsive()).
+        $css .= '.sb-w-custom{max-width:var(--sb-cw,none);margin-left:auto;margin-right:auto}';
         foreach (self::GAP as $name => $value) {
             $css .= '.sb-gap-' . $name . '{gap:' . $value . '}';
         }
@@ -588,6 +591,9 @@ final class StudioStylesheet
         }
         foreach (self::ALIGN as $name => $value) {
             $css .= '.sb-' . $prefix . 'align-' . $name . '{text-align:' . $value . '}';
+        }
+        if ($prefix !== '') {
+            $css .= '.sb-w-custom.sb-' . $prefix . 'cw{max-width:var(--sb-cw-' . rtrim($prefix, '-') . ')}';
         }
         return $css;
     }

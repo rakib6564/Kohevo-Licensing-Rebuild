@@ -268,7 +268,8 @@ final class StyleSurface
     }
 
     /**
-     * A boxed block keeps its full width (and its background) and holds its children to `layout.content_max`: each side's
+     * A boxed block keeps its full width (and its background) and holds its children to `layout.content_max`, or to the
+     * site's content width when it has none: each side's
      * padding becomes the larger of the author's padding and half the room left over, as a centred inner box would give.
      * The percentage is the parent's width, which is the block's own while it is boxed (its width is never set then).
      *
@@ -278,10 +279,13 @@ final class StyleSurface
     private static function emitBoxed(array $style, array &$out): void
     {
         $layout = is_array($style['layout'] ?? null) ? $style['layout'] : [];
-        if (($layout['content_width'] ?? null) !== 'boxed' || !isset($layout['content_max']) || !self::fieldAccepts($layout['content_max'], ['length', ''])) {
+        if (($layout['content_width'] ?? null) !== 'boxed') {
             return;
         }
-        $max = trim((string) $layout['content_max']);
+        // With no width of its own a boxed block holds its children to the site's content width (Site settings › Layout).
+        $max = isset($layout['content_max']) && self::fieldAccepts($layout['content_max'], ['length', ''])
+            ? trim((string) $layout['content_max'])
+            : 'var(--sb-layout-content,80rem)';
         $padding = is_array($style['padding'] ?? null) ? $style['padding'] : [];
         foreach (['left', 'right'] as $side) {
             $own = isset($padding[$side]) && self::fieldAccepts($padding[$side], ['padlen', '']) ? trim((string) $padding[$side]) : '0px';
@@ -461,6 +465,12 @@ final class StyleSurface
         $v = trim($v);
         // The name is ResolvedTheme::cssVarName's (a unit test keeps the two the same); this layer does not depend on the renderer.
         return self::isColourToken($v) ? 'var(--sb-' . str_replace('.', '-', $v) . ')' : $v;
+    }
+
+    /** A size that is never negative (px, %, rem, vw...), as padding takes it: a section's custom width. */
+    public static function isSize(mixed $v): bool
+    {
+        return self::fieldAccepts($v, ['padlen', '']);
     }
 
     /** A length with no CSS-wide keywords; `auto` only where the property takes it. */

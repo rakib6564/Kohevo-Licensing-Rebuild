@@ -6252,10 +6252,19 @@
             "hidden"
         ],
         "container_widths": [
+            "default",
             "narrow",
             "normal",
             "wide",
             "full"
+        ],
+        "section_widths": [
+            "default",
+            "narrow",
+            "normal",
+            "wide",
+            "full",
+            "custom"
         ],
         "robots": [
             "index,follow",

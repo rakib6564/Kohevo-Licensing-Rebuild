@@ -97,11 +97,14 @@ function emitTable(group, values, table, out) {
   }
 }
 
-/** StyleSurface::emitBoxed: a boxed block holds its children to `layout.content_max` with side padding, one declaration a side. */
+/**
+ * StyleSurface::emitBoxed: a boxed block holds its children to `layout.content_max` (or, with none, the site's content
+ * width) with side padding, one declaration a side.
+ */
 function emitBoxed(style, out) {
   const layout = isObj(style.layout) ? style.layout : {};
-  if (layout.content_width !== 'boxed' || !ok('layout.content_max', layout.content_max)) return;
-  const max = String(layout.content_max).trim();
+  if (layout.content_width !== 'boxed') return;
+  const max = layout.content_max !== undefined && ok('layout.content_max', layout.content_max) ? String(layout.content_max).trim() : 'var(--sb-layout-content,80rem)';
   const padding = isObj(style.padding) ? style.padding : {};
   for (const side of ['left', 'right']) {
     const own = side in padding && ok(`padding.${side}`, padding[side]) ? String(padding[side]).trim() : '0px';

@@ -616,8 +616,24 @@ final class DocumentValidator
             self::validateResponsiveColumns($layout['columns'], "{$path}.columns", $errors);
         }
 
-        if (isset($layout['width']) && (!is_string($layout['width']) || !in_array($layout['width'], CanonicalDocumentSchema::ALLOWED_CONTAINER_WIDTHS, true))) {
+        if (isset($layout['width']) && (!is_string($layout['width']) || !in_array($layout['width'], CanonicalDocumentSchema::ALLOWED_SECTION_WIDTHS, true))) {
             $errors[] = ValidationResult::issue("{$path}.width", 'invalid_layout_width', 'Invalid section layout width.');
+        }
+
+        // A custom width per device: a breakpoint map of sizes, as the Inspector's other size fields take them.
+        if (isset($layout['custom_width'])) {
+            $custom = $layout['custom_width'];
+            if (!is_array($custom) || $custom === [] || array_is_list($custom)) {
+                $errors[] = ValidationResult::issue("{$path}.custom_width", 'invalid_custom_width', 'section.layout.custom_width must be a breakpoint map of sizes.');
+            } else {
+                foreach ($custom as $bp => $size) {
+                    if (!in_array((string) $bp, CanonicalDocumentSchema::ALLOWED_BREAKPOINTS, true)) {
+                        $errors[] = ValidationResult::issue("{$path}.custom_width.{$bp}", 'invalid_breakpoint', "Unknown breakpoint '{$bp}'.");
+                    } elseif (!StyleSurface::isSize($size)) {
+                        $errors[] = ValidationResult::issue("{$path}.custom_width.{$bp}", 'invalid_custom_width', 'A custom width is a size such as 960px, 90%, 60rem or 80vw.');
+                    }
+                }
+            }
         }
 
         if (isset($layout['gap']) && (!is_string($layout['gap']) || !in_array($layout['gap'], CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, true))) {

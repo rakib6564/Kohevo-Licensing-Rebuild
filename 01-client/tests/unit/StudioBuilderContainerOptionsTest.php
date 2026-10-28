@@ -63,9 +63,13 @@ unit('container: boxed holds the children to the width with side padding, and th
     assert_false(str_contains($css, 'content'), 'content_width and content_max are never CSS properties of their own');
 });
 
-unit('container: full width, or boxed without a width, changes nothing', function (): void {
+unit('container: full width changes nothing; boxed without a width keeps to the site content width', function (): void {
     assert_eq('', StyleSurface::declarations(['layout' => ['content_width' => 'full', 'content_max' => '900px']]), 'full width');
-    assert_eq('', StyleSurface::declarations(['layout' => ['content_width' => 'boxed']]), 'no width yet');
+    assert_eq(
+        'padding-left:max(0px,calc((100% - var(--sb-layout-content,80rem))/2));padding-right:max(0px,calc((100% - var(--sb-layout-content,80rem))/2))',
+        StyleSurface::declarations(['layout' => ['content_width' => 'boxed']]),
+        'boxed with no width of its own follows Site settings › Layout › Content width'
+    );
 });
 
 unit('container: the boxed fields are validated, and set once for every device', function (): void {
