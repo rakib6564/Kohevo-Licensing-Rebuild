@@ -2039,6 +2039,7 @@ return [
     'studio_field_video_url' => 'URL de la vidéo',
     'studio_field_lightbox' => 'Lightbox',
     'studio_field_play_icon' => 'Icône lecture',
+    'studio_field_play_symbol' => 'Symbole lecture',
     'studio_field_overlay_image' => 'Image de superposition',
     'studio_field_image_overlay' => 'Superposition d’image',
     'studio_field_lazy_load' => 'Chargement différé',

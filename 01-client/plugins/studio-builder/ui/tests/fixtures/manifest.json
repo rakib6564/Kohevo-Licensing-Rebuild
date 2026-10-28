@@ -4435,7 +4435,20 @@
                 "text_shadow",
                 "overlay"
             ],
-            "style_parts": [],
+            "style_parts": [
+                {
+                    "key": "poster",
+                    "label": "Overlay image"
+                },
+                {
+                    "key": "play",
+                    "label": "Play icon"
+                },
+                {
+                    "key": "svg",
+                    "label": "Play symbol"
+                }
+            ],
             "title": "Video",
             "type": "core.video",
             "version": 1

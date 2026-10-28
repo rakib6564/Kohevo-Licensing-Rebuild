@@ -196,3 +196,12 @@ unit('video: the runtime swaps the template in place or opens it in a lightbox, 
     }
     assert_false((bool) preg_match('/youtube\.com|location\.href\s*=|window\.open/', substr($js, (int) strpos($js, 'function initVideos'), 4000)), 'the runtime builds no player address and never navigates');
 });
+
+unit('video: the overlay image and the play icon are parts an author can style, and the base hover never beats them', function (): void {
+    $parts = \Slate\Module\StudioBuilder\Registry\BlockParts::for('core.video');
+    assert_eq(['poster', 'play', 'svg'], array_keys($parts));
+    assert_eq(['.sb-video__play'], $parts['play']['selectors']);
+    $css = StudioStylesheet::css();
+    assert_true(str_contains($css, ':where(.sb-video__overlay:hover,.sb-video__overlay:focus-visible) .sb-video__play{'), 'the hover look has no more weight than a class');
+    assert_false(str_contains($css, 'translate(-50%,-50%) scale'), 'centred without a transform, so a part may scale it');
+});

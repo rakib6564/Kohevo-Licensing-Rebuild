@@ -520,9 +520,11 @@ final class StudioStylesheet
             // The image overlay: a poster button that the runtime swaps for the player (or opens in a lightbox).
             . '.sb-video__overlay{position:absolute;inset:0;display:block;width:100%;height:100%;margin:0;padding:0;border:0;background:#000;cursor:pointer;color:#fff}'
             . '.sb-video__overlay img{display:block;width:100%;height:100%;object-fit:cover}'
-            . '.sb-video__play{position:absolute;left:50%;top:50%;display:flex;align-items:center;justify-content:center;width:4.5rem;height:4.5rem;border-radius:50%;background:rgba(0,0,0,.55);transform:translate(-50%,-50%);transition:background-color .2s,transform .2s}'
+            // Centred by inset + auto margins, not a transform, so a Play icon part may scale or resize it and stay centred;
+            // the hover look is :where() so the part's own colours (and its hover) win.
+            . '.sb-video__play{position:absolute;inset:0;margin:auto;display:flex;align-items:center;justify-content:center;width:4.5rem;height:4.5rem;border-radius:50%;background:rgba(0,0,0,.55);transition:background-color .2s,transform .2s}'
             . '.sb-video__play svg{width:2rem;height:2rem;margin-left:.2rem}'
-            . '.sb-video__overlay:hover .sb-video__play,.sb-video__overlay:focus-visible .sb-video__play{background:rgba(0,0,0,.8);transform:translate(-50%,-50%) scale(1.06)}'
+            . ':where(.sb-video__overlay:hover,.sb-video__overlay:focus-visible) .sb-video__play{background:rgba(0,0,0,.8);transform:scale(1.06)}'
             . '.sb-video__overlay:focus-visible{outline:3px solid #fff;outline-offset:-3px}'
             . '.sb-video-lightbox__frame{width:min(92vw,151vh)}.sb-video-lightbox__frame.sb-video--aspect-4-3{width:min(92vw,113vh)}'
             . '.sb-video-lightbox__frame.sb-video--aspect-1-1{width:min(92vw,85vh)}.sb-video-lightbox__frame.sb-video--aspect-9-16{width:min(92vw,48vh)}';
