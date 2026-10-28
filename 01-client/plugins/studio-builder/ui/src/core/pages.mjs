@@ -56,13 +56,14 @@ export function renameChanges(page, title, slug) {
 
 /**
  * What a header or footer region of the current page resolves to, from the chrome binding the server returns:
- * hidden on this page, the page's own partial, the site-wide partial, or the built-in markup.
+ * hidden on this page, the page's own partial, one its display conditions pick, the site-wide partial, or the built-in markup.
  */
 export function partialRef(binding) {
   if (!binding) return null;
   const ref = (p) => (p ? { id: Number(p.id), title: String(p.title || '') } : null);
   if (binding.resolved === 'hidden') return { kind: 'hidden', page: null };
   if (binding.resolved === 'custom' && binding.custom) return { kind: 'custom', page: ref(binding.custom) };
+  if (binding.resolved === 'template' && binding.template) return { kind: 'template', page: ref(binding.template) };
   if (binding.resolved === 'site' && binding.site) return { kind: 'site', page: ref(binding.site) };
   return { kind: 'builtin', page: null };
 }

@@ -31,6 +31,7 @@ export function PartialRows({ region, chrome }) {
   const regionLabel = t(region === 'header' ? 'chrome_header' : 'chrome_footer');
   const text = ref.kind === 'hidden' ? t('nav_partial_hidden')
     : ref.kind === 'custom' ? t('nav_partial_custom', { title: ref.page.title })
+      : ref.kind === 'template' ? t('nav_partial_template', { title: ref.page.title })
       : ref.kind === 'site' ? t('nav_partial_site', { title: ref.page.title })
         : t('nav_partial_builtin');
   return (

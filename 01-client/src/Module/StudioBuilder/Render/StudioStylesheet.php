@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '40';
+    public const VERSION = '41';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -515,8 +515,20 @@ final class StudioStylesheet
             . '.sb-gallery__item img{width:100%;height:100%;object-fit:cover;display:block}'
             . '.sb-gallery__item--aspect-1-1{aspect-ratio:1/1}.sb-gallery__item--aspect-4-3{aspect-ratio:4/3}.sb-gallery__item--aspect-16-9{aspect-ratio:16/9}'
             . '.sb-video-wrapper{position:relative;width:100%;overflow:hidden;border-radius:.5rem}'
-            . '.sb-video--aspect-16-9{aspect-ratio:16/9}.sb-video--aspect-4-3{aspect-ratio:4/3}.sb-video--aspect-1-1{aspect-ratio:1/1}'
-            . '.sb-video-wrapper iframe,.sb-video-wrapper video{width:100%;height:100%;border:0}';
+            . '.sb-video--aspect-16-9{aspect-ratio:16/9}.sb-video--aspect-4-3{aspect-ratio:4/3}.sb-video--aspect-1-1{aspect-ratio:1/1}.sb-video--aspect-9-16{aspect-ratio:9/16}'
+            . '.sb-video-wrapper iframe,.sb-video-wrapper video{width:100%;height:100%;border:0}'
+            . '.sb-video-wrapper video{display:block;background:#000}'
+            // The image overlay: a poster button that the runtime swaps for the player (or opens in a lightbox).
+            . '.sb-video__overlay{position:absolute;inset:0;display:block;width:100%;height:100%;margin:0;padding:0;border:0;background:#000;cursor:pointer;color:#fff}'
+            . '.sb-video__overlay img{display:block;width:100%;height:100%;object-fit:cover}'
+            // Centred by inset + auto margins, not a transform, so a Play icon part may scale or resize it and stay centred;
+            // the hover look is :where() so the part's own colours (and its hover) win.
+            . '.sb-video__play{position:absolute;inset:0;margin:auto;display:flex;align-items:center;justify-content:center;width:4.5rem;height:4.5rem;border-radius:50%;background:rgba(0,0,0,.55);transition:background-color .2s,transform .2s}'
+            . '.sb-video__play svg{width:2rem;height:2rem;margin-left:.2rem}'
+            . ':where(.sb-video__overlay:hover,.sb-video__overlay:focus-visible) .sb-video__play{background:rgba(0,0,0,.8);transform:scale(1.06)}'
+            . '.sb-video__overlay:focus-visible{outline:3px solid #fff;outline-offset:-3px}'
+            . '.sb-video-lightbox__frame{width:min(92vw,151vh)}.sb-video-lightbox__frame.sb-video--aspect-4-3{width:min(92vw,113vh)}'
+            . '.sb-video-lightbox__frame.sb-video--aspect-1-1{width:min(92vw,85vh)}.sb-video-lightbox__frame.sb-video--aspect-9-16{width:min(92vw,48vh)}';
 
         foreach (self::WIDTHS as $name => $token) {
             // The widths follow the site's Layout tokens (Site settings): `default` is its content width; `full` is no limit.

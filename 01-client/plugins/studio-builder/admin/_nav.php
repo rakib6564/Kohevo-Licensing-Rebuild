@@ -95,6 +95,19 @@ if (!function_exists('sb_render_admin_nav')) {
             ['id' => 'redirects',       'label' => __('studio_nav_redirects', 'Redirects'), 'file' => 'redirects.php',      'icon' => 'redirects'],
         ];
 
+        // Each content type kept in the sidebar has its own tab after Pages, as in the sidebar (pages.php?type=<key>).
+        try {
+            $typeTabs = [];
+            foreach (\Slate\Module\StudioBuilder\Meta\PageMeta::postTypes(current_tenant_id()) as $key => $type) {
+                if (\Slate\Module\StudioBuilder\Meta\PageMeta::showsInMenu($type)) {
+                    $typeTabs[] = ['id' => 'type-' . $key, 'label' => (string) ($type['plural'] ?? $type['singular'] ?? $key), 'file' => 'pages.php?type=' . rawurlencode((string) $key), 'icon' => 'content'];
+                }
+            }
+            array_splice($items, 2, 0, $typeTabs);
+        } catch (\Throwable $e) {
+            // No types readable: the fixed tabs only.
+        }
+
         // Code & tracking injects scripts and CSS into every public page: administrators only.
         if (!(Auth::can('studio-builder.admin') || Auth::isSuperAdmin())) {
             $items = array_values(array_filter($items, static fn (array $item): bool => $item['id'] !== 'code-tracking'));

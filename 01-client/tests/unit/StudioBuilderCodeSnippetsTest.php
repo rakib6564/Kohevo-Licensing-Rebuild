@@ -102,7 +102,7 @@ unit('snippets: size is capped; prepareSnippet trims and throws the reason', fun
     }
 });
 
-unit('snippets: nothing is emitted in the editor or preview, and an unset tenant emits nothing', function (): void {
+unit('snippets: the editor and preview get at most the font links, and an unset tenant emits nothing', function (): void {
     foreach ([RenderMode::Editor, RenderMode::Preview] as $mode) {
         assert_eq('', StudioCodePolicy::headMarkup(1, $mode));
         assert_eq('', StudioCodePolicy::bodyMarkup(1, $mode));

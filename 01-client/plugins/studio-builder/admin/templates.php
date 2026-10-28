@@ -12,6 +12,7 @@ require __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/_nav.php';
 
 use Slate\Data\Database;
+use Slate\Module\StudioBuilder\Admin\PageListView;
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\DocumentCopier;
@@ -511,6 +512,20 @@ try {
     $pagesByKey = [];
 }
 
+// The site's own headers, footers and theme templates (pages of those kinds), whatever made them: the Pages screen lists
+// only pages, so these are found here.
+$siteParts = [];
+$sitePartsActor = StudioActor::fromCurrentSession();
+try {
+    $siteParts = array_values(array_filter(
+        StudioRuntimeFactory::build()->app->listPages($sitePartsActor),
+        static fn(array $p): bool => in_array((string) ($p['page_type'] ?? ''), ['header_partial', 'footer_partial', 'system'], true)
+    ));
+} catch (\Throwable $e) {
+    $siteParts = [];
+}
+$sitePartsCanEdit = $sitePartsActor->can(StudioPermissions::EDIT);
+
 // Portfolio page ID for nav
 
 require SLATE_ROOT . '/admin/partials/header.php';
@@ -523,6 +538,17 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : ($flash['type'] === 'warning' ? 'warning' : 'danger') ?>" >
             <?= e($flash['msg']) ?>
         </div>
+    <?php endif; ?>
+
+    <?php if ($siteParts !== []): ?>
+    <div class="card" style="margin-bottom: 24px;" data-testid="site-parts">
+        <div class="card-header"><div>
+            <h2><?= e(__('studio_site_parts', 'Your header, footer and theme templates')) ?></h2>
+            <div class="card-sub"><?= e(__('studio_site_parts_sub', 'What your site uses now. Open one in the builder to change it everywhere it applies.')) ?></div>
+        </div></div>
+        <?= PageListView::render($siteParts, $sitePartsCanEdit, plugin_url('studio-builder', 'admin/builder.php'), plugin_url('studio-builder', 'admin/preview.php'), false, 'page-edit.php') ?>
+        <?php slate_data_list_script(); ?>
+    </div>
     <?php endif; ?>
 
     <!-- Subtitle & Action Bar -->

@@ -1,6 +1,6 @@
-// The Single template that lays the open page out on the live site (`layout_template` query). The editing canvas
-// shows the page on its own, so a section set wider than the template's content section looks right here but is
-// kept to the template's width on the live page; the section Inspector says so, naming the template.
+// The Single template that lays the open page out on the live site (`layout_template` query). The canvas shows the
+// page inside it, so a section set wider than the template's content section is kept to the template's width there
+// as on the live page; the section Inspector says why, naming the template.
 
 const WIDTHS = ['narrow', 'normal', 'wide', 'full'];
 

@@ -150,8 +150,9 @@ final class StudioPageAddressService
                 'updated_by' => $actorId > 0 ? $actorId : null,
             ]);
 
+            // No SEO title of its own: the Site & SEO title format names the page (and follows a rename) until an author sets one.
             $blankDocument = ValidatedDocument::from(
-                CanonicalDocumentSchema::emptyDocument($pageType, 'default', $title),
+                CanonicalDocumentSchema::emptyDocument($pageType),
                 $this->registry,
                 $validationOptions,
             );

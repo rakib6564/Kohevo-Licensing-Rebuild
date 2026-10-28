@@ -110,7 +110,7 @@ final class StudioCompiler
                 ? $header . '<' . $region . ' class="sb-site-' . $region . ' sb-site-' . $region . '--partial" id="main">' . $main . '</' . $region . '>' . $footer
                 : $header . '<main class="sb-main sb-main--' . $width . '" id="main">' . $main . '</main>' . $footer;
             $css  = StudioStylesheet::css() . $theme->rootCss() . $collector->css();
-            $seo  = SeoHead::build(is_array($document['seo'] ?? null) ? $document['seo'] : [], $page, $context->site, $context->mode, $this->media);
+            $seo  = SeoHead::build(is_array($document['seo'] ?? null) ? $document['seo'] : [], $page, $context->site, $context->mode, $this->media, $context->tenantId);
         } catch (StudioRenderException $e) {
             throw $e;
         } catch (\Throwable $e) {
@@ -344,6 +344,8 @@ final class StudioCompiler
             'registry'    => ModuleBlockDefinitions::registryFingerprint($this->registry),
             'renderers'   => $this->renderers->fingerprint(),
             'revision_id' => (int) $revision['id'],
+            // The page's public address (content type prefix, trailing slash) is in its canonical tag and links.
+            'route'       => \Slate\Module\StudioBuilder\Meta\PageRoutes::path($context->tenantId, (int) $page->id, $page->slug, $page->routeMode),
             'site'        => $context->site->fingerprint(),
             'stylesheet'  => StudioStylesheet::VERSION,
             'theme'       => $theme->fingerprint(),
@@ -410,7 +412,7 @@ final class StudioCompiler
         $published = $page->publishedAt !== null ? strtotime($page->publishedAt) : false;
         return [
             'post_title'  => $page->title,
-            'post_url'    => $context->site->absoluteUrl($page->routeMode === 'homepage' ? '/' : '/' . $page->slug),
+            'post_url'    => $context->site->absoluteUrl(\Slate\Module\StudioBuilder\Meta\PageRoutes::path($context->tenantId, (int) $page->id, $page->slug, $page->routeMode)),
             'category'    => $settings['category'] ?? '',
             'author_name' => mb_substr(trim($author), 0, 120),
             'date'        => $published !== false ? date('M j, Y', $published) : '',
@@ -419,15 +421,16 @@ final class StudioCompiler
     }
 
     /**
-     * The Single template for a page on a public or preview render, or null. Never in the editor (the canvas
-     * edits the page's own document), never for a page that is itself a theme template.
+     * The Single template for a page, or null; never for a page that is itself a theme template. The editor canvas
+     * gets it too, so the author edits the page inside the layout the live page has (the template's own blocks are
+     * framing there, not selectable).
      *
      * @param array<string, string> $settings the page document's string settings
      * @return ?array{page: array<string, mixed>, revision: array<string, mixed>}
      */
     private function singleFor(PageAddress $page, array $settings, RenderContext $context): ?array
     {
-        if ($context->mode === RenderMode::Editor || ($settings['template_type'] ?? '') !== '' || $page->id === null) {
+        if (($settings['template_type'] ?? '') !== '' || $page->id === null) {
             return null;
         }
         try {
@@ -458,7 +461,8 @@ final class StudioCompiler
         $templateComponents = is_array($decoded) ? $this->components->resolveDocument($decoded) : [];
 
         $first = count($collector->deferred());
-        $html = $this->documents->renderSections($template['sections'] ?? [], $context, $theme, $collector, true, $this->prepareComponents($templateComponents));
+        // On the canvas the template is the frame around the page: only the page's own sections can be picked.
+        $html = $this->documents->renderSections($template['sections'] ?? [], $context->framing(), $theme, $collector, true, $this->prepareComponents($templateComponents));
         $slots = [];
         foreach (array_slice($collector->deferred(), $first, null, true) as $index => $node) {
             if (($node['type'] ?? '') === 'theme.post_content') {
@@ -501,7 +505,7 @@ final class StudioCompiler
             $classes = trim($class . ' sb-site-' . $region . '--partial ' . implode(' ', $scroll['classes']));
             $style = $scroll['vars'] !== [] ? ' style="' . Html::e(implode(';', $scroll['vars'])) . '"' : '';
             return '<' . $tag . ' class="' . Html::e($classes) . '"' . $scroll['attrs'] . $style . '>'
-                . $this->documents->renderSections($partial['sections'] ?? [], $context, $theme, $collector, true)
+                . $this->documents->renderSections($partial['sections'] ?? [], $context->framing(), $theme, $collector, true)
                 . '</' . $tag . '>';
         }
 

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createMediaApi, listQuery, uploadProblem, toPickRecord, MAX_UPLOAD_BYTES } from '../src/core/mediaApi.mjs';
+import { createMediaApi, listQuery, uploadProblem, toPickRecord, isVideoTarget, MAX_UPLOAD_BYTES, MAX_VIDEO_UPLOAD_BYTES } from '../src/core/mediaApi.mjs';
 import { registerMediaHost, mediaPickerAvailable, openMediaPicker } from '../src/core/mediaPicker.mjs';
 
 const json = (status, body) => ({ ok: status < 300, status, json: async () => body });
@@ -72,4 +72,37 @@ test('the picker registry: available only with the flag and a host; the host rec
   off();
   assert.equal(mediaPickerAvailable(true), false);
   assert.equal(openMediaPicker({}), false);
+});
+
+test('video files: the Video widget\'s picker lists, checks and uploads video files with their own size and types', async () => {
+  assert.equal(listQuery({ type: 'video' }), '?type=video');
+  assert.equal(listQuery({ q: 'clip', page: 2, type: 'video' }), '?type=video&q=clip&page=2');
+  assert.equal(listQuery({ ids: [5], type: 'video' }), '?type=video&ids=5');
+  assert.equal(listQuery({ q: 'x', type: 'nonsense' }), '?q=x', 'anything else is an image list');
+
+  assert.equal(uploadProblem(null, 'video'), 'media_err_none_video');
+  assert.equal(uploadProblem({ size: 20 * 1024 * 1024, type: 'video/mp4' }, 'video'), null, 'a 20 MB video is fine');
+  assert.equal(uploadProblem({ size: MAX_VIDEO_UPLOAD_BYTES + 1, type: 'video/mp4' }, 'video'), 'media_err_too_big_video');
+  assert.equal(uploadProblem({ size: 10, type: 'image/png' }, 'video'), 'media_err_type_video');
+  assert.equal(uploadProblem({ size: 10, type: 'video/mp4' }), 'media_err_type', 'an image field still refuses a video');
+  for (const type of ['video/webm', 'video/ogg', 'video/quicktime']) assert.equal(uploadProblem({ size: 10, type }, 'video'), null, type);
+
+  const calls = [];
+  const api = createMediaApi({ url: '/m.php', csrfToken: 't', fetchImpl: async (u, o = {}) => {
+    calls.push({ u, o });
+    return o.method === 'POST' ? json(201, { ok: true, data: { item: { id: 4, url: '/c.mp4' } } }) : json(200, { ok: true, data: { items: [], total: 0, page: 1, pages: 1 } });
+  } });
+  await api.list({ type: 'video' });
+  assert.equal(calls[0].u, '/m.php?type=video');
+  const up = await api.upload(new File([new Uint8Array(4)], 'c.mp4', { type: 'video/mp4' }), 'video');
+  assert.equal(up.item.url, '/c.mp4');
+  assert.equal(calls[1].o.body.get('type'), 'video');
+});
+
+test('a URL field holding a video opens the video picker', () => {
+  assert.equal(isVideoTarget({ key: 'hosted_url', label: 'Video File' }, ''), true, 'the Video widget\'s file');
+  assert.equal(isVideoTarget({ key: 'bg_video', label: 'Background Video' }, null), true, 'a section\'s background video');
+  assert.equal(isVideoTarget({ key: 'href', label: 'Link' }, '/uploads/media/2026/10/a.webm'), true, 'a value that is a video file');
+  assert.equal(isVideoTarget({ key: 'url', label: 'Link URL' }, '/about'), false);
+  assert.equal(isVideoTarget({ key: 'image', label: 'Image' }, '/a.png'), false);
 });

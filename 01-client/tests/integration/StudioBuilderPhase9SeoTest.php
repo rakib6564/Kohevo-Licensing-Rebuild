@@ -691,6 +691,28 @@ unit('phase9c integration: SEO settings, sitemap.xml, robots.txt and slug hygien
                 }
                 assert_eq($before, sbs9_page_public($rt, SBS9_A, 'about'), 'with the settings gone the page is exactly as before');
             });
+
+            unit('a page created in the builder has no SEO title of its own, so the Site & SEO title format names it and follows a rename; a title the author sets still wins', function () use ($rt, $publisher): void {
+                $title = static fn(string $html): string => preg_match('~<title>([^<]*)</title>~', $html, $m) ? html_entity_decode($m[1]) : '(none)';
+                $created = $rt->tenants->runAs(SBS9_A, static fn() => $rt->app->createPage($publisher, 'Fresh Page', 'title-format-page', 'page', 'standalone'));
+                $pageId = (int) $created['page']['id'];
+                $doc = $rt->tenants->runAs(SBS9_A, static fn() => $rt->app->loadEditorDocument($publisher, $pageId))['document'];
+                assert_eq('', $doc['seo']['title'], 'the new draft carries no SEO title');
+                $rt->tenants->runAs(SBS9_A, static fn() => $rt->app->publish($publisher, $pageId, (int) $created['revision']['id']));
+
+                Database::setSetting('studio_seo_title_format', '%title% | %site_name%', SBS9_A);
+                try {
+                    assert_eq('Fresh Page | Site', $title(sbs9_page_public($rt, SBS9_A, 'title-format-page')), 'the format names the page');
+                    $rt->tenants->runAs(SBS9_A, static fn() => $rt->app->updatePageAddress($publisher, $pageId, ['title' => 'Renamed Page']));
+                    assert_eq('Renamed Page | Site', $title(sbs9_page_public($rt, SBS9_A, 'title-format-page')), 'and follows a rename');
+
+                    sbs9_draft($rt, SBS9_A, $publisher, $pageId, sbs9_doc('Fresh', ['title' => 'Chosen by the author']));
+                    sbs9_publish_draft($rt, SBS9_A, $publisher, $pageId);
+                    assert_eq('Chosen by the author', $title(sbs9_page_public($rt, SBS9_A, 'title-format-page')), 'an SEO title the author sets wins');
+                } finally {
+                    Database::query('DELETE FROM settings WHERE tenant_id = ? AND setting_key = ?', [SBS9_A, 'studio_seo_title_format']);
+                }
+            });
         });
     } finally {
         sbs9_drop_db($dbName);

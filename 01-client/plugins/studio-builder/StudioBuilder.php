@@ -109,6 +109,18 @@ class StudioBuilder extends Plugin
             ['slug' => 'studio-redirects',       'label' => function_exists('__') ? __('studio_redirects', 'Redirects') : 'Redirects',              'file' => 'admin/redirects.php',       'icon' => 'link',        'order' => 212],
         ];
 
+        // Each content type the site made has its own list, right under Pages (Types & fields › Show in the sidebar).
+        try {
+            $tenantId = function_exists('current_tenant_id') ? current_tenant_id() : 0;
+            foreach (\Slate\Module\StudioBuilder\Meta\PageMeta::postTypes($tenantId) as $key => $type) {
+                if (\Slate\Module\StudioBuilder\Meta\PageMeta::showsInMenu($type)) {
+                    $studioNav[] = ['slug' => 'studio-type-' . $key, 'label' => (string) ($type['plural'] ?? $type['singular'] ?? $key), 'file' => 'admin/pages.php?type=' . rawurlencode((string) $key), 'icon' => 'folder', 'order' => 202];
+                }
+            }
+        } catch (\Throwable $e) {
+            // No settings table yet (install): the sidebar shows the fixed entries only.
+        }
+
         foreach ($studioNav as $nav) {
             $items[] = [
                 'slug'  => $nav['slug'],
