@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '34';
+    public const VERSION = '35';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -66,7 +66,7 @@ final class StudioStylesheet
             // and the space blocks leave between them (`type.flow`, `type.heading_gap`). The defaults are the look every
             // site had before these settings existed. A heading's colour is zero-weight so any block colour wins over it.
             . 'body.sb-body{margin:0;background:var(--sb-surface-page);color:var(--sb-text-body,var(--sb-text-primary));font-family:var(--sb-font-body);font-size:var(--sb-type-body_size,1rem);line-height:var(--sb-type-body_leading,1.6);overflow-x:clip}'
-            . '.sb-body h1,.sb-body h2,.sb-body h3,.sb-body h4,.sb-body h5,.sb-body h6{font-family:var(--sb-font-heading);line-height:var(--sb-type-heading_leading,1.2);margin:0 0 var(--sb-type-heading_gap,.5em)}'
+            . '.sb-body h1,.sb-body h2,.sb-body h3,.sb-body h4,.sb-body h5,.sb-body h6{font-family:var(--sb-font-heading);line-height:var(--sb-type-heading_leading,1.2);margin:0 0 var(--sb-type-heading_gap,.5em);text-wrap:pretty}'
             . ':where(.sb-body) :where(h1,h2,h3,h4,h5,h6){color:var(--sb-text-heading,inherit)}'
             . '.sb-body img{max-width:100%;height:auto}'
             // Buttons are links too: the generic link colour must not reach them (it would equal

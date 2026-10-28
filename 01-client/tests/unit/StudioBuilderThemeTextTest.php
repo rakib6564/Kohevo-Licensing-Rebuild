@@ -72,7 +72,7 @@ unit('text settings: the base stylesheet reads them, with today\'s values as fal
     $css = StudioStylesheet::css();
     foreach ([
         'color:var(--sb-text-body,var(--sb-text-primary));font-family:var(--sb-font-body);font-size:var(--sb-type-body_size,1rem);line-height:var(--sb-type-body_leading,1.6)',
-        'line-height:var(--sb-type-heading_leading,1.2);margin:0 0 var(--sb-type-heading_gap,.5em)}',
+        'line-height:var(--sb-type-heading_leading,1.2);margin:0 0 var(--sb-type-heading_gap,.5em);text-wrap:pretty}',
         ':where(.sb-body) :where(h1,h2,h3,h4,h5,h6){color:var(--sb-text-heading,inherit)}',
         '.sb-text{margin:0 0 var(--sb-type-flow,1rem);line-height:var(--sb-type-body_leading,1.6)}',
         '.sb-text--base{font-size:var(--sb-type-body_size,1rem)}',
