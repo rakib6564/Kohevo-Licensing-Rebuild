@@ -1416,6 +1416,56 @@
     if (marked.length) mount(function () { marked.forEach(function (a) { a.removeAttribute('aria-current'); }); });
   }
 
+  /* ── Feature: menu submenus ──────────────────────────────────────────────
+   * NavMenuRenderer's submenus open on hover and keyboard focus with CSS alone; this adds the click and keyboard toggle.
+   * Its button (the arrow, or an item with no address of its own) sets `aria-expanded` and `data-open` on the item;
+   * opening one closes its open siblings, and Escape or a click outside the menu closes them (Escape returns focus
+   * to the button; `data-closed` keeps a horizontal submenu shut while focus is still inside it).
+   */
+  function initSubmenus(root) {
+    var off = [];
+    var items = qsa(root, '.sb-nav__item--parent');
+    if (!items.length) return;
+    function set(li, open) {
+      var btn = li.querySelector(':scope > .sb-nav__toggle, :scope > .sb-nav__parent');
+      if (open) { li.setAttribute('data-open', ''); li.removeAttribute('data-closed'); } else { li.removeAttribute('data-open'); }
+      if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (!open) qsa(li, '.sb-nav__item--parent[data-open]').forEach(function (child) { set(child, false); });
+    }
+    items.forEach(function (li) {
+      var btn = li.querySelector(':scope > .sb-nav__toggle, :scope > .sb-nav__parent');
+      if (!btn) return;
+      off.push(on(btn, 'click', function (e) {
+        e.preventDefault();
+        var open = !li.hasAttribute('data-open');
+        if (open && li.parentNode) {
+          Array.prototype.forEach.call(li.parentNode.children, function (sib) { if (sib !== li && sib.hasAttribute('data-open')) set(sib, false); });
+        }
+        set(li, open);
+        if (!open) li.setAttribute('data-closed', '');
+      }));
+      off.push(on(li, 'mouseleave', function () { li.removeAttribute('data-closed'); }));
+      off.push(on(li, 'focusout', function (e) {
+        if (!li.contains(e.relatedTarget)) { li.removeAttribute('data-closed'); if (li.closest('.sb-nav--horizontal')) set(li, false); }
+      }));
+      off.push(on(li, 'keydown', function (e) {
+        if (e.key !== 'Escape' && e.key !== 'Esc') return;
+        if (!li.hasAttribute('data-open') && !li.matches(':focus-within')) return;
+        e.stopPropagation();
+        set(li, false);
+        li.setAttribute('data-closed', '');
+        btn.focus();
+      }));
+    });
+    off.push(on(document, 'click', function (e) {
+      qsa(root, '.sb-nav__item--parent[data-open]').forEach(function (li) { if (!li.contains(e.target)) set(li, false); });
+    }));
+    mount(function () {
+      off.forEach(function (un) { un(); });
+      items.forEach(function (li) { set(li, false); li.removeAttribute('data-closed'); });
+    });
+  }
+
 /* ── Boot / teardown ─────────────────────────────────────────────────────
    * `StudioRuntime.mount()` and `.disable()` are what the A/B toggle calls.
    * disable() must leave the page byte-identical to a no-JS Studio render,
@@ -1439,6 +1489,7 @@
     ['countdown', initCountdown],
     ['forms', initForms],
     ['currentLinks', initCurrentLinks],
+    ['submenus', initSubmenus],
     ['anchors', initAnchors]
   ];
 

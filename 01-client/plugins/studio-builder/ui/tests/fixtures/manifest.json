@@ -3095,6 +3095,18 @@
                 {
                     "key": "current",
                     "label": "Current page link"
+                },
+                {
+                    "key": "submenu",
+                    "label": "Submenu"
+                },
+                {
+                    "key": "sublink",
+                    "label": "Submenu links"
+                },
+                {
+                    "key": "toggle",
+                    "label": "Submenu arrow"
                 }
             ],
             "title": "Nav menu",

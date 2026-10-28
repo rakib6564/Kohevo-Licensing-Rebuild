@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '39';
+    public const VERSION = '42';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -197,6 +197,26 @@ final class StudioStylesheet
             . '.sb-body .sb-nav a.sb-nav__link{color:inherit}.sb-body .sb-nav a.sb-nav__link:hover{color:var(--sb-color-accent)}'
             . '.sb-nav--underline .sb-nav__link{text-decoration:underline;text-underline-offset:.25em}'
             . '.sb-nav--pill .sb-nav__link{padding:.35rem .9rem;border-radius:999px}.sb-nav--pill .sb-nav__link:hover{background:var(--sb-border-default)}'
+            // Submenus (NavMenuRenderer). Horizontal: a card that drops down on hover or keyboard focus (CSS alone, so the canvas
+            // shows it), its own submenus opening to the side; `data-open` is the runtime's toggle, `data-closed` its Escape.
+            // Vertical (a drawer): indented, folded away by the runtime once it runs, so without scripts every link shows.
+            . '.sb-nav__item{position:relative}.sb-nav__item--parent{display:flex;align-items:center;flex-wrap:wrap;column-gap:.3rem}'
+            . '.sb-nav__toggle,.sb-nav__parent{font:inherit;color:inherit;background:none;border:0;margin:0;cursor:pointer;text-transform:inherit;letter-spacing:inherit}'
+            . '.sb-nav__toggle{padding:.35rem .2rem;line-height:1}.sb-nav__parent{display:inline-flex;align-items:center;gap:.45em;padding:.35rem 0;text-align:inherit}'
+            . '.sb-nav__toggle::before,.sb-nav__caret{content:"";display:inline-block;width:0;height:0;border-style:solid;border-width:.32em .3em 0;border-color:currentColor transparent transparent;transition:transform .15s}'
+            . '.sb-nav__sub{list-style:none;margin:0;padding:.5rem 0}'
+            . '.sb-nav--horizontal .sb-nav__sub{position:absolute;top:100%;left:0;z-index:60;min-width:14rem;background:var(--sb-surface-primary,#fff);color:var(--sb-text-primary);border-radius:var(--sb-radius-md,.5rem);box-shadow:var(--sb-shadow-md,0 12px 32px rgba(0,0,0,.14));text-align:left;opacity:0;visibility:hidden;transform:translateY(.4rem);transition:opacity .15s,transform .15s,visibility .15s}'
+            . '.sb-nav--horizontal .sb-nav__sub::before{content:"";position:absolute;left:0;right:0;top:-.6rem;height:.6rem}'
+            . '.sb-nav--horizontal .sb-nav__item--parent:is(:hover,:focus-within,[data-open]):not([data-closed])>.sb-nav__sub{opacity:1;visibility:visible;transform:none}'
+            . '.sb-nav--horizontal .sb-nav__sub .sb-nav__sub{top:-.5rem;left:100%}.sb-nav--horizontal .sb-nav__sub .sb-nav__sub::before{top:0;bottom:0;left:-.6rem;right:auto;width:.6rem;height:auto}'
+            . '.sb-nav--right .sb-nav__list>.sb-nav__item>.sb-nav__sub{left:auto;right:0}'
+            . '.sb-nav__sub .sb-nav__item--parent{flex-wrap:nowrap}.sb-nav__sub .sb-nav__item--parent>.sb-nav__link{flex:1}'
+            . '.sb-nav__sub .sb-nav__link{display:block;padding:.55rem 1.25rem;white-space:nowrap}.sb-nav--pill .sb-nav__sub .sb-nav__link{border-radius:0}'
+            . '.sb-nav--horizontal .sb-nav__sub .sb-nav__toggle{padding:.55rem 1rem}.sb-nav--horizontal .sb-nav__sub .sb-nav__caret,.sb-nav--horizontal .sb-nav__sub .sb-nav__toggle::before{transform:rotate(-90deg)}'
+            . '.sb-nav--vertical .sb-nav__sub{flex-basis:100%;padding:0 0 0 1rem}.sb-nav--vertical.sb-nav--center .sb-nav__item--parent{justify-content:center}.sb-nav--vertical.sb-nav--center .sb-nav__sub{padding-left:0}'
+            . '.sb-nav--vertical.sb-nav--right .sb-nav__item--parent{justify-content:flex-end}.sb-nav--vertical.sb-nav--right .sb-nav__sub{padding:0 1rem 0 0}'
+            . 'html[data-sb-ready] .sb-nav--vertical .sb-nav__item--parent:not([data-open])>.sb-nav__sub{display:none}'
+            . '.sb-nav--vertical .sb-nav__item--parent[data-open]>.sb-nav__parent>.sb-nav__caret,.sb-nav--vertical .sb-nav__item--parent[data-open]>.sb-nav__toggle::before{transform:rotate(180deg)}'
             . '.sb-link-row{margin:0 0 var(--sb-type-flow,1rem)}.sb-link-row--center{text-align:center}.sb-link-row--right{text-align:right}'
             // In a row (a horizontal flex or a grid) the gap spaces the items; a link's, button's, text's, menu's or
             // icon's own margin would push it off the row's centre line (a header's button sat lower than its menu).

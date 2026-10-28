@@ -93,6 +93,9 @@ final class BlockParts
             'link'    => ['label' => 'Links', 'selectors' => ['.sb-nav__link']],
             // studio-runtime.js marks the link of the page being viewed (a header is rendered once for every page).
             'current' => ['label' => 'Current page link', 'selectors' => ['.sb-nav__link[aria-current="page"]']],
+            'submenu' => ['label' => 'Submenu', 'selectors' => ['.sb-nav__sub']],
+            'sublink' => ['label' => 'Submenu links', 'selectors' => ['.sb-nav__sub .sb-nav__link']],
+            'toggle'  => ['label' => 'Submenu arrow', 'selectors' => ['.sb-nav__toggle', '.sb-nav__caret']],
         ],
         'core.carousel' => [
             'quote'  => ['label' => 'Quote', 'selectors' => ['.sb-carousel__quote']],
