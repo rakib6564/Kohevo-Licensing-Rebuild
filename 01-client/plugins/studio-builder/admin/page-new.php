@@ -93,7 +93,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
 <div class="sb-admin-wrapper">
-    <?php sb_render_admin_nav('pages'); ?>
+    <?php sb_render_admin_nav($newType !== null ? 'type-' . $formValues['content_type'] : 'pages'); ?>
     <?php sb_render_crumbs([[$listName, $listHref], [$newName, null]]); ?>
 
     <?php if ($flash): ?>

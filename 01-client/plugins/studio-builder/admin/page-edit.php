@@ -169,7 +169,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
 <div class="sb-admin-wrapper">
-    <?php sb_render_admin_nav('pages'); ?>
+    <?php sb_render_admin_nav($itemType !== null ? 'type-' . $itemTypeKey : 'pages'); ?>
     <?php sb_render_crumbs([[$listName, $listHref], [$page !== null ? (string) $page['title'] : __('studio_page_settings', 'Settings'), null]]); ?>
 
     <?php if ($flash): ?>

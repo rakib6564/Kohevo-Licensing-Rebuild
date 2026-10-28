@@ -252,3 +252,16 @@ unit('studio admin content lists: Pages lists plain pages, ?type= one type; temp
     $types = (string) file_get_contents($dir . '/admin/types-fields.php');
     assert_true(str_contains($types, "\$action === 'toggle_menu'") && str_contains($types, 'name="show_in_menu" value="1" checked'), 'Types & fields sets it, on by default');
 });
+
+unit('studio admin content lists: kinds read as words, type lists have their own tab, and the pager counts their items', function (): void {
+    assert_eq(['Page', 'Landing page', 'Header', 'Footer', 'Theme template'], array_map([PageListView::class, 'kindLabel'], ['page', 'landing', 'header_partial', 'footer_partial', 'system']), 'stored kinds as words');
+    $html = PageListView::render([sbal_page(3, 'Header', true, false, 'header_partial')], true, '/b', '/p');
+    assert_true(str_contains($html, '>Header<') && !str_contains($html, '>header_partial<'), 'a header row says Header: ' . $html);
+    $dir = dirname(__DIR__, 2) . '/plugins/studio-builder/admin';
+    $nav = (string) file_get_contents($dir . '/_nav.php');
+    assert_true(str_contains($nav, "'id' => 'type-' . \$key") && str_contains($nav, 'array_splice($items, 2, 0, $typeTabs)'), 'a tab per type, after Pages');
+    foreach (['pages.php' => "\$type !== null ? 'type-' . \$typeKey : 'pages'", 'page-edit.php' => "\$itemType !== null ? 'type-' . \$itemTypeKey : 'pages'", 'page-new.php' => "\$newType !== null ? 'type-' . \$formValues['content_type'] : 'pages'"] as $file => $active) {
+        assert_true(str_contains((string) file_get_contents($dir . '/' . $file), "sb_render_admin_nav({$active})"), "{$file} marks its type's tab");
+    }
+    assert_true(str_contains((string) file_get_contents($dir . '/pages.php'), "'label' => \$type !== null ? mb_strtolower(\$pageTitle)"), 'the pager counts "3 cours", not pages');
+});

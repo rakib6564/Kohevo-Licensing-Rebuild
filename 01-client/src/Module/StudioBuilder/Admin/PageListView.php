@@ -48,7 +48,7 @@ final class PageListView
             $hasChanges  = $published && !empty($p['has_unpublished_changes']);
             $title       = (string) $p['title'];
             $statusLabel = $published ? \__('studio_status_published', 'Published') : \__('studio_status_draft', 'Draft');
-            $typeLabel   = $typeLabels[$id] ?? (string) $p['page_type'];
+            $typeLabel   = $typeLabels[$id] ?? self::kindLabel((string) $p['page_type']);
 
             $detail = [
                 'address' => ['label' => \__('studio_address', 'Address'), 'html' => '<code>' . \e((string) $p['public_path']) . '</code>'],
@@ -90,6 +90,19 @@ final class PageListView
         echo '</div>';
 
         return (string) ob_get_clean();
+    }
+
+    /** A page kind as people say it: "Page", "Header", "Theme template", not the stored `header_partial` or `system`. */
+    public static function kindLabel(string $pageType): string
+    {
+        return match ($pageType) {
+            'page'           => \__('studio_kind_page', 'Page'),
+            'landing'        => \__('studio_kind_landing', 'Landing page'),
+            'header_partial' => \__('studio_kind_header', 'Header'),
+            'footer_partial' => \__('studio_kind_footer', 'Footer'),
+            'system'         => \__('studio_kind_template', 'Theme template'),
+            default          => $pageType,
+        };
     }
 
     /**

@@ -103,7 +103,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
 <div class="sb-admin-wrapper">
-    <?php sb_render_admin_nav('pages'); ?>
+    <?php sb_render_admin_nav($type !== null ? 'type-' . $typeKey : 'pages'); ?>
 
     <?php if ($flash): ?>
         <div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div>
@@ -166,7 +166,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <input type="hidden" name="page" value="<?= $slice['page'] ?>">
             <?= PageListView::render($slice['rows'], $canEdit, plugin_url('studio-builder', 'admin/builder.php'), plugin_url('studio-builder', 'admin/preview.php'), $canEdit, 'page-edit.php', $typeLabels) ?>
         </form>
-        <?php slate_pagination($slice['page'], $slice['pages'], array_diff_key($_GET, ['deleted' => 1, 'failed' => 1]), ['total' => $slice['total'], 'per_page' => $slice['per_page'], 'label' => __('studio_pager_label', 'pages')]); ?>
+        <?php slate_pagination($slice['page'], $slice['pages'], array_diff_key($_GET, ['deleted' => 1, 'failed' => 1]), ['total' => $slice['total'], 'per_page' => $slice['per_page'], 'label' => $type !== null ? mb_strtolower($pageTitle) : __('studio_pager_label', 'pages')]); ?>
         <?php slate_data_list_script(); ?>
         <?= PageListView::selectionScript() ?>
         <?php endif; ?>
