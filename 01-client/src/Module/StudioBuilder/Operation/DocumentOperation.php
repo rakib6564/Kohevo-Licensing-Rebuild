@@ -49,6 +49,7 @@ final class DocumentOperation
     public const OP_UPDATE_BLOCK_ANIMATION     = 'update_block_animation';
     public const OP_UPDATE_BLOCK_META          = 'update_block_meta';
     public const OP_UPDATE_BLOCK_STYLE_STATES  = 'update_block_style_states';
+    public const OP_UPDATE_BLOCK_STYLE_PARTS   = 'update_block_style_parts';
     public const OP_UPDATE_BLOCK_TAG           = 'update_block_tag';
     public const OP_RESET_BLOCK_STYLE_PROPERTY = 'reset_block_style_property';
     public const OP_UPDATE_SECTION_STYLE       = 'update_section_style';
@@ -82,6 +83,7 @@ final class DocumentOperation
         self::OP_UPDATE_BLOCK_ANIMATION,
         self::OP_UPDATE_BLOCK_META,
         self::OP_UPDATE_BLOCK_STYLE_STATES,
+        self::OP_UPDATE_BLOCK_STYLE_PARTS,
         self::OP_UPDATE_BLOCK_TAG,
         self::OP_RESET_BLOCK_STYLE_PROPERTY,
         self::OP_UPDATE_SECTION_STYLE,
@@ -120,6 +122,7 @@ final class DocumentOperation
         self::OP_UPDATE_BLOCK_ANIMATION    => ['block_id', 'animation'],
         self::OP_UPDATE_BLOCK_META         => ['block_id'],
         self::OP_UPDATE_BLOCK_STYLE_STATES => ['block_id', 'style_states'],
+        self::OP_UPDATE_BLOCK_STYLE_PARTS  => ['block_id', 'style_parts'],
         self::OP_UPDATE_BLOCK_TAG          => ['block_id', 'tag'],
         self::OP_RESET_BLOCK_STYLE_PROPERTY => ['block_id', 'property'],
         self::OP_UPDATE_SECTION_STYLE      => ['section_id', 'style'],

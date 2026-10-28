@@ -3479,3 +3479,6 @@ html, body.sbx-body {
 
 /* A prop with its own value per device (DeviceProp): the device bar sits above the control, as for per-device styles. */
 .sbx-devprop { display: grid; gap: 6px; }
+
+/* Parts (PartStyles): the part picker and Normal / Hover, then the part's own controls. */
+.sbx-parts { display: grid; gap: 10px; }

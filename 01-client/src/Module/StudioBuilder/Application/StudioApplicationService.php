@@ -1550,6 +1550,10 @@ final class StudioApplicationService
         if (is_array($block['field_schema'] ?? null)) {
             $block['field_schema'] = self::translateFieldLabels($block['field_schema']);
         }
+        // A widget's part names (BlockParts) are translated as field labels are.
+        if (is_array($block['style_parts'] ?? null) && $block['style_parts'] !== []) {
+            $block['style_parts'] = self::translateFieldLabels($block['style_parts']);
+        }
         return $block;
     }
 

@@ -17,6 +17,7 @@ const PARTS = {
     ['style', ops.updateBlockStyle, {}],
     ['responsive', ops.updateBlockResponsive, {}],
     ['style_states', ops.updateBlockStyleStates, {}],
+    ['style_parts', ops.updateBlockStyleParts, {}],
     ['classNames', ops.updateBlockClassNames, []],
     ['attributes', ops.updateBlockAttributes, {}],
     ['visibility', ops.updateBlockVisibility, {}],
@@ -43,7 +44,7 @@ export function editableState(node, kind = 'block') {
 /** True when the node carries any look the bar's Reset would clear. */
 export function hasStyle(node, kind = 'block') {
   if (kind === 'section') return !empty(node && node.style) || !!asObject(node && node.layout).background_token;
-  return !empty(node && node.style) || !empty(node && node.responsive) || !empty(node && node.style_states);
+  return !empty(node && node.style) || !empty(node && node.responsive) || !empty(node && node.style_states) || !empty(node && node.style_parts);
 }
 
 /** Operations that clear the node's look. */
@@ -61,6 +62,7 @@ export function resetOps(node, kind = 'block') {
   if (!empty(node.style)) out.push(ops.updateBlockStyle(node.id, {}));
   if (!empty(node.responsive)) out.push(ops.updateBlockResponsive(node.id, {}));
   if (!empty(node.style_states)) out.push(ops.updateBlockStyleStates(node.id, {}));
+  if (!empty(node.style_parts)) out.push(ops.updateBlockStyleParts(node.id, {}));
   return out;
 }
 

@@ -864,6 +864,11 @@ final class DocumentValidator
         }
 
         // Interaction-state overlays (hover/focus/active/disabled).
+        if (array_key_exists('style_parts', $block)) {
+            foreach (StyleSurface::partIssues($block['style_parts'], is_string($block['type'] ?? null) ? $block['type'] : '', "{$path}.style_parts") as $issue) {
+                $errors[] = ValidationResult::issue($issue['path'], $issue['code'], $issue['message']);
+            }
+        }
         if (array_key_exists('style_states', $block)) {
             foreach (StyleSurface::stateIssues($block['style_states'], "{$path}.style_states") as $issue) {
                 $errors[] = ValidationResult::issue($issue['path'], $issue['code'], $issue['message']);

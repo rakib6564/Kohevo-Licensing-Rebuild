@@ -303,6 +303,7 @@ final class DeclarativeBlockDefinition implements BlockDefinitionInterface
             'required_entitlement'      => $this->requiredEntitlement,
             'required_permission'       => $this->requiredPermission,
             'style_capabilities'        => $this->styleCapabilities,
+            'style_parts'               => BlockParts::forEditor($this->type),
             'title'                     => $this->title !== null && trim($this->title) !== '' ? $this->title : $this->label,
             'type'                      => $this->type,
             'version'                   => $this->version,

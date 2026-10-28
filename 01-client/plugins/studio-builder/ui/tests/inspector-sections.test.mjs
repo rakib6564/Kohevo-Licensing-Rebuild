@@ -25,7 +25,7 @@ test('the registry has unique ids, known tabs and a title key for every section'
 test('a text block shows content, the full style stack and the advanced fields, in order', () => {
   const ctx = ctxOf('core.quote');
   assert.deepEqual(ids('content', ctx), ['content']);
-  assert.deepEqual(ids('style', ctx), ['align', 'typography', 'background', 'border', 'shadow', 'opacity', 'states', 'tokens']);
+  assert.deepEqual(ids('style', ctx), ['align', 'typography', 'background', 'border', 'shadow', 'opacity', 'parts', 'states', 'tokens']);
   // Background and Border are Style for every block; a leaf block keeps Layout and Dimensions under Advanced, after the one group of everyday fields.
   assert.deepEqual(ids('advanced', ctx), ['advanced', 'layout', 'dimensions', 'position', 'effects', 'motion', 'responsive', 'identity', 'tag', 'attributes']);
 });
@@ -255,4 +255,11 @@ test('a Container has a Background Overlay and a Shape Divider section under Sty
   const section = (id) => SECTIONS.find((x) => x.id === id);
   assert.equal(section('shape_divider').summary(ctxOf('core.container', { props: { shape_top: 'wave', shape_bottom: 'none' } })), 'wave');
   assert.equal(section('overlay').summary(ctxOf('core.container', { style: { overlay: { gradient: 'linear-gradient(90deg, #000000, #ffffff)' } } })), 'gradient');
+});
+
+test('a widget with named parts has a Parts section in Style; one without has none', () => {
+  for (const type of ['core.tabs', 'core.accordion', 'core.stats', 'core.form', 'core.query_loop']) {
+    assert.ok(ids('style', ctxOf(type)).includes('parts'), `${type} has parts`);
+  }
+  for (const type of ['core.heading', 'core.image']) assert.ok(!ids('style', ctxOf(type)).includes('parts'), `${type} has none`);
 });

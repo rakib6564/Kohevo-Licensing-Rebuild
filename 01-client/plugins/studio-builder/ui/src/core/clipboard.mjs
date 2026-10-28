@@ -17,7 +17,7 @@ const MAX_NODES = 600;
 const MAX_TREE_DEPTH = 12;
 const MAX_JSON_DEPTH = 32;
 
-const BLOCK_OBJECT_KEYS = ['props', 'bindings', 'style', 'visibility', 'responsive', 'attributes', 'metadata', 'interactions', 'animation', 'style_states'];
+const BLOCK_OBJECT_KEYS = ['props', 'bindings', 'style', 'visibility', 'responsive', 'attributes', 'metadata', 'interactions', 'animation', 'style_states', 'style_parts'];
 const BLOCK_ANY_KEYS = ['classNames', 'conditions'];
 const SECTION_OBJECT_KEYS = ['layout', 'visibility', 'style', 'animation', 'interactions'];
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);

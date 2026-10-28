@@ -17,6 +17,7 @@ import { StyleControls } from './StyleControls.jsx';
 import { BorderExtras, DimensionsExtras, EffectsPane, LayoutPane, PositionPane, ShadowExtras, SpacingPane, StatesPane, TypographyExtras } from './SurfaceControls.jsx';
 import { COLOUR_TOKEN_CATEGORIES, OPTIONS } from '../../core/styleSurface.mjs';
 import { EntranceSelect, MotionInspector } from './MotionInspector.jsx';
+import { PartStyles } from './PartStyles.jsx';
 import { ClassNamesField, DataAttributes, IdentityFields } from './AdvancedControls.jsx';
 import { ContainerPane } from './ContainerPane.jsx';
 import { BackgroundStates } from './BackgroundStates.jsx';
@@ -220,6 +221,12 @@ export function BlockInspector({ info }) {
     position: () => <PositionPane style={style} onChange={saveStyle} />,
     effects: () => <EffectsPane style={style} onChange={saveStyle} />,
     states: () => <StatesPane type={block.type} states={block.style_states} onChange={(next) => save(ops.updateBlockStyleStates(block.id, next))} />,
+    parts: () => (
+      <>
+        <p className="sbx-hint">{t('section_parts_hint')}</p>
+        <PartStyles blockId={block.id} parts={def.style_parts} value={block.style_parts} tokens={colourTokens} onChange={(next) => save(ops.updateBlockStyleParts(block.id, next))} />
+      </>
+    ),
     // A Button's one Style section: position, typography, text shadow, the colours and surface per state, shadow, border, padding.
     button_style: () => (
       <>
