@@ -173,22 +173,7 @@ export function scopedDeclarations(style) {
   emitSides('padding', style.padding, out);
   emitBoxed(style, out);
   emitTable('dimensions', style.dimensions, DIMENSIONS, out);
-  if (isObj(style.border)) {
-    for (const side of SIDES) {
-      const b = style.border[side];
-      if (!isObj(b)) continue;
-      if ('width' in b && ok(`border.${side}.width`, b.width)) out.push(`border-${side}-width:${String(b.width).trim()}`);
-      if ('style' in b && ok(`border.${side}.style`, b.style)) out.push(`border-${side}-style:${b.style}`);
-      if ('color' in b && ok(`border.${side}.color`, b.color)) out.push(`border-${side}-color:${colourCss(b.color)}`);
-    }
-    if (isObj(style.border.radius_corners)) {
-      for (const [short, long] of Object.entries(CORNER_CSS)) {
-        if (short in style.border.radius_corners && ok(`border.radius_corners.${short}`, style.border.radius_corners[short])) {
-          out.push(`border-${long}-radius:${String(style.border.radius_corners[short]).trim()}`);
-        }
-      }
-    }
-  }
+  if (isObj(style.border)) emitBorderSides(style.border, out);
   emitTable('typography', style.typography, TYPO_EXTRAS, out);
   if (isObj(style.shadow)) {
     const shadow = shadowValue(style.shadow);
@@ -362,19 +347,54 @@ export function compileBlockStyle(block, tokens) {
   };
 }
 
+/** Each side's width, style and colour, then each corner's radius (StyleSurface::moreFields border + corners). */
+function emitBorderSides(border, out) {
+  for (const side of SIDES) {
+    const b = border[side];
+    if (!isObj(b)) continue;
+    if ('width' in b && ok(`border.${side}.width`, b.width)) out.push(`border-${side}-width:${String(b.width).trim()}`);
+    if ('style' in b && ok(`border.${side}.style`, b.style)) out.push(`border-${side}-style:${b.style}`);
+    if ('color' in b && ok(`border.${side}.color`, b.color)) out.push(`border-${side}-color:${colourCss(b.color)}`);
+  }
+  if (isObj(border.radius_corners)) {
+    for (const [short, long] of Object.entries(CORNER_CSS)) {
+      if (short in border.radius_corners && ok(`border.radius_corners.${short}`, border.radius_corners[short])) {
+        out.push(`border-${long}-radius:${String(border.radius_corners[short]).trim()}`);
+      }
+    }
+  }
+}
+
+// StyleSurface::sectionBorderFields: the radius presets as the block classes write them.
+const SECTION_RADIUS = { none: '0', sm: 'var(--sb-radius-sm,.25rem)', md: 'var(--sb-radius-md,.5rem)', lg: 'var(--sb-radius-lg,1rem)', xl: '1.5rem', '2xl': '2rem', full: 'var(--sb-radius-full,9999px)' };
+
+/** StyleSurface::emitSectionBorder: all sides, then the sides and corners; a width with no style is a solid line. */
+function emitSectionBorder(border, out) {
+  const sides = SIDES.filter((side) => isObj(border[side]));
+  const styled = 'style' in border || sides.some((side) => 'style' in border[side]);
+  const wide = 'width' in border || sides.some((side) => 'width' in border[side]);
+  if (wide && !styled) out.push('border-style:solid');
+  if ('style' in border && ok('border.top.style', border.style)) out.push(`border-style:${border.style}`);
+  if ('width' in border && ok('border.top.width', border.width)) out.push(`border-width:${String(border.width).trim()}`);
+  if ('color' in border && ok('border.top.color', border.color)) out.push(`border-color:${colourCss(border.color)}`);
+  if (typeof border.radius === 'string' && border.radius in SECTION_RADIUS) out.push(`border-radius:${SECTION_RADIUS[border.radius]}`);
+  emitBorderSides(border, out);
+}
+
 // ── a section's own style: StyleSurface::sectionDeclarations ────────────────
 
 export function compileSectionStyle(section) {
   const style = isObj(section && section.style) ? section.style : {};
   let covered = true;
   for (const key of Object.keys(style)) {
-    if (!['background', 'padding'].includes(key) && style[key] !== null && style[key] !== undefined && style[key] !== '') covered = false;
+    if (!['background', 'padding', 'border'].includes(key) && style[key] !== null && style[key] !== undefined && style[key] !== '') covered = false;
   }
   const bg = isObj(style.background) ? style.background : {};
   if (bg.image !== undefined && bg.image !== null) covered = false;
   const scoped = [];
   if ('color' in bg && typeof bg.color === 'string' && isColor(bg.color) && !isToken(bg.color.trim())) scoped.push(`background-color:${String(bg.color).trim()}`);
   if ('gradient' in bg && !isObj(bg.image) && isGradient(bg.gradient)) scoped.push(`background-image:${String(bg.gradient).trim()}`);
+  if (isObj(style.border)) emitSectionBorder(style.border, scoped);
   const padding = [];
   emitSides('padding', style.padding, padding);
   scoped.push(...padding.map((d) => `${d} !important`)); // as the server: the author's section padding beats site CSS

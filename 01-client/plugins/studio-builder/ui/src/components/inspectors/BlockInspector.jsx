@@ -189,13 +189,12 @@ export function BlockInspector({ info }) {
     ),
     overlay: () => <OverlayStates style={style} states={block.style_states} onStyle={saveStyle} onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))} tokens={manifest && manifest.tokens} />,
     shape_divider: () => <ShapeDividers props={props} onProps={(next) => save(ops.updateBlockProps(block.id, next))} tokens={colourTokens} />,
+    // Every side's width, style and colour and every corner's radius are in view, not behind a pencil.
     border: () => (
-      <Popover
-        label={t('edit_border')}
-        row={<StyleControls style={style} capabilities={capabilities} only="border" onChange={saveStyle} tokens={manifest && manifest.tokens} />}
-      >
+      <>
+        <StyleControls style={style} capabilities={capabilities} only="border" onChange={saveStyle} tokens={manifest && manifest.tokens} />
         <BorderExtras style={style} onChange={saveStyle} tokens={colourTokens} />
-      </Popover>
+      </>
     ),
     shadow: () => {
       const custom = !!style.shadow && typeof style.shadow === 'object';

@@ -144,11 +144,12 @@ test('a page section has the same three tabs, with its own smaller list of group
   const ctx = inspectorContext({ id: 'sec_1', style: {}, layout: { width: 'wide', gap: 'md' } }, SECTION_DEF);
   const idsOf = (tab) => sectionsFor(tab, ctx, PAGE_SECTION_SECTIONS).map((s) => s.id);
   assert.deepEqual(idsOf('content'), ['layout']);
-  assert.deepEqual(idsOf('style'), ['background']);
+  assert.deepEqual(idsOf('style'), ['background', 'border']);
   assert.deepEqual(idsOf('advanced'), ['advanced', 'motion', 'responsive']);
   assert.deepEqual(defaultOpenIds('advanced', ctx, PAGE_SECTION_SECTIONS), ['advanced']);
   assert.equal(PAGE_SECTION_SECTIONS.find((s) => s.id === 'layout').summary(ctx), 'wide · md');
   assert.deepEqual(searchSections(ctx, 'padding', (s) => s.titleKey, PAGE_SECTION_SECTIONS).map((s) => s.id), ['advanced']);
+  assert.deepEqual(searchSections(ctx, 'radius', (s) => s.titleKey, PAGE_SECTION_SECTIONS).map((s) => s.id), ['border'], 'a section has its own border, sides and corners included');
 });
 
 test('a container shows its flex and grid options under Content (closed) and titles its props Layout; a leaf block keeps Layout under Advanced', () => {

@@ -18,7 +18,7 @@ import { InspectorShell } from './InspectorShell.jsx';
 import { InspectorBar } from './InspectorBar.jsx';
 import { PAGE_SECTION_SECTIONS, SECTION_DEF } from '../../core/inspectorSections.mjs';
 import { ColorField } from './StyleControls.jsx';
-import { SpacingBox } from './SurfaceControls.jsx';
+import { SectionBorder, SpacingBox } from './SurfaceControls.jsx';
 import { getPath, sectionStyleOverrides, setPath, setPaths } from '../../core/styleSurface.mjs';
 import { asList, asObject, isGlobalSection, sectionsOf } from '../../core/doc.mjs';
 import { tokensFor } from '../../core/fields.mjs';
@@ -193,6 +193,7 @@ export function SectionInspector({ info }) {
               </fieldset>
       </>
     ),
+    border: () => <SectionBorder style={style} onChange={(next) => applyOp(ops.updateSectionStyle(section.id, next), { label })} tokens={tokensFor(manifest, ['surface', 'text', 'color', 'border'])} />,
     advanced: () => (
       <>
         <SpacingBox id={`${idPrefix}-style`} group="padding" label={t('section_style_padding')} get={(path) => getPath(style, path)} putAll={putStyleAll} />
