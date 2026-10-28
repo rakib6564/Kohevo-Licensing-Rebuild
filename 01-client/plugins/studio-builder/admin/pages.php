@@ -33,7 +33,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         if (($_POST['bulk_action'] ?? '') === 'delete') {
             $result = sb_archive_pages($studioApp, $studioActor, $_POST['ids'] ?? []);
             $keep = (string) ($_POST['filter'] ?? 'all');
-            header('Location: pages.php?' . http_build_query(['filter' => $keep] + $result), true, 303);
+            $back = array_filter(['filter' => $keep, 'q' => trim((string) ($_POST['q'] ?? '')), 'page' => (int) ($_POST['page'] ?? 0)]);
+            header('Location: pages.php?' . http_build_query($back + $result), true, 303);
             exit;
         }
     }
@@ -65,6 +66,8 @@ if ($search !== '') {
     $needle = mb_strtolower($search);
     $filteredPages = array_values(array_filter($filteredPages, static fn(array $p): bool => str_contains(mb_strtolower((string) ($p['title'] ?? '')), $needle) || str_contains(mb_strtolower((string) ($p['slug'] ?? '')), $needle)));
 }
+// 20 rows a screen; the pager keeps the filter and the search.
+$slice = sb_page_slice($filteredPages, $_GET['page'] ?? 1, 20);
 $filterUrl = static fn(string $f): string => 'pages.php' . ($f === 'all' && $search === '' ? '' : '?' . http_build_query(array_filter(['filter' => $f === 'all' ? null : $f, 'q' => $search !== '' ? $search : null])));
 $countOf = static function (string $f) use ($pages): int {
     return match ($f) {
@@ -131,8 +134,11 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <form method="post" id="studio-bulk-form">
             <?= csrf_field() ?>
             <input type="hidden" name="filter" value="<?= e($filter) ?>">
-            <?= PageListView::render($filteredPages, $canEdit, plugin_url('studio-builder', 'admin/builder.php'), plugin_url('studio-builder', 'admin/preview.php'), $canEdit, 'page-edit.php') ?>
+            <input type="hidden" name="q" value="<?= e($search) ?>">
+            <input type="hidden" name="page" value="<?= $slice['page'] ?>">
+            <?= PageListView::render($slice['rows'], $canEdit, plugin_url('studio-builder', 'admin/builder.php'), plugin_url('studio-builder', 'admin/preview.php'), $canEdit, 'page-edit.php') ?>
         </form>
+        <?php slate_pagination($slice['page'], $slice['pages'], array_diff_key($_GET, ['deleted' => 1, 'failed' => 1]), ['total' => $slice['total'], 'per_page' => $slice['per_page'], 'label' => __('studio_pager_label', 'pages')]); ?>
         <?php slate_data_list_script(); ?>
         <?= PageListView::selectionScript() ?>
         <?php endif; ?>

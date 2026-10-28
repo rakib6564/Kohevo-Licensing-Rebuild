@@ -34,7 +34,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
     } elseif (($_POST['bulk_action'] ?? '') === 'delete') {
         $result = sb_archive_pages($studioApp, $studioActor, $_POST['ids'] ?? []);
-        header('Location: index.php?' . http_build_query($result), true, 303);
+        header('Location: index.php?' . http_build_query(array_filter(['page' => (int) ($_POST['page'] ?? 0)]) + $result), true, 303);
         exit;
     }
 }
@@ -62,6 +62,9 @@ foreach ($pages as $p) {
 }
 $mcpTools = count(StudioMcpToolCatalog::tools());
 $mcpGateway = class_exists('PluginLoader') && PluginLoader::isActive('mcp-gateway');
+
+// The recent list shows 10 pages a screen, newest first; View All Pages has the search and the filters.
+$recent = sb_page_slice($pages, $_GET['page'] ?? 1, 10);
 
 // Stats calculations
 $totalPages = count($pages);
@@ -223,8 +226,10 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <?php else: ?>
             <form method="post" id="studio-bulk-form">
                 <?= csrf_field() ?>
-                <?= PageListView::render($pages, $canEdit, plugin_url('studio-builder', 'admin/builder.php'), plugin_url('studio-builder', 'admin/preview.php'), $canEdit, 'page-edit.php') ?>
+                <input type="hidden" name="page" value="<?= $recent['page'] ?>">
+                <?= PageListView::render($recent['rows'], $canEdit, plugin_url('studio-builder', 'admin/builder.php'), plugin_url('studio-builder', 'admin/preview.php'), $canEdit, 'page-edit.php') ?>
             </form>
+            <?php slate_pagination($recent['page'], $recent['pages'], array_diff_key($_GET, ['deleted' => 1, 'failed' => 1]), ['total' => $recent['total'], 'per_page' => $recent['per_page'], 'label' => __('studio_pager_label', 'pages')]); ?>
             <?php slate_data_list_script(); ?>
             <?= PageListView::selectionScript() ?>
         <?php endif; ?>
