@@ -623,7 +623,7 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
             unit('phase6 int 6: chrome bindings report what inherit/custom/hidden resolve to (published partials only); publishing a partial invalidates chromed pages, not hidden ones', function () use ($rt, $editor, $publisher, $S): void {
                 $chrome = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'GET', 'chrome', ['page' => $S->about]), 'chrome')['chrome'];
                 assert_true($chrome['chromed']);
-                assert_eq(['mode' => 'inherit', 'resolved' => 'builtin', 'site' => null, 'custom' => null], $chrome['header'], 'no partial yet → built-in chrome');
+                assert_eq(['mode' => 'inherit', 'resolved' => 'builtin', 'site' => null, 'custom' => null, 'template' => null], $chrome['header'], 'no partial yet → built-in chrome');
                 $cc = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'GET', 'chrome', ['page' => $S->componentId]), 'component chrome')['chrome'];
                 assert_false($cc['chromed'], 'a component has no chrome of its own');
                 $peers = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'GET', 'template_peers', ['page' => $S->about]), 'template peers');

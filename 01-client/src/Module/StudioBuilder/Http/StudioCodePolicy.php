@@ -380,16 +380,13 @@ final class StudioCodePolicy
     }
 
     /**
-     * Markup for <head>. In Editor only the font links (rule (a)); '' whenever nothing is
-     * configured, so the common case emits nothing at all.
+     * Markup for <head>. In Editor and Preview only the font links (rule (a); a preview runs no tenant code
+     * either, but must show the site's fonts); '' whenever nothing is configured, so the common case emits nothing at all.
      */
     public static function headMarkup(int $tenantId, RenderMode $mode): string
     {
-        if ($mode === RenderMode::Editor) {
-            return self::editorFontLinks($tenantId);
-        }
         if ($mode !== RenderMode::Public) {
-            return '';
+            return self::editorFontLinks($tenantId);
         }
 
         $out = '';

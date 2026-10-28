@@ -798,9 +798,11 @@ final class StudioApplicationService
 
     /**
      * What a page's header/footer settings currently resolve to, following
-     * exactly the Phase 4 ChromeResolver rules (published partials only):
-     * the site partial (slug `default`) and the page-specific partial (slug =
-     * the page's slug) of each region, and which one the mode picks.
+     * exactly the ChromeResolver rules (published partials only): the site
+     * partial (slug `default`), the page-specific partial (slug = the page's
+     * slug) and the header or footer whose display conditions pick it for this
+     * page (`template`, resolved `template`) of each region, and which one the
+     * mode picks.
      *
      * @return array<string, mixed>
      */
@@ -810,6 +812,10 @@ final class StudioApplicationService
         [$page, $document] = $this->currentDocument($pageId);
         $settings = is_array($document['settings'] ?? null) ? $document['settings'] : [];
         $chromed  = in_array((string) $page['page_type'], ChromeResolver::CHROMED_PAGE_TYPES, true);
+        // Display conditions read the page's category and tags (the canvas shows the working draft, so its settings).
+        $themes   = new ThemeTemplateResolver($this->pageRepo, $this->revisionRepo);
+        $address  = PageAddress::fromRow($page);
+        $context  = ['category' => is_string($settings['category'] ?? null) ? $settings['category'] : '', 'tags' => self::settingTags($settings)];
 
         $regions = [];
         foreach (['header' => 'header_partial', 'footer' => 'footer_partial'] as $region => $partialType) {
@@ -821,10 +827,13 @@ final class StudioApplicationService
             $custom = (string) $page['slug'] !== ChromeResolver::SITE_PARTIAL_SLUG ? $this->pageRepo->findBySlug((string) $page['slug'], $partialType) : null;
             $isLive = static fn(?array $row): bool => $row !== null && ($row['status'] ?? null) === 'published' && !empty($row['published_revision_id']);
 
+            $template = null;
             if (!$chromed || $mode === 'hidden') {
                 $resolved = 'hidden';
             } elseif ($mode === 'custom' && $isLive($custom)) {
                 $resolved = 'custom';
+            } elseif (($template = $themes->chromeTemplate($region, $address, $context)['page'] ?? null) !== null) {
+                $resolved = 'template';
             } elseif ($isLive($site)) {
                 $resolved = 'site';
             } else {
@@ -835,6 +844,7 @@ final class StudioApplicationService
                 'resolved' => $resolved,
                 'site'     => $site !== null && ($site['status'] ?? null) !== 'archived' ? StudioEditorViews::page($site) : null,
                 'custom'   => $custom !== null && ($custom['status'] ?? null) !== 'archived' ? StudioEditorViews::page($custom) : null,
+                'template' => $template !== null ? StudioEditorViews::page($template) : null,
             ];
         }
         return ['chromed' => $chromed, 'page_slug' => (string) $page['slug'], 'site_slug' => ChromeResolver::SITE_PARTIAL_SLUG, 'header' => $regions['header'], 'footer' => $regions['footer']];
@@ -862,8 +872,7 @@ final class StudioApplicationService
     /**
      * The published Single template that lays this page out on the live site, from its working draft's category and
      * content type, with the width of the section the page's content sits in: `{id, title, content_width}`, or null.
-     * The editing canvas shows the page on its own (no Single template in Editor mode), so the section Inspector uses
-     * this to say when the template keeps a wider section narrower. Read-only.
+     * The section Inspector uses this to say why the template keeps a wider section narrower. Read-only.
      *
      * @return array{id: int, title: string, content_width: ?string}|null
      */
@@ -1361,8 +1370,7 @@ final class StudioApplicationService
         $decoded = json_decode((string) ($hostRevision['document_json'] ?? ''), true);
         $hostSettings = is_array($decoded) && is_array($decoded['settings'] ?? null) ? $decoded['settings'] : [];
         $context = ['category' => is_string($hostSettings['category'] ?? null) ? $hostSettings['category'] : ''];
-        $tags = $hostSettings['tags'] ?? [];
-        $context['tags'] = array_values(array_filter(array_map('trim', is_string($tags) ? explode(',', $tags) : (is_array($tags) ? array_filter($tags, 'is_string') : [])), static fn(string $t): bool => $t !== ''));
+        $context['tags'] = self::settingTags($hostSettings);
         $row = $host->id !== null ? $this->pageRepo->find($host->id) : null;
         if ($row !== null && (int) ($row['created_by'] ?? 0) > 0) {
             $context['author_id'] = (int) $row['created_by'];
@@ -1376,6 +1384,18 @@ final class StudioApplicationService
             // No custom content type: the page type stands in for it.
         }
         return ThemeTemplateResolver::appliesTo($role, $template->slug, $templateSettings, $host, $context) ? [] : ['preview_unmatched' => $role];
+    }
+
+    /**
+     * A page document's tags (`settings.tags`: a list, or one comma-separated text), for display conditions.
+     *
+     * @param array<string, mixed> $settings
+     * @return list<string>
+     */
+    private static function settingTags(array $settings): array
+    {
+        $tags = $settings['tags'] ?? [];
+        return array_values(array_filter(array_map('trim', is_string($tags) ? explode(',', $tags) : (is_array($tags) ? array_filter($tags, 'is_string') : [])), static fn(string $t): bool => $t !== ''));
     }
 
     /**
