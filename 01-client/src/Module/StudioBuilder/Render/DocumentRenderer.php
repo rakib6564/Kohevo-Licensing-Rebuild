@@ -34,6 +34,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Render;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\ScrollEffects;
 use Slate\Module\StudioBuilder\Document\StyleSurface;
 use Slate\Module\StudioBuilder\Document\StyleValueGuard;
 use Slate\Module\StudioBuilder\Registry\BlockDefinitionInterface;
@@ -179,7 +180,8 @@ final class DocumentRenderer
         // nothing, so documents that never use them render exactly as before.
         $blockStyle   = is_array($block['style'] ?? null) ? $block['style'] : [];
         $stateRules   = is_array($block['style_states'] ?? null) ? StyleSurface::stateRules($block['style_states']) : [];
-        $scopedClass  = $collector->scopedRule((string) ($block['id'] ?? ''), StyleSurface::declarations($blockStyle, $this->backgroundImageUrl($blockStyle)), StyleSurface::hasTransition($blockStyle), $stateRules, is_array($block['responsive'] ?? null) ? StyleSurface::responsiveRules($block['responsive']) : []);
+        $scopedClass  = $collector->scopedRule((string) ($block['id'] ?? ''), StyleSurface::declarations($blockStyle, $this->backgroundImageUrl($blockStyle), ScrollEffects::hasParallaxBackground($block)), StyleSurface::hasTransition($blockStyle), $stateRules, is_array($block['responsive'] ?? null) ? StyleSurface::responsiveRules($block['responsive']) : []);
+        $scroll = ScrollEffects::render($block);
         $scopedClasses = $scopedClass !== '' ? [$scopedClass] : [];
 
         $classes = array_merge(
@@ -193,9 +195,10 @@ final class DocumentRenderer
             $responsiveClasses,
             $animationClasses,
             $interactionClasses,
+            $scroll['classes'],
         );
 
-        $attrs = $interactionAttrs;
+        $attrs = $interactionAttrs . $scroll['attrs'];
         if (isset($block['attributes']) && is_array($block['attributes'])) {
             foreach ($block['attributes'] as $attrKey => $attrVal) {
                 // Same allow-list the validator enforces; re-checked here so a
@@ -212,7 +215,7 @@ final class DocumentRenderer
         $inlineStyles = $this->buildInlineStyles(is_array($block['style'] ?? null) ? $block['style'] : []);
         // Joined with a `;`: the inline styles end without one, and run together with the timing variables the last
         // inline declaration (often the z-index) became invalid and was dropped as soon as a block had animation timing.
-        $combined     = implode(';', array_filter([trim($inlineStyles, " ;"), trim($motionVars, " ;")], static fn(string $part): bool => $part !== ''));
+        $combined     = implode(';', array_filter([trim($inlineStyles, " ;"), trim($motionVars, " ;"), implode(';', $scroll['vars'])], static fn(string $part): bool => $part !== ''));
         $styleAttr    = $combined !== '' ? ' style="' . Html::e($combined) . '"' : '';
 
         $metadata = empty($block[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($block['id'] ?? ''), $type) : '';
@@ -280,7 +283,8 @@ final class DocumentRenderer
         $layout = is_array($section['layout'] ?? null) ? $section['layout'] : CanonicalDocumentSchema::defaultSectionLayout();
 
         $sectionStyle = is_array($section['style'] ?? null) ? $section['style'] : [];
-        $sectionClass = $collector->scopedRule((string) ($section['id'] ?? ''), StyleSurface::sectionDeclarations($sectionStyle, $this->backgroundImageUrl($sectionStyle)));
+        $sectionClass = $collector->scopedRule((string) ($section['id'] ?? ''), StyleSurface::sectionDeclarations($sectionStyle, $this->backgroundImageUrl($sectionStyle), ScrollEffects::hasParallaxBackground($section)));
+        $scroll = ScrollEffects::render($section);
 
         ['animationClasses' => $animationClasses, 'interactionClasses' => $interactionClasses, 'interactionAttrs' => $interactionAttrs, 'motionVars' => $motionVars] = $this->motionOf($section);
 
@@ -291,7 +295,7 @@ final class DocumentRenderer
                 $outer[] = 'sb-' . $prefix . 'py-' . $value;
             }
         }
-        $outer = array_merge($outer, self::hideClasses($visibility), $animationClasses, $interactionClasses);
+        $outer = array_merge($outer, self::hideClasses($visibility), $animationClasses, $interactionClasses, $scroll['classes']);
 
         $width = in_array($layout['width'] ?? null, CanonicalDocumentSchema::ALLOWED_CONTAINER_WIDTHS, true) ? $layout['width'] : 'wide';
         $gap   = in_array($layout['gap'] ?? null, CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, true) ? $layout['gap'] : 'md';
@@ -309,8 +313,9 @@ final class DocumentRenderer
         }
 
         $metadata = empty($section[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($section['id'] ?? ''), 'section') : '';
-        $styleAttr = $motionVars !== '' ? ' style="' . Html::e($motionVars) . '"' : '';
-        return '<section' . Html::classAttr($outer) . $metadata . $interactionAttrs . $styleAttr . '>'
+        $sectionVars = $motionVars . implode(';', $scroll['vars']);
+        $styleAttr = $sectionVars !== '' ? ' style="' . Html::e($sectionVars) . '"' : '';
+        return '<section' . Html::classAttr($outer) . $metadata . $interactionAttrs . $scroll['attrs'] . $styleAttr . '>'
             . '<div' . Html::classAttr($innerClasses) . '>' . $inner . '</div></section>';
     }
 

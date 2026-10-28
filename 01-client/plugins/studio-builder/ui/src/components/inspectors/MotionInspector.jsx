@@ -14,14 +14,15 @@
 import { asObject } from '../../core/doc.mjs';
 import {
   ANIMATION_TYPES, DELAY_RANGE, DURATION_RANGE, EASINGS, INTERACTION_TRIGGERS,
-  MOTION_PRESETS, clampMs, motionLabel, normalizeAnimation, normalizeInteractions,
+  MOTION_PRESETS, PARALLAX_SPEED, SCROLL_DEVICES, STICKY_OFFSET, clampMs, motionLabel, normalizeAnimation, normalizeInteractions,
 } from '../../core/motion.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
-import { Field } from '../ui/index.js';
+import { Check, Field, Pills } from '../ui/index.js';
+import { SliderField, ThemeColor } from './SurfaceControls.jsx';
 
-/** `block` is the block (or, with `section`, the section) whose motion is edited. */
-export function MotionInspector({ block, applyOp, label, section = false }) {
+/** `block` is the block (or, with `section`, the section) whose motion is edited; `tokens` are the theme colours offered. */
+export function MotionInspector({ block, applyOp, label, section = false, tokens }) {
   const idPrefix = `sbx-motion-${block.id}`;
   const animation = normalizeAnimation(block.animation);
   const interactions = normalizeInteractions(block.interactions);
@@ -125,6 +126,14 @@ export function MotionInspector({ block, applyOp, label, section = false }) {
         interactions={interactions}
         onChange={commitInteractions}
       />
+
+      <ScrollEffectsSection
+        idPrefix={idPrefix}
+        interactions={interactions}
+        hasBackground={section || block.type === 'core.container'}
+        tokens={tokens}
+        onChange={commitInteractions}
+      />
     </>
   );
 }
@@ -170,7 +179,7 @@ function InteractionSection({ idPrefix, interactions, onChange }) {
         <select
           id={`${idPrefix}-trigger`}
           value={trigger}
-          onChange={(e) => onChange(normalizeInteractions({ trigger: e.target.value }))}
+          onChange={(e) => onChange(normalizeInteractions({ ...interactions, trigger: e.target.value, animation: undefined }))}
         >
           {INTERACTION_TRIGGERS.map((o) => (
             <option key={o.value || 'none'} value={o.value}>{motionLabel('trigger', o)}</option>
@@ -185,6 +194,7 @@ function InteractionSection({ idPrefix, interactions, onChange }) {
             id={`${idPrefix}-trigger-anim`}
             value={hoverAnim}
             onChange={(e) => onChange(normalizeInteractions({
+              ...interactions,
               trigger,
               animation: { type: e.target.value },
             }))}
@@ -198,6 +208,117 @@ function InteractionSection({ idPrefix, interactions, onChange }) {
     </section>
   );
 }
+/**
+ * Sticky and parallax (interactions.sticky / interactions.parallax). Off is the absence of the object; each control
+ * writes the whole `interactions` back through the normaliser, so the trigger above is kept.
+ */
+function ScrollEffectsSection({ idPrefix, interactions, hasBackground, tokens, onChange }) {
+  const sticky = interactions.sticky || null;
+  const parallax = interactions.parallax || null;
+  const setSticky = (next) => onChange(normalizeInteractions({ ...interactions, sticky: next }));
+  const setParallax = (next) => onChange(normalizeInteractions({ ...interactions, parallax: next }));
+  const layer = parallax ? parallax.layer : (hasBackground ? 'background' : 'element');
+
+  return (
+    <section className="sbx-motion-section" data-scroll-effects>
+      <h3 className="sbx-fieldset-legend">{t('scroll_effects')}</h3>
+
+      <Field label={t('sticky')}>
+        <Pills
+          label={t('sticky')}
+          value={sticky ? sticky.edge : ''}
+          options={[
+            { value: '', label: t('sticky_off') },
+            { value: 'top', label: t('sticky_top') },
+            { value: 'bottom', label: t('sticky_bottom') },
+          ]}
+          onChange={(edge) => setSticky(edge ? { ...(sticky || {}), edge } : null)}
+        />
+      </Field>
+      {sticky && (
+        <>
+          <SliderField
+            id={`${idPrefix}-sticky-offset`}
+            label={t('sticky_offset')}
+            value={sticky.offset}
+            min={STICKY_OFFSET.min}
+            max={STICKY_OFFSET.max}
+            unit="px"
+            neutral={0}
+            onChange={(v) => setSticky({ ...sticky, offset: v })}
+          />
+          <DeviceChecks idPrefix={`${idPrefix}-sticky`} legend={t('sticky_on')} devices={sticky.devices} onChange={(devices) => setSticky({ ...sticky, devices })} />
+          <p className="sbx-hint">{t('sticky_effects_hint')}</p>
+          <Check label={t('sticky_shadow')} checked={sticky.shadow === true} onChange={(e) => setSticky({ ...sticky, shadow: e.target.checked })} />
+          {sticky.edge === 'top' && (
+            <Check label={t('sticky_hide_on_scroll')} checked={sticky.hide_on_scroll === true} onChange={(e) => setSticky({ ...sticky, hide_on_scroll: e.target.checked })} />
+          )}
+          <ThemeColor id={`${idPrefix}-sticky-bg`} label={t('sticky_background')} value={sticky.background} tokens={tokens} onChange={(v) => setSticky({ ...sticky, background: v })} />
+        </>
+      )}
+
+      <Field label={t('parallax')}>
+        <Pills
+          label={t('parallax')}
+          value={parallax ? parallax.layer : ''}
+          options={[
+            { value: '', label: t('sticky_off') },
+            ...(hasBackground ? [{ value: 'background', label: t('parallax_background') }] : []),
+            { value: 'element', label: t('parallax_element') },
+          ]}
+          onChange={(v) => setParallax(v ? { speed: PARALLAX_SPEED.default, ...(parallax || {}), layer: v } : null)}
+        />
+      </Field>
+      {parallax && (
+        <>
+          {layer === 'background' && <p className="sbx-hint">{t('parallax_background_hint')}</p>}
+          <SliderField
+            id={`${idPrefix}-parallax-speed`}
+            label={t('parallax_speed')}
+            value={parallax.speed}
+            min={PARALLAX_SPEED.min}
+            max={PARALLAX_SPEED.max}
+            unit="%"
+            neutral={PARALLAX_SPEED.default}
+            onChange={(v) => setParallax({ ...parallax, speed: v ?? PARALLAX_SPEED.default })}
+          />
+          <Field label={t('parallax_direction')}>
+            <Pills
+              label={t('parallax_direction')}
+              value={parallax.direction === 'down' ? 'down' : 'up'}
+              options={[{ value: 'up', label: t('parallax_up') }, { value: 'down', label: t('parallax_down') }]}
+              onChange={(v) => setParallax({ ...parallax, direction: v })}
+            />
+          </Field>
+          <DeviceChecks idPrefix={`${idPrefix}-parallax`} legend={t('parallax_on')} devices={parallax.devices} onChange={(devices) => setParallax({ ...parallax, devices })} />
+        </>
+      )}
+      <p className="sbx-hint">{t('scroll_effects_hint')}</p>
+    </section>
+  );
+}
+
+/** Which devices an effect runs on: every device when none is unticked. Unticking the last one is refused. */
+function DeviceChecks({ idPrefix, legend, devices, onChange }) {
+  const on = Array.isArray(devices) && devices.length ? devices : SCROLL_DEVICES;
+  return (
+    <fieldset className="sbx-fieldset" id={idPrefix + '-devices'}>
+      <legend>{legend}</legend>
+      <div className="sbx-check-row">
+        {SCROLL_DEVICES.map((d) => (
+          <Check
+            key={d}
+            label={t(`device_${d}`)}
+            checked={on.includes(d)}
+            disabled={on.length === 1 && on.includes(d)}
+            onChange={(e) => onChange(e.target.checked ? [...on, d] : on.filter((x) => x !== d))}
+          />
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 /** The entrance preset as one select (the reference's "Entrance Animation"); the Motion group keeps timing and triggers. */
 export function EntranceSelect({ block, applyOp, label, section = false }) {
   const id = `sbx-entrance-${block.id}`;

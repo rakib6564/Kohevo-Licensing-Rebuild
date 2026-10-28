@@ -149,7 +149,7 @@ function Length({ id, path, label, get, put, placeholder, units }) {
  * same path (the server writes a token out as the theme's custom property), so a pick replaces the literal and the reverse.
  * With no `tokens` it is the plain colour field.
  */
-function ThemeColor({ id, label, value, onChange, tokens, fallback }) {
+export function ThemeColor({ id, label, value, onChange, tokens, fallback }) {
   const token = isColourToken(value) ? value : null;
   return (
     <ColorField
