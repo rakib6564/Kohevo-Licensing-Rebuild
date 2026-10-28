@@ -104,7 +104,7 @@ final class StudioSitemapService
                 if (($row['page_type'] ?? '') === 'landing' && isset($pageSlugs[$slug])) {
                     continue; // shadowed by the published `page` of the same slug
                 }
-                $path = '/' . $slug;
+                $path = \Slate\Module\StudioBuilder\Meta\PageRoutes::path($this->tenants->id(), $id, $slug, (string) ($row['route_mode'] ?? ''));
             }
             $candidates[$id] = ['row' => $row, 'path' => $path];
         }

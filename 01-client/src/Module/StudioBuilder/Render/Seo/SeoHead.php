@@ -27,6 +27,7 @@ namespace Slate\Module\StudioBuilder\Render\Seo;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
+use Slate\Module\StudioBuilder\Meta\PageRoutes;
 use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Render\Media\MediaResolverInterface;
 use Slate\Module\StudioBuilder\Render\RenderContext;
@@ -52,7 +53,7 @@ final class SeoHead
     /**
      * @param array<string, mixed> $seo normalized document seo
      */
-    public static function build(array $seo, PageAddress $page, SiteContext $site, RenderMode $mode, MediaResolverInterface $media): self
+    public static function build(array $seo, PageAddress $page, SiteContext $site, RenderMode $mode, MediaResolverInterface $media, int $tenantId = 0): self
     {
         // The Site & SEO screen's settings fill in what the page leaves empty, and its robots can only make a page stricter.
         $defaults = $site->seo;
@@ -88,7 +89,7 @@ final class SeoHead
             $title,
             $description,
             $robots,
-            self::canonical($seo['canonical_url'] ?? null, $site, self::publicPath($page)),
+            self::canonical($seo['canonical_url'] ?? null, $site, self::publicPath($page, $tenantId)),
             $ogImage,
             $site->siteName,
             $defaults->verification,
@@ -105,10 +106,10 @@ final class SeoHead
             : 'index,follow';
     }
 
-    /** The page's own public path: `/` for the homepage route, `/{slug}` otherwise. */
-    public static function publicPath(PageAddress $page): string
+    /** The page's own public path (PageRoutes): `/` for the homepage, `/{slug}` or `/{prefix}/{slug}` otherwise. */
+    public static function publicPath(PageAddress $page, int $tenantId = 0): string
     {
-        return $page->routeMode === 'homepage' ? '/' : '/' . $page->slug;
+        return PageRoutes::path($tenantId, (int) $page->id, $page->slug, $page->routeMode);
     }
 
     public static function canonical(mixed $authored, SiteContext $site, string $publicPath): ?string
