@@ -769,7 +769,7 @@ final class StudioPackageService
         $revision = $draftId > 0 ? $this->revisionRepo->findByIdForPage((int) $page['id'], $draftId) : null;
         return $revision !== null
             ? $this->upgraded(CanonicalJson::decode((string) $revision['document_json']))
-            : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
+            : CanonicalDocumentSchema::emptyDocument((string) $page['page_type']);
     }
 
     /** A component's content as consumers see it: its published revision, else its draft. @param array<string, mixed> $component @return array<string, mixed> */
