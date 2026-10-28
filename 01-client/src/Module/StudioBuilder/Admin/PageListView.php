@@ -92,15 +92,15 @@ final class PageListView
         return (string) ob_get_clean();
     }
 
-    /** A page kind as people say it: "Page", "Header", "Theme template", not the stored `header_partial` or `system`. */
+    /** A page kind as one word that fits the list's type pill: "Header", "Template", not the stored `header_partial` or `system`. */
     public static function kindLabel(string $pageType): string
     {
         return match ($pageType) {
             'page'           => \__('studio_kind_page', 'Page'),
-            'landing'        => \__('studio_kind_landing', 'Landing page'),
+            'landing'        => \__('studio_kind_landing', 'Landing'),
             'header_partial' => \__('studio_kind_header', 'Header'),
             'footer_partial' => \__('studio_kind_footer', 'Footer'),
-            'system'         => \__('studio_kind_template', 'Theme template'),
+            'system'         => \__('studio_kind_template', 'Template'),
             default          => $pageType,
         };
     }

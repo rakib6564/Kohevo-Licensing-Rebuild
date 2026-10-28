@@ -254,7 +254,7 @@ unit('studio admin content lists: Pages lists plain pages, ?type= one type; temp
 });
 
 unit('studio admin content lists: kinds read as words, type lists have their own tab, and the pager counts their items', function (): void {
-    assert_eq(['Page', 'Landing page', 'Header', 'Footer', 'Theme template'], array_map([PageListView::class, 'kindLabel'], ['page', 'landing', 'header_partial', 'footer_partial', 'system']), 'stored kinds as words');
+    assert_eq(['Page', 'Landing', 'Header', 'Footer', 'Template'], array_map([PageListView::class, 'kindLabel'], ['page', 'landing', 'header_partial', 'footer_partial', 'system']), 'stored kinds as words');
     $html = PageListView::render([sbal_page(3, 'Header', true, false, 'header_partial')], true, '/b', '/p');
     assert_true(str_contains($html, '>Header<') && !str_contains($html, '>header_partial<'), 'a header row says Header: ' . $html);
     $dir = dirname(__DIR__, 2) . '/plugins/studio-builder/admin';
