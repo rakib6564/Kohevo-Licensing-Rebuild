@@ -358,8 +358,12 @@ $pages['accueil'] = ['Accueil', 'homepage', [
             B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'justify' => 'center'], [BTN('Nos cours', '/cours/'), BTN('Nous soutenir', '/nous-soutenir/', 'yg-btn yg-btn--dark')], 'yg-hero__actions'),
         ], 'yg-hero__copy'),
         BOX([
-            IMGP(LOCAL($BG['cours'][0]), 'Une femme en gants de boxe, sensibilisation au cancer', 'yg-hero__img'),
-            B('core.icon', ['name' => 'play', 'url' => 'https://www.youtube.com/watch?v=PHx3K_nNnms', 'new_tab' => true, 'label' => 'Voir l’interview de Sara Rezki', 'size_px' => 20], [], 'yg-play'),
+            // The interview plays on the page: the hero photo is the video's overlay, and clicking it starts the player in place.
+            B('core.video', [
+                'source' => 'youtube', 'url' => 'https://www.youtube.com/watch?v=PHx3K_nNnms', 'aspect_ratio' => '16:9',
+                'privacy' => true, 'lazy_load' => true, 'controls' => true, 'overlay' => true, 'play_icon' => true, 'lightbox' => false,
+                'overlay_image' => ['media_id' => MID(LOCAL($BG['cours'][0])), 'alt' => 'Une femme en gants de boxe, sensibilisation au cancer', 'focal_point' => [0.5, 0.5]],
+            ], [], 'yg-hero__video'),
         ], 'yg-hero__visual'),
     ], 'yg-hero-sec'),
     SEC('Nos valeurs', [WRAP([HEAD('FightxLife', 'Nos valeurs', 'valeurs'), GRID([

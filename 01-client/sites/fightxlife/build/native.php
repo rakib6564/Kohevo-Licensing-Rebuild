@@ -127,8 +127,9 @@ function native_map_base(): array
         'yg-hero__text'       => ['s' => S(dim(['max_width' => '570px']), mar(13, 'auto', 47, 'auto'), col(BODY), ty('14px', null, '1.45')),
                                   'm' => S(ty('13px'), dim(['max_width' => '370px']), mar(13, null, 20, null))],
         'yg-hero__actions'    => ['s' => lay(['gap' => '14px', 'align' => 'center', 'wrap' => 'wrap', 'justify' => 'center']), 'm' => lay(['gap' => '10px'])],
-        'yg-hero__visual'     => ['s' => S(place('relative'), dim(['height' => 665, 'overflow' => 'hidden']), mar(49, null, null, null), radius('18px')),
-                                  't' => dim(['height' => '460px']), 'm' => S(dim(['height' => '300px']), mar(27, null, null, null))],
+        'yg-hero__visual'     => ['s' => S(place('relative'), dim(['overflow' => 'hidden']), mar(49, null, null, null), radius('18px')),
+                                  'm' => mar(27, null, null, null)],
+        'yg-hero__video'      => ['s' => radius('18px')],
         'yg-hero__img'        => ['s' => S(dim(['height' => '100%', 'object_fit' => 'cover', 'object_position' => 'center']), radius('18px'))],
         'yg-play'             => ['s' => S(place('absolute', ['left' => '50%', 'top' => '50%']), ['effects' => ['transform' => ['translate_x' => '-50%', 'translate_y' => '-50%']]], ['z_index' => 2])],
 
@@ -437,6 +438,12 @@ function native_more(): array
         'yg-play'         => ['parts' => ['link' => S(sz(['width' => 66, 'height' => 66]), lay(['display' => 'flex', 'justify' => 'center', 'align' => 'center']), brd('rgba(255,255,255,.92)', '7px', '50%'),
                 ['background' => ['gradient' => PINK_GRAD]], col('#ffffff'), shadow(0, 5, 24, 'rgba(31,17,43,.14)'), fx(TRANS)), 'link:hover' => fx(['transform' => ['scale' => 1.06]]), 'svg' => mar(null, null, null, 3)],
             'mparts' => ['link' => sz(['width' => 58, 'height' => 58])]],
+
+        // The hero video's play icon: the same pink button the icon link had.
+        'yg-hero__video'  => ['parts' => ['play' => S(sz(['width' => 66, 'height' => 66]), brd('rgba(255,255,255,.92)', '7px', '50%'),
+                ['background' => ['gradient' => PINK_GRAD]], col('#ffffff'), shadow(0, 5, 24, 'rgba(31,17,43,.14)'), fx(TRANS)), 'play:hover' => fx(['transform' => ['scale' => 1.06]]),
+                'svg' => S(sz(['width' => 22, 'height' => 22]), mar(null, null, null, 3))],
+            'mparts' => ['play' => sz(['width' => 58, 'height' => 58])]],
 
         // ── Rich text ──
         'fx-rich'         => ['parts' => ['paragraph' => mar(0, 0, 14, 0), 'list' => S(mar(0, 0, 16, 0), pad(null, null, null, 22)), 'item' => mar(6, 0, 6, 0), 'marker' => col(PINK),
