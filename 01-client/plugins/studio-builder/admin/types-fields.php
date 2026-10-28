@@ -242,8 +242,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <label class="sb-field__label">Description</label>
                 <input type="text" name="description" class="form-control" placeholder="Purpose and data description...">
             </div>
-            <div class="sb-field">
-                <label class="sb-field__label" style="display: flex; gap: 8px; align-items: center; font-weight: 500;"><input type="checkbox" name="show_in_menu" value="1" checked> <?= e(__('studio_tf_show_in_menu', 'Show in the sidebar')) ?></label>
+            <div class="sb-check-row" style="margin: 4px 0 12px;">
+                <label style="display: flex; gap: 8px; align-items: center; font-weight: 600; font-size: 0.85rem;"><input type="checkbox" name="show_in_menu" value="1" checked> <?= e(__('studio_tf_show_in_menu', 'Show in the sidebar')) ?></label>
                 <p class="sb-field__hint"><?= e(__('studio_tf_show_in_menu_hint', 'Gives the type its own list in the Studio sidebar, under Pages.')) ?></p>
             </div>
             <div class="sb-card-actions">

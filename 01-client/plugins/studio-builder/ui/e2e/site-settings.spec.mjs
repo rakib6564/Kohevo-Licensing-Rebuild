@@ -17,7 +17,7 @@ test('Site settings groups the tokens, saves an override, and resets it', async 
   const panel = page.locator('#sbx-leftpanel-settings');
   await panel.locator('[data-settings-view="site"]').click();
   const form = panel.getByTestId('site-settings');
-  await expect(form.locator('[data-ss-group]')).toHaveText([/Global colors/, /Global fonts/, /Corners/, /Shadows/, /Spacing/, /Page widths/, /Custom CSS/]);
+  await expect(form.locator('[data-ss-group]')).toHaveText([/Global colors/, /Global fonts/, /^Text/, /Corners/, /Shadows/, /Spacing/, /^Layout/, /Custom CSS/]);
   await expect(form.locator('[data-ss-group="colors"]')).toHaveAttribute('open', '');
   await expect(form.locator('[data-ss-group="shape"]')).not.toHaveAttribute('open', '');
 
@@ -81,7 +81,7 @@ test('Page widths are three site-wide sizes: a new Wide reaches the page, and a 
   const form = panel.getByTestId('site-settings');
   const group = form.locator('[data-ss-group="layout"]');
   await group.locator('summary').click();
-  await expect(group).toContainText('Each section picks Narrow, Normal, Wide or Full');
+  await expect(group).toContainText('Each section picks Default, Narrow, Normal, Wide, Full or a custom width');
   const wide = group.locator('.sbx-ss__row', { hasText: 'Wide' }).first().locator('input[type="text"]');
   const save = form.getByTestId('site-settings-save');
   try {

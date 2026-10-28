@@ -21,17 +21,17 @@ test('create a menu, refuse an unsafe link, edit it, use it in a Nav menu block,
   await page.locator('#sb-menu-name').fill(name);
   await page.locator('#sb-menu-key').fill(key);
   const rows = page.getByTestId('menu-item');
-  await rows.nth(0).locator('input').nth(0).fill('Alpha link');
-  await rows.nth(0).locator('input').nth(1).fill('/alpha');
+  await rows.nth(0).locator('input:not([type="hidden"])').nth(0).fill('Alpha link');
+  await rows.nth(0).locator('input:not([type="hidden"])').nth(1).fill('/alpha');
   await page.getByTestId('menu-add-link').click();
-  await rows.nth(1).locator('input').nth(0).fill('Bad link');
-  await rows.nth(1).locator('input').nth(1).fill('javascript:alert(1)');
+  await rows.nth(1).locator('input:not([type="hidden"])').nth(0).fill('Bad link');
+  await rows.nth(1).locator('input:not([type="hidden"])').nth(1).fill('javascript:alert(1)');
   await page.getByRole('button', { name: 'Create menu' }).click();
   await expect(page.locator('.alert-error')).toContainText('Bad link'); // refused, nothing saved
   await expect(page).toHaveURL(/menu-new\.php$/);
 
-  await rows.nth(1).locator('input').nth(1).fill('https://example.com/beta');
-  await rows.nth(1).locator('input').nth(0).fill('Beta link');
+  await rows.nth(1).locator('input:not([type="hidden"])').nth(1).fill('https://example.com/beta');
+  await rows.nth(1).locator('input:not([type="hidden"])').nth(0).fill('Beta link');
   await page.getByRole('button', { name: 'Create menu' }).click();
   await expect(page).toHaveURL(/menus\.php\?saved=1/);
   await expect(page.locator('.alert-success')).toContainText('Menu saved');
@@ -42,7 +42,7 @@ test('create a menu, refuse an unsafe link, edit it, use it in a Nav menu block,
   await rows.nth(1).locator('[data-move="up"]').click();
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.locator('.alert-success')).toContainText('Menu saved');
-  await expect(rows.nth(0).locator('input').nth(0)).toHaveValue('Beta link');
+  await expect(rows.nth(0).locator('input:not([type="hidden"])').nth(0)).toHaveValue('Beta link');
 
   // The builder offers it in a Nav menu block, and the canvas shows its links.
   await openBuilder(page);
