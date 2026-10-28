@@ -33,6 +33,8 @@ namespace Slate\Module\StudioBuilder\Runtime;
 
 use Slate\Module\StudioBuilder\Domain\PageAddress;
 use Slate\Module\StudioBuilder\Meta\PageRoutes;
+use Slate\Module\StudioBuilder\Registry\PluginSingleInterface;
+use Slate\Module\StudioBuilder\Registry\PluginWidgetCatalog;
 use Slate\Module\StudioBuilder\Render\RenderContext;
 use Slate\Module\StudioBuilder\Render\StudioRenderService;
 use Slate\Module\StudioBuilder\Repository\PageRepository;
@@ -46,9 +48,11 @@ final class StudioPublicRuntime
     public const ENTITLEMENT_KEY = 'studio-builder';
 
     private readonly \Closure $entitlementCheck;
+    private readonly \Closure $pluginSingles;
 
     /**
      * @param ?\Closure $entitlementCheck fn(int $tenantId, string $moduleKey): bool — defaults to EntitlementService::canAccess()
+     * @param ?\Closure $pluginSingles    fn(): list<PluginSingleInterface> — defaults to PluginWidgetCatalog::singles()
      */
     public function __construct(
         private readonly TenantContext $tenants,
@@ -59,9 +63,11 @@ final class StudioPublicRuntime
         private readonly ?StudioSitemapService $sitemap = null,
         private readonly ?ThemeTemplateResolver $themeTemplates = null,
         private readonly ?StudioRedirects $redirects = null,
+        ?\Closure $pluginSingles = null,
     ) {
         $this->entitlementCheck = $entitlementCheck
             ?? static fn(int $tenantId, string $moduleKey): bool => EntitlementService::canAccess($tenantId, $moduleKey);
+        $this->pluginSingles = $pluginSingles ?? static fn(): array => PluginWidgetCatalog::singles();
     }
 
     /** @param ?string $accept the request's `Accept` header: a browser gets the sitemap as a readable page, a crawler as XML */
@@ -98,6 +104,12 @@ final class StudioPublicRuntime
                 $query = isset($qp['q']) ? (string) $qp['q'] : (isset($qp['s']) ? (string) $qp['s'] : '');
             }
             return $this->handleSearch($query, $ifNoneMatch);
+        }
+
+        // An item a plugin keeps itself (a Shop product) lives at `/{its prefix}/{slug}`, shown by its Single template.
+        $item = $this->handlePluginSingle($trimmedPath, $ifNoneMatch);
+        if ($item !== false) {
+            return $item;
         }
 
         // A page of a content type with a URL route prefix lives at `/{prefix}/{slug}`.
@@ -193,6 +205,62 @@ final class StudioPublicRuntime
             'category'     => $type === 'category' ? $term : '',
             'tag'          => $type === 'tag' ? $term : '',
         ]);
+    }
+
+    /**
+     * `/{prefix}/{slug}` of a plugin single (PluginSingleInterface): false when no plugin claims the prefix (the
+     * address is someone else's), else the response, or null (the ordinary 404) when the plugin is not active and
+     * licensed, the item is not published, or no published Single template names its content type.
+     */
+    public function handlePluginSingle(string $path, ?string $ifNoneMatch = null): PublicResponse|null|false
+    {
+        $path = trim($path, '/');
+        $cut = strrpos($path, '/');
+        if ($cut === false || $this->themeTemplates === null || !$this->tenants->isScoped()) {
+            return false;
+        }
+        $prefix = strtolower(substr($path, 0, $cut));
+        $slug = substr($path, $cut + 1);
+        $tenantId = $this->tenants->id();
+        try {
+            $singles = ($this->pluginSingles)();
+        } catch (\Throwable $e) {
+            self::log('plugin singles', $e);
+            return false;
+        }
+        foreach ($singles as $single) {
+            if (!$single instanceof PluginSingleInterface || PageRoutes::normalizePrefix($single->prefix($tenantId)) !== $prefix || $prefix === '') {
+                continue;
+            }
+            if ($this->reserved->isReserved(explode('/', $prefix)[0]) || preg_match(PageAddress::SLUG_PATTERN, $slug) !== 1) {
+                return null;
+            }
+            if ($tenantId <= 0 || !$this->isEntitled($tenantId, $single->requiredEntitlement())) {
+                return null;
+            }
+            try {
+                $found = $single->find($tenantId, $slug);
+            } catch (\Throwable $e) {
+                self::log('plugin single lookup', $e);
+                return null;
+            }
+            if (!is_array($found) || !is_int($found['id'] ?? null)) {
+                return null;
+            }
+            $type = $single->contentType();
+            $tpl = $this->resolveThemeTemplate(fn(ThemeTemplateResolver $t): ?array => $t->resolvePluginSingle($type, $slug));
+            if ($tpl === null) {
+                return null;
+            }
+            $item = ['type' => $type, 'url' => '/' . $prefix . '/' . $slug] + $found;
+            return $this->serveTemplate(PageAddress::fromRow($tpl['page']), $ifNoneMatch, 200, [
+                'content_type' => $type,
+                'single_item'  => $item,
+                'post_title'   => (string) ($found['title'] ?? ''),
+                'post_url'     => $this->renderer->siteContext()->absoluteUrl($item['url']),
+            ]);
+        }
+        return false;
     }
 
     public function handleSearch(string $query, ?string $ifNoneMatch = null): ?PublicResponse

@@ -68,3 +68,20 @@ test('templates with the same conditions are named, whatever the order, case or 
   assert.deepEqual(sameConditionsAs({ rules: [{ action: 'include', condition: 'front_page' }] }, peers), []);
   assert.equal(conditionsKey({ rules: [] }), '');
 });
+
+test('a content type the site or a plugin brings (Shop\'s products) can be picked and is saved as it is', async () => {
+  const { contentTypeLabel, contentTypes, setContentTypes } = await import('../src/core/conditions.mjs');
+  setContentTypes([{ key: 'product', label: 'Products' }, { key: 'post', label: 'Dup' }, { key: 'Bad Key', label: 'x' }, null, { key: 'event' }]);
+  try {
+    assert.deepEqual(contentTypes().slice(-2), ['product', 'event'], 'built-in keys are not repeated; malformed ones are dropped');
+    assert.equal(contentTypeLabel('product'), 'Products');
+    assert.equal(contentTypeLabel('event'), 'event', 'a type without a name shows its key');
+    assert.equal(contentTypeLabel('post'), null, 'a built-in type keeps its translated label');
+    const rows = toRows([{ action: 'include', condition: 'singular', value: 'product' }]);
+    assert.deepEqual(rows.map((r) => [r.kind, r.value]), [['singular', 'product']], 'not a custom rule');
+    assert.deepEqual(fromRows(rows), { rules: [{ action: 'include', condition: 'singular', value: 'product' }] });
+  } finally {
+    setContentTypes([]);
+  }
+  assert.equal(toRows([{ action: 'include', condition: 'singular', value: 'product' }])[0].kind, 'custom', 'unknown again once the type is gone: kept, never rewritten');
+});

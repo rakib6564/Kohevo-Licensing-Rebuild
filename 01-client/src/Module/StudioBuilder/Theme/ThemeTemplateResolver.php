@@ -233,6 +233,44 @@ final class ThemeTemplateResolver
     }
 
     /**
+     * Resolve the Single template for an item a plugin keeps in its own tables (PluginSingleInterface): the item is not
+     * a page, so conditions see only its content type and slug. Only a template whose conditions name the type
+     * (`singular` = `product`) is chosen: a blog post template that applies to the entire site has none of the
+     * product's widgets and would show an empty page.
+     *
+     * @return ?array{page: array<string, mixed>, revision: array<string, mixed>}
+     */
+    public function resolvePluginSingle(string $contentType, string $slug): ?array
+    {
+        $names = static fn(array $settings): bool => self::namesContentType($settings['conditions'] ?? null, $contentType);
+        return $this->resolveTemplate('single', [
+            'page_id'       => null,
+            'slug'          => $slug,
+            'page_type'     => $contentType,
+            'content_type'  => $contentType,
+            'is_front_page' => false,
+        ], $names);
+    }
+
+    /** Whether conditions hold an include rule for exactly this content type. */
+    private static function namesContentType(mixed $conditions, string $contentType): bool
+    {
+        $rules = is_array($conditions) && is_array($conditions['rules'] ?? null) ? $conditions['rules'] : (is_array($conditions) ? $conditions : []);
+        foreach ($rules as $rule) {
+            if (!is_array($rule)) {
+                continue;
+            }
+            $scope = strtolower(trim((string) ($rule['condition'] ?? $rule['scope'] ?? '')));
+            $action = strtolower(trim((string) ($rule['action'] ?? 'include')));
+            $value = strtolower(trim((string) ($rule['value'] ?? $rule['post_type'] ?? '')));
+            if ($action === 'include' && in_array($scope, ['singular', 'post_type', 'page_type'], true) && $value === $contentType) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Resolve an Archive template for a taxonomy or term.
      *
      * @param string               $archiveType 'category', 'tag', 'author', 'all'
@@ -280,7 +318,7 @@ final class ThemeTemplateResolver
      * @param array<string, mixed> $evalContext
      * @return ?array{page: array<string, mixed>, revision: array<string, mixed>}
      */
-    private function resolveTemplate(string $role, array $evalContext): ?array
+    private function resolveTemplate(string $role, array $evalContext, ?\Closure $accepts = null): ?array
     {
         if ($this->pages === null || $this->revisions === null) {
             return null;
@@ -292,7 +330,7 @@ final class ThemeTemplateResolver
         foreach ($this->templateIndex() as ['row' => $row, 'settings' => $settings]) {
             $slug = (string) ($row['slug'] ?? '');
 
-            if (!self::isRoleMatch($role, $settings, $slug)) {
+            if (!self::isRoleMatch($role, $settings, $slug) || ($accepts !== null && !$accepts($settings))) {
                 continue;
             }
 

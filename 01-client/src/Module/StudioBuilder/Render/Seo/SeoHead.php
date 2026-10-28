@@ -156,6 +156,24 @@ final class SeoHead
                 $this->verification,
             );
         }
+        // An item a plugin keeps itself (a Shop product): its own title, description, image and address.
+        $item = $context->attribute('single_item');
+        if (is_array($item) && is_string($item['title'] ?? null) && trim($item['title']) !== '' && is_string($item['url'] ?? null)) {
+            $description = is_string($item['description'] ?? null) ? trim(mb_substr(trim(strip_tags($item['description'])), 0, 300)) : '';
+            $image = is_string($item['image'] ?? null) && $item['image'] !== '' ? $item['image'] : null;
+            if ($image !== null && !preg_match('#^https?://#i', $image) && $context->site->baseUrl !== '') {
+                $image = $context->site->absoluteUrl($image);
+            }
+            return new self(
+                trim($item['title']) . ($this->siteName !== '' ? ' | ' . $this->siteName : ''),
+                $description !== '' ? $description : $this->description,
+                $this->robots,
+                $context->site->baseUrl !== '' ? $context->site->absoluteUrl($item['url']) : null,
+                $image ?? $this->ogImageUrl,
+                $this->siteName,
+                $this->verification,
+            );
+        }
         if ($context->attribute('is_search') === true || $context->attribute('is_404') === true) {
             $query = $context->attribute('search_query');
             $title = is_string($query) && trim($query) !== '' ? trim($query) . ($this->siteName !== '' ? ' | ' . $this->siteName : '') : $this->title;

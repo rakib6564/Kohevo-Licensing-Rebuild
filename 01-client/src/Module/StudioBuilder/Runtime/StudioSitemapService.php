@@ -22,6 +22,9 @@
  *     foreign-host canonical is already replaced by the page's own URL by that
  *     policy, so it can never put a foreign URL in the sitemap.
  *
+ * Items a plugin keeps itself (a Shop product, PluginSingleInterface) are listed too when `$pluginItems` (from
+ * StudioRuntimeFactory) answers them: the plugin active and licensed and a published Single template naming the type.
+ *
  * Cost: one page query plus one revision query per 500 pages.
  */
 
@@ -48,6 +51,7 @@ final class StudioSitemapService
         private readonly RevisionRepository $revisions,
         private readonly StudioReservedRoutes $reserved,
         private readonly StudioRenderService $renderer,
+        private readonly ?\Closure $pluginItems = null,
     ) {}
 
     /** The current tenant's site context (server-side base URL and branding). */
@@ -138,6 +142,19 @@ final class StudioSitemapService
                 'loc'     => $own,
                 'lastmod' => self::lastmod($row['published_at'] ?? null),
             ];
+        }
+
+        if ($this->pluginItems !== null) {
+            try {
+                foreach (($this->pluginItems)($this->tenants->id()) as $item) {
+                    if (is_array($item) && is_string($item['path'] ?? null)) {
+                        $own = $site->absoluteUrl($item['path']);
+                        $entries[$own] ??= ['home' => false, 'loc' => $own, 'lastmod' => self::lastmod($item['updated_at'] ?? null)];
+                    }
+                }
+            } catch (\Throwable) {
+                // The pages are listed without the plugin's items.
+            }
         }
 
         usort($entries, static fn(array $a, array $b): int => [$b['home'], $a['loc']] <=> [$a['home'], $b['loc']]);

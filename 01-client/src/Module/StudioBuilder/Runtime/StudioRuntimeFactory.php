@@ -138,7 +138,7 @@ final class StudioRuntimeFactory
             $render,
             $reserved,
             null,
-            new StudioSitemapService($tenants, $pages, $revisions, $reserved, $render),
+            new StudioSitemapService($tenants, $pages, $revisions, $reserved, $render, self::pluginSitemapItems($themeTemplates)),
             $themeTemplates,
         );
 
@@ -147,6 +147,33 @@ final class StudioRuntimeFactory
             $pages, $revisions, $templates, $dependencies, $compilations, $tokens,
             $compiler, $render, $invalidator, $app, $publicRuntime,
         );
+    }
+
+    /**
+     * The sitemap's plugin items (`/{prefix}/{slug}` of a PluginSingleInterface): only while the plugin is active and
+     * licensed and a published Single template names its content type, as the runtime would serve them.
+     *
+     * @return \Closure(int): list<array{path: string, updated_at: ?string}>
+     */
+    private static function pluginSitemapItems(?\Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver $themes): \Closure
+    {
+        return static function (int $tenantId) use ($themes): array {
+            $out = [];
+            foreach (PluginWidgetCatalog::singles() as $single) {
+                $prefix = \Slate\Module\StudioBuilder\Meta\PageRoutes::normalizePrefix($single->prefix($tenantId));
+                if (!is_string($prefix) || $prefix === '' || $themes === null
+                    || !\Slate\Services\Licensing\EntitlementService::canAccess($tenantId, $single->requiredEntitlement())
+                    || $themes->resolvePluginSingle($single->contentType(), '') === null) {
+                    continue;
+                }
+                foreach ($single->sitemap($tenantId) as $item) {
+                    if (is_string($item['slug'] ?? null) && $item['slug'] !== '') {
+                        $out[] = ['path' => '/' . $prefix . '/' . $item['slug'], 'updated_at' => is_string($item['updated_at'] ?? null) ? $item['updated_at'] : null];
+                    }
+                }
+            }
+            return $out;
+        };
     }
 
     /** The Phase 3 business providers — the only dynamic data sources Studio has. */

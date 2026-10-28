@@ -83,6 +83,11 @@ unit('part styles: every selector names a class the widget\'s renderers still wr
         $sources .= (string) file_get_contents($file);
     }
     $sources .= (string) file_get_contents(dirname(__DIR__, 2) . '/src/Module/StudioBuilder/Render/Html.php');
+    // A plugin's widgets (studio-widgets.php `parts`) are rendered by its own studio/ classes, or by the endpoints whose
+    // markup its cart widgets show (public/).
+    foreach (glob(dirname(__DIR__, 2) . '/plugins/*/{studio,public}/*.php', GLOB_BRACE) ?: [] as $file) {
+        $sources .= (string) file_get_contents($file);
+    }
     $manifests = [];
     foreach (ModuleBlockDefinitions::studioRegistry()->editorManifests() as $m) {
         $manifests[$m['type']] = $m;

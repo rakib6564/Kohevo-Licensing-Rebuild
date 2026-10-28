@@ -7,6 +7,13 @@
  *   ['blocks' => list<BlockDefinitionInterface>, 'renderers' => list<BlockRendererInterface>,
  *    'providers' => list<DataProviderInterface>]
  *
+ * and may add
+ *
+ *   'parts'   => [block type => [part => ['label' => …, 'selectors' => […]]]]  the parts an author can style (BlockParts),
+ *                only for the plugin's own block types;
+ *   'singles' => list<PluginSingleInterface>  content types the plugin keeps in its own tables and Studio shows through
+ *                a Single template at `/{prefix}/{slug}` (Shop's products).
+ *
  * Every INSTALLED plugin's file is read, active or not: a page that holds a booking block must still
  * open, validate and save when Booking is switched off. Whether a widget can be used is the
  * entitlement's job — `EntitlementService::canAccess()` needs the plugin active and licensed, so an
@@ -28,7 +35,10 @@ final class PluginWidgetCatalog
 {
     public const FILE = 'studio-widgets.php';
 
-    /** @var array<string, array{blocks: list<BlockDefinitionInterface>, renderers: list<BlockRendererInterface>, providers: list<DataProviderInterface>}> */
+    /** A part key, as BlockParts names them. */
+    private const PART_KEY = '/^[a-z][a-z0-9_]{0,40}$/';
+
+    /** @var array<string, array{blocks: list<BlockDefinitionInterface>, renderers: list<BlockRendererInterface>, providers: list<DataProviderInterface>, parts: array<string, array<string, array{label: string, selectors: list<string>}>>, singles: list<PluginSingleInterface>}> */
     private static array $cache = [];
 
     /** @return list<BlockDefinitionInterface> */
@@ -49,6 +59,29 @@ final class PluginWidgetCatalog
         return self::load($pluginsDir)['providers'];
     }
 
+    /** @return array<string, array<string, array{label: string, selectors: list<string>}>> block type => its parts */
+    public static function parts(?string $pluginsDir = null): array
+    {
+        return self::load($pluginsDir)['parts'];
+    }
+
+    /** @return list<PluginSingleInterface> */
+    public static function singles(?string $pluginsDir = null): array
+    {
+        return self::load($pluginsDir)['singles'];
+    }
+
+    /** The plugin single of a content type, or null. */
+    public static function single(string $contentType, ?string $pluginsDir = null): ?PluginSingleInterface
+    {
+        foreach (self::singles($pluginsDir) as $single) {
+            if ($single->contentType() === $contentType) {
+                return $single;
+            }
+        }
+        return null;
+    }
+
     /** The folder plugins are installed in (next to `src/`). */
     public static function pluginsDir(): string
     {
@@ -62,7 +95,7 @@ final class PluginWidgetCatalog
         self::$cache = [];
     }
 
-    /** @return array{blocks: list<BlockDefinitionInterface>, renderers: list<BlockRendererInterface>, providers: list<DataProviderInterface>} */
+    /** @return array{blocks: list<BlockDefinitionInterface>, renderers: list<BlockRendererInterface>, providers: list<DataProviderInterface>, parts: array<string, array<string, array{label: string, selectors: list<string>}>>, singles: list<PluginSingleInterface>} */
     private static function load(?string $pluginsDir): array
     {
         $dir = $pluginsDir ?? self::pluginsDir();
@@ -70,7 +103,7 @@ final class PluginWidgetCatalog
             return self::$cache[$dir];
         }
 
-        $out = ['blocks' => [], 'renderers' => [], 'providers' => []];
+        $out = ['blocks' => [], 'renderers' => [], 'providers' => [], 'parts' => [], 'singles' => []];
         $files = glob(rtrim($dir, '/') . '/*/' . self::FILE) ?: [];
         sort($files, SORT_STRING);
         foreach ($files as $file) {
@@ -79,19 +112,65 @@ final class PluginWidgetCatalog
                 if (!is_array($declared)) {
                     throw new \UnexpectedValueException('it must return an array');
                 }
-                foreach (['blocks' => BlockDefinitionInterface::class, 'renderers' => BlockRendererInterface::class, 'providers' => DataProviderInterface::class] as $key => $class) {
+                $found = ['blocks' => [], 'renderers' => [], 'providers' => [], 'singles' => []];
+                foreach (['blocks' => BlockDefinitionInterface::class, 'renderers' => BlockRendererInterface::class, 'providers' => DataProviderInterface::class, 'singles' => PluginSingleInterface::class] as $key => $class) {
                     foreach ((array) ($declared[$key] ?? []) as $item) {
                         if (!$item instanceof $class) {
                             throw new \UnexpectedValueException("every '{$key}' entry must be a {$class}");
                         }
-                        $out[$key][] = $item;
+                        $found[$key][] = $item;
                     }
                 }
+                $ownTypes = array_map(static fn(BlockDefinitionInterface $b): string => $b->type(), $found['blocks']);
+                $parts = self::cleanParts($declared['parts'] ?? [], $ownTypes);
+                foreach ($found['singles'] as $single) {
+                    if (preg_match('/^[a-z][a-z0-9_]{0,31}$/', $single->contentType()) !== 1) {
+                        throw new \UnexpectedValueException('a single content type must be a lowercase key');
+                    }
+                }
+                foreach ($found as $key => $items) {
+                    array_push($out[$key], ...$items);
+                }
+                $out['parts'] += $parts;
             } catch (\Throwable $e) {
                 StudioLog::failure('plugin_widgets', 'load ' . basename(dirname($file)), $e);
             }
         }
 
         return self::$cache[$dir] = $out;
+    }
+
+    /**
+     * A plugin's `parts`, checked: only its own block types, part keys BlockParts would accept, a label and one or more
+     * selectors made of class names, attribute tests and combinators (they are scoped to the block when written).
+     *
+     * @param list<string> $ownTypes
+     * @return array<string, array<string, array{label: string, selectors: list<string>}>>
+     */
+    private static function cleanParts(mixed $parts, array $ownTypes): array
+    {
+        if (!is_array($parts)) {
+            throw new \UnexpectedValueException("'parts' must be an array");
+        }
+        $out = [];
+        foreach ($parts as $type => $defs) {
+            if (!in_array($type, $ownTypes, true) || !is_array($defs)) {
+                throw new \UnexpectedValueException("'parts' may only name the plugin's own block types");
+            }
+            foreach ($defs as $key => $def) {
+                $selectors = is_array($def) ? ($def['selectors'] ?? null) : null;
+                if (!is_string($key) || preg_match(self::PART_KEY, $key) !== 1 || !is_string($def['label'] ?? null) || !is_array($selectors) || $selectors === []) {
+                    throw new \UnexpectedValueException("part '{$type}.{$key}' needs a key, a label and selectors");
+                }
+                foreach ($selectors as $selector) {
+                    if (!is_string($selector) || preg_match('/^[a-zA-Z0-9_\-\.\s>\[\]="~:()+*]{1,200}$/', $selector) !== 1 || str_contains($selector, '{')) {
+                        throw new \UnexpectedValueException("part '{$type}.{$key}' has a selector Studio cannot scope");
+                    }
+                }
+                $out[$type][$key] = ['label' => $def['label'], 'selectors' => array_values($selectors)]
+                    + (($def['states'] ?? true) === false ? ['states' => false] : []);
+            }
+        }
+        return $out;
     }
 }
