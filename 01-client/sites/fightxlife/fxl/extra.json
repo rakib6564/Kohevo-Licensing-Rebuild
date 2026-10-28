@@ -1,0 +1,100 @@
+{
+ "events": {
+  "colloque-free-clinic": {
+   "date": "24 Sep 2022",
+   "heure": "9:00 AM - 5:30 PM",
+   "tarif": "",
+   "lieu": ""
+  },
+  "event-gala-octo-pink": {
+   "date": "13 - 14 Oct 2022",
+   "heure": "6:30 PM",
+   "tarif": "75,00€",
+   "lieu": ""
+  },
+  "village-de-noel-a-rouge-cloitre-auderghem": {
+   "date": "17 - 18 Déc 2022",
+   "heure": "2:00 PM - 7:00 PM",
+   "tarif": "",
+   "lieu": ""
+  },
+  "fightxlife-au-festival-des-rencontres": {
+   "date": "16 Mai 2023",
+   "heure": "2:00 PM - 8:00 PM",
+   "tarif": "",
+   "lieu": ""
+  },
+  "les-fous-rires-de-fightxlife": {
+   "date": "17 Oct 2023",
+   "heure": "8:00 PM",
+   "tarif": "24,50€",
+   "lieu": ""
+  },
+  "les-fous-rires-de-fightxlife-2": {
+   "date": "04 Fév 2024",
+   "heure": "3:00 PM",
+   "tarif": "24,50€",
+   "lieu": ""
+  },
+  "fightxlife-soutien-le-relais-pour-la-vie-2024": {
+   "date": "09 - 10 Nov 2024",
+   "heure": "2:00 PM - 2:00 PM",
+   "tarif": "10,00€",
+   "lieu": ""
+  },
+  "bounce-back-festival-baob": {
+   "date": "12 Oct 2024",
+   "heure": "10:00 AM - 6:00 PM",
+   "tarif": "",
+   "lieu": ""
+  },
+  "chaque-pas-compte": {
+   "date": "01 - 02 Mai 2026",
+   "heure": "9:00 AM - 6:00 PM",
+   "tarif": "10,00€",
+   "lieu": ""
+  }
+ },
+ "products": {
+  "donation": {
+   "price": "10,00 €",
+   "couleurs": "",
+   "tailles": "",
+   "imgs": [
+    "https://fightxlife.com/wp-content/uploads/2022/05/Fightxlife-merch.jpg",
+    "https://fightxlife.com/wp-content/uploads/2022/05/Fightxlife-merch-8.jpg",
+    "https://fightxlife.com/wp-content/uploads/2022/05/Fightxlife-merch-35.jpg"
+   ]
+  },
+  "casquette-adulte-fightxlife": {
+   "price": "10,00 €",
+   "couleurs": "",
+   "tailles": "",
+   "imgs": [
+    "https://fightxlife.com/wp-content/uploads/2022/05/Fightxlife-merch-35.jpg",
+    "https://fightxlife.com/wp-content/uploads/2022/05/Fightxlife-merch.jpg",
+    "https://fightxlife.com/wp-content/uploads/2022/05/Fightxlife-merch-8.jpg"
+   ]
+  },
+  "t-shirt-fightxlife": {
+   "price": "20,00 €",
+   "couleurs": "Blanc, Noir",
+   "tailles": "XS, S, M, L, XL, XXL",
+   "imgs": [
+    "https://fightxlife.com/wp-content/uploads/2022/05/Fightxlife-merch-8.jpg",
+    "https://fightxlife.com/wp-content/uploads/2022/05/Fightxlife-merch.jpg",
+    "https://fightxlife.com/wp-content/uploads/2022/05/Fightxlife-merch-35.jpg"
+   ]
+  },
+  "sweat-a-capuche": {
+   "price": "35,00 €",
+   "couleurs": "Rose Pastel, Bleu Pastel, Bleu Marine, Beige, Blanc",
+   "tailles": "XS, S, M, L, XL",
+   "imgs": [
+    "https://fightxlife.com/wp-content/uploads/2022/05/Fightxlife-merch.jpg",
+    "https://fightxlife.com/wp-content/uploads/2022/05/Fightxlife-merch-35.jpg",
+    "https://fightxlife.com/wp-content/uploads/2022/05/Fightxlife-merch-8.jpg"
+   ]
+  }
+ }
+}

@@ -4257,19 +4257,69 @@
                 "aspect_ratio": "16:9",
                 "autoplay": false,
                 "controls": true,
+                "end": 0,
+                "hosted_url": null,
+                "lazy_load": true,
+                "lightbox": false,
                 "loop": false,
                 "muted": false,
+                "overlay": false,
+                "overlay_image": null,
+                "play_icon": true,
+                "privacy": true,
+                "source": "youtube",
+                "start": 0,
                 "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
             },
-            "description": "Responsive video player",
+            "description": "YouTube, Vimeo or self-hosted video, played on the page",
             "field_schema": [
+                {
+                    "key": "source",
+                    "type": "enum",
+                    "label": "Source",
+                    "required": false,
+                    "default": "youtube",
+                    "allowed_values": [
+                        "youtube",
+                        "vimeo",
+                        "hosted"
+                    ]
+                },
                 {
                     "key": "url",
                     "type": "string",
                     "label": "Video URL",
-                    "required": true,
+                    "required": false,
                     "default": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
                     "max_length": 1000
+                },
+                {
+                    "key": "hosted_url",
+                    "type": "url",
+                    "label": "Video File",
+                    "required": false,
+                    "default": null,
+                    "max_length": 1000
+                },
+                {
+                    "key": "start",
+                    "type": "number",
+                    "label": "Start Time (seconds)",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 86400,
+                    "integer_only": true
+                },
+                {
+                    "key": "end",
+                    "type": "number",
+                    "label": "End Time (seconds)",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 86400,
+                    "integer_only": true
                 },
                 {
                     "key": "aspect_ratio",
@@ -4280,7 +4330,8 @@
                     "allowed_values": [
                         "16:9",
                         "4:3",
-                        "1:1"
+                        "1:1",
+                        "9:16"
                     ]
                 },
                 {
@@ -4289,13 +4340,6 @@
                     "label": "Autoplay",
                     "required": false,
                     "default": false
-                },
-                {
-                    "key": "controls",
-                    "type": "boolean",
-                    "label": "Show Controls",
-                    "required": false,
-                    "default": true
                 },
                 {
                     "key": "muted",
@@ -4308,6 +4352,55 @@
                     "key": "loop",
                     "type": "boolean",
                     "label": "Loop",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "controls",
+                    "type": "boolean",
+                    "label": "Show Controls",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "privacy",
+                    "type": "boolean",
+                    "label": "Privacy Mode",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "lazy_load",
+                    "type": "boolean",
+                    "label": "Lazy Load",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "overlay",
+                    "type": "boolean",
+                    "label": "Image Overlay",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "overlay_image",
+                    "type": "media_ref",
+                    "label": "Overlay Image",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "play_icon",
+                    "type": "boolean",
+                    "label": "Play Icon",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "lightbox",
+                    "type": "boolean",
+                    "label": "Lightbox",
                     "required": false,
                     "default": false
                 }
@@ -4342,7 +4435,20 @@
                 "text_shadow",
                 "overlay"
             ],
-            "style_parts": [],
+            "style_parts": [
+                {
+                    "key": "poster",
+                    "label": "Overlay image"
+                },
+                {
+                    "key": "play",
+                    "label": "Play icon"
+                },
+                {
+                    "key": "svg",
+                    "label": "Play symbol"
+                }
+            ],
             "title": "Video",
             "type": "core.video",
             "version": 1

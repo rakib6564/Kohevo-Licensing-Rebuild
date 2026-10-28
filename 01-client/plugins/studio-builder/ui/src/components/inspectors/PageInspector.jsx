@@ -179,6 +179,29 @@ function StickyHeaderSetting({ value, onChange }) {
   );
 }
 
+/**
+ * A content item's type and its fields' values, read from the server (`content_fields`). The values are edited on the
+ * page's settings screen; the live page shows them through Field value blocks. Nothing for a plain page.
+ */
+function ContentFields({ content, settingsUrl }) {
+  if (!content) return null;
+  return (
+    <section data-content-fields>
+      <h3 className="sbx-inspector__subtitle">{t('content_fields_title')}</h3>
+      <p className="sbx-hint">{t('content_fields_type', { type: content.type_label })} {t('content_fields_hint')}</p>
+      <dl className="sbx-content-fields">
+        {asList(content.fields).map((f) => (
+          <div key={f.key} className="sbx-content-fields__row">
+            <dt>{f.label}</dt>
+            <dd>{f.text !== '' ? f.text : <span className="sbx-muted">{t('content_fields_empty')}</span>}</dd>
+          </div>
+        ))}
+      </dl>
+      {settingsUrl && <a className="sbx-btn sbx-btn--xs" href={settingsUrl} target="_blank" rel="noopener">{t('content_fields_edit')}</a>}
+    </section>
+  );
+}
+
 export function PageInspector() {
   const { manifest, applyOp, transport, boot, createPartial = null } = useEditor();
   const working = useEngineState((s) => s.working);
@@ -211,6 +234,18 @@ export function PageInspector() {
     </Field>
   );
 
+  // A content item's fields (re-read with each revision, so a value saved on the settings screen shows after the next save).
+  const [content, setContent] = useState(null);
+  useEffect(() => {
+    if (!chromed || !transport || typeof transport.contentFields !== 'function') return undefined;
+    let alive = true;
+    transport.contentFields(boot.pageId).then((res) => {
+      if (alive && res && res.ok) setContent(res.data.content || null);
+    });
+    return () => { alive = false; };
+  }, [transport, boot.pageId, revisionId, chromed]);
+  const settingsUrl = boot.builderUrl ? `${String(boot.builderUrl).replace(/builder\.php$/, 'page-edit.php')}?id=${boot.pageId}#sb-meta-form` : '';
+
   // The published templates of the same role, for the "same conditions as" note (re-read with each revision).
   const conditioned = hasDisplayConditions(page, settings);
   const [peers, setPeers] = useState([]);
@@ -231,6 +266,8 @@ export function PageInspector() {
       {conditioned && (
         <ConditionsSetting page={page} settings={settings} peers={peers} onSave={(conditions) => applyOp(ops.updateSettings({ conditions }), { label: t('cond_title') })} />
       )}
+
+      <ContentFields content={content} settingsUrl={settingsUrl} />
 
       {page && page.page_type === 'header_partial' && (
         <StickyHeaderSetting value={settings.sticky_header} onChange={(next) => applyOp(ops.updateSettings({ sticky_header: next }), { label: t('sticky_header') })} />

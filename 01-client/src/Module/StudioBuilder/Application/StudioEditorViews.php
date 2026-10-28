@@ -35,7 +35,7 @@ final class StudioEditorViews
             'id'                       => (int) $page->id,
             'is_published'             => $page->isPublished(),
             'page_type'                => $page->pageType,
-            'public_path'              => $page->routeMode === 'homepage' ? '/' : '/' . $page->slug,
+            'public_path'              => \Slate\Module\StudioBuilder\Meta\PageRoutes::path((int) ($row['tenant_id'] ?? 0), (int) $page->id, $page->slug, $page->routeMode),
             'published_at'             => $page->publishedAt,
             'published_revision_id'    => $page->publishedRevisionId,
             'route_mode'               => $page->routeMode,

@@ -66,3 +66,42 @@ unit('media api: the endpoint is gated like the authoring API and cannot be reac
     assert_true(strpos($src, 'csrf_verify()') < strrpos($src, 'Media::upload('), 'CSRF is checked before anything is stored');
     assert_true(strpos($src, 'StudioPermissions::EDIT') < strrpos($src, 'Media::listAll('), 'permission is checked before listing');
 });
+
+unit('media api: the Video widget asks for video files; anything else is an image request', function (): void {
+    assert_eq('video', StudioMediaApi::listQuery(['type' => 'video'])['type']);
+    foreach ([[], ['type' => 'image'], ['type' => 'document'], ['type' => ['video']]] as $get) {
+        assert_eq('image', StudioMediaApi::listQuery($get)['type'], json_encode($get));
+    }
+    assert_eq('image', StudioMediaApi::type(null));
+
+    $video = ['id' => 4, 'url' => '/uploads/media/2026/10/c.mp4', 'path' => '/uploads/media/2026/10/c.mp4', 'kind' => 'other', 'mime' => 'video/mp4', 'size_bytes' => 9000, 'original_name' => 'clip.mp4'];
+    $item = StudioMediaApi::shapeItem($video, 'video');
+    assert_eq(['id' => 4, 'url' => '/uploads/media/2026/10/c.mp4', 'original_name' => 'clip.mp4'], ['id' => $item['id'] ?? null, 'url' => $item['url'] ?? null, 'original_name' => $item['original_name'] ?? null]);
+    assert_null(StudioMediaApi::shapeItem($video), 'a video is not an image');
+    assert_null(StudioMediaApi::shapeItem(['kind' => 'image', 'mime' => 'image/png', 'path' => '/a.png', 'url' => '/a.png', 'id' => 1], 'video'), 'an image is not a video');
+    assert_null(StudioMediaApi::shapeItem(['mime' => 'application/pdf', 'path' => '/a.pdf'] + $video, 'video'), 'a document is not a video');
+    assert_null(StudioMediaApi::shapeItem(['path' => '/a.php', 'url' => '/a.php'] + $video, 'video'), 'a video MIME on another extension is refused');
+    assert_null(StudioMediaApi::shapeItem(['url' => 'javascript:alert(1)//c.mp4'] + $video, 'video'), 'an unsafe URL is refused');
+
+    $list = StudioMediaApi::shapeList(['items' => [$video, ['id' => 2, 'url' => '/b.png', 'kind' => 'image']], 'total' => 2], 'video');
+    assert_eq([4], array_column($list['items'], 'id'));
+    assert_eq(256 * 1024 * 1024, StudioMediaApi::MAX_VIDEO_UPLOAD_BYTES);
+
+    $endpoint = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/admin/media-api.php');
+    assert_true(str_contains($endpoint, "'allowed_mimes' => StudioMediaApi::VIDEO_MIMES") && str_contains($endpoint, "'max_bytes'     => StudioMediaApi::MAX_VIDEO_UPLOAD_BYTES"), 'a video upload has its own types and ceiling');
+    assert_true(str_contains($endpoint, "'allowed_mimes' => Media::imageMimes()"), 'an image upload keeps the image rules');
+});
+
+unit('core media: video files are allowed, kept as kind "other", and told apart by MIME and extension', function (): void {
+    $media = \Slate\Services\Media\Media::class;
+    foreach (['mp4', 'webm', 'mov'] as $ext) {
+        assert_true(in_array($ext, $media::allowedExts(), true), "{$ext} is an allowed extension");
+    }
+    assert_true(in_array('video/mp4', $media::allowedMimes(), true));
+    assert_eq('other', $media::kindForMime('video/mp4', 'mp4'), 'no schema change: the ENUM has no video value');
+    assert_true($media::isVideo(['mime' => 'video/webm', 'path' => '/uploads/media/x.webm']));
+    assert_true($media::isVideo('video/quicktime', '.mov'));
+    assert_false($media::isVideo(['mime' => 'video/mp4', 'path' => '/uploads/media/x.php']), 'MIME and extension must agree');
+    assert_false($media::isVideo(['mime' => 'image/png', 'path' => '/uploads/media/x.png']));
+    assert_false(in_array('php', $media::allowedExts(), true));
+});

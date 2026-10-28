@@ -495,6 +495,26 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             assert_null($rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->layoutTemplate($actorA, $p2Id)), 'a page its conditions do not match has none');
             assert_null($rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->layoutTemplate($actorA, $tplSingleId)), 'nor has the template itself');
 
+            // A content item: its type's list (typesByPage), and its fields' values in the builder's page settings.
+            \Slate\Data\Database::setSetting('studio_custom_post_types', json_encode(['cours' => ['key' => 'cours', 'singular' => 'Cours', 'plural' => 'Cours', 'route' => '/', 'show_in_menu' => false]]), S6_TENANT_A);
+            \Slate\Data\Database::setSetting('studio_meta_fields', json_encode([
+                ['id' => 'f_lieu', 'post_type' => 'cours', 'label' => 'Lieu', 'key' => 'lieu', 'type' => 'text', 'required' => true, 'options' => []],
+                ['id' => 'f_tarifs', 'post_type' => 'cours', 'label' => 'Tarifs', 'key' => 'tarifs', 'type' => 'list', 'required' => false, 'options' => []],
+            ]), S6_TENANT_A);
+            assert_null($rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->contentFields($actorA, $p1Id)), 'a plain page has no content fields');
+            assert_false(\Slate\Module\StudioBuilder\Meta\PageMeta::assignType(S6_TENANT_A, $p2Id, 'nope'), 'a type that does not exist is refused');
+            assert_true(\Slate\Module\StudioBuilder\Meta\PageMeta::assignType(S6_TENANT_A, $p2Id, 'cours'), 'a new item gets its type although a required field is still empty');
+            assert_eq([$p2Id => 'cours'], array_intersect_key(\Slate\Module\StudioBuilder\Meta\PageMeta::typesByPage(S6_TENANT_A), [$p1Id => 1, $p2Id => 1]), 'only the item has a type');
+            $empty = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->contentFields($actorA, $p2Id));
+            assert_eq(['', ''], array_column($empty['fields'], 'text'), 'no values yet');
+            \Slate\Module\StudioBuilder\Meta\PageMeta::save(S6_TENANT_A, $p2Id, 'cours', ['lieu' => 'Molenbeek', 'tarifs' => "20 €\n50 €"]);
+            $filled = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->contentFields($actorA, $p2Id));
+            assert_eq('Cours', $filled['type_label'], 'the type name');
+            assert_eq([['key' => 'lieu', 'label' => 'Lieu', 'field_type' => 'text', 'text' => 'Molenbeek'], ['key' => 'tarifs', 'label' => 'Tarifs', 'field_type' => 'list', 'text' => '20 € · 50 €']], $filled['fields'], 'each field with its value as text');
+            assert_null($rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->contentFields($actorA, $tplSingleId)), 'a template has none');
+            assert_false(\Slate\Module\StudioBuilder\Meta\PageMeta::showsInMenu(['show_in_menu' => false]) || !\Slate\Module\StudioBuilder\Meta\PageMeta::showsInMenu([]), 'a type is in the sidebar unless the site turned it off');
+            \Slate\Module\StudioBuilder\Meta\PageMeta::forget(S6_TENANT_A, $p2Id);
+
             // Publishing a change to the template reaches the page without republishing the page.
             $tplSingleDraft = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->loadEditorDocument($actorA, $tplSingleId));
             $headingId = (string) $tplSingleDraft['document']['sections'][0]['blocks'][0]['id'];

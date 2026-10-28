@@ -870,6 +870,48 @@ final class StudioApplicationService
     }
 
     /**
+     * The content type of a page and its fields' current values, as text, for the builder's page settings: `{type,
+     * type_label, fields: [{key, label, field_type, text}]}`, or null for a plain page (or a header, footer, template).
+     * The values are edited on the page's settings screen (admin/page-edit.php, the content-type card). Read-only.
+     *
+     * @return array{type: string, type_label: string, fields: list<array{key: string, label: string, field_type: string, text: string}>}|null
+     */
+    public function contentFields(StudioActor $actor, int $pageId): ?array
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::VIEW);
+        [$page] = $this->currentDocument($pageId);
+        if (!in_array((string) $page['page_type'], PageMeta::PAGE_TYPES, true)) {
+            return null;
+        }
+        $meta = PageMeta::read($tenantId, $pageId);
+        $type = PageMeta::postTypes($tenantId)[$meta['type']] ?? null;
+        if ($type === null) {
+            return null;
+        }
+        $text = static function (mixed $v) use (&$text): string {
+            if (is_bool($v)) {
+                return $v ? '✓' : '';
+            }
+            if (is_scalar($v)) {
+                return mb_substr(trim((string) $v), 0, 160);
+            }
+            if (is_array($v)) {
+                return mb_substr(implode(' · ', array_filter(array_map($text, $v), static fn(string $s): bool => $s !== '')), 0, 160);
+            }
+            return '';
+        };
+        $fields = [];
+        foreach (PageMeta::fieldsFor($tenantId, $meta['type']) as $f) {
+            $key = (string) ($f['key'] ?? '');
+            if ($key === '') {
+                continue;
+            }
+            $fields[] = ['key' => $key, 'label' => (string) ($f['label'] ?? $key), 'field_type' => (string) ($f['type'] ?? 'text'), 'text' => $text($meta['values'][$key] ?? null)];
+        }
+        return ['type' => $meta['type'], 'type_label' => (string) ($type['singular'] ?? $meta['type']), 'fields' => $fields];
+    }
+
+    /**
      * The published Single template that lays this page out on the live site, from its working draft's category and
      * content type, with the width of the section the page's content sits in: `{id, title, content_width}`, or null.
      * The section Inspector uses this to say why the template keeps a wider section narrower. Read-only.
@@ -1535,7 +1577,7 @@ final class StudioApplicationService
         // A draft saved at an older block version is read at the current one, so the next edit saves it upgraded.
         $document = $revision !== null
             ? DocumentUpgrader::upgrade(CanonicalJson::decode((string) $revision['document_json']), $this->registry)['document']
-            : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
+            : CanonicalDocumentSchema::emptyDocument((string) $page['page_type']);
 
         return [
             'page'     => StudioEditorViews::page($page),
@@ -1810,7 +1852,7 @@ final class StudioApplicationService
             }
         }
 
-        $baseDocument     = $base !== null ? CanonicalJson::decode((string) $base['document_json']) : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
+        $baseDocument     = $base !== null ? CanonicalJson::decode((string) $base['document_json']) : CanonicalDocumentSchema::emptyDocument((string) $page['page_type']);
         $proposedDocument = CanonicalJson::decode((string) $proposed['document_json']);
 
         $depsBefore = $this->dependencySignatures($baseDocument);
@@ -2057,7 +2099,7 @@ final class StudioApplicationService
         // A draft saved at an older block version is read at the current one, so the next edit saves it upgraded.
         $document = $revision !== null
             ? DocumentUpgrader::upgrade(CanonicalJson::decode((string) $revision['document_json']), $this->registry)['document']
-            : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
+            : CanonicalDocumentSchema::emptyDocument((string) $page['page_type']);
         if (is_array($document)) {
             $document['document_type'] = (string) $page['page_type']; // the page decides, whatever an older draft said
         }

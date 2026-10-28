@@ -29,7 +29,7 @@ if (!function_exists('unit')) {
 require_once dirname(__DIR__) . '/support/license_signing.php';
 require_once dirname(__DIR__, 2) . '/includes/Plugin.php';
 require_once dirname(__DIR__, 2) . '/plugins/studio-builder/StudioBuilder.php';
-require_once dirname(__DIR__, 2) . '/plugins/studio-testimonial-widget/StudioTestimonialWidget.php';
+require_once dirname(__DIR__) . '/fixtures/studio-testimonial-widget/StudioTestimonialWidget.php';
 
 use Slate\Data\Database;
 use Slate\Data\MigrationRunner;
@@ -191,7 +191,7 @@ unit('sprint8 integration: developer widget SDK, third-party plugin loading, ver
             $testimonialPlugin = new StudioTestimonialWidget(
                 'studio-testimonial-widget',
                 ['version' => '1.0.0'],
-                dirname(__DIR__, 2) . '/plugins/studio-testimonial-widget'
+                dirname(__DIR__) . '/fixtures/studio-testimonial-widget'
             );
             $testimonialPlugin->boot();
             assert_true(Studio::widgets()->has('acme.testimonial'), 'Plugin registered acme.testimonial');

@@ -5,10 +5,12 @@
  *   GET  /plugins/studio-builder/admin/media-api.php?q=<search>&page=<n>      images of this site
  *   GET  /plugins/studio-builder/admin/media-api.php?ids=3,7                  those images (previews)
  *   POST /plugins/studio-builder/admin/media-api.php        multipart `file`   upload one image
+ *   `type=video` (query string, or a POST field) does the same for video files: the Video widget's picker.
  *
  * A thin adapter over the core Media service, so the picker needs no other plugin. Same gates as the
  * authoring API: signed in, entitled to Studio, `studio-builder.edit`, the session CSRF token on a
- * POST, the per-session rate limit. Images only, 10 MB, SVG sanitised by Media::upload().
+ * POST, the per-session rate limit. Images up to 10 MB, SVG sanitised by Media::upload(); video files
+ * (mp4, m4v, webm, ogv, mov) up to 256 MB.
  */
 
 declare(strict_types=1);
@@ -70,28 +72,33 @@ try {
             $items = [];
             foreach ($q['ids'] as $id) {
                 $row = Media::get($id);
-                $item = is_array($row) ? StudioMediaApi::shapeItem($row) : null;
+                $item = is_array($row) ? StudioMediaApi::shapeItem($row, $q['type']) : null;
                 if ($item !== null) {
                     $items[] = $item;
                 }
             }
             $respond(200, ['ok' => true, 'data' => ['items' => $items, 'total' => count($items), 'page' => 1, 'pages' => 1]]);
         }
-        $result = Media::listAll(['type' => 'image', 'search' => $q['search'], 'page' => $q['page'], 'per_page' => StudioMediaApi::PER_PAGE]);
-        $respond(200, ['ok' => true, 'data' => StudioMediaApi::shapeList($result)]);
+        $result = Media::listAll(['type' => $q['type'], 'search' => $q['search'], 'page' => $q['page'], 'per_page' => StudioMediaApi::PER_PAGE]);
+        $respond(200, ['ok' => true, 'data' => StudioMediaApi::shapeList($result, $q['type'])]);
     }
 
+    $type = StudioMediaApi::type($_POST['type'] ?? null);
     if (empty($_FILES['file']) || !is_array($_FILES['file']) || is_array($_FILES['file']['name'] ?? null)) {
-        $fail(400, 'validation_error', 'Choose one image to upload.');
+        $fail(400, 'validation_error', $type === 'video' ? 'Choose one video to upload.' : 'Choose one image to upload.');
     }
-    $res = Media::upload('file', [
+    $res = Media::upload('file', $type === 'video' ? [
+        'allowed_mimes' => StudioMediaApi::VIDEO_MIMES,
+        'allowed_exts'  => StudioMediaApi::VIDEO_EXTS,
+        'max_bytes'     => StudioMediaApi::MAX_VIDEO_UPLOAD_BYTES,
+    ] : [
         'allowed_mimes' => Media::imageMimes(),
         'allowed_exts'  => Media::IMAGE_EXTS,
         'max_bytes'     => StudioMediaApi::MAX_UPLOAD_BYTES,
     ]);
-    $item = is_array($res) && !empty($res['id']) ? StudioMediaApi::shapeItem($res) : null;
+    $item = is_array($res) && !empty($res['id']) ? StudioMediaApi::shapeItem($res, $type) : null;
     if ($item === null) {
-        $fail(422, 'validation_error', is_array($res) && !empty($res['error']) && is_string($res['error']) ? $res['error'] : 'That file could not be uploaded as an image.');
+        $fail(422, 'validation_error', is_array($res) && !empty($res['error']) && is_string($res['error']) ? $res['error'] : ($type === 'video' ? 'That file could not be uploaded as a video.' : 'That file could not be uploaded as an image.'));
     }
     $respond(201, ['ok' => true, 'data' => ['item' => $item]]);
 } catch (\Throwable $e) {

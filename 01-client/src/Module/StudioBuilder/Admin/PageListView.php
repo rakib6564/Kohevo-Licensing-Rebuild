@@ -21,9 +21,11 @@ final class PageListView
      * @param bool                       $canEdit whether "Open builder" is offered
      * @param bool                       $canDelete whether the selection bar offers Delete (the list sits inside a POST form that carries `ids[]`)
      * @param string                     $settingsUrl the page-settings screen (`?id=` is appended); empty offers no link
+     * @param array<int, string>         $typeLabels page id => its content type's name: the row shows that name as its
+     *                                               type and offers Fields (the settings screen's content-type card)
      * @return string the .data-list markup (no script tag; see slate_data_list_script())
      */
-    public static function render(array $pages, bool $canEdit, string $builderUrl, string $previewUrl, bool $canDelete = false, string $settingsUrl = ''): string
+    public static function render(array $pages, bool $canEdit, string $builderUrl, string $previewUrl, bool $canDelete = false, string $settingsUrl = '', array $typeLabels = []): string
     {
         if (!function_exists('slate_data_row')) {
             require_once dirname(__DIR__, 4) . '/includes/ui_components.php';
@@ -46,10 +48,11 @@ final class PageListView
             $hasChanges  = $published && !empty($p['has_unpublished_changes']);
             $title       = (string) $p['title'];
             $statusLabel = $published ? \__('studio_status_published', 'Published') : \__('studio_status_draft', 'Draft');
+            $typeLabel   = $typeLabels[$id] ?? self::kindLabel((string) $p['page_type']);
 
             $detail = [
                 'address' => ['label' => \__('studio_address', 'Address'), 'html' => '<code>' . \e((string) $p['public_path']) . '</code>'],
-                'type'    => ['label' => \__('studio_page_type', 'Type'), 'value' => (string) $p['page_type']],
+                'type'    => ['label' => \__('studio_page_type', 'Type'), 'value' => $typeLabel],
                 'status'  => ['label' => \__('status', 'Status'), 'value' => $statusLabel . ($hasChanges ? ' · ' . \__('studio_unpublished_changes', 'unpublished changes') : '')],
             ];
             if (!empty($p['updated_at'])) {
@@ -65,6 +68,10 @@ final class PageListView
                 $actions .= '<a class="btn btn-sm btn-ghost" href="' . \e($settingsUrl . '?id=' . $id) . '">'
                     . \e(\__('studio_page_settings', 'Settings')) . '</a> ';
             }
+            if ($settingsUrl !== '' && isset($typeLabels[$id])) {
+                $actions .= '<a class="btn btn-sm btn-ghost" href="' . \e($settingsUrl . '?id=' . $id . '#sb-meta-form') . '">'
+                    . \e(\__('studio_item_fields', 'Fields')) . '</a> ';
+            }
             $actions .= '<a class="btn btn-sm btn-ghost" target="_blank" rel="noopener" href="' . \e($previewUrl . '?page=' . $id) . '">'
                 . \e(\__('studio_preview', 'Preview')) . '</a>';
 
@@ -74,7 +81,7 @@ final class PageListView
                 'avatar_color' => $published ? 'success' : 'muted',
                 'title'        => $title,
                 'meta'         => (string) $p['public_path'],
-                'value'        => (string) $p['page_type'],
+                'value'        => $typeLabel,
                 'badge'        => [$statusLabel, $published ? 'active' : 'warning'],
                 'detail'       => $detail,
                 'actions'      => $actions,
@@ -83,6 +90,19 @@ final class PageListView
         echo '</div>';
 
         return (string) ob_get_clean();
+    }
+
+    /** A page kind as one word that fits the list's type pill: "Header", "Template", not the stored `header_partial` or `system`. */
+    public static function kindLabel(string $pageType): string
+    {
+        return match ($pageType) {
+            'page'           => \__('studio_kind_page', 'Page'),
+            'landing'        => \__('studio_kind_landing', 'Landing'),
+            'header_partial' => \__('studio_kind_header', 'Header'),
+            'footer_partial' => \__('studio_kind_footer', 'Footer'),
+            'system'         => \__('studio_kind_template', 'Template'),
+            default          => $pageType,
+        };
     }
 
     /**
