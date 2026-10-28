@@ -213,6 +213,7 @@ final class StudioStylesheet
             . '.sb-nav__sub .sb-nav__item--parent{flex-wrap:nowrap}.sb-nav__sub .sb-nav__item--parent>.sb-nav__link{flex:1}'
             . '.sb-nav__sub .sb-nav__link{display:block;padding:.55rem 1.25rem;white-space:nowrap}.sb-nav--pill .sb-nav__sub .sb-nav__link{border-radius:0}'
             . '.sb-nav--horizontal .sb-nav__sub .sb-nav__toggle{padding:.55rem 1rem}.sb-nav--horizontal .sb-nav__sub .sb-nav__caret,.sb-nav--horizontal .sb-nav__sub .sb-nav__toggle::before{transform:rotate(-90deg)}'
+            . '.sb-nav--vertical .sb-nav__item--parent{flex-wrap:wrap}.sb-nav--vertical .sb-nav__item--parent>:is(.sb-nav__link,.sb-nav__parent){flex:1}.sb-nav--vertical .sb-nav__toggle{align-self:stretch;padding:0 .5rem}'
             . '.sb-nav--vertical .sb-nav__sub{flex-basis:100%;padding:0 0 0 1rem}.sb-nav--vertical.sb-nav--center .sb-nav__item--parent{justify-content:center}.sb-nav--vertical.sb-nav--center .sb-nav__sub{padding-left:0}'
             . '.sb-nav--vertical.sb-nav--right .sb-nav__item--parent{justify-content:flex-end}.sb-nav--vertical.sb-nav--right .sb-nav__sub{padding:0 1rem 0 0}'
             . 'html[data-sb-ready] .sb-nav--vertical .sb-nav__item--parent:not([data-open])>.sb-nav__sub{display:none}'
