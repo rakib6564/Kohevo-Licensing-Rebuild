@@ -1,13 +1,23 @@
 // A single, archive or 404 template is previewed with a sample of what it gets on the site: an archive with a type and
 // name, a single template on a chosen page; a 404 needs nothing.
 import { test, expect } from '@playwright/test';
-import { settled } from './helpers.mjs';
+import { settled, archivePage } from './helpers.mjs';
 
 test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'preview bar (desktop)');
 });
 
-/** Create a theme template of `type` from the Templates screen and open its page in the builder. */
+// The templates made here are published for the entire site, and the editor lays every page out in its Single
+// template, so each one is deleted afterwards: otherwise every later spec edits its page inside this template.
+const made = [];
+test.afterEach(async ({ page }) => {
+  if (!made.length) return;
+  // archivePage needs the builder's boot data, so a test that stopped elsewhere opens one of its templates first.
+  if (!(await page.locator('#sb-builder-boot').count())) await page.goto(`/plugins/studio-builder/admin/builder.php?page=${made[0]}`);
+  while (made.length) await archivePage(page, made.pop());
+});
+
+/** Create a theme template of `type` from the Templates screen and open its page in the builder (deleted after the test). */
 async function createTemplateAndOpen(page, type, name) {
   await page.goto('/plugins/studio-builder/admin/templates.php');
   await page.evaluate(() => { const d = document.getElementById('sb-tpl-drawer'); if (d) d.style.display = 'block'; });
@@ -19,6 +29,7 @@ async function createTemplateAndOpen(page, type, name) {
   await page.goto(`/plugins/studio-builder/admin/templates.php?type=${type}`);
   const hrefs = await page.locator('a', { hasText: 'Edit in Canvas' }).evaluateAll((as) => as.map((a) => a.getAttribute('href')));
   const newest = hrefs.map((h) => ({ h, id: Number((h.match(/page=(\d+)/) || [])[1]) })).sort((a, b) => b.id - a.id)[0];
+  made.push(newest.id);
   await page.goto(newest.h);
   await page.locator('iframe.sbx-canvas__frame').waitFor();
   await settled(page);
