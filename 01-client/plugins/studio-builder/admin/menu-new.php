@@ -38,7 +38,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $key = trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower($name)), '-');
         }
         $items = is_array($_POST['items'] ?? null) ? array_values($_POST['items']) : [];
-        $menuForm = ['key' => $key, 'name' => $name, 'items' => array_map(static fn($r): array => is_array($r) ? ['label' => (string) ($r['label'] ?? ''), 'url' => (string) ($r['url'] ?? ''), 'new_tab' => !empty($r['new_tab'])] : [], $items)];
+        $menuForm = ['key' => $key, 'name' => $name, 'items' => array_map(static fn($r): array => is_array($r) ? ['label' => (string) ($r['label'] ?? ''), 'url' => (string) ($r['url'] ?? ''), 'new_tab' => !empty($r['new_tab']), 'depth' => (int) ($r['depth'] ?? 0)] : [], $items)];
         try {
             StudioMenus::save($tenantId, $key, $name, $items);
             header('Location: menus.php?saved=1', true, 303);

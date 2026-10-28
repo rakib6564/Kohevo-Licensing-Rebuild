@@ -55,7 +55,7 @@ if ($menu !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $newKey = $key;
         }
         $items = is_array($_POST['items'] ?? null) ? array_values($_POST['items']) : [];
-        $menuForm = ['key' => $newKey, 'name' => $name, 'items' => array_map(static fn($r): array => is_array($r) ? ['label' => (string) ($r['label'] ?? ''), 'url' => (string) ($r['url'] ?? ''), 'new_tab' => !empty($r['new_tab'])] : [], $items)];
+        $menuForm = ['key' => $newKey, 'name' => $name, 'items' => array_map(static fn($r): array => is_array($r) ? ['label' => (string) ($r['label'] ?? ''), 'url' => (string) ($r['url'] ?? ''), 'new_tab' => !empty($r['new_tab']), 'depth' => (int) ($r['depth'] ?? 0)] : [], $items)];
         try {
             StudioMenus::save($tenantId, $newKey, $name, $items, $key, (string) ($_POST['version'] ?? ''));
             header('Location: menu-edit.php?key=' . rawurlencode($newKey) . '&saved=1', true, 303);

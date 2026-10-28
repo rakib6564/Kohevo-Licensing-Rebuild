@@ -240,6 +240,14 @@ unit('audit step 6 integration: revisions, menus, document type, component refer
             assert_true($refused, 'a save from a form showing an older version of the menu is refused as a conflict, not silently applied');
             assert_eq('Main menu', StudioMenus::find(SBA6_A, 'main')['name'] ?? null);
 
+            // Submenus: the form's rows (each with its depth) are stored as a tree and read back as the same rows.
+            $rows = [['label' => 'Home', 'url' => '/', 'depth' => 0], ['label' => 'Projets', 'url' => '', 'depth' => 0], ['label' => 'Nos actions', 'url' => '/nos-actions/', 'depth' => 1], ['label' => 'Gala', 'url' => '/gala/', 'depth' => 2]];
+            StudioMenus::save(SBA6_A, 'main', 'Main menu', $rows, 'main');
+            StudioMenus::forget();
+            $nested = StudioMenus::find(SBA6_A, 'main');
+            assert_eq('Gala', $nested['items'][1]['children'][0]['children'][0]['label'] ?? null, 'a submenu of a submenu survives the round trip');
+            assert_eq(array_column($rows, 'depth'), array_column(StudioMenus::flatten($nested['items']), 'depth'), 'and shows in the form as it was entered');
+
             // ── document_type follows the page, never the client ───────────────────────────────────────
             $t = sba6i_page($rt, $editor, 'typed');
             $tDoc = $inA(static fn() => $rt->app->loadEditorDocument($editor, $t['id']))['document'];

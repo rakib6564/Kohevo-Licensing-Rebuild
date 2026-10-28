@@ -489,7 +489,8 @@ unit('site menus: a menu is validated as one small closed shape, and decoded saf
         ['ok', 'N', [['label' => 'x', 'url' => '//evil.test']]],
         ['ok', 'N', [['label' => '', 'url' => '/a']]],
         ['ok', 'N', [['label' => 'x', 'url' => '']]],
-        ['ok', 'N', array_fill(0, 31, ['label' => 'x', 'url' => '/a'])],
+        ['ok', 'N', array_fill(0, 61, ['label' => 'x', 'url' => '/a'])],
+        ['ok', 'N', [['label' => 'Top', 'url' => '/a', 'children' => array_fill(0, 60, ['label' => 'x', 'url' => '/a'])]]], // submenu links count too
     ] as [$k, $n, $rows]) {
         $threw = false;
         try {
@@ -533,6 +534,57 @@ unit('site menus: a Nav menu block shows the chosen menu, falls back to its own 
     assert_true($block->validateProps(['menu' => 'header-2'])->isValid() && $block->validateProps(['menu' => ''])->isValid(), 'a menu key or none is valid');
     assert_false($block->validateProps(['menu' => 'Bad Key!'])->isValid(), 'anything else is refused');
     $menus::forget();
+});
+
+unit('site menus: submenus nest up to two levels; only an item with links under it may go without an address', function (): void {
+    $menus = \Slate\Module\StudioBuilder\Menu\StudioMenus::class;
+    $rows = [
+        ['label' => 'Accueil', 'url' => '/'],
+        ['label' => 'Projets', 'url' => '', 'depth' => 0],
+        ['label' => 'Nos actions', 'url' => '/nos-actions/', 'depth' => 1],
+        ['label' => 'SmileBox', 'url' => '/smile-box/', 'depth' => 2],
+        ['label' => 'Gala', 'url' => '/gala/', 'depth' => 3],          // deeper than allowed: kept at the deepest level
+        ['label' => 'Evenements', 'url' => '/evenements/', 'depth' => 1],
+        ['label' => 'Soutenir', 'url' => '/soutenir/', 'depth' => 0],
+    ];
+    $menu = $menus::validate('header', 'Header', $rows);
+    assert_eq(['Accueil', 'Projets', 'Soutenir'], array_column($menu['items'], 'label'), 'rows with a depth become a tree');
+    assert_eq(['Nos actions', 'Evenements'], array_column($menu['items'][1]['children'], 'label'));
+    assert_eq(['SmileBox', 'Gala'], array_column($menu['items'][1]['children'][0]['children'], 'label'), 'two levels down at most');
+    assert_false(array_key_exists('children', $menu['items'][0]), 'a link with nothing under it stores no children');
+    assert_eq($menu, $menus::validate('header', 'Header', $menu['items']), 'the stored tree validates to itself');
+    assert_eq([0, 0, 1, 2, 2, 1, 0], array_column($menus::flatten($menu['items']), 'depth'), 'and flattens back to the form rows');
+    $clamped = $menus::validate('m', 'M', [['label' => 'A', 'url' => '/a', 'depth' => 2], ['label' => 'B', 'url' => '/b', 'depth' => 2]]);
+    assert_eq('B', $clamped['items'][0]['children'][0]['label'] ?? null, 'the first link is at the top, and none is more than one level below the row above');
+    $flat = $menus::validate('old', 'Old', [['label' => 'A', 'url' => '/a']]);
+    assert_eq(['key' => 'old', 'name' => 'Old', 'items' => [['label' => 'A', 'url' => '/a', 'new_tab' => false]]], $flat, 'a menu without submenus keeps its old shape');
+    foreach ([[['label' => 'Lonely', 'url' => '']], [['label' => 'P', 'url' => ''], ['label' => 'C', 'url' => 'javascript:alert(1)', 'depth' => 1]]] as $bad) {
+        $threw = false;
+        try { $menus::validate('m', 'M', $bad); } catch (\InvalidArgumentException) { $threw = true; }
+        assert_true($threw, 'refused: ' . json_encode($bad));
+    }
+
+    $menus::useForTests(SBEL_TENANT, [$menu]);
+    $navBlock = sbel_block('core.nav_menu', ['menu' => 'header', 'layout' => 'horizontal']);
+    $html = sbel_render([$navBlock]);
+    assert_true((bool) preg_match('~<li class="sb-nav__item sb-nav__item--parent"><button type="button" class="sb-nav__link sb-nav__parent" aria-expanded="false" aria-controls="([^"]+)">Projets<span class="sb-nav__caret" aria-hidden="true"></span></button><ul class="sb-nav__sub sb-nav__sub--1" id="\\1">~', $html), 'an item with no address is the toggle of its submenu: ' . $html);
+    assert_true((bool) preg_match('~<a class="sb-nav__link" href="/nos-actions/">Nos actions<span class="sb-nav__caret" aria-hidden="true"></span></a><button type="button" class="sb-nav__toggle" aria-expanded="false" aria-controls="([^"]+)" aria-label="[^"]*Nos actions"></button><ul class="sb-nav__sub sb-nav__sub--2" id="\\1">~', $html), 'an item with an address keeps its link, the arrow drawn in it, and gets an arrow button');
+    assert_true(str_contains($html, '<a class="sb-nav__link" href="/gala/">Gala</a>'), 'a link with nothing under it has no arrow');
+    $parts = \Slate\Module\StudioBuilder\Registry\BlockParts::for('core.nav_menu');
+    assert_eq(['.sb-nav__list>.sb-nav__item>.sb-nav__link'], $parts['link']['selectors'], 'the Links part styles the menu\'s own row, never a submenu\'s links (a header link 90px tall made every submenu row 90px)');
+    assert_true(str_contains($html, '>SmileBox</a>') && str_contains($html, '>Gala</a>') && str_contains($html, '>Evenements</a>'), 'every link is in the page, so it works without scripts');
+    preg_match_all('~ id="([^"]+)"~', $html, $ids);
+    assert_eq(count($ids[1]), count(array_unique($ids[1])), 'submenu ids are unique');
+    assert_eq($html, sbel_render([$navBlock]), 'and the same on every render');
+    $menus::forget();
+
+    $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
+    assert_true(str_contains($css, '.sb-nav--horizontal .sb-nav__item--parent:is(:hover,:focus-within,[data-open]):not([data-closed])>.sb-nav__sub{opacity:1;visibility:visible'), 'a horizontal submenu drops down on hover and focus, with CSS alone');
+    assert_true(str_contains($css, 'html[data-sb-ready] .sb-nav--vertical .sb-nav__item--parent:not([data-open])>.sb-nav__sub{display:none}'), 'a vertical one folds away only once the runtime can open it');
+    $js = (string) file_get_contents(dirname(__DIR__, 2) . '/plugins/studio-builder/assets/public/studio-runtime.js');
+    assert_true(str_contains($js, "['submenus', initSubmenus]") && str_contains($js, "'.sb-nav__item--parent'") && str_contains($js, "setAttribute('aria-expanded'"), 'the runtime toggles submenus');
+    $parts = \Slate\Module\StudioBuilder\Registry\BlockParts::for('core.nav_menu');
+    assert_true(isset($parts['submenu'], $parts['sublink'], $parts['toggle']), 'the submenu, its links and the arrow can be styled');
 });
 
 unit('heading highlight: the highlighted part has its own colour, italic, weight and underline, and nothing unsafe reaches the page', function (): void {

@@ -10,6 +10,11 @@
  * never put an unsafe URL or an oversized list on a page. URLs go through the same allowlist as every other Studio link
  * (`FieldSchema::isSafeUrl`) and are checked again at render time by `Html::link`.
  *
+ * Submenus: an item may hold `children`, down to MAX_DEPTH levels below the top (Projets › Nos actions › SmileBox). An item
+ * with children may have no address of its own: it only opens its submenu. The menu form posts a flat list where each
+ * row carries its `depth`; `validate()` turns either shape into the stored tree, and an item without children stores
+ * no `children` key, so a menu saved before submenus existed reads back unchanged.
+ *
  * Renaming: a menu remembers the keys it had before (`aliases`), and `find()` resolves an old key to it, so every Nav
  * menu block saved with the old key keeps showing the menu. A key a live menu now uses always wins over an alias.
  *
@@ -32,7 +37,10 @@ final class StudioMenus
 
     public const SETTING_KEY     = 'studio_menus';
     public const MAX_MENUS       = 15;
-    public const MAX_ITEMS       = 30;
+    /** Links in one menu, submenu links included. */
+    public const MAX_ITEMS       = 60;
+    /** Levels below the top level: 2 = a submenu, and a submenu of that. */
+    public const MAX_DEPTH       = 2;
     public const MAX_NAME        = 80;
     public const MAX_LABEL       = 80;
     public const MAX_URL         = 1000;
@@ -61,7 +69,7 @@ final class StudioMenus
     /**
      * A menu by its key, or by a key it had before it was renamed (blocks saved with the old key keep working).
      *
-     * @return array{key: string, name: string, items: list<array{label: string, url: string, new_tab: bool}>}|null
+     * @return array{key: string, name: string, items: list<array{label: string, url: string, new_tab: bool, children?: list<array<string, mixed>>}>}|null
      */
     public static function find(int $tenantId, string $key): ?array
     {
@@ -85,7 +93,7 @@ final class StudioMenus
      * Create or replace one menu. Returns the stored menu, or throws \InvalidArgumentException with a readable reason.
      *
      * @param array<int, mixed> $items rows of ['label' =>, 'url' =>, 'new_tab' =>]
-     * @return array{key: string, name: string, items: list<array{label: string, url: string, new_tab: bool}>}
+     * @return array{key: string, name: string, items: list<array{label: string, url: string, new_tab: bool, children?: list<array<string, mixed>>}>}
      */
     public static function save(int $tenantId, string $key, string $name, array $items, ?string $replacesKey = null, ?string $expectedVersion = null): array
     {
@@ -144,7 +152,7 @@ final class StudioMenus
      * One menu as the form posted it, checked. Pure: no storage, so it is unit-testable.
      *
      * @param array<int, mixed> $items
-     * @return array{key: string, name: string, items: list<array{label: string, url: string, new_tab: bool}>}
+     * @return array{key: string, name: string, items: list<array{label: string, url: string, new_tab: bool, children?: list<array<string, mixed>>}>}
      */
     public static function validate(string $key, string $name, array $items): array
     {
@@ -156,28 +164,106 @@ final class StudioMenus
         if ($name === '' || mb_strlen($name) > self::MAX_NAME) {
             throw new \InvalidArgumentException('Give the menu a name (up to ' . self::MAX_NAME . ' characters).');
         }
+        $rows = self::flatten($items);
+        if (count($rows) > self::MAX_ITEMS) {
+            throw new \InvalidArgumentException('A menu holds up to ' . self::MAX_ITEMS . ' links.');
+        }
         $clean = [];
+        $previous = -1;
+        foreach ($rows as $row) {
+            $label = trim((string) ($row['label'] ?? ''));
+            $url   = trim((string) ($row['url'] ?? ''));
+            $depth = max(0, min(self::MAX_DEPTH, (int) ($row['depth'] ?? 0), $previous + 1)); // never deeper than one below the row above
+            if ($label === '' || mb_strlen($label) > self::MAX_LABEL) {
+                throw new \InvalidArgumentException('Every link needs a label (up to ' . self::MAX_LABEL . ' characters).');
+            }
+            if (strlen($url) > self::MAX_URL || ($url !== '' && !FieldSchema::isSafeUrl($url))) {
+                throw new \InvalidArgumentException('The link "' . $label . '" needs a web address, a path such as /about, or mailto:/tel:.');
+            }
+            $clean[] = ['label' => $label, 'url' => $url, 'new_tab' => !empty($row['new_tab']), 'depth' => $depth];
+            $previous = $depth;
+        }
+        $tree = self::tree($clean);
+        self::assertAddresses($tree);
+        return ['key' => $key, 'name' => $name, 'items' => $tree];
+    }
+
+    /**
+     * A menu's items as the rows of the menu form: one row per link, in order, with its `depth` (0 = top level).
+     *
+     * @param array<int, mixed> $items stored items (with `children`) or form rows (with `depth`)
+     * @return list<array{label: string, url: string, new_tab: bool, depth: int}>
+     */
+    public static function flatten(array $items, int $depth = 0): array
+    {
+        $rows = [];
         foreach ($items as $row) {
             if (!is_array($row)) {
                 continue;
             }
             $label = trim((string) ($row['label'] ?? ''));
             $url   = trim((string) ($row['url'] ?? ''));
-            if ($label === '' && $url === '') {
+            $children = is_array($row['children'] ?? null) ? $row['children'] : [];
+            if ($label === '' && $url === '' && $children === []) {
                 continue; // an empty row is just a row the author did not use
             }
-            if ($label === '' || mb_strlen($label) > self::MAX_LABEL) {
-                throw new \InvalidArgumentException('Every link needs a label (up to ' . self::MAX_LABEL . ' characters).');
+            $rows[] = ['label' => $label, 'url' => $url, 'new_tab' => !empty($row['new_tab']), 'depth' => $depth + max(0, (int) ($row['depth'] ?? 0))];
+            if ($children !== [] && $depth < self::MAX_DEPTH + 1) {
+                array_push($rows, ...self::flatten($children, $depth + 1));
             }
-            if ($url === '' || strlen($url) > self::MAX_URL || !FieldSchema::isSafeUrl($url)) {
-                throw new \InvalidArgumentException('The link "' . $label . '" needs a web address, a path such as /about, or mailto:/tel:.');
+        }
+        return $rows;
+    }
+
+    /**
+     * Rows with depths (each at most one below the row above) as nested items.
+     *
+     * @param list<array{label: string, url: string, new_tab: bool, depth: int}> $rows
+     * @return list<array<string, mixed>>
+     */
+    private static function tree(array $rows): array
+    {
+        $root = [];
+        $stack = [&$root]; // $stack[$d] is the list a row of depth $d goes into
+        foreach ($rows as $row) {
+            $depth = $row['depth'];
+            unset($row['depth']);
+            $stack = array_slice($stack, 0, $depth + 1, true);
+            $list = &$stack[$depth];
+            $list[] = $row;
+            $last = array_key_last($list);
+            $list[$last]['children'] = [];
+            $stack[$depth + 1] = &$list[$last]['children'];
+            unset($list);
+        }
+        unset($stack);
+        return self::dropEmptyChildren($root);
+    }
+
+    /** @param list<array<string, mixed>> $items @return list<array<string, mixed>> */
+    private static function dropEmptyChildren(array $items): array
+    {
+        foreach ($items as $i => $item) {
+            if (($item['children'] ?? []) === []) {
+                unset($items[$i]['children']);
+            } else {
+                $items[$i]['children'] = self::dropEmptyChildren($item['children']);
             }
-            $clean[] = ['label' => $label, 'url' => $url, 'new_tab' => !empty($row['new_tab'])];
         }
-        if (count($clean) > self::MAX_ITEMS) {
-            throw new \InvalidArgumentException('A menu holds up to ' . self::MAX_ITEMS . ' links.');
+        return $items;
+    }
+
+    /** Only an item that opens a submenu may go without an address. @param list<array<string, mixed>> $items */
+    private static function assertAddresses(array $items): void
+    {
+        foreach ($items as $item) {
+            if ($item['url'] === '' && empty($item['children'])) {
+                throw new \InvalidArgumentException('The link "' . $item['label'] . '" needs a web address, a path such as /about, or mailto:/tel:. Only an item with links under it can go without one.');
+            }
+            if (!empty($item['children'])) {
+                self::assertAddresses($item['children']);
+            }
         }
-        return ['key' => $key, 'name' => $name, 'items' => $clean];
     }
 
     /** Well-formed earlier keys of a stored menu (none of them its own key). @return list<string> */

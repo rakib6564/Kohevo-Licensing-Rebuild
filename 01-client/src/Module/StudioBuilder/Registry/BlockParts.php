@@ -89,10 +89,14 @@ final class BlockParts
         ],
         'core.nav_menu' => [
             'list'    => ['label' => 'Menu list', 'selectors' => ['.sb-nav__list']],
-            'item'    => ['label' => 'Items', 'selectors' => ['.sb-nav__item']],
-            'link'    => ['label' => 'Links', 'selectors' => ['.sb-nav__link']],
+            // The menu's own row of items and links; a submenu's are styled by its own parts below.
+            'item'    => ['label' => 'Items', 'selectors' => ['.sb-nav__list>.sb-nav__item']],
+            'link'    => ['label' => 'Links', 'selectors' => ['.sb-nav__list>.sb-nav__item>.sb-nav__link']],
             // studio-runtime.js marks the link of the page being viewed (a header is rendered once for every page).
             'current' => ['label' => 'Current page link', 'selectors' => ['.sb-nav__link[aria-current="page"]']],
+            'submenu' => ['label' => 'Submenu', 'selectors' => ['.sb-nav__sub']],
+            'sublink' => ['label' => 'Submenu links', 'selectors' => ['.sb-nav__sub .sb-nav__link']],
+            'toggle'  => ['label' => 'Submenu arrow', 'selectors' => ['.sb-nav__caret', '.sb-nav__toggle']],
         ],
         'core.carousel' => [
             'quote'  => ['label' => 'Quote', 'selectors' => ['.sb-carousel__quote']],

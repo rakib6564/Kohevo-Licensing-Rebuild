@@ -1515,6 +1515,76 @@
     if (marked.length) mount(function () { marked.forEach(function (a) { a.removeAttribute('aria-current'); }); });
   }
 
+  /* ── Feature: menu submenus ──────────────────────────────────────────────
+   * NavMenuRenderer's submenus open on hover and keyboard focus with CSS alone; this adds the click and keyboard toggle.
+   * Its button (the arrow, or an item with no address of its own) sets `aria-expanded` and `data-open` on the item;
+   * opening one closes its open siblings, and Escape or a click outside the menu closes them (Escape returns focus
+   * to the button; `data-closed` keeps a horizontal submenu shut while focus is still inside it).
+   */
+  function initSubmenus(root) {
+    var off = [];
+    var items = qsa(root, '.sb-nav__item--parent');
+    if (!items.length) return;
+    function set(li, open) {
+      var btn = li.querySelector(':scope > .sb-nav__toggle, :scope > .sb-nav__parent');
+      if (open) { li.setAttribute('data-open', ''); li.removeAttribute('data-closed'); } else { li.removeAttribute('data-open'); }
+      if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (!open) qsa(li, '.sb-nav__item--parent[data-open]').forEach(function (child) { set(child, false); });
+    }
+    // A submenu that would run past the right edge of the window opens the other way (`data-flip`).
+    function fit(li) {
+      var sub = li.querySelector(':scope > .sb-nav__sub');
+      if (!sub) return;
+      li.removeAttribute('data-flip');
+      if (sub.getBoundingClientRect().right > document.documentElement.clientWidth - 8) li.setAttribute('data-flip', '');
+    }
+    function closeSiblings(li) {
+      if (!li.parentNode) return;
+      Array.prototype.forEach.call(li.parentNode.children, function (sib) {
+        if (sib === li) return;
+        if (sib.hasAttribute('data-open')) set(sib, false);
+        // Focus left on its button (it was clicked) would keep it showing (:focus-within).
+        if (sib.classList.contains('sb-nav__item--parent') && sib.contains(document.activeElement)) sib.setAttribute('data-closed', '');
+      });
+    }
+    items.forEach(function (li) {
+      var btn = li.querySelector(':scope > .sb-nav__toggle, :scope > .sb-nav__parent');
+      if (!btn) return;
+      off.push(on(btn, 'click', function (e) {
+        e.preventDefault();
+        var open = !li.hasAttribute('data-open');
+        if (open) closeSiblings(li);
+        set(li, open);
+        if (!open) li.setAttribute('data-closed', '');
+      }));
+      // Pointing at another item of a horizontal menu shows only its submenu: one opened by a click closes.
+      off.push(on(li, 'mouseenter', function () {
+        li.removeAttribute('data-closed');
+        if (li.closest('.sb-nav--horizontal')) { closeSiblings(li); fit(li); }
+      }));
+      off.push(on(li, 'focusin', function () { if (li.closest('.sb-nav--horizontal')) fit(li); }));
+      off.push(on(li, 'mouseleave', function () { li.removeAttribute('data-closed'); }));
+      off.push(on(li, 'focusout', function (e) {
+        if (!li.contains(e.relatedTarget)) { li.removeAttribute('data-closed'); if (li.closest('.sb-nav--horizontal')) set(li, false); }
+      }));
+      off.push(on(li, 'keydown', function (e) {
+        if (e.key !== 'Escape' && e.key !== 'Esc') return;
+        if (!li.hasAttribute('data-open') && !li.matches(':focus-within')) return;
+        e.stopPropagation();
+        set(li, false);
+        li.setAttribute('data-closed', '');
+        btn.focus();
+      }));
+    });
+    off.push(on(document, 'click', function (e) {
+      qsa(root, '.sb-nav__item--parent[data-open]').forEach(function (li) { if (!li.contains(e.target)) set(li, false); });
+    }));
+    mount(function () {
+      off.forEach(function (un) { un(); });
+      items.forEach(function (li) { set(li, false); li.removeAttribute('data-closed'); li.removeAttribute('data-flip'); });
+    });
+  }
+
 /* ── Boot / teardown ─────────────────────────────────────────────────────
    * `StudioRuntime.mount()` and `.disable()` are what the A/B toggle calls.
    * disable() must leave the page byte-identical to a no-JS Studio render,
@@ -1539,6 +1609,7 @@
     ['countdown', initCountdown],
     ['forms', initForms],
     ['currentLinks', initCurrentLinks],
+    ['submenus', initSubmenus],
     ['anchors', initAnchors]
   ];
 

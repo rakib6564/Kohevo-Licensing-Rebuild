@@ -589,6 +589,12 @@ unit('phase4 stylesheet: the generated CSS is the CSS its VERSION shipped, so a 
         '39' => '9582622fcf69e34360a54490be080673b2ebb4cd',
         '40' => '1c03e884fb66d0d2fae1f5bd7d20aa2b88ea8d83',
         '41' => 'aa22b5905025fab5ba8335e5522d1551c8ab6ea3',
+        '42' => '8900af5f5f40fb50a9e55aaa4fa789bea6d3aabe',
+        // 43–45 shipped only on the FightxLife dev server while #178 and #179 were combined there; 46 is the two merged.
+        '43' => '0aeac6d56963acc107e288d27eb7dd2ec78b7bc6',
+        '44' => 'c61433babb1829facf8f378cf34f1295b292561b',
+        '45' => '85ee329b545662542e50b419388225ceab58aa85',
+        '46' => '35653edc89193557981b3a1f62f38f248aff0632',
     ];
     $version = \Slate\Module\StudioBuilder\Render\StudioStylesheet::VERSION;
     $hash = sha1(\Slate\Module\StudioBuilder\Render\StudioStylesheet::css());
