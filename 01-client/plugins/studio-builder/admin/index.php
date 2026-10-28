@@ -93,11 +93,11 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <div class="sb-kpi-grid">
         <div class="sb-kpi-card">
             <div class="sb-kpi-top">
-                <span class="sb-kpi-label">Total Pages</span>
+                <span class="sb-kpi-label"><?= e(__('studio_overview_total_pages', 'Total Pages')) ?></span>
                 <?= sb_svg('pages', 20, 'sb-muted') ?>
             </div>
             <div class="sb-kpi-value"><?= $totalPages ?></div>
-            <div class="sb-kpi-meta"><?= $publishedCount ?> published · <?= $draftCount ?> drafts</div>
+            <div class="sb-kpi-meta"><?= e(sprintf(__('studio_overview_published_drafts', '%1$d published · %2$d drafts'), $publishedCount, $draftCount)) ?></div>
         </div>
         <div class="sb-kpi-card">
             <div class="sb-kpi-top">
@@ -163,20 +163,20 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <div class="sb-feature-header">
                     <div class="sb-feature-icon-box"><?= sb_svg('templates', 22) ?></div>
                     <div>
-                        <h3 class="sb-feature-title">Theme Builder Engine</h3>
-                        <p class="sb-feature-desc">Craft reusable site headers, footers, archive templates, loop grids, and single page templates across your brand.</p>
+                        <h3 class="sb-feature-title"><?= e(__('studio_overview_tb_title', 'Theme Builder Engine')) ?></h3>
+                        <p class="sb-feature-desc"><?= e(__('studio_overview_tb_desc', 'Craft reusable site headers, footers, archive templates, loop grids, and single page templates across your brand.')) ?></p>
                     </div>
                 </div>
                 <div style="font-size: 0.85rem; color: #64748b; margin-top: 8px;">
-                    Headers · Footers · Archive Templates · Bento Grids · Single Post Layouts
+                    <?= e(__('studio_overview_tb_kinds', 'Headers · Footers · Archive Templates · Bento Grids · Single Post Layouts')) ?>
                 </div>
             </div>
             <div class="sb-feature-footer">
                 <a href="templates.php" class="btn btn-sm btn-primary">
-                    <?= sb_svg('layout', 14) ?>
-                    <span>Manage Templates</span>
+                    <?= sb_svg('templates', 14) ?>
+                    <span><?= e(__('studio_overview_tb_manage', 'Manage Templates')) ?></span>
                 </a>
-                <span class="badge badge-info">Theme Builder</span>
+                <span class="badge badge-info"><?= e(__('studio_overview_tb_badge', 'Theme Builder')) ?></span>
             </div>
         </div>
 
@@ -185,8 +185,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <div class="sb-feature-header">
                     <div class="sb-feature-icon-box"><?= sb_svg('types-fields', 22) ?></div>
                     <div>
-                        <h3 class="sb-feature-title">Post Types & Custom Meta Fields</h3>
-                        <p class="sb-feature-desc">Architect custom data types (Portfolio, Case Studies, Services) and bind dynamic fields to visual blocks seamlessly.</p>
+                        <h3 class="sb-feature-title"><?= e(__('studio_overview_tf_title', 'Post Types & Custom Meta Fields')) ?></h3>
+                        <p class="sb-feature-desc"><?= e(__('studio_overview_tf_desc', 'Architect custom data types (Portfolio, Case Studies, Services) and bind dynamic fields to visual blocks seamlessly.')) ?></p>
                     </div>
                 </div>
                 <div style="font-size: 0.85rem; color: #64748b; margin-top: 8px;">
@@ -196,9 +196,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <div class="sb-feature-footer">
                 <a href="types-fields.php" class="btn btn-sm btn-primary">
                     <?= sb_svg('tag', 14) ?>
-                    <span>Define Types & Fields</span>
+                    <span><?= e(__('studio_overview_tf_manage', 'Define Types & Fields')) ?></span>
                 </a>
-                <span class="badge badge-info">Query Loop Ready</span>
+                <span class="badge badge-info"><?= e(__('studio_overview_tf_badge', 'Query Loop Ready')) ?></span>
             </div>
         </div>
     </div>
@@ -207,18 +207,18 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <div class="card" style="margin-top: 24px;">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <h2>Recent Studio Pages</h2>
-                <div class="card-sub">Open any page in the Visual Builder or inspect public preview.</div>
+                <h2><?= e(__('studio_overview_recent', 'Recent Studio Pages')) ?></h2>
+                <div class="card-sub"><?= e(__('studio_overview_recent_sub', 'Open any page in the Visual Builder or inspect public preview.')) ?></div>
             </div>
             <a href="pages.php" class="btn btn-sm btn-outline">
                 <?= sb_svg('pages', 14) ?>
-                <span>View All Pages</span>
+                <span><?= e(__('studio_overview_all_pages', 'View All Pages')) ?></span>
             </a>
         </div>
         <?php if ($pages === []): ?>
             <div class="empty">
                 <div class="empty-title"><?= e(__('studio_no_pages', 'No Studio pages yet')) ?></div>
-                <p class="text-sm"><?= e(__('studio_no_pages_hint', 'Create a page above to open it in the builder.')) ?></p>
+                <p class="text-sm"><?= e(__('studio_no_pages_first', 'Create your first page to open it in the builder.')) ?></p>
             </div>
         <?php else: ?>
             <form method="post" id="studio-bulk-form">

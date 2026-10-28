@@ -68,3 +68,11 @@ test('a section: background and padding are predicted, an image is left to the s
   assert.equal(compileSectionStyle({ style: { background: { image: { media_id: 3 } } } }).covered, false);
   assert.equal(compileSectionStyle({ style: {} }).covered, true);
 });
+
+test('a section border paints on the canvas exactly as StyleSurface::sectionDeclarations writes it', () => {
+  const border = { style: 'solid', width: '1px', color: 'color.accent', radius: 'md', bottom: { width: '4px', color: '#123456' }, radius_corners: { tl: '0' } };
+  const out = compileSectionStyle({ style: { border } });
+  assert.equal(out.covered, true, 'no repaint from the server is needed');
+  assert.equal(out.scoped.join(';'), 'border-style:solid;border-width:1px;border-color:var(--sb-color-accent);border-radius:var(--sb-radius-md,.5rem);border-bottom-width:4px;border-bottom-color:#123456;border-top-left-radius:0');
+  assert.equal(compileSectionStyle({ style: { border: { top: { width: '2px' } } } }).scoped.join(';'), 'border-style:solid;border-top-width:2px', 'a width with no style is a solid line');
+});

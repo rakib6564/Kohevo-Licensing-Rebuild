@@ -132,9 +132,9 @@ test('Background has Normal and Hover tabs; the border widths are linked', async
   await expect.poll(async () => (await canvasHtml(page)).includes('#123456'), { timeout: 20_000 }).toBe(true);
 
   const border = panel.locator('[data-section="border"]');
-  await border.getByLabel('Border Style').selectOption('solid');
-  await border.getByRole('button', { name: 'Edit border' }).click();
-  const top = page.getByRole('dialog', { name: 'Edit border' }).getByRole('textbox', { name: 'Top', exact: true });
+  await border.getByLabel('Border Style', { exact: true }).selectOption('solid');
+  // The side widths sit in the Border group itself, linked by default.
+  const top = border.getByRole('textbox', { name: 'Top', exact: true });
   await top.fill('3');
   await top.blur();
   await expect.poll(() => nodeIn(page, id).evaluate((el) => ['Top', 'Right', 'Bottom', 'Left'].map((s) => getComputedStyle(el)[`border${s}Width`]).join(' '))).toBe('3px 3px 3px 3px');

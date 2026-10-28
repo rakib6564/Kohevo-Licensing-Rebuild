@@ -54,6 +54,23 @@ function PageForm({ heading, hint, warn, initial, submitLabel, onSubmit, onClose
   );
 }
 
+/** "Duplicate page" for the page being edited (the phone's More sheet): the same form and command as the Pages list. */
+export function DuplicatePageDialog({ onClose }) {
+  const { transport, announce } = useEditor();
+  const page = useEngineState((s) => s.page);
+  if (!page) return null;
+  const submit = async ({ title, slug }) => {
+    const res = await transport.duplicatePage({ page_id: page.id, title, slug });
+    if (!res.ok) return failureDetail(res.error) || errorMessage(res.error);
+    if (announce) announce(t('nav_announce_duplicated', { title }));
+    onClose();
+    return null;
+  };
+  return (
+    <PageForm heading={t('nav_page_dup_title')} hint={t('nav_page_dup_hint')} initial={copyNames(page, t('nav_page_copy_suffix'))} submitLabel={t('nav_page_duplicate')} onSubmit={submit} onClose={onClose} />
+  );
+}
+
 /** Quick page tools: one-tap entry points into dialogs that already exist (nothing here is new behaviour). */
 function PageTools({ onOpenSettings }) {
   const { openHistory = null, openTheme = null, openPackages = null } = useEditor();

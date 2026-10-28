@@ -5,7 +5,8 @@
  * Pure transforms over canonical document ARRAYS (no database, no tenant):
  *
  *   - media references: collect every media id a document names (block
- *     `media_ref` fields at any depth — through repeaters and objects — and
+ *     `media_ref` fields at any depth — through repeaters and objects —,
+ *     section and block `style.background.image` media references, and
  *     `seo.og_image_media_id`), and rewrite them through a resolver. On
  *     export the resolver renumbers source ids into package-local keys; on
  *     import it maps package keys to TARGET-tenant media ids.
@@ -13,6 +14,8 @@
  *     Downgrade rule for a media reference the resolver cannot map (the
  *     Phase 8A import contract):
  *       * `seo.og_image_media_id`                -> null
+ *       * a section or block background image   -> removed (the colour,
+ *         gradient and overlay of that background are kept)
  *       * an OPTIONAL `media_ref` field (e.g. core.hero `media`) -> null
  *       * a block with a REQUIRED `media_ref` field (e.g. core.image) ->
  *         the block is omitted from the imported document
@@ -86,7 +89,13 @@ final class PackageDocumentMapper
 
         if (is_array($document['sections'] ?? null)) {
             foreach ($document['sections'] as $s => $section) {
-                if (!is_array($section) || !is_array($section['blocks'] ?? null)) {
+                if (!is_array($section)) {
+                    continue;
+                }
+                if (is_array($section['style'] ?? null)) {
+                    $document['sections'][$s]['style'] = self::rewriteBackground($section['style'], $resolve, "\$.sections[{$s}].style", $unresolved);
+                }
+                if (!is_array($section['blocks'] ?? null)) {
                     continue;
                 }
                 $document['sections'][$s]['blocks'] = self::rewriteBlocks($section['blocks'], $registry, $resolve, "\$.sections[{$s}].blocks", $unresolved);
@@ -117,12 +126,43 @@ final class PackageDocumentMapper
                     continue; // a required image that cannot exist in this tenant: the block is omitted
                 }
             }
+            if (is_array($block['style'] ?? null)) {
+                $block['style'] = self::rewriteBackground($block['style'], $resolve, "{$blockPath}.style", $unresolved);
+            }
             if (is_array($block['children'] ?? null)) {
                 $block['children'] = self::rewriteBlocks($block['children'], $registry, $resolve, "{$blockPath}.children", $unresolved);
             }
             $out[] = $block;
         }
         return $out;
+    }
+
+    /**
+     * A section's or block's `style.background.image` media reference. An
+     * unresolved one is removed; the rest of the background stays.
+     *
+     * @param array<string, mixed> $style
+     * @param list<array{path: string, media_key: int, action: string}> $unresolved
+     * @return array<string, mixed>
+     */
+    private static function rewriteBackground(array $style, callable $resolve, string $path, array &$unresolved): array
+    {
+        $image = is_array($style['background'] ?? null) ? ($style['background']['image'] ?? null) : null;
+        if (!is_array($image)) {
+            return $style;
+        }
+        $id = $image['media_id'] ?? null;
+        if (!is_int($id) || $id <= 0) {
+            return $style; // malformed: left for the canonical validator to reject
+        }
+        $mapped = $resolve($id);
+        if ($mapped !== null) {
+            $style['background']['image']['media_id'] = $mapped;
+            return $style;
+        }
+        $unresolved[] = ['path' => "{$path}.background.image", 'media_key' => $id, 'action' => 'set_null'];
+        unset($style['background']['image']);
+        return $style;
     }
 
     /**

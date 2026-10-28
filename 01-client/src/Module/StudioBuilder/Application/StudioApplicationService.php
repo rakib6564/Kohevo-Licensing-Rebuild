@@ -242,9 +242,31 @@ final class StudioApplicationService
         // Archiving a published page takes it off the site at once.
         $this->authorizeLiveChange($actor, $current);
         // Deletion/archive safety: a Global Component still referenced by a page's
-        // current draft or published document cannot be archived.
-        $this->components?->assertNotReferenced($current);
-        $result = $this->pages->archivePage($pageId, (int) $actor->userId);
+        // current draft or published document cannot be archived. Checked and archived
+        // under the page row lock: a draft that adds a reference to this component takes
+        // a shared lock on the same row (StudioRevisionService), so the check cannot pass
+        // while such a save is about to commit.
+        $pdo = Database::get();
+        $ownsTx = !$pdo->inTransaction();
+        if ($ownsTx) {
+            $pdo->beginTransaction();
+        }
+        try {
+            $locked = Database::row('SELECT * FROM `studiobuilder_pages` WHERE `tenant_id` = ? AND `id` = ? FOR UPDATE', [$this->requireTenantId(), $pageId]);
+            if ($locked === null) {
+                throw new StudioNotFoundException("Studio page {$pageId} was not found in the active tenant.", ['page_id' => $pageId]);
+            }
+            $this->components?->assertNotReferenced($locked);
+            $result = $this->pages->archivePage($pageId, (int) $actor->userId);
+            if ($ownsTx) {
+                $pdo->commit();
+            }
+        } catch (\Throwable $e) {
+            if ($ownsTx && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
         $this->invalidator?->invalidatePage($pageId);
         $this->invalidateSharedContent($current);
         $this->audit($actor, 'studio.page.archived', (string) $pageId);
@@ -306,6 +328,12 @@ final class StudioApplicationService
     ): array {
         $this->authorize($actor, StudioPermissions::EDIT);
         $revisionKind = $this->draftKind($actor, $revisionKind);
+        // The document type follows the page, never the client: a component posted as a 'page' document would
+        // otherwise pass the rules that keep components from referencing other components.
+        $page = $this->pageRepo->find($pageId);
+        if ($page !== null) {
+            $rawDocument['document_type'] = (string) $page['page_type'];
+        }
         $validated = ValidatedDocument::from($rawDocument, $this->registry, $this->buildValidationOptions($actor, $pageId));
         $result = $this->revisions->createDraftRevision($pageId, $validated, $expectedRevisionId, (int) $actor->userId, $revisionKind, $summary);
         $this->audit($actor, 'studio.page.draft_saved', (string) $pageId, ['revision_kind' => $revisionKind, 'deduplicated' => $result['deduplicated'], 'revision_id' => (int) ($result['revision']['id'] ?? 0)]);
@@ -1985,6 +2013,9 @@ final class StudioApplicationService
         $document = $revision !== null
             ? DocumentUpgrader::upgrade(CanonicalJson::decode((string) $revision['document_json']), $this->registry)['document']
             : CanonicalDocumentSchema::emptyDocument((string) $page['page_type'], 'default', (string) $page['title']);
+        if (is_array($document)) {
+            $document['document_type'] = (string) $page['page_type']; // the page decides, whatever an older draft said
+        }
         return [$page, $document];
     }
 

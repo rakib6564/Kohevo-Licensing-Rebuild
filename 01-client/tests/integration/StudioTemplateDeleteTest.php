@@ -111,7 +111,7 @@ unit('theme builder delete: only the exact backing page is affected, it is archi
     [$decoy, $decoyRev]     = stdel_page("stdel-decoy-{$tag}", ['is_theme_template' => true, 'template_id' => (int) ($tplId . '7'), 'template_type' => 'header']);
     try {
         [$status, $body] = stdel_post(['_action' => 'delete_template', 'template_id' => $tplId]);
-        assert_eq(200, $status);
+        assert_eq(303, $status, 'back to the list (POST/redirect/GET)');
         assert_true(str_contains($body, 'Template deleted successfully'), 'success flash: ' . substr(strip_tags($body), 0, 200));
         assert_eq(0, (int) Database::value('SELECT COUNT(*) FROM studiobuilder_templates WHERE tenant_id = ? AND id = ?', [current_tenant_id(), $tplId]), 'template removed');
 

@@ -27,16 +27,27 @@ $key        = (string) ($_GET['key'] ?? $_POST['original_key'] ?? '');
 $menu       = StudioMenus::find($tenantId, $key);
 $menuForm   = $menu ?? ['key' => $key, 'name' => '', 'items' => []];
 
+// Both forms carry the version of the menu they were loaded with, so a write over someone else's change is refused.
+$menuError = static fn(\InvalidArgumentException $e): string => $e->getCode() === StudioMenus::CONFLICT
+    ? __('studio_menu_conflict', 'Someone else changed this menu while you were editing it. Reload it and make your change again.')
+    : $e->getMessage();
+
 if ($menu !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $action = (string) ($_POST['action'] ?? 'save');
     if (!csrf_verify()) {
         $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
     } elseif (!$canEdit) {
         $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to edit menus.')];
+    } elseif (!sb_studio_entitled()) {
+        $flash = ['type' => 'error', 'msg' => __('studio_pages_forbidden', 'Kohevo Studio is not available for your account on this site.')];
     } elseif ($action === 'delete') {
-        StudioMenus::delete($tenantId, $key);
-        header('Location: menus.php?deleted=1', true, 303);
-        exit;
+        try {
+            StudioMenus::delete($tenantId, $key, (string) ($_POST['version'] ?? ''));
+            header('Location: menus.php?deleted=1', true, 303);
+            exit;
+        } catch (\InvalidArgumentException $e) {
+            $flash = ['type' => 'error', 'msg' => $menuError($e)];
+        }
     } else {
         $name = trim((string) ($_POST['name'] ?? ''));
         $newKey = trim((string) ($_POST['key'] ?? ''));
@@ -46,11 +57,11 @@ if ($menu !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $items = is_array($_POST['items'] ?? null) ? array_values($_POST['items']) : [];
         $menuForm = ['key' => $newKey, 'name' => $name, 'items' => array_map(static fn($r): array => is_array($r) ? ['label' => (string) ($r['label'] ?? ''), 'url' => (string) ($r['url'] ?? ''), 'new_tab' => !empty($r['new_tab'])] : [], $items)];
         try {
-            StudioMenus::save($tenantId, $newKey, $name, $items, $key);
+            StudioMenus::save($tenantId, $newKey, $name, $items, $key, (string) ($_POST['version'] ?? ''));
             header('Location: menu-edit.php?key=' . rawurlencode($newKey) . '&saved=1', true, 303);
             exit;
         } catch (\InvalidArgumentException $e) {
-            $flash = ['type' => 'error', 'msg' => $e->getMessage()];
+            $flash = ['type' => 'error', 'msg' => $menuError($e)];
         }
     }
 }
@@ -95,6 +106,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <form method="post" class="card sb-form-card">
         <?= csrf_field() ?>
         <input type="hidden" name="original_key" value="<?= e($key) ?>">
+        <input type="hidden" name="version" value="<?= e($menu !== null ? StudioMenus::version($menu) : '') ?>">
         <input type="hidden" name="action" value="save">
         <?php require __DIR__ . '/_menu_form.php'; ?>
         <?php if ($canEdit): ?>
@@ -108,6 +120,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <form method="post" class="card sb-form-card sb-danger-card" onsubmit="return window.confirm(this.getAttribute('data-confirm'));" data-confirm="<?= e(__('studio_menu_delete_confirm', 'Delete this menu? Nav menu blocks that use it fall back to their own links.')) ?>">
         <?= csrf_field() ?>
         <input type="hidden" name="original_key" value="<?= e($key) ?>">
+        <input type="hidden" name="version" value="<?= e($menu !== null ? StudioMenus::version($menu) : '') ?>">
         <input type="hidden" name="action" value="delete">
         <div class="card-header"><div><h3><?= e(__('studio_menu_delete', 'Delete menu')) ?></h3><div class="card-sub"><?= e(__('studio_menu_delete_sub', 'Nav menu blocks that use it fall back to their own links.')) ?></div></div></div>
         <div class="sb-form-actions" style="border-top:0; margin-top:0; padding-top:0;">

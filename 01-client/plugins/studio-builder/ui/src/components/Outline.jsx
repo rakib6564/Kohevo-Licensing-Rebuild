@@ -22,6 +22,7 @@ import {
 import { isProvisionalId } from '../core/operations.mjs';
 import { topLevelIds } from '../core/shellState.mjs';
 import { effectivelyLocked, isLocked, lockIndex } from '../core/layerLock.mjs';
+import { treeArrow } from '../core/treeKeys.mjs';
 
 const DRAG_TYPE_NODE = 'application/x-kohevo-studio-node';
 
@@ -239,6 +240,15 @@ export const Outline = memo(function Outline() {
       case 'ArrowUp': e.preventDefault(); if (visibleRows[i - 1]) focusRow(visibleRows[i - 1].id); break;
       case 'Home': e.preventDefault(); if (visibleRows[0]) focusRow(visibleRows[0].id); break;
       case 'End': e.preventDefault(); if (visibleRows.length) focusRow(visibleRows[visibleRows.length - 1].id); break;
+      case 'ArrowRight': case 'ArrowLeft': {
+        if (e.metaKey || e.ctrlKey || e.shiftKey) break;
+        const step = treeArrow(e.key, row, searchQuery.trim() ? new Set() : collapsed, visibleRows);
+        if (!step) break;
+        e.preventDefault();
+        if (step.focus) focusRow(step.focus);
+        else toggleCollapse(step.expand || step.collapse);
+        break;
+      }
       case 'Enter': case ' ': e.preventDefault(); select(row.id); break;
       case 'Delete': case 'Backspace': e.preventDefault(); removeNode(row.id); break;
       case 'F2': e.preventDefault(); startRename(row); break;

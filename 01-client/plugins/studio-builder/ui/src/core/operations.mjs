@@ -260,7 +260,7 @@ export function applyLocal(doc, operation, ctx = {}) {
       const from = sections.findIndex((s) => s.id === p.section_id);
       if (from < 0) throw notFound(p.section_id);
       const source = sections[from];
-      const cloned = cloneWithProvisionalIds(source, 'sec');
+      const cloned = cloneWithProvisionalIds(source, 'sec', ctx.provisionalId || null);
       cloned.label = `${source.label || 'Section'} (Copy)`;
       sections.splice(from + 1, 0, cloned);
       return { ...doc, sections };
@@ -316,7 +316,7 @@ export function applyLocal(doc, operation, ctx = {}) {
       const block = {
         ...extras,
         bindings: Object.keys(asObject(given.bindings)).length ? given.bindings : {},
-        children: def && def.allows_children ? asList(given.children).map((c) => cloneWithProvisionalIds(c, 'blk')) : [],
+        children: def && def.allows_children ? asList(given.children).map((c, i) => cloneWithProvisionalIds(c, 'blk', ctx.provisionalId ? `${ctx.provisionalId}_${i}` : null)) : [],
         id: ctx.provisionalId || provisionalId('blk'),
         props: Object.keys(asObject(given.props)).length ? given.props : asObject(def && def.default_props),
         style: Object.keys(asObject(given.style)).length ? given.style : DEFAULT_BLOCK_STYLE,
@@ -344,7 +344,7 @@ export function applyLocal(doc, operation, ctx = {}) {
           out.push(b);
           if (b.id === p.block_id) {
             hit = true;
-            out.push(cloneWithProvisionalIds(b, 'blk'));
+            out.push(cloneWithProvisionalIds(b, 'blk', ctx.provisionalId || null));
             continue;
           }
           if (b.children && b.children.length) {
@@ -615,17 +615,21 @@ function insertInto(doc, parentId, index, block) {
   return next;
 }
 
-function cloneWithProvisionalIds(node, prefix = 'blk') {
+// With `rootId` (the entry's provisional id) every id in the copy is derived from it by position
+// (`<root>_0_2`), so the copy keeps the same ids each time the working document is rebuilt: an edit
+// made to a pasted or duplicated child before the server answered still finds its target, and the
+// sync engine can map each one to the id the server minted for it.
+function cloneWithProvisionalIds(node, prefix = 'blk', rootId = null) {
   const cloned = JSON.parse(JSON.stringify(node));
-  const remint = (item, pfx) => {
-    item.id = provisionalId(pfx);
+  const remint = (item, pfx, id) => {
+    item.id = id || provisionalId(pfx);
     if (Array.isArray(item.blocks)) {
-      item.blocks.forEach((child) => remint(child, 'blk'));
+      item.blocks.forEach((child, i) => remint(child, 'blk', id ? `${id}_${i}` : null));
     }
     if (Array.isArray(item.children)) {
-      item.children.forEach((child) => remint(child, 'blk'));
+      item.children.forEach((child, i) => remint(child, 'blk', id ? `${id}_${i}` : null));
     }
   };
-  remint(cloned, prefix);
+  remint(cloned, prefix, rootId);
   return cloned;
 }

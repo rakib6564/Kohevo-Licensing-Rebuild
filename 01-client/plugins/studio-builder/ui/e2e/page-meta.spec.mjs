@@ -1,5 +1,6 @@
 // A page's content type and custom fields: pick a type, fill its fields, save, and see them again after a reload.
 import { test, expect } from '@playwright/test';
+import { ensurePostType } from './helpers.mjs';
 
 const TYPES = '/plugins/studio-builder/admin/types-fields.php';
 const NEW = '/plugins/studio-builder/admin/page-new.php';
@@ -11,6 +12,7 @@ test.beforeEach(async ({}, info) => {
 test('a page takes a content type, shows only that type\'s fields, validates them and keeps what is saved', async ({ page }) => {
   const stamp = Date.now();
   const key = `mode_${stamp}`;
+  await ensurePostType(page, 'services', 'Service');
 
   // Two fields on Services: a select and a required number.
   for (const f of [

@@ -183,11 +183,12 @@ function a11ySummary(attrs) {
  * and visibility), so it has its own list, shaped the same way: Content (how it arranges), Style (its background) and Advanced
  * (padding, entrance, motion, responsive).
  */
-export const SECTION_DEF = Object.freeze({ style_capabilities: Object.freeze(['background', 'padding']), allows_children: true, binding_slots: Object.freeze([]) });
+export const SECTION_DEF = Object.freeze({ style_capabilities: Object.freeze(['background', 'padding', 'border']), allows_children: true, binding_slots: Object.freeze([]) });
 
 export const PAGE_SECTION_SECTIONS = Object.freeze([
   { id: 'layout', tab: 'content', titleKey: 'section_layout', appliesTo: () => true, summary: (ctx) => pageLayoutSummary(ctx.node.layout), openFor: () => true },
   { id: 'background', tab: 'style', titleKey: 'background_label', appliesTo: () => true, summary: (ctx) => backgroundSummary(ctx.style.background), openFor: () => true },
+  { id: 'border', tab: 'style', titleKey: 'border', keywords: ['border', 'radius', 'corner', 'side', 'outline'], appliesTo: () => true, summary: (ctx) => borderSummary(asObject(ctx.style).border), openFor: () => false },
   { id: 'advanced', tab: 'advanced', titleKey: 'section_advanced', keywords: ['padding', 'spacing', 'entrance', 'animation'], appliesTo: () => true, summary: (ctx) => spacingSummary({ padding: asObject(ctx.style).padding }), openFor: () => true },
   { id: 'motion', tab: 'advanced', titleKey: 'section_motion_effects', appliesTo: () => true, summary: (ctx) => motionSummary(ctx.node), openFor: () => false },
   { id: 'responsive', tab: 'advanced', titleKey: 'tab_responsive', appliesTo: () => true, summary: (ctx) => visibilitySummary(ctx.node.visibility), openFor: () => false },

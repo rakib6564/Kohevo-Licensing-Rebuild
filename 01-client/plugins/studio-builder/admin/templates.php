@@ -106,6 +106,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
     } elseif (!$canEdit) {
         $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to manage templates.')];
+    } elseif (!sb_studio_entitled()) {
+        $flash = ['type' => 'error', 'msg' => __('studio_pages_forbidden', 'Kohevo Studio is not available for your account on this site.')];
     } else {
         $action = (string) ($_POST['_action'] ?? '');
         // Each action needs the Studio permission its application service
@@ -158,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // The same name and description rules the template service applies, checked first so the
             // message is a translated one and nothing is touched.
             if ($name === '') {
-                $flash = ['type' => 'error', 'msg' => 'Template name is required.'];
+                $flash = ['type' => 'error', 'msg' => __('studio_tpl_name_required', 'Template name is required.')];
             } elseif (mb_strlen($name, 'UTF-8') > 191 || preg_match('/[<>]/', $name) === 1) {
                 $flash = ['type' => 'error', 'msg' => __('studio_tpl_invalid_name', 'A template name is plain text of at most 191 characters, without < or >.')];
             } elseif (mb_strlen($description, 'UTF-8') > 1000 || preg_match('/[<>]/', $description) === 1) {
@@ -320,15 +322,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($created !== null && $publishNow) {
                     try {
                         $runtime->app->publish($actor, $created['page_id'], $created['revision_id'], "Initial publish of {$name}");
-                        $flash = ['type' => 'success', 'msg' => "Theme template '{$name}' created and published! It is now active on the site."];
+                        $flash = ['type' => 'success', 'msg' => sprintf(__('studio_tpl_created_published', "Theme template '%s' created and published! It is now active on the site."), $name)];
                     } catch (\Throwable $pubEx) {
                         $flash = ['type' => 'warning', 'msg' => rtrim(__('studio_tpl_created_not_published', 'Template created as draft, but it could not be published automatically. You can publish it in the Canvas editor.') . ' ' . sb_templates_error_message($pubEx, ''))];
                     }
+                    sb_flash_redirect('templates.php', $flash);
                 } elseif ($created !== null && $openInCanvas) {
                     header('Location: ' . plugin_url('studio-builder', 'admin/builder.php') . '?page=' . (int) $created['page_id'], true, 303);
                     exit;
                 } elseif ($created !== null) {
-                    $flash = ['type' => 'success', 'msg' => "Theme template '{$name}' created as draft. Click 'Edit in Canvas' to design and publish."];
+                    sb_flash_redirect('templates.php', ['type' => 'success', 'msg' => sprintf(__('studio_tpl_created_draft', "Theme template '%s' created as draft. Click 'Edit in Canvas' to design and publish."), $name)]);
                 }
             }
         } elseif ($action === 'publish_template') {
@@ -342,7 +345,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $runtime = StudioRuntimeFactory::build();
                             $actor = StudioActor::fromCurrentSession();
                             $runtime->app->publish($actor, $pageId, $targetRev, "Published from Theme Builder");
-                            $flash = ['type' => 'success', 'msg' => "Template published and activated!"];
+                            sb_flash_redirect('templates.php', ['type' => 'success', 'msg' => __('studio_tpl_published', 'Template published and activated!')]);
                         }
                     }
                 } catch (\Throwable $e) {
@@ -360,12 +363,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $isTemplatePage = $tplPage !== null
                         && (str_starts_with((string) $tplPage['slug'], 'template-') || (is_array($tplSettings) && !empty($tplSettings['is_theme_template'])));
                     if (!$isTemplatePage) {
-                        $flash = ['type' => 'error', 'msg' => 'Template not found.'];
+                        $flash = ['type' => 'error', 'msg' => __('studio_tpl_not_found', 'Template not found.')];
                     } else {
                         Database::query("UPDATE studiobuilder_pages SET status = 'draft', published_revision_id = NULL, published_at = NULL WHERE id = ? AND tenant_id = ?", [$pageId, $tenantId]);
                         StudioRuntimeFactory::build()->invalidator->invalidatePage($pageId);
                         AuditLog::record('studio.page.unpublished', (string) $pageId, ['via' => 'theme-builder']);
-                        $flash = ['type' => 'success', 'msg' => "Template unpublished (reverted to draft)."];
+                        sb_flash_redirect('templates.php', ['type' => 'success', 'msg' => __('studio_tpl_unpublished', 'Template unpublished (reverted to draft).')]);
                     }
                 } catch (\Throwable $e) {
                     $flash = ['type' => 'error', 'msg' => sb_templates_error_message($e, __('studio_tpl_unpublish_failed', 'The template could not be unpublished.'))];
@@ -377,7 +380,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ? Database::row("SELECT id, template_key FROM studiobuilder_templates WHERE tenant_id = ? AND id = ? AND is_system = 0", [$tenantId, $templateId])
                 : null;
             if ($doomed === null) {
-                $flash = ['type' => 'error', 'msg' => 'Template not found.'];
+                $flash = ['type' => 'error', 'msg' => __('studio_tpl_not_found', 'Template not found.')];
             } else {
                 try {
                     $runtime = StudioRuntimeFactory::build();
@@ -406,7 +409,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     foreach ($backingIds as $pId) {
                         $runtime->app->archivePage($actor, $pId);
                     }
-                    $flash = ['type' => 'success', 'msg' => 'Template deleted successfully.'];
+                    sb_flash_redirect('templates.php', ['type' => 'success', 'msg' => __('studio_tpl_deleted', 'Template deleted successfully.')]);
                 } catch (\Throwable $e) {
                     $flash = ['type' => 'error', 'msg' => sb_templates_error_message($e, __('studio_tpl_delete_failed', 'The template could not be deleted.'))];
                 }
@@ -414,6 +417,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$flash = $flash ?? sb_take_flash();
 
 // Filter and query templates
 $typeFilter = trim((string) ($_GET['type'] ?? 'all'));
@@ -542,7 +547,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <?= sb_svg('alert-circle', 14) ?> 404 Pages (<?= $counts['not_found'] ?>)
             </a>
             <a href="<?= e(plugin_url('studio-builder', 'admin/templates.php?type=sections')) ?>" class="sb-pill-item <?= $typeFilter === 'sections' ? 'active' : '' ?>">
-                <?= sb_svg('grid', 14) ?> Sections & Components (<?= $counts['sections'] ?>)
+                <?= sb_svg('overview', 14) ?> Sections & Components (<?= $counts['sections'] ?>)
             </a>
         </div>
 

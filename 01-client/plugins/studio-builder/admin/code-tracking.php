@@ -57,12 +57,12 @@ foreach (array_keys(StudioCodePolicy::VERIFICATION_SERVICES) as $service) {
 $snippetMessage = static function (string $label, string $reason): string {
     [$kind, $detail] = array_pad(explode(':', $reason, 2), 2, '');
     return $label . ': ' . match ($kind) {
-        'too_large' => 'the code is larger than ' . (StudioCodePolicy::MAX_SNIPPET_BYTES / 1024) . ' KiB.',
-        'control_characters' => 'it contains control characters.',
-        'unclosed' => 'a <' . $detail . '> is not closed.',
-        'stray_close' => 'a </' . $detail . '> has no matching opening tag.',
-        'tag' => '<' . $detail . '> is not allowed here. Snippets may only contain script, noscript, style, link and meta tags (the footer also img and iframe).',
-        default => 'it could not be accepted.',
+        'too_large' => sprintf(__('studio_code_too_large', 'the code is larger than %d KiB.'), (int) (StudioCodePolicy::MAX_SNIPPET_BYTES / 1024)),
+        'control_characters' => __('studio_code_control_chars', 'it contains control characters.'),
+        'unclosed' => sprintf(__('studio_code_unclosed', 'a <%s> is not closed.'), $detail),
+        'stray_close' => sprintf(__('studio_code_stray_close', 'a </%s> has no matching opening tag.'), $detail),
+        'tag' => sprintf(__('studio_code_tag', '<%s> is not allowed here. Snippets may only contain script, noscript, style, link and meta tags (the footer also img and iframe).'), $detail),
+        default => __('studio_code_rejected', 'it could not be accepted.'),
     };
 };
 
@@ -72,6 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flash = ['type' => 'error', 'msg' => __('csrf_failed', 'Security check failed.')];
     } elseif (!$canEdit) {
         $flash = ['type' => 'error', 'msg' => __('forbidden', 'You do not have permission to manage scripts and CSS.')];
+    } elseif (!sb_studio_entitled()) {
+        $flash = ['type' => 'error', 'msg' => __('studio_pages_forbidden', 'Kohevo Studio is not available for your account on this site.')];
     } else {
         $customCss = (string) ($_POST['custom_css'] ?? '');
         $ga4Id = trim((string) ($_POST['ga4_id'] ?? ''));
@@ -88,10 +90,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // instead of being stored and silently dropped at render time. Nothing is saved unless everything is valid.
         $errors = [];
         if (StudioCodePolicy::ga4Id($ga4Id) === null && $ga4Id !== '') {
-            $errors[] = 'GA4 must look like G-XXXXXXXXXX.';
+            $errors[] = __('studio_code_bad_ga4', 'GA4 must look like G-XXXXXXXXXX.');
         }
         if (StudioCodePolicy::gtmId($gtmId) === null && $gtmId !== '') {
-            $errors[] = 'GTM must look like GTM-XXXXXXX.';
+            $errors[] = __('studio_code_bad_gtm', 'GTM must look like GTM-XXXXXXX.');
         }
         $verifyTokens = [];
         $preparedHead = '';
@@ -100,12 +102,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($verify as $service => $raw) {
                 $token = StudioCodePolicy::verificationToken($raw);
                 if ($token === null) {
-                    $errors[] = ucfirst($service) . ' verification: paste the token or the whole meta tag the service gives you.';
+                    $errors[] = sprintf(__('studio_code_bad_verification', '%s verification: paste the token or the whole meta tag the service gives you.'), ucfirst($service));
                 } else {
                     $verifyTokens[$service] = $token;
                 }
             }
-            foreach (['Header code' => ['head', $headSnippet], 'Footer code' => ['footer', $footerSnippet]] as $label => [$placement, $raw]) {
+            foreach ([__('studio_code_header_label', 'Header code') => ['head', $headSnippet], __('studio_code_footer_label', 'Footer code') => ['footer', $footerSnippet]] as $label => [$placement, $raw]) {
                 try {
                     $prepared = StudioCodePolicy::prepareSnippet($raw, $placement);
                     if ($placement === 'head') { $preparedHead = $prepared; } else { $preparedFooter = $prepared; }
@@ -116,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($errors !== []) {
-            $flash = ['type' => 'error', 'msg' => 'Nothing was saved. ' . implode(' ', $errors)];
+            $flash = ['type' => 'error', 'msg' => __('studio_code_nothing_saved', 'Nothing was saved.') . ' ' . implode(' ', $errors)];
         } else {
             $sanitizedCss = StudioCodePolicy::sanitizeCustomCss($customCss);
             Database::setSetting(StudioCodePolicy::SETTING_CUSTOM_CSS, $sanitizedCss, $tenantId);
@@ -146,10 +148,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             AuditLog::record('studio.code_tracking_updated', (string) $tenantId, $audit);
 
-            $flash = ['type' => 'success', 'msg' => $isAdmin ? 'Tags, verification, code snippets and CSS saved.' : 'Analytics IDs and custom CSS saved.'];
+            sb_flash_redirect('code-tracking.php', ['type' => 'success', 'msg' => $isAdmin
+                ? __('studio_code_saved_admin', 'Tags, verification, code snippets and CSS saved.')
+                : __('studio_code_saved', 'Analytics IDs and custom CSS saved.')]);
         }
     }
 }
+$flash = $flash ?? sb_take_flash();
 
 
 require SLATE_ROOT . '/admin/partials/header.php';

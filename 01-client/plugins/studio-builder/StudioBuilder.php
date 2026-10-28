@@ -71,9 +71,6 @@ class StudioBuilder extends Plugin
         require_once __DIR__ . '/StudioBuilderMcpHandler.php';
         StudioBuilderMcpHandler::register();
 
-        // Custom Portfolio Widgets
-        require_once __DIR__ . '/StudioBuilderPortfolioWidgets.php';
-        \Slate\Module\StudioBuilder\StudioBuilderPortfolioWidgets::register();
     }
 
     /**
@@ -101,7 +98,6 @@ class StudioBuilder extends Plugin
         $studioNav = [
             ['slug' => 'studio-overview',        'label' => function_exists('__') ? __('studio_overview', 'Overview') : 'Overview',                  'file' => 'admin/index.php',           'icon' => 'bar-chart-2', 'order' => 200],
             ['slug' => 'studio-pages',           'label' => function_exists('__') ? __('studio_pages', 'Pages') : 'Pages',                            'file' => 'admin/pages.php',           'icon' => 'file-text',   'order' => 201],
-            ['slug' => 'studio-content',         'label' => function_exists('__') ? __('studio_content', 'Content') : 'Content',                      'file' => 'admin/content.php',         'icon' => 'box',         'order' => 202],
             ['slug' => 'studio-media',           'label' => function_exists('__') ? __('studio_media', 'Media') : 'Media',                            'file' => 'admin/media.php',           'icon' => 'image',       'order' => 203],
             ['slug' => 'studio-templates',       'label' => function_exists('__') ? __('studio_templates', 'Templates') : 'Templates',              'file' => 'admin/templates.php',       'icon' => 'layout',      'order' => 204],
             ['slug' => 'studio-menus',       'label' => function_exists('__') ? __('studio_menus', 'Menus') : 'Menus',              'file' => 'admin/menus.php',       'icon' => 'list',      'order' => 204],
