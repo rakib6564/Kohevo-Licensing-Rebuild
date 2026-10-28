@@ -4,7 +4,8 @@
  *
  * A page of a content type whose route prefix is `/events` is served at `/events/{slug}`, its old `/{slug}` answers
  * with a 301 there, and a wrong prefix is not found. Its canonical tag, the sitemap and Query Loop links name the
- * prefixed address, and the site's trailing-slash setting adds the slash WordPress sites use.
+ * prefixed address, and the site's trailing-slash setting adds the slash WordPress sites use. A Query Loop card shows
+ * the post's social-share image.
  */
 
 declare(strict_types=1);
@@ -95,10 +96,13 @@ function sbpr_with(\PDO $pdo, callable $fn): void
 }
 
 /** Create, draft and publish a page with one heading; its content type and category are set. */
-function sbpr_page(StudioRuntime $rt, StudioActor $actor, string $slug, string $text, string $type = '', string $category = ''): int
+function sbpr_page(StudioRuntime $rt, StudioActor $actor, string $slug, string $text, string $type = '', string $category = '', int $ogImage = 0): int
 {
-    return $rt->tenants->runAs(SBPR_TENANT, static function () use ($rt, $actor, $slug, $text, $type, $category): int {
+    return $rt->tenants->runAs(SBPR_TENANT, static function () use ($rt, $actor, $slug, $text, $type, $category, $ogImage): int {
         $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', ucfirst($slug));
+        if ($ogImage > 0) {
+            $doc['seo']['og_image_media_id'] = $ogImage;
+        }
         if ($category !== '') {
             $doc['settings']['category'] = $category;
         }
@@ -157,7 +161,9 @@ unit('page routes: a content type route prefix gives its pages their own address
             $base = defined('SLATE_URL') ? rtrim((string) SLATE_URL, '/') : '';
 
             sbpr_types(['evenement' => '/events', 'produit' => '/produit', 'note' => '/']);
-            $event = sbpr_page($rt, $actor, 'chaque-pas-compte', 'Marche solidaire', 'evenement', 'Actualites');
+            \Slate\Services\Media\Media::ensureSchema();
+            $card = (int) Database::insert('media_files', ['tenant_id' => SBPR_TENANT, 'path' => '/uploads/media/routes/marche.jpg', 'kind' => 'image', 'mime' => 'image/jpeg', 'folder' => 'routes', 'original_name' => 'marche.jpg']);
+            $event = sbpr_page($rt, $actor, 'chaque-pas-compte', 'Marche solidaire', 'evenement', 'Actualites', $card);
             $product = sbpr_page($rt, $actor, 't-shirt', 'T-shirt FightxLife', 'produit');
             $note = sbpr_page($rt, $actor, 'a-note', 'A plain note', 'note');
             sbpr_page($rt, $actor, 'contact', 'Contacte-nous', '');
@@ -184,6 +190,7 @@ unit('page routes: a content type route prefix gives its pages their own address
 
             $rows = $rt->tenants->runAs(SBPR_TENANT, static fn() => (new PostsProvider())->execute($rt->tenants, ['category' => 'Actualites', 'limit' => 5]));
             assert_eq('/events/chaque-pas-compte', $rows[0]['url'] ?? null, 'Query Loop links use the prefixed address');
+            assert_true(str_ends_with((string) ($rows[0]['featured_image'] ?? ''), '/uploads/media/routes/marche.jpg'), 'the card image is the page\'s social-share image: ' . ($rows[0]['featured_image'] ?? ''));
 
             if ($base !== '') {
                 $xml = (string) sbpr_get($rt, '/sitemap.xml?format=xml')?->body;

@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Provider;
 
 use Slate\Data\Database;
+use Slate\Module\StudioBuilder\Render\Media\CoreMediaResolver;
 use Slate\Module\StudioBuilder\Runtime\PublishedPageData;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 use Slate\Module\StudioBuilder\StudioPermissions;
@@ -166,10 +167,30 @@ final class PostsProvider implements PublicDataProviderInterface
                 'author_id'      => (int) ($row['created_by'] ?? 1),
                 'published_at'   => $pubDate,
                 'date_formatted' => date('M j, Y', $timestamp),
-                'featured_image' => (string) ($settings['featured_image_url'] ?? ''),
+                'featured_image' => self::featuredImage($settings, is_array($seo) ? $seo : [], $tenants),
             ];
         }
 
         return $out;
+    }
+
+    /**
+     * The card image of a post: its social-share (Open Graph) image, which the SEO panel sets per page. An older
+     * document's `featured_image_url` setting still wins; the document schema no longer accepts that key.
+     *
+     * @param array<string, mixed> $settings
+     * @param array<string, mixed> $seo
+     */
+    private static function featuredImage(array $settings, array $seo, TenantContext $tenants): string
+    {
+        $legacy = (string) ($settings['featured_image_url'] ?? '');
+        if ($legacy !== '') {
+            return $legacy;
+        }
+        $mediaId = $seo['og_image_media_id'] ?? null;
+        if (!is_int($mediaId) || $mediaId <= 0) {
+            return '';
+        }
+        return (new CoreMediaResolver($tenants))->resolveImage($mediaId)?->url ?? '';
     }
 }
