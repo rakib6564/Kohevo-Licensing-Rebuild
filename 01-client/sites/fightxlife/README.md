@@ -37,7 +37,7 @@ The bundle can sit anywhere; run it from the site root. It reads only files insi
 
    Users, the licence, plugins and other modules' data are not touched.
 2. **Images**: copies the 279 FightxLife images into `uploads/media/fxl` and registers them in the media library.
-3. **Build** (`build/site.php`): Site settings › Text and colour tokens, fonts, content types (cours, projet, evenement
+3. **Build** (`build/site.php`): Site settings › Text and colour tokens, fonts, content types (cours, projet, article, evenement
    at /events/…, produit at /produit/…) with their fields, 73 pages at the live site's addresses, header, footer, 5
    single templates and 9 redirects. The site's custom CSS is empty: the design is native Studio style.
 4. **Branding**: the admin and login logo, the #e9008a accent, the favicon, the login photo and the tagline

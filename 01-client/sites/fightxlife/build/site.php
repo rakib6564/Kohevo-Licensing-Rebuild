@@ -4,7 +4,7 @@
  *
  * Every live URL keeps its address (trailing slash on). Text, dates and SEO titles/descriptions come from the live
  * site (WordPress REST API + crawl, see ../fxl/content.json); images are the live site's own uploads.
- * Content types: cours, projet, evenement (/events/…), produit (/produit/…); articles are pages in "Actualités".
+ * Content types: cours, projet, evenement (/events/…), produit (/produit/…), article (the blog posts, in "Actualités").
  *
  *   cd <site> && php .../fxl-build/site.php
  */
@@ -63,6 +63,8 @@ $typeDefs = [
         ['date', 'Date', 'text'], ['heure', 'Heure', 'text'], ['tarif', 'Tarif', 'text'], ['lieu', 'Lieu', 'text']]],
     'produit'   => ['Produit', 'Produits', '/produit', 'An item of the e-shop.', [
         ['prix', 'Prix', 'text'], ['couleurs', 'Couleurs', 'text'], ['tailles', 'Tailles', 'text']]],
+    // The blog posts: their own list in the admin. Lists and the Article template still pick them by the Actualités category.
+    'article'   => ['Article', 'Articles', '/', 'A news post of the Actualités blog.', []],
 ];
 $types = PageMeta::postTypes($tid);
 $fields = array_values(array_filter(PageMeta::allFields($tid), static fn(array $f): bool => !isset($typeDefs[$f['post_type'] ?? ''])));
@@ -644,7 +646,7 @@ foreach (array_filter($CONTENT, static fn(array $i): bool => $i['kind'] === 'pos
     $feat = LOCAL($it['featured']);
     if ($feat !== '') { array_unshift($body, IMGP($feat, $it['title'], 'fx-body__img fx-body__hero')); }
     $pages[$it['slug']] = [$it['title'], 'standalone', [SEC('Article', $body, 'fx-body')],
-        ['seo_item' => "posts:{$it['slug']}", 'category' => CAT, 'excerpt' => mb_substr($it['seo_desc'] !== '' ? $it['seo_desc'] : $it['excerpt'], 0, 300)], null, [], $it['date']];
+        ['seo_item' => "posts:{$it['slug']}", 'category' => CAT, 'excerpt' => mb_substr($it['seo_desc'] !== '' ? $it['seo_desc'] : $it['excerpt'], 0, 300)], 'article', [], $it['date']];
 }
 
 // ── Single templates ─────────────────────────────────────────────────────────────────────────────────────────────
