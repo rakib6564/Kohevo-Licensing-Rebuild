@@ -262,8 +262,13 @@ $HOMELOGOS = ['2022-05-nos_sponsors_7-removebg-preview.png', '2022-08-logohude-f
 const LOGO = '2022-05-cropped-logo-fxl-01-e1638355780533-1.png';
 
 // ── Header and footer ────────────────────────────────────────────────────────────────────────────────────────────
-$nav = [['label' => 'Accueil', 'url' => '/'], ['label' => 'Qui Sommes-Nous', 'url' => '/qui-sommes-nous/'], ['label' => 'Cours', 'url' => '/cours/'],
-    ['label' => 'Projets', 'url' => '/nos-actions/'], ['label' => 'Evénements', 'url' => '/evenements/'], ['label' => 'Nous Soutenir', 'url' => '/nous-soutenir/']];
+// The live site's submenus: Cours › the three courses, Projets (no page of its own) › Nos Actions › the five actions, and Evénements.
+$coursNav = [['label' => 'Boxe Adaptée aux Malades', 'url' => '/boxe-adaptee/'], ['label' => 'WaterxFight', 'url' => '/waterxfight/'], ['label' => 'Boxe 100% Féminin', 'url' => '/100-feminin/']];
+$actionsNav = [['label' => 'SmileBox', 'url' => '/smile-box/'], ['label' => 'Solidarité contre le Cancer', 'url' => '/solidarite-5/'], ['label' => 'Les Hôpitaux', 'url' => '/les-hopitaux/'],
+    ['label' => 'Gala', 'url' => '/gala/'], ['label' => 'Crowdfunding', 'url' => '/crowdfunding/']];
+$nav = [['label' => 'Accueil', 'url' => '/'], ['label' => 'Qui Sommes-Nous', 'url' => '/qui-sommes-nous/'], ['label' => 'Cours', 'url' => '/cours/', 'children' => $coursNav],
+    ['label' => 'Projets', 'url' => '', 'children' => [['label' => 'Nos Actions', 'url' => '/nos-actions/', 'children' => $actionsNav], ['label' => 'Evénements', 'url' => '/evenements/']]],
+    ['label' => 'Nous Soutenir', 'url' => '/nous-soutenir/']];
 $drawerNav = [['label' => 'Accueil', 'url' => '/'], ['label' => 'Qui Sommes-Nous', 'url' => '/qui-sommes-nous/'], ['label' => 'Cours', 'url' => '/cours/'],
     ['label' => 'Boxe Adaptée aux Malades', 'url' => '/boxe-adaptee/'], ['label' => 'WaterxFight', 'url' => '/waterxfight/'], ['label' => 'Boxe 100% Féminin', 'url' => '/100-feminin/'],
     ['label' => 'Nos Actions', 'url' => '/nos-actions/'], ['label' => 'SmileBox', 'url' => '/smile-box/'], ['label' => 'Solidarité contre le Cancer', 'url' => '/solidarite-5/'],
@@ -280,7 +285,7 @@ $footPages = [['label' => 'Nous soutenir', 'url' => '/nous-soutenir/'], ['label'
 $footInfo = [['label' => 'Presse', 'url' => '/presse/'], ['label' => 'Nous Contacter', 'url' => '/contact/'], ['label' => 'Politique de Confidentialité', 'url' => '/politique-de-confidentialite/'], ['label' => 'Conditions Générales de Vente', 'url' => '/conditions-generales-de-vente/']];
 $actions = [['label' => 'SmileBox', 'url' => '/smile-box/'], ['label' => 'Solidarité', 'url' => '/solidarite-5/'], ['label' => 'Les hôpitaux', 'url' => '/les-hopitaux/'], ['label' => 'Gala', 'url' => '/gala/'], ['label' => 'Crowdfunding', 'url' => '/crowdfunding/']];
 $menuHeader = $menu('header', 'Menu principal', $nav);
-$menuDrawer = $menu('drawer', 'Menu mobile', array_slice($drawerNav, 0, 12));
+$menuDrawer = $menu('drawer', 'Menu mobile', [$drawerNav[0], $drawerNav[1], $drawerNav[2] + ['children' => $coursNav], $drawerNav[6] + ['children' => $actionsNav]]);
 $menuDrawerMore = $menu('drawer-more', 'Menu mobile (suite)', array_slice($drawerNav, 12));
 $menuFootPages = $menu('footer-pages', 'Pied de page · Autres pages', $footPages);
 $menuFootInfo = $menu('footer-info', 'Pied de page · En savoir plus', $footInfo);
