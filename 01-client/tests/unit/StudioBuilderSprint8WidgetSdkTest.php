@@ -327,12 +327,12 @@ unit('sprint8 unit: WidgetMigrator transforms older block and document versions'
 unit('sprint8 unit: StudioTestimonialWidget example plugin boots, renders, and migrates', function (): void {
     WidgetSdk::reset();
 
-    require_once dirname(__DIR__, 2) . '/plugins/studio-testimonial-widget/StudioTestimonialWidget.php';
+    require_once dirname(__DIR__) . '/fixtures/studio-testimonial-widget/StudioTestimonialWidget.php';
 
     $plugin = new StudioTestimonialWidget(
         'studio-testimonial-widget',
         ['version' => '1.0.0'],
-        dirname(__DIR__, 2) . '/plugins/studio-testimonial-widget'
+        dirname(__DIR__) . '/fixtures/studio-testimonial-widget'
     );
     $plugin->boot();
 
