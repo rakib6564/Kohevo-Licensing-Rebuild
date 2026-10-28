@@ -20,7 +20,7 @@ import { EntranceSelect, MotionInspector } from './MotionInspector.jsx';
 import { ClassNamesField, DataAttributes, IdentityFields } from './AdvancedControls.jsx';
 import { ContainerPane } from './ContainerPane.jsx';
 import { BackgroundStates } from './BackgroundStates.jsx';
-import { BlendField, CornersBox, NormalHover, PaddingBox, TextColorField, TextShadowField, TextStrokeField } from './TextBlockStyle.jsx';
+import { BlendField, NormalHover, PaddingBox, TextColorField, TextShadowField, TextStrokeField } from './TextBlockStyle.jsx';
 import { IconProps, ImageStates } from './MediaBlockStyle.jsx';
 import { OverlayStates, ShapeDividers } from './ContainerLayers.jsx';
 import { InspectorShell } from './InspectorShell.jsx';
@@ -220,7 +220,7 @@ export function BlockInspector({ info }) {
     position: () => <PositionPane style={style} onChange={saveStyle} />,
     effects: () => <EffectsPane style={style} onChange={saveStyle} />,
     states: () => <StatesPane type={block.type} states={block.style_states} onChange={(next) => save(ops.updateBlockStyleStates(block.id, next))} />,
-    // A Button's one Style section: position, typography, text shadow, the colours and surface per state, shadow, border, padding.
+    // A Button's one Style section: position, typography, text shadow, the colours and surface per state, shadow, border (its corners too), padding.
     button_style: () => (
       <>
         {sections.align({ label: t('button_position') })}
@@ -232,7 +232,6 @@ export function BlockInspector({ info }) {
         </NormalHover>
         {sections.shadow()}
         {sections.border()}
-        <CornersBox style={style} onChange={saveStyle} />
         <PaddingBox deviceScope={deviceScope} />
       </>
     ),
@@ -265,7 +264,6 @@ export function BlockInspector({ info }) {
         {sections.dimensions()}
         <ImageStates style={style} states={block.style_states} onStyle={saveStyle} onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))} />
         {sections.border()}
-        <CornersBox style={style} onChange={saveStyle} />
         {sections.shadow()}
       </>
     ),
