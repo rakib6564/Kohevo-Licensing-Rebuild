@@ -198,6 +198,7 @@ final class CanonicalDocumentSchema
         'interactions',
         'animation',
         'style_states',
+        'style_parts',
         'tag',
         'link',
     ];
@@ -281,6 +282,7 @@ final class CanonicalDocumentSchema
         'interactions',
         'animation',
         'style_states',
+        'style_parts',
         'tag',
         'link',
     ];

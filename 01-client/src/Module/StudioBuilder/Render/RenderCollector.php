@@ -103,11 +103,11 @@ final class RenderCollector
      *
      * @param array<string, string> $states state name => declarations
      */
-    public function scopedRule(string $nodeId, string $declarations, bool $reduceMotion = false, array $states = [], array $media = []): string
+    public function scopedRule(string $nodeId, string $declarations, bool $reduceMotion = false, array $states = [], array $media = [], array $parts = []): string
     {
         $isSection = str_starts_with($nodeId, 'sec_');
         $valid = preg_match($isSection ? CanonicalDocumentSchema::SECTION_ID_PATTERN : CanonicalDocumentSchema::BLOCK_ID_PATTERN, $nodeId) === 1;
-        if (($declarations === '' && $states === [] && $media === []) || !$valid) {
+        if (($declarations === '' && $states === [] && $media === [] && $parts === []) || !$valid) {
             return '';
         }
         // NUL stands for the class until it is known; no declaration can contain it (the typed guard
@@ -133,6 +133,10 @@ final class RenderCollector
             if ($decl !== '') {
                 $template .= '@media ' . $query . "{.\0{" . $decl . '}}';
             }
+        }
+        // `$parts` is StyleSurface::partRules(): selectors inside the block (BlockParts), each written under its class.
+        foreach ($parts as $rule) {
+            $template .= implode(',', array_map(static fn(string $sel): string => ".\0 " . $sel, $rule['selectors'])) . '{' . $rule['declarations'] . '}';
         }
         $class = 'sb-x-' . substr(hash('sha256', $template), 0, 16);
         $this->cssRules['~' . $class] = str_replace("\0", $class, $template);

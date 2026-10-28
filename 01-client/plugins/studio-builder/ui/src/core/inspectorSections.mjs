@@ -136,6 +136,8 @@ export const SECTIONS = Object.freeze([
   // An image's, video's or gallery's size sits with its other settings (Content), where authors look for it.
   { id: 'dimensions', tab: (ctx) => (MEDIA_TYPES.has(ctx.node.type) ? 'content' : isContainer(ctx) ? 'style' : 'advanced'), titleKey: 'dimensions_label', appliesTo: (ctx) => has(ctx, 'dimensions') && !inOwnStyle(ctx, 'dimensions'), summary: (ctx) => dimensionsSummary(ctx.style.dimensions), openFor: (ctx) => isContainer(ctx) && !isBoxContainer(ctx) },
   { id: 'opacity', tab: 'style', titleKey: 'opacity_label', appliesTo: (ctx) => has(ctx, 'opacity') && !inOwnStyle(ctx, 'opacity'), summary: (ctx) => (typeof ctx.style.opacity === 'number' ? `${Math.round(ctx.style.opacity * 100)}%` : ''), openFor: () => false },
+  // A widget with named parts (BlockParts.php) styles each on its own: open by default, as it is what such a widget is styled with.
+  { id: 'parts', tab: 'style', titleKey: 'section_parts', appliesTo: (ctx) => asList(ctx.def && ctx.def.style_parts).length > 0, summary: (ctx) => partsSummary(ctx.node), openFor: () => false, keywords: ['part', 'title', 'label', 'number', 'input', 'tab', 'hover'] },
   { id: 'states', tab: 'style', titleKey: 'section_states', appliesTo: () => true, summary: (ctx) => Object.keys(asObject(ctx.node.style_states)).join(' · '), openFor: () => false },
   { id: 'tokens', tab: 'style', titleKey: 'section_tokens', appliesTo: (ctx) => Object.keys(STYLE_TOKEN_CATEGORIES).some((k) => has(ctx, k)), summary: (ctx) => String(Object.keys(STYLE_TOKEN_CATEGORIES).filter((k) => ctx.style[k]).length || ''), openFor: () => false },
 
@@ -241,6 +243,10 @@ function borderSummary(border) {
 function dimensionsSummary(d) {
   const o = asObject(d);
   return [o.width, o.min_height, o.max_width].filter(Boolean).join(' · ');
+}
+function partsSummary(node) {
+  const names = Object.keys(asObject(node.style_parts)).map((k) => k.split(':')[0]);
+  return [...new Set(names)].join(' · ');
 }
 function motionSummary(node) {
   const a = asObject(node.animation).type;

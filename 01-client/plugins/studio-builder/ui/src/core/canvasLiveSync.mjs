@@ -107,7 +107,7 @@ function styleWithoutAlign(style) {
  * renderer. Motion is here as it is for sections: the live patch cannot add an interaction's classes or its animation, so
  * an entrance animation, its timing or an interaction showed only after a reload.
  */
-const SERVER_PAINTED_FIELDS = ['style_states', 'tag', 'link', 'classNames', 'attributes', 'animation', 'interactions'];
+const SERVER_PAINTED_FIELDS = ['style_states', 'style_parts', 'tag', 'link', 'classNames', 'attributes', 'animation', 'interactions'];
 
 /**
  * Blocks whose markup is built only on the server (no heuristic live patch exists for them): any

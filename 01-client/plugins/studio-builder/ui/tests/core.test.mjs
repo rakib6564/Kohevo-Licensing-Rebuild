@@ -95,7 +95,9 @@ test('operations use the canonical {op, payload} vocabulary', () => {
     // B2-P3b: states, wrapper tag, section style and single-property reset.
     'update_block_style_states', 'update_block_tag', 'reset_block_style_property', 'update_section_style',
     // B2-P3d: a section's own motion.
-    'update_section_animation', 'update_section_interactions'];
+    'update_section_animation', 'update_section_interactions',
+    // A widget's part styles (BlockParts.php).
+    'update_block_style_parts'];
   for (const name of Object.values(ops.OPS)) assert.ok(serverOps.includes(name), `${name} is a server DocumentOperation`);
 });
 

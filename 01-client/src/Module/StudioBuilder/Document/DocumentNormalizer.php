@@ -281,6 +281,18 @@ final class DocumentNormalizer
         if (($normalizedBlock['tag'] ?? null) === 'a' && is_array($block['link'] ?? null) && $block['link'] !== []) {
             $normalizedBlock['link'] = CanonicalJson::sortKeysRecursively($block['link']);
         }
+        // Part styles, like states: an empty part (and an empty map) is dropped.
+        if (array_key_exists('style_parts', $block) && is_array($block['style_parts'])) {
+            $parts = [];
+            foreach ($block['style_parts'] as $name => $partial) {
+                if (is_array($partial) && $partial !== []) {
+                    $parts[(string) $name] = CanonicalJson::sortKeysRecursively($partial);
+                }
+            }
+            if ($parts !== []) {
+                $normalizedBlock['style_parts'] = CanonicalJson::sortKeysRecursively($parts);
+            }
+        }
         // Interaction states: empty states (and an empty map) are dropped, so the canonical form has no `style_states` unless one does something.
         if (array_key_exists('style_states', $block) && is_array($block['style_states'])) {
             $states = [];

@@ -41,6 +41,7 @@ export const OPS = Object.freeze({
   UPDATE_BLOCK_INTERACTIONS: 'update_block_interactions',
   UPDATE_BLOCK_META: 'update_block_meta',
   UPDATE_BLOCK_STYLE_STATES: 'update_block_style_states',
+  UPDATE_BLOCK_STYLE_PARTS: 'update_block_style_parts',
   UPDATE_BLOCK_TAG: 'update_block_tag',
   RESET_BLOCK_STYLE_PROPERTY: 'reset_block_style_property',
   UPDATE_SECTION_STYLE: 'update_section_style',
@@ -69,6 +70,7 @@ const REPLACE_TARGET = {
   [OPS.UPDATE_SECTION_LAYOUT]: 'section_id',
   [OPS.UPDATE_SECTION_VISIBILITY]: 'section_id',
   [OPS.UPDATE_BLOCK_STYLE_STATES]: 'block_id',
+  [OPS.UPDATE_BLOCK_STYLE_PARTS]: 'block_id',
   [OPS.UPDATE_BLOCK_TAG]: 'block_id',
   [OPS.UPDATE_SECTION_STYLE]: 'section_id',
   [OPS.UPDATE_SECTION_ANIMATION]: 'section_id',
@@ -129,6 +131,8 @@ export const updateSectionLocked = (sectionId, locked) => op(OPS.UPDATE_SECTION_
 export const updateBlockMeta = (blockId, meta) => op(OPS.UPDATE_BLOCK_META, { block_id: blockId, ...meta });
 /** Replace a block's interaction states ({hover, focus, active, disabled}); `{}` clears them. */
 export const updateBlockStyleStates = (blockId, styleStates) => op(OPS.UPDATE_BLOCK_STYLE_STATES, { block_id: blockId, style_states: styleStates });
+/** The styles of a widget's parts (BlockParts.php): `{ <part>: partial, '<part>:hover': partial }`; `{}` clears them. */
+export const updateBlockStyleParts = (blockId, styleParts) => op(OPS.UPDATE_BLOCK_STYLE_PARTS, { block_id: blockId, style_parts: styleParts });
 /** Choose the block's wrapper element; null (or `div`) is the default. */
 /** `link` ({url, new_tab}) is only for the `a` tag: where the linked wrapper points. */
 export const updateBlockTag = (blockId, tag, link) => op(OPS.UPDATE_BLOCK_TAG, link ? { block_id: blockId, tag, link } : { block_id: blockId, tag });
@@ -149,7 +153,7 @@ export const updateSeo = (seo) => op(OPS.UPDATE_SEO, { seo });
 // ── Id bookkeeping ──────────────────────────────────────────────────────────
 
 // Keys an inserted block may carry besides its core fields (the server keeps the same list).
-const INSERT_BLOCK_EXTRAS = ['responsive', 'attributes', 'classNames', 'conditions', 'metadata', 'interactions', 'animation', 'style_states', 'tag'];
+const INSERT_BLOCK_EXTRAS = ['responsive', 'attributes', 'classNames', 'conditions', 'metadata', 'interactions', 'animation', 'style_states', 'style_parts', 'tag'];
 
 const ID_KEYS = ['section_id', 'block_id', 'parent_id'];
 
@@ -418,6 +422,18 @@ export function applyLocal(doc, operation, ctx = {}) {
         const { style_states: _old, ...rest } = b;
         const states = asObject(p.style_states);
         return Object.keys(states).length ? { ...rest, style_states: states } : rest;
+      });
+      if (!hit) throw notFound(p.block_id);
+      return next;
+    }
+    case OPS.UPDATE_BLOCK_STYLE_PARTS: {
+      let hit = false;
+      const next = mapBlocks(doc, (b) => {
+        if (b.id !== p.block_id) return b;
+        hit = true;
+        const { style_parts: _old, ...rest } = b;
+        const parts = asObject(p.style_parts);
+        return Object.keys(parts).length ? { ...rest, style_parts: parts } : rest;
       });
       if (!hit) throw notFound(p.block_id);
       return next;

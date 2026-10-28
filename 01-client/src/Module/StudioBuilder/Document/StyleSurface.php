@@ -24,6 +24,7 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Document;
 
+use Slate\Module\StudioBuilder\Registry\BlockParts;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 
 final class StyleSurface
@@ -1181,6 +1182,126 @@ final class StyleSurface
                     // beat it to show at all, and inline style loses only to !important.
                     $rules[$name] = implode(';', array_map(static fn(string $d): string => $d . ' !important', array_filter(explode(';', $decl), static fn(string $d): bool => trim($d) !== '')));
                 }
+            }
+        }
+        return $rules;
+    }
+
+    // ── parts (BlockParts) ────────────────────────────────────────────────────
+
+    /**
+     * What one part of a widget may set: its text (colour, size, weight, line height, letter spacing, case, style and
+     * decoration), its background colour, border, corners, padding, margin and shadow. A closed table, like the rest.
+     *
+     * @return array<string, array<string, array<int, mixed>>|array<int, mixed>>
+     */
+    private static function partFields(): array
+    {
+        $more = self::moreFields();
+        return [
+            'color'      => ['tcolor', 'color'],
+            'typography' => [
+                'size'           => ['length', 'font-size'],
+                'weight'         => ['map', 'font-weight', ['normal' => '400', 'medium' => '500', 'semibold' => '600', 'bold' => '700', 'extrabold' => '800']],
+                'line_height'    => ['length', 'line-height'],
+                'letter_spacing' => ['length', 'letter-spacing', true],
+                'transform'      => ['enum', 'text-transform', ['none', 'uppercase', 'lowercase', 'capitalize']],
+                'style'          => $more['typography']['style'],
+                'decoration'     => $more['typography']['decoration'],
+            ],
+            'background' => ['color' => ['tcolor', 'background-color']],
+            'border'     => [
+                'width'  => ['length', 'border-width'],
+                'style'  => ['enum', 'border-style', CanonicalDocumentSchema::ALLOWED_BORDER_STYLES],
+                'color'  => ['tcolor', 'border-color'],
+                'radius' => ['length', 'border-radius'],
+            ],
+            'padding'    => $more['padding'],
+            'margin'     => $more['margin'],
+            'shadow'     => $more['shadow'],
+        ];
+    }
+
+    /**
+     * Issues for `block.style_parts`: keys are a part of the block's type (BlockParts), alone or with a state
+     * (`title:hover`); each value is a partial style from partFields().
+     *
+     * @return list<array{path: string, code: string, message: string}>
+     */
+    public static function partIssues(mixed $parts, string $type, string $path): array
+    {
+        if (!is_array($parts) || ($parts !== [] && array_is_list($parts))) {
+            return [self::issue($path, 'style_parts must be an object.')];
+        }
+        $known = BlockParts::for($type);
+        $defs = self::partFields();
+        $errors = [];
+        foreach ($parts as $key => $partial) {
+            $p = "{$path}.{$key}";
+            [$part, $state] = array_pad(explode(':', (string) $key, 2), 2, null);
+            if (!isset($known[$part]) || ($state !== null && !isset(BlockParts::STATES[$state]))) {
+                $errors[] = self::issue($p, "'{$key}' is not a part of {$type}.");
+                continue;
+            }
+            if (!is_array($partial) || ($partial !== [] && array_is_list($partial))) {
+                $errors[] = self::issue($p, 'A part style must be an object.');
+                continue;
+            }
+            foreach ($partial as $group => $value) {
+                $def = $defs[(string) $group] ?? null;
+                if ($def === null) {
+                    $errors[] = self::issue("{$p}.{$group}", "A part cannot set '{$group}'.");
+                } elseif (array_is_list($def)) {
+                    self::checkField($value, $def, "{$p}.{$group}", $errors);
+                } else {
+                    self::checkObject($value, $def, "{$p}.{$group}", $errors);
+                }
+            }
+        }
+        return $errors;
+    }
+
+    /**
+     * The rules of `block.style_parts`, for RenderCollector::scopedRule(): each is the part's selectors (with the state's
+     * pseudo-class) and its declarations. `!important`, because the base stylesheet makes a widget's inner text follow the
+     * widget's own typography with `inherit !important`, and an author's part style has to win over that.
+     *
+     * @param array<string, mixed> $parts
+     * @return list<array{selectors: list<string>, declarations: string}>
+     */
+    public static function partRules(array $parts, string $type): array
+    {
+        $known = BlockParts::for($type);
+        $defs = self::partFields();
+        $rules = [];
+        // Base styles first, then states, so a hover wins over the base at equal weight.
+        foreach ([null, ...array_keys(BlockParts::STATES)] as $state) {
+            foreach ($known as $part => $definition) {
+                $partial = $parts[$state === null ? $part : $part . ':' . $state] ?? null;
+                if (!is_array($partial)) {
+                    continue;
+                }
+                $out = [];
+                foreach ($defs as $group => $def) {
+                    if (!array_key_exists($group, $partial)) {
+                        continue;
+                    }
+                    if (array_is_list($def)) {
+                        self::emitFields([$group => $partial[$group]], [$group => $def], $out);
+                    } elseif ($group === 'shadow' && is_array($partial['shadow'])) {
+                        $out = array_merge($out, array_filter(explode(';', self::declarations(['shadow' => $partial['shadow']])), static fn(string $d): bool => $d !== ''));
+                    } elseif (is_array($partial[$group])) {
+                        self::emitFields($partial[$group], $def, $out);
+                    }
+                }
+                if ($out === []) {
+                    continue;
+                }
+                $pseudo = $state === null ? '' : BlockParts::STATES[$state];
+                $rules[] = [
+                    'selectors'    => array_map(static fn(string $sel): string => $sel . $pseudo, $definition['selectors']),
+                    'declarations' => implode(';', array_map(static fn(string $d): string => $d . ' !important', $out)),
+                ];
             }
         }
         return $rules;

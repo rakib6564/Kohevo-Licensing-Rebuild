@@ -88,6 +88,7 @@ final class DocumentOperationApplier
             DocumentOperation::OP_UPDATE_BLOCK_ANIMATION => self::updateBlockField($document, $payload, 'animation'),
             DocumentOperation::OP_UPDATE_BLOCK_META => self::updateBlockMeta($document, $payload),
             DocumentOperation::OP_UPDATE_BLOCK_STYLE_STATES => self::updateBlockStyleStates($document, $payload),
+            DocumentOperation::OP_UPDATE_BLOCK_STYLE_PARTS => self::updateBlockStyleParts($document, $payload),
             DocumentOperation::OP_UPDATE_BLOCK_TAG => self::updateBlockTag($document, $payload),
             DocumentOperation::OP_RESET_BLOCK_STYLE_PROPERTY => self::resetBlockStyleProperty($document, $payload),
             DocumentOperation::OP_UPDATE_SECTION_STYLE => self::updateSectionStyle($document, $payload),
@@ -830,6 +831,27 @@ final class DocumentOperationApplier
         self::assertFound($found, 'block_id', $blockId, 'block');
         $document['sections'] = $sections;
         return $document;
+    }
+
+    /**
+     * Replace the block's `style_parts` wholesale (BlockParts); an empty object removes the key.
+     *
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function updateBlockStyleParts(array $document, array $payload): array
+    {
+        $blockId = self::requireString($payload, 'block_id', '$.payload.block_id');
+        $parts   = self::requireObject($payload, 'style_parts', '$.payload.style_parts');
+        return self::changeBlockInDocument($document, $blockId, static function (array $block) use ($parts): array {
+            if ($parts === []) {
+                unset($block['style_parts']);
+            } else {
+                $block['style_parts'] = $parts;
+            }
+            return $block;
+        });
     }
 
     /**

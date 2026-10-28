@@ -59,6 +59,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Booking",
             "type": "booking.embed",
             "version": 1
@@ -137,6 +138,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Booking Services",
             "type": "booking.services",
             "version": 1
@@ -242,6 +244,24 @@
                 "padding",
                 "text_shadow",
                 "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "item",
+                    "label": "Item"
+                },
+                {
+                    "key": "title",
+                    "label": "Title"
+                },
+                {
+                    "key": "icon",
+                    "label": "Icon"
+                },
+                {
+                    "key": "content",
+                    "label": "Content"
+                }
             ],
             "title": "Accordion",
             "type": "core.accordion",
@@ -419,6 +439,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Button",
             "type": "core.button",
             "version": 1
@@ -498,6 +519,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Card",
             "type": "core.card",
             "version": 1
@@ -668,6 +690,24 @@
                 "padding",
                 "text_shadow",
                 "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "quote",
+                    "label": "Quote"
+                },
+                {
+                    "key": "author",
+                    "label": "Author"
+                },
+                {
+                    "key": "arrows",
+                    "label": "Arrows"
+                },
+                {
+                    "key": "dots",
+                    "label": "Dots"
+                }
             ],
             "title": "Carousel",
             "type": "core.carousel",
@@ -887,6 +927,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Container",
             "type": "core.container",
             "version": 1
@@ -958,6 +999,24 @@
                 "padding",
                 "text_shadow",
                 "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "title",
+                    "label": "Title"
+                },
+                {
+                    "key": "box",
+                    "label": "Box"
+                },
+                {
+                    "key": "number",
+                    "label": "Number"
+                },
+                {
+                    "key": "unit",
+                    "label": "Unit name"
+                }
             ],
             "title": "Countdown",
             "type": "core.countdown",
@@ -1057,6 +1116,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Divider",
             "type": "core.divider",
             "version": 1
@@ -1193,6 +1253,28 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [
+                {
+                    "key": "title",
+                    "label": "Title"
+                },
+                {
+                    "key": "card",
+                    "label": "Item"
+                },
+                {
+                    "key": "heading",
+                    "label": "Item heading"
+                },
+                {
+                    "key": "body",
+                    "label": "Item text"
+                },
+                {
+                    "key": "link",
+                    "label": "Link"
+                }
+            ],
             "title": "Feature list",
             "type": "core.feature_list",
             "version": 1
@@ -1316,6 +1398,24 @@
                 "padding",
                 "text_shadow",
                 "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "label",
+                    "label": "Labels"
+                },
+                {
+                    "key": "input",
+                    "label": "Inputs"
+                },
+                {
+                    "key": "help",
+                    "label": "Help text"
+                },
+                {
+                    "key": "button",
+                    "label": "Submit button"
+                }
             ],
             "title": "Form",
             "type": "core.form",
@@ -1465,6 +1565,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Form Field",
             "type": "core.form_field",
             "version": 1
@@ -1597,6 +1698,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Gallery",
             "type": "core.gallery",
             "version": 1
@@ -1761,6 +1863,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Heading",
             "type": "core.heading",
             "version": 1
@@ -1929,6 +2032,24 @@
                 "padding",
                 "text_shadow",
                 "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "eyebrow",
+                    "label": "Eyebrow"
+                },
+                {
+                    "key": "heading",
+                    "label": "Heading"
+                },
+                {
+                    "key": "subheading",
+                    "label": "Subheading"
+                },
+                {
+                    "key": "media",
+                    "label": "Image"
+                }
             ],
             "title": "Hero",
             "type": "core.hero",
@@ -2158,6 +2279,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Icon",
             "type": "core.icon",
             "version": 1
@@ -2274,6 +2396,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Image",
             "type": "core.image",
             "version": 1
@@ -2359,6 +2482,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Link",
             "type": "core.link",
             "version": 1
@@ -2456,6 +2580,12 @@
                 "padding",
                 "text_shadow",
                 "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "item",
+                    "label": "Items"
+                }
             ],
             "title": "List",
             "type": "core.list",
@@ -2555,6 +2685,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Map",
             "type": "core.map",
             "version": 1
@@ -2655,6 +2786,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Modal",
             "type": "core.modal",
             "version": 1
@@ -2815,6 +2947,12 @@
                 "padding",
                 "text_shadow",
                 "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "link",
+                    "label": "Links"
+                }
             ],
             "title": "Nav menu",
             "type": "core.nav_menu",
@@ -3069,6 +3207,36 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [
+                {
+                    "key": "card",
+                    "label": "Card"
+                },
+                {
+                    "key": "image",
+                    "label": "Image"
+                },
+                {
+                    "key": "category",
+                    "label": "Category"
+                },
+                {
+                    "key": "title",
+                    "label": "Title"
+                },
+                {
+                    "key": "excerpt",
+                    "label": "Excerpt"
+                },
+                {
+                    "key": "meta",
+                    "label": "Date and author"
+                },
+                {
+                    "key": "button",
+                    "label": "Read more"
+                }
+            ],
             "title": "Posts grid",
             "type": "core.query_loop",
             "version": 1
@@ -3159,6 +3327,20 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [
+                {
+                    "key": "text",
+                    "label": "Quote"
+                },
+                {
+                    "key": "author",
+                    "label": "Author"
+                },
+                {
+                    "key": "role",
+                    "label": "Role"
+                }
+            ],
             "title": "Quote",
             "type": "core.quote",
             "version": 1
@@ -3247,6 +3429,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Rich text",
             "type": "core.rich_text",
             "version": 1
@@ -3308,6 +3491,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Spacer",
             "type": "core.spacer",
             "version": 1
@@ -3465,6 +3649,16 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [
+                {
+                    "key": "number",
+                    "label": "Number"
+                },
+                {
+                    "key": "label",
+                    "label": "Label"
+                }
+            ],
             "title": "Stats",
             "type": "core.stats",
             "version": 1
@@ -3574,6 +3768,20 @@
                 "padding",
                 "text_shadow",
                 "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "header",
+                    "label": "Header cells"
+                },
+                {
+                    "key": "cell",
+                    "label": "Cells"
+                },
+                {
+                    "key": "caption",
+                    "label": "Caption"
+                }
             ],
             "title": "Table",
             "type": "core.table",
@@ -3697,6 +3905,20 @@
                 "padding",
                 "text_shadow",
                 "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "tab",
+                    "label": "Tab titles"
+                },
+                {
+                    "key": "tab_active",
+                    "label": "Active tab"
+                },
+                {
+                    "key": "panel",
+                    "label": "Panel"
+                }
             ],
             "title": "Tabs",
             "type": "core.tabs",
@@ -3834,6 +4056,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Text",
             "type": "core.text",
             "version": 1
@@ -3933,6 +4156,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Video",
             "type": "core.video",
             "version": 1
@@ -3983,6 +4207,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Form",
             "type": "forms.embed",
             "version": 1
@@ -4052,6 +4277,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Form Card",
             "type": "forms.form_card",
             "version": 1
@@ -4140,6 +4366,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Width container",
             "type": "layout.container",
             "version": 1
@@ -4260,6 +4487,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Flex",
             "type": "layout.flex",
             "version": 1
@@ -4348,6 +4576,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Grid",
             "type": "layout.grid",
             "version": 1
@@ -4515,6 +4744,12 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [
+                {
+                    "key": "trigger",
+                    "label": "Open button"
+                }
+            ],
             "title": "Offcanvas",
             "type": "layout.offcanvas",
             "version": 1
@@ -4631,6 +4866,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Section",
             "type": "layout.section",
             "version": 1
@@ -4709,6 +4945,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Membership Plans",
             "type": "membership.plans",
             "version": 1
@@ -4813,6 +5050,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Payment Button",
             "type": "payment.button",
             "version": 1
@@ -4876,6 +5114,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Payment link",
             "type": "payment.link",
             "version": 1
@@ -4945,6 +5184,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Archive title",
             "type": "theme.archive_title",
             "version": 1
@@ -5033,6 +5273,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Field value",
             "type": "theme.field_value",
             "version": 1
@@ -5089,6 +5330,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Post content",
             "type": "theme.post_content",
             "version": 1
@@ -5170,6 +5412,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Post meta",
             "type": "theme.post_meta",
             "version": 1
@@ -5255,6 +5498,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Post title",
             "type": "theme.post_title",
             "version": 1
@@ -5318,6 +5562,7 @@
                 "text_shadow",
                 "overlay"
             ],
+            "style_parts": [],
             "title": "Search box",
             "type": "theme.search_box",
             "version": 1
