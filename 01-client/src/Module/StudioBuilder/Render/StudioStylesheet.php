@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '33';
+    public const VERSION = '34';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -62,14 +62,19 @@ final class StudioStylesheet
         }
 
         $css = '*,*::before,*::after{box-sizing:border-box}'
-            . 'body.sb-body{margin:0;background:var(--sb-surface-page);color:var(--sb-text-primary);font-family:var(--sb-font-body);line-height:1.6;overflow-x:clip}'
-            . '.sb-body h1,.sb-body h2,.sb-body h3,.sb-body h4,.sb-body h5,.sb-body h6{font-family:var(--sb-font-heading);line-height:1.2;margin:0 0 .5em}'
+            // Site settings › Text: body text (its colour, size and line height), the headings' colour and line height,
+            // and the space blocks leave between them (`type.flow`, `type.heading_gap`). The defaults are the look every
+            // site had before these settings existed. A heading's colour is zero-weight so any block colour wins over it.
+            . 'body.sb-body{margin:0;background:var(--sb-surface-page);color:var(--sb-text-body,var(--sb-text-primary));font-family:var(--sb-font-body);font-size:var(--sb-type-body_size,1rem);line-height:var(--sb-type-body_leading,1.6);overflow-x:clip}'
+            . '.sb-body h1,.sb-body h2,.sb-body h3,.sb-body h4,.sb-body h5,.sb-body h6{font-family:var(--sb-font-heading);line-height:var(--sb-type-heading_leading,1.2);margin:0 0 var(--sb-type-heading_gap,.5em)}'
+            . ':where(.sb-body) :where(h1,h2,h3,h4,h5,h6){color:var(--sb-text-heading,inherit)}'
             . '.sb-body img{max-width:100%;height:auto}'
             // Buttons are links too: the generic link colour must not reach them (it would equal
             // the primary button's background and hide the label), so they keep their variant colours.
-            . '.sb-body a:not(.sb-button){color:var(--sb-color-accent)}'
+            // A linked heading keeps the heading's colour (`.sb-heading__link` alone was outweighed by this rule).
+            . '.sb-body a:not(.sb-button):not(.sb-heading__link){color:var(--sb-color-accent)}'
             . '.sb-main{display:block}'
-            . '.sb-section__inner{margin:0 auto;padding-left:1rem;padding-right:1rem;display:grid}'
+            . '.sb-section__inner{margin:0 auto;padding-left:var(--sb-type-section_gutter,1rem);padding-right:var(--sb-type-section_gutter,1rem);display:grid}'
             . '.sb-section__inner>*{min-width:0}'
             // The default chrome's padding and rule; a custom header or footer partial renders exactly as designed.
             . '.sb-site-header:not(.sb-site-header--partial),.sb-site-footer:not(.sb-site-footer--partial){padding:1rem;border-color:var(--sb-border-default)}'
@@ -82,7 +87,7 @@ final class StudioStylesheet
             . '.sb-hero__eyebrow{text-transform:uppercase;letter-spacing:.08em;font-size:.8rem;margin:0 0 .5rem}'
             . '.sb-hero__heading{font-size:clamp(2rem,5vw,3.5rem)}'
             . '.sb-hero__media img{display:block;width:100%;border-radius:var(--sb-radius-lg);object-fit:cover}'
-            . '.sb-button-row{margin:1rem 0 0}'
+            . '.sb-button-row{margin:var(--sb-type-flow,1rem) 0 0}'
             . '.sb-button{font-style:inherit;display:inline-block;padding:.7rem 1.3rem;border-radius:var(--sb-radius-md);text-decoration:none;font-weight:600;border:2px solid var(--sb-color-accent)}'
             . '.sb-button--primary{background:var(--sb-surface-accent);color:var(--sb-text-inverse)}'
             . '.sb-button--secondary{background:var(--sb-surface-secondary);color:var(--sb-text-primary);border-color:var(--sb-surface-secondary)}'
@@ -119,7 +124,7 @@ final class StudioStylesheet
             . '.sb-image--ratio-1-1 img{aspect-ratio:1/1}.sb-image--ratio-3-4 img{aspect-ratio:3/4}'
             . '.sb-image figcaption{font-size:.875rem;color:var(--sb-text-muted);margin-top:.5rem}'
             // Icon, list, quote and link elements (P2b).
-            . ':where(.sb-block--core-icon){color:var(--sb-color-accent)}.sb-icon{display:flex;margin:0 0 1rem}'
+            . ':where(.sb-block--core-icon){color:var(--sb-color-accent)}.sb-icon{display:flex;margin:0 0 var(--sb-type-flow,1rem)}'
             // The Icon's views: stacked fills its frame with the icon colour (the icon takes the secondary colour), framed outlines it.
             . '.sb-icon__link{display:inline-flex;color:inherit}.sb-icon__frame{display:inline-flex;padding:.5em;line-height:0}'
             . '.sb-icon--stacked .sb-icon__frame{background:currentColor}:where(.sb-icon--stacked .sb-icon__svg){color:var(--sb-surface-primary,#fff)}'
@@ -127,7 +132,7 @@ final class StudioStylesheet
             . '.sb-icon--center{justify-content:center}.sb-icon--right{justify-content:flex-end}'
             . '.sb-icon__svg{display:block;width:2rem;height:2rem}'
             . '.sb-icon--sm .sb-icon__svg{width:1.25rem;height:1.25rem}.sb-icon--lg .sb-icon__svg{width:3rem;height:3rem}.sb-icon--xl .sb-icon__svg{width:4.5rem;height:4.5rem}'
-            . '.sb-list{margin:0 0 1rem;padding-left:1.4rem;line-height:1.6}.sb-list__item{margin:.25rem 0}'
+            . '.sb-list{margin:0 0 var(--sb-type-flow,1rem);padding-left:1.4rem;line-height:var(--sb-type-body_leading,1.6)}.sb-list__item{margin:.25rem 0}'
             . '.sb-list--none{list-style:none;padding-left:0}'
             . '.sb-list--check{list-style:none;padding-left:0}'
             . '.sb-list--check .sb-list__item{position:relative;padding-left:1.7rem}'
@@ -183,7 +188,7 @@ final class StudioStylesheet
             . '.sb-map iframe{position:relative;z-index:1;display:block;width:100%;height:100%;border:0}'
             . '.sb-map--sm{height:15.5rem}.sb-map--md{height:25rem}.sb-map--lg{height:34rem}'
             . '@media (max-width:767.98px){.sb-map--md{height:20rem}.sb-map--lg{height:26rem}}'
-            . '.sb-nav{margin:0 0 1rem}.sb-nav__list{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:.25rem 1.5rem}'
+            . '.sb-nav{margin:0 0 var(--sb-type-flow,1rem)}.sb-nav__list{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:.25rem 1.5rem}'
             . '.sb-nav--vertical .sb-nav__list{flex-direction:column;gap:.25rem}'
             . '.sb-nav--center .sb-nav__list{justify-content:center}.sb-nav--right .sb-nav__list{justify-content:flex-end}'
             . '.sb-nav--vertical.sb-nav--center{text-align:center}.sb-nav--vertical.sb-nav--right{text-align:right}'
@@ -192,7 +197,7 @@ final class StudioStylesheet
             . '.sb-body .sb-nav a.sb-nav__link{color:inherit}.sb-body .sb-nav a.sb-nav__link:hover{color:var(--sb-color-accent)}'
             . '.sb-nav--underline .sb-nav__link{text-decoration:underline;text-underline-offset:.25em}'
             . '.sb-nav--pill .sb-nav__link{padding:.35rem .9rem;border-radius:999px}.sb-nav--pill .sb-nav__link:hover{background:var(--sb-border-default)}'
-            . '.sb-link-row{margin:0 0 1rem}.sb-link-row--center{text-align:center}.sb-link-row--right{text-align:right}'
+            . '.sb-link-row{margin:0 0 var(--sb-type-flow,1rem)}.sb-link-row--center{text-align:center}.sb-link-row--right{text-align:right}'
             // In a row (a horizontal flex or a grid) the gap spaces the items; a link's, button's, text's, menu's or
             // icon's own margin would push it off the row's centre line (a header's button sat lower than its menu).
             . '.sb-flex--row>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-text,.sb-nav,.sb-icon),.sb-grid>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-text,.sb-nav,.sb-icon){margin:0}'
@@ -267,10 +272,12 @@ final class StudioStylesheet
             . '.sb-grid--align-center{align-items:center}'
             . '.sb-grid--align-end{align-items:flex-end}'
             . '.sb-grid--align-stretch{align-items:stretch}'
-            . '.sb-text{margin:0 0 1rem;line-height:1.6}'
+            . '.sb-text{margin:0 0 var(--sb-type-flow,1rem);line-height:var(--sb-type-body_leading,1.6)}'
             . '.sb-text--xs{font-size:.75rem}'
             . '.sb-text--sm{font-size:.875rem}'
-            . '.sb-text--base{font-size:1rem}'
+            . '.sb-text--base{font-size:var(--sb-type-body_size,1rem)}'
+            // "Same as around it": the text takes the size and line height of the block it sits in.
+            . '.sb-text--inherit{font-size:inherit;line-height:inherit}'
             . '.sb-text--lg{font-size:1.125rem}'
             . '.sb-text--xl{font-size:1.25rem}'
             . ':where(.sb-hl){color:var(--sb-color-accent)}'

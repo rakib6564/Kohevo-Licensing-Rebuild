@@ -7,6 +7,7 @@ import { asList } from './doc.mjs';
 export const SITE_GROUPS = Object.freeze([
   { id: 'colors', titleKey: 'ss_group_colors', categories: ['surface', 'text', 'color', 'border'], swatch: true },
   { id: 'fonts', titleKey: 'ss_group_fonts', categories: ['font'], fonts: true },
+  { id: 'type', titleKey: 'ss_group_type', categories: ['type'], hintKey: 'ss_hint_type' },
   { id: 'shape', titleKey: 'ss_group_shape', categories: ['radius'] },
   { id: 'shadows', titleKey: 'ss_group_shadows', categories: ['shadow'] },
   { id: 'spacing', titleKey: 'ss_group_spacing', categories: ['space'] },

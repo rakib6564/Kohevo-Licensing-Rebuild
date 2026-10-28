@@ -15,7 +15,7 @@ use Slate\Module\StudioBuilder\Render\Html;
 
 final class TextRenderer implements BlockRendererInterface
 {
-    private const SIZES = ['xs', 'sm', 'base', 'lg', 'xl', 'lead'];
+    private const SIZES = ['xs', 'sm', 'base', 'lg', 'xl', 'lead', 'inherit'];
     private const ALIGN = ['left', 'center', 'right', 'justify'];
 
     public function type(): string

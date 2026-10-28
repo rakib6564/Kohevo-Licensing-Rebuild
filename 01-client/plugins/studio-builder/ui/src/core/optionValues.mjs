@@ -31,7 +31,8 @@ export function sizedLabel(fieldId, value) {
   const table = tableFor(fieldId);
   const row = table && OPTION_VALUES.tables[table];
   const raw = row && Object.prototype.hasOwnProperty.call(row.values, value) ? row.values[value] : null;
-  return raw === null ? base : `${base} · ${formatSize(raw)}`;
+  // A size that follows the text around it has no number of its own to show.
+  return raw === null || raw === 'inherit' ? base : `${base} · ${formatSize(raw)}`;
 }
 
 /** A label function bound to one field, for selects that take `labelOf`. */

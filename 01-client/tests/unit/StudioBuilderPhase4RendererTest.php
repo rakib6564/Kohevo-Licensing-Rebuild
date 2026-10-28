@@ -565,7 +565,7 @@ unit('phase4 routing: only single-segment, non-reserved slugs are Studio candida
 unit('phase4 stylesheet: the generic link colour never reaches .sb-button links, so every button variant keeps its own label colour (a primary label was invisible: accent text on an accent background)', function (): void {
     $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
     assert_true(!str_contains($css, '.sb-body a{'), 'no bare link rule that also matches buttons');
-    assert_true(str_contains($css, '.sb-body a:not(.sb-button){color:var(--sb-color-accent)}'), 'ordinary links keep the accent colour');
+    assert_true(str_contains($css, '.sb-body a:not(.sb-button):not(.sb-heading__link){color:var(--sb-color-accent)}'), 'ordinary links keep the accent colour, and a linked heading keeps the heading\'s');
     assert_true(str_contains($css, '.sb-button--primary{background:var(--sb-surface-accent);color:var(--sb-text-inverse)}'), 'primary: inverse text on the accent surface');
     assert_true(str_contains($css, '.sb-button--secondary{background:var(--sb-surface-secondary);color:var(--sb-text-primary)'), 'secondary keeps its own text colour');
 });
@@ -581,6 +581,7 @@ unit('phase4 stylesheet: the generated CSS is the CSS its VERSION shipped, so a 
         '31' => 'af230d7893b02fafcb90ae2b370a996997c4547a',
         '32' => '4023d88403440f286386888e42dd9ec5b074d5ac',
         '33' => '6cc9bcd269d6c089a8d2adc2d75935523dd732a5',
+        '34' => '24abea4fc0d99c23a44fecba73a9f7f9c5bdfa67',
     ];
     $version = \Slate\Module\StudioBuilder\Render\StudioStylesheet::VERSION;
     $hash = sha1(\Slate\Module\StudioBuilder\Render\StudioStylesheet::css());
@@ -601,8 +602,8 @@ unit('phase4 stylesheet: an Image block\'s height, aspect ratio, object-fit and 
 unit('phase4 stylesheet: in a row (horizontal flex or grid) a link, button, text, menu or icon keeps no margin of its own, so a header\'s items share one centre line', function (): void {
     $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
     assert_true(str_contains($css, '.sb-flex--row>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-text,.sb-nav,.sb-icon),.sb-grid>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-text,.sb-nav,.sb-icon){margin:0}'), 'row items lose the stacked-layout margins');
-    assert_true(str_contains($css, '.sb-button-row{margin:1rem 0 0}') && str_contains($css, '.sb-link-row{margin:0 0 1rem}'), 'stacked links and buttons keep their spacing');
-    assert_true(strpos($css, '{margin:0}', strpos($css, '.sb-flex--row>.sb-block>:is(')) > strpos($css, '.sb-button-row{margin:1rem 0 0}'), 'the row rule comes after the stacked rules');
+    assert_true(str_contains($css, '.sb-button-row{margin:var(--sb-type-flow,1rem) 0 0}') && str_contains($css, '.sb-link-row{margin:0 0 var(--sb-type-flow,1rem)}'), 'stacked links and buttons keep their spacing (the site\'s text spacing, 1rem unless set)');
+    assert_true(strpos($css, '{margin:0}', strpos($css, '.sb-flex--row>.sb-block>:is(')) > strpos($css, '.sb-button-row{margin:var(--sb-type-flow,1rem) 0 0}'), 'the row rule comes after the stacked rules');
 });
 
 if (!empty($studioP4UnitStandalone)) {

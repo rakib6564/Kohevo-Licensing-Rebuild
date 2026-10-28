@@ -17,7 +17,7 @@ function sb_css_default(string $value): string
         $rem = (float) $m[1] * (int) (($m[2] ?? '') !== '' ? $m[2] : 1) / (int) (($m[3] ?? '') !== '' ? $m[3] : 1);
         return rtrim(rtrim(number_format($rem, 4, '.', ''), '0'), '.') . 'rem';
     }
-    if (preg_match('~^var\(--sb-[a-z0-9-]+,\s*(.+)\)$~', $value, $m) === 1) {
+    if (preg_match('~^var\(--sb-[a-z0-9_-]+,\s*(.+)\)$~', $value, $m) === 1) {
         return trim($m[1]);
     }
     return $value;
