@@ -53,16 +53,16 @@ function sbtt_render_editor(array $block): string
 
 unit('text settings: new tokens default to the look every site already had, and body text follows Main text until set', function (): void {
     $tokens = (new ThemeResolver(null, static fn(): array => []))->resolve()->tokens();
-    foreach (['type.body_size' => '1rem', 'type.body_leading' => '1.6', 'type.heading_leading' => '1.2', 'type.flow' => '1rem', 'type.heading_gap' => '0.5em', 'type.section_gutter' => '1rem', 'text.heading' => 'currentColor'] as $ref => $default) {
+    foreach (['type.body_size' => '1rem', 'type.body_leading' => '1.6', 'type.heading_leading' => '1.2', 'type.flow' => '1rem', 'type.heading_gap' => '0.5em', 'type.section_gutter' => '1rem', 'type.smoothing' => 'auto', 'text.heading' => 'currentColor'] as $ref => $default) {
         assert_eq($default, $tokens[$ref] ?? null, "{$ref} default");
     }
     assert_eq($tokens['text.primary'], $tokens['text.body'], 'body text is Main text unless set');
 
     $sanitize = new \ReflectionMethod(ThemeResolver::class, 'sanitizeValue');
-    foreach (['type.body_size' => '15px', 'type.body_leading' => '1.65', 'type.heading_leading' => '1.17', 'type.flow' => '0', 'type.heading_gap' => '0.5em', 'type.section_gutter' => '0px', 'text.heading' => '#0c0905'] as $ref => $ok) {
+    foreach (['type.body_size' => '15px', 'type.body_leading' => '1.65', 'type.heading_leading' => '1.17', 'type.flow' => '0', 'type.heading_gap' => '0.5em', 'type.section_gutter' => '0px', 'type.smoothing' => 'antialiased', 'text.heading' => '#0c0905'] as $ref => $ok) {
         assert_eq($ok, $sanitize->invoke(null, $ref, $ok), "accepted: {$ref} = {$ok}");
     }
-    foreach (['type.body_size' => '1.6', 'type.body_leading' => '1.6;color:red', 'type.flow' => 'auto', 'type.heading_gap' => 'calc(1px)', 'type.unknown_thing' => 'x'] as $ref => $bad) {
+    foreach (['type.body_size' => '1.6', 'type.body_leading' => '1.6;color:red', 'type.flow' => 'auto', 'type.heading_gap' => 'calc(1px)', 'type.smoothing' => 'subpixel', 'type.unknown_thing' => 'x'] as $ref => $bad) {
         assert_eq(null, $sanitize->invoke(null, $ref, $bad), "refused: {$ref} = {$bad}");
     }
 });
@@ -71,7 +71,7 @@ unit('text settings: the base stylesheet reads them, with today\'s values as fal
     StudioStylesheet::resetCache();
     $css = StudioStylesheet::css();
     foreach ([
-        'color:var(--sb-text-body,var(--sb-text-primary));font-family:var(--sb-font-body);font-size:var(--sb-type-body_size,1rem);line-height:var(--sb-type-body_leading,1.6)',
+        'color:var(--sb-text-body,var(--sb-text-primary));font-family:var(--sb-font-body);font-size:var(--sb-type-body_size,1rem);line-height:var(--sb-type-body_leading,1.6);-webkit-font-smoothing:var(--sb-type-smoothing,auto)',
         'line-height:var(--sb-type-heading_leading,1.2);margin:0 0 var(--sb-type-heading_gap,.5em);text-wrap:pretty}',
         ':where(.sb-body) :where(h1,h2,h3,h4,h5,h6){color:var(--sb-text-heading,inherit)}',
         '.sb-text{margin:0 0 var(--sb-type-flow,1rem);line-height:var(--sb-type-body_leading,1.6)}',

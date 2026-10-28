@@ -1145,6 +1145,7 @@ return [
     'studio_ui_ss_tk_type_flow' => 'Espace après un texte',
     'studio_ui_ss_tk_type_heading_gap' => 'Espace sous un titre',
     'studio_ui_ss_tk_type_section_gutter' => 'Marge latérale des sections',
+    'studio_ui_ss_tk_type_smoothing' => 'Lissage des polices (auto ou antialiased)',
     'studio_ui_state_not_first' => 'Tous sauf le premier',
     'studio_ui_layout_row_span' => 'Lignes occupées',
     'studio_ui_layout_span_full' => 'Toute la ligne',

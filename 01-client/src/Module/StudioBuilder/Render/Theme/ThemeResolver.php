@@ -75,6 +75,8 @@ final class ThemeResolver
         'type.heading_gap'     => '0.5em',
         'type.heading_leading' => '1.2',
         'type.section_gutter'  => '1rem',
+        // How text is drawn on macOS: `auto` (the system's subpixel rendering) or `antialiased` (lighter, crisper on dark).
+        'type.smoothing'       => 'auto',
     ];
 
     /** TenantBranding::resolve() key => Studio token refs it feeds. */
@@ -216,9 +218,11 @@ final class ThemeResolver
             'layout' => preg_match('/^[1-9][0-9]{0,3}(\.[0-9]{1,2})?(px|rem|em)$/', $value) === 1,
             'font' => preg_match(self::FONT_PATTERN, $value) === 1,
             // A line height is a plain number (1.6) or a length; a size or a space is a length with its unit (or 0).
-            'type' => str_ends_with($ref, '_leading')
+            'type' => $ref === 'type.smoothing'
+                ? in_array($value, ['auto', 'antialiased'], true)
+                : (str_ends_with($ref, '_leading')
                 ? preg_match('/^([0-9](\.[0-9]{1,3})?|' . self::LENGTH . ')$/', $value) === 1
-                : preg_match('/^(0|[0-9]{1,4}(\.[0-9]{1,3})?(px|rem|em|%))$/', $value) === 1,
+                : preg_match('/^(0|[0-9]{1,4}(\.[0-9]{1,3})?(px|rem|em|%))$/', $value) === 1),
             default => false,
         };
 

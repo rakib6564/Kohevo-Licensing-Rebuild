@@ -617,6 +617,7 @@ const EN = {
   ss_tk_type_flow: 'Space after text',
   ss_tk_type_heading_gap: 'Space under headings',
   ss_tk_type_section_gutter: 'Section side space',
+  ss_tk_type_smoothing: 'Font smoothing (auto or antialiased)',
   state_not_first: 'All but the first',
   layout_row_span: 'Spans rows',
   layout_span_full: 'Whole row',

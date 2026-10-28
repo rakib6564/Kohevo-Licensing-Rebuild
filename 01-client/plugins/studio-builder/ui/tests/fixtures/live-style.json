@@ -34,7 +34,8 @@
         "type.flow",
         "type.heading_gap",
         "type.heading_leading",
-        "type.section_gutter"
+        "type.section_gutter",
+        "type.smoothing"
     ],
     "cases": [
         {
