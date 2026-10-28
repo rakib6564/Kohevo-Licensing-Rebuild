@@ -45,6 +45,8 @@ return [
     'fm_err_refused_webhook_url_is_not_a_public_http_s_endpoint' => 'Refused: webhook URL is not a public http(s) endpoint.',
     'fm_err_thanks_your_response_has_been_received' => 'Thanks — your response has been received.',
     'fm_err_security_check_failed_please_try_again' => 'Security check failed. Please try again.',
+    'fm_err_fix_fields' => 'Please check the highlighted fields.',
+    'fm_thanks_default' => 'Thanks! Your submission has been received.',
     'forms_js_required' => 'This field is required.',
     'forms_js_email' => 'Enter a valid email address.',
     'forms_js_url' => 'Enter a valid URL (https://…).',

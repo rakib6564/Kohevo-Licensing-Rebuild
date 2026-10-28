@@ -52,10 +52,11 @@ $tenant = (int) $core['tenant_id'];
 InstallationService::createAdminAccount($tenant, 'Sandbox Admin', SBX_ADMIN_EMAIL, password_hash(SBX_ADMIN_PASSWORD, PASSWORD_DEFAULT));
 license_test_seed_cache($tenant, [
     'installation_id' => (string) $core['installation_id'], 'status' => 'active', 'plan' => 'sandbox',
-    'entitlements' => ['studio-builder', 'multilang-translate'], 'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
+    'entitlements' => ['studio-builder', 'multilang-translate', 'forms'], 'expires_at' => null, 'fetched_at' => gmdate('Y-m-d H:i:s'),
 ]);
-// multilang-translate is what makes French a selectable language (?lang=fr), so the French pack can be exercised.
-foreach (['studio-builder', 'multilang-translate'] as $slug) {
+// multilang-translate is what makes French a selectable language (?lang=fr), so the French pack can be exercised; forms
+// receives what a Studio form block submits (form-pipeline.spec.mjs).
+foreach (['studio-builder', 'multilang-translate', 'forms'] as $slug) {
     $act = PluginLoader::installFromDisk($slug);
     if (empty($act['ok'])) {
         fwrite(STDERR, "{$slug} install failed: " . json_encode($act) . "\n");

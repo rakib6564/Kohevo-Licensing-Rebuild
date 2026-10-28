@@ -103,6 +103,7 @@ use Slate\Module\StudioBuilder\Http\StudioCodePolicy;
 use Slate\Module\StudioBuilder\Registry\BlockAvailability;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Registry\BlockUsage;
+use Slate\Module\StudioBuilder\Service\StudioFormSync;
 use Slate\Module\StudioBuilder\Menu\StudioMenus;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeResolver;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeSource;
@@ -1042,6 +1043,7 @@ final class StudioApplicationService
             $result = $this->revisions->publishWorkingRevision($pageId, $expectedRevisionId, (int) $actor->userId, $summary, $this->buildValidationOptions($actor, $pageId));
             $this->claimHomepage($actor, $pageId);
             $this->invalidateSharedContent($result['page']);
+            $this->syncForms($tenantId, $result);
             $this->audit($actor, 'studio.page.published', (string) $pageId, ['revision_id' => (int) ($result['revision']['id'] ?? 0), 'source_revision_id' => (int) ($result['revision']['parent_revision_id'] ?? 0)]);
             return $result;
         }
@@ -1082,6 +1084,7 @@ final class StudioApplicationService
         // A republished Global Component / header / footer partial: drop the
         // artifacts of every dependent page (they recompile on next request).
         $this->invalidateSharedContent($result['page']);
+        $this->syncForms($tenantId, $result);
 
         $this->audit($actor, 'studio.page.published', (string) $pageId, [
             'revision_id'        => (int) $result['revision']['id'],
@@ -1089,6 +1092,24 @@ final class StudioApplicationService
             'content_hash'       => $compiled->contentHash,
         ]);
         return $result;
+    }
+
+    /**
+     * The page's Studio forms become Forms forms (StudioFormSync), after the publish has committed: a Forms problem is
+     * logged and never undoes a publish.
+     *
+     * @param array{revision: array<string, mixed>, page: array<string, mixed>} $result
+     */
+    private function syncForms(int $tenantId, array $result): void
+    {
+        try {
+            $document = json_decode((string) ($result['revision']['document_json'] ?? ''), true);
+            if (is_array($document)) {
+                StudioFormSync::sync($tenantId, $document, (string) ($result['page']['title'] ?? ''));
+            }
+        } catch (\Throwable $e) {
+            error_log('[studio-builder] forms sync failed for page ' . (int) ($result['page']['id'] ?? 0) . ': ' . $e->getMessage());
+        }
     }
 
     /**

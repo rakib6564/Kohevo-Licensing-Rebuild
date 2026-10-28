@@ -1173,6 +1173,120 @@
     });
   }
 
+  /* ── Feature: forms ───────────────────────────────────────────────────────
+   * A Studio form ([data-sb-form-slug]) posts to the Forms module. The page is cached and has no session, so when the
+   * visitor first touches the form this asks Forms for a CSRF token and a time-trap stamp (GET <action>/token), then
+   * submits in place with `Accept: application/json` and shows Forms' answer: the success message (or its redirect),
+   * or each field's error beside the field. Without this script the post still reaches Forms, which shows its own page.
+   */
+
+  function initForms(root) {
+    var forms = qsa(root, 'form[data-sb-form-slug]');
+    if (!forms.length || !global.fetch || !global.FormData) return;
+    var offs = [];
+
+    forms.forEach(function (form) {
+      var status = qs(form, '[data-sb-form-status]');
+      var button = qs(form, 'button[type="submit"]');
+      var back = qs(form, '[data-sb-return-to]');
+      if (back) back.value = global.location.pathname + global.location.search;
+      var token = null;
+
+      function hidden(name, value) {
+        var input = form.querySelector('input[type="hidden"][name="' + name + '"]');
+        if (!input) {
+          input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = name;
+          form.appendChild(input);
+        }
+        input.value = value;
+      }
+      function getToken() {
+        if (!token) {
+          token = fetch(form.action.replace(/\/?$/, '/token'), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+            .then(function (r) { if (!r.ok) throw new Error('token ' + r.status); return r.json(); })
+            .then(function (j) { hidden('_csrf', j.csrf || ''); hidden('_fts', j.fts || ''); return j; })
+            .catch(function (err) { token = null; throw err; });
+        }
+        return token;
+      }
+      function say(text, kind) {
+        if (!status) return;
+        status.textContent = text;
+        status.hidden = !text;
+        status.setAttribute('data-sb-state', kind || '');
+      }
+      function clearErrors() {
+        qsa(form, '[data-sb-field]').forEach(function (group) {
+          group.classList.remove('is-invalid');
+          var msg = qs(group, '[data-sb-field-error]');
+          if (msg) { msg.textContent = ''; msg.hidden = true; }
+          qsa(group, 'input,select,textarea').forEach(function (el) { el.removeAttribute('aria-invalid'); });
+        });
+      }
+      function showErrors(errors) {
+        var first = null;
+        Object.keys(errors || {}).forEach(function (name) {
+          var group = form.querySelector('[data-sb-field="' + name.replace(/"/g, '') + '"]');
+          if (!group) return;
+          group.classList.add('is-invalid');
+          var msg = qs(group, '[data-sb-field-error]');
+          if (msg) { msg.textContent = String(errors[name]); msg.hidden = false; }
+          var input = qs(group, 'input,select,textarea');
+          if (input) {
+            input.setAttribute('aria-invalid', 'true');
+            if (msg) {
+              if (!msg.id) msg.id = uid('err');
+              var by = (input.getAttribute('aria-describedby') || '').split(' ').filter(function (x) { return x && x !== msg.id; });
+              by.push(msg.id);
+              input.setAttribute('aria-describedby', by.join(' '));
+            }
+            if (!first) first = input;
+          }
+        });
+        if (first) first.focus();
+      }
+
+      offs.push(on(form, 'focusin', function () { getToken().catch(function () {}); }));
+      offs.push(on(form, 'submit', function (e) {
+        e.preventDefault();
+        if (form.getAttribute('aria-busy') === 'true') return;
+        clearErrors();
+        form.setAttribute('aria-busy', 'true');
+        if (button) button.disabled = true;
+        say(form.getAttribute('data-sb-label-sending') || 'Sending…', 'busy');
+        getToken()
+          .then(function () {
+            return fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin', headers: { Accept: 'application/json' } });
+          })
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            if (j && j.ok) {
+              if (j.redirect) { global.location.assign(j.redirect); return; }
+              form.reset();
+              if (back) back.value = global.location.pathname + global.location.search;
+              say(j.message || (status && status.getAttribute('data-sb-success')) || '', 'success');
+              token = null; // a new stamp for the next submit
+              return;
+            }
+            showErrors(j && j.errors);
+            say((j && j.message) || '', 'error');
+          })
+          .catch(function () {
+            say(form.getAttribute('data-sb-label-failed') || 'The form could not be sent.', 'error');
+            token = null;
+          })
+          .then(function () {
+            form.removeAttribute('aria-busy');
+            if (button) button.disabled = false;
+          });
+      }));
+    });
+
+    mount(function () { offs.forEach(function (off) { off(); }); });
+  }
+
   /* ── Feature: countdown ──────────────────────────────────────────────────
    * The element's existing text is the no-JS fallback, so the degraded state
    * is a sensible static label rather than a blank gap.
@@ -1290,6 +1404,7 @@
     ['carousel', initCarousel],
     ['marquee', initMarquee],
     ['countdown', initCountdown],
+    ['forms', initForms],
     ['anchors', initAnchors]
   ];
 

@@ -64,6 +64,12 @@ final class BlockRenderScope
         return $suffix === '' ? $base : $base . '-' . $suffix;
     }
 
+    /** @return array<string, mixed> the block as stored (its props, responsive values, children…) */
+    public function block(): array
+    {
+        return $this->block;
+    }
+
     /** @return array<string, mixed> */
     public function props(): array
     {

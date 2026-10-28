@@ -599,6 +599,10 @@ final class BlockRegistry
                 ['key' => 'form_name', 'type' => 'string', 'label' => 'Form Name', 'required' => false, 'default' => 'contact_form', 'max_length' => 64],
                 ['key' => 'submit_text', 'type' => 'string', 'label' => 'Submit Button Text', 'required' => false, 'default' => 'Submit', 'max_length' => 60],
                 ['key' => 'submit_variant', 'type' => 'enum', 'label' => 'Submit Variant', 'required' => false, 'allowed_values' => ['primary', 'secondary', 'outline'], 'default' => 'primary'],
+                // What happens after a submit (StudioFormSync makes the form a Forms form on publish; Forms stores it).
+                ['key' => 'success_message', 'type' => 'text', 'label' => 'Success Message', 'required' => false, 'default' => 'Thanks! We received your message.', 'max_length' => 500],
+                ['key' => 'redirect_url', 'type' => 'string', 'label' => 'Redirect To (optional)', 'required' => false, 'default' => '', 'max_length' => 500],
+                ['key' => 'notify_email', 'type' => 'string', 'label' => 'Email Submissions To', 'required' => false, 'default' => '', 'max_length' => 200],
             ]),
             allowsChildren: true,
         ));
@@ -615,11 +619,14 @@ final class BlockRegistry
             schema: FieldSchema::define([
                 ['key' => 'name', 'type' => 'string', 'label' => 'Field Name', 'required' => true, 'default' => 'field_name', 'max_length' => 64],
                 ['key' => 'label', 'type' => 'string', 'label' => 'Field Label', 'required' => true, 'default' => 'Field Label', 'max_length' => 120],
-                ['key' => 'field_type', 'type' => 'enum', 'label' => 'Field Type', 'required' => false, 'allowed_values' => ['text', 'email', 'tel', 'number', 'url', 'textarea', 'select', 'checkbox', 'radio'], 'default' => 'text'],
+                ['key' => 'field_type', 'type' => 'enum', 'label' => 'Field Type', 'required' => false, 'allowed_values' => ['text', 'email', 'tel', 'number', 'url', 'textarea', 'select', 'checkbox', 'radio', 'checkboxes', 'date', 'time', 'file', 'hidden'], 'default' => 'text'],
                 ['key' => 'placeholder', 'type' => 'string', 'label' => 'Placeholder', 'required' => false, 'default' => '', 'max_length' => 120],
                 ['key' => 'required', 'type' => 'boolean', 'label' => 'Required', 'required' => false, 'default' => false],
                 ['key' => 'help_text', 'type' => 'string', 'label' => 'Help Text', 'required' => false, 'default' => '', 'max_length' => 255],
                 ['key' => 'options', 'type' => 'string', 'label' => 'Options (comma-separated)', 'required' => false, 'default' => '', 'max_length' => 500],
+                ['key' => 'default_value', 'type' => 'string', 'label' => 'Default Value', 'required' => false, 'default' => '', 'max_length' => 255],
+                // A field's share of the form's row; two halves sit side by side. A phone stacks them unless set per device.
+                ['key' => 'width', 'type' => 'enum', 'label' => 'Width', 'required' => false, 'per_device' => true, 'allowed_values' => ['100', '75', '66', '50', '33', '25'], 'default' => '100'],
             ]),
             allowsChildren: false,
         ));

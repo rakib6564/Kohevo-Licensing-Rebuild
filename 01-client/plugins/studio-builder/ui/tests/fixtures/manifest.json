@@ -1207,8 +1207,11 @@
                 "action": "",
                 "form_name": "contact_form",
                 "method": "post",
+                "notify_email": "",
+                "redirect_url": "",
                 "submit_text": "Submit",
-                "submit_variant": "primary"
+                "submit_variant": "primary",
+                "success_message": "Thanks! We received your message."
             },
             "description": "Interactive form builder",
             "field_schema": [
@@ -1258,6 +1261,30 @@
                         "secondary",
                         "outline"
                     ]
+                },
+                {
+                    "key": "success_message",
+                    "type": "text",
+                    "label": "Success Message",
+                    "required": false,
+                    "default": "Thanks! We received your message.",
+                    "max_length": 500
+                },
+                {
+                    "key": "redirect_url",
+                    "type": "string",
+                    "label": "Redirect To (optional)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 500
+                },
+                {
+                    "key": "notify_email",
+                    "type": "string",
+                    "label": "Email Submissions To",
+                    "required": false,
+                    "default": "",
+                    "max_length": 200
                 }
             ],
             "icon": "form",
@@ -1301,13 +1328,15 @@
             "binding_slots": [],
             "category": "forms",
             "default_props": {
+                "default_value": "",
                 "field_type": "text",
                 "help_text": "",
                 "label": "Field Label",
                 "name": "field_name",
                 "options": "",
                 "placeholder": "",
-                "required": false
+                "required": false,
+                "width": "100"
             },
             "description": "A single input for a form",
             "field_schema": [
@@ -1342,7 +1371,12 @@
                         "textarea",
                         "select",
                         "checkbox",
-                        "radio"
+                        "radio",
+                        "checkboxes",
+                        "date",
+                        "time",
+                        "file",
+                        "hidden"
                     ]
                 },
                 {
@@ -1375,6 +1409,30 @@
                     "required": false,
                     "default": "",
                     "max_length": 500
+                },
+                {
+                    "key": "default_value",
+                    "type": "string",
+                    "label": "Default Value",
+                    "required": false,
+                    "default": "",
+                    "max_length": 255
+                },
+                {
+                    "key": "width",
+                    "type": "enum",
+                    "label": "Width",
+                    "required": false,
+                    "default": "100",
+                    "allowed_values": [
+                        "100",
+                        "75",
+                        "66",
+                        "50",
+                        "33",
+                        "25"
+                    ],
+                    "per_device": true
                 }
             ],
             "icon": "form",

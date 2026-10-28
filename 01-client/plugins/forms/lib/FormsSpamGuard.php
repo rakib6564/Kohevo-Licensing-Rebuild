@@ -528,9 +528,14 @@ class FormsSpamGuard
     /** Signed hidden field carrying the render time, for the time-trap. */
     public static function timeTrapField(): string
     {
-        $ts  = time();
-        $sig = self::sign((string)$ts);
-        return '<input type="hidden" name="_fts" value="' . $ts . '.' . $sig . '">';
+        return '<input type="hidden" name="_fts" value="' . self::timeTrapValue() . '">';
+    }
+
+    /** The signed render time on its own (`<time>.<signature>`), for a form drawn by a page that is not this one. */
+    public static function timeTrapValue(): string
+    {
+        $ts = time();
+        return $ts . '.' . self::sign((string)$ts);
     }
 
     /**
