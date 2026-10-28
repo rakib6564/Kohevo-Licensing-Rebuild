@@ -35,7 +35,7 @@ unit('part styles: a part of the block\'s type takes a closed partial style, alo
     foreach ([
         'a part another widget has' => ['number' => ['color' => 'red']],
         'an unknown state'          => ['tab:focus' => ['color' => 'red']],
-        'a group parts cannot set'  => ['tab' => ['layout' => ['display' => 'grid']]],
+        'a group parts cannot set'  => ['tab' => ['position' => ['mode' => 'absolute']]],
         'a CSS injection'           => ['tab' => ['color' => 'red;}body{display:none']],
         'an unknown weight'         => ['tab' => ['typography' => ['weight' => '950']]],
         'a part as a list'          => ['tab' => ['red']],
@@ -79,7 +79,7 @@ unit('part styles: the operation sets and clears them', function (): void {
 
 unit('part styles: every selector names a class the widget\'s renderers still write, and the editor manifest lists the parts', function (): void {
     $sources = '';
-    foreach (glob(dirname(__DIR__, 2) . '/src/Module/StudioBuilder/Render/Block/CoreRenderers/*.php') ?: [] as $file) {
+    foreach (glob(dirname(__DIR__, 2) . '/src/Module/StudioBuilder/Render/Block/{Core,Module}Renderers/*.php', GLOB_BRACE) ?: [] as $file) {
         $sources .= (string) file_get_contents($file);
     }
     $sources .= (string) file_get_contents(dirname(__DIR__, 2) . '/src/Module/StudioBuilder/Render/Html.php');
@@ -99,5 +99,5 @@ unit('part styles: every selector names a class the widget\'s renderers still wr
             }
         }
     }
-    assert_eq([], $manifests['core.heading']['style_parts'], 'a widget without parts lists none');
+    assert_eq([], $manifests['core.text']['style_parts'], 'a widget without parts lists none');
 });

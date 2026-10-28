@@ -134,9 +134,11 @@ final class RenderCollector
                 $template .= '@media ' . $query . "{.\0{" . $decl . '}}';
             }
         }
-        // `$parts` is StyleSurface::partRules(): selectors inside the block (BlockParts), each written under its class.
+        // `$parts` is StyleSurface::partRules(): selectors inside the block (BlockParts), each written under its class, and a
+        // device's rules under its media query (the query comes from StyleSurface::RESPONSIVE_DEVICES, never the document).
         foreach ($parts as $rule) {
-            $template .= implode(',', array_map(static fn(string $sel): string => ".\0 " . $sel, $rule['selectors'])) . '{' . $rule['declarations'] . '}';
+            $css = implode(',', array_map(static fn(string $sel): string => ".\0 " . $sel, $rule['selectors'])) . '{' . $rule['declarations'] . '}';
+            $template .= isset($rule['media']) ? '@media ' . $rule['media'] . '{' . $css . '}' : $css;
         }
         $class = 'sb-x-' . substr(hash('sha256', $template), 0, 16);
         $this->cssRules['~' . $class] = str_replace("\0", $class, $template);

@@ -49,6 +49,21 @@ export function isMeasure(v, allowAuto = false) {
   return isLength(v);
 }
 
+/**
+ * Grid column sizes (StyleSurface::isTracks): 1-12 tracks separated by spaces, each `auto`, `min-content`, `max-content`,
+ * `<n>fr`, a plain length (px, rem, em, %, vw) or `minmax(a,b)` of two of those.
+ */
+export function isTracks(v) {
+  if (typeof v !== 'string' || v.length > 200) return false;
+  const one = '(?:auto|min-content|max-content|0|\\d{1,4}(?:\\.\\d{1,3})?(?:fr|px|rem|em|%|vw))';
+  const track = new RegExp(`^(?:${one}|minmax\\(\\s*${one}\\s*,\\s*${one}\\s*\\))$`);
+  const tracks = v.trim().split(/\s+(?![^(]*\))/);
+  return tracks.length >= 1 && tracks.length <= 12 && tracks[0] !== '' && tracks.every((t) => track.test(t));
+}
+
+/** The CSS a valid track list is written as: no spaces around brackets and commas, single spaces between tracks. */
+export const tracksCss = (v) => v.trim().replace(/\s*([(,])\s*/g, '$1').replace(/\s*\)/g, ')').replace(/\s+/g, ' ');
+
 const enumOf = (list) => (v) => typeof v === 'string' && list.includes(v);
 const measure = (auto) => (v) => isMeasure(v, auto);
 const padding = (v) => isMeasure(v, false) && !v.trim().startsWith('-');
@@ -92,6 +107,8 @@ add('layout.grow', int(0, 10));
 add('layout.shrink', int(0, 10));
 add('layout.columns', int(1, 12));
 add('layout.rows', int(1, 12));
+add('layout.tracks', isTracks);
+add('layout.column_span', (v) => v === 'full' || int(1, 12)(v));
 add('layout.content_width', enumOf(OPTIONS.contentWidth));
 add('layout.content_max', measure(false));
 

@@ -164,8 +164,8 @@ test('a container shows its flex and grid options under Content (closed) and tit
 });
 
 test('a Button and a Heading have one Style section each, like the reference editor, holding the sections it replaces', () => {
-  assert.deepEqual(ids('style', ctxOf('core.button')), ['button_style', 'opacity', 'states', 'tokens']);
-  assert.deepEqual(ids('style', ctxOf('core.heading')), ['heading_style', 'background', 'border', 'shadow', 'opacity', 'states', 'tokens']);
+  assert.deepEqual(ids('style', ctxOf('core.button')), ['button_style', 'opacity', 'parts', 'states', 'tokens']);
+  assert.deepEqual(ids('style', ctxOf('core.heading')), ['heading_style', 'background', 'border', 'shadow', 'opacity', 'parts', 'states', 'tokens']);
   assert.equal(titleKeyOf(SECTIONS.find((x) => x.id === 'button_style'), ctxOf('core.button')), 'section_button');
   const title = (s) => ({ section_heading: 'Heading' }[s.titleKey] || s.titleKey);
   assert.ok(searchSections(ctxOf('core.heading'), 'stroke', title).map((s) => s.id).includes('heading_style'), 'its keywords find it');
@@ -227,7 +227,7 @@ test('a video or gallery has its size with its other settings: Dimensions is on 
 });
 
 test('a Text Editor, a Text, an Image and an Icon have one Style section each, like the reference editor, holding the sections it replaces', () => {
-  assert.deepEqual(ids('style', ctxOf('core.rich_text')), ['text_style', 'background', 'border', 'shadow', 'opacity', 'states', 'tokens']);
+  assert.deepEqual(ids('style', ctxOf('core.rich_text')), ['text_style', 'background', 'border', 'shadow', 'opacity', 'parts', 'states', 'tokens']);
   assert.deepEqual(ids('style', ctxOf('core.text')), ['text_style', 'background', 'border', 'shadow', 'opacity', 'states', 'tokens']);
   assert.deepEqual(ids('style', ctxOf('core.image')), ['image_style', 'background', 'states', 'tokens']);
   assert.ok(ids('style', ctxOf('core.icon')).includes('icon_style'));
@@ -258,8 +258,8 @@ test('a Container has a Background Overlay and a Shape Divider section under Sty
 });
 
 test('a widget with named parts has a Parts section in Style; one without has none', () => {
-  for (const type of ['core.tabs', 'core.accordion', 'core.stats', 'core.form', 'core.query_loop']) {
+  for (const type of ['core.tabs', 'core.accordion', 'core.stats', 'core.form', 'core.query_loop', 'core.button', 'core.gallery', 'core.nav_menu', 'core.list', 'core.heading']) {
     assert.ok(ids('style', ctxOf(type)).includes('parts'), `${type} has parts`);
   }
-  for (const type of ['core.heading', 'core.image']) assert.ok(!ids('style', ctxOf(type)).includes('parts'), `${type} has none`);
+  for (const type of ['core.text', 'core.image']) assert.ok(!ids('style', ctxOf(type)).includes('parts'), `${type} has none`);
 });

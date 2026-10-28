@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '32';
+    public const VERSION = '33';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -131,7 +131,19 @@ final class StudioStylesheet
             . '.sb-list--none{list-style:none;padding-left:0}'
             . '.sb-list--check{list-style:none;padding-left:0}'
             . '.sb-list--check .sb-list__item{position:relative;padding-left:1.7rem}'
-            . '.sb-list--check .sb-list__item::before{content:"";position:absolute;left:.15rem;top:.35em;width:.9rem;height:.5rem;border-left:2px solid var(--sb-color-accent);border-bottom:2px solid var(--sb-color-accent);transform:rotate(-45deg) scale(.9)}'
+            // The tick and the dash are drawn in `currentColor` of their own, so the list's Markers part can recolour them.
+            . '.sb-list--check .sb-list__item::before{content:"";position:absolute;left:.15rem;top:.35em;width:.9rem;height:.5rem;color:var(--sb-color-accent);border-left:2px solid;border-bottom:2px solid;transform:rotate(-45deg) scale(.9)}'
+            . '.sb-list--dash{list-style:none;padding-left:0}'
+            . '.sb-list--dash .sb-list__item{position:relative;padding-left:1.4rem}'
+            . '.sb-list--dash .sb-list__item::before{content:"";position:absolute;left:0;top:.8em;width:.8rem;height:2px;color:var(--sb-color-accent);background:currentColor}'
+            . '.sb-list--cols{display:grid;column-gap:1.5rem}.sb-list--cols>.sb-list__item{margin:0 0 .25rem}'
+            . '.sb-list--inline{display:flex;flex-wrap:wrap;column-gap:1rem;row-gap:.25rem;list-style:none;padding-left:0}.sb-list--inline>.sb-list__item{margin:0}'
+            . '.sb-list--divided:not(.sb-list--inline)>.sb-list__item+.sb-list__item{border-top:1px solid var(--sb-border-default);padding-top:.5rem;margin-top:.5rem}'
+            . '.sb-list--divided.sb-list--inline>.sb-list__item+.sb-list__item{border-left:1px solid var(--sb-border-default);padding-left:1rem}'
+            // A tick or a dash sits beside the text, so it moves with the room a line between the items adds.
+            . '.sb-list--divided:not(.sb-list--inline)>.sb-list__item+.sb-list__item::before{margin-top:.5rem}'
+            . '.sb-list--divided.sb-list--inline:is(.sb-list--check,.sb-list--dash)>.sb-list__item+.sb-list__item{padding-left:2.7rem}'
+            . '.sb-list--divided.sb-list--inline:is(.sb-list--check,.sb-list--dash)>.sb-list__item+.sb-list__item::before{margin-left:1rem}'
             . '.sb-quote{margin:0 0 1.5rem}.sb-quote--center{text-align:center}'
             . '.sb-quote__text{margin:0;padding:0 0 0 1.1rem;border-left:3px solid var(--sb-color-accent);font-size:1.25rem;line-height:1.5}'
             . '.sb-quote--center .sb-quote__text{border-left:0;padding:0}'
@@ -654,7 +666,16 @@ final class StudioStylesheet
             . '.sb-form__status[data-sb-state="success"]{background:#ecfdf5;color:#065f46}'
             . '.sb-form__status[data-sb-state="error"]{background:#fef2f2;color:#991b1b}'
             . '.sb-form__note{font-size:.8rem;color:var(--sb-text-muted);margin:0}'
-            . '.sb-form[aria-busy="true"] .sb-form__actions .sb-button{opacity:.6;cursor:progress}';
+            . '.sb-form[aria-busy="true"] .sb-form__actions .sb-button{opacity:.6;cursor:progress}'
+            // Hidden labels: out of sight, still read out (each field keeps its accessible name).
+            . '.sb-form--labels-hidden :is(.sb-form-group>label,.sb-form-choices>legend){position:absolute!important;width:1px;height:1px;margin:0;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}'
+            // Inline: the fields share the row and the button keeps its own width beside them, on every device; a status
+            // line or a note takes a row of its own. After the width rules above, so it wins over a field's width.
+            . '.sb-form--inline{flex-wrap:wrap;align-items:flex-end}'
+            . '.sb-form--inline>.sb-block{flex:1 1 0;min-width:0}'
+            . '.sb-form--inline>.sb-form__actions{flex:0 0 auto;margin-top:0}'
+            . '.sb-form--inline>.sb-form__actions .sb-button{width:auto}'
+            . '.sb-form--inline>:is(.sb-form__status,.sb-form__note){flex:0 0 100%;order:9}';
     }
 
     public static function prefix(string $breakpoint): ?string

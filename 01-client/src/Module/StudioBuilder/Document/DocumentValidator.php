@@ -792,6 +792,16 @@ final class DocumentValidator
                             }
                         }
                     }
+                    // A widget's parts per device (BlockParts), under the same rule: tablet and mobile only.
+                    if (is_array($bpVal) && array_key_exists('style_parts', $bpVal)) {
+                        if (!array_key_exists((string) $bpKey, StyleSurface::RESPONSIVE_DEVICES)) {
+                            $errors[] = ValidationResult::issue("{$path}.responsive.{$bpKey}.style_parts", 'invalid_style_value', "Only tablet and mobile take a part override; '{$bpKey}' uses the block's own parts.");
+                        } else {
+                            foreach (StyleSurface::responsivePartIssues($bpVal['style_parts'], is_string($block['type'] ?? null) ? $block['type'] : '', "{$path}.responsive.{$bpKey}.style_parts") as $issue) {
+                                $errors[] = ValidationResult::issue($issue['path'], $issue['code'], $issue['message']);
+                            }
+                        }
+                    }
                 }
             }
         }

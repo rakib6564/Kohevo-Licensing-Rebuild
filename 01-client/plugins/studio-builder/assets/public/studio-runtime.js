@@ -1383,6 +1383,25 @@
     if (off.length) mount(function () { off.forEach(function (un) { un(); }); });
   }
 
+  /* A menu's link to the page being viewed. The header is rendered once for every page, so the server cannot mark it;
+   * this does, so `aria-current` tells a screen reader where the visitor is and the menu's "Current page link" part
+   * (BlockParts) can style it. A trailing slash and the query do not count; a link to another site never matches.
+   */
+  function initCurrentLinks(root) {
+    var here = location.pathname.replace(/\/+$/, '') || '/';
+    var marked = [];
+    qsa(root, 'a.sb-nav__link[href]').forEach(function (a) {
+      if (a.hasAttribute('aria-current')) return;
+      var url;
+      try { url = new URL(a.getAttribute('href'), location.href); } catch (err) { return; }
+      if (url.origin !== location.origin) return;
+      if ((url.pathname.replace(/\/+$/, '') || '/') !== here) return;
+      a.setAttribute('aria-current', 'page');
+      marked.push(a);
+    });
+    if (marked.length) mount(function () { marked.forEach(function (a) { a.removeAttribute('aria-current'); }); });
+  }
+
 /* ── Boot / teardown ─────────────────────────────────────────────────────
    * `StudioRuntime.mount()` and `.disable()` are what the A/B toggle calls.
    * disable() must leave the page byte-identical to a no-JS Studio render,
@@ -1405,6 +1424,7 @@
     ['marquee', initMarquee],
     ['countdown', initCountdown],
     ['forms', initForms],
+    ['currentLinks', initCurrentLinks],
     ['anchors', initAnchors]
   ];
 

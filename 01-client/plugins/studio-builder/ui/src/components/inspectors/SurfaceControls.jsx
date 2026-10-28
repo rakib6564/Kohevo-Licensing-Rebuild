@@ -5,14 +5,14 @@
 // and validates a typed value with the same table the server uses, so nothing it offers can make a block
 // "unavailable". A cleared field is removed, and a group left empty is removed with it.
 
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { ColorField, DraftText, unitOf } from './StyleControls.jsx';
 import { Icon, choiceIcon } from './InspectorIcons.jsx';
 import { Field, Pills, Check } from '../ui/index.js';
 import { asObject } from '../../core/doc.mjs';
 import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
 import { DeviceStyle } from './DeviceStyle.jsx';
-import { CORNERS, FILTER, OPTIONS, SIDES, TRANSFORM, getPath, isColourToken, setPath, setPaths } from '../../core/styleSurface.mjs';
+import { CORNERS, FILTER, OPTIONS, SIDES, TRANSFORM, getPath, isColourToken, isTracks, setPath, setPaths } from '../../core/styleSurface.mjs';
 import { t } from '../../core/messages.mjs';
 import { statesFor } from '../../core/inspectorSections.mjs';
 import { optionLabel } from '../../core/optionLabels.mjs';
@@ -238,6 +238,7 @@ function ContainerFields({ id, style, onChange, flex, grid }) {
       {grid && (
         <>
           <IntField id={pathId(id, 'layout.columns')} label={t('layout_columns')} value={f.get('layout.columns')} min={1} max={12} onChange={(v) => f.put('layout.columns', v)} />
+          <TracksField id={pathId(id, 'layout.tracks')} value={f.get('layout.tracks')} onChange={(v) => f.put('layout.tracks', v)} />
           <IntField id={pathId(id, 'layout.rows')} label={t('layout_rows')} value={f.get('layout.rows')} min={1} max={12} onChange={(v) => f.put('layout.rows', v)} />
           <IconChoice label={t('layout_align')} kind="items" value={f.get('layout.align')} options={OPTIONS.align} onChange={(v) => f.put('layout.align', v)} />
         </>
@@ -263,7 +264,33 @@ function ItemFields({ id, style, onChange }) {
       <IntField id={pathId(id, 'layout.shrink')} label={t('layout_shrink')} value={f.get('layout.shrink')} min={0} max={10} onChange={(v) => f.put('layout.shrink', v)} />
       <Length id={id} units={LENGTH_UNITS} path="layout.basis" label={t('layout_basis')} get={f.get} put={f.put} placeholder={'auto'} />
       <SelectField id={pathId(id, 'layout.align_self')} label={t('layout_align_self')} value={f.get('layout.align_self')} options={OPTIONS.alignSelf} onChange={(v) => f.put('layout.align_self', v)} />
+      <SelectField id={pathId(id, 'layout.column_span')} label={t('layout_column_span')} value={f.get('layout.column_span') == null ? '' : String(f.get('layout.column_span'))} options={SPANS} optionLabels={{ full: t('layout_span_full') }} onChange={(v) => f.put('layout.column_span', v === 'full' || !v ? v || undefined : Number(v))} />
     </>
+  );
+}
+
+const SPANS = ['full', '2', '3', '4', '5', '6'];
+const TRACK_PRESETS = ['2fr 1fr', '1fr 2fr', '1fr auto 1fr', 'auto 1fr', '300px 1fr', '1fr 300px'];
+
+/**
+ * Column sizes for a grid (`layout.tracks`): typed (`2fr 1fr`, `300px auto`, `minmax(0,2fr) 1fr`) or picked from a few
+ * presets. Checked as typed against the server's grammar; empty goes back to equal columns.
+ */
+export function TracksField({ id, value, onChange }) {
+  const [draft, setDraft] = useState(value || '');
+  useEffect(() => setDraft(value || ''), [value]);
+  const bad = draft.trim() !== '' && !isTracks(draft);
+  const commit = (v) => {
+    const next = v.trim();
+    if (next === '') onChange(undefined);
+    else if (isTracks(next)) onChange(next);
+  };
+  return (
+    <Field label={t('layout_tracks')} htmlFor={id} hint={bad ? null : t('layout_tracks_hint')} error={bad ? t('layout_tracks_invalid') : null} errorId={`${id}-err`}>
+      <input id={id} type="text" list={`${id}-presets`} value={draft} placeholder="1fr 1fr" aria-invalid={bad || undefined} aria-describedby={bad ? `${id}-err` : undefined}
+        onChange={(e) => setDraft(e.target.value)} onBlur={() => commit(draft)} onKeyDown={(e) => { if (e.key === 'Enter') commit(draft); }} />
+      <datalist id={`${id}-presets`}>{TRACK_PRESETS.map((p) => <option key={p} value={p} />)}</datalist>
+    </Field>
   );
 }
 

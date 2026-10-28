@@ -182,7 +182,7 @@ final class DocumentRenderer
         // nothing, so documents that never use them render exactly as before.
         $blockStyle   = is_array($block['style'] ?? null) ? $block['style'] : [];
         $stateRules   = is_array($block['style_states'] ?? null) ? StyleSurface::stateRules($block['style_states']) : [];
-        $scopedClass  = $collector->scopedRule((string) ($block['id'] ?? ''), StyleSurface::declarations($blockStyle, $this->backgroundImageUrl($blockStyle), ScrollEffects::hasParallaxBackground($block)), StyleSurface::hasTransition($blockStyle), $stateRules, is_array($block['responsive'] ?? null) ? StyleSurface::responsiveRules($block['responsive']) : [], is_array($block['style_parts'] ?? null) ? StyleSurface::partRules($block['style_parts'], $type) : []);
+        $scopedClass  = $collector->scopedRule((string) ($block['id'] ?? ''), StyleSurface::declarations($blockStyle, $this->backgroundImageUrl($blockStyle), ScrollEffects::hasParallaxBackground($block)), StyleSurface::hasTransition($blockStyle), $stateRules, is_array($block['responsive'] ?? null) ? StyleSurface::responsiveRules($block['responsive']) : [], StyleSurface::partRules(is_array($block['style_parts'] ?? null) ? $block['style_parts'] : [], $type, is_array($block['responsive'] ?? null) ? $block['responsive'] : []));
         $scroll = ScrollEffects::render($block);
         $scopedClasses = $scopedClass !== '' ? [$scopedClass] : [];
 

@@ -1755,6 +1755,68 @@
                 "media": [],
                 "reduceMotion": false
             }
+        },
+        {
+            "name": "grid tracks",
+            "covered": true,
+            "block": {
+                "style": {
+                    "layout": {
+                        "display": "grid",
+                        "tracks": "minmax(0, 2fr)  1fr"
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [
+                    "display:grid",
+                    "grid-template-columns:minmax(0,2fr) 1fr"
+                ],
+                "inline": [],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
+        },
+        {
+            "name": "grid span",
+            "covered": true,
+            "block": {
+                "style": {
+                    "layout": {
+                        "column_span": "full"
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [
+                    "grid-column:1/-1"
+                ],
+                "inline": [],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
+        },
+        {
+            "name": "grid span count",
+            "covered": true,
+            "block": {
+                "style": {
+                    "layout": {
+                        "column_span": 3
+                    }
+                }
+            },
+            "expected": {
+                "scoped": [
+                    "grid-column:span 3"
+                ],
+                "inline": [],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
         }
     ]
 }

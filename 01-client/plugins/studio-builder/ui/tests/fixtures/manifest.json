@@ -439,7 +439,20 @@
                 "text_shadow",
                 "overlay"
             ],
-            "style_parts": [],
+            "style_parts": [
+                {
+                    "key": "button",
+                    "label": "Button"
+                },
+                {
+                    "key": "label",
+                    "label": "Text"
+                },
+                {
+                    "key": "icon",
+                    "label": "Icon"
+                }
+            ],
             "title": "Button",
             "type": "core.button",
             "version": 1
@@ -1288,6 +1301,8 @@
             "default_props": {
                 "action": "",
                 "form_name": "contact_form",
+                "labels": "visible",
+                "layout": "stacked",
                 "method": "post",
                 "notify_email": "",
                 "redirect_url": "",
@@ -1367,6 +1382,28 @@
                     "required": false,
                     "default": "",
                     "max_length": 200
+                },
+                {
+                    "key": "labels",
+                    "type": "enum",
+                    "label": "Field Labels",
+                    "required": false,
+                    "default": "visible",
+                    "allowed_values": [
+                        "visible",
+                        "hidden"
+                    ]
+                },
+                {
+                    "key": "layout",
+                    "type": "enum",
+                    "label": "Form Layout",
+                    "required": false,
+                    "default": "stacked",
+                    "allowed_values": [
+                        "stacked",
+                        "inline"
+                    ]
                 }
             ],
             "icon": "form",
@@ -1401,6 +1438,14 @@
             ],
             "style_parts": [
                 {
+                    "key": "form",
+                    "label": "Fields area"
+                },
+                {
+                    "key": "field",
+                    "label": "Field"
+                },
+                {
                     "key": "label",
                     "label": "Labels"
                 },
@@ -1409,8 +1454,16 @@
                     "label": "Inputs"
                 },
                 {
+                    "key": "textarea",
+                    "label": "Text areas"
+                },
+                {
                     "key": "help",
                     "label": "Help text"
+                },
+                {
+                    "key": "actions",
+                    "label": "Button row"
                 },
                 {
                     "key": "button",
@@ -1698,7 +1751,20 @@
                 "text_shadow",
                 "overlay"
             ],
-            "style_parts": [],
+            "style_parts": [
+                {
+                    "key": "grid",
+                    "label": "Gallery layout"
+                },
+                {
+                    "key": "item",
+                    "label": "Tiles"
+                },
+                {
+                    "key": "image",
+                    "label": "Images"
+                }
+            ],
             "title": "Gallery",
             "type": "core.gallery",
             "version": 1
@@ -1863,7 +1929,16 @@
                 "text_shadow",
                 "overlay"
             ],
-            "style_parts": [],
+            "style_parts": [
+                {
+                    "key": "highlight",
+                    "label": "Highlighted words"
+                },
+                {
+                    "key": "link",
+                    "label": "Link"
+                }
+            ],
             "title": "Heading",
             "type": "core.heading",
             "version": 1
@@ -2279,7 +2354,16 @@
                 "text_shadow",
                 "overlay"
             ],
-            "style_parts": [],
+            "style_parts": [
+                {
+                    "key": "link",
+                    "label": "Icon link"
+                },
+                {
+                    "key": "svg",
+                    "label": "Icon"
+                }
+            ],
             "title": "Icon",
             "type": "core.icon",
             "version": 1
@@ -2494,6 +2578,8 @@
             "binding_slots": [],
             "category": "content",
             "default_props": {
+                "columns": 1,
+                "divider": false,
                 "items": [
                     {
                         "text": "First item"
@@ -2505,6 +2591,7 @@
                         "text": "Third item"
                     }
                 ],
+                "layout": "stacked",
                 "style": "bullet"
             },
             "description": "Bulleted, numbered or ticked items",
@@ -2519,8 +2606,38 @@
                         "bullet",
                         "number",
                         "check",
+                        "dash",
                         "none"
                     ]
+                },
+                {
+                    "key": "layout",
+                    "type": "enum",
+                    "label": "List Layout",
+                    "required": false,
+                    "default": "stacked",
+                    "allowed_values": [
+                        "stacked",
+                        "inline"
+                    ]
+                },
+                {
+                    "key": "columns",
+                    "type": "number",
+                    "label": "Columns",
+                    "required": false,
+                    "default": 1,
+                    "min": 1,
+                    "max": 4,
+                    "integer_only": true,
+                    "per_device": true
+                },
+                {
+                    "key": "divider",
+                    "type": "boolean",
+                    "label": "Lines Between Items",
+                    "required": false,
+                    "default": false
                 },
                 {
                     "key": "items",
@@ -2583,8 +2700,17 @@
             ],
             "style_parts": [
                 {
+                    "key": "list",
+                    "label": "List"
+                },
+                {
                     "key": "item",
                     "label": "Items"
+                },
+                {
+                    "key": "marker",
+                    "label": "Markers",
+                    "states": false
                 }
             ],
             "title": "List",
@@ -2685,7 +2811,12 @@
                 "text_shadow",
                 "overlay"
             ],
-            "style_parts": [],
+            "style_parts": [
+                {
+                    "key": "frame",
+                    "label": "Map frame"
+                }
+            ],
             "title": "Map",
             "type": "core.map",
             "version": 1
@@ -2950,8 +3081,20 @@
             ],
             "style_parts": [
                 {
+                    "key": "list",
+                    "label": "Menu list"
+                },
+                {
+                    "key": "item",
+                    "label": "Items"
+                },
+                {
                     "key": "link",
                     "label": "Links"
+                },
+                {
+                    "key": "current",
+                    "label": "Current page link"
                 }
             ],
             "title": "Nav menu",
@@ -3235,6 +3378,18 @@
                 {
                     "key": "button",
                     "label": "Read more"
+                },
+                {
+                    "key": "button_row",
+                    "label": "Read more row"
+                },
+                {
+                    "key": "body",
+                    "label": "Card text area"
+                },
+                {
+                    "key": "grid",
+                    "label": "Cards layout"
                 }
             ],
             "title": "Posts grid",
@@ -3429,7 +3584,37 @@
                 "text_shadow",
                 "overlay"
             ],
-            "style_parts": [],
+            "style_parts": [
+                {
+                    "key": "paragraph",
+                    "label": "Paragraphs"
+                },
+                {
+                    "key": "heading",
+                    "label": "Headings"
+                },
+                {
+                    "key": "list",
+                    "label": "Lists"
+                },
+                {
+                    "key": "item",
+                    "label": "List items"
+                },
+                {
+                    "key": "marker",
+                    "label": "List markers",
+                    "states": false
+                },
+                {
+                    "key": "link",
+                    "label": "Links"
+                },
+                {
+                    "key": "bold",
+                    "label": "Bold text"
+                }
+            ],
             "title": "Rich text",
             "type": "core.rich_text",
             "version": 1
@@ -4748,6 +4933,26 @@
                 {
                     "key": "trigger",
                     "label": "Open button"
+                },
+                {
+                    "key": "panel",
+                    "label": "Panel"
+                },
+                {
+                    "key": "header",
+                    "label": "Panel header"
+                },
+                {
+                    "key": "close",
+                    "label": "Close button"
+                },
+                {
+                    "key": "body",
+                    "label": "Panel content"
+                },
+                {
+                    "key": "backdrop",
+                    "label": "Backdrop"
                 }
             ],
             "title": "Offcanvas",
@@ -5050,7 +5255,12 @@
                 "text_shadow",
                 "overlay"
             ],
-            "style_parts": [],
+            "style_parts": [
+                {
+                    "key": "button",
+                    "label": "Button"
+                }
+            ],
             "title": "Payment Button",
             "type": "payment.button",
             "version": 1

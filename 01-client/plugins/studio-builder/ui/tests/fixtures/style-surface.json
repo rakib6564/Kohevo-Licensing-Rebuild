@@ -469,6 +469,81 @@
    "path": "layout.content_max",
    "value": "1300",
    "ok": false
+  },
+  {
+   "path": "layout.tracks",
+   "value": "2fr 1fr",
+   "ok": true
+  },
+  {
+   "path": "layout.tracks",
+   "value": "minmax(0,2fr) minmax(0, 1fr)",
+   "ok": true
+  },
+  {
+   "path": "layout.tracks",
+   "value": "300px auto 1fr",
+   "ok": true
+  },
+  {
+   "path": "layout.tracks",
+   "value": "1.5fr 25% 10vw",
+   "ok": true
+  },
+  {
+   "path": "layout.tracks",
+   "value": "repeat(2,1fr)",
+   "ok": false
+  },
+  {
+   "path": "layout.tracks",
+   "value": "1fr;color:red",
+   "ok": false
+  },
+  {
+   "path": "layout.tracks",
+   "value": "",
+   "ok": false
+  },
+  {
+   "path": "layout.tracks",
+   "value": "2",
+   "ok": false
+  },
+  {
+   "path": "layout.tracks",
+   "value": "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr",
+   "ok": false
+  },
+  {
+   "path": "layout.tracks",
+   "value": "calc(100% - 2px)",
+   "ok": false
+  },
+  {
+   "path": "layout.column_span",
+   "value": 2,
+   "ok": true
+  },
+  {
+   "path": "layout.column_span",
+   "value": "full",
+   "ok": true
+  },
+  {
+   "path": "layout.column_span",
+   "value": 0,
+   "ok": false
+  },
+  {
+   "path": "layout.column_span",
+   "value": 13,
+   "ok": false
+  },
+  {
+   "path": "layout.column_span",
+   "value": "2",
+   "ok": false
   }
  ]
 }

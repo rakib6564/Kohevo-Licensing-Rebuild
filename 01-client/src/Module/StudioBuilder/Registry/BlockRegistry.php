@@ -603,6 +603,9 @@ final class BlockRegistry
                 ['key' => 'success_message', 'type' => 'text', 'label' => 'Success Message', 'required' => false, 'default' => 'Thanks! We received your message.', 'max_length' => 500],
                 ['key' => 'redirect_url', 'type' => 'string', 'label' => 'Redirect To (optional)', 'required' => false, 'default' => '', 'max_length' => 500],
                 ['key' => 'notify_email', 'type' => 'string', 'label' => 'Email Submissions To', 'required' => false, 'default' => '', 'max_length' => 200],
+                // Layout: hidden labels stay readable to screen readers; inline puts the fields and the button on one row.
+                ['key' => 'labels', 'type' => 'enum', 'label' => 'Field Labels', 'required' => false, 'allowed_values' => ['visible', 'hidden'], 'default' => 'visible'],
+                ['key' => 'layout', 'type' => 'enum', 'label' => 'Form Layout', 'required' => false, 'allowed_values' => ['stacked', 'inline'], 'default' => 'stacked'],
             ]),
             allowsChildren: true,
         ));
@@ -874,7 +877,10 @@ final class BlockRegistry
             category: 'content',
             icon: 'list',
             schema: FieldSchema::define([
-                ['key' => 'style', 'type' => 'enum', 'label' => 'Style', 'required' => false, 'allowed_values' => ['bullet', 'number', 'check', 'none'], 'default' => 'bullet'],
+                ['key' => 'style', 'type' => 'enum', 'label' => 'Style', 'required' => false, 'allowed_values' => ['bullet', 'number', 'check', 'dash', 'none'], 'default' => 'bullet'],
+                ['key' => 'layout', 'type' => 'enum', 'label' => 'List Layout', 'required' => false, 'allowed_values' => ['stacked', 'inline'], 'default' => 'stacked'],
+                ['key' => 'columns', 'type' => 'number', 'label' => 'Columns', 'required' => false, 'per_device' => true, 'default' => 1, 'min' => 1, 'max' => 4, 'integer_only' => true],
+                ['key' => 'divider', 'type' => 'boolean', 'label' => 'Lines Between Items', 'required' => false, 'default' => false],
                 [
                     'key'         => 'items',
                     'type'        => 'repeater',

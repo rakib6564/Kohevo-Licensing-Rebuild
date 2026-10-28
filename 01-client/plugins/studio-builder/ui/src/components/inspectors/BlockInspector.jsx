@@ -224,7 +224,7 @@ export function BlockInspector({ info }) {
     parts: () => (
       <>
         <p className="sbx-hint">{t('section_parts_hint')}</p>
-        <PartStyles blockId={block.id} parts={def.style_parts} value={block.style_parts} tokens={colourTokens} onChange={(next) => save(ops.updateBlockStyleParts(block.id, next))} />
+        <PartStyles blockId={block.id} parts={def.style_parts} value={block.style_parts} responsive={responsive} tokens={colourTokens} onChange={(next) => save(ops.updateBlockStyleParts(block.id, next))} onResponsiveChange={deviceScope.saveResponsive} />
       </>
     ),
     // A Button's one Style section: position, typography, text shadow, the colours and surface per state, shadow, border (its corners too), padding.
