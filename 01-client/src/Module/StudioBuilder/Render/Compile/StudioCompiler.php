@@ -421,15 +421,16 @@ final class StudioCompiler
     }
 
     /**
-     * The Single template for a page on a public or preview render, or null. Never in the editor (the canvas
-     * edits the page's own document), never for a page that is itself a theme template.
+     * The Single template for a page, or null; never for a page that is itself a theme template. The editor canvas
+     * gets it too, so the author edits the page inside the layout the live page has (the template's own blocks are
+     * framing there, not selectable).
      *
      * @param array<string, string> $settings the page document's string settings
      * @return ?array{page: array<string, mixed>, revision: array<string, mixed>}
      */
     private function singleFor(PageAddress $page, array $settings, RenderContext $context): ?array
     {
-        if ($context->mode === RenderMode::Editor || ($settings['template_type'] ?? '') !== '' || $page->id === null) {
+        if (($settings['template_type'] ?? '') !== '' || $page->id === null) {
             return null;
         }
         try {
@@ -460,7 +461,8 @@ final class StudioCompiler
         $templateComponents = is_array($decoded) ? $this->components->resolveDocument($decoded) : [];
 
         $first = count($collector->deferred());
-        $html = $this->documents->renderSections($template['sections'] ?? [], $context, $theme, $collector, true, $this->prepareComponents($templateComponents));
+        // On the canvas the template is the frame around the page: only the page's own sections can be picked.
+        $html = $this->documents->renderSections($template['sections'] ?? [], $context->framing(), $theme, $collector, true, $this->prepareComponents($templateComponents));
         $slots = [];
         foreach (array_slice($collector->deferred(), $first, null, true) as $index => $node) {
             if (($node['type'] ?? '') === 'theme.post_content') {
@@ -503,7 +505,7 @@ final class StudioCompiler
             $classes = trim($class . ' sb-site-' . $region . '--partial ' . implode(' ', $scroll['classes']));
             $style = $scroll['vars'] !== [] ? ' style="' . Html::e(implode(';', $scroll['vars'])) . '"' : '';
             return '<' . $tag . ' class="' . Html::e($classes) . '"' . $scroll['attrs'] . $style . '>'
-                . $this->documents->renderSections($partial['sections'] ?? [], $context, $theme, $collector, true)
+                . $this->documents->renderSections($partial['sections'] ?? [], $context->framing(), $theme, $collector, true)
                 . '</' . $tag . '>';
         }
 

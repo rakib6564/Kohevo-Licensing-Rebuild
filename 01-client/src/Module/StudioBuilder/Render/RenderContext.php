@@ -36,6 +36,9 @@ use Slate\Services\Licensing\EntitlementService;
 
 final class RenderContext
 {
+    /** Attribute set by framing(). */
+    public const FRAME_ONLY = 'frame_only';
+
     private readonly \Closure $entitlementCheck;
 
     private function __construct(
@@ -128,10 +131,19 @@ final class RenderContext
         return $authState !== 'authenticated';
     }
 
-    /** Editor-only node metadata (`data-sb-node`) for canvas selection. */
+    /** Editor-only node metadata (`data-sb-node`) for canvas selection; never for a part of the canvas that is not the page's own document. */
     public function emitsNodeMetadata(): bool
     {
-        return $this->mode === RenderMode::Editor;
+        return $this->mode === RenderMode::Editor && $this->attribute(self::FRAME_ONLY) !== true;
+    }
+
+    /**
+     * The same context for what the canvas shows AROUND the page being edited (its header, footer and Single template):
+     * it renders as on the live site, without node metadata, so none of it can be selected, hovered or dropped onto.
+     */
+    public function framing(): self
+    {
+        return $this->withAttributes([self::FRAME_ONLY => true]);
     }
 
     /** Visible diagnostics for unavailable blocks — authoring contexts only. */

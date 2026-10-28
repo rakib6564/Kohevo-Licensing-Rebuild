@@ -54,6 +54,8 @@ final class DocumentRenderer
 
     /** Marker key on a block rendered as part of an embedded Global Component (never a canonical document key). */
     public const EMBEDDED_KEY = '__sb_embedded';
+    /** Set on a deferred block of the canvas's frame (RenderContext::framing()), so it is filled as framing too. */
+    public const FRAMING_KEY = '__sb_framing';
 
     private const STYLE_UTILITIES = [
         'border_token'  => 'bd',
@@ -114,7 +116,14 @@ final class DocumentRenderer
         }
 
         if ($deferDynamic && self::isDynamicNode($block, $definition, $renderer)) {
+            // Filled later with the page's own context: a block of the canvas's frame stays framing (no node metadata).
+            if ($context->mode === RenderMode::Editor && $context->attribute(RenderContext::FRAME_ONLY) === true) {
+                $block[self::FRAMING_KEY] = true;
+            }
             return $collector->defer($block);
+        }
+        if (!empty($block[self::FRAMING_KEY])) {
+            $context = $context->framing();
         }
 
         $entitlement = $definition->requiredEntitlement();

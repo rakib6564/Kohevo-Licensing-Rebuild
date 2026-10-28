@@ -85,10 +85,12 @@ function ChromeRegion({ region, binding, settings, onMode, onCreatePartial, buil
   const mode = settings[`${region}_mode`] || 'inherit';
   const site = binding && binding.site;
   const custom = binding && binding.custom;
+  const picked = binding && binding.resolved === 'template' ? binding.template : null;
   let resolved = null;
   if (binding) {
     if (binding.resolved === 'hidden') resolved = t('chrome_resolved_hidden');
     else if (binding.resolved === 'custom' && custom) resolved = t('chrome_resolved_custom', { region: regionLabel, title: custom.title });
+    else if (picked) resolved = t('chrome_resolved_template', { region: regionLabel, title: picked.title });
     else if (binding.resolved === 'site' && site) resolved = t('chrome_resolved_site', { region: regionLabel, title: site.title });
     else resolved = t('chrome_resolved_builtin', { region: regionLabel });
   }
@@ -105,6 +107,7 @@ function ChromeRegion({ region, binding, settings, onMode, onCreatePartial, buil
       {binding && mode === 'custom' && binding.resolved !== 'custom' && <p className="sbx-hint">{t('chrome_custom_missing', { region: regionLabel })}</p>}
       {binding && mode !== 'hidden' && (
         <div className="sbx-inspector__actions">
+          {picked && <a className="sbx-btn sbx-btn--xs" href={`${builderUrl}?page=${picked.id}`} target="_blank" rel="noopener">{t('chrome_edit_template', { region: regionLabel })}{draftNote(picked)}</a>}
           {site
             ? <a className="sbx-btn sbx-btn--xs" href={`${builderUrl}?page=${site.id}`} target="_blank" rel="noopener">{t('chrome_edit_site', { region: regionLabel })}{draftNote(site)}</a>
             : <button type="button" className="sbx-btn sbx-btn--xs" onClick={() => onCreatePartial(region, binding.site_slug)}>{t('chrome_create_site', { region: regionLabel })}</button>}
