@@ -148,6 +148,11 @@ final class BlockParts
             'link' => ['label' => 'Icon link', 'selectors' => ['.sb-icon__link']],
             'svg'  => ['label' => 'Icon', 'selectors' => ['svg']],
         ],
+        'core.video' => [
+            'poster' => ['label' => 'Overlay image', 'selectors' => ['.sb-video__overlay img']],
+            'play'   => ['label' => 'Play icon', 'selectors' => ['.sb-video__play']],
+            'svg'    => ['label' => 'Play symbol', 'selectors' => ['.sb-video__play svg']],
+        ],
         'theme.post_meta' => [
             'meta' => ['label' => 'Meta line', 'selectors' => ['.sb-post-meta']],
             'item' => ['label' => 'Items', 'selectors' => ['.sb-post-meta > span']],

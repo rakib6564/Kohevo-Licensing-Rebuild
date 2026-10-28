@@ -78,7 +78,7 @@
                 '<label class="mlp-upload-label" title="Upload media">' +
                   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>' +
                   '<span>Upload</span>' +
-                  '<input type="file" class="mlp-upload-input" accept="image/*,application/pdf" multiple style="display:none;">' +
+                  '<input type="file" class="mlp-upload-input" accept="image/*,application/pdf,video/mp4,video/webm,video/ogg,video/quicktime" multiple style="display:none;">' +
                 '</label>' +
                 '<span class="mlp-upload-progress"></span>' +
                 '<input type="search" class="mlp-search" placeholder="Search by filename, title, or alt text...">' +
@@ -504,7 +504,9 @@
             var dim = (it.width && it.height) ? (it.width + '×' + it.height) : '';
             var kb = Math.round((it.size_bytes || 0) / 1024);
             card.innerHTML =
-                '<div class="mlp-thumb"><img src="' + escAttr(it.url) + '" alt="" loading="lazy"></div>' +
+                '<div class="mlp-thumb">' + (/^video\//.test(it.mime || '')
+                  ? '<video src="' + escAttr(it.url) + '" preload="metadata" muted playsinline></video>'
+                  : '<img src="' + escAttr(it.url) + '" alt="" loading="lazy">') + '</div>' +
                 '<div class="mlp-item-meta">' +
                   '<div class="mlp-item-name" title="' + escAttr(it.original_name) + '">' +
                     escText(truncate(it.original_name, 22)) +

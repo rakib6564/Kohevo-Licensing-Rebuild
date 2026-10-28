@@ -63,6 +63,7 @@ final class PageMeta
     {
         if ($postType === '') {
             Database::setSetting(self::SETTING_PREFIX . $pageId, json_encode(['type' => '', 'values' => new \stdClass()]), $tenantId);
+            PageRoutes::forget($tenantId);
             return ['errors' => []];
         }
         if (!isset(self::postTypes($tenantId)[$postType])) {
@@ -84,6 +85,7 @@ final class PageMeta
         }
         if ($errors === []) {
             Database::setSetting(self::SETTING_PREFIX . $pageId, json_encode(['type' => $postType, 'values' => (object) $values], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
+            PageRoutes::forget($tenantId);
         }
         return ['errors' => $errors];
     }

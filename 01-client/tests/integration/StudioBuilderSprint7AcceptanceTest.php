@@ -290,6 +290,24 @@ unit('sprint7 integration: production marketing website with animation, modal, o
                 ]
             );
 
+            // The same video behind an image overlay, opening in a lightbox: saved through the real pipeline (so the
+            // schema accepts every new setting) and rendered on the public page.
+            $videoOverlay = s7_make_block(
+                'core.video',
+                [
+                    'source'       => 'youtube',
+                    'url'          => 'https://youtu.be/dQw4w9WgXcQ',
+                    'aspect_ratio' => '9:16',
+                    'start'        => 10,
+                    'end'          => 40,
+                    'privacy'      => true,
+                    'lazy_load'    => true,
+                    'overlay'      => true,
+                    'play_icon'    => true,
+                    'lightbox'     => true,
+                ]
+            );
+
             // Section 5: Customer Gallery
             $customerGallery = s7_make_block(
                 'core.gallery',
@@ -308,7 +326,7 @@ unit('sprint7 integration: production marketing website with animation, modal, o
 
             $secHero = s7_make_section([$heroHeading, $heroSubtext], 'Hero');
             $secInteractive = s7_make_section([$offcanvasDrawer, $contactModal], 'Interactive Navigation & Actions');
-            $secMedia = s7_make_section([$videoShowcase, $customerGallery], 'Media & Video');
+            $secMedia = s7_make_section([$videoShowcase, $videoOverlay, $customerGallery], 'Media & Video');
 
             $op1 = new DocumentOperation('insert_section', ['index' => 0, 'section' => $secHero]);
             $op2 = new DocumentOperation('insert_section', ['index' => 1, 'section' => $secInteractive]);
@@ -368,6 +386,13 @@ unit('sprint7 integration: production marketing website with animation, modal, o
             assert_true(str_contains($body, 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ'), 'Contains privacy-enhanced YouTube embed');
             assert_true(str_contains($body, 'sb-video--aspect-16-9'), 'Contains aspect ratio wrapper class');
             assert_true(str_contains($body, 'allowfullscreen'), 'Contains allowfullscreen attribute');
+
+            // 5b. Video behind an image overlay: a poster button, the player in a template for the runtime, never a link.
+            assert_true(str_contains($body, 'sb-video--overlay') && str_contains($body, 'data-sb-video-lightbox') && str_contains($body, 'data-sb-video-aspect="9-16"'), 'Contains the overlay video in lightbox mode');
+            assert_true(str_contains($body, 'data-sb-video-play') && str_contains($body, 'i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg'), 'Contains the poster button with the video\'s own thumbnail');
+            assert_true((bool) preg_match('~<template data-sb-video-player><iframe src="https://www\.youtube-nocookie\.com/embed/dQw4w9WgXcQ\?autoplay=1[^"]*start=10&amp;end=40"~', $body), 'The template holds the autoplaying privacy-mode player with its start and end');
+            assert_false(str_contains($body, 'href="https://www.youtube.com/watch'), 'No link sends the visitor to YouTube');
+            assert_true(str_contains($body, 'studio-runtime.js'), 'The runtime that swaps the player in is on the page');
 
             // 6. Media Gallery
             assert_true(str_contains($body, 'sb-gallery--cols-3'), 'Contains cols-3 grid class');

@@ -16,6 +16,7 @@ namespace Slate\Module\StudioBuilder\Registry;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\ContainerRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\CountdownRenderer;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\VideoRenderer;
 use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
@@ -671,16 +672,29 @@ final class BlockRegistry
             version: 1,
             label: 'Video',
             title: 'Video',
-            description: 'Responsive video player',
+            description: 'YouTube, Vimeo or self-hosted video, played on the page',
             category: 'media',
             icon: 'video',
+            // Source picks which address plays: `url` for YouTube and Vimeo (the provider is read from the link, so a
+            // block saved before Source existed keeps playing), `hosted_url` for a file. An image overlay shows a
+            // poster that turns into the player when clicked, in place or in a lightbox.
             schema: FieldSchema::define([
-                ['key' => 'url', 'type' => 'string', 'label' => 'Video URL', 'required' => true, 'default' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'max_length' => 1000],
-                ['key' => 'aspect_ratio', 'type' => 'enum', 'label' => 'Aspect Ratio', 'required' => false, 'allowed_values' => ['16:9', '4:3', '1:1'], 'default' => '16:9'],
+                ['key' => 'source', 'type' => 'enum', 'label' => 'Source', 'required' => false, 'allowed_values' => VideoRenderer::SOURCES, 'default' => 'youtube'],
+                ['key' => 'url', 'type' => 'string', 'label' => 'Video URL', 'required' => false, 'default' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'max_length' => 1000],
+                ['key' => 'hosted_url', 'type' => 'url', 'label' => 'Video File', 'required' => false, 'max_length' => 1000],
+                ['key' => 'start', 'type' => 'number', 'label' => 'Start Time (seconds)', 'required' => false, 'default' => 0, 'min' => 0, 'max' => VideoRenderer::MAX_SECONDS, 'integer_only' => true],
+                ['key' => 'end', 'type' => 'number', 'label' => 'End Time (seconds)', 'required' => false, 'default' => 0, 'min' => 0, 'max' => VideoRenderer::MAX_SECONDS, 'integer_only' => true],
+                ['key' => 'aspect_ratio', 'type' => 'enum', 'label' => 'Aspect Ratio', 'required' => false, 'allowed_values' => VideoRenderer::ASPECTS, 'default' => '16:9'],
                 ['key' => 'autoplay', 'type' => 'boolean', 'label' => 'Autoplay', 'required' => false, 'default' => false],
-                ['key' => 'controls', 'type' => 'boolean', 'label' => 'Show Controls', 'required' => false, 'default' => true],
                 ['key' => 'muted', 'type' => 'boolean', 'label' => 'Muted', 'required' => false, 'default' => false],
                 ['key' => 'loop', 'type' => 'boolean', 'label' => 'Loop', 'required' => false, 'default' => false],
+                ['key' => 'controls', 'type' => 'boolean', 'label' => 'Show Controls', 'required' => false, 'default' => true],
+                ['key' => 'privacy', 'type' => 'boolean', 'label' => 'Privacy Mode', 'required' => false, 'default' => true],
+                ['key' => 'lazy_load', 'type' => 'boolean', 'label' => 'Lazy Load', 'required' => false, 'default' => true],
+                ['key' => 'overlay', 'type' => 'boolean', 'label' => 'Image Overlay', 'required' => false, 'default' => false],
+                ['key' => 'overlay_image', 'type' => 'media_ref', 'label' => 'Overlay Image', 'required' => false, 'default' => null],
+                ['key' => 'play_icon', 'type' => 'boolean', 'label' => 'Play Icon', 'required' => false, 'default' => true],
+                ['key' => 'lightbox', 'type' => 'boolean', 'label' => 'Lightbox', 'required' => false, 'default' => false],
             ]),
             allowsChildren: false,
         ));

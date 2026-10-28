@@ -55,12 +55,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $singular = trim((string) ($_POST['singular'] ?? ''));
             $plural = trim((string) ($_POST['plural'] ?? ''));
             $desc = trim((string) ($_POST['description'] ?? ''));
-            $route = '/' . ltrim(trim((string) ($_POST['route'] ?? $key)), '/');
+            $prefix = \Slate\Module\StudioBuilder\Meta\PageRoutes::normalizePrefix((string) ($_POST['route'] ?? ''));
+            $route = '/' . (string) $prefix;
 
             $key = preg_replace('/[^a-z0-9_-]/', '', $key);
 
             if ($key === '' || $singular === '') {
                 $flash = ['type' => 'error', 'msg' => __('studio_tf_type_required', 'Post type key and singular name are required.')];
+            } elseif ($prefix === null) {
+                $flash = ['type' => 'error', 'msg' => __('studio_tf_route_invalid', 'A URL route prefix is one to three lowercase words separated by /, like /events. Leave it empty for none.')];
             } elseif (isset($allPostTypes[$key])) {
                 $flash = ['type' => 'error', 'msg' => sprintf(__('studio_tf_type_exists', "Post type '%s' already exists."), $key)];
             } else {
@@ -75,6 +78,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
                 Database::setSetting('studio_custom_post_types', json_encode($customTypes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
                 sb_flash_redirect($self, ['type' => 'success', 'msg' => sprintf(__('studio_tf_type_created', "Custom post type '%s' created successfully!"), $singular)]);
+            }
+        } elseif ($action === 'update_post_type_route') {
+            // Pages of the type move to the new address at once; their old address answers with a 301 to it.
+            $key = trim((string) ($_POST['key'] ?? ''));
+            $prefix = \Slate\Module\StudioBuilder\Meta\PageRoutes::normalizePrefix((string) ($_POST['route'] ?? ''));
+            if (!isset($customTypes[$key])) {
+                $flash = ['type' => 'error', 'msg' => __('studio_tf_field_bad_type', 'Choose a post type that exists.')];
+            } elseif ($prefix === null) {
+                $flash = ['type' => 'error', 'msg' => __('studio_tf_route_invalid', 'A URL route prefix is one to three lowercase words separated by /, like /events. Leave it empty for none.')];
+            } else {
+                $customTypes[$key]['route'] = '/' . $prefix;
+                Database::setSetting('studio_custom_post_types', json_encode($customTypes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tenantId);
+                \Slate\Module\StudioBuilder\Meta\PageRoutes::forget($tenantId);
+                AuditLog::record('studio.post_type_route_changed', (string) $tenantId, ['key' => $key, 'route' => '/' . $prefix]);
+                sb_flash_redirect($self, ['type' => 'success', 'msg' => $prefix === ''
+                    ? sprintf(__('studio_tf_route_cleared', "Pages of '%s' now live at /their-slug."), (string) ($customTypes[$key]['singular'] ?? $key))
+                    : sprintf(__('studio_tf_route_saved', "Pages of '%1\$s' now live at /%2\$s/their-slug."), (string) ($customTypes[$key]['singular'] ?? $key), $prefix)]);
             }
         } elseif ($action === 'toggle_menu') {
             // A type's own list in the admin sidebar, on or off. Its items and the list itself stay either way.
@@ -215,6 +235,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <div class="sb-field">
                     <label class="sb-field__label">URL Route Prefix</label>
                     <input type="text" name="route" class="form-control" placeholder="/clients">
+                    <p class="sb-field__hint">Pages of this type live at /clients/page-slug. Leave it empty for /page-slug.</p>
                 </div>
             </div>
             <div class="sb-field">
@@ -381,6 +402,19 @@ require SLATE_ROOT . '/admin/partials/header.php';
                             <?= e($pt['description'] ?? 'Custom content collection.') ?>
                         </p>
                     </div>
+                    <?php $ptPrefix = \Slate\Module\StudioBuilder\Meta\PageRoutes::normalizePrefix((string) ($pt['route'] ?? '')); ?>
+                    <?php if ($canEdit): ?>
+                        <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/types-fields.php')) ?>" class="sb-type-route" style="display: flex; gap: 6px; align-items: center; margin: 0 0 12px 0;">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="_action" value="update_post_type_route">
+                            <input type="hidden" name="key" value="<?= e($tKey) ?>">
+                            <label for="route-<?= e($tKey) ?>" class="sb-field__hint" style="white-space: nowrap; margin: 0;">URL prefix</label>
+                            <input type="text" id="route-<?= e($tKey) ?>" name="route" class="form-control" value="<?= e($ptPrefix ? '/' . $ptPrefix : '') ?>" placeholder="none" style="flex: 1; min-width: 0;">
+                            <button type="submit" class="btn btn-sm btn-outline">Save</button>
+                        </form>
+                    <?php else: ?>
+                        <p class="sb-field__hint" style="margin: 0 0 12px 0;">Address: /<?= e($ptPrefix ? $ptPrefix . '/' : '') ?>page-slug</p>
+                    <?php endif; ?>
                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--sb-border); padding-top: 12px;">
                         <a class="btn btn-sm btn-primary" href="<?= e(plugin_url('studio-builder', 'admin/pages.php?type=' . rawurlencode((string) $tKey))) ?>" data-testid="type-items-<?= e((string) $tKey) ?>"><?= e(__('studio_tf_view_items', 'View items')) ?></a>
                         <?php if ($canEdit): ?>
