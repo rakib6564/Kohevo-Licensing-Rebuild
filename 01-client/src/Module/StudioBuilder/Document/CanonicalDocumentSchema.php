@@ -68,6 +68,8 @@ final class CanonicalDocumentSchema
         'excerpt',
         'template_type',
         'conditions',
+        // A header partial's "Sticky header": the whole header stays at the top while the page scrolls (ScrollEffects' sticky shape).
+        'sticky_header',
     ];
 
     /** Display-condition rules (Theme Builder): how many, which keys and which `condition` names a rule may use. */

@@ -19,9 +19,10 @@ import { t, errorMessage } from '../../core/messages.mjs';
 import { seoLimits, canonicalProblem, canonicalValue } from '../../core/seo.mjs';
 import { SeoImageControl } from './SeoImageControl.jsx';
 import { optionLabel } from '../../core/optionLabels.mjs';
-import { Field } from '../ui/index.js';
+import { Check, Field, Pills } from '../ui/index.js';
 import { ConditionDialog } from '../ConditionDialog.jsx';
 import { sameConditionsAs, toRows } from '../../core/conditions.mjs';
+import { DeviceChecks } from './MotionInspector.jsx';
 
 function TextSetting({ label, value, maxLength, multiline = false, onCommit, counter = false }) {
   const id = useId();
@@ -145,6 +146,36 @@ function ConditionsSetting({ page, settings, onSave, peers }) {
   );
 }
 
+/**
+ * A header partial's "Sticky header" (`settings.sticky_header`, the sticky shape a section takes): the whole header stays
+ * at the top of the screen while the page scrolls. Off is the absence of the setting.
+ */
+function StickyHeaderSetting({ value, onChange }) {
+  const sticky = value && typeof value === 'object' ? value : null;
+  const put = (next) => onChange(next);
+  return (
+    <section className="sbx-motion-section" data-sticky-header>
+      <h3 className="sbx-inspector__subtitle">{t('sticky_header')}</h3>
+      <Field label={t('sticky_header')}>
+        <Pills
+          label={t('sticky_header')}
+          value={sticky ? 'on' : ''}
+          options={[{ value: '', label: t('sticky_off') }, { value: 'on', label: t('sticky_header_on') }]}
+          onChange={(v) => put(v ? { edge: 'top', shadow: true } : null)}
+        />
+      </Field>
+      <p className="sbx-hint">{t('sticky_header_hint')}</p>
+      {sticky && (
+        <>
+          <DeviceChecks idPrefix="sbx-sticky-header" legend={t('sticky_on')} devices={sticky.devices} onChange={(devices) => put({ ...sticky, devices })} />
+          <Check label={t('sticky_shadow')} checked={sticky.shadow === true} onChange={(e) => put({ ...sticky, shadow: e.target.checked })} />
+          <Check label={t('sticky_hide_on_scroll')} checked={sticky.hide_on_scroll === true} onChange={(e) => put({ ...sticky, hide_on_scroll: e.target.checked })} />
+        </>
+      )}
+    </section>
+  );
+}
+
 export function PageInspector() {
   const { manifest, applyOp, transport, boot, createPartial = null } = useEditor();
   const working = useEngineState((s) => s.working);
@@ -196,6 +227,10 @@ export function PageInspector() {
       <h2 className="sbx-inspector__title">{t('page_settings')}</h2>
       {conditioned && (
         <ConditionsSetting page={page} settings={settings} peers={peers} onSave={(conditions) => applyOp(ops.updateSettings({ conditions }), { label: t('cond_title') })} />
+      )}
+
+      {page && page.page_type === 'header_partial' && (
+        <StickyHeaderSetting value={settings.sticky_header} onChange={(next) => applyOp(ops.updateSettings({ sticky_header: next }), { label: t('sticky_header') })} />
       )}
 
       <h3 className="sbx-inspector__subtitle">{t('chrome_title')}</h3>

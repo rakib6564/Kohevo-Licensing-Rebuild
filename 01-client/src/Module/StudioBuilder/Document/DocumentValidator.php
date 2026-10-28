@@ -323,6 +323,14 @@ final class DocumentValidator
         if (isset($settings['conditions'])) {
             self::validateConditions($settings['conditions'], $errors);
         }
+
+        // The same sticky shape a section or block takes (edge, offset, devices, shadow, background, hide on scroll).
+        if (isset($settings['sticky_header'])) {
+            foreach (ScrollEffects::issues(['sticky' => $settings['sticky_header']], '$.settings') as $issue) {
+                $issue['path'] = str_replace('$.settings.sticky', '$.settings.sticky_header', $issue['path']);
+                $errors[] = $issue;
+            }
+        }
     }
 
     /**

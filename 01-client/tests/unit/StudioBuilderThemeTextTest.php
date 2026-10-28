@@ -130,3 +130,22 @@ unit('public pages leave no empty box: a block with nothing to show and a layout
     $out = sbdc_render($mixed);
     assert_true(str_contains($out, 'sb-block--layout-flex') && !str_contains($out, 'sb-block--core-list'), 'a layout with something to show stays; only the empty child goes');
 });
+
+unit('sticky header: a header partial\'s settings take the sticky shape a section takes, and refuse anything else', function (): void {
+    $doc = static function (mixed $sticky): array {
+        $d = sbdc_doc(sbdc_block('core.text', ['content' => 'Hi']));
+        $d['document_type'] = 'header_partial';
+        $d['settings'] = ['sticky_header' => $sticky];
+        return $d;
+    };
+    $ok = static fn(mixed $s): bool => DocumentValidator::validate($doc($s), BlockRegistry::withAllCoreBlocks())->isValid();
+    assert_true($ok(['edge' => 'top', 'shadow' => true, 'hide_on_scroll' => true, 'devices' => ['desktop', 'tablet']]), 'on, with a shadow, hidden while scrolling down, not on phones');
+    assert_true($ok(null), 'off');
+    assert_false($ok(['edge' => 'left']), 'an unknown edge');
+    assert_false($ok(['edge' => 'top', 'offset' => 9999]), 'an offset past the limit');
+    assert_false($ok('yes'), 'not an object');
+    $r = \Slate\Module\StudioBuilder\Document\ScrollEffects::render(['interactions' => ['sticky' => ['edge' => 'top', 'shadow' => true]]]);
+    assert_eq(['sb-sticky', 'sb-sticky--top'], $r['classes'], 'the header gets the classes a sticky section gets');
+    $src = (string) file_get_contents(SLATE_ROOT . '/src/Module/StudioBuilder/Render/Compile/StudioCompiler.php');
+    assert_true(str_contains($src, "\$partial['settings']['sticky_header']"), 'the compiler puts them on the site header');
+});
