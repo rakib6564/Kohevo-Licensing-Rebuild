@@ -61,6 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Database::setSetting('studio_seo_robots', $seoRobots, $tenantId);
         Database::setSetting('studio_seo_google_verify', $seoGoogleVerification, $tenantId);
         Database::setSetting('studio_seo_bing_verify', $seoBingVerification, $tenantId);
+        Database::setSetting(\Slate\Module\StudioBuilder\Meta\PageRoutes::SETTING_TRAILING_SLASH, !empty($_POST['trailing_slash']) ? '1' : '0', $tenantId);
 
         sb_flash_redirect('seo.php', ['type' => 'success', 'msg' => __('studio_seo_saved', 'Saved. Published pages use these settings from their next visit.')]);
     }
@@ -166,6 +167,14 @@ require SLATE_ROOT . '/admin/partials/header.php';
                             <option value="index,nofollow" <?= $seoRobots === 'index,nofollow' ? 'selected' : '' ?>>index, nofollow (index page, do not crawl outbound links)</option>
                             <option value="noindex,nofollow" <?= $seoRobots === 'noindex,nofollow' ? 'selected' : '' ?>>noindex, nofollow (complete bot blackout)</option>
                         </select>
+                    </div>
+
+                    <div class="sb-field">
+                        <label class="sb-check" for="seo-input-slash" style="display: flex; gap: 8px; align-items: flex-start;">
+                            <input type="checkbox" name="trailing_slash" id="seo-input-slash" value="1" <?= (string) Database::setting(\Slate\Module\StudioBuilder\Meta\PageRoutes::SETTING_TRAILING_SLASH, $tenantId) === '1' ? 'checked' : '' ?>>
+                            <span>Page addresses end with a slash (<code>/contact/</code>)</span>
+                        </label>
+                        <p class="sb-field__hint">Both forms open the page; this sets the one in canonical tags, the sitemap and post links. Turn it on for a site moved from WordPress, so search engines keep the addresses they know.</p>
                     </div>
 
                     <div class="sb-form-grid">

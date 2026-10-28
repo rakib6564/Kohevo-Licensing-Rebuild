@@ -109,7 +109,7 @@ final class StudioCompiler
                 ? $header . '<' . $region . ' class="sb-site-' . $region . ' sb-site-' . $region . '--partial" id="main">' . $main . '</' . $region . '>' . $footer
                 : $header . '<main class="sb-main sb-main--' . $width . '" id="main">' . $main . '</main>' . $footer;
             $css  = StudioStylesheet::css() . $theme->rootCss() . $collector->css();
-            $seo  = SeoHead::build(is_array($document['seo'] ?? null) ? $document['seo'] : [], $page, $context->site, $context->mode, $this->media);
+            $seo  = SeoHead::build(is_array($document['seo'] ?? null) ? $document['seo'] : [], $page, $context->site, $context->mode, $this->media, $context->tenantId);
         } catch (StudioRenderException $e) {
             throw $e;
         } catch (\Throwable $e) {
@@ -343,6 +343,8 @@ final class StudioCompiler
             'registry'    => ModuleBlockDefinitions::registryFingerprint($this->registry),
             'renderers'   => $this->renderers->fingerprint(),
             'revision_id' => (int) $revision['id'],
+            // The page's public address (content type prefix, trailing slash) is in its canonical tag and links.
+            'route'       => \Slate\Module\StudioBuilder\Meta\PageRoutes::path($context->tenantId, (int) $page->id, $page->slug, $page->routeMode),
             'site'        => $context->site->fingerprint(),
             'stylesheet'  => StudioStylesheet::VERSION,
             'theme'       => $theme->fingerprint(),
@@ -409,7 +411,7 @@ final class StudioCompiler
         $published = $page->publishedAt !== null ? strtotime($page->publishedAt) : false;
         return [
             'post_title'  => $page->title,
-            'post_url'    => $context->site->absoluteUrl($page->routeMode === 'homepage' ? '/' : '/' . $page->slug),
+            'post_url'    => $context->site->absoluteUrl(\Slate\Module\StudioBuilder\Meta\PageRoutes::path($context->tenantId, (int) $page->id, $page->slug, $page->routeMode)),
             'category'    => $settings['category'] ?? '',
             'author_name' => mb_substr(trim($author), 0, 120),
             'date'        => $published !== false ? date('M j, Y', $published) : '',

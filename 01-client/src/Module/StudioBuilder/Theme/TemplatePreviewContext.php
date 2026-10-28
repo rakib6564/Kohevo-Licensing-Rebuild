@@ -68,7 +68,7 @@ final class TemplatePreviewContext
                 $category = is_array($settings) && is_string($settings['category'] ?? null) ? self::text($settings['category']) : '';
                 return [
                     'post_title' => self::text($host['title'] ?? ''),
-                    'post_url'   => $site->absoluteUrl('/' . ltrim((string) ($host['slug'] ?? ''), '/')),
+                    'post_url'   => $site->absoluteUrl(\Slate\Module\StudioBuilder\Meta\PageRoutes::path((int) ($host['tenant_id'] ?? 0), (int) ($host['id'] ?? 0), (string) ($host['slug'] ?? ''), (string) ($host['route_mode'] ?? ''))),
                     'category'   => $category,
                     'meta_page_id' => (int) ($host['id'] ?? 0),
                 ];

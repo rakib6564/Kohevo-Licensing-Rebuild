@@ -159,7 +159,7 @@ final class PostsProvider implements PublicDataProviderInterface
                 'id'             => (int) $row['id'],
                 'title'          => (string) $row['title'],
                 'slug'           => (string) $row['slug'],
-                'url'            => '/' . ltrim((string) $row['slug'], '/'),
+                'url'            => \Slate\Module\StudioBuilder\Meta\PageRoutes::path($tenantId, (int) $row['id'], (string) $row['slug'], ''),
                 'excerpt'        => mb_substr($excerpt, 0, 200, 'UTF-8'),
                 'category'       => $postCategory,
                 'author_name'    => (string) ($row['author_name'] ?? 'Staff Author'),
