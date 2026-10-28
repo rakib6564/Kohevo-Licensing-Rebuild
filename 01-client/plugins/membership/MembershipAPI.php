@@ -194,19 +194,6 @@ class MembershipAPI {
      * the same reason D2 left booking's wizard on /book rather than inlining it.
      * The card links; the portal sells. */
 
-    /** Active, sellable plans as editor select options. */
-    public static function blockPickerOptions(): array {
-        $out = [['v' => '', 'l' => 'Show all plans']];
-        try {
-            foreach (self::sellablePlans() as $p) {
-                $out[] = ['v' => (string)$p['id'], 'l' => self::planName($p)];
-            }
-        } catch (\Throwable $e) {
-            // schema not ready — just offer "all".
-        }
-        return $out;
-    }
-
     /**
      * Plans worth advertising.
      *
@@ -259,55 +246,6 @@ class MembershipAPI {
                   . '</div>';
         }
         return $out . '</div>';
-    }
-
-    /**
-     * Minimal stylesheet for the block.
-     *
-     * Membership has no shared public stylesheet to reuse — the portal's card
-     * styles are an inline <style> in landing.php, scoped to the portal's own
-     * chrome — so dragging those onto a public page would import layout that has
-     * nothing to do with this block.
-     *
-     * Written against --slate-* directly rather than a new --mb-* family: this is
-     * new code, and Phase E's whole aim is one vocabulary, so adding a sixth
-     * would be work created for the sake of removing it later.
-     */
-    public static function blockCss(): string {
-        return '<style id="cb-mplans-css">'
-             . '.cb-mplans{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));'
-             . 'gap:var(--slate-space-6,1.5rem);margin:var(--slate-space-8,2rem) 0}'
-             . '.cb-mplan{border:1px solid var(--slate-color-border,#e2e8f0);'
-             . 'border-radius:var(--slate-radius-lg,16px);padding:var(--slate-space-6,1.5rem);'
-             . 'background:var(--slate-color-surface,#fff);display:flex;flex-direction:column;'
-             . 'gap:var(--slate-space-2,.5rem)}'
-             . '.cb-mplan-name{font-weight:var(--slate-font-weight-bold,700);'
-             . 'font-size:var(--slate-font-size-lg,1.125rem);color:var(--slate-color-text,#0f172a)}'
-             . '.cb-mplan-price{font-size:var(--slate-font-size-xl,1.25rem);'
-             . 'color:var(--slate-color-text,#0f172a)}'
-             // Also full text colour, for the same reason as the description: at
-             // 14px this is normal text and needs 4.5:1, which muted does not
-             // reach on four of the six palettes. The term still reads as
-             // secondary because it is SMALLER — hierarchy carried by size
-             // rather than by a contrast level that fails.
-             . '.cb-mplan-term{font-size:var(--slate-font-size-sm,.875rem);'
-             . 'color:var(--slate-color-text,#0f172a)}'
-             // Full text colour, not muted. A plan description is content, not
-             // de-emphasised metadata, so full contrast is the more correct
-             // choice on its own terms — and it is the only one that holds at
-             // 14px on every tenant palette. Measured on the warm-editorial
-             // theme, muted-on-surface is 3.76:1 against a 4.5:1 requirement.
-             // text-secondary would not be safe either: it sits between text and
-             // muted and can still fail on a low-contrast brand.
-             . '.cb-mplan-desc{color:var(--slate-color-text,#0f172a);'
-             . 'font-size:var(--slate-font-size-sm,.875rem)}'
-             . '.cb-mplan-cta{margin-top:auto;display:inline-block;text-align:center;'
-             . 'padding:var(--slate-space-3,.75rem) var(--slate-space-4,1rem);'
-             . 'border-radius:var(--slate-radius-control,8px);text-decoration:none;'
-             . 'background:var(--slate-color-accent,#2563eb);color:var(--slate-color-on-accent,#fff)}'
-             . '.cb-mplans-empty{color:var(--slate-color-text,#0f172a);'
-             . 'padding:var(--slate-space-6,1.5rem);text-align:center}'
-             . '</style>';
     }
 
     /** The `membership-plans` block. Renders cards; never initiates a purchase. */

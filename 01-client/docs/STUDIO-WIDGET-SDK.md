@@ -160,3 +160,34 @@ Per Section 32 of the Master Architecture:
 - **No Database Escalation**: Renderers do not gain write or admin database access.
 - **Tenant Scope Enforcement**: All asset resolution and data access remain strictly isolated to the current tenant.
 - **Fail-Closed Execution**: Render failures are logged securely and isolated from the rest of the document.
+
+---
+
+## 8. Kohevo module widgets (`studio-widgets.php`)
+
+A Kohevo module plugin (Booking, Membership, Forms, and later Shop) offers its widgets in Add › Components by shipping `plugins/<slug>/studio-widgets.php`. Studio's `PluginWidgetCatalog` reads that file for **every installed plugin, active or not**, so a page that holds a booking block still opens, validates and saves when Booking is switched off. Whether a widget can be inserted and whether it renders is decided by its entitlement: `EntitlementService::canAccess()` needs the plugin active **and** licensed, so an inactive or unlicensed plugin's widgets are listed as locked and render nothing for visitors.
+
+The file returns plain objects (no hook, no boot order):
+
+```php
+<?php
+declare(strict_types=1);
+
+if (!defined('SLATE_ROOT')) { http_response_code(404); exit; }
+
+require_once __DIR__ . '/studio/ShopProductCardRenderer.php';
+
+return [
+    'blocks'    => [ /* DeclarativeBlockDefinition, category 'business', requiredEntitlement '<module>' */ ],
+    'renderers' => [ /* BlockRendererInterface, one per block type */ ],
+    'providers' => [ /* DataProviderInterface for the data the blocks bind to (tenant-scoped, entitlement-gated) */ ],
+];
+```
+
+Rules:
+- Use the plugin's own namespace for types (`booking.*`, `membership.*`, `forms.*`, `shop.*`). A type Studio or another plugin already registered is ignored.
+- Give every block `category: 'business'` and `requiredEntitlement` set to the plugin's `commercial_module.entitlement`.
+- A file that throws or returns the wrong shape is logged through `StudioLog` and skipped; Studio keeps working.
+- Add the block's French title and description (`studio_block_<type>_title` / `_desc`) and any new field labels (`studio_field_*`) to `plugins/studio-builder/lang/fr.php`, then regenerate `ui/tests/fixtures/manifest.json`.
+
+See `plugins/booking/studio-widgets.php` and `plugins/membership/studio-widgets.php` for working examples.

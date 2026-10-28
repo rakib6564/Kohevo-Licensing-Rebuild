@@ -2241,20 +2241,6 @@ class BookingAPI {
      * flow working but put nothing in the document: the page carried a reference,
      * not content, and --slate-* could not reach inside the frame. */
 
-    /** Active services as editor select options, plus a "full flow" default. */
-    public static function pickerOptions(): array {
-        $out = [['v' => '', 'l' => 'Show all services (catalogue)']];
-        try {
-            foreach (self::getActiveServices() as $s) {
-                $name = self::serviceName($s);
-                $out[] = ['v' => (string)$s['id'], 'l' => ($name !== '' ? $name : ('Service #' . $s['id']))];
-            }
-        } catch (\Throwable $e) {
-            // schema not ready / no services — just offer the full flow.
-        }
-        return $out;
-    }
-
     /**
      * The service catalogue, as HTML.
      *
