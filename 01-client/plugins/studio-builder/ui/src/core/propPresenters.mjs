@@ -44,6 +44,17 @@ export const PROP_PRESENTERS = Object.freeze({
     url: { showIf: (p) => p.link_to === 'custom' },
     new_tab: { showIf: (p) => p.link_to === 'media' || p.link_to === 'custom' },
   },
+  // The Video, like the reference editor's: Source decides which address field shows, and the poster's own settings
+  // show once Image Overlay is on (a lightbox opens from the poster, so it needs one too).
+  'core.video': {
+    source: { pills: true },
+    url: { showIf: (p) => p.source !== 'hosted' },
+    hosted_url: { showIf: (p) => p.source === 'hosted' },
+    privacy: { showIf: (p) => p.source !== 'hosted' },
+    overlay_image: { showIf: (p) => p.overlay === true },
+    play_icon: { showIf: (p) => p.overlay === true },
+    lightbox: { showIf: (p) => p.overlay === true },
+  },
   // The Icon's colours, size, frame and rotation are set from its Style section, not here. The older preset size and
   // colour token stay visible only while they hold a value the Style section does not show.
   'core.icon': {

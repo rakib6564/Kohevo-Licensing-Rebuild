@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { ICON_STYLE_PROPS, PROP_PRESENTERS, presentersFor } from '../src/core/propPresenters.mjs';
+import { optionLabel } from '../src/core/optionLabels.mjs';
 
 const manifest = JSON.parse(readFileSync(new URL('./fixtures/manifest.json', import.meta.url), 'utf8'));
 
@@ -85,4 +86,25 @@ test('an icon has one size and one colour, in its Style section; the older prese
   assert.equal(icon.size.showIf({ size: 'lg', size_px: 40 }), false, 'a pixel size replaces it');
   assert.equal(icon.color_token.showIf({ color_token: null }), false);
   assert.equal(icon.color_token.showIf({ color_token: 'color.accent' }), true);
+});
+
+test('Video: Source decides which address shows, and the poster, play icon and lightbox wait for Image Overlay', () => {
+  const v = presentersFor('core.video');
+  const shown = (props) => Object.keys(v).filter((k) => !v[k].showIf || v[k].showIf(props));
+  // A block saved before Source existed has none: it is a YouTube or Vimeo link.
+  assert.deepEqual(shown({}).sort(), ['privacy', 'source', 'url']);
+  assert.deepEqual(shown({ source: 'youtube' }).sort(), ['privacy', 'source', 'url']);
+  assert.deepEqual(shown({ source: 'hosted' }).sort(), ['hosted_url', 'source']);
+  assert.deepEqual(shown({ source: 'vimeo', overlay: true }).sort(), ['lightbox', 'overlay_image', 'play_icon', 'privacy', 'source', 'url']);
+  assert.equal(v.source.pills, true);
+  assert.deepEqual(['youtube', 'vimeo', 'hosted'].map(optionLabel), ['YouTube', 'Vimeo', 'Self hosted']);
+
+  const fields = fieldSchemas().get('core.video');
+  const field = (k) => fields.find((f) => f.key === k);
+  assert.deepEqual(field('source').allowed_values, ['youtube', 'vimeo', 'hosted']);
+  assert.deepEqual(field('aspect_ratio').allowed_values, ['16:9', '4:3', '1:1', '9:16']);
+  assert.equal(field('hosted_url').type, 'url', 'a URL field, so it offers the Media library');
+  assert.equal(field('overlay_image').type, 'media_ref');
+  for (const k of ['start', 'end']) assert.equal(field(k).type, 'number');
+  for (const k of ['autoplay', 'muted', 'loop', 'controls', 'privacy', 'lazy_load', 'overlay', 'play_icon', 'lightbox']) assert.equal(field(k).type, 'boolean', k);
 });

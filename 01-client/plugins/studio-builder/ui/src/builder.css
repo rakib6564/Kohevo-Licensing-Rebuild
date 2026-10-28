@@ -3244,7 +3244,7 @@ html, body.sbx-body {
 .sbx-media-dialog__item:hover { background: var(--sbx-fill-2); border-color: var(--sbx-border-strong); }
 .sbx-media-dialog__item:focus-visible { outline: none; box-shadow: var(--sbx-focus); }
 .sbx-media-dialog__item.is-chosen { border-color: var(--sbx-accent); background: var(--sbx-accent-tint); }
-.sbx-media-dialog__item img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--sbx-r-md); background: var(--sbx-fill-2); display: block; }
+.sbx-media-dialog__item img, .sbx-media-dialog__item video { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--sbx-r-md); background: var(--sbx-fill-2); display: block; }
 .sbx-media-dialog__name { font-size: var(--sbx-fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sbx-media-dialog__empty { padding: var(--sbx-s-5) 0; text-align: center; }
 .sbx-media-dialog__more { align-self: center; }
