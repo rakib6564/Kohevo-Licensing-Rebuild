@@ -41,6 +41,8 @@ $tokens = [
     'type.heading_leading' => '1.17', 'type.flow' => '0', 'type.heading_gap' => '0', 'type.section_gutter' => '0', 'type.smoothing' => 'antialiased',
     'radius.sm' => '7px', 'radius.md' => '14px', 'radius.lg' => '15px', 'radius.full' => '999px',
     'shadow.sm' => '0 6px 18px rgba(30,20,48,.035)', 'shadow.md' => '0 8px 28px rgba(18,10,34,.08)',
+    // Site settings › Layout: the design's content width. Every section's boxed container keeps to it.
+    'layout.content' => '1170px',
 ];
 $fonts = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
        . '<link href="https://fonts.googleapis.com/css2?family=Karla:wght@400;700&family=Syne:wght@400;700&display=swap" rel="stylesheet">';

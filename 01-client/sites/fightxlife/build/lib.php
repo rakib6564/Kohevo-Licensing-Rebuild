@@ -42,9 +42,9 @@ function B(string $type, array $props = [], array $children = [], string|array $
 require __DIR__ . '/native.php';
 
 /**
- * A full-width section. Its container holds the content to 1170px with Studio's boxed content width (22px gutters on a
- * tablet, 18px on a phone), and the design's class names become native style (native.php). A long-form body is laid
- * into a template column, so it is not boxed.
+ * A full-width section. Its container is boxed with no width of its own, so it holds the content to the site's content
+ * width (Site settings › Layout, 1170px in site.php) with a 32px gutter (22px on a tablet, 18px on a phone), and the
+ * design's class names become native style (native.php). A long-form body is laid into a template column, so it is not boxed.
  */
 function SEC(string $label, array $blocks, string|array $cls = []): array
 {
@@ -67,12 +67,18 @@ function SEC(string $label, array $blocks, string|array $cls = []): array
         'blocks' => [B('layout.container', ['width' => 'full', 'padding' => 'none'], $blocks, $cls)],
     ];
     $box = &$s['blocks'][0];
-    if (!in_array('fx-body', $cls, true)) {
-        $box['style']['layout'] = ['content_width' => 'boxed', 'content_max' => 'min(1170px, calc(100% - 64px))'];
+    $boxed = !in_array('fx-body', $cls, true);
+    if ($boxed) {
+        $box['style']['layout'] = ['content_width' => 'boxed'];
         $box['responsive']['tablet']['style']['padding'] = ['left' => '22px', 'right' => '22px'];
         $box['responsive']['mobile']['style']['padding'] = ['left' => '18px', 'right' => '18px'];
     }
     native_apply($box, []);
+    // The desktop gutter, unless the design gives the section a padding or a width of its own.
+    if ($boxed && !isset($box['style']['layout']['content_max'])) {
+        $box['style']['padding']['left'] ??= '32px';
+        $box['style']['padding']['right'] ??= '32px';
+    }
     if (in_array('yg-header-sec', $cls, true)) {
         $box['style']['background'] = ['color' => '#ffffff'];
     }
