@@ -175,7 +175,7 @@ final class BlockRegistry
             schema: FieldSchema::define([
                 ['key' => 'content', 'type' => 'rich_text', 'label' => 'Content', 'required' => true, 'default' => '<p></p>'],
                 ['key' => 'drop_cap', 'type' => 'boolean', 'label' => 'Drop Cap', 'required' => false, 'default' => false],
-                ['key' => 'columns', 'type' => 'number', 'label' => 'Columns', 'required' => false, 'default' => 1, 'min' => 1, 'max' => 10, 'integer_only' => true],
+                ['key' => 'columns', 'type' => 'number', 'label' => 'Columns', 'required' => false, 'per_device' => true, 'default' => 1, 'min' => 1, 'max' => 10, 'integer_only' => true],
                 ['key' => 'columns_gap', 'type' => 'number', 'label' => 'Columns Gap', 'required' => false, 'default' => 20, 'min' => 0, 'max' => 200, 'integer_only' => true],
             ]),
             allowsChildren: false,
@@ -239,7 +239,7 @@ final class BlockRegistry
             icon: 'list-check',
             schema: FieldSchema::define([
                 ['key' => 'title', 'type' => 'string', 'label' => 'Title', 'required' => false, 'default' => '', 'max_length' => 200],
-                ['key' => 'columns', 'type' => 'number', 'label' => 'Columns', 'required' => false, 'default' => 3, 'min' => 1, 'max' => 4, 'integer_only' => true],
+                ['key' => 'columns', 'type' => 'number', 'label' => 'Columns', 'required' => false, 'per_device' => true, 'default' => 3, 'min' => 1, 'max' => 4, 'integer_only' => true],
                 [
                     'key'        => 'items',
                     'type'       => 'repeater',
@@ -372,7 +372,7 @@ final class BlockRegistry
             category: 'layout',
             icon: 'grid-panes',
             schema: FieldSchema::define([
-                ['key' => 'columns', 'type' => 'number', 'label' => 'Columns', 'required' => false, 'default' => 2, 'min' => 1, 'max' => 12, 'integer_only' => true],
+                ['key' => 'columns', 'type' => 'number', 'label' => 'Columns', 'required' => false, 'per_device' => true, 'default' => 2, 'min' => 1, 'max' => 12, 'integer_only' => true],
                 ['key' => 'gap', 'type' => 'enum', 'label' => 'Gap', 'required' => false, 'allowed_values' => CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, 'default' => 'md'],
                 ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['start', 'center', 'end', 'stretch'], 'default' => 'stretch'],
             ]),
@@ -394,7 +394,7 @@ final class BlockRegistry
                 ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['left', 'center', 'right', 'justify'], 'default' => 'left'],
                 ['key' => 'color_token', 'type' => 'token_ref', 'label' => 'Color Token', 'required' => false, 'default' => null],
                 ['key' => 'drop_cap', 'type' => 'boolean', 'label' => 'Drop Cap', 'required' => false, 'default' => false],
-                ['key' => 'columns', 'type' => 'number', 'label' => 'Columns', 'required' => false, 'default' => 1, 'min' => 1, 'max' => 10, 'integer_only' => true],
+                ['key' => 'columns', 'type' => 'number', 'label' => 'Columns', 'required' => false, 'per_device' => true, 'default' => 1, 'min' => 1, 'max' => 10, 'integer_only' => true],
                 ['key' => 'columns_gap', 'type' => 'number', 'label' => 'Columns Gap', 'required' => false, 'default' => 20, 'min' => 0, 'max' => 200, 'integer_only' => true],
             ]),
             allowsChildren: false,
@@ -419,7 +419,7 @@ final class BlockRegistry
                 ['key' => 'order_by', 'type' => 'enum', 'label' => 'Order By', 'required' => false, 'allowed_values' => ['published_at', 'title', 'created_at'], 'default' => 'published_at'],
                 ['key' => 'order', 'type' => 'enum', 'label' => 'Order Direction', 'required' => false, 'allowed_values' => ['desc', 'asc'], 'default' => 'desc'],
                 ['key' => 'per_page', 'type' => 'number', 'label' => 'Posts Per Page', 'required' => false, 'default' => 6, 'min' => 1, 'max' => 24, 'integer_only' => true],
-                ['key' => 'columns', 'type' => 'number', 'label' => 'Grid Columns', 'required' => false, 'default' => 3, 'min' => 1, 'max' => 6, 'integer_only' => true],
+                ['key' => 'columns', 'type' => 'number', 'label' => 'Grid Columns', 'required' => false, 'per_device' => true, 'default' => 3, 'min' => 1, 'max' => 6, 'integer_only' => true],
                 ['key' => 'gap', 'type' => 'enum', 'label' => 'Gap', 'required' => false, 'allowed_values' => CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, 'default' => 'md'],
                 ['key' => 'card_variant', 'type' => 'enum', 'label' => 'Card Variant', 'required' => false, 'allowed_values' => ['card', 'minimal', 'horizontal'], 'default' => 'card'],
                 // The cards' heading level, so a loop under an h2 section heading can follow the page's outline.
@@ -634,7 +634,7 @@ final class BlockRegistry
             category: 'media',
             icon: 'gallery',
             schema: FieldSchema::define([
-                ['key' => 'columns', 'type' => 'enum', 'label' => 'Columns', 'required' => false, 'allowed_values' => ['2', '3', '4', '6'], 'default' => '3'],
+                ['key' => 'columns', 'type' => 'enum', 'label' => 'Columns', 'required' => false, 'per_device' => true, 'allowed_values' => ['2', '3', '4', '6'], 'default' => '3'],
                 ['key' => 'gap', 'type' => 'enum', 'label' => 'Gap', 'required' => false, 'allowed_values' => ['none', 'xs', 'sm', 'md', 'lg'], 'default' => 'md'],
                 ['key' => 'aspect_ratio', 'type' => 'enum', 'label' => 'Aspect Ratio', 'required' => false, 'allowed_values' => ['auto', '1:1', '4:3', '16:9'], 'default' => '1:1'],
                 ['key' => 'rounded', 'type' => 'boolean', 'label' => 'Rounded Corners', 'required' => false, 'default' => true],
@@ -783,7 +783,7 @@ final class BlockRegistry
                     'label'      => 'Options',
                     'required'   => false,
                     'properties' => FieldSchema::define([
-                        ['key' => 'per_view', 'type' => 'number', 'label' => 'Slides Per View', 'required' => false, 'default' => 1, 'min' => 1, 'max' => 3, 'integer_only' => true],
+                        ['key' => 'per_view', 'type' => 'number', 'label' => 'Slides Per View', 'required' => false, 'per_device' => true, 'default' => 1, 'min' => 1, 'max' => 3, 'integer_only' => true],
                         ['key' => 'loop', 'type' => 'boolean', 'label' => 'Loop', 'required' => false, 'default' => true],
                         ['key' => 'autoplay_ms', 'type' => 'number', 'label' => 'Autoplay (ms, 0 = off)', 'required' => false, 'default' => 0, 'min' => 0, 'max' => 60000, 'integer_only' => true],
                     ]),

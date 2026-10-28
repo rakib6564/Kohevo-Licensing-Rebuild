@@ -919,7 +919,12 @@
       var slides = qsa(group, '[data-sb-slide]');
       if (!track || slides.length < 2) return;
 
-      var perView = parseInt(group.getAttribute('data-sb-per-view') || '1', 10);
+      // Slides per view can differ per device (.sb-dpv sets --sb-pv in its media queries); the attribute is the desktop count.
+      function perViewNow() {
+        var css = parseInt(global.getComputedStyle(group).getPropertyValue('--sb-pv'), 10);
+        return css > 0 ? css : parseInt(group.getAttribute('data-sb-per-view') || '1', 10);
+      }
+      var perView = perViewNow();
       var loop = group.hasAttribute('data-sb-loop');
       var auto = parseInt(group.getAttribute('data-sb-autoplay') || '0', 10);
       var index = 0;
@@ -1014,23 +1019,26 @@
       // The server renders one dot per slide; with several slides per view there are fewer positions, so the
       // dots are rebuilt then, with the server's (translated) label.
       var dotsHost = qs(group, '[data-sb-car-dots]');
-      if (dotsHost) {
+      function buildDots() {
+        if (!dotsHost) return;
         var existing = qsa(dotsHost, '[data-sb-car-dot]');
         if (existing.length === max + 1) {
           dots = existing;
-        } else {
-          dotsHost.innerHTML = '';
-          for (var i = 0; i <= max; i++) {
-            var b = document.createElement('button');
-            b.type = 'button';
-            b.className = 'sb-carousel__dot';
-            b.setAttribute('data-sb-car-dot', String(i));
-            b.setAttribute('aria-label', label('go', 'Go to slide') + ' ' + (i + 1));
-            dotsHost.appendChild(b);
-            dots.push(b);
-          }
+          return;
+        }
+        dotsHost.innerHTML = '';
+        dots = [];
+        for (var i = 0; i <= max; i++) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'sb-carousel__dot';
+          b.setAttribute('data-sb-car-dot', String(i));
+          b.setAttribute('aria-label', label('go', 'Go to slide') + ' ' + (i + 1));
+          dotsHost.appendChild(b);
+          dots.push(b);
         }
       }
+      buildDots();
       group.setAttribute('data-sb-car-ready', '');
 
       function stop() { if (timer) { global.clearInterval(timer); timer = null; } }
@@ -1051,7 +1059,18 @@
       }
 
       // Slide widths follow the carousel's, so the offset is measured again when the window changes size.
-      off.push(on(global, 'resize', function () { if (startX === null) place(0); }, { passive: true }));
+      // A new device size can also change the slides per view, and with it the positions and dots.
+      off.push(on(global, 'resize', function () {
+        var next = perViewNow();
+        if (next !== perView) {
+          perView = next;
+          max = Math.max(0, slides.length - perView);
+          index = clamp(index, 0, max);
+          buildDots();
+          render();
+        }
+        if (startX === null) place(0);
+      }, { passive: true }));
 
       render();
       restart();

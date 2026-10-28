@@ -19,6 +19,7 @@ import { optionLabel } from '../../core/optionLabels.mjs';
 import { getMetaFields, isKnownMetaField, metaFieldGroups } from '../../core/metaFields.mjs';
 import { sizedLabeller, tableFor } from '../../core/optionValues.mjs';
 import { Check, Field } from '../ui/index.js';
+import { DeviceProp } from './DeviceProp.jsx';
 
 const RichTextEditor = lazy(() => import('./RichTextEditor.jsx'));
 
@@ -57,7 +58,7 @@ export const FieldRow = ({ id, label, required, problem, children, wide = false 
   </Field>
 );
 
-export const FieldControl = memo(function FieldControl({ field, value, onChange, manifest, mediaPicker, labelOf = null }) {
+export const FieldControl = memo(function FieldControl({ field, value, onChange, manifest, mediaPicker, labelOf = null, device = null }) {
   const id = useId();
   const kind = controlFor(field);
   const [draft, update, problem, external] = useDraft(value, field, onChange);
@@ -181,7 +182,7 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
       return (
         <fieldset className="sbx-fieldset">
           <legend>{field.label}</legend>
-          <ObjectFields schema={field.properties} value={asObject(value)} onChange={onChange} manifest={manifest} mediaPicker={mediaPicker} />
+          <ObjectFields schema={field.properties} value={asObject(value)} onChange={onChange} manifest={manifest} mediaPicker={mediaPicker} device={device} pathPrefix={`${field.key}.`} />
         </fieldset>
       );
     default:
@@ -190,10 +191,17 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
 });
 
 /** Controls for a map of fields (object properties, repeater items, block props). */
-export function ObjectFields({ schema, value, onChange, manifest, mediaPicker, presenters = null, blockType = null, owned = [] }) {
+/**
+ * `device` ({ responsive, saveResponsive }) lets a `per_device` field hold its own value on tablet and mobile (DeviceProp);
+ * `pathPrefix` is the path of the object these fields sit in (`options.`), so the stored path is the prop's full path.
+ */
+export function ObjectFields({ schema, value, onChange, manifest, mediaPicker, presenters = null, blockType = null, owned = [], device = null, pathPrefix = '' }) {
   // A presenter's `showIf(props)` hides a field that means nothing yet (an icon's position before there is an icon).
   return asList(schema).filter((f) => !(presenters && presenters[f.key] && presenters[f.key].showIf) || presenters[f.key].showIf(asObject(value))).map((f) => {
-    const field = objectField(f, value, onChange, manifest, mediaPicker, presenters, blockType);
+    let field = objectField(f, value, onChange, manifest, mediaPicker, presenters, blockType, device);
+    if (device && f.per_device === true) {
+      field = <DeviceProp key={f.key} field={f} path={pathPrefix + f.key} device={device}>{field}</DeviceProp>;
+    }
     if (!owned.includes(f.key)) return field;
     // Another control owns this value: show it, read-only, and say where to change it.
     return (
@@ -205,7 +213,7 @@ export function ObjectFields({ schema, value, onChange, manifest, mediaPicker, p
   });
 }
 
-function objectField(f, value, onChange, manifest, mediaPicker, presenters, blockType) {
+function objectField(f, value, onChange, manifest, mediaPicker, presenters, blockType, device = null) {
   const set = (v) => onChange({ ...value, [f.key]: v });
   const presenter = presenters && presenters[f.key];
   const fieldId = blockType ? `${blockType}.${f.key}` : null;
@@ -220,6 +228,7 @@ function objectField(f, value, onChange, manifest, mediaPicker, presenters, bloc
       manifest={manifest}
       mediaPicker={mediaPicker}
       labelOf={labelOf}
+      device={device}
       onChange={set}
     />
   );

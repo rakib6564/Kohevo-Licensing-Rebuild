@@ -61,7 +61,7 @@ function sbtii_render(array $block): string
 
 unit('text editor: a drop cap is a class, and more than one column a style built only from clamped integers', function (): void {
     $html = sbtii_render(sbtii_block('core.rich_text', ['content' => '<p>Once</p>', 'drop_cap' => true, 'columns' => 3, 'columns_gap' => 32]));
-    assert_true(str_contains($html, '<div class="sb-rich-text sb-dropcap" style="column-count:3;column-gap:32px"><p>Once</p></div>'), $html);
+    assert_true(str_contains($html, '<div class="sb-rich-text sb-dropcap sb-dtc" style="--sb-tc-d:3;--sb-tc-t:3;--sb-tc-m:1;column-gap:32px"><p>Once</p></div>'), $html);
     $plain = sbtii_render(sbtii_block('core.rich_text', ['content' => '<p>Once</p>']));
     assert_true(str_contains($plain, '<div class="sb-rich-text"><p>Once</p></div>'), 'untouched, it renders as it did: ' . $plain);
     assert_false(sbtii_valid(sbtii_block('core.rich_text', ['content' => '<p>x</p>', 'columns' => 11])), 'at most 10 columns');
@@ -70,7 +70,7 @@ unit('text editor: a drop cap is a class, and more than one column a style built
 
 unit('text: the same drop cap and columns on its paragraph', function (): void {
     $html = sbtii_render(sbtii_block('core.text', ['content' => 'Hello', 'drop_cap' => true, 'columns' => 2]));
-    assert_true(str_contains($html, '<p class="sb-text sb-text--base sb-dropcap" style="column-count:2;column-gap:20px">Hello</p>'), $html);
+    assert_true(str_contains($html, '<p class="sb-text sb-text--base sb-dropcap sb-dtc" style="--sb-tc-d:2;--sb-tc-t:2;--sb-tc-m:1;column-gap:20px">Hello</p>'), $html);
 });
 
 // ── Image ─────────────────────────────────────────────────────────────────

@@ -836,8 +836,9 @@ unit('text colours: post excerpt and content use variables the theme defines', f
     preg_match_all('/var\((--sb-[a-z0-9-]+)/', $css, $m);
     $defined = array_map([\Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme::class, 'cssVarName'], array_keys(ThemeResolver::DEFAULT_TOKENS));
     // --sb-anim-* are set per element by the animation surface, --sb-ov-* by a Container's overlay, --sb-shape-* by its
-    // shape dividers, and --sb-pbg-*, --sb-parallax-*, --sb-sticky-* and --sb-stuck-* by the scroll effects, not by the theme.
-    $perElement = ['--sb-anim-', '--sb-ov-', '--sb-shape-', '--sb-pbg-', '--sb-parallax-', '--sb-sticky-', '--sb-stuck-'];
+    // shape dividers, --sb-pbg-*, --sb-parallax-*, --sb-sticky-* and --sb-stuck-* by the scroll effects, and --sb-dc-*, --sb-tc-*
+    // and --sb-pv* by counts that differ per device (DeviceColumns), not by the theme.
+    $perElement = ['--sb-anim-', '--sb-ov-', '--sb-shape-', '--sb-pbg-', '--sb-parallax-', '--sb-sticky-', '--sb-stuck-', '--sb-dc-', '--sb-tc-', '--sb-pv'];
     $missing = array_values(array_filter(array_diff(array_unique($m[1]), $defined), static function (string $v) use ($perElement): bool {
         foreach ($perElement as $prefix) {
             if (str_starts_with($v, $prefix)) {

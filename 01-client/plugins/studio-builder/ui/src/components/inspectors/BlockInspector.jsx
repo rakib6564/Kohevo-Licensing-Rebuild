@@ -89,6 +89,7 @@ export function BlockInspector({ info }) {
         presenters={presentersFor(block.type)}
         blockType={block.type}
         owned={layoutOwnedProps(block.type, style)}
+        device={{ responsive, saveResponsive: deviceScope.saveResponsive }}
         onChange={(next) => save(ops.updateBlockProps(block.id, next))}
       />
     ),

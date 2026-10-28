@@ -9,6 +9,7 @@ namespace Slate\Module\StudioBuilder\Render\Block\CoreRenderers;
 
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
+use Slate\Module\StudioBuilder\Render\Block\DeviceColumns;
 use Slate\Module\StudioBuilder\Render\Html;
 
 final class GalleryRenderer implements BlockRendererInterface
@@ -52,8 +53,14 @@ final class GalleryRenderer implements BlockRendererInterface
             $classes[] = 'sb-gallery--rounded';
         }
 
+        // Fewer columns on smaller screens unless the author chose otherwise: at most three on a tablet, two on a phone.
+        $n = (int) $cols;
+        $devices = $scope->deviceCounts('columns', 1, 6, min($n, 3), min($n, 2));
+        $classes[] = 'sb-dcols';
+        $vars = DeviceColumns::vars('dc', $n, $devices['tablet'], $devices['mobile']);
+
         $images = $scope->prop('images');
-        $html = '<div' . Html::classAttr($classes) . '>';
+        $html = '<div' . Html::classAttr($classes) . ' style="' . $vars . '">';
 
         if (is_array($images) && $images !== []) {
             foreach ($images as $img) {

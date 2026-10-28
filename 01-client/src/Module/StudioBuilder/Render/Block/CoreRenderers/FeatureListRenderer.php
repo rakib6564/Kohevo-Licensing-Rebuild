@@ -9,6 +9,7 @@ namespace Slate\Module\StudioBuilder\Render\Block\CoreRenderers;
 
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
+use Slate\Module\StudioBuilder\Render\Block\DeviceColumns;
 use Slate\Module\StudioBuilder\Render\Html;
 
 final class FeatureListRenderer implements BlockRendererInterface
@@ -48,9 +49,14 @@ final class FeatureListRenderer implements BlockRendererInterface
                 . '</li>';
         }
 
+        // One column on a phone and the chosen count from tablet up, unless the author set a count per device.
+        $perDevice = $scope->hasDeviceValue('columns');
+        $devices = $scope->deviceCounts('columns', 1, 4, $columns, 1);
+        $deviceStyle = $perDevice ? ' style="' . DeviceColumns::vars('dc', $columns, $devices['tablet'], $devices['mobile']) . '"' : '';
+
         return '<div class="sb-feature-list">'
             . ($title !== '' ? '<h2 class="sb-feature-list__title">' . Html::e($title) . '</h2>' : '')
-            . ($items !== '' ? '<ul' . Html::classAttr(['sb-feature-list__items', 'sb-cols-1', 'sb-md-cols-' . $columns]) . '>' . $items . '</ul>' : '')
+            . ($items !== '' ? '<ul' . Html::classAttr(['sb-feature-list__items', 'sb-cols-1', 'sb-md-cols-' . $columns, $perDevice ? 'sb-dcols' : '']) . $deviceStyle . '>' . $items . '</ul>' : '')
             . '</div>';
     }
 }
