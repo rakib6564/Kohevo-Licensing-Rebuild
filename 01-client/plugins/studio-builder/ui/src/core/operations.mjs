@@ -84,7 +84,7 @@ export const DEFAULT_BLOCK_STYLE = Object.freeze({
 });
 export const DEFAULT_SECTION_LAYOUT = Object.freeze({
   background_token: 'surface.primary', columns: { base: 1, md: 12 }, gap: 'md',
-  padding_y: { base: 'md', md: 'lg' }, width: 'wide',
+  padding_y: { base: 'md', md: 'lg' }, width: 'default',
 });
 
 // ── Builders ────────────────────────────────────────────────────────────────

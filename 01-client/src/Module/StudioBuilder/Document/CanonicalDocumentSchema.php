@@ -83,7 +83,10 @@ final class CanonicalDocumentSchema
         'singular', 'post_type', 'page_type', 'archive', '404', 'not_found', 'search',
     ];
 
-    public const ALLOWED_CONTAINER_WIDTHS = ['narrow', 'normal', 'wide', 'full'];
+    /** `default` is the site's content width (Site settings › Layout); the others are the site's Narrow, Normal and Wide, or no limit. */
+    public const ALLOWED_CONTAINER_WIDTHS = ['default', 'narrow', 'normal', 'wide', 'full'];
+    /** A section can also take a width of its own, per device (`layout.custom_width`). */
+    public const ALLOWED_SECTION_WIDTHS = ['default', 'narrow', 'normal', 'wide', 'full', 'custom'];
     public const ALLOWED_CHROME_MODES     = ['inherit', 'custom', 'hidden'];
 
     public const ALLOWED_SEO_KEYS = [
@@ -152,6 +155,7 @@ final class CanonicalDocumentSchema
         'gap',
         'padding_y',
         'background_token',
+        'custom_width',
     ];
 
     public const ALLOWED_SPACING_SCALE = ['none', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'];
@@ -415,7 +419,7 @@ final class CanonicalDocumentSchema
             'columns'          => ['base' => 1, 'md' => 12],
             'gap'              => 'md',
             'padding_y'        => ['base' => 'md', 'md' => 'lg'],
-            'width'            => 'wide',
+            'width'            => 'default',
         ];
     }
 

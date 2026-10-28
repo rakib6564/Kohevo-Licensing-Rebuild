@@ -5,6 +5,7 @@
         "color.accent",
         "font.body",
         "font.heading",
+        "layout.content",
         "layout.narrow",
         "layout.normal",
         "layout.wide",
@@ -1590,7 +1591,10 @@
                 }
             },
             "expected": {
-                "scoped": [],
+                "scoped": [
+                    "padding-left:max(0px,calc((100% - var(--sb-layout-content,80rem))/2))",
+                    "padding-right:max(0px,calc((100% - var(--sb-layout-content,80rem))/2))"
+                ],
                 "inline": [],
                 "classes": [],
                 "media": [],

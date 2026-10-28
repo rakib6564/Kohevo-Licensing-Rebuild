@@ -1,7 +1,7 @@
 // Shared inspector controls built on the canonical vocabulary from the
 // server manifest (breakpoints, spacing scale, alignments, auth states …).
 
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { asList, asObject } from '../../core/doc.mjs';
 import { BREAKPOINTS, VIEWPORTS } from '../../core/viewport.mjs';
 import { useEditor } from '../EditorContext.jsx';
@@ -10,6 +10,7 @@ import { IconMonitor, IconTablet, IconSmartphone } from '../Icons.jsx';
 import { t } from '../../core/messages.mjs';
 import { optionLabel } from '../../core/optionLabels.mjs';
 import { Field, Check } from '../ui/index.js';
+import { acceptsDraft } from '../../core/styleValues.mjs';
 
 const DEVICE_ICONS = { desktop: IconMonitor, tablet: IconTablet, mobile: IconSmartphone };
 
@@ -98,6 +99,90 @@ export function ResponsiveSelect({ label, value, options, onChange, activeBreakp
         {cell('sm', t('responsive_sm_label'))}
       </details>
     </fieldset>
+  );
+}
+
+/**
+ * A size per device (a breakpoint map of sizes), edited for the device the canvas shows, like ResponsiveSelect: the
+ * device buttons switch the canvas, and a device with no size of its own shows the one it inherits as the placeholder.
+ * Each size is checked as the other size fields are (`size`: px, %, rem, vw... never negative); a bad one stays in the box.
+ */
+export function ResponsiveSize({ label, value, onChange, placeholder = '', unit = 'px', hint = null }) {
+  const id = useId();
+  const { viewport, setViewport } = useEditor();
+  const map = asObject(value);
+  const device = VIEWPORTS.find((v) => v.breakpoint === ((viewport && viewport.breakpoint) || 'base'));
+  const editing = device ? device.breakpoint : 'base';
+  const lower = BREAKPOINTS.slice(0, BREAKPOINTS.indexOf(editing));
+  let inherited;
+  for (let i = lower.length - 1; i >= 0 && inherited === undefined; i -= 1) inherited = map[lower[i]];
+  const set = (v) => {
+    const next = { ...map };
+    if (v === undefined || v === '') delete next[editing];
+    else next[editing] = v;
+    onChange(next);
+  };
+  return (
+    <fieldset className="sbx-fieldset sbx-responsive" data-testid="responsive-size">
+      <legend>{label}</legend>
+      <div className="sbx-responsive__devices" role="group" aria-label={`${label} — ${t('viewport')}`}>
+        {VIEWPORTS.map((v) => {
+          const Dev = DEVICE_ICONS[v.key];
+          return (
+            <button
+              key={v.key}
+              type="button"
+              className={`sbx-responsive__device${editing === v.breakpoint ? ' is-active' : ''}${map[v.breakpoint] !== undefined ? ' is-set' : ''}`}
+              aria-pressed={editing === v.breakpoint}
+              aria-label={t(v.key)}
+              title={`${t(v.key)} (${v.breakpoint})`}
+              onClick={() => setViewport && setViewport(v.key)}
+            >
+              <Dev size={14} />
+            </button>
+          );
+        })}
+      </div>
+      <SizeInput
+        key={`${editing}:${map[editing] ?? ''}`}
+        id={`${id}-${editing}`}
+        label={`${label} (${t(device ? device.key : 'mobile')})`}
+        value={map[editing]}
+        placeholder={inherited !== undefined ? String(inherited) : placeholder}
+        unit={unit}
+        onCommit={set}
+      />
+      {hint && <p className="sbx-hint">{hint}</p>}
+    </fieldset>
+  );
+}
+
+/** One size: a bare number takes `unit`; an invalid draft stays in the box with an error and is never committed. */
+function SizeInput({ id, label, value, placeholder, unit, onCommit }) {
+  const [error, setError] = useState(false);
+  const commit = (raw) => {
+    let next = raw.trim();
+    if (/^\d*\.?\d+$/.test(next) && Number(next) !== 0) next += unit;
+    if (!acceptsDraft('size', next)) { setError(true); return; }
+    setError(false);
+    if (next !== (value ?? '')) onCommit(next);
+  };
+  return (
+    <Field label={label} htmlFor={id}>
+      <input
+        id={id}
+        type="text"
+        className="sbx-input"
+        defaultValue={value ?? ''}
+        placeholder={placeholder}
+        aria-invalid={error || undefined}
+        aria-describedby={error ? `${id}-err` : undefined}
+        onChange={() => { if (error) setError(false); }}
+        onBlur={(e) => commit(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+      />
+      {error && <p className="sbx-field__error" id={`${id}-err`} role="alert">{t('custom_width_invalid')}</p>}
+    </Field>
   );
 }
 

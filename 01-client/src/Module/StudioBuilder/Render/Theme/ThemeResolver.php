@@ -42,6 +42,9 @@ final class ThemeResolver
         'color.accent'      => '#1f2937',
         'font.body'         => 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
         'font.heading'      => 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+        // Site settings › Layout: the content width a section set to Default (and a boxed container) keeps to, like
+        // Elementor's site-wide Content width; then the widths a section can pick instead.
+        'layout.content'    => '80rem',
         'layout.narrow'     => '42rem',
         'layout.normal'     => '64rem',
         'layout.wide'       => '80rem',

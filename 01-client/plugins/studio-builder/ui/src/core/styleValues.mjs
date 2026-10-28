@@ -148,8 +148,21 @@ export function isFontFamily(value) {
 }
 
 /** Field kind → checker, for controls that name what they edit. */
+/**
+ * A size that is never negative, as padding takes it (StyleSurface::isSize): 960px, 90%, 60rem, 80vw, calc()...; a bare
+ * number other than 0 and the CSS keywords are refused. A section's custom width.
+ */
+export function isSize(value) {
+  if (typeof value !== 'string') return false;
+  const bare = value.trim();
+  if (bare.startsWith('-') || (/^(\d+\.?\d*|\.\d+)$/.test(bare) && Number(bare) !== 0)) return false;
+  if (['auto', 'none', 'inherit', 'initial', 'unset', 'fit-content', 'min-content', 'max-content'].includes(bare.toLowerCase())) return false;
+  return isLength(value);
+}
+
 export const CHECKS = {
   length: isLength,
+  size: isSize,
   // A part's max width or height (StyleSurface `maxlen`): a length, or `none` to lift the stylesheet's cap.
   maxLength: (v) => (typeof v === 'string' && v.trim() === 'none') || isLength(v),
   lengthList: isLengthList,

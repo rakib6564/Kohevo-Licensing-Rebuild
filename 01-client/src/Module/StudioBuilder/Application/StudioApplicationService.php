@@ -1687,6 +1687,7 @@ final class StudioApplicationService
                 'breakpoints'      => CanonicalDocumentSchema::ALLOWED_BREAKPOINTS,
                 'chrome_modes'     => CanonicalDocumentSchema::ALLOWED_CHROME_MODES,
                 'container_widths' => CanonicalDocumentSchema::ALLOWED_CONTAINER_WIDTHS,
+                'section_widths'   => CanonicalDocumentSchema::ALLOWED_SECTION_WIDTHS,
                 'robots'           => CanonicalDocumentSchema::ALLOWED_ROBOTS_DIRECTIVES,
                 'spacing_scale'    => CanonicalDocumentSchema::ALLOWED_SPACING_SCALE,
                 'style_keys'       => CanonicalDocumentSchema::ALLOWED_STYLE_KEYS,

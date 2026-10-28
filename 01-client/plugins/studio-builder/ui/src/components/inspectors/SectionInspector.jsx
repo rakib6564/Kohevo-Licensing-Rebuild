@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import { useEditor, useEngineState } from '../EditorContext.jsx';
-import { ResponsiveSelect, VisibilityControls } from './controls.jsx';
+import { ResponsiveSelect, ResponsiveSize, VisibilityControls } from './controls.jsx';
 import { TokenSelect } from '../fields/FieldControl.jsx';
 import { MediaControl } from '../fields/MediaControl.jsx';
 import { IconLayoutSection } from '../Icons.jsx';
@@ -27,6 +27,7 @@ import { templateCapsWidth } from '../../core/layoutTemplate.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
 import { sizedLabel, sizedLabeller } from '../../core/optionValues.mjs';
+import { sectionWidthLabel, sectionWidths, siteToken } from '../../core/siteWidths.mjs';
 import { Field } from '../ui/index.js';
 
 const COLUMN_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -91,7 +92,12 @@ export function SectionInspector({ info }) {
   const vocab = manifest.vocabulary || {};
   const idPrefix = `sbx-sec-${section.id}`;
   const label = section.label || t('section');
-  const setLayout = (patch) => applyOp(ops.updateSectionLayout(section.id, { ...layout, ...patch }), { label });
+  const width = layout.width || 'default';
+  const setLayout = (patch) => {
+    const next = { ...layout, ...patch };
+    for (const k of Object.keys(next)) if (next[k] === undefined) delete next[k];
+    applyOp(ops.updateSectionLayout(section.id, next), { label });
+  };
   const global = isGlobalSection(section);
   const style = asObject(section.style);
   const putStyle = (path, value) => applyOp(ops.updateSectionStyle(section.id, setPath(style, path, value)), { label });
@@ -135,14 +141,23 @@ export function SectionInspector({ info }) {
   const sectionBodies = {
     layout: () => (
       <>
-      <Field label={t('width')} htmlFor={`${idPrefix}-width`}>
-                <select id={`${idPrefix}-width`} value={layout.width || 'wide'} onChange={(e) => setLayout({ width: e.target.value })}>
-                  {asList(vocab.container_widths).map((w) => <option key={w} value={w}>{sizedLabel('section.width', w)}</option>)}
+      <Field label={t('width')} htmlFor={`${idPrefix}-width`} hint={width === 'default' ? t('width_default_hint') : null}>
+                <select id={`${idPrefix}-width`} value={width} onChange={(e) => setLayout({ width: e.target.value })}>
+                  {sectionWidths(vocab).map((w) => <option key={w} value={w}>{sectionWidthLabel(manifest, w)}</option>)}
                 </select>
               </Field>
+              {width === 'custom' && (
+                <ResponsiveSize
+                  label={t('custom_width')}
+                  value={layout.custom_width}
+                  placeholder={siteToken(manifest, 'layout.content') || '80rem'}
+                  hint={t('custom_width_hint')}
+                  onChange={(custom) => setLayout({ custom_width: Object.keys(custom).length ? custom : undefined })}
+                />
+              )}
               {templateCapsWidth(layoutTemplate, layout.width) && (
                 <p className="sbx-hint" role="note" data-testid="width-template-cap">
-                  {t('width_template_cap', { title: layoutTemplate.title, width: sizedLabel('section.width', layoutTemplate.content_width) })}
+                  {t('width_template_cap', { title: layoutTemplate.title, width: sectionWidthLabel(manifest, layoutTemplate.content_width) })}
                   {' '}
                   <a href={`${boot.builderUrl || ''}?page=${layoutTemplate.id}`} target="_blank" rel="noopener">{t('width_template_edit')}</a>
                 </p>
