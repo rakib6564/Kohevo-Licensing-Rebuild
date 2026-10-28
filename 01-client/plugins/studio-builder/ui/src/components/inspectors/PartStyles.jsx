@@ -1,8 +1,8 @@
 // PartStyles — style one part of a widget on its own (BlockParts.php): the titles of a Tabs block, the number of a Stat,
 // the inputs of a Form, the tiles of a Gallery.
 //
-// The author picks a part and Normal or Hover; the controls below edit that part's partial style in
-// `block.style_parts` (`<part>` or `<part>:hover`), a closed set the server checks again (StyleSurface::partIssues):
+// The author picks a part and Normal, Hover or All but the first (a line between items); the controls below edit that part's partial style in
+// `block.style_parts` (`<part>`, `<part>:hover` or `<part>:not_first`), a closed set the server checks again (StyleSurface::partIssues):
 // text, background (a colour or a gradient), border and corners, padding and margin, size, the part's own flex or grid
 // layout, opacity and effects. A cleared field is removed, and a part left empty is removed with it.
 //
@@ -48,6 +48,9 @@ function Group({ title, initiallyOpen, children }) {
  * `parts`: the definition's `style_parts` ([{ key, label, states? }]); `value`: the block's `style_parts`;
  * `responsive` and `onResponsiveChange`: the block's `responsive`, for the tablet and mobile values.
  */
+/** Part states besides the plain one (BlockParts::STATES): '' is the part itself. */
+const PART_STATES = ['', 'hover', 'not_first'];
+
 export function PartStyles({ blockId, parts, value, responsive, tokens, onChange, onResponsiveChange }) {
   const list = asList(parts);
   const { viewport } = useEditor();
@@ -58,7 +61,7 @@ export function PartStyles({ blockId, parts, value, responsive, tokens, onChange
   const perDevice = OVERRIDE_DEVICES.includes(device) && typeof onResponsiveChange === 'function';
   const takesStates = (list.find((p) => p.key === part) || {}).states !== false;
   const shownState = perDevice || !takesStates ? 'normal' : state;
-  const key = shownState === 'hover' ? `${part}:hover` : part;
+  const key = shownState === 'normal' ? part : `${part}:${shownState}`;
 
   const resp = asObject(responsive);
   const deviceParts = perDevice ? asObject(asObject(resp[device]).style_parts) : {};
@@ -95,7 +98,7 @@ export function PartStyles({ blockId, parts, value, responsive, tokens, onChange
       <Field label={t('part_label')} htmlFor={`sbx-part-${blockId}`}>
         <select id={`sbx-part-${blockId}`} value={part} onChange={(e) => setPart(e.target.value)}>
           {list.map((p) => (
-            <option key={p.key} value={p.key}>{p.label}{isSet(p.key) || isSet(`${p.key}:hover`) ? ' •' : ''}</option>
+            <option key={p.key} value={p.key}>{p.label}{PART_STATES.some((st) => isSet(st ? `${p.key}:${st}` : p.key)) ? ' •' : ''}</option>
           ))}
         </select>
       </Field>
@@ -109,6 +112,7 @@ export function PartStyles({ blockId, parts, value, responsive, tokens, onChange
           options={[
             { value: 'normal', label: t('state_normal'), hasValue: isSet(part) },
             { value: 'hover', label: t('state_hover'), hasValue: isSet(`${part}:hover`) },
+            { value: 'not_first', label: t('state_not_first'), hasValue: isSet(`${part}:not_first`) },
           ]}
           onChange={setState}
         />

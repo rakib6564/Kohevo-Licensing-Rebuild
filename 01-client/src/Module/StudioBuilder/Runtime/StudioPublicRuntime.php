@@ -264,7 +264,7 @@ final class StudioPublicRuntime
                 if (SitemapPage::prefersHtml($accept)) {
                     $readable = true;
                     $type = 'text/html; charset=utf-8';
-                    $body = SitemapPage::html($entries, $site->siteName, $site->absoluteUrl('/'));
+                    $body = SitemapPage::html($entries, $site->siteName, $site->absoluteUrl('/'), str_starts_with($site->seo->robotsFor('index,follow'), 'noindex'));
                 } else {
                     $type = 'application/xml; charset=utf-8';
                     $body = StudioSitemapService::xml($entries);

@@ -24,9 +24,18 @@
         "surface.primary",
         "surface.secondary",
         "text.accent",
+        "text.body",
+        "text.heading",
         "text.inverse",
         "text.muted",
-        "text.primary"
+        "text.primary",
+        "type.body_leading",
+        "type.body_size",
+        "type.flow",
+        "type.heading_gap",
+        "type.heading_leading",
+        "type.section_gutter",
+        "type.smoothing"
     ],
     "cases": [
         {

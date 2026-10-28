@@ -109,6 +109,7 @@ add('layout.columns', int(1, 12));
 add('layout.rows', int(1, 12));
 add('layout.tracks', isTracks);
 add('layout.column_span', (v) => v === 'full' || int(1, 12)(v));
+add('layout.row_span', (v) => v === 'full' || int(1, 12)(v));
 add('layout.content_width', enumOf(OPTIONS.contentWidth));
 add('layout.content_max', measure(false));
 

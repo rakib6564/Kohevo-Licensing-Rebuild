@@ -77,6 +77,20 @@ if ($seoOgMediaId !== '' && is_numeric($seoOgMediaId)) {
     }
 }
 
+// The previews show a real page of this site: the home page, else the latest published page.
+$samplePage = Database::row(
+    "SELECT title, slug, route_mode FROM studiobuilder_pages WHERE tenant_id = ? AND status = 'published' AND page_type IN ('page', 'landing')
+     ORDER BY route_mode = 'homepage' DESC, published_at DESC LIMIT 1",
+    [$tenantId]
+) ?: null;
+$sampleTitle = $samplePage ? (string) $samplePage['title'] : ($siteName !== '' ? $siteName : 'Home');
+$siteHost = (string) (parse_url(SLATE_URL, PHP_URL_HOST) ?: '');
+$sampleCrumbs = array_values(array_filter(explode('/', (string) (parse_url(SLATE_URL, PHP_URL_PATH) ?: ''))));
+if ($samplePage && $samplePage['route_mode'] !== 'homepage') {
+    $sampleCrumbs[] = (string) $samplePage['slug'];
+}
+$sampleTitleText = static fn(string $format): string => str_replace(['%title%', '%site_name%'], [$sampleTitle, $siteName], $format !== '' ? $format : '%title%');
+
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
@@ -197,15 +211,16 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 </div>
                 <div style="font-family: Arial, sans-serif;">
                     <div style="font-size: 0.82rem; color: #202124; display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
-                        <span><?= e(parse_url(SLATE_URL, PHP_URL_HOST) ?: 'rakibhasaan.com') ?></span>
-                        <span style="color: #5f6368;">› about</span>
+                        <span><?= e($siteHost) ?></span>
+                        <?php foreach ($sampleCrumbs as $crumb): ?><span style="color: #5f6368;">› <?= e($crumb) ?></span><?php endforeach; ?>
                     </div>
-                    <div style="font-size: 1.15rem; color: #1a0dab; line-height: 1.3; font-weight: 400; margin-bottom: 4px;">
-                        <?= e(str_replace(['%title%', '%site_name%'], ['About', $siteName], $seoTitleFormat)) ?>
+                    <div style="font-size: 1.15rem; color: #1a0dab; line-height: 1.3; font-weight: 400; margin-bottom: 4px;" data-seo-preview="title">
+                        <?= e($sampleTitleText($seoTitleFormat)) ?>
                     </div>
-                    <div style="font-size: 0.85rem; color: #4d5156; line-height: 1.4;">
+                    <div style="font-size: 0.85rem; color: #4d5156; line-height: 1.4;" data-seo-preview="description">
                         <?= e($seoDescription) ?>
                     </div>
+                    <p class="sb-field__hint" style="margin-top: 10px;">Shown with <?= e($sampleTitle) ?>. A page's own SEO title and description replace these defaults.</p>
                 </div>
             </div>
 
@@ -227,12 +242,12 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     </div>
                     <div style="padding: 14px; background: #ffffff;">
                         <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--sb-muted); font-weight: 600; margin-bottom: 4px;">
-                            <?= e(parse_url(SLATE_URL, PHP_URL_HOST) ?: 'rakibhasaan.com') ?>
+                            <?= e($siteHost) ?>
                         </div>
-                        <div style="font-weight: 700; font-size: 0.95rem; color: var(--sb-text); margin-bottom: 4px;">
-                            <?= e(str_replace(['%title%', '%site_name%'], ['About', $siteName], $seoTitleFormat)) ?>
+                        <div style="font-weight: 700; font-size: 0.95rem; color: var(--sb-text); margin-bottom: 4px;" data-seo-preview="title">
+                            <?= e($sampleTitleText($seoTitleFormat)) ?>
                         </div>
-                        <div style="font-size: 0.82rem; color: var(--sb-muted); line-height: 1.4;">
+                        <div style="font-size: 0.82rem; color: var(--sb-muted); line-height: 1.4;" data-seo-preview="card-description">
                             <?= e(mb_strimwidth($seoDescription, 0, 110, '...')) ?>
                         </div>
                     </div>
@@ -241,6 +256,22 @@ require SLATE_ROOT . '/admin/partials/header.php';
         </div>
     </div>
 </div>
+
+<script>
+// The previews follow the title format and description as they are typed.
+(function () {
+  var title = document.getElementById('seo-input-title'), desc = document.getElementById('seo-input-desc');
+  var page = <?= json_encode($sampleTitle, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>, site = <?= json_encode($siteName, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;
+  function set(name, text) { document.querySelectorAll('[data-seo-preview="' + name + '"]').forEach(function (el) { el.textContent = text; }); }
+  function update() {
+    set('title', (title.value.trim() || '%title%').split('%title%').join(page).split('%site_name%').join(site));
+    var d = desc.value.trim();
+    set('description', d);
+    set('card-description', d.length > 110 ? d.slice(0, 107) + '...' : d);
+  }
+  if (title && desc) { title.addEventListener('input', update); desc.addEventListener('input', update); }
+})();
+</script>
 
 <?php sb_render_media_picker_modal(); ?>
 

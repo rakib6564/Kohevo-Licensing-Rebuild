@@ -768,8 +768,14 @@
     }).reduce(function (a, b) { return a.concat(b); }, []);
 
     off.push(on(lb, 'click', function (e) {
-      if (e.target.closest('[data-sb-lb-prev]')) { e.preventDefault(); show(index - 1); }
-      if (e.target.closest('[data-sb-lb-next]')) { e.preventDefault(); show(index + 1); }
+      if (e.target.closest('[data-sb-lb-prev]')) { e.preventDefault(); show(index - 1); return; }
+      if (e.target.closest('[data-sb-lb-next]')) { e.preventDefault(); show(index + 1); return; }
+      // The close button, or the dark backdrop around the picture. Modals and off-canvas panels get these from their own
+      // set-up; the lightbox is neither, so without this only Escape closed it and the × did nothing.
+      if (e.target.closest('[data-sb-close]') || e.target === lb) {
+        e.preventDefault();
+        if (lb.__sbClose) lb.__sbClose();
+      }
     }));
     off.push(on(document, 'keydown', function (e) {
       if (!lb.hasAttribute('data-sb-open')) return;
@@ -1192,7 +1198,9 @@
     var offs = [];
 
     forms.forEach(function (form) {
-      var status = qs(form, '[data-sb-form-status]');
+      // An inline form keeps its status line just after it, outside the form.
+      var after = form.nextElementSibling;
+      var status = qs(form, '[data-sb-form-status]') || (after && after.hasAttribute('data-sb-form-status') ? after : null);
       var button = qs(form, 'button[type="submit"]');
       var back = qs(form, '[data-sb-return-to]');
       if (back) back.value = global.location.pathname + global.location.search;

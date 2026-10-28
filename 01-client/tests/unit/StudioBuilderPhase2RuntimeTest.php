@@ -186,6 +186,7 @@ unit('phase2: the runtime enhances the blocks that exist today', function (): vo
     assert_true(str_contains($src, '.sb-modal'), 'must enhance core.modal by class');
     assert_true(str_contains($src, '.sb-offcanvas'), 'must enhance layout.offcanvas by class');
     assert_true(str_contains($src, '.sb-gallery__item'), 'must build a lightbox for core.gallery');
+    assert_true(str_contains($src, "if (e.target.closest('[data-sb-close]') || e.target === lb) {"), 'the lightbox closes on its × and on the backdrop, not only on Escape');
 });
 
 unit('phase2: the runtime degrades cleanly when disabled', function (): void {

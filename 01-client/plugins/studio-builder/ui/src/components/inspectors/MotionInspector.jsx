@@ -299,7 +299,7 @@ function ScrollEffectsSection({ idPrefix, interactions, hasBackground, tokens, o
 }
 
 /** Which devices an effect runs on: every device when none is unticked. Unticking the last one is refused. */
-function DeviceChecks({ idPrefix, legend, devices, onChange }) {
+export function DeviceChecks({ idPrefix, legend, devices, onChange }) {
   const on = Array.isArray(devices) && devices.length ? devices : SCROLL_DEVICES;
   return (
     <fieldset className="sbx-fieldset" id={idPrefix + '-devices'}>

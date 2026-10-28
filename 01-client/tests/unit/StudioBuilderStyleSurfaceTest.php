@@ -833,7 +833,7 @@ unit('widths: layout sections and containers follow the Page width tokens', func
 unit('text colours: post excerpt and content use variables the theme defines', function (): void {
     \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
     $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
-    preg_match_all('/var\((--sb-[a-z0-9-]+)/', $css, $m);
+    preg_match_all('/var\((--sb-[a-z0-9_-]+)/', $css, $m);
     $defined = array_map([\Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme::class, 'cssVarName'], array_keys(ThemeResolver::DEFAULT_TOKENS));
     // --sb-anim-* are set per element by the animation surface, --sb-ov-* by a Container's overlay, --sb-shape-* by its
     // shape dividers, --sb-pbg-*, --sb-parallax-*, --sb-sticky-* and --sb-stuck-* by the scroll effects, and --sb-dc-*, --sb-tc-*

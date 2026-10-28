@@ -27,6 +27,7 @@ namespace Slate\Module\StudioBuilder\Render\Compile;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Document\ScrollEffects;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
 use Slate\Module\StudioBuilder\Exception\StudioRenderException;
 use Slate\Module\StudioBuilder\Exception\StudioTenantScopeException;
@@ -493,7 +494,13 @@ final class StudioCompiler
 
         if ($source->kind === ChromeSource::PARTIAL && $source->documentJson !== null) {
             $partial = RenderDocumentPreparer::prepare($source->documentJson, $this->registry)['document'];
-            return '<' . $tag . ' class="' . $class . ' sb-site-' . $region . '--partial">'
+            // "Sticky header" (the header partial's settings): the whole header sticks, as a sticky section would.
+            $scroll = $region === 'header' && is_array($partial['settings']['sticky_header'] ?? null)
+                ? ScrollEffects::render(['interactions' => ['sticky' => $partial['settings']['sticky_header']]])
+                : ['classes' => [], 'attrs' => '', 'vars' => []];
+            $classes = trim($class . ' sb-site-' . $region . '--partial ' . implode(' ', $scroll['classes']));
+            $style = $scroll['vars'] !== [] ? ' style="' . Html::e(implode(';', $scroll['vars'])) . '"' : '';
+            return '<' . $tag . ' class="' . Html::e($classes) . '"' . $scroll['attrs'] . $style . '>'
                 . $this->documents->renderSections($partial['sections'] ?? [], $context, $theme, $collector, true)
                 . '</' . $tag . '>';
         }

@@ -208,3 +208,22 @@ unit('studio admin bulk delete: the message after the redirect says how many wen
 if (!empty($studioAdminListStandalone)) {
     exit(unit_summary());
 }
+
+unit('studio admin lists: one page at a time; a page past the end shows the last, a junk page the first', function (): void {
+    $rows = array_map(static fn(int $i): array => ['id' => $i], range(1, 45));
+    $second = sb_page_slice($rows, '2', 20);
+    assert_eq([21, 40], [$second['rows'][0]['id'], $second['rows'][19]['id']], 'rows 21-40');
+    assert_eq(3, $second['pages'], 'three pages');
+    $past = sb_page_slice($rows, 9, 20);
+    assert_eq([3, 5], [$past['page'], count($past['rows'])], 'past the end: the last page');
+    assert_eq(1, sb_page_slice($rows, 'x', 20)['page'], 'junk: the first page');
+    $none = sb_page_slice([], 1, 10);
+    assert_eq([1, 1, []], [$none['page'], $none['pages'], $none['rows']], 'an empty list is one empty page');
+
+    foreach (['pages.php' => 20, 'index.php' => 10] as $screen => $per) {
+        $src = (string) file_get_contents(dirname(__DIR__, 2) . '/plugins/studio-builder/admin/' . $screen);
+        assert_true(str_contains($src, "sb_page_slice(") && str_contains($src, ", {$per});"), "{$screen}: {$per} a screen");
+        assert_true(str_contains($src, 'slate_pagination('), "{$screen}: shows the pager");
+        assert_true(str_contains($src, 'name="page" value='), "{$screen}: a bulk delete comes back to the same page");
+    }
+});

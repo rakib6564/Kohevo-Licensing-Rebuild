@@ -70,6 +70,7 @@ const LAYOUT = [
   ['gap', 'gap'], ['row_gap', 'row-gap'], ['column_gap', 'column-gap'], ['order', 'order'], ['grow', 'flex-grow'], ['shrink', 'flex-shrink'],
   ['basis', 'flex-basis'], ['align_self', 'align-self', ALIGN_SELF], ['columns', 'grid-template-columns', null, 'repeat(%d,minmax(0,1fr))'], ['tracks', 'grid-template-columns', tracksCss],
   ['rows', 'grid-template-rows', null, 'repeat(%d,minmax(0,1fr))'], ['column_span', 'grid-column', (v) => (v === 'full' ? '1/-1' : `span ${v}`)],
+  ['row_span', 'grid-row', (v) => (v === 'full' ? '1/-1' : `span ${v}`)],
 ];
 const DIMENSIONS = [
   ['min_width', 'min-width'], ['max_height', 'max-height'], ['aspect_ratio', 'aspect-ratio'], ['overflow', 'overflow'], ['object_fit', 'object-fit'],

@@ -61,6 +61,9 @@ unit('form pipeline: a form without an Action URL posts to Forms, with a honeypo
     assert_true(str_contains($html, 'data-sb-label-sending="Sending…"'), 'translated runtime words');
     assert_true(str_contains($html, 'autocomplete="email"') && str_contains($html, 'data-sb-field-error hidden'), 'an email field and its error slot');
 
+    $pill = sbdc_render(sbfp_form(['layout' => 'inline', 'success_message' => 'Merci'], [sbfp_field(['name' => 'email', 'label' => 'Email', 'field_type' => 'email'])]));
+    assert_true(str_contains($pill, '</form><div class="sb-form__status" role="status"'), 'an inline form keeps its status line under it, outside the pill: ' . $pill);
+
     $custom = sbdc_render(sbfp_form(['action' => 'https://example.test/hook']));
     assert_true(str_contains($custom, 'action="https://example.test/hook"') && !str_contains($custom, 'data-sb-form-slug'), 'an Action URL posts there as before');
 });

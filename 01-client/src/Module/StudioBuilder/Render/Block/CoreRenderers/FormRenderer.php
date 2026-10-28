@@ -63,18 +63,23 @@ final class FormRenderer implements BlockRendererInterface
                 : Html::t('studio_form_note_off', 'Turn on the Forms module so this form can receive submissions.')) . '</p>';
         }
         $success = $scope->string('success_message', '');
+        $status = '<div class="sb-form__status" role="status" aria-live="polite" data-sb-form-status'
+            . ($success !== '' ? ' data-sb-success="' . Html::e($success) . '"' : '') . ' hidden></div>';
+        // An inline form (a pill) keeps its status line under it, outside the form, so the answer never breaks its shape.
+        $inline = $scope->string('layout', 'stacked') === 'inline';
         return '<form class="' . $formClass . '" action="' . Html::e($scope->site()->absoluteUrl('forms/' . $slug)) . '" method="post"'
             . ' data-sb-form="' . Html::e($formName) . '" data-sb-form-slug="' . Html::e($slug) . '" enctype="multipart/form-data"'
             // The runtime's own words, translated here so a French page stays French.
             . ' data-sb-label-sending="' . Html::e(Html::t('studio_form_sending', 'Sending…')) . '"'
             . ' data-sb-label-failed="' . Html::e(Html::t('studio_form_failed', 'The form could not be sent. Check your connection and try again.')) . '">'
-            . $note
             // Honeypot: hidden from people and assistive technology; Forms drops a submission that fills it.
             . '<div class="sb-hp" aria-hidden="true"><label>Website <input type="text" name="hp_field" tabindex="-1" autocomplete="off"></label></div>'
             . '<input type="hidden" name="return_to" value="" data-sb-return-to>'
             . $scope->childrenHtml()
-            . '<div class="sb-form__status" role="status" aria-live="polite" data-sb-form-status'
-            . ($success !== '' ? ' data-sb-success="' . Html::e($success) . '"' : '') . ' hidden></div>'
-            . $actions . '</form>';
+            . ($inline ? '' : $status)
+            . $actions . '</form>'
+            . ($inline ? $status : '')
+            // The editor's note sits under the form, outside it, so a styled form (an inline pill) keeps its shape.
+            . $note;
     }
 }

@@ -151,6 +151,15 @@ final class DocumentRenderer
             return $this->unavailable('render_failed', $context);
         }
 
+        // Nothing to show leaves no box on a public page: a block that rendered nothing (a pay button with no payment
+        // provider, an empty list) and a layout whose every child rendered nothing are left out, with their spacing and
+        // backgrounds. The editor keeps them, so the author can still select them. A layout with no children at all is
+        // a shape the author drew (a spacer, a coloured band) and always renders.
+        if ($inner === '' && !$context->emitsNodeMetadata()
+            && (!$definition->allowsChildren() || (is_array($block['children'] ?? null) && $block['children'] !== []))) {
+            return '';
+        }
+
         $customClasses = [];
         if (isset($block['classNames']) && is_array($block['classNames'])) {
             foreach ($block['classNames'] as $c) {

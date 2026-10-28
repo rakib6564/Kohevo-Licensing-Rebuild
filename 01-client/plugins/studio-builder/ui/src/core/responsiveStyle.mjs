@@ -18,7 +18,7 @@ export const RESPONSIVE_SCOPES = Object.freeze({
   gap: ['layout.gap', 'layout.row_gap', 'layout.column_gap'],
   // The flex / grid layout of a container: every layout field but the display type, which stays one value for all devices.
   layout: ['layout.direction', 'layout.wrap', 'layout.justify', 'layout.align', 'layout.align_content', 'layout.gap', 'layout.row_gap', 'layout.column_gap', 'layout.columns', 'layout.tracks', 'layout.rows'],
-  item: ['layout.order', 'layout.grow', 'layout.shrink', 'layout.basis', 'layout.align_self', 'layout.column_span'],
+  item: ['layout.order', 'layout.grow', 'layout.shrink', 'layout.basis', 'layout.align_self', 'layout.column_span', 'layout.row_span'],
   dimensions: ['dimensions.width', 'dimensions.height', 'dimensions.min_height', 'dimensions.max_width'],
 });
 

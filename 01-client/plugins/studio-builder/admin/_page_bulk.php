@@ -6,6 +6,7 @@
  * render the same PageListView inside a CSRF-protected POST form. Each screen
  * checks the CSRF token, calls `sb_archive_pages()`, and redirects (303) with
  * the two counts; `sb_bulk_delete_flash()` turns them back into the message.
+ * Both lists show one page at a time (`sb_page_slice()` + `slate_pagination()`).
  */
 
 declare(strict_types=1);
@@ -61,5 +62,20 @@ if (!function_exists('sb_archive_pages')) {
         return $nFailed > 0
             ? ['type' => 'error', 'msg' => sprintf(__('studio_pages_deleted_some', '%1$d page(s) deleted, %2$d could not be (a shared component that other pages still use).'), $nDeleted, $nFailed)]
             : ['type' => 'success', 'msg' => sprintf(__('studio_pages_deleted', '%d page(s) deleted.'), $nDeleted)];
+    }
+
+    /**
+     * One page of a list of Studio pages, for `slate_pagination()`. A `?page=` past the end (after a delete emptied the
+     * last page) shows the last page; anything that is not a number shows the first.
+     *
+     * @param list<array<string, mixed>> $pages
+     * @return array{rows: list<array<string, mixed>>, page: int, pages: int, per_page: int, total: int}
+     */
+    function sb_page_slice(array $pages, mixed $requested, int $perPage): array
+    {
+        $total = count($pages);
+        $count = max(1, (int) ceil($total / $perPage));
+        $page  = max(1, min($count, is_numeric($requested) ? (int) $requested : 1));
+        return ['rows' => array_slice($pages, ($page - 1) * $perPage, $perPage), 'page' => $page, 'pages' => $count, 'per_page' => $perPage, 'total' => $total];
     }
 }

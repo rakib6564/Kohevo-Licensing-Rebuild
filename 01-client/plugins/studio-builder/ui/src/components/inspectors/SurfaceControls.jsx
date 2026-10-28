@@ -265,6 +265,7 @@ function ItemFields({ id, style, onChange }) {
       <Length id={id} units={LENGTH_UNITS} path="layout.basis" label={t('layout_basis')} get={f.get} put={f.put} placeholder={'auto'} />
       <SelectField id={pathId(id, 'layout.align_self')} label={t('layout_align_self')} value={f.get('layout.align_self')} options={OPTIONS.alignSelf} onChange={(v) => f.put('layout.align_self', v)} />
       <SelectField id={pathId(id, 'layout.column_span')} label={t('layout_column_span')} value={f.get('layout.column_span') == null ? '' : String(f.get('layout.column_span'))} options={SPANS} optionLabels={{ full: t('layout_span_full') }} onChange={(v) => f.put('layout.column_span', v === 'full' || !v ? v || undefined : Number(v))} />
+      <SelectField id={pathId(id, 'layout.row_span')} label={t('layout_row_span')} value={f.get('layout.row_span') == null ? '' : String(f.get('layout.row_span'))} options={SPANS} optionLabels={{ full: t('layout_span_full') }} onChange={(v) => f.put('layout.row_span', v === 'full' || !v ? v || undefined : Number(v))} />
     </>
   );
 }

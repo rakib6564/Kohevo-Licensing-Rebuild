@@ -4153,7 +4153,8 @@
                         "base",
                         "lg",
                         "xl",
-                        "lead"
+                        "lead",
+                        "inherit"
                     ]
                 },
                 {

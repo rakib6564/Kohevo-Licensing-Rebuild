@@ -78,6 +78,8 @@ final class StyleSurface
                 'rows'      => ['int', 'grid-template-rows', 1, 12, 'repeat(%d,minmax(0,1fr))'],
                 // On a grid's child: the columns it covers.
                 'column_span' => ['span', 'grid-column'],
+                // ...and the rows it covers (a form beside a heading and the cards under it).
+                'row_span'    => ['span', 'grid-row'],
                 // Boxed content width: the block stays full width (its background too) and its children are held to
                 // `content_max` by side padding (see emitBoxed). No CSS property of their own, so the property is ''.
                 'content_width' => ['enum', '', ['boxed', 'full']],
