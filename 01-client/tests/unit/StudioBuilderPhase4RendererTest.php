@@ -584,6 +584,7 @@ unit('phase4 stylesheet: the generated CSS is the CSS its VERSION shipped, so a 
         '34' => '24abea4fc0d99c23a44fecba73a9f7f9c5bdfa67',
         '35' => 'ac3f0dd676edd505df354ce10485cdbb07ecabf8',
         '36' => '10bfb4175dca4f9299988b8f9192b62681ebce16',
+        '37' => '08066d499a0cc9b133f14c1aac54bf00be5b2c99',
     ];
     $version = \Slate\Module\StudioBuilder\Render\StudioStylesheet::VERSION;
     $hash = sha1(\Slate\Module\StudioBuilder\Render\StudioStylesheet::css());
@@ -603,7 +604,8 @@ unit('phase4 stylesheet: an Image block\'s height, aspect ratio, object-fit and 
 
 unit('phase4 stylesheet: in a row (horizontal flex or grid) a link, button, text, menu or icon keeps no margin of its own, so a header\'s items share one centre line', function (): void {
     $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
-    assert_true(str_contains($css, '.sb-flex--row>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-text,.sb-nav,.sb-icon),.sb-grid>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-text,.sb-nav,.sb-icon){margin:0}'), 'row items lose the stacked-layout margins');
+    assert_true(str_contains($css, '.sb-flex--row>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-pay,.sb-text,.sb-nav,.sb-icon),.sb-grid>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-pay,.sb-text,.sb-nav,.sb-icon){margin:0}'), 'row items lose the stacked-layout margins (a pay button too, so it lines up with a button beside it)');
+    assert_true(str_contains($css, '.sb-pay{margin:var(--sb-type-flow,1rem) 0 0}'), 'a stacked pay button follows the site\'s text spacing');
     assert_true(str_contains($css, '.sb-button-row{margin:var(--sb-type-flow,1rem) 0 0}') && str_contains($css, '.sb-link-row{margin:0 0 var(--sb-type-flow,1rem)}'), 'stacked links and buttons keep their spacing (the site\'s text spacing, 1rem unless set)');
     assert_true(strpos($css, '{margin:0}', strpos($css, '.sb-flex--row>.sb-block>:is(')) > strpos($css, '.sb-button-row{margin:var(--sb-type-flow,1rem) 0 0}'), 'the row rule comes after the stacked rules');
 });

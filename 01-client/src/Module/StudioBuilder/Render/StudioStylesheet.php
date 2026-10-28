@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '36';
+    public const VERSION = '37';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -200,7 +200,7 @@ final class StudioStylesheet
             . '.sb-link-row{margin:0 0 var(--sb-type-flow,1rem)}.sb-link-row--center{text-align:center}.sb-link-row--right{text-align:right}'
             // In a row (a horizontal flex or a grid) the gap spaces the items; a link's, button's, text's, menu's or
             // icon's own margin would push it off the row's centre line (a header's button sat lower than its menu).
-            . '.sb-flex--row>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-text,.sb-nav,.sb-icon),.sb-grid>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-text,.sb-nav,.sb-icon){margin:0}'
+            . '.sb-flex--row>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-pay,.sb-text,.sb-nav,.sb-icon),.sb-grid>.sb-block>:is(.sb-link-row,.sb-button-row,.sb-pay,.sb-text,.sb-nav,.sb-icon){margin:0}'
             . '.sb-link{color:var(--sb-color-accent);font-weight:600}.sb-link--plain{text-decoration:none}'
             . '.sb-link--arrow{text-decoration:none}.sb-link--arrow::after{content:" \\2192"}'
             . '.sb-feature-list__items,.sb-catalog__list{list-style:none;margin:0;padding:0;display:grid;gap:1rem}'
@@ -221,7 +221,7 @@ final class StudioStylesheet
             . '.sb-embed-card__fields{margin:.75rem 0 0;padding-left:1.25rem;color:var(--sb-text-muted)}'
             . '.sb-embed-card__note{margin:.75rem 0 0;font-size:.8125rem;color:var(--sb-text-muted)}'
             . '.sb-embed-frame{width:100%;border:0;display:block}'
-            . '.sb-pay{margin:1rem 0 0}.sb-pay__button{cursor:pointer;border:0;font:inherit}'
+            . '.sb-pay{margin:var(--sb-type-flow,1rem) 0 0}.sb-pay__button{cursor:pointer;border:0;font:inherit}'
             . '.sb-pay-card__button{margin:.5rem 0}.sb-pay-card__summary{margin:0;font-weight:600;color:var(--sb-text-primary)}'
             // The Forms stylesheet reads its colours from variables it defines only on its own standalone page (`.forms-public`).
             // Embedded in a Studio page there is no such ancestor, so the submit button lost its background; map them to the site tokens.
