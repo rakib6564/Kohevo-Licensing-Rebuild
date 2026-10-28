@@ -36,14 +36,7 @@ class Membership extends Plugin {
         Hook::addFilter('customer_portal_avatar',     [$this, 'portalAvatar'], 10, 2);
         Hook::addFilter('public_routes',              [$this, 'addPublicRoutes']);
 
-        // Content Builder: advertise plans on any page. Boot order between
-        // plugins is not guaranteed, so register now if the builder is already
-        // up, else catch its hook — the same pattern forms and booking use, and
-        // the thing the reachability test actually guards.
-        $this->registerContentBlock();
-
-        // The block's stylesheet, only for pages that carry the block.
-        Hook::addFilter('content_head_tags',          [$this, 'injectPlanAssets'], 10, 2);
+        // Studio widgets (Add › Components) are declared in studio-widgets.php.
 
         // Activate a membership when its Stripe checkout completes (routed
         // through the stripe-payment plugin, same pattern as Booking).
@@ -98,41 +91,6 @@ class Membership extends Plugin {
     }
 
     // ── Lifecycle hooks ──────────────────────────────────────────────────
-
-    /** Register the "Membership plans" block (order-independent). */
-    private function registerContentBlock(): void {
-        $register = function ($registry) {
-            $registry::register('membership-plans', [
-                'label'  => 'Membership plans',
-                'group'  => 'Membership',
-                'fields' => [
-                    ['key' => 'plan', 'type' => 'select', 'label' => 'Plan',
-                     'options' => MembershipAPI::blockPickerOptions()],
-                ],
-                'render'   => ['MembershipAPI', 'renderContentBlock'],
-                'defaults' => ['plan' => ''],
-            ]);
-        };
-
-        if (class_exists('BlockRegistry')) {
-            $register('BlockRegistry');                        // builder already booted
-        } else {
-            Hook::addAction('content_register_blocks', $register);  // builder boots later
-        }
-    }
-
-    /** Block stylesheet, once, and only where the block is used. */
-    public function injectPlanAssets($headTags, $post = null): string {
-        $headTags = (string) $headTags;
-
-        $layout = is_array($post) ? ($post['layout'] ?? []) : [];
-        if (!class_exists('ContentBuilderAPI')
-            || !ContentBuilderAPI::layoutHasBlock($layout, 'membership-plans')) {
-            return $headTags;
-        }
-
-        return $headTags . MembershipAPI::blockCss();
-    }
 
     public function addPublicRoutes(array $routes): array {
         // Public marketing / join landing page (no login required).

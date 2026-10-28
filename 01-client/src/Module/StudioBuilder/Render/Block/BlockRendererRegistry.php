@@ -105,13 +105,14 @@ final class BlockRendererRegistry
     public static function withStudioRenderers(): self
     {
         $registry = self::withCoreRenderers();
-        $registry->register(new ModuleRenderers\BookingServicesRenderer());
-        $registry->register(new ModuleRenderers\MembershipPlansRenderer());
-        $registry->register(new ModuleRenderers\FormCardRenderer());
-        $registry->register(new ModuleRenderers\FormEmbedRenderer());
-        $registry->register(new ModuleRenderers\BookingEmbedRenderer());
         $registry->register(new ModuleRenderers\PaymentButtonRenderer());
         $registry->register(new ModuleRenderers\PaymentLinkRenderer());
+        // The module widgets' renderers come with their plugins (studio-widgets.php).
+        foreach (\Slate\Module\StudioBuilder\Registry\PluginWidgetCatalog::renderers() as $renderer) {
+            if (!$registry->has($renderer->type())) {
+                $registry->register($renderer);
+            }
+        }
         foreach (\Slate\Module\StudioBuilder\Sdk\WidgetSdk::instance()->all() as $customWidget) {
             if (!$registry->has($customWidget->type())) {
                 $registry->register($customWidget->toBlockRenderer());

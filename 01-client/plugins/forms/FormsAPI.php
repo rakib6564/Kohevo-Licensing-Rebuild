@@ -2532,24 +2532,6 @@ class FormsAPI {
      * a same-origin iframe (?embed=1) so its own CSS/JS/CSRF and submission
      * flow keep working untouched. The iframe auto-sizes via postMessage. */
 
-    /** Published forms as editor select options: [['v'=>slug,'l'=>title], …]. */
-    public static function pickerOptions(): array {
-        try {
-            $rows = Database::rows(
-                "SELECT slug, title FROM forms_definitions
-                  WHERE tenant_id = ? AND status = 'published' ORDER BY title ASC",
-                [current_tenant_id()]
-            );
-        } catch (\Throwable $e) {
-            return [];
-        }
-        $out = [];
-        foreach ($rows as $r) {
-            $out[] = ['v' => $r['slug'], 'l' => ($r['title'] !== '' ? $r['title'] : $r['slug'])];
-        }
-        return $out;
-    }
-
     /** Published forms with their ids, for pickers that store the id (Studio): [['id'=>int,'title'=>string], …]. */
     public static function publishedChoices(): array {
         try {
@@ -2714,11 +2696,5 @@ class FormsAPI {
 
         $path = (string) parse_url($uri, PHP_URL_PATH);
         return ($path !== '' && $path[0] === '/' && !str_starts_with($path, '//')) ? $path : '';
-    }
-
-    /** @deprecated thin delegate — ContentBuilderAPI owns the walk now. */
-    public static function layoutHasBlock($layout, string $type): bool {
-        return class_exists('ContentBuilderAPI')
-            && ContentBuilderAPI::layoutHasBlock($layout, $type);
     }
 }

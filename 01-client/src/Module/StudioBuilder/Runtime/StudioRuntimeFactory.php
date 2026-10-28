@@ -16,16 +16,12 @@ use Slate\Module\StudioBuilder\Application\StudioApplicationService;
 use Slate\Module\StudioBuilder\Application\StudioPackageService;
 use Slate\Module\StudioBuilder\Package\Html\HtmlImportConverter;
 use Slate\Module\StudioBuilder\Provider\AuthorsProvider;
-use Slate\Module\StudioBuilder\Provider\BookingEmbedTargetProvider;
-use Slate\Module\StudioBuilder\Provider\BookingServicesProvider;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
-use Slate\Module\StudioBuilder\Provider\FormsFormEmbedProvider;
-use Slate\Module\StudioBuilder\Provider\FormsFormProvider;
-use Slate\Module\StudioBuilder\Provider\MembershipPlansProvider;
 use Slate\Module\StudioBuilder\Provider\PostsProvider;
 use Slate\Module\StudioBuilder\Provider\TaxonomyProvider;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions;
+use Slate\Module\StudioBuilder\Registry\PluginWidgetCatalog;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeResolver;
 use Slate\Module\StudioBuilder\Render\Component\GlobalComponentResolver;
@@ -157,14 +153,15 @@ final class StudioRuntimeFactory
     public static function dataProviders(): DataProviderRegistry
     {
         $providers = new DataProviderRegistry();
-        $providers->register(new BookingServicesProvider());
-        $providers->register(new MembershipPlansProvider());
-        $providers->register(new FormsFormProvider());
-        $providers->register(new FormsFormEmbedProvider());
-        $providers->register(new BookingEmbedTargetProvider());
         $providers->register(new PostsProvider());
         $providers->register(new AuthorsProvider());
         $providers->register(new TaxonomyProvider());
+        // The module widgets' data providers come with their plugins (studio-widgets.php).
+        foreach (PluginWidgetCatalog::providers() as $provider) {
+            if (!$providers->has($provider->key())) {
+                $providers->register($provider);
+            }
+        }
         return $providers;
     }
 }

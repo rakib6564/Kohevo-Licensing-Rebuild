@@ -66,6 +66,84 @@
         },
         {
             "allowed_binding_providers": [
+                "booking.embed_target"
+            ],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [
+                {
+                    "provider": "booking.embed_target",
+                    "slot": "service"
+                }
+            ],
+            "category": "business",
+            "default_props": {
+                "cta_label": "",
+                "show_duration": true,
+                "show_price": true
+            },
+            "description": "One service with its price, length and a Book button",
+            "field_schema": [
+                {
+                    "key": "show_price",
+                    "type": "boolean",
+                    "label": "Show price",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_duration",
+                    "type": "boolean",
+                    "label": "Show length",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "cta_label",
+                    "type": "string",
+                    "label": "Button label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                }
+            ],
+            "icon": "calendar",
+            "inline_text": [],
+            "label": "Service Card",
+            "required_entitlement": "booking",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Service Card",
+            "type": "booking.service",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [
                 "booking.services"
             ],
             "allowed_child_types": [],
@@ -5196,6 +5274,165 @@
             "version": 1
         },
         {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "business",
+            "default_props": {
+                "account_label": "",
+                "join_label": "",
+                "show_account": false,
+                "show_join": true,
+                "signin_label": ""
+            },
+            "description": "Sign in, Join and My membership buttons",
+            "field_schema": [
+                {
+                    "key": "signin_label",
+                    "type": "string",
+                    "label": "Sign-in label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "show_join",
+                    "type": "boolean",
+                    "label": "Show Join",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "join_label",
+                    "type": "string",
+                    "label": "Join label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "show_account",
+                    "type": "boolean",
+                    "label": "Show My membership",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "account_label",
+                    "type": "string",
+                    "label": "My membership label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                }
+            ],
+            "icon": "arrow-up-right",
+            "inline_text": [],
+            "label": "Member Sign-in",
+            "required_entitlement": "membership",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Member Sign-in",
+            "type": "membership.member_links",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [
+                "membership.plan"
+            ],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [
+                {
+                    "provider": "membership.plan",
+                    "slot": "plan"
+                }
+            ],
+            "category": "business",
+            "default_props": {
+                "cta_label": "",
+                "show_price": true
+            },
+            "description": "One membership plan with its price and a Join button",
+            "field_schema": [
+                {
+                    "key": "show_price",
+                    "type": "boolean",
+                    "label": "Show price",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "cta_label",
+                    "type": "string",
+                    "label": "Button label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                }
+            ],
+            "icon": "grid-panes",
+            "inline_text": [],
+            "label": "Plan Card",
+            "required_entitlement": "membership",
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Plan Card",
+            "type": "membership.plan",
+            "version": 1
+        },
+        {
             "allowed_binding_providers": [
                 "membership.plans"
             ],
@@ -6110,6 +6347,22 @@
                     "type": "number",
                     "label": "Form",
                     "required": true,
+                    "default": 0,
+                    "min": 1,
+                    "integer_only": true,
+                    "choices": []
+                }
+            ]
+        },
+        {
+            "key": "membership.plan",
+            "max_results": 1,
+            "params": [
+                {
+                    "key": "id",
+                    "type": "number",
+                    "label": "Plan",
+                    "required": false,
                     "default": 0,
                     "min": 1,
                     "integer_only": true,

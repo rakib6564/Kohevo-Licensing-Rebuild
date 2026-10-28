@@ -94,40 +94,7 @@ class Booking extends Plugin {
         require_once __DIR__ . '/BookingMcpHandler.php';
         BookingMcpHandler::register();
 
-        // Content Builder integration: a "Booking" block for embedding the
-        // booking flow into any page. Boot order isn't guaranteed, so register
-        // now if Content Builder already booted, else catch its hook.
-        $this->registerContentBlock();
-    }
-
-    /** Register the "Booking" block with Content Builder (order-independent). */
-    private function registerContentBlock(): void {
-        $register = function ($registry) {
-            $opts = BookingAPI::pickerOptions();
-            $registry::register('booking', [
-                'label'  => __('booking_block', 'Booking'),
-                'group'  => 'Booking',
-                'fields' => [
-                    ['key'=>'service','type'=>'select','label'=>'Service','options'=>$opts],
-                    ['key'=>'minHeight','type'=>'text','label'=>'Initial height (px)','placeholder'=>'640'],
-                ],
-                'render'   => ['BookingAPI', 'renderContentBlock'],
-                'defaults' => ['service' => '', 'minHeight' => '640'],
-            ]);
-        };
-
-        if (class_exists('BlockRegistry')) {
-            $register('BlockRegistry');                       // CB already booted
-        } else {
-            Hook::addAction('content_register_blocks', $register); // CB boots later
-        }
-
-        // The block renders inline now, so its stylesheet has to reach the HOST
-        // page's head — the iframe used to carry it. Only for pages that have a
-        // booking block, so every other page pays nothing.
-        if (class_exists('Hook')) {
-            Hook::addFilter('content_head_tags', [$this, 'injectBookingAssets'], 10, 2);
-        }
+        // Studio widgets (Add › Components) are declared in studio-widgets.php.
     }
 
     /** Confirm a pending appointment when its Stripe payment succeeds. */
@@ -212,36 +179,6 @@ class Booking extends Plugin {
         return $items;
     }
 
-    /**
-     * The catalogue stylesheet, for pages that actually carry a booking block.
-     *
-     * INLINED rather than linked, matching the standalone widget: a CDN in front
-     * of this install cached public.css by path and ignored the ?v= query string,
-     * so linked updates never reached visitors. Inlining ties the CSS to the
-     * uncacheable HTML. The <link> stays as the fallback for an unreadable file.
-     *
-     * The stylesheet defines only .book-* classes plus one .field rule — no bare
-     * element selectors — so dropping it into a host page cannot restyle the page
-     * around the block.
-     */
-    public function injectBookingAssets($headTags, $post = null): string {
-        $headTags = (string) $headTags;
-
-        $layout = is_array($post) ? ($post['layout'] ?? []) : [];
-        if (!class_exists('ContentBuilderAPI')
-            || !ContentBuilderAPI::layoutHasBlock($layout, 'booking')) {
-            return $headTags;
-        }
-
-        $css = @file_get_contents(plugin_dir('booking', 'assets/css/public.css'));
-        if ($css !== false && $css !== '') {
-            return $headTags . '<style id="booking-block">' . $css . '</style>';
-        }
-
-        $v = @filemtime(plugin_dir('booking', 'assets/css/public.css')) ?: 0;
-        return $headTags . '<link rel="stylesheet" href="'
-             . e(plugin_url('booking', 'assets/css/public.css')) . '?v=' . $v . '">';
-    }
 
     public function addPublicRoutes(array $routes): array {
         $routes['book'] = [

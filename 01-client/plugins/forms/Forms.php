@@ -25,40 +25,7 @@ class Forms extends Plugin {
         require_once __DIR__ . '/FormsMcpHandler.php';
         FormsMcpHandler::register();
 
-        // The form block renders inline now, so its stylesheet and logic script
-        // have to reach the HOST page's <head> — the iframe used to carry them.
-        // Injected only when the page actually contains a form block, so pages
-        // without one pay nothing, and emitted once regardless of how many
-        // blocks the page holds.
-        Hook::addFilter('content_head_tags',        [$this, 'injectFormAssets'], 10, 2);
-
-        // Content Builder integration: a "Form" block for dropping a form into
-        // any page. Plugin boot order isn't guaranteed, so register now if
-        // Content Builder has already booted, otherwise catch its hook.
-        $this->registerContentBlock();
-    }
-
-    /** Register the "Form" block with Content Builder (order-independent). */
-    private function registerContentBlock(): void {
-        $register = function ($registry) {
-            $opts = FormsAPI::pickerOptions();
-            $registry::register('form', [
-                'label'  => __('forms_block', 'Form'),
-                'group'  => 'Forms',
-                'fields' => [
-                    ['key'=>'formSlug','type'=>'select','label'=>'Form','options'=>$opts],
-                    ['key'=>'minHeight','type'=>'text','label'=>'Initial height (px)','placeholder'=>'480'],
-                ],
-                'render'   => ['FormsAPI', 'renderContentBlock'],
-                'defaults' => ['formSlug' => ($opts[0]['v'] ?? ''), 'minHeight' => '480'],
-            ]);
-        };
-
-        if (class_exists('BlockRegistry')) {
-            $register('BlockRegistry');                       // CB already booted
-        } else {
-            Hook::addAction('content_register_blocks', $register); // CB boots later
-        }
+        // Studio widgets (Add › Components) are declared in studio-widgets.php.
     }
 
     public function addAdminNav(array $items): array {
@@ -101,21 +68,6 @@ class Forms extends Plugin {
             'group' => 'form-builder',
         ];
         return $items;
-    }
-
-    /** Stylesheet + logic script for an inline form block, once per page. */
-    public function injectFormAssets($headTags, $post = null): string {
-        $headTags = (string) $headTags;
-
-        $layout = is_array($post) ? ($post['layout'] ?? []) : [];
-        if (!class_exists('FormsAPI') || !FormsAPI::layoutHasBlock($layout, 'form')) {
-            return $headTags;
-        }
-
-        $v = FormsAPI::ASSET_VERSION;
-        return $headTags
-            . '<link rel="stylesheet" href="' . e(plugin_url('forms', 'assets/css/public.css')) . '?v=' . e($v) . '">'
-            . '<script src="' . e(plugin_url('forms', 'assets/js/forms-logic.js')) . '?v=' . e($v) . '" defer></script>';
     }
 
     public function addPublicRoutes(array $routes): array {
