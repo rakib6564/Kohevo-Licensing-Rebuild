@@ -14,6 +14,7 @@ require_once __DIR__ . '/_nav.php';
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Exception\StudioException;
 use Slate\Module\StudioBuilder\Exception\StudioValidationException;
+use Slate\Module\StudioBuilder\Meta\PageMeta;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 use Slate\Module\StudioBuilder\StudioPermissions;
 
@@ -21,10 +22,14 @@ Auth::require();
 
 $studioApp   = StudioRuntimeFactory::build()->app;
 $studioActor = StudioActor::fromCurrentSession();
-$pageTitle   = __('studio_new_page', 'New page');
-$currentNav  = 'studio-pages';
+$tenantId    = current_tenant_id();
+$postTypes   = PageMeta::postTypes($tenantId);
 $flash       = null;
-$formValues  = ['title' => '', 'slug' => '', 'page_type' => 'page', 'route_mode' => 'standalone', 'template_key' => ''];
+// `?type=` (from a content type's list) starts the form as a new item of that type.
+$formValues  = ['title' => '', 'slug' => '', 'page_type' => 'page', 'route_mode' => 'standalone', 'template_key' => '', 'content_type' => (string) ($_GET['type'] ?? '')];
+if (!isset($postTypes[$formValues['content_type']])) {
+    $formValues['content_type'] = '';
+}
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     if (!csrf_verify()) {
@@ -33,12 +38,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         foreach (array_keys($formValues) as $k) {
             $formValues[$k] = trim((string) ($_POST[$k] ?? ''));
         }
+        if (!isset($postTypes[$formValues['content_type']]) || !in_array($formValues['page_type'], PageMeta::PAGE_TYPES, true)) {
+            $formValues['content_type'] = '';
+        }
         if ($formValues['slug'] === '') {
             $formValues['slug'] = trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower($formValues['title'])), '-');
         }
         try {
             $created = $studioApp->createPage($studioActor, $formValues['title'], $formValues['slug'], $formValues['page_type'], $formValues['route_mode']);
             $newId = (int) $created['page']['id'];
+            if ($formValues['content_type'] !== '') {
+                PageMeta::assignType($tenantId, $newId, $formValues['content_type']);
+            }
             if ($formValues['template_key'] !== '') {
                 // The page exists from here on: a template that cannot be applied leaves it blank, and says so on its
                 // settings screen (which links to the builder) instead of reporting that nothing was created.
@@ -71,13 +82,19 @@ try {
         : __('studio_pages_unavailable', 'Studio pages could not be loaded.');
 }
 $canEdit = $studioActor->can(StudioPermissions::EDIT) && $listError === null;
+$newType  = $postTypes[$formValues['content_type']] ?? null;
+$listHref = 'pages.php' . ($newType !== null ? '?type=' . rawurlencode($formValues['content_type']) : '');
+$listName = $newType !== null ? (string) ($newType['plural'] ?? $newType['singular']) : __('studio_pages', 'Studio Pages');
+$newName  = $newType !== null ? sprintf(__('studio_new_item_button', 'New %s'), (string) $newType['singular']) : __('studio_new_page', 'New page');
+$pageTitle  = $newName;
+$currentNav = $newType !== null ? 'studio-type-' . $formValues['content_type'] : 'studio-pages';
 
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
 <div class="sb-admin-wrapper">
-    <?php sb_render_admin_nav('pages'); ?>
-    <?php sb_render_crumbs([[__('studio_pages', 'Studio Pages'), 'pages.php'], [__('studio_new_page', 'New page'), null]]); ?>
+    <?php sb_render_admin_nav($newType !== null ? 'type-' . $formValues['content_type'] : 'pages'); ?>
+    <?php sb_render_crumbs([[$listName, $listHref], [$newName, null]]); ?>
 
     <?php if ($flash): ?>
         <div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div>
@@ -90,7 +107,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <?php else: ?>
     <div class="sb-screen-head">
         <div>
-            <h2><?= e(__('studio_new_page', 'New page')) ?></h2>
+            <h2><?= e($newName) ?></h2>
             <p><?= e(__('studio_new_page_sub', 'Give it a title and address, then open directly in the Visual Canvas Builder.')) ?></p>
         </div>
     </div>
@@ -117,6 +134,18 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     <?php endforeach; ?>
                 </select>
             </div>
+            <?php if ($postTypes !== []): ?>
+            <div class="sb-field">
+                <label class="sb-field__label" for="sb-ctype-new"><?= e(__('studio_page_content_type_short', 'Content type')) ?></label>
+                <select id="sb-ctype-new" name="content_type">
+                    <option value=""><?= e(__('studio_page_no_type', 'None (a plain page)')) ?></option>
+                    <?php foreach ($postTypes as $tKey => $t): ?>
+                        <option value="<?= e((string) $tKey) ?>"<?= $formValues['content_type'] === (string) $tKey ? ' selected' : '' ?>><?= e((string) ($t['singular'] ?? $tKey)) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <p class="sb-field__hint"><?= e(__('studio_page_content_type_hint', 'An item of a content type is listed under that type and has its fields.')) ?></p>
+            </div>
+            <?php endif; ?>
             <div class="sb-field">
                 <label class="sb-field__label" for="sb-route"><?= e(__('studio_route_mode', 'Route Mode')) ?></label>
                 <select id="sb-route" name="route_mode">
@@ -141,7 +170,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <?= sb_svg('plus', 14) ?>
                 <span><?= e(__('studio_create_and_open', 'Create & Open Canvas Builder')) ?></span>
             </button>
-            <a href="pages.php" class="btn btn-ghost"><?= e(__('cancel', 'Cancel')) ?></a>
+            <a href="<?= e($listHref) ?>" class="btn btn-ghost"><?= e(__('cancel', 'Cancel')) ?></a>
         </div>
     </form>
     <script>
