@@ -396,8 +396,8 @@ export function BorderExtras({ style, onChange, tokens }) {
         {SIDES.map((s) => (
           <fieldset key={s} className="sbx-fieldset">
             <legend>{t(`side_${s}`)}</legend>
-            <SelectField id={pathId(id, `border.${s}.style`)} label={t('border_style')} value={f.get(`border.${s}.style`)} options={OPTIONS.borderStyle} onChange={(v) => f.put(`border.${s}.style`, v)} />
-            <ThemeColor id={pathId(id, `border.${s}.color`)} label={t('border_color')} value={f.get(`border.${s}.color`)} onChange={(v) => f.put(`border.${s}.color`, v)} tokens={tokens} />
+            <SelectField id={pathId(id, `border.${s}.style`)} label={`${t(`side_${s}`)} · ${t('border_style')}`} value={f.get(`border.${s}.style`)} options={OPTIONS.borderStyle} onChange={(v) => f.put(`border.${s}.style`, v)} />
+            <ThemeColor id={pathId(id, `border.${s}.color`)} label={`${t(`side_${s}`)} · ${t('border_color')}`} value={f.get(`border.${s}.color`)} onChange={(v) => f.put(`border.${s}.color`, v)} tokens={tokens} />
           </fieldset>
         ))}
       </details>
