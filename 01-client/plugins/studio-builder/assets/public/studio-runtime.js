@@ -768,8 +768,14 @@
     }).reduce(function (a, b) { return a.concat(b); }, []);
 
     off.push(on(lb, 'click', function (e) {
-      if (e.target.closest('[data-sb-lb-prev]')) { e.preventDefault(); show(index - 1); }
-      if (e.target.closest('[data-sb-lb-next]')) { e.preventDefault(); show(index + 1); }
+      if (e.target.closest('[data-sb-lb-prev]')) { e.preventDefault(); show(index - 1); return; }
+      if (e.target.closest('[data-sb-lb-next]')) { e.preventDefault(); show(index + 1); return; }
+      // The close button, or the dark backdrop around the picture. Modals and off-canvas panels get these from their own
+      // set-up; the lightbox is neither, so without this only Escape closed it and the × did nothing.
+      if (e.target.closest('[data-sb-close]') || e.target === lb) {
+        e.preventDefault();
+        if (lb.__sbClose) lb.__sbClose();
+      }
     }));
     off.push(on(document, 'keydown', function (e) {
       if (!lb.hasAttribute('data-sb-open')) return;
