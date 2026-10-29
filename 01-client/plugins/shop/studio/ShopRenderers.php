@@ -340,7 +340,8 @@ final class ShopMiniCartRenderer implements BlockRendererInterface
         $cartUrl = class_exists('ShopStoreAPI') ? \ShopStoreAPI::pageUrl('cart_page') : $scope->site()->absoluteUrl('cart');
         $label = $scope->string('label') !== '' ? $scope->string('label') : Html::t('shop_cart', 'Cart');
         $fallback = '<a class="sb-shop-mini__link" href="' . Html::e($cartUrl) . '"><span class="sb-shop-mini__label">' . Html::e($label) . '</span></a>';
-        $url = ShopStudio::endpoint($scope, 'cart.php') . '?view=mini&total=' . ($scope->bool('show_total', false) ? '1' : '0');
+        $url = ShopStudio::endpoint($scope, 'cart.php') . '?view=mini&total=' . ($scope->bool('show_total', false) ? '1' : '0')
+            . ($scope->string('label') !== '' ? '&label=' . rawurlencode($scope->string('label')) : '');
         return ShopStudio::fragment($scope, 'sb-shop-mini', $url, $fallback, 'shop-cart');
     }
 }

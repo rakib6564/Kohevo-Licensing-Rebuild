@@ -29,7 +29,8 @@ if ($method === 'GET') {
         shop_json(['count' => $totals['count'], 'subtotal_cents' => $totals['subtotal_cents'], 'currency' => $totals['currency']]);
     }
     if ($view === 'mini') {
-        shop_html(shop_view_mini($totals, ($_GET['total'] ?? '1') !== '0'));
+        $label = is_string($_GET['label'] ?? null) ? mb_substr(trim($_GET['label']), 0, 40) : '';
+        shop_html(shop_view_mini($totals, ($_GET['total'] ?? '1') !== '0', $label));
     }
     $html = shop_view_cart($totals);
     shop_html(shop_is_fragment() ? $html : shop_page(__('shop_cart', 'Cart'), $html));

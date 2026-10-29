@@ -21,7 +21,9 @@ The bundle can sit anywhere; run it from the site root. It reads only files insi
   Without it install.php stops before changing anything.
 - `uploads/` must be writable by the user running the script (it creates `uploads/media/fxl` and deletes
   `uploads/media/solaya-site`).
-- The licence must entitle `studio-builder` (the pages) and `forms` (the contact and newsletter forms).
+- The licence must entitle `studio-builder` (the pages), `forms` (the contact and newsletter forms) and `shop` (the
+  e-shop), and the Shop and stripe-payment plugins must be active. Without Shop, install.php stops before changing
+  anything.
 - Take a database backup first. The removal of Solaya cannot be undone without one.
 
 ## What it does
@@ -37,9 +39,15 @@ The bundle can sit anywhere; run it from the site root. It reads only files insi
 
    Users, the licence, plugins and other modules' data are not touched.
 2. **Images**: copies the 279 FightxLife images into `uploads/media/fxl` and registers them in the media library.
-3. **Build** (`build/site.php`): Site settings › Text and colour tokens, fonts, content types (cours, projet, article, evenement
-   at /events/…, produit at /produit/…) with their fields, 73 pages at the live site's addresses, header, footer, 5
-   single templates and 9 redirects. The site's custom CSS is empty: the design is native Studio style.
+3. **Build** (`build/site.php`): Site settings › Text and colour tokens, fonts, content types (cours, projet, article,
+   evenement at /events/…) with their fields, the pages at the live site's addresses, header, footer, 5 single
+   templates and the redirects. The site's custom CSS is empty: the design is native Studio style.
+   The **e-shop** is the Shop plugin (`fxl/shop.json`, from the live WooCommerce store API): the T-shirt, the Sweat à
+   Capuche and the Casquette with their colour and size variants, at /produit/{slug}/; the Product Grid on /e-shop/,
+   /boutique/ and the home page; the cart at /panier/, the checkout at /commande/ and /commande-recue/ (the live
+   addresses); the Produit Single template; and a mini cart in the header. A product already in Shop is left as it
+   is, so prices and stock changed in Shop › Products survive a rebuild. Shipping is a 5,00 € flat rate (a
+   placeholder: the live shop ships with Mondial Relay by weight) or free pickup.
 4. **Branding**: the admin and login logo, the #e9008a accent, the favicon, the login photo and the tagline
    "La force de vivre".
 
@@ -60,6 +68,12 @@ images included, in `~/fxl-server-bundle`. To run the install from this folder, 
 `install.php` first:
 
     rsync -a rakib-server:fxl-server-bundle/media/ sites/fightxlife/media/
+
+## Only the shop
+
+`php ~/fxl-server-bundle/install.php --shop` copies any new images and builds only the shop: the products, the Shop
+settings, /e-shop/, /boutique/, /panier/, /commande/, /commande-recue/, the Produit template and the header. Use it when
+pages have been edited in the editor since the last full run.
 
 ## Deploying a change to the dev server
 

@@ -125,6 +125,7 @@ function build_page(string $slug, string $title, string $pageType, string $route
     $doc['sections'] = $sections;
     $doc['settings'] = array_replace($doc['settings'], $settings);
     if ($pageType === 'system') { $doc['seo']['robots'] = 'noindex,nofollow'; }
+    if (isset($settings['seo_robots'])) { $doc['seo']['robots'] = (string) $settings['seo_robots']; unset($doc['settings']['seo_robots']); }
     if ($seoDesc !== '') { $doc['seo']['description'] = mb_substr($seoDesc, 0, 300); }
     if ($ogId) { $doc['seo']['og_image_media_id'] = $ogId; }
     check_doc($doc);

@@ -221,6 +221,7 @@ unit('shop: catalogue, cart, checkout, payment and the Studio storefront (real M
                 assert_true(str_contains($html, 'Club &lt;b&gt;T-shirt&lt;/b&gt;') && !str_contains($html, '<b>T-shirt'), 'the cart escapes product names');
                 assert_true(str_contains($html, 'name="_csrf"'), 'its forms carry the session token');
                 assert_true(str_contains(shop_view_mini(ShopStoreAPI::cartTotals()), 'data-count="4"'));
+                assert_true(str_contains(shop_view_mini(ShopStoreAPI::cartTotals(), false, 'Panier <b>'), '<span class="sb-shop-mini__label">Panier &lt;b&gt;</span>'), 'the widget\'s own label, escaped');
 
                 // ── Checkout ──────────────────────────────────────────────────────
                 $bad = ShopStoreAPI::placeOrder(['email' => 'nope', 'name' => '', 'delivery' => 'shipping', 'country' => 'US']);

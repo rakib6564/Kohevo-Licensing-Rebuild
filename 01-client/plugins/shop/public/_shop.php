@@ -93,12 +93,13 @@ function shop_money(int $cents, string $currency): string {
     return e(ShopStoreAPI::money($cents, $currency));
 }
 
-/** The mini cart: a link to the cart page with the item count (and subtotal). */
-function shop_view_mini(array $totals, bool $showTotal = true): string {
+/** The mini cart: a link to the cart page with the item count (and subtotal); `$label` is the widget's own label. */
+function shop_view_mini(array $totals, bool $showTotal = true, string $label = ''): string {
     $count = (int) $totals['count'];
-    $label = $count === 1 ? __('shop_one_item', '1 item') : sprintf(__('shop_n_items', '%d items'), $count);
-    return '<a class="sb-shop-mini__link" href="' . e(ShopStoreAPI::pageUrl('cart_page')) . '" aria-label="' . e(__('shop_cart', 'Cart') . ', ' . $label) . '">'
-        . '<span class="sb-shop-mini__label">' . e(__('shop_cart', 'Cart')) . '</span>'
+    $items = $count === 1 ? __('shop_one_item', '1 item') : sprintf(__('shop_n_items', '%d items'), $count);
+    $name = $label !== '' ? $label : __('shop_cart', 'Cart');
+    return '<a class="sb-shop-mini__link" href="' . e(ShopStoreAPI::pageUrl('cart_page')) . '" aria-label="' . e($name . ', ' . $items) . '">'
+        . '<span class="sb-shop-mini__label">' . e($name) . '</span>'
         . '<span class="sb-shop-mini__count" data-count="' . $count . '">' . $count . '</span>'
         . ($showTotal && $count > 0 ? '<span class="sb-shop-mini__total">' . shop_money((int) $totals['subtotal_cents'], (string) $totals['currency']) . '</span>' : '')
         . '</a>';

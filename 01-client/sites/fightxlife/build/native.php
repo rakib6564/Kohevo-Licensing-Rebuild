@@ -461,6 +461,52 @@ function native_more(): array
         // ── Map, highlight ──
         'yg-map'          => ['parts' => ['frame' => S(sz(['height' => 440]), radius('13px'), bg('#eeeeee'))], 'mparts' => ['frame' => sz(['height' => 300])]],
         'fx-banner--photo yg-banner__title' => ['parts' => ['highlight' => col('#ff9ad2')]],
+        // ── Shop (plugins/shop widgets) ──
+        // The Product Grid as the site's own cards: the photo, then a white card over its foot with the pink heart tile,
+        // the name, the price as the card's text and "Acheter →".
+        'fx-shop-grid'    => ['parts' => [
+                'grid'  => lay(['gap' => '28px']),
+                'card'  => S(place('relative'), sz(['min_width' => '0px'])),
+                'image' => S(sz(['width' => '100%', 'height' => 255, 'overflow' => 'hidden']), radius('15px'), bg('#eeeeee')),
+                'body'  => S(place('relative'), mar(-35, 13, 0, 13), pad(24, 22, 23, 22), radius('13px'), bg('#ffffff'), shadow(0, 8, 28, 'rgba(18,10,34,.08)'), lay(['gap' => '0px'])),
+                'icon'  => S(sz(['width' => 39, 'height' => 39]), radius('10px'), bg(PINK_SOFT), col(PINK), mar(-44, null, 16, null)),
+                'title' => S(fam('heading', '21px', null, '25px'), mar(0, 0, 9, 0), col(INK)),
+                'title:hover' => col(PINK),
+                'price' => S(mar(0, 0, 13, 0), col(BODY), fam('body', '14.5px', 'normal', '24px')),
+                'link'  => S(col(PINK), fam('body', '14px', 'bold')),
+                'badge' => S(bg(PINK), col('#ffffff')),
+            ],
+            'tparts' => ['grid' => lay(['gap' => '18px'])],
+            'mparts' => ['grid' => lay(['gap' => '25px']), 'image' => sz(['height' => 230])]],
+        // The product page: two columns, the summary stacked; the title is the banner's.
+        'fx-shop-detail'  => ['s' => lay(['tracks' => 'minmax(0,1fr) minmax(0,1fr)', 'gap' => '60px', 'align' => 'start']), 't' => lay(['gap' => '30px']), 'm' => lay(['tracks' => '1fr', 'gap' => '30px'])],
+        'fx-shop-summary' => ['s' => lay(['display' => 'flex', 'direction' => 'column', 'gap' => '18px'])],
+        'fx-shop-title'   => ['s' => S(dim(['max_width' => '900px']), ty('clamp(34px,4vw,50px)', null, '1.16', '-.025em')), 'm' => ty('31px')],
+        'fx-shop-text'    => ['s' => S(col(BODY), ty('16px', null, '1.65'))],
+        // The mini cart in the header: "Panier" and a pink count.
+        'fx-mini-cart'    => ['parts' => [
+                'link'  => S(lay(['display' => 'inline-flex', 'align' => 'center', 'gap' => '8px']), col(INK), fam('body', '15px', 'normal')),
+                'link:hover' => col(PINK),
+                'count' => S(sz(['min_width' => 22, 'height' => 22]), pad(0, 6), radius('999px'), bg(PINK), col('#ffffff'), fam('body', '12px', 'bold', '22px'), lay(['display' => 'inline-flex', 'justify' => 'center'])),
+            ]],
+        // The product page: price, options, quantity and the pink pill button.
+        'fx-shop-price'   => ['parts' => ['regular' => S(col(INK), fam('heading', '28px', 'bold')), 'sale' => S(col(PINK), fam('heading', '28px', 'bold')), 'vat' => S(col('#999999'), fam('body', '13px'))]],
+        'fx-shop-add'     => ['parts' => [
+                'options' => S($input, sz(['height' => 50, 'max_width' => '100%'])),
+                'option_labels' => S(col(INK), fam('body', '14px', 'bold')),
+                'variant_price' => S(col(PINK), fam('heading', '20px', 'bold')),
+                'quantity' => S($input, sz(['width' => 80, 'height' => 56])),
+                'button' => S($pill, sz(['height' => 56]), fx(['cursor' => 'pointer'])),
+            ], 'mparts' => ['button' => $pillPhone]],
+        'fx-shop-stock'   => ['parts' => ['in' => S(col('#1f8a4c'), fam('body', '14px', 'bold')), 'low' => S(col('#b45309'), fam('body', '14px', 'bold')), 'out' => S(col(PINK), fam('body', '14px', 'bold'))]],
+        'fx-shop-gallery' => ['parts' => ['main' => radius('15px'), 'thumbs' => radius('10px')]],
+        'fx-shop-meta'    => ['parts' => ['label' => S(col(INK), fam('body', '13px', 'bold')), 'value' => S(col(BODY), fam('body', '13px'))]],
+        // Cart, checkout and the order: the site's inputs, card and pink pill.
+        'fx-shop-cart'    => ['parts' => ['title' => S(col(INK), fam('heading', '17px', 'bold')), 'options' => col(BODY),
+                'totals' => S(pad(24), radius('14px'), bg('#ffffff'), shadow(0, 8, 30, 'rgba(22,12,39,.1)')), 'button' => S($pill, fx(['cursor' => 'pointer']))]],
+        'fx-shop-checkout' => ['parts' => ['fields' => S($input, sz(['height' => 50])), 'labels' => S(col(INK), fam('body', '14px', 'bold')),
+                'summary' => S(pad(26), radius('14px'), bg('#ffffff'), shadow(0, 8, 30, 'rgba(22,12,39,.1)')), 'button' => S($pill, sz(['width' => '100%']), fx(['cursor' => 'pointer']))]],
+        'fx-shop-order'   => ['parts' => ['lead' => S(col(INK), fam('body', '17px')), 'total' => S(col(INK), fam('heading', '20px', 'bold'))]],
     ];
 }
 
