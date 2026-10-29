@@ -247,10 +247,10 @@ unit('plugin widgets: a plugin may declare style parts for its own blocks only, 
 });
 
 unit('plugin widgets: Shop\'s parts reach BlockParts and the editor, and its products are a content type Studio serves', function (): void {
-    assert_eq(['card', 'image', 'title', 'price', 'button', 'badge', 'filter', 'pager', 'grid'], array_keys(\Slate\Module\StudioBuilder\Registry\BlockParts::for('shop.products')));
+    assert_eq(['card', 'image', 'body', 'icon', 'link', 'title', 'price', 'button', 'badge', 'filter', 'pager', 'grid'], array_keys(\Slate\Module\StudioBuilder\Registry\BlockParts::for('shop.products')));
     assert_true(in_array('shop.cart', \Slate\Module\StudioBuilder\Registry\BlockParts::types(), true));
     $manifest = ModuleBlockDefinitions::studioRegistry()->get('shop.product_add_to_cart')->toEditorManifest();
-    assert_eq(['button', 'quantity', 'message'], array_column($manifest['style_parts'], 'key'));
+    assert_eq(['button', 'options', 'option_labels', 'variant_price', 'quantity', 'message'], array_column($manifest['style_parts'], 'key'));
     $single = PluginWidgetCatalog::single('product');
     assert_true($single !== null, 'Shop declares products');
     assert_eq('shop', $single->requiredEntitlement());

@@ -15,6 +15,12 @@
  *
  * Idempotent: a second run deletes nothing (Solaya is gone), re-copies nothing that is already in place and rebuilds
  * the same pages in place. Reads only files inside this bundle; no network.
+ *
+ *   php <bundle>/install.php --shop   only the shop: images, the Shop products, settings and pages (e-shop, boutique,
+ *                                     panier, commande, commande-recue), the product template and the header. Every
+ *                                     other page stays as an editor left it.
+ *
+ * Needs the Shop and stripe-payment plugins active and the `shop` entitlement (the e-shop, cart and checkout).
  */
 
 declare(strict_types=1);
@@ -49,12 +55,22 @@ if (!str_contains(CanonicalDocumentSchema::TOKEN_REF_PATTERN, '|type|') || !isse
 }
 $tid = current_tenant_id();
 PluginLoader::activePlugins();
+$shopOnly = in_array('--shop', $argv, true);
+if ($shopOnly) {
+    define('FXL_SHOP_ONLY', true);
+}
+if (!class_exists('ShopStoreAPI') || !\Slate\Services\Licensing\EntitlementService::canAccess($tid, 'shop')) {
+    fail('The e-shop needs the Shop plugin active and licensed (with stripe-payment). Install and license it first; nothing was changed.');
+}
 $hasForms = (bool) Database::value("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'forms_definitions'");
 out("FightxLife install — tenant {$tid}, site " . (defined('SLATE_URL') ? SLATE_URL : '?'));
 
 // ── 1. Remove Solaya (first run only) ──────────────────────────────────────────────────────────────────────────────
 $deleted = [];
 $installedAt = (string) Database::setting(FXL_MARKER, $tid);
+if ($installedAt === '' && $shopOnly) {
+    fail('--shop updates an installed FightxLife site; run the full install first. Nothing was changed.');
+}
 if ($installedAt === '') {
     $pages = Database::all('SELECT id, page_type, status, slug FROM studiobuilder_pages WHERE tenant_id = ? ORDER BY id', [$tid]);
     $ids = array_map(static fn(array $p): int => (int) $p['id'], $pages);
@@ -184,7 +200,7 @@ require $bundle . '/build/site.php';
 
 // A Studio form's Forms entry is named after its block (sb-<block id>). The two FightxLife forms keep their ids from
 // build to build; an entry left by a form block that no page holds any more, with nothing sent through it, goes.
-if ($hasForms) {
+if ($hasForms && !$shopOnly) {
     $live = [];
     foreach (Database::all("SELECT r.document_json FROM studiobuilder_pages p JOIN studiobuilder_revisions r ON r.id = p.published_revision_id WHERE p.tenant_id = ? AND p.status = 'published'", [$tid]) as $row) {
         $walk = static function (array $blocks) use (&$walk, &$live): void {
@@ -222,13 +238,13 @@ $brand = [
     'brand_login_image_path' => '/uploads/media/fxl/2022-06-woman-fighting-breast-cancer-awareness-scaled.jpg',
     'brand_login_tagline'    => 'La force de vivre',
 ];
-foreach ($brand as $key => $value) {
+foreach ($shopOnly ? [] : $brand as $key => $value) {
     if (str_starts_with($value, '/uploads/') && !is_file($site . $value)) {
         fail("branding file missing: {$value}");
     }
     Database::setSetting($key, $value, $tid);
 }
-out('branding: ' . implode(', ', array_keys($brand)));
+out($shopOnly ? 'branding: left as it is (--shop)' : 'branding: ' . implode(', ', array_keys($brand)));
 
 if ($installedAt === '') {
     Database::setSetting(FXL_MARKER, gmdate('c'), $tid);

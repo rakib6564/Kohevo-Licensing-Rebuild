@@ -117,6 +117,13 @@ final class PageRoutes
         return self::$cache[$tenantId]['slash'];
     }
 
+    /** The public path of an item a plugin keeps itself (a Shop product): `/{prefix}/{slug}`, with the site's trailing slash. */
+    public static function itemPath(int $tenantId, string $prefix, string $slug): string
+    {
+        $path = '/' . trim($prefix, '/') . '/' . ltrim($slug, '/');
+        return $tenantId > 0 && self::trailingSlash($tenantId) ? $path . '/' : $path;
+    }
+
     /** A page's public path: `/` for the homepage, else `/{prefix}/{slug}` or `/{slug}`, with the site's trailing slash. */
     public static function path(int $tenantId, int $pageId, string $slug, string $routeMode): string
     {

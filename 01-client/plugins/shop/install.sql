@@ -1,4 +1,4 @@
--- Shop plugin — install schema (full, as of 0.1.0).
+-- Shop plugin — install schema (full, as of 0.2.0).
 -- Fresh installs get every table here. Existing installs are kept current by
 -- the idempotent ShopStoreAPI::ensureSchema() self-heal called on boot.
 --
@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS `shop_products` (
     `short_description` TEXT NULL,
     `description`       MEDIUMTEXT NULL,
     `images_json`       TEXT NULL,
+    `attributes_json`   TEXT NULL,
     `stock_qty`         INT NULL,
     `status`            VARCHAR(16)  NOT NULL DEFAULT 'draft',
     `sort_order`        INT NOT NULL DEFAULT 0,
@@ -32,6 +33,32 @@ CREATE TABLE IF NOT EXISTS `shop_products` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `tenant_slug` (`tenant_id`, `slug`),
     KEY `tenant_status_sort` (`tenant_id`, `status`, `sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Variants ─────────────────────────────────────────────────────────────
+-- A product with attributes (shop_products.attributes_json: [{name, values}]) is
+-- sold as variants, one row per combination of values: options_json lists one
+-- value per attribute, in the attributes' order; options_key is its SHA-1.
+-- price_cents NULL means the product's price; stock_qty NULL means not tracked.
+-- A disabled variant is a combination the shop does not sell.
+CREATE TABLE IF NOT EXISTS `shop_variants` (
+    `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         INT UNSIGNED NOT NULL DEFAULT 1,
+    `product_id`        INT UNSIGNED NOT NULL,
+    `options_json`      TEXT NOT NULL,
+    `options_key`       CHAR(40) NOT NULL,
+    `sku`               VARCHAR(64) NULL,
+    `price_cents`       INT UNSIGNED NULL,
+    `sale_price_cents`  INT UNSIGNED NULL,
+    `stock_qty`         INT NULL,
+    `image`             VARCHAR(500) NULL,
+    `enabled`           TINYINT(1) NOT NULL DEFAULT 1,
+    `sort_order`        INT NOT NULL DEFAULT 0,
+    `created_at`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `product_options` (`tenant_id`, `product_id`, `options_key`),
+    KEY `tenant_product` (`tenant_id`, `product_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Categories ───────────────────────────────────────────────────────────
@@ -97,7 +124,9 @@ CREATE TABLE IF NOT EXISTS `shop_order_items` (
     `tenant_id`        INT UNSIGNED NOT NULL DEFAULT 1,
     `order_id`         INT UNSIGNED NOT NULL,
     `product_id`       INT UNSIGNED NULL,
+    `variant_id`       INT UNSIGNED NULL,
     `title`            VARCHAR(200) NOT NULL,
+    `options_label`    VARCHAR(255) NULL,
     `sku`              VARCHAR(64)  NULL,
     `unit_price_cents` INT UNSIGNED NOT NULL DEFAULT 0,
     `qty`              INT UNSIGNED NOT NULL DEFAULT 1,

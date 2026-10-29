@@ -18,6 +18,7 @@ namespace Slate\Plugin\Shop\Studio;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
 use Slate\Module\StudioBuilder\Render\Html;
+use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
 
 /** `shop.products`: a grid of products with an optional category filter and a pager. */
 final class ShopProductsRenderer implements BlockRendererInterface
@@ -78,6 +79,9 @@ final class ShopProductsRenderer implements BlockRendererInterface
         $showPrice = $scope->bool('show_price', true);
         $showAdd = $scope->bool('show_add_to_cart', true);
         $label = $scope->string('button_label');
+        $linkLabel = $scope->string('link_label');
+        $icon = $scope->bool('show_icon', false) ? IconLibrary::markup($scope->string('icon', 'heart')) : '';
+        $iconHtml = $icon !== '' ? '<span class="sb-shop-card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">' . $icon . '</svg></span>' : '';
         $out .= '<ul class="sb-shop-products__grid">';
         foreach ($list['rows'] as $p) {
             $url = ShopStudio::productUrl($scope, $p);
@@ -85,10 +89,15 @@ final class ShopProductsRenderer implements BlockRendererInterface
                 . '<a class="sb-shop-card__media" href="' . Html::e($url) . '" tabindex="-1" aria-hidden="true">'
                 . ($p['image'] !== '' ? '<img class="sb-shop-card__image" src="' . Html::e($p['image']) . '" alt="" loading="lazy">' : '<span class="sb-shop-card__placeholder"></span>')
                 . (!$p['in_stock'] ? '<span class="sb-shop-card__badge">' . Html::e(Html::t('shop_sold_out', 'Sold out')) . '</span>' : ($p['on_sale'] ? '<span class="sb-shop-card__badge sb-shop-card__badge--sale">' . Html::e(Html::t('shop_sale', 'Sale')) . '</span>' : ''))
-                . '</a><div class="sb-shop-card__body">'
+                . '</a><div class="sb-shop-card__body">' . $iconHtml
                 . '<h3 class="sb-shop-card__title"><a href="' . Html::e($url) . '">' . Html::e($p['title']) . '</a></h3>'
                 . ($showPrice ? ShopStudio::priceHtml($p) : '')
-                . ($showAdd ? ShopStudio::addToCartForm($scope, $p, $label, false, false, 'sb-shop-card__add') : '')
+                // A text link to the product (the design's "Buy →") takes the place of the button.
+                . ($linkLabel !== '' ? '<a class="sb-shop-card__link" href="' . Html::e($url) . '">' . Html::e($linkLabel) . '</a>' : '')
+                . ($showAdd && $linkLabel === '' ? ($p['has_variants'] && $p['in_stock']
+                    // Options are chosen on the product's page.
+                    ? '<p class="sb-shop-add sb-shop-card__add"><a class="sb-button sb-button--primary sb-shop-add__button sb-shop-card__choose" href="' . Html::e($url) . '">' . Html::e($scope->string('options_label') !== '' ? $scope->string('options_label') : Html::t('shop_choose_options', 'Choose options')) . '</a></p>'
+                    : ShopStudio::addToCartForm($scope, $p, $label, false, false, 'sb-shop-card__add')) : '')
                 . '</div></li>';
         }
         $out .= '</ul>';
@@ -331,7 +340,8 @@ final class ShopMiniCartRenderer implements BlockRendererInterface
         $cartUrl = class_exists('ShopStoreAPI') ? \ShopStoreAPI::pageUrl('cart_page') : $scope->site()->absoluteUrl('cart');
         $label = $scope->string('label') !== '' ? $scope->string('label') : Html::t('shop_cart', 'Cart');
         $fallback = '<a class="sb-shop-mini__link" href="' . Html::e($cartUrl) . '"><span class="sb-shop-mini__label">' . Html::e($label) . '</span></a>';
-        $url = ShopStudio::endpoint($scope, 'cart.php') . '?view=mini&total=' . ($scope->bool('show_total', false) ? '1' : '0');
+        $url = ShopStudio::endpoint($scope, 'cart.php') . '?view=mini&total=' . ($scope->bool('show_total', false) ? '1' : '0')
+            . ($scope->string('label') !== '' ? '&label=' . rawurlencode($scope->string('label')) : '');
         return ShopStudio::fragment($scope, 'sb-shop-mini', $url, $fallback, 'shop-cart');
     }
 }

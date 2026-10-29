@@ -1,0 +1,540 @@
+{
+ "_source": "https://fightxlife.com/wp-json/wc/store/v1/products?per_page=50 and /products/<variation id>, 2026-10-29. Donation is left out (it is the Donation page's payment buttons).",
+ "settings": {
+  "currency": "EUR",
+  "product_prefix": "produit",
+  "cart_page": "panier",
+  "checkout_page": "commande",
+  "thanks_page": "commande-recue",
+  "shipping_enabled": "1",
+  "shipping_cents": "500",
+  "free_over_cents": "0",
+  "pickup_enabled": "1",
+  "pickup_label": "Retrait chez FightxLife, Rue Gabrielle Petit 32, 1080 Molenbeek (gratuit)",
+  "countries": "BE,FR,LU,NL",
+  "_note": "The live shop ships with Mondial Relay at a weight-based price; Shop has one flat rate. 5,00 EUR is a placeholder until FightxLife gives its rates."
+ },
+ "products": [
+  {
+   "slug": "casquette-adulte-fightxlife",
+   "title": "Casquette Kid FightxLife",
+   "price": "10.00",
+   "sort": 0,
+   "woo_id": 224156,
+   "images": [
+    "/uploads/media/fxl/2022-05-fightxlife-merch-35-scaled.jpg"
+   ],
+   "categories": [
+    "Casquette adulte",
+    "FightxLife"
+   ],
+   "short_description": "Avec cet achat, tu soutiens directement les actions de FightxLife : cours de boxe adaptée, visites dans les hôpitaux et SmileBox pour les enfants.",
+   "description": "",
+   "attributes": [
+    {
+     "name": "Couleur",
+     "values": [
+      "Beige",
+      "Rouge",
+      "Bleu Marine"
+     ]
+    }
+   ],
+   "variants": [
+    {
+     "options": [
+      "Beige"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-35-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Rouge"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-35-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Bleu Marine"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-35-scaled.jpg",
+     "enabled": true
+    }
+   ]
+  },
+  {
+   "slug": "sweat-a-capuche",
+   "title": "Sweat à Capuche",
+   "price": "35.00",
+   "sort": 1,
+   "woo_id": 224154,
+   "images": [
+    "/uploads/media/fxl/2022-05-fightxlife-merch-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-24-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-20-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-3-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-7-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-21-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-22-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-27-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-25-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-26-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-6-scaled.jpg"
+   ],
+   "categories": [
+    "FightxLife",
+    "Sweat à Capuche"
+   ],
+   "short_description": "Avec cet achat, tu soutiens directement les actions de FightxLife : cours de boxe adaptée, visites dans les hôpitaux et SmileBox pour les enfants.",
+   "description": "",
+   "attributes": [
+    {
+     "name": "Couleur",
+     "values": [
+      "Rose Pastel",
+      "Bleu Pastel",
+      "Bleu Marine",
+      "Beige",
+      "Blanc"
+     ]
+    },
+    {
+     "name": "Taille",
+     "values": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+     ]
+    }
+   ],
+   "variants": [
+    {
+     "options": [
+      "Rose Pastel",
+      "XS"
+     ],
+     "price": null,
+     "stock": 1,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-4-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Rose Pastel",
+      "S"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-4-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Rose Pastel",
+      "M"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-4-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Rose Pastel",
+      "L"
+     ],
+     "price": null,
+     "stock": 2,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-4-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Rose Pastel",
+      "XL"
+     ],
+     "price": null,
+     "stock": 0,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-4-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Bleu Pastel",
+      "XS"
+     ],
+     "price": null,
+     "stock": 0,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-19-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Bleu Pastel",
+      "S"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-19-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Bleu Pastel",
+      "M"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-19-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Bleu Pastel",
+      "L"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-19-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Bleu Pastel",
+      "XL"
+     ],
+     "price": null,
+     "stock": 0,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-19-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Bleu Marine",
+      "XS"
+     ],
+     "price": null,
+     "stock": 1,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-23-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Bleu Marine",
+      "S"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-23-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Bleu Marine",
+      "M"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-23-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Bleu Marine",
+      "L"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-23-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Bleu Marine",
+      "XL"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-23-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Beige",
+      "XS"
+     ],
+     "price": null,
+     "stock": 0,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-5-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Beige",
+      "S"
+     ],
+     "price": null,
+     "stock": 0,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-5-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Beige",
+      "M"
+     ],
+     "price": null,
+     "stock": 0,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-5-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Beige",
+      "L"
+     ],
+     "price": null,
+     "stock": 0,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-5-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Beige",
+      "XL"
+     ],
+     "price": null,
+     "stock": 0,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-5-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Blanc",
+      "XS"
+     ],
+     "price": null,
+     "stock": 0,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Blanc",
+      "S"
+     ],
+     "price": null,
+     "stock": 0,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Blanc",
+      "M"
+     ],
+     "price": null,
+     "stock": 0,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Blanc",
+      "L"
+     ],
+     "price": null,
+     "stock": 0,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Blanc",
+      "XL"
+     ],
+     "price": null,
+     "stock": 0,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-scaled.jpg",
+     "enabled": true
+    }
+   ]
+  },
+  {
+   "slug": "t-shirt-fightxlife",
+   "title": "T-shirt FightxLife",
+   "price": "20.00",
+   "sort": 2,
+   "woo_id": 224150,
+   "images": [
+    "/uploads/media/fxl/2022-05-fightxlife-merch-8-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-18-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-17-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-15-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-13-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-12-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-11-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-14-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-10-scaled.jpg",
+    "/uploads/media/fxl/2022-05-fightxlife-merch-9-scaled.jpg"
+   ],
+   "categories": [
+    "FightxLife"
+   ],
+   "short_description": "Avec cet achat, tu soutiens directement les actions de FightxLife : cours de boxe adaptée, visites dans les hôpitaux et SmileBox pour les enfants.",
+   "description": "",
+   "attributes": [
+    {
+     "name": "Couleur",
+     "values": [
+      "Blanc",
+      "Noir"
+     ]
+    },
+    {
+     "name": "Taille",
+     "values": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+     ]
+    }
+   ],
+   "variants": [
+    {
+     "options": [
+      "Blanc",
+      "XS"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-8-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Blanc",
+      "XXL"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-8-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Noir",
+      "XS"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-8-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Noir",
+      "XXL"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-8-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Blanc",
+      "S"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-14-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Blanc",
+      "M"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-14-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Blanc",
+      "L"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-14-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Blanc",
+      "XL"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-14-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Noir",
+      "S"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-16-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Noir",
+      "M"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-16-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Noir",
+      "L"
+     ],
+     "price": null,
+     "stock": null,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-16-scaled.jpg",
+     "enabled": true
+    },
+    {
+     "options": [
+      "Noir",
+      "XL"
+     ],
+     "price": null,
+     "stock": 1,
+     "image": "/uploads/media/fxl/2022-05-fightxlife-merch-16-scaled.jpg",
+     "enabled": true
+    }
+   ]
+  }
+ ]
+}

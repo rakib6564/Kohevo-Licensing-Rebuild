@@ -5734,6 +5734,10 @@
                     "label": "Product names"
                 },
                 {
+                    "key": "options",
+                    "label": "Chosen options"
+                },
+                {
                     "key": "totals",
                     "label": "Totals"
                 },
@@ -5962,7 +5966,7 @@
                 "go_to_cart": false,
                 "show_quantity": true
             },
-            "description": "Quantity and the Add to cart button",
+            "description": "Options, quantity and the Add to cart button",
             "field_schema": [
                 {
                     "key": "button_label",
@@ -6021,6 +6025,18 @@
                 {
                     "key": "button",
                     "label": "Button"
+                },
+                {
+                    "key": "options",
+                    "label": "Option pickers"
+                },
+                {
+                    "key": "option_labels",
+                    "label": "Option names"
+                },
+                {
+                    "key": "variant_price",
+                    "label": "Chosen price"
                 },
                 {
                     "key": "quantity",
@@ -6464,10 +6480,14 @@
                 "columns": 3,
                 "empty_message": "",
                 "heading": "",
+                "icon": "heart",
+                "link_label": "",
+                "options_label": "",
                 "order": "menu",
                 "per_page": 12,
                 "show_add_to_cart": true,
                 "show_filter": false,
+                "show_icon": false,
                 "show_pager": true,
                 "show_price": true
             },
@@ -6552,6 +6572,74 @@
                     "max_length": 80
                 },
                 {
+                    "key": "link_label",
+                    "type": "string",
+                    "label": "Product link text (instead of the button)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                },
+                {
+                    "key": "options_label",
+                    "type": "string",
+                    "label": "Button label for products with options",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
+                },
+                {
+                    "key": "show_icon",
+                    "type": "boolean",
+                    "label": "Show an icon on the card",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "icon",
+                    "type": "enum",
+                    "label": "Card icon",
+                    "required": false,
+                    "default": "heart",
+                    "allowed_values": [
+                        "check",
+                        "check-circle",
+                        "star",
+                        "heart",
+                        "arrow-right",
+                        "mail",
+                        "phone",
+                        "map-pin",
+                        "clock",
+                        "calendar",
+                        "user",
+                        "users",
+                        "shield",
+                        "zap",
+                        "globe",
+                        "message",
+                        "gift",
+                        "award",
+                        "camera",
+                        "home",
+                        "search",
+                        "sparkle",
+                        "play",
+                        "leaf",
+                        "dollar",
+                        "menu",
+                        "menu-short",
+                        "close",
+                        "facebook",
+                        "twitter",
+                        "x-social",
+                        "instagram",
+                        "youtube",
+                        "linkedin",
+                        "whatsapp",
+                        "tiktok"
+                    ]
+                },
+                {
                     "key": "empty_message",
                     "type": "string",
                     "label": "Message when empty",
@@ -6598,6 +6686,18 @@
                 {
                     "key": "image",
                     "label": "Image"
+                },
+                {
+                    "key": "body",
+                    "label": "Card text"
+                },
+                {
+                    "key": "icon",
+                    "label": "Icon"
+                },
+                {
+                    "key": "link",
+                    "label": "Product link"
                 },
                 {
                     "key": "title",

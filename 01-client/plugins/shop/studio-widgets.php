@@ -16,6 +16,7 @@ if (!defined('SLATE_ROOT')) {
 }
 
 use Slate\Module\StudioBuilder\Registry\DeclarativeBlockDefinition;
+use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 use Slate\Plugin\Shop\Studio as S;
 
@@ -53,6 +54,10 @@ return [
             $bool('show_price', 'Show prices', true),
             $bool('show_add_to_cart', 'Show Add to cart', true),
             $text('button_label', 'Button label'),
+            $text('link_label', 'Product link text (instead of the button)'),
+            $text('options_label', 'Button label for products with options'),
+            $bool('show_icon', 'Show an icon on the card', false),
+            ['key' => 'icon', 'type' => 'enum', 'label' => 'Card icon', 'required' => false, 'default' => 'heart', 'allowed_values' => IconLibrary::names()],
             $text('empty_message', 'Message when empty', 200),
         ], ['providers' => ['shop.products'], 'slots' => ['items' => 'shop.products']]),
         $block('shop.product_image', 'Product Images', 'The product\'s image and its other images', 'gallery', [
@@ -65,7 +70,7 @@ return [
         $block('shop.product_price', 'Product Price', 'The price, and the sale price when on sale', 'list', [
             $bool('show_vat_note', 'Show "incl. VAT"', true),
         ]),
-        $block('shop.product_add_to_cart', 'Add to Cart', 'Quantity and the Add to cart button', 'arrow-up-right', [
+        $block('shop.product_add_to_cart', 'Add to Cart', 'Options, quantity and the Add to cart button', 'arrow-up-right', [
             $text('button_label', 'Button label'),
             $bool('show_quantity', 'Show quantity', true),
             $bool('go_to_cart', 'Go to the cart after adding', false),
@@ -116,6 +121,9 @@ return [
         'shop.products' => [
             'card'    => ['label' => 'Card', 'selectors' => ['.sb-shop-card']],
             'image'   => ['label' => 'Image', 'selectors' => ['.sb-shop-card__media']],
+            'body'    => ['label' => 'Card text', 'selectors' => ['.sb-shop-card__body']],
+            'icon'    => ['label' => 'Icon', 'selectors' => ['.sb-shop-card__icon']],
+            'link'    => ['label' => 'Product link', 'selectors' => ['.sb-shop-card__link']],
             'title'   => ['label' => 'Title', 'selectors' => ['.sb-shop-card__title', '.sb-shop-card__title a']],
             'price'   => ['label' => 'Price', 'selectors' => ['.sb-shop-card .sb-shop-price']],
             'button'  => ['label' => 'Button', 'selectors' => ['.sb-shop-card .sb-shop-add__button']],
@@ -135,6 +143,9 @@ return [
         ],
         'shop.product_add_to_cart' => [
             'button'   => ['label' => 'Button', 'selectors' => ['.sb-shop-add__button']],
+            'options'  => ['label' => 'Option pickers', 'selectors' => ['.sb-shop-add__select']],
+            'option_labels' => ['label' => 'Option names', 'selectors' => ['.sb-shop-add__option-label']],
+            'variant_price' => ['label' => 'Chosen price', 'selectors' => ['.sb-shop-add__price']],
             'quantity' => ['label' => 'Quantity', 'selectors' => ['.sb-shop-add__qty']],
             'message'  => ['label' => 'Message', 'selectors' => ['.sb-shop-add__message']],
         ],
@@ -155,6 +166,7 @@ return [
         'shop.cart' => [
             'table'  => ['label' => 'Table', 'selectors' => ['.sb-shop-cart__table']],
             'title'  => ['label' => 'Product names', 'selectors' => ['.sb-shop-cart__title']],
+            'options' => ['label' => 'Chosen options', 'selectors' => ['.sb-shop-cart__options']],
             'totals' => ['label' => 'Totals', 'selectors' => ['.sb-shop-cart__totals']],
             'button' => ['label' => 'Checkout button', 'selectors' => ['.sb-shop-cart__checkout']],
         ],

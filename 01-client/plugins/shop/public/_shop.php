@@ -93,12 +93,13 @@ function shop_money(int $cents, string $currency): string {
     return e(ShopStoreAPI::money($cents, $currency));
 }
 
-/** The mini cart: a link to the cart page with the item count (and subtotal). */
-function shop_view_mini(array $totals, bool $showTotal = true): string {
+/** The mini cart: a link to the cart page with the item count (and subtotal); `$label` is the widget's own label. */
+function shop_view_mini(array $totals, bool $showTotal = true, string $label = ''): string {
     $count = (int) $totals['count'];
-    $label = $count === 1 ? __('shop_one_item', '1 item') : sprintf(__('shop_n_items', '%d items'), $count);
-    return '<a class="sb-shop-mini__link" href="' . e(ShopStoreAPI::pageUrl('cart_page')) . '" aria-label="' . e(__('shop_cart', 'Cart') . ', ' . $label) . '">'
-        . '<span class="sb-shop-mini__label">' . e(__('shop_cart', 'Cart')) . '</span>'
+    $items = $count === 1 ? __('shop_one_item', '1 item') : sprintf(__('shop_n_items', '%d items'), $count);
+    $name = $label !== '' ? $label : __('shop_cart', 'Cart');
+    return '<a class="sb-shop-mini__link" href="' . e(ShopStoreAPI::pageUrl('cart_page')) . '" aria-label="' . e($name . ', ' . $items) . '">'
+        . '<span class="sb-shop-mini__label">' . e($name) . '</span>'
         . '<span class="sb-shop-mini__count" data-count="' . $count . '">' . $count . '</span>'
         . ($showTotal && $count > 0 ? '<span class="sb-shop-mini__total">' . shop_money((int) $totals['subtotal_cents'], (string) $totals['currency']) . '</span>' : '')
         . '</a>';
@@ -115,22 +116,25 @@ function shop_view_cart(array $totals, string $notice = ''): string {
     $rows = '';
     foreach ($totals['lines'] as $line) {
         $pid = (int) $line['product_id'];
-        $rows .= '<tr class="sb-shop-cart__line" data-product="' . $pid . '">'
+        $key = (string) $line['key'];
+        $dom = str_replace(':', '-', $key);
+        $rows .= '<tr class="sb-shop-cart__line" data-product="' . $pid . '"' . ($line['variant_id'] > 0 ? ' data-variant="' . (int) $line['variant_id'] . '"' : '') . '>'
             . '<td class="sb-shop-cart__product">'
             . ($line['image'] !== '' ? '<img class="sb-shop-cart__image" src="' . e($line['image']) . '" alt="" width="64" height="64" loading="lazy">' : '')
             . '<a class="sb-shop-cart__title" href="' . e(rtrim((string) SLATE_URL, '/') . $line['url']) . '">' . e($line['title']) . '</a>'
+            . ($line['options_label'] !== '' ? '<span class="sb-shop-cart__options">' . e($line['options_label']) . '</span>' : '')
             . ($line['capped'] ? '<span class="sb-shop-cart__note">' . e(sprintf(__('shop_err_only_n', 'Only %d left in stock.'), $line['max_qty'])) . '</span>' : '')
             . '</td>'
             . '<td class="sb-shop-cart__price">' . shop_money((int) $line['unit_cents'], (string) $line['currency']) . '</td>'
             . '<td class="sb-shop-cart__qty"><form method="post" action="' . $action . '" class="sb-shop-cart__qty-form">' . csrf_field()
-            . '<input type="hidden" name="action" value="update"><input type="hidden" name="product_id" value="' . $pid . '">'
-            . '<label class="sb-shop-sr" for="sb-shop-qty-' . $pid . '">' . e(__('shop_quantity', 'Quantity')) . '</label>'
-            . '<input class="sb-shop-cart__qty-input" id="sb-shop-qty-' . $pid . '" type="number" name="qty" min="0" max="' . (int) $line['max_qty'] . '" value="' . (int) $line['qty'] . '" inputmode="numeric">'
+            . '<input type="hidden" name="action" value="update"><input type="hidden" name="line" value="' . e($key) . '">'
+            . '<label class="sb-shop-sr" for="sb-shop-qty-' . e($dom) . '">' . e(__('shop_quantity', 'Quantity')) . '</label>'
+            . '<input class="sb-shop-cart__qty-input" id="sb-shop-qty-' . e($dom) . '" type="number" name="qty" min="0" max="' . (int) $line['max_qty'] . '" value="' . (int) $line['qty'] . '" inputmode="numeric">'
             . '<button type="submit" class="sb-shop-cart__update">' . e(__('shop_update', 'Update')) . '</button></form></td>'
             . '<td class="sb-shop-cart__line-total">' . shop_money((int) $line['line_cents'], (string) $line['currency']) . '</td>'
             . '<td class="sb-shop-cart__remove-cell"><form method="post" action="' . $action . '">' . csrf_field()
-            . '<input type="hidden" name="action" value="remove"><input type="hidden" name="product_id" value="' . $pid . '">'
-            . '<button type="submit" class="sb-shop-cart__remove" aria-label="' . e(sprintf(__('shop_remove_x', 'Remove %s'), $line['title'])) . '">×</button></form></td>'
+            . '<input type="hidden" name="action" value="remove"><input type="hidden" name="line" value="' . e($key) . '">'
+            . '<button type="submit" class="sb-shop-cart__remove" aria-label="' . e(sprintf(__('shop_remove_x', 'Remove %s'), ShopStoreAPI::lineTitle($line['title'], $line['options_label']))) . '">×</button></form></td>'
             . '</tr>';
     }
     $cur = (string) $totals['currency'];
@@ -198,7 +202,7 @@ function shop_view_checkout(array $totals, array $errors = [], array $old = [], 
         : '';
     $summary = '';
     foreach ($totals['lines'] as $line) {
-        $summary .= '<li class="sb-shop-summary__line"><span>' . e($line['title']) . ' × ' . (int) $line['qty'] . '</span> <span>' . shop_money((int) $line['line_cents'], (string) $line['currency']) . '</span></li>';
+        $summary .= '<li class="sb-shop-summary__line"><span>' . e(ShopStoreAPI::lineTitle($line['title'], $line['options_label'])) . ' × ' . (int) $line['qty'] . '</span> <span>' . shop_money((int) $line['line_cents'], (string) $line['currency']) . '</span></li>';
     }
     $shipping = ShopStoreAPI::shippingFor((int) $totals['subtotal_cents'], $delivery);
     return '<div class="sb-shop-checkout">'
@@ -226,7 +230,7 @@ function shop_view_order(array $order): string {
     $labels = ShopStoreAPI::statusLabels();
     $lines = '';
     foreach (ShopStoreAPI::orderItems((int) $order['id']) as $item) {
-        $lines .= '<li class="sb-shop-order__line"><span>' . e($item['title']) . ' × ' . (int) $item['qty'] . '</span> <span>' . shop_money((int) $item['line_total_cents'], $cur) . '</span></li>';
+        $lines .= '<li class="sb-shop-order__line"><span>' . e(ShopStoreAPI::lineTitle((string) $item['title'], $item['options_label'] ?? null)) . ' × ' . (int) $item['qty'] . '</span> <span>' . shop_money((int) $item['line_total_cents'], $cur) . '</span></li>';
     }
     $paid = in_array($order['status'], ['paid', 'fulfilled'], true);
     $lead = $paid

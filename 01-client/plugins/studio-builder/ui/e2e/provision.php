@@ -94,6 +94,20 @@ Printed in Belgium."],
         exit(1);
     }
 }
+// A product sold in variants (colour × size): Blue / L costs more, Pink / M is sold out, Blue / S is not sold.
+$hoodie = ShopStoreAPI::saveProduct(['title' => 'Club Hoodie', 'price' => '35.00', 'sku' => 'FXL-HD', 'status' => 'published', 'sort_order' => 3,
+    'attributes' => "Colour: Pink, Blue\nSize: S, M, L"]);
+$k = static fn(string $c, string $sz): string => ShopStoreAPI::optionsKey([$c, $sz]);
+$fields = [];
+foreach (['Pink', 'Blue'] as $c) foreach (['S', 'M', 'L'] as $sz) $fields[$k($c, $sz)] = ['enabled' => '1'];
+$fields[$k('Blue', 'L')] = ['price' => '39.00', 'sku' => 'FXL-HD-BL', 'enabled' => '1'];
+$fields[$k('Pink', 'M')] = ['stock' => '0', 'enabled' => '1'];
+$fields[$k('Blue', 'S')] = ['enabled' => ''];
+$res = ShopStoreAPI::saveVariants((int) ($hoodie['id'] ?? 0), ShopStoreAPI::parseAttributes("Colour: Pink, Blue\nSize: S, M, L")['attributes'], $fields);
+if (empty($hoodie['ok']) || empty($res['ok'])) {
+    fwrite(STDERR, 'hoodie failed: ' . json_encode([$hoodie, $res]) . "\n");
+    exit(1);
+}
 PluginLoader::activePlugins();
 require_once dirname(__DIR__, 4) . '/plugins/shop/studio/ShopStudioPages.php';
 $runtime = \Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory::build();

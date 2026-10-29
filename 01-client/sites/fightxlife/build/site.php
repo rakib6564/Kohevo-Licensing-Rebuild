@@ -4,9 +4,15 @@
  *
  * Every live URL keeps its address (trailing slash on). Text, dates and SEO titles/descriptions come from the live
  * site (WordPress REST API + crawl, see ../fxl/content.json); images are the live site's own uploads.
- * Content types: cours, projet, evenement (/events/…), produit (/produit/…), article (the blog posts, in "Actualités").
+ * Content types: cours, projet, evenement (/events/…), article (the blog posts, in "Actualités").
+ * The e-shop is the Shop plugin: its products (fxl/shop.json, from the live WooCommerce store) at /produit/{slug}/, the
+ * Product Grid on /e-shop/, /boutique/ and the home page, the cart at /panier/ and the checkout at /commande/ (the live
+ * addresses), and the Produit Single template.
  *
  *   cd <site> && php .../fxl-build/site.php
+ *
+ * With FXL_SHOP_ONLY defined (install.php --shop) only the shop is built: the products, the shop pages, the product
+ * template and the header; the other pages, which an editor may have changed, are left as they are.
  */
 
 declare(strict_types=1);
@@ -25,6 +31,8 @@ foreach (json_decode((string) file_get_contents("{$DATA}/content.json"), true) a
 $IMGMAP = json_decode((string) file_get_contents("{$DATA}/image-map.json"), true);
 $EXTRA = json_decode((string) file_get_contents("{$DATA}/extra.json"), true);
 $BG = json_decode((string) file_get_contents("{$DATA}/page-bg.json"), true);
+$SHOP = json_decode((string) file_get_contents("{$DATA}/shop.json"), true);
+$SHOP_ONLY = defined('FXL_SHOP_ONLY') && FXL_SHOP_ONLY;
 
 const MEMBRE = 'https://membre.fightxlife.com/';
 const CAT = 'Actualités';
@@ -48,6 +56,8 @@ $fonts = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="
        . '<link href="https://fonts.googleapis.com/css2?family=Karla:wght@400;700&family=Syne:wght@400;700&display=swap" rel="stylesheet">';
 $css = StudioCodePolicy::prepareCustomCss(trim((string) preg_replace('~/\*.*?\*/~s', '', file_get_contents(__DIR__ . '/gap.css'))));
 if ($css['changed']) { say('  ! the CSS cleaner changed the stylesheet'); }
+// The shop alone leaves the theme, fonts, menus and SEO defaults as they are (an editor may have changed them).
+if (!$SHOP_ONLY) {
 $runtime->app->saveDesignTokens($actor, 'default', $tokens);
 Database::setSetting(StudioCodePolicy::SETTING_CUSTOM_CSS, $css['css'], $tid);
 Database::setSetting(StudioCodePolicy::SETTING_HEAD_SNIPPET, StudioCodePolicy::prepareSnippet($fonts, 'head'), $tid);
@@ -55,6 +65,7 @@ Database::setSetting('site_name', 'FightxLife', $tid);
 Database::setSetting(PageRoutes::SETTING_TRAILING_SLASH, '1', $tid);
 Database::setSetting('studio_seo_title_format', '%title%', $tid);
 say("  + theme, fonts, stylesheet {$css['bytes']} bytes, trailing slash on");
+}
 
 // ── Content types and fields ─────────────────────────────────────────────────────────────────────────────────────
 $typeDefs = [
@@ -63,14 +74,14 @@ $typeDefs = [
     'projet'    => ['Projet', 'Projets', '/', 'An action of the association (SmileBox, hospitals, gala…).', [['accroche', 'Accroche', 'text']]],
     'evenement' => ['Événement', 'Événements', '/events', 'A FightxLife event.', [
         ['date', 'Date', 'text'], ['heure', 'Heure', 'text'], ['tarif', 'Tarif', 'text'], ['lieu', 'Lieu', 'text']]],
-    'produit'   => ['Produit', 'Produits', '/produit', 'An item of the e-shop.', [
-        ['prix', 'Prix', 'text'], ['couleurs', 'Couleurs', 'text'], ['tailles', 'Tailles', 'text']]],
     // The blog posts: their own list in the admin. Lists and the Article template still pick them by the Actualités category.
     'article'   => ['Article', 'Articles', '/', 'A news post of the Actualités blog.', []],
 ];
+// `produit` was a content type before the e-shop moved to the Shop plugin; its /produit/ prefix is the Shop's now.
 $types = PageMeta::postTypes($tid);
-$fields = array_values(array_filter(PageMeta::allFields($tid), static fn(array $f): bool => !isset($typeDefs[$f['post_type'] ?? ''])));
-foreach ($typeDefs as $key => [$singular, $plural, $route, $desc, $fs]) {
+unset($types['produit']);
+$fields = array_values(array_filter(PageMeta::allFields($tid), static fn(array $f): bool => ($SHOP_ONLY || !isset($typeDefs[$f['post_type'] ?? ''])) && ($f['post_type'] ?? '') !== 'produit'));
+foreach ($SHOP_ONLY ? [] : $typeDefs as $key => [$singular, $plural, $route, $desc, $fs]) {
     $types[$key] = ['key' => $key, 'singular' => $singular, 'plural' => $plural, 'route' => $route, 'is_system' => false, 'description' => $desc];
     foreach ($fs as [$fk, $label, $ft]) {
         $fields[] = ['id' => 'f_' . substr(md5($key . $fk), 0, 8), 'post_type' => $key, 'label' => $label, 'key' => $fk, 'type' => $ft, 'required' => false, 'placeholder' => '', 'help' => '', 'options' => []];
@@ -80,6 +91,44 @@ Database::setSetting('studio_custom_post_types', json_encode($types, JSON_UNESCA
 Database::setSetting('studio_meta_fields', json_encode($fields, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $tid);
 PageRoutes::forget($tid);
 say('  + content types: ' . implode(', ', array_keys($typeDefs)));
+
+// ── Shop ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Settings, categories and products from the live store (fxl/shop.json). A product that exists already is left as it
+// is (prices, stock and options may have been changed in Shop › Products since); a missing one is created.
+if (!class_exists('ShopStoreAPI')) { require_once SLATE_ROOT . '/plugins/shop/ShopStoreAPI.php'; }
+ShopStoreAPI::ensureSchema();
+foreach ($SHOP['settings'] as $key => $value) {
+    if ($key[0] !== '_') { ShopStoreAPI::setSetting($key, (string) $value); }
+}
+$catIds = array_column(ShopStoreAPI::categories(), 'id', 'name');
+$made = [];
+foreach ($SHOP['products'] as $sp) {
+    foreach ($sp['categories'] as $name) {
+        $catIds[$name] ??= (int) ShopStoreAPI::saveCategory(['name' => $name])['id'];
+    }
+    if ((int) Database::value('SELECT COUNT(*) FROM shop_products WHERE tenant_id = ? AND slug = ?', [$tid, $sp['slug']]) > 0) { continue; }
+    foreach ($sp['images'] as $img) {
+        if (MID($img) <= 0) { throw new RuntimeException("product image {$img} missing"); }
+    }
+    $res = ShopStoreAPI::saveProduct(['title' => $sp['title'], 'slug' => $sp['slug'], 'price' => $sp['price'], 'short_description' => $sp['short_description'],
+        'description' => $sp['description'], 'images' => implode("\n", $sp['images']), 'status' => 'published', 'sort_order' => $sp['sort'],
+        'categories' => array_map(static fn(string $n): int => $catIds[$n], $sp['categories'])]);
+    if (!$res['ok']) { throw new RuntimeException("product {$sp['slug']}: " . json_encode($res['errors'] ?? [])); }
+    $vfields = [];
+    foreach ($sp['variants'] as $v) {
+        $vfields[ShopStoreAPI::optionsKey($v['options'])] = ['price' => $v['price'] ?? '', 'stock' => $v['stock'] === null ? '' : (string) $v['stock'], 'image' => $v['image'], 'enabled' => $v['enabled'] ? '1' : ''];
+    }
+    $res = ShopStoreAPI::saveVariants((int) $res['id'], $sp['attributes'], $vfields);
+    if (!$res['ok']) { throw new RuntimeException("variants of {$sp['slug']}: " . json_encode($res['errors'] ?? [])); }
+    $made[] = $sp['slug'];
+}
+say('  + shop: ' . count($SHOP['products']) . ' products' . ($made ? ' (created ' . implode(', ', $made) . ')' : ' (all there already)') . ', /' . ShopStoreAPI::productPrefix() . '/{slug}/');
+// The pages the `produit` content type made at /produit/{slug}/ are the Shop's products now.
+foreach (Database::all("SELECT id, slug FROM studiobuilder_pages WHERE tenant_id = ? AND page_type = 'page' AND status <> 'archived' AND slug IN ('casquette-adulte-fightxlife', 'sweat-a-capuche', 't-shirt-fightxlife')", [$tid]) as $old) {
+    $runtime->app->archivePage($actor, (int) $old['id']);
+    PageMeta::save($tid, (int) $old['id'], '', []);
+    say("  - archived the old product page /{$old['slug']}/ (#{$old['id']})");
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────────────────────────────────────────
 function C(string $kind, string $slug): array
@@ -221,12 +270,12 @@ function QUOTE(string $text, string $img, string $name, string $role): array
         B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center'], [str_contains($img, '-user.') ? array_replace_recursive(IMGP(F($img), $name, 'yg-quote__img'), ['style' => S(dim(['object_fit' => 'contain']), pad(10), bg('#fdeef6'))]) : IMGP(F($img), $name, 'yg-quote__img'), BOX([T($name, 'yg-quote__name'), T($role, 'yg-quote__role')])], 'yg-quote__person'),
     ], 'yg-quote');
 }
-function PRODUCTCARD(string $slug): array
+/** The Shop's Product Grid as the site's cards (native style `fx-shop-grid`): photo, white card, heart, name, price, "Acheter →". */
+function SHOPGRID(int $perPage = 12, bool $pager = true): array
 {
-    global $EXTRA;
-    $it = C('product', $slug);
-    $img = LOCAL($it['featured']) ?: LOCAL($EXTRA['products'][$slug]['imgs'][0] ?? '');
-    return CARD($img, $it['title'], $EXTRA['products'][$slug]['price'], "/produit/{$slug}/", 'Acheter');
+    return B('shop.products', ['columns' => 3, 'order' => 'menu', 'per_page' => $perPage, 'show_pager' => $pager, 'show_price' => true, 'show_add_to_cart' => false,
+        'link_label' => 'Acheter →', 'show_icon' => true, 'icon' => 'heart', 'empty_message' => 'Aucun produit pour le moment.'],
+        [], 'fx-shop-grid', ['bindings' => ['items' => ['provider' => 'shop.products']]]);
 }
 function EVENTCARD(string $slug): array
 {
@@ -278,9 +327,9 @@ $drawerNav = [['label' => 'Accueil', 'url' => '/'], ['label' => 'Qui Sommes-Nous
     ['label' => 'Evénements', 'url' => '/evenements/'], ['label' => 'Nous Soutenir', 'url' => '/nous-soutenir/'], ['label' => 'E-shop', 'url' => '/e-shop/'],
     ['label' => 'Blog', 'url' => '/blog/'], ['label' => 'Presse', 'url' => '/presse/'], ['label' => 'Contact', 'url' => '/contact/']];
 // Site menus (Studio › Menus): the header, drawer and footer navs name one, so links are edited in one place.
-$menu = static function (string $key, string $name, array $items): string {
+$menu = static function (string $key, string $name, array $items) use ($SHOP_ONLY): string {
     global $tid;
-    \Slate\Module\StudioBuilder\Menu\StudioMenus::save($tid, $key, $name, $items, $key);
+    if (!$SHOP_ONLY) { \Slate\Module\StudioBuilder\Menu\StudioMenus::save($tid, $key, $name, $items, $key); }
     return $key;
 };
 $footPages = [['label' => 'Nous soutenir', 'url' => '/nous-soutenir/'], ['label' => 'Les Hôpitaux', 'url' => '/les-hopitaux/'], ['label' => 'E-shop', 'url' => '/e-shop/'], ['label' => 'Blog', 'url' => '/blog/']];
@@ -306,6 +355,7 @@ $header = [
         IMGP(F(LOGO), 'FightxLife', 'yg-brand fx-brand', ['link_to' => 'custom', 'url' => '/']),
         B('core.nav_menu', ['menu' => $menuHeader, 'items' => [], 'layout' => 'horizontal', 'align' => 'center', 'aria_label' => 'Navigation principale'], [], 'yg-nav fx-nav'),
         B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center', 'justify' => 'end'], [
+            B('shop.mini_cart', ['label' => 'Panier', 'show_total' => false], [], 'fx-mini-cart'),
             BTN('Connexion', MEMBRE, 'yg-btn fx-login'),
             B('layout.offcanvas', ['drawer_id' => 'site-drawer', 'title' => '', 'position' => 'right', 'trigger_text' => 'Ouvrir le menu', 'trigger_icon' => 'menu-short',
                 'trigger_icon_size' => 26, 'trigger_show_text' => false, 'trigger_variant' => 'plain'], [
@@ -407,7 +457,7 @@ $pages['accueil'] = ['Accueil', 'homepage', [
     ], 'yg-why fx-why--flip')])], 'yg-why-sec fx-white'),
     SEC('Témoignages', [WRAP([HEAD('FightxLife', 'Témoignages', 'Témoignages'), GRID(array_map(static fn(array $t): array => QUOTE(...$t), $testimonials), 'yg-quote-grid fx-quote-grid', 4)])], 'yg-testi-sec'),
     SEC('E-shop', [WRAP([HEAD('FightxLife', 'E-shop', 'shop', 'Se faire plaisir et soutenir nos projets : deviens notre ambassadeur et arbore nos couleurs !'),
-        GRID([PRODUCTCARD('casquette-adulte-fightxlife'), PRODUCTCARD('sweat-a-capuche'), PRODUCTCARD('t-shirt-fightxlife')]), BOX([BTN('Voir l’e-shop', '/e-shop/')], 'yg-center')])], 'yg-content'),
+        SHOPGRID(3, false), BOX([BTN('Voir l’e-shop', '/e-shop/')], 'yg-center')])], 'yg-content'),
     SEC('Partenaires', [WRAP([HEAD('FightxLife', 'Nos sponsors & Partenaires', 'Partenaires'), LOGOS($HOMELOGOS)])], 'yg-content fx-logos-sec'),
 ], ['seo' => 'accueil']];
 
@@ -556,11 +606,21 @@ $pages['evenements'] = ['Evénements', 'standalone', [BANNER('Evénements', 'Ev�
 $pages['events'] = ['Événements', 'standalone', [BANNER('Evénements Passés', 'Passés', 'Evénements', PAGEBG('evenements')), SEC('Événements', [WRAP([$eventsGrid()])], 'yg-content')],
     ['seo_title' => 'Événements Archive - Fightxlife', 'seo_desc' => 'Les événements passés de FightxLife : galas, festivals, marches solidaires et soirées pour la lutte contre le cancer.']];
 
-$shop = static fn(): array => GRID([PRODUCTCARD('casquette-adulte-fightxlife'), PRODUCTCARD('sweat-a-capuche'), PRODUCTCARD('t-shirt-fightxlife')]);
+$shop = static fn(): array => SHOPGRID();
 $pages['e-shop'] = ['E-Shop', 'standalone', [BANNER('E-Shop', 'Shop', 'E-shop', PAGEBG('e-shop')),
     SEC('Produits', [WRAP([HEAD('FightxLife', 'Arbore nos couleurs', 'couleurs', 'Acheter sur la boutique de FightxLife, c’est faire un don contre le cancer et nous soutenir dans la lutte contre la maladie.'), $shop()])], 'yg-content')], ['seo' => 'e-shop']];
 $pages['boutique'] = ['Boutique', 'standalone', [BANNER('Boutique', 'Boutique', 'Boutique', PAGEBG('e-shop')), SEC('Produits', [WRAP([$shop()])], 'yg-content')],
     ['seo_title' => 'Boutique - Fightxlife', 'seo_desc' => 'La boutique FightxLife : casquettes, sweats et t-shirts pour soutenir la lutte contre le cancer.']];
+// The Shop's own pages, at the live store's addresses (Shop settings in fxl/shop.json). Never search results.
+$pages['panier'] = ['Panier', 'standalone', [BANNER('Panier', 'Panier', 'Panier', PAGEBG('e-shop')),
+    SEC('Panier', [WRAP([B('shop.cart', [], [], 'fx-shop-cart'), BOX([BTN('Continuer mes achats', '/e-shop/', 'yg-btn yg-btn--dark')], 'yg-center')])], 'yg-content')],
+    ['seo_title' => 'Panier - Fightxlife', 'seo_desc' => 'Ton panier sur la boutique FightxLife.', 'seo_robots' => 'noindex,follow']];
+$pages['commande'] = ['Commande', 'standalone', [BANNER('Commande', 'Commande', 'Commande', PAGEBG('e-shop')),
+    SEC('Commande', [WRAP([B('shop.checkout', [], [], 'fx-shop-checkout')])], 'yg-content')],
+    ['seo_title' => 'Commande - Fightxlife', 'seo_desc' => 'Finalise ta commande sur la boutique FightxLife.', 'seo_robots' => 'noindex,follow']];
+$pages['commande-recue'] = ['Commande reçue', 'standalone', [BANNER('Merci !', 'Merci', 'Commande reçue', PAGEBG('e-shop')),
+    SEC('Commande reçue', [WRAP([B('shop.order_confirmation', ['heading' => ''], [], 'fx-shop-order'), BOX([BTN('Retour à l’e-shop', '/e-shop/')], 'yg-center')])], 'yg-content')],
+    ['seo_title' => 'Commande reçue - Fightxlife', 'seo_desc' => 'Ta commande FightxLife.', 'seo_robots' => 'noindex,follow']];
 
 $pages['donation'] = ['Donation', 'standalone', [
     BANNER('Faire un don', 'don', 'Donation', PAGEBG('nous-soutenir')),
@@ -632,21 +692,6 @@ foreach ($eventSlugs as $slug) {
     $pages[$slug] = [$it['title'], 'standalone', [SEC('Événement', $body, 'fx-body')], ['seo_item' => "mec-events:{$slug}"], 'evenement',
         ['date' => $ev['date'], 'heure' => $ev['heure'], 'tarif' => $ev['tarif'] !== '' ? $ev['tarif'] : 'Gratuit', 'lieu' => $ev['lieu']]];
 }
-foreach (['casquette-adulte-fightxlife', 'sweat-a-capuche', 't-shirt-fightxlife'] as $slug) {
-    $it = C('product', $slug); $pr = $EXTRA['products'][$slug];
-    $body = [IMGP(LOCAL($it['featured']), $it['title'], 'fx-body__img fx-product__photo'),
-        H($it['title'], 'h2', 'fx-body__h fx-body__h2'),
-        T($pr['price'], 'fx-product__price'),
-        RICH('<p>Avec cet achat, tu soutiens directement les actions de FightxLife : cours de boxe adaptée, visites dans les hôpitaux et SmileBox pour les enfants.</p>'
-            . ($pr['couleurs'] !== '' ? '<ul><li><strong>Couleurs :</strong> ' . htmlspecialchars($pr['couleurs']) . '</li><li><strong>Tailles :</strong> ' . htmlspecialchars($pr['tailles']) . '</li></ul>' : ''))];
-    $body = array_merge($body, BODY($it['blocks']));
-    $amount = (float) str_replace(',', '.', preg_replace('/[^0-9,]/', '', $pr['price']));
-    $body[] = B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center', 'wrap' => 'wrap'], [
-        B('payment.button', ['label' => 'Acheter — ' . $pr['price'], 'amount' => $amount, 'currency' => 'EUR', 'description' => $it['title']], [], 'yg-btn fx-pay'),
-        BTN('Commander par message', '/contact/', 'yg-btn yg-btn--dark fx-order')], 'fx-buy');
-    $pages[$slug] = [$it['title'], 'standalone', [SEC('Produit', $body, 'fx-body')], ['seo_item' => "product:{$slug}"], 'produit',
-        ['prix' => $pr['price'], 'couleurs' => $pr['couleurs'], 'tailles' => $pr['tailles']]];
-}
 // Articles: pages in "Actualités", original dates, featured image first.
 foreach (array_filter($CONTENT, static fn(array $i): bool => $i['kind'] === 'posts') as $it) {
     $body = BODY($it['blocks']);
@@ -711,22 +756,35 @@ $templates = [
                     B('core.icon', ['name' => 'linkedin', 'url' => 'https://www.linkedin.com/company/fightxlife/', 'new_tab' => true, 'label' => 'LinkedIn', 'size_px' => 15], [], 'fx-social-ico fx-social-ico--line')], 'yg-share yg-share--card')], 'yg-info fx-info--short'), $helpCard], 'yg-detail__side'),
         ], 'yg-detail')])], 'yg-content yg-detail-sec'),
     ]],
-    'fxl-produit' => ['Produit', [['type' => 'include', 'condition' => 'post_type', 'value' => 'produit']], [
-        $titleBanner('E-shop', '/e-shop/'),
+    // A Shop product (/produit/{slug}/): the gallery beside the price, stock, options and Add to cart.
+    'fxl-produit' => ['Produit', [['type' => 'include', 'condition' => 'singular', 'value' => 'product']], [
+        SEC('Banner', [WRAP([
+            B('shop.product_title', ['tag' => 'h1'], [], 'fx-shop-title'),
+            B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center', 'wrap' => 'wrap'], [LNK('Accueil', '/', 'yg-crumb__home'), T('›', 'yg-crumb__sep'), LNK('E-shop', '/e-shop/', 'yg-crumb__here fx-crumb-link')], 'yg-crumbs'),
+        ])], 'yg-banner'),
         SEC('Produit', [WRAP([B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [
-            B('theme.post_content', [], [], 'yg-detail__main'),
-            BOX([BOX([H('Informations', 'h3', 'fx-info__title'), $row('Prix', 'prix'), $row('Couleurs', 'couleurs'), $row('Tailles', 'tailles'),
-                T('Précise ta taille et ta couleur dans le message du paiement, ou écris-nous.', 'fx-widget__text'), BTN('Une question ?', '/contact/', 'yg-btn yg-btn--block yg-btn--dark')], 'yg-info fx-info--short'), $helpCard], 'yg-detail__side'),
-        ], 'yg-detail')])], 'yg-content yg-detail-sec'),
+            B('shop.product_image', ['ratio' => 'portrait', 'show_thumbnails' => true], [], 'fx-shop-gallery'),
+            BOX([
+                B('shop.product_price', ['show_vat_note' => true], [], 'fx-shop-price'),
+                B('shop.product_stock', ['low_stock' => 3, 'show_in_stock' => true], [], 'fx-shop-stock'),
+                B('shop.product_description', ['source' => 'short'], [], 'fx-shop-text'),
+                B('shop.product_add_to_cart', ['button_label' => 'Ajouter au panier', 'show_quantity' => true, 'go_to_cart' => false], [], 'fx-shop-add'),
+                B('shop.product_meta', ['show_sku' => false, 'show_categories' => true], [], 'fx-shop-meta'),
+                $helpCard,
+            ], 'fx-shop-summary'),
+        ], 'fx-shop-detail')])], 'yg-content yg-detail-sec'),
+        DONATE(),
     ]],
 ];
 
 // ── Build ────────────────────────────────────────────────────────────────────────────────────────────────────────
 // A sticky section can't stick past the header partial around it, so the whole header sticks (its "Sticky header" setting).
 build_page('default', 'Header', 'header_partial', 'standalone', $header, ['sticky_header' => ['edge' => 'top', 'offset' => 0, 'devices' => ['desktop', 'tablet', 'mobile'], 'shadow' => true, 'background' => '#ffffff']]);
-build_page('default', 'Footer', 'footer_partial', 'standalone', $footer);
+if (!$SHOP_ONLY) { build_page('default', 'Footer', 'footer_partial', 'standalone', $footer); }
 $n = 0;
+$shopPages = ['e-shop', 'boutique', 'panier', 'commande', 'commande-recue'];
 foreach ($pages as $slug => $def) {
+    if ($SHOP_ONLY && !in_array($slug, $shopPages, true)) { continue; }
     [$title, $route, $sections] = $def;
     $settings = $def[3] ?? [];
     $type = $def[4] ?? null; $values = $def[5] ?? []; $date = $def[6] ?? null;
@@ -743,7 +801,10 @@ foreach ($pages as $slug => $def) {
     if ($date !== null) { Database::query('UPDATE studiobuilder_pages SET published_at = ? WHERE id = ?', [date('Y-m-d H:i:s', (int) strtotime($date)), $id]); }
     $n++;
 }
+$built = 0;
 foreach ($templates as $key => [$name, $rules, $sections]) {
+    if ($SHOP_ONLY && $key !== 'fxl-produit') { continue; }
+    $built++;
     $doc = \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::emptyDocument('system', 'default', $name);
     $doc['seo']['robots'] = 'noindex,nofollow';
     $doc['settings']['conditions'] = ['rules' => $rules];
@@ -756,7 +817,9 @@ foreach ($templates as $key => [$name, $rules, $sections]) {
 
 // Redirects for retired WooCommerce addresses (301), and the duplicate account page.
 $rules = [];
-foreach (['/panier/', '/commander/', '/categorie-produit/t-shirt/', '/categorie-produit/casquette-adulte/', '/categorie-produit/fightxlife/', '/categorie-produit/sweat-a-capuche/', '/etiquette-produit/fightxlife/'] as $from) {
+// /panier/ and /commande/ are the Shop's own pages; /commander/ went to the checkout too.
+$rules[] = ['from' => '/commander/', 'to' => '/commande/', 'code' => 301];
+foreach (['/categorie-produit/t-shirt/', '/categorie-produit/casquette-adulte/', '/categorie-produit/fightxlife/', '/categorie-produit/sweat-a-capuche/', '/etiquette-produit/fightxlife/'] as $from) {
     $rules[] = ['from' => $from, 'to' => '/e-shop/', 'code' => 301];
 }
 $rules[] = ['from' => '/produit/donation/', 'to' => '/donation/', 'code' => 301];
@@ -764,11 +827,13 @@ $rules[] = ['from' => '/cours/mon-compte/', 'to' => MEMBRE, 'code' => 301];
 Database::setSetting(\Slate\Module\StudioBuilder\Runtime\StudioRedirects::SETTING, json_encode($rules, JSON_UNESCAPED_SLASHES), $tid);
 // Site & SEO defaults, for a page that leaves its own empty: pages' own titles already end in "| Fightxlife", so the
 // format stays the bare title; the description and share image are the home page's.
+if (!$SHOP_ONLY) {
 $home = Database::row("SELECT seo_json FROM studiobuilder_pages WHERE tenant_id = ? AND route_mode = 'homepage' AND status = 'published' LIMIT 1", [$tid]);
 $homeSeo = $home ? (json_decode((string) $home['seo_json'], true) ?: []) : [];
 Database::setSetting('studio_seo_title_format', '%title%', $tid);
 Database::setSetting('studio_seo_description', (string) ($homeSeo['description'] ?? ''), $tid);
 Database::setSetting('studio_seo_og_media_id', (string) ($homeSeo['og_image_media_id'] ?? ''), $tid);
 Database::setSetting('studio_seo_og_image_url', '', $tid);
+}
 PageRoutes::forget($tid);
-say("done: {$n} pages, " . count($templates) . ' templates, ' . count($rules) . ' redirects');
+say("done: {$n} pages, {$built} templates, " . count($rules) . ' redirects');
