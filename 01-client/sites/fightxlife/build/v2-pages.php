@@ -441,7 +441,10 @@ function v2_build_pages(array $pages): void
         $n = count($pg['sections']);
         foreach ($pg['sections'] as $i => $sec) {
             $s = v2_section($sec, $pg, $i, $i === $n - 1);
-            if ($s) { $sections[] = $s; }
+            if (!$s) { continue; }
+            // The document's HTML id, so its anchor links (/waterxfight/#infos-pratiques) land on the section.
+            if ($sec['id'] !== '') { $s['blocks'][0]['attributes'] = ['id' => $sec['id']]; }
+            $sections[] = $s;
         }
         foreach ($sections as &$s) { v2_relink($s); }
         unset($s);

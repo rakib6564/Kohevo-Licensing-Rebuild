@@ -451,8 +451,10 @@ $sections = [
         B('layout.flex', ['direction' => 'row', 'gap' => 'none'], [V2BTN('Voir toutes les actualités', '/actualites/'), V2BTN('Consulter l’agenda', '/agenda/', 'v2-ghost')], 'v2-center'),
     ], 'v2-news-sec'),
 ];
-// The V2 document's anchors (#axes, #projets, #partenaires, #soutenir, #vie-association) need an HTML id on a section,
-// which Studio does not offer yet.
+// The V2 document's anchors: the section container's HTML id (Advanced › ID in the editor).
+foreach ([2 => 'axes', 3 => 'projets', 4 => 'partenaires', 5 => 'soutenir', 6 => 'vie-association'] as $i => $anchor) {
+    $sections[$i]['blocks'][0]['attributes'] = ['id' => $anchor];
+}
 
 // ── Build ────────────────────────────────────────────────────────────────────────────────────────────────────────
 $only = ['conditions' => ['rules' => array_map(static fn(string $s): array => ['type' => 'include', 'condition' => 'slug', 'value' => $s], $V2SLUGS)]];
