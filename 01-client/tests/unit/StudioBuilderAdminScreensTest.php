@@ -141,3 +141,18 @@ unit('admin screens: the empty Pages filter and the empty Overview have keys of 
         assert_true(isset($fr[$k]), "fr: {$k}");
     }
 });
+
+unit('menus: every string the menu screens and the add panel show has a French translation, and the form posts each item\'s classes', function (): void {
+    $fr = require SLATE_ROOT . '/plugins/studio-builder/lang/fr.php';
+    $src = sbas_admin('_menu_form.php') . sbas_admin('menu-new.php') . sbas_admin('menu-edit.php') . (string) file_get_contents(SLATE_ROOT . '/src/Module/StudioBuilder/Menu/MenuSources.php');
+    preg_match_all("/(?:__|self::t)\('(studio_menu[a-z_]*)',/", $src, $m);
+    foreach (array_unique($m[1]) as $key) {
+        assert_true(isset($fr[$key]), "fr: {$key}");
+    }
+    assert_true(isset($fr['studio_menu_source_product'], $fr['studio_menu_type_product']), 'fr: Shop products in the add panel');
+    assert_true(str_contains(sbas_admin('_menu_form.php'), 'name="items[<?= e($i) ?>][class]"'), 'the form posts an item\'s CSS classes');
+    foreach (['menu-new.php', 'menu-edit.php'] as $file) {
+        assert_true(str_contains(sbas_admin($file), "'class' => (string) (\$r['class'] ?? '')"), "{$file} keeps the posted classes when a save is refused");
+    }
+    assert_true(str_contains(sbas_admin('menu-edit.php'), 'id="sb-menu-delete"') && str_contains(sbas_admin('_menu_form.php'), 'form="<?= e($menuDeleteForm) ?>"'), 'Delete menu sits by Save menu but posts its own form');
+});

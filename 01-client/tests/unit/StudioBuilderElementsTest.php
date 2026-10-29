@@ -587,6 +587,57 @@ unit('site menus: submenus nest up to two levels; only an item with links under 
     assert_true(isset($parts['submenu'], $parts['sublink'], $parts['toggle']), 'the submenu, its links and the arrow can be styled');
 });
 
+unit('site menus: an item may carry CSS classes, stored only when set and put on its <li>', function (): void {
+    $menus = \Slate\Module\StudioBuilder\Menu\StudioMenus::class;
+    $menu = $menus::validate('header', 'Header', [
+        ['label' => 'Accueil', 'url' => '/', 'class' => '  is-home  menu-cta is-home '],
+        ['label' => 'Projets', 'url' => '', 'class' => 'has-sub'],
+        ['label' => 'Gala', 'url' => '/gala/', 'depth' => 1],
+    ]);
+    assert_eq('is-home menu-cta', $menu['items'][0]['class'], 'names are trimmed, deduplicated and kept in order');
+    assert_eq(['label' => 'Gala', 'url' => '/gala/', 'new_tab' => false], $menu['items'][1]['children'][0], 'an item without classes stores no class key');
+    assert_eq($menu, $menus::validate('header', 'Header', $menu['items']), 'the stored tree validates to itself');
+    assert_eq(['is-home menu-cta', 'has-sub', ''], array_column($menus::flatten($menu['items']), 'class'), 'and the form rows carry the classes');
+    foreach (['bad"name', '<x>', 'a;b', '9lives', str_repeat('a', 121)] as $bad) {
+        $threw = false;
+        try { $menus::validate('m', 'M', [['label' => 'A', 'url' => '/a', 'class' => $bad]]); } catch (\InvalidArgumentException) { $threw = true; }
+        assert_true($threw, 'refused class: ' . $bad);
+    }
+    $menus::useForTests(SBEL_TENANT, [$menu]);
+    $html = sbel_render([sbel_block('core.nav_menu', ['menu' => 'header', 'layout' => 'horizontal'])]);
+    assert_true(str_contains($html, '<li class="sb-nav__item is-home menu-cta"><a class="sb-nav__link" href="/">Accueil</a></li>'), 'a link\'s classes are on its <li>: ' . $html);
+    assert_true(str_contains($html, '<li class="sb-nav__item sb-nav__item--parent has-sub">'), 'and a submenu item\'s too');
+    assert_true(str_contains($html, '<li class="sb-nav__item"><a class="sb-nav__link" href="/gala/">Gala</a></li>'), 'an item without classes is unchanged');
+    $menus::forget();
+});
+
+unit('menu editor sources: published pages, each content type\'s items and plugin items, as "Add menu items" groups', function (): void {
+    $sources = \Slate\Module\StudioBuilder\Menu\MenuSources::class;
+    $page = static fn(int $id, string $title, string $path, string $type = 'page', bool $published = true, string $updated = '2026-10-01 10:00:00'): array
+        => ['id' => $id, 'title' => $title, 'public_path' => $path, 'page_type' => $type, 'is_published' => $published, 'updated_at' => $updated];
+    $groups = $sources::groups(
+        [
+            $page(1, 'Contact', '/contact/'),
+            $page(2, 'Accueil', '/', 'page', true, '2026-10-20 08:00:00'),
+            $page(3, 'Brouillon', '/brouillon/', 'page', false),
+            $page(4, '[Theme] Header', '/template-header', 'header'),
+            $page(5, 'Gala 2026', '/actualites/gala-2026/'),
+            $page(6, 'Landing', '/offre/', 'landing'),
+            $page(7, 'Orphan type', '/orphan/'),
+        ],
+        [5 => 'article', 7 => 'removed-type'],
+        ['article' => ['key' => 'article', 'singular' => 'Article', 'plural' => 'Articles'], 'event' => ['key' => 'event', 'singular' => 'Event']],
+        [['key' => 'product', 'label' => 'Products', 'singular' => 'Product', 'items' => [['title' => 'Sweat à Capuche', 'url' => '/produit/sweat-a-capuche/', 'updated' => '2026-10-29'], ['title' => '', 'url' => '/x/']]]],
+    );
+    assert_eq(['page', 'type:article', 'type:event', 'plugin:product'], array_column($groups, 'key'), 'Pages, then each content type, then each plugin\'s items');
+    assert_eq(['Accueil', 'Contact', 'Landing', 'Orphan type'], array_column($groups[0]['items'], 'title'), 'published pages and landings, alphabetical; drafts and theme parts are left out, and a page of a removed type is a page');
+    assert_eq('2026-10-20 08:00:00', $groups[0]['items'][0]['updated'], 'with the last change, for Most recent');
+    assert_eq(['Gala 2026'], array_column($groups[1]['items'], 'title'));
+    assert_eq(['Articles', 'Article'], [$groups[1]['label'], $groups[1]['singular']]);
+    assert_eq(['Event', 'Event', []], [$groups[2]['label'], $groups[2]['singular'], $groups[2]['items']], 'a type with no plural or no items still has its box');
+    assert_eq([['title' => 'Sweat à Capuche', 'url' => '/produit/sweat-a-capuche/', 'updated' => '2026-10-29']], $groups[3]['items'], 'plugin items without a title are skipped');
+});
+
 unit('heading highlight: the highlighted part has its own colour, italic, weight and underline, and nothing unsafe reaches the page', function (): void {
     $html = sbel_render([sbel_block('core.heading', ['text' => 'Three steps, in order.', 'highlight' => 'in order.', 'highlight_color' => '#d4623d', 'highlight_italic' => true, 'highlight_weight' => 'bold', 'highlight_underline' => true])]);
     assert_true(str_contains($html, 'Three steps, <span class="sb-hl sb-hl--italic sb-hl--underline sb-hl--w-bold" style="color:#d4623d;font-style:italic;font-weight:700;text-decoration:underline;text-underline-offset:.15em">in order.</span>'), 'the phrase carries its own look, also inline so a site\'s own highlight CSS cannot override it');

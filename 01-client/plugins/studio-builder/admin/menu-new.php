@@ -9,6 +9,7 @@ require_once dirname(__DIR__, 3) . '/config.php';
 require_once __DIR__ . '/_nav.php';
 
 use Slate\Module\StudioBuilder\Application\StudioActor;
+use Slate\Module\StudioBuilder\Menu\MenuSources;
 use Slate\Module\StudioBuilder\Menu\StudioMenus;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 
@@ -38,7 +39,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $key = trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower($name)), '-');
         }
         $items = is_array($_POST['items'] ?? null) ? array_values($_POST['items']) : [];
-        $menuForm = ['key' => $key, 'name' => $name, 'items' => array_map(static fn($r): array => is_array($r) ? ['label' => (string) ($r['label'] ?? ''), 'url' => (string) ($r['url'] ?? ''), 'new_tab' => !empty($r['new_tab']), 'depth' => (int) ($r['depth'] ?? 0)] : [], $items)];
+        $menuForm = ['key' => $key, 'name' => $name, 'items' => array_map(static fn($r): array => is_array($r) ? ['label' => (string) ($r['label'] ?? ''), 'url' => (string) ($r['url'] ?? ''), 'new_tab' => !empty($r['new_tab']), 'class' => (string) ($r['class'] ?? ''), 'depth' => (int) ($r['depth'] ?? 0)] : [], $items)];
         try {
             StudioMenus::save($tenantId, $key, $name, $items);
             header('Location: menus.php?saved=1', true, 303);
@@ -49,16 +50,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 }
 
-$menuPaths = [];
+$menuSources = [];
 try {
-    $app = StudioRuntimeFactory::build()->app;
-    foreach ($app->listPages(StudioActor::fromCurrentSession()) as $p) {
-        if (in_array($p['page_type'] ?? '', ['page', 'landing'], true) && !empty($p['is_published'])) {
-            $menuPaths[] = (string) $p['public_path'];
-        }
-    }
+    $menuSources = MenuSources::forTenant($tenantId, StudioRuntimeFactory::build()->app->listPages(StudioActor::fromCurrentSession()));
 } catch (\Throwable) {
-    // the address suggestions are a convenience, not required
+    // the Add menu items column is a convenience: custom links still work without it
 }
 
 require SLATE_ROOT . '/admin/partials/header.php';
@@ -81,13 +77,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <p><?= e(__('studio_menu_new_sub', 'Name it, list its links, then choose it in a Nav menu block.')) ?></p>
         </div>
     </div>
-    <form method="post" class="card sb-form-card">
+    <form method="post" class="sb-menu-form">
         <?= csrf_field() ?>
-        <?php require __DIR__ . '/_menu_form.php'; ?>
-        <div class="sb-form-actions">
-            <button type="submit" class="btn btn-primary"><?= sb_svg('save', 14) ?> <span><?= e(__('studio_menu_create', 'Create menu')) ?></span></button>
-            <a href="menus.php" class="btn btn-ghost"><?= e(__('cancel', 'Cancel')) ?></a>
-        </div>
+        <?php $menuSubmitLabel = __('studio_menu_create', 'Create menu'); $menuDeleteForm = ''; require __DIR__ . '/_menu_form.php'; ?>
     </form>
     <?php endif; ?>
 </div>
