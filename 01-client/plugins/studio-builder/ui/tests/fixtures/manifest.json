@@ -1567,6 +1567,8 @@
                 "options": "",
                 "placeholder": "",
                 "required": false,
+                "url_param": "",
+                "url_values": "",
                 "width": "100"
             },
             "description": "A single input for a form",
@@ -1648,6 +1650,22 @@
                     "required": false,
                     "default": "",
                     "max_length": 255
+                },
+                {
+                    "key": "url_param",
+                    "type": "string",
+                    "label": "Fill from the page address (parameter names)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 120
+                },
+                {
+                    "key": "url_values",
+                    "type": "text",
+                    "label": "Address values (value=Option, one per line)",
+                    "required": false,
+                    "default": "",
+                    "max_length": 2000
                 },
                 {
                     "key": "width",
@@ -5519,12 +5537,16 @@
             "category": "business",
             "default_props": {
                 "amount": 10,
+                "amount_choice": "fixed",
+                "amount_label": "",
                 "currency": "USD",
                 "description": "",
+                "frequency": "once",
                 "label": "Pay now",
+                "max_amount": 5000,
                 "success_path": ""
             },
-            "description": "A fixed-amount pay button that opens Stripe Checkout",
+            "description": "A Stripe Checkout pay button: a set or visitor-chosen amount, once or monthly",
             "field_schema": [
                 {
                     "key": "label",
@@ -5542,6 +5564,45 @@
                     "default": 10,
                     "min": 0.5,
                     "max": 999999
+                },
+                {
+                    "key": "amount_choice",
+                    "type": "enum",
+                    "label": "Who sets the amount",
+                    "required": false,
+                    "default": "fixed",
+                    "allowed_values": [
+                        "fixed",
+                        "visitor"
+                    ]
+                },
+                {
+                    "key": "max_amount",
+                    "type": "number",
+                    "label": "Highest amount a visitor can give",
+                    "required": false,
+                    "default": 5000,
+                    "min": 1,
+                    "max": 999999
+                },
+                {
+                    "key": "frequency",
+                    "type": "enum",
+                    "label": "How often",
+                    "required": false,
+                    "default": "once",
+                    "allowed_values": [
+                        "once",
+                        "month"
+                    ]
+                },
+                {
+                    "key": "amount_label",
+                    "type": "string",
+                    "label": "Amount box label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 80
                 },
                 {
                     "key": "currency",
@@ -5615,6 +5676,14 @@
                 {
                     "key": "button",
                     "label": "Button"
+                },
+                {
+                    "key": "form",
+                    "label": "Button and amount row"
+                },
+                {
+                    "key": "amount",
+                    "label": "Amount box"
                 }
             ],
             "title": "Payment Button",
