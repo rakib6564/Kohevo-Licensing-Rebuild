@@ -387,6 +387,7 @@ unit('shop: catalogue, cart, checkout, payment and the Studio storefront (real M
             $r = sbsh_get($rt, '/product/club-b-t-shirt-b');
             assert_true($r !== null && $r->status === 200, 'the product page is served by its Single template');
             $html = (string) $r->body;
+            assert_true(preg_match('/<header class="sb-site-header[ "]/', $html) === 1 && preg_match('/<footer class="sb-site-footer[ "]/', $html) === 1, 'the product page has the site\'s header and footer, though its template is a system page');
             assert_true(str_contains($html, '<h1 class="sb-shop-title">Club &lt;b&gt;T-shirt&lt;/b&gt;</h1>'), 'title, escaped');
             assert_true(str_contains($html, 'sb-shop-price--sale') && str_contains($html, 'sb-shop-stock--out'), 'sale price and stock (sold out after the order)');
             assert_true(str_contains($html, '<title>Club &lt;b&gt;T-shirt&lt;/b&gt;'), 'the page title is the product');

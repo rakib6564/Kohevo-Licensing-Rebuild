@@ -35,6 +35,7 @@ use Slate\Module\StudioBuilder\Domain\PageAddress;
 use Slate\Module\StudioBuilder\Meta\PageRoutes;
 use Slate\Module\StudioBuilder\Registry\PluginSingleInterface;
 use Slate\Module\StudioBuilder\Registry\PluginWidgetCatalog;
+use Slate\Module\StudioBuilder\Render\Chrome\ChromeResolver;
 use Slate\Module\StudioBuilder\Render\RenderContext;
 use Slate\Module\StudioBuilder\Render\StudioRenderService;
 use Slate\Module\StudioBuilder\Repository\PageRepository;
@@ -469,7 +470,7 @@ final class StudioPublicRuntime
                     $tenantId,
                     $this->renderer->siteContext(),
                     fn(string $moduleKey): bool => $this->isEntitled($tenantId, $moduleKey),
-                    $dynamicContext,
+                    [ChromeResolver::SERVED_TEMPLATE => true] + $dynamicContext,
                 );
                 return $this->renderer->renderPublished($page, $context);
             });

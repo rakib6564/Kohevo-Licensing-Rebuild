@@ -39,6 +39,13 @@ final class ChromeResolver
     public const SITE_PARTIAL_SLUG = 'default';
     public const CHROMED_PAGE_TYPES = ['page', 'landing'];
 
+    /**
+     * Context flag: a theme template is being served as the page itself (a plugin's Single such as a Shop product,
+     * search, archive, 404). The template is a `system` page, but the visitor sees it as a page, with the site's
+     * header and footer.
+     */
+    public const SERVED_TEMPLATE = 'served_template';
+
     private const REGION_PAGE_TYPE = ['header' => 'header_partial', 'footer' => 'footer_partial'];
 
     /**
@@ -71,7 +78,8 @@ final class ChromeResolver
 
     public function resolve(string $region, string $mode, PageAddress $page, array $context = []): ChromeSource
     {
-        if (!isset(self::REGION_PAGE_TYPE[$region]) || !in_array($page->pageType, self::CHROMED_PAGE_TYPES, true) || $mode === 'hidden') {
+        $chromed = in_array($page->pageType, self::CHROMED_PAGE_TYPES, true) || ($page->pageType === 'system' && !empty($context[self::SERVED_TEMPLATE]));
+        if (!isset(self::REGION_PAGE_TYPE[$region]) || !$chromed || $mode === 'hidden') {
             return ChromeSource::hidden();
         }
 
