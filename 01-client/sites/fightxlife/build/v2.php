@@ -18,6 +18,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/lib.php';
+require __DIR__ . '/v2-pages.php'; // the other V2 pages: their styles (native_v2_pages) and the page engine
 
 use Slate\Module\StudioBuilder\Http\StudioCodePolicy;
 use Slate\Module\StudioBuilder\Menu\StudioMenus;
@@ -62,7 +63,7 @@ function native_v2(): array
     $lift = shadow(...LIFT);
     $up = static fn(int $delay = 0): array => ['type' => 'fade_up', 'duration_ms' => 800, 'delay_ms' => $delay, 'easing' => EASE];
     $V = static fn(int $t, int $b): array => pad($t, null, $b, null);
-    return [
+    return native_v2_pages($pill, $pillHover, $base, $up, $V) + [
         // ── Type ──
         'v2-kick'        => ['s' => S(col(PINK), ty('19px', '400', '1.5', null, SCRIPT), mar(0, null, 6, null))],
         'v2-kick--light' => ['s' => col('#ff7cc3')],
@@ -249,11 +250,40 @@ if (!str_contains($head, 'Homemade+Apple')) {
     say('  + font: Homemade Apple');
 }
 
+// ── Preview addresses ────────────────────────────────────────────────────────────────────────────────────────────
+// While the client compares the two designs, each V2 page lives beside the current one at "<slug>-v2" (the home page at
+// /accueil-v2/), and every link between V2 pages points at those addresses. On the switch, V2URL() becomes the identity.
+$V2PAGES = json_decode((string) file_get_contents(__DIR__ . '/../fxl/v2-content.json'), true);
+$V2MAP = [];
+foreach ($V2PAGES as $pg) { $V2MAP[$pg['url']] = $pg['url'] === '/' ? '/' . V2_SLUG . '/' : rtrim($pg['url'], '/') . '-v2/'; }
+function V2URL(string $href): string
+{
+    global $V2MAP;
+    if ($href === '' || $href[0] !== '/' || str_starts_with($href, '//')) { return $href; }
+    $path = (string) parse_url($href, PHP_URL_PATH);
+    $rest = substr($href, strlen($path));
+    return isset($V2MAP[$path]) ? $V2MAP[$path] . $rest : $href;
+}
+/** Every V2 page slug: the header and footer show on these only. */
+$V2SLUGS = array_map(static fn(string $u): string => trim($u, '/'), array_values($V2MAP));
+/** Point a block tree's internal links at the V2 addresses. */
+function v2_relink(array &$node): void
+{
+    foreach (['url', 'href'] as $k) { if (isset($node['props'][$k]) && is_string($node['props'][$k])) { $node['props'][$k] = V2URL($node['props'][$k]); } }
+    if (isset($node['props']['link']['href'])) { $node['props']['link']['href'] = V2URL($node['props']['link']['href']); }
+    if (isset($node['props']['content']) && is_string($node['props']['content'])) {
+        $node['props']['content'] = (string) preg_replace_callback('~href="([^"]+)"~', static fn($m) => 'href="' . htmlspecialchars(V2URL(html_entity_decode($m[1])), ENT_QUOTES) . '"', $node['props']['content']);
+    }
+    foreach (['blocks', 'children'] as $k) {
+        if (isset($node[$k]) && is_array($node[$k])) { foreach ($node[$k] as &$c) { v2_relink($c); } unset($c); }
+    }
+}
+
 // ── Menus (V2 structure, « 0. Menu ») ────────────────────────────────────────────────────────────────────────────
 $actions = [['label' => 'Le sport comme outil', 'url' => '/le-sport-comme-outil/'], ['label' => 'Soutien à l’hôpital', 'url' => '/soutien-a-lhopital/'],
     ['label' => 'Information & prévention', 'url' => '/information-prevention/'], ['label' => 'Nous soutenir', 'url' => '/nous-soutenir/']];
 $cours = [['label' => 'Boxe adaptée', 'url' => '/boxe-adaptee/'], ['label' => 'WaterxFight', 'url' => '/waterxfight/'], ['label' => 'Boxe 100 % féminin', 'url' => '/100-feminin/'],
-    ['label' => 'Nage libre', 'url' => '/nage-libre/'], ['label' => 'Cours de natation', 'url' => '/cours-de-natation/']];
+    ['label' => 'Nage libre', 'url' => '/nage-libre-femmes/'], ['label' => 'Cours de natation', 'url' => '/cours-de-natation/']];
 $projets = [['label' => 'Notre impact', 'url' => '/notre-impact/'], ['label' => 'La SmileBox', 'url' => '/smile-box/'], ['label' => 'Benkick, notre mascotte', 'url' => '/benkick-mascotte/'],
     ['label' => 'Partenaires & soutiens', 'url' => '/partenaires-soutiens/']];
 $apropos = [['label' => 'Qui sommes-nous ?', 'url' => '/qui-sommes-nous/'], ['label' => 'Actualités', 'url' => '/actualites/'], ['label' => 'Agenda', 'url' => '/agenda/'], ['label' => 'Presse', 'url' => '/presse/']];
@@ -261,7 +291,10 @@ $main = [['label' => 'Nos actions', 'url' => '/nos-actions/', 'children' => $act
     ['label' => 'Projets & impact', 'url' => '/notre-impact/', 'children' => $projets], ['label' => 'À propos', 'url' => '/a-propos/', 'children' => $apropos], ['label' => 'Contact', 'url' => '/contact/']];
 $menus = ['v2-header' => ['V2 · Menu principal', $main], 'v2-actions' => ['V2 · Nos actions', $actions], 'v2-cours' => ['V2 · Nos cours', $cours], 'v2-projets' => ['V2 · Projets & impact', $projets],
     'v2-apropos' => ['V2 · À propos', $apropos], 'v2-legal' => ['V2 · Mentions', [['label' => 'Politique de confidentialité', 'url' => '/politique-de-confidentialite/'], ['label' => 'Conditions générales de vente', 'url' => '/conditions-generales-de-vente/']]]];
-foreach ($menus as $key => [$name, $items]) { StudioMenus::save($tid, $key, $name, $items, $key); }
+$relinkItems = static function (array $items) use (&$relinkItems): array {
+    return array_map(static fn(array $i): array => array_replace($i, ['url' => V2URL($i['url'])], isset($i['children']) ? ['children' => $relinkItems($i['children'])] : []), $items);
+};
+foreach ($menus as $key => [$name, $items]) { StudioMenus::save($tid, $key, $name, $relinkItems($items), $key); }
 say('  + menus: ' . implode(', ', array_keys($menus)));
 
 // ── Header ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -422,7 +455,9 @@ $sections = [
 // which Studio does not offer yet.
 
 // ── Build ────────────────────────────────────────────────────────────────────────────────────────────────────────
-$only = ['conditions' => ['rules' => [['type' => 'include', 'condition' => 'slug', 'value' => V2_SLUG]]]];
+$only = ['conditions' => ['rules' => array_map(static fn(string $s): array => ['type' => 'include', 'condition' => 'slug', 'value' => $s], $V2SLUGS)]];
+foreach ([&$header, &$footer, &$sections] as &$tree) { foreach ($tree as &$sec) { v2_relink($sec); } unset($sec); }
+unset($tree);
 build_page('v2-header', 'Header V2 (aperçu)', 'header_partial', 'standalone', $header,
     $only + ['sticky_header' => ['edge' => 'top', 'offset' => 0, 'devices' => ['desktop', 'tablet', 'mobile'], 'shadow' => true, 'background' => '#ffffff']]);
 build_page('v2-footer', 'Footer V2 (aperçu)', 'footer_partial', 'standalone', $footer, $only);
@@ -430,5 +465,6 @@ build_page(V2_SLUG, 'Accueil V2 (aperçu)', 'page', 'standalone', $sections, ['s
     'FightxLife | Association d’accompagnement face au cancer',
     'FightxLife accompagne les personnes touchées par le cancer et leurs proches : cours adaptés à Bruxelles, actions hospitalières et sensibilisation en Belgique.',
     MID('/uploads/media/fxl/2022-05-femininn.jpg') ?: null);
+v2_build_pages($V2PAGES);
 PageRoutes::forget($tid);
-say('done: /' . V2_SLUG . '/ with its own header and footer');
+say('done: /' . V2_SLUG . '/ and ' . (count($V2SLUGS) - 1) . ' V2 pages, with their own header and footer');

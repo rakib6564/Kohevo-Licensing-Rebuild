@@ -1,0 +1,4352 @@
+[
+ {
+  "doc": "1. Accueil _ FightxLife V2.docx",
+  "url": "/",
+  "seo_title": "FightxLife | Association d’accompagnement face au cancer",
+  "meta": "FightxLife accompagne les personnes touchées par le cancer et leurs proches : cours adaptés à Bruxelles, actions hospitalières et sensibilisation en Belgique.",
+  "h1": "Aux côtés des personnes touchées par le cancer et de leurs proches",
+  "intro": [
+   {
+    "t": "p",
+    "html": "1. Accueil"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "Association d’accompagnement face au cancer"
+   },
+   {
+    "t": "p",
+    "html": "Le cancer ne bouleverse pas seulement la santé. Il transforme le rapport au corps, bouscule les repères, fragilise parfois la confiance, modifie le quotidien et touche aussi profondément les proches et la vie familiale."
+   },
+   {
+    "t": "p",
+    "html": "<strong>FightxLife</strong> accompagne les enfants, les adolescents et les adultes touchés par la maladie, ainsi que leurs proches, pour les aider à rester en mouvement, garder du lien et trouver du soutien à chaque étape de leur parcours."
+   },
+   {
+    "t": "p",
+    "html": "L’association propose des cours adaptés à Bruxelles et mène également des actions dans les hôpitaux, les écoles et différents lieux en Belgique, à travers le sport, la sensibilisation et des projets pensés au plus près des personnes concernées."
+   },
+   {
+    "t": "cta",
+    "kind": "Primary CTA",
+    "label": "Découvrir nos actions",
+    "href": "/nos-actions/"
+   },
+   {
+    "t": "cta",
+    "kind": "Secondary CTA",
+    "label": "Voir nos cours à Bruxelles",
+    "href": "/cours/"
+   }
+  ],
+  "sections": [
+   {
+    "id": "axes",
+    "h2": "Trois manières d’agir face au cancer",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Parce que chaque parcours est différent, <strong>FightxLife</strong> agit à plusieurs endroits de la vie : quand il faut retrouver confiance dans son corps, traverser le quotidien à l’hôpital ou aider les autres à mieux comprendre la maladie."
+     },
+     {
+      "t": "p",
+      "html": "<strong>FightxLife</strong> agit sur les conséquences physiques, psychologiques, humaines et sociales de la maladie à travers trois axes complémentaires."
+     },
+     {
+      "t": "h3",
+      "text": "Le sport comme outil",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "À Bruxelles, <strong>FightxLife</strong> propose des activités adaptées aux personnes malades, fragiles ou en convalescence."
+       },
+       {
+        "t": "p",
+        "html": "Boxe adaptée, WaterxFight, Boxe 100 % féminin, nage libre et cours de natation permettent de bouger à son rythme, de retrouver progressivement des sensations et de partager un moment avec d’autres, sans pression de performance."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir le sport comme outil",
+        "href": "/le-sport-comme-outil/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Le soutien à l’hôpital",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "<strong>FightxLife</strong> intervient auprès des enfants touchés par le cancer et de leurs familles dans des services d’oncologie pédiatrique en Belgique."
+       },
+       {
+        "t": "p",
+        "html": "Boxe et autres activités sportives, jeux, ateliers créatifs, rencontres ou distribution de SmileBox : ces moments permettent à l’enfant de vivre autre chose que les soins, de bouger, de créer, d’échanger et simplement d’être un enfant."
+       },
+       {
+        "t": "p",
+        "html": "Chaque action est adaptée aux enfants, au fonctionnement du service et aux possibilités du moment."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir notre soutien à l’hôpital",
+        "href": "/soutien-a-lhopital/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Information & prévention",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Parler du cancer autrement, c’est aussi aider à mieux le comprendre."
+       },
+       {
+        "t": "p",
+        "html": "Dans les écoles, les associations, lors d’événements et à travers ses contenus, <strong>FightxLife</strong> aide les enfants, les jeunes et le grand public à mieux comprendre le cancer, la santé, la prévention et les réalités vécues par les personnes malades."
+       },
+       {
+        "t": "p",
+        "html": "Grâce à une approche pédagogique fondée sur l’information, l’échange, le mouvement, des activités créatives et des supports accessibles comme Benkick, l’association encourage l’empathie, la solidarité et une meilleure compréhension de la maladie."
+       },
+       {
+        "t": "p",
+        "html": "Les enfants et les jeunes peuvent par exemple participer à un atelier de sensibilisation, découvrir la boxe, décorer une SmileBox ou créer un message destiné à un enfant hospitalisé."
+       },
+       {
+        "t": "p",
+        "html": "Ces expériences permettent d’aborder la maladie, la différence, les émotions, l’entraide et la solidarité de manière concrète et adaptée à leur âge."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir nos actions d’information et de prévention",
+        "href": "/information-prevention/"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "projets",
+    "h2": "Des projets qui créent du lien",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Dans les cours, les écoles ou les services d’oncologie pédiatrique, <strong>FightxLife</strong> développe des projets qui partent d’une même idée : permettre aux personnes touchées par le cancer de rester reliées aux autres et créer autour d’elles davantage de compréhension et de solidarité."
+     },
+     {
+      "t": "h3",
+      "text": "L’expérience des membres",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "« Une jolie bulle d’oxygène et de défoulement qui me permet de reprendre le sport en respectant mon rythme. »"
+       },
+       {
+        "t": "p",
+        "html": "Jayne, participante au WaterxFight"
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir notre impact",
+        "href": "/notre-impact/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "La SmileBox",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "La SmileBox est offerte aux enfants et aux jeunes de 0 à 21 ans touchés par le cancer, par l’intermédiaire de services d’oncologie pédiatrique partenaires."
+       },
+       {
+        "t": "p",
+        "html": "Elle réunit notamment des produits La Roche-Posay, une peluche Benkick, un t-shirt, une casquette et des messages d’encouragement préparés par des élèves."
+       },
+       {
+        "t": "p",
+        "html": "Mais la SmileBox ne se résume pas à son contenu. Sa remise est aussi un moment pour rencontrer l’enfant et sa famille, échanger avec eux et créer une parenthèse différente dans le quotidien hospitalier."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir la SmileBox",
+        "href": "/smile-box/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Benkick, la mascotte de FightxLife",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Benkick est un kangourou qui représente la force et le courage. À l’hôpital, ses visites proposent aux enfants un moment de jeu et de complicité, sans chercher à les faire parler de la maladie."
+       },
+       {
+        "t": "p",
+        "html": "Son univers sert aussi de support pédagogique aux actions de sensibilisation dans les écoles et aux contenus de l’association. Sa version peluche accompagne les enfants à travers la SmileBox."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Rencontrer Benkick",
+        "href": "/benkick-mascotte/"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "partenaires",
+    "h2": "Agir ensemble",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Les actions de <strong>FightxLife</strong> se construisent aussi grâce aux collaborations développées avec des hôpitaux, des écoles, des associations, des institutions, des fondations, des entreprises et d’autres acteurs engagés."
+     },
+     {
+      "t": "p",
+      "html": "<strong>FightxLife</strong> apporte son expérience auprès des personnes touchées par le cancer, ses activités sportives, ses outils pédagogiques et ses projets de sensibilisation."
+     },
+     {
+      "t": "p",
+      "html": "Selon les projets, les partenaires peuvent accueillir ou coorganiser une action, mettre à disposition des produits ou du matériel, apporter leur expertise ou contribuer financièrement à une initiative précise."
+     },
+     {
+      "t": "note",
+      "text": "Dynamic partner block: show approved partner logos, including La Roche-Posay and Cera, with their actual contribution. Link the full partner section to /partenaires-soutiens/."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Découvrir nos partenaires et soutiens",
+      "href": "/partenaires-soutiens/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Construire une collaboration",
+      "href": "/contact/?reason=partenariat"
+     }
+    ]
+   },
+   {
+    "id": "soutenir",
+    "h2": "Soutenir les enfants et les familles à l’hôpital",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Les soutiens reçus par <strong>FightxLife</strong> contribuent notamment aux actions menées auprès des enfants touchés par le cancer et de leurs familles dans les services d’oncologie pédiatrique."
+     },
+     {
+      "t": "p",
+      "html": "SmileBox, activités sportives et créatives, animations, rencontres : ces soutiens contribuent à rendre possibles les moments organisés autour de l’enfant et de sa famille."
+     },
+     {
+      "t": "p",
+      "html": "Il est possible d’aider <strong>FightxLife</strong> de différentes manières : faire un don, devenir bénévole, proposer ses compétences, organiser une initiative solidaire ou soutenir un projet en tant que partenaire."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Soutenir FightxLife",
+      "href": "/nous-soutenir/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Contacter l’association",
+      "href": "/contact/"
+     }
+    ]
+   },
+   {
+    "id": "vie-association",
+    "h2": "La vie de FightxLife",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Dans un hôpital, une école, autour d’un cours ou lors d’un événement, découvrez les dernières actions de <strong>FightxLife</strong> et les prochains rendez-vous de l’association."
+     },
+     {
+      "t": "note",
+      "text": "Dynamic content: display the latest published news and the next confirmed public event. Hide any empty block; do not create sample news or events."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Voir toutes les actualités",
+      "href": "/actualites/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Consulter l’agenda",
+      "href": "/agenda/"
+     }
+    ]
+   }
+  ],
+  "design": "Preserve the approved home design system. Use authentic authorized photographs. Keep the three action columns compact and stack them on mobile. Use one clear primary action per section. Display the partner names next to their logos; preserve the approved testimonial."
+ },
+ {
+  "doc": "2. Nos actions _ FightxLife V2.docx",
+  "url": "/nos-actions/",
+  "seo_title": "Nos actions face au cancer | FightxLife",
+  "meta": "Sport adapté à Bruxelles, soutien en oncologie pédiatrique et sensibilisation au cancer : découvrez les actions de FightxLife et comment y participer.",
+  "h1": "Nos actions face au cancer",
+  "intro": [
+   {
+    "t": "p",
+    "html": "2. Nos actions"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "Participer à un cours, accueillir un atelier de sensibilisation ou proposer une collaboration à l’hôpital : plusieurs façons de prendre part aux actions de <strong>FightxLife</strong>."
+   },
+   {
+    "t": "p",
+    "html": "L’association agit auprès des personnes touchées par le cancer et de leurs proches, mais aussi avec celles et ceux qui souhaitent mieux comprendre leurs réalités et leur témoigner du soutien."
+   },
+   {
+    "t": "cta",
+    "kind": "Anchor link",
+    "label": "Explorer nos actions",
+    "href": "/nos-actions/#axes-actions"
+   }
+  ],
+  "sections": [
+   {
+    "id": "axes-actions",
+    "h2": "Une action adaptée à chaque contexte",
+    "blocks": [
+     {
+      "t": "h3",
+      "text": "Le sport comme outil",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Les cours proposés à Bruxelles s’adressent notamment aux personnes malades, fragiles ou en convalescence. <strong>FightxLife</strong> envisage le sport comme un outil d’accompagnement, avec une attention au rythme et aux possibilités de chacun."
+       },
+       {
+        "t": "cta",
+        "kind": "Primary CTA",
+        "label": "Voir les cours proposés à Bruxelles",
+        "href": "/cours/"
+       },
+       {
+        "t": "cta",
+        "kind": "Secondary link",
+        "label": "Découvrir le sport comme outil",
+        "href": "/le-sport-comme-outil/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Soutien à l’hôpital",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Dans les services d’oncologie pédiatrique partenaires, <strong>FightxLife</strong> propose aux enfants touchés par le cancer des activités sportives et créatives, adaptées aux possibilités du moment."
+       },
+       {
+        "t": "p",
+        "html": "Les visites et la remise d’une SmileBox sont aussi des occasions de rencontrer l’enfant et sa famille, d’échanger et de partager un moment dans le quotidien hospitalier."
+       },
+       {
+        "t": "cta",
+        "kind": "Primary CTA",
+        "label": "Découvrir notre soutien à l’hôpital",
+        "href": "/soutien-a-lhopital/"
+       },
+       {
+        "t": "cta",
+        "kind": "Secondary link",
+        "label": "Découvrir la SmileBox",
+        "href": "/smile-box/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Information & prévention",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Dans les écoles, les associations et lors d’événements, <strong>FightxLife</strong> aborde le cancer, la prévention et les réalités vécues par les personnes malades à travers des échanges et des activités adaptés aux publics rencontrés."
+       },
+       {
+        "t": "p",
+        "html": "Les ateliers scolaires peuvent associer sensibilisation, créativité et initiation à la boxe éducative. Décorer une SmileBox ou préparer un message pour un enfant hospitalisé donne aux élèves une manière concrète de participer à une démarche solidaire."
+       },
+       {
+        "t": "cta",
+        "kind": "Primary CTA",
+        "label": "Découvrir nos actions d’information et de prévention",
+        "href": "/information-prevention/"
+       },
+       {
+        "t": "cta",
+        "kind": "Secondary link",
+        "label": "Rencontrer Benkick",
+        "href": "/benkick-mascotte/"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "approche",
+    "h2": "Des actions ancrées dans les réalités du terrain",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Née du vécu de sa fondatrice, Sara Rezki, face au cancer, <strong>FightxLife</strong> construit aussi ses actions à partir de l’écoute des enfants, des familles et des équipes médicales."
+     },
+     {
+      "t": "p",
+      "html": "Cette attention guide le choix des activités, leur rythme et leur déroulement. Elle permet de tenir compte des besoins exprimés, de la situation des participants et du fonctionnement des lieux qui accueillent les interventions."
+     },
+     {
+      "t": "p",
+      "html": "Les projets évoluent au fil des échanges et de l’expérience du terrain."
+     },
+     {
+      "t": "cta",
+      "kind": "Contextual link",
+      "label": "Découvrir notre impact",
+      "href": "/notre-impact/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary link",
+      "label": "Mieux connaître FightxLife",
+      "href": "/qui-sommes-nous/"
+     }
+    ]
+   },
+   {
+    "id": "participer",
+    "h2": "Prendre part à nos actions",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "École, hôpital, association, entreprise, institution ou fondation : échangeons autour d’une intervention, d’un projet à soutenir ou d’une collaboration."
+     },
+     {
+      "t": "p",
+      "html": "Les entreprises peuvent aussi proposer un team building solidaire."
+     },
+     {
+      "t": "p",
+      "html": "Faire un don, devenir bénévole, proposer ses compétences ou organiser une initiative solidaire permet également de soutenir <strong>FightxLife</strong>, notamment dans ses actions auprès des enfants et des familles à l’hôpital."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Proposer une action ou une collaboration",
+      "href": "/contact/?reason=partenariat"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Soutenir FightxLife",
+      "href": "/nous-soutenir/"
+     }
+    ]
+   }
+  ],
+  "design": "Use one authentic hero photograph and three compact text blocks for the action axes. Keep secondary links visually lighter. On mobile, preserve the reading order and avoid large repeated images."
+ },
+ {
+  "doc": "2.1. Le sport comme outil _ FightxLife V2.docx",
+  "url": "/le-sport-comme-outil/",
+  "seo_title": "Sport adapté et cancer à Bruxelles | FightxLife",
+  "meta": "Découvrez les cours de FightxLife à Bruxelles : une approche du sport adaptée à vos possibilités, pour bouger à votre rythme et partager une activité.",
+  "h1": "Le sport comme outil d’accompagnement face au cancer",
+  "intro": [
+   {
+    "t": "p",
+    "html": "2.1. Le sport comme outil"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "La maladie et les traitements peuvent modifier l’énergie, les capacités physiques, la relation au corps et le bien-être psychologique. Retrouver une activité dans laquelle on se sent à l’aise compte aussi."
+   },
+   {
+    "t": "p",
+    "html": "À Bruxelles, <strong>FightxLife</strong> fait du sport un levier d’accompagnement pour les personnes touchées par le cancer, fragiles ou en convalescence. Ses activités offrent un cadre pour bouger à son rythme, reprendre confiance et partager un moment avec d’autres."
+   },
+   {
+    "t": "cta",
+    "kind": "Primary CTA",
+    "label": "Découvrir nos cours à Bruxelles",
+    "href": "/cours/"
+   }
+  ],
+  "sections": [
+   {
+    "id": "pourquoi-sport",
+    "h2": "Retrouver du mouvement, de la confiance et du lien",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Reprendre une activité peut commencer par un mouvement que l’on ose refaire, une séance à laquelle on participe ou le plaisir de retrouver un groupe."
+     },
+     {
+      "t": "p",
+      "html": "À travers ses cours, <strong>FightxLife</strong> cherche à encourager :"
+     },
+     {
+      "t": "ul",
+      "items": [
+       "une reprise progressive du mouvement ;",
+       "la confiance dans ses capacités ;",
+       "l’écoute du corps et de ses limites ;",
+       "le plaisir de pratiquer avec d’autres."
+      ]
+     },
+     {
+      "t": "p",
+      "html": "Ces objectifs prennent une place différente selon chaque personne, son parcours et ses possibilités."
+     }
+    ]
+   },
+   {
+    "id": "approche",
+    "h2": "Pratiquer dans un groupe où l’on se sent compris",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Dans les activités destinées aux personnes malades, fragiles ou en convalescence, la fatigue, les limites et les variations d’énergie sont prises en compte."
+     },
+     {
+      "t": "p",
+      "html": "L’approche de <strong>FightxLife</strong> vise à mettre chacun sur un pied d’égalité : pouvoir participer avec ses difficultés, se sentir accepté et trouver sa place dans le groupe."
+     },
+     {
+      "t": "p",
+      "html": "Les exercices sont adaptés aux possibilités du moment. Ralentir, ajuster un mouvement ou prendre une pause fait partie de la pratique. Chacun avance à son rythme, dans un cadre collectif accueillant."
+     }
+    ]
+   },
+   {
+    "id": "activites",
+    "h2": "Cinq activités à découvrir à Bruxelles",
+    "blocks": [
+     {
+      "t": "h3",
+      "text": "Boxe adaptée",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Une pratique sans combat entre participants, centrée sur le mouvement, la coordination et la confiance en soi."
+       },
+       {
+        "t": "cta",
+        "kind": "Activity link",
+        "label": "Découvrir la boxe adaptée",
+        "href": "/boxe-adaptee/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "WaterxFight",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Une activité en piscine associant la résistance de l’eau à des mouvements inspirés de la boxe et des arts martiaux."
+       },
+       {
+        "t": "cta",
+        "kind": "Activity link",
+        "label": "Découvrir le WaterxFight",
+        "href": "/waterxfight/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Boxe 100 % féminin",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Un cours de kickboxing réservé aux femmes, dans un cadre collectif fondé sur le respect, la progression et la solidarité."
+       },
+       {
+        "t": "cta",
+        "kind": "Activity link",
+        "label": "Découvrir la boxe 100 % féminin",
+        "href": "/100-feminin/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Nage libre",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Un temps en piscine pour nager et se remettre en mouvement à son rythme."
+       },
+       {
+        "t": "cta",
+        "kind": "Activity link",
+        "label": "Découvrir la nage libre",
+        "href": "/nage-libre-femmes/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Cours de natation",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Deux niveaux réservés aux femmes : apprendre à nager lorsqu’on débute ou améliorer sa technique lorsqu’on sait déjà nager."
+       },
+       {
+        "t": "cta",
+        "kind": "Activity link",
+        "label": "Découvrir les cours de natation",
+        "href": "/cours-de-natation/"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "choisir",
+    "h2": "Quel cours vous correspond ?",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Retrouvez les publics concernés, les horaires, les lieux, les tarifs et les modalités d’inscription sur les pages des cours."
+     },
+     {
+      "t": "p",
+      "html": "Vous hésitez entre plusieurs activités ou avez une question sur leur déroulement ? Contactez <strong>FightxLife</strong> pour en parler."
+     },
+     {
+      "t": "p",
+      "html": "Si votre état de santé soulève une question sur la reprise d’activité, demandez conseil au professionnel de santé qui vous accompagne."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Voir les cours et les informations pratiques",
+      "href": "/cours/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Poser une question sur les cours",
+      "href": "/contact/?reason=cours"
+     }
+    ]
+   }
+  ],
+  "design": "Use a compact hero with a real class photograph. Keep the four objectives as a simple list. Display the five activities as compact rows, not five full-height illustrated sections."
+ },
+ {
+  "doc": "2.2. Soutien à l’hôpital _ FightxLife V2.docx",
+  "url": "/soutien-a-lhopital/",
+  "seo_title": "Soutien aux enfants hospitalisés | FightxLife",
+  "meta": "FightxLife accompagne les enfants touchés par le cancer et leurs familles à l’hôpital : ateliers sportifs et créatifs, moments festifs et SmileBox.",
+  "h1": "Soutenir les enfants et les familles à l’hôpital",
+  "intro": [
+   {
+    "t": "p",
+    "html": "2.2. Soutien à l’hôpital"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "L’hospitalisation peut éloigner les enfants de leur quotidien, de leur école et de leurs relations habituelles. Elle affecte également toute la vie familiale."
+   },
+   {
+    "t": "p",
+    "html": "<strong>FightxLife</strong> intervient auprès des enfants touchés par le cancer et de leurs proches. Nos activités sont mises en place avec les éducateurs et les coordinateurs des services d’oncologie pédiatrique."
+   },
+   {
+    "t": "p",
+    "html": "À travers des ateliers sportifs et créatifs, des moments festifs et la remise de SmileBox, l’association propose des occasions d’échanger, de partager une activité et de garder un lien avec l’extérieur."
+   },
+   {
+    "t": "cta",
+    "kind": "Primary CTA",
+    "label": "Découvrir nos actions à l’hôpital",
+    "href": "/soutien-a-lhopital/#interventions"
+   },
+   {
+    "t": "cta",
+    "kind": "Secondary CTA",
+    "label": "Proposer une collaboration",
+    "href": "/soutien-a-lhopital/#collaborer"
+   }
+  ],
+  "sections": [
+   {
+    "id": "interventions",
+    "h2": "Des actions adaptées aux enfants et au cadre hospitalier",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Les interventions prennent différentes formes selon les possibilités du service, l’âge des enfants, leur situation et les ressources disponibles."
+     },
+     {
+      "t": "h3",
+      "text": "Ateliers sportifs",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Des séances de boxe adaptée et des jeux sportifs, notamment autour du thème des Jeux olympiques, invitent les enfants à se mettre en mouvement selon leurs possibilités."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Ateliers créatifs et récréatifs",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Des activités pour créer, s’exprimer et partager un moment, avec un format adapté à l’âge et à l’énergie des enfants."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Moments festifs",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Une fête foraine organisée chaque année, ainsi que des animations à Noël et à Pâques, apportent des occasions de jouer et de partager un moment de fête à l’hôpital."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "SmileBox et rencontres",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "La remise d’une SmileBox est aussi un temps de rencontre avec l’enfant et sa famille : découvrir son contenu, échanger et transmettre les messages de soutien préparés par des élèves."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "lien",
+    "h2": "Des moments pour échanger, s’exprimer et partager",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Les actions de <strong>FightxLife</strong> prennent place dans la vie quotidienne à l’hôpital : les relations, l’expression et le lien avec l’extérieur."
+     },
+     {
+      "t": "p",
+      "html": "Elles visent notamment à :"
+     },
+     {
+      "t": "ul",
+      "items": [
+       "proposer un moment différent du temps médical ;",
+       "favoriser l’échange avec l’enfant et ses proches ;",
+       "permettre une activité adaptée à son âge et à son énergie ;",
+       "apporter une attention concrète à l’enfant et à sa famille."
+      ]
+     },
+     {
+      "t": "p",
+      "html": "Chaque intervention est adaptée au fonctionnement du service et à la disponibilité des enfants."
+     }
+    ]
+   },
+   {
+    "id": "outils",
+    "h2": "La SmileBox et Benkick",
+    "blocks": [
+     {
+      "t": "h3",
+      "text": "La SmileBox",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "La SmileBox contient notamment des produits de soin La Roche-Posay, comme Cicaplast et les produits Lipikar, ainsi que des attentions destinées aux enfants et aux jeunes touchés par le cancer."
+       },
+       {
+        "t": "p",
+        "html": "Remise dans les services d’oncologie pédiatrique partenaires, elle porte aussi les messages de soutien préparés par des élèves lors de nos actions de sensibilisation. Un lien concret entre les enfants à l’école et ceux qui sont hospitalisés."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir la SmileBox",
+        "href": "/smile-box/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Benkick, notre mascotte",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Benkick est notre mascotte pédagogique : un kangourou qui représente la force et le courage, en lien avec la boxe."
+       },
+       {
+        "t": "p",
+        "html": "À l’hôpital, il vient rencontrer et amuser les enfants dans une ambiance bienveillante, sans chercher à les faire parler de la maladie."
+       },
+       {
+        "t": "p",
+        "html": "La mascotte a pu voir le jour grâce au soutien de la coopérative Cera."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir Benkick",
+        "href": "/benkick-mascotte/"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "collaborer",
+    "h2": "Collaborer ou soutenir nos actions à l’hôpital",
+    "blocks": [
+     {
+      "t": "h3",
+      "text": "Vous représentez un hôpital ou un service de soins ?",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "<strong>FightxLife</strong> peut échanger avec votre équipe afin d’étudier une intervention adaptée aux enfants concernés, aux besoins observés et au fonctionnement de votre service."
+       },
+       {
+        "t": "p",
+        "html": "La collaboration est définie avec les interlocuteurs sur place, en tenant compte du format envisagé et des possibilités d’intervention de l’association."
+       },
+       {
+        "t": "cta",
+        "kind": "Primary CTA",
+        "label": "Échanger sur une collaboration hospitalière",
+        "href": "/contact/?reason=hopital"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Vous souhaitez soutenir ces actions ?",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Les dons, le bénévolat, les partenariats et les initiatives solidaires contribuent à la préparation et à la continuité des actions menées auprès des enfants et de leurs familles."
+       },
+       {
+        "t": "cta",
+        "kind": "Secondary CTA",
+        "label": "Soutenir FightxLife",
+        "href": "/nous-soutenir/"
+       },
+       {
+        "t": "cta",
+        "kind": "Secondary link",
+        "label": "Découvrir nos partenaires et soutiens",
+        "href": "/partenaires-soutiens/"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "design": "Use one authorized hospital activity photograph in the compact hero. Arrange the four interventions in a two-column grid, stacked on mobile. Show the open SmileBox and the official Benkick image in the two tool blocks. Keep the collaboration and support paths distinct."
+ },
+ {
+  "doc": "2.3. Information et prévention _ FightxLife V2.docx",
+  "url": "/information-prevention/",
+  "seo_title": "Information et prévention autour du cancer | FightxLife",
+  "meta": "Écoles, associations, entreprises : FightxLife sensibilise au cancer, au sport et à la santé et encourage la solidarité envers les personnes malades.",
+  "h1": "Information & prévention",
+  "intro": [
+   {
+    "t": "p",
+    "html": "2.3. Information et prévention"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "Mieux comprendre la maladie aide à faire évoluer les regards et à soutenir les personnes qui y sont confrontées."
+   },
+   {
+    "t": "p",
+    "html": "<strong>FightxLife</strong> mène des actions d’information, de prévention et de sensibilisation autour du cancer, du sport, de la santé et de la solidarité."
+   },
+   {
+    "t": "p",
+    "html": "Dans les écoles, les associations, les entreprises, lors d’événements et à travers ses contenus, l’association ouvre des espaces pour s’informer, poser des questions et parler de sujets parfois difficiles à aborder."
+   },
+   {
+    "t": "cta",
+    "kind": "Anchor link",
+    "label": "Découvrir nos actions de sensibilisation",
+    "href": "/information-prevention/#sensibilisation"
+   }
+  ],
+  "sections": [
+   {
+    "id": "comprendre",
+    "h2": "Mieux comprendre pour mieux agir",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Le cancer reste associé à de nombreuses peurs, idées reçues et maladresses. Lorsqu’une personne tombe malade, son entourage ne sait pas toujours comment réagir, quels mots employer ou comment lui apporter un soutien adapté."
+     },
+     {
+      "t": "p",
+      "html": "<strong>FightxLife</strong> transmet des repères sur ce que la maladie peut changer au quotidien, la place de l’entourage et l’importance du sport et de l’attention portée à sa santé."
+     },
+     {
+      "t": "p",
+      "html": "À l’école, cette sensibilisation poursuit aussi un objectif concret : préparer l’accueil ou le retour d’un enfant après la maladie. Comprendre les absences, la fatigue ou les différences liées à son parcours peut aider les élèves à mieux l’accueillir, à éviter les moqueries et à lui témoigner du soutien."
+     }
+    ]
+   },
+   {
+    "id": "sensibilisation",
+    "h2": "Informer, sensibiliser et ouvrir le dialogue",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Les interventions sont préparées avec les structures qui accueillent <strong>FightxLife</strong>, selon leur public et leurs objectifs. Pour les écoles, l’association s’appuie sur ses dossiers pédagogiques et choisit les thématiques avec les enseignants."
+     },
+     {
+      "t": "h3",
+      "text": "Dans les écoles",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Les sujets et les activités évoluent selon l’âge et la classe. Avec les plus jeunes, les échanges portent sur la maladie, la différence et l’inclusion. Avec les plus grands, le cancer peut être abordé plus directement."
+       },
+       {
+        "t": "p",
+        "html": "Les ateliers peuvent associer échanges, activités créatives et initiation à la boxe. Ils invitent les élèves à réfléchir à la place de chacun, à l’importance de bouger et aux façons de soutenir une personne malade."
+       },
+       {
+        "t": "p",
+        "html": "Décorer une SmileBox ou y laisser un message crée aussi un lien avec les enfants hospitalisés, éloignés des bancs de l’école."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Dans les associations, les entreprises et les structures de formation",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Les interventions sont construites autour des préoccupations du public rencontré. Dans une association, une entreprise ou une école de soins infirmiers, les thèmes et les formats sont définis avec les interlocuteurs de la structure."
+       },
+       {
+        "t": "p",
+        "html": "Le vécu de la maladie, le parcours des personnes touchées par le cancer, la solidarité ou l’engagement bénévole peuvent notamment nourrir les échanges."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Lors d’événements",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Les événements permettent à <strong>FightxLife</strong> de rencontrer les familles et le grand public, de présenter ses actions et de rendre les questions liées au cancer plus accessibles."
+       },
+       {
+        "t": "p",
+        "html": "La présence de l’association crée un point de départ pour informer, échanger et sensibiliser sans dramatiser la maladie."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "À travers nos contenus",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "<strong>FightxLife</strong> utilise également son site internet et ses réseaux sociaux pour partager des informations, des témoignages et des contenus de sensibilisation."
+       },
+       {
+        "t": "p",
+        "html": "Ces publications prolongent les actions de terrain et donnent une place à la parole des personnes touchées par le cancer."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Consulter nos actualités",
+        "href": "/actualites/"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "demarche",
+    "h2": "Donner une place à la parole et à l’expérience",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Poser une question, partager une expérience ou participer à une activité permet de prendre part à la réflexion. <strong>FightxLife</strong> privilégie l’écoute, les exemples concrets et un langage adapté aux participants."
+     },
+     {
+      "t": "p",
+      "html": "Selon les publics, les échanges peuvent porter sur :"
+     },
+     {
+      "t": "ul",
+      "items": [
+       "la maladie et ses conséquences physiques, émotionnelles et sociales ;",
+       "la prévention, le sport et la santé ;",
+       "la différence, l’inclusion et le retour à l’école ;",
+       "la place des proches et le maintien du lien ;",
+       "la solidarité, les messages de soutien et le bénévolat."
+      ]
+     },
+     {
+      "t": "p",
+      "html": "Les témoignages de personnes touchées par le cancer permettent aussi d’aborder les parcours vécus."
+     },
+     {
+      "t": "p",
+      "html": "Cette démarche vise à développer la compréhension, l’écoute et l’empathie, et à donner à chacun des moyens concrets de manifester sa solidarité."
+     },
+     {
+      "t": "p",
+      "html": "Les contenus sont adaptés aux publics rencontrés et ne remplacent pas les recommandations des professionnels de santé."
+     }
+    ]
+   },
+   {
+    "id": "benkick",
+    "h2": "Benkick, un appui pour échanger avec les enfants",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Benkick est la mascotte pédagogique de <strong>FightxLife</strong>. Ce kangourou représente la force et le courage, en lien avec la boxe."
+     },
+     {
+      "t": "p",
+      "html": "Dans les écoles et les contenus de sensibilisation, il sert de support pour expliquer, ouvrir le dialogue et aborder la santé, la différence et la solidarité avec les enfants."
+     },
+     {
+      "t": "p",
+      "html": "À l’hôpital, son rôle est différent : il rend visite aux enfants pour leur apporter une présence réconfortante, sans aborder la maladie avec eux."
+     },
+     {
+      "t": "cta",
+      "kind": "Contextual link",
+      "label": "Découvrir Benkick",
+      "href": "/benkick-mascotte/"
+     }
+    ]
+   },
+   {
+    "id": "intervention",
+    "h2": "Sensibiliser votre public avec FightxLife",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Vous représentez une école, une association, une entreprise, une institution, une structure jeunesse ou une école de soins infirmiers ?"
+     },
+     {
+      "t": "p",
+      "html": "<strong>FightxLife</strong> peut échanger avec vous afin de comprendre votre contexte, votre public et les objectifs de l’intervention envisagée."
+     },
+     {
+      "t": "p",
+      "html": "Toute collaboration est définie en fonction des possibilités de l’association et des besoins identifiés avec votre structure."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Proposer une intervention",
+      "href": "/contact/?reason=sensibilisation"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Découvrir nos partenaires et soutiens",
+      "href": "/partenaires-soutiens/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary link",
+      "label": "Découvrir toutes nos actions",
+      "href": "/nos-actions/"
+     }
+    ]
+   }
+  ],
+  "design": "Use a compact hero with an authorized school activity photograph. Keep the four intervention contexts compact, with more room for the school block. Present themes as a simple list and use an official Benkick image. Do not announce future role-play formats as already available."
+ },
+ {
+  "doc": "2.4. Nous soutenir _ FightxLife V2.docx",
+  "url": "/nous-soutenir/",
+  "seo_title": "Soutenir FightxLife | Don, bénévolat et partenariat",
+  "meta": "Soutenez les actions de FightxLife par un don ponctuel ou régulier, du bénévolat, une initiative solidaire ou un partenariat.",
+  "h1": "Soutenir FightxLife",
+  "intro": [
+   {
+    "t": "p",
+    "html": "2.4. Nous soutenir"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "<strong>FightxLife</strong> accompagne les personnes touchées par le cancer et leurs proches à travers des cours adaptés, des actions auprès des enfants hospitalisés et des projets d’information et de prévention."
+   },
+   {
+    "t": "p",
+    "html": "L’association développe ses interventions auprès d’un nombre croissant d’hôpitaux en Belgique."
+   },
+   {
+    "t": "p",
+    "html": "Les dons et les différentes formes d’engagement contribuent à la préparation, à la continuité et, lorsque les moyens le permettent, au développement de ces actions."
+   },
+   {
+    "t": "p",
+    "html": "Chacun peut choisir une manière de soutenir <strong>FightxLife</strong> selon ses possibilités."
+   },
+   {
+    "t": "cta",
+    "kind": "Primary CTA",
+    "label": "Faire un don",
+    "href": "/nous-soutenir/#faire-un-don"
+   },
+   {
+    "t": "cta",
+    "kind": "Secondary CTA",
+    "label": "Découvrir les autres manières d’aider",
+    "href": "/nous-soutenir/#autres-aides"
+   }
+  ],
+  "sections": [
+   {
+    "id": "actions-soutenues",
+    "h2": "Des actions concrètes face au cancer",
+    "blocks": [
+     {
+      "t": "h3",
+      "text": "Des cours adaptés à Bruxelles",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Votre soutien contribue à la continuité des cours proposés aux personnes malades, fragiles ou en convalescence."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir nos cours",
+        "href": "/cours/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Des actions auprès des enfants hospitalisés",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Il contribue à la préparation des ateliers sportifs et créatifs, des visites et des SmileBox, ainsi qu’à la mise en place d’outils pédagogiques destinés à accompagner les enfants et leurs familles pendant l’hospitalisation."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir notre soutien à l’hôpital",
+        "href": "/soutien-a-lhopital/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Des actions d’information et de prévention",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Il accompagne les interventions menées dans les écoles, les associations et lors d’événements. Ces actions créent aussi des liens avec les enfants hospitalisés, notamment à travers les messages de soutien préparés par les élèves pour les SmileBox."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir nos actions de sensibilisation",
+        "href": "/information-prevention/"
+       },
+       {
+        "t": "cta",
+        "kind": "Secondary link",
+        "label": "Découvrir notre impact",
+        "href": "/notre-impact/"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "faire-un-don",
+    "h2": "Choisir un don ponctuel ou régulier",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Un don ponctuel permet de soutenir <strong>FightxLife</strong> au moment qui vous convient."
+     },
+     {
+      "t": "p",
+      "html": "Un don régulier apporte davantage de visibilité à l’association pour préparer ses activités et inscrire ses actions dans la durée."
+     },
+     {
+      "t": "p",
+      "html": "Choisissez le montant et la fréquence de votre soutien dans le module ci-dessous."
+     },
+     {
+      "t": "note",
+      "text": "Donation module: embed the actual donation form here. Enable and test one-off and recurring options, free amounts, clear payment frequency and payment confirmation before launch. Use the general FightxLife donation journey; do not imply a dedicated SmileBox allocation. Remove shop and class terms and the unrelated renewal label from the donation interface. Keep payment-processing endpoints operational."
+     },
+     {
+      "t": "cta",
+      "kind": "Donation form submit button",
+      "label": "Je soutiens FightxLife",
+      "href": "module:donation"
+     }
+    ]
+   },
+   {
+    "id": "autres-aides",
+    "h2": "Donner du temps, mobiliser ou collaborer",
+    "blocks": [
+     {
+      "t": "h3",
+      "text": "Devenir bénévole",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Vous pouvez proposer votre temps ou vos compétences pour contribuer aux événements, à la préparation des actions ou à certains besoins pratiques de l’association."
+       },
+       {
+        "t": "p",
+        "html": "<strong>FightxLife</strong> étudiera votre proposition en fonction des besoins actuels et des missions disponibles."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual CTA",
+        "label": "Proposer mon aide",
+        "href": "/contact/?reason=benevolat"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Organiser une initiative solidaire",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Une collecte, un défi, une activité ou un événement peut permettre de mobiliser votre entourage et de soutenir les actions de <strong>FightxLife</strong>."
+       },
+       {
+        "t": "p",
+        "html": "Contactez l’association avant de lancer votre initiative afin d’en présenter le cadre, les objectifs et les modalités de communication."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual CTA",
+        "label": "Proposer une initiative",
+        "href": "/contact/?reason=evenement"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Devenir partenaire",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Les entreprises, fondations, institutions et organisations peuvent apporter un soutien financier ou matériel, mettre des compétences à disposition ou construire un projet avec <strong>FightxLife</strong>."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual CTA",
+        "label": "Découvrir les possibilités de partenariat",
+        "href": "/partenaires-soutiens/"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "faire-connaitre",
+    "h2": "Aider une personne à trouver FightxLife",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Une personne touchée par le cancer, un parent ou une famille de votre entourage pourrait avoir besoin de connaître nos activités."
+     },
+     {
+      "t": "p",
+      "html": "Partager un cours, une action à l’hôpital ou une publication peut l’aider à découvrir <strong>FightxLife</strong> et à prendre contact avec l’association."
+     },
+     {
+      "t": "cta",
+      "kind": "Social link",
+      "label": "Suivre FightxLife sur Instagram",
+      "href": "https://www.instagram.com/fightxlife/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary social link",
+      "label": "Suivre FightxLife sur Facebook",
+      "href": "https://www.facebook.com/Fightxlife"
+     }
+    ]
+   }
+  ],
+  "design": "Keep donations visually primary. Use one real hero image, three compact action blocks and the donation module without an extra intermediate page. Stack other support options on mobile. Do not display tax relief or a tax certificate. Keep social links secondary."
+ },
+ {
+  "doc": "3. Nos cours _ FightxLife V2.docx",
+  "url": "/cours/",
+  "seo_title": "Cours adaptés à Bruxelles : boxe et natation | FightxLife",
+  "meta": "Découvrez les activités de FightxLife à Bruxelles : boxe adaptée, WaterxFight, boxe féminine, nage libre et cours de natation débutant ou perfectionnement.",
+  "h1": "Nos cours adaptés à Bruxelles",
+  "intro": [
+   {
+    "t": "p",
+    "html": "3. Nos cours"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "<strong>FightxLife</strong> propose des activités physiques adaptées, destinées en priorité aux personnes touchées par le cancer, fragiles ou en convalescence."
+   },
+   {
+    "t": "p",
+    "html": "Les cours offrent un cadre pour bouger à son rythme, reprendre confiance et partager une activité dans un groupe respectueux, sans pression de performance."
+   },
+   {
+    "t": "p",
+    "html": "Vous débutez ou pratiquez déjà ? Découvrez les activités et les niveaux proposés pour choisir le cours qui vous correspond."
+   },
+   {
+    "t": "p",
+    "html": "Tous les cours ont lieu à Bruxelles."
+   },
+   {
+    "t": "cta",
+    "kind": "Primary CTA",
+    "label": "Découvrir les cours",
+    "href": "/cours/#activites"
+   },
+   {
+    "t": "cta",
+    "kind": "Secondary CTA",
+    "label": "Accéder à l’espace membre",
+    "href": "https://membre.fightxlife.com/connexion/"
+   }
+  ],
+  "sections": [
+   {
+    "id": "activites",
+    "h2": "Cinq activités, plusieurs manières de bouger",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Retrouvez sur chaque page les publics concernés, les horaires, les lieux, les tarifs et les modalités d’inscription."
+     },
+     {
+      "t": "h3",
+      "text": "Boxe adaptée",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Une pratique inspirée de la boxe, sans combat entre participants, pour travailler le mouvement, la coordination et la confiance."
+       },
+       {
+        "t": "cta",
+        "kind": "Activity link",
+        "label": "Découvrir la boxe adaptée",
+        "href": "/boxe-adaptee/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "WaterxFight",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Une activité aquatique qui associe la résistance de l’eau à des mouvements inspirés de la boxe et des arts martiaux."
+       },
+       {
+        "t": "cta",
+        "kind": "Activity link",
+        "label": "Découvrir le WaterxFight",
+        "href": "/waterxfight/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Boxe 100 % féminin",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Un cours de kickboxing réservé aux femmes, dans un environnement collectif fondé sur le respect, la progression et la solidarité."
+       },
+       {
+        "t": "cta",
+        "kind": "Activity link",
+        "label": "Découvrir la boxe 100 % féminin",
+        "href": "/100-feminin/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Nage libre",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Un temps de pratique en piscine pour nager et se remettre en mouvement à son rythme dans le cadre proposé par <strong>FightxLife</strong>."
+       },
+       {
+        "t": "cta",
+        "kind": "Activity link",
+        "label": "Découvrir la nage libre",
+        "href": "/nage-libre-femmes/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Cours de natation",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Deux niveaux réservés aux femmes : un cours débutant pour apprendre à nager et un cours de perfectionnement pour celles qui savent déjà nager et souhaitent améliorer leur technique."
+       },
+       {
+        "t": "cta",
+        "kind": "Activity link",
+        "label": "Découvrir les cours de natation",
+        "href": "/cours-de-natation/"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "approche",
+    "h2": "Bouger selon ses possibilités",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Les activités de <strong>FightxLife</strong> reposent sur quelques principes simples :"
+     },
+     {
+      "t": "ul",
+      "items": [
+       "respecter le corps, ses capacités et ses limites ;",
+       "adapter l’intensité à l’énergie du moment ;",
+       "progresser sans comparaison ni pression ;",
+       "favoriser le plaisir de bouger et la confiance ;",
+       "créer du lien dans une ambiance collective, bienveillante et sans jugement."
+      ]
+     },
+     {
+      "t": "p",
+      "html": "Lorsque votre état de santé le nécessite, demandez l’avis de votre professionnel de santé avant de reprendre une activité physique."
+     },
+     {
+      "t": "cta",
+      "kind": "Contextual link",
+      "label": "Comprendre le sport comme outil d’accompagnement",
+      "href": "/le-sport-comme-outil/"
+     }
+    ]
+   },
+   {
+    "id": "participation",
+    "h2": "Puis-je participer aux cours si je ne suis pas malade ?",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Oui. Les cours de <strong>FightxLife</strong> ont été conçus pour accueillir les personnes malades, fragiles ou en convalescence, mais il n’est pas nécessaire d’être ou d’avoir été malade pour devenir membre ou participer."
+     },
+     {
+      "t": "p",
+      "html": "Les activités restent adaptées au rythme et aux capacités de chacun, selon les publics et les modalités propres à chaque cours."
+     }
+    ]
+   },
+   {
+    "id": "inscription",
+    "h2": "Trouver le cours qui vous correspond",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Vous hésitez entre plusieurs activités ou souhaitez obtenir une précision avant de vous inscrire ? Consultez les pages détaillées ou contactez l’équipe de <strong>FightxLife</strong>."
+     },
+     {
+      "t": "p",
+      "html": "Pour rejoindre une activité, créez votre compte dans l’espace membre et réglez la cotisation annuelle. Les inscriptions, réservations et paiements s’effectuent ensuite depuis cet espace."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Accéder à l’espace membre",
+      "href": "https://membre.fightxlife.com/connexion/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Poser une question sur les cours",
+      "href": "/contact/?reason=cours"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary link",
+      "label": "Soutenir les actions de FightxLife",
+      "href": "/nous-soutenir/"
+     }
+    ]
+   }
+  ],
+  "design": "Display five compact activity cards, stacked on mobile. Keep the common approach and participation answer concise. Use the same member access destination across all activities; annual membership is required. Preserve activity context through the existing member journey."
+ },
+ {
+  "doc": "3.1. Boxe adaptée _ FightxLife V2.docx",
+  "url": "/boxe-adaptee/",
+  "seo_title": "Boxe adaptée à Bruxelles | FightxLife",
+  "meta": "Découvrez la boxe adaptée de FightxLife à Bruxelles : une pratique sans combat, à votre rythme, pour débutants aussi. Un cours d’essai gratuit est proposé.",
+  "h1": "Boxe adaptée à Bruxelles",
+  "intro": [
+   {
+    "t": "p",
+    "html": "3.1. Boxe adaptée"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "Reprendre le mouvement et retrouver confiance, un geste après l’autre."
+   },
+   {
+    "t": "p",
+    "html": "<strong>FightxLife</strong> propose un cours de boxe adaptée destiné en priorité aux personnes touchées par le cancer, fragiles ou en convalescence."
+   },
+   {
+    "t": "p",
+    "html": "Inspirée des techniques de la boxe, cette activité se pratique sans combat entre participants et sans coups portés au corps, dans un cadre sans pression de performance."
+   },
+   {
+    "t": "p",
+    "html": "Les exercices sont adaptés aux capacités, au rythme et à l’énergie de chacun. Aucune expérience de la boxe ni aucun niveau sportif ne sont nécessaires."
+   },
+   {
+    "t": "p",
+    "html": "Un cours d’essai gratuit vous permet de découvrir la pratique."
+   },
+   {
+    "t": "p",
+    "html": "Lieu et horaires : Une salle est actuellement recherchée à Bruxelles. Le lieu et les horaires seront communiqués dans l’espace membre dès leur confirmation."
+   },
+   {
+    "t": "cta",
+    "kind": "Primary CTA",
+    "label": "Accéder à l’espace membre",
+    "href": "https://membre.fightxlife.com/connexion/"
+   },
+   {
+    "t": "note",
+    "text": "Member journey context: boxe-adaptee. Keep the selected activity through sign-in and account creation using the member platform’s supported routing. The URL above is the verified public entry point, not an invented deep booking link."
+   }
+  ],
+  "sections": [
+   {
+    "id": "infos-pratiques",
+    "h2": "Une boxe accessible, encadrée et sans combat",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Public prioritaire : Personnes touchées par le cancer, fragiles ou en convalescence."
+     },
+     {
+      "t": "p",
+      "html": "Pratique : Déplacements, enchaînements et exercices réalisés avec des sacs de frappe et des paos, des cibles de frappe."
+     },
+     {
+      "t": "p",
+      "html": "Contact : Aucun combat entre participants et aucun coup porté au corps."
+     },
+     {
+      "t": "p",
+      "html": "Niveau : Débutants bienvenus. Aucune expérience préalable n’est demandée."
+     },
+     {
+      "t": "p",
+      "html": "Durée : 90 minutes."
+     },
+     {
+      "t": "p",
+      "html": "Horaires et lieu : À confirmer à Bruxelles."
+     },
+     {
+      "t": "p",
+      "html": "Tarifs : Inscription et assurance annuelles : 50 €."
+     },
+     {
+      "t": "p",
+      "html": "Abonnement mensuel : 30 €."
+     },
+     {
+      "t": "p",
+      "html": "Découverte : Un cours d’essai gratuit."
+     }
+    ]
+   },
+   {
+    "id": "seance",
+    "h2": "Bouger progressivement, selon ses possibilités",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Chaque séance commence par un échauffement progressif destiné à préparer le corps."
+     },
+     {
+      "t": "p",
+      "html": "Le coach propose ensuite des déplacements, des enchaînements simples, des exercices de coordination et du travail avec des sacs de frappe ou des paos."
+     },
+     {
+      "t": "p",
+      "html": "La séance se termine par un retour au calme."
+     },
+     {
+      "t": "p",
+      "html": "Chaque participant peut adapter l’intensité, modifier un exercice, prendre une pause ou interrompre un mouvement lorsque sa situation le demande."
+     },
+     {
+      "t": "p",
+      "html": "La pratique vise notamment à travailler :"
+     },
+     {
+      "t": "ul",
+      "items": [
+       "la mobilité et la coordination ;",
+       "l’équilibre et les déplacements ;",
+       "la concentration et la mémorisation des mouvements ;",
+       "la confiance dans ses capacités ;",
+       "l’expression de son énergie à travers le mouvement ;",
+       "le plaisir de pratiquer une activité collective."
+      ]
+     },
+     {
+      "t": "p",
+      "html": "Les effets ressentis varient selon chaque personne, son état de santé et la régularité de sa participation."
+     },
+     {
+      "t": "p",
+      "html": "En cas de doute sur la reprise d’une activité physique, demandez conseil au professionnel de santé qui vous accompagne."
+     }
+    ]
+   },
+   {
+    "id": "inscription",
+    "h2": "Découvrir le cours de boxe adaptée",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Créez votre compte dans l’espace membre et réglez la cotisation annuelle pour rejoindre les activités de <strong>FightxLife</strong>. Retrouvez-y les informations d’ouverture du cours et les possibilités de participation."
+     },
+     {
+      "t": "p",
+      "html": "Le cours d’essai est gratuit ; les frais annuels d’inscription et d’assurance restent applicables."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Accéder à l’espace membre",
+      "href": "https://membre.fightxlife.com/connexion/"
+     },
+     {
+      "t": "note",
+      "text": "Member journey context: boxe-adaptee. Keep the selected activity through sign-in and account creation using the member platform’s supported routing. The URL above is the verified public entry point, not an invented deep booking link."
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Poser une question sur le cours",
+      "href": "/contact/?reason=cours&activity=boxe-adaptee"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary link",
+      "label": "Découvrir les autres cours de FightxLife",
+      "href": "/cours/"
+     }
+    ]
+   }
+  ],
+  "design": "Use one authentic class photograph showing bags or pads. Keep the pending venue notice visible and do not publish the former Monday/Friday timetable. All membership and activity enrolment takes place in the member area. Do not create a separate contact-based trial registration. Do not expose a bookable session until its actual date and venue exist."
+ },
+ {
+  "doc": "3.2. WaterxFight _ FightxLife V2.docx",
+  "url": "/waterxfight/",
+  "seo_title": "WaterxFight à Bruxelles | Boxe dans l’eau | FightxLife",
+  "meta": "Découvrez le WaterxFight à Bruxelles : un cours dynamique de boxe dans l’eau, sans combat. Un créneau 100 % féminin est également proposé à Ixelles.",
+  "h1": "WaterxFight : de la boxe dans l’eau à Bruxelles",
+  "intro": [
+   {
+    "t": "p",
+    "html": "3.2. WaterxFight"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "Le WaterxFight associe des mouvements inspirés de la boxe et des arts martiaux à la résistance de l’eau."
+   },
+   {
+    "t": "p",
+    "html": "Encadré par des coachs professionnels, le cours se pratique en piscine, en musique et avec des gants de boxe aquatiques spécifiques."
+   },
+   {
+    "t": "p",
+    "html": "Une séance dynamique, sans combat entre participants, où chacun adapte l’intensité des mouvements à ses capacités et à son énergie. Aucune expérience de la boxe n’est nécessaire."
+   },
+   {
+    "t": "p",
+    "html": "Un créneau 100 % féminin est également proposé à la piscine d’Ixelles, avec une coach et une maître-nageuse."
+   },
+   {
+    "t": "cta",
+    "kind": "Primary CTA",
+    "label": "M’inscrire au WaterxFight",
+    "href": "https://membre.fightxlife.com/connexion/"
+   },
+   {
+    "t": "note",
+    "text": "Member journey context: waterxfight. Keep the selected activity through sign-in and account creation using the member platform’s supported routing. The URL above is the verified public entry point, not an invented deep booking link."
+   },
+   {
+    "t": "cta",
+    "kind": "Anchor link",
+    "label": "Voir les horaires et les piscines",
+    "href": "/waterxfight/#infos-pratiques"
+   }
+  ],
+  "sections": [
+   {
+    "id": "apercu",
+    "h2": "Une activité dynamique, sans combat",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Durée : 45 minutes."
+     },
+     {
+      "t": "p",
+      "html": "Pratique : Mouvements, déplacements et enchaînements inspirés de la boxe et des arts martiaux, sans combat entre participants."
+     },
+     {
+      "t": "p",
+      "html": "Niveau : Débutants bienvenus. Aucune expérience de la boxe n’est nécessaire ; l’intensité est adaptée selon les possibilités de chacun."
+     },
+     {
+      "t": "p",
+      "html": "Matériel : Maillot et bonnet de bain. Des gants de boxe aquatiques spécifiques sont utilisés pendant le cours."
+     },
+     {
+      "t": "p",
+      "html": "Encadrement : Cours guidé par des coachs professionnels."
+     },
+     {
+      "t": "p",
+      "html": "Créneau 100 % féminin : À la piscine d’Ixelles, avec une coach et une maître-nageuse."
+     }
+    ]
+   },
+   {
+    "id": "pratique",
+    "h2": "Bouger avec la résistance et le soutien de l’eau",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Les mouvements de boxe prennent une autre dimension dans l’eau : déplacements, enchaînements et exercices mobilisent le corps dans un environnement différent d’un cours en salle."
+     },
+     {
+      "t": "p",
+      "html": "La pratique vise notamment à :"
+     },
+     {
+      "t": "ul",
+      "items": [
+       "travailler le renforcement musculaire ;",
+       "solliciter la respiration et l’endurance ;",
+       "exercer l’équilibre et la coordination ;",
+       "mobiliser le corps à son rythme ;",
+       "retrouver le plaisir de bouger dans une ambiance collective."
+      ]
+     },
+     {
+      "t": "p",
+      "html": "Les effets ressentis varient selon chaque personne, sa situation et la régularité de sa pratique."
+     },
+     {
+      "t": "p",
+      "html": "Si votre état de santé soulève une question sur la participation au cours, demandez conseil au professionnel de santé qui vous accompagne."
+     }
+    ]
+   },
+   {
+    "id": "infos-pratiques",
+    "h2": "Horaires, lieux et tarifs",
+    "blocks": [
+     {
+      "t": "h3",
+      "text": "À la Piscine du Centre",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Adresse : Rue du Chevreuil 28"
+       },
+       {
+        "t": "p",
+        "html": "1000 Bruxelles"
+       },
+       {
+        "t": "p",
+        "html": "Horaires : Mercredi à 19 h 00."
+       },
+       {
+        "t": "p",
+        "html": "Vendredi à 19 h 00."
+       },
+       {
+        "t": "p",
+        "html": "Dimanche à 15 h 45."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "À la piscine d’Ixelles : créneau 100 % féminin",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Adresse : Rue de la Natation 10"
+       },
+       {
+        "t": "p",
+        "html": "1050 Ixelles"
+       },
+       {
+        "t": "p",
+        "html": "Horaire : Dimanche à 18 h 30."
+       },
+       {
+        "t": "p",
+        "html": "Encadrement : Une coach et une maître-nageuse."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Tarifs",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Cotisation annuelle : 20 €."
+       },
+       {
+        "t": "p",
+        "html": "Carte de séances : 10 séances : 110 €."
+       },
+       {
+        "t": "p",
+        "html": "Carte valable pendant 3 mois."
+       },
+       {
+        "t": "p",
+        "html": "Les prochaines dates et les éventuelles modifications sont communiquées dans l’espace membre."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "inscription",
+    "h2": "Rejoindre le WaterxFight",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Créez votre compte dans l’espace membre et réglez la cotisation annuelle. Vous pourrez y acheter votre carte et réserver les séances proposées."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "M’inscrire au WaterxFight",
+      "href": "https://membre.fightxlife.com/connexion/"
+     },
+     {
+      "t": "note",
+      "text": "Member journey context: waterxfight. Keep the selected activity through sign-in and account creation using the member platform’s supported routing. The URL above is the verified public entry point, not an invented deep booking link."
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Poser une question sur le cours",
+      "href": "/contact/?reason=cours&activity=waterxfight"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary link",
+      "label": "Découvrir les autres cours",
+      "href": "/cours/"
+     }
+    ]
+   }
+  ],
+  "design": "Keep the two pool timetables clearly separated and display the common provided rates once. Preserve the selected pool and activity in the member journey. Use the official pool page for swimwear information, not its public admission prices. No additional age-document or staffing confirmation is required."
+ },
+ {
+  "doc": "3.3. Boxe 100 _ féminin _ FightxLife V2.docx",
+  "url": "/100-feminin/",
+  "seo_title": "Boxe 100 % féminin à Bruxelles | FightxLife",
+  "meta": "Découvrez le cours de kickboxing 100 % féminin de FightxLife à Bruxelles : une activité encadrée par des femmes pour bouger et progresser ensemble.",
+  "h1": "Boxe 100 % féminin à Bruxelles",
+  "intro": [
+   {
+    "t": "p",
+    "html": "3.3. Boxe 100 % féminin"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "Un cours de kickboxing réservé aux femmes et encadré par des coachs professionnelles."
+   },
+   {
+    "t": "p",
+    "html": "<strong>FightxLife</strong> propose un espace où les femmes peuvent découvrir la boxe, progresser et se remettre en mouvement dans une dynamique collective fondée sur le respect et la solidarité."
+   },
+   {
+    "t": "p",
+    "html": "Le cours permet également d’ouvrir le dialogue autour de la santé, de la prévention et des cancers féminins."
+   },
+   {
+    "t": "cta",
+    "kind": "Primary CTA",
+    "label": "M’inscrire à la boxe 100 % féminin",
+    "href": "https://membre.fightxlife.com/connexion/"
+   },
+   {
+    "t": "note",
+    "text": "Member journey context: boxe-feminin. Keep the selected activity through sign-in and account creation using the member platform’s supported routing. The URL above is the verified public entry point, not an invented deep booking link."
+   },
+   {
+    "t": "cta",
+    "kind": "Anchor link",
+    "label": "Voir les horaires et les tarifs",
+    "href": "/100-feminin/#infos-pratiques"
+   }
+  ],
+  "sections": [
+   {
+    "id": "infos-pratiques",
+    "h2": "Du kickboxing entre femmes",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Public : Cours exclusivement réservé aux femmes."
+     },
+     {
+      "t": "p",
+      "html": "Pratique : Techniques de poings et de pieds, déplacements, enchaînements et exercices de condition physique inspirés du kickboxing."
+     },
+     {
+      "t": "p",
+      "html": "Encadrement : Cours animé par des coachs professionnelles."
+     },
+     {
+      "t": "p",
+      "html": "Horaires : Lundi de 17 h 50 à 19 h 15."
+     },
+     {
+      "t": "p",
+      "html": "Mercredi de 17 h 50 à 19 h 15."
+     },
+     {
+      "t": "p",
+      "html": "Vendredi de 17 h 50 à 19 h 15."
+     },
+     {
+      "t": "p",
+      "html": "Lieu : Quai des Charbonnages 82"
+     },
+     {
+      "t": "p",
+      "html": "1080 Molenbeek-Saint-Jean"
+     },
+     {
+      "t": "p",
+      "html": "Tarifs : Inscription et assurance annuelles : 50 €."
+     },
+     {
+      "t": "p",
+      "html": "Abonnement mensuel : 40 €."
+     },
+     {
+      "t": "p",
+      "html": "Abonnement trimestriel : 110 €."
+     },
+     {
+      "t": "p",
+      "html": "Abonnement semestriel : 210 €."
+     }
+    ]
+   },
+   {
+    "id": "pratique",
+    "h2": "Une pratique physique dans un cadre exclusivement féminin",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Les séances associent l’apprentissage des techniques du kickboxing à des exercices de déplacement, de coordination et de renforcement."
+     },
+     {
+      "t": "p",
+      "html": "La pratique permet notamment de travailler :"
+     },
+     {
+      "t": "ul",
+      "items": [
+       "l’endurance et la respiration ;",
+       "la coordination, l’agilité et les réflexes ;",
+       "le renforcement musculaire ;",
+       "la concentration ;",
+       "la gestion du stress et des tensions ;",
+       "la confiance dans ses capacités."
+      ]
+     },
+     {
+      "t": "p",
+      "html": "Le cadre exclusivement féminin permet à chacune de pratiquer dans un environnement où elle peut évoluer à son rythme, partager une activité avec d’autres femmes et prendre progressivement sa place dans le groupe."
+     },
+     {
+      "t": "p",
+      "html": "Les effets ressentis varient selon les participantes, leur condition physique et la régularité de leur pratique."
+     }
+    ]
+   },
+   {
+    "id": "sensibilisation",
+    "h2": "Le sport comme point de départ du dialogue",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Au-delà de l’activité physique, ce cours permet à <strong>FightxLife</strong> de sensibiliser les participantes à la santé, à la prévention et aux cancers qui touchent les femmes."
+     },
+     {
+      "t": "p",
+      "html": "Ces échanges ne remplacent ni une consultation ni un suivi médical. Ils visent à rendre l’information plus accessible et à encourager chacune à être attentive à sa santé."
+     }
+    ]
+   },
+   {
+    "id": "inscription",
+    "h2": "Rejoindre la boxe 100 % féminin",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Créez votre compte dans l’espace membre et réglez les frais annuels d’inscription et d’assurance. Les abonnements, inscriptions et paiements sont gérés depuis cet espace."
+     },
+     {
+      "t": "p",
+      "html": "Les prochaines dates, les périodes de fermeture et les éventuelles modifications y sont également communiquées."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "M’inscrire à la boxe 100 % féminin",
+      "href": "https://membre.fightxlife.com/connexion/"
+     },
+     {
+      "t": "note",
+      "text": "Member journey context: boxe-feminin. Keep the selected activity through sign-in and account creation using the member platform’s supported routing. The URL above is the verified public entry point, not an invented deep booking link."
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Poser une question sur le cours",
+      "href": "/contact/?reason=cours&activity=boxe-feminin"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary link",
+      "label": "Découvrir les autres cours de FightxLife",
+      "href": "/cours/"
+     }
+    ]
+   }
+  ],
+  "design": "Use a real photograph of this class and a compact practical information block. The supplied 17:50 timetable takes precedence over the old public page. Do not retain the inconsistent 75-minute duration. Do not invent a revised annual subscription price; display only the priced plans listed above. Keep class enrolment in the member area."
+ },
+ {
+  "doc": "3.4. Nage libre _ FightxLife V2.docx",
+  "url": "/nage-libre-femmes/",
+  "seo_title": "Nage libre pour femmes à Ixelles | FightxLife",
+  "meta": "Nagez à votre rythme à la piscine d’Ixelles avec FightxLife : deux créneaux réservés aux femmes, dont un ouvert aux enfants. Découvrez les horaires et tarifs.",
+  "h1": "Nage libre pour femmes à Ixelles",
+  "intro": [
+   {
+    "t": "p",
+    "html": "3.4. Nage libre"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "Un temps pour nager à son rythme, dans un espace réservé aux femmes."
+   },
+   {
+    "t": "p",
+    "html": "<strong>FightxLife</strong> propose des plages de nage libre aux femmes qui souhaitent pratiquer une activité aquatique librement, sans programme imposé ni recherche de performance."
+   },
+   {
+    "t": "p",
+    "html": "Chacune choisit son rythme et la manière dont elle souhaite profiter de l’eau : nager, marcher, bouger doucement ou faire une pause, selon son autonomie dans le bassin."
+   },
+   {
+    "t": "p",
+    "html": "Le premier créneau accueille également les enfants."
+   },
+   {
+    "t": "cta",
+    "kind": "Primary CTA",
+    "label": "M’inscrire à la nage libre",
+    "href": "https://membre.fightxlife.com/connexion/"
+   },
+   {
+    "t": "note",
+    "text": "Member journey context: nage-libre. Keep the selected activity through sign-in and account creation using the member platform’s supported routing. The URL above is the verified public entry point, not an invented deep booking link."
+   },
+   {
+    "t": "cta",
+    "kind": "Anchor link",
+    "label": "Voir les horaires et les tarifs",
+    "href": "/nage-libre-femmes/#infos-pratiques"
+   }
+  ],
+  "sections": [
+   {
+    "id": "infos-pratiques",
+    "h2": "Un accès à la piscine sans cours collectif",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Public : Femmes souhaitant pratiquer librement, avec une autonomie suffisante dans l’eau. Le premier créneau accueille également les enfants."
+     },
+     {
+      "t": "p",
+      "html": "Format : Accès à la piscine sans apprentissage technique structuré ni programme collectif."
+     },
+     {
+      "t": "p",
+      "html": "Horaires : Dimanche de 17 h 30 à 18 h 20 : femmes et enfants."
+     },
+     {
+      "t": "p",
+      "html": "Dimanche de 18 h 30 à 19 h 20 : femmes uniquement."
+     },
+     {
+      "t": "p",
+      "html": "Lieu : Piscine d’Ixelles"
+     },
+     {
+      "t": "p",
+      "html": "Rue de la Natation 10"
+     },
+     {
+      "t": "p",
+      "html": "1050 Ixelles"
+     },
+     {
+      "t": "h3",
+      "text": "Cotisation annuelle",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "L’adhésion à <strong>FightxLife</strong> est obligatoire. La cotisation annuelle est de 20 €."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Entrée à l’unité",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Tarif adulte : 8 € la séance."
+       },
+       {
+        "t": "p",
+        "html": "Tarifs enfants pour le premier créneau : Moins de 2 ans : gratuit."
+       },
+       {
+        "t": "p",
+        "html": "De 2 ans à moins de 12 ans : 3 €."
+       },
+       {
+        "t": "p",
+        "html": "À partir de 12 ans : tarif adulte."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "La carte de 10 séances",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "La carte de 10 séances coûte 50 € et est valable 4 mois, soit 5 € par séance au lieu de 8 € à l’unité."
+       },
+       {
+        "t": "p",
+        "html": "La cotisation annuelle s’ajoute au prix de la carte."
+       },
+       {
+        "t": "cta",
+        "kind": "Member purchase CTA",
+        "label": "Accéder à la carte de 10 séances",
+        "href": "https://membre.fightxlife.com/connexion/"
+       },
+       {
+        "t": "note",
+        "text": "Member journey context: nage-libre. Keep the selected activity through sign-in and account creation using the member platform’s supported routing. The URL above is the verified public entry point, not an invented deep booking link."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Quelle tenue de bain prévoir ?",
+      "blocks": []
+     }
+    ]
+   },
+   {
+    "id": "cadre",
+    "h2": "Profiter de l’eau avec davantage de liberté",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Pour certaines femmes, fréquenter une piscine mixte peut être difficile en raison du regard des autres, d’un manque de confiance, de complexes corporels ou des transformations liées à une maladie ou à une opération."
+     },
+     {
+      "t": "p",
+      "html": "<strong>FightxLife</strong> propose deux créneaux dédiés aux femmes, dont le premier accueille également les enfants."
+     },
+     {
+      "t": "p",
+      "html": "Cet espace s’adresse notamment :"
+     },
+     {
+      "t": "ul",
+      "items": [
+       "aux femmes touchées par le cancer ou en convalescence ;",
+       "à celles qui souhaitent reprendre une activité physique en douceur ;",
+       "aux femmes qui se sentent plus à l’aise dans ce cadre ;",
+       "à celles qui recherchent simplement un moment pour nager librement."
+      ]
+     },
+     {
+      "t": "p",
+      "html": "Aucun objectif de distance, de vitesse ou de progression n’est imposé."
+     }
+    ]
+   },
+   {
+    "id": "choisir",
+    "h2": "Choisir l’activité adaptée à votre niveau",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "La nage libre n’est pas un cours de natation."
+     },
+     {
+      "t": "p",
+      "html": "Elle convient aux femmes capables d’évoluer dans l’eau de manière suffisamment autonome et qui ne recherchent pas un apprentissage technique structuré."
+     },
+     {
+      "t": "p",
+      "html": "Vous souhaitez apprendre à nager ou reprendre les bases ? Le cours débutant permet de travailler cet apprentissage."
+     },
+     {
+      "t": "p",
+      "html": "Vous savez déjà nager et souhaitez améliorer votre technique ? Un cours de perfectionnement est également proposé."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Découvrir les cours de natation",
+      "href": "/cours-de-natation/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary link",
+      "label": "Découvrir le WaterxFight",
+      "href": "/waterxfight/"
+     }
+    ]
+   },
+   {
+    "id": "inscription",
+    "h2": "Rejoindre la nage libre",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Créez votre compte sur l’espace membre de <strong>FightxLife</strong> et réglez la cotisation annuelle. Vous pourrez y acheter vos entrées ou votre carte de séances et gérer vos réservations."
+     },
+     {
+      "t": "p",
+      "html": "Les prochaines dates, les périodes de fermeture et les éventuelles modifications y sont également communiquées."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "M’inscrire à la nage libre",
+      "href": "https://membre.fightxlife.com/connexion/"
+     },
+     {
+      "t": "note",
+      "text": "Member journey context: nage-libre. Keep the selected activity through sign-in and account creation using the member platform’s supported routing. The URL above is the verified public entry point, not an invented deep booking link."
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Poser une question",
+      "href": "/contact/?reason=cours&activity=nage-libre"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary link",
+      "label": "Découvrir toutes les activités de FightxLife",
+      "href": "/cours/"
+     }
+    ]
+   }
+  ],
+  "design": "Use a free-swimming image, not a coached lesson image. Separate annual membership from admission or card prices. Remove every previous statement suggesting access without an account or annual membership. Do not request age documents. Keep children rates visible by the first slot; do not add an unconfirmed boys-age rule."
+ },
+ {
+  "doc": "3.5. Cours de natation _ FightxLife V2.docx",
+  "url": "/cours-de-natation/",
+  "seo_title": "Cours de natation pour femmes à Ixelles | FightxLife",
+  "meta": "Apprendre à nager ou améliorer sa technique : découvrez les cours de natation 100 % femmes de FightxLife à Ixelles, du niveau débutant au perfectionnement.",
+  "h1": "Cours de natation pour femmes à Ixelles",
+  "intro": [
+   {
+    "t": "p",
+    "html": "3.5. Cours de natation"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "Apprendre à nager ou améliorer sa technique, avec un accompagnement adapté à son niveau."
+   },
+   {
+    "t": "p",
+    "html": "<strong>FightxLife</strong> propose deux niveaux de cours : débutant pour acquérir les bases et perfectionnement pour les femmes qui savent déjà nager."
+   },
+   {
+    "t": "p",
+    "html": "Les séances se déroulent à la piscine d’Ixelles, dans un cadre 100 % féminin, avec une coach et une maître-nageuse."
+   },
+   {
+    "t": "cta",
+    "kind": "Primary CTA",
+    "label": "M’inscrire aux cours de natation",
+    "href": "https://membre.fightxlife.com/connexion/"
+   },
+   {
+    "t": "note",
+    "text": "Member journey context: natation. Keep the selected activity through sign-in and account creation using the member platform’s supported routing. The URL above is the verified public entry point, not an invented deep booking link."
+   },
+   {
+    "t": "cta",
+    "kind": "Anchor link",
+    "label": "Voir les horaires et les tarifs",
+    "href": "/cours-de-natation/#infos-pratiques"
+   }
+  ],
+  "sections": [
+   {
+    "id": "niveaux",
+    "h2": "Deux niveaux, selon votre aisance dans l’eau",
+    "blocks": [
+     {
+      "t": "h3",
+      "text": "Débutant : apprendre à nager",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Vous ne savez pas nager ou souhaitez reprendre les bases ?"
+       },
+       {
+        "t": "p",
+        "html": "Ce cours vous accompagne dans l’apprentissage de la natation pour développer progressivement votre aisance et votre autonomie dans l’eau."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Perfectionnement : améliorer sa technique",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Vous savez déjà nager, mais souhaitez mieux maîtriser vos mouvements ?"
+       },
+       {
+        "t": "p",
+        "html": "Ce cours vous permet de travailler votre technique avec les conseils de la coach. Il s’adresse aux femmes qui souhaitent progresser à partir de leurs acquis."
+       },
+       {
+        "t": "p",
+        "html": "Vous hésitez entre les deux niveaux ? Contactez l’équipe pour choisir le cours qui correspond à votre pratique et à votre aisance dans l’eau."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "infos-pratiques",
+    "h2": "Votre cours à la piscine d’Ixelles",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Public : Cours réservés aux femmes."
+     },
+     {
+      "t": "p",
+      "html": "Niveaux : Débutant et perfectionnement."
+     },
+     {
+      "t": "p",
+      "html": "Encadrement : Une coach et une maître-nageuse."
+     },
+     {
+      "t": "p",
+      "html": "Horaire : Dimanche de 17 h 30 à 18 h 20."
+     },
+     {
+      "t": "p",
+      "html": "Lieu : Piscine d’Ixelles"
+     },
+     {
+      "t": "p",
+      "html": "Rue de la Natation 10"
+     },
+     {
+      "t": "p",
+      "html": "1050 Ixelles"
+     },
+     {
+      "t": "h3",
+      "text": "Tarifs",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Cotisation annuelle au club : 20 €."
+       },
+       {
+        "t": "p",
+        "html": "Abonnement mensuel : 55 €."
+       },
+       {
+        "t": "p",
+        "html": "Abonnement trimestriel : 145 €."
+       },
+       {
+        "t": "p",
+        "html": "Abonnement semestriel : 270 €."
+       },
+       {
+        "t": "p",
+        "html": "Séance d’essai : 15 €."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "nage-libre",
+    "h2": "Apprendre avec une coach ou pratiquer librement",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Les cours de natation proposent un apprentissage et des conseils pour progresser selon votre niveau."
+     },
+     {
+      "t": "p",
+      "html": "Si vous êtes suffisamment autonome dans l’eau et souhaitez simplement nager à votre rythme, sans cours ni programme collectif, découvrez les plages de nage libre."
+     },
+     {
+      "t": "cta",
+      "kind": "Contextual link",
+      "label": "Découvrir la nage libre",
+      "href": "/nage-libre-femmes/"
+     }
+    ]
+   },
+   {
+    "id": "inscription",
+    "h2": "Rejoindre les cours de natation",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Créez votre compte dans l’espace membre de <strong>FightxLife</strong> et réglez la cotisation annuelle. Vous pourrez y choisir votre niveau et votre formule, vous inscrire et effectuer vos paiements."
+     },
+     {
+      "t": "p",
+      "html": "Pour une question sur le niveau à choisir ou le déroulement des séances, contactez l’équipe avant de vous inscrire."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "M’inscrire aux cours de natation",
+      "href": "https://membre.fightxlife.com/connexion/"
+     },
+     {
+      "t": "note",
+      "text": "Member journey context: natation. Keep the selected activity through sign-in and account creation using the member platform’s supported routing. The URL above is the verified public entry point, not an invented deep booking link."
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "M’aider à choisir mon niveau",
+      "href": "/contact/?reason=cours&activity=natation&subject=Choix+du+niveau"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary link",
+      "label": "Découvrir toutes les activités de FightxLife",
+      "href": "/cours/"
+     }
+    ]
+   }
+  ],
+  "design": "Display the two levels in two compact blocks, stacked on mobile. Keep both levels on this single page. Show the provided rates, including the 15 € trial, and annual membership separately. Use the existing member registration and level-selection journey."
+ },
+ {
+  "doc": "4.1. Notre impact _ FightxLife V2.docx",
+  "url": "/notre-impact/",
+  "seo_title": "Notre impact face au cancer | FightxLife",
+  "meta": "Découvrez les réalisations de FightxLife : actions auprès des enfants hospitalisés, sensibilisation dans les écoles et témoignages de participantes aux cours.",
+  "h1": "Notre impact",
+  "intro": [
+   {
+    "t": "p",
+    "html": "4.1. Notre impact"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "Reprendre une activité, trouver un groupe où se sentir à sa place, partager un moment à l’hôpital ou mieux comprendre les réalités du cancer : les actions de <strong>FightxLife</strong> poursuivent ces objectifs au quotidien."
+   },
+   {
+    "t": "p",
+    "html": "L’association agit auprès des personnes malades ou fragilisées, des enfants hospitalisés, de leurs familles et des publics rencontrés lors de ses actions de sensibilisation."
+   },
+   {
+    "t": "p",
+    "html": "Découvrez les actions réalisées, quelques repères chiffrés et l’expérience de participantes aux cours."
+   },
+   {
+    "t": "cta",
+    "kind": "Primary CTA",
+    "label": "Découvrir nos réalisations en chiffres",
+    "href": "/notre-impact/#chiffres"
+   },
+   {
+    "t": "cta",
+    "kind": "Secondary CTA",
+    "label": "Soutenir FightxLife",
+    "href": "/nous-soutenir/"
+   }
+  ],
+  "sections": [
+   {
+    "id": "dimensions",
+    "h2": "Ce que nos actions peuvent rendre possible",
+    "blocks": [
+     {
+      "t": "h3",
+      "text": "Bouger et trouver sa place",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Lorsque la maladie modifie l’énergie, les capacités ou la confiance en soi, pousser la porte d’une salle de sport peut être difficile."
+       },
+       {
+        "t": "p",
+        "html": "<strong>FightxLife</strong> propose un cadre où chacun est considéré sur un pied d’égalité, avec ses possibilités et ses difficultés. Adapter un mouvement, ralentir ou prendre une pause fait partie de la pratique."
+       },
+       {
+        "t": "p",
+        "html": "Les cours offrent ainsi un espace pour reprendre une activité et partager un moment collectif, sans comparaison ni jugement."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir nos cours",
+        "href": "/cours/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Soutenir les enfants et les familles",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Les ateliers sportifs et créatifs, les moments festifs, les visites et la remise de SmileBox proposent aux enfants hospitalisés et à leurs proches des occasions d’échanger, de partager une activité et de garder un lien avec l’extérieur."
+       },
+       {
+        "t": "p",
+        "html": "Ces interventions sont mises en place avec les éducateurs et les coordinateurs des services d’oncologie pédiatrique."
+       },
+       {
+        "t": "p",
+        "html": "Des actions ont notamment été menées à l’HUDERF et à l’Hôpital Erasme, à Bruxelles, ainsi qu’en lien avec la Fondation de la Citadelle, à Liège."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir notre soutien à l’hôpital",
+        "href": "/soutien-a-lhopital/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Informer et sensibiliser",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Les interventions scolaires permettent d’aborder la maladie, la différence et la solidarité selon l’âge des élèves. Elles visent notamment à préparer l’accueil ou le retour d’un enfant après la maladie."
+       },
+       {
+        "t": "p",
+        "html": "Les messages préparés pour les SmileBox créent aussi un lien entre les élèves et les enfants hospitalisés."
+       },
+       {
+        "t": "p",
+        "html": "Les interventions auprès d’autres publics et les contenus de <strong>FightxLife</strong> prolongent cette démarche d’information et de dialogue."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir nos actions de sensibilisation",
+        "href": "/information-prevention/"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "chiffres",
+    "h2": "FightxLife en quelques chiffres",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "950 enfants : Rencontrés en 2025 dans le cadre des actions à l’hôpital."
+     },
+     {
+      "t": "p",
+      "html": "Plus de 350 élèves : Sensibilisés en 2025."
+     },
+     {
+      "t": "p",
+      "html": "220 SmileBox : Distribuées."
+     },
+     {
+      "t": "p",
+      "html": "Plus de 25 actions : Menées à l’hôpital chaque année."
+     },
+     {
+      "t": "p",
+      "html": "Plus de 140 personnes : Participant aux activités en piscine."
+     },
+     {
+      "t": "p",
+      "html": "15 à 20 bénévoles : Mobilisés autour des actions."
+     },
+     {
+      "t": "p",
+      "html": "Ces chiffres rendent compte de l’activité de l’association. Les témoignages apportent un autre éclairage sur la manière dont les actions sont vécues."
+     }
+    ]
+   },
+   {
+    "id": "temoignages",
+    "h2": "L’expérience vécue par les participantes",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "« Le groupe m’apporte autant un soutien psychologique que physique. »"
+     },
+     {
+      "t": "p",
+      "html": "Géraldine"
+     },
+     {
+      "t": "p",
+      "html": "« Une superbe aventure humaine ! »"
+     },
+     {
+      "t": "p",
+      "html": "Eva"
+     },
+     {
+      "t": "p",
+      "html": "« Un moyen de me sentir vivante malgré les moments difficiles. »"
+     },
+     {
+      "t": "p",
+      "html": "Une participante"
+     }
+    ]
+   },
+   {
+    "id": "suivi",
+    "h2": "Des actions qui évoluent avec les retours du terrain",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "<strong>FightxLife</strong> tient compte des retours des participants, des familles et des structures partenaires pour ajuster ses activités."
+     },
+     {
+      "t": "p",
+      "html": "Ces échanges permettent de mieux comprendre les besoins rencontrés et de faire évoluer les projets en fonction des ressources disponibles."
+     },
+     {
+      "t": "cta",
+      "kind": "Contextual link",
+      "label": "Découvrir nos partenaires et soutiens",
+      "href": "/partenaires-soutiens/"
+     }
+    ]
+   },
+   {
+    "id": "contribuer",
+    "h2": "Faire avancer les actions de FightxLife",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Les dons, le bénévolat, les partenariats et les initiatives solidaires contribuent à la continuité des actions de <strong>FightxLife</strong> et, lorsque les moyens le permettent, à leur développement."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Soutenir FightxLife",
+      "href": "/nous-soutenir/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Proposer une collaboration",
+      "href": "/contact/?reason=partenariat"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary link",
+      "label": "Découvrir nos projets",
+      "href": "/#projets"
+     }
+    ]
+   }
+  ],
+  "design": "Use a compact factual layout. Show the supplied figures as written, without counters, new counting questions or invented reporting periods. Keep 2025 attached only to the two figures explicitly dated 2025. Show quotations directly, without a carousel. The named hospital examples are past collaborations, not a claim that every partnership is currently active."
+ },
+ {
+  "doc": "4.2. La SmileBox _ FightxLife V2.docx",
+  "url": "/smile-box/",
+  "seo_title": "La SmileBox pour les enfants touchés par le cancer | FightxLife",
+  "meta": "Offerte aux enfants et jeunes de 0 à 21 ans touchés par le cancer, la SmileBox réunit des soins La Roche-Posay, une peluche Benkick et des messages d’élèves.",
+  "h1": "La SmileBox",
+  "intro": [
+   {
+    "t": "p",
+    "html": "4.2. La SmileBox"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "Une attention concrète pour les enfants et les jeunes touchés par le cancer."
+   },
+   {
+    "t": "p",
+    "html": "Créée par <strong>FightxLife</strong>, la SmileBox est offerte gratuitement aux enfants et aux jeunes de 0 à 21 ans atteints d’un cancer, par l’intermédiaire des services d’oncologie pédiatrique partenaires."
+   },
+   {
+    "t": "p",
+    "html": "Elle réunit des produits de soin La Roche-Posay, une peluche Benkick, un t-shirt et une casquette <strong>FightxLife</strong>, ainsi que des messages d’encouragement préparés par des élèves."
+   },
+   {
+    "t": "p",
+    "html": "La Roche-Posay fournit les produits de soin et soutient les projets de <strong>FightxLife</strong> au sein des hôpitaux."
+   },
+   {
+    "t": "cta",
+    "kind": "Primary CTA",
+    "label": "Comment recevoir une SmileBox ?",
+    "href": "/smile-box/#recevoir-smilebox"
+   },
+   {
+    "t": "cta",
+    "kind": "Secondary CTA",
+    "label": "Soutenir FightxLife",
+    "href": "/nous-soutenir/#faire-un-don"
+   }
+  ],
+  "sections": [
+   {
+    "id": "contenu",
+    "h2": "Des soins et un soutien au quotidien",
+    "blocks": [
+     {
+      "t": "h3",
+      "text": "Des produits de soin La Roche-Posay",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "La SmileBox comprend notamment des produits des gammes Cicaplast et Lipikar : un soin Cicaplast, un gel lavant Lipikar et un baume pour le corps Lipikar."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Benkick, une peluche pédagogique et émotionnelle",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "La peluche à l’effigie de Benkick, le kangourou de <strong>FightxLife</strong>, accompagne l’enfant au quotidien. Elle est pensée comme un support pour l’expression de son humeur et de ses émotions."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir Benkick",
+        "href": "/benkick-mascotte/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Un t-shirt et une casquette FightxLife",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Un t-shirt et une casquette aux couleurs de l’association complètent la SmileBox."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "lien-ecoles",
+    "h2": "Garder un lien avec le monde extérieur",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "La maladie et les hospitalisations peuvent éloigner un enfant de son école, de ses activités et de ses repères habituels. Elles affectent également toute la vie familiale."
+     },
+     {
+      "t": "p",
+      "html": "Lors des actions de sensibilisation dans les écoles, les élèves préparent des messages d’encouragement pour les enfants hospitalisés. Transmis avec les SmileBox, ces mots créent un lien entre les élèves et ceux qui sont éloignés des bancs de l’école."
+     },
+     {
+      "t": "p",
+      "html": "La SmileBox vise à apporter une attention personnelle à l’enfant, à l’encourager et à témoigner un soutien concret à sa famille."
+     },
+     {
+      "t": "p",
+      "html": "Sa remise est aussi une occasion de rencontre et d’échange. Elle complète les ateliers, les visites et les autres actions de <strong>FightxLife</strong> à l’hôpital."
+     },
+     {
+      "t": "cta",
+      "kind": "Contextual link",
+      "label": "Découvrir nos actions à l’hôpital",
+      "href": "/soutien-a-lhopital/"
+     }
+    ]
+   },
+   {
+    "id": "recevoir-smilebox",
+    "h2": "Comment obtenir gratuitement une SmileBox ?",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "La SmileBox est distribuée aux enfants et aux jeunes concernés par l’intermédiaire des services d’oncologie pédiatrique partenaires de <strong>FightxLife</strong>."
+     },
+     {
+      "t": "p",
+      "html": "Les familles peuvent se renseigner directement auprès :"
+     },
+     {
+      "t": "ul",
+      "items": [
+       "des éducateurs du service ;",
+       "des infirmières coordinatrices ;",
+       "de l’équipe qui accompagne l’enfant à l’hôpital."
+      ]
+     },
+     {
+      "t": "p",
+      "html": "Pour savoir si la SmileBox est disponible dans l’établissement concerné ou obtenir davantage d’informations, contactez <strong>FightxLife</strong>."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Poser une question sur la SmileBox",
+      "href": "/contact/?reason=smilebox&project=smilebox"
+     }
+    ]
+   },
+   {
+    "id": "partenaires",
+    "h2": "Des partenaires mobilisés autour des enfants",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "La Roche-Posay contribue au projet en fournissant les produits de soin et en soutenant les actions de <strong>FightxLife</strong> dans les hôpitaux."
+     },
+     {
+      "t": "p",
+      "html": "Les services d’oncologie pédiatrique partenaires participent à la distribution auprès des enfants et des familles. Les bénévoles, les donateurs et les autres partenaires contribuent également à la réalisation du projet."
+     },
+     {
+      "t": "p",
+      "html": "Vous représentez un hôpital, une école, une entreprise, une fondation ou une autre organisation et souhaitez participer au projet ?"
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Devenir partenaire de la SmileBox",
+      "href": "/contact/?reason=partenariat&project=smilebox"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Découvrir nos partenaires et soutiens",
+      "href": "/partenaires-soutiens/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary link",
+      "label": "Découvrir nos autres projets",
+      "href": "/#projets"
+     }
+    ]
+   }
+  ],
+  "design": "Keep /smile-box/ as the canonical project URL. Use a current open-box photograph; remove customization materials from every project description. Give La Roche-Posay clear visibility with the official authorized logo. Distinguish school decoration activities from items supplied inside the box. Do not turn this page into a product checkout or promise home delivery."
+ },
+ {
+  "doc": "4.3. Benkick notre mascotte _ FightxLife V2.docx",
+  "url": "/benkick-mascotte/",
+  "seo_title": "Benkick, la mascotte de FightxLife",
+  "meta": "Découvrez Benkick, le kangourou de FightxLife créé avec le soutien de Cera : des rencontres à l’hôpital et un support pédagogique pour la sensibilisation.",
+  "h1": "Benkick, la mascotte de FightxLife",
+  "intro": [
+   {
+    "t": "p",
+    "html": "4.3. Benkick notre mascotte"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "Un kangourou qui représente la force et le courage, et vient à la rencontre des enfants."
+   },
+   {
+    "t": "p",
+    "html": "Benkick est la mascotte officielle de <strong>FightxLife</strong>. À l’hôpital, dans les écoles et lors d’événements, il rend l’association identifiable et crée des occasions de rencontre avec les enfants et les familles."
+   },
+   {
+    "t": "p",
+    "html": "Benkick ne parle pas lors de ses visites. À l’hôpital, sa présence, ses gestes et ses interactions sont là pour amuser les enfants et partager un moment bienveillant."
+   },
+   {
+    "t": "p",
+    "html": "La mascotte a pu voir le jour grâce au soutien de la coopérative Cera."
+   },
+   {
+    "t": "cta",
+    "kind": "Anchor link",
+    "label": "Découvrir Benkick en action",
+    "href": "/benkick-mascotte/#contextes-benkick"
+   }
+  ],
+  "sections": [
+   {
+    "id": "contextes-benkick",
+    "h2": "Un même personnage dans différents contextes",
+    "blocks": [
+     {
+      "t": "h3",
+      "text": "Dans les hôpitaux",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Benkick accompagne certaines visites et activités de <strong>FightxLife</strong> auprès des enfants hospitalisés."
+       },
+       {
+        "t": "p",
+        "html": "Ce héros qui incarne la force et le courage vient leur proposer un moment de jeu et de complicité, avec une attention à chacun et à sa famille. Sa visite n’a pas pour objectif de faire parler les enfants de la maladie."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir notre soutien à l’hôpital",
+        "href": "/soutien-a-lhopital/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Dans les écoles",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Benkick est un support pédagogique pour les actions de sensibilisation. Son univers accompagne les échanges et les activités autour de la santé, de la différence, de l’entraide et de la solidarité."
+       },
+       {
+        "t": "p",
+        "html": "Les intervenants adaptent les explications à l’âge des élèves et aux thématiques choisies avec les enseignants."
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir nos actions de sensibilisation",
+        "href": "/information-prevention/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Lors des événements",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Benkick rend <strong>FightxLife</strong> immédiatement identifiable et crée un premier contact avec les enfants et les familles."
+       },
+       {
+        "t": "p",
+        "html": "Sa présence permet à l’équipe de présenter les actions et la mission de l’association dans une ambiance accueillante."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Sur les réseaux sociaux",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "L’univers de Benkick accompagne les contenus de sensibilisation de <strong>FightxLife</strong>. Il permet d’illustrer les messages autour de la santé, de la prévention et de la solidarité dans un format accessible."
+       },
+       {
+        "t": "cta",
+        "kind": "Social link",
+        "label": "Suivre FightxLife sur Instagram",
+        "href": "https://www.instagram.com/fightxlife/"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "peluche",
+    "h2": "Une peluche à l’effigie de Benkick",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Une peluche à l’effigie de Benkick est intégrée à la SmileBox offerte aux enfants touchés par le cancer."
+     },
+     {
+      "t": "p",
+      "html": "Elle permet à l’enfant de retrouver l’univers de la mascotte dans un objet personnel. Pensée comme un compagnon et un support pédagogique et émotionnel, elle peut accompagner l’expression de son humeur ou de ses émotions."
+     },
+     {
+      "t": "cta",
+      "kind": "Contextual link",
+      "label": "Découvrir la SmileBox",
+      "href": "/smile-box/"
+     }
+    ]
+   },
+   {
+    "id": "intervention",
+    "h2": "Construire une action avec FightxLife",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Vous représentez une école, un hôpital, une association ou une institution, ou vous organisez un événement ?"
+     },
+     {
+      "t": "p",
+      "html": "Contactez <strong>FightxLife</strong> pour présenter votre projet et étudier les possibilités d’intervention de Benkick, selon le public, le contexte et les disponibilités de l’association."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Organiser une action avec Benkick",
+      "href": "/contact/?reason=partenariat&project=benkick"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Soutenir les projets de FightxLife",
+      "href": "/nous-soutenir/"
+     }
+    ]
+   }
+  ],
+  "design": "Use the real full-size mascot in the hero and the plush toy in the SmileBox block. Place the Cera logo near the introduction with “Avec le soutien de Cera”. Integrate the supplied Cera hospital video when its asset is available, without autoplay. Keep voice content on social media separate from silent in-person visits. The contact reason stays editable so a hospital or school can choose its own context."
+ },
+ {
+  "doc": "4.4. Partenaires et soutiens _ FightxLife V2.docx",
+  "url": "/partenaires-soutiens/",
+  "seo_title": "Partenaires et soutiens de FightxLife",
+  "meta": "Découvrez les partenaires qui soutiennent les actions de FightxLife, dont La Roche-Posay et Cera, et les possibilités de collaboration avec l’association.",
+  "h1": "Partenaires & soutiens",
+  "intro": [
+   {
+    "t": "p",
+    "html": "4.4. Partenaires et soutiens"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "Les actions de <strong>FightxLife</strong> se construisent avec des hôpitaux, des écoles, des institutions, des associations, des entreprises et des fondations engagées à ses côtés."
+   },
+   {
+    "t": "p",
+    "html": "Selon la nature de chaque collaboration, ces partenaires apportent un soutien financier, matériel, logistique ou humain qui contribue à la réalisation et à la continuité des projets."
+   },
+   {
+    "t": "cta",
+    "kind": "Primary CTA",
+    "label": "Proposer un partenariat",
+    "href": "/contact/?reason=partenariat"
+   },
+   {
+    "t": "cta",
+    "kind": "Secondary CTA",
+    "label": "Découvrir notre impact",
+    "href": "/notre-impact/"
+   }
+  ],
+  "sections": [
+   {
+    "id": "partenaires",
+    "h2": "Des collaborations au service de projets concrets",
+    "blocks": [
+     {
+      "t": "h3",
+      "text": "La Roche-Posay : des soins pour la SmileBox",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "La Roche-Posay fournit les produits de soin intégrés à la SmileBox et soutient les projets de <strong>FightxLife</strong> au sein des hôpitaux."
+       },
+       {
+        "t": "p",
+        "html": "Les produits Cicaplast et Lipikar font partie du contenu offert aux enfants et aux jeunes touchés par le cancer, par l’intermédiaire des services d’oncologie pédiatrique partenaires."
+       },
+       {
+        "t": "cta",
+        "kind": "Project link",
+        "label": "Découvrir la SmileBox",
+        "href": "/smile-box/"
+       },
+       {
+        "t": "cta",
+        "kind": "Partner website link",
+        "label": "La Roche-Posay",
+        "href": "https://www.laroche-posay.be/fr-be"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Cera : un soutien à la création de Benkick",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Le soutien de la coopérative Cera a permis à Benkick, la mascotte de <strong>FightxLife</strong>, de voir le jour."
+       },
+       {
+        "t": "p",
+        "html": "Ce kangourou qui représente la force et le courage vient à la rencontre des enfants à l’hôpital et accompagne les actions pédagogiques et de sensibilisation de l’association."
+       },
+       {
+        "t": "cta",
+        "kind": "Project link",
+        "label": "Découvrir Benkick",
+        "href": "/benkick-mascotte/"
+       },
+       {
+        "t": "cta",
+        "kind": "Partner website link",
+        "label": "Cera",
+        "href": "https://www.cera.coop/fr/particuliers"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Les partenaires hospitaliers et de terrain",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Les services hospitaliers, les écoles et les structures sportives, éducatives et associatives permettent à <strong>FightxLife</strong> d’aller à la rencontre des publics et d’adapter ses actions aux réalités du terrain."
+       },
+       {
+        "t": "p",
+        "html": "Dans les services d’oncologie pédiatrique, les interventions sont mises en place avec les éducateurs et les coordinateurs, selon les possibilités du service et la disponibilité des enfants."
+       },
+       {
+        "t": "p",
+        "html": "<strong>FightxLife</strong> a notamment mené des actions à l’HUDERF et à l’Hôpital Erasme, à Bruxelles, ainsi qu’en lien avec la Fondation de la Citadelle, à Liège."
+       },
+       {
+        "t": "cta",
+        "kind": "Hospital website link",
+        "label": "HUDERF",
+        "href": "https://www.huderf.be/fr"
+       },
+       {
+        "t": "cta",
+        "kind": "Hospital website link",
+        "label": "Hôpital Erasme",
+        "href": "https://www.erasme.be/fr"
+       },
+       {
+        "t": "cta",
+        "kind": "Partner website link",
+        "label": "Fondation de la Citadelle",
+        "href": "https://fondation.citadelle.be/"
+       },
+       {
+        "t": "cta",
+        "kind": "Contextual link",
+        "label": "Découvrir notre soutien à l’hôpital",
+        "href": "/soutien-a-lhopital/"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "collaborations",
+    "h2": "Des partenariats adaptés à chaque structure",
+    "blocks": [
+     {
+      "t": "h3",
+      "text": "Hôpitaux et services de soins",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "<strong>FightxLife</strong> peut étudier avec les équipes hospitalières une action adaptée aux enfants, aux familles, aux besoins du service et aux possibilités d’intervention de l’association."
+       },
+       {
+        "t": "p",
+        "html": "Une collaboration peut concerner une visite, une activité, la SmileBox, Benkick ou un autre projet cohérent avec la mission de <strong>FightxLife</strong>."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Écoles, associations et institutions",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Ces structures peuvent accueillir ou coorganiser une intervention, contribuer à une action d’information et de prévention ou mobiliser leurs publics autour d’un projet solidaire."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Entreprises et fondations",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Une entreprise ou une fondation peut soutenir un projet financièrement, fournir du matériel ou des produits utiles, apporter une expertise ou mobiliser ses équipes autour d’une initiative solidaire."
+       },
+       {
+        "t": "p",
+        "html": "Chaque proposition est étudiée en fonction :"
+       },
+       {
+        "t": "ul",
+        "items": [
+         "de sa cohérence avec la mission de <strong>FightxLife</strong> ;",
+         "des besoins rencontrés ;",
+         "des publics concernés ;",
+         "des ressources nécessaires et disponibles."
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "devenir-partenaire",
+    "h2": "Devenir partenaire de FightxLife",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Vous représentez un hôpital, une école, une association, une institution, une entreprise ou une fondation ?"
+     },
+     {
+      "t": "p",
+      "html": "Présentez-nous votre structure, le type de soutien envisagé et les objectifs de la collaboration. <strong>FightxLife</strong> pourra ensuite étudier avec vous les modalités d’un partenariat adapté."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Proposer un partenariat",
+      "href": "/contact/?reason=partenariat"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Découvrir notre impact",
+      "href": "/notre-impact/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary link",
+      "label": "Soutenir FightxLife",
+      "href": "/nous-soutenir/"
+     }
+    ]
+   }
+  ],
+  "design": "Use a compact text hero. Give La Roche-Posay and Cera equal visual prominence with official logos and precise roles. Present hospital names and sites without claiming that all historical collaborations are current. Use any other approved partner assets already supplied, without empty categories or unsupported partner additions."
+ },
+ {
+  "doc": "5. À propos _ FightxLife V2.docx",
+  "url": "/a-propos/",
+  "seo_title": "À propos de FightxLife | Association face au cancer",
+  "meta": "Découvrez FightxLife, son identité, ses actualités, ses événements et ses prises de parole en faveur des personnes touchées par le cancer.",
+  "h1": "À propos de FightxLife",
+  "intro": [
+   {
+    "t": "p",
+    "html": "5. À propos"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "<strong>FightxLife</strong> est une association bruxelloise engagée auprès des personnes touchées par le cancer et de leurs proches en Belgique."
+   },
+   {
+    "t": "p",
+    "html": "Découvrez son identité, suivez la vie de l’association et retrouvez les événements et prises de parole qui font connaître ses actions."
+   },
+   {
+    "t": "cta",
+    "kind": "Primary CTA",
+    "label": "Découvrir FightxLife",
+    "href": "/qui-sommes-nous/"
+   },
+   {
+    "t": "cta",
+    "kind": "Secondary CTA",
+    "label": "Découvrir nos actions",
+    "href": "/nos-actions/"
+   }
+  ],
+  "sections": [
+   {
+    "id": "association",
+    "h2": "Découvrir l’association",
+    "blocks": [
+     {
+      "t": "h3",
+      "text": "Qui sommes-nous ?",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Découvrez l’histoire de <strong>FightxLife</strong>, sa mission, ses valeurs et les personnes qui font vivre l’association."
+       },
+       {
+        "t": "cta",
+        "kind": "Section link",
+        "label": "Mieux connaître FightxLife",
+        "href": "/qui-sommes-nous/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Actualités",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Suivez les projets en cours, les actions de terrain et les informations importantes liées à la vie de l’association."
+       },
+       {
+        "t": "cta",
+        "kind": "Section link",
+        "label": "Lire nos actualités",
+        "href": "/actualites/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Agenda",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Consultez les prochains événements, rencontres et rendez-vous organisés ou soutenus par <strong>FightxLife</strong>."
+       },
+       {
+        "t": "cta",
+        "kind": "Section link",
+        "label": "Voir l’agenda",
+        "href": "/agenda/"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Presse",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Retrouvez les articles, interviews, reportages et prises de parole consacrés à <strong>FightxLife</strong> et à ses projets."
+       },
+       {
+        "t": "cta",
+        "kind": "Section link",
+        "label": "Consulter l’espace presse",
+        "href": "/presse/"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "participer",
+    "h2": "Participer, collaborer ou soutenir",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Vous souhaitez rejoindre une activité, proposer une collaboration ou contribuer aux projets de <strong>FightxLife</strong> ?"
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Découvrir nos cours",
+      "href": "/cours/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Nous contacter",
+      "href": "/contact/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary link",
+      "label": "Soutenir FightxLife",
+      "href": "/nous-soutenir/"
+     }
+    ]
+   }
+  ],
+  "design": "Use a compact orientation page with four equal cards in a two-by-two grid, stacked on mobile. Do not repeat the full association history or impact figures here."
+ },
+ {
+  "doc": "5.1. Qui sommes-nous _ _ FightxLife V2.docx",
+  "url": "/qui-sommes-nous/",
+  "seo_title": "Qui sommes-nous ? | FightxLife, association face au cancer",
+  "meta": "Découvrez l’histoire de Sara Rezki, la mission et les personnes qui font vivre FightxLife, association engagée auprès des personnes touchées par le cancer.",
+  "h1": "Qui sommes-nous ?",
+  "intro": [
+   {
+    "t": "p",
+    "html": "5.1. Qui sommes-nous ?"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "<strong>FightxLife</strong> est une association bruxelloise engagée auprès des personnes touchées par le cancer et de leurs proches en Belgique."
+   },
+   {
+    "t": "p",
+    "html": "Née d’une expérience personnelle de la maladie, elle s’est progressivement construite comme un projet collectif porté par des personnes concernées, des professionnels, des coachs, des bénévoles et des partenaires."
+   },
+   {
+    "t": "p",
+    "html": "À travers le mouvement, le soutien aux enfants hospitalisés, l’information et la prévention, <strong>FightxLife</strong> accompagne les réalités physiques, humaines et sociales liées au cancer."
+   },
+   {
+    "t": "cta",
+    "kind": "Anchor link",
+    "label": "Découvrir notre histoire",
+    "href": "/qui-sommes-nous/#histoire"
+   },
+   {
+    "t": "cta",
+    "kind": "Secondary CTA",
+    "label": "Découvrir nos actions",
+    "href": "/nos-actions/"
+   }
+  ],
+  "sections": [
+   {
+    "id": "histoire",
+    "h2": "Une association née des réalités du cancer",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "<strong>FightxLife</strong> est née de l’expérience du cancer vécue par sa fondatrice, Sara Rezki, et de ce que la boxe lui a apporté dans ce parcours."
+     },
+     {
+      "t": "p",
+      "html": "La maladie ne se limite pas aux traitements. Elle peut modifier la relation au corps, fragiliser la confiance, isoler et bouleverser la vie familiale, scolaire, professionnelle et sociale."
+     },
+     {
+      "t": "p",
+      "html": "Face à ces réalités, <strong>FightxLife</strong> a développé des espaces permettant de se remettre en mouvement, de retrouver des repères, de rencontrer d’autres personnes et de prendre part à des projets collectifs."
+     },
+     {
+      "t": "p",
+      "html": "Aujourd’hui, ce projet est porté par les personnes qui conçoivent, coordonnent, encadrent, soutiennent et font évoluer les actions de l’association."
+     }
+    ]
+   },
+   {
+    "id": "mission",
+    "h2": "Une mission, des valeurs et une organisation collective",
+    "blocks": [
+     {
+      "t": "h3",
+      "text": "Notre mission",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "<strong>FightxLife</strong> crée des espaces de mouvement, de rencontre et de soutien pour accompagner les conséquences physiques, humaines et sociales du cancer."
+       },
+       {
+        "t": "p",
+        "html": "L’association cherche à renforcer la confiance et l’autonomie, à préserver le lien social et à rendre l’information et la prévention plus accessibles."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Nos valeurs",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "Le respect, la dignité, l’accessibilité, la participation, la solidarité et la coopération guident la conception et la mise en œuvre des actions de <strong>FightxLife</strong>."
+       },
+       {
+        "t": "p",
+        "html": "Chaque personne est accueillie dans le respect de son histoire, de son rythme et de ses capacités."
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Notre organisation",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "<strong>FightxLife</strong> s’appuie sur les personnes qui assurent l’administration de l’association, la coordination des projets, l’encadrement des activités et leur réalisation sur le terrain."
+       },
+       {
+        "t": "p",
+        "html": "Ces responsabilités complémentaires permettent de préparer les actions et d’en assurer le suivi."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "equipe",
+    "h2": "Les personnes qui font vivre FightxLife",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "L’administration de l’association, la coordination des projets, les cours, les ateliers et le bénévolat réunissent plusieurs formes d’engagement."
+     },
+     {
+      "t": "p",
+      "html": "Découvrez les personnes qui y contribuent et leur rôle au sein de <strong>FightxLife</strong>."
+     },
+     {
+      "t": "note",
+      "text": "Team block: use only the supplied approved names, roles, portraits and short biographies. Keep administration, project coordination, coaching and volunteering easy to distinguish. Do not add honorary members, ambassadors or advisory groups. If no team entries are available at integration, hide this whole section, including its heading and introduction."
+     }
+    ]
+   },
+   {
+    "id": "terrain",
+    "h2": "Une mission qui prend forme sur le terrain",
+    "blocks": [
+     {
+      "t": "ul",
+      "items": [
+       "Des activités sportives adaptées à Bruxelles.",
+       "Des actions auprès des enfants et des familles en oncologie pédiatrique.",
+       "Des interventions d’information et de prévention dans les écoles, les associations, les entreprises et auprès du grand public."
+      ]
+     },
+     {
+      "t": "p",
+      "html": "Ces actions se développent selon les besoins rencontrés, les collaborations et les ressources disponibles."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Découvrir nos actions",
+      "href": "/nos-actions/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Découvrir notre impact",
+      "href": "/notre-impact/"
+     }
+    ]
+   }
+  ],
+  "design": "Balance the founder story with the collective project. Use compact mission, values and organization blocks. Avoid repeating full project descriptions already covered in the action pages."
+ },
+ {
+  "doc": "5.2. Actualités _ FightxLife V2.docx",
+  "url": "/actualites/",
+  "seo_title": "Actualités de FightxLife | Actions et vie de l’association",
+  "meta": "Suivez les actualités de FightxLife : actions de terrain, projets, cours, événements et initiatives auprès des personnes touchées par le cancer.",
+  "h1": "Actualités",
+  "intro": [
+   {
+    "t": "p",
+    "html": "5.2. Actualités"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "Suivez les projets, les actions de terrain et les temps forts de <strong>FightxLife</strong>."
+   },
+   {
+    "t": "p",
+    "html": "Découvrez les nouvelles de l’association, les retours sur les initiatives menées dans les hôpitaux, les écoles et les cours, ainsi que les informations utiles à la communauté <strong>FightxLife</strong>."
+   },
+   {
+    "t": "cta",
+    "kind": "Contextual link",
+    "label": "Voir les prochains événements",
+    "href": "/agenda/"
+   },
+   {
+    "t": "cta",
+    "kind": "Secondary link",
+    "label": "Découvrir nos actions",
+    "href": "/nos-actions/"
+   }
+  ],
+  "sections": [
+   {
+    "id": "dernieres-nouvelles",
+    "h2": "Les dernières nouvelles de FightxLife",
+    "blocks": [
+     {
+      "t": "note",
+      "text": "Featured news block: use the most recent appropriate published article, with its real image, French title as H3, publication date, short excerpt and a descriptive article link. Do not invent a sample article. Avoid showing the same article again in the first grid row."
+     }
+    ]
+   },
+   {
+    "id": "articles",
+    "h2": "La vie de l’association",
+    "blocks": [
+     {
+      "t": "note",
+      "text": "News archive: list the existing published posts in reverse chronological order, with real titles, dates, excerpts and article URLs. Use working pagination. Add categories or filters only when populated and implemented. Reuse /actualites/ as the canonical news archive instead of creating a duplicate static page. Keep every individual article at its existing URL; redirect only the old /blog/ index."
+     }
+    ]
+   },
+   {
+    "id": "suivre",
+    "h2": "Rester informé des actions de FightxLife",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Consultez l’agenda pour connaître les prochains rendez-vous ou suivez <strong>FightxLife</strong> sur les réseaux sociaux pour découvrir les nouvelles de l’association."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Consulter l’agenda",
+      "href": "/agenda/"
+     },
+     {
+      "t": "cta",
+      "kind": "Social link",
+      "label": "Suivre FightxLife sur Instagram",
+      "href": "https://www.instagram.com/fightxlife/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary social link",
+      "label": "Suivre FightxLife sur Facebook",
+      "href": "https://www.facebook.com/Fightxlife"
+     }
+    ]
+   }
+  ],
+  "design": "Use one featured article followed by a compact card grid. Use editorial images from the real articles, without repeating a large image before each short introduction. Keep the French article labels consistent and accessible."
+ },
+ {
+  "doc": "5.3. Agenda _ FightxLife V2.docx",
+  "url": "/agenda/",
+  "seo_title": "Agenda de FightxLife | Événements et rencontres",
+  "meta": "Consultez les prochains rendez-vous de FightxLife : rencontres, actions de sensibilisation et initiatives solidaires. Retrouvez les modalités de participation.",
+  "h1": "Agenda de FightxLife",
+  "intro": [
+   {
+    "t": "p",
+    "html": "5.3. Agenda"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "Retrouvez les prochains événements, rencontres et actions ponctuelles organisés ou soutenus par <strong>FightxLife</strong>."
+   },
+   {
+    "t": "p",
+    "html": "Chaque événement précise le public concerné, le lieu, les modalités de participation et la nécessité éventuelle de s’inscrire."
+   },
+   {
+    "t": "cta",
+    "kind": "Anchor link",
+    "label": "Voir les événements à venir",
+    "href": "/agenda/#evenements-a-venir"
+   },
+   {
+    "t": "cta",
+    "kind": "Secondary link",
+    "label": "Lire les actualités",
+    "href": "/actualites/"
+   },
+   {
+    "t": "cta",
+    "kind": "Contextual link",
+    "label": "Consulter les cours réguliers",
+    "href": "/cours/"
+   }
+  ],
+  "sections": [
+   {
+    "id": "evenements-a-venir",
+    "h2": "Les rendez-vous à venir",
+    "blocks": [
+     {
+      "t": "note",
+      "text": "Upcoming events module: display only confirmed events whose end date has not passed. Sort by start date. For each entry, show the real French title as H3, date and time, venue, audience, participation conditions, price or free admission, registration deadline when relevant, and the actual event detail or registration destination. Hospital interventions are not public drop-in events. Regular classes belong in /cours/."
+     },
+     {
+      "t": "note",
+      "text": "Conditional empty state: display the following two paragraphs and news link only when no upcoming event is published. Hide this empty state when events exist."
+     },
+     {
+      "t": "p",
+      "html": "Aucun nouvel événement n’est actuellement annoncé."
+     },
+     {
+      "t": "p",
+      "html": "Consultez régulièrement cette page ou suivez les actualités de <strong>FightxLife</strong> pour connaître les prochains rendez-vous."
+     },
+     {
+      "t": "cta",
+      "kind": "Empty-state link",
+      "label": "Consulter les actualités",
+      "href": "/actualites/"
+     }
+    ]
+   },
+   {
+    "id": "evenements-passes",
+    "h2": "Retour sur les rendez-vous précédents",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Retrouvez les événements et actions déjà organisés par <strong>FightxLife</strong> à travers leurs comptes rendus, photographies et retours de terrain."
+     },
+     {
+      "t": "note",
+      "text": "Past events module: retain and list the existing nine individual /events/<slug>/ archive pages with their original dates and working detail links. Keep them out of the upcoming list. Add the relevant published news reports when available; do not reset old dates or redirect all individual event URLs to the agenda index."
+     },
+     {
+      "t": "cta",
+      "kind": "News archive link",
+      "label": "Lire les retours sur nos actions",
+      "href": "/actualites/"
+     }
+    ]
+   },
+   {
+    "id": "collaboration",
+    "h2": "Construire une action avec FightxLife",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Vous représentez une école, un hôpital, une association, une institution, une entreprise ou une fondation et souhaitez proposer un événement en lien avec la mission de <strong>FightxLife</strong> ?"
+     },
+     {
+      "t": "p",
+      "html": "Présentez-nous votre structure, votre projet, le public concerné et le type de collaboration envisagé. Chaque proposition est étudiée selon sa cohérence avec les actions de l’association et les ressources disponibles."
+     },
+     {
+      "t": "cta",
+      "kind": "Primary CTA",
+      "label": "Proposer un événement",
+      "href": "/contact/?reason=evenement"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary CTA",
+      "label": "Découvrir les possibilités de partenariat",
+      "href": "/partenaires-soutiens/"
+     }
+    ]
+   }
+  ],
+  "design": "Use a chronological event list with clear dates. Separate upcoming and past events, keeping both anchors present. Do not add a decorative calendar that hides essential participation details on mobile."
+ },
+ {
+  "doc": "5.4. Presse _ FightxLife V2.docx",
+  "url": "/presse/",
+  "seo_title": "Presse | Articles et reportages sur FightxLife",
+  "meta": "Articles, interviews, reportages et contact presse de FightxLife, association engagée auprès des personnes touchées par le cancer.",
+  "h1": "Presse",
+  "intro": [
+   {
+    "t": "p",
+    "html": "5.4. Presse"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "<strong>FightxLife</strong> accompagne les personnes touchées par le cancer et leurs proches à travers le sport comme outil, le soutien aux enfants hospitalisés et des actions d’information et de prévention."
+   },
+   {
+    "t": "cta",
+    "kind": "Anchor link",
+    "label": "Voir la revue de presse",
+    "href": "/presse/#dans-les-medias"
+   },
+   {
+    "t": "cta",
+    "kind": "Secondary anchor link",
+    "label": "Contacter la presse",
+    "href": "/presse/#contact-presse"
+   }
+  ],
+  "sections": [
+   {
+    "id": "association",
+    "h2": "Une association engagée face au cancer",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Basée à Bruxelles, <strong>FightxLife</strong> mène ses actions en Belgique autour de trois axes complémentaires :"
+     },
+     {
+      "t": "ul",
+      "items": [
+       "le sport comme outil, à travers des cours proposés à Bruxelles ;",
+       "le soutien aux enfants touchés par le cancer et à leurs familles à l’hôpital ;",
+       "l’information et la prévention auprès des écoles, des associations, des entreprises et du grand public."
+      ]
+     },
+     {
+      "t": "cta",
+      "kind": "Contextual link",
+      "label": "Mieux connaître FightxLife",
+      "href": "/qui-sommes-nous/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary link",
+      "label": "Découvrir nos actions",
+      "href": "/nos-actions/"
+     }
+    ]
+   },
+   {
+    "id": "dans-les-medias",
+    "h2": "FightxLife dans les médias",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Retrouvez les interviews, articles, reportages, vidéos et podcasts consacrés à <strong>FightxLife</strong>, à sa fondatrice et aux actions de l’association."
+     },
+     {
+      "t": "h3",
+      "text": "Radios & podcasts",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "RTBF Auvio : Tendances Première : une femme, une combattante, Sara Rezki."
+       },
+       {
+        "t": "cta",
+        "kind": "Media link",
+        "label": "Écouter sur Auvio",
+        "href": "https://auvio.rtbf.be/media/tendances-premiere-tendances-premiere-les-tendanceurs-2859925"
+       },
+       {
+        "t": "p",
+        "html": "Arabel : Interview de <strong>FightxLife</strong> ASBL."
+       },
+       {
+        "t": "cta",
+        "kind": "Media link",
+        "label": "Voir l’interview Arabel",
+        "href": "https://www.youtube.com/watch?v=IGSdV_Y3s8g"
+       }
+      ]
+     },
+     {
+      "t": "h3",
+      "text": "Articles, reportages et interviews",
+      "blocks": [
+       {
+        "t": "p",
+        "html": "La DH : Sara de Paduwa : « On a tous envie de mettre le cancer K.O. »"
+       },
+       {
+        "t": "cta",
+        "kind": "Media link",
+        "label": "Lire l’article de La DH",
+        "href": "https://www.dhnet.be/lifestyle/people/2021/02/01/sara-de-paduwa-on-a-tous-envie-de-mettre-le-cancer-ko-MWF2AQUQORC7VP6IC2D6G65X7I/"
+       },
+       {
+        "t": "p",
+        "html": "RTBF : Une jeune Bruxelloise se lance un défi pour lutter contre le cancer."
+       },
+       {
+        "t": "cta",
+        "kind": "Media link",
+        "label": "Lire cet article de la RTBF",
+        "href": "https://www.rtbf.be/article/une-jeune-bruxelloise-se-lance-un-defi-pour-lutter-contre-le-cancer-10688290"
+       },
+       {
+        "t": "p",
+        "html": "RTBF, Les Grenades : In Sara Rezki We Trust, « la boxe m’a sauvé la vie »."
+       },
+       {
+        "t": "cta",
+        "kind": "Media link",
+        "label": "Lire le portrait de Sara",
+        "href": "https://www.rtbf.be/article/in-sara-rezki-we-trust-la-boxe-m-a-sauve-la-vie-10852866"
+       },
+       {
+        "t": "p",
+        "html": "BX1 : De la boxe pour combattre le cancer."
+       },
+       {
+        "t": "cta",
+        "kind": "Media link",
+        "label": "Voir le reportage de BX1",
+        "href": "https://bx1.be/communes/bruxelles-ville/de-la-boxe-pour-combattre-le-cancer/"
+       },
+       {
+        "t": "p",
+        "html": "Petites étincelles : Petites étincelles avec Sara Rezki, épisode 3."
+       },
+       {
+        "t": "cta",
+        "kind": "Media link",
+        "label": "Voir l’entretien Petites étincelles",
+        "href": "https://www.youtube.com/watch?v=W0N25moJ8us"
+       },
+       {
+        "t": "p",
+        "html": "RTBF : De la boxe adaptée pour les malades du cancer : « Venir sur le ring, c’est aller vers la vie »."
+       },
+       {
+        "t": "cta",
+        "kind": "Media link",
+        "label": "Lire le reportage sur la boxe adaptée",
+        "href": "https://www.rtbf.be/article/de-la-boxe-adaptee-pour-les-malades-du-cancer-venir-sur-le-ring-c-est-aller-vers-la-vie-10437246"
+       },
+       {
+        "t": "p",
+        "html": "Estelle Baldé : Sara est Esperanza, interview."
+       },
+       {
+        "t": "cta",
+        "kind": "Media link",
+        "label": "Voir l’interview Sara est Esperanza",
+        "href": "https://www.facebook.com/estellebalde/videos/sara-est-esperanza-interview/252699939717847/"
+       },
+       {
+        "t": "p",
+        "html": "Estelle Baldé : Esperanza, clip officiel."
+       },
+       {
+        "t": "cta",
+        "kind": "Media link",
+        "label": "Voir le clip Esperanza",
+        "href": "https://www.youtube.com/watch?v=PHx3K_nNnms"
+       },
+       {
+        "t": "p",
+        "html": "Hespress : Portrait de Sara Rezki, reportage en arabe."
+       },
+       {
+        "t": "cta",
+        "kind": "Media link",
+        "label": "Voir le reportage de Hespress",
+        "href": "https://www.youtube.com/watch?v=cBbOhe2XFIo"
+       },
+       {
+        "t": "note",
+        "text": "Media integration: keep these verified label-to-content pairings. The Arabic Hespress report now uses its own video cBbOhe2XFIo; PHx3K_nNnms is the Esperanza music video only. Use the final La DH and Auvio URLs above. The old LN24 link returns 404: do not publish that active card without a verified replacement. RTL and La Manchette could not be conclusively verified during the automated check; keep those entries in the editorial archive, outside the active grid, until a working destination is established. Do not replace a missing article with a media homepage."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "contact-presse",
+    "h2": "Une demande d’interview ou de reportage ?",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "Pour toute demande d’information, d’interview, de reportage ou de visuel, contactez l’attachée de presse de <strong>FightxLife</strong>."
+     },
+     {
+      "t": "p",
+      "html": "Valérie Cornelis : Attachée de presse de <strong>FightxLife</strong>"
+     },
+     {
+      "t": "p",
+      "html": "Com’ les Demoiselles"
+     },
+     {
+      "t": "p",
+      "html": "contact@<strong>fightxlife</strong>.com"
+     },
+     {
+      "t": "cta",
+      "kind": "Email CTA",
+      "label": "Contacter le service presse",
+      "href": "mailto:contact@fightxlife.com?subject=Demande%20presse"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary link",
+      "label": "Consulter les prochains événements",
+      "href": "/agenda/"
+     }
+    ]
+   }
+  ],
+  "design": "Use one H1. Display media as compact cards grouped by format, with the outlet name, real title and descriptive link. Load external video players only on request. Do not publish an empty press-kit download button."
+ },
+ {
+  "doc": "6. Contact _ FightxLife V2.docx",
+  "url": "/contact/",
+  "seo_title": "Contact FightxLife | Cours, projets et collaborations",
+  "meta": "Contactez FightxLife pour une question sur les cours, la SmileBox, une action hospitalière, le bénévolat, un partenariat ou un don.",
+  "h1": "Contactez FightxLife",
+  "intro": [
+   {
+    "t": "p",
+    "html": "6. Contact"
+   },
+   {
+    "t": "note",
+    "text": "Integration note: English italic text is for implementation. Quoted French button labels and French SEO values must remain in French. Bold styling on every FightxLife occurrence is intentional."
+   },
+   {
+    "t": "p",
+    "html": "Vous avez une question sur un cours, la SmileBox ou une action de <strong>FightxLife</strong> ? Vous souhaitez devenir bénévole, proposer une initiative ou construire un partenariat ?"
+   },
+   {
+    "t": "p",
+    "html": "Sélectionnez le motif de votre demande dans le formulaire afin qu’elle puisse être orientée vers la personne concernée."
+   },
+   {
+    "t": "p",
+    "html": "Pour vous inscrire à une activité, réserver une séance ou effectuer un paiement, rendez-vous dans l’espace membre. La création d’un compte et le paiement de la cotisation annuelle sont nécessaires pour rejoindre les cours."
+   },
+   {
+    "t": "cta",
+    "kind": "Member link",
+    "label": "Accéder à l’espace membre",
+    "href": "https://membre.fightxlife.com/connexion/"
+   },
+   {
+    "t": "cta",
+    "kind": "Anchor link",
+    "label": "Écrire à FightxLife",
+    "href": "/contact/#formulaire"
+   }
+  ],
+  "sections": [
+   {
+    "id": "formulaire",
+    "h2": "Comment pouvons-nous vous aider ?",
+    "blocks": [
+     {
+      "t": "note",
+      "text": "Contact form module: the French options and field labels below are public interface copy. Implement the shared query contract from the integration guide. A supplied reason must select the matching option; activity, project and subject must appear as editable context. Invalid query values must fall back to the general option. The form answers questions; it must not create a class booking or take a payment."
+     },
+     {
+      "t": "p",
+      "html": "Motif de votre demande"
+     },
+     {
+      "t": "ul",
+      "items": [
+       "Demande d’information générale",
+       "Question sur un cours ou une inscription",
+       "Question sur la SmileBox",
+       "Je représente un hôpital ou une structure de soins",
+       "Je souhaite organiser une intervention de sensibilisation",
+       "Je souhaite proposer un partenariat",
+       "Je souhaite devenir bénévole",
+       "Je souhaite organiser une action solidaire ou un événement",
+       "Question relative à un don",
+       "Demande presse ou média"
+      ]
+     },
+     {
+      "t": "p",
+      "html": "Nom et prénom"
+     },
+     {
+      "t": "p",
+      "html": "Adresse e-mail"
+     },
+     {
+      "t": "p",
+      "html": "Téléphone (facultatif)"
+     },
+     {
+      "t": "p",
+      "html": "Organisation / établissement"
+     },
+     {
+      "t": "p",
+      "html": "Objet de votre demande"
+     },
+     {
+      "t": "p",
+      "html": "Votre message"
+     },
+     {
+      "t": "note",
+      "text": "Field behavior: require name, email, subject and message. Phone stays optional. Show the organization field for hospital, prevention, partnership, event and press requests; keep it optional. Do not request age documents or add health-history fields. Use the existing privacy page and working server-side submission, validation and delivery."
+     },
+     {
+      "t": "p",
+      "html": "Les informations transmises servent à traiter votre demande. Pour en savoir plus, consultez notre politique de confidentialité."
+     },
+     {
+      "t": "cta",
+      "kind": "Privacy link",
+      "label": "Consulter la politique de confidentialité",
+      "href": "/politique-de-confidentialite/"
+     },
+     {
+      "t": "cta",
+      "kind": "Contact form submit button",
+      "label": "Envoyer ma demande",
+      "href": "module:contact"
+     },
+     {
+      "t": "note",
+      "text": "Success state: display the following message only after a successful form submission. Keep entered data available when validation or delivery fails."
+     },
+     {
+      "t": "p",
+      "html": "Votre message a bien été envoyé à <strong>FightxLife</strong>."
+     },
+     {
+      "t": "p",
+      "html": "Merci pour votre prise de contact. L’association vous répondra dès que possible."
+     },
+     {
+      "t": "note",
+      "text": "End of conditional success message."
+     },
+     {
+      "t": "p",
+      "html": "<strong>FightxLife</strong> ne fournit pas de conseil médical et ne traite pas les demandes urgentes. Pour toute question relative à votre état de santé ou à un traitement, adressez-vous à votre équipe soignante. En cas d’urgence, contactez les services compétents."
+     }
+    ]
+   },
+   {
+    "id": "coordonnees",
+    "h2": "Contacter FightxLife",
+    "blocks": [
+     {
+      "t": "p",
+      "html": "<strong>FightxLife</strong> ASBL : Rue Gabrielle Petit 32"
+     },
+     {
+      "t": "p",
+      "html": "1080 Molenbeek-Saint-Jean"
+     },
+     {
+      "t": "p",
+      "html": "Belgique"
+     },
+     {
+      "t": "p",
+      "html": "E-mail : contact@<strong>fightxlife</strong>.com"
+     },
+     {
+      "t": "p",
+      "html": "Téléphone : +32 483 12 72 98"
+     },
+     {
+      "t": "p",
+      "html": "Numéro d’entreprise : BE 0720.965.564"
+     },
+     {
+      "t": "cta",
+      "kind": "Email link",
+      "label": "Envoyer un e-mail",
+      "href": "mailto:contact@fightxlife.com"
+     },
+     {
+      "t": "cta",
+      "kind": "Phone link",
+      "label": "Appeler FightxLife",
+      "href": "tel:+32483127298"
+     },
+     {
+      "t": "p",
+      "html": "Les lieux des activités sont indiqués sur les pages des cours."
+     },
+     {
+      "t": "cta",
+      "kind": "Contextual link",
+      "label": "Voir les cours et leurs lieux",
+      "href": "/cours/"
+     }
+    ]
+   },
+   {
+    "id": "reseaux-sociaux",
+    "h2": "Suivre nos actualités",
+    "blocks": [
+     {
+      "t": "cta",
+      "kind": "Social link",
+      "label": "Suivre FightxLife sur Instagram",
+      "href": "https://www.instagram.com/fightxlife/"
+     },
+     {
+      "t": "cta",
+      "kind": "Secondary social link",
+      "label": "Suivre FightxLife sur Facebook",
+      "href": "https://www.facebook.com/Fightxlife"
+     }
+    ]
+   }
+  ],
+  "design": "Keep one form and one compact contact-details block. Place the member-area link above the form. Use plain-language field errors. Do not present the association address as a class venue or add an unsupported response-time promise."
+ }
+]
