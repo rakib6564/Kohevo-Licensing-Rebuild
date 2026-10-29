@@ -56,6 +56,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach (['product_prefix', 'cart_page', 'checkout_page', 'thanks_page'] as $k) {
             if (!$slugOk(strtolower(trim($in($k), '/')))) $errors[$k] = __('shop_err_address_format', 'Use lowercase letters, digits and hyphens.');
         }
+        // A Studio content type with the same address prefix would be served there first: products would never show.
+        if (!isset($errors['product_prefix']) && class_exists(\Slate\Module\StudioBuilder\Meta\PageRoutes::class)) {
+            $taken = array_search(strtolower(trim($in('product_prefix'), '/')), \Slate\Module\StudioBuilder\Meta\PageRoutes::prefixes((int) current_tenant_id()), true);
+            if ($taken !== false) $errors['product_prefix'] = sprintf(__('shop_err_prefix_taken', 'The content type “%s” already uses this address.'), (string) $taken);
+        }
         $notify = $in('notify_email');
         if ($notify !== '' && !filter_var($notify, FILTER_VALIDATE_EMAIL)) $errors['notify_email'] = __('shop_err_email', 'Enter a valid email address.');
         $currency = strtoupper($in('currency'));

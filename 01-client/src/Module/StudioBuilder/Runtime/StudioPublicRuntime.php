@@ -252,7 +252,7 @@ final class StudioPublicRuntime
             if ($tpl === null) {
                 return null;
             }
-            $item = ['type' => $type, 'url' => '/' . $prefix . '/' . $slug] + $found;
+            $item = ['type' => $type, 'url' => PageRoutes::itemPath($tenantId, $prefix, $slug)] + $found;
             return $this->serveTemplate(PageAddress::fromRow($tpl['page']), $ifNoneMatch, 200, [
                 'content_type' => $type,
                 'single_item'  => $item,

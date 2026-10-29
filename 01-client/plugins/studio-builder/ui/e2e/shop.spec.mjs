@@ -88,6 +88,53 @@ test('a guest adds to cart, checks out, pays and sees the order; the admin sees 
   }
 });
 
+test('a product with variants: the pickers allow only what is sold and in stock, and the cart records the choice', async ({ browser }) => {
+  const visitor = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const v = await visitor.newPage();
+  try {
+    await v.goto('/product/club-hoodie');
+    await expect(v.locator('.sb-shop-price__range')).toContainText('35.00');
+    await expect(v.locator('.sb-shop-price__range')).toContainText('39.00');
+    const add = v.getByRole('button', { name: 'Add to cart' });
+    const colour = v.getByLabel('Colour');
+    const size = v.getByLabel('Size');
+    await expect(add).toBeDisabled();
+
+    // Pink / M is sold out and Blue / S is not sold: those values cannot be picked with the other choice.
+    await colour.selectOption('Pink');
+    await expect(size.locator('option[value="M"]')).toBeDisabled();
+    await expect(size.locator('option[value="S"]')).toBeEnabled();
+    await colour.selectOption('Blue');
+    await expect(size.locator('option[value="S"]')).toBeDisabled();
+    await size.selectOption('L');
+    await expect(v.locator('.sb-shop-add__price')).toContainText('39.00');
+    await expect(add).toBeEnabled();
+    await add.click();
+    await expect(v.locator('.sb-shop-add__message')).toHaveText('Added to your cart.');
+
+    // Clear, then another combination at the product's price.
+    await v.getByRole('button', { name: 'Clear' }).click();
+    await expect(add).toBeDisabled();
+    await colour.selectOption('Pink');
+    await size.selectOption('S');
+    await expect(v.locator('.sb-shop-add__price')).toContainText('35.00');
+    await add.click();
+    await expect(v.locator('.sb-shop-add__message')).toHaveText('Added to your cart.');
+
+    // Each combination is its own cart line, named by its options.
+    await v.goto('/cart');
+    const cart = v.locator('.sb-shop-cart-block');
+    await expect(cart.locator('.sb-shop-cart__line')).toHaveCount(2);
+    await expect(cart.locator('.sb-shop-cart__options')).toHaveText(['Blue / L', 'Pink / S']);
+    await expect(cart.locator('.sb-shop-cart__subtotal')).toContainText('74.00');
+    await cart.locator('.sb-shop-cart__line', { hasText: 'Pink / S' }).getByRole('button', { name: /Remove/ }).click();
+    await expect(cart.locator('.sb-shop-cart__line')).toHaveCount(1);
+    await expect(cart.locator('.sb-shop-cart__options')).toHaveText('Blue / L');
+  } finally {
+    await visitor.close();
+  }
+});
+
 test('the Shop widgets are in Add › Components and Products is a display condition', async ({ page }) => {
   await openBuilder(page);
   await settled(page);

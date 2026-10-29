@@ -168,7 +168,7 @@ final class StudioRuntimeFactory
                 }
                 foreach ($single->sitemap($tenantId) as $item) {
                     if (is_string($item['slug'] ?? null) && $item['slug'] !== '') {
-                        $out[] = ['path' => '/' . $prefix . '/' . $item['slug'], 'updated_at' => is_string($item['updated_at'] ?? null) ? $item['updated_at'] : null];
+                        $out[] = ['path' => \Slate\Module\StudioBuilder\Meta\PageRoutes::itemPath($tenantId, $prefix, $item['slug']), 'updated_at' => is_string($item['updated_at'] ?? null) ? $item['updated_at'] : null];
                     }
                 }
             }

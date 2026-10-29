@@ -109,7 +109,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <thead><tr><th><?= __('shop_product', 'Product') ?></th><th><?= __('shop_sku', 'SKU') ?></th><th><?= __('shop_price', 'Price') ?></th><th><?= __('shop_quantity', 'Quantity') ?></th><th><?= __('shop_total', 'Total') ?></th></tr></thead>
             <tbody>
             <?php foreach ($items as $it): ?>
-                <tr><td><?= e((string) $it['title']) ?></td><td><?= e((string) ($it['sku'] ?? '')) ?></td><td><?= e(ShopStoreAPI::money((int) $it['unit_price_cents'], $cur)) ?></td><td><?= (int) $it['qty'] ?></td><td><?= e(ShopStoreAPI::money((int) $it['line_total_cents'], $cur)) ?></td></tr>
+                <tr><td><?= e((string) $it['title']) ?><?php if (!empty($it['options_label'])): ?><br><span class="text-muted text-sm"><?= e((string) $it['options_label']) ?></span><?php endif; ?></td><td><?= e((string) ($it['sku'] ?? '')) ?></td><td><?= e(ShopStoreAPI::money((int) $it['unit_price_cents'], $cur)) ?></td><td><?= (int) $it['qty'] ?></td><td><?= e(ShopStoreAPI::money((int) $it['line_total_cents'], $cur)) ?></td></tr>
             <?php endforeach; ?>
             </tbody>
             <tfoot>

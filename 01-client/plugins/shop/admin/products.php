@@ -5,6 +5,10 @@
  * Title, address (slug), SKU, price and sale price (VAT included), stock (tracked or not), images (one address per
  * line: a site path or an https:// URL, first is the main image), short and full description, categories and
  * Draft/Published. A product that was ever ordered is unpublished instead of deleted, so order history keeps it.
+ *
+ * Variants: attributes are written one per line (`Couleur: Blanc, Noir`); saving makes one variant per combination,
+ * listed under them with its own SKU, price, sale price, stock and image, each of which may be left to the product's,
+ * and an "On sale" switch for a combination the shop does not sell.
  */
 require_once dirname(__DIR__, 3) . '/config.php';
 require_once dirname(__DIR__) . '/ShopStoreAPI.php';
@@ -78,13 +82,16 @@ require SLATE_ROOT . '/admin/partials/header.php';
     $posted = $_SERVER['REQUEST_METHOD'] === 'POST' && $errors;
     $src = $posted ? $_POST : null;
     $p = $editing ?: ['id' => 0, 'title' => '', 'slug' => '', 'sku' => '', 'price_cents' => 0, 'sale_price_cents' => null, 'currency' => ShopStoreAPI::currency(),
-        'short_description' => '', 'description' => '', 'images_json' => '[]', 'stock_qty' => null, 'status' => 'draft', 'sort_order' => 0];
+        'short_description' => '', 'description' => '', 'images_json' => '[]', 'attributes_json' => null, 'stock_qty' => null, 'status' => 'draft', 'sort_order' => 0];
     $v = static function (string $key, string $fromRow) use ($src): string { return e($src !== null ? (string) ($src[$key] ?? '') : $fromRow); };
     $fmt = static fn($c): string => $c === null || $c === '' ? '' : number_format(((int) $c) / 100, 2, '.', '');
     $tracked = $src !== null ? !empty($src['track_stock']) : $p['stock_qty'] !== null;
     $selectedCats = $src !== null ? array_map('intval', (array) ($src['categories'] ?? [])) : array_column(ShopStoreAPI::categoriesOf([(int) $p['id']])[(int) $p['id']] ?? [], 'id');
     $err = static fn(string $k): string => isset($errors[$k]) ? '<div class="field-error" role="alert">' . e($errors[$k]) . '</div>' : '';
-    $publicUrl = $editing ? rtrim((string) SLATE_URL, '/') . '/' . ShopStoreAPI::productPrefix() . '/' . $editing['slug'] : '';
+    $publicUrl = $editing ? rtrim((string) SLATE_URL, '/') . ShopStoreAPI::productPath((string) $editing['slug']) : '';
+    $attributes = ShopStoreAPI::attributes($p);
+    $variantRows = $editing && $attributes !== [] ? ShopStoreAPI::variantRows((int) $editing['id']) : [];
+    $postedVariants = $src !== null && is_array($src['variants'] ?? null) ? $src['variants'] : [];
 ?>
 <?php slate_editor_css(); ?>
 <?php slate_edit_open(['title_fallback' => __('shop_new_product', 'New product')]); ?>
@@ -153,6 +160,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <div class="field-row field-row-2">
                 <div class="field">
                     <label class="field-check"><input type="checkbox" name="track_stock" value="1" <?= $tracked ? 'checked' : '' ?> data-shop-track> <?= __('shop_track_stock', 'Track stock') ?></label>
+                    <?php if ($attributes !== []): ?><div class="field-hint"><?= __('shop_stock_by_variant', 'This product has variants: each variant keeps its own stock below.') ?></div><?php endif; ?>
                 </div>
                 <div class="field" data-shop-stock style="<?= $tracked ? '' : 'display:none;' ?>">
                     <label class="field-label" for="stock_qty"><?= __('shop_in_stock_qty', 'In stock') ?></label>
@@ -160,6 +168,48 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     <?= $err('stock_qty') ?>
                 </div>
             </div>
+        <?php slate_edit_card_close(); ?>
+
+        <?php slate_edit_card_open(['icon' => 'layers', 'eyebrow' => __('shop_variants', 'Variants'), 'title' => __('shop_options_variants', 'Options and variants')]); ?>
+            <div class="field">
+                <label class="field-label" for="attributes"><?= __('shop_attributes', 'Attributes') ?></label>
+                <textarea id="attributes" name="attributes" rows="3" placeholder="<?= e(__('shop_attributes_placeholder', "Couleur: Blanc, Noir\nTaille: S, M, L")) ?>"><?= $v('attributes', ShopStoreAPI::attributesText($attributes)) ?></textarea>
+                <div class="field-hint"><?= __('shop_attributes_hint', 'One per line: the name, a colon, then the values separated by commas. Leave empty for a product without options. Saving makes one variant per combination.') ?></div>
+                <?= $err('attributes') ?>
+            </div>
+            <?php if ($variantRows): ?>
+                <?= $err('variants') ?>
+                <div class="table-wrap">
+                <table class="table shop-variants">
+                    <thead><tr>
+                        <th><?= __('shop_variant', 'Variant') ?></th><th><?= __('shop_sku', 'SKU') ?></th>
+                        <th><?= __('shop_price', 'Price') ?></th><th><?= __('shop_sale_price', 'Sale price') ?></th>
+                        <th><?= __('shop_stock', 'Stock') ?></th><th><?= __('shop_image', 'Image') ?></th><th><?= __('shop_variant_sold', 'On sale') ?></th>
+                    </tr></thead>
+                    <tbody>
+                    <?php foreach ($variantRows as $vr):
+                        $key = (string) $vr['options_key'];
+                        $f = is_array($postedVariants[$key] ?? null) ? $postedVariants[$key] : null;
+                        $fv = static fn(string $k, string $fromRow): string => e($f !== null ? (string) ($f[$k] ?? '') : $fromRow);
+                        $label = ShopStoreAPI::optionsLabel(ShopStoreAPI::variantValues($vr));
+                        $name = 'variants[' . e($key) . ']';
+                        $on = $f !== null ? !empty($f['enabled']) : (int) $vr['enabled'] === 1;
+                    ?>
+                        <tr>
+                            <th scope="row"><?= e($label) ?></th>
+                            <td><input type="text" name="<?= $name ?>[sku]" maxlength="64" value="<?= $fv('sku', (string) ($vr['sku'] ?? '')) ?>" aria-label="<?= e($label . ' — ' . __('shop_sku', 'SKU')) ?>"></td>
+                            <td><input type="text" inputmode="decimal" name="<?= $name ?>[price]" value="<?= $fv('price', $fmt($vr['price_cents'])) ?>" placeholder="<?= e($fmt($p['price_cents'])) ?>" aria-label="<?= e($label . ' — ' . __('shop_price', 'Price')) ?>"></td>
+                            <td><input type="text" inputmode="decimal" name="<?= $name ?>[sale_price]" value="<?= $fv('sale_price', $fmt($vr['sale_price_cents'])) ?>" aria-label="<?= e($label . ' — ' . __('shop_sale_price', 'Sale price')) ?>"></td>
+                            <td><input type="number" min="0" step="1" name="<?= $name ?>[stock]" value="<?= $fv('stock', $vr['stock_qty'] === null ? '' : (string) (int) $vr['stock_qty']) ?>" placeholder="<?= e(__('shop_not_tracked', 'Not tracked')) ?>" aria-label="<?= e($label . ' — ' . __('shop_stock', 'Stock')) ?>"></td>
+                            <td><input type="text" name="<?= $name ?>[image]" maxlength="500" value="<?= $fv('image', (string) ($vr['image'] ?? '')) ?>" aria-label="<?= e($label . ' — ' . __('shop_image', 'Image')) ?>"></td>
+                            <td><label class="field-check"><input type="checkbox" name="<?= $name ?>[enabled]" value="1" <?= $on ? 'checked' : '' ?>> <span class="sr-only"><?= e($label) ?></span></label></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+                </div>
+                <div class="field-hint"><?= __('shop_variants_hint', 'Empty price: the product\'s price. Empty stock: not tracked. Untick "On sale" for a combination you do not sell.') ?></div>
+            <?php endif; ?>
         <?php slate_edit_card_close(); ?>
 
         <?php slate_edit_card_open(['icon' => 'image', 'eyebrow' => __('shop_media', 'Media'), 'title' => __('shop_images', 'Images')]); ?>
@@ -230,7 +280,10 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <div class="data-list" data-single-open>
         <?php foreach ($products as $p):
             $price = ShopStoreAPI::money(ShopStoreAPI::effectivePrice($p), (string) $p['currency']);
-            $stock = $p['stock_qty'] === null ? __('shop_not_tracked', 'Not tracked') : (string) (int) $p['stock_qty'];
+            $variantCount = ShopStoreAPI::attributes($p) !== [] ? count(ShopStoreAPI::variantRows((int) $p['id'], true)) : 0;
+            $stock = $variantCount > 0
+                ? sprintf(__('shop_n_variants', '%d variants'), $variantCount)
+                : ($p['stock_qty'] === null ? __('shop_not_tracked', 'Not tracked') : (string) (int) $p['stock_qty']);
             $actions = '';
             if ($canEdit) {
                 $actions = '<a href="?edit=' . (int) $p['id'] . '" class="btn btn-sm">' . __('shop_edit', 'Edit') . '</a> '
@@ -239,7 +292,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     . '<button class="btn btn-sm btn-danger">' . __('shop_delete', 'Delete') . '</button></form>';
             }
             if ($p['status'] === 'published') {
-                $actions .= ' <a class="btn btn-sm btn-ghost" target="_blank" rel="noopener" href="' . e(rtrim((string) SLATE_URL, '/') . '/' . ShopStoreAPI::productPrefix() . '/' . $p['slug']) . '">' . __('shop_view', 'View') . ' ↗</a>';
+                $actions .= ' <a class="btn btn-sm btn-ghost" target="_blank" rel="noopener" href="' . e(rtrim((string) SLATE_URL, '/') . ShopStoreAPI::productPath((string) $p['slug'])) . '">' . __('shop_view', 'View') . ' ↗</a>';
             }
             slate_data_row([
                 'avatar'       => mb_substr((string) $p['title'], 0, 1),

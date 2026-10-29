@@ -1496,6 +1496,68 @@
     mount(on(document, 'submit', onSubmit));
   }
 
+  /**
+   * Option pickers for a product with variants: `form[data-sb-variants]` lists the combinations sold as
+   * {"v": [[id, [value per picker], in stock (1|0), price text], ...]}; each `select[data-sb-variant-attr]` picks one
+   * value. A value that leads to no combination in stock (with the other choices) is disabled, the chosen combination's
+   * id goes in `input[name=variant_id]`, its price in `[data-sb-variant-price]`, and the submit button stays off until
+   * the choice names a combination in stock. Without this script the form still posts the chosen values and the server
+   * resolves them.
+   */
+  function initVariants(root) {
+    var forms = qsa(root, 'form[data-sb-variants]');
+    if (!forms.length) return;
+    forms.forEach(function (form) {
+      var rows;
+      try { rows = JSON.parse(form.getAttribute('data-sb-variants') || '{}').v; } catch (e) { return; }
+      if (!Array.isArray(rows)) return;
+      var selects = qsa(form, 'select[data-sb-variant-attr]');
+      var idField = qs(form, 'input[name="variant_id"]');
+      if (!selects.length || !idField) return;
+      var button = qs(form, '[data-sb-variant-submit]');
+      var price = qs(form, '[data-sb-variant-price]');
+      var reset = qs(form, '[data-sb-variant-reset]');
+      function fits(row, values) {
+        for (var i = 0; i < values.length; i++) {
+          if (values[i] !== '' && row[1][i] !== values[i]) return false;
+        }
+        return true;
+      }
+      function update() {
+        var values = selects.map(function (s) { return s.value; });
+        selects.forEach(function (s, i) {
+          Array.prototype.forEach.call(s.options, function (o) {
+            if (o.value === '') return;
+            var test = values.slice();
+            test[i] = o.value;
+            o.disabled = !rows.some(function (r) { return r[2] && fits(r, test); });
+          });
+        });
+        var match = null;
+        if (values.indexOf('') === -1) rows.forEach(function (r) { if (fits(r, values)) match = r; });
+        var ok = !!(match && match[2]);
+        idField.value = ok ? String(match[0]) : '';
+        if (button) button.disabled = !ok;
+        if (price) { price.textContent = match ? String(match[3]) : ''; price.hidden = !match; }
+        if (reset) reset.hidden = values.join('') === '';
+        form.setAttribute('data-sb-variant-state', ok ? 'ready' : (match ? 'sold-out' : 'choose'));
+      }
+      var off = selects.map(function (s) { return on(s, 'change', update); });
+      if (reset) {
+        off.push(on(reset, 'click', function () {
+          selects.forEach(function (s) { s.value = ''; });
+          update();
+        }));
+      }
+      update();
+      mount(function () {
+        off.forEach(function (un) { un(); });
+        if (button) button.disabled = false;
+        form.removeAttribute('data-sb-variant-state');
+      });
+    });
+  }
+
   function initCountdown(root) {
     var els = qsa(root, '[data-sb-countdown]');
     if (!els.length) return;
@@ -1700,6 +1762,7 @@
     ['countdown', initCountdown],
     ['forms', initForms],
     ['fragments', initFragments],
+    ['variants', initVariants],
     ['currentLinks', initCurrentLinks],
     ['submenus', initSubmenus],
     ['anchors', initAnchors]

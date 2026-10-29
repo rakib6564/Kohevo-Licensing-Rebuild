@@ -5,10 +5,11 @@
  *   GET  ?view=mini           the Mini cart widget's fragment
  *   GET  ?view=cart (default) the Cart widget's fragment; without `X-Studio-Fragment` a plain cart page (no JavaScript)
  *   GET  Accept: application/json   {count, subtotal_cents, currency}
- *   POST action=add           product_id, qty[, return]: from an Add to cart button on a cached Studio page, so it
- *                             carries no CSRF token; it must come from this site (Origin/Referer) and only ever adds
- *                             a published product to the visitor's own cart
- *   POST action=update|remove product_id[, qty]: from the cart's own forms, CSRF-checked
+ *   POST action=add           product_id, qty[, variant_id | opt[]][, return]: from an Add to cart button on a cached
+ *                             Studio page, so it carries no CSRF token; it must come from this site (Origin/Referer)
+ *                             and only ever adds a published product to the visitor's own cart. A product with
+ *                             variants needs the variant (its id, or one value per attribute in `opt[]`).
+ *   POST action=update|remove line (or product_id)[, qty]: from the cart's own forms, CSRF-checked
  *
  * A JSON caller (studio-runtime.js) gets {ok, message, count[, html]}; a plain form post is sent back with a 303.
  */
@@ -48,7 +49,8 @@ if ($action === 'add') {
     if (!shop_same_site()) {
         $json ? shop_json(['ok' => false, 'message' => __('shop_err_security', 'Security check failed. Please reload the page.')], 403) : shop_html('Forbidden', 403);
     }
-    $res = ShopStoreAPI::cartAdd($productId, max(1, min(ShopStoreAPI::MAX_QTY, (int) ($_POST['qty'] ?? 1))));
+    $options = is_array($_POST['opt'] ?? null) ? array_map(static fn($v): string => is_string($v) ? $v : '', $_POST['opt']) : [];
+    $res = ShopStoreAPI::cartAdd($productId, max(1, min(ShopStoreAPI::MAX_QTY, (int) ($_POST['qty'] ?? 1))), (int) ($_POST['variant_id'] ?? 0), $options);
     $count = ShopStoreAPI::cartTotals()['count'];
     if ($json) {
         shop_json([
@@ -68,7 +70,8 @@ if ($action === 'update' || $action === 'remove') {
     if (!csrf_verify()) {
         $json ? shop_json(['ok' => false, 'message' => __('shop_err_security', 'Security check failed. Please reload the page.')], 403) : shop_html('Forbidden', 403);
     }
-    ShopStoreAPI::cartSet($productId, $action === 'remove' ? 0 : max(0, (int) ($_POST['qty'] ?? 0)));
+    $line = is_string($_POST['line'] ?? null) ? $_POST['line'] : (string) $productId;
+    ShopStoreAPI::cartSet($line, $action === 'remove' ? 0 : max(0, (int) ($_POST['qty'] ?? 0)));
     $totals = ShopStoreAPI::cartTotals();
     if ($json) {
         shop_json(['ok' => true, 'html' => shop_view_cart($totals, __('shop_cart_updated', 'Your cart was updated.')), 'count' => $totals['count']]);

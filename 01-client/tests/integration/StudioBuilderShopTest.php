@@ -291,6 +291,82 @@ unit('shop: catalogue, cart, checkout, payment and the Studio storefront (real M
                 assert_eq(['cancelled', 'pending_payment'], [ShopStoreAPI::order((int) $old['id'])['status'], ShopStoreAPI::order((int) $new['id'])['status']]);
             });
 
+            // ── Variants ──────────────────────────────────────────────────────────
+            sbsh_as(SBSH_TENANT, static function (): void {
+                ShopStoreAPI::cartClear();
+                assert_true(isset(ShopStoreAPI::parseAttributes("Couleur Blanc")['error']), 'an attribute line needs a colon');
+                assert_true(isset(ShopStoreAPI::parseAttributes("Couleur:")['error']), 'and values');
+                assert_true(isset(ShopStoreAPI::parseAttributes("A: 1\nB: 1\nC: 1\nD: 1")['error']), 'at most three attributes');
+                assert_eq([['name' => 'Couleur', 'values' => ['Blanc', 'noir']]], ShopStoreAPI::parseAttributes("Couleur: Blanc, noir, Noir |\ncouleur: Rouge")['attributes'], 'repeated values and attributes are dropped');
+
+                $hoodieId = sbsh_product(['title' => 'Hoodie', 'price' => '35', 'sku' => 'HD', 'images' => '/uploads/media/hoodie.jpg', 'attributes' => "Couleur: Rose, Bleu\nTaille: S, M, L"]);
+                $rows = ShopStoreAPI::variantRows($hoodieId);
+                assert_eq(6, count($rows), 'one variant per combination');
+                assert_eq(['Rose', 'S'], ShopStoreAPI::variantValues($rows[0]), 'first attribute slowest');
+                $key = static fn(array $values): string => ShopStoreAPI::optionsKey($values);
+                $fields = [];
+                foreach ($rows as $r) $fields[(string) $r['options_key']] = ['enabled' => '1'];
+                $fields[$key(['Rose', 'S'])] = ['sku' => 'HD-RS', 'stock' => '1', 'enabled' => '1', 'image' => '/uploads/media/hoodie-rose.jpg'];
+                $fields[$key(['Bleu', 'L'])] = ['price' => '39,00', 'enabled' => '1'];
+                $fields[$key(['Bleu', 'M'])] = ['enabled' => ''];
+                $fields[$key(['Rose', 'L'])] = ['stock' => '0', 'enabled' => '1'];
+                assert_true(isset(ShopStoreAPI::saveProduct(['title' => 'Hoodie', 'price' => '35', 'attributes' => "Couleur: Rose, Bleu\nTaille: S, M, L", 'variants' => [$key(['Rose', 'M']) => ['price' => 'abc']]], $hoodieId)['errors']['variants']), 'a variant price is checked');
+                $res = ShopStoreAPI::saveProduct(['title' => 'Hoodie', 'price' => '35', 'sku' => 'HD', 'status' => 'published', 'images' => '/uploads/media/hoodie.jpg', 'attributes' => "Couleur: Rose, Bleu\nTaille: S, M, L", 'variants' => $fields], $hoodieId);
+                assert_true($res['ok'], 'variants saved: ' . json_encode($res['errors'] ?? []));
+
+                $p = ShopStoreAPI::productBySlug('hoodie');
+                assert_true($p['has_variants'] && $p['in_stock'], 'a product with variants, in stock');
+                assert_eq([['name' => 'Couleur', 'values' => ['Rose', 'Bleu']], ['name' => 'Taille', 'values' => ['S', 'M', 'L']]], $p['attributes']);
+                assert_eq(5, count($p['variants']), 'a disabled combination is not offered');
+                assert_eq([3500, 3900], [$p['min_cents'], $p['max_cents']], 'the price range');
+                $byLabel = array_column($p['variants'], null, 'label');
+                assert_eq(['HD-RS', 1, true, '/uploads/media/hoodie-rose.jpg'], [$byLabel['Rose / S']['sku'], $byLabel['Rose / S']['stock_qty'], $byLabel['Rose / S']['in_stock'], $byLabel['Rose / S']['image']]);
+                assert_eq(['HD', null, ''], [$byLabel['Rose / M']['sku'], $byLabel['Rose / M']['stock_qty'], $byLabel['Rose / M']['image']], 'what a variant leaves empty comes from the product');
+                assert_true(!$byLabel['Rose / L']['in_stock'], 'a variant with no stock is sold out');
+
+                assert_eq('Choose your options first.', ShopStoreAPI::cartAdd($hoodieId)['error'] ?? null, 'a product with variants needs a choice');
+                assert_true(!ShopStoreAPI::cartAdd($hoodieId, 1, 0, ['Rose', 'XL'])['ok'], 'an unknown value is refused');
+                assert_true(!ShopStoreAPI::cartAdd($hoodieId, 1, 0, ['Bleu', 'M'])['ok'], 'a disabled combination is refused');
+                assert_eq('This product is sold out.', ShopStoreAPI::cartAdd($hoodieId, 1, 0, ['Rose', 'L'])['error'] ?? null, 'a sold-out variant is refused');
+                assert_true(!ShopStoreAPI::cartAdd($hoodieId, 1, $byLabel['Rose / S']['id'] + 100000)['ok'], 'a variant of another product is refused');
+                assert_true(ShopStoreAPI::cartAdd($hoodieId, 1, 0, ['Taille' => 'S', 'Couleur' => 'Rose'])['ok'], 'chosen by attribute name');
+                $capped = ShopStoreAPI::cartAdd($hoodieId, 1, $byLabel['Rose / S']['id']);
+                assert_true(!$capped['ok'] && $capped['qty'] === 1, 'capped at the variant\'s stock');
+                assert_true(ShopStoreAPI::cartAdd($hoodieId, 2, $byLabel['Bleu / L']['id'])['ok'], 'chosen by variant id');
+                $lines = ShopStoreAPI::cartLines();
+                assert_eq([['Rose / S', 'HD-RS', 3500, 1, '/uploads/media/hoodie-rose.jpg'], ['Bleu / L', 'HD', 3900, 2, '/uploads/media/hoodie.jpg']],
+                    array_map(static fn($l) => [$l['options_label'], $l['sku'], $l['unit_cents'], $l['qty'], $l['image']], $lines), 'each variant is its own line, at its own price');
+                $cartHtml = shop_view_cart(ShopStoreAPI::cartTotals());
+                assert_true(str_contains($cartHtml, '<span class="sb-shop-cart__options">Bleu / L</span>') && str_contains($cartHtml, 'name="line" value="' . $hoodieId . ':' . $byLabel['Bleu / L']['id'] . '"'), 'the cart shows the options and names the line');
+                ShopStoreAPI::cartSet($hoodieId . ':' . $byLabel['Bleu / L']['id'], 1);
+                assert_eq(1, ShopStoreAPI::cartLines()[1]['qty'], 'a line is updated by its key');
+                ShopStoreAPI::cartSet('nonsense', 0);
+                assert_eq(2, count(ShopStoreAPI::cartLines()), 'a malformed key changes nothing');
+
+                $placed = ShopStoreAPI::placeOrder(['email' => 'v@example.test', 'name' => 'V', 'delivery' => 'pickup']);
+                assert_true($placed['ok'], 'an order with variants');
+                $items = ShopStoreAPI::orderItems((int) $placed['order']['id']);
+                assert_eq([['Hoodie', 'Rose / S', 'HD-RS', $byLabel['Rose / S']['id']], ['Hoodie', 'Bleu / L', 'HD', $byLabel['Bleu / L']['id']]],
+                    array_map(static fn($i) => [$i['title'], $i['options_label'], $i['sku'], (int) $i['variant_id']], $items), 'order lines record the combination');
+                assert_true(ShopStoreAPI::markPaid((int) $placed['order']['id'], 0, 'EUR'));
+                assert_eq(0, (int) Database::value('SELECT stock_qty FROM shop_variants WHERE id = ?', [$byLabel['Rose / S']['id']]), 'paying takes the variant\'s stock');
+                assert_eq(null, Database::value('SELECT stock_qty FROM shop_products WHERE id = ?', [$hoodieId]), 'not the product\'s');
+                assert_true(str_contains(shop_view_order(ShopStoreAPI::order((int) $placed['order']['id'])), 'Hoodie — Rose / S × 1'), 'the confirmation names the combination');
+                assert_true(!ShopStoreAPI::productBySlug('hoodie')['variants'][0]['in_stock'], 'Rose / S is now sold out');
+
+                assert_eq(['Bleu / L'], array_column(ShopStoreAPI::cartLines(), 'options_label'), 'a sold-out variant leaves the cart');
+                // Changing the attributes keeps the combinations that remain and drops the others.
+                $keep = (int) Database::value('SELECT id FROM shop_variants WHERE options_key = ?', [$key(['Rose', 'S'])]);
+                $res = ShopStoreAPI::saveVariants($hoodieId, [['name' => 'Couleur', 'values' => ['Rose']], ['name' => 'Taille', 'values' => ['S', 'XL']]]);
+                assert_true($res['ok']);
+                assert_eq([$keep, 'HD-RS'], [(int) ShopStoreAPI::variantRows($hoodieId)[0]['id'], ShopStoreAPI::variantRows($hoodieId)[0]['sku']], 'Rose / S keeps its id and fields');
+                assert_eq(['Rose / S', 'Rose / XL'], array_map(static fn($r) => ShopStoreAPI::optionsLabel(ShopStoreAPI::variantValues($r)), ShopStoreAPI::variantRows($hoodieId)));
+                assert_eq([], ShopStoreAPI::cartLines(), 'a cart line whose variant is gone is dropped');
+                ShopStoreAPI::cartClear();
+                $res = ShopStoreAPI::saveVariants($hoodieId, [['name' => 'Couleur', 'values' => ['Rose', 'Bleu']], ['name' => 'Taille', 'values' => ['S', 'M', 'L']]], [$key(['Bleu', 'L']) => ['price' => '39', 'enabled' => '1']]);
+                assert_true($res['ok']);
+            });
+
             // ── Studio storefront ─────────────────────────────────────────────────
             $rt = StudioRuntimeFactory::build();
             $actor = StudioActor::authenticated(31, StudioPermissions::ALL, true);
@@ -355,6 +431,43 @@ unit('shop: catalogue, cart, checkout, payment and the Studio storefront (real M
             assert_true(str_contains($grid, 'class="sb-shop-filter"') && str_contains($grid, 'href="?category=apparel"'), 'the category filter');
             assert_true(str_contains($grid, 'href="?page=2"') && str_contains($grid, 'aria-current="page">1<'), 'pages');
             assert_true(str_contains($grid, 'sb-shop-card__badge') && !str_contains($grid, 'Hidden draft'), 'badges, and no drafts');
+
+            // A product with variants: one picker per attribute, the combinations for the runtime, the price range.
+            $hoodie = (string) sbsh_get($rt, '/product/hoodie')?->body;
+            assert_true(str_contains($hoodie, 'name="opt[0]"') && str_contains($hoodie, 'name="opt[1]"') && str_contains($hoodie, '<option value="Bleu">Bleu</option>'), 'a picker per attribute');
+            assert_true(str_contains($hoodie, 'data-sb-variants="') && str_contains($hoodie, 'name="variant_id"') && str_contains($hoodie, 'data-sb-variant-submit'), 'the combinations for the runtime');
+            assert_true(str_contains($hoodie, 'sb-shop-price__range'), 'the price range');
+            assert_true(str_contains($grid, 'sb-shop-card__choose') && str_contains($grid, 'href="' . $base . '/product/hoodie"'), 'in a grid, a product with options links to its page');
+            $rt->tenants->runAs(SBSH_TENANT, static fn() => sbsh_as(SBSH_TENANT, static function () use ($rt, $actor): void {
+                $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Cards');
+                $doc['sections'] = [[
+                    'blocks' => [[
+                        'bindings' => ['items' => ['provider' => 'shop.products']], 'children' => [], 'id' => CanonicalDocumentSchema::newBlockId(),
+                        'props' => ['link_label' => 'Acheter →', 'show_icon' => true, 'icon' => 'heart'],
+                        'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'type' => 'shop.products', 'version' => 1, 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+                    ]],
+                    'global_ref' => null, 'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'Main',
+                    'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+                ]];
+                $created = $rt->app->createPage($actor, 'Cards', 'shop-cards', 'page', 'standalone');
+                $saved = $rt->app->saveDraft($actor, (int) $created['page']['id'], $doc, (int) $created['revision']['id']);
+                $rt->app->publish($actor, (int) $created['page']['id'], (int) $saved['revision']['id']);
+            }));
+            $cards = (string) sbsh_get($rt, '/shop-cards')?->body;
+            assert_true(str_contains($cards, '<a class="sb-shop-card__link" href="' . $base . '/product/gloves">Acheter →</a>'), 'a text link to the product');
+            assert_true(!str_contains($cards, 'class="sb-button sb-button--primary sb-shop-add__button') && str_contains($cards, 'class="sb-shop-card__icon"'), 'in place of the button, with the card icon');
+
+            // A site whose addresses end with a slash (Site settings › SEO) gets its products' addresses the same way.
+            sbsh_as(SBSH_TENANT, static fn() => Database::setSetting(\Slate\Module\StudioBuilder\Meta\PageRoutes::SETTING_TRAILING_SLASH, '1', SBSH_TENANT));
+            \Slate\Module\StudioBuilder\Meta\PageRoutes::forget();
+            assert_eq('/product/gloves/', sbsh_as(SBSH_TENANT, static fn() => ShopStoreAPI::productBySlug('gloves')['url']), 'a product address with the slash');
+            $slashed = (string) sbsh_get($rt, '/product/gloves/')?->body;
+            if ($base !== '') {
+                assert_true(str_contains($slashed, '<link rel="canonical" href="' . $base . '/product/gloves/">'), 'its canonical too');
+                assert_true(str_contains((string) sbsh_get($rt, '/sitemap.xml?format=xml')?->body, '<loc>' . $base . '/product/gloves/</loc>'), 'and the sitemap');
+            }
+            sbsh_as(SBSH_TENANT, static fn() => Database::setSetting(\Slate\Module\StudioBuilder\Meta\PageRoutes::SETTING_TRAILING_SLASH, '0', SBSH_TENANT));
+            \Slate\Module\StudioBuilder\Meta\PageRoutes::forget();
 
             // Without the shop entitlement the product pages are gone.
             sbsh_license((string) $core['installation_id'], SBSH_TENANT, ['studio-builder']);

@@ -7,8 +7,14 @@
  * Money: integer cents. A product's price is VAT-inclusive and carries its own currency; an order snapshots currency,
  * prices, titles and SKUs. A cart holds one currency (the first product's): a product priced in another is refused.
  *
- * Cart: the visitor's PHP session (`$_SESSION['kohevo_shop_cart'][tenant id] = [product id => qty]`). Only ids and
- * quantities are kept; prices, titles and stock are read again every time the cart is shown or checked out.
+ * Variants: a product with attributes (`Couleur: Blanc, Noir`, `Taille: S, M, L`) is sold as variants, one per
+ * combination of values (shop_variants). A variant may carry its own SKU, price, sale price, stock and image, and may be
+ * disabled (a combination the shop does not sell); what it leaves empty comes from the product. Such a product's own
+ * stock is not used: its variants carry the stock.
+ *
+ * Cart: the visitor's PHP session (`$_SESSION['kohevo_shop_cart'][tenant id] = [line key => qty]`, the key being the
+ * product id, or `product id:variant id`). Only ids and quantities are kept; prices, titles and stock are read again
+ * every time the cart is shown or checked out.
  *
  * Payment: Stripe Checkout through the stripe-payment plugin's generic facade (`StripePaymentAPI::createCheckout`),
  * like Booking and Membership. An order is created `pending_payment`; the webhook (`stripe_webhook_event`) or the
@@ -27,6 +33,9 @@ class ShopStoreAPI {
     public const MAX_QTY = 99;
     public const MAX_CART_LINES = 50;
     public const MAX_IMAGES = 12;
+    public const MAX_ATTRIBUTES = 3;
+    public const MAX_ATTRIBUTE_VALUES = 30;
+    public const MAX_VARIANTS = 150;
     public const SLUG_PATTERN = '/^[a-z0-9]([a-z0-9-]{0,188}[a-z0-9])?$/';
     private const SESSION_KEY = 'kohevo_shop_cart';
 
@@ -47,6 +56,21 @@ class ShopStoreAPI {
             } catch (\Throwable $e) {
                 slate_log('Shop ensureSchema statement failed: ' . $e->getMessage(), 'error');
             }
+        }
+        // Columns added after 0.1.0 (CREATE TABLE IF NOT EXISTS leaves an existing table as it was).
+        self::ensureColumn('shop_products', 'attributes_json', 'TEXT NULL AFTER `images_json`');
+        self::ensureColumn('shop_order_items', 'variant_id', 'INT UNSIGNED NULL AFTER `product_id`');
+        self::ensureColumn('shop_order_items', 'options_label', 'VARCHAR(255) NULL AFTER `title`');
+    }
+
+    private static function ensureColumn(string $table, string $column, string $definition): void {
+        try {
+            $has = (int) Database::value(
+                "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+                [$table, $column]);
+            if ($has === 0) Database::query("ALTER TABLE `$table` ADD COLUMN `$column` $definition");
+        } catch (\Throwable $e) {
+            slate_log("Shop ensureSchema: adding $table.$column failed: " . $e->getMessage(), 'error');
         }
     }
 
@@ -103,11 +127,22 @@ class ShopStoreAPI {
         return preg_match('#^[a-z0-9-]+(/[a-z0-9-]+){0,2}$#', $p) ? $p : 'product';
     }
 
+    /** A product's site-relative address: `/product/{slug}` (with the site's trailing slash when Studio adds one). */
+    public static function productPath(string $slug): string {
+        return self::withSlash('/' . self::productPrefix() . '/' . $slug);
+    }
+
     /** A Studio page of the site, by the slug a setting names (`cart`, `checkout`, `order-received`). */
     public static function pageUrl(string $setting): string {
         $slug = strtolower(trim(self::setting($setting), " /"));
         if (!preg_match('#^[a-z0-9-]+(/[a-z0-9-]+)*$#', $slug)) $slug = self::settingDefaults()[$setting] ?? '';
-        return rtrim((string) SLATE_URL, '/') . '/' . $slug;
+        return rtrim((string) SLATE_URL, '/') . self::withSlash('/' . $slug);
+    }
+
+    /** A path as Studio writes the site's addresses: with a trailing slash when the site's setting asks for one. */
+    private static function withSlash(string $path): string {
+        $slash = class_exists(\Slate\Module\StudioBuilder\Meta\PageRoutes::class) && \Slate\Module\StudioBuilder\Meta\PageRoutes::trailingSlash((int) current_tenant_id());
+        return $slash ? rtrim($path, '/') . '/' : $path;
     }
 
     /** A Shop endpoint (`public/cart.php`). */
@@ -245,12 +280,28 @@ class ShopStoreAPI {
      *
      * @param ?list<array{id: int, name: string, slug: string}> $categories (read when null)
      */
-    public static function publicProduct(array $row, ?array $categories = null): array {
+    public static function publicProduct(array $row, ?array $categories = null, ?array $variantRows = null): array {
         $id = (int) $row['id'];
         $images = self::images($row);
-        $available = self::available($row);
+        $attributes = self::attributes($row);
+        $variants = [];
+        if ($attributes !== []) {
+            foreach ($variantRows ?? self::variantRows($id, true) as $v) {
+                $variants[] = self::publicVariant($v, $row);
+            }
+        }
+        $hasVariants = $attributes !== [];
+        $available = $hasVariants ? null : self::available($row);
         $price = (int) $row['price_cents'];
         $effective = self::effectivePrice($row);
+        $min = $max = $effective;
+        if ($variants !== []) {
+            $prices = array_column($variants, 'effective_cents');
+            [$min, $max] = [min($prices), max($prices)];
+        }
+        $inStock = $hasVariants
+            ? array_filter($variants, static fn(array $v): bool => $v['in_stock']) !== []
+            : ($available === null || $available > 0);
         return [
             'id'                => $id,
             'slug'              => (string) $row['slug'],
@@ -266,9 +317,14 @@ class ShopStoreAPI {
             'images'            => $images,
             'image'             => $images[0] ?? '',
             'stock_qty'         => $available,
-            'in_stock'          => $available === null || $available > 0,
+            'in_stock'          => $inStock,
+            'has_variants'      => $hasVariants,
+            'attributes'        => $attributes,
+            'variants'          => $variants,
+            'min_cents'         => $min,
+            'max_cents'         => $max,
             'categories'        => $categories ?? (self::categoriesOf([$id])[$id] ?? []),
-            'url'               => '/' . self::productPrefix() . '/' . $row['slug'],
+            'url'               => self::productPath((string) $row['slug']),
             'updated_at'        => (string) ($row['updated_at'] ?? ''),
         ];
     }
@@ -305,8 +361,9 @@ class ShopStoreAPI {
         $offset = ($page - 1) * $perPage;
         $rows = Database::rows("SELECT p.* FROM shop_products p WHERE $where ORDER BY $order LIMIT $perPage OFFSET $offset", $args);
         $cats = self::categoriesOf(array_column($rows, 'id'));
+        $vars = self::variantsOf(array_column($rows, 'id'));
         return [
-            'rows'  => array_map(static fn(array $r): array => self::publicProduct($r, $cats[(int) $r['id']] ?? []), $rows),
+            'rows'  => array_map(static fn(array $r): array => self::publicProduct($r, $cats[(int) $r['id']] ?? [], $vars[(int) $r['id']] ?? []), $rows),
             'total' => $total,
             'page'  => $page,
             'pages' => $pages,
@@ -363,6 +420,13 @@ class ShopStoreAPI {
         }
         if (count($images) > self::MAX_IMAGES) $errors['images'] = sprintf(__('shop_err_images_many', 'At most %d images.'), self::MAX_IMAGES);
         $status = in_array($in['status'] ?? '', self::PRODUCT_STATUSES, true) ? (string) $in['status'] : 'draft';
+        $attributes = null;
+        if (array_key_exists('attributes', $in)) {
+            $parsed = is_array($in['attributes']) ? ['attributes' => self::attributes(['attributes_json' => json_encode($in['attributes'])])] : self::parseAttributes((string) $in['attributes']);
+            if (isset($parsed['error'])) $errors['attributes'] = $parsed['error'];
+            $attributes = $parsed['attributes'];
+            if (!isset($errors['attributes'])) self::variantRowsFor($attributes, is_array($in['variants'] ?? null) ? $in['variants'] : [], $errors);
+        }
         if ($errors !== []) return ['ok' => false, 'errors' => $errors];
 
         $existing = $id > 0 ? self::productRow($id) : null;
@@ -387,6 +451,10 @@ class ShopStoreAPI {
             $id = Database::insert('shop_products', $row + ['tenant_id' => $tid]);
         }
         self::setProductCategories($id, array_map('intval', (array) ($in['categories'] ?? [])));
+        if ($attributes !== null) {
+            $res = self::saveVariants($id, $attributes, is_array($in['variants'] ?? null) ? $in['variants'] : []);
+            if (!$res['ok']) return ['ok' => false, 'id' => $id, 'errors' => $res['errors'] ?? []];
+        }
         return ['ok' => true, 'id' => $id];
     }
 
@@ -411,8 +479,247 @@ class ShopStoreAPI {
             return 'unpublished';
         }
         Database::delete('shop_product_categories', 'product_id = ? AND tenant_id = ?', [$id, $tid]);
+        Database::delete('shop_variants', 'product_id = ? AND tenant_id = ?', [$id, $tid]);
         Database::delete('shop_products', 'id = ? AND tenant_id = ?', [$id, $tid]);
         return 'deleted';
+    }
+
+    // ── Variants ──────────────────────────────────────────────────────────
+
+    /** @return list<array{name: string, values: list<string>}> a product row's attributes (none: a simple product) */
+    public static function attributes(array $row): array {
+        $list = json_decode((string) ($row['attributes_json'] ?? ''), true);
+        $out = [];
+        foreach (is_array($list) ? $list : [] as $a) {
+            if (!is_array($a) || !is_string($a['name'] ?? null) || !is_array($a['values'] ?? null)) continue;
+            $values = array_values(array_filter($a['values'], static fn($v): bool => is_string($v) && $v !== ''));
+            if (trim($a['name']) !== '' && $values !== []) $out[] = ['name' => $a['name'], 'values' => $values];
+        }
+        return array_slice($out, 0, self::MAX_ATTRIBUTES);
+    }
+
+    /**
+     * Attributes from the admin form's text, one per line: `Couleur: Blanc, Noir`. Values are separated by commas (or
+     * `|`); repeated names and values are dropped.
+     *
+     * @return array{attributes: list<array{name: string, values: list<string>}>, error?: string}
+     */
+    public static function parseAttributes(string $text): array {
+        $out = [];
+        $seen = [];
+        foreach (preg_split('/\R/', $text) ?: [] as $line) {
+            $line = trim($line);
+            if ($line === '') continue;
+            if (!str_contains($line, ':')) return ['attributes' => [], 'error' => __('shop_err_attribute_line', 'Write each attribute as “Name: value, value”.')];
+            [$name, $raw] = array_map('trim', explode(':', $line, 2));
+            $name = mb_substr($name, 0, 60);
+            $values = [];
+            foreach (preg_split('/\s*[,|]\s*/', $raw) ?: [] as $v) {
+                $v = mb_substr(trim($v), 0, 60);
+                if ($v !== '' && !in_array(mb_strtolower($v), array_map('mb_strtolower', $values), true)) $values[] = $v;
+            }
+            if ($name === '' || $values === []) return ['attributes' => [], 'error' => __('shop_err_attribute_line', 'Write each attribute as “Name: value, value”.')];
+            if (isset($seen[mb_strtolower($name)])) continue;
+            $seen[mb_strtolower($name)] = true;
+            if (count($values) > self::MAX_ATTRIBUTE_VALUES) return ['attributes' => [], 'error' => sprintf(__('shop_err_attribute_values', 'At most %d values per attribute.'), self::MAX_ATTRIBUTE_VALUES)];
+            $out[] = ['name' => $name, 'values' => $values];
+        }
+        if (count($out) > self::MAX_ATTRIBUTES) return ['attributes' => [], 'error' => sprintf(__('shop_err_attributes_many', 'At most %d attributes.'), self::MAX_ATTRIBUTES)];
+        if (self::combinationCount($out) > self::MAX_VARIANTS) return ['attributes' => [], 'error' => sprintf(__('shop_err_variants_many', 'At most %d combinations.'), self::MAX_VARIANTS)];
+        return ['attributes' => $out];
+    }
+
+    /** The attributes as the admin form writes them. */
+    public static function attributesText(array $attributes): string {
+        return implode("\n", array_map(static fn(array $a): string => $a['name'] . ': ' . implode(', ', $a['values']), $attributes));
+    }
+
+    private static function combinationCount(array $attributes): int {
+        return $attributes === [] ? 0 : (int) array_product(array_map(static fn(array $a): int => count($a['values']), $attributes));
+    }
+
+    /** @return list<list<string>> every combination of the attributes' values, first attribute slowest */
+    public static function combinations(array $attributes): array {
+        $out = [[]];
+        foreach ($attributes as $a) {
+            $next = [];
+            foreach ($out as $prefix) {
+                foreach ($a['values'] as $v) $next[] = array_merge($prefix, [$v]);
+            }
+            $out = $next;
+        }
+        return $attributes === [] ? [] : $out;
+    }
+
+    /** The key of a combination (its values in the attributes' order). */
+    public static function optionsKey(array $values): string {
+        return sha1(json_encode(array_values(array_map('strval', $values)), JSON_UNESCAPED_UNICODE));
+    }
+
+    /** `Blanc / M`: a combination as customers read it. */
+    public static function optionsLabel(array $values): string {
+        return implode(' / ', array_map('strval', $values));
+    }
+
+    /** @return list<array<string, mixed>> a product's variant rows, in the order of its combinations */
+    public static function variantRows(int $productId, bool $enabledOnly = false): array {
+        self::ensureSchema();
+        return Database::rows("SELECT * FROM shop_variants WHERE tenant_id = ? AND product_id = ?" . ($enabledOnly ? ' AND enabled = 1' : '') . " ORDER BY sort_order, id",
+            [current_tenant_id(), $productId]);
+    }
+
+    /** @return array<int, list<array<string, mixed>>> product id => its enabled variant rows */
+    public static function variantsOf(array $productIds): array {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $productIds))));
+        if ($ids === []) return [];
+        $marks = implode(',', array_fill(0, count($ids), '?'));
+        $out = [];
+        foreach (Database::rows("SELECT * FROM shop_variants WHERE tenant_id = ? AND enabled = 1 AND product_id IN ($marks) ORDER BY sort_order, id", array_merge([current_tenant_id()], $ids)) as $r) {
+            $out[(int) $r['product_id']][] = $r;
+        }
+        return $out;
+    }
+
+    /** @return list<string> a variant row's values */
+    public static function variantValues(array $variant): array {
+        $v = json_decode((string) ($variant['options_json'] ?? ''), true);
+        return is_array($v) ? array_values(array_map('strval', $v)) : [];
+    }
+
+    /** A variant row with the product's price, sale price, SKU and image filled in where it leaves them empty. */
+    private static function variantEffectiveRow(array $variant, array $product): array {
+        $ownPrice = $variant['price_cents'] !== null && $variant['price_cents'] !== '';
+        return [
+            'price_cents'      => $ownPrice ? (int) $variant['price_cents'] : (int) $product['price_cents'],
+            'sale_price_cents' => $ownPrice ? ($variant['sale_price_cents'] ?? null) : ($variant['sale_price_cents'] ?? $product['sale_price_cents'] ?? null),
+            'stock_qty'        => $variant['stock_qty'],
+        ];
+    }
+
+    /** The public shape of a variant. */
+    public static function publicVariant(array $variant, array $product): array {
+        $eff = self::variantEffectiveRow($variant, $product);
+        $values = self::variantValues($variant);
+        $available = self::available($eff);
+        $price = (int) $eff['price_cents'];
+        $effective = self::effectivePrice($eff);
+        $image = (string) ($variant['image'] ?? '');
+        return [
+            'id'              => (int) $variant['id'],
+            'options'         => $values,
+            'label'           => self::optionsLabel($values),
+            'sku'             => (string) ($variant['sku'] ?? '') !== '' ? (string) $variant['sku'] : (string) ($product['sku'] ?? ''),
+            'price_cents'     => $price,
+            'effective_cents' => $effective,
+            'on_sale'         => $effective < $price,
+            'stock_qty'       => $available,
+            'in_stock'        => $available === null || $available > 0,
+            'image'           => self::isImageUrl($image) ? $image : '',
+        ];
+    }
+
+    /**
+     * Set a product's attributes and bring its variants in line: a variant per combination (new ones enabled, with the
+     * product's price and untracked stock), combinations that no longer exist removed, and the fields given for a
+     * combination applied. No attributes makes the product simple again.
+     *
+     * @param list<array{name: string, values: list<string>}> $attributes
+     * @param array<string, array<string, mixed>> $fields options key => sku, price, sale_price, stock (empty: not tracked), image, enabled
+     * @return array{ok: bool, errors?: array<string, string>}
+     */
+    public static function saveVariants(int $productId, array $attributes, array $fields = []): array {
+        self::ensureSchema();
+        $tid = current_tenant_id();
+        $errors = [];
+        $rows = self::variantRowsFor($attributes, $fields, $errors);
+        if ($errors !== []) return ['ok' => false, 'errors' => $errors];
+
+        $pdo = Database::get();
+        $own = !$pdo->inTransaction();
+        if ($own) $pdo->beginTransaction();
+        try {
+            Database::update('shop_products', ['attributes_json' => $attributes === [] ? null : json_encode($attributes, JSON_UNESCAPED_UNICODE)], 'id = ? AND tenant_id = ?', [$productId, $tid]);
+            $existing = [];
+            foreach (self::variantRows($productId) as $v) $existing[(string) $v['options_key']] = (int) $v['id'];
+            foreach ($existing as $key => $vid) {
+                if (!isset($rows[$key])) Database::delete('shop_variants', 'id = ? AND tenant_id = ?', [$vid, $tid]);
+            }
+            foreach ($rows as $key => $row) {
+                if (isset($existing[$key])) {
+                    Database::update('shop_variants', $row, 'id = ? AND tenant_id = ?', [$existing[$key], $tid]);
+                } else {
+                    Database::insert('shop_variants', $row + ['tenant_id' => $tid, 'product_id' => $productId, 'options_key' => $key]);
+                }
+            }
+            if ($attributes !== []) Database::update('shop_products', ['stock_qty' => null], 'id = ? AND tenant_id = ?', [$productId, $tid]);
+            if ($own) $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($own && $pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+        return ['ok' => true];
+    }
+
+    /**
+     * The variant rows for a set of attributes, by options key, with the fields given for a combination checked and
+     * applied (a combination without fields keeps what it has, or the defaults when it is new).
+     *
+     * @param array<string, string> $errors filled with what is wrong
+     * @return array<string, array<string, mixed>>
+     */
+    private static function variantRowsFor(array $attributes, array $fields, array &$errors): array {
+        $rows = [];
+        foreach (self::combinations($attributes) as $i => $values) {
+            $key = self::optionsKey($values);
+            $f = is_array($fields[$key] ?? null) ? $fields[$key] : null;
+            $row = ['options_json' => json_encode($values, JSON_UNESCAPED_UNICODE), 'sort_order' => $i];
+            if ($f !== null) {
+                $label = self::optionsLabel($values);
+                $price = trim((string) ($f['price'] ?? '')) === '' ? null : self::parseMoney($f['price']);
+                $sale = trim((string) ($f['sale_price'] ?? '')) === '' ? null : self::parseMoney($f['sale_price']);
+                if (trim((string) ($f['price'] ?? '')) !== '' && $price === null) $errors['variants'] = sprintf(__('shop_err_variant_price', '%s: enter a price, such as 24.90, or leave it empty.'), $label);
+                if (trim((string) ($f['sale_price'] ?? '')) !== '' && $sale === null) $errors['variants'] = sprintf(__('shop_err_variant_price', '%s: enter a price, such as 24.90, or leave it empty.'), $label);
+                $stockRaw = trim((string) ($f['stock'] ?? ''));
+                if ($stockRaw !== '' && !preg_match('/^\d{1,7}$/', $stockRaw)) $errors['variants'] = sprintf(__('shop_err_variant_stock', '%s: enter the number in stock, or leave it empty.'), $label);
+                $image = trim((string) ($f['image'] ?? ''));
+                if ($image !== '' && !self::isImageUrl($image)) $errors['variants'] = sprintf(__('shop_err_variant_image', '%s: the image must be a site path or an https:// address.'), $label);
+                $row += [
+                    'sku'              => trim((string) ($f['sku'] ?? '')) !== '' ? mb_substr(trim((string) $f['sku']), 0, 64) : null,
+                    'price_cents'      => $price,
+                    'sale_price_cents' => $sale,
+                    'stock_qty'        => $stockRaw === '' ? null : (int) $stockRaw,
+                    'image'            => $image !== '' ? mb_substr($image, 0, 500) : null,
+                    'enabled'          => !empty($f['enabled']) ? 1 : 0,
+                ];
+            }
+            $rows[$key] = $row;
+        }
+        return $rows;
+    }
+
+    /**
+     * The enabled variant of a published product that a visitor chose: by its id, or by one value per attribute
+     * (indexed by position or by attribute name). Null when the choice is incomplete or names no enabled variant.
+     */
+    public static function findVariant(int $productId, int $variantId = 0, array $options = []): ?array {
+        $row = self::productRow($productId);
+        if (!$row) return null;
+        $attributes = self::attributes($row);
+        if ($attributes === []) return null;
+        $variants = self::variantRows($productId, true);
+        if ($variantId > 0) {
+            foreach ($variants as $v) if ((int) $v['id'] === $variantId) return $v;
+            return null;
+        }
+        $values = [];
+        foreach ($attributes as $i => $a) {
+            $v = $options[$i] ?? $options[$a['name']] ?? null;
+            if (!is_string($v) || !in_array($v, $a['values'], true)) return null;
+            $values[] = $v;
+        }
+        $key = self::optionsKey($values);
+        foreach ($variants as $v) if ((string) $v['options_key'] === $key) return $v;
+        return null;
     }
 
     /** `24.90`, `24,90` or `24` as cents; null when it is not a non-negative amount. */
@@ -424,7 +731,7 @@ class ShopStoreAPI {
 
     // ── Cart (session) ────────────────────────────────────────────────────
 
-    /** @return array<int, int> product id => qty, as stored */
+    /** @return array<int|string, int> line key => qty, as stored */
     private static function &cartRef(): array {
         $tid = (int) current_tenant_id();
         if (!isset($_SESSION[self::SESSION_KEY]) || !is_array($_SESSION[self::SESSION_KEY])) $_SESSION[self::SESSION_KEY] = [];
@@ -432,45 +739,77 @@ class ShopStoreAPI {
         return $_SESSION[self::SESSION_KEY][$tid];
     }
 
-    /** @return array<int, int> product id => qty */
+    /** A cart line's key: `12` for a product, `12:34` for one of its variants. */
+    public static function lineKey(int $productId, int $variantId = 0): string {
+        return $variantId > 0 ? $productId . ':' . $variantId : (string) $productId;
+    }
+
+    /** @return array{0: int, 1: int}|null [product id, variant id] of a line key */
+    public static function parseLineKey(int|string $key): ?array {
+        return preg_match('/^(\d{1,10})(?::(\d{1,10}))?$/', (string) $key, $m) === 1 && (int) $m[1] > 0
+            ? [(int) $m[1], (int) ($m[2] ?? 0)] : null;
+    }
+
+    /** @return array<int|string, int> line key => qty */
     public static function cartItems(): array {
         $out = [];
-        foreach (self::cartRef() as $pid => $qty) {
-            if ((int) $pid > 0 && (int) $qty > 0) $out[(int) $pid] = min(self::MAX_QTY, (int) $qty);
+        foreach (self::cartRef() as $key => $qty) {
+            if (self::parseLineKey($key) !== null && (int) $qty > 0) $out[$key] = min(self::MAX_QTY, (int) $qty);
         }
         return $out;
     }
 
-    /** @return array{ok: bool, error?: string, qty?: int} */
-    public static function cartAdd(int $productId, int $qty = 1): array {
+    /**
+     * Add a product to the cart. A product with variants needs the visitor's choice: a variant id, or one value per
+     * attribute (`$options`, by position or attribute name).
+     *
+     * @return array{ok: bool, error?: string, qty?: int}
+     */
+    public static function cartAdd(int $productId, int $qty = 1, int $variantId = 0, array $options = []): array {
         $product = self::publishedProduct($productId);
         if (!$product) return ['ok' => false, 'error' => __('shop_err_unavailable', 'This product is not available.')];
-        if (!$product['in_stock']) return ['ok' => false, 'error' => __('shop_err_sold_out', 'This product is sold out.')];
+        $variant = null;
+        if ($product['has_variants']) {
+            $chosen = $variantId > 0 || array_filter($options, static fn($v): bool => is_string($v) && $v !== '') !== [];
+            $row = $chosen ? self::findVariant($productId, $variantId, $options) : null;
+            if ($row === null) {
+                return ['ok' => false, 'error' => $chosen
+                    ? __('shop_err_combination', 'This combination is not available.')
+                    : __('shop_err_choose_options', 'Choose your options first.')];
+            }
+            foreach ($product['variants'] as $v) if ($v['id'] === (int) $row['id']) $variant = $v;
+            if ($variant === null) return ['ok' => false, 'error' => __('shop_err_combination', 'This combination is not available.')];
+        }
+        $item = $variant ?? $product;
+        if (!$item['in_stock']) return ['ok' => false, 'error' => __('shop_err_sold_out', 'This product is sold out.')];
         $cart = &self::cartRef();
+        $key = self::lineKey($productId, $variant['id'] ?? 0);
         $lines = self::cartLines();
         if ($lines !== [] && $lines[0]['currency'] !== $product['currency']) {
             return ['ok' => false, 'error' => __('shop_err_currency', 'This product cannot be in the same cart as the others.')];
         }
-        if (!isset($cart[$productId]) && count($cart) >= self::MAX_CART_LINES) {
+        if (!isset($cart[$key]) && count($cart) >= self::MAX_CART_LINES) {
             return ['ok' => false, 'error' => __('shop_err_cart_full', 'Your cart is full.')];
         }
-        $want = min(self::MAX_QTY, (int) ($cart[$productId] ?? 0) + max(1, $qty));
-        if ($product['stock_qty'] !== null && $want > $product['stock_qty']) {
-            $want = $product['stock_qty'];
-            $cart[$productId] = $want;
+        $want = min(self::MAX_QTY, (int) ($cart[$key] ?? 0) + max(1, $qty));
+        if ($item['stock_qty'] !== null && $want > $item['stock_qty']) {
+            $want = $item['stock_qty'];
+            $cart[$key] = $want;
             return ['ok' => false, 'error' => sprintf(__('shop_err_only_n', 'Only %d left in stock.'), $want), 'qty' => $want];
         }
-        $cart[$productId] = $want;
+        $cart[$key] = $want;
         return ['ok' => true, 'qty' => $want];
     }
 
-    /** Set a line's quantity (0 removes it). */
-    public static function cartSet(int $productId, int $qty): void {
+    /** Set a line's quantity (0 removes it); the line is named by its key (a product id for a product without variants). */
+    public static function cartSet(int|string $key, int $qty): void {
+        if (self::parseLineKey($key) === null) return;
         $cart = &self::cartRef();
+        $key = (string) $key;
         if ($qty <= 0) {
-            unset($cart[$productId]);
-        } elseif (isset($cart[$productId])) {
-            $cart[$productId] = min(self::MAX_QTY, $qty);
+            unset($cart[$key]);
+        } elseif (isset($cart[$key])) {
+            $cart[$key] = min(self::MAX_QTY, $qty);
         }
     }
 
@@ -479,43 +818,74 @@ class ShopStoreAPI {
         $cart = [];
     }
 
+    /** `T-shirt — Blanc / M`: a line's title with its options. */
+    public static function lineTitle(string $title, ?string $options): string {
+        return $options !== null && $options !== '' ? $title . ' — ' . $options : $title;
+    }
+
     /**
-     * The cart as lines, read fresh: products that are gone or unpublished are dropped, quantities are capped at stock.
+     * The cart as lines, read fresh: products and variants that are gone, disabled or unpublished are dropped, and
+     * quantities are capped at stock.
      *
-     * @return list<array{product_id: int, title: string, slug: string, url: string, image: string, sku: string, unit_cents: int, qty: int, line_cents: int, currency: string, max_qty: int, capped: bool}>
+     * @return list<array{key: string, product_id: int, variant_id: int, title: string, options_label: string, slug: string, url: string, image: string, sku: string, unit_cents: int, qty: int, line_cents: int, currency: string, max_qty: int, capped: bool}>
      */
     public static function cartLines(): array {
         $items = self::cartItems();
         if ($items === []) return [];
-        $ids = array_keys($items);
-        $marks = implode(',', array_fill(0, count($ids), '?'));
-        $rows = Database::rows("SELECT * FROM shop_products WHERE tenant_id = ? AND status = 'published' AND id IN ($marks)", array_merge([current_tenant_id()], $ids));
+        $pids = [];
+        foreach (array_keys($items) as $key) $pids[] = self::parseLineKey($key)[0];
+        $pids = array_values(array_unique($pids));
+        $marks = implode(',', array_fill(0, count($pids), '?'));
+        $rows = Database::rows("SELECT * FROM shop_products WHERE tenant_id = ? AND status = 'published' AND id IN ($marks)", array_merge([current_tenant_id()], $pids));
         $byId = [];
         foreach ($rows as $r) $byId[(int) $r['id']] = $r;
+        $variantsById = [];
+        foreach (self::variantsOf($pids) as $list) {
+            foreach ($list as $v) $variantsById[(int) $v['id']] = $v;
+        }
         $lines = [];
-        foreach ($items as $pid => $qty) {
+        foreach ($items as $key => $qty) {
+            [$pid, $vid] = self::parseLineKey($key);
             $r = $byId[$pid] ?? null;
             if (!$r) continue;
-            $avail = self::available($r);
+            $hasVariants = self::attributes($r) !== [];
+            if ($hasVariants !== ($vid > 0)) continue;
+            $label = '';
+            $sku = (string) ($r['sku'] ?? '');
+            $images = self::images($r);
+            $image = $images[0] ?? '';
+            $priced = $r;
+            if ($vid > 0) {
+                $v = $variantsById[$vid] ?? null;
+                if (!$v || (int) $v['product_id'] !== $pid) continue;
+                $pv = self::publicVariant($v, $r);
+                $priced = self::variantEffectiveRow($v, $r);
+                $label = $pv['label'];
+                $sku = $pv['sku'];
+                $image = $pv['image'] !== '' ? $pv['image'] : $image;
+            }
+            $avail = self::available($priced);
             $max = $avail === null ? self::MAX_QTY : min(self::MAX_QTY, $avail);
             if ($max <= 0) continue;
             $capped = $qty > $max;
             $qty = min($qty, $max);
-            $unit = self::effectivePrice($r);
-            $images = self::images($r);
+            $unit = self::effectivePrice($priced);
             $lines[] = [
-                'product_id' => $pid,
-                'title'      => (string) $r['title'],
-                'slug'       => (string) $r['slug'],
-                'url'        => '/' . self::productPrefix() . '/' . $r['slug'],
-                'image'      => $images[0] ?? '',
-                'sku'        => (string) ($r['sku'] ?? ''),
-                'unit_cents' => $unit,
-                'qty'        => $qty,
-                'line_cents' => $unit * $qty,
-                'currency'   => (string) $r['currency'],
-                'max_qty'    => $max,
-                'capped'     => $capped,
+                'key'           => self::lineKey($pid, $vid),
+                'product_id'    => $pid,
+                'variant_id'    => $vid,
+                'title'         => (string) $r['title'],
+                'options_label' => $label,
+                'slug'          => (string) $r['slug'],
+                'url'           => self::productPath((string) $r['slug']),
+                'image'         => $image,
+                'sku'           => $sku,
+                'unit_cents'    => $unit,
+                'qty'           => $qty,
+                'line_cents'    => $unit * $qty,
+                'currency'      => (string) $r['currency'],
+                'max_qty'       => $max,
+                'capped'        => $capped,
             ];
         }
         return $lines;
@@ -594,8 +964,8 @@ class ShopStoreAPI {
         if ($totals['lines'] === []) $errors['_'] = __('shop_err_cart_empty', 'Your cart is empty.');
         foreach ($totals['lines'] as $line) {
             if ($line['capped']) {
-                $errors['_'] = sprintf(__('shop_err_stock_changed', 'Only %1$d of “%2$s” left: your cart was updated.'), $line['max_qty'], $line['title']);
-                self::cartSet($line['product_id'], $line['max_qty']);
+                $errors['_'] = sprintf(__('shop_err_stock_changed', 'Only %1$d of “%2$s” left: your cart was updated.'), $line['max_qty'], self::lineTitle($line['title'], $line['options_label']));
+                self::cartSet($line['key'], $line['max_qty']);
                 break;
             }
         }
@@ -626,7 +996,9 @@ class ShopStoreAPI {
                     'tenant_id'        => $tid,
                     'order_id'         => $orderId,
                     'product_id'       => $line['product_id'],
+                    'variant_id'       => $line['variant_id'] > 0 ? $line['variant_id'] : null,
                     'title'            => $line['title'],
+                    'options_label'    => $line['options_label'] !== '' ? mb_substr($line['options_label'], 0, 255) : null,
                     'sku'              => $line['sku'] !== '' ? $line['sku'] : null,
                     'unit_price_cents' => $line['unit_cents'],
                     'qty'              => $line['qty'],
@@ -669,7 +1041,7 @@ class ShopStoreAPI {
         }
         $lineItems = [];
         foreach (self::orderItems((int) $order['id']) as $item) {
-            $lineItems[] = ['name' => (string) $item['title'], 'amount_cents' => (int) $item['unit_price_cents'], 'quantity' => (int) $item['qty']];
+            $lineItems[] = ['name' => self::lineTitle((string) $item['title'], $item['options_label'] ?? null), 'amount_cents' => (int) $item['unit_price_cents'], 'quantity' => (int) $item['qty']];
         }
         if ((int) $order['shipping_cents'] > 0) {
             $lineItems[] = ['name' => __('shop_shipping', 'Shipping'), 'amount_cents' => (int) $order['shipping_cents'], 'quantity' => 1];
@@ -732,14 +1104,16 @@ class ShopStoreAPI {
         }
         foreach (self::orderItems($orderId) as $item) {
             if (empty($item['product_id'])) continue;
+            // A variant's own stock, else the product's.
+            [$table, $id] = !empty($item['variant_id']) ? ['shop_variants', (int) $item['variant_id']] : ['shop_products', (int) $item['product_id']];
             $taken = Database::query(
-                "UPDATE shop_products SET stock_qty = stock_qty - ? WHERE id = ? AND tenant_id = ? AND stock_qty IS NOT NULL AND stock_qty >= ?",
-                [(int) $item['qty'], (int) $item['product_id'], $tid, (int) $item['qty']])->rowCount();
+                "UPDATE $table SET stock_qty = stock_qty - ? WHERE id = ? AND tenant_id = ? AND stock_qty IS NOT NULL AND stock_qty >= ?",
+                [(int) $item['qty'], $id, $tid, (int) $item['qty']])->rowCount();
             if ($taken === 0) {
-                $tracked = Database::value("SELECT stock_qty FROM shop_products WHERE id = ? AND tenant_id = ?", [(int) $item['product_id'], $tid]);
+                $tracked = Database::value("SELECT stock_qty FROM $table WHERE id = ? AND tenant_id = ?", [$id, $tid]);
                 if ($tracked !== null && $tracked !== false) {
-                    Database::query("UPDATE shop_products SET stock_qty = 0 WHERE id = ? AND tenant_id = ?", [(int) $item['product_id'], $tid]);
-                    $notes[] = sprintf('Short of stock: %s × %d (had %d)', $item['title'], (int) $item['qty'], (int) $tracked);
+                    Database::query("UPDATE $table SET stock_qty = 0 WHERE id = ? AND tenant_id = ?", [$id, $tid]);
+                    $notes[] = sprintf('Short of stock: %s × %d (had %d)', self::lineTitle((string) $item['title'], $item['options_label'] ?? null), (int) $item['qty'], (int) $tracked);
                 }
             }
         }
@@ -871,7 +1245,8 @@ class ShopStoreAPI {
         }
         foreach (self::orderItems($orderId) as $item) {
             if (!empty($item['product_id'])) {
-                Database::query("UPDATE shop_products SET stock_qty = stock_qty + ? WHERE id = ? AND tenant_id = ? AND stock_qty IS NOT NULL", [(int) $item['qty'], (int) $item['product_id'], $tid]);
+                [$table, $id] = !empty($item['variant_id']) ? ['shop_variants', (int) $item['variant_id']] : ['shop_products', (int) $item['product_id']];
+                Database::query("UPDATE $table SET stock_qty = stock_qty + ? WHERE id = ? AND tenant_id = ? AND stock_qty IS NOT NULL", [(int) $item['qty'], $id, $tid]);
             }
         }
         if (class_exists('AuditLog')) AuditLog::record('shop.order_refunded', (string) $orderId);
@@ -897,7 +1272,7 @@ class ShopStoreAPI {
             $site = Database::setting('site_name') ?: 'Kohevo';
             $rows = [];
             foreach (self::orderItems($orderId) as $item) {
-                $rows[] = [e($item['title']) . ' × ' . (int) $item['qty'], e(self::money((int) $item['line_total_cents'], (string) $order['currency']))];
+                $rows[] = [e(self::lineTitle((string) $item['title'], $item['options_label'] ?? null)) . ' × ' . (int) $item['qty'], e(self::money((int) $item['line_total_cents'], (string) $order['currency']))];
             }
             if ((int) $order['shipping_cents'] > 0) $rows[] = [e(__('shop_shipping', 'Shipping')), e(self::money((int) $order['shipping_cents'], (string) $order['currency']))];
             $rows[] = ['<strong>' . e(__('shop_total_incl_vat', 'Total (incl. VAT)')) . '</strong>', '<strong>' . e(self::money((int) $order['total_cents'], (string) $order['currency'])) . '</strong>'];
