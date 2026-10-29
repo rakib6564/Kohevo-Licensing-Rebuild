@@ -1640,6 +1640,8 @@ return [
     'studio_pay_range' => 'Le visiteur choisit',
     'studio_pay_per_month' => 'par mois',
     'studio_field_who_sets_the_amount' => 'Qui fixe le montant',
+    'studio_field_fill_from_the_page_address_parameter_names' => 'Remplir depuis l’adresse de la page (noms des paramètres)',
+    'studio_field_address_values_value_option_one_per_line' => 'Valeurs de l’adresse (valeur=Option, une par ligne)',
     'studio_field_highest_amount_a_visitor_can_give' => 'Montant maximum qu’un visiteur peut donner',
     'studio_field_how_often' => 'Fréquence',
     'studio_field_amount_box_label' => 'Libellé du champ montant',

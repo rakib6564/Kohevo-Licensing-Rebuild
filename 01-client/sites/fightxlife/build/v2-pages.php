@@ -49,6 +49,11 @@ const V2_SECTION_OF = ['2' => 'Nos actions', '3' => 'Nos cours', '4' => 'Projets
 const V2_PRIMARY = ['Primary CTA', 'Member purchase CTA', 'Email CTA', 'Contextual CTA'];
 const V2_GHOST = ['Secondary CTA', 'Member link', 'Anchor link', 'Secondary anchor link', 'Email link', 'Phone link'];
 const V2_SKIP = ['Contact form submit button', 'Donation form submit button'];
+/** The contact links' ?reason= values (from the documents' links) and the motif each selects, by its place in the list. */
+const V2_REASONS = ['information' => 0, 'cours' => 1, 'smilebox' => 2, 'hopital' => 3, 'sensibilisation' => 4, 'partenariat' => 5, 'benevolat' => 6, 'evenement' => 7, 'don' => 8, 'presse' => 9];
+/** The ?activity= and ?project= values, as the object field shows them. */
+const V2_CONTEXT = ['boxe-adaptee' => 'Boxe adaptée', 'waterxfight' => 'WaterxFight', 'boxe-feminin' => 'Boxe 100 % féminin', 'nage-libre' => 'Nage libre',
+    'natation' => 'Cours de natation', 'smilebox' => 'La SmileBox', 'benkick' => 'Benkick'];
 
 function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $up, \Closure $V): array
 {
@@ -323,9 +328,13 @@ function v2_module(array $notes, array $sec, array $pg): ?array
         $f = static fn(string $type, string $name, string $label, bool $req, array $extra = []): array =>
             B('core.form_field', array_replace(['field_type' => $type, 'name' => $name, 'label' => $label, 'placeholder' => '', 'required' => $req], $extra));
         $form = B('core.form', ['form_name' => 'contact-v2', 'submit_text' => 'Envoyer ma demande', 'submit_variant' => 'primary', 'success_message' => implode(' ', $success)], [
-            $f('select', 'motif', 'Motif de votre demande', true, ['options' => implode(',', $reasons)]),
+            // The links' ?reason= picks the motif (an unknown one keeps the general request); ?activity=, ?project= and
+            // ?subject= fill the object, still editable.
+            $f('select', 'motif', 'Motif de votre demande', true, ['options' => implode(',', $reasons), 'default_value' => $reasons[0],
+                'url_param' => 'reason', 'url_values' => implode("\n", array_map(static fn(string $k, int $i): string => "{$k}={$reasons[$i]}", array_keys(V2_REASONS), V2_REASONS))]),
             $f('text', 'nom', 'Nom et prénom', true), $f('email', 'email', 'Adresse e-mail', true), $f('tel', 'telephone', 'Téléphone (facultatif)', false),
-            $f('text', 'organisation', 'Organisation / établissement', false), $f('text', 'objet', 'Objet de votre demande', true), $f('textarea', 'message', 'Votre message', true),
+            $f('text', 'organisation', 'Organisation / établissement', false), $f('text', 'objet', 'Objet de votre demande', true, ['url_param' => 'activity, project, subject',
+                'url_values' => implode("\n", array_map(static fn(string $k, string $v): string => "{$k}={$v}", array_keys(V2_CONTEXT), V2_CONTEXT))]), $f('textarea', 'message', 'Votre message', true),
         ], 'v2-form', ['id' => STABLE_ID('v2-contact-form')]);
         $side = array_merge(array_map(static fn(string $t): array => B('core.rich_text', ['content' => '<p>' . htmlspecialchars($t) . ' <a href="/politique-de-confidentialite/">Consulter la politique de confidentialité</a></p>'], [], 'v2-text'), $privacy),
             $after ? [v2_rich($after)] : []);

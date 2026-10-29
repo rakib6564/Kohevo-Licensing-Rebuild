@@ -629,6 +629,9 @@ final class BlockRegistry
                 ['key' => 'help_text', 'type' => 'string', 'label' => 'Help Text', 'required' => false, 'default' => '', 'max_length' => 255],
                 ['key' => 'options', 'type' => 'string', 'label' => 'Options (comma-separated)', 'required' => false, 'default' => '', 'max_length' => 500],
                 ['key' => 'default_value', 'type' => 'string', 'label' => 'Default Value', 'required' => false, 'default' => '', 'max_length' => 255],
+                // Filled from the page address (contact/?reason=cours): which parameters, and what their values become.
+                ['key' => 'url_param', 'type' => 'string', 'label' => 'Fill from the page address (parameter names)', 'required' => false, 'default' => '', 'max_length' => 120, 'pattern' => '~^[A-Za-z0-9_\- ,]*$~'],
+                ['key' => 'url_values', 'type' => 'text', 'label' => 'Address values (value=Option, one per line)', 'required' => false, 'default' => '', 'max_length' => 2000],
                 // A field's share of the form's row; two halves sit side by side. A phone stacks them unless set per device.
                 ['key' => 'width', 'type' => 'enum', 'label' => 'Width', 'required' => false, 'per_device' => true, 'allowed_values' => ['100', '75', '66', '50', '33', '25'], 'default' => '100'],
             ]),
