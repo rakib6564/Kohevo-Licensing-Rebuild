@@ -207,4 +207,17 @@ final class Html
         }
         return $default;
     }
+
+    /** A post date in the page's language ("Jul 15, 2025", "15 juillet 2025"); the language pack sets the format. */
+    public static function date(int $timestamp): string
+    {
+        $format = self::t('studio_date_format', 'M j, Y');
+        if (\class_exists(\Slate\Services\I18n\I18n::class)) {
+            try {
+                return \Slate\Services\I18n\I18n::localDate($format, $timestamp);
+            } catch (\Throwable $ignored) {
+            }
+        }
+        return \date($format, $timestamp);
+    }
 }

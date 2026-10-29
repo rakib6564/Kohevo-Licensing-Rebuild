@@ -416,7 +416,7 @@ final class StudioCompiler
             'post_url'    => $context->site->absoluteUrl(\Slate\Module\StudioBuilder\Meta\PageRoutes::path($context->tenantId, (int) $page->id, $page->slug, $page->routeMode)),
             'category'    => $settings['category'] ?? '',
             'author_name' => mb_substr(trim($author), 0, 120),
-            'date'        => $published !== false ? date('M j, Y', $published) : '',
+            'date'        => $published !== false ? Html::date($published) : '',
             'is_single'   => true,
         ];
     }
