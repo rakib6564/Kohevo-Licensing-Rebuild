@@ -339,6 +339,9 @@ unit('shop: catalogue, cart, checkout, payment and the Studio storefront (real M
                     array_map(static fn($l) => [$l['options_label'], $l['sku'], $l['unit_cents'], $l['qty'], $l['image']], $lines), 'each variant is its own line, at its own price');
                 $cartHtml = shop_view_cart(ShopStoreAPI::cartTotals());
                 assert_true(str_contains($cartHtml, '<span class="sb-shop-cart__options">Bleu / L</span>') && str_contains($cartHtml, 'name="line" value="' . $hoodieId . ':' . $byLabel['Bleu / L']['id'] . '"'), 'the cart shows the options and names the line');
+                $siteBase = rtrim((string) SLATE_URL, '/');
+                assert_true(str_contains($cartHtml, 'src="' . e($siteBase . '/uploads/media/hoodie-rose.jpg') . '"'), 'the cart image carries the site base URL, so a subfolder install shows it');
+                assert_eq([$siteBase . '/media/a.jpg', 'https://cdn.test/a.jpg', '//cdn.test/a.jpg'], array_map([ShopStoreAPI::class, 'assetUrl'], ['/media/a.jpg', 'https://cdn.test/a.jpg', '//cdn.test/a.jpg']), 'only a site path is given the base URL');
                 ShopStoreAPI::cartSet($hoodieId . ':' . $byLabel['Bleu / L']['id'], 1);
                 assert_eq(1, ShopStoreAPI::cartLines()[1]['qty'], 'a line is updated by its key');
                 ShopStoreAPI::cartSet('nonsense', 0);
@@ -384,6 +387,7 @@ unit('shop: catalogue, cart, checkout, payment and the Studio storefront (real M
             $r = sbsh_get($rt, '/product/club-b-t-shirt-b');
             assert_true($r !== null && $r->status === 200, 'the product page is served by its Single template');
             $html = (string) $r->body;
+            assert_true(preg_match('/<header class="sb-site-header[ "]/', $html) === 1 && preg_match('/<footer class="sb-site-footer[ "]/', $html) === 1, 'the product page has the site\'s header and footer, though its template is a system page');
             assert_true(str_contains($html, '<h1 class="sb-shop-title">Club &lt;b&gt;T-shirt&lt;/b&gt;</h1>'), 'title, escaped');
             assert_true(str_contains($html, 'sb-shop-price--sale') && str_contains($html, 'sb-shop-stock--out'), 'sale price and stock (sold out after the order)');
             assert_true(str_contains($html, '<title>Club &lt;b&gt;T-shirt&lt;/b&gt;'), 'the page title is the product');

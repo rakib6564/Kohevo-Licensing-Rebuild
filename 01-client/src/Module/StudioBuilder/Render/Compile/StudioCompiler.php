@@ -295,6 +295,7 @@ final class StudioCompiler
         // Header and footer display conditions read this revision's own category and tags, never the draft row.
         $chromeContext = $settings + ['category' => ''];
         $chromeContext['tags'] = self::tagsOf($decoded);
+        $chromeContext[ChromeResolver::SERVED_TEMPLATE] = (bool) $context->attribute(ChromeResolver::SERVED_TEMPLATE, false);
         $header = $this->chrome->resolve('header', (string) $settings['header_mode'], $page, $chromeContext);
         $footer = $this->chrome->resolve('footer', (string) $settings['footer_mode'], $page, $chromeContext);
         // "Preview as a page": an authoring preview may swap in the draft of a header or footer being edited. A page

@@ -120,7 +120,7 @@ function shop_view_cart(array $totals, string $notice = ''): string {
         $dom = str_replace(':', '-', $key);
         $rows .= '<tr class="sb-shop-cart__line" data-product="' . $pid . '"' . ($line['variant_id'] > 0 ? ' data-variant="' . (int) $line['variant_id'] . '"' : '') . '>'
             . '<td class="sb-shop-cart__product">'
-            . ($line['image'] !== '' ? '<img class="sb-shop-cart__image" src="' . e($line['image']) . '" alt="" width="64" height="64" loading="lazy">' : '')
+            . ($line['image'] !== '' ? '<img class="sb-shop-cart__image" src="' . e(ShopStoreAPI::assetUrl($line['image'])) . '" alt="" width="64" height="64" loading="lazy">' : '')
             . '<a class="sb-shop-cart__title" href="' . e(rtrim((string) SLATE_URL, '/') . $line['url']) . '">' . e($line['title']) . '</a>'
             . ($line['options_label'] !== '' ? '<span class="sb-shop-cart__options">' . e($line['options_label']) . '</span>' : '')
             . ($line['capped'] ? '<span class="sb-shop-cart__note">' . e(sprintf(__('shop_err_only_n', 'Only %d left in stock.'), $line['max_qty'])) . '</span>' : '')

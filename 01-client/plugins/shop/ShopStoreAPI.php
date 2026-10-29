@@ -145,6 +145,14 @@ class ShopStoreAPI {
         return $slash ? rtrim($path, '/') . '/' : $path;
     }
 
+    /**
+     * An image address as a page outside Studio can use it: a site path (`/uploads/…`) gains the site's base URL, so it
+     * still works when the site lives in a subfolder (Studio rebases its own pages; the Shop's fragments are not Studio's).
+     */
+    public static function assetUrl(string $url): string {
+        return str_starts_with($url, '/') && !str_starts_with($url, '//') ? rtrim((string) SLATE_URL, '/') . $url : $url;
+    }
+
     /** A Shop endpoint (`public/cart.php`). */
     public static function endpoint(string $file): string {
         return function_exists('plugin_url') ? plugin_url('shop', 'public/' . $file) : rtrim((string) SLATE_URL, '/') . '/plugins/shop/public/' . $file;
