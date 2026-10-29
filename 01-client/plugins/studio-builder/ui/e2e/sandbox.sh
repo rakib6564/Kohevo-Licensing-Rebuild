@@ -46,6 +46,7 @@ LICENSE_SERVER_PUBLIC_KEY=$PUBLIC_KEY
 LICENSE_PRODUCT=kohevo
 LICENSE_KEY=test-key
 LICENSE_SYNC_INTERVAL=86400
+STRIPE_API_BASE=http://127.0.0.1:12111
 ENV
 
 (cd "$SITE" && php plugins/studio-builder/ui/e2e/provision.php)

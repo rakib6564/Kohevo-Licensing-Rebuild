@@ -1405,6 +1405,97 @@
    * is a sensible static label rather than a blank gap.
    */
 
+  /**
+   * Fragments: the parts of a page that belong to one visitor (a Shop cart, its checkout) on a page that is cached
+   * for everyone. `[data-sb-fragment="<same-origin url>"]` is filled with the HTML that URL answers for this visitor
+   * (their session cookie goes with it); whatever it held before (a plain link) stays when the fetch fails or there
+   * is no JavaScript. A form inside a fragment, or one marked `data-sb-fragment-form`, is sent in place: the JSON
+   * answer may carry `html` (the fragment's new content), `message`, and `redirect` (this site, or https, e.g. Stripe
+   * Checkout). After a send, every fragment of the same `data-sb-fragment-group` is fetched again (the mini cart
+   * after an add to cart). Inserted HTML is never executed: it is markup only.
+   */
+  function sameOrigin(url) {
+    try { return new URL(url, global.location.href).origin === global.location.origin; } catch (e) { return false; }
+  }
+
+  function initFragments(root) {
+    var slots = qsa(root, '[data-sb-fragment]');
+    var forms = qsa(root, 'form[data-sb-fragment-form]');
+    if (!slots.length && !forms.length) return;
+    if (!global.fetch || !global.FormData) return;
+
+    function load(slot) {
+      var url = slot.getAttribute('data-sb-fragment');
+      if (!url || !sameOrigin(url)) return;
+      // `data-sb-fragment-query="order,key"`: pass on those parameters of the page's own address (an order link).
+      var names = (slot.getAttribute('data-sb-fragment-query') || '').split(',').filter(Boolean);
+      if (names.length && global.URLSearchParams) {
+        var target = new URL(url, global.location.href);
+        var here = new URLSearchParams(global.location.search);
+        names.forEach(function (n) { if (here.has(n)) target.searchParams.set(n, here.get(n)); });
+        url = target.toString();
+      }
+      slot.setAttribute('data-sb-fragment-state', 'loading');
+      fetch(url, { credentials: 'same-origin', headers: { Accept: 'text/html', 'X-Studio-Fragment': '1' } })
+        .then(function (res) {
+          var type = res.headers.get('Content-Type') || '';
+          if (!res.ok || type.indexOf('text/html') !== 0) throw new Error('fragment ' + res.status);
+          return res.text();
+        })
+        .then(function (html) {
+          slot.innerHTML = html;
+          slot.setAttribute('data-sb-fragment-state', 'ready');
+        })
+        .catch(function () { slot.setAttribute('data-sb-fragment-state', 'error'); });
+    }
+
+    function refresh(group) {
+      if (!group) return;
+      qsa(document, '[data-sb-fragment][data-sb-fragment-group]').forEach(function (slot) {
+        if (slot.getAttribute('data-sb-fragment-group') === group) load(slot);
+      });
+    }
+
+    function onSubmit(event) {
+      var form = event.target;
+      if (!form || form.tagName !== 'FORM') return;
+      var slot = form.closest('[data-sb-fragment]');
+      if (!slot && !form.hasAttribute('data-sb-fragment-form')) return;
+      // The attributes, not form.action / form.method: a field named "action" or "method" shadows those properties.
+      var action = new URL(form.getAttribute('action') || global.location.href, global.location.href).href;
+      if (!sameOrigin(action) || (form.getAttribute('method') || 'get').toLowerCase() !== 'post') return;
+      event.preventDefault();
+      if (form.getAttribute('aria-busy') === 'true') return;
+      form.setAttribute('aria-busy', 'true');
+      var body = new FormData(form);
+      if (event.submitter && event.submitter.name) body.append(event.submitter.name, event.submitter.value);
+      var note = qs(form, '[data-sb-fragment-message]');
+      fetch(action, { method: 'POST', body: body, credentials: 'same-origin', headers: { Accept: 'application/json', 'X-Studio-Fragment': '1' } })
+        .then(function (res) { return res.json().catch(function () { return {}; }).then(function (data) { return { ok: res.ok, data: data || {} }; }); })
+        .then(function (r) {
+          var data = r.data;
+          if (typeof data.redirect === 'string' && (sameOrigin(data.redirect) || /^https:\/\//i.test(data.redirect))) {
+            global.location.assign(data.redirect);
+            return;
+          }
+          if (slot && typeof data.html === 'string') slot.innerHTML = data.html;
+          if (note && typeof data.message === 'string') {
+            note.textContent = data.message;
+            note.setAttribute('data-sb-state', r.ok ? 'ok' : 'error');
+          }
+          var group = form.getAttribute('data-sb-fragment-group') || (slot && slot.getAttribute('data-sb-fragment-group'));
+          if (r.ok) refresh(group);
+        })
+        .catch(function () {
+          if (note) { note.textContent = note.getAttribute('data-sb-fragment-error') || ''; note.setAttribute('data-sb-state', 'error'); }
+        })
+        .then(function () { form.removeAttribute('aria-busy'); });
+    }
+
+    slots.forEach(load);
+    mount(on(document, 'submit', onSubmit));
+  }
+
   function initCountdown(root) {
     var els = qsa(root, '[data-sb-countdown]');
     if (!els.length) return;
@@ -1608,6 +1699,7 @@
     ['marquee', initMarquee],
     ['countdown', initCountdown],
     ['forms', initForms],
+    ['fragments', initFragments],
     ['currentLinks', initCurrentLinks],
     ['submenus', initSubmenus],
     ['anchors', initAnchors]

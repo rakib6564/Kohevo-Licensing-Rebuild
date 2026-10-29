@@ -131,6 +131,20 @@ try {
     // The block falls back to an empty list.
 }
 
+// Content types the display-conditions dialog offers besides the built-in ones: the site's own (Types & fields) and
+// the ones a plugin keeps in its own tables (Shop's products).
+$sbContentTypes = [];
+try {
+    foreach (\Slate\Module\StudioBuilder\Meta\PageMeta::postTypes(current_tenant_id()) as $key => $type) {
+        $sbContentTypes[] = ['key' => (string) $key, 'label' => (string) ($type['plural'] ?? $type['singular'] ?? $key)];
+    }
+    foreach (\Slate\Module\StudioBuilder\Registry\PluginWidgetCatalog::singles() as $single) {
+        $sbContentTypes[] = ['key' => $single->contentType(), 'label' => __('studio_content_type_' . $single->contentType(), $single->label())];
+    }
+} catch (\Throwable $e) {
+    // The dialog keeps its built-in types.
+}
+
 $sbBoot = [
     'pageId'     => $sbPageId,
     'allPages'   => $sbAllPages,
@@ -143,6 +157,7 @@ $sbBoot = [
     'canvasSandbox' => StudioCanvasPolicy::IFRAME_SANDBOX,
     'mediaPicker'   => $sbMediaPicker,
     'metaFields'    => $sbMetaFields,
+    'contentTypes'  => $sbContentTypes,
     'mediaApiUrl'   => plugin_url('studio-builder', 'admin/media-api.php'),
     'builderUrl'    => plugin_url('studio-builder', 'admin/builder.php'),
     'brandingUrl'   => rtrim((string) SLATE_URL, '/') . '/admin/settings.php?tab=branding',
@@ -1267,6 +1282,14 @@ $sbBoot = [
         'opt_framed' => __('studio_ui_opt_framed', 'Framed'),
         'opt_circle' => __('studio_ui_opt_circle', 'Circle'),
         'opt_square' => __('studio_ui_opt_square', 'Square'),
+        'opt_menu' => __('studio_ui_opt_menu', 'Shop order'),
+        'opt_newest' => __('studio_ui_opt_newest', 'Newest first'),
+        'opt_price_asc' => __('studio_ui_opt_price_asc', 'Price, low to high'),
+        'opt_price_desc' => __('studio_ui_opt_price_desc', 'Price, high to low'),
+        'opt_natural' => __('studio_ui_opt_natural', 'Natural'),
+        'opt_portrait' => __('studio_ui_opt_portrait', 'Portrait'),
+        'opt_landscape' => __('studio_ui_opt_landscape', 'Landscape'),
+        'opt_long' => __('studio_ui_opt_long', 'Full description'),
         'css_filters' => __('studio_ui_css_filters', 'CSS Filters'),
         'hover_zoom' => __('studio_ui_hover_zoom', 'Hover zoom'),
         'icon_primary_color' => __('studio_ui_icon_primary_color', 'Primary Color'),

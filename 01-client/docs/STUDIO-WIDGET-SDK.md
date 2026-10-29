@@ -190,4 +190,16 @@ Rules:
 - A file that throws or returns the wrong shape is logged through `StudioLog` and skipped; Studio keeps working.
 - Add the block's French title and description (`studio_block_<type>_title` / `_desc`) and any new field labels (`studio_field_*`) to `plugins/studio-builder/lang/fr.php`, then regenerate `ui/tests/fixtures/manifest.json`.
 
-See `plugins/booking/studio-widgets.php` and `plugins/membership/studio-widgets.php` for working examples.
+See `plugins/booking/studio-widgets.php` and `plugins/membership/studio-widgets.php` for working examples, and `plugins/shop/studio-widgets.php` for the keys below.
+
+### Style parts (`parts`)
+
+A plugin's widgets get Style › Parts like Studio's own: `'parts' => ['shop.products' => ['title' => ['label' => 'Title', 'selectors' => ['.sb-shop-card__title']]]]`. Only the plugin's own block types may be named; selectors are class names, attribute tests and combinators (Studio scopes them to the block, so a part can only reach its own block); `'states' => false` marks a pseudo-element. Studio's own map (`BlockParts`) wins for a type both name. Add each part label's French text as a field label (`studio_field_*`).
+
+### Content types a plugin keeps itself (`singles`)
+
+`'singles' => [new MyItemSingle()]`, each a `Registry\PluginSingleInterface`: a content type key (`product`), its name, the entitlement, an address prefix, `find(tenant, slug)` for one published item and `sitemap(tenant)`. Studio then serves `/{prefix}/{slug}` with the published Single template whose display conditions include `singular` = that type (a template that only says "entire site" is not used), with the item in the render context as `single_item` (`$scope->context()->attribute('single_item')`; the plugin's own data in its `data` key). The item's title, description and image become the page's title, description, canonical and social image; the type is offered in the display-conditions dialog; the items are listed in the sitemap. An inactive or unlicensed plugin, an unpublished item or no matching template is the ordinary 404.
+
+### Per-visitor content on cached pages (fragments)
+
+Studio's public pages are cached for everyone and carry no session, so a widget that shows something of one visitor (a cart) renders a placeholder with `data-sb-fragment="<same-origin URL>"` and a plain link inside it. studio-runtime.js fetches that URL with the visitor's cookies (`X-Studio-Fragment: 1`) and puts the HTML it answers in the placeholder; it is markup only, never executed. `data-sb-fragment-query="order,key"` passes on those parameters of the page's own address; `data-sb-fragment-group` names fragments that refresh together. A `<form method="post">` inside a fragment, or one marked `data-sb-fragment-form`, is sent in place: the endpoint answers JSON with `html` (the fragment's new content), `message` (shown in the form's `[data-sb-fragment-message]`) and/or `redirect` (this site, or any https address such as Stripe Checkout). The endpoint is the plugin's own (`plugins/<slug>/public/*.php`, `slate_public_entry()` first, `Cache-Control: private, no-store`), and it does its own CSRF check for the forms it renders.

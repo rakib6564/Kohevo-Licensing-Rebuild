@@ -21,14 +21,22 @@ export default defineConfig({
   reporter: [['list']],
   outputDir: 'test-results',
   use: { baseURL, storageState: 'e2e/.auth/state.json', trace: 'retain-on-failure', screenshot: 'only-on-failure' },
-  webServer: dir && !process.env.SBX_URL ? {
+  // The sandbox site, and the fake Stripe its .env points at (STRIPE_API_BASE) for the Shop checkout suite.
+  webServer: dir && !process.env.SBX_URL ? [{
     command: `php -S localhost:${port} -t "${dir}" "${dir}/dev-server.php"`,
     url: `${baseURL}/admin/login.php`,
     reuseExistingServer: true,
     stdout: 'ignore',
     stderr: 'ignore',
     timeout: 30_000,
-  } : undefined,
+  }, {
+    command: 'node e2e/fake-stripe.mjs 12111',
+    url: 'http://127.0.0.1:12111/health',
+    reuseExistingServer: true,
+    stdout: 'ignore',
+    stderr: 'ignore',
+    timeout: 15_000,
+  }] : undefined,
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } } },
     { name: 'tablet', use: { ...devices['Desktop Chrome'], viewport: { width: 820, height: 1000 } } },

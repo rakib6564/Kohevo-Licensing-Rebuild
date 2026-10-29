@@ -12,6 +12,9 @@
  * rules also match under `[data-sb-scope~="<the block's class>"]`, which the runtime writes on what it moves.
  * The selectors are the renderers' own class names: a renderer that renames one must rename it here too (a unit test
  * renders each widget and checks every selector still matches).
+ *
+ * A Kohevo plugin's widgets declare their parts in the plugin's `studio-widgets.php` (`'parts'`, read by
+ * PluginWidgetCatalog); Studio's own map wins for a type both name.
  */
 
 declare(strict_types=1);
@@ -175,7 +178,7 @@ final class BlockParts
     /** @return array<string, array{label: string, selectors: list<string>}> the parts of a block type (none for most). */
     public static function for(string $type): array
     {
-        return self::PARTS[$type] ?? [];
+        return self::PARTS[$type] ?? (PluginWidgetCatalog::parts()[$type] ?? []);
     }
 
     /** True when the part is inside an element the runtime moves to <body> (see the class comment). */
@@ -193,7 +196,7 @@ final class BlockParts
     /** @return list<string> every block type that has parts */
     public static function types(): array
     {
-        return array_keys(self::PARTS);
+        return array_values(array_unique([...array_keys(self::PARTS), ...array_keys(PluginWidgetCatalog::parts())]));
     }
 
     /** @return list<array{key: string, label: string}> what the editor offers for a type, in order */

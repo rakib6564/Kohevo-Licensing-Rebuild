@@ -27,6 +27,24 @@ export const KINDS = Object.freeze([
 
 export const CONTENT_TYPES = Object.freeze(['all', 'page', 'post', 'portfolio', 'services']);
 
+// More content types from the boot payload (`boot.contentTypes`): the site's own types (Types & fields) and the
+// ones a plugin keeps in its own tables (Shop's products). Each is offered with its own name.
+let extraTypes = [];
+
+/** `list` is boot.contentTypes: [{key, label}]. Malformed entries and the built-in keys are dropped. */
+export function setContentTypes(list) {
+  const seen = new Set(CONTENT_TYPES);
+  extraTypes = (Array.isArray(list) ? list : [])
+    .filter((c) => c && typeof c.key === 'string' && /^[a-z][a-z0-9_]{0,31}$/.test(c.key) && !seen.has(c.key) && seen.add(c.key))
+    .map((c) => ({ key: c.key, label: typeof c.label === 'string' && c.label !== '' ? c.label : c.key }));
+}
+
+/** Every content type key a `singular` row may name. */
+export const contentTypes = () => [...CONTENT_TYPES, ...extraTypes.map((c) => c.key)];
+
+/** The name of an extra content type, or null for a built-in one (those are translated messages). */
+export const contentTypeLabel = (key) => (extraTypes.find((c) => c.key === key) || {}).label || null;
+
 const KIND_IDS = new Set(KINDS.map((k) => k.id));
 
 /**
@@ -71,7 +89,7 @@ export function toRow(rule) {
   if (scope === 'front_page' || scope === 'home') return row('front_page');
   if (scope === 'singular' || scope === 'post_type' || scope === 'page_type') {
     const v = String(rule.value ?? rule.post_type ?? 'all').toLowerCase();
-    return CONTENT_TYPES.includes(v) && !rule.field ? row('singular', v) : { action, kind: 'custom', value: '', raw: rule };
+    return contentTypes().includes(v) && !rule.field ? row('singular', v) : { action, kind: 'custom', value: '', raw: rule };
   }
   if (scope === 'category') return row('category', rule.value ?? rule.category ?? '');
   if (scope === 'tag') return row('tag', rule.value ?? rule.tag ?? '');
@@ -96,7 +114,7 @@ export function fromRow(row) {
   const action = row.action === 'exclude' ? 'exclude' : 'include';
   const text = String(row.value ?? '').trim();
   switch (row.kind) {
-    case 'singular': return { action, condition: 'singular', value: CONTENT_TYPES.includes(text) ? text : 'all' };
+    case 'singular': return { action, condition: 'singular', value: contentTypes().includes(text) ? text : 'all' };
     case 'category': case 'tag': case 'slug': return { action, condition: row.kind, value: text };
     case 'author': case 'id': return { action, condition: row.kind, value: Number.parseInt(text, 10) };
     case 'archive': return text === '' ? { action, condition: 'archive', value: 'all' } : { action, condition: 'archive', term: text };

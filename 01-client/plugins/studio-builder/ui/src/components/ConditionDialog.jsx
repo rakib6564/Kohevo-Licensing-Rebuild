@@ -7,7 +7,7 @@
 import { useId, useState } from 'react';
 import { Dialog } from './Dialog.jsx';
 import { t } from '../core/messages.mjs';
-import { CONTENT_TYPES, KINDS, MAX_RULES, fromRows, rowProblem, sameConditionsAs, setProblem } from '../core/conditions.mjs';
+import { KINDS, contentTypeLabel, contentTypes, MAX_RULES, fromRows, rowProblem, sameConditionsAs, setProblem } from '../core/conditions.mjs';
 
 const kindInput = (kind) => (KINDS.find((k) => k.id === kind) || {}).input || null;
 
@@ -33,8 +33,8 @@ function Row({ row, index, onChange, onRemove }) {
         {KINDS.map((k) => <option key={k.id} value={k.id}>{t(`cond_kind_${k.id}`)}</option>)}
       </select>
       {input === 'content_type' && (
-        <select aria-label={t('cond_value')} data-cond="value" value={CONTENT_TYPES.includes(row.value) ? row.value : 'all'} onChange={(e) => onChange({ ...row, value: e.target.value })}>
-          {CONTENT_TYPES.map((c) => <option key={c} value={c}>{t(`cond_type_${c}`)}</option>)}
+        <select aria-label={t('cond_value')} data-cond="value" value={contentTypes().includes(row.value) ? row.value : 'all'} onChange={(e) => onChange({ ...row, value: e.target.value })}>
+          {contentTypes().map((c) => <option key={c} value={c}>{contentTypeLabel(c) ?? t(`cond_type_${c}`)}</option>)}
         </select>
       )}
       {(input === 'text' || input === 'number' || input === 'optional_text') && (

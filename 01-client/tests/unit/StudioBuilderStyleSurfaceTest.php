@@ -838,8 +838,8 @@ unit('text colours: post excerpt and content use variables the theme defines', f
     // --sb-anim-* are set per element by the animation surface, --sb-ov-* by a Container's overlay, --sb-shape-* by its
     // shape dividers, --sb-pbg-*, --sb-parallax-*, --sb-sticky-* and --sb-stuck-* by the scroll effects, and --sb-dc-*, --sb-tc-*
     // and --sb-pv* by counts that differ per device (DeviceColumns), --sb-fw-* by a form field's width, and --sb-cw* by a
-    // section's custom width, not by the theme.
-    $perElement = ['--sb-anim-', '--sb-ov-', '--sb-shape-', '--sb-pbg-', '--sb-parallax-', '--sb-sticky-', '--sb-stuck-', '--sb-dc-', '--sb-tc-', '--sb-pv', '--sb-fw-', '--sb-cw'];
+    // section's custom width, and --sb-shop-* by a Shop widget (a Product grid's columns), not by the theme.
+    $perElement = ['--sb-anim-', '--sb-ov-', '--sb-shape-', '--sb-pbg-', '--sb-parallax-', '--sb-sticky-', '--sb-stuck-', '--sb-dc-', '--sb-tc-', '--sb-pv', '--sb-fw-', '--sb-cw', '--sb-shop-'];
     $missing = array_values(array_filter(array_diff(array_unique($m[1]), $defined), static function (string $v) use ($perElement): bool {
         foreach ($perElement as $prefix) {
             if (str_starts_with($v, $prefix)) {
