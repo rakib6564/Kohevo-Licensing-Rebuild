@@ -49,6 +49,18 @@ const V2_SECTION_OF = ['2' => 'Nos actions', '3' => 'Nos cours', '4' => 'Projets
 const V2_PRIMARY = ['Primary CTA', 'Member purchase CTA', 'Email CTA', 'Contextual CTA'];
 const V2_GHOST = ['Secondary CTA', 'Member link', 'Anchor link', 'Secondary anchor link', 'Email link', 'Phone link'];
 const V2_SKIP = ['Contact form submit button', 'Donation form submit button'];
+/**
+ * The team, grouped by role: the "Notre Équipe" block of the live site (names, roles and portraits as published there; it
+ * has no biographies). The advisory board and the honorary committee stay out, as the document asks. Empty this to hide
+ * the section again until the client sends approved entries.
+ */
+const V2_TEAM = [
+    'Administration' => [['Sara R.', 'Fondatrice', 'sara-ponpqw0gqz9udxela26ghmgghhjey2rgcpahom9pdk.jpg'], ['Mirella', 'Administratrice', 'mirella-ponpu0t3j3k934uqzexostzrrq3glr78s7kr9tmgmw.jpg'],
+        ['Nafissa', 'Administratrice', 'nafisa-ponpvl7ex5pgfqktu3bayfrfeudhflf4zypw2fau9k.jpg']],
+    'Communication' => [['Valérie Cornelis', 'Attachée de presse', 'cornelis-valerie-ponq3f6zvgfh6r783h7dqglpmfrlksim2qfk1foqew.jpg']],
+    'Coaching' => [['Romane Bellens', 'Coach sportive, trois fois championne d’Europe WCTS', 'bellens-romane-ponqm7ysk65xdzw6blqrlptlbv3viv5cns55knt9yw.jpg'],
+        ['Inès Miloudi', 'Coach Cancerfighter', 'miloudi-ines-ponqm7ysk65xdzw6blqrlptlbv3viv5cns55knt9yw.jpg'], ['Sylvia', 'Coach WaterxFight', 'sylvia-ponr0bjn2pgrjfevzp5b05qi3xm2zf4elkfcq2womw.jpg']],
+];
 /** The contact links' ?reason= values (from the documents' links) and the motif each selects, by its place in the list. */
 const V2_REASONS = ['information' => 0, 'cours' => 1, 'smilebox' => 2, 'hopital' => 3, 'sensibilisation' => 4, 'partenariat' => 5, 'benevolat' => 6, 'evenement' => 7, 'don' => 8, 'presse' => 9];
 /** The ?activity= and ?project= values, as the object field shows them. */
@@ -119,6 +131,14 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
 
         // ── Figures and quotes ──
         'v2-stats'       => ['s' => lay(['gap' => '20px']), 'props' => ['columns' => 3], 'tp' => ['columns' => 2], 'mp' => ['columns' => 1], 'reveal' => $up(0)],
+        'v2-team__block' => ['s' => mar(0, null, 40, null), 'reveal' => $up(0)],
+        'v2-team__group' => ['s' => S(col(PINK), ty('15px', 'bold', null, '.06em'), mar(0, null, 18, null)), 'center' => true],
+        'v2-team'        => ['s' => lay(['gap' => '22px', 'justify' => 'center']), 'm' => lay(['gap' => '12px'])],
+        'v2-team__card'  => ['s' => S(dim(['width' => '220px']), pad(24, 18), radius('22px'), bg('#ffffff'), $lift, fx(['transition' => ['duration_ms' => 300, 'easing' => 'ease']])),
+                              'h' => fx(['transform' => ['translate_y' => '-6px']]), 'm' => S(dim(['width' => '46%']), pad(18, 10)), 'center' => true],
+        'v2-team__photo' => ['s' => S(dim(['width' => '120px', 'height' => '120px', 'object_fit' => 'cover', 'overflow' => 'hidden']), radius('999px'), mar(0, 'auto', 14, 'auto'), brd('#ffd3ea', '4px', '999px')), 'm' => dim(['width' => '92px', 'height' => '92px'])],
+        'v2-team__name'  => ['s' => S(col(INK), fam('heading', '18px', 'bold', '1.3'))],
+        'v2-team__role'  => ['s' => S(col(BODY), ty('14px', null, '1.5'), mar(4, null, 0, null))],
         'v2-stat'        => ['s' => S(pad(30, 28), radius('22px'), bg('#ffffff'), $lift), 'center' => true],
         'v2-stat__num'   => ['s' => S(col(PINK), ty('clamp(30px,3vw,40px)', 'bold', '1.1', '-.02em', SYNE), mar(0, null, 10, null))],
         'v2-stat__text'  => ['s' => S(col(BODY), ty('15px', null, '1.55'))],
@@ -395,7 +415,17 @@ function v2_section(array $sec, array $pg, int $i, bool $last): ?array
 {
     [$text, $ctas, $notes, $h3s] = v2_parts($sec['blocks']);
     $all = implode("\n", $notes);
-    if (str_contains($all, 'Team block')) { return null; } // no approved team entries supplied: the document says to hide the section
+    // The document says to hide the team section when no approved entries are supplied; V2_TEAM is empty in that case.
+    if (str_contains($all, 'Team block')) {
+        if (!V2_TEAM) { return null; }
+        $groups = [];
+        foreach (V2_TEAM as $group => $people) {
+            $cards = array_map(static fn(array $m): array => BOX([V2IMG($m[2], $m[0], 'v2-team__photo'), T($m[0], 'v2-team__name'), T($m[1], 'v2-team__role')], 'v2-team__card'), $people);
+            $groups[] = BOX([T($group, 'v2-team__group'), B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'justify' => 'center', 'wrap' => 'wrap'], $cards, 'v2-team')], 'v2-team__block');
+        }
+        return SEC($sec['h2'], [BOX(array_merge([KICK(), H($sec['h2'], 'h2', 'v2-h2')], array_filter([v2_rich($text)])), 'v2-head v2-head--center'), ...$groups],
+            'v2-sec' . ($i % 2 === 1 ? ' v2-sec--soft' : ''));
+    }
     $soft = $i % 2 === 1;
     $head = [KICK(), H($sec['h2'], 'h2', 'v2-h2')];
     $module = v2_module($notes, $sec, $pg);
