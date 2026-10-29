@@ -491,7 +491,8 @@ function v2_section(array $sec, array $pg, int $i, bool $last): ?array
 }
 
 /** Build every V2 page but the home page, each at "<slug>-v2", with the document's SEO title and description. */
-function v2_build_pages(array $pages): void
+/** @return array<string, int> each page's id by its document address */
+function v2_build_pages(array $pages): array
 {
     global $CONTENT_V1, $EXTRA_V1, $IMGMAP_V1;
     $data = __DIR__ . '/../fxl';
@@ -499,6 +500,7 @@ function v2_build_pages(array $pages): void
     foreach (json_decode((string) file_get_contents("{$data}/content.json"), true) as $item) { $CONTENT_V1[$item['kind'] . ':' . $item['slug']] = $item; }
     $EXTRA_V1 = json_decode((string) file_get_contents("{$data}/extra.json"), true);
     $IMGMAP_V1 = json_decode((string) file_get_contents("{$data}/image-map.json"), true);
+    $ids = [];
     foreach ($pages as $pg) {
         if ($pg['url'] === '/') { continue; }
         $sections = [v2_hero($pg)];
@@ -514,7 +516,90 @@ function v2_build_pages(array $pages): void
         unset($s);
         $slug = trim(V2URL($pg['url']), '/');
         $photo = V2_PAGE_IMAGES[$pg['url']]['hero'] ?? null;
-        build_page($slug, $pg['h1'] . ' (V2)', 'page', 'standalone', $sections, ['seo_robots' => 'noindex,nofollow'], $pg['seo_title'], $pg['meta'],
+        $ids[$pg['url']] = build_page($slug, V2_LIVE ? $pg['h1'] : $pg['h1'] . ' (V2)', 'page', 'standalone', $sections, V2_LIVE ? [] : ['seo_robots' => 'noindex,nofollow'], $pg['seo_title'], $pg['meta'],
             $photo ? (MID('/uploads/media/fxl/' . $photo) ?: null) : null);
     }
+    return $ids;
+}
+
+/**
+ * Move the pages between the preview and the live addresses, before the build. Going live, each current page whose
+ * address a V2 page takes moves to "<slug>-v1" first; going back, the V2 page returns to "<slug>-v2" and the current page
+ * to its address. Renames go through Studio (updatePageAddress), so revisions, ids and the homepage role follow.
+ * Returns the "-v1" slugs: the V2 header and footer leave those out, so they keep the current ones (the site's default
+ * header and footer, which Studio uses wherever no other one applies).
+ *
+ * @return list<string>
+ */
+function v2_switch(array $pages, array $map): array
+{
+    global $runtime, $actor, $tid;
+    $known = json_decode((string) Database::setting('fxl_v2_pages', $tid), true) ?: [];
+    $slugOf = static fn(int $id): ?string => ($v = Database::value("SELECT slug FROM studiobuilder_pages WHERE tenant_id = ? AND id = ? AND status <> 'archived'", [$tid, $id])) !== null ? (string) $v : null;
+    $pageAt = static fn(string $slug): ?int => ($v = Database::value("SELECT id FROM studiobuilder_pages WHERE tenant_id = ? AND slug = ? AND page_type = 'page' AND status <> 'archived'", [$tid, $slug])) !== null ? (int) $v : null;
+    $move = static function (int $id, string $slug, string $route, ?string $title = null) use ($runtime, $actor): void {
+        $runtime->app->updatePageAddress($actor, $id, array_filter(['slug' => $slug, 'route_mode' => $route, 'title' => $title], static fn($v) => $v !== null));
+        say("  ~ #{$id} -> /{$slug}/" . ($route === 'homepage' ? ' (home page)' : ''));
+    };
+    $v1 = [];
+    foreach ($pages as $pg) {
+        $url = $pg['url'];
+        $real = $url === '/' ? 'accueil' : trim($url, '/');
+        $preview = $url === '/' ? 'accueil-v2' : $real . '-v2';
+        $route = $url === '/' ? 'homepage' : 'standalone';
+        // V2's page: by its recorded id, else (a first run) at its preview address. Never "whatever is at the real address".
+        $id = isset($known[$url]) && $slugOf((int) $known[$url]) !== null ? (int) $known[$url] : $pageAt($preview);
+        if (V2_LIVE) {
+            $current = $pageAt($real);
+            if ($current !== null && $current !== $id) {
+                $title = (string) Database::value('SELECT title FROM studiobuilder_pages WHERE id = ?', [$current]);
+                $move($current, "{$real}-v1", 'standalone', str_ends_with($title, ' (V1)') ? null : "{$title} (V1)");
+            }
+            if ($id !== null && $slugOf($id) !== $real) { $move($id, $real, $route); }
+            if ($pageAt("{$real}-v1") !== null) { $v1[] = "{$real}-v1"; }
+        } else {
+            if ($id !== null && $slugOf($id) === $real) { $move($id, $preview, 'standalone'); }
+            if (($old = $pageAt("{$real}-v1")) !== null) {
+                $title = (string) Database::value('SELECT title FROM studiobuilder_pages WHERE id = ?', [$old]);
+                $move($old, $real, $route, str_ends_with($title, ' (V1)') ? substr($title, 0, -5) : null);
+            }
+        }
+    }
+    // The site's default header and footer are a fallback Studio never scores, so they carry no display conditions.
+    foreach (Database::all("SELECT id, active_draft_revision_id, published_revision_id FROM studiobuilder_pages WHERE tenant_id = ? AND slug = 'default' AND page_type IN ('header_partial', 'footer_partial') AND status = 'published'", [$tid]) as $row) {
+        $doc = json_decode((string) Database::value('SELECT document_json FROM studiobuilder_revisions WHERE id = ?', [(int) $row['published_revision_id']]), true);
+        if (!is_array($doc) || !isset($doc['settings']['conditions'])) { continue; }
+        unset($doc['settings']['conditions']);
+        $draft = $runtime->app->saveDraft($actor, (int) $row['id'], $doc, (int) $row['active_draft_revision_id'], 'manual', 'FightxLife V2 switch');
+        $runtime->app->publish($actor, (int) $row['id'], (int) $draft['revision']['id'], 'FightxLife V2 switch');
+        say("  ~ default partial #{$row['id']}: conditions removed");
+    }
+    return $v1;
+}
+
+/**
+ * The 301 plan: installed with --live, taken out again in the preview (where the retired pages are still the site's).
+ * The site's other rules (the retired shop addresses) stay. /produit/donation/ goes straight to the donation section live,
+ * so there is no chain through /donation/.
+ */
+function v2_redirects(array $map): void
+{
+    global $tid;
+    $key = \Slate\Module\StudioBuilder\Runtime\StudioRedirects::SETTING;
+    $rules = json_decode((string) Database::setting($key, $tid), true) ?: [];
+    $rules = array_values(array_filter($rules, static fn(array $r): bool => !isset(V2_RETIRED[$r['from']]) && $r['from'] !== '/produit/donation/'));
+    $rules[] = ['from' => '/produit/donation/', 'to' => V2_LIVE ? V2_RETIRED['/donation/'] : '/donation/', 'code' => 301];
+    $rules[] = ['from' => '/cours/mon-compte/', 'to' => V2_MEMBRE, 'code' => 301];
+    // The preview addresses the client was sent ("<slug>-v2") lead to the live page once V2 is live.
+    $rules = array_values(array_filter($rules, static fn(array $r): bool => !preg_match('~-v2/$~', $r['from'])));
+    if (V2_LIVE) {
+        foreach (V2_RETIRED as $from => $to) {
+            if ($from !== '/cours/mon-compte/') { $rules[] = ['from' => $from, 'to' => $to, 'code' => 301]; }
+        }
+        foreach ($map as $url => $live) {
+            $rules[] = ['from' => $url === '/' ? '/accueil-v2/' : rtrim($url, '/') . '-v2/', 'to' => $live, 'code' => 301];
+        }
+    }
+    Database::setSetting($key, json_encode($rules, JSON_UNESCAPED_SLASHES), $tid);
+    say('  + redirects: ' . count($rules) . (V2_LIVE ? ' (with the 301 plan)' : ''));
 }

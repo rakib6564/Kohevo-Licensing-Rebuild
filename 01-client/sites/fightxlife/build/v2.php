@@ -9,10 +9,13 @@
  *   - a header and a footer whose display condition is that page's slug, so only the preview shows them;
  *   - the menus they name (v2-*), and the Homemade Apple font in the head snippet.
  *
- *   cd <site> && php .../build/v2.php
+ *   cd <site> && php .../build/v2.php            the preview: V2 at "<slug>-v2", the current site untouched
+ *   cd <site> && php .../build/v2.php --live     the switch: V2 at the real addresses, the 301 plan installed
  *
- * Once the client approves, the same blocks become the site's home page, header and footer, and the other V2 pages
- * follow this design.
+ * The switch deletes nothing. Each current page whose address V2 takes moves to "<slug>-v1" (the home page to
+ * /accueil-v1/) and keeps its header and footer there; the V2 header and footer show everywhere else. Running without
+ * --live again moves every page back, so the switch can be undone. The pages are renamed through Studio, keeping their
+ * revisions, and V2's page ids are kept in the `fxl_v2_pages` setting so both directions find them.
  */
 
 declare(strict_types=1);
@@ -24,7 +27,10 @@ use Slate\Module\StudioBuilder\Http\StudioCodePolicy;
 use Slate\Module\StudioBuilder\Menu\StudioMenus;
 use Slate\Module\StudioBuilder\Meta\PageRoutes;
 
-const V2_SLUG = 'accueil-v2';
+define('V2_LIVE', in_array('--live', $argv ?? [], true));
+define('V2_SLUG', V2_LIVE ? 'accueil' : 'accueil-v2');
+/** Where the logo goes: the home page. */
+define('V2_HOME_URL', V2_LIVE ? '/' : '/accueil-v2/');
 const V2_MEMBRE = 'https://membre.fightxlife.com/connexion/';
 const V2_LOGO = '2022-05-cropped-logo-fxl-01-e1638355780533-1.png';
 const SCRIPT = 'Homemade Apple, cursive';
@@ -250,9 +256,9 @@ if (!str_contains($head, 'Homemade+Apple')) {
     say('  + font: Homemade Apple');
 }
 
-// ── Preview addresses ────────────────────────────────────────────────────────────────────────────────────────────
+// ── Addresses ────────────────────────────────────────────────────────────────────────────────────────────────────
 // While the client compares the two designs, each V2 page lives beside the current one at "<slug>-v2" (the home page at
-// /accueil-v2/), and every link between V2 pages points at those addresses. On the switch, V2URL() becomes the identity.
+// /accueil-v2/), and every link between V2 pages points at those addresses. With --live, V2URL() is the identity.
 $V2PAGES = json_decode((string) file_get_contents(__DIR__ . '/../fxl/v2-content.json'), true);
 // Where Stripe sends a donor back: not in the content pack, which only asks for a clear payment confirmation.
 const V2_THANKS = '/merci-don/';
@@ -264,14 +270,28 @@ $V2PAGES[] = ['doc' => '2.4. (merci)', 'url' => V2_THANKS, 'seo_title' => 'Merci
         ['t' => 'cta', 'kind' => 'Secondary CTA', 'label' => 'Retour à l’accueil', 'href' => '/'],
     ]];
 $V2MAP = [];
-foreach ($V2PAGES as $pg) { $V2MAP[$pg['url']] = $pg['url'] === '/' ? '/' . V2_SLUG . '/' : rtrim($pg['url'], '/') . '-v2/'; }
+foreach ($V2PAGES as $pg) { $V2MAP[$pg['url']] = V2_LIVE ? $pg['url'] : ($pg['url'] === '/' ? '/accueil-v2/' : rtrim($pg['url'], '/') . '-v2/'); }
+/**
+ * The 301 plan of the content pack (« 301 redirect plan », 16 October 2026): each retired address and its destination.
+ * Installed with --live; links to a retired address always go straight to its destination, never through the 301.
+ */
+const V2_RETIRED = [
+    '/les-hopitaux/' => '/soutien-a-lhopital/', '/blog/' => '/actualites/', '/evenements/' => '/agenda/', '/events/' => '/agenda/#evenements-passes',
+    '/smilebox/' => '/smile-box/', '/gala/' => '/nous-soutenir/#autres-aides', '/crowdfunding/' => '/nous-soutenir/#faire-un-don',
+    '/donation/' => '/nous-soutenir/#faire-un-don', '/register/' => V2_MEMBRE, '/cours/mon-compte/' => V2_MEMBRE,
+];
 function V2URL(string $href): string
 {
     global $V2MAP;
     if ($href === '' || $href[0] !== '/' || str_starts_with($href, '//')) { return $href; }
     $path = (string) parse_url($href, PHP_URL_PATH);
     $rest = substr($href, strlen($path));
-    return isset($V2MAP[$path]) ? $V2MAP[$path] . $rest : $href;
+    if (isset(V2_RETIRED[$path])) {
+        [$path, $rest] = array_pad(explode('#', V2_RETIRED[$path], 2), 2, null);
+        if ($path[0] !== '/') { return V2_RETIRED[parse_url($href, PHP_URL_PATH)]; }
+        $rest = $rest !== null ? '#' . $rest : '';
+    }
+    return isset($V2MAP[$path]) ? $V2MAP[$path] . $rest : $path . $rest;
 }
 /** Every V2 page slug: the header and footer show on these only. */
 $V2SLUGS = array_map(static fn(string $u): string => trim($u, '/'), array_values($V2MAP));
@@ -317,13 +337,13 @@ $header = [
             V2SOCIAL('instagram', 'https://www.instagram.com/fightxlife', 'FightxLife sur Instagram', 'v2-social'), LNK('Espace membre', V2_MEMBRE, 'v2-top__member'), B('shop.mini_cart', ['label' => 'Panier', 'show_total' => false], [], 'v2-cart')], 'v2-top__right'),
     ], 'v2-top')], 'v2-top-sec'),
     SEC('Header', [B('layout.grid', ['columns' => 3, 'gap' => 'none', 'align' => 'center'], [
-        V2IMG(V2_LOGO, 'FightxLife', 'v2-brand', ['link_to' => 'custom', 'url' => '/' . V2_SLUG . '/']),
+        V2IMG(V2_LOGO, 'FightxLife', 'v2-brand', ['link_to' => 'custom', 'url' => V2_HOME_URL]),
         B('core.nav_menu', ['menu' => 'v2-header', 'items' => [], 'layout' => 'horizontal', 'align' => 'center', 'aria_label' => 'Navigation principale'], [], 'v2-nav'),
         B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center', 'justify' => 'end'], [
             V2BTN('Soutenir FightxLife', '/nous-soutenir/', 'v2-donate'),
             B('layout.offcanvas', ['drawer_id' => 'v2-drawer', 'title' => '', 'position' => 'right', 'trigger_text' => 'Ouvrir le menu', 'trigger_icon' => 'menu-short',
                 'trigger_icon_size' => 24, 'trigger_show_text' => false, 'trigger_variant' => 'plain'], [
-                V2IMG(V2_LOGO, 'FightxLife', 'v2-brand', ['link_to' => 'custom', 'url' => '/' . V2_SLUG . '/']),
+                V2IMG(V2_LOGO, 'FightxLife', 'v2-brand', ['link_to' => 'custom', 'url' => V2_HOME_URL]),
                 B('core.nav_menu', ['menu' => 'v2-header', 'items' => [], 'layout' => 'vertical', 'aria_label' => 'Pages'], [], 'v2-drawer__nav'),
                 V2BTN('Soutenir FightxLife', '/nous-soutenir/', 'v2-btn'),
             ], 'v2-drawer', ['visibility' => ['auth_state' => 'any', 'devices' => ['base', 'sm', 'md']]]),
@@ -347,7 +367,7 @@ $footer = [
             $footCol('Nos actions', 'v2-actions'), $footCol('Nos cours', 'v2-cours'), $footCol('Projets & impact', 'v2-projets'), $footCol('À propos', 'v2-apropos'),
         ], 'v2-foot__cols'),
         BOX([
-            V2IMG(V2_LOGO, 'FightxLife', 'v2-foot__logo', ['link_to' => 'custom', 'url' => '/' . V2_SLUG . '/']),
+            V2IMG(V2_LOGO, 'FightxLife', 'v2-foot__logo', ['link_to' => 'custom', 'url' => V2_HOME_URL]),
             T('Association d’accompagnement face au cancer : cours adaptés à Bruxelles, actions à l’hôpital et sensibilisation en Belgique.', 'v2-foot__about'),
             $footRow('phone', LNK('+32 483 12 72 98', 'tel:+32483127298', 'v2-foot__line')),
             $footRow('mail', LNK('contact@fightxlife.com', 'mailto:contact@fightxlife.com', 'v2-foot__line')),
@@ -466,16 +486,24 @@ foreach ([2 => 'axes', 3 => 'projets', 4 => 'partenaires', 5 => 'soutenir', 6 =>
 }
 
 // ── Build ────────────────────────────────────────────────────────────────────────────────────────────────────────
-$only = ['conditions' => ['rules' => array_map(static fn(string $s): array => ['type' => 'include', 'condition' => 'slug', 'value' => $s], $V2SLUGS)]];
+$v1slugs = v2_switch($V2PAGES, $V2MAP);
+// Live, the V2 header and footer are the site's, except on the "-v1" pages, which keep the current ones.
+$only = ['conditions' => ['rules' => V2_LIVE
+    ? [['type' => 'include', 'condition' => 'entire_site'], ...array_map(static fn(string $s): array => ['type' => 'exclude', 'condition' => 'slug', 'value' => $s], $v1slugs)]
+    : array_map(static fn(string $s): array => ['type' => 'include', 'condition' => 'slug', 'value' => $s], $V2SLUGS)]];
 foreach ([&$header, &$footer, &$sections] as &$tree) { foreach ($tree as &$sec) { v2_relink($sec); } unset($sec); }
 unset($tree);
-build_page('v2-header', 'Header V2 (aperçu)', 'header_partial', 'standalone', $header,
+$v2ids = [];
+$v2ids['header'] = build_page('v2-header', V2_LIVE ? 'Header' : 'Header V2 (aperçu)', 'header_partial', 'standalone', $header,
     $only + ['sticky_header' => ['edge' => 'top', 'offset' => 0, 'devices' => ['desktop', 'tablet', 'mobile'], 'shadow' => true, 'background' => '#ffffff']]);
-build_page('v2-footer', 'Footer V2 (aperçu)', 'footer_partial', 'standalone', $footer, $only);
-build_page(V2_SLUG, 'Accueil V2 (aperçu)', 'page', 'standalone', $sections, ['seo_robots' => 'noindex,nofollow'],
+$v2ids['footer'] = build_page('v2-footer', V2_LIVE ? 'Footer' : 'Footer V2 (aperçu)', 'footer_partial', 'standalone', $footer, $only);
+$v2ids['/'] = build_page(V2_SLUG, V2_LIVE ? 'Accueil' : 'Accueil V2 (aperçu)', 'page', V2_LIVE ? 'homepage' : 'standalone', $sections, V2_LIVE ? [] : ['seo_robots' => 'noindex,nofollow'],
     'FightxLife | Association d’accompagnement face au cancer',
     'FightxLife accompagne les personnes touchées par le cancer et leurs proches : cours adaptés à Bruxelles, actions hospitalières et sensibilisation en Belgique.',
     MID('/uploads/media/fxl/2022-05-femininn.jpg') ?: null);
-v2_build_pages($V2PAGES);
+$v2ids += v2_build_pages($V2PAGES);
+Database::setSetting('fxl_v2_pages', json_encode($v2ids, JSON_UNESCAPED_SLASHES), $tid);
+v2_redirects($V2MAP);
 PageRoutes::forget($tid);
-say('done: /' . V2_SLUG . '/ and ' . (count($V2SLUGS) - 1) . ' V2 pages, with their own header and footer');
+say(V2_LIVE ? 'done: V2 is the site, at the real addresses; the current pages are at "<slug>-v1"; ' . count(V2_RETIRED) . ' retired addresses redirect (301)'
+    : 'done: /accueil-v2/ and ' . (count($V2SLUGS) - 1) . ' V2 pages, with their own header and footer');

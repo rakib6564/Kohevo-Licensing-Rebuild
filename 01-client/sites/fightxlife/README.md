@@ -72,8 +72,27 @@ editor changes:
 - `build/v2-pages.php`: the page engine for the 21 other pages (`native_v2_pages()`, `v2_build_pages()`). It also holds
   each page's photos (`V2_PAGE_IMAGES`).
 
-**The switch.** When V2 replaces the current site: make `V2URL()` the identity and drop the `-v2` slugs. Then
-publish the 301 plan from the pack, and retire the old pages it lists.
+**The switch** (`--live`, done on the dev site on 2026-10-29). V2 takes the real addresses and nothing is deleted:
+
+    cd ~/public_html/fightxlife && php ~/fxl-server-bundle/build/v2.php --live
+
+- each current page whose address V2 takes moves to `<slug>-v1` (the home page to `/accueil-v1/`) and keeps the
+  current header and footer there; the V2 header and footer show everywhere else (articles, events and shop too);
+- the 301 plan is installed (`V2_RETIRED`), plus a 301 from each `-v2` preview address to its page; links to a
+  retired address go straight to its destination;
+- the V2 pages drop their own noindex (the site's robots setting still decides).
+
+Running `v2.php` without `--live` moves every page back, so the switch can be undone. Pages are renamed through
+Studio, keeping their revisions; V2's page ids are in the `fxl_v2_pages` setting.
+
+**Donations and contact.** The donation section has one-off and monthly panels, each with set amounts and a free
+amount (5–5 000 €), returning to `/merci-don/`. Monthly gifts are Stripe subscriptions: on the production Stripe
+account, add `invoice.paid` to the webhook's events so renewals are recorded. Contact links carry `?reason=`
+(the motif), and `?activity=`, `?project=`, `?subject=` (the object), filled in by the page (see `V2_REASONS`).
+
+**Still from the client:** the full-size Benkick mascot photo (hero) and the Cera hospital video, a free-swimming
+photo for Nage libre, any partner beyond La Roche-Posay and Cera, and confirmation of the team (`V2_TEAM`, taken from
+the live site's Notre Équipe; empty it to hide the section).
 
 ## Contents
 
