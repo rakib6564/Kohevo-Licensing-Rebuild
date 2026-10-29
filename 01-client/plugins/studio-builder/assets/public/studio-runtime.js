@@ -1291,6 +1291,47 @@
    * or each field's error beside the field. Without this script the post still reaches Forms, which shows its own page.
    */
 
+  /* ── Feature: fields filled from the page address ─────────────────────────
+   * A field with data-sb-url-param takes its value from the page address (contact/?reason=cours), so a link can open a
+   * form already pointed at the right subject. data-sb-url-values maps a value to its option or readable text. A list
+   * (select, radio group) only ever takes one of its own options: an unknown value leaves its default. A text field
+   * takes every named value (mapped or as typed, cut to 120 characters), joined with " – ", and stays editable. A field
+   * the visitor already changed (the browser restoring it) is left alone.
+   */
+
+  function initUrlFill(root) {
+    if (!global.URLSearchParams) return;
+    var query = new URLSearchParams(global.location.search);
+    qsa(root, '[data-sb-url-param]').forEach(function (el) {
+      var map = {};
+      try { map = JSON.parse(el.getAttribute('data-sb-url-values') || '{}') || {}; } catch (e) { map = {}; }
+      var found = el.getAttribute('data-sb-url-param').split(',').map(function (p) {
+        var raw = query.get(p.trim());
+        if (raw == null) return null;
+        raw = raw.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (raw === '') return null;
+        var key = raw.toLowerCase();
+        return Object.prototype.hasOwnProperty.call(map, key) ? { text: map[key], mapped: true } : { text: raw.slice(0, 120), mapped: false };
+      }).filter(Boolean);
+      if (!found.length) return;
+
+      if (el.tagName === 'FIELDSET') {
+        var pick = found.filter(function (f) { return f.mapped; })[0];
+        if (!pick) return;
+        qsa(el, 'input[type="radio"]').forEach(function (r) { r.checked = r.value === pick.text; });
+        return;
+      }
+      if (el.tagName === 'SELECT') {
+        var choice = found.filter(function (f) { return f.mapped; })[0];
+        if (!choice || el.value !== (qs(el, 'option[selected]') || el.options[0] || {}).value) return;
+        if (Array.prototype.some.call(el.options, function (o) { return o.value === choice.text; })) el.value = choice.text;
+        return;
+      }
+      if (el.value !== el.defaultValue) return;
+      el.value = found.map(function (f) { return f.text; }).join(' – ');
+    });
+  }
+
   function initForms(root) {
     var forms = qsa(root, 'form[data-sb-form-slug]');
     if (!forms.length || !global.fetch || !global.FormData) return;
@@ -1760,6 +1801,7 @@
     ['carousel', initCarousel],
     ['marquee', initMarquee],
     ['countdown', initCountdown],
+    ['urlFill', initUrlFill],
     ['forms', initForms],
     ['fragments', initFragments],
     ['variants', initVariants],

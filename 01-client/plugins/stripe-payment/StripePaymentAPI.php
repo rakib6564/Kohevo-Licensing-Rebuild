@@ -116,6 +116,10 @@ class StripePaymentAPI {
      *   'metadata'       array<string,string>
      *   'collect_shipping_address' bool (default false)
      *   'allowed_countries' array<string> (only if collect_shipping_address)
+     *   'interval'       'month' or 'year' for a subscription that charges
+     *                    every line item again each period ('' = one-time).
+     *                    The metadata is also copied onto the subscription,
+     *                    so its renewals (invoice.paid) can be attributed.
      *
      * Returns ['session_id' => 'cs_…', 'url' => '…'] or throws.
      */
@@ -131,9 +135,10 @@ class StripePaymentAPI {
         }
 
         $currency = strtolower((string)($opts['currency'] ?? 'usd'));
+        $interval = in_array(($opts['interval'] ?? ''), ['month', 'year'], true) ? (string)$opts['interval'] : '';
 
         $params = [
-            'mode'        => 'payment',
+            'mode'        => $interval !== '' ? 'subscription' : 'payment',
             'success_url' => (string)$opts['success_url'],
             'cancel_url'  => (string)$opts['cancel_url'],
         ];
@@ -144,7 +149,7 @@ class StripePaymentAPI {
         // When the admin expressly enables Bancontact, pin the compatible
         // method pair for EUR checkouts. The card fallback keeps Checkout
         // usable for customers who do not select Bancontact.
-        if ($currency === 'eur'
+        if ($currency === 'eur' && $interval === ''
             && (Database::setting('stripe-payment.method_bancontact') ?? '0') === '1') {
             $params['payment_method_types[0]'] = 'card';
             $params['payment_method_types[1]'] = 'bancontact';
@@ -161,6 +166,9 @@ class StripePaymentAPI {
             $params["line_items[$i][price_data][currency]"]          = $currency;
             $params["line_items[$i][price_data][unit_amount]"]       = $amount;
             $params["line_items[$i][price_data][product_data][name]"] = $name;
+            if ($interval !== '') {
+                $params["line_items[$i][price_data][recurring][interval]"] = $interval;
+            }
             if (!empty($li['description'])) {
                 $params["line_items[$i][price_data][product_data][description]"]
                     = mb_substr((string)$li['description'], 0, 500);
@@ -177,6 +185,9 @@ class StripePaymentAPI {
         if (!empty($opts['metadata']) && is_array($opts['metadata'])) {
             foreach ($opts['metadata'] as $mk => $mv) {
                 $params["metadata[$mk]"] = (string)$mv;
+                if ($interval !== '') {
+                    $params["subscription_data[metadata][$mk]"] = (string)$mv;
+                }
             }
         }
 

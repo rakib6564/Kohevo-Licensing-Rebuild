@@ -5,6 +5,11 @@
  * One input of a Studio form. Radio buttons and several checkboxes are a group built from the field's options; one
  * checkbox is a single tick (an acceptance box). The field's width is its share of the form's row, written on the block's
  * wrapper (the form's flex item) per device: two halves sit side by side, and a phone stacks them unless set per device.
+ *
+ * A field can be filled from the page address (`url_param`, e.g. `reason`, or several: `activity, subject`), with
+ * `url_values` turning a value into its option or readable text (`cours=Question sur un cours`). The page is cached, so
+ * the runtime does the filling from the data attributes written here. A list field (select, radio) only ever takes one of
+ * its own options, so an unknown value keeps its default; a text field takes the values, still editable.
  */
 
 declare(strict_types=1);
@@ -44,6 +49,49 @@ final class FormFieldRenderer implements BlockRendererInterface, WrapperClassesI
             $name = 'field_' . $name;
         }
         return substr(rtrim($name, '_'), 0, 50);
+    }
+
+    /**
+     * The address fill of a field: its parameter names and its value map (lower-cased value => text), or null when it
+     * has none. For a list field the map keeps only values that name one of its options.
+     *
+     * @param list<string>|null $options the field's options, for a list field
+     * @return array{params: list<string>, values: array<string, string>}|null
+     */
+    public static function urlFill(string $params, string $values, ?array $options): ?array
+    {
+        $names = array_values(array_unique(array_filter(array_map('trim', explode(',', $params)), static fn(string $p): bool => preg_match('/^[A-Za-z0-9_-]{1,40}$/', $p) === 1)));
+        if ($names === []) {
+            return null;
+        }
+        $map = [];
+        foreach (preg_split('/\R/', $values) ?: [] as $line) {
+            $at = strpos($line, '=');
+            if ($at === false) {
+                continue;
+            }
+            $key = strtolower(trim(substr($line, 0, $at)));
+            $text = trim(substr($line, $at + 1));
+            if ($key === '' || $text === '' || ($options !== null && !in_array($text, $options, true))) {
+                continue;
+            }
+            $map[$key] = $text;
+        }
+        if ($options !== null && $map === []) {
+            return null;
+        }
+        return ['params' => $names, 'values' => $map];
+    }
+
+    /** The data attributes the runtime fills a field from (none without an address fill). */
+    private static function urlFillAttributes(BlockRenderScope $scope, ?array $options): string
+    {
+        $fill = self::urlFill($scope->string('url_param'), $scope->string('url_values'), $options);
+        if ($fill === null) {
+            return '';
+        }
+        return ' data-sb-url-param="' . Html::e(implode(',', $fill['params'])) . '"'
+            . ($fill['values'] !== [] ? ' data-sb-url-values="' . Html::e((string) json_encode($fill['values'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) . '"' : '');
     }
 
     /** @return list<string> the options, one per comma or line */
@@ -87,7 +135,7 @@ final class FormFieldRenderer implements BlockRendererInterface, WrapperClassesI
         $mark = $required ? ' <span class="sb-required" aria-hidden="true">*</span>' : '';
 
         if ($fieldType === 'hidden') {
-            return '<input type="hidden" name="' . Html::e($name) . '" value="' . Html::e($default) . '">';
+            return '<input type="hidden" name="' . Html::e($name) . '" value="' . Html::e($default) . '"' . self::urlFillAttributes($scope, null) . '>';
         }
 
         $html = '<div class="sb-form-group sb-form-group--' . Html::e($fieldType) . '" data-sb-field="' . Html::e($name) . '">';
@@ -99,7 +147,7 @@ final class FormFieldRenderer implements BlockRendererInterface, WrapperClassesI
                 . '<span>' . Html::e($label) . $mark . '</span></label>';
         } elseif ($fieldType === 'radio' || $fieldType === 'checkboxes') {
             $type = $fieldType === 'radio' ? 'radio' : 'checkbox';
-            $html .= '<fieldset class="sb-form-choices"' . $describedBy . '><legend>' . Html::e($label) . $mark . '</legend>';
+            $html .= '<fieldset class="sb-form-choices"' . $describedBy . ($type === 'radio' ? self::urlFillAttributes($scope, self::options($scope->string('options'))) : '') . '><legend>' . Html::e($label) . $mark . '</legend>';
             foreach (self::options($scope->string('options')) as $i => $opt) {
                 // A radio group is required as a whole (any one input carrying `required` does that); several checkboxes
                 // are checked by Forms, as the browser cannot ask for "at least one".
@@ -111,7 +159,8 @@ final class FormFieldRenderer implements BlockRendererInterface, WrapperClassesI
             $html .= '</fieldset>';
         } else {
             $html .= '<label for="' . Html::e($inputId) . '">' . Html::e($label) . $mark . '</label>';
-            $common = ' name="' . Html::e($name) . '" id="' . Html::e($inputId) . '"' . $reqAttr . $describedBy;
+            $common = ' name="' . Html::e($name) . '" id="' . Html::e($inputId) . '"' . $reqAttr . $describedBy
+                . (in_array($fieldType, ['file', 'number', 'date', 'time'], true) ? '' : self::urlFillAttributes($scope, $fieldType === 'select' ? self::options($scope->string('options')) : null));
             if ($fieldType === 'textarea') {
                 $html .= '<textarea' . $common . ' placeholder="' . Html::e($placeholder) . '">' . Html::e($default) . '</textarea>';
             } elseif ($fieldType === 'select') {

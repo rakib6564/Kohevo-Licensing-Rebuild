@@ -6,7 +6,9 @@
  * POST, only when Stripe is set up, only within the visitor's limit, only an offer that verifies (see PaymentOffer),
  * only one made for this tenant, not yet expired, and only while a published Studio document still holds the block it
  * names with exactly its terms (a draft-only or since-repriced button cannot be paid). The Stripe session is created from the offer's own terms, never from anything else in
- * the request, and the visitor is sent on with a 303 to the checkout URL Stripe returned.
+ * the request (the one exception: an offer that lets the visitor choose the amount takes the posted `v`, only within the
+ * signed range), and the visitor is sent on with a 303 to the checkout URL Stripe returned. A monthly offer starts a
+ * Stripe subscription instead of a one-time payment.
  */
 
 declare(strict_types=1);
@@ -19,7 +21,7 @@ final class PayRequest
      * @param array<string, mixed> $post
      * @param array{tenantId: int, siteUrl: string, referer: string, visitor: string, configured: bool, now: int} $env
      * @param callable(string, string, string): bool $verifier `slate_sign_equals`
-     * @param callable(int, string, string, string, string): string $checkout (cents, currency, name, successUrl, cancelUrl) -> hosted checkout URL; throws on failure
+     * @param callable(int, string, string, string, string, string): string $checkout (cents, currency, name, successUrl, cancelUrl, interval '' or 'month') -> hosted checkout URL; throws on failure
      * @param callable(string): bool $allow per-visitor limit
      * @param callable(string): ?array $liveProps block id -> the props of that payment button as PUBLISHED now, or null
      * @return array{status: int, location?: string, message?: string}
@@ -48,13 +50,21 @@ final class PayRequest
             return ['status' => 400, 'message' => 'This payment button is out of date. Reload the page and try again.'];
         }
 
+        $cents = $offer['a'];
+        if ($offer['h'] > 0) {
+            $cents = PaymentOffer::visitorCents($offer, $post['v'] ?? null);
+            if ($cents === null) {
+                return ['status' => 400, 'message' => 'Choose an amount from ' . PaymentOffer::display($offer['a'], $offer['c']) . ' to ' . PaymentOffer::display($offer['h'], $offer['c']) . '.'];
+            }
+        }
+
         $site = rtrim($env['siteUrl'], '/');
         $success = $site . ($offer['s'] !== '' ? '/' . $offer['s'] : '/');
         $cancel = self::sameSite($env['referer'], $site) ? $env['referer'] : $site . '/';
         $name = $offer['d'] !== '' ? $offer['d'] : 'Payment';
 
         try {
-            $url = $checkout($offer['a'], $offer['c'], $name, $success, $cancel);
+            $url = $checkout($cents, $offer['c'], $name, $success, $cancel, $offer['f'] === 'month' ? 'month' : '');
         } catch (\Throwable) {
             return ['status' => 502, 'message' => 'Could not start the payment. Please try again.'];
         }

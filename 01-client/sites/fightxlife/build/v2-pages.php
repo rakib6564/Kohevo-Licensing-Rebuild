@@ -49,6 +49,23 @@ const V2_SECTION_OF = ['2' => 'Nos actions', '3' => 'Nos cours', '4' => 'Projets
 const V2_PRIMARY = ['Primary CTA', 'Member purchase CTA', 'Email CTA', 'Contextual CTA'];
 const V2_GHOST = ['Secondary CTA', 'Member link', 'Anchor link', 'Secondary anchor link', 'Email link', 'Phone link'];
 const V2_SKIP = ['Contact form submit button', 'Donation form submit button'];
+/**
+ * The team, grouped by role: the "Notre Équipe" block of the live site (names, roles and portraits as published there; it
+ * has no biographies). The advisory board and the honorary committee stay out, as the document asks. Empty this to hide
+ * the section again until the client sends approved entries.
+ */
+const V2_TEAM = [
+    'Administration' => [['Sara R.', 'Fondatrice', 'sara-ponpqw0gqz9udxela26ghmgghhjey2rgcpahom9pdk.jpg'], ['Mirella', 'Administratrice', 'mirella-ponpu0t3j3k934uqzexostzrrq3glr78s7kr9tmgmw.jpg'],
+        ['Nafissa', 'Administratrice', 'nafisa-ponpvl7ex5pgfqktu3bayfrfeudhflf4zypw2fau9k.jpg']],
+    'Communication' => [['Valérie Cornelis', 'Attachée de presse', 'cornelis-valerie-ponq3f6zvgfh6r783h7dqglpmfrlksim2qfk1foqew.jpg']],
+    'Coaching' => [['Romane Bellens', 'Coach sportive, trois fois championne d’Europe WCTS', 'bellens-romane-ponqm7ysk65xdzw6blqrlptlbv3viv5cns55knt9yw.jpg'],
+        ['Inès Miloudi', 'Coach Cancerfighter', 'miloudi-ines-ponqm7ysk65xdzw6blqrlptlbv3viv5cns55knt9yw.jpg'], ['Sylvia', 'Coach WaterxFight', 'sylvia-ponr0bjn2pgrjfevzp5b05qi3xm2zf4elkfcq2womw.jpg']],
+];
+/** The contact links' ?reason= values (from the documents' links) and the motif each selects, by its place in the list. */
+const V2_REASONS = ['information' => 0, 'cours' => 1, 'smilebox' => 2, 'hopital' => 3, 'sensibilisation' => 4, 'partenariat' => 5, 'benevolat' => 6, 'evenement' => 7, 'don' => 8, 'presse' => 9];
+/** The ?activity= and ?project= values, as the object field shows them. */
+const V2_CONTEXT = ['boxe-adaptee' => 'Boxe adaptée', 'waterxfight' => 'WaterxFight', 'boxe-feminin' => 'Boxe 100 % féminin', 'nage-libre' => 'Nage libre',
+    'natation' => 'Cours de natation', 'smilebox' => 'La SmileBox', 'benkick' => 'Benkick'];
 
 function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $up, \Closure $V): array
 {
@@ -114,6 +131,14 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
 
         // ── Figures and quotes ──
         'v2-stats'       => ['s' => lay(['gap' => '20px']), 'props' => ['columns' => 3], 'tp' => ['columns' => 2], 'mp' => ['columns' => 1], 'reveal' => $up(0)],
+        'v2-team__block' => ['s' => mar(0, null, 40, null), 'reveal' => $up(0)],
+        'v2-team__group' => ['s' => S(col(PINK), ty('15px', 'bold', null, '.06em'), mar(0, null, 18, null)), 'center' => true],
+        'v2-team'        => ['s' => lay(['gap' => '22px', 'justify' => 'center']), 'm' => lay(['gap' => '12px'])],
+        'v2-team__card'  => ['s' => S(dim(['width' => '220px']), pad(24, 18), radius('22px'), bg('#ffffff'), $lift, fx(['transition' => ['duration_ms' => 300, 'easing' => 'ease']])),
+                              'h' => fx(['transform' => ['translate_y' => '-6px']]), 'm' => S(dim(['width' => '46%']), pad(18, 10)), 'center' => true],
+        'v2-team__photo' => ['s' => S(dim(['width' => '120px', 'height' => '120px', 'object_fit' => 'cover', 'overflow' => 'hidden']), radius('999px'), mar(0, 'auto', 14, 'auto'), brd('#ffd3ea', '4px', '999px')), 'm' => dim(['width' => '92px', 'height' => '92px'])],
+        'v2-team__name'  => ['s' => S(col(INK), fam('heading', '18px', 'bold', '1.3'))],
+        'v2-team__role'  => ['s' => S(col(BODY), ty('14px', null, '1.5'), mar(4, null, 0, null))],
         'v2-stat'        => ['s' => S(pad(30, 28), radius('22px'), bg('#ffffff'), $lift), 'center' => true],
         'v2-stat__num'   => ['s' => S(col(PINK), ty('clamp(30px,3vw,40px)', 'bold', '1.1', '-.02em', SYNE), mar(0, null, 10, null))],
         'v2-stat__text'  => ['s' => S(col(BODY), ty('15px', null, '1.55'))],
@@ -138,7 +163,14 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         // ── Modules ──
         'v2-panel'       => ['s' => S(pad(36, 36), radius('24px'), bg('#ffffff'), $lift), 'm' => pad(24, 20), 'reveal' => $up(0)],
         'v2-give'        => ['s' => S(lay(['gap' => '12px', 'justify' => 'center']), mar(14, null, 6, null))],
-        'v2-pay'         => ['parts' => ['button' => S($pill, sz(['height' => 58, 'min_width' => 150]), fx(['cursor' => 'pointer'])), 'button:hover' => $pillHover]],
+        'v2-give2'       => ['s' => lay(['tracks' => 'minmax(0,1fr) minmax(0,1fr)', 'gap' => '28px']), 't' => lay(['tracks' => '1fr', 'gap' => '22px'])],
+        'v2-give__title' => ['s' => S(ty('26px', 'bold', '1.2'), mar(6, null, 8, null))],
+        'v2-give__text'  => ['s' => S(col(BODY), ty('15.5px', null, '1.6'), mar(0, null, 8, null))],
+        'v2-give__free'  => ['s' => S(mar(18, null, 0, null), pad(20, 0, 0, 0), ['border' => ['top' => ['width' => '1px', 'style' => 'solid', 'color' => '#f1e3ea']]]), 'center' => true],
+        'v2-pay--free'   => ['parts' => ['form' => lay(['justify' => 'center'])]],
+        'v2-give__note'  => ['s' => S(col(BODY), ty('14px', null, '1.6'), mar(22, null, 0, null)), 'center' => true],
+        'v2-pay'         => ['parts' => ['button' => S($pill, sz(['height' => 58, 'min_width' => 150]), fx(['cursor' => 'pointer'])), 'button:hover' => $pillHover,
+                'amount' => S(sz(['width' => '180px', 'height' => 58]), pad(0, 18), brd('#ead9e2', '1.5px', '999px'), bg('#fffafd'), col(INK), fam('body', '17px', 'bold'))]],
         'v2-form'        => ['props' => ['labels' => 'visible'], 'parts' => [
                 'form' => lay(['display' => 'grid', 'gap' => '18px']),
                 'label' => S(col(INK), fam('body', '14px', 'bold'), mar(0, 0, 6, 0)),
@@ -316,20 +348,42 @@ function v2_module(array $notes, array $sec, array $pg): ?array
         $f = static fn(string $type, string $name, string $label, bool $req, array $extra = []): array =>
             B('core.form_field', array_replace(['field_type' => $type, 'name' => $name, 'label' => $label, 'placeholder' => '', 'required' => $req], $extra));
         $form = B('core.form', ['form_name' => 'contact-v2', 'submit_text' => 'Envoyer ma demande', 'submit_variant' => 'primary', 'success_message' => implode(' ', $success)], [
-            $f('select', 'motif', 'Motif de votre demande', true, ['options' => implode(',', $reasons)]),
+            // The links' ?reason= picks the motif (an unknown one keeps the general request); ?activity=, ?project= and
+            // ?subject= fill the object, still editable.
+            $f('select', 'motif', 'Motif de votre demande', true, ['options' => implode(',', $reasons), 'default_value' => $reasons[0],
+                'url_param' => 'reason', 'url_values' => implode("\n", array_map(static fn(string $k, int $i): string => "{$k}={$reasons[$i]}", array_keys(V2_REASONS), V2_REASONS))]),
             $f('text', 'nom', 'Nom et prénom', true), $f('email', 'email', 'Adresse e-mail', true), $f('tel', 'telephone', 'Téléphone (facultatif)', false),
-            $f('text', 'organisation', 'Organisation / établissement', false), $f('text', 'objet', 'Objet de votre demande', true), $f('textarea', 'message', 'Votre message', true),
+            $f('text', 'organisation', 'Organisation / établissement', false), $f('text', 'objet', 'Objet de votre demande', true, ['url_param' => 'activity, project, subject',
+                'url_values' => implode("\n", array_map(static fn(string $k, string $v): string => "{$k}={$v}", array_keys(V2_CONTEXT), V2_CONTEXT))]), $f('textarea', 'message', 'Votre message', true),
         ], 'v2-form', ['id' => STABLE_ID('v2-contact-form')]);
         $side = array_merge(array_map(static fn(string $t): array => B('core.rich_text', ['content' => '<p>' . htmlspecialchars($t) . ' <a href="/politique-de-confidentialite/">Consulter la politique de confidentialité</a></p>'], [], 'v2-text'), $privacy),
             $after ? [v2_rich($after)] : []);
         return B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [BOX([$form], 'v2-panel'), BOX($side, 'v2-aside')], 'v2-split2 v2-split2--top');
     }
     if (str_contains($all, 'Donation module')) {
-        return BOX([
-            KICK('Je soutiens FightxLife'),
-            B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'justify' => 'center', 'wrap' => 'wrap'], array_map(static fn(int $a): array =>
-                B('payment.button', ['label' => "Donner {$a} €", 'amount' => $a, 'currency' => 'EUR', 'description' => 'Don à FightxLife ASBL'], [], 'v2-pay'), [10, 25, 50, 100]), 'v2-give'),
+        // One-off and monthly, each with set amounts and a free amount (from 5 € up to 5 000 €); Stripe confirms the payment,
+        // then the donor lands on the thank-you page (V2_THANKS).
+        $pay = static fn(string $label, int $amount, string $frequency, array $extra = []): array => B('payment.button', array_replace([
+            'label' => $label, 'amount' => $amount, 'currency' => 'EUR', 'frequency' => $frequency, 'success_path' => trim(V2URL(V2_THANKS), '/'),
+            'description' => $frequency === 'month' ? 'Don mensuel à FightxLife ASBL' : 'Don à FightxLife ASBL'], $extra), [], 'v2-pay');
+        $free = static function (string $frequency, string $label) use ($pay): array {
+            $b = $pay('Je soutiens FightxLife', 5, $frequency, ['amount_choice' => 'visitor', 'max_amount' => 5000, 'amount_label' => $label]);
+            $b['classNames'][] = 'v2-pay--free';
+            return $b;
+        };
+        $panel = static fn(string $kicker, string $title, string $text, array $amounts, string $frequency, string $suffix, string $freeLabel): array => BOX([
+            KICK($kicker), H($title, 'h3', 'v2-give__title'), T($text, 'v2-give__text'),
+            B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'justify' => 'center', 'wrap' => 'wrap'],
+                array_map(static fn(int $a): array => $pay("{$a} €{$suffix}", $a, $frequency), $amounts), 'v2-give'),
+            BOX([$free($frequency, $freeLabel)], 'v2-give__free'),
         ], 'v2-panel v2-narrow--center');
+        return BOX([
+            B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'stretch'], [
+                $panel('Une fois', 'Don ponctuel', 'Un seul paiement, au moment qui vous convient.', [10, 25, 50, 100], 'once', '', 'Autre montant (€)'),
+                $panel('Chaque mois', 'Don mensuel', 'Prélevé chaque mois à la même date, jusqu’à ce que vous l’arrêtiez.', [10, 25, 50], 'month', ' / mois', 'Autre montant par mois (€)'),
+            ], 'v2-give2'),
+            T('Paiement sécurisé par Stripe (carte, Bancontact pour un don ponctuel). Pour modifier ou arrêter un don mensuel, contactez-nous.', 'v2-give__note'),
+        ]);
     }
     if (str_contains($all, 'Featured news block')) {
         return B('core.query_loop', ['source' => 'posts', 'category' => 'Actualités', 'per_page' => 1, 'columns' => 1, 'card_variant' => 'horizontal', 'show_author' => false, 'show_category' => true,
@@ -361,7 +415,17 @@ function v2_section(array $sec, array $pg, int $i, bool $last): ?array
 {
     [$text, $ctas, $notes, $h3s] = v2_parts($sec['blocks']);
     $all = implode("\n", $notes);
-    if (str_contains($all, 'Team block')) { return null; } // no approved team entries supplied: the document says to hide the section
+    // The document says to hide the team section when no approved entries are supplied; V2_TEAM is empty in that case.
+    if (str_contains($all, 'Team block')) {
+        if (!V2_TEAM) { return null; }
+        $groups = [];
+        foreach (V2_TEAM as $group => $people) {
+            $cards = array_map(static fn(array $m): array => BOX([V2IMG($m[2], $m[0], 'v2-team__photo'), T($m[0], 'v2-team__name'), T($m[1], 'v2-team__role')], 'v2-team__card'), $people);
+            $groups[] = BOX([T($group, 'v2-team__group'), B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'justify' => 'center', 'wrap' => 'wrap'], $cards, 'v2-team')], 'v2-team__block');
+        }
+        return SEC($sec['h2'], [BOX(array_merge([KICK(), H($sec['h2'], 'h2', 'v2-h2')], array_filter([v2_rich($text)])), 'v2-head v2-head--center'), ...$groups],
+            'v2-sec' . ($i % 2 === 1 ? ' v2-sec--soft' : ''));
+    }
     $soft = $i % 2 === 1;
     $head = [KICK(), H($sec['h2'], 'h2', 'v2-h2')];
     $module = v2_module($notes, $sec, $pg);
@@ -427,7 +491,8 @@ function v2_section(array $sec, array $pg, int $i, bool $last): ?array
 }
 
 /** Build every V2 page but the home page, each at "<slug>-v2", with the document's SEO title and description. */
-function v2_build_pages(array $pages): void
+/** @return array<string, int> each page's id by its document address */
+function v2_build_pages(array $pages): array
 {
     global $CONTENT_V1, $EXTRA_V1, $IMGMAP_V1;
     $data = __DIR__ . '/../fxl';
@@ -435,6 +500,7 @@ function v2_build_pages(array $pages): void
     foreach (json_decode((string) file_get_contents("{$data}/content.json"), true) as $item) { $CONTENT_V1[$item['kind'] . ':' . $item['slug']] = $item; }
     $EXTRA_V1 = json_decode((string) file_get_contents("{$data}/extra.json"), true);
     $IMGMAP_V1 = json_decode((string) file_get_contents("{$data}/image-map.json"), true);
+    $ids = [];
     foreach ($pages as $pg) {
         if ($pg['url'] === '/') { continue; }
         $sections = [v2_hero($pg)];
@@ -450,7 +516,90 @@ function v2_build_pages(array $pages): void
         unset($s);
         $slug = trim(V2URL($pg['url']), '/');
         $photo = V2_PAGE_IMAGES[$pg['url']]['hero'] ?? null;
-        build_page($slug, $pg['h1'] . ' (V2)', 'page', 'standalone', $sections, ['seo_robots' => 'noindex,nofollow'], $pg['seo_title'], $pg['meta'],
+        $ids[$pg['url']] = build_page($slug, V2_LIVE ? $pg['h1'] : $pg['h1'] . ' (V2)', 'page', 'standalone', $sections, V2_LIVE ? [] : ['seo_robots' => 'noindex,nofollow'], $pg['seo_title'], $pg['meta'],
             $photo ? (MID('/uploads/media/fxl/' . $photo) ?: null) : null);
     }
+    return $ids;
+}
+
+/**
+ * Move the pages between the preview and the live addresses, before the build. Going live, each current page whose
+ * address a V2 page takes moves to "<slug>-v1" first; going back, the V2 page returns to "<slug>-v2" and the current page
+ * to its address. Renames go through Studio (updatePageAddress), so revisions, ids and the homepage role follow.
+ * Returns the "-v1" slugs: the V2 header and footer leave those out, so they keep the current ones (the site's default
+ * header and footer, which Studio uses wherever no other one applies).
+ *
+ * @return list<string>
+ */
+function v2_switch(array $pages, array $map): array
+{
+    global $runtime, $actor, $tid;
+    $known = json_decode((string) Database::setting('fxl_v2_pages', $tid), true) ?: [];
+    $slugOf = static fn(int $id): ?string => ($v = Database::value("SELECT slug FROM studiobuilder_pages WHERE tenant_id = ? AND id = ? AND status <> 'archived'", [$tid, $id])) !== null ? (string) $v : null;
+    $pageAt = static fn(string $slug): ?int => ($v = Database::value("SELECT id FROM studiobuilder_pages WHERE tenant_id = ? AND slug = ? AND page_type = 'page' AND status <> 'archived'", [$tid, $slug])) !== null ? (int) $v : null;
+    $move = static function (int $id, string $slug, string $route, ?string $title = null) use ($runtime, $actor): void {
+        $runtime->app->updatePageAddress($actor, $id, array_filter(['slug' => $slug, 'route_mode' => $route, 'title' => $title], static fn($v) => $v !== null));
+        say("  ~ #{$id} -> /{$slug}/" . ($route === 'homepage' ? ' (home page)' : ''));
+    };
+    $v1 = [];
+    foreach ($pages as $pg) {
+        $url = $pg['url'];
+        $real = $url === '/' ? 'accueil' : trim($url, '/');
+        $preview = $url === '/' ? 'accueil-v2' : $real . '-v2';
+        $route = $url === '/' ? 'homepage' : 'standalone';
+        // V2's page: by its recorded id, else (a first run) at its preview address. Never "whatever is at the real address".
+        $id = isset($known[$url]) && $slugOf((int) $known[$url]) !== null ? (int) $known[$url] : $pageAt($preview);
+        if (V2_LIVE) {
+            $current = $pageAt($real);
+            if ($current !== null && $current !== $id) {
+                $title = (string) Database::value('SELECT title FROM studiobuilder_pages WHERE id = ?', [$current]);
+                $move($current, "{$real}-v1", 'standalone', str_ends_with($title, ' (V1)') ? null : "{$title} (V1)");
+            }
+            if ($id !== null && $slugOf($id) !== $real) { $move($id, $real, $route); }
+            if ($pageAt("{$real}-v1") !== null) { $v1[] = "{$real}-v1"; }
+        } else {
+            if ($id !== null && $slugOf($id) === $real) { $move($id, $preview, 'standalone'); }
+            if (($old = $pageAt("{$real}-v1")) !== null) {
+                $title = (string) Database::value('SELECT title FROM studiobuilder_pages WHERE id = ?', [$old]);
+                $move($old, $real, $route, str_ends_with($title, ' (V1)') ? substr($title, 0, -5) : null);
+            }
+        }
+    }
+    // The site's default header and footer are a fallback Studio never scores, so they carry no display conditions.
+    foreach (Database::all("SELECT id, active_draft_revision_id, published_revision_id FROM studiobuilder_pages WHERE tenant_id = ? AND slug = 'default' AND page_type IN ('header_partial', 'footer_partial') AND status = 'published'", [$tid]) as $row) {
+        $doc = json_decode((string) Database::value('SELECT document_json FROM studiobuilder_revisions WHERE id = ?', [(int) $row['published_revision_id']]), true);
+        if (!is_array($doc) || !isset($doc['settings']['conditions'])) { continue; }
+        unset($doc['settings']['conditions']);
+        $draft = $runtime->app->saveDraft($actor, (int) $row['id'], $doc, (int) $row['active_draft_revision_id'], 'manual', 'FightxLife V2 switch');
+        $runtime->app->publish($actor, (int) $row['id'], (int) $draft['revision']['id'], 'FightxLife V2 switch');
+        say("  ~ default partial #{$row['id']}: conditions removed");
+    }
+    return $v1;
+}
+
+/**
+ * The 301 plan: installed with --live, taken out again in the preview (where the retired pages are still the site's).
+ * The site's other rules (the retired shop addresses) stay. /produit/donation/ goes straight to the donation section live,
+ * so there is no chain through /donation/.
+ */
+function v2_redirects(array $map): void
+{
+    global $tid;
+    $key = \Slate\Module\StudioBuilder\Runtime\StudioRedirects::SETTING;
+    $rules = json_decode((string) Database::setting($key, $tid), true) ?: [];
+    $rules = array_values(array_filter($rules, static fn(array $r): bool => !isset(V2_RETIRED[$r['from']]) && $r['from'] !== '/produit/donation/'));
+    $rules[] = ['from' => '/produit/donation/', 'to' => V2_LIVE ? V2_RETIRED['/donation/'] : '/donation/', 'code' => 301];
+    $rules[] = ['from' => '/cours/mon-compte/', 'to' => V2_MEMBRE, 'code' => 301];
+    // The preview addresses the client was sent ("<slug>-v2") lead to the live page once V2 is live.
+    $rules = array_values(array_filter($rules, static fn(array $r): bool => !preg_match('~-v2/$~', $r['from'])));
+    if (V2_LIVE) {
+        foreach (V2_RETIRED as $from => $to) {
+            if ($from !== '/cours/mon-compte/') { $rules[] = ['from' => $from, 'to' => $to, 'code' => 301]; }
+        }
+        foreach ($map as $url => $live) {
+            $rules[] = ['from' => $url === '/' ? '/accueil-v2/' : rtrim($url, '/') . '-v2/', 'to' => $live, 'code' => 301];
+        }
+    }
+    Database::setSetting($key, json_encode($rules, JSON_UNESCAPED_SLASHES), $tid);
+    say('  + redirects: ' . count($rules) . (V2_LIVE ? ' (with the 301 plan)' : ''));
 }

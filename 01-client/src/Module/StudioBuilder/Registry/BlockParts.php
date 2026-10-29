@@ -132,6 +132,8 @@ final class BlockParts
         ],
         'payment.button' => [
             'button' => ['label' => 'Button', 'selectors' => ['.sb-pay__button']],
+            'form'   => ['label' => 'Button and amount row', 'selectors' => ['.sb-pay']],
+            'amount' => ['label' => 'Amount box', 'selectors' => ['.sb-pay__amount-input']],
         ],
         'core.gallery' => [
             'grid'  => ['label' => 'Gallery layout', 'selectors' => ['.sb-gallery']],

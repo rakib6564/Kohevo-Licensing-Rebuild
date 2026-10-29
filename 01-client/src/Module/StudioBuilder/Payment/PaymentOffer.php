@@ -12,6 +12,9 @@
  * cannot be paid, a raised price retires the old forms at once, and a saved copy of a form stops working after
  * TTL_SECONDS. Offers are signed on public pages only.
  *
+ * Two optional terms: `f` (how often: `once`, or `month` for a Stripe subscription) and `h` (0 for a fixed amount; above
+ * 0, the visitor types the amount, which must be from `a` up to `h`). An offer with neither signs exactly as before.
+ *
  * Pure: the signer is injected (the platform's `slate_sign`), so it is testable without a configured secret.
  */
 
@@ -34,11 +37,13 @@ final class PaymentOffer
     /** How long a rendered form keeps working (the expiry is rounded up to the hour, so a page's HTML stays stable). */
     public const TTL_SECONDS = 172_800;
 
+    public const FREQUENCIES = ['once', 'month'];
+
     /**
      * The terms of an offer from a block's props, or null when they cannot be offered (no amount, a bad currency, ...).
      *
      * @param array<string, mixed> $props
-     * @return array{t: int, a: int, c: string, d: string, s: string}|null
+     * @return array{t: int, a: int, c: string, d: string, s: string, f: string, h: int}|null
      */
     public static function fromProps(array $props, int $tenantId): ?array
     {
@@ -53,14 +58,23 @@ final class PaymentOffer
         }
         $description = self::clean(is_string($props['description'] ?? null) ? $props['description'] : '', self::MAX_DESCRIPTION);
         $success = self::path(is_string($props['success_path'] ?? null) ? $props['success_path'] : '');
-        return ['t' => $tenantId, 'a' => $cents, 'c' => $currency, 'd' => $description, 's' => $success];
+        $frequency = in_array($props['frequency'] ?? 'once', self::FREQUENCIES, true) ? (string) ($props['frequency'] ?? 'once') : 'once';
+        $max = 0;
+        if (($props['amount_choice'] ?? 'fixed') === 'visitor') {
+            $top = $props['max_amount'] ?? null;
+            $max = is_int($top) || is_float($top) ? (int) round(((float) $top) * 100) : 0;
+            if ($max <= $cents || $max > self::MAX_CENTS) {
+                return null;
+            }
+        }
+        return ['t' => $tenantId, 'a' => $cents, 'c' => $currency, 'd' => $description, 's' => $success, 'f' => $frequency, 'h' => $max];
     }
 
     /**
      * The terms bound to the block that shows them and an expiry, or null for a block without a usable id.
      *
-     * @param array{t: int, a: int, c: string, d: string, s: string} $terms
-     * @return array{t: int, a: int, c: string, d: string, s: string, n: string, x: int}|null
+     * @param array{t: int, a: int, c: string, d: string, s: string, f: string, h: int} $terms
+     * @return array{t: int, a: int, c: string, d: string, s: string, f: string, h: int, n: string, x: int}|null
      */
     public static function bind(array $terms, string $blockId, int $now): ?array
     {
@@ -92,7 +106,8 @@ final class PaymentOffer
         $live = self::fromProps($liveProps, $tenantId);
         return $live !== null
             && $live['t'] === ($offer['t'] ?? null) && $live['a'] === ($offer['a'] ?? null)
-            && $live['c'] === ($offer['c'] ?? null) && $live['d'] === ($offer['d'] ?? null) && $live['s'] === ($offer['s'] ?? null);
+            && $live['c'] === ($offer['c'] ?? null) && $live['d'] === ($offer['d'] ?? null) && $live['s'] === ($offer['s'] ?? null)
+            && $live['f'] === ($offer['f'] ?? 'once') && $live['h'] === ($offer['h'] ?? 0);
     }
 
     /**
@@ -109,17 +124,25 @@ final class PaymentOffer
             && is_int($offer['a']) && $offer['a'] >= self::MIN_CENTS && $offer['a'] <= self::MAX_CENTS
             && is_string($offer['c']) && in_array($offer['c'], self::CURRENCIES, true)
             && is_string($offer['d']) && mb_strlen($offer['d'], 'UTF-8') <= self::MAX_DESCRIPTION
-            && is_string($offer['s']) && ($offer['s'] === '' || self::path($offer['s']) === $offer['s']);
+            && is_string($offer['s']) && ($offer['s'] === '' || self::path($offer['s']) === $offer['s'])
+            && in_array($offer['f'] ?? 'once', self::FREQUENCIES, true)
+            && is_int($offer['h'] ?? 0) && (($offer['h'] ?? 0) === 0 || (($offer['h'] ?? 0) > $offer['a'] && ($offer['h'] ?? 0) <= self::MAX_CENTS));
     }
 
-    /** The exact text that is signed: every term, in a fixed order, one per line. */
+    /** The exact text that is signed: every term, in a fixed order, one per line (`f` and `h` only when not the default). */
     public static function canonical(array $offer): string
     {
-        return implode("\n", [(string) $offer['t'], (string) $offer['a'], (string) $offer['c'], (string) $offer['d'], (string) $offer['s'], (string) $offer['n'], (string) $offer['x']]);
+        $lines = [(string) $offer['t'], (string) $offer['a'], (string) $offer['c'], (string) $offer['d'], (string) $offer['s'], (string) $offer['n'], (string) $offer['x']];
+        $frequency = (string) ($offer['f'] ?? 'once');
+        $max = (int) ($offer['h'] ?? 0);
+        if ($frequency !== 'once' || $max !== 0) {
+            array_push($lines, $frequency, (string) $max);
+        }
+        return implode("\n", $lines);
     }
 
     /**
-     * @param array{t: int, a: int, c: string, d: string, s: string, n: string, x: int} $offer
+     * @param array{t: int, a: int, c: string, d: string, s: string, f: string, h: int, n: string, x: int} $offer
      * @param callable(string, string): ?string $signer `slate_sign` (context, value) -> signature or null when no secret is set
      */
     public static function sign(array $offer, callable $signer): ?string
@@ -132,7 +155,7 @@ final class PaymentOffer
      *
      * @param array<string, mixed> $post
      * @param callable(string, string, string): bool $verifier `slate_sign_equals` (context, value, candidate)
-     * @return array{t: int, a: int, c: string, d: string, s: string, n: string, x: int}|null
+     * @return array{t: int, a: int, c: string, d: string, s: string, f: string, h: int, n: string, x: int}|null
      */
     public static function fromPost(array $post, callable $verifier): ?array
     {
@@ -146,7 +169,13 @@ final class PaymentOffer
                 return null;
             }
         }
-        $offer = ['t' => (int) $post['t'], 'a' => (int) $post['a'], 'c' => $post['c'], 'd' => $post['d'], 's' => $post['s'], 'n' => $post['n'], 'x' => (int) $post['x']];
+        // `f` and `h` are optional: a form signed before they existed means a fixed, one-time amount.
+        $frequency = $post['f'] ?? 'once';
+        $max = $post['h'] ?? '0';
+        if (!is_string($frequency) || !is_string($max) || preg_match('/^(?:0|[1-9][0-9]{0,11})$/', $max) !== 1) {
+            return null;
+        }
+        $offer = ['t' => (int) $post['t'], 'a' => (int) $post['a'], 'c' => $post['c'], 'd' => $post['d'], 's' => $post['s'], 'f' => $frequency, 'h' => (int) $max, 'n' => $post['n'], 'x' => (int) $post['x']];
         if (!self::isWellFormed($offer) || !$verifier(self::SIGN_CONTEXT, self::canonical($offer), $post['g'])) {
             return null;
         }
@@ -165,6 +194,25 @@ final class PaymentOffer
     {
         $path = trim($path, " \t\n\r\0\x0B/");
         return preg_match('~^[A-Za-z0-9][A-Za-z0-9_\-]*(?:/[A-Za-z0-9][A-Za-z0-9_\-]*){0,5}$~', $path) === 1 && strlen($path) <= 120 ? $path : '';
+    }
+
+    /**
+     * The amount a visitor typed, in cents, when it is within the offer's range; null otherwise. Accepts `25`, `25.5`,
+     * `25,50` and a leading or trailing currency sign or spaces.
+     *
+     * @param array{a: int, h: int} $offer
+     */
+    public static function visitorCents(array $offer, mixed $typed): ?int
+    {
+        if (!is_string($typed) || strlen($typed) > 20) {
+            return null;
+        }
+        $typed = trim(str_replace([' ', "\u{00A0}", '€', '$', '£'], '', $typed));
+        if (preg_match('/^([0-9]{1,9})(?:[.,]([0-9]{1,2}))?$/', $typed, $m) !== 1) {
+            return null;
+        }
+        $cents = (int) $m[1] * 100 + (int) str_pad($m[2] ?? '0', 2, '0');
+        return $cents >= $offer['a'] && $cents <= $offer['h'] ? $cents : null;
     }
 
     /** `49.00 USD` for display. */

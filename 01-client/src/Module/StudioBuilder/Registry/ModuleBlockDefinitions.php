@@ -4,7 +4,8 @@
  *
  * Studio's own business blocks:
  *
- *   payment.button    -> no provider: fixed amount typed in the block, signed at render time (see Payment/PaymentOffer)
+ *   payment.button    -> no provider: an amount typed in the block (or a range the visitor picks within), one-time or
+ *                        monthly, signed at render time (see Payment/PaymentOffer)
  *   payment.link      -> no provider: a Stripe-hosted link typed in the block (see Payment/PaymentLinkUrl)
  *
  * The module widgets (booking.*, membership.*, forms.*) belong to their plugins: each ships
@@ -38,12 +39,16 @@ final class ModuleBlockDefinitions
                 version: 1,
                 label: 'Payment Button',
                 title: 'Payment Button',
-                description: 'A fixed-amount pay button that opens Stripe Checkout',
+                description: 'A Stripe Checkout pay button: a set or visitor-chosen amount, once or monthly',
                 category: 'business',
                 icon: 'arrow-up-right',
                 schema: FieldSchema::define([
                     ['key' => 'label', 'type' => 'string', 'label' => 'Button label', 'required' => false, 'default' => 'Pay now', 'max_length' => 80],
                     ['key' => 'amount', 'type' => 'number', 'label' => 'Amount', 'required' => false, 'default' => 10, 'min' => 0.5, 'max' => 999999],
+                    ['key' => 'amount_choice', 'type' => 'enum', 'label' => 'Who sets the amount', 'required' => false, 'default' => 'fixed', 'allowed_values' => ['fixed', 'visitor']],
+                    ['key' => 'max_amount', 'type' => 'number', 'label' => 'Highest amount a visitor can give', 'required' => false, 'default' => 5000, 'min' => 1, 'max' => 999999],
+                    ['key' => 'frequency', 'type' => 'enum', 'label' => 'How often', 'required' => false, 'default' => 'once', 'allowed_values' => PaymentOffer::FREQUENCIES],
+                    ['key' => 'amount_label', 'type' => 'string', 'label' => 'Amount box label', 'required' => false, 'default' => '', 'max_length' => 80],
                     ['key' => 'currency', 'type' => 'enum', 'label' => 'Currency', 'required' => false, 'default' => 'USD', 'allowed_values' => PaymentOffer::CURRENCIES],
                     ['key' => 'description', 'type' => 'string', 'label' => 'What the visitor is paying for', 'required' => false, 'default' => '', 'max_length' => PaymentOffer::MAX_DESCRIPTION],
                     ['key' => 'success_path', 'type' => 'string', 'label' => 'Thank-you page path', 'required' => false, 'default' => '', 'max_length' => 120, 'pattern' => '~^(?:[A-Za-z0-9][A-Za-z0-9_\-]*(?:/[A-Za-z0-9][A-Za-z0-9_\-]*){0,5})?$~'],

@@ -7,6 +7,9 @@
  *                                     (the customer paid on stripe.com)
  *   - payment_intent.succeeded       — embedded Payment Element flow
  *                                     (the customer paid on our page)
+ *   - invoice.paid                   — a subscription's renewal (the first
+ *                                     period is recorded by its checkout
+ *                                     session, so only renewals count here)
  *
  * Both events arrive server-to-server. We treat them as the source of
  * truth for "did this payment go through" — the browser-side paths
@@ -69,6 +72,20 @@ if ($type === 'checkout.session.completed' && is_array($obj)) {
         'stripe_payment_intent_id' => (string)($obj['payment_intent'] ?? ''),
         'customer_email'           => (string)($obj['customer_details']['email'] ?? ($obj['customer_email'] ?? '')),
         'amount_cents'             => (int)($obj['amount_total'] ?? 0),
+        'currency'                 => strtoupper((string)($obj['currency'] ?? 'usd')),
+        'meta'                     => $meta,
+    ]);
+}
+if ($type === 'invoice.paid' && is_array($obj) && ($obj['billing_reason'] ?? '') === 'subscription_cycle') {
+    // The subscription's metadata, where the checkout copied it (the API's newer and older invoice shapes).
+    $meta = $obj['parent']['subscription_details']['metadata'] ?? ($obj['subscription_details']['metadata'] ?? []);
+    StripePaymentAPI::recordCharge([
+        'source_plugin'            => (string)($meta['source_plugin'] ?? 'unknown'),
+        'source_id'                => (string)($meta['source_id'] ?? ''),
+        // The invoice id stands in for a session id: it is unique per renewal, so a redelivery is not counted twice.
+        'stripe_session_id'        => (string)($obj['id'] ?? ''),
+        'customer_email'           => (string)($obj['customer_email'] ?? ''),
+        'amount_cents'             => (int)($obj['amount_paid'] ?? 0),
         'currency'                 => strtoupper((string)($obj['currency'] ?? 'usd')),
         'meta'                     => $meta,
     ]);
