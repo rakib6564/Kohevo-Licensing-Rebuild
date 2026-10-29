@@ -85,6 +85,7 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         'v2-phero__photo' => ['s' => S(dim(['height' => '470px', 'object_fit' => 'cover', 'overflow' => 'hidden']), radius('30px'), shadow(...LIFT)), 't' => dim(['height' => '400px']), 'm' => dim(['height' => '280px']),
                               'anim' => ['type' => 'scale_up', 'duration_ms' => 1000, 'delay_ms' => 120, 'easing' => EASE]],
         'v2-phero__links' => ['s' => S(lay(['gap' => '20px']), mar(18, null, 0, null))],
+        'v2-phero--text v2-badge' => ['s' => mar(null, 'auto', null, 'auto')],
         'v2-phero--text v2-actions' => ['s' => lay(['justify' => 'center'])],
         'v2-phero--text v2-phero__links' => ['s' => lay(['justify' => 'center'])],
 
@@ -93,6 +94,10 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         'v2-sec--soft'   => ['s' => bg('#fbf6f8')],
         'v2-narrow'      => ['s' => S(dim(['max_width' => '820px']), mar(null, 'auto', null, 'auto')), 'reveal' => $up(0)],
         'v2-narrow--center' => ['center' => true],
+        'v2-narrow--center v2-actions' => ['s' => lay(['justify' => 'center'])],
+        'v2-narrow--center v2-links' => ['s' => lay(['justify' => 'center'])],
+        'v2-center v2-actions' => ['s' => S(lay(['justify' => 'center']), mar(0, null, null, null))],
+        'v2-center v2-links' => ['s' => lay(['justify' => 'center'])],
         'v2-text'        => ['parts' => $rich],
         'v2-split2'      => ['s' => lay(['tracks' => 'minmax(0,1fr) minmax(0,.9fr)', 'gap' => '64px', 'align' => 'center']), 't' => lay(['tracks' => '1fr', 'gap' => '36px'])],
         'v2-split2__photo' => ['s' => S(dim(['height' => '440px', 'object_fit' => 'cover', 'overflow' => 'hidden']), radius('26px'), shadow(...LIFT)), 'm' => dim(['height' => '280px']),
