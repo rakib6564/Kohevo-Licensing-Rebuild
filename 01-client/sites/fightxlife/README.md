@@ -54,10 +54,31 @@ The bundle can sit anywhere; run it from the site root. It reads only files insi
 It prints what it removed and what is published. Run it again at any time: the second run removes nothing and
 rebuilds the same pages in place.
 
+## V2 pages (preview beside the current site)
+
+The V2 content pack (October 2026: 0. Menu, 1. Accueil … 6. Contact, and a 301 plan) is built in the client-approved
+V2 design **beside** the current pages, which stay as they are. Each V2 page lives at `<slug>-v2`, for example
+`/cours-v2/` next to `/cours/`, with the home page at `/accueil-v2/`. The V2 header, footer and menus (`v2-*`) show
+only on those pages: their display conditions list the V2 slugs. Every link between V2 pages points at the `-v2`
+addresses (`V2URL()` in v2.php). The build creates and updates only its own pages, so it is safe to run after
+editor changes:
+
+    cd ~/public_html/fightxlife && php ~/fxl-server-bundle/build/v2.php
+
+- `fxl/v2-content.json`: the documents' text as data (SEO title and description, H1, intro, H2 sections with their
+  H3 blocks, paragraphs, lists and labelled calls to action). Rebuild it from the client's zip:
+  `python3 build/v2parse.py "<zip>" fxl/v2-content.json`.
+- `build/v2.php`: the home page, header, footer, menus, the Homemade Apple font and the design (`native_v2()`).
+- `build/v2-pages.php`: the page engine for the 21 other pages (`native_v2_pages()`, `v2_build_pages()`). It also holds
+  each page's photos (`V2_PAGE_IMAGES`).
+
+**The switch.** When V2 replaces the current site: make `V2URL()` the identity and drop the `-v2` slugs. Then
+publish the 301 plan from the pack, and retire the old pages it lists.
+
 ## Contents
 
 - `install.php`: the entry point.
-- `build/`: `site.php` (the site), `lib.php` (helpers), `native.php` (the design as native style), `gap.css` (empty).
+- `build/`: `site.php` (the site), `v2.php`, `v2-pages.php` and `v2parse.py` (the V2 pages), `lib.php` (helpers), `native.php` (the design as native style), `gap.css` (empty).
 - `fxl/`: content.json, image-map.json, extra.json, page-bg.json (the live site's text and image mapping).
 - `media/fxl/`: the images, the logo and the site icon.
 
