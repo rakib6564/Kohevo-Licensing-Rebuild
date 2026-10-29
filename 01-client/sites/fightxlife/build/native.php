@@ -52,7 +52,8 @@ function tile(int $size, string $r, string $bg, ?string $fg = PINK): array { ret
  */
 function native_map(): array
 {
-    return array_replace_recursive(native_map_base(), native_more());
+    // v2.php adds the V2 design's classes (native_v2) when it is the build that runs.
+    return array_replace_recursive(native_map_base(), native_more(), function_exists('native_v2') ? native_v2() : []);
 }
 
 function native_map_base(): array
@@ -523,6 +524,9 @@ function native_merge(array &$b, array $f): void
         if (isset($f[$k])) { $b['responsive'][$device]['style_parts'] = array_replace_recursive($b['responsive'][$device]['style_parts'] ?? [], $f[$k]); }
     }
     if (isset($f['props'])) { $b['props'] = array_replace($b['props'], $f['props']); }
+    // Motion: `anim` plays as the page loads, `reveal` as the block scrolls into view.
+    if (isset($f['anim'])) { $b['animation'] = $f['anim']; }
+    if (isset($f['reveal'])) { $b['interactions'] = ['trigger' => 'viewport-enter', 'animation' => $f['reveal']]; }
     foreach (['t' => 'tablet', 'm' => 'mobile'] as $k => $device) {
         if (isset($f[$k])) { $b['responsive'][$device]['style'] = array_replace_recursive($b['responsive'][$device]['style'] ?? [], $f[$k]); }
         if (isset($f[$k . 'p'])) { $b['responsive'][$device]['props'] = array_replace($b['responsive'][$device]['props'] ?? [], $f[$k . 'p']); }

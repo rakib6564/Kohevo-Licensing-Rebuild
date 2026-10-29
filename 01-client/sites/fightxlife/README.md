@@ -54,10 +54,22 @@ The bundle can sit anywhere; run it from the site root. It reads only files insi
 It prints what it removed and what is published. Run it again at any time: the second run removes nothing and
 rebuilds the same pages in place.
 
+## V2 home page preview
+
+`build/v2.php` builds the home page of the V2 content pack (« 1. Accueil », October 2026) in the upgraded design as a
+preview at `/accueil-v2/` (noindex), with its own header and footer: their display condition is that page's slug, so the
+rest of the site keeps its current header and footer. It also saves the V2 menus (`v2-*`) and adds the Homemade Apple
+font to the head snippet. It creates nothing else and edits no existing page, so it is safe to run after editor changes:
+
+    cd ~/public_html/fightxlife && php ~/fxl-server-bundle/build/v2.php
+
+The design lives in `native_v2()` in that file (native.php merges it in when v2.php runs). Once the client approves, the
+same blocks become the site's home page, header and footer, and the other V2 pages follow this design.
+
 ## Contents
 
 - `install.php`: the entry point.
-- `build/`: `site.php` (the site), `lib.php` (helpers), `native.php` (the design as native style), `gap.css` (empty).
+- `build/`: `site.php` (the site), `v2.php` (the V2 home page preview), `lib.php` (helpers), `native.php` (the design as native style), `gap.css` (empty).
 - `fxl/`: content.json, image-map.json, extra.json, page-bg.json (the live site's text and image mapping).
 - `media/fxl/`: the images, the logo and the site icon.
 
