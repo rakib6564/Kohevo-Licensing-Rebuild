@@ -31,7 +31,7 @@ final class PostMetaRenderer implements BlockRendererInterface
         $separator    = $scope->string('separator', ' • ');
 
         $author = (string) ($scope->prop('author_name') ?? $scope->context()->attribute('author_name', 'Author'));
-        $date   = (string) ($scope->prop('published_at') ?? $scope->context()->attribute('date', $scope->context()->attribute('published_at', date('M j, Y'))));
+        $date   = (string) ($scope->prop('published_at') ?? $scope->context()->attribute('date', $scope->context()->attribute('published_at', Html::date(time()))));
         $cat    = (string) ($scope->prop('category') ?? $scope->context()->attribute('category', ''));
 
         $items = [];

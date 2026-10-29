@@ -153,7 +153,7 @@ final class PostsProvider implements PublicDataProviderInterface
             $description = trim(is_string($seo['description'] ?? null) ? $seo['description'] : '');
             $excerpt = $description !== '' ? $description : (is_string($settings['excerpt'] ?? null) ? $settings['excerpt'] : '');
             if ($excerpt === '') {
-                $excerpt = 'Read the full story: ' . (string) $row['title'];
+                $excerpt = str_replace('%s', (string) $row['title'], \Slate\Module\StudioBuilder\Render\Html::t('studio_read_full_story', 'Read the full story: %s'));
             }
 
             $out[] = [
@@ -166,7 +166,7 @@ final class PostsProvider implements PublicDataProviderInterface
                 'author_name'    => (string) ($row['author_name'] ?? 'Staff Author'),
                 'author_id'      => (int) ($row['created_by'] ?? 1),
                 'published_at'   => $pubDate,
-                'date_formatted' => date('M j, Y', $timestamp),
+                'date_formatted' => \Slate\Module\StudioBuilder\Render\Html::date($timestamp),
                 'featured_image' => self::featuredImage($settings, is_array($seo) ? $seo : [], $tenants),
             ];
         }

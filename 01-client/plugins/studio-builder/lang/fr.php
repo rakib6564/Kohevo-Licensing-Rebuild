@@ -2179,6 +2179,8 @@ return [
     'studio_archive_author' => 'Auteur : %s',
     'studio_archive' => 'Archives',
     'studio_post_by' => 'Par %s',
+    'studio_date_format' => 'j F Y',
+    'studio_read_full_story' => 'Lire l’article : %s',
     'studio_close' => 'Fermer',
     'studio_menu' => 'Menu',
     'studio_open_menu' => 'Ouvrir le menu',
