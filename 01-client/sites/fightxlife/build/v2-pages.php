@@ -138,7 +138,14 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         // ── Modules ──
         'v2-panel'       => ['s' => S(pad(36, 36), radius('24px'), bg('#ffffff'), $lift), 'm' => pad(24, 20), 'reveal' => $up(0)],
         'v2-give'        => ['s' => S(lay(['gap' => '12px', 'justify' => 'center']), mar(14, null, 6, null))],
-        'v2-pay'         => ['parts' => ['button' => S($pill, sz(['height' => 58, 'min_width' => 150]), fx(['cursor' => 'pointer'])), 'button:hover' => $pillHover]],
+        'v2-give2'       => ['s' => lay(['tracks' => 'minmax(0,1fr) minmax(0,1fr)', 'gap' => '28px']), 't' => lay(['tracks' => '1fr', 'gap' => '22px'])],
+        'v2-give__title' => ['s' => S(ty('26px', 'bold', '1.2'), mar(6, null, 8, null))],
+        'v2-give__text'  => ['s' => S(col(BODY), ty('15.5px', null, '1.6'), mar(0, null, 8, null))],
+        'v2-give__free'  => ['s' => S(mar(18, null, 0, null), pad(20, 0, 0, 0), ['border' => ['top' => ['width' => '1px', 'style' => 'solid', 'color' => '#f1e3ea']]]), 'center' => true],
+        'v2-pay--free'   => ['parts' => ['form' => lay(['justify' => 'center'])]],
+        'v2-give__note'  => ['s' => S(col(BODY), ty('14px', null, '1.6'), mar(22, null, 0, null)), 'center' => true],
+        'v2-pay'         => ['parts' => ['button' => S($pill, sz(['height' => 58, 'min_width' => 150]), fx(['cursor' => 'pointer'])), 'button:hover' => $pillHover,
+                'amount' => S(sz(['width' => '180px', 'height' => 58]), pad(0, 18), brd('#ead9e2', '1.5px', '999px'), bg('#fffafd'), col(INK), fam('body', '17px', 'bold'))]],
         'v2-form'        => ['props' => ['labels' => 'visible'], 'parts' => [
                 'form' => lay(['display' => 'grid', 'gap' => '18px']),
                 'label' => S(col(INK), fam('body', '14px', 'bold'), mar(0, 0, 6, 0)),
@@ -325,11 +332,29 @@ function v2_module(array $notes, array $sec, array $pg): ?array
         return B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [BOX([$form], 'v2-panel'), BOX($side, 'v2-aside')], 'v2-split2 v2-split2--top');
     }
     if (str_contains($all, 'Donation module')) {
-        return BOX([
-            KICK('Je soutiens FightxLife'),
-            B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'justify' => 'center', 'wrap' => 'wrap'], array_map(static fn(int $a): array =>
-                B('payment.button', ['label' => "Donner {$a} €", 'amount' => $a, 'currency' => 'EUR', 'description' => 'Don à FightxLife ASBL'], [], 'v2-pay'), [10, 25, 50, 100]), 'v2-give'),
+        // One-off and monthly, each with set amounts and a free amount (from 5 € up to 5 000 €); Stripe confirms the payment,
+        // then the donor lands on the thank-you page (V2_THANKS).
+        $pay = static fn(string $label, int $amount, string $frequency, array $extra = []): array => B('payment.button', array_replace([
+            'label' => $label, 'amount' => $amount, 'currency' => 'EUR', 'frequency' => $frequency, 'success_path' => trim(V2URL(V2_THANKS), '/'),
+            'description' => $frequency === 'month' ? 'Don mensuel à FightxLife ASBL' : 'Don à FightxLife ASBL'], $extra), [], 'v2-pay');
+        $free = static function (string $frequency, string $label) use ($pay): array {
+            $b = $pay('Je soutiens FightxLife', 5, $frequency, ['amount_choice' => 'visitor', 'max_amount' => 5000, 'amount_label' => $label]);
+            $b['classNames'][] = 'v2-pay--free';
+            return $b;
+        };
+        $panel = static fn(string $kicker, string $title, string $text, array $amounts, string $frequency, string $suffix, string $freeLabel): array => BOX([
+            KICK($kicker), H($title, 'h3', 'v2-give__title'), T($text, 'v2-give__text'),
+            B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'justify' => 'center', 'wrap' => 'wrap'],
+                array_map(static fn(int $a): array => $pay("{$a} €{$suffix}", $a, $frequency), $amounts), 'v2-give'),
+            BOX([$free($frequency, $freeLabel)], 'v2-give__free'),
         ], 'v2-panel v2-narrow--center');
+        return BOX([
+            B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'stretch'], [
+                $panel('Une fois', 'Don ponctuel', 'Un seul paiement, au moment qui vous convient.', [10, 25, 50, 100], 'once', '', 'Autre montant (€)'),
+                $panel('Chaque mois', 'Don mensuel', 'Prélevé chaque mois à la même date, jusqu’à ce que vous l’arrêtiez.', [10, 25, 50], 'month', ' / mois', 'Autre montant par mois (€)'),
+            ], 'v2-give2'),
+            T('Paiement sécurisé par Stripe (carte, Bancontact pour un don ponctuel). Pour modifier ou arrêter un don mensuel, contactez-nous.', 'v2-give__note'),
+        ]);
     }
     if (str_contains($all, 'Featured news block')) {
         return B('core.query_loop', ['source' => 'posts', 'category' => 'Actualités', 'per_page' => 1, 'columns' => 1, 'card_variant' => 'horizontal', 'show_author' => false, 'show_category' => true,

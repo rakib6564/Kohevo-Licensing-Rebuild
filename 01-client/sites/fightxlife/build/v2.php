@@ -254,6 +254,15 @@ if (!str_contains($head, 'Homemade+Apple')) {
 // While the client compares the two designs, each V2 page lives beside the current one at "<slug>-v2" (the home page at
 // /accueil-v2/), and every link between V2 pages points at those addresses. On the switch, V2URL() becomes the identity.
 $V2PAGES = json_decode((string) file_get_contents(__DIR__ . '/../fxl/v2-content.json'), true);
+// Where Stripe sends a donor back: not in the content pack, which only asks for a clear payment confirmation.
+const V2_THANKS = '/merci-don/';
+$V2PAGES[] = ['doc' => '2.4. (merci)', 'url' => V2_THANKS, 'seo_title' => 'Merci pour votre don | FightxLife', 'meta' => '', 'h1' => 'Merci pour votre don', 'design' => '', 'sections' => [],
+    'intro' => [
+        ['t' => 'p', 'html' => 'Votre paiement a bien été accepté. Merci de soutenir FightxLife et les personnes touchées par le cancer.'],
+        ['t' => 'p', 'html' => 'Si vous avez choisi un don mensuel, il sera prélevé chaque mois à la même date. Pour le modifier ou l’arrêter, <a href="/contact/">contactez-nous</a>.'],
+        ['t' => 'cta', 'kind' => 'Primary CTA', 'label' => 'Découvrir nos actions', 'href' => '/nos-actions/'],
+        ['t' => 'cta', 'kind' => 'Secondary CTA', 'label' => 'Retour à l’accueil', 'href' => '/'],
+    ]];
 $V2MAP = [];
 foreach ($V2PAGES as $pg) { $V2MAP[$pg['url']] = $pg['url'] === '/' ? '/' . V2_SLUG . '/' : rtrim($pg['url'], '/') . '-v2/'; }
 function V2URL(string $href): string

@@ -33,7 +33,7 @@ $result = PayRequest::handle(
         'now'        => time(),
     ],
     static fn (string $context, string $value, string $candidate): bool => slate_sign_equals($context, $value, $candidate),
-    static function (int $cents, string $currency, string $name, string $successUrl, string $cancelUrl): string {
+    static function (int $cents, string $currency, string $name, string $successUrl, string $cancelUrl, string $interval = ''): string {
         $session = StripePaymentAPI::createCheckout(
             [['name' => $name, 'amount_cents' => $cents]],
             [
@@ -41,6 +41,7 @@ $result = PayRequest::handle(
                 'success_url' => $successUrl,
                 'cancel_url'  => $cancelUrl,
                 'metadata'    => ['source_plugin' => 'studio-builder', 'source_id' => 'payment-button'],
+                'interval'    => $interval,
             ]
         );
         return (string) $session['url'];

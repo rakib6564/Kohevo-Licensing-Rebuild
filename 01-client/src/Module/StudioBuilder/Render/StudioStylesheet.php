@@ -18,7 +18,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class StudioStylesheet
 {
-    public const VERSION = '48';
+    public const VERSION = '49';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -254,6 +254,8 @@ final class StudioStylesheet
             . '.sb-embed-card__note{margin:.75rem 0 0;font-size:.8125rem;color:var(--sb-text-muted)}'
             . '.sb-embed-frame{width:100%;border:0;display:block}'
             . '.sb-pay{margin:var(--sb-type-flow,1rem) 0 0}.sb-pay__button{cursor:pointer;border:0;font:inherit}'
+            . '.sb-pay--amount{display:flex;flex-wrap:wrap;align-items:flex-end;gap:.75rem}.sb-pay__amount{display:flex;flex-direction:column;gap:.35rem;font-size:.875rem;font-weight:600}'
+            . '.sb-pay__amount-input{width:9rem;min-height:2.75rem;padding:.5rem .75rem;border:1px solid var(--sb-border-default);border-radius:var(--sb-radius-md);font:inherit;font-size:1rem;background:var(--sb-surface-primary);color:inherit}'
             . '.sb-pay-card__button{margin:.5rem 0}.sb-pay-card__summary{margin:0;font-weight:600;color:var(--sb-text-primary)}'
             // The Forms stylesheet reads its colours from variables it defines only on its own standalone page (`.forms-public`).
             // Embedded in a Studio page there is no such ancestor, so the submit button lost its background; map them to the site tokens.

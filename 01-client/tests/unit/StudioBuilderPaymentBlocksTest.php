@@ -80,7 +80,7 @@ function sbpb_post(array $props = SBPB_PROPS, string $blockId = SBPB_BLOCK, int 
     $offer = PaymentOffer::bind((array) PaymentOffer::fromProps($props, SBPB_TENANT), $blockId, $now);
     assert_true($offer !== null, 'the props make an offer');
     return ['t' => (string) $offer['t'], 'a' => (string) $offer['a'], 'c' => $offer['c'], 'd' => $offer['d'], 's' => $offer['s'],
-            'n' => $offer['n'], 'x' => (string) $offer['x'], 'g' => (string) PaymentOffer::sign($offer, sbpb_signer())];
+            'f' => $offer['f'], 'h' => (string) $offer['h'], 'n' => $offer['n'], 'x' => (string) $offer['x'], 'g' => (string) PaymentOffer::sign($offer, sbpb_signer())];
 }
 
 /** The published-block lookup: block SBPB_BLOCK is live with `$props`, nothing else is. */
@@ -91,7 +91,7 @@ function sbpb_live(array $props = SBPB_PROPS): callable
 
 unit('payment blocks: an offer is made from the props in cents, only when it can be offered', function (): void {
     $o = PaymentOffer::fromProps(['amount' => 49.99, 'currency' => 'eur', 'description' => "  Two\n  hours ", 'success_path' => '/thank-you/'], SBPB_TENANT);
-    assert_eq(['t' => SBPB_TENANT, 'a' => 4999, 'c' => 'EUR', 'd' => 'Two hours', 's' => 'thank-you'], $o);
+    assert_eq(['t' => SBPB_TENANT, 'a' => 4999, 'c' => 'EUR', 'd' => 'Two hours', 's' => 'thank-you', 'f' => 'once', 'h' => 0], $o);
     assert_eq(4999, PaymentOffer::fromProps(['amount' => 49.99], SBPB_TENANT)['a'] ?? null, '49.99 is exactly 4999 cents, not 4998');
     assert_true(PaymentOffer::fromProps(['amount' => 0.4], SBPB_TENANT) === null, 'below the minimum');
     assert_true(PaymentOffer::fromProps(['amount' => 1_000_000], SBPB_TENANT) === null, 'above the cap');
@@ -131,6 +131,39 @@ unit('payment blocks: only a signature the server made verifies, and changing an
     $old = $post;
     unset($old['n'], $old['x']);
     assert_true(PaymentOffer::fromPost($old, sbpb_verifier()) === null, 'a form from before offers named their block is refused');
+});
+
+unit('payment blocks: monthly and visitor-chosen offers sign their extra terms, and older forms still verify', function (): void {
+    $range = ['amount' => 5, 'currency' => 'EUR', 'amount_choice' => 'visitor', 'max_amount' => 5000, 'frequency' => 'month'];
+    $o = PaymentOffer::fromProps($range, SBPB_TENANT);
+    assert_eq(['f' => 'month', 'h' => 500000, 'a' => 500], ['f' => $o['f'] ?? null, 'h' => $o['h'] ?? null, 'a' => $o['a'] ?? null]);
+    assert_true(PaymentOffer::fromProps(['max_amount' => 4] + $range, SBPB_TENANT) === null, 'a highest amount must be above the minimum');
+    assert_eq('once', PaymentOffer::fromProps(['frequency' => 'weekly'] + $range, SBPB_TENANT)['f'] ?? null, 'an unknown frequency is one-time');
+    assert_eq(0, PaymentOffer::fromProps(['amount' => 5, 'max_amount' => 1], SBPB_TENANT)['h'] ?? null, 'a fixed amount ignores the highest amount');
+
+    $post = sbpb_post($range);
+    assert_true(PaymentOffer::fromPost($post, sbpb_verifier()) !== null, 'the genuine monthly range form verifies');
+    foreach (['f' => 'once', 'h' => '999999', 'a' => '50'] as $key => $value) {
+        $tampered = $post;
+        $tampered[$key] = $value;
+        assert_true(PaymentOffer::fromPost($tampered, sbpb_verifier()) === null, "changing '{$key}' is refused");
+    }
+    $dropped = $post;
+    unset($dropped['f'], $dropped['h']);
+    assert_true(PaymentOffer::fromPost($dropped, sbpb_verifier()) === null, 'dropping the extra terms does not turn it into a one-time fixed offer');
+
+    $legacy = sbpb_post();
+    unset($legacy['f'], $legacy['h']);
+    assert_true(PaymentOffer::fromPost($legacy, sbpb_verifier()) !== null, 'a fixed one-time form signed before the extra terms existed still verifies');
+
+    $offer = ['a' => 500, 'h' => 500000];
+    foreach (['25' => 2500, '25.5' => 2550, '25,50' => 2550, ' 30 € ' => 3000, '5' => 500, '5000' => 500000] as $typed => $cents) {
+        assert_eq($cents, PaymentOffer::visitorCents($offer, (string) $typed), "typed '{$typed}'");
+    }
+    foreach (['4.99', '5000.01', '', 'abc', '1e3', '-10', '25.555'] as $bad) {
+        assert_true(PaymentOffer::visitorCents($offer, $bad) === null, "refused '{$bad}'");
+    }
+    assert_true(PaymentOffer::visitorCents($offer, ['25']) === null, 'an array');
 });
 
 /** @return array{tenantId: int, siteUrl: string, referer: string, visitor: string, configured: bool, now: int} */
@@ -181,6 +214,29 @@ unit('payment blocks: the pay request builds the Stripe session from the signed 
     assert_eq(1, count($calls), 'only the valid one reached Stripe');
     assert_eq(PaymentOffer::expiry(intdiv(SBPB_NOW, 3600) * 3600), PaymentOffer::expiry(intdiv(SBPB_NOW, 3600) * 3600 + 3599), 'the expiry is stable within an hour, so the page HTML (and its ETag) is too');
     assert_true(PaymentOffer::expiry(SBPB_NOW) >= SBPB_NOW + PaymentOffer::TTL_SECONDS, 'a form works for at least TTL_SECONDS');
+});
+
+unit('payment blocks: a visitor-chosen monthly offer charges the typed amount every month', function (): void {
+    $range = ['amount' => 5, 'currency' => 'EUR', 'description' => 'Don', 'amount_choice' => 'visitor', 'max_amount' => 5000, 'frequency' => 'month'];
+    $calls = [];
+    $checkout = static function (int $cents, string $currency, string $name, string $success, string $cancel, string $interval) use (&$calls): string {
+        $calls[] = [$cents, $currency, $interval];
+        return 'https://checkout.stripe.com/c/pay/cs_test_m';
+    };
+    $allow = static fn(string $v): bool => true;
+    $post = sbpb_post($range);
+    assert_eq(303, PayRequest::handle('POST', $post + ['v' => '42,50'], sbpb_env(), sbpb_verifier(), $checkout, $allow, sbpb_live($range))['status']);
+    assert_eq([[4250, 'EUR', 'month']], $calls, 'the typed amount, monthly');
+    $r = PayRequest::handle('POST', $post + ['v' => '2'], sbpb_env(), sbpb_verifier(), $checkout, $allow, sbpb_live($range));
+    assert_eq(400, $r['status'], 'below the minimum');
+    assert_true(str_contains($r['message'], '5.00 EUR') && str_contains($r['message'], '5,000.00 EUR'), $r['message']);
+    assert_eq(400, PayRequest::handle('POST', $post, sbpb_env(), sbpb_verifier(), $checkout, $allow, sbpb_live($range))['status'], 'no amount typed');
+    assert_eq(400, PayRequest::handle('POST', $post + ['v' => '20'], sbpb_env(), sbpb_verifier(), $checkout, $allow, sbpb_live(['frequency' => 'once'] + $range))['status'], 'the block was switched to one-time and published: the old form is retired');
+    assert_eq(1, count($calls), 'only the valid one reached Stripe');
+
+    $calls = [];
+    PayRequest::handle('POST', sbpb_post() + ['v' => '1'], sbpb_env(), sbpb_verifier(), $checkout, $allow, sbpb_live());
+    assert_eq([[4999, 'EUR', '']], $calls, 'a fixed one-time offer ignores a posted amount and is not a subscription');
 });
 
 unit('payment blocks: the throttle allows a burst, then waits for the window', function (): void {
@@ -249,6 +305,20 @@ unit('payment blocks: the button renders a signed form publicly, a card in the e
     assert_eq(SBPB_BLOCK, $rendered['n'], 'the offer names its block');
     assert_true($rendered['x'] > time(), 'and expires in the future');
     assert_true(PaymentOffer::matchesProps($rendered, $props, SBPB_TENANT), 'its terms are the block\'s props');
+    assert_true(!str_contains($public, 'name="v"'), 'a set amount has no amount box');
+
+    $range = ['label' => 'Donner', 'amount' => 5, 'currency' => 'EUR', 'amount_choice' => 'visitor', 'max_amount' => 500, 'frequency' => 'month'];
+    $box = sbpb_render('payment.button', $range, 'public');
+    assert_true(str_contains($box, 'name="v" type="number"') && str_contains($box, 'min="5.00" max="500.00"') && str_contains($box, 'value="5"'), $box);
+    assert_true(str_contains($box, 'name="f" value="month"') && str_contains($box, 'name="h" value="50000"'), 'the extra terms are hidden fields');
+    assert_true(str_contains($box, 'Amount per month (EUR)'), 'the default box label says monthly');
+    preg_match_all('/<input type="hidden" name="([a-z])" value="([^"]*)">/', $box, $m2, PREG_SET_ORDER);
+    $boxFields = [];
+    foreach ($m2 as $row) {
+        $boxFields[$row[1]] = html_entity_decode($row[2], ENT_QUOTES);
+    }
+    assert_true(PaymentOffer::fromPost($boxFields, sbpb_verifier()) !== null, 'the rendered range form verifies');
+    assert_true(str_contains(sbpb_render('payment.button', $range, 'editor'), 'Visitor chooses 5.00 EUR – 500.00 EUR per month'), 'the editor card says what visitors will see');
 
     $preview = sbpb_render('payment.button', $props, 'preview');
     assert_true(!str_contains($preview, '<form') && !str_contains($preview, '<input'), 'a preview (which may be a draft) gets no payable form');
