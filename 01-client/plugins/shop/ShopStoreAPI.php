@@ -378,11 +378,11 @@ class ShopStoreAPI {
         ];
     }
 
-    /** @return list<array{slug: string, updated_at: string}> every published product, for the sitemap */
+    /** @return list<array{slug: string, title: string, updated_at: string}> every published product, for the sitemap and the menu editor */
     public static function sitemap(int $limit = 5000): array {
         self::ensureSchema();
-        $rows = Database::rows("SELECT slug, updated_at FROM shop_products WHERE tenant_id = ? AND status = 'published' ORDER BY id LIMIT " . max(1, $limit), [current_tenant_id()]);
-        return array_map(static fn(array $r): array => ['slug' => (string) $r['slug'], 'updated_at' => (string) $r['updated_at']], $rows);
+        $rows = Database::rows("SELECT slug, title, updated_at FROM shop_products WHERE tenant_id = ? AND status = 'published' ORDER BY id LIMIT " . max(1, $limit), [current_tenant_id()]);
+        return array_map(static fn(array $r): array => ['slug' => (string) $r['slug'], 'title' => (string) $r['title'], 'updated_at' => (string) $r['updated_at']], $rows);
     }
 
     /**

@@ -75,11 +75,13 @@ final class NavMenuRenderer implements BlockRendererInterface
             $children = $depth < StudioMenus::MAX_DEPTH && is_array($item['children'] ?? null) ? $item['children'] : [];
             $sub = $children !== [] ? $this->items($children, $scope, $depth + 1, $path . '-' . $i) : '';
             $caret = '<span class="sb-nav__caret" aria-hidden="true"></span>';
+            // A site menu item's own CSS classes (checked by StudioMenus) go on its <li>, as a theme would expect.
+            $own = preg_split('/\s+/', trim((string) ($item['class'] ?? '')), -1, PREG_SPLIT_NO_EMPTY) ?: [];
             // A link with a submenu carries the arrow inside it, so the arrow sits by its label whatever spacing the link is given.
             $anchor = Html::link(['href' => $item['url'] ?? null, 'label' => $label, 'target' => !empty($item['new_tab']) ? '_blank' : '_self'], 'sb-nav__link', $sub !== '' ? Html::e($label) . $caret : null);
             if ($sub === '') {
                 if ($anchor !== '' && str_starts_with($anchor, '<a')) {
-                    $html .= '<li class="sb-nav__item">' . $anchor . '</li>';
+                    $html .= '<li' . Html::classAttr(['sb-nav__item', ...$own]) . '>' . $anchor . '</li>';
                 }
                 continue;
             }
@@ -91,7 +93,7 @@ final class NavMenuRenderer implements BlockRendererInterface
             $head = str_starts_with($anchor, '<a')
                 ? $anchor . '<button type="button" class="sb-nav__toggle"' . $expanded . ' aria-label="' . Html::e(sprintf(Html::t('studio_nav_submenu', 'Show the links under %s'), $label)) . '"></button>'
                 : '<button type="button" class="sb-nav__link sb-nav__parent"' . $expanded . '>' . Html::e($label) . $caret . '</button>';
-            $html .= '<li class="sb-nav__item sb-nav__item--parent">' . $head . '<ul class="sb-nav__sub sb-nav__sub--' . ($depth + 1) . '" id="' . Html::e($id) . '">' . $sub . '</ul></li>';
+            $html .= '<li' . Html::classAttr(['sb-nav__item', 'sb-nav__item--parent', ...$own]) . '>' . $head . '<ul class="sb-nav__sub sb-nav__sub--' . ($depth + 1) . '" id="' . Html::e($id) . '">' . $sub . '</ul></li>';
         }
         return $html;
     }

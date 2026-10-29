@@ -11,6 +11,7 @@ require_once dirname(__DIR__, 3) . '/config.php';
 require_once __DIR__ . '/_nav.php';
 
 use Slate\Module\StudioBuilder\Application\StudioActor;
+use Slate\Module\StudioBuilder\Menu\MenuSources;
 use Slate\Module\StudioBuilder\Menu\StudioMenus;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 
@@ -55,7 +56,7 @@ if ($menu !== null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $newKey = $key;
         }
         $items = is_array($_POST['items'] ?? null) ? array_values($_POST['items']) : [];
-        $menuForm = ['key' => $newKey, 'name' => $name, 'items' => array_map(static fn($r): array => is_array($r) ? ['label' => (string) ($r['label'] ?? ''), 'url' => (string) ($r['url'] ?? ''), 'new_tab' => !empty($r['new_tab']), 'depth' => (int) ($r['depth'] ?? 0)] : [], $items)];
+        $menuForm = ['key' => $newKey, 'name' => $name, 'items' => array_map(static fn($r): array => is_array($r) ? ['label' => (string) ($r['label'] ?? ''), 'url' => (string) ($r['url'] ?? ''), 'new_tab' => !empty($r['new_tab']), 'class' => (string) ($r['class'] ?? ''), 'depth' => (int) ($r['depth'] ?? 0)] : [], $items)];
         try {
             StudioMenus::save($tenantId, $newKey, $name, $items, $key, (string) ($_POST['version'] ?? ''));
             header('Location: menu-edit.php?key=' . rawurlencode($newKey) . '&saved=1', true, 303);
@@ -70,16 +71,11 @@ if ($flash === null && isset($_GET['saved'])) {
 }
 
 $pageTitle = $menu !== null ? $menu['name'] : __('studio_menus', 'Menus');
-$menuPaths = [];
+$menuSources = [];
 try {
-    $app = StudioRuntimeFactory::build()->app;
-    foreach ($app->listPages(StudioActor::fromCurrentSession()) as $p) {
-        if (in_array($p['page_type'] ?? '', ['page', 'landing'], true) && !empty($p['is_published'])) {
-            $menuPaths[] = (string) $p['public_path'];
-        }
-    }
+    $menuSources = MenuSources::forTenant($tenantId, StudioRuntimeFactory::build()->app->listPages(StudioActor::fromCurrentSession()));
 } catch (\Throwable) {
-    // the address suggestions are a convenience, not required
+    // the Add menu items column is a convenience: custom links still work without it
 }
 
 require SLATE_ROOT . '/admin/partials/header.php';
@@ -103,29 +99,19 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <p><?= e(__('studio_menu_edit_sub', 'Choose this menu in a Nav menu block. Changing it here updates every page that shows it.')) ?></p>
         </div>
     </div>
-    <form method="post" class="card sb-form-card">
+    <form method="post" class="sb-menu-form">
         <?= csrf_field() ?>
         <input type="hidden" name="original_key" value="<?= e($key) ?>">
-        <input type="hidden" name="version" value="<?= e($menu !== null ? StudioMenus::version($menu) : '') ?>">
+        <input type="hidden" name="version" value="<?= e(StudioMenus::version($menu)) ?>">
         <input type="hidden" name="action" value="save">
-        <?php require __DIR__ . '/_menu_form.php'; ?>
-        <?php if ($canEdit): ?>
-        <div class="sb-form-actions">
-            <button type="submit" class="btn btn-primary"><?= sb_svg('save', 14) ?> <span><?= e(__('save', 'Save changes')) ?></span></button>
-            <a href="menus.php" class="btn btn-ghost"><?= e(__('studio_menu_back', 'Back to menus')) ?></a>
-        </div>
-        <?php endif; ?>
+        <?php $menuSubmitLabel = __('studio_menu_save', 'Save menu'); $menuDeleteForm = $canEdit ? 'sb-menu-delete' : ''; require __DIR__ . '/_menu_form.php'; ?>
     </form>
     <?php if ($canEdit): ?>
-    <form method="post" class="card sb-form-card sb-danger-card" onsubmit="return window.confirm(this.getAttribute('data-confirm'));" data-confirm="<?= e(__('studio_menu_delete_confirm', 'Delete this menu? Nav menu blocks that use it fall back to their own links.')) ?>">
+    <form method="post" id="sb-menu-delete" hidden onsubmit="return window.confirm(this.getAttribute('data-confirm'));" data-confirm="<?= e(__('studio_menu_delete_confirm', 'Delete this menu? Nav menu blocks that use it fall back to their own links.')) ?>">
         <?= csrf_field() ?>
         <input type="hidden" name="original_key" value="<?= e($key) ?>">
-        <input type="hidden" name="version" value="<?= e($menu !== null ? StudioMenus::version($menu) : '') ?>">
+        <input type="hidden" name="version" value="<?= e(StudioMenus::version($menu)) ?>">
         <input type="hidden" name="action" value="delete">
-        <div class="card-header"><div><h3><?= e(__('studio_menu_delete', 'Delete menu')) ?></h3><div class="card-sub"><?= e(__('studio_menu_delete_sub', 'Nav menu blocks that use it fall back to their own links.')) ?></div></div></div>
-        <div class="sb-form-actions" style="border-top:0; margin-top:0; padding-top:0;">
-            <button type="submit" class="btn btn-danger"><?= sb_svg('trash', 14) ?> <span><?= e(__('studio_menu_delete', 'Delete menu')) ?></span></button>
-        </div>
     </form>
     <?php endif; ?>
     <?php endif; ?>

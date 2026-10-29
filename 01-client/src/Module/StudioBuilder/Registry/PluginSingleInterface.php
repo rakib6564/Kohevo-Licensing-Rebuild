@@ -39,9 +39,10 @@ interface PluginSingleInterface
     public function find(int $tenantId, string $slug): ?array;
 
     /**
-     * Every published item's slug and last change, for the sitemap (bounded by the plugin).
+     * Every published item's slug, title and last change, for the sitemap and the menu editor's add panel (bounded by
+     * the plugin).
      *
-     * @return list<array{slug: string, updated_at?: string}>
+     * @return list<array{slug: string, title?: string, updated_at?: string}>
      */
     public function sitemap(int $tenantId): array;
 }
