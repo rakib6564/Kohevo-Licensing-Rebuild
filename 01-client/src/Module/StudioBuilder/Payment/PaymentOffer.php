@@ -218,6 +218,6 @@ final class PaymentOffer
     /** `49.00 USD` for display. */
     public static function display(int $cents, string $currency): string
     {
-        return number_format($cents / 100, 2, '.', ',') . ' ' . $currency;
+        return \Slate\Services\I18n\I18n::amount($cents) . ' ' . $currency;
     }
 }

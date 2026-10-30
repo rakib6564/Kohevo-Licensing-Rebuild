@@ -18,7 +18,7 @@ final class CatalogFormat
             return '';
         }
         $code = is_string($currency) && preg_match('/^[A-Za-z]{3}$/', $currency) === 1 ? strtoupper($currency) : '';
-        return trim(number_format($cents / 100, 2, '.', ',') . ' ' . $code);
+        return trim(\Slate\Services\I18n\I18n::amount($cents) . ' ' . $code);
     }
 
     public static function str(array $row, string $key): string

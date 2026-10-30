@@ -502,11 +502,12 @@ if (!function_exists('slate_currency_symbol')) {
 // ── The single formatter every plugin should call to render a price ──
 // Combines the global currency symbol and the global before/after position
 // so every screen (booking, membership, gift cards, stripe, emails, chat)
-// renders amounts identically. $cents is an integer amount in the minor unit.
+// renders amounts identically, in the current language's number style.
+// $cents is an integer amount in the minor unit.
 // Returns HTML-safe markup (symbol escaped, "&nbsp;" entity) for direct echo.
 if (!function_exists('slate_format_price')) {
     function slate_format_price(int $cents, ?string $currencyCode = null): string {
-        $amount = number_format($cents / 100, 2);
+        $amount = \Slate\Services\I18n\I18n::amount($cents);
         $symbol = e(slate_currency_symbol($currencyCode));
         return slate_currency_position() === 'after'
             ? $amount . '&nbsp;' . $symbol
@@ -518,7 +519,7 @@ if (!function_exists('slate_format_price')) {
 // U+00A0 non-breaking space instead of the HTML entity, symbol unescaped.
 if (!function_exists('slate_format_price_plain')) {
     function slate_format_price_plain(int $cents, ?string $currencyCode = null): string {
-        $amount = number_format($cents / 100, 2);
+        $amount = \Slate\Services\I18n\I18n::amount($cents);
         $symbol = slate_currency_symbol($currencyCode);
         return slate_currency_position() === 'after'
             ? $amount . "\u{00A0}" . $symbol
