@@ -16,6 +16,7 @@ namespace Slate\Module\StudioBuilder\Registry;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\ContainerRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\CountdownRenderer;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\AudioRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\VideoRenderer;
 use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
@@ -702,6 +703,25 @@ final class BlockRegistry
             allowsChildren: false,
         ));
 
+        // 24b. core.audio — a podcast or radio card. Source picks which address plays, as on the Video.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.audio',
+            version: 1,
+            label: 'Audio',
+            title: 'Audio',
+            description: 'A podcast or radio card: SoundCloud, Spotify or a self-hosted file',
+            category: 'media',
+            icon: 'video',
+            schema: FieldSchema::define([
+                ['key' => 'source', 'type' => 'enum', 'label' => 'Source', 'required' => false, 'allowed_values' => AudioRenderer::SOURCES, 'default' => 'soundcloud'],
+                ['key' => 'url', 'type' => 'string', 'label' => 'Audio Link', 'required' => false, 'default' => '', 'max_length' => 1000],
+                ['key' => 'hosted_url', 'type' => 'url', 'label' => 'Audio File', 'required' => false, 'max_length' => 1000],
+                ['key' => 'title', 'type' => 'string', 'label' => 'Title', 'required' => false, 'default' => 'Episode title', 'max_length' => 200],
+                ['key' => 'subtitle', 'type' => 'string', 'label' => 'Subtitle', 'required' => false, 'default' => 'Show or station', 'max_length' => 200],
+            ]),
+            allowsChildren: false,
+        ));
+
         // 25. core.tabs — `items[].label` names the tab, `content` is its panel.
         //     The renderer pairs each tab to its panel via generated `t1`, `t2` …
         //     ids, which is the contract the runtime matches on.
@@ -1046,7 +1066,7 @@ final class BlockRegistry
             allowsChildren: false,
         ));
 
-        // 38. core.nav_menu — a row or column of links: one of the site's named menus (Menus screen), or links listed by hand (a mobile toggle comes from placing it in an Offcanvas).
+        // 38. core.nav_menu — a row or column of links: one of the site's named menus (Menus screen), or links listed by hand, with a built-in menu button (NavMenuRenderer) that folds it behind a hamburger.
         $registry->register(new DeclarativeBlockDefinition(
             type: 'core.nav_menu',
             version: 1,
@@ -1061,6 +1081,16 @@ final class BlockRegistry
                 ['key' => 'layout', 'type' => 'enum', 'label' => 'Layout', 'required' => false, 'allowed_values' => ['horizontal', 'vertical'], 'default' => 'horizontal'],
                 ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['left', 'center', 'right'], 'default' => 'left'],
                 ['key' => 'style', 'type' => 'enum', 'label' => 'Link style', 'required' => false, 'allowed_values' => ['plain', 'underline', 'pill'], 'default' => 'plain'],
+                ['key' => 'pointer', 'type' => 'enum', 'label' => 'Hover pointer', 'required' => false, 'allowed_values' => ['none', 'underline', 'overline', 'double_line', 'framed', 'background', 'text'], 'default' => 'none'],
+                ['key' => 'pointer_animation', 'type' => 'enum', 'label' => 'Pointer animation', 'required' => false, 'allowed_values' => ['none', 'fade', 'slide', 'grow'], 'default' => 'fade'],
+                ['key' => 'pointer_color', 'type' => 'token_ref', 'label' => 'Pointer colour', 'required' => false, 'default' => null],
+                ['key' => 'divider', 'type' => 'boolean', 'label' => 'Divider between items', 'required' => false, 'default' => false],
+                ['key' => 'toggle_breakpoint', 'type' => 'enum', 'label' => 'Menu button shows on', 'required' => false, 'allowed_values' => ['none', 'tablet', 'mobile', 'always'], 'default' => 'none'],
+                ['key' => 'toggle_mode', 'type' => 'enum', 'label' => 'Menu opens as', 'required' => false, 'allowed_values' => ['dropdown', 'offcanvas'], 'default' => 'dropdown'],
+                ['key' => 'toggle_full_width', 'type' => 'boolean', 'label' => 'Dropdown spans the full width', 'required' => false, 'default' => true],
+                ['key' => 'toggle_icon', 'type' => 'enum', 'label' => 'Menu button icon', 'required' => false, 'allowed_values' => ['hamburger', 'dots', 'text_icon'], 'default' => 'hamburger'],
+                ['key' => 'toggle_label', 'type' => 'string', 'label' => 'Menu button label', 'required' => false, 'default' => 'Menu', 'max_length' => 40],
+                ['key' => 'toggle_align', 'type' => 'enum', 'label' => 'Menu button alignment', 'required' => false, 'allowed_values' => ['left', 'center', 'right'], 'default' => 'right'],
                 [
                     'key'         => 'items',
                     'type'        => 'repeater',
@@ -1071,12 +1101,25 @@ final class BlockRegistry
                     'item_schema' => FieldSchema::define([
                         ['key' => 'label', 'type' => 'string', 'label' => 'Label', 'required' => true, 'max_length' => 80],
                         ['key' => 'url', 'type' => 'url', 'label' => 'URL', 'required' => true, 'max_length' => 1000],
+                        [
+                            'key'         => 'children',
+                            'type'        => 'repeater',
+                            'label'       => 'Submenu links',
+                            'required'    => false,
+                            'default'     => [],
+                            'max_items'   => 12,
+                            'item_schema' => FieldSchema::define([
+                                ['key' => 'label', 'type' => 'string', 'label' => 'Label', 'required' => true, 'max_length' => 80],
+                                ['key' => 'url', 'type' => 'url', 'label' => 'URL', 'required' => true, 'max_length' => 1000],
+                            ]),
+                        ],
                     ]),
                 ],
             ]),
             allowsChildren: false,
-            // Each link's text edits the matching item; a menu chosen on the Menus screen shows its own links, so not then.
-            inlineText: [['prop' => 'items.*.label', 'selector' => '.sb-nav__link', 'unless' => 'menu']],
+            // Each link's text edits the matching item (top-level links only: a submenu link is not an item of the list);
+            // a menu chosen on the Menus screen shows its own links, so not then.
+            inlineText: [['prop' => 'items.*.label', 'selector' => '.sb-nav__list > .sb-nav__item > .sb-nav__link', 'unless' => 'menu']],
         ));
 
         // 39. core.map — an OpenStreetMap embed centred on a point (no key, no tracking cookies).

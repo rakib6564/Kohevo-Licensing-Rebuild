@@ -2,6 +2,9 @@
 // allowed values; this only picks a friendlier control for some of them: icon toggles (direction, wrap,
 // justify, align), text pills (width modes) or tiles (grid columns). A field with no entry stays a plain select.
 
+/** The Nav menu has a menu button. */
+const navToggled = (p) => !!p.toggle_breakpoint && p.toggle_breakpoint !== 'none';
+
 export const PROP_PRESENTERS = Object.freeze({
   'layout.flex': {
     direction: { icons: 'dir' },
@@ -25,6 +28,16 @@ export const PROP_PRESENTERS = Object.freeze({
   },
   'core.card': {
     variant: { pills: true },
+  },
+  // The menu button's options mean nothing without a button, and the dropdown's width only applies to a dropdown.
+  'core.nav_menu': {
+    pointer_animation: { showIf: (p) => !!p.pointer && p.pointer !== 'none' && p.pointer !== 'text' },
+    pointer_color: { showIf: (p) => !!p.pointer && p.pointer !== 'none' },
+    toggle_mode: { pills: true, showIf: navToggled },
+    toggle_full_width: { showIf: (p) => navToggled(p) && p.toggle_mode !== 'offcanvas' },
+    toggle_icon: { showIf: navToggled },
+    toggle_label: { showIf: navToggled },
+    toggle_align: { pills: true, showIf: navToggled },
   },
   'core.button': {
     icon_position: { pills: true, showIf: (p) => !!p.icon && p.icon !== 'none' },
@@ -54,6 +67,12 @@ export const PROP_PRESENTERS = Object.freeze({
     overlay_image: { showIf: (p) => p.overlay === true },
     play_icon: { showIf: (p) => p.overlay === true },
     lightbox: { showIf: (p) => p.overlay === true },
+  },
+  // The Audio: Source decides which address field shows.
+  'core.audio': {
+    source: { pills: true },
+    url: { showIf: (p) => p.source !== 'hosted' },
+    hosted_url: { showIf: (p) => p.source === 'hosted' },
   },
   // The Icon's colours, size, frame and rotation are set from its Style section, not here. The older preset size and
   // colour token stay visible only while they hold a value the Style section does not show.

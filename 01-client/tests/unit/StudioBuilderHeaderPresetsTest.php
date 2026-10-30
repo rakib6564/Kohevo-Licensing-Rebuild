@@ -48,9 +48,9 @@ function sbhp_blocks(array $document): array
     return $out;
 }
 
-unit('header presets: five headers with unique, reserved keys and one-line copy', function (): void {
+unit('header presets: six headers with unique, reserved keys and one-line copy', function (): void {
     $all = HeaderPresetCatalog::all();
-    assert_eq(['classic', 'centered', 'split', 'minimal', 'two-tier'], array_column($all, 'slug'));
+    assert_eq(['classic', 'centered', 'split', 'minimal', 'two-tier', 'hamburger'], array_column($all, 'slug'));
     $keys = array_column($all, 'key');
     assert_eq(count($keys), count(array_unique($keys)), 'keys are unique');
     foreach ($all as $p) {

@@ -173,6 +173,7 @@ function StickyHeaderSetting({ value, onChange }) {
           <DeviceChecks idPrefix="sbx-sticky-header" legend={t('sticky_on')} devices={sticky.devices} onChange={(devices) => put({ ...sticky, devices })} />
           <Check label={t('sticky_shadow')} checked={sticky.shadow === true} onChange={(e) => put({ ...sticky, shadow: e.target.checked })} />
           <Check label={t('sticky_hide_on_scroll')} checked={sticky.hide_on_scroll === true} onChange={(e) => put({ ...sticky, hide_on_scroll: e.target.checked })} />
+          <Check label={t('sticky_shrink')} checked={sticky.shrink === true} onChange={(e) => put({ ...sticky, shrink: e.target.checked })} />
         </>
       )}
     </section>

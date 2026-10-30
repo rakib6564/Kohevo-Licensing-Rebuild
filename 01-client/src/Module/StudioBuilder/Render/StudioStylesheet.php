@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '50';
+    public const VERSION = '52';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -232,6 +232,7 @@ final class StudioStylesheet
             . '.sb-nav--vertical.sb-nav--right .sb-nav__item--parent{justify-content:flex-end}.sb-nav--vertical.sb-nav--right .sb-nav__sub{padding:0 1rem .35rem 0}'
             . 'html[data-sb-ready] .sb-nav--vertical .sb-nav__item--parent:not([data-open])>.sb-nav__sub{display:none}'
             . '.sb-nav--vertical .sb-nav__item--parent[data-open]>.sb-nav__parent>.sb-nav__caret,.sb-nav--vertical .sb-nav__item--parent[data-open]>.sb-nav__toggle::before{transform:rotate(180deg)}'
+            . self::navWidgetCss()
             . '.sb-link-row{margin:0 0 var(--sb-type-flow,1rem)}.sb-link-row--center{text-align:center}.sb-link-row--right{text-align:right}'
             // In a row (a horizontal flex or a grid) the gap spaces the items; a link's, button's, text's, menu's or
             // icon's own margin would push it off the row's centre line (a header's button sat lower than its menu).
@@ -566,6 +567,20 @@ final class StudioStylesheet
             . ':where(.sb-video__overlay:hover,.sb-video__overlay:focus-visible) .sb-video__play{background:rgba(0,0,0,.8)}'
             . '@media ' . StyleSurface::HOVER_MOTION . '{:where(.sb-video__overlay:hover,.sb-video__overlay:focus-visible) .sb-video__play{transform:scale(1.06)}}'
             . '.sb-video__overlay:focus-visible{outline:3px solid #fff;outline-offset:-3px}'
+            // Audio ── a card with its own play button; the provider's player opens under it on click.
+            . '.sb-audio{display:flex;flex-direction:column;gap:.75rem;padding:1.5rem;background:var(--sb-surface-accent);color:var(--sb-text-inverse);border-radius:var(--sb-radius-md)}'
+            . '.sb-audio--empty{background:var(--sb-surface-secondary);color:var(--sb-text-primary)}'
+            . '.sb-audio__head{display:flex;align-items:center;justify-content:space-between;gap:1rem}.sb-audio__text{min-width:0}'
+            . '.sb-audio__title{margin:0;font-size:1.5rem;font-weight:600;line-height:1.25;color:inherit}.sb-audio__subtitle{margin:.25rem 0 0;color:inherit;opacity:.9}'
+            . '.sb-audio__play{flex:none;display:flex;align-items:center;justify-content:center;width:3.5rem;height:3.5rem;padding:0;border:0;border-radius:50%;background:#fff;color:var(--sb-color-accent);cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}'
+            . '.sb-audio__play[hidden]{display:none}'
+            . '.sb-audio__play:focus-visible{outline:3px solid #fff;outline-offset:3px}'
+            . '@media ' . StyleSurface::HOVER_MOTION . '{.sb-audio__play:hover{transform:scale(1.06)}}'
+            . '.sb-audio__icon-pause{display:none}.sb-audio__icon-play,.sb-audio__icon-pause{line-height:0}'
+            . '.sb-audio[data-sb-audio-playing] .sb-audio__icon-pause{display:block}.sb-audio[data-sb-audio-playing] .sb-audio__icon-play{display:none}'
+            . '.sb-audio__bar{display:flex;align-items:center;gap:1rem}.sb-audio__seek{flex:1;min-width:0;margin:0;accent-color:currentColor}.sb-audio__time{flex:none;font-variant-numeric:tabular-nums;font-size:.875rem}'
+            . '.sb-audio__embed{display:block;width:100%;border:0;border-radius:.5rem}'
+            . '.sb-body a.sb-audio__link{align-self:flex-start;color:inherit;font-size:.875rem;text-decoration:underline;text-underline-offset:.2em}'
             . '.sb-video-lightbox__frame{width:min(92vw,151vh)}.sb-video-lightbox__frame.sb-video--aspect-4-3{width:min(92vw,113vh)}'
             . '.sb-video-lightbox__frame.sb-video--aspect-1-1{width:min(92vw,85vh)}.sb-video-lightbox__frame.sb-video--aspect-9-16{width:min(92vw,48vh)}';
 
@@ -671,6 +686,104 @@ final class StudioStylesheet
     }
 
     /**
+     * The Nav menu's built-in menu button, hover pointers and divider (NavMenuRenderer).
+     *
+     * The menu is one list. Below its breakpoint (`.sb-nav--toggle-*`) the list folds away and `.sb-nav__bar` shows; the
+     * open state is the bar's checkbox, so the same rules serve a page with and without the runtime. The folded rules are
+     * written once per breakpoint, and they undo the row's dropdown cards: submenus sit in the panel, indented, as in a
+     * vertical menu. A pointer is drawn by `::before`/`::after`, so it takes no room and never moves the row, and it shows on
+     * hover (pointers that can hover only), keyboard focus and the current page.
+     */
+    private static function navWidgetCss(): string
+    {
+        $css = '.sb-nav{--sb-nav-pointer:var(--sb-color-accent)}'
+            . '.sb-nav__bar{display:none;position:relative;z-index:1}.sb-nav--tgl-left .sb-nav__bar{justify-content:flex-start}.sb-nav--tgl-center .sb-nav__bar{justify-content:center}.sb-nav--tgl-right .sb-nav__bar{justify-content:flex-end}'
+            . '.sb-nav__bar>span{position:relative;display:inline-flex}'
+            . '.sb-nav__check{position:absolute;inset:0;z-index:1;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}html[data-sb-ready] .sb-nav__check{display:none}'
+            . '.sb-nav__burger{display:inline-flex;align-items:center;gap:.6rem;min-width:2.75rem;min-height:2.75rem;justify-content:center;padding:.35rem;font:inherit;color:inherit;background:none;border:0;border-radius:.4rem;cursor:pointer}'
+            . '.sb-nav__icon,.sb-nav__icon::before,.sb-nav__icon::after{display:block;width:1.5rem;height:2px;border-radius:2px;background:currentColor;transition:transform .2s ease,background-color .2s ease}'
+            . '.sb-nav__icon{position:relative}.sb-nav__icon::before,.sb-nav__icon::after{content:"";position:absolute;left:0}.sb-nav__icon::before{top:-.45rem}.sb-nav__icon::after{top:.45rem}'
+            . '.sb-nav__icon--dots{width:.3rem;height:.3rem;margin:0 .6rem;border-radius:50%}.sb-nav__icon--dots::before,.sb-nav__icon--dots::after{width:.3rem;height:.3rem;border-radius:50%}.sb-nav__icon--dots::before{top:-.5rem}.sb-nav__icon--dots::after{top:.5rem}'
+            . '.sb-nav__check:checked~.sb-nav__burger .sb-nav__icon{background:transparent}'
+            . '.sb-nav__check:checked~.sb-nav__burger :is(.sb-nav__icon--hamburger,.sb-nav__icon--dots)::before,.sb-nav__check:checked~.sb-nav__burger :is(.sb-nav__icon--hamburger,.sb-nav__icon--dots)::after{top:0;left:-.6rem;width:1.5rem;height:2px;border-radius:2px;background:currentColor}'
+            . '.sb-nav__check:checked~.sb-nav__burger .sb-nav__icon--hamburger::before,.sb-nav__check:checked~.sb-nav__burger .sb-nav__icon--hamburger::after{left:0}'
+            . '.sb-nav__check:checked~.sb-nav__burger .sb-nav__icon::before{transform:rotate(45deg)}.sb-nav__check:checked~.sb-nav__burger .sb-nav__icon::after{transform:rotate(-45deg)}'
+            . '.sb-nav__backdrop{display:none}'
+            // Divider
+            . '.sb-nav--divider.sb-nav--horizontal .sb-nav__list{column-gap:0}.sb-nav--divider.sb-nav--horizontal .sb-nav__list>.sb-nav__item{padding:0 .75rem}.sb-nav--divider.sb-nav--horizontal .sb-nav__list>.sb-nav__item+.sb-nav__item{border-left:1px solid var(--sb-border-default)}'
+            . '.sb-nav--divider.sb-nav--vertical .sb-nav__list{row-gap:0}.sb-nav--divider.sb-nav--vertical .sb-nav__list>.sb-nav__item+.sb-nav__item{border-top:1px solid var(--sb-border-default)}';
+
+        // Pointers
+        $link = '.sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent)';
+        $lit = ':is(:focus-visible,[aria-current="page"])';
+        $css .= ':is(.sb-nav--pointer-underline,.sb-nav--pointer-overline,.sb-nav--pointer-double_line,.sb-nav--pointer-framed,.sb-nav--pointer-background) ' . $link . '{position:relative}'
+            . ':is(.sb-nav--pointer-framed,.sb-nav--pointer-background) ' . $link . '{padding-left:.75rem;padding-right:.75rem}';
+        $shape = [
+            'underline'   => ['after', 'left:0;right:0;bottom:0;height:2px;background:var(--sb-nav-pointer)'],
+            'overline'    => ['before', 'left:0;right:0;top:0;height:2px;background:var(--sb-nav-pointer)'],
+            'framed'      => ['after', 'inset:0;border:2px solid var(--sb-nav-pointer);border-radius:.3rem'],
+            'background'  => ['after', 'inset:0;z-index:-1;background:color-mix(in srgb,var(--sb-nav-pointer) 16%,transparent);border-radius:.3rem'],
+        ];
+        foreach ($shape as $name => [$pseudo, $rule]) {
+            $css .= '.sb-nav--pointer-' . $name . ' ' . $link . '::' . $pseudo . '{content:"";position:absolute;pointer-events:none;' . $rule . '}';
+        }
+        $css .= '.sb-nav--pointer-background ' . $link . '{isolation:isolate}'
+            . '.sb-nav--pointer-double_line ' . $link . '::before,.sb-nav--pointer-double_line ' . $link . '::after{content:"";position:absolute;pointer-events:none;left:0;right:0;height:2px;background:var(--sb-nav-pointer)}'
+            . '.sb-nav--pointer-double_line ' . $link . '::before{top:0}.sb-nav--pointer-double_line ' . $link . '::after{bottom:0}';
+        $marks = static fn(string $state): string => implode(',', array_merge(
+            ...array_map(static fn(string $pseudo): array => ['[class*="sb-nav--pointer-"] ' . $link . $state . '::' . $pseudo], ['before', 'after']),
+        ));
+        $css .= '[class*="sb-nav--pointer-"] ' . $link . '::before,[class*="sb-nav--pointer-"] ' . $link . '::after{opacity:0}'
+            . '.sb-nav--anim-fade ' . $link . '::before,.sb-nav--anim-fade ' . $link . '::after{transition:opacity .2s ease}'
+            . '.sb-nav--anim-slide ' . $link . '::before,.sb-nav--anim-slide ' . $link . '::after{transform:translateY(.35em);transition:opacity .2s ease,transform .2s ease}'
+            . '.sb-nav--anim-grow ' . $link . '::before,.sb-nav--anim-grow ' . $link . '::after{transform:scaleX(0);transition:opacity .2s ease,transform .2s ease}'
+            . ':is(.sb-nav--pointer-framed,.sb-nav--pointer-background).sb-nav--anim-grow ' . $link . '::after{transform:scale(.85)}'
+            . $marks($lit) . '{opacity:1;transform:none}'
+            . '@media (hover:hover){' . $marks(':hover') . '{opacity:1;transform:none}.sb-body .sb-nav--pointer-text a.sb-nav__link:hover{color:var(--sb-nav-pointer)}}'
+            . '.sb-body .sb-nav--pointer-text a.sb-nav__link:is(:focus-visible,[aria-current="page"]),.sb-nav--pointer-text .sb-nav__parent:focus-visible{color:var(--sb-nav-pointer)}'
+            . '@media (prefers-reduced-motion:reduce){[class*="sb-nav--anim-"] ' . $link . '::before,[class*="sb-nav--anim-"] ' . $link . '::after{transition:none;transform:none}.sb-nav__icon,.sb-nav__icon::before,.sb-nav__icon::after{transition:none}}';
+
+        foreach (['always' => null, 'tablet' => '(max-width:1023.98px)', 'mobile' => '(max-width:767.98px)'] as $when => $query) {
+            $rules = self::navFoldedCss('.sb-nav--toggle-' . $when);
+            $css .= $query === null ? $rules : '@media ' . $query . '{' . $rules . '}';
+        }
+        return $css;
+    }
+
+    /** The rules of a menu folded behind its button; `$n` selects the menus this breakpoint folds. */
+    private static function navFoldedCss(string $n): string
+    {
+        $open = $n . ' .sb-nav__bar:has(.sb-nav__check:checked)';
+        $drop = $n . '.sb-nav--menu-dropdown .sb-nav__list';
+        $side = $n . '.sb-nav--menu-offcanvas .sb-nav__list';
+        return $n . '{position:relative}' . $n . ' .sb-nav__bar{display:flex}'
+            . $n . ' .sb-nav__list{display:none;flex-direction:column;flex-wrap:nowrap;justify-content:flex-start;gap:0;background:var(--sb-surface-primary,#fff);color:var(--sb-text-primary,#1a1a1a);text-align:left}'
+            . $open . '~.sb-nav__list{display:flex}'
+            . $drop . '{position:absolute;top:var(--sb-nav-top,100%);z-index:60;min-width:16rem;padding:.5rem 1rem;box-shadow:0 18px 40px -12px rgba(0,0,0,.22)}'
+            . $n . '.sb-nav--tgl-left.sb-nav--menu-dropdown .sb-nav__list{left:0}'
+            . $n . '.sb-nav--tgl-right.sb-nav--menu-dropdown .sb-nav__list{right:0}'
+            . $n . '.sb-nav--tgl-center.sb-nav--menu-dropdown .sb-nav__list{left:50%;transform:translateX(-50%)}'
+            // The runtime measures the window (--sb-nav-left, --sb-nav-vw); without it the panel keeps the menu's own width.
+            . $n . '.sb-nav--menu-full.sb-nav--menu-dropdown .sb-nav__list{left:var(--sb-nav-left);width:var(--sb-nav-vw,auto);box-sizing:border-box;transform:none}'
+            . $side . '{position:fixed;top:0;bottom:0;right:0;z-index:10000;box-sizing:border-box;width:22rem;max-width:85vw;padding:4.5rem 1.25rem 1.5rem;overflow-y:auto;box-shadow:-4px 0 16px rgba(0,0,0,.15)}'
+            . $n . '.sb-nav--tgl-left.sb-nav--menu-offcanvas .sb-nav__list{left:0;right:auto;box-shadow:4px 0 16px rgba(0,0,0,.15)}'
+            . $n . '.sb-nav--menu-offcanvas .sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__backdrop{display:block;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5)}'
+            . $n . '.sb-nav--menu-offcanvas .sb-nav__bar:has(.sb-nav__check:checked){z-index:10001}'
+            . $n . '.sb-nav--menu-offcanvas .sb-nav__check:checked~.sb-nav__burger{background:var(--sb-surface-primary,#fff);color:var(--sb-text-primary,#1a1a1a)}'
+            . $n . ' .sb-nav__list>.sb-nav__item{padding:0;border:0}' . $n . ' .sb-nav__list>.sb-nav__item+.sb-nav__item{border-top:1px solid var(--sb-border-default)}'
+            . $n . ' .sb-nav__link,' . $n . ' .sb-nav__parent{display:block;padding:.65rem 0}'
+            . $n . ' .sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent)::before,' . $n . ' .sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent)::after{display:none}'
+            . $n . ' .sb-nav__item--parent>:is(.sb-nav__link,.sb-nav__parent){flex:1}' . $n . ' .sb-nav__item--parent>.sb-nav__parent{display:inline-flex;justify-content:space-between}' . $n . ' .sb-nav__item--parent>.sb-nav__link .sb-nav__caret{display:none}'
+            . $n . ' .sb-nav__toggle:not(:focus-visible),' . $n . ' .sb-nav__toggle{position:static;width:auto;height:auto;align-self:stretch;padding:0 .75rem;overflow:visible;clip:auto;white-space:normal}'
+            . $n . ' .sb-nav__sub{position:static;flex-basis:100%;min-width:0;padding:0 0 .35rem 1rem;background:none;border:0;box-shadow:none;opacity:1;visibility:visible;transform:none;transition:none}'
+            . $n . ' .sb-nav__sub::before,' . $n . ' .sb-nav__sub .sb-nav__sub::before{display:none}'
+            . $n . ' .sb-nav__sub .sb-nav__item{display:flex}'
+            . $n . ' .sb-nav__sub .sb-nav__link{display:block;width:auto;padding:.45rem 0;white-space:normal}'
+            . 'html[data-sb-ready] ' . $n . ' .sb-nav__item--parent:not([data-open])>.sb-nav__sub{display:none}'
+            . $n . ' .sb-nav__item--parent[data-open]>.sb-nav__parent>.sb-nav__caret,' . $n . ' .sb-nav__item--parent[data-open]>.sb-nav__toggle::before{transform:rotate(180deg)}';
+    }
+
+    /**
      * Sticky and parallax (ScrollEffects). A sticky node is plain `position: sticky`, so it sticks without JavaScript;
      * studio-runtime.js adds `is-stuck` (for the shadow and the stuck background) and `is-hidden` (hide while scrolling
      * down). A header or footer holding a sticky section lets it stick to the page, not inside its own wrapper.
@@ -687,8 +800,11 @@ final class StudioStylesheet
             . '.sb-sticky.is-stuck[data-sb-sticky-effect~="shadow"]{box-shadow:0 8px 24px -8px rgba(15,23,42,.25)}'
             . '.sb-sticky.is-stuck[data-sb-sticky-effect~="background"]{background-color:var(--sb-stuck-bg)!important}'
             . '.sb-sticky.is-hidden{transform:translate3d(0,calc(-100% - var(--sb-sticky-offset,0px)),0)}'
+            // Shrink: the runtime's `is-shrunk` tightens the header's sections and logo once the page has scrolled a little.
+            . '.sb-sticky[data-sb-sticky-effect~="shrink"] :is(.sb-section,.sb-section img){transition:padding .2s ease,max-height .2s ease}'
+            . '.sb-sticky.is-shrunk .sb-section{padding-top:.35rem!important;padding-bottom:.35rem!important}.sb-sticky.is-shrunk .sb-section img{max-height:2.25rem;width:auto}'
             . '.sb-site-header--partial:has(>.sb-sticky),.sb-site-footer--partial:has(>.sb-sticky){display:contents}'
-            . '@media (prefers-reduced-motion:reduce){.sb-sticky{transition:none}}';
+            . '@media (prefers-reduced-motion:reduce){.sb-sticky,.sb-sticky :is(.sb-section,.sb-section img){transition:none!important}}';
         foreach (['desktop' => '(min-width:1024px)', 'tablet' => '(min-width:768px) and (max-width:1023.98px)', 'mobile' => '(max-width:767.98px)'] as $device => $query) {
             $css .= '@media ' . $query . '{.sb-sticky.sb-sticky-off-' . $device . '{position:relative;top:auto;bottom:auto;transform:none}}';
         }

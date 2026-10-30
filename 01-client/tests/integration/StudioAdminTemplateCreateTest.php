@@ -154,7 +154,7 @@ unit('theme builder create: a header can start from a built-in design; an unknow
         assert_eq(303, $status, 'created (from the blank header)');
         $made = [];
         foreach (stcre_created($tag) as $m) { $made[(string) $m['template']['name']] = $m; }
-        assert_eq(6, count($made), 'five designs and one blank');
+        assert_eq(7, count($made), 'six designs and one blank');
         foreach (\Slate\Module\StudioBuilder\Presets\HeaderPresetCatalog::all() as $design) {
             $m = $made["Design {$design['slug']} {$tag}"];
             $rev = Database::row('SELECT document_json FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [current_tenant_id(), (int) $m['page']['active_draft_revision_id']]);

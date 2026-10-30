@@ -96,10 +96,13 @@ final class BlockParts
             'item'    => ['label' => 'Items', 'selectors' => ['.sb-nav__list>.sb-nav__item']],
             'link'    => ['label' => 'Links', 'selectors' => ['.sb-nav__list>.sb-nav__item>.sb-nav__link']],
             // studio-runtime.js marks the link of the page being viewed (a header is rendered once for every page).
-            'current' => ['label' => 'Current page link', 'selectors' => ['.sb-nav__link[aria-current="page"]']],
+            'current' => ['label' => 'Current page link', 'selectors' => ['.sb-nav__link[aria-current="page"]', '.sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)']],
             'submenu' => ['label' => 'Submenu', 'selectors' => ['.sb-nav__sub']],
             'sublink' => ['label' => 'Submenu links', 'selectors' => ['.sb-nav__sub .sb-nav__link']],
             'toggle'  => ['label' => 'Submenu arrow', 'selectors' => ['.sb-nav__caret', '.sb-nav__toggle']],
+            'burger'  => ['label' => 'Menu button', 'selectors' => ['.sb-nav__burger']],
+            // Only an open menu matches, so a panel's look never reaches the links shown in a row.
+            'panel'   => ['label' => 'Open menu panel', 'selectors' => ['.sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__list'], 'states' => false],
         ],
         'core.carousel' => [
             'quote'  => ['label' => 'Quote', 'selectors' => ['.sb-carousel__quote']],
@@ -156,6 +159,13 @@ final class BlockParts
         'core.icon' => [
             'link' => ['label' => 'Icon link', 'selectors' => ['.sb-icon__link']],
             'svg'  => ['label' => 'Icon', 'selectors' => ['svg']],
+        ],
+        'core.audio' => [
+            'card'     => ['label' => 'Card', 'selectors' => ['.sb-audio']],
+            'title'    => ['label' => 'Title', 'selectors' => ['.sb-audio__title']],
+            'subtitle' => ['label' => 'Subtitle', 'selectors' => ['.sb-audio__subtitle']],
+            'play'     => ['label' => 'Play button', 'selectors' => ['.sb-audio__play']],
+            'link'     => ['label' => 'Source link', 'selectors' => ['.sb-audio__link']],
         ],
         'core.video' => [
             'poster' => ['label' => 'Overlay image', 'selectors' => ['.sb-video__overlay img']],

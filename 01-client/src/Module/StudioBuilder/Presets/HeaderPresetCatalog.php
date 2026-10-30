@@ -2,7 +2,7 @@
 /**
  * Kohevo Studio (studio-builder) — the built-in header catalogue.
  *
- * Five ready-made site headers, built only from registered blocks, synced as system `header_preset` templates exactly
+ * Six ready-made site headers, built only from registered blocks, synced as system `header_preset` templates exactly
  * like SectionPresetCatalog's sections: reserved keys, immutable, copyable, offered in the builder Library while a
  * header is open and as the starting design of a new Theme Builder header.
  *
@@ -11,6 +11,8 @@
  * in place: the brand, buttons and text by double-clicking them on the canvas, and each menu carries its own links
  * (no site menu chosen), so every link's text is edited on the canvas too and its address in the Inspector. Choosing a
  * menu from the Menus screen in the Inspector switches a menu to that one. Copy is neutral placeholder text.
+ *
+ * Every menu carries its own menu button (the Nav menu's `toggle_*` props), so one list of links serves every screen.
  *
  * Each section is one column wide: a section's blocks are equal-width columns, and the phone-only and wide-only rows a
  * header needs would otherwise split it in half. Grids that centre the brand keep three columns on a phone (a grid of
@@ -25,7 +27,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class HeaderPresetCatalog
 {
-    public const VERSION = 1;
+    public const VERSION = 2;
 
     /** Template keys are `system-header-<slug>`: reserved, immutable, copyable. */
     public const KEY_PREFIX = 'system-header-';
@@ -83,14 +85,7 @@ final class HeaderPresetCatalog
         $add('classic', 'Header — Classic', 'Brand on the left, menu and a button on the right.',
             static fn(callable $id): array => [
                 self::section($id, 'Header', [
-                    self::block($id, 'layout.flex', ['direction' => 'row', 'wrap' => 'nowrap', 'justify' => 'between', 'align' => 'center', 'gap' => 'lg'], [
-                        self::brand($id),
-                        self::block($id, 'layout.flex', ['direction' => 'row', 'wrap' => 'nowrap', 'justify' => 'end', 'align' => 'center', 'gap' => 'lg'], [
-                            self::menu($id, 'horizontal', 'right'),
-                            self::button($id, 'Get in touch', '/contact', 'primary', 'sm'),
-                        ], [], self::WIDE),
-                        self::drawer($id, $id('drawer'), 'right', 'Menu', 'outline', self::PHONE),
-                    ]),
+                    self::classicRow($id),
                 ]),
             ]);
 
@@ -99,14 +94,14 @@ final class HeaderPresetCatalog
             static fn(callable $id): array => [
                 self::section($id, 'Header', [
                     self::threeColumns($id, [
-                        self::drawer($id, $id('drawer'), 'left', 'Menu', 'ghost'),
+                        self::menu($id, 'horizontal', 'left', null, ['toggle_breakpoint' => 'always', 'toggle_mode' => 'offcanvas', 'toggle_align' => 'left']),
                         self::brand($id, 'center'),
                         self::button($id, 'Book now', '/contact', 'primary', 'sm', ['align' => ['base' => 'right']], self::WIDE),
                     ]),
                 ]),
             ]);
 
-        // 3. Split: links either side of a centred brand; a drawer on a phone.
+        // 3. Split: links either side of a centred brand; one menu button on a phone.
         $add('split', 'Header — Split', 'Links on either side of a centred brand.',
             static fn(callable $id): array => [
                 self::section($id, 'Header', [
@@ -117,18 +112,18 @@ final class HeaderPresetCatalog
                     ], self::WIDE),
                     self::block($id, 'layout.flex', ['direction' => 'row', 'wrap' => 'nowrap', 'justify' => 'between', 'align' => 'center', 'gap' => 'md'], [
                         self::brand($id),
-                        self::drawer($id, $id('drawer'), 'right', 'Menu', 'outline'),
+                        self::menu($id, 'horizontal', 'right', null, ['toggle_breakpoint' => 'always']),
                     ], [], self::PHONE),
                 ]),
             ]);
 
-        // 4. Minimal: the brand and one Menu button that opens a full-width panel.
+        // 4. Minimal: the brand and one labelled menu button that opens a full-width panel.
         $add('minimal', 'Header — Minimal', 'Brand and a single Menu button that opens a full-width panel.',
             static fn(callable $id): array => [
                 self::section($id, 'Header', [
                     self::block($id, 'layout.flex', ['direction' => 'row', 'wrap' => 'nowrap', 'justify' => 'between', 'align' => 'center', 'gap' => 'md'], [
                         self::brand($id),
-                        self::drawer($id, $id('drawer'), 'top', 'Menu', 'ghost'),
+                        self::menu($id, 'horizontal', 'right', null, ['toggle_breakpoint' => 'always', 'toggle_icon' => 'text_icon']),
                     ]),
                 ]),
             ]);
@@ -148,13 +143,17 @@ final class HeaderPresetCatalog
                     ]),
                 ], ['background_token' => 'surface.secondary', 'padding_y' => ['base' => 'xs']]),
                 self::section($id, 'Header', [
-                    self::block($id, 'layout.flex', ['direction' => 'row', 'wrap' => 'nowrap', 'justify' => 'between', 'align' => 'center', 'gap' => 'lg'], [
+                    self::classicRow($id),
+                ]),
+            ]);
+
+        // 6. Hamburger only: the brand and a hamburger that slides the menu in, on every screen.
+        $add('hamburger', 'Header — Hamburger only', 'Brand and a hamburger that opens the menu in a side panel, on every screen.',
+            static fn(callable $id): array => [
+                self::section($id, 'Header', [
+                    self::block($id, 'layout.flex', ['direction' => 'row', 'wrap' => 'nowrap', 'justify' => 'between', 'align' => 'center', 'gap' => 'md'], [
                         self::brand($id),
-                        self::block($id, 'layout.flex', ['direction' => 'row', 'wrap' => 'nowrap', 'justify' => 'end', 'align' => 'center', 'gap' => 'lg'], [
-                            self::menu($id, 'horizontal', 'right'),
-                            self::button($id, 'Get in touch', '/contact', 'primary', 'sm'),
-                        ], [], self::WIDE),
-                        self::drawer($id, $id('drawer'), 'right', 'Menu', 'outline', self::PHONE),
+                        self::menu($id, 'horizontal', 'right', null, ['toggle_breakpoint' => 'always', 'toggle_mode' => 'offcanvas']),
                     ]),
                 ]),
             ]);
@@ -233,11 +232,12 @@ final class HeaderPresetCatalog
      * A menu with its own links, edited in place (no site menu chosen).
      *
      * @param list<array{label: string, url: string}>|null $items
+     * @param array<string, mixed> $toggle the menu button's props
      * @return array<string, mixed>
      */
-    private static function menu(callable $id, string $layout, string $align, ?array $items = null): array
+    private static function menu(callable $id, string $layout, string $align, ?array $items = null, array $toggle = []): array
     {
-        return self::block($id, 'core.nav_menu', [
+        return self::block($id, 'core.nav_menu', $toggle + [
             'menu'       => '',
             'aria_label' => 'Main menu',
             'layout'     => $layout,
@@ -252,30 +252,26 @@ final class HeaderPresetCatalog
         ], [], ['align' => ['base' => $align]]);
     }
 
-    /**
-     * A Menu button that opens a drawer (or, from the top, a full-width panel) holding the whole menu and a button.
-     *
-     * @param list<string>|null $devices
-     */
-    private static function drawer(callable $id, string $drawerId, string $position, string $trigger, string $variant, ?array $devices = null): array
+    /** Brand, then the menu and a wide-screen button: the menu folds behind its own hamburger on a phone. */
+    private static function classicRow(callable $id): array
     {
-        return self::block($id, 'layout.offcanvas', [
-            'drawer_id' => str_replace('_', '-', $drawerId), 'position' => $position, 'title' => 'Menu',
-            'trigger_text' => $trigger, 'trigger_variant' => $variant,
-        ], [
-            self::menu($id, 'vertical', 'left'),
-            self::button($id, 'Get in touch', '/contact', 'primary', 'md', [], null, true),
-        ], [], $devices);
+        return self::block($id, 'layout.flex', ['direction' => 'row', 'wrap' => 'nowrap', 'justify' => 'between', 'align' => 'center', 'gap' => 'lg'], [
+            self::brand($id),
+            self::block($id, 'layout.flex', ['direction' => 'row', 'wrap' => 'nowrap', 'justify' => 'end', 'align' => 'center', 'gap' => 'lg'], [
+                self::menu($id, 'horizontal', 'right', null, ['toggle_breakpoint' => 'mobile']),
+                self::button($id, 'Get in touch', '/contact', 'primary', 'sm', [], self::WIDE),
+            ]),
+        ]);
     }
 
     /**
      * @param array<string, mixed> $style
      * @param list<string>|null $devices
      */
-    private static function button(callable $id, string $label, string $href, string $variant, string $size, array $style = [], ?array $devices = null, bool $fullWidth = false): array
+    private static function button(callable $id, string $label, string $href, string $variant, string $size, array $style = [], ?array $devices = null): array
     {
         return self::block($id, 'core.button', [
-            'link' => ['label' => $label, 'href' => $href], 'variant' => $variant, 'size' => $size, 'full_width' => $fullWidth,
+            'link' => ['label' => $label, 'href' => $href], 'variant' => $variant, 'size' => $size, 'full_width' => false,
         ], [], $style, $devices);
     }
 

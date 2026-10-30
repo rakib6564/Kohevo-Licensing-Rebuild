@@ -61,7 +61,7 @@ test('resolveInlineTarget finds the declared element under the pointer, or the f
 
 test('a menu edits each link in place: the n-th link writes item n, and the list stays a list', () => {
   const links = [0, 1, 2].map((i) => ({ i, contains: (t) => t === links[i] }));
-  const nav = { querySelector: () => links[0], querySelectorAll: (sel) => (sel === '.sb-nav__link' ? links : []) };
+  const nav = { querySelector: () => links[0], querySelectorAll: (sel) => (sel === '.sb-nav__list > .sb-nav__item > .sb-nav__link' ? links : []) };
   const specs = inlineSpecsFor(manifest, { type: 'core.nav_menu', props: { menu: '' } });
   assert.deepEqual(specs.map((sp) => sp.prop), ['items.*.label']);
   const hit = resolveInlineTarget(nav, specs, links[2]);
