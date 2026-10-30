@@ -72,6 +72,7 @@ test.describe('countdown options', () => {
 
   test('an evergreen timer starts on the first view and carries on after a reload', async ({ page }) => {
     await loadHtml(page, evergreen());
+    await page.clock.runFor(1000); // the clock may or may not have moved since the load: 1 h 1 min is now past
     expect([await num(page, 'h'), await num(page, 'm')]).toEqual(['01', '00']);
     await page.clock.runFor(30 * 60 * 1000);
     await page.setContent(`<!doctype html><html><body>${evergreen()}</body></html>`);
@@ -82,7 +83,7 @@ test.describe('countdown options', () => {
   test('a new evergreen length restarts the timer', async ({ page }) => {
     await loadHtml(page, evergreen());
     await page.clock.runFor(30 * 60 * 1000);
-    const longer = evergreen().replace('"3660"', '"7260"');
+    const longer = evergreen().replace('"3660"', '"7290"'); // 2 h 1 min 30 s: the half minute absorbs load time
     await page.setContent(`<!doctype html><html><body>${longer}</body></html>`);
     await page.addScriptTag({ path: runtimePath });
     expect([await num(page, 'h'), await num(page, 'm')]).toEqual(['02', '01']);
