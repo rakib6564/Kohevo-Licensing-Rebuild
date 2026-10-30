@@ -68,6 +68,9 @@ export const PROP_PRESENTERS = Object.freeze({
     play_icon: { showIf: (p) => p.overlay === true },
     lightbox: { showIf: (p) => p.overlay === true },
   },
+  'core.marquee': {
+    direction: { pills: true },
+  },
   // The Audio: Source decides which address field shows.
   'core.audio': {
     source: { pills: true },
