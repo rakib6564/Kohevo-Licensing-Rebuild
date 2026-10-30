@@ -23,6 +23,8 @@
  * current user's permissions and sorted by 'order'. Items optionally
  * carry a 'group' key — items with the same group render under an
  * uppercase section label. Core groups: overview, content, system.
+ * An item may also carry a 'section' label: inside its group, a smaller
+ * label starts each run of items with the same section.
  *
  * MOBILE TAB BAR shows the first 4 items + a "More" button that opens
  * a sheet listing the rest. Desktop sidebar shows all items grouped.
@@ -1101,6 +1103,11 @@ if (!function_exists('slate_admin_nav_icon')) {
         /* ── Nav items (rounded icon-tile style — reference look) ─── */
         .sidebar-nav { list-style: none; padding: 0; margin: 0 0 4px; }
         .sidebar-item { position: relative; }
+        .sidebar-subsection {
+            font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+            color: var(--sidebar-subtle); padding: 10px 12px 3px 20px; list-style: none;
+        }
+        .sidebar-item + .sidebar-subsection { margin-top: 2px; }
         .sidebar-item + .sidebar-item { margin-top: 3px; }
         .sidebar-item a {
             display: flex;
@@ -1235,6 +1242,7 @@ if (!function_exists('slate_admin_nav_icon')) {
         html.sidebar-collapsed .sidebar-brand-logo img { max-height: 30px; margin: 0 auto; }
         /* Centre the nav icon tiles. */
         html.sidebar-collapsed .sidebar-item a { justify-content: center; padding: 5px 0; gap: 0; }
+        html.sidebar-collapsed .sidebar-subsection { display: none; }
         html.sidebar-collapsed .sidebar-item a:hover { transform: none; }
         /* Drop the active row-pill when collapsed — the accent icon tile alone
            carries the state, cleaner at rail width. */
@@ -1668,9 +1676,13 @@ if (!function_exists('slate_admin_nav_icon')) {
                         <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
                     </summary>
                     <ul class="sidebar-nav">
-                        <?php foreach ($groupItems as $item):
+                        <?php $_navSection = null; foreach ($groupItems as $item):
                             $isActive = ($currentNav === ($item['slug'] ?? null));
-                        ?>
+                            // An item may name a sub-section ('section' => label): a small label starts each run of them.
+                            $_itemSection = is_string($item['section'] ?? null) && $item['section'] !== '' ? $item['section'] : null;
+                            if ($_itemSection !== null && $_itemSection !== $_navSection): ?>
+                            <li class="sidebar-subsection" role="presentation"><?= e($_itemSection) ?></li>
+                        <?php endif; $_navSection = $_itemSection; ?>
                             <li class="sidebar-item <?= $isActive ? 'is-active' : '' ?>">
                                 <a href="<?= e($item['href']) ?>"
                                    <?= $isActive ? 'aria-current="page"' : '' ?>>

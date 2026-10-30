@@ -36,12 +36,9 @@ $menus = StudioMenus::all($tenantId);
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
-<div class="sb-admin-wrapper">
-    <?php sb_render_admin_nav('menus'); ?>
+<div class="sb-admin">
 
-    <?php if ($flash): ?>
-        <div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div>
-    <?php endif; ?>
+    <?php sb_render_flash($flash); ?>
 
     <div class="sb-screen-head">
         <div>

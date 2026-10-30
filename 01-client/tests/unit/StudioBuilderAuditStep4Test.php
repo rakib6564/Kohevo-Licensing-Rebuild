@@ -69,13 +69,12 @@ unit('site SEO: the site robots setting can only make a page stricter, and the s
     assert_eq('index,follow', SiteSeoDefaults::fromValues(['robots' => 'bogus'])->robots, 'an unknown setting is ignored');
 });
 
-unit('site SEO: verification codes become meta tags on public pages only, and survive a stored compilation', function (): void {
-    $site = sba4_site(['google_verify' => 'abc_123-XYZ', 'bing_verify' => 'bad code"><script>']);
+unit('site SEO: verification codes are not part of the page head (StudioCodePolicy prints them once, from one setting)', function (): void {
+    $site = sba4_site(['google_verify' => 'abc_123-XYZ']);
     $head = SeoHead::build([], sba4_page(), $site, RenderMode::Public, new _Sba4Media());
-    assert_true(str_contains($head->tags(), '<meta name="google-site-verification" content="abc_123-XYZ">'), $head->tags());
-    assert_true(!str_contains($head->tags(), 'msvalidate') && !str_contains($head->tags(), '<script'), 'a malformed code is dropped');
-    assert_eq($head->tags(), SeoHead::fromArray($head->toArray())->tags(), 'the stored head renders the same');
-    assert_true(!str_contains(SeoHead::build([], sba4_page(), $site, RenderMode::Preview, new _Sba4Media())->tags(), 'verification'), 'not in previews');
+    assert_true(!str_contains($head->tags(), 'verification'), $head->tags());
+    assert_false(array_key_exists('verification', $head->toArray()), 'a stored head carries none either');
+    assert_false(array_key_exists('verification', $site->seo->toArray()), 'nor the site defaults');
 });
 
 unit('site SEO: changing a setting changes the site fingerprint, so stored pages recompile', function (): void {

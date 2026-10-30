@@ -71,7 +71,7 @@ test('Redirects: a saved rule sends the old address to the new one, a bad rule i
     await drawer.locator('[name="from_path"]').fill(from);
     await drawer.locator('[name="to_path"]').fill('https://bad host/page');
     await drawer.getByRole('button', { name: /Save Rule/ }).click();
-    await expect(page.locator('.alert-danger')).toContainText('destination');
+    await expect(page.locator('.alert-error')).toContainText('destination');
 
     await page.getByRole('button', { name: /Add Redirect Rule/ }).click();
     await drawer.locator('[name="from_path"]').fill(from);
@@ -89,7 +89,7 @@ test('Redirects: a saved rule sends the old address to the new one, a bad rule i
     await drawer.locator('[name="from_path"]').fill(from);
     await drawer.locator('[name="to_path"]').fill('/elsewhere');
     await drawer.getByRole('button', { name: /Save Rule/ }).click();
-    await expect(page.locator('.alert-danger')).toContainText('already a rule');
+    await expect(page.locator('.alert-error')).toContainText('already a rule');
   } finally {
     await page.goto(`${ADMIN}/redirects.php`);
     const row = page.locator('.data-row', { hasText: from });
@@ -111,5 +111,5 @@ test('AI & MCP lists every MCP tool, with a count that matches the list, and off
   expect(await rows.count()).toBeGreaterThan(10);
   await expect(page.locator('.sb-kpi-card').first().locator('.sb-kpi-value')).toHaveText(String(await rows.count()));
   await expect(rows.filter({ hasText: 'studio_list_pages' })).toHaveCount(1);
-  await expect(page.locator('.content-wrapper form[method="POST"], .content-wrapper form[method="post"]')).toHaveCount(0);
+  await expect(page.locator('.sb-admin form[method="POST"], .sb-admin form[method="post"]')).toHaveCount(0);
 });

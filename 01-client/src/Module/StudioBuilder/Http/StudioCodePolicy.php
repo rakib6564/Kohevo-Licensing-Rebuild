@@ -56,6 +56,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Http;
 
 use Slate\Module\StudioBuilder\Render\RenderMode;
+use Slate\Module\StudioBuilder\Render\Seo\SiteSeoDefaults;
 
 final class StudioCodePolicy
 {
@@ -83,6 +84,9 @@ final class StudioCodePolicy
 
     /** One snippet (32 KiB) is far more than any vendor tag; a larger one is a file, not a snippet. */
     public const MAX_SNIPPET_BYTES = 32768;
+
+    /** The settings Site & SEO kept Google and Bing codes in before both screens shared `SETTING_VERIFICATION`. */
+    public const LEGACY_SEO_VERIFICATION = ['google' => 'studio_seo_google_verify', 'bing' => 'studio_seo_bing_verify'];
 
     private const VERIFICATION_TOKEN_PATTERN = '/^[A-Za-z0-9_\-]{8,128}$/';
 
@@ -294,22 +298,50 @@ final class StudioCodePolicy
         return $html;
     }
 
+    /**
+     * The verification token saved for each service ('' when none), from the one setting Site & SEO and Code & tracking
+     * both save to. A service with nothing there falls back to the old Site & SEO setting of the same service, so a site
+     * keeps the code it entered before the two screens shared one setting; the next save carries it over.
+     *
+     * @return array<string, string> service => token, for every service in `VERIFICATION_SERVICES`
+     */
+    public static function verificationTokens(int $tenantId): array
+    {
+        $raw = self::setting(self::SETTING_VERIFICATION, $tenantId);
+        $stored = is_string($raw) && $raw !== '' ? json_decode($raw, true) : null;
+        $tokens = [];
+        foreach (array_keys(self::VERIFICATION_SERVICES) as $service) {
+            $token = is_array($stored) && is_string($stored[$service] ?? null) ? $stored[$service] : '';
+            if ($token === '' && isset(self::LEGACY_SEO_VERIFICATION[$service])) {
+                $legacy = self::setting(self::LEGACY_SEO_VERIFICATION[$service], $tenantId);
+                $legacy = is_string($legacy) ? trim($legacy) : '';
+                $token = preg_match(SiteSeoDefaults::VERIFICATION_PATTERN, $legacy) === 1 ? $legacy : '';
+            }
+            $tokens[$service] = $token;
+        }
+        return $tokens;
+    }
+
+    /** Save the tokens (service => token; '' clears one), keeping the services not given. The old Site & SEO values are cleared. */
+    public static function saveVerificationTokens(int $tenantId, array $tokens): void
+    {
+        $merged = array_merge(self::verificationTokens($tenantId), array_intersect_key($tokens, self::VERIFICATION_SERVICES));
+        \Database::setSetting(self::SETTING_VERIFICATION, json_encode(array_filter($merged, static fn (string $v): bool => $v !== ''), JSON_THROW_ON_ERROR), $tenantId);
+        foreach (self::LEGACY_SEO_VERIFICATION as $legacyKey) {
+            \Database::setSetting($legacyKey, '', $tenantId);
+        }
+    }
+
     /** `<meta>` ownership tags for the services this tenant verified. Public only; tokens are re-validated here. */
     public static function verificationMarkup(int $tenantId, RenderMode $mode): string
     {
         if ($mode !== RenderMode::Public) {
             return '';
         }
-        $raw = self::setting(self::SETTING_VERIFICATION, $tenantId);
-        $stored = is_string($raw) && $raw !== '' ? json_decode($raw, true) : null;
-        if (!is_array($stored)) {
-            return '';
-        }
         $out = '';
-        foreach (self::VERIFICATION_SERVICES as $service => $metaName) {
-            $token = is_string($stored[$service] ?? null) ? $stored[$service] : '';
-            if ($token !== '' && preg_match(self::VERIFICATION_TOKEN_PATTERN, $token) === 1) {
-                $out .= '<meta name="' . $metaName . '" content="' . $token . '">';
+        foreach (self::verificationTokens($tenantId) as $service => $token) {
+            if ($token !== '' && (preg_match(self::VERIFICATION_TOKEN_PATTERN, $token) === 1 || preg_match(SiteSeoDefaults::VERIFICATION_PATTERN, $token) === 1)) {
+                $out .= '<meta name="' . self::VERIFICATION_SERVICES[$service] . '" content="' . $token . '">';
             }
         }
         return $out;

@@ -82,12 +82,19 @@ foreach ($pages as $p) {
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
-<div class="sb-admin-wrapper">
-    <?php sb_render_admin_nav('overview', $homePage !== null ? (int) $homePage['id'] : null); ?>
+<div class="sb-admin">
 
-    <?php if ($flash): ?>
-        <div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div>
-    <?php endif; ?>
+    <div class="sb-screen-head">
+        <div>
+            <h2><?= e(__('studio_nav_home', 'Home')) ?></h2>
+            <p><?= e(__('studio_home_intro', 'Your Studio site at a glance: pages, templates and what needs attention.')) ?></p>
+        </div>
+        <div class="sb-screen-actions">
+            <a href="<?= e(plugin_url('studio-builder', 'admin/page-new.php')) ?>" class="btn btn-primary"><?= sb_svg('plus', 14) ?> <?= e(__('studio_new_page', 'New page')) ?></a>
+        </div>
+    </div>
+
+    <?php sb_render_flash($flash); ?>
 
     <?php if ($listError !== null): ?>
         <div class="alert alert-error" role="status"><?= e($listError) ?></div>

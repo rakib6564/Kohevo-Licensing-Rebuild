@@ -26,12 +26,14 @@ for (const [file, reveal] of [['seo.php', null], ['code-tracking.php', null], ['
   });
 }
 
-test('the Studio tab bar wraps instead of showing a scrollbar on a desktop screen', async ({ page }, info) => {
+test('a Studio screen opens on its own header, with no second tab bar above it', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'desktop width');
   await page.goto(`${ADMIN}/seo.php`);
-  const bar = page.locator('.sb-admin-nav-bar');
-  const { scroll, client } = await bar.evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
-  expect(scroll).toBeLessThanOrEqual(client + 1);
+  await expect(page.locator('.sb-admin-nav-bar')).toHaveCount(0);
+  const head = await page.locator('.sb-admin .sb-screen-head, .sb-admin .sb-page-head').first().boundingBox();
+  const main = await page.locator('.sb-admin').boundingBox();
+  expect(head.y - main.y, 'the header is the first thing on the screen').toBeLessThanOrEqual(2);
+  await expect(page.locator('header .sb-topbar-action')).toHaveCount(3);
 });
 
 test('a page\'s settings, duplicate and delete cards are as wide as the strip above them', async ({ page }, info) => {

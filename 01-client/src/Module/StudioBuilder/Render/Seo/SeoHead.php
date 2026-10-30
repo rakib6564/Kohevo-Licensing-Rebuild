@@ -46,8 +46,6 @@ final class SeoHead
         public readonly ?string $canonicalUrl,
         public readonly ?string $ogImageUrl,
         public readonly string $siteName,
-        /** @var array<string, string> site-verification meta name => code (public output only) */
-        public readonly array $verification = [],
     ) {}
 
     /**
@@ -92,7 +90,6 @@ final class SeoHead
             self::canonical($seo['canonical_url'] ?? null, $site, self::publicPath($page, $tenantId)),
             $ogImage,
             $site->siteName,
-            $defaults->verification,
         );
 
         return $head->forMode($mode);
@@ -153,7 +150,6 @@ final class SeoHead
                 $context->site->baseUrl !== '' ? $context->site->absoluteUrl('/' . $type . '/' . rawurlencode($term)) : null,
                 $this->ogImageUrl,
                 $this->siteName,
-                $this->verification,
             );
         }
         // An item a plugin keeps itself (a Shop product): its own title, description, image and address.
@@ -171,13 +167,12 @@ final class SeoHead
                 $context->site->baseUrl !== '' ? $context->site->absoluteUrl($item['url']) : null,
                 $image ?? $this->ogImageUrl,
                 $this->siteName,
-                $this->verification,
             );
         }
         if ($context->attribute('is_search') === true || $context->attribute('is_404') === true) {
             $query = $context->attribute('search_query');
             $title = is_string($query) && trim($query) !== '' ? trim($query) . ($this->siteName !== '' ? ' | ' . $this->siteName : '') : $this->title;
-            return new self($title, $this->description, 'noindex,follow', null, $this->ogImageUrl, $this->siteName, $this->verification);
+            return new self($title, $this->description, 'noindex,follow', null, $this->ogImageUrl, $this->siteName);
         }
         return $this;
     }
@@ -204,9 +199,6 @@ final class SeoHead
             . ($this->canonicalUrl !== null ? '<meta property="og:url" content="' . Html::e($this->canonicalUrl) . '">' : '')
             . ($this->ogImageUrl !== null ? '<meta property="og:image" content="' . Html::e($this->ogImageUrl) . '">' : '')
             . '<meta name="twitter:card" content="' . ($this->ogImageUrl !== null ? 'summary_large_image' : 'summary') . '">';
-        foreach ($this->verification as $name => $code) {
-            $tags .= '<meta name="' . Html::e($name) . '" content="' . Html::e($code) . '">';
-        }
         return $tags;
     }
 
@@ -220,7 +212,6 @@ final class SeoHead
             'robots'        => $this->robots,
             'site_name'     => $this->siteName,
             'title'         => $this->title,
-            'verification'  => $this->verification,
         ];
     }
 
@@ -242,20 +233,6 @@ final class SeoHead
             Html::safeUrl($data['canonical_url'] ?? null),
             Html::safeUrl($data['og_image_url'] ?? null),
             is_string($data['site_name'] ?? null) ? $data['site_name'] : '',
-            self::verificationFrom($data['verification'] ?? null),
         );
-    }
-
-    /** @return array<string, string> only the two known verification tags, with codes of the allowed shape */
-    private static function verificationFrom(mixed $stored): array
-    {
-        $out = [];
-        foreach (['google-site-verification', 'msvalidate.01'] as $name) {
-            $code = is_array($stored) ? ($stored[$name] ?? null) : null;
-            if (is_string($code) && preg_match(SiteSeoDefaults::VERIFICATION_PATTERN, $code) === 1) {
-                $out[$name] = $code;
-            }
-        }
-        return $out;
     }
 }

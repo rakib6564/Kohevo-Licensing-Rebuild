@@ -92,13 +92,10 @@ $currentNav = $newType !== null ? 'studio-type-' . $formValues['content_type'] :
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
-<div class="sb-admin-wrapper">
-    <?php sb_render_admin_nav($newType !== null ? 'type-' . $formValues['content_type'] : 'pages'); ?>
+<div class="sb-admin">
     <?php sb_render_crumbs([[$listName, $listHref], [$newName, null]]); ?>
 
-    <?php if ($flash): ?>
-        <div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div>
-    <?php endif; ?>
+    <?php sb_render_flash($flash); ?>
 
     <?php if ($listError !== null): ?>
         <div class="alert alert-error" role="status"><?= e($listError) ?></div>
@@ -116,7 +113,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <?= csrf_field() ?>
         <div class="sb-form-grid">
             <div class="sb-field">
-                <label class="sb-field__label" for="sb-title"><?= e(__('title', 'Title')) ?> <span class="field-required" style="color:#ef4444;">*</span></label>
+                <label class="sb-field__label" for="sb-title"><?= e(__('title', 'Title')) ?> <span class="field-required">*</span></label>
                 <input type="text" id="sb-title" name="title" required maxlength="255" autofocus placeholder="<?= e(__('studio_title_placeholder', 'About us')) ?>" value="<?= e($formValues['title']) ?>">
             </div>
             <div class="sb-field">

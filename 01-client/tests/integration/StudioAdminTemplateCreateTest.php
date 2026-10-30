@@ -57,7 +57,7 @@ function stcre_post(array $fields, int $roleId = 1): array
 /** The flash message the page rendered, as text (after a success, the short body of the 303 that carries it). */
 function stcre_flash(string $body): string
 {
-    return preg_match('/<div class="alert[^"]*"\s*>\s*(.*?)\s*<\/div>/s', $body, $m) === 1 ? html_entity_decode(trim($m[1]), ENT_QUOTES) : '';
+    return preg_match('/<div class="alert[^"]*"[^>]*>\s*(.*?)\s*<\/div>/s', $body, $m) === 1 ? html_entity_decode(trim($m[1]), ENT_QUOTES) : '';
 }
 
 /** Template rows whose name starts with the tag, with their backing page (by the `template-<key>` slug). */

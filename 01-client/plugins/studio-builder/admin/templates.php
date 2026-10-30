@@ -531,14 +531,16 @@ $sitePartsCanEdit = $sitePartsActor->can(StudioPermissions::EDIT);
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
-<div class="content-wrapper">
-    <?php sb_render_admin_nav('templates'); ?>
+<div class="sb-admin">
 
-    <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : ($flash['type'] === 'warning' ? 'warning' : 'danger') ?>" >
-            <?= e($flash['msg']) ?>
+    <div class="sb-screen-head">
+        <div>
+            <h2><?= e(__('studio_nav_templates', 'Templates')) ?></h2>
+            <p><?= e(__('studio_tpl_intro', 'The headers, footers and theme templates your site uses, and saved templates to start new ones from.')) ?></p>
         </div>
-    <?php endif; ?>
+    </div>
+
+    <?php sb_render_flash($flash); ?>
 
     <?php if ($siteParts !== []): ?>
     <div class="card" style="margin-bottom: 24px;" data-testid="site-parts">
@@ -555,30 +557,30 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
         <div class="sb-pill-filter" style="margin-bottom: 0;">
             <a href="<?= e(plugin_url('studio-builder', 'admin/templates.php')) ?>" class="sb-pill-item <?= $typeFilter === 'all' ? 'active' : '' ?>">
-                <?= sb_svg('templates', 14) ?> All Templates (<?= $counts['all'] ?>)
+                <?= sb_svg('templates', 14) ?> <?= e(__('studio_tpl_filter_all_saved', 'All saved')) ?> (<?= $counts['all'] ?>)
             </a>
             <a href="<?= e(plugin_url('studio-builder', 'admin/templates.php?type=header')) ?>" class="sb-pill-item <?= $typeFilter === 'header' ? 'active' : '' ?>">
-                <?= sb_svg('layer', 14) ?> Headers (<?= $counts['header'] ?>)
+                <?= sb_svg('layer', 14) ?> <?= e(__('studio_tpl_filter_headers', 'Headers')) ?> (<?= $counts['header'] ?>)
             </a>
             <a href="<?= e(plugin_url('studio-builder', 'admin/templates.php?type=footer')) ?>" class="sb-pill-item <?= $typeFilter === 'footer' ? 'active' : '' ?>">
-                <?= sb_svg('layer', 14) ?> Footers (<?= $counts['footer'] ?>)
+                <?= sb_svg('layer', 14) ?> <?= e(__('studio_tpl_filter_footers', 'Footers')) ?> (<?= $counts['footer'] ?>)
             </a>
             <a href="<?= e(plugin_url('studio-builder', 'admin/templates.php?type=single')) ?>" class="sb-pill-item <?= $typeFilter === 'single' ? 'active' : '' ?>">
-                <?= sb_svg('pages', 14) ?> Single Pages (<?= $counts['single'] ?>)
+                <?= sb_svg('pages', 14) ?> <?= e(__('studio_tpl_filter_single', 'Single Pages')) ?> (<?= $counts['single'] ?>)
             </a>
             <a href="<?= e(plugin_url('studio-builder', 'admin/templates.php?type=archive')) ?>" class="sb-pill-item <?= $typeFilter === 'archive' ? 'active' : '' ?>">
-                <?= sb_svg('content', 14) ?> Archives & Loop Grids (<?= $counts['archive'] ?>)
+                <?= sb_svg('content', 14) ?> <?= e(__('studio_tpl_filter_archive', 'Archives & Loop Grids')) ?> (<?= $counts['archive'] ?>)
             </a>
             <a href="<?= e(plugin_url('studio-builder', 'admin/templates.php?type=not_found')) ?>" class="sb-pill-item <?= $typeFilter === 'not_found' ? 'active' : '' ?>">
-                <?= sb_svg('alert-circle', 14) ?> 404 Pages (<?= $counts['not_found'] ?>)
+                <?= sb_svg('alert-circle', 14) ?> <?= e(__('studio_tpl_filter_not_found', '404 Pages')) ?> (<?= $counts['not_found'] ?>)
             </a>
             <a href="<?= e(plugin_url('studio-builder', 'admin/templates.php?type=sections')) ?>" class="sb-pill-item <?= $typeFilter === 'sections' ? 'active' : '' ?>">
-                <?= sb_svg('overview', 14) ?> Sections & Components (<?= $counts['sections'] ?>)
+                <?= sb_svg('overview', 14) ?> <?= e(__('studio_tpl_filter_sections', 'Sections & Components')) ?> (<?= $counts['sections'] ?>)
             </a>
         </div>
 
         <button type="button" class="btn btn-primary" onclick="document.getElementById('sb-tpl-drawer').style.display='block'">
-            <?= sb_svg('plus', 14) ?> New Theme Template
+            <?= sb_svg('plus', 14) ?> <?= e(__('studio_tpl_new', 'New Theme Template')) ?>
         </button>
     </div>
 
@@ -613,7 +615,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <div id="sb-tpl-drawer" class="sb-card sb-drawer" style="display: none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--sb-border);">
             <div class="sb-card__title" style="display: flex; align-items: center; gap: 8px;">
-                <?= sb_svg('templates', 20) ?> Create Theme Builder Template
+                <?= sb_svg('templates', 20) ?> <?= e(__('studio_tpl_create_heading', 'Create Theme Builder Template')) ?>
             </div>
             <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('sb-tpl-drawer').style.display='none'">
                 <?= sb_svg('close', 14) ?>
@@ -624,29 +626,29 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <input type="hidden" name="_action" value="create_template">
             <div class="sb-form-grid">
                 <div class="sb-field">
-                    <label class="sb-field__label">Template Name <span style="color: #ef4444;">*</span></label>
-                    <input type="text" name="name" class="form-control" placeholder="e.g. Modern Glass Header" required>
+                    <label class="sb-field__label"><?= e(__('studio_tpl_name', 'Template Name')) ?> <span class="field-required">*</span></label>
+                    <input type="text" name="name" class="form-control" placeholder="<?= e(__('studio_tpl_name_placeholder', 'e.g. Modern Glass Header')) ?>" required>
                 </div>
                 <div class="sb-field">
-                    <label class="sb-field__label">Template Type</label>
+                    <label class="sb-field__label"><?= e(__('studio_tpl_type', 'Template Type')) ?></label>
                     <select name="template_type" class="form-control" style="background: #ffffff;">
-                        <option value="header">Header (Top navigation & hero chrome)</option>
-                        <option value="footer">Footer (Site-wide footer & bottom chrome)</option>
-                        <option value="single">Single Post / Page (Dynamic single item view)</option>
-                        <option value="archive">Archive & Loop Grid (Dynamic collection feed)</option>
-                        <option value="not_found">404 Error (Custom Not Found page)</option>
-                        <option value="section_preset">Section & Component Preset (Reusable block layout)</option>
+                        <option value="header"><?= e(__('studio_tpl_type_header', 'Header (Top navigation & hero chrome)')) ?></option>
+                        <option value="footer"><?= e(__('studio_tpl_type_footer', 'Footer (Site-wide footer & bottom chrome)')) ?></option>
+                        <option value="single"><?= e(__('studio_tpl_type_single', 'Single Post / Page (Dynamic single item view)')) ?></option>
+                        <option value="archive"><?= e(__('studio_tpl_type_archive', 'Archive & Loop Grid (Dynamic collection feed)')) ?></option>
+                        <option value="not_found"><?= e(__('studio_tpl_type_not_found', '404 Error (Custom Not Found page)')) ?></option>
+                        <option value="section_preset"><?= e(__('studio_tpl_type_section', 'Section & Component Preset (Reusable block layout)')) ?></option>
                     </select>
                 </div>
                 <div class="sb-field">
-                    <label class="sb-field__label">Display Condition</label>
+                    <label class="sb-field__label"><?= e(__('studio_tpl_condition', 'Display Condition')) ?></label>
                     <select name="condition_rule" class="form-control" style="background: #ffffff;">
-                        <option value="entire_site">Entire Site (Global Default)</option>
-                        <option value="front_page">Front Page / Homepage Only</option>
-                        <option value="all_portfolio">All Portfolio Items</option>
-                        <option value="all_posts">All Blog Posts</option>
-                        <option value="all_services">All Service Offerings</option>
-                        <option value="singular_pages">Regular Pages</option>
+                        <option value="entire_site"><?= e(__('studio_tpl_cond_entire_site', 'Entire Site (Global Default)')) ?></option>
+                        <option value="front_page"><?= e(__('studio_tpl_cond_front_page', 'Front Page / Homepage Only')) ?></option>
+                        <option value="all_portfolio"><?= e(__('studio_tpl_cond_all_portfolio', 'All Portfolio Items')) ?></option>
+                        <option value="all_posts"><?= e(__('studio_tpl_cond_all_posts', 'All Blog Posts')) ?></option>
+                        <option value="all_services"><?= e(__('studio_tpl_cond_all_services', 'All Service Offerings')) ?></option>
+                        <option value="singular_pages"><?= e(__('studio_tpl_cond_singular_pages', 'Regular Pages')) ?></option>
                     </select>
                 </div>
             </div>
@@ -671,44 +673,41 @@ require SLATE_ROOT . '/admin/partials/header.php';
             }());
             </script>
             <div class="sb-field">
-                <label class="sb-field__label">Description / Notes</label>
-                <input type="text" name="description" class="form-control" placeholder="Optional notes about design intent or typography...">
+                <label class="sb-field__label"><?= e(__('studio_tpl_description', 'Description / Notes')) ?></label>
+                <input type="text" name="description" class="form-control" placeholder="<?= e(__('studio_tpl_description_placeholder', 'Optional notes about design intent or typography...')) ?>">
             </div>
             <div style="margin-bottom: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px;">
                 <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; margin: 0;">
                     <input type="checkbox" name="publish_now" value="1" checked style="width: 16px; height: 16px;">
-                    Publish & activate template immediately
+                    <?= e(__('studio_tpl_publish_now', 'Publish & activate template immediately')) ?>
                 </label>
                 <div style="font-size: 0.78rem; color: var(--sb-muted); margin-top: 4px; margin-left: 24px;">
-                    Publishes revision #1 so <code>ThemeTemplateResolver</code> attaches it to live matching pages immediately. You can further customize layout in the visual Canvas editor at any time.
+                    <?= sprintf(e(__('studio_tpl_publish_now_hint', 'Publishes revision #1 so %s attaches it to live matching pages immediately. You can further customize layout in the visual Canvas editor at any time.')), '<code>ThemeTemplateResolver</code>') ?>
                 </div>
             </div>
             <div class="sb-card-actions">
-                <button type="button" class="btn btn-outline" onclick="document.getElementById('sb-tpl-drawer').style.display='none'">Cancel</button>
-                <button type="submit" class="btn btn-primary"><?= sb_svg('check', 14) ?> Create Template</button>
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('sb-tpl-drawer').style.display='none'"><?= e(__('cancel', 'Cancel')) ?></button>
+                <button type="submit" class="btn btn-primary"><?= sb_svg('check', 14) ?> <?= e(__('studio_tpl_create', 'Create Template')) ?></button>
             </div>
         </form>
     </div>
 
     <!-- Active Templates List -->
     <?php if (empty($templates)): ?>
-        <div class="card" style="padding: 48px 24px; text-align: center; border-radius: 16px; border: 1px dashed var(--sb-border); margin-bottom: 32px;">
-            <div style="width: 56px; height: 56px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; color: var(--sb-muted);">
-                <?= sb_svg('templates', 28) ?>
-            </div>
-            <h3 style="font-weight: 700; color: var(--sb-text); margin-bottom: 8px;">No theme templates found</h3>
-            <p style="color: var(--sb-muted); font-size: 0.9rem; max-width: 460px; margin: 0 auto 20px auto;">
-                Create full-site Headers, Footers, dynamic Loop Grids, or Single Page layouts to build a completely unified visual design system.
-            </p>
+        <div class="sb-empty" data-testid="templates-empty">
+            <h3><?= e($typeFilter === 'all' ? __('studio_tpl_empty_title', 'No saved templates yet') : __('studio_tpl_empty_filtered', 'No saved templates of this kind')) ?></h3>
+            <p><?= e($siteParts !== []
+                ? __('studio_tpl_empty_has_parts', 'The headers, footers and theme templates your site uses are listed above. A saved template is a starting point you can reuse.')
+                : __('studio_tpl_empty_sub', 'Save a header, footer, single page, archive or 404 layout here to reuse it across the site.')) ?></p>
             <button type="button" class="btn btn-primary" onclick="document.getElementById('sb-tpl-drawer').style.display='block'">
-                <?= sb_svg('plus', 16) ?> Create First Template
+                <?= sb_svg('plus', 16) ?> <?= e(__('studio_tpl_create_first', 'Create First Template')) ?>
             </button>
         </div>
     <?php else: ?>
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-bottom: 36px;">
             <?php foreach ($templates as $tpl):
                 $tid = (int) $tpl['id'];
-                $tName = (string) ($tpl['name'] ?? 'Untitled Template');
+                $tName = (string) ($tpl['name'] ?? __('studio_tpl_untitled', 'Untitled Template'));
                 $tType = (string) ($tpl['template_type'] ?? 'header_preset');
                 $tCat = (string) ($tpl['category'] ?? '');
                 $tDesc = (string) ($tpl['description'] ?? '');
@@ -726,6 +725,16 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     $tCat === 'archive' => 'archive',
                     $tCat === 'not_found' => 'not_found',
                     default => 'template',
+                };
+
+                $displayTypeLabel = match ($displayType) {
+                    'header'    => __('studio_kind_header', 'Header'),
+                    'footer'    => __('studio_kind_footer', 'Footer'),
+                    'section'   => __('studio_ui_section', 'Section'),
+                    'single'    => __('studio_tpl_kind_single', 'Single'),
+                    'archive'   => __('studio_tpl_kind_archive', 'Archive'),
+                    'not_found' => __('studio_tpl_kind_not_found', '404'),
+                    default     => __('studio_kind_template', 'Template'),
                 };
 
                 $builderUrl = $backingPageId
@@ -746,23 +755,23 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     <div>
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
                             <span style="background: <?= $typeBadgeColor ?>15; color: <?= $typeBadgeColor ?>; font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em;">
-                                <?= e($displayType) ?>
+                                <?= e($displayTypeLabel) ?>
                             </span>
                             <?php if ($isSys): ?>
-                                <span style="font-size: 0.72rem; color: var(--sb-muted); font-weight: 600;">System Preset</span>
+                                <span style="font-size: 0.72rem; color: var(--sb-muted); font-weight: 600;"><?= e(__('studio_tpl_system_preset', 'System Preset')) ?></span>
                             <?php elseif ($isPublished): ?>
                                 <span style="font-size: 0.72rem; color: #10b981; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; background: #ecfdf5; padding: 2px 8px; border-radius: 9999px;">
-                                    <?= sb_svg('check', 12) ?> Published & Active
+                                    <?= sb_svg('check', 12) ?> <?= e(__('studio_tpl_published_active', 'Published & Active')) ?>
                                 </span>
                             <?php else: ?>
                                 <span style="font-size: 0.72rem; color: #f59e0b; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; background: #fffbeb; padding: 2px 8px; border-radius: 9999px;">
-                                    Draft (Inactive)
+                                    <?= e(__('studio_tpl_draft_inactive', 'Draft (Inactive)')) ?>
                                 </span>
                             <?php endif; ?>
                         </div>
                         <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--sb-text); margin: 0 0 6px 0;"><?= e($tName) ?></h3>
                         <p style="font-size: 0.85rem; color: var(--sb-muted); line-height: 1.5; margin: 0 0 14px 0;">
-                            <?= e($tDesc !== '' ? $tDesc : "Theme {$displayType} layout with dynamic slot bindings.") ?>
+                            <?= e($tDesc !== '' ? $tDesc : sprintf(__('studio_tpl_desc_default', 'Theme %s layout with dynamic slot bindings.'), $displayTypeLabel)) ?>
                         </p>
                     </div>
 
@@ -770,7 +779,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <?php if ($backingPageId): ?>
                                 <a href="<?= e($builderUrl) ?>" class="btn btn-sm btn-primary" target="_blank" rel="noopener">
-                                    <?= sb_svg('edit', 12) ?> Edit in Canvas
+                                    <?= sb_svg('edit', 12) ?> <?= e(__('studio_overview_edit', 'Edit in Canvas')) ?>
                                 </a>
                             <?php endif; ?>
                             <?php if (!$isSys && $backingPageId && $canEdit): ?>
@@ -780,8 +789,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
                                         <input type="hidden" name="_action" value="publish_template">
                                         <input type="hidden" name="template_id" value="<?= $tid ?>">
                                         <input type="hidden" name="page_id" value="<?= $backingPageId ?>">
-                                        <button type="submit" class="btn btn-sm btn-outline" style="color: #10b981; border-color: #10b981;" title="Publish this template to activate it on the site">
-                                            <?= sb_svg('check', 12) ?> Publish
+                                        <button type="submit" class="btn btn-sm btn-success-outline" title="<?= e(__('studio_tpl_publish_title', 'Publish this template to activate it on the site')) ?>">
+                                            <?= sb_svg('check', 12) ?> <?= e(__('studio_ui_publish', 'Publish')) ?>
                                         </button>
                                     </form>
                                 <?php else: ?>
@@ -789,19 +798,19 @@ require SLATE_ROOT . '/admin/partials/header.php';
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="_action" value="unpublish_template">
                                         <input type="hidden" name="page_id" value="<?= $backingPageId ?>">
-                                        <button type="submit" class="btn btn-sm btn-outline" style="color: #64748b;" title="Revert to draft">
-                                            Unpublish
+                                        <button type="submit" class="btn btn-sm btn-outline" style="color: #64748b;" title="<?= e(__('studio_tpl_unpublish_title', 'Revert to draft')) ?>">
+                                            <?= e(__('studio_tpl_unpublish', 'Unpublish')) ?>
                                         </button>
                                     </form>
                                 <?php endif; ?>
                             <?php endif; ?>
                         </div>
                         <?php if (!$isSys && $canEdit): ?>
-                            <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/templates.php')) ?>" onsubmit="return confirm('Delete this theme template?');" style="margin: 0;">
+                            <form method="POST" action="<?= e(plugin_url('studio-builder', 'admin/templates.php')) ?>" onsubmit="return window.confirm(this.getAttribute('data-confirm'));" data-confirm="<?= e(__('studio_tpl_delete_confirm', 'Delete this theme template?')) ?>" style="margin: 0;">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="_action" value="delete_template">
                                 <input type="hidden" name="template_id" value="<?= $tid ?>">
-                                <button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444;" title="Delete Template">
+                                <button type="submit" class="btn btn-sm btn-danger" title="<?= e(__('studio_tpl_delete_title', 'Delete Template')) ?>">
                                     <?= sb_svg('trash', 12) ?>
                                 </button>
                             </form>
@@ -818,10 +827,10 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <div style="color: var(--sb-accent); margin-bottom: 10px;">
                 <?= sb_svg('layer', 24) ?>
             </div>
-            <h4 style="font-weight: 700; color: var(--sb-text); font-size: 1rem; margin-bottom: 6px;">Global Chrome Integration</h4>
+            <h4 style="font-weight: 700; color: var(--sb-text); font-size: 1rem; margin-bottom: 6px;"><?= e(__('studio_tpl_guide_chrome', 'Global Chrome Integration')) ?></h4>
             <p style="font-size: 0.85rem; color: var(--sb-muted); line-height: 1.5; margin: 0;">
-                Headers and Footers attach automatically to published pages matching their display conditions (via <code>ThemeTemplateResolver</code>).
-                <em>Note: Pages with <code>header_mode: hidden</code> or <code>footer_mode: hidden</code> in their Page Settings deliberately suppress chrome.</em>
+                <?= sprintf(e(__('studio_tpl_guide_chrome_text', 'Headers and Footers attach automatically to published pages matching their display conditions (via %s).')), '<code>ThemeTemplateResolver</code>') ?>
+                <em><?= sprintf(e(__('studio_tpl_guide_chrome_note', 'Note: Pages with %1$s or %2$s in their Page Settings deliberately suppress chrome.')), '<code>header_mode: hidden</code>', '<code>footer_mode: hidden</code>') ?></em>
             </p>
         </div>
 
@@ -829,9 +838,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <div style="color: #10b981; margin-bottom: 10px;">
                 <?= sb_svg('content', 24) ?>
             </div>
-            <h4 style="font-weight: 700; color: var(--sb-text); font-size: 1rem; margin-bottom: 6px;">Loop Grid & Query Builder</h4>
+            <h4 style="font-weight: 700; color: var(--sb-text); font-size: 1rem; margin-bottom: 6px;"><?= e(__('studio_tpl_guide_loop', 'Loop Grid & Query Builder')) ?></h4>
             <p style="font-size: 0.85rem; color: var(--sb-muted); line-height: 1.5; margin: 0;">
-                Archive and loop grid templates consume data feeds from <code>core.query_loop</code>. Bind custom fields like client, year, tags, and cover images to repeat automatically across cards.
+                <?= sprintf(e(__('studio_tpl_guide_loop_text', 'Archive and loop grid templates consume data feeds from %s. Bind custom fields like client, year, tags, and cover images to repeat automatically across cards.')), '<code>core.query_loop</code>') ?>
             </p>
         </div>
 
@@ -839,9 +848,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <div style="color: #0ea5e9; margin-bottom: 10px;">
                 <?= sb_svg('pages', 24) ?>
             </div>
-            <h4 style="font-weight: 700; color: var(--sb-text); font-size: 1rem; margin-bottom: 6px;">Dynamic Single Post Templates</h4>
+            <h4 style="font-weight: 700; color: var(--sb-text); font-size: 1rem; margin-bottom: 6px;"><?= e(__('studio_tpl_guide_single', 'Dynamic Single Post Templates')) ?></h4>
             <p style="font-size: 0.85rem; color: var(--sb-muted); line-height: 1.5; margin: 0;">
-                Design once, render for every portfolio item or case study. Single templates inject dynamic content tokens: <code>{{post.title}}</code>, <code>{{meta.client}}</code>, and <code>{{post.content}}</code>.
+                <?= sprintf(e(__('studio_tpl_guide_single_text', 'Design once, render for every portfolio item or case study. Single templates inject dynamic content tokens: %1$s, %2$s, and %3$s.')), '<code>{{post.title}}</code>', '<code>{{meta.client}}</code>', '<code>{{post.content}}</code>') ?>
             </p>
         </div>
     </div>

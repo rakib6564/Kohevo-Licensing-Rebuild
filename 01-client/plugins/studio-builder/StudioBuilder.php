@@ -58,6 +58,8 @@ class StudioBuilder extends Plugin
         \Hook::addFilter('public_fallback', [self::class, 'servePublicPath'], 10, 2);
         \Hook::addFilter('public_homepage', [self::class, 'servePublicHomepage'], 10, 1);
         \Hook::addFilter('admin_nav_items', [$this, 'addAdminNav']);
+        \Hook::addAction('admin_head', [$this, 'adminHead']);
+        \Hook::addFilter('admin_topbar_actions', [$this, 'addTopbarActions']);
         \Hook::addFilter('i18n_lang_paths', [$this, 'addLangPath']);
         // The media library will not delete a file a Studio page still uses.
         // Registered once even if the plugin boots again: a second copy would count every use twice.
@@ -94,46 +96,134 @@ class StudioBuilder extends Plugin
         if (!self::isEntitled()) {
             return $items;
         }
+        $order = 200;
+        foreach (self::navItems() as $nav) {
+            $items[] = [
+                'slug'    => $nav['slug'],
+                'label'   => $nav['label'],
+                'href'    => $this->url($nav['file']),
+                'icon'    => $nav['icon'],
+                'perm'    => $nav['perm'] ?? 'studio-builder.view',
+                'order'   => $order++,
+                'group'   => 'studio',
+                'section' => $nav['section'],
+            ];
+        }
+        return $items;
+    }
 
-        $studioNav = [
-            ['slug' => 'studio-overview',        'label' => function_exists('__') ? __('studio_overview', 'Overview') : 'Overview',                  'file' => 'admin/index.php',           'icon' => 'bar-chart-2', 'order' => 200],
-            ['slug' => 'studio-pages',           'label' => function_exists('__') ? __('studio_pages', 'Pages') : 'Pages',                            'file' => 'admin/pages.php',           'icon' => 'file-text',   'order' => 201],
-            ['slug' => 'studio-media',           'label' => function_exists('__') ? __('studio_media', 'Media') : 'Media',                            'file' => 'admin/media.php',           'icon' => 'image',       'order' => 203],
-            ['slug' => 'studio-templates',       'label' => function_exists('__') ? __('studio_templates', 'Templates') : 'Templates',              'file' => 'admin/templates.php',       'icon' => 'layout',      'order' => 204],
-            ['slug' => 'studio-menus',       'label' => function_exists('__') ? __('studio_menus', 'Menus') : 'Menus',              'file' => 'admin/menus.php',       'icon' => 'list',      'order' => 204],
-            ['slug' => 'studio-types-fields',    'label' => function_exists('__') ? __('studio_types_fields', 'Types & fields') : 'Types & fields',  'file' => 'admin/types-fields.php',    'icon' => 'tag',         'order' => 205],
-            ['slug' => 'studio-seo',             'label' => function_exists('__') ? __('studio_seo', 'Site & SEO') : 'Site & SEO',                    'file' => 'admin/seo.php',             'icon' => 'globe',       'order' => 207],
-            ['slug' => 'studio-ai-mcp',          'label' => function_exists('__') ? __('studio_ai_mcp', 'AI & MCP') : 'AI & MCP',                      'file' => 'admin/ai-mcp.php',          'icon' => 'sparkles',    'order' => 209],
-            ['slug' => 'studio-reviews',         'label' => function_exists('__') ? __('studio_reviews', 'Reviews') : 'Reviews',                      'file' => 'admin/reviews.php',         'icon' => 'clock',       'order' => 210],
-            ['slug' => 'studio-code-tracking',   'label' => function_exists('__') ? __('studio_code_tracking', 'Code & tracking') : 'Code & tracking','file' => 'admin/code-tracking.php',   'icon' => 'edit-3',      'order' => 211],
-            ['slug' => 'studio-redirects',       'label' => function_exists('__') ? __('studio_redirects', 'Redirects') : 'Redirects',              'file' => 'admin/redirects.php',       'icon' => 'link',        'order' => 212],
+    /** Whether this request is one of the Studio admin screens (they all render the platform admin layout). */
+    public static function onStudioScreen(): bool
+    {
+        $script = isset($_SERVER['SCRIPT_NAME']) && is_string($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
+        return str_contains($script, '/plugins/studio-builder/admin/');
+    }
+
+    /**
+     * `admin_head`: the Studio admin stylesheet, and the viewer's density choice applied before the first paint
+     * (Compact is the default; Comfortable is remembered in this browser).
+     */
+    public function adminHead(): void
+    {
+        if (!self::onStudioScreen()) {
+            return;
+        }
+        $css = $this->dir('assets/admin/studio-admin.css');
+        $version = is_file($css) ? (string) filemtime($css) : '1';
+        echo '<link rel="stylesheet" href="' . htmlspecialchars($this->url('assets/admin/studio-admin.css') . '?v=' . $version, ENT_QUOTES) . '">';
+        echo "<script>try{if(localStorage.getItem('sb-density')==='comfortable')document.documentElement.dataset.sbDensity='comfortable'}catch(e){}</script>";
+    }
+
+    /**
+     * `admin_topbar_actions`: on a Studio screen, open the builder (on the homepage, else the first page), view the site,
+     * and switch between Compact and Comfortable rows.
+     *
+     * @param array<int, string> $actions
+     * @return array<int, string>
+     */
+    public function addTopbarActions(mixed $actions): array
+    {
+        $actions = is_array($actions) ? $actions : [];
+        if (!self::onStudioScreen() || !self::isEntitled()) {
+            return $actions;
+        }
+        $t = static fn (string $key, string $default): string => function_exists('__') ? __($key, $default) : $default;
+        $esc = static fn (string $v): string => htmlspecialchars($v, ENT_QUOTES);
+        $icon = static fn (string $paths): string => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $paths . '</svg>';
+
+        $pageId = self::builderPageId();
+        $builder = $pageId !== null ? $this->url('admin/builder.php') . '?page=' . $pageId : $this->url('admin/pages.php');
+        $open = $t('studio_nav_open_builder', 'Open builder');
+        $view = $t('studio_nav_view_site', 'View site');
+        $density = $t('studio_density_toggle', 'Compact or comfortable rows');
+        $base = defined('SLATE_URL') ? rtrim((string) SLATE_URL, '/') . '/' : '/';
+
+        $actions[] = '<a href="' . $esc($builder) . '" class="topbar-icon-btn sb-topbar-action" title="' . $esc($open) . '" aria-label="' . $esc($open) . '"' . ($pageId !== null ? ' target="_blank" rel="noopener"' : '') . '>'
+            . $icon('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>') . '</a>';
+        $actions[] = '<a href="' . $esc($base) . '" class="topbar-icon-btn sb-topbar-action" title="' . $esc($view) . '" aria-label="' . $esc($view) . '" target="_blank" rel="noopener">'
+            . $icon('<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>') . '</a>';
+        $actions[] = '<button type="button" class="topbar-icon-btn sb-topbar-action" data-sb-density-toggle title="' . $esc($density) . '" aria-label="' . $esc($density) . '"'
+            . ' onclick="var r=document.documentElement,c=r.dataset.sbDensity===\'comfortable\';if(c){delete r.dataset.sbDensity}else{r.dataset.sbDensity=\'comfortable\'}try{localStorage.setItem(\'sb-density\',c?\'compact\':\'comfortable\')}catch(e){}">'
+            . $icon('<line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>') . '</button>';
+        return $actions;
+    }
+
+    /** The page "Open builder" opens: the homepage, else the first live page, else the first page; null with none. */
+    public static function builderPageId(): ?int
+    {
+        try {
+            $found = \Database::value(
+                "SELECT id FROM studiobuilder_pages WHERE tenant_id = ? AND page_type IN ('page','landing') AND status <> 'archived' ORDER BY (route_mode = 'homepage') DESC, (status = 'published') DESC, id ASC LIMIT 1",
+                [function_exists('current_tenant_id') ? current_tenant_id() : 0]
+            );
+            return $found ? (int) $found : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * The Studio sidebar, in order: Home, then Content, Site, Search and Advanced, each under a small label. The one list
+     * of Studio admin screens (each screen's `$currentNav` is its `slug`). Media is the platform's Media Library.
+     *
+     * @return list<array{slug: string, label: string, file: string, icon: string, section: string, perm?: string}>
+     */
+    public static function navItems(): array
+    {
+        $t = static fn (string $key, string $default): string => function_exists('__') ? __($key, $default) : $default;
+        $content  = $t('studio_nav_section_content', 'Content');
+        $site     = $t('studio_nav_section_site', 'Site');
+        $search   = $t('studio_nav_section_search', 'Search');
+        $advanced = $t('studio_nav_section_advanced', 'Advanced');
+
+        $items = [
+            ['slug' => 'studio-overview', 'label' => $t('studio_nav_home', 'Home'), 'file' => 'admin/index.php', 'icon' => 'home', 'section' => ''],
+            ['slug' => 'studio-pages', 'label' => $t('studio_nav_pages', 'Pages'), 'file' => 'admin/pages.php', 'icon' => 'file-text', 'section' => $content],
         ];
-
-        // Each content type the site made has its own list, right under Pages (Types & fields › Show in the sidebar).
+        // Each content type the site made has its own list, right under Pages (Content types › Show in the sidebar).
         try {
             $tenantId = function_exists('current_tenant_id') ? current_tenant_id() : 0;
             foreach (\Slate\Module\StudioBuilder\Meta\PageMeta::postTypes($tenantId) as $key => $type) {
                 if (\Slate\Module\StudioBuilder\Meta\PageMeta::showsInMenu($type)) {
-                    $studioNav[] = ['slug' => 'studio-type-' . $key, 'label' => (string) ($type['plural'] ?? $type['singular'] ?? $key), 'file' => 'admin/pages.php?type=' . rawurlencode((string) $key), 'icon' => 'folder', 'order' => 202];
+                    $items[] = ['slug' => 'studio-type-' . $key, 'label' => (string) ($type['plural'] ?? $type['singular'] ?? $key), 'file' => 'admin/pages.php?type=' . rawurlencode((string) $key), 'icon' => 'folder', 'section' => $content];
                 }
             }
         } catch (\Throwable $e) {
-            // No settings table yet (install): the sidebar shows the fixed entries only.
+            // No settings table yet (install): the fixed entries only.
         }
-
-        foreach ($studioNav as $nav) {
-            $items[] = [
-                'slug'  => $nav['slug'],
-                'label' => $nav['label'],
-                'href'  => $this->url($nav['file']),
-                'icon'  => $nav['icon'],
-                'perm'  => 'studio-builder.view',
-                'order' => $nav['order'],
-                'group' => 'studio',
-            ];
-        }
-
-        return $items;
+        return array_merge($items, [
+            ['slug' => 'studio-templates', 'label' => $t('studio_nav_templates', 'Templates'), 'file' => 'admin/templates.php', 'icon' => 'layout', 'section' => $site],
+            ['slug' => 'studio-menus', 'label' => $t('studio_nav_menus', 'Menus'), 'file' => 'admin/menus.php', 'icon' => 'list', 'section' => $site],
+            // Colours, fonts, widths and custom CSS are edited in the builder (Settings › Site); this opens it there.
+            ['slug' => 'studio-design', 'label' => $t('studio_nav_design', 'Design'), 'file' => 'admin/themes.php', 'icon' => 'palette', 'section' => $site],
+            ['slug' => 'studio-seo', 'label' => $t('studio_nav_seo', 'SEO'), 'file' => 'admin/seo.php', 'icon' => 'globe', 'section' => $search],
+            ['slug' => 'studio-redirects', 'label' => $t('studio_nav_redirects', 'Redirects'), 'file' => 'admin/redirects.php', 'icon' => 'link', 'section' => $search],
+            // Scripts run on every public page: Studio administrators only, as on the screen itself.
+            ['slug' => 'studio-code-tracking', 'label' => $t('studio_nav_tracking', 'Tracking & code'), 'file' => 'admin/code-tracking.php', 'icon' => 'edit-3', 'section' => $search, 'perm' => 'studio-builder.admin'],
+            ['slug' => 'studio-types-fields', 'label' => $t('studio_nav_content_types', 'Content types'), 'file' => 'admin/types-fields.php', 'icon' => 'tag', 'section' => $advanced],
+            ['slug' => 'studio-reviews', 'label' => $t('studio_nav_history', 'History'), 'file' => 'admin/reviews.php', 'icon' => 'clock', 'section' => $advanced],
+            ['slug' => 'studio-ai-mcp', 'label' => $t('studio_nav_ai_mcp', 'AI & MCP'), 'file' => 'admin/ai-mcp.php', 'icon' => 'sparkles', 'section' => $advanced],
+        ]);
     }
 
     /**

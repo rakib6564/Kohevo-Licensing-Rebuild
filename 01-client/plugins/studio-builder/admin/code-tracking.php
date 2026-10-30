@@ -47,11 +47,8 @@ $ga4Id = (string) (Database::setting(StudioCodePolicy::SETTING_GA4, $tenantId) ?
 $gtmId = (string) (Database::setting(StudioCodePolicy::SETTING_GTM, $tenantId) ?: '');
 $headSnippet = (string) (Database::setting(StudioCodePolicy::SETTING_HEAD_SNIPPET, $tenantId) ?: '');
 $footerSnippet = (string) (Database::setting(StudioCodePolicy::SETTING_FOOTER_SNIPPET, $tenantId) ?: '');
-$verifyStored = json_decode((string) (Database::setting(StudioCodePolicy::SETTING_VERIFICATION, $tenantId) ?: ''), true);
-$verify = [];
-foreach (array_keys(StudioCodePolicy::VERIFICATION_SERVICES) as $service) {
-    $verify[$service] = is_array($verifyStored) && is_string($verifyStored[$service] ?? null) ? $verifyStored[$service] : '';
-}
+// Shared with Site & SEO (Google and Bing): one setting, so each tag is printed once.
+$verify = StudioCodePolicy::verificationTokens($tenantId);
 
 /** A plain-language message for a refused snippet (the policy's reason code). */
 $snippetMessage = static function (string $label, string $reason): string {
@@ -131,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'css_bytes' => strlen($sanitizedCss),
             ];
             if ($isAdmin) {
-                Database::setSetting(StudioCodePolicy::SETTING_VERIFICATION, json_encode(array_filter($verifyTokens, static fn (string $v): bool => $v !== ''), JSON_THROW_ON_ERROR), $tenantId);
+                StudioCodePolicy::saveVerificationTokens($tenantId, $verifyTokens);
                 Database::setSetting(StudioCodePolicy::SETTING_HEAD_SNIPPET, $preparedHead, $tenantId);
                 Database::setSetting(StudioCodePolicy::SETTING_FOOTER_SNIPPET, $preparedFooter, $tenantId);
                 $verify = $verifyTokens;
@@ -160,14 +157,9 @@ $flash = $flash ?? sb_take_flash();
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
-<div class="content-wrapper">
-    <?php sb_render_admin_nav('code-tracking'); ?>
+<div class="sb-admin">
 
-    <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?> sb-alert">
-            <?= e($flash['msg']) ?>
-        </div>
-    <?php endif; ?>
+    <?php sb_render_flash($flash); ?>
 
     <div class="sb-page-head">
         <h2>Custom code, tracking &amp; CSS</h2>

@@ -41,8 +41,7 @@ $accessLabel = static fn(string $access): array => match ($access) {
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
-<div class="content-wrapper">
-    <?php sb_render_admin_nav('ai-mcp'); ?>
+<div class="sb-admin">
 
     <div class="sb-page-head">
         <h2><?= e(__('studio_ai_heading', 'AI assistants (MCP)')) ?></h2>
@@ -79,7 +78,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <h3 class="sb-card__title"><?= e(__('studio_ai_rules', 'What an assistant can never do')) ?></h3>
         </div>
         <ul style="margin: 0; padding-left: 18px; font-size: 0.88rem; color: var(--sb-muted); line-height: 1.6;">
-            <li><?= e(__('studio_ai_rule_drafts', 'Its changes are saved as drafts. A person reviews them in Reviews and publishes.')) ?></li>
+            <li><?= e(__('studio_ai_rule_drafts', 'Its changes are saved as drafts. A person checks them (History › AI drafts) and publishes.')) ?></li>
             <li><?= e(__('studio_ai_rule_live', 'It cannot rename, move or delete a published page, whatever its token allows.')) ?></li>
             <li><?= e(__('studio_ai_rule_locks', 'It cannot change a locked section or block.')) ?></li>
             <li><?= e(__('studio_ai_rule_stale', 'Every change names the revision it is based on; a stale change is refused and nothing is overwritten.')) ?></li>

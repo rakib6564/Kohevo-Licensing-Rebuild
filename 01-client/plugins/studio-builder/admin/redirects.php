@@ -103,23 +103,18 @@ $flash = $flash ?? sb_take_flash();
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
-<div class="content-wrapper">
-    <?php sb_render_admin_nav('redirects'); ?>
+<div class="sb-admin">
 
-    <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" >
-            <?= e($flash['msg']) ?>
-        </div>
-    <?php endif; ?>
+    <?php sb_render_flash($flash); ?>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+    <div class="sb-screen-head">
         <div>
-            <h2 style="font-size: 1.3rem; font-weight: 800; color: var(--sb-text); margin: 0 0 4px 0;">URL Redirects & Link Hygiene</h2>
-            <p style="font-size: 0.88rem; color: var(--sb-muted); margin: 0;"><?= e(__('studio_redirects_intro', 'Send visitors from an old address to a new one: 301 for a permanent move, 302 for a temporary one. A rule applies to any address on your Studio site, including a page that still exists, but not to the home page or to admin, login and other system addresses.')) ?></p>
+            <h2><?= e(__('studio_redirects_heading', 'URL Redirects & Link Hygiene')) ?></h2>
+            <p><?= e(__('studio_redirects_intro', 'Send visitors from an old address to a new one: 301 for a permanent move, 302 for a temporary one. A rule applies to any address on your Studio site, including a page that still exists, but not to the home page or to admin, login and other system addresses.')) ?></p>
         </div>
 
         <button type="button" class="btn btn-primary" onclick="document.getElementById('sb-redirect-drawer').style.display='block'">
-            <?= sb_svg('plus', 14) ?> Add Redirect Rule
+            <?= sb_svg('plus', 14) ?> <?= e(__('studio_redirects_add', 'Add Redirect Rule')) ?>
         </button>
     </div>
 
@@ -127,7 +122,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <div id="sb-redirect-drawer" class="sb-card sb-drawer" style="display: none;">
         <div class="sb-card__head sb-card__head--split">
             <div class="sb-card__title" style="display: flex; align-items: center; gap: 8px;">
-                <?= sb_svg('redirects', 20) ?> Create URL Redirection
+                <?= sb_svg('redirects', 20) ?> <?= e(__('studio_redirects_create', 'Create URL Redirection')) ?>
             </div>
             <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('sb-redirect-drawer').style.display='none'">
                 <?= sb_svg('close', 14) ?>
@@ -138,30 +133,30 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <input type="hidden" name="_action" value="add_redirect">
             <div class="sb-form-grid">
                 <div class="sb-field">
-                    <label class="sb-field__label">Source Path <span style="color: #ef4444;">*</span></label>
-                    <input type="text" name="from_path" class="form-control" placeholder="e.g. /old-portfolio or /work" required>
-                    <p class="sb-field__hint">Incoming request path to intercept.</p>
+                    <label class="sb-field__label"><?= e(__('studio_redirects_source', 'Source Path')) ?> <span class="field-required">*</span></label>
+                    <input type="text" name="from_path" class="form-control" placeholder="<?= e(__('studio_redirects_source_placeholder', 'e.g. /old-portfolio or /work')) ?>" required>
+                    <p class="sb-field__hint"><?= e(__('studio_redirects_source_hint', 'Incoming request path to intercept.')) ?></p>
                 </div>
                 <div class="sb-field">
-                    <label class="sb-field__label">Target Destination <span style="color: #ef4444;">*</span></label>
-                    <input type="text" name="to_path" class="form-control" placeholder="e.g. /portfolio or https://..." required>
-                    <p class="sb-field__hint">New destination URL or relative path.</p>
+                    <label class="sb-field__label"><?= e(__('studio_redirects_target', 'Target Destination')) ?> <span class="field-required">*</span></label>
+                    <input type="text" name="to_path" class="form-control" placeholder="<?= e(__('studio_redirects_target_placeholder', 'e.g. /portfolio or https://...')) ?>" required>
+                    <p class="sb-field__hint"><?= e(__('studio_redirects_target_hint', 'New destination URL or relative path.')) ?></p>
                 </div>
                 <div class="sb-field">
-                    <label class="sb-field__label">HTTP Status Code</label>
+                    <label class="sb-field__label"><?= e(__('studio_redirects_status', 'HTTP Status Code')) ?></label>
                     <select name="status_code" class="form-control" style="background: #ffffff;">
-                        <option value="301">301 Moved Permanently (SEO Standard)</option>
-                        <option value="302">302 Found / Temporary (Shortlinks)</option>
+                        <option value="301"><?= e(__('studio_redirects_301', '301 Moved Permanently (SEO Standard)')) ?></option>
+                        <option value="302"><?= e(__('studio_redirects_302', '302 Found / Temporary (Shortlinks)')) ?></option>
                     </select>
                 </div>
             </div>
             <div class="sb-field">
-                <label class="sb-field__label">Notes</label>
-                <input type="text" name="notes" class="form-control" placeholder="Reason for redirect or migration note...">
+                <label class="sb-field__label"><?= e(__('studio_redirects_notes', 'Notes')) ?></label>
+                <input type="text" name="notes" class="form-control" placeholder="<?= e(__('studio_redirects_notes_placeholder', 'Reason for redirect or migration note...')) ?>">
             </div>
             <div class="sb-card-actions">
-                <button type="button" class="btn btn-outline" onclick="document.getElementById('sb-redirect-drawer').style.display='none'">Cancel</button>
-                <button type="submit" class="btn btn-primary"><?= sb_svg('check', 14) ?> Save Rule</button>
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('sb-redirect-drawer').style.display='none'"><?= e(__('cancel', 'Cancel')) ?></button>
+                <button type="submit" class="btn btn-primary"><?= sb_svg('check', 14) ?> <?= e(__('studio_redirects_save', 'Save Rule')) ?></button>
             </div>
         </form>
     </div>
@@ -169,12 +164,12 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <!-- Redirect rules (shared Kohevo expandable data rows) -->
     <?php if (empty($redirects)): ?>
         <div class="card" style="padding: 36px; text-align: center; color: var(--sb-muted); margin-bottom: 32px;">
-            No redirect rules configured. Click "Add Redirect Rule" to map legacy URLs or vanity paths.
+            <?= e(__('studio_redirects_empty', 'No redirect rules configured. Click "Add Redirect Rule" to map legacy URLs or vanity paths.')) ?>
         </div>
     <?php else: ?>
         <div class="data-list is-columnar" data-single-open style="margin-bottom: 32px;">
             <?php
-            slate_data_list_head(['main' => 'Source URL', 'value' => 'Target', 'badge' => 'Type']);
+            slate_data_list_head(['main' => __('studio_redirects_col_source', 'Source URL'), 'value' => __('studio_redirects_col_target', 'Target'), 'badge' => __('studio_page_type', 'Type')]);
             foreach ($redirects as $rule) {
                 $rId = (string) ($rule['id'] ?? '');
                 $from = (string) ($rule['from'] ?? '');
@@ -185,11 +180,11 @@ require SLATE_ROOT . '/admin/partials/header.php';
 
                 $actions = '';
                 if ($canEdit) {
-                    $actions = '<form method="POST" action="' . e(plugin_url('studio-builder', 'admin/redirects.php')) . '" onsubmit="return confirm(\'Remove redirect rule for ' . e($from) . '?\');" style="margin: 0; display: inline;">'
+                    $actions = '<form method="POST" action="' . e(plugin_url('studio-builder', 'admin/redirects.php')) . '" onsubmit="return window.confirm(this.getAttribute(\'data-confirm\'));" data-confirm="' . e(sprintf(__('studio_redirects_delete_confirm', 'Remove redirect rule for %s?'), $from)) . '" style="margin: 0; display: inline;">'
                         . csrf_field()
                         . '<input type="hidden" name="_action" value="delete_redirect">'
                         . '<input type="hidden" name="rule_id" value="' . e($rId) . '">'
-                        . '<button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444;" title="Delete rule">' . sb_svg('trash', 12) . ' Delete</button>'
+                        . '<button type="submit" class="btn btn-sm btn-danger" title="' . e(__('studio_redirects_delete_title', 'Delete rule')) . '">' . sb_svg('trash', 12) . ' ' . e(__('delete', 'Delete')) . '</button>'
                         . '</form>';
                 }
 
@@ -201,9 +196,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     'value'        => $to,
                     'badge'        => [(string) $code, $code === 301 ? 'active' : 'info'],
                     'detail'       => [
-                        'to'      => ['label' => 'Target Destination', 'html' => '<code>' . e($to) . '</code>'],
-                        'notes'   => ['label' => 'Notes', 'value' => $notes !== '' ? $notes : '—', 'muted' => $notes === ''],
-                        'created' => ['label' => 'Created', 'value' => $createdAt !== '' ? date('M j, Y', strtotime($createdAt)) : '—'],
+                        'to'      => ['label' => __('studio_redirects_target', 'Target Destination'), 'html' => '<code>' . e($to) . '</code>'],
+                        'notes'   => ['label' => __('studio_redirects_notes', 'Notes'), 'value' => $notes !== '' ? $notes : '—', 'muted' => $notes === ''],
+                        'created' => ['label' => __('studio_redirects_created', 'Created'), 'value' => $createdAt !== '' ? date('M j, Y', strtotime($createdAt)) : '—'],
                     ],
                     'actions'      => $actions,
                 ]);

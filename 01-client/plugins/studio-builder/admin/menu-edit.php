@@ -81,13 +81,10 @@ try {
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
-<div class="sb-admin-wrapper">
-    <?php sb_render_admin_nav('menus'); ?>
+<div class="sb-admin">
     <?php sb_render_crumbs([[__('studio_menus', 'Menus'), 'menus.php'], [$menu !== null ? $menu['name'] : __('studio_menu_edit', 'Edit'), null]]); ?>
 
-    <?php if ($flash): ?>
-        <div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div>
-    <?php endif; ?>
+    <?php sb_render_flash($flash); ?>
 
     <?php if ($menu === null): ?>
         <div class="alert alert-error" role="status"><?= e(__('studio_menu_not_found', 'This menu does not exist, or has been deleted.')) ?></div>

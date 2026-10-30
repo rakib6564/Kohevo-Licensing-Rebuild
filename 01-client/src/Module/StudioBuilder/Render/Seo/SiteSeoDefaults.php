@@ -8,7 +8,9 @@
  *  - description    used only when the page has no SEO description
  *  - share image    a media id or an absolute https URL, used only when the page has no share image
  *  - robots         can only make a page stricter: a site set to `noindex` keeps every page out of search
- *  - verification   Google and Bing site-verification codes, as meta tags on public pages
+ *
+ * Search-engine verification codes are not here: `StudioCodePolicy` prints them, from the one setting both this screen
+ * and Code & tracking save to (the old `studio_seo_google_verify` / `studio_seo_bing_verify` values still count there).
  *
  * Every value is re-checked here, so a bad setting gives no default rather than broken markup.
  */
@@ -23,6 +25,7 @@ use Slate\Module\StudioBuilder\Schema\FieldSchema;
 
 final class SiteSeoDefaults
 {
+    /** The shape the old Site & SEO verification settings were saved in (read by `StudioCodePolicy`). */
     public const VERIFICATION_PATTERN = '/^[A-Za-z0-9_\-]{1,100}$/';
 
     private function __construct(
@@ -31,13 +34,11 @@ final class SiteSeoDefaults
         public readonly ?int $ogImageMediaId,
         public readonly string $ogImageUrl,
         public readonly string $robots,
-        /** @var array<string, string> meta name => content */
-        public readonly array $verification,
     ) {}
 
     public static function none(): self
     {
-        return new self('', '', null, '', 'index,follow', []);
+        return new self('', '', null, '', 'index,follow');
     }
 
     /** @param array<string, mixed> $values the `studio_seo_*` settings, keyed without the prefix */
@@ -52,13 +53,6 @@ final class SiteSeoDefaults
         $mediaId = $str('og_media_id', 20);
         $url = $str('og_image_url', 2000);
         $robots = $str('robots', 40);
-        $verification = [];
-        foreach (['google_verify' => 'google-site-verification', 'bing_verify' => 'msvalidate.01'] as $key => $meta) {
-            $code = $str($key, 100);
-            if ($code !== '' && preg_match(self::VERIFICATION_PATTERN, $code) === 1) {
-                $verification[$meta] = $code;
-            }
-        }
 
         return new self(
             $format,
@@ -66,7 +60,6 @@ final class SiteSeoDefaults
             ctype_digit($mediaId) && (int) $mediaId > 0 ? (int) $mediaId : null,
             preg_match('~^https://~i', $url) === 1 && FieldSchema::isSafeUrl($url) ? $url : '',
             in_array($robots, CanonicalDocumentSchema::ALLOWED_ROBOTS_DIRECTIVES, true) ? $robots : 'index,follow',
-            $verification,
         );
     }
 
@@ -75,7 +68,7 @@ final class SiteSeoDefaults
     {
         $values = [];
         try {
-            foreach (['title_format', 'description', 'og_media_id', 'og_image_url', 'robots', 'google_verify', 'bing_verify'] as $key) {
+            foreach (['title_format', 'description', 'og_media_id', 'og_image_url', 'robots'] as $key) {
                 $values[$key] = Database::setting('studio_seo_' . $key, $tenantId);
             }
         } catch (\Throwable) {
@@ -110,7 +103,6 @@ final class SiteSeoDefaults
             'og_image_url'      => $this->ogImageUrl,
             'robots'            => $this->robots,
             'title_format'      => $this->titleFormat,
-            'verification'      => $this->verification,
         ];
     }
 }

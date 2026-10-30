@@ -168,13 +168,10 @@ $typeLabels = ['page' => __('studio_type_page', 'Standard Page'), 'landing' => _
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
-<div class="sb-admin-wrapper">
-    <?php sb_render_admin_nav($itemType !== null ? 'type-' . $itemTypeKey : 'pages'); ?>
+<div class="sb-admin">
     <?php sb_render_crumbs([[$listName, $listHref], [$page !== null ? (string) $page['title'] : __('studio_page_settings', 'Settings'), null]]); ?>
 
-    <?php if ($flash): ?>
-        <div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div>
-    <?php endif; ?>
+    <?php sb_render_flash($flash); ?>
 
     <?php if ($loadError !== null): ?>
         <div class="alert alert-error" role="status"><?= e($loadError) ?></div>
@@ -208,7 +205,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
         <div class="card-header"><div><h2><?= e(__('studio_page_settings', 'Settings')) ?></h2></div></div>
         <div class="sb-form-grid">
             <div class="sb-field">
-                <label class="sb-field__label" for="sb-title"><?= e(__('title', 'Title')) ?> <span class="field-required" style="color:#ef4444;">*</span></label>
+                <label class="sb-field__label" for="sb-title"><?= e(__('title', 'Title')) ?> <span class="field-required">*</span></label>
                 <input type="text" id="sb-title" name="title" required maxlength="255" value="<?= e((string) $page['title']) ?>"<?= $canEdit ? '' : ' disabled' ?>>
             </div>
             <div class="sb-field">

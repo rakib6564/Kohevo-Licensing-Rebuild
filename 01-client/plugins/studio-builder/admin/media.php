@@ -23,7 +23,7 @@ if (class_exists('Media')) {
 }
 
 $pageTitle = __('studio_media', 'Media & Assets');
-$currentNav = 'studio-media';
+$currentNav = 'media'; // the platform Media Library holds the same files; Studio has no Media entry of its own
 
 $flash = null;
 
@@ -140,14 +140,16 @@ try {
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
-<div class="content-wrapper">
-    <?php sb_render_admin_nav('media'); ?>
+<div class="sb-admin">
 
-    <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>" >
-            <?= e($flash['msg']) ?>
+    <div class="sb-screen-head">
+        <div>
+            <h2><?= e(__('studio_media', 'Media')) ?></h2>
+            <p><?= e(__('studio_media_intro', 'Files your Studio pages can use. The same files are in the Media Library.')) ?></p>
         </div>
-    <?php endif; ?>
+    </div>
+
+    <?php sb_render_flash($flash); ?>
 
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
         <div class="sb-pill-filter" style="margin-bottom: 0;">
@@ -280,7 +282,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="_action" value="delete">
                                     <input type="hidden" name="media_id" value="<?= $id ?>">
-                                    <button type="submit" class="btn btn-sm btn-outline" style="color: #ef4444; padding: 4px 8px;" title="Delete file">
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete file">
                                         <?= sb_svg('trash', 12) ?>
                                     </button>
                                 </form>

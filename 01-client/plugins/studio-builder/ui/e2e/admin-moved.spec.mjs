@@ -13,11 +13,16 @@ for (const file of ['themes.php', 'global-settings.php']) {
   });
 }
 
-test('the Studio menus no longer list Themes or Global settings', async ({ page }) => {
+test('the sidebar lists the Studio screens once, grouped, with Design opening the builder', async ({ page }) => {
   await page.goto('/plugins/studio-builder/admin/pages.php');
-  const bar = page.getByRole('navigation', { name: 'Studio Navigation' });
-  await expect(bar.getByRole('link', { name: 'Pages' })).toBeVisible();
-  await expect(bar.getByRole('link', { name: 'Themes' })).toHaveCount(0);
-  await expect(bar.getByRole('link', { name: 'Global settings' })).toHaveCount(0);
-  await expect(page.locator('aside, nav').getByRole('link', { name: 'Themes', exact: true })).toHaveCount(0);
+  const sidebar = page.locator('aside');
+  await expect(sidebar.locator('.sidebar-subsection')).toHaveText(['Content', 'Site', 'Search', 'Advanced']);
+  for (const name of ['Home', 'Pages', 'Templates', 'Menus', 'Design', 'SEO', 'Redirects', 'Tracking & code', 'Content types', 'History', 'AI & MCP']) {
+    await expect(sidebar.getByRole('link', { name, exact: true })).toHaveCount(1);
+  }
+  await expect(sidebar.getByRole('link', { name: 'Themes', exact: true })).toHaveCount(0);
+  await expect(sidebar.getByRole('link', { name: 'Global settings', exact: true })).toHaveCount(0);
+  await expect(page.locator('.sb-admin-nav-bar, .sb-admin-header')).toHaveCount(0);
+  await sidebar.getByRole('link', { name: 'Design', exact: true }).click();
+  await expect(page).toHaveURL(/builder\.php\?page=\d+/);
 });

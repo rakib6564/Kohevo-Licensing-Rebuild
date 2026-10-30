@@ -33,7 +33,8 @@ unit('code & tracking: a non-administrator gets a 403 before the screen reads a 
 });
 
 unit('code & tracking: the admin navigation hides the screen from non-administrators', function (): void {
-    $src = (string) file_get_contents(__DIR__ . '/../../plugins/studio-builder/admin/_nav.php');
-    assert_true(str_contains($src, "\$item['id'] !== 'code-tracking'"), 'the code-tracking item is filtered out');
-    assert_true(str_contains($src, "Auth::can('studio-builder.admin') || Auth::isSuperAdmin()"), 'the filter keys on the administrator permission');
+    // The Studio screens are listed once, in the platform sidebar, which drops an item whose 'perm' the user lacks.
+    $src = (string) file_get_contents(__DIR__ . '/../../plugins/studio-builder/StudioBuilder.php');
+    assert_true(str_contains($src, "'file' => 'admin/code-tracking.php', 'icon' => 'edit-3', 'section' => \$search, 'perm' => 'studio-builder.admin']"), 'the sidebar item needs the administrator permission');
+    assert_true(str_contains($src, "'perm'    => \$nav['perm'] ?? 'studio-builder.view',"), 'and the sidebar receives it');
 });
