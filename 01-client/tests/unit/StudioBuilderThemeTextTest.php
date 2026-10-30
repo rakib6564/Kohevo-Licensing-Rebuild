@@ -90,7 +90,7 @@ unit('text settings: the base stylesheet reads them, with today\'s values as fal
 });
 
 unit('parts: "all but the first" draws a line between items, never before the first, and comes before hover', function (): void {
-    assert_eq(['not_first' => ':not(:first-child)', 'hover' => ':hover'], BlockParts::STATES);
+    assert_eq(['not_first' => ':not(:first-child)', 'hover' => ':hover', 'focus' => ':focus-visible'], BlockParts::STATES);
     $meta = sbdc_block('theme.post_meta', []);
     $parts = [
         'item'           => ['color' => '#999999'],

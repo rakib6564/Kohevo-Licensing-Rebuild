@@ -174,6 +174,10 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         'v2-give__free'  => ['s' => S(mar(18, null, 0, null), pad(20, 0, 0, 0), ['border' => ['top' => ['width' => '1px', 'style' => 'solid', 'color' => '#f1e3ea']]]), 'center' => true],
         'v2-pay--free'   => ['parts' => ['form' => lay(['justify' => 'center'])]],
         'v2-give__note'  => ['s' => S(col(BODY), ty('14px', null, '1.6'), mar(22, null, 0, null)), 'center' => true],
+        // The set amounts: an outline at rest, the brand fill on hover and keyboard focus. 19px bold is large text, which #e9008a passes on white both ways round.
+        'v2-amount'      => ['parts' => ['button' => S($base, sz(['height' => 58, 'min_width' => 150]), brd(PINK, '2px', '999px'), bg('transparent'), col(PINK), ty('19px'), fx(['cursor' => 'pointer'])),
+                'button:hover' => S(bg(PINK), col('#ffffff'), fx(['transform' => ['translate_y' => '-3px']]), shadow(0, 18, 34, 'rgba(233,0,138,.34)', -6)),
+                'button:focus' => S(bg(PINK), col('#ffffff'))]],
         'v2-pay'         => ['parts' => ['button' => S($pill, sz(['height' => 58, 'min_width' => 150]), fx(['cursor' => 'pointer'])), 'button:hover' => $pillHover,
                 'amount' => S(sz(['width' => '180px', 'height' => 58]), pad(0, 18), brd('#ead9e2', '1.5px', '999px'), bg('#fffafd'), col(INK), fam('body', '17px', 'bold'))]],
         'v2-form'        => ['props' => ['labels' => 'visible'], 'parts' => [
@@ -368,9 +372,9 @@ function v2_module(array $notes, array $sec, array $pg): ?array
     if (str_contains($all, 'Donation module')) {
         // One-off and monthly, each with set amounts and a free amount (from 5 € up to 5 000 €); Stripe confirms the payment,
         // then the donor lands on the thank-you page (V2_THANKS).
-        $pay = static fn(string $label, int $amount, string $frequency, array $extra = []): array => B('payment.button', array_replace([
+        $pay = static fn(string $label, int $amount, string $frequency, array $extra = [], string $cls = 'v2-pay'): array => B('payment.button', array_replace([
             'label' => $label, 'amount' => $amount, 'currency' => 'EUR', 'frequency' => $frequency, 'success_path' => trim(V2URL(V2_THANKS), '/'),
-            'description' => $frequency === 'month' ? 'Don mensuel à FightxLife ASBL' : 'Don à FightxLife ASBL'], $extra), [], 'v2-pay');
+            'description' => $frequency === 'month' ? 'Don mensuel à FightxLife ASBL' : 'Don à FightxLife ASBL'], $extra), [], $cls);
         $free = static function (string $frequency, string $label) use ($pay): array {
             $b = $pay('Je soutiens FightxLife', 5, $frequency, ['amount_choice' => 'visitor', 'max_amount' => 5000, 'amount_label' => $label]);
             $b['classNames'][] = 'v2-pay--free';
@@ -379,7 +383,7 @@ function v2_module(array $notes, array $sec, array $pg): ?array
         $panel = static fn(string $kicker, string $title, string $text, array $amounts, string $frequency, string $suffix, string $freeLabel): array => BOX([
             KICK($kicker), H($title, 'h3', 'v2-give__title'), T($text, 'v2-give__text'),
             B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'justify' => 'center', 'wrap' => 'wrap'],
-                array_map(static fn(int $a): array => $pay("{$a} €{$suffix}", $a, $frequency), $amounts), 'v2-give'),
+                array_map(static fn(int $a): array => $pay("{$a} €{$suffix}", $a, $frequency, [], 'v2-amount'), $amounts), 'v2-give'),
             BOX([$free($frequency, $freeLabel)], 'v2-give__free'),
         ], 'v2-panel v2-narrow--center');
         return BOX([
