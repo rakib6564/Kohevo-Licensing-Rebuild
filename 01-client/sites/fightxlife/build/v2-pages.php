@@ -200,7 +200,8 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         'v2-band v2-actions' => ['s' => lay(['justify' => 'center'])],
         'v2-band v2-links' => ['s' => lay(['justify' => 'center'])],
         'v2-band v2-more' => ['s' => col('#ffffff')],
-        'v2-band v2-btn' => ['parts' => ['button' => S(['background' => ['gradient' => 'linear-gradient(140deg,#ffffff 0%,#ffffff 100%)']], col(PINK), shadow(0, 14, 30, 'rgba(60,0,35,.25)', -6))]],
+        'v2-band v2-btn' => ['parts' => ['button' => S(['background' => ['gradient' => 'linear-gradient(140deg,#ffffff 0%,#ffffff 100%)']], col(PINK), shadow(0, 14, 30, 'rgba(60,0,35,.25)', -6)),
+                'button:hover' => S(['background' => ['gradient' => 'linear-gradient(140deg,#fff0f7 0%,#ffe0f0 100%)']], col(PINK_DEEP), shadow(0, 18, 34, 'rgba(60,0,35,.3)', -6))]],
         'v2-band v2-ghost' => ['parts' => ['button' => S(bg('transparent'), col('#ffffff'), brd('rgba(255,255,255,.65)', '1.5px', '999px'), shadow(0, 0, 0, 'transparent')),
                 'button:hover' => S(col('#ffffff'), bg('rgba(255,255,255,.14)'), ['border' => ['color' => '#ffffff']])]],
 

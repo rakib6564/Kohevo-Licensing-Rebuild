@@ -214,21 +214,21 @@ function native_v2(): array
         'v2-cart'        => ['s' => S(col('#ffffff'), ty('12.5px', 'bold'), mar(null, null, null, 12))],
         'v2-social'      => ['s' => S(tile(30, '50%', 'transparent', null), col('rgba(255,255,255,.8)'), fx(TRANS)), 'h' => S(bg(PINK), col('#ffffff'))],
         'v2-head-sec'    => ['s' => S(bg('#ffffff'), $V(0, 0))],
-        'v2-header'      => ['s' => S(lay(['tracks' => 'auto 1fr auto', 'align' => 'center', 'gap' => '20px']), dim(['height' => '92px'])), 't' => lay(['tracks' => '1fr auto']), 'm' => dim(['height' => '74px'])],
+        'v2-header'      => ['s' => S(lay(['tracks' => 'auto 1fr auto', 'align' => 'center', 'gap' => '20px']), dim(['height' => '92px'])), 't' => lay(['tracks' => '1fr auto auto', 'gap' => '12px']), 'm' => dim(['height' => '74px'])],
         'v2-brand'       => ['s' => dim(['width' => '140px']), 'm' => dim(['width' => '112px'])],
-        'v2-nav'         => ['props' => ['align' => 'center'], 'thide' => true, 'parts' => [
-                'list' => lay(['display' => 'flex', 'gap' => '4px', 'justify' => 'center']),
-                'link' => S(lay(['display' => 'flex', 'align' => 'center']), pad(10, 12), radius('999px'), col(INK), fam('body', '15px', 'bold'), fx(TRANS)),
-                'link:hover' => S(col(PINK), bg('#fff0f7')), 'current' => col(PINK)]],
+        // One menu at every width: a row with underlined links, then a side panel behind its own button; folded, it moves after the donate button.
+        'v2-nav'         => ['t' => lay(['order' => 2]), 'm' => lay(['order' => 2]), 'parts' => [
+                'list' => lay(['gap' => '6px']), // no display here: it would beat the rule that folds the list away
+                'link' => S(lay(['display' => 'flex', 'align' => 'center']), pad(10, 10), col(INK), fam('body', '15px', 'bold'), fx(TRANS)),
+                'link:hover' => col(PINK), 'current' => col(PINK),
+                'submenu' => S(radius('18px'), shadow(0, 22, 50, 'rgba(70,10,48,.16)', -10)), 'sublink' => S(col(INK), ty('14.5px')), 'sublink:hover' => S(col(PINK), bg('#fff0f7')),
+                'burger' => S(sz(['width' => 44, 'height' => 44]), radius('12px'), bg('#fff0f7'), col(PINK)),
+                'panel' => S(pad(128, 28, 32, 28), // clears the close button, which stays where the header puts it (at most 114px down)
+                     shadow(-10, 0, 35, 'rgba(20,10,35,.14)'))]],
         'v2-head__end'   => ['s' => lay(['gap' => '12px', 'align' => 'center', 'justify' => 'end'])],
         // 19px would run into the menu at 1024px, so the header keeps 14px and takes the deeper pink.
         'v2-donate'      => ['parts' => ['button' => S($outline, brd(PINK_DEEP, '2px', '999px'), col(PINK_DEEP), sz(['height' => 46]), pad(0, 22), ty('14px')),
-                'button:hover' => S($outlineHover, bg(PINK_DEEP)), 'button:focus' => S($outlineFocus, bg(PINK_DEEP))], 'mhide' => true],
-        'v2-drawer'      => ['parts' => ['trigger' => S(sz(['width' => 40, 'height' => 40]), lay(['justify' => 'center']), radius('12px'), bg('#fff0f7'), col(PINK)), 'backdrop' => bg('rgba(15,8,23,.45)'),
-                'panel' => S(sz(['width' => 'min(390px,88vw)', 'max_width' => 'none']), pad(0), shadow(-10, 0, 35, 'rgba(20,10,35,.14)')),
-                'close' => S(sz(['width' => 38, 'height' => 38]), radius('50%'), bg('#fdeaf4'), col(PINK), ty('25px', null, '38px'), lay(['display' => 'flex', 'justify' => 'center', 'align' => 'center']), ['typography' => ['decoration' => 'none']]),
-                'header' => S(['position' => ['mode' => 'absolute', 'top' => '18px', 'right' => '22px']], pad(0)), 'body' => pad(42, 32)]],
-        'v2-drawer__nav' => ['parts' => ['list' => S(lay(['display' => 'grid']), mar(24, 0, 24, 0)), 'link' => S(lay(['display' => 'block']), pad(11, 0), side('bottom', '#f1e8ec'), col(INK), fam('heading', '15.5px', 'bold', '20px')), 'link:hover' => col(PINK)]],
+                'button:hover' => S($outlineHover, bg(PINK_DEEP)), 'button:focus' => S($outlineFocus, bg(PINK_DEEP))], 'mparts' => ['button' => S(sz(['height' => 42]), pad(0, 16), ty('13.5px'))]],
 
         // ── Newsletter and footer ──
         'v2-news-strip'  => ['s' => $V(64, 120), 'm' => $V(44, 90)],
@@ -362,15 +362,11 @@ $header = [
     ], 'v2-top')], 'v2-top-sec'),
     SEC('Header', [B('layout.grid', ['columns' => 3, 'gap' => 'none', 'align' => 'center'], [
         V2IMG(V2_LOGO, 'FightxLife', 'v2-brand', ['link_to' => 'custom', 'url' => V2_HOME_URL]),
-        B('core.nav_menu', ['menu' => 'v2-header', 'items' => [], 'layout' => 'horizontal', 'align' => 'center', 'aria_label' => 'Navigation principale'], [], 'v2-nav'),
+        B('core.nav_menu', ['menu' => 'v2-header', 'items' => [], 'layout' => 'horizontal', 'align' => 'center', 'aria_label' => 'Navigation principale', 'pointer' => 'underline', 'pointer_animation' => 'grow',
+            'toggle_breakpoint' => 'tablet', 'toggle_mode' => 'offcanvas', 'toggle_label' => 'Ouvrir le menu'], [], 'v2-nav'),
         B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center', 'justify' => 'end'], [
-            V2BTN('Soutenir FightxLife', '/nous-soutenir/', 'v2-donate'),
-            B('layout.offcanvas', ['drawer_id' => 'v2-drawer', 'title' => '', 'position' => 'right', 'trigger_text' => 'Ouvrir le menu', 'trigger_icon' => 'menu-short',
-                'trigger_icon_size' => 24, 'trigger_show_text' => false, 'trigger_variant' => 'plain'], [
-                V2IMG(V2_LOGO, 'FightxLife', 'v2-brand', ['link_to' => 'custom', 'url' => V2_HOME_URL]),
-                B('core.nav_menu', ['menu' => 'v2-header', 'items' => [], 'layout' => 'vertical', 'aria_label' => 'Pages'], [], 'v2-drawer__nav'),
-                V2BTN('Soutenir FightxLife', '/nous-soutenir/', 'v2-btn'),
-            ], 'v2-drawer', ['visibility' => ['auth_state' => 'any', 'devices' => ['base', 'sm', 'md']]]),
+            B('core.button', ['link' => L('Soutenir FightxLife', '/nous-soutenir/'), 'variant' => 'primary'], [], 'v2-donate', ['visibility' => ['auth_state' => 'any', 'devices' => ['md', 'lg']]]),
+            B('core.button', ['link' => L('Soutenir', '/nous-soutenir/'), 'variant' => 'primary'], [], 'v2-donate', ['visibility' => ['auth_state' => 'any', 'devices' => ['base', 'sm']]]),
         ], 'v2-head__end'),
     ], 'v2-header')], 'v2-head-sec'),
 ];
