@@ -80,6 +80,7 @@ final class BlockRendererRegistry
         $registry->register(new CoreRenderers\FormFieldRenderer());
         $registry->register(new CoreRenderers\GalleryRenderer());
         $registry->register(new CoreRenderers\VideoRenderer());
+        $registry->register(new CoreRenderers\AudioRenderer());
         // Phase 6 — interactive blocks. Each one emits markup the Phase 2
         // runtime already knows how to drive; none of them require a new
         // runtime feature to be useful with JavaScript switched off.
