@@ -7,7 +7,7 @@
  * H1, intro, then the H2 sections with their H3 blocks, paragraphs, lists and labelled calls to action. The documents'
  * English implementation notes are not shown; the few that ask for a module (contact form, donations, news, events,
  * team) choose how their section is built. One engine lays every page out:
- *   - a hero: the menu section as a badge, the H1, the intro and its buttons, with the page's photo when it has one;
+ *   - a hero: the menu section as a badge, the H1, the intro and its buttons at 70%, the page's photo at 30%;
  *   - each H2 section on a white or soft-pink band: kicker, title, text, then its H3 blocks as cards;
  *   - "Label : value" lines (durée, horaires, tarifs…) as fact cards, figures as stat cards, quotes as quote cards;
  *   - the last section, when it is a call to action, as a pink band.
@@ -35,7 +35,13 @@ const V2_PAGE_IMAGES = [
         'cards' => ['Benkick, une peluche pédagogique et émotionnelle' => '2023-01-ny-20220827-smile-box-5273.jpg', 'Un t-shirt et une casquette FightxLife' => '2022-05-fightxlife-merch-scaled.jpg']],
     '/benkick-mascotte/' => ['hero' => '2023-01-ny-20220827-smile-box-5273.jpg', 'sec' => ['peluche' => '2022-05-fightxlife-merch-30.jpg']],
     '/qui-sommes-nous/' => ['hero' => 'sara-ponpqw0gqz9udxela26ghmgghhjey2rgcpahom9pdk.jpg', 'sec' => ['histoire' => '2022-05-gala-sara-scaled.jpg']],
-    '/partenaires-soutiens/' => ['logos' => ['La Roche-Posay : des soins pour la SmileBox' => '2022-05-nos_sponsors_7-removebg-preview.png', 'Cera : un soutien à la création de Benkick' => '2025-02-logo_cera_baseline_fr.png']],
+    '/cours-de-natation/' => ['hero' => '2025-05-design-sans-titre-5.jpg'],
+    '/a-propos/' => ['hero' => '2023-01-dw7a7907.jpg'],
+    '/actualites/' => ['hero' => '2025-01-f981f540-e91a-4938-ae51-19f73712c56b.jpg'],
+    '/agenda/' => ['hero' => '2022-06-calendar-appointment-scheduler-with-pin-pink-background-scaled.jpg'],
+    '/presse/' => ['hero' => '2022-06-4k-high-definition-video-camera-monitor-tripod-crane-studio-softbox-paper-scaled.jpg'],
+    '/contact/' => ['hero' => '2022-07-pink-notebook-pens-pink-background-scaled.jpg'],
+    '/partenaires-soutiens/' => ['hero' => '2022-06-smiling-women-organising-event-breast-cancer-awareness-1-scaled.jpg', 'logos' => ['La Roche-Posay : des soins pour la SmileBox' => '2022-05-nos_sponsors_7-removebg-preview.png', 'Cera : un soutien à la création de Benkick' => '2025-02-logo_cera_baseline_fr.png']],
 ];
 /** The five activities: their photo on the activity cards. */
 const V2_ACTIVITY_IMAGES = [
@@ -43,6 +49,22 @@ const V2_ACTIVITY_IMAGES = [
     'Boxe 100 % féminin' => '2022-05-femininn.jpg', 'Nage libre' => '2022-06-man-hit-water-punch-concept-power-assertiveness.jpg',
     'Cours de natation' => '2022-05-waterfight-piscine.jpg',
 ];
+/** The hero photo of a page with none of its own. */
+const V2_HERO_FALLBACK = '2022-06-smiling-women-organising-event-breast-cancer-awareness-1-scaled.jpg';
+/** Text sections shown beside a photo, image 30% and text 70%: page, then section id. */
+const V2_SIDE_IMAGES = [
+    '/le-sport-comme-outil/' => ['pourquoi-sport' => '2023-03-boxe-adapte-2.jpg'],
+    '/nos-actions/' => ['approche' => '2024-09-img_0498.jpeg'],
+    '/information-prevention/' => ['comprendre' => '2024-01-img_7686.jpeg', 'demarche' => '2024-01-409664485_659793019694783_3153137091451259587_n.jpg'],
+    '/cours/' => ['approche' => '2023-03-boxe-adapte-4.jpg'],
+    '/boxe-adaptee/' => ['seance' => '2022-07-senior-woman-with-trainer-boxing-sparring.jpg'],
+    '/waterxfight/' => ['pratique' => '2025-05-design-sans-titre-5.jpg'],
+    '/100-feminin/' => ['pratique' => '2022-06-6c763bee83dde6f11bd493853c2c86cb-1582207165.jpg'],
+    '/nage-libre-femmes/' => ['cadre' => '2025-05-design-sans-titre-5.jpg', 'choisir' => '2022-05-waterfight-piscine.jpg'],
+    '/smile-box/' => ['recevoir-smilebox' => '2023-01-img_5082-scaled.jpeg'],
+    '/presse/' => ['association' => '2023-01-0i0a1332-scaled.jpg'],
+];
+
 /** The menu section a page belongs to (the document number's first digit), shown as the hero badge. */
 const V2_SECTION_OF = ['2' => 'Nos actions', '3' => 'Nos cours', '4' => 'Projets & impact', '5' => 'À propos', '6' => 'Contact'];
 /** CTA kinds: buttons (pink, then outlined) and the lighter text links. Anything else is a text link. */
@@ -76,18 +98,14 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
     return [
         // ── Hero ──
         'v2-phero-sec'   => ['s' => S(grad('linear-gradient(180deg,#fff4fa 0%,#ffffff 100%)'), $V(64, 76), dim(['overflow' => 'hidden'])), 't' => $V(44, 60), 'm' => $V(28, 46)],
-        'v2-phero'       => ['s' => lay(['tracks' => 'minmax(0,1.05fr) minmax(0,.95fr)', 'gap' => '64px', 'align' => 'center']), 't' => lay(['tracks' => '1fr', 'gap' => '40px'])],
-        'v2-phero--text' => ['s' => S(dim(['max_width' => '860px']), mar(null, 'auto', null, 'auto')), 'center' => true],
+        'v2-phero'       => ['s' => lay(['tracks' => 'minmax(0,7fr) minmax(0,3fr)', 'gap' => '80px', 'align' => 'center']), 't' => lay(['tracks' => '1fr', 'gap' => '40px'])],
         'v2-phero__title' => ['s' => S(ty('clamp(36px,4vw,56px)', 'bold', '1.08', '-.035em'), mar(0, null, 20, null)), 'm' => ty('32px'), 'parts' => ['highlight' => col(PINK)],
                               'anim' => ['type' => 'fade_up', 'duration_ms' => 800, 'delay_ms' => 80, 'easing' => EASE]],
         'v2-phero__lead' => ['s' => S(col(INK), ty('18.5px', null, '1.65'), mar(0, null, 14, null)), 'm' => ty('16.5px'), 'anim' => ['type' => 'fade_up', 'duration_ms' => 800, 'delay_ms' => 150, 'easing' => EASE]],
         'v2-phero__text' => ['anim' => ['type' => 'fade_up', 'duration_ms' => 800, 'delay_ms' => 220, 'easing' => EASE], 'parts' => $rich + ['paragraph' => S(col(BODY), ty('16px', null, '28px'), mar(14, 0, 0, 0))]],
-        'v2-phero__photo' => ['s' => S(dim(['height' => '470px', 'object_fit' => 'cover', 'overflow' => 'hidden']), radius('30px'), shadow(...LIFT)), 't' => dim(['height' => '400px']), 'm' => dim(['height' => '280px']),
+        'v2-phero__photo' => ['s' => S(dim(['aspect_ratio' => '16/15', 'object_fit' => 'cover', 'overflow' => 'hidden']), radius('30px'), shadow(...LIFT)), 't' => dim(['width' => '100%', 'height' => '400px']), 'm' => dim(['width' => '100%', 'height' => '280px']),
                               'anim' => ['type' => 'scale_up', 'duration_ms' => 1000, 'delay_ms' => 120, 'easing' => EASE]],
         'v2-phero__links' => ['s' => S(lay(['gap' => '20px']), mar(18, null, 0, null))],
-        'v2-phero--text v2-badge' => ['s' => mar(null, 'auto', null, 'auto')],
-        'v2-phero--text v2-actions' => ['s' => lay(['justify' => 'center'])],
-        'v2-phero--text v2-phero__links' => ['s' => lay(['justify' => 'center'])],
 
         // ── Sections ──
         'v2-sec'         => ['s' => S(bg('#ffffff'), $V(84, 84)), 'm' => $V(54, 54)],
@@ -100,7 +118,9 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         'v2-center v2-links' => ['s' => lay(['justify' => 'center'])],
         'v2-text'        => ['parts' => $rich],
         'v2-split2'      => ['s' => lay(['tracks' => 'minmax(0,1fr) minmax(0,.9fr)', 'gap' => '64px', 'align' => 'center']), 't' => lay(['tracks' => '1fr', 'gap' => '36px'])],
-        'v2-split2__photo' => ['s' => S(dim(['height' => '440px', 'object_fit' => 'cover', 'overflow' => 'hidden']), radius('26px'), shadow(...LIFT)), 'm' => dim(['height' => '280px']),
+        'v2-split2--bal' => ['s' => lay(['tracks' => 'minmax(0,3fr) minmax(0,7fr)', 'gap' => '80px', 'align' => 'center'])],
+        'v2-split2__photo' => ['s' => S(dim(['height' => '440px', 'object_fit' => 'cover', 'overflow' => 'hidden']), radius('26px'), shadow(...LIFT)), 't' => lay(['order' => 2]), 'm' => S(dim(['height' => '280px']), lay(['order' => 2])), // stacked, the text comes first
+           
                               'reveal' => ['type' => 'scale_up', 'duration_ms' => 900, 'easing' => EASE]],
         'v2-split2__copy' => ['reveal' => $up(0)],
         'v2-split2--top' => ['s' => lay(['tracks' => 'minmax(0,1.25fr) minmax(0,.75fr)', 'align' => 'start', 'gap' => '40px'])],
@@ -385,11 +405,9 @@ function v2_hero(array $pg): array
         $b['classNames'] = array_map(static fn(string $c): string => $c === 'v2-links' ? 'v2-phero__links' : $c, $b['classNames'] ?? []);
         return $b;
     }, v2_ctas($ctas)));
-    $photo = V2_PAGE_IMAGES[$pg['url']]['hero'] ?? null;
-    if ($photo) {
-        return SEC('Hero', [B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [BOX($copy), V2IMG($photo, $pg['h1'], 'v2-phero__photo')], 'v2-phero')], 'v2-phero-sec');
-    }
-    return SEC('Hero', [BOX($copy, 'v2-phero--text')], 'v2-phero-sec');
+    $photo = V2_PAGE_IMAGES[$pg['url']]['hero'] ?? V2_HERO_FALLBACK;
+    v2_press_media($photo);
+    return SEC('Hero', [B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [BOX($copy), V2IMG($photo, $pg['h1'], 'v2-phero__photo')], 'v2-phero')], 'v2-phero-sec');
 }
 
 /** The section's module, when a document note asks for one. */
@@ -496,7 +514,8 @@ function v2_section(array $sec, array $pg, int $i, bool $last): ?array
     $soft = $i % 2 === 1;
     $head = [KICK(), H($sec['h2'], 'h2', 'v2-h2')];
     $module = v2_module($notes, $sec, $pg);
-    $photo = V2_PAGE_IMAGES[$pg['url']]['sec'][$sec['id']] ?? null;
+    $side = V2_SIDE_IMAGES[$pg['url']][$sec['id']] ?? null;
+    $photo = $side ?? V2_PAGE_IMAGES[$pg['url']]['sec'][$sec['id']] ?? null;
 
     // The contact form keeps its own text beside the form.
     if ($module && str_contains($all, 'Contact form module')) {
@@ -540,7 +559,10 @@ function v2_section(array $sec, array $pg, int $i, bool $last): ?array
     $blocks = [];
     if ($photo && !$h3s) {
         $copy = array_merge($head, array_filter([v2_rich($intro)]), v2_ctas($ctas));
-        $blocks[] = B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], $i % 2 === 0
+        v2_press_media($photo);
+        $blocks[] = $side
+            ? B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [V2IMG($photo, $sec['h2'], 'v2-split2__photo'), BOX($copy, 'v2-split2__copy')], 'v2-split2 v2-split2--bal')
+            : B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], $i % 2 === 0
             ? [BOX($copy, 'v2-split2__copy'), V2IMG($photo, $sec['h2'], 'v2-split2__photo')]
             : [V2IMG($photo, $sec['h2'], 'v2-split2__photo'), BOX($copy, 'v2-split2__copy')], 'v2-split2');
     } else {
