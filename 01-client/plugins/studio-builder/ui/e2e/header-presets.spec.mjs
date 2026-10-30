@@ -1,4 +1,4 @@
-// Built-in headers (HeaderPresetCatalog): while a header is open, the library window lists the five designs, and
+// Built-in headers (HeaderPresetCatalog): while a header is open, the library window lists the six designs, and
 // applying one replaces the header's content with that design on the canvas (a header is never stacked inside another).
 import { test, expect } from '@playwright/test';
 import { frameDocument, settled } from './helpers.mjs';

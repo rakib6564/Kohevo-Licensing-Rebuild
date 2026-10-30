@@ -363,7 +363,7 @@ unit('header presets integration: seeded on first use apart from the sections, i
             };
             $resetMemos();
 
-            // 1. Nothing until asked; the first call seeds the five headers, in catalogue order, as system rows.
+            // 1. Nothing until asked; the first call seeds the six headers, in catalogue order, as system rows.
             sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'GET', 'templates'), 'plain library');
             assert_eq(0, $count('header_preset'), 'listing the library does not seed headers');
             $first = sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $viewer, 'GET', 'header_presets'), 'first call (a viewer may read)')['presets'];
