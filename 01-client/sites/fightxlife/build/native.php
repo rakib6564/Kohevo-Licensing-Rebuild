@@ -8,6 +8,7 @@
 declare(strict_types=1);
 
 const PINK = '#e9008a';
+const PINK_DEEP = '#d4007e'; // the brand pink where small text has to reach 4.5:1 against white
 const PINK_SOFT = '#fde4f1';
 const INK = '#0c0905';
 const BODY = '#6b6468';
