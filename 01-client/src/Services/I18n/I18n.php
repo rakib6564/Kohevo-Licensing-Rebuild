@@ -36,6 +36,14 @@ class I18n
 
     private const LOCALE_PATTERN = '/^[a-z]{2}(?:[-_][a-z]{2,4})?$/iD';
 
+    /** Decimal point and thousands separator per language; a language not listed writes numbers the English way. */
+    private const NUMBER_STYLES = [
+        'fr' => [',', "\u{00A0}"], 'ru' => [',', "\u{00A0}"], 'pl' => [',', "\u{00A0}"], 'cs' => [',', "\u{00A0}"],
+        'sv' => [',', "\u{00A0}"], 'nb' => [',', "\u{00A0}"], 'fi' => [',', "\u{00A0}"], 'uk' => [',', "\u{00A0}"],
+        'de' => [',', '.'], 'nl' => [',', '.'], 'es' => [',', '.'], 'it' => [',', '.'],
+        'pt' => [',', '.'], 'da' => [',', '.'], 'tr' => [',', '.'], 'ro' => [',', '.'],
+    ];
+
     /**
      * The tenant's configured site language (`default_language`), normalized
      * exactly as currentLocale() normalizes it, but independent of the
@@ -207,6 +215,22 @@ class I18n
         }
 
         return $lang;
+    }
+
+    /**
+     * A money amount in the current language's number style: "1,234.50" in
+     * English, "1 234,50" in French (a non-breaking space, so a price never
+     * wraps). Display only; never parse the result or send it to a payment API.
+     */
+    public static function amount(int $cents): string
+    {
+        try {
+            $language = substr(strtolower(self::currentLocale()), 0, 2);
+        } catch (\Throwable $e) {
+            $language = 'en';
+        }
+        [$decimal, $thousands] = self::NUMBER_STYLES[$language] ?? ['.', ','];
+        return number_format($cents / 100, 2, $decimal, $thousands);
     }
 
     /**
