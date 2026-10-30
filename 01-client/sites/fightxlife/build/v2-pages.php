@@ -32,9 +32,9 @@ const V2_PAGE_IMAGES = [
     '/nage-libre-femmes/' => ['hero' => '2022-06-man-hit-water-punch-concept-power-assertiveness.jpg'],
     '/notre-impact/' => ['hero' => '2022-05-cowdfunding-2022-2.jpg'],
     '/smile-box/' => ['hero' => '2023-01-ny-20220827-smile-box-5262.jpg', 'sec' => ['lien-ecoles' => '2022-07-7124ea94-e35a-4e0e-99ff-8983ca3b2570.jpeg'],
-        'cards' => ['Benkick, une peluche pédagogique et émotionnelle' => '2023-01-ny-20220827-smile-box-5273.jpg', 'Un t-shirt et une casquette FightxLife' => '2022-05-fightxlife-merch-scaled.jpg']],
+        'cards' => ['Des produits de soin La Roche-Posay' => '2023-01-ny-20220827-smile-box-5262.jpg', 'Benkick, une peluche pédagogique et émotionnelle' => '2023-01-ny-20220827-smile-box-5273.jpg', 'Un t-shirt et une casquette FightxLife' => '2022-05-fightxlife-merch-scaled.jpg']],
     '/benkick-mascotte/' => ['hero' => '2023-01-ny-20220827-smile-box-5273.jpg', 'sec' => ['peluche' => '2022-05-fightxlife-merch-30.jpg']],
-    '/qui-sommes-nous/' => ['hero' => 'sara-ponpqw0gqz9udxela26ghmgghhjey2rgcpahom9pdk.jpg', 'sec' => ['histoire' => '2022-05-gala-sara-scaled.jpg']],
+    '/qui-sommes-nous/' => ['hero' => 'sara-ponpqw0gqz9udxela26ghmgghhjey2rgcpahom9pdk.jpg'],
     '/cours-de-natation/' => ['hero' => '2025-05-design-sans-titre-5.jpg'],
     '/a-propos/' => ['hero' => '2023-01-dw7a7907.jpg'],
     '/actualites/' => ['hero' => '2025-01-f981f540-e91a-4938-ae51-19f73712c56b.jpg'],
@@ -49,6 +49,8 @@ const V2_ACTIVITY_IMAGES = [
     'Boxe 100 % féminin' => '2022-05-femininn.jpg', 'Nage libre' => '2022-06-man-hit-water-punch-concept-power-assertiveness.jpg',
     'Cours de natation' => '2022-05-waterfight-piscine.jpg',
 ];
+/** Sections shown inside another one instead of on their own. */
+const V2_FOLDED = ['coordonnees'];
 /** The hero photo of a page with none of its own. */
 const V2_HERO_FALLBACK = '2022-06-smiling-women-organising-event-breast-cancer-awareness-1-scaled.jpg';
 /** Text sections shown beside a photo, image 30% and text 70%: page, then section id. */
@@ -62,6 +64,7 @@ const V2_SIDE_IMAGES = [
     '/100-feminin/' => ['pratique' => '2022-06-6c763bee83dde6f11bd493853c2c86cb-1582207165.jpg'],
     '/nage-libre-femmes/' => ['cadre' => '2025-05-design-sans-titre-5.jpg', 'choisir' => '2022-05-waterfight-piscine.jpg'],
     '/smile-box/' => ['recevoir-smilebox' => '2023-01-img_5082-scaled.jpeg'],
+    '/qui-sommes-nous/' => ['histoire' => '2022-05-gala-sara-scaled.jpg'],
     '/presse/' => ['association' => '2023-01-0i0a1332-scaled.jpg'],
 ];
 
@@ -123,7 +126,12 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
            
                               'reveal' => ['type' => 'scale_up', 'duration_ms' => 900, 'easing' => EASE]],
         'v2-split2__copy' => ['reveal' => $up(0)],
-        'v2-split2--top' => ['s' => lay(['tracks' => 'minmax(0,1.25fr) minmax(0,.75fr)', 'align' => 'start', 'gap' => '40px'])],
+        'v2-split2--top' => ['s' => lay(['tracks' => 'minmax(0,3fr) minmax(0,7fr)', 'align' => 'start', 'gap' => '40px'])],
+        'v2-contact-side' => ['s' => lay(['gap' => '14px']), 't' => lay(['order' => 2]), 'm' => lay(['order' => 2])], // stacked, the form comes first
+        'v2-ibox'        => ['s' => S(lay(['gap' => '14px']), pad(16, 18), radius('18px'), bg('#ffffff'), brd('#f2e4ec', '1px', '18px'), shadow(0, 12, 30, 'rgba(70,10,48,.06)', -6)), 'reveal' => $up(0)],
+        'v2-ibox__icon'  => ['s' => tile(46, '14px', PINK_SOFT), 'props' => ['size_px' => 21]],
+        'v2-ibox__body'  => ['s' => dim(['min_width' => '0px'])],
+        'v2-ibox__link'  => ['s' => S(col(INK), ty('15.5px', null, '1.55'))],
         'v2-aside'       => ['s' => S(pad(30, 28), radius('22px'), bg('#fbf6f8'), brd('#f2e4ec', '1px', '22px')), 'reveal' => $up(120)],
         'v2-fact--in v2-more' => ['s' => S(mar(8, null, 0, null), ty('13.5px'))],
         'v2-links'       => ['s' => S(lay(['gap' => '22px']), mar(10, null, 0, null))],
@@ -132,12 +140,12 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         'v2-grid'        => ['s' => S(lay(['gap' => '26px', 'align' => 'stretch']), mar(8, null, 0, null)), 'props' => ['columns' => 3], 't' => lay(['gap' => '18px']), 'tp' => ['columns' => 2], 'mp' => ['columns' => 1]],
         'v2-grid--2'     => ['props' => ['columns' => 2]],
         'v2-grid--4'     => ['props' => ['columns' => 4], 'tp' => ['columns' => 2]],
-        'v2-box'         => ['s' => S(place('relative'), radius('22px'), bg('#ffffff'), $lift, fx(['transition' => ['duration_ms' => 350, 'easing' => 'ease']])),
+        'v2-box'         => ['s' => S(lay(['display' => 'flex', 'direction' => 'column']), place('relative'), radius('22px'), bg('#ffffff'), $lift, fx(['transition' => ['duration_ms' => 350, 'easing' => 'ease']])),
                               'h' => S(fx(['transform' => ['translate_y' => '-6px']]), shadow(0, 30, 70, 'rgba(70,10,48,.17)', -8)), 'reveal' => $up(0)],
         'v2-box__photo'  => ['s' => S(dim(['height' => '210px', 'overflow' => 'hidden']), bg('#f4eef1'), top_radius('22px'))],
         'v2-box__img'    => zoom(1.05, 600, dim(['height' => '100%', 'object_fit' => 'cover'])),
         'v2-box__logo'   => ['s' => S(dim(['height' => '120px', 'object_fit' => 'contain']), pad(22, 30), bg('#ffffff'), side('bottom', '#f3e8ee'), top_radius('22px'))],
-        'v2-box__body'   => ['s' => pad(28, 28, 28, 28), 'm' => pad(22, 20, 24, 20)],
+        'v2-box__body'   => ['s' => S(lay(['display' => 'flex', 'direction' => 'column', 'grow' => 1]), pad(28, 28, 28, 28)), 'm' => pad(22, 20, 24, 20)],
         'v2-box__icon'   => ['s' => S(tile(50, '15px', PINK_SOFT), mar(0, null, 18, null)), 'props' => ['size_px' => 23]],
         'v2-press__group' => ['s' => S(ty('26px', 'bold', '1.25', '-.015em'), mar(44, null, 20, null))],
         'v2-press__title' => ['s' => S(ty('18px', 'bold', '1.35'), mar(0, null, 12, null))],
@@ -146,12 +154,15 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         'v2-box__title'  => ['s' => S(ty('21px', 'bold', '1.28', '-.012em'), mar(0, null, 12, null))],
         'v2-box__text'   => ['parts' => $rich + ['paragraph' => S(col(BODY), ty('15px', null, '25px'), mar(0, 0, 10, 0)), 'item' => S(col(BODY), ty('14.5px', null, '23px'), mar(0, 0, 4, 0))]],
         'v2-box__links'  => ['s' => S(lay(['gap' => '10px']), mar(8, null, 0, null))],
+        'v2-box__foot'   => ['s' => S(mar('auto', null, 0, null), pad(8, 0, 0, 0))], // the first links sit on the card's bottom edge
         'v2-btn--sm'     => ['parts' => ['button' => S(sz(['height' => 46]), pad(0, 20), ty('14px'))]],
         'v2-ghost--sm'   => ['parts' => ['button' => S(sz(['height' => 46]), pad(0, 20), ty('14px'))]],
 
         // ── Facts (Label : value) ──
         'v2-facts'       => ['s' => S(lay(['gap' => '14px']), mar(6, null, 0, null)), 'props' => ['columns' => 3], 'tp' => ['columns' => 2], 'mp' => ['columns' => 1], 'reveal' => $up(0)],
         'v2-facts--2'    => ['props' => ['columns' => 2]],
+        'v2-facts--1'    => ['s' => mar(0, null, 0, null), 'props' => ['columns' => 1], 'tp' => ['columns' => 1]],
+        'v2-infos'       => ['s' => lay(['tracks' => 'minmax(0,1fr) minmax(0,1fr)', 'gap' => '26px', 'align' => 'stretch']), 't' => lay(['tracks' => '1fr', 'gap' => '18px'])],
         'v2-fact'        => ['s' => S(pad(20, 22), radius('18px'), bg('#ffffff'), brd('#f2e4ec', '1px', '18px'), shadow(0, 12, 30, 'rgba(70,10,48,.06)', -6))],
         'v2-sec--soft v2-fact' => ['s' => bg('#ffffff')],
         'v2-fact__label' => ['s' => S(col(PINK), ty('12.5px', 'bold', '1.3', '.08em'), ['typography' => ['transform' => 'uppercase']], mar(0, null, 8, null))],
@@ -207,10 +218,11 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
                 'textarea' => sz(['height' => 160, 'min_height' => 160]),
                 'button' => S($pill, fx(['cursor' => 'pointer']))]],
         'v2-loop--featured' => ['parts' => ['image' => sz(['height' => 300])], 'mparts' => ['image' => sz(['height' => 210])]],
-        'v2-event'       => ['s' => S(radius('22px'), bg('#ffffff'), $lift, fx(['transition' => ['duration_ms' => 300, 'easing' => 'ease']])),
+        'v2-event'       => ['s' => S(lay(['display' => 'flex', 'direction' => 'column']), radius('22px'), bg('#ffffff'), $lift, fx(['transition' => ['duration_ms' => 300, 'easing' => 'ease']])),
                               'h' => fx(['transform' => ['translate_y' => '-6px']]), 'reveal' => $up(0)],
         'v2-event__img'  => ['s' => S(dim(['height' => '190px', 'overflow' => 'hidden', 'object_fit' => 'cover']), top_radius('22px'))],
-        'v2-event__body' => ['s' => pad(22, 24, 24, 24)],
+        'v2-event__body' => ['s' => S(lay(['display' => 'flex', 'direction' => 'column', 'grow' => 1]), pad(22, 24, 24, 24))],
+        'v2-event__more' => ['s' => mar('auto', null, 0, null)],
         'v2-event__date' => ['s' => S(col(PINK), ty('12.5px', 'bold', null, '.08em'), ['typography' => ['transform' => 'uppercase']], mar(0, null, 8, null))],
         'v2-event__title' => ['s' => S(ty('18px', 'bold', '1.3'), mar(0, null, 12, null))],
     ];
@@ -267,7 +279,7 @@ function v2_facts(array $ps): ?array
 function v2_fact_grid(array $facts, int $cols = 3): array
 {
     $cells = array_map(static fn(array $f): array => BOX([T($f[0], 'v2-fact__label'), T(implode("\n", $f[1]), 'v2-fact__value')], 'v2-fact'), $facts);
-    return B('layout.grid', ['columns' => $cols, 'gap' => 'none'], $cells, $cols === 2 ? 'v2-facts v2-facts--2' : 'v2-facts');
+    return B('layout.grid', ['columns' => $cols, 'gap' => 'none'], $cells, [1 => 'v2-facts v2-facts--1', 2 => 'v2-facts v2-facts--2'][$cols] ?? 'v2-facts');
 }
 
 /** Buttons (pink then outlined) and text links for a list of CTAs. */
@@ -282,8 +294,8 @@ function v2_ctas(array $ctas, bool $small = false): array
         else { $links[] = MORE($c['label'], $href); }
     }
     $out = [];
-    if ($buttons) { $out[] = B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'wrap' => 'wrap'], $buttons, $small ? 'v2-box__links' : 'v2-actions'); }
-    if ($links) { $out[] = B('layout.flex', ['direction' => $small ? 'column' : 'row', 'gap' => 'none', 'wrap' => 'wrap'], $links, $small ? 'v2-box__links' : 'v2-links'); }
+    if ($buttons) { $out[] = B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'wrap' => 'wrap'], $buttons, $small ? 'v2-box__links v2-box__foot' : 'v2-actions'); }
+    if ($links) { $out[] = B('layout.flex', ['direction' => $small ? 'column' : 'row', 'gap' => 'none', 'wrap' => 'wrap'], $links, $small ? ($buttons ? 'v2-box__links' : 'v2-box__links v2-box__foot') : 'v2-links'); }
     return $out;
 }
 
@@ -443,7 +455,19 @@ function v2_module(array $notes, array $sec, array $pg): ?array
         ], 'v2-form', ['id' => STABLE_ID('v2-contact-form')]);
         $side = array_merge(array_map(static fn(string $t): array => B('core.rich_text', ['content' => '<p>' . htmlspecialchars($t) . ' <a href="/politique-de-confidentialite/">Consulter la politique de confidentialité</a></p>'], [], 'v2-text'), $privacy),
             $after ? [v2_rich($after)] : []);
-        return B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [BOX([$form], 'v2-panel'), BOX($side, 'v2-aside')], 'v2-split2 v2-split2--top');
+        $ibox = static fn(string $icon, string $label, array $value): array => B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'start'],
+            [ICO($icon, 'v2-ibox__icon'), BOX([T($label, 'v2-fact__label'), ...$value], 'v2-ibox__body')], 'v2-ibox');
+        $info = [
+            $ibox('map-pin', 'Adresse', [T("Rue Gabrielle Petit 32\n1080 Molenbeek-Saint-Jean\nBelgique", 'v2-fact__value')]),
+            $ibox('mail', 'E-mail', [LNK('contact@fightxlife.com', 'mailto:contact@fightxlife.com', 'v2-ibox__link')]),
+            $ibox('phone', 'Téléphone', [LNK('+32 483 12 72 98', 'tel:+32483127298', 'v2-ibox__link')]),
+            $ibox('shield', 'Numéro d’entreprise', [T('BE 0720.965.564', 'v2-fact__value')]),
+        ];
+        // The address section's buttons and link join the boxes; the section itself is left out (see V2_FOLDED).
+        foreach ($pg['sections'] as $other) {
+            if (in_array($other['id'], V2_FOLDED, true)) { array_push($info, ...v2_ctas(v2_parts($other['blocks'])[1])); }
+        }
+        return B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'start'], [BOX(array_merge([BOX($side, 'v2-aside')], $info), 'v2-contact-side'), BOX([$form], 'v2-panel')], 'v2-split2 v2-split2--top');
     }
     if (str_contains($all, 'Donation module')) {
         // One-off and monthly, each with set amounts and a free amount (from 5 € up to 5 000 €); Stripe confirms the payment,
@@ -487,7 +511,7 @@ function v2_module(array $notes, array $sec, array $pg): ?array
             $img = (static function (string $u): string { global $IMGMAP_V1; return $IMGMAP_V1[preg_replace('/-\d+x\d+(?=\.\w+$)/', '', $u)] ?? $IMGMAP_V1[$u] ?? ''; })((string) ($it['featured'] ?? ''));
             $kids = [];
             if ($img !== '' && MID($img) > 0) { $kids[] = V2IMG(basename($img), $it['title'], 'v2-event__img', ['link_to' => 'custom', 'url' => "/events/{$slug}/"]); }
-            $kids[] = BOX([T(trim($ev['date'] . ($ev['heure'] !== '' ? ' · ' . $ev['heure'] : '')), 'v2-event__date'), B('core.heading', ['text' => $it['title'], 'level' => 'h3', 'url' => "/events/{$slug}/"], [], 'v2-event__title'), MORE('Voir l’événement', "/events/{$slug}/")], 'v2-event__body');
+            $kids[] = BOX([T(trim($ev['date'] . ($ev['heure'] !== '' ? ' · ' . $ev['heure'] : '')), 'v2-event__date'), B('core.heading', ['text' => $it['title'], 'level' => 'h3', 'url' => "/events/{$slug}/"], [], 'v2-event__title'), LNK('Voir l’événement →', "/events/{$slug}/", 'v2-more v2-event__more')], 'v2-event__body');
             $cards[] = BOX($kids, 'v2-event');
         }
         return $cards ? B('layout.grid', ['columns' => 3, 'gap' => 'none'], $cards, 'v2-grid') : null;
@@ -574,7 +598,11 @@ function v2_section(array $sec, array $pg, int $i, bool $last): ?array
             $blocks[] = BOX(array_merge($headBox, v2_ctas($ctas)), 'v2-narrow' . ($short ? ' v2-narrow--center' : ''));
             $ctas = [];
         }
-        if ($facts) { $blocks[] = v2_fact_grid($facts, count($facts) === 4 ? 2 : 3); }
+        // The facts beside a lone card (the course's prices), so neither leaves half a row empty.
+        if ($facts && count($h3s) === 1) {
+            $blocks[] = B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'stretch'], [v2_fact_grid($facts, 1), v2_card($h3s[0], $pg['url'], 0)], 'v2-infos');
+            $h3s = [];
+        } elseif ($facts) { $blocks[] = v2_fact_grid($facts, count($facts) === 4 ? 2 : 3); }
         if ($module) { $blocks[] = $module; }
         if ($h3s) { $blocks[] = v2_cards($h3s, $pg['url']); }
         if ($ctas) { $blocks[] = BOX(v2_ctas($ctas), 'v2-center'); }
@@ -596,8 +624,9 @@ function v2_build_pages(array $pages): array
     foreach ($pages as $pg) {
         if ($pg['url'] === '/') { continue; }
         $sections = [v2_hero($pg)];
-        $n = count($pg['sections']);
-        foreach ($pg['sections'] as $i => $sec) {
+        $kept = array_values(array_filter($pg['sections'], static fn(array $sec): bool => !in_array($sec['id'], V2_FOLDED, true)));
+        $n = count($kept);
+        foreach ($kept as $i => $sec) {
             $s = v2_section($sec, $pg, $i, $i === $n - 1);
             if (!$s) { continue; }
             // The document's HTML id, so its anchor links (/waterxfight/#infos-pratiques) land on the section.
