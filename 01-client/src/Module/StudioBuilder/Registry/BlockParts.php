@@ -24,7 +24,7 @@ namespace Slate\Module\StudioBuilder\Registry;
 final class BlockParts
 {
     /** States a part may take, with the pseudo-class each adds to every selector. */
-    public const STATES = ['not_first' => ':not(:first-child)', 'hover' => ':hover'];
+    public const STATES = ['not_first' => ':not(:first-child)', 'hover' => ':hover', 'focus' => ':focus-visible'];
 
     /** @var array<string, array<string, array{label: string, selectors: list<string>, states?: bool, portal?: bool}>> type => part => definition */
     private const PARTS = [

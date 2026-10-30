@@ -66,10 +66,14 @@ function native_v2(): array
         fam('body', '15px', 'bold', '16px'), fx(['transition' => ['duration_ms' => 250, 'easing' => 'ease']]));
     $pill = S($base, col('#ffffff'), ['background' => ['gradient' => PINK_GRAD]], shadow(0, 12, 28, 'rgba(233,0,138,.28)', -6));
     $pillHover = S(fx(['transform' => ['translate_y' => '-3px']]), shadow(0, 18, 34, 'rgba(233,0,138,.34)', -6));
+    // The donate buttons: an outline at rest, the brand fill on hover and keyboard focus. 19px bold is large text, which #e9008a passes on white both ways round.
+    $outline = S($base, brd(PINK, '2px', '999px'), bg('transparent'), col(PINK), ty('19px'));
+    $outlineFocus = S(bg(PINK), col('#ffffff'));
+    $outlineHover = S($outlineFocus, $pillHover);
     $lift = shadow(...LIFT);
     $up = static fn(int $delay = 0): array => ['type' => 'fade_up', 'duration_ms' => 800, 'delay_ms' => $delay, 'easing' => EASE];
     $V = static fn(int $t, int $b): array => pad($t, null, $b, null);
-    return native_v2_pages($pill, $pillHover, $base, $up, $V) + [
+    return native_v2_pages($pill, $pillHover, $base, $up, $V, $outline, $outlineHover, $outlineFocus) + [
         // ── Type ──
         'v2-kick'        => ['s' => S(col(PINK), ty('19px', '400', '1.5', null, SCRIPT), mar(0, null, 6, null))],
         'v2-kick--light' => ['s' => col('#ff7cc3')],
@@ -206,7 +210,9 @@ function native_v2(): array
                 'link' => S(lay(['display' => 'flex', 'align' => 'center']), pad(10, 12), radius('999px'), col(INK), fam('body', '15px', 'bold'), fx(TRANS)),
                 'link:hover' => S(col(PINK), bg('#fff0f7')), 'current' => col(PINK)]],
         'v2-head__end'   => ['s' => lay(['gap' => '12px', 'align' => 'center', 'justify' => 'end'])],
-        'v2-donate'      => ['parts' => ['button' => S($pill, sz(['height' => 46]), pad(0, 22), ty('14px')), 'button:hover' => $pillHover], 'mhide' => true],
+        // 19px would run into the menu at 1024px, so the header keeps 14px and takes the deeper pink.
+        'v2-donate'      => ['parts' => ['button' => S($outline, brd(PINK_DEEP, '2px', '999px'), col(PINK_DEEP), sz(['height' => 46]), pad(0, 22), ty('14px')),
+                'button:hover' => S($outlineHover, bg(PINK_DEEP)), 'button:focus' => S($outlineFocus, bg(PINK_DEEP))], 'mhide' => true],
         'v2-drawer'      => ['parts' => ['trigger' => S(sz(['width' => 40, 'height' => 40]), lay(['justify' => 'center']), radius('12px'), bg('#fff0f7'), col(PINK)), 'backdrop' => bg('rgba(15,8,23,.45)'),
                 'panel' => S(sz(['width' => 'min(390px,88vw)', 'max_width' => 'none']), pad(0), shadow(-10, 0, 35, 'rgba(20,10,35,.14)')),
                 'close' => S(sz(['width' => 38, 'height' => 38]), radius('50%'), bg('#fdeaf4'), col(PINK), ty('25px', null, '38px'), lay(['display' => 'flex', 'justify' => 'center', 'align' => 'center']), ['typography' => ['decoration' => 'none']]),

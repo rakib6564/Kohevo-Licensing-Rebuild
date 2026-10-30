@@ -34,7 +34,7 @@ unit('part styles: a part of the block\'s type takes a closed partial style, alo
     ])), 'a full set of tab parts');
     foreach ([
         'a part another widget has' => ['number' => ['color' => 'red']],
-        'an unknown state'          => ['tab:focus' => ['color' => 'red']],
+        'an unknown state'          => ['tab:active' => ['color' => 'red']],
         'a group parts cannot set'  => ['tab' => ['text_shadow' => ['x' => '1px', 'y' => '1px', 'color' => '#000000']]],
         'a CSS injection'           => ['tab' => ['color' => 'red;}body{display:none']],
         'an unknown weight'         => ['tab' => ['typography' => ['weight' => '950']]],

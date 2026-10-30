@@ -67,7 +67,7 @@ const V2_REASONS = ['information' => 0, 'cours' => 1, 'smilebox' => 2, 'hopital'
 const V2_CONTEXT = ['boxe-adaptee' => 'Boxe adaptée', 'waterxfight' => 'WaterxFight', 'boxe-feminin' => 'Boxe 100 % féminin', 'nage-libre' => 'Nage libre',
     'natation' => 'Cours de natation', 'smilebox' => 'La SmileBox', 'benkick' => 'Benkick'];
 
-function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $up, \Closure $V): array
+function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $up, \Closure $V, array $outline, array $outlineHover, array $outlineFocus): array
 {
     $lift = shadow(...LIFT);
     $rich = ['paragraph' => S(col(BODY), ty('16px', null, '28px'), mar(0, 0, 14, 0)), 'link' => S(col(PINK), ty(null, 'bold')), 'bold' => col(INK),
@@ -174,7 +174,7 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         'v2-give__free'  => ['s' => S(mar(18, null, 0, null), pad(20, 0, 0, 0), ['border' => ['top' => ['width' => '1px', 'style' => 'solid', 'color' => '#f1e3ea']]]), 'center' => true],
         'v2-pay--free'   => ['parts' => ['form' => lay(['justify' => 'center'])]],
         'v2-give__note'  => ['s' => S(col(BODY), ty('14px', null, '1.6'), mar(22, null, 0, null)), 'center' => true],
-        'v2-pay'         => ['parts' => ['button' => S($pill, sz(['height' => 58, 'min_width' => 150]), fx(['cursor' => 'pointer'])), 'button:hover' => $pillHover,
+        'v2-pay'         => ['parts' => ['button' => S($outline, sz(['height' => 58, 'min_width' => 150]), fx(['cursor' => 'pointer'])), 'button:hover' => $outlineHover, 'button:focus' => $outlineFocus,
                 'amount' => S(sz(['width' => '180px', 'height' => 58]), pad(0, 18), brd('#ead9e2', '1.5px', '999px'), bg('#fffafd'), col(INK), fam('body', '17px', 'bold'))]],
         'v2-form'        => ['props' => ['labels' => 'visible'], 'parts' => [
                 'form' => lay(['display' => 'grid', 'gap' => '18px']),
