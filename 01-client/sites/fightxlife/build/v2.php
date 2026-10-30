@@ -123,8 +123,7 @@ function native_v2(): array
         'v2-force-sec'   => ['s' => S(bg('#ffffff'), $V(64, 40), dim(['overflow' => 'hidden'])), 'm' => $V(40, 24)],
         'v2-force__kick' => ['center' => true, 's' => mar(0, null, 0, null)],
         'v2-force__marquee' => ['s' => S(col(INK), ty('clamp(44px,7vw,92px)', '400', '1.2', null, STENCIL), ['typography' => ['transform' => 'uppercase']], mar(0, null, 34, null)), 'm' => S(ty('40px'), mar(0, null, 22, null))],
-        'v2-force__video' => ['s' => S(radius('26px'), dim(['overflow' => 'hidden', 'max_width' => '1040px']), mar(null, 'auto', null, 'auto'), $lift), 'reveal' => $up(0),
-            'parts' => ['play' => S(sz(['width' => 76, 'height' => 76]), bg(PINK))]],
+        'v2-force__video' => ['s' => S(radius('26px'), dim(['overflow' => 'hidden']), $lift), 'reveal' => $up(0)],
         'v2-intro-sec'   => ['s' => S(bg('#ffffff'), $V(0, 30))],
         'v2-intro'       => ['s' => S(mar(-70, null, 0, null), place('relative'), pad(46, 52), radius('26px'), bg('#ffffff'), $lift, lay(['tracks' => 'minmax(0,1fr) minmax(0,1fr)', 'gap' => '46px'])),
                               't' => pad(36, 34), 'm' => S(lay(['tracks' => '1fr', 'gap' => '6px']), pad(26, 22), mar(-50, null, null, null)), 'reveal' => $up()],
@@ -430,10 +429,6 @@ $supportBand = BOX([BOX([
 $supportBand['style']['background'] = ['image' => ['media_id' => MID('/uploads/media/fxl/2022-05-enfant-malade.jpg'), 'alt' => '', 'focal_point' => [0.75, 0.3]], 'fit' => 'cover', 'position' => 'right',
     'overlay' => ['color' => 'rgba(26,4,18,.12)']];
 
-// The video's own frame from YouTube, kept with the site's media.
-v2_press_media('video-force-de-vivre.jpg');
-define('V2_POSTER', MID('/uploads/media/fxl/video-force-de-vivre.jpg'));
-
 $sections = [
     SEC('Hero', [B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
         BOX([
@@ -458,7 +453,7 @@ $sections = [
         KICK('FightxLife', 'v2-kick v2-force__kick'),
         B('core.marquee', ['text' => 'La force de vivre', 'duration' => 60], [], 'v2-force__marquee'),
         B('core.video', ['source' => 'youtube', 'url' => 'https://www.youtube.com/watch?v=jwMB0uoajXQ', 'aspect_ratio' => '16:9', 'privacy' => true, 'lazy_load' => true, 'controls' => true,
-            'overlay' => true, 'play_icon' => true, 'lightbox' => false, 'overlay_image' => ['media_id' => V2_POSTER, 'alt' => 'FightxLife, la force de vivre : la vidéo de l’association', 'focal_point' => [0.5, 0.5]]], [], 'v2-force__video'),
+            'autoplay' => true, 'muted' => true], [], 'v2-force__video'),
     ], 'v2-force-sec'),
     SEC('Trois manières d’agir', [
         V2HEAD('Trois manières d’agir face au cancer', 'face au cancer', [
