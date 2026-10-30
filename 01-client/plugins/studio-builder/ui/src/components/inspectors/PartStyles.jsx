@@ -2,7 +2,7 @@
 // the inputs of a Form, the tiles of a Gallery.
 //
 // The author picks a part and Normal, Hover or All but the first (a line between items); the controls below edit that part's partial style in
-// `block.style_parts` (`<part>`, `<part>:hover` or `<part>:not_first`), a closed set the server checks again (StyleSurface::partIssues):
+// `block.style_parts` (`<part>`, `<part>:hover`, `<part>:focus` or `<part>:not_first`), a closed set the server checks again (StyleSurface::partIssues):
 // text, background (a colour or a gradient), border and corners, padding and margin, size, the part's own flex or grid
 // layout, opacity and effects. A cleared field is removed, and a part left empty is removed with it.
 //
@@ -49,7 +49,7 @@ function Group({ title, initiallyOpen, children }) {
  * `responsive` and `onResponsiveChange`: the block's `responsive`, for the tablet and mobile values.
  */
 /** Part states besides the plain one (BlockParts::STATES): '' is the part itself. */
-const PART_STATES = ['', 'hover', 'not_first'];
+const PART_STATES = ['', 'hover', 'focus', 'not_first'];
 
 export function PartStyles({ blockId, parts, value, responsive, tokens, onChange, onResponsiveChange }) {
   const list = asList(parts);
@@ -112,6 +112,7 @@ export function PartStyles({ blockId, parts, value, responsive, tokens, onChange
           options={[
             { value: 'normal', label: t('state_normal'), hasValue: isSet(part) },
             { value: 'hover', label: t('state_hover'), hasValue: isSet(`${part}:hover`) },
+            { value: 'focus', label: t('state_focus'), hasValue: isSet(`${part}:focus`) },
             { value: 'not_first', label: t('state_not_first'), hasValue: isSet(`${part}:not_first`) },
           ]}
           onChange={setState}
