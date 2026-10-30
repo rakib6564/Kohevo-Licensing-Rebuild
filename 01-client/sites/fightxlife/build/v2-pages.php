@@ -119,6 +119,10 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         'v2-box__logo'   => ['s' => S(dim(['height' => '120px', 'object_fit' => 'contain']), pad(22, 30), bg('#ffffff'), side('bottom', '#f3e8ee'), top_radius('22px'))],
         'v2-box__body'   => ['s' => pad(28, 28, 28, 28), 'm' => pad(22, 20, 24, 20)],
         'v2-box__icon'   => ['s' => S(tile(50, '15px', PINK_SOFT), mar(0, null, 18, null)), 'props' => ['size_px' => 23]],
+        'v2-press__group' => ['s' => S(ty('26px', 'bold', '1.25', '-.015em'), mar(44, null, 20, null))],
+        'v2-press__title' => ['s' => S(ty('18px', 'bold', '1.35'), mar(0, null, 12, null))],
+        'v2-audio'       => ['s' => mar(0, null, 26, null), 'parts' => ['card' => S(pad(28, 32), radius('22px'), bg(PINK), shadow(0, 22, 50, 'rgba(233,0,138,.22)', -10)), 'title' => fam('heading', '24px', 'bold', '32px'), 'play' => col(PINK), 'link' => col('#ffffff')],
+                              'mparts' => ['card' => pad(22, 20), 'title' => ty('19px')], 'reveal' => $up(0)],
         'v2-box__title'  => ['s' => S(ty('21px', 'bold', '1.28', '-.012em'), mar(0, null, 12, null))],
         'v2-box__text'   => ['parts' => $rich + ['paragraph' => S(col(BODY), ty('15px', null, '25px'), mar(0, 0, 10, 0)), 'item' => S(col(BODY), ty('14.5px', null, '23px'), mar(0, 0, 4, 0))]],
         'v2-box__links'  => ['s' => S(lay(['gap' => '10px']), mar(8, null, 0, null))],
@@ -271,6 +275,64 @@ function v2_parts(array $blocks): array
         match ($b['t']) { 'p', 'ul' => $text[] = $b, 'cta' => $ctas[] = $b, 'note' => $notes[] = $b['text'], 'h3' => $h3s[] = $b, default => null };
     }
     return [$text, $ctas, $notes, $h3s];
+}
+
+/** Press photos by the item's link. The live site's own, or a YouTube video's thumbnail where the live one is only 300px wide. */
+const V2_PRESS_IMAGES = [
+    'https://auvio.rtbf.be/media/tendances-premiere-tendances-premiere-les-tendanceurs-2859925' => 'press-auvio.jpg',
+    'https://www.youtube.com/watch?v=IGSdV_Y3s8g' => 'press-arabel.jpg',
+    'https://www.dhnet.be/lifestyle/people/2021/02/01/sara-de-paduwa-on-a-tous-envie-de-mettre-le-cancer-ko-MWF2AQUQORC7VP6IC2D6G65X7I/' => 'press-dh.webp',
+    'https://www.rtbf.be/article/une-jeune-bruxelloise-se-lance-un-defi-pour-lutter-contre-le-cancer-10688290' => 'press-rtbf-defi.jpg',
+    'https://www.rtbf.be/article/in-sara-rezki-we-trust-la-boxe-m-a-sauve-la-vie-10852866' => 'press-grenades.jpg',
+    'https://bx1.be/communes/bruxelles-ville/de-la-boxe-pour-combattre-le-cancer/' => 'press-bx1.jpg',
+    'https://www.youtube.com/watch?v=W0N25moJ8us' => 'press-petites.jpg',
+    'https://www.rtbf.be/article/de-la-boxe-adaptee-pour-les-malades-du-cancer-venir-sur-le-ring-c-est-aller-vers-la-vie-10437246' => 'press-boxe-adaptee.jpg',
+    'https://www.facebook.com/estellebalde/videos/sara-est-esperanza-interview/252699939717847/' => 'press-esperanza.jpg',
+    'https://www.youtube.com/watch?v=PHx3K_nNnms' => 'press-clip.jpg',
+    'https://www.youtube.com/watch?v=cBbOhe2XFIo' => 'press-hespress.jpg',
+];
+
+/** Copy a photo from the bundle's media folder into the site and register it, once. */
+function v2_press_media(string $file): void
+{
+    if (MID('/uploads/media/fxl/' . $file) > 0) { return; }
+    $src = dirname(__DIR__) . '/media/fxl/' . $file;
+    $dst = getcwd() . '/uploads/media/fxl/' . $file;
+    if (!is_file($src) || !copy($src, $dst)) { throw new RuntimeException("media {$file} missing from the bundle"); }
+    $size = @getimagesize($dst) ?: [null, null, 'mime' => mime_content_type($dst) ?: ''];
+    \Slate\Services\Media\Media::register('/uploads/media/fxl/' . $file, ['mime' => (string) ($size['mime'] ?? ''), 'size_bytes' => filesize($dst), 'width' => $size[0] ?? null, 'height' => $size[1] ?? null, 'original_name' => $file]);
+}
+
+/** One press item: its photo, the outlet, the title and the link. */
+function v2_press_card(string $outlet, string $title, array $link, int $i): array
+{
+    $file = V2_PRESS_IMAGES[$link['href']] ?? throw new RuntimeException("no press photo for {$link['href']}");
+    v2_press_media($file);
+    $box = BOX([
+        BOX([V2IMG($file, $title, 'v2-box__img', ['link_to' => 'custom', 'url' => $link['href'], 'new_tab' => true])], 'v2-box__photo'),
+        BOX([T($outlet, 'v2-fact__label'), H($title, 'h4', 'v2-press__title'), MORE($link['label'], $link['href'])], 'v2-box__body'),
+    ], 'v2-box');
+    $box['interactions'] = ['trigger' => 'viewport-enter', 'animation' => ['type' => 'fade_up', 'duration_ms' => 800, 'delay_ms' => ($i % 3) * 110, 'easing' => EASE]];
+    return $box;
+}
+
+/** The press review: the radio card, then each H3's items as a photo grid. Items are "Outlet : title" with a link each. */
+function v2_press(array $sec, array $head): array
+{
+    [$text, , , $h3s] = v2_parts($sec['blocks']);
+    $blocks = [BOX(array_merge($head, array_filter([v2_rich($text)])), 'v2-head v2-head--center')];
+    foreach ($h3s as $n => $h3) {
+        [$items, $ctas] = v2_parts($h3['blocks']);
+        $links = array_values(array_filter($ctas, static fn(array $c): bool => $c['kind'] === 'Media link'));
+        $blocks[] = H($h3['text'], 'h3', 'v2-press__group');
+        if ($n === 0) {
+            $blocks[] = B('core.audio', ['source' => 'soundcloud', 'url' => 'https://soundcloud.com/bxfmradio/positive-fem-sara-rezki-fightxlife', 'title' => 'Positive Fem - Sara Rezki - FightxLife', 'subtitle' => 'BXFM 104.3 Bruxelles'], [], 'v2-audio');
+        }
+        $cards = [];
+        foreach (v2_facts($items) as $k => $f) { $cards[] = v2_press_card($f[0], implode(' ', $f[1]), $links[$k], $k); }
+        $blocks[] = B('layout.grid', ['columns' => count($cards) === 2 ? 2 : 3, 'gap' => 'none'], $cards, count($cards) === 2 ? 'v2-grid v2-grid--2' : 'v2-grid');
+    }
+    return $blocks;
 }
 
 /** One H3 block as a card: photo, logo or icon, title, text (or facts), and its own links. */
@@ -439,6 +501,9 @@ function v2_section(array $sec, array $pg, int $i, bool $last): ?array
     // The contact form keeps its own text beside the form.
     if ($module && str_contains($all, 'Contact form module')) {
         return SEC($sec['h2'], [BOX($head, 'v2-head v2-head--center'), $module], 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
+    }
+    if ($sec['id'] === 'dans-les-medias') {
+        return SEC($sec['h2'], v2_press($sec, $head), 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
     }
     // Upcoming events: there is none, so the document's empty state shows.
     if (str_contains($all, 'Upcoming events module')) {

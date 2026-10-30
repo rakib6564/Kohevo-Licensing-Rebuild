@@ -16,6 +16,7 @@ namespace Slate\Module\StudioBuilder\Registry;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\ContainerRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\CountdownRenderer;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\AudioRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\VideoRenderer;
 use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
@@ -698,6 +699,25 @@ final class BlockRegistry
                 ['key' => 'overlay_image', 'type' => 'media_ref', 'label' => 'Overlay Image', 'required' => false, 'default' => null],
                 ['key' => 'play_icon', 'type' => 'boolean', 'label' => 'Play Icon', 'required' => false, 'default' => true],
                 ['key' => 'lightbox', 'type' => 'boolean', 'label' => 'Lightbox', 'required' => false, 'default' => false],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 24b. core.audio — a podcast or radio card. Source picks which address plays, as on the Video.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.audio',
+            version: 1,
+            label: 'Audio',
+            title: 'Audio',
+            description: 'A podcast or radio card: SoundCloud, Spotify or a self-hosted file',
+            category: 'media',
+            icon: 'video',
+            schema: FieldSchema::define([
+                ['key' => 'source', 'type' => 'enum', 'label' => 'Source', 'required' => false, 'allowed_values' => AudioRenderer::SOURCES, 'default' => 'soundcloud'],
+                ['key' => 'url', 'type' => 'string', 'label' => 'Audio Link', 'required' => false, 'default' => '', 'max_length' => 1000],
+                ['key' => 'hosted_url', 'type' => 'url', 'label' => 'Audio File', 'required' => false, 'max_length' => 1000],
+                ['key' => 'title', 'type' => 'string', 'label' => 'Title', 'required' => false, 'default' => 'Episode title', 'max_length' => 200],
+                ['key' => 'subtitle', 'type' => 'string', 'label' => 'Subtitle', 'required' => false, 'default' => 'Show or station', 'max_length' => 200],
             ]),
             allowsChildren: false,
         ));

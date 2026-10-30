@@ -157,6 +157,13 @@ final class BlockParts
             'link' => ['label' => 'Icon link', 'selectors' => ['.sb-icon__link']],
             'svg'  => ['label' => 'Icon', 'selectors' => ['svg']],
         ],
+        'core.audio' => [
+            'card'     => ['label' => 'Card', 'selectors' => ['.sb-audio']],
+            'title'    => ['label' => 'Title', 'selectors' => ['.sb-audio__title']],
+            'subtitle' => ['label' => 'Subtitle', 'selectors' => ['.sb-audio__subtitle']],
+            'play'     => ['label' => 'Play button', 'selectors' => ['.sb-audio__play']],
+            'link'     => ['label' => 'Source link', 'selectors' => ['.sb-audio__link']],
+        ],
         'core.video' => [
             'poster' => ['label' => 'Overlay image', 'selectors' => ['.sb-video__overlay img']],
             'play'   => ['label' => 'Play icon', 'selectors' => ['.sb-video__play']],

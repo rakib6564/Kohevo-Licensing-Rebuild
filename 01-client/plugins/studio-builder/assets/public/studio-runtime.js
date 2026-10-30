@@ -785,6 +785,58 @@
 
     mount(function () { off.forEach(function (un) { un(); }); });
   }
+  /* ── Feature: audio ─────────────────────────────────────
+   * A provider link is a card whose player waits in a <template>; the play
+   * button swaps it in, so nothing loads from the provider before the visitor
+   * asks. A self-hosted file plays in the card's <audio>, driven by its button
+   * and progress bar. With no JS the card keeps its link to the source.
+   */
+
+  function audioTime(s) {
+    if (!isFinite(s)) return '0:00';
+    var m = Math.floor(s / 60);
+    var r = Math.floor(s % 60);
+    return m + ':' + (r < 10 ? '0' : '') + r;
+  }
+
+  function initAudio(root) {
+    qsa(root, '[data-sb-audio]').forEach(function (block) {
+      var button = qs(block, '[data-sb-audio-play]');
+      var file = qs(block, '[data-sb-audio-file]');
+      if (!button) return;
+      var off = [];
+      if (file) {
+        var seek = qs(block, '[data-sb-audio-seek]');
+        var time = qs(block, '[data-sb-audio-time]');
+        var show = function () {
+          if (seek && file.duration) seek.value = String((file.currentTime / file.duration) * 100);
+          if (time) time.textContent = audioTime(file.currentTime) + ' / ' + audioTime(file.duration);
+        };
+        var mark = function () {
+          if (file.paused) block.removeAttribute('data-sb-audio-playing');
+          else block.setAttribute('data-sb-audio-playing', '');
+        };
+        off.push(on(button, 'click', function () {
+          if (file.paused) { var p = file.play(); if (p && p.catch) p.catch(mark); } else { file.pause(); }
+        }));
+        off.push(on(file, 'play', mark), on(file, 'pause', mark), on(file, 'ended', mark), on(file, 'timeupdate', show), on(file, 'loadedmetadata', show));
+        if (seek) off.push(on(seek, 'input', function () { if (file.duration) file.currentTime = (Number(seek.value) / 100) * file.duration; }));
+      } else {
+        off.push(on(button, 'click', function () {
+          var tpl = qs(block, 'template[data-sb-audio-player]');
+          var player = tpl && tpl.content && tpl.content.firstElementChild;
+          if (!player) return;
+          var frame = document.importNode(player, true);
+          tpl.parentNode.replaceChild(frame, tpl);
+          button.hidden = true;
+          block.setAttribute('data-sb-audio-open', '');
+          frame.focus();
+        }));
+      }
+      mount(function () { off.forEach(function (un) { un(); }); });
+    });
+  }
+
 /* ── Feature: video overlay ─────────────────────────────────────────────
    * A video with an image overlay is a poster button plus the player the
    * server rendered inside a <template>. A click swaps the poster for that
@@ -1796,6 +1848,7 @@
     ['galleryLightbox', initGalleryLightbox],
     ['lightbox', initLightbox],
     ['videos', initVideos],
+    ['audio', initAudio],
     ['tabs', initTabs],
     ['accordion', initAccordion],
     ['carousel', initCarousel],
