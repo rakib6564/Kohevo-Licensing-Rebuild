@@ -15,10 +15,11 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Render;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '49';
+    public const VERSION = '50';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -195,6 +196,8 @@ final class StudioStylesheet
             . '.sb-nav--vertical.sb-nav--center{text-align:center}.sb-nav--vertical.sb-nav--right{text-align:right}'
             // `.sb-body a:not(.sb-button)` colours every link in the accent; a menu link takes the surrounding text colour, so it must outrank that rule.
             . '.sb-nav__link{text-decoration:none;display:inline-block;padding:.35rem 0}'
+            // Links that change colour on hover fade rather than snap; :where() leaves an author's own transition in charge.
+            . ':where(.sb-nav__link,.sb-post-card__title,.sb-post-card__title a,.sb-shop-card__title,.sb-shop-card__title a,.sb-shop-card__link){transition:color .2s ease,background-color .2s ease}'
             . '.sb-body .sb-nav a.sb-nav__link{color:inherit}.sb-body .sb-nav a.sb-nav__link:hover{color:var(--sb-color-accent)}'
             . '.sb-nav--underline .sb-nav__link{text-decoration:underline;text-underline-offset:.25em}'
             . '.sb-nav--pill .sb-nav__link{padding:.35rem .9rem;border-radius:999px}.sb-nav--pill .sb-nav__link:hover{background:var(--sb-border-default)}'
@@ -350,6 +353,8 @@ final class StudioStylesheet
             . '@media (max-width:767.98px){.sb-query-loop .sb-query-loop__grid{grid-template-columns:minmax(0,1fr)}}'
             . '.sb-post-card{display:flex;flex-direction:column;border:1px solid var(--sb-border-default,#e2e8f0);border-radius:var(--sb-radius-md,.5rem);overflow:hidden;background:var(--sb-surface-secondary,#ffffff);transition:box-shadow .2s ease}'
             . '.sb-post-card:hover{box-shadow:var(--sb-shadow-md,0 4px 6px -1px rgba(0,0,0,0.1))}'
+            // A card may leave overflow open (the hover margin of a lifted card needs it), so the image rounds itself.
+            . '.sb-post-card__media{overflow:hidden;border-top-left-radius:inherit;border-top-right-radius:inherit}'
             . '.sb-post-card__media img{width:100%;height:12rem;object-fit:cover;display:block}'
             . '.sb-post-card__body{padding:1.25rem;display:flex;flex-direction:column;flex:1}'
             . '.sb-post-card__category{display:inline-block;font-size:.75rem;font-weight:600;text-transform:uppercase;color:var(--sb-color-accent,#6366f1);margin-bottom:.5rem}'
@@ -381,16 +386,16 @@ final class StudioStylesheet
             . '.sb-animate-reveal-left{animation:sb-reveal-left var(--sb-anim-duration,.7s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
             . '.sb-animate-reveal-up{animation:sb-reveal-up var(--sb-anim-duration,.7s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
             . '@keyframes sb-fade-in{from{opacity:0}to{opacity:1}}'
-            . '@keyframes sb-fade-up{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}'
-            . '@keyframes sb-fade-down{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:translateY(0)}}'
-            . '@keyframes sb-scale-up{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}'
-            . '@keyframes sb-slide-in{from{transform:translateX(-100%)}to{transform:translateX(0)}}'
-            . '@keyframes sb-move-left{from{opacity:0;transform:translateX(48px)}to{opacity:1;transform:translateX(0)}}'
-            . '@keyframes sb-move-right{from{opacity:0;transform:translateX(-48px)}to{opacity:1;transform:translateX(0)}}'
+            . '@keyframes sb-fade-up{from{opacity:0;translate:0 24px}to{opacity:1;translate:0 0}}'
+            . '@keyframes sb-fade-down{from{opacity:0;translate:0 -24px}to{opacity:1;translate:0 0}}'
+            . '@keyframes sb-scale-up{from{opacity:0;scale:.92}to{opacity:1;scale:1}}'
+            . '@keyframes sb-slide-in{from{translate:-100% 0}to{translate:0 0}}'
+            . '@keyframes sb-move-left{from{opacity:0;translate:48px 0}to{opacity:1;translate:0 0}}'
+            . '@keyframes sb-move-right{from{opacity:0;translate:-48px 0}to{opacity:1;translate:0 0}}'
             . '@keyframes sb-reveal-left{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}'
             . '@keyframes sb-reveal-up{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0 0 0 0)}}'
             . '.sb-interaction-hover{transition:transform .25s ease,box-shadow .25s ease}'
-            . '.sb-interaction-hover:hover{transform:translateY(-3px) scale(1.02)}'
+            . '@media ' . StyleSurface::HOVER_MOTION . '{.sb-interaction-hover:hover{transform:translateY(-3px) scale(1.02)}}'
             // Keyboard parity: a hover-only lift leaves the block unreachable
             // for keyboard users, so :focus-visible gets the same affordance.
             . '.sb-interaction-focus{transition:transform .25s ease,box-shadow .25s ease,outline-color .25s ease}'
@@ -421,7 +426,7 @@ final class StudioStylesheet
             // Scroll: tied to the scroll position for as long as the block crosses the screen. With no
             // animation the block drifts gently against the scroll; with one, the animation follows the
             // scroll. Browsers without scroll timelines get the drift from studio-runtime.js instead.
-            . '@keyframes sb-scroll-drift{from{transform:translateY(32px)}to{transform:translateY(-32px)}}'
+            . '@keyframes sb-scroll-drift{from{translate:0 32px}to{translate:0 -32px}}'
             . '@supports (animation-timeline:view()){'
             . '.sb-interaction-scroll{animation-timeline:view();animation-range:cover 0% cover 100%;animation-fill-mode:both}'
             . '.sb-interaction-scroll:not([class*="sb-animate-"]){animation:sb-scroll-drift linear both;animation-timeline:view();animation-range:cover 0% cover 100%}'
@@ -558,7 +563,8 @@ final class StudioStylesheet
             // the hover look is :where() so the part's own colours (and its hover) win.
             . '.sb-video__play{position:absolute;inset:0;margin:auto;display:flex;align-items:center;justify-content:center;width:4.5rem;height:4.5rem;border-radius:50%;background:rgba(0,0,0,.55);transition:background-color .2s,transform .2s}'
             . '.sb-video__play svg{width:2rem;height:2rem;margin-left:.2rem}'
-            . ':where(.sb-video__overlay:hover,.sb-video__overlay:focus-visible) .sb-video__play{background:rgba(0,0,0,.8);transform:scale(1.06)}'
+            . ':where(.sb-video__overlay:hover,.sb-video__overlay:focus-visible) .sb-video__play{background:rgba(0,0,0,.8)}'
+            . '@media ' . StyleSurface::HOVER_MOTION . '{:where(.sb-video__overlay:hover,.sb-video__overlay:focus-visible) .sb-video__play{transform:scale(1.06)}}'
             . '.sb-video__overlay:focus-visible{outline:3px solid #fff;outline-offset:-3px}'
             . '.sb-video-lightbox__frame{width:min(92vw,151vh)}.sb-video-lightbox__frame.sb-video--aspect-4-3{width:min(92vw,113vh)}'
             . '.sb-video-lightbox__frame.sb-video--aspect-1-1{width:min(92vw,85vh)}.sb-video-lightbox__frame.sb-video--aspect-9-16{width:min(92vw,48vh)}';
@@ -720,7 +726,7 @@ final class StudioStylesheet
             . '.sb-shop-card{display:flex;flex-direction:column;min-width:0}'
             . '.sb-shop-card__media{position:relative;display:block;aspect-ratio:1;overflow:hidden;border-radius:var(--sb-radius-md);background:var(--sb-surface-secondary)}'
             . '.sb-shop-card__image{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s ease}'
-            . '.sb-shop-card__media:hover .sb-shop-card__image{transform:scale(1.03)}'
+            . '@media ' . StyleSurface::HOVER_MOTION . '{.sb-shop-card__media:hover .sb-shop-card__image{transform:scale(1.03)}}'
             . '.sb-shop-card__placeholder{display:block;width:100%;height:100%}'
             . '.sb-shop-card__badge{position:absolute;top:.6rem;left:.6rem;padding:.2rem .55rem;border-radius:999px;font-size:.75rem;font-weight:600;background:var(--sb-text-primary);color:var(--sb-surface-primary,#fff)}'
             . '.sb-shop-card__badge--sale{background:var(--sb-color-accent)}'

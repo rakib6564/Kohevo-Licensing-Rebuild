@@ -16,6 +16,7 @@
 declare(strict_types=1);
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\StyleSurface;
 use Slate\Module\StudioBuilder\Operation\DocumentOperation;
 use Slate\Module\StudioBuilder\Operation\DocumentOperationApplier;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
@@ -217,4 +218,31 @@ unit('phase4: applying both motion operations writes the document fields', funct
         $registry
     );
     assert_eq(['trigger' => 'hover'], $afterInteractions['sections'][0]['blocks'][0]['interactions']);
+});
+
+unit('motion: a reveal never holds transform, so a hover lift can animate', function (): void {
+    $css = StudioStylesheet::css();
+    preg_match_all('/@keyframes sb-[\w-]+\{(?:[^{}]*\{[^{}]*\})*\}/', $css, $keyframes);
+    assert_true(count($keyframes[0]) >= 9, 'keyframes found');
+    foreach ($keyframes[0] as $rule) {
+        assert_false(str_contains($rule, 'transform:'), 'a finished reveal would block the hover transition: ' . $rule);
+    }
+});
+
+unit('motion: a hover move stays off touch and reduced motion, and keeps the pointer on the block', function (): void {
+    $motion = '@media (hover:hover) and (prefers-reduced-motion:no-preference)';
+    $collector = new RenderCollector();
+    $class = $collector->scopedRule('blk_aaaaaaaaaaaaaaaaaaaaaaaa', 'transition:all 300ms ease', true, ['hover' => 'color:#fff !important;transform:translate(0,-8px) !important']);
+    $css = $collector->css();
+    assert_true(str_contains($css, ".{$class}:hover{color:#fff !important}"), 'colour stays unconditional: ' . $css);
+    assert_true(str_contains($css, "{$motion}{.{$class}:hover{transform:translate(0,-8px) !important}"), 'move is gated: ' . $css);
+    assert_true(str_contains($css, ".{$class}:not(.sb-parallax-bg):hover::after{content:\"\";position:absolute;inset:-8px;z-index:-1}"), 'hover margin: ' . $css);
+
+    $scale = StyleSurface::hoverBridge('transform:scale(1.05) !important');
+    assert_eq('', $scale);
+
+    $rules = StyleSurface::partRules(['button:hover' => ['effects' => ['transform' => ['translate_y' => '-3px']]]], 'core.button');
+    $media = array_values(array_filter($rules, static fn(array $r): bool => ($r['media'] ?? '') !== ''));
+    assert_eq(2, count($media), 'part move and its margin');
+    assert_true(str_contains($media[1]['selectors'][0], ':hover::after'), 'part margin selector');
 });

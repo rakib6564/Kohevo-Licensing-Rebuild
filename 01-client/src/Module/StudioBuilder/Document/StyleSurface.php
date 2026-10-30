@@ -110,6 +110,12 @@ final class StyleSurface
     public const TYPOGRAPHY_EXTRAS = ['style', 'decoration', 'decoration_style', 'decoration_color', 'decoration_thickness', 'decoration_offset', 'stroke_width', 'stroke_color'];
 
     /** Pseudo-classes an author may style, keyed by the `style_states` name. */
+    /**
+     * When a hover may move something. A touch screen keeps :hover after a tap, which would leave the block lifted, and
+     * a visitor who asked for less motion has no transition, so the move would be a jump.
+     */
+    public const HOVER_MOTION = '(hover:hover) and (prefers-reduced-motion:no-preference)';
+
     public const STATE_SELECTORS = ['hover' => ':hover', 'focus' => ':focus-within', 'active' => ':active', 'disabled' => ':has(:disabled)'];
 
     /** @return array<string, array<string, array<int, mixed>>> */
@@ -1244,6 +1250,31 @@ final class StyleSurface
         return $rules;
     }
 
+    /**
+     * Split a hover's declarations into what always applies and the `transform` that belongs under HOVER_MOTION.
+     *
+     * @return array{0: string, 1: string} rest, transform
+     */
+    public static function splitHoverMotion(string $declarations): array
+    {
+        $parts = explode(';', $declarations);
+        $motion = array_filter($parts, static fn(string $d): bool => str_starts_with($d, 'transform:'));
+        return [implode(';', array_diff_key($parts, $motion)), implode(';', $motion)];
+    }
+
+    /**
+     * A block lifted on hover can slide out from under a still pointer, drop back and lift again. A clear margin as wide
+     * as the move, painted behind the content, keeps the pointer on it. Blank when the transform only scales or turns.
+     */
+    public static function hoverBridge(string $motion): string
+    {
+        if (preg_match('/translate\(([-\d.]+)(?:px)?,([-\d.]+)(?:px)?\)/', $motion, $m) !== 1) {
+            return '';
+        }
+        $room = max(abs((float) $m[1]), abs((float) $m[2]));
+        return $room > 0 ? 'content:"";position:absolute;inset:-' . $room . 'px;z-index:-1' : '';
+    }
+
     // ── parts (BlockParts) ────────────────────────────────────────────────────
 
     /**
@@ -1423,10 +1454,24 @@ final class StyleSurface
                     continue;
                 }
                 $pseudo = $state === null ? '' : BlockParts::STATES[$state];
-                $rules[] = [
-                    'selectors'    => array_map(static fn(string $sel): string => self::withPseudo($sel, $pseudo), $definition['selectors']),
-                    'declarations' => implode(';', array_map(static fn(string $d): string => $d . ' !important', $out)),
-                ] + (BlockParts::isPortal($definition) ? ['portal' => true] : []);
+                $selectors = array_map(static fn(string $sel): string => self::withPseudo($sel, $pseudo), $definition['selectors']);
+                $portal = BlockParts::isPortal($definition) ? ['portal' => true] : [];
+                $declarations = implode(';', array_map(static fn(string $d): string => $d . ' !important', $out));
+                [$declarations, $motion] = $state === 'hover' ? self::splitHoverMotion($declarations) : [$declarations, ''];
+                if ($declarations !== '') {
+                    $rules[] = ['selectors' => $selectors, 'declarations' => $declarations] + $portal;
+                }
+                if ($motion !== '') {
+                    $rules[] = ['selectors' => $selectors, 'declarations' => $motion, 'media' => self::HOVER_MOTION] + $portal;
+                    $bridge = self::hoverBridge($motion);
+                    if ($bridge !== '') {
+                        $rules[] = [
+                            'selectors'    => array_map(static fn(string $sel): string => $sel . ':not(.sb-link--arrow):hover::after', array_values(array_filter($definition['selectors'], static fn(string $sel): bool => !str_contains($sel, '::')))),
+                            'declarations' => $bridge,
+                            'media'        => self::HOVER_MOTION,
+                        ] + $portal;
+                    }
+                }
             }
         }
         foreach (self::RESPONSIVE_DEVICES as $device => $query) {

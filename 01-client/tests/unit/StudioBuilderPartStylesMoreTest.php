@@ -56,7 +56,8 @@ unit('parts: size, layout (hidden included), gradient, font, opacity and effects
     foreach (['font-family:var(--sb-font-body) !important', 'background-image:linear-gradient(140deg, #ff4dae, #e9008a) !important', 'border-radius:999px !important', 'height:60px !important', 'min-width:169px !important', 'transition:all 200ms ease !important'] as $decl) {
         assert_true(str_contains($rules[0]['declarations'], $decl), "{$decl} in {$rules[0]['declarations']}");
     }
-    assert_eq(['selectors' => ['.sb-button:hover'], 'declarations' => 'opacity:0.9 !important;transform:translate(0,-2px) !important;filter:saturate(107%) !important'], $rules[1]);
+    assert_eq(['selectors' => ['.sb-button:hover'], 'declarations' => 'opacity:0.9 !important;filter:saturate(107%) !important'], $rules[1]);
+    assert_eq(['selectors' => ['.sb-button:hover'], 'declarations' => 'transform:translate(0,-2px) !important', 'media' => StyleSurface::HOVER_MOTION], $rules[2]);
 
     $loop = sbdc_block('core.query_loop', []);
     assert_true(sbpm_valid($loop + ['style_parts' => ['button_row' => ['layout' => ['display' => 'none']], 'grid' => ['layout' => ['display' => 'block']]]]), 'a part may be hidden, unlike a block');
