@@ -89,6 +89,8 @@ final class BlockParts
             'box'    => ['label' => 'Box', 'selectors' => ['.sb-countdown__unit']],
             'number' => ['label' => 'Number', 'selectors' => ['.sb-countdown__num']],
             'unit'   => ['label' => 'Unit name', 'selectors' => ['.sb-countdown__name']],
+            'units'  => ['label' => 'Boxes row', 'selectors' => ['.sb-countdown__units']],
+            'message' => ['label' => 'Expire message', 'selectors' => ['.sb-countdown__done']],
         ],
         'core.nav_menu' => [
             'list'    => ['label' => 'Menu list', 'selectors' => ['.sb-nav__list']],
@@ -96,7 +98,8 @@ final class BlockParts
             'item'    => ['label' => 'Items', 'selectors' => ['.sb-nav__list>.sb-nav__item']],
             'link'    => ['label' => 'Links', 'selectors' => ['.sb-nav__list>.sb-nav__item>.sb-nav__link']],
             // studio-runtime.js marks the link of the page being viewed (a header is rendered once for every page).
-            'current' => ['label' => 'Current page link', 'selectors' => ['.sb-nav__link[aria-current="page"]', '.sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)']],
+            // As specific as `link` and `sublink` and more, or their colour would win over this one.
+            'current' => ['label' => 'Current page link', 'selectors' => ['.sb-nav__list>.sb-nav__item>.sb-nav__link[aria-current="page"]', '.sb-nav__sub .sb-nav__item>.sb-nav__link[aria-current="page"]', '.sb-nav__list .sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)']],
             'submenu' => ['label' => 'Submenu', 'selectors' => ['.sb-nav__sub']],
             'sublink' => ['label' => 'Submenu links', 'selectors' => ['.sb-nav__sub .sb-nav__link']],
             'toggle'  => ['label' => 'Submenu arrow', 'selectors' => ['.sb-nav__caret', '.sb-nav__toggle']],

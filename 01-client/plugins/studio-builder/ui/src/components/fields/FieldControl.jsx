@@ -8,7 +8,7 @@
 // server mid-typing). Labels come from the server manifest and are text only.
 
 import { Fragment, lazy, memo, Suspense, useEffect, useId, useRef, useState } from 'react';
-import { coerce, controlFor, highlightMissing, hint, newRepeaterItem, swatchHex, tokensFor, clone } from '../../core/fields.mjs';
+import { coerce, controlFor, datetimeFromLocal, datetimeToLocal, highlightMissing, hint, newRepeaterItem, swatchHex, tokensFor, clone } from '../../core/fields.mjs';
 import { asList, asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
 import { MediaControl } from './MediaControl.jsx';
@@ -102,6 +102,12 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
             step={field.integer_only ? 1 : 'any'}
             onChange={(e) => update(coerce(field, e.target.value))}
           />
+        </FieldRow>
+      );
+    case 'datetime':
+      return (
+        <FieldRow id={id} label={field.label} required={field.required} problem={problem}>
+          <input type="datetime-local" {...common} value={datetimeToLocal(draft)} onChange={(e) => update(datetimeFromLocal(e.target.value))} />
         </FieldRow>
       );
     case 'metafield': {

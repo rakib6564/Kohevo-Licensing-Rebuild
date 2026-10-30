@@ -77,10 +77,10 @@ final class StatsRenderer implements BlockRendererInterface
                 . '</div>';
         }
 
-        $columns = count($items);
-        $columns = max(2, min(4, $columns));
+        $columns = min(4, count($items));
 
-        return '<div' . Html::classAttr(['sb-stats', 'sb-cols-2', 'sb-md-cols-' . $columns]) . '>'
+        // A lone figure fills its block; any more sit two across on a phone.
+        return '<div' . Html::classAttr(['sb-stats', 'sb-cols-' . min(2, $columns), 'sb-md-cols-' . $columns]) . '>'
             . $cells
             . '</div>';
     }

@@ -20,7 +20,7 @@ export const OPTIONS = Object.freeze({
   overflow: ['visible', 'hidden', 'auto', 'scroll'],
   objectFit: ['cover', 'contain', 'fill', 'none', 'scale-down'],
   objectPosition: ['center', 'top', 'bottom', 'left', 'right', 'top-left', 'top-right', 'bottom-left', 'bottom-right'],
-  borderStyle: ['none', 'solid', 'dashed', 'dotted', 'double'],
+  borderStyle: ['none', 'solid', 'dashed', 'dotted', 'double', 'groove'],
   fontStyle: ['normal', 'italic'],
   decoration: ['none', 'underline', 'line-through', 'overline'],
   decorationStyle: ['solid', 'dashed', 'dotted', 'wavy', 'double'],

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { COLOR_VALUE, controlFor, hint, swatchHex } from '../src/core/fields.mjs';
+import { COLOR_VALUE, controlFor, datetimeFromLocal, datetimeToLocal, hint, swatchHex } from '../src/core/fields.mjs';
 
 test('a string field with format colour gets the colour control; plain strings stay text', () => {
   assert.equal(controlFor({ type: 'string', format: 'color' }), 'color');
@@ -34,4 +34,14 @@ test('highlightMissing: warns only when a phrase is set and absent from the text
   assert.equal(highlightMissing({ heading: 'Welcome home', highlight: 'home' }), false); // a hero's text is `heading`
   assert.equal(highlightMissing({ heading: 'Welcome home', highlight: 'away' }), true);
   assert.equal(highlightMissing({}), false);
+});
+
+test('date-time field: local input and stored UTC are the same moment', () => {
+  const stored = datetimeFromLocal('2030-01-01T09:30');
+  assert.match(stored, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+  assert.equal(new Date(stored).getTime(), new Date('2030-01-01T09:30').getTime());
+  assert.equal(datetimeToLocal(stored), '2030-01-01T09:30');
+  assert.equal(datetimeFromLocal(''), '');
+  assert.equal(datetimeToLocal('nonsense'), '');
+  assert.equal(controlFor({ type: 'string', format: 'datetime' }), 'datetime');
 });

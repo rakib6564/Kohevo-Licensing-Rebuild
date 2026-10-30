@@ -179,8 +179,12 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         'v2-team__photo' => ['s' => S(dim(['width' => '120px', 'height' => '120px', 'object_fit' => 'cover', 'overflow' => 'hidden']), radius('999px'), mar(0, 'auto', 14, 'auto'), brd('#ffd3ea', '4px', '999px')), 'm' => dim(['width' => '92px', 'height' => '92px'])],
         'v2-team__name'  => ['s' => S(col(INK), fam('heading', '18px', 'bold', '1.3'))],
         'v2-team__role'  => ['s' => S(col(BODY), ty('14px', null, '1.5'), mar(4, null, 0, null))],
-        'v2-stat'        => ['s' => S(pad(30, 28), radius('22px'), bg('#ffffff'), $lift), 'center' => true],
-        'v2-stat__num'   => ['s' => S(col(PINK), ty('clamp(30px,3vw,40px)', 'bold', '1.1', '-.02em', SYNE), mar(0, null, 10, null))],
+        'v2-stat'        => ['s' => S(pad(34, 28), radius('22px'), bg('#ffffff'), $lift), 'center' => true],
+        'v2-stat__counter' => ['parts' => ['number' => S(col(PINK), fam('heading', '60px', 'bold', '66px')),
+            'label' => S(col(INK), fam('heading', '19px', 'bold', '25px'), mar(12, null, 8, null))],
+            'mparts' => ['number' => ty('46px')]],
+        // A short note closing a section: italic, with room above and below.
+        'v2-note'        => ['s' => S(['typography' => ['style' => 'italic']], mar(60, 'auto', 28, 'auto')), 'm' => mar(40, 'auto', 16, 'auto')],
         'v2-stat__text'  => ['s' => S(col(BODY), ty('15px', null, '1.55'))],
         'v2-quotes'      => ['s' => lay(['gap' => '22px']), 'props' => ['columns' => 3], 'mp' => ['columns' => 1], 'reveal' => $up(0)],
         'v2-q'           => ['s' => S(pad(30, 28), radius('22px'), grad('linear-gradient(150deg,#ff3fa6 0%,#e9008a 60%,#b0006a 100%)'), shadow(0, 24, 50, 'rgba(233,0,138,.25)', -10))],
@@ -196,7 +200,8 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         'v2-band v2-actions' => ['s' => lay(['justify' => 'center'])],
         'v2-band v2-links' => ['s' => lay(['justify' => 'center'])],
         'v2-band v2-more' => ['s' => col('#ffffff')],
-        'v2-band v2-btn' => ['parts' => ['button' => S(['background' => ['gradient' => 'linear-gradient(140deg,#ffffff 0%,#ffffff 100%)']], col(PINK), shadow(0, 14, 30, 'rgba(60,0,35,.25)', -6))]],
+        'v2-band v2-btn' => ['parts' => ['button' => S(['background' => ['gradient' => 'linear-gradient(140deg,#ffffff 0%,#ffffff 100%)']], col(PINK), shadow(0, 14, 30, 'rgba(60,0,35,.25)', -6)),
+                'button:hover' => S(['background' => ['gradient' => 'linear-gradient(140deg,#fff0f7 0%,#ffe0f0 100%)']], col(PINK_DEEP), shadow(0, 18, 34, 'rgba(60,0,35,.3)', -6))]],
         'v2-band v2-ghost' => ['parts' => ['button' => S(bg('transparent'), col('#ffffff'), brd('rgba(255,255,255,.65)', '1.5px', '999px'), shadow(0, 0, 0, 'transparent')),
                 'button:hover' => S(col('#ffffff'), bg('rgba(255,255,255,.14)'), ['border' => ['color' => '#ffffff']])]],
 
@@ -216,7 +221,7 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
                 'label' => S(col(INK), fam('body', '14px', 'bold'), mar(0, 0, 6, 0)),
                 'input' => S(sz(['width' => '100%', 'height' => 52]), pad(0, 16), brd('#ead9e2', '1.5px', '14px'), bg('#fffafd'), col(INK), fam('body', '15px')),
                 'textarea' => sz(['height' => 160, 'min_height' => 160]),
-                'button' => S($pill, fx(['cursor' => 'pointer']))]],
+                'button' => S($pill, fx(['cursor' => 'pointer'])), 'button:hover' => $pillHover]],
         'v2-loop--featured' => ['parts' => ['image' => sz(['height' => 300])], 'mparts' => ['image' => sz(['height' => 210])]],
         'v2-event'       => ['s' => S(lay(['display' => 'flex', 'direction' => 'column']), radius('22px'), bg('#ffffff'), $lift, fx(['transition' => ['duration_ms' => 300, 'easing' => 'ease']])),
                               'h' => fx(['transform' => ['translate_y' => '-6px']]), 'reveal' => $up(0)],
@@ -558,9 +563,13 @@ function v2_section(array $sec, array $pg, int $i, bool $last): ?array
         $stats = []; $rest = [];
         foreach ($text as $b) {
             $p = $b['t'] === 'p' ? v2_plain($b['html']) : '';
-            if ($p !== '' && preg_match('/^(.{1,30}?)\s:\s(.+)$/u', $p, $m)) { $stats[] = BOX([T($m[1], 'v2-stat__num'), T($m[2], 'v2-stat__text')], 'v2-stat'); } else { $rest[] = $b; }
+            // "Plus de 350 élèves : …" counts up to +350, under it the title and the short description.
+            if ($p !== '' && preg_match('/^(Plus de )?(\d+ à )?(\d+)\s(.{1,24}?)\s:\s(.+)$/u', $p, $m)) {
+                $figure = ['value' => (int) $m[3], 'label' => mb_strtoupper(mb_substr($m[4], 0, 1)) . mb_substr($m[4], 1), 'prefix' => $m[1] !== '' ? '+' : str_replace(' à ', '–', $m[2]), 'suffix' => '', 'decimals' => 0];
+                $stats[] = BOX([B('core.stats', ['items' => [$figure]], [], 'v2-stat__counter'), T($m[5], 'v2-stat__text')], 'v2-stat');
+            } else { $rest[] = $b; }
         }
-        return SEC($sec['h2'], [BOX($head, 'v2-head v2-head--center'), B('layout.grid', ['columns' => 3, 'gap' => 'none'], $stats, 'v2-stats'), BOX(array_filter([v2_rich($rest)]), 'v2-narrow v2-narrow--center')], 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
+        return SEC($sec['h2'], [BOX($head, 'v2-head v2-head--center'), B('layout.grid', ['columns' => 3, 'gap' => 'none'], $stats, 'v2-stats'), BOX(array_filter([v2_rich($rest)]), 'v2-narrow v2-narrow--center v2-note')], 'v2-sec' . ($soft ? ' v2-sec--soft' : ''));
     }
     if ($sec['id'] === 'temoignages') {
         $quotes = []; $q = null; $rest = [];

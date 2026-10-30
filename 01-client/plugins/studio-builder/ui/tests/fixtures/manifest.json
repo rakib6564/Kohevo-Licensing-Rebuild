@@ -1146,18 +1146,152 @@
             "binding_slots": [],
             "category": "content",
             "default_props": {
+                "countdown_type": "due_date",
+                "custom_labels": false,
                 "done_text": "",
+                "evergreen_hours": 47,
+                "evergreen_minutes": 59,
+                "expire_action": "message",
                 "label": "Starts in",
-                "target": "2030-01-01T00:00:00Z"
+                "label_days": "",
+                "label_hours": "",
+                "label_minutes": "",
+                "label_seconds": "",
+                "message_align": "left",
+                "redirect_url": null,
+                "show_days": true,
+                "show_hours": true,
+                "show_labels": true,
+                "show_minutes": true,
+                "show_seconds": true,
+                "target": "2030-01-01T00:00:00Z",
+                "view": "block"
             },
             "description": "Days, hours, minutes and seconds to a date",
             "field_schema": [
                 {
+                    "key": "countdown_type",
+                    "type": "enum",
+                    "label": "Type",
+                    "required": false,
+                    "default": "due_date",
+                    "allowed_values": [
+                        "due_date",
+                        "evergreen"
+                    ]
+                },
+                {
                     "key": "target",
                     "type": "string",
-                    "label": "Ends at (UTC, e.g. 2030-01-01T00:00:00Z)",
+                    "label": "Due Date",
                     "required": true,
                     "default": "2030-01-01T00:00:00Z",
+                    "max_length": 40,
+                    "format": "datetime"
+                },
+                {
+                    "key": "evergreen_hours",
+                    "type": "number",
+                    "label": "Hours",
+                    "required": false,
+                    "default": 47,
+                    "min": 0,
+                    "max": 8760,
+                    "integer_only": true
+                },
+                {
+                    "key": "evergreen_minutes",
+                    "type": "number",
+                    "label": "Minutes",
+                    "required": false,
+                    "default": 59,
+                    "min": 0,
+                    "max": 59,
+                    "integer_only": true
+                },
+                {
+                    "key": "view",
+                    "type": "enum",
+                    "label": "View",
+                    "required": false,
+                    "default": "block",
+                    "allowed_values": [
+                        "block",
+                        "inline"
+                    ]
+                },
+                {
+                    "key": "show_days",
+                    "type": "boolean",
+                    "label": "Days",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_hours",
+                    "type": "boolean",
+                    "label": "Hours",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_minutes",
+                    "type": "boolean",
+                    "label": "Minutes",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_seconds",
+                    "type": "boolean",
+                    "label": "Seconds",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "show_labels",
+                    "type": "boolean",
+                    "label": "Show Labels",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "custom_labels",
+                    "type": "boolean",
+                    "label": "Custom Labels",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "label_days",
+                    "type": "string",
+                    "label": "Days Label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40
+                },
+                {
+                    "key": "label_hours",
+                    "type": "string",
+                    "label": "Hours Label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40
+                },
+                {
+                    "key": "label_minutes",
+                    "type": "string",
+                    "label": "Minutes Label",
+                    "required": false,
+                    "default": "",
+                    "max_length": 40
+                },
+                {
+                    "key": "label_seconds",
+                    "type": "string",
+                    "label": "Seconds Label",
+                    "required": false,
+                    "default": "",
                     "max_length": 40
                 },
                 {
@@ -1169,12 +1303,45 @@
                     "max_length": 120
                 },
                 {
+                    "key": "expire_action",
+                    "type": "enum",
+                    "label": "Actions After Expire",
+                    "required": false,
+                    "default": "message",
+                    "allowed_values": [
+                        "message",
+                        "hide",
+                        "redirect"
+                    ]
+                },
+                {
                     "key": "done_text",
                     "type": "string",
                     "label": "Text when it ends",
                     "required": false,
                     "default": "",
                     "max_length": 160
+                },
+                {
+                    "key": "message_align",
+                    "type": "enum",
+                    "label": "Message Alignment",
+                    "required": false,
+                    "default": "left",
+                    "allowed_values": [
+                        "left",
+                        "center",
+                        "right",
+                        "justify"
+                    ]
+                },
+                {
+                    "key": "redirect_url",
+                    "type": "url",
+                    "label": "Redirect URL",
+                    "required": false,
+                    "default": null,
+                    "max_length": 1000
                 }
             ],
             "icon": "timer",
@@ -1223,6 +1390,14 @@
                 {
                     "key": "unit",
                     "label": "Unit name"
+                },
+                {
+                    "key": "units",
+                    "label": "Boxes row"
+                },
+                {
+                    "key": "message",
+                    "label": "Expire message"
                 }
             ],
             "title": "Countdown",

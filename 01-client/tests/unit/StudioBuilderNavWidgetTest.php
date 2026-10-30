@@ -87,8 +87,8 @@ unit('nav widget: inline text addresses top-level links only, so a submenu link 
 
 unit('nav widget: the current page and the menu button can be styled as parts', function (): void {
     $parts = BlockParts::for('core.nav_menu');
-    assert_true(in_array('.sb-nav__link[aria-current="page"]', $parts['current']['selectors'], true));
-    assert_true(in_array('.sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)', $parts['current']['selectors'], true), 'a parent of the current page lights up too');
+    assert_true(in_array('.sb-nav__list>.sb-nav__item>.sb-nav__link[aria-current="page"]', $parts['current']['selectors'], true), 'the current link outranks the Links colour');
+    assert_true(in_array('.sb-nav__list .sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)', $parts['current']['selectors'], true), 'a parent of the current page lights up too');
     assert_eq(['.sb-nav__burger'], $parts['burger']['selectors']);
     assert_true(isset($parts['panel']));
 });

@@ -28,7 +28,7 @@ const POSITIONS = {
 
 export const FONT_WEIGHTS = ['normal', 'medium', 'semibold', 'bold', 'extrabold', '100', '200', '300', '400', '500', '600', '700', '800', '900'];
 export const TEXT_TRANSFORMS = ['none', 'uppercase', 'lowercase', 'capitalize'];
-export const BORDER_STYLES = ['none', 'solid', 'dashed', 'dotted', 'double'];
+export const BORDER_STYLES = ['none', 'solid', 'dashed', 'dotted', 'double', 'groove'];
 export const SHADOW_PRESETS = ['none', 'sm', 'md', 'lg', 'xl', '2xl', 'inner'];
 export const RADIUS_PRESETS = ['none', 'sm', 'md', 'lg', 'xl', '2xl', 'full'];
 const Z_MIN = -999;
