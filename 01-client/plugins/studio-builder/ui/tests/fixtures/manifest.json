@@ -3036,6 +3036,97 @@
         {
             "allowed_binding_providers": [],
             "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "direction": "left",
+                "duration": 30,
+                "pause_on_hover": false,
+                "text": "Your text here"
+            },
+            "description": "A line of text that scrolls across the page without end",
+            "field_schema": [
+                {
+                    "key": "text",
+                    "type": "string",
+                    "label": "Text",
+                    "required": false,
+                    "default": "Your text here",
+                    "max_length": 200
+                },
+                {
+                    "key": "duration",
+                    "type": "number",
+                    "label": "Loop Time (seconds)",
+                    "required": false,
+                    "default": 30,
+                    "min": 5,
+                    "max": 180,
+                    "integer_only": true
+                },
+                {
+                    "key": "direction",
+                    "type": "enum",
+                    "label": "Direction",
+                    "required": false,
+                    "default": "left",
+                    "allowed_values": [
+                        "left",
+                        "right"
+                    ]
+                },
+                {
+                    "key": "pause_on_hover",
+                    "type": "boolean",
+                    "label": "Pause on Hover",
+                    "required": false,
+                    "default": false
+                }
+            ],
+            "icon": "pilcrow",
+            "inline_text": [],
+            "label": "Text Marquee",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "text",
+                    "label": "Text"
+                }
+            ],
+            "title": "Text Marquee",
+            "type": "core.marquee",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
             "allows_children": true,
             "binding_slots": [],
             "category": "advanced",

@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '52';
+    public const VERSION = '53';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -581,6 +581,13 @@ final class StudioStylesheet
             . '.sb-audio__bar{display:flex;align-items:center;gap:1rem}.sb-audio__seek{flex:1;min-width:0;margin:0;accent-color:currentColor}.sb-audio__time{flex:none;font-variant-numeric:tabular-nums;font-size:.875rem}'
             . '.sb-audio__embed{display:block;width:100%;border:0;border-radius:.5rem}'
             . '.sb-body a.sb-audio__link{align-self:flex-start;color:inherit;font-size:.875rem;text-decoration:underline;text-underline-offset:.2em}'
+            // Marquee ── two identical groups, moved by half the track, so the loop has no seam.
+            . '.sb-marquee{overflow:hidden;max-width:100%}'
+            . '.sb-marquee__track{display:flex;width:max-content;direction:ltr;animation:sb-marquee 30s linear infinite}'
+            . '.sb-marquee--right .sb-marquee__track{animation-direction:reverse}.sb-marquee--pause:hover .sb-marquee__track{animation-play-state:paused}'
+            . '.sb-marquee__group{display:flex;flex:none}.sb-marquee__text{flex:none;padding-inline-end:1em;white-space:nowrap}'
+            . '@keyframes sb-marquee{to{translate:-50%}}'
+            . '@media (prefers-reduced-motion:reduce){.sb-marquee__track{width:auto;justify-content:center;animation:none}.sb-marquee [aria-hidden="true"]{display:none}.sb-marquee__group{flex:0 1 auto;min-width:0}.sb-marquee__text{flex:0 1 auto;padding-inline-end:0;white-space:normal;text-align:center}}'
             . '.sb-video-lightbox__frame{width:min(92vw,151vh)}.sb-video-lightbox__frame.sb-video--aspect-4-3{width:min(92vw,113vh)}'
             . '.sb-video-lightbox__frame.sb-video--aspect-1-1{width:min(92vw,85vh)}.sb-video-lightbox__frame.sb-video--aspect-9-16{width:min(92vw,48vh)}';
 

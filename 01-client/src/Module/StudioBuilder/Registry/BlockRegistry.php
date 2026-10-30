@@ -17,6 +17,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\ContainerRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\CountdownRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\AudioRenderer;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MarqueeRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\VideoRenderer;
 use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
@@ -718,6 +719,24 @@ final class BlockRegistry
                 ['key' => 'hosted_url', 'type' => 'url', 'label' => 'Audio File', 'required' => false, 'max_length' => 1000],
                 ['key' => 'title', 'type' => 'string', 'label' => 'Title', 'required' => false, 'default' => 'Episode title', 'max_length' => 200],
                 ['key' => 'subtitle', 'type' => 'string', 'label' => 'Subtitle', 'required' => false, 'default' => 'Show or station', 'max_length' => 200],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // 24c. core.marquee — a line of text that scrolls without end; Style sets its font, size and colour.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.marquee',
+            version: 1,
+            label: 'Text Marquee',
+            title: 'Text Marquee',
+            description: 'A line of text that scrolls across the page without end',
+            category: 'content',
+            icon: 'pilcrow',
+            schema: FieldSchema::define([
+                ['key' => 'text', 'type' => 'string', 'label' => 'Text', 'required' => false, 'default' => 'Your text here', 'max_length' => 200],
+                ['key' => 'duration', 'type' => 'number', 'label' => 'Loop Time (seconds)', 'required' => false, 'default' => 30, 'min' => MarqueeRenderer::MIN_SECONDS, 'max' => MarqueeRenderer::MAX_SECONDS, 'integer_only' => true],
+                ['key' => 'direction', 'type' => 'enum', 'label' => 'Direction', 'required' => false, 'allowed_values' => MarqueeRenderer::DIRECTIONS, 'default' => 'left'],
+                ['key' => 'pause_on_hover', 'type' => 'boolean', 'label' => 'Pause on Hover', 'required' => false, 'default' => false],
             ]),
             allowsChildren: false,
         ));

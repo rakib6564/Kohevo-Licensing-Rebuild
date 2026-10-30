@@ -160,6 +160,9 @@ final class BlockParts
             'link' => ['label' => 'Icon link', 'selectors' => ['.sb-icon__link']],
             'svg'  => ['label' => 'Icon', 'selectors' => ['svg']],
         ],
+        'core.marquee' => [
+            'text' => ['label' => 'Text', 'selectors' => ['.sb-marquee__text']],
+        ],
         'core.audio' => [
             'card'     => ['label' => 'Card', 'selectors' => ['.sb-audio']],
             'title'    => ['label' => 'Title', 'selectors' => ['.sb-audio__title']],

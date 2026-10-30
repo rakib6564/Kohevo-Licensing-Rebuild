@@ -34,6 +34,7 @@ define('V2_HOME_URL', V2_LIVE ? '/' : '/accueil-v2/');
 const V2_MEMBRE = 'https://membre.fightxlife.com/connexion/';
 const V2_LOGO = '2022-05-cropped-logo-fxl-01-e1638355780533-1.png';
 const SCRIPT = 'Homemade Apple, cursive';
+const STENCIL = 'Saira Stencil One, sans-serif';
 const INK_SOFT = '#1b1418';
 /** The design's lifted-card shadow: the live site's deep, soft drop, warmed toward the brand pink. */
 const LIFT = [0, 22, 60, 'rgba(70,10,48,.13)', -8];
@@ -119,6 +120,11 @@ function native_v2(): array
         'v2-hero__qname' => ['s' => S(col(PINK), ty('18px', null, '1.4', null, SCRIPT), mar(8, null, 0, null)), 'm' => ty('15px')],
 
         // ── Intro card (the page's second and third paragraphs) ──
+        'v2-force-sec'   => ['s' => S(bg('#ffffff'), $V(64, 40), dim(['overflow' => 'hidden'])), 'm' => $V(40, 24)],
+        'v2-force__kick' => ['center' => true, 's' => mar(0, null, 0, null)],
+        'v2-force__marquee' => ['s' => S(col(INK), ty('clamp(44px,7vw,92px)', '400', '1.2', null, STENCIL), ['typography' => ['transform' => 'uppercase']], mar(0, null, 34, null)), 'm' => S(ty('40px'), mar(0, null, 22, null))],
+        'v2-force__video' => ['s' => S(radius('26px'), dim(['overflow' => 'hidden', 'max_width' => '1040px']), mar(null, 'auto', null, 'auto'), $lift), 'reveal' => $up(0),
+            'parts' => ['play' => S(sz(['width' => 76, 'height' => 76]), bg(PINK))]],
         'v2-intro-sec'   => ['s' => S(bg('#ffffff'), $V(0, 30))],
         'v2-intro'       => ['s' => S(mar(-70, null, 0, null), place('relative'), pad(46, 52), radius('26px'), bg('#ffffff'), $lift, lay(['tracks' => 'minmax(0,1fr) minmax(0,1fr)', 'gap' => '46px'])),
                               't' => pad(36, 34), 'm' => S(lay(['tracks' => '1fr', 'gap' => '6px']), pad(26, 22), mar(-50, null, null, null)), 'reveal' => $up()],
@@ -261,6 +267,12 @@ if (!str_contains($head, 'Homemade+Apple')) {
     }
     Database::setSetting(StudioCodePolicy::SETTING_HEAD_SNIPPET, StudioCodePolicy::prepareSnippet($head, 'head'), $tid);
     say('  + font: Homemade Apple');
+}
+// The marquee's stencil face, as on the live site.
+if (!str_contains($head, 'Saira+Stencil+One')) {
+    $head = str_replace('family=Homemade+Apple', 'family=Saira+Stencil+One&family=Homemade+Apple', $head);
+    Database::setSetting(StudioCodePolicy::SETTING_HEAD_SNIPPET, StudioCodePolicy::prepareSnippet($head, 'head'), $tid);
+    say('  + font: Saira Stencil One');
 }
 
 // ── Addresses ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -418,6 +430,10 @@ $supportBand = BOX([BOX([
 $supportBand['style']['background'] = ['image' => ['media_id' => MID('/uploads/media/fxl/2022-05-enfant-malade.jpg'), 'alt' => '', 'focal_point' => [0.75, 0.3]], 'fit' => 'cover', 'position' => 'right',
     'overlay' => ['color' => 'rgba(26,4,18,.12)']];
 
+// The video's own frame from YouTube, kept with the site's media.
+v2_press_media('video-force-de-vivre.jpg');
+define('V2_POSTER', MID('/uploads/media/fxl/video-force-de-vivre.jpg'));
+
 $sections = [
     SEC('Hero', [B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
         BOX([
@@ -438,6 +454,12 @@ $sections = [
         BOX([KICK('Qui accompagnons-nous ?'), T('FightxLife accompagne les enfants, les adolescents et les adultes touchés par la maladie, ainsi que leurs proches, pour les aider à rester en mouvement, garder du lien et trouver du soutien à chaque étape de leur parcours.', 'v2-intro__text')]),
         BOX([KICK('Où agissons-nous ?'), T('L’association propose des cours adaptés à Bruxelles et mène également des actions dans les hôpitaux, les écoles et différents lieux en Belgique, à travers le sport, la sensibilisation et des projets pensés au plus près des personnes concernées.', 'v2-intro__text')], 'v2-intro__second'),
     ], 'v2-intro')], 'v2-intro-sec'),
+    SEC('La force de vivre', [
+        KICK('FightxLife', 'v2-kick v2-force__kick'),
+        B('core.marquee', ['text' => 'La force de vivre', 'duration' => 60], [], 'v2-force__marquee'),
+        B('core.video', ['source' => 'youtube', 'url' => 'https://www.youtube.com/watch?v=jwMB0uoajXQ', 'aspect_ratio' => '16:9', 'privacy' => true, 'lazy_load' => true, 'controls' => true,
+            'overlay' => true, 'play_icon' => true, 'lightbox' => false, 'overlay_image' => ['media_id' => V2_POSTER, 'alt' => 'FightxLife, la force de vivre : la vidéo de l’association', 'focal_point' => [0.5, 0.5]]], [], 'v2-force__video'),
+    ], 'v2-force-sec'),
     SEC('Trois manières d’agir', [
         V2HEAD('Trois manières d’agir face au cancer', 'face au cancer', [
             'Parce que chaque parcours est différent, FightxLife agit à plusieurs endroits de la vie : quand il faut retrouver confiance dans son corps, traverser le quotidien à l’hôpital ou aider les autres à mieux comprendre la maladie.']),
