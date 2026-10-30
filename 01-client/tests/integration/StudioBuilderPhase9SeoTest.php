@@ -662,7 +662,11 @@ unit('phase9c integration: SEO settings, sitemap.xml, robots.txt and slug hygien
                 $set('studio_seo_google_verify', 'gv_123');
                 $html = sbs9_page_public($rt, SBS9_A, 'about');
                 assert_true($html !== $before, 'a saved setting changes the live page without a republish');
-                assert_true(str_contains($html, '<meta name="google-site-verification" content="gv_123">'), 'verification tag');
+                assert_true(str_contains($html, '<meta name="google-site-verification" content="gv_123">'), 'an old Site & SEO code still gives its tag');
+                assert_eq(1, substr_count($html, 'google-site-verification'), 'once');
+                $set('studio_code_site_verification', (string) json_encode(['google' => 'gv_shared_12345']));
+                $shared = sbs9_page_public($rt, SBS9_A, 'about');
+                assert_true(str_contains($shared, 'content="gv_shared_12345"') && substr_count($shared, 'google-site-verification') === 1, 'the shared setting wins, and the tag is printed once');
                 $team = sbs9_page_public($rt, SBS9_A, 'team');
                 assert_true(str_contains($team, '<title>Team | Site</title>'), 'a page without its own SEO title uses the format: ' . (preg_match('~<title>[^<]*</title>~', $team, $m) ? $m[0] : '(none)'));
                 assert_true(str_contains($team, 'content="Site-wide description"'), 'and the site description');
@@ -686,7 +690,7 @@ unit('phase9c integration: SEO settings, sitemap.xml, robots.txt and slug hygien
                 assert_null(sbs9_file($rt, SBS9_B, '/old-about'), 'another tenant\'s rules do not apply');
                 assert_eq(200, sbs9_file($rt, SBS9_A, '/about')?->status, 'other addresses are served as before');
 
-                foreach (['studio_seo_title_format', 'studio_seo_description', 'studio_seo_google_verify', 'studio_seo_robots', 'studio_redirects'] as $k) {
+                foreach (['studio_seo_title_format', 'studio_seo_description', 'studio_seo_google_verify', 'studio_code_site_verification', 'studio_seo_robots', 'studio_redirects'] as $k) {
                     Database::query('DELETE FROM settings WHERE tenant_id = ? AND setting_key = ?', [SBS9_A, $k]);
                 }
                 assert_eq($before, sbs9_page_public($rt, SBS9_A, 'about'), 'with the settings gone the page is exactly as before');

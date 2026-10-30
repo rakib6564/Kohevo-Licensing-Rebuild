@@ -55,7 +55,7 @@ test('the type chooser is grouped, each type shows only its options, and a saved
   await drawer.locator('input[name="label"]').fill('Again');
   await drawer.locator('input[name="key"]').fill(key);
   await drawer.getByRole('button', { name: /Save Field/ }).click();
-  await expect(page.locator('.alert-danger')).toContainText('already exists');
+  await expect(page.locator('.alert-error')).toContainText('already exists');
 
   // A select without choices is refused.
   await page.evaluate(() => { document.getElementById('sb-field-drawer').style.display = 'block'; });
@@ -63,7 +63,7 @@ test('the type chooser is grouped, each type shows only its options, and a saved
   await drawer.locator('input[name="key"]').fill(`${key}_b`);
   await drawer.locator('#sb-meta-type').selectOption('select');
   await drawer.getByRole('button', { name: /Save Field/ }).click();
-  await expect(page.locator('.alert-danger')).toContainText('at least one choice');
+  await expect(page.locator('.alert-error')).toContainText('at least one choice');
 
   // Clean up.
   const mine = page.locator('.data-row', { hasText: key });

@@ -102,12 +102,9 @@ $newHref = 'page-new.php' . ($typeKey !== '' ? '?type=' . rawurlencode($typeKey)
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
-<div class="sb-admin-wrapper">
-    <?php sb_render_admin_nav($type !== null ? 'type-' . $typeKey : 'pages'); ?>
+<div class="sb-admin">
 
-    <?php if ($flash): ?>
-        <div class="alert alert-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div>
-    <?php endif; ?>
+    <?php sb_render_flash($flash); ?>
 
     <?php if ($listError !== null): ?>
         <div class="alert alert-error" role="status"><?= e($listError) ?></div>

@@ -24,7 +24,7 @@ Auth::requirePerm('studio-builder.view');
 $canEdit = Auth::can('studio-builder.edit') || Auth::isSuperAdmin();
 $tenantId = current_tenant_id();
 
-$pageTitle = __('studio_reviews', 'Reviews');
+$pageTitle = __('studio_nav_history', 'History');
 $currentNav = 'studio-reviews';
 
 $flash = null;
@@ -185,32 +185,35 @@ $kindUrl = static fn(string $k): string => e($self . ($k === 'all' ? '' : '?kind
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
-<div class="content-wrapper">
-    <?php sb_render_admin_nav('reviews'); ?>
+<div class="sb-admin">
 
-    <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?> sb-alert">
-            <?= e($flash['msg']) ?>
-        </div>
-    <?php endif; ?>
+    <?php sb_render_flash($flash); ?>
 
     <div class="sb-screen-head">
         <div>
-            <h2>Revision history &amp; AI audit log</h2>
-            <p>Audit structural changes, review AI drafts before publishing, restore a page to an earlier snapshot, or clear out old history.</p>
-        </div>
-        <div class="sb-pill-filter" style="margin-bottom: 0;">
-            <a href="<?= $kindUrl('all') ?>" class="sb-pill-item <?= $kindFilter === 'all' ? 'active' : '' ?>">All revisions<?= $kindFilter === 'all' ? ' (' . $total . ')' : '' ?></a>
-            <a href="<?= $kindUrl('ai') ?>" class="sb-pill-item <?= $kindFilter === 'ai' ? 'active' : '' ?>"><?= sb_svg('sparkles', 14) ?> AI drafts<?= $kindFilter === 'ai' ? ' (' . $total . ')' : '' ?></a>
-            <a href="<?= $kindUrl('manual') ?>" class="sb-pill-item <?= $kindFilter === 'manual' ? 'active' : '' ?>"><?= sb_svg('edit', 14) ?> Manual saves<?= $kindFilter === 'manual' ? ' (' . $total . ')' : '' ?></a>
-            <a href="<?= $kindUrl('rollback') ?>" class="sb-pill-item <?= $kindFilter === 'rollback' ? 'active' : '' ?>"><?= sb_svg('refresh', 14) ?> Rollbacks<?= $kindFilter === 'rollback' ? ' (' . $total . ')' : '' ?></a>
+            <h2><?= e(__('studio_nav_history', 'History')) ?></h2>
+            <p><?= e(__('studio_history_intro', 'Every saved version of every page, including AI drafts. Open one in the builder, restore it, or clear out old versions.')) ?></p>
         </div>
     </div>
 
+    <nav class="sb-pill-filter" aria-label="<?= e(__('studio_history_filter', 'Show')) ?>">
+        <?php foreach ([
+            'all'      => ['', __('studio_history_all', 'All')],
+            'ai'       => ['sparkles', __('studio_history_ai', 'AI drafts')],
+            'manual'   => ['edit', __('studio_history_manual', 'Saves')],
+            'autosave' => ['clock', __('studio_history_autosave', 'Autosaves')],
+            'publish'  => ['zap', __('studio_history_publish', 'Publishes')],
+            'rollback' => ['refresh', __('studio_history_rollback', 'Restores')],
+            'import'   => ['upload', __('studio_history_import', 'Imports')],
+        ] as $kindKey => [$kindIcon, $kindLabel]): ?>
+            <a href="<?= $kindUrl($kindKey) ?>" class="sb-pill-item <?= $kindFilter === $kindKey ? 'active' : '' ?>"<?= $kindFilter === $kindKey ? ' aria-current="true"' : '' ?>><?= $kindIcon !== '' ? sb_svg($kindIcon, 14) . ' ' : '' ?><?= e($kindLabel) ?><?= $kindFilter === $kindKey ? ' (' . $total . ')' : '' ?></a>
+        <?php endforeach; ?>
+    </nav>
+
     <?php if (empty($revisions)): ?>
-        <div class="sb-card" style="text-align: center; color: var(--sb-muted);">
-            No revisions recorded yet. Save edits in the Canvas Builder to start recording immutable snapshots.
-        </div>
+        <div class="sb-empty"><p><?= e($kindFilter === 'all'
+            ? __('studio_history_empty', 'No saved versions yet. Each save in the builder adds one here.')
+            : __('studio_history_empty_kind', 'No saved versions of this kind.')) ?></p></div>
     <?php else: ?>
         <form method="POST" action="<?= e($self) ?>" id="studio-revision-form">
             <?= csrf_field() ?>
@@ -222,19 +225,27 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 echo \Slate\Module\StudioBuilder\Admin\PageListView::selectBar(
                     $canDelete,
                     'delete_revisions',
-                    'Delete',
-                    'Delete %d selected revision(s) for good? A page\'s published revision and current draft are kept.'
+                    __('delete', 'Delete'),
+                    __('studio_history_bulk_delete_confirm', 'Delete %d selected revision(s) for good? A page\'s published revision and current draft are kept.')
                 );
-                slate_data_list_head(['main' => 'Page', 'value' => 'Rev #', 'badge' => 'Kind'], ['select_all' => 'Select all revisions on this page']);
+                slate_data_list_head(['main' => __('studio_kind_page', 'Page'), 'value' => __('studio_history_col_rev', 'Rev #'), 'badge' => __('studio_history_col_kind', 'Kind')], ['select_all' => __('studio_history_select_all', 'Select all revisions on this page')]);
                 foreach ($revisions as $rev) {
                     $rId = (int) $rev['id'];
                     $pId = (int) $rev['page_id'];
-                    $pTitle = (string) ($rev['page_title'] ?? "Page #{$pId}");
+                    $pTitle = (string) ($rev['page_title'] ?? sprintf(__('studio_history_page_n', 'Page #%d'), $pId));
                     $pSlug = (string) ($rev['page_slug'] ?? '');
                     $revNum = (int) ($rev['revision_number'] ?? 1);
                     $kind = (string) ($rev['revision_kind'] ?? 'manual');
-                    $kindLabel = $kind === 'ai_operation' ? 'ai' : $kind;
-                    $summary = (string) ($rev['summary'] ?? 'Document update');
+                    $kindLabel = match ($kind) {
+                        'ai_operation' => __('studio_history_kind_ai', 'AI'),
+                        'manual' => __('studio_history_kind_manual', 'Save'),
+                        'autosave' => __('studio_history_kind_autosave', 'Autosave'),
+                        'publish' => __('studio_history_kind_publish', 'Publish'),
+                        'rollback' => __('studio_history_kind_rollback', 'Restore'),
+                        'import' => __('studio_history_kind_import', 'Import'),
+                        default => $kind,
+                    };
+                    $summary = (string) ($rev['summary'] ?? __('studio_history_summary_default', 'Document update'));
                     $createdAt = (string) ($rev['created_at'] ?? '');
                     $kindBadge = match ($kind) {
                         'ai_operation' => 'info',
@@ -245,32 +256,32 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     $use = $inUseIds[$rId] ?? null;
 
                     $actions = '<a href="' . e(plugin_url('studio-builder', 'admin/builder.php?page=' . $pId)) . '" target="_blank" rel="noopener" class="btn btn-sm btn-ghost">'
-                        . sb_svg('eye', 12) . ' Open in Builder</a>';
+                        . sb_svg('eye', 12) . ' ' . e(__('studio_history_open_builder', 'Open in Builder')) . '</a>';
                     if ($canEdit && ($rev['page_status'] ?? '') !== 'archived') {
-                        $actions .= ' <button type="submit" name="row_action" value="restore:' . $rId . ':' . (int) ($rev['page_draft_id'] ?? 0) . '" class="btn btn-sm btn-primary" data-row-confirm="Restore page to snapshot #' . $revNum . '?" title="Roll the page back to this snapshot">'
-                            . sb_svg('refresh', 12) . ' Restore</button>';
+                        $actions .= ' <button type="submit" name="row_action" value="restore:' . $rId . ':' . (int) ($rev['page_draft_id'] ?? 0) . '" class="btn btn-sm btn-primary" data-row-confirm="' . e(sprintf(__('studio_history_restore_confirm', 'Restore page to snapshot #%d?'), $revNum)) . '" title="' . e(__('studio_history_restore_title', 'Roll the page back to this snapshot')) . '">'
+                            . sb_svg('refresh', 12) . ' ' . e(__('studio_ui_history_restore', 'Restore')) . '</button>';
                     }
                     if ($canDelete && $use === null) {
-                        $actions .= ' <button type="submit" name="row_action" value="delete:' . $rId . '" class="btn btn-sm btn-outline" style="color: #ef4444;" data-row-confirm="Delete snapshot #' . $revNum . ' for good?" title="Delete this snapshot">'
-                            . sb_svg('trash', 12) . ' Delete</button>';
+                        $actions .= ' <button type="submit" name="row_action" value="delete:' . $rId . '" class="btn btn-sm btn-danger" data-row-confirm="' . e(sprintf(__('studio_history_delete_confirm', 'Delete snapshot #%d for good?'), $revNum)) . '" title="' . e(__('studio_history_delete_title', 'Delete this snapshot')) . '">'
+                            . sb_svg('trash', 12) . ' ' . e(__('delete', 'Delete')) . '</button>';
                     }
 
                     $detail = [
-                        'summary' => ['label' => 'Summary & notes', 'value' => $summary],
-                        'when'    => ['label' => 'Timestamp', 'value' => $createdAt !== '' ? date('M j, Y H:i', strtotime($createdAt)) : '—'],
+                        'summary' => ['label' => __('studio_history_summary', 'Summary & notes'), 'value' => $summary],
+                        'when'    => ['label' => __('studio_history_timestamp', 'Timestamp'), 'value' => $createdAt !== '' ? date('M j, Y H:i', strtotime($createdAt)) : '—'],
                     ];
                     if ($use !== null) {
                         $detail['use'] = ['label' => __('studio_review_in_use', 'In use'), 'value' => $inUseNote[$use] ?? $inUseNote['current draft']];
                     }
 
                     slate_data_row([
-                        'select'       => ['name' => 'ids[]', 'value' => (string) $rId, 'label' => 'Select snapshot #' . $revNum . ' of ' . $pTitle],
+                        'select'       => ['name' => 'ids[]', 'value' => (string) $rId, 'label' => sprintf(__('studio_history_select_one', 'Select snapshot #%1$d of %2$s'), $revNum, $pTitle)],
                         'avatar'       => $pTitle,
                         'avatar_color' => $kindBadge === 'muted' ? 'muted' : ($kindBadge === 'active' ? 'success' : $kindBadge),
                         'title'        => $pTitle,
                         'meta'         => '/' . $pSlug,
                         'value'        => '#' . $revNum,
-                        'badge'        => [strtoupper($kindLabel), $kindBadge],
+                        'badge'        => [mb_strtoupper($kindLabel, 'UTF-8'), $kindBadge],
                         'detail'       => $detail,
                         'actions'      => $actions,
                     ]);

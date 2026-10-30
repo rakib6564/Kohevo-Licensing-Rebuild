@@ -28,8 +28,10 @@ $seoDescription = (string) (Database::setting('studio_seo_description', $tenantI
 $seoOgMediaId   = (string) (Database::setting('studio_seo_og_media_id', $tenantId) ?: '');
 $seoOgImageUrl  = (string) (Database::setting('studio_seo_og_image_url', $tenantId) ?: '');
 $seoRobots      = (string) (Database::setting('studio_seo_robots', $tenantId) ?: 'index,follow');
-$seoGoogleVerification = (string) (Database::setting('studio_seo_google_verify', $tenantId) ?: '');
-$seoBingVerification   = (string) (Database::setting('studio_seo_bing_verify', $tenantId) ?: '');
+// Verification codes share one setting with Code & tracking, which prints them (each tag once).
+$verifyTokens = \Slate\Module\StudioBuilder\Http\StudioCodePolicy::verificationTokens($tenantId);
+$seoGoogleVerification = $verifyTokens['google'];
+$seoBingVerification   = $verifyTokens['bing'];
 // The name the live pages use for %site_name%.
 try {
     $siteName = \Slate\Services\Content\TenantBranding::siteName();
@@ -53,14 +55,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $seoRobots      = trim((string) ($_POST['robots'] ?? 'index,follow'));
         $seoGoogleVerification = trim((string) ($_POST['google_verify'] ?? ''));
         $seoBingVerification   = trim((string) ($_POST['bing_verify'] ?? ''));
-
+        $googleToken = \Slate\Module\StudioBuilder\Http\StudioCodePolicy::verificationToken($seoGoogleVerification);
+        $bingToken   = \Slate\Module\StudioBuilder\Http\StudioCodePolicy::verificationToken($seoBingVerification);
+        if ($googleToken === null || $bingToken === null) {
+            $flash = ['type' => 'error', 'msg' => __('studio_code_nothing_saved', 'Nothing was saved.') . ' ' . __('studio_seo_bad_verification', 'Verification: paste the code or the whole meta tag Google or Bing gives you.')];
+        }
+    }
+    if (isset($googleToken, $bingToken) && $flash === null) {
         Database::setSetting('studio_seo_title_format', $seoTitleFormat, $tenantId);
         Database::setSetting('studio_seo_description', $seoDescription, $tenantId);
         Database::setSetting('studio_seo_og_media_id', $seoOgMediaId, $tenantId);
         Database::setSetting('studio_seo_og_image_url', $seoOgImageUrl, $tenantId);
         Database::setSetting('studio_seo_robots', $seoRobots, $tenantId);
-        Database::setSetting('studio_seo_google_verify', $seoGoogleVerification, $tenantId);
-        Database::setSetting('studio_seo_bing_verify', $seoBingVerification, $tenantId);
+        \Slate\Module\StudioBuilder\Http\StudioCodePolicy::saveVerificationTokens($tenantId, ['google' => $googleToken, 'bing' => $bingToken]);
         Database::setSetting(\Slate\Module\StudioBuilder\Meta\PageRoutes::SETTING_TRAILING_SLASH, !empty($_POST['trailing_slash']) ? '1' : '0', $tenantId);
 
         sb_flash_redirect('seo.php', ['type' => 'success', 'msg' => __('studio_seo_saved', 'Saved. Published pages use these settings from their next visit.')]);
@@ -84,7 +91,7 @@ $samplePage = Database::row(
      ORDER BY route_mode = 'homepage' DESC, published_at DESC LIMIT 1",
     [$tenantId]
 ) ?: null;
-$sampleTitle = $samplePage ? (string) $samplePage['title'] : ($siteName !== '' ? $siteName : 'Home');
+$sampleTitle = $samplePage ? (string) $samplePage['title'] : ($siteName !== '' ? $siteName : __('studio_seo_sample_home', 'Home'));
 $siteHost = (string) (parse_url(SLATE_URL, PHP_URL_HOST) ?: '');
 $sampleCrumbs = array_values(array_filter(explode('/', (string) (parse_url(SLATE_URL, PHP_URL_PATH) ?: ''))));
 if ($samplePage && $samplePage['route_mode'] !== 'homepage') {
@@ -95,17 +102,12 @@ $sampleTitleText = static fn(string $format): string => str_replace(['%title%', 
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
-<div class="content-wrapper">
-    <?php sb_render_admin_nav('seo'); ?>
+<div class="sb-admin">
 
-    <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?> sb-alert">
-            <?= e($flash['msg']) ?>
-        </div>
-    <?php endif; ?>
+    <?php sb_render_flash($flash); ?>
 
     <div class="sb-page-head">
-        <h2>Site &amp; Search Engine Optimization</h2>
+        <h2><?= e(__('studio_seo_heading', 'Site & Search Engine Optimization')) ?></h2>
         <p><?= e(__('studio_seo_intro', 'Site-wide defaults for every Studio page. The title format, description and share image are used when a page leaves its own SEO fields empty. A site set to noindex keeps every page out of search and out of the sitemap. Verification codes are added to every public page.')) ?></p>
     </div>
 
@@ -113,23 +115,23 @@ require SLATE_ROOT . '/admin/partials/header.php';
     <div class="sb-two-up">
         <div class="sb-card sb-link-card">
             <div>
-                <span class="sb-link-card__kicker" style="color: #10b981;">Live XML feed</span>
+                <span class="sb-link-card__kicker" style="color: #10b981;"><?= e(__('studio_seo_sitemap_kicker', 'Live XML feed')) ?></span>
                 <h4>sitemap.xml</h4>
-                <p>Every published, indexable page, kept up to date automatically.</p>
+                <p><?= e(__('studio_seo_sitemap_desc', 'Every published, indexable page, kept up to date automatically.')) ?></p>
             </div>
             <a href="<?= e(SLATE_URL . '/sitemap.xml') ?>" target="_blank" rel="noopener" class="btn btn-sm btn-outline">
-                <?= sb_svg('external-link', 14) ?> View
+                <?= sb_svg('external-link', 14) ?> <?= e(__('view', 'View')) ?>
             </a>
         </div>
 
         <div class="sb-card sb-link-card">
             <div>
-                <span class="sb-link-card__kicker" style="color: var(--sb-accent);">Bot directives</span>
+                <span class="sb-link-card__kicker" style="color: var(--sb-accent);"><?= e(__('studio_seo_robots_kicker', 'Bot directives')) ?></span>
                 <h4>robots.txt</h4>
-                <p>Base crawl permissions and the sitemap location.</p>
+                <p><?= e(__('studio_seo_robots_desc', 'Base crawl permissions and the sitemap location.')) ?></p>
             </div>
             <a href="<?= e(SLATE_URL . '/robots.txt') ?>" target="_blank" rel="noopener" class="btn btn-sm btn-outline">
-                <?= sb_svg('external-link', 14) ?> View
+                <?= sb_svg('external-link', 14) ?> <?= e(__('view', 'View')) ?>
             </a>
         </div>
     </div>
@@ -141,8 +143,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <div class="sb-card__head">
                 <span class="sb-card__icon"><?= sb_svg('seo', 18) ?></span>
                 <div>
-                    <h3 class="sb-card__title">Global SEO controls</h3>
-                    <p class="sb-card__sub">Defaults for every page that does not set its own.</p>
+                    <h3 class="sb-card__title"><?= e(__('studio_seo_controls', 'Global SEO controls')) ?></h3>
+                    <p class="sb-card__sub"><?= e(__('studio_seo_controls_sub', 'Defaults for every page that does not set its own.')) ?></p>
                 </div>
             </div>
 
@@ -150,15 +152,15 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <?= csrf_field() ?>
                 <div class="sb-stack">
                     <div class="sb-field">
-                        <label class="sb-field__label" for="seo-input-title">Title format pattern</label>
+                        <label class="sb-field__label" for="seo-input-title"><?= e(__('studio_seo_title_format', 'Title format pattern')) ?></label>
                         <input type="text" name="title_format" id="seo-input-title" value="<?= e($seoTitleFormat) ?>" class="form-control" placeholder="%title% | %site_name%">
-                        <p class="sb-field__hint">Supported tags: <code>%title%</code>, <code>%site_name%</code>.</p>
+                        <p class="sb-field__hint"><?= e(__('studio_seo_title_tags', 'Supported tags:')) ?> <code>%title%</code>, <code>%site_name%</code>.</p>
                     </div>
 
                     <div class="sb-field">
-                        <label class="sb-field__label" for="seo-input-desc">Global meta description</label>
-                        <textarea name="description" id="seo-input-desc" rows="3" class="form-control" placeholder="Compelling summary under 160 characters..."><?= e($seoDescription) ?></textarea>
-                        <p class="sb-field__hint">Search engines show about 160 characters.</p>
+                        <label class="sb-field__label" for="seo-input-desc"><?= e(__('studio_seo_description', 'Global meta description')) ?></label>
+                        <textarea name="description" id="seo-input-desc" rows="3" class="form-control" placeholder="<?= e(__('studio_seo_description_placeholder', 'Compelling summary under 160 characters...')) ?>"><?= e($seoDescription) ?></textarea>
+                        <p class="sb-field__hint"><?= e(__('studio_seo_description_hint', 'Search engines show about 160 characters.')) ?></p>
                     </div>
 
                     <div>
@@ -166,46 +168,46 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         <?= sb_media_picker_field([
                             'id'          => 'seo_og_image_url',
                             'name'        => 'og_image_url',
-                            'label'       => 'Default social share image (OpenGraph)',
+                            'label'       => __('studio_seo_og_image', 'Default social share image (OpenGraph)'),
                             'value'       => $ogImageUrl,
-                            'placeholder' => 'https://... or choose from Media Library',
-                            'help'        => 'Select an asset from your Media Library (recommended: 1200×630px). Used for Twitter/X, LinkedIn, and social embeds.',
+                            'placeholder' => __('studio_seo_og_image_placeholder', 'https://... or choose from Media Library'),
+                            'help'        => __('studio_seo_og_image_help', 'Select an asset from your Media Library (recommended: 1200×630px). Used for Twitter/X, LinkedIn, and social embeds.'),
                         ]) ?>
                     </div>
 
                     <div class="sb-field">
-                        <label class="sb-field__label" for="seo-input-robots">Search robots policy</label>
+                        <label class="sb-field__label" for="seo-input-robots"><?= e(__('studio_seo_robots', 'Search robots policy')) ?></label>
                         <select name="robots" id="seo-input-robots" class="form-control">
-                            <option value="index,follow" <?= $seoRobots === 'index,follow' ? 'selected' : '' ?>>index, follow (Recommended — allow indexing &amp; links)</option>
-                            <option value="noindex,follow" <?= $seoRobots === 'noindex,follow' ? 'selected' : '' ?>>noindex, follow (hide from search, follow internal links)</option>
-                            <option value="index,nofollow" <?= $seoRobots === 'index,nofollow' ? 'selected' : '' ?>>index, nofollow (index page, do not crawl outbound links)</option>
-                            <option value="noindex,nofollow" <?= $seoRobots === 'noindex,nofollow' ? 'selected' : '' ?>>noindex, nofollow (complete bot blackout)</option>
+                            <option value="index,follow" <?= $seoRobots === 'index,follow' ? 'selected' : '' ?>><?= e(__('studio_seo_robots_index_follow', 'index, follow (Recommended — allow indexing & links)')) ?></option>
+                            <option value="noindex,follow" <?= $seoRobots === 'noindex,follow' ? 'selected' : '' ?>><?= e(__('studio_seo_robots_noindex_follow', 'noindex, follow (hide from search, follow internal links)')) ?></option>
+                            <option value="index,nofollow" <?= $seoRobots === 'index,nofollow' ? 'selected' : '' ?>><?= e(__('studio_seo_robots_index_nofollow', 'index, nofollow (index page, do not crawl outbound links)')) ?></option>
+                            <option value="noindex,nofollow" <?= $seoRobots === 'noindex,nofollow' ? 'selected' : '' ?>><?= e(__('studio_seo_robots_noindex_nofollow', 'noindex, nofollow (complete bot blackout)')) ?></option>
                         </select>
                     </div>
 
                     <div class="sb-field">
                         <label class="sb-check" for="seo-input-slash" style="display: flex; gap: 8px; align-items: flex-start;">
                             <input type="checkbox" name="trailing_slash" id="seo-input-slash" value="1" <?= (string) Database::setting(\Slate\Module\StudioBuilder\Meta\PageRoutes::SETTING_TRAILING_SLASH, $tenantId) === '1' ? 'checked' : '' ?>>
-                            <span>Page addresses end with a slash (<code>/contact/</code>)</span>
+                            <span><?= e(__('studio_seo_trailing_slash', 'Page addresses end with a slash')) ?> (<code>/contact/</code>)</span>
                         </label>
-                        <p class="sb-field__hint">Both forms open the page; this sets the one in canonical tags, the sitemap and post links. Turn it on for a site moved from WordPress, so search engines keep the addresses they know.</p>
+                        <p class="sb-field__hint"><?= e(__('studio_seo_trailing_slash_hint', 'Both forms open the page; this sets the one in canonical tags, the sitemap and post links. Turn it on for a site moved from WordPress, so search engines keep the addresses they know.')) ?></p>
                     </div>
 
                     <div class="sb-form-grid">
                         <div class="sb-field">
-                            <label class="sb-field__label" for="seo-input-google">Google site verification tag</label>
-                            <input type="text" name="google_verify" id="seo-input-google" value="<?= e($seoGoogleVerification) ?>" class="form-control" placeholder="google-site-verification code">
+                            <label class="sb-field__label" for="seo-input-google"><?= e(__('studio_seo_google_verify_label', 'Google site verification tag')) ?></label>
+                            <input type="text" name="google_verify" id="seo-input-google" value="<?= e($seoGoogleVerification) ?>" class="form-control" placeholder="<?= e(__('studio_seo_google_verify_placeholder', 'google-site-verification code')) ?>">
                         </div>
                         <div class="sb-field">
-                            <label class="sb-field__label" for="seo-input-bing">Bing Webmaster tag</label>
-                            <input type="text" name="bing_verify" id="seo-input-bing" value="<?= e($seoBingVerification) ?>" class="form-control" placeholder="msvalidate.01 code">
+                            <label class="sb-field__label" for="seo-input-bing"><?= e(__('studio_seo_bing_verify_label', 'Bing Webmaster tag')) ?></label>
+                            <input type="text" name="bing_verify" id="seo-input-bing" value="<?= e($seoBingVerification) ?>" class="form-control" placeholder="<?= e(__('studio_seo_bing_verify_placeholder', 'msvalidate.01 code')) ?>">
                         </div>
                     </div>
                 </div>
 
                 <div class="sb-card-actions">
                     <button type="submit" class="btn btn-primary">
-                        <?= sb_svg('save', 14) ?> Save SEO settings
+                        <?= sb_svg('save', 14) ?> <?= e(__('studio_seo_save', 'Save SEO settings')) ?>
                     </button>
                 </div>
             </form>
@@ -216,7 +218,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <!-- Google SERP Snippet Preview -->
             <div class="sb-card">
                 <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--sb-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-                    <?= sb_svg('globe', 14) ?> Google Search Result Simulator
+                    <?= sb_svg('globe', 14) ?> <?= e(__('studio_seo_serp_preview', 'Google Search Result Simulator')) ?>
                 </div>
                 <div style="font-family: Arial, sans-serif;">
                     <div style="font-size: 0.82rem; color: #202124; display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
@@ -229,23 +231,23 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     <div style="font-size: 0.85rem; color: #4d5156; line-height: 1.4;" data-seo-preview="description">
                         <?= e($seoDescription) ?>
                     </div>
-                    <p class="sb-field__hint" style="margin-top: 10px;">Shown with <?= e($sampleTitle) ?>. A page's own SEO title and description replace these defaults.</p>
+                    <p class="sb-field__hint" style="margin-top: 10px;"><?= e(sprintf(__('studio_seo_preview_note', 'Shown with %s. A page\'s own SEO title and description replace these defaults.'), $sampleTitle)) ?></p>
                 </div>
             </div>
 
             <!-- Twitter / OpenGraph Card Preview -->
             <div class="sb-card" style="margin-bottom: 0;">
                 <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--sb-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-                    <?= sb_svg('eye', 14) ?> OpenGraph / Twitter Card Preview
+                    <?= sb_svg('eye', 14) ?> <?= e(__('studio_seo_card_preview', 'OpenGraph / Twitter Card Preview')) ?>
                 </div>
                 <div style="border: 1px solid var(--sb-border); border-radius: 12px; overflow: hidden; background: #0f172a;">
                     <div style="height: 180px; background: #1e293b; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                         <?php if ($ogImageUrl !== ''): ?>
-                            <img src="<?= e($ogImageUrl) ?>" alt="Social Preview" style="width: 100%; height: 100%; object-fit: cover;">
+                            <img src="<?= e($ogImageUrl) ?>" alt="<?= e(__('studio_seo_card_alt', 'Social Preview')) ?>" style="width: 100%; height: 100%; object-fit: cover;">
                         <?php else: ?>
                             <div style="text-align: center; color: #94a3b8;">
                                 <?= sb_svg('media', 36) ?>
-                                <div style="font-size: 0.75rem; margin-top: 6px;">No OpenGraph Media ID set</div>
+                                <div style="font-size: 0.75rem; margin-top: 6px;"><?= e(__('studio_seo_no_og_image', 'No OpenGraph Media ID set')) ?></div>
                             </div>
                         <?php endif; ?>
                     </div>

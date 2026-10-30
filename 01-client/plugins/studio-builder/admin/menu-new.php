@@ -60,13 +60,10 @@ try {
 require SLATE_ROOT . '/admin/partials/header.php';
 ?>
 
-<div class="sb-admin-wrapper">
-    <?php sb_render_admin_nav('menus'); ?>
+<div class="sb-admin">
     <?php sb_render_crumbs([[__('studio_menus', 'Menus'), 'menus.php'], [__('studio_menu_new', 'New menu'), null]]); ?>
 
-    <?php if ($flash): ?>
-        <div class="alert alert-<?= e($flash['type']) ?>" role="alert"><?= e($flash['msg']) ?></div>
-    <?php endif; ?>
+    <?php sb_render_flash($flash); ?>
 
     <?php if (!$canEdit): ?>
         <div class="alert alert-error" role="status"><?= e(__('forbidden', 'You do not have permission to edit menus.')) ?></div>

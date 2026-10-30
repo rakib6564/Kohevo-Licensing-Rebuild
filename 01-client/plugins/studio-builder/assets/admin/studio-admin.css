@@ -1,0 +1,203 @@
+/*
+ * Kohevo Studio — admin screens (Pages, Templates, Menus, SEO, History…).
+ *
+ * Linked once in the admin <head> by StudioBuilder::adminHead() on Studio screens only. Built on the platform admin
+ * tokens (--text, --muted, --border, --surface, --accent…), so Studio follows the site's admin theme and accent.
+ *
+ * Density: compact by default. A viewer can switch to comfortable rows from the topbar; that choice is
+ * `html[data-sb-density="comfortable"]` and only changes the --sb-* spacing values below.
+ */
+
+:root {
+    /* Old names the screens still use inline, mapped onto the platform tokens. */
+    --sb-accent: var(--accent);
+    --sb-border: var(--border);
+    --sb-text: var(--text);
+    --sb-muted: var(--muted);
+
+    --sb-gap: 12px;          /* between blocks on a screen */
+    --sb-card-pad: 16px;
+    --sb-card-radius: 10px;
+    --sb-row-pad: 6px 12px;  /* one row of a list */
+    --sb-row-min: 40px;
+    --sb-avatar: 26px;
+    --sb-field-gap: 14px 18px;
+    --sb-font: 13px;
+    --sb-small: 12px;
+}
+html[data-sb-density="comfortable"] {
+    --sb-gap: 20px;
+    --sb-card-pad: 22px;
+    --sb-card-radius: 14px;
+    --sb-row-pad: 11px 14px;
+    --sb-row-min: 54px;
+    --sb-avatar: 32px;
+    --sb-field-gap: 20px 24px;
+    --sb-font: 14px;
+    --sb-small: 13px;
+}
+
+/* ── Screen frame ─────────────────────────────────────────────────────────── */
+.sb-admin { font-size: var(--sb-font); }
+.sb-admin > * + * { margin-top: var(--sb-gap); }
+.sb-admin > .alert, .sb-admin > .sb-alert { margin-bottom: 0; }
+
+/* One header for every screen: title + one line of help on the left, actions on the right. */
+.sb-screen-head, .sb-page-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin: 0 0 var(--sb-gap);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+.sb-screen-head h2, .sb-page-head h2 { margin: 0; font-size: 1.15rem; font-weight: 700; line-height: 1.3; color: var(--text); letter-spacing: -0.01em; }
+.sb-screen-head p, .sb-page-head p { margin: 2px 0 0; font-size: var(--sb-small); color: var(--muted); max-width: 90ch; }
+.sb-screen-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+.sb-crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; font-size: var(--sb-small); color: var(--muted); }
+.sb-crumbs a { color: var(--muted); text-decoration: none; font-weight: 600; }
+.sb-crumbs a:hover { color: var(--accent); }
+.sb-crumbs [aria-current] { color: var(--text); font-weight: 600; }
+
+.sb-muted { color: var(--muted); }
+
+/* ── Buttons inside Studio screens: one size step down ───────────────────── */
+.sb-admin .btn { padding: 6px 12px; font-size: var(--sb-font); gap: 6px; }
+.sb-admin .btn-sm { padding: 4px 9px; font-size: var(--sb-small); }
+.btn-success-outline { color: var(--success); border-color: var(--success); background: var(--surface); }
+.btn-success-outline:hover { background: var(--success-soft); color: var(--success); }
+
+/* ── Toolbar, filters, search ────────────────────────────────────────────── */
+.sb-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 10px; }
+.sb-search { display: flex; align-items: center; gap: 6px; }
+.sb-search input[type="search"] { min-width: 220px; }
+.sb-admin .form-control { padding: 6px 10px; font-size: var(--sb-font); }
+
+.sb-pill-filter { display: flex; gap: 4px; flex-wrap: wrap; margin: 0 0 10px; }
+.sb-pill-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    border: 1px solid var(--border);
+    font-size: var(--sb-small);
+    font-weight: 600;
+    background: var(--surface);
+    color: var(--muted);
+    text-decoration: none;
+    transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.sb-pill-item:hover { color: var(--text); border-color: var(--border-strong); }
+.sb-pill-item.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+/* ── Cards and forms ─────────────────────────────────────────────────────── */
+.sb-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--sb-card-radius);
+    padding: var(--sb-card-pad);
+    margin-bottom: var(--sb-gap);
+}
+.sb-admin .card { border-radius: var(--sb-card-radius); }
+.sb-admin .card-header { padding: 12px var(--sb-card-pad); }
+.sb-admin .card-header h2 { font-size: 0.98rem; }
+.sb-card__head { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.sb-card__head--split { justify-content: space-between; }
+.sb-card__icon { width: 28px; height: 28px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--accent-soft); color: var(--accent); }
+.sb-card__title { margin: 0; font-size: 0.98rem; font-weight: 700; line-height: 1.3; color: var(--text); }
+.sb-card__sub { margin: 1px 0 0; font-size: var(--sb-small); color: var(--muted); }
+.sb-card__note { margin: 0 0 12px; font-size: var(--sb-small); line-height: 1.5; color: var(--muted); max-width: 90ch; }
+.sb-card-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.sb-drawer { box-shadow: var(--shadow-sm); }
+
+.sb-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--sb-field-gap); align-items: start; }
+.sb-stack { display: flex; flex-direction: column; gap: 14px; }
+.sb-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sb-field--wide { grid-column: 1 / -1; }
+.sb-field[hidden] { display: none; }
+.sb-field__label { display: block; margin: 0; font-size: var(--sb-small); font-weight: 600; line-height: 1.3; color: var(--text); }
+.sb-field__label small { font-weight: 400; color: var(--muted); }
+.sb-field .form-control,
+.sb-field input[type="text"], .sb-field input[type="url"], .sb-field input[type="email"], .sb-field input[type="number"],
+.sb-field select, .sb-field textarea { display: block; width: 100%; max-width: 100%; box-sizing: border-box; margin: 0; }
+.sb-field select { background-color: var(--surface); }
+.sb-field textarea { resize: vertical; }
+.sb-field__hint { margin: 0; font-size: 11.5px; line-height: 1.45; color: var(--muted); }
+.sb-code-input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: #0f172a !important; color: #cbd5e1 !important; }
+.sb-code-box { background: #0f172a; color: #cbd5e1; border-radius: 8px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.6; overflow-x: auto; margin: 8px 0; }
+.sb-form-grid + .sb-field, .sb-form-grid + .sb-form-grid { margin-top: 14px; }
+.sb-card form > * + *:not(.sb-card-actions):not(input[type="hidden"]) { margin-top: 14px; }
+
+/* A page's screens: the cards are as wide as the strip above them. */
+.sb-form-card { max-width: none; width: 100%; box-sizing: border-box; }
+.sb-form-card + .sb-form-card { margin-top: var(--sb-gap); }
+.sb-form-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.sb-form-actions .sb-spacer { margin-left: auto; }
+.sb-meta-strip { display: flex; flex-wrap: wrap; gap: 6px 24px; margin: 0 0 var(--sb-gap); padding: 8px 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--sb-card-radius); font-size: var(--sb-small); color: var(--muted); }
+.sb-meta-strip strong { display: block; color: var(--text); font-weight: 600; }
+.sb-danger-card { border-color: color-mix(in srgb, var(--danger) 30%, var(--border)); }
+.sb-danger-card h3 { color: var(--danger); margin: 0 0 4px; }
+.sb-row-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.sb-media-field-group { margin: 0; }
+.sb-media-field-group .field-label { display: block; margin: 0 0 4px; font-size: var(--sb-small); font-weight: 600; color: var(--text); }
+.sb-two-up { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: var(--sb-gap); align-items: start; margin-bottom: var(--sb-gap); }
+.sb-two-up > .sb-card { margin-bottom: 0; }
+.sb-link-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; margin-bottom: 0; }
+.sb-link-card__kicker { display: block; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.sb-link-card h4 { margin: 1px 0; font-size: 0.95rem; font-weight: 700; color: var(--text); }
+.sb-link-card p { margin: 0; font-size: var(--sb-small); color: var(--muted); }
+
+.sb-empty { padding: 20px var(--sb-card-pad); text-align: center; border: 1px dashed var(--border-strong); border-radius: var(--sb-card-radius); color: var(--muted); background: var(--surface); }
+.sb-empty h3 { margin: 0 0 4px; font-size: 0.98rem; color: var(--text); }
+.sb-empty p { margin: 0 auto 10px; max-width: 60ch; font-size: var(--sb-small); }
+.sb-empty p:last-child { margin-bottom: 0; }
+
+/* ── Home: figures and shortcuts ─────────────────────────────────────────── */
+.sb-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: var(--sb-gap); }
+.sb-kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--sb-card-radius); padding: 10px 14px; display: flex; flex-direction: column; }
+.sb-kpi-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+.sb-kpi-top svg { width: 15px; height: 15px; }
+.sb-kpi-label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.sb-kpi-value { font-size: 1.35rem; font-weight: 700; color: var(--text); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.sb-kpi-meta { font-size: 11.5px; color: var(--muted); }
+.sb-feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-bottom: var(--sb-gap); }
+.sb-feature-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--sb-card-radius); padding: 12px 14px; display: flex; flex-direction: column; justify-content: space-between; }
+.sb-feature-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+.sb-feature-icon-box { width: 28px; height: 28px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sb-feature-icon-box svg { width: 15px; height: 15px; }
+.sb-feature-title { font-size: 0.95rem; font-weight: 700; color: var(--text); margin: 0 0 2px; }
+.sb-feature-desc { font-size: var(--sb-small); color: var(--muted); line-height: 1.5; margin: 0; }
+.sb-feature-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+
+/* ── Lists: the platform data rows, tighter ──────────────────────────────── */
+.sb-admin .data-row-summary { min-height: var(--sb-row-min); padding: var(--sb-row-pad); gap: 10px; }
+.sb-admin .data-row-avatar { width: var(--sb-avatar); height: var(--sb-avatar); font-size: 10px; }
+.sb-admin .data-row-avatar.has-icon { width: calc(var(--sb-avatar) + 4px); height: calc(var(--sb-avatar) + 4px); }
+.sb-admin .data-list-head { padding-top: 6px; padding-bottom: 6px; font-size: 10.5px; }
+.sb-admin .data-list { border-radius: var(--sb-card-radius); }
+
+/* Studio's own pager (History) looks like the platform's. */
+.sb-pager { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin: 10px 0 0; font-size: var(--sb-small); color: var(--muted); }
+.sb-pager__pages { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.sb-pager__link, .sb-pager__gap { min-width: 28px; height: 28px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); font-weight: 600; text-decoration: none; color: var(--text); border: 1px solid var(--border); background: var(--surface); }
+.sb-pager__link:hover { border-color: var(--border-stronger); }
+.sb-pager__link.is-current { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.sb-pager__link.is-disabled { opacity: 0.4; pointer-events: none; }
+.sb-pager__gap { border-color: transparent; background: none; color: var(--muted); }
+.sb-pager__size { display: flex; align-items: center; gap: 4px; }
+.sb-admin .slate-pager { margin-top: 10px; }
+
+/* ── Phones ──────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .sb-screen-head, .sb-page-head { align-items: flex-start; }
+    .sb-screen-actions { width: 100%; }
+    .sb-search, .sb-search input[type="search"] { width: 100%; min-width: 0; }
+    .sb-pill-filter { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .sb-pill-filter::-webkit-scrollbar { display: none; }
+    .sb-pill-item { white-space: nowrap; }
+}

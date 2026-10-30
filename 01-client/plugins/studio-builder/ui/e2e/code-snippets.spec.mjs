@@ -22,11 +22,11 @@ async function save(page, fields) {
 
 test('unsafe snippets are refused with a reason, and nothing is saved', async ({ page }) => {
   await save(page, { head_snippet: '<div>hello</div>', footer_snippet: '<script>alert(1)' });
-  await expect(page.locator('.alert-danger')).toContainText('Nothing was saved');
-  await expect(page.locator('.alert-danger')).toContainText('<div> is not allowed here');
-  await expect(page.locator('.alert-danger')).toContainText('<script> is not closed');
+  await expect(page.locator('.alert-error')).toContainText('Nothing was saved');
+  await expect(page.locator('.alert-error')).toContainText('<div> is not allowed here');
+  await expect(page.locator('.alert-error')).toContainText('<script> is not closed');
   await save(page, { verify_google: 'not a token!' });
-  await expect(page.locator('.alert-danger')).toContainText('Google verification');
+  await expect(page.locator('.alert-error')).toContainText('Google verification');
   await page.goto(SCREEN);
   await expect(page.locator('[name="head_snippet"]')).toHaveValue('');
 });
