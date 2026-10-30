@@ -79,9 +79,9 @@ function native_v2(): array
         // ── Type ──
         'v2-kick'        => ['s' => S(col(PINK), ty('19px', '400', '1.5', null, SCRIPT), mar(0, null, 6, null))],
         'v2-kick--light' => ['s' => col('#ff7cc3')],
-        'v2-h2'          => ['s' => S(ty('clamp(30px,3.2vw,44px)', 'bold', '1.14', '-.025em'), mar(0, null, 18, null)), 'm' => ty('29px'), 'parts' => ['highlight' => col(PINK)]],
-        'v2-lead'        => ['s' => S(col(BODY), ty('16.5px', null, '1.75'), mar(0, null, 14, null)), 'm' => ty('15.5px')],
-        'v2-head'        => ['s' => mar(0, null, 46, null), 'm' => mar(0, null, 30, null)],
+        'v2-h2'          => ['s' => S(ty('clamp(30px,3.2vw,44px)', 'bold', '1.14', '-.025em'), mar(0, null, 22, null)), 'm' => ty('29px'), 'parts' => ['highlight' => col(PINK)]],
+        'v2-lead'        => ['s' => S(col(BODY), ty('16.5px', null, '1.75'), mar(0, null, 18, null)), 'm' => ty('15.5px')],
+        'v2-head'        => ['s' => mar(0, null, 64, null), 'm' => mar(0, null, 40, null)],
         'v2-head--center' => ['s' => S(dim(['max_width' => '780px']), mar(null, 'auto', null, 'auto')), 'center' => true],
         'v2-more'        => ['s' => S(col(PINK), ty('15px', 'bold'), fx(TRANS)), 'h' => fx(['transform' => ['translate_x' => '4px']])],
         'v2-dark v2-h2'  => ['s' => col('#ffffff')],
@@ -93,7 +93,7 @@ function native_v2(): array
         'v2-ghost'       => ['parts' => ['button' => S($base, bg('#ffffff'), col(INK), brd('#eadde4', '1.5px', '999px'), shadow(0, 8, 20, 'rgba(40,10,30,.06)', -6)),
                 'button:hover' => S(col(PINK), ['border' => ['color' => PINK]], fx(['transform' => ['translate_y' => '-3px']]))], 'mparts' => ['button' => S(sz(['height' => 52]), pad(0, 22), ty('14.5px'))]],
         'v2-btn--block'  => ['s' => dim(['width' => '100%']), 'parts' => ['button' => sz(['width' => '100%'])]],
-        'v2-actions'     => ['s' => S(lay(['gap' => '14px']), mar(26, null, 0, null)), 'm' => lay(['gap' => '10px'])],
+        'v2-actions'     => ['s' => S(lay(['gap' => '16px']), mar(34, null, 0, null)), 'm' => lay(['gap' => '12px'])],
 
         // ── Hero ──
         'v2-hero-sec'    => ['s' => S(grad('linear-gradient(180deg,#fff7fb 0%,#ffffff 78%)'), $V(90, 150), dim(['overflow' => 'hidden'])), 't' => $V(64, 116), 'm' => $V(44, 88)],
