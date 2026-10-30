@@ -363,7 +363,7 @@ unit('header presets integration: seeded on first use apart from the sections, i
             };
             $resetMemos();
 
-            // 1. Nothing until asked; the first call seeds the five headers, in catalogue order, as system rows.
+            // 1. Nothing until asked; the first call seeds the six headers, in catalogue order, as system rows.
             sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'GET', 'templates'), 'plain library');
             assert_eq(0, $count('header_preset'), 'listing the library does not seed headers');
             $first = sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $viewer, 'GET', 'header_presets'), 'first call (a viewer may read)')['presets'];
@@ -372,7 +372,7 @@ unit('header presets integration: seeded on first use apart from the sections, i
                 assert_true($row['is_system'] === true && $row['template_type'] === 'header_preset' && $row['category'] === 'header', "{$row['template_key']} is a system header");
                 assert_true(!isset($row['document_json']) && !isset($row['document']), 'no document body reaches the panel');
             }
-            assert_eq(5, $count('header_preset'));
+            assert_eq(6, $count('header_preset'));
             assert_eq(0, $count('section_preset'), 'headers are seeded on their own, not with the sections');
 
             // 2. Idempotent, and the sections' seeding leaves the headers alone (and the other way round).
@@ -382,7 +382,7 @@ unit('header presets integration: seeded on first use apart from the sections, i
             sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'GET', 'header_presets'), 'second call');
             sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'GET', 'section_presets'), 'section presets');
             assert_eq($before, $rows(), 'unchanged headers are not rewritten');
-            assert_eq(5, $count('header_preset'), 'no duplicates');
+            assert_eq(6, $count('header_preset'), 'no duplicates');
             assert_eq(count(SectionPresetCatalog::all()), $count('section_preset'), 'the sections seed only sections');
 
             // 3. Immutable, even for an admin.
@@ -402,6 +402,7 @@ unit('header presets integration: seeded on first use apart from the sections, i
                 $html = sbpa_canvas($rt, SBPA_TENANT_A, $editor, $page['id']);
                 assert_true(str_contains($html, 'Your brand') && str_contains($html, 'sb-nav') && !str_contains($html, 'Old header'), "{$preset['key']} renders its brand and menu");
                 assert_true(!str_contains($html, '<script'), "{$preset['key']}: no script");
+                assert_true(str_contains($html, 'class="sb-nav__burger"') && str_contains($html, 'data-sb-nav-toggle') && !str_contains($html, 'data-sb-offcanvas-open'), "{$preset['key']} folds its menu behind the built-in button, with no drawer");
             }
         });
     } finally {

@@ -3143,6 +3143,7 @@
             "default_props": {
                 "align": "left",
                 "aria_label": "Menu",
+                "divider": false,
                 "items": [
                     {
                         "label": "Home",
@@ -3159,7 +3160,16 @@
                 ],
                 "layout": "horizontal",
                 "menu": "",
-                "style": "plain"
+                "pointer": "none",
+                "pointer_animation": "fade",
+                "pointer_color": null,
+                "style": "plain",
+                "toggle_align": "right",
+                "toggle_breakpoint": "none",
+                "toggle_full_width": true,
+                "toggle_icon": "hamburger",
+                "toggle_label": "Menu",
+                "toggle_mode": "dropdown"
             },
             "description": "A row or column of links",
             "field_schema": [
@@ -3215,6 +3225,112 @@
                     ]
                 },
                 {
+                    "key": "pointer",
+                    "type": "enum",
+                    "label": "Hover pointer",
+                    "required": false,
+                    "default": "none",
+                    "allowed_values": [
+                        "none",
+                        "underline",
+                        "overline",
+                        "double_line",
+                        "framed",
+                        "background",
+                        "text"
+                    ]
+                },
+                {
+                    "key": "pointer_animation",
+                    "type": "enum",
+                    "label": "Pointer animation",
+                    "required": false,
+                    "default": "fade",
+                    "allowed_values": [
+                        "none",
+                        "fade",
+                        "slide",
+                        "grow"
+                    ]
+                },
+                {
+                    "key": "pointer_color",
+                    "type": "token_ref",
+                    "label": "Pointer colour",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "divider",
+                    "type": "boolean",
+                    "label": "Divider between items",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "toggle_breakpoint",
+                    "type": "enum",
+                    "label": "Menu button shows on",
+                    "required": false,
+                    "default": "none",
+                    "allowed_values": [
+                        "none",
+                        "tablet",
+                        "mobile",
+                        "always"
+                    ]
+                },
+                {
+                    "key": "toggle_mode",
+                    "type": "enum",
+                    "label": "Menu opens as",
+                    "required": false,
+                    "default": "dropdown",
+                    "allowed_values": [
+                        "dropdown",
+                        "offcanvas"
+                    ]
+                },
+                {
+                    "key": "toggle_full_width",
+                    "type": "boolean",
+                    "label": "Dropdown spans the full width",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "toggle_icon",
+                    "type": "enum",
+                    "label": "Menu button icon",
+                    "required": false,
+                    "default": "hamburger",
+                    "allowed_values": [
+                        "hamburger",
+                        "dots",
+                        "text_icon"
+                    ]
+                },
+                {
+                    "key": "toggle_label",
+                    "type": "string",
+                    "label": "Menu button label",
+                    "required": false,
+                    "default": "Menu",
+                    "max_length": 40
+                },
+                {
+                    "key": "toggle_align",
+                    "type": "enum",
+                    "label": "Menu button alignment",
+                    "required": false,
+                    "default": "right",
+                    "allowed_values": [
+                        "left",
+                        "center",
+                        "right"
+                    ]
+                },
+                {
                     "key": "items",
                     "type": "repeater",
                     "label": "Custom links (used when no menu is chosen)",
@@ -3250,6 +3366,32 @@
                             "required": true,
                             "default": null,
                             "max_length": 1000
+                        },
+                        {
+                            "key": "children",
+                            "type": "repeater",
+                            "label": "Submenu links",
+                            "required": false,
+                            "default": [],
+                            "max_items": 12,
+                            "item_schema": [
+                                {
+                                    "key": "label",
+                                    "type": "string",
+                                    "label": "Label",
+                                    "required": true,
+                                    "default": "",
+                                    "max_length": 80
+                                },
+                                {
+                                    "key": "url",
+                                    "type": "url",
+                                    "label": "URL",
+                                    "required": true,
+                                    "default": null,
+                                    "max_length": 1000
+                                }
+                            ]
                         }
                     ]
                 }
@@ -3258,7 +3400,7 @@
             "inline_text": [
                 {
                     "prop": "items.*.label",
-                    "selector": ".sb-nav__link",
+                    "selector": ".sb-nav__list > .sb-nav__item > .sb-nav__link",
                     "multiline": false,
                     "unless": "menu"
                 }
@@ -3319,6 +3461,15 @@
                 {
                     "key": "toggle",
                     "label": "Submenu arrow"
+                },
+                {
+                    "key": "burger",
+                    "label": "Menu button"
+                },
+                {
+                    "key": "panel",
+                    "label": "Open menu panel",
+                    "states": false
                 }
             ],
             "title": "Nav menu",

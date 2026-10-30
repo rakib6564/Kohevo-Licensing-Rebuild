@@ -165,6 +165,7 @@ export function normalizeSticky(raw) {
   if (raw.shadow === true) out.shadow = true;
   if (typeof raw.background === 'string' && raw.background.trim() !== '') out.background = raw.background.trim();
   if (raw.hide_on_scroll === true && raw.edge === 'top') out.hide_on_scroll = true;
+  if (raw.shrink === true && raw.edge === 'top') out.shrink = true;
   return out;
 }
 

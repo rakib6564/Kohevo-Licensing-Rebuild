@@ -8,7 +8,7 @@ namespace Slate\Module\StudioBuilder\Document;
  * Sticky and parallax, the two scroll effects a block or a section may carry in its `interactions`.
  *
  *   interactions.sticky   = {edge: top|bottom, offset: 0-400 (px), devices: [desktop, tablet, mobile],
- *                            shadow: bool, background: colour, hide_on_scroll: bool}
+ *                            shadow: bool, background: colour, hide_on_scroll: bool, shrink: bool}
  *   interactions.parallax = {layer: background|element, speed: 5-80 (% of the scroll), direction: up|down,
  *                            devices: [desktop, tablet, mobile]}
  *
@@ -55,7 +55,7 @@ final class ScrollEffects
                 'edge'           => in_array($value, self::EDGES, true),
                 'offset'         => is_int($value) && $value >= 0 && $value <= self::MAX_OFFSET,
                 'devices'        => self::devicesValid($value),
-                'shadow', 'hide_on_scroll' => is_bool($value),
+                'shadow', 'hide_on_scroll', 'shrink' => is_bool($value),
                 'background'     => StyleValueGuard::isColor($value),
                 default          => null,
             };
@@ -129,6 +129,9 @@ final class ScrollEffects
             }
             if ($edge === 'top' && ($sticky['hide_on_scroll'] ?? false) === true) {
                 $effects[] = 'hide';
+            }
+            if ($edge === 'top' && ($sticky['shrink'] ?? false) === true) {
+                $effects[] = 'shrink';
             }
             $attrs .= ' data-sb-sticky="' . $edge . '"';
             if ($effects !== []) {

@@ -339,8 +339,10 @@ export const Outline = memo(function Outline() {
       if (container) {
         const box = container.getBoundingClientRect();
         const dy = autoScrollDelta(session.y, box.top, box.bottom);
-        if (dy) { container.scrollTop += dy; updatePointerTarget(session); }
+        if (dy) container.scrollTop += dy;
       }
+      // Every frame, not only on a move: rows can shift under a finger that has stopped.
+      updatePointerTarget(session);
       session.raf = requestAnimationFrame(tick);
     };
     session.raf = requestAnimationFrame(tick);

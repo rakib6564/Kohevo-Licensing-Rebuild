@@ -1312,6 +1312,11 @@
         s.el.classList.toggle('is-stuck', s.stuck);
         s.el.classList.toggle('is-hidden', s.hide && !reducedMotion());
         if (s.stuck) s.el.setAttribute('data-sb-stuck', ''); else s.el.removeAttribute('data-sb-stuck');
+        // Two thresholds: the shorter header shortens the page, which must not undo the scroll that shrank it.
+        if (/(^|\s)shrink(\s|$)/.test(s.el.getAttribute('data-sb-sticky-effect') || '')) {
+          if (s.stuck && y > 48) s.el.classList.add('is-shrunk');
+          else if (y < 8) s.el.classList.remove('is-shrunk');
+        }
       });
       lastY = y;
     }
@@ -1330,7 +1335,7 @@
     mount(function () {
       offs.forEach(function (off) { off(); });
       nodes.forEach(function (el) {
-        el.classList.remove('is-stuck', 'is-hidden');
+        el.classList.remove('is-stuck', 'is-hidden', 'is-shrunk');
         el.removeAttribute('data-sb-stuck');
       });
     });
@@ -1517,6 +1522,12 @@
     if (!slots.length && !forms.length) return;
     if (!global.fetch || !global.FormData) return;
 
+    // Only the newest content for a slot may land: a slower, older answer must not overwrite it.
+    function nextTurn(slot) {
+      slot.__sbFragmentTurn = (slot.__sbFragmentTurn || 0) + 1;
+      return slot.__sbFragmentTurn;
+    }
+
     function load(slot) {
       var url = slot.getAttribute('data-sb-fragment');
       if (!url || !sameOrigin(url)) return;
@@ -1529,6 +1540,7 @@
         url = target.toString();
       }
       slot.setAttribute('data-sb-fragment-state', 'loading');
+      var turn = nextTurn(slot);
       fetch(url, { credentials: 'same-origin', headers: { Accept: 'text/html', 'X-Studio-Fragment': '1' } })
         .then(function (res) {
           var type = res.headers.get('Content-Type') || '';
@@ -1536,16 +1548,18 @@
           return res.text();
         })
         .then(function (html) {
+          if (slot.__sbFragmentTurn !== turn) return;
           slot.innerHTML = html;
           slot.setAttribute('data-sb-fragment-state', 'ready');
         })
         .catch(function () { slot.setAttribute('data-sb-fragment-state', 'error'); });
     }
 
-    function refresh(group) {
+    // `fresh` is a slot that already holds the answer (and any message in it): reloading it would wipe that message.
+    function refresh(group, fresh) {
       if (!group) return;
       qsa(document, '[data-sb-fragment][data-sb-fragment-group]').forEach(function (slot) {
-        if (slot.getAttribute('data-sb-fragment-group') === group) load(slot);
+        if (slot !== fresh && slot.getAttribute('data-sb-fragment-group') === group) load(slot);
       });
     }
 
@@ -1571,13 +1585,14 @@
             global.location.assign(data.redirect);
             return;
           }
-          if (slot && typeof data.html === 'string') slot.innerHTML = data.html;
+          var fresh = slot && typeof data.html === 'string' ? slot : null;
+          if (fresh) { nextTurn(fresh); fresh.innerHTML = data.html; }
           if (note && typeof data.message === 'string') {
             note.textContent = data.message;
             note.setAttribute('data-sb-state', r.ok ? 'ok' : 'error');
           }
           var group = form.getAttribute('data-sb-fragment-group') || (slot && slot.getAttribute('data-sb-fragment-group'));
-          if (r.ok) refresh(group);
+          if (r.ok) refresh(group, fresh);
         })
         .catch(function () {
           if (note) { note.textContent = note.getAttribute('data-sb-fragment-error') || ''; note.setAttribute('data-sb-state', 'error'); }
@@ -1749,6 +1764,7 @@
   function initCurrentLinks(root) {
     var here = location.pathname.replace(/\/+$/, '') || '/';
     var marked = [];
+    var parents = [];
     qsa(root, 'a.sb-nav__link[href]').forEach(function (a) {
       if (a.hasAttribute('aria-current')) return;
       var url;
@@ -1756,9 +1772,116 @@
       if (url.origin !== location.origin) return;
       if ((url.pathname.replace(/\/+$/, '') || '/') !== here) return;
       a.setAttribute('aria-current', 'page');
+      a.classList.add('is-current');
       marked.push(a);
+      var parent = a.closest('.sb-nav__sub');
+      while (parent) {
+        var li = parent.parentNode;
+        li.classList.add('is-current-parent');
+        parents.push(li);
+        parent = li.parentNode.closest('.sb-nav__sub');
+      }
     });
-    if (marked.length) mount(function () { marked.forEach(function (a) { a.removeAttribute('aria-current'); }); });
+    if (marked.length) {
+      mount(function () {
+        marked.forEach(function (a) { a.removeAttribute('aria-current'); a.classList.remove('is-current'); });
+        parents.forEach(function (li) { li.classList.remove('is-current-parent'); });
+      });
+    }
+  }
+
+  /* A menu folded behind its button right now (the bar only shows below the menu's breakpoint). */
+  function navFolded(el) {
+    var nav = el.closest('[data-sb-nav-toggle]');
+    var bar = nav && qs(nav, '.sb-nav__bar');
+    return !!bar && global.getComputedStyle(bar).display !== 'none';
+  }
+
+  /* Whether a submenu item drops down as a card: a horizontal menu that is not folded. */
+  function navFlyout(li) {
+    return !!li.closest('.sb-nav--horizontal') && !navFolded(li);
+  }
+
+  /* ── Feature: the menu button ────────────────────────────────────────────
+   * NavMenuRenderer's checkbox is the open state, so the stylesheet has one rule for it with or without this file. This
+   * hands the control to the real button (aria-expanded), and adds what CSS cannot do: Escape and a click elsewhere close
+   * the menu, a link closes it, an off-canvas panel holds focus and the page behind stays put, and a full-width
+   * dropdown measures the window. Growing past the breakpoint closes it.
+   */
+  function initNavToggles(root) {
+    var off = [];
+    var closers = [];
+    qsa(root, '[data-sb-nav-toggle]').forEach(function (nav) {
+      var burger = qs(nav, '.sb-nav__burger');
+      var check = qs(nav, '.sb-nav__check');
+      var list = qs(nav, '.sb-nav__list');
+      var backdrop = qs(nav, '.sb-nav__backdrop');
+      if (!burger || !check || !list) return;
+      var side = nav.classList.contains('sb-nav--menu-offcanvas');
+      var release = null;
+      burger.removeAttribute('tabindex');
+
+      // A full-width dropdown spans the window, and any dropdown starts at the header's bottom edge, not the button's.
+      function place() {
+        if (side) return;
+        var rect = nav.getBoundingClientRect();
+        var header = nav.closest('.sb-site-header');
+        var section = header && (nav.closest('.sb-section') || header);
+        if (section) nav.style.setProperty('--sb-nav-top', (section.getBoundingClientRect().bottom - rect.top) + 'px');
+        if (nav.classList.contains('sb-nav--menu-full')) {
+          nav.style.setProperty('--sb-nav-left', (-rect.left) + 'px');
+          nav.style.setProperty('--sb-nav-vw', document.documentElement.clientWidth + 'px');
+        }
+      }
+      function close(refocus) {
+        if (!check.checked) return;
+        check.checked = false;
+        burger.setAttribute('aria-expanded', 'false');
+        qsa(list, '.sb-nav__item--parent[data-open]').forEach(function (li) {
+          li.removeAttribute('data-open');
+          var btn = li.querySelector(':scope > .sb-nav__toggle, :scope > .sb-nav__parent');
+          if (btn) btn.setAttribute('aria-expanded', 'false');
+        });
+        var autofocus = qs(list, '[data-sb-autofocus]');
+        if (autofocus) autofocus.removeAttribute('data-sb-autofocus');
+        if (side) document.documentElement.classList.remove('sb-scroll-lock');
+        if (release) { var free = release; release = null; free(); }
+        if (refocus && !side) burger.focus();
+      }
+      function open() {
+        place();
+        check.checked = true;
+        burger.setAttribute('aria-expanded', 'true');
+        if (side) {
+          document.documentElement.classList.add('sb-scroll-lock');
+          var first = qs(list, 'a, button');
+          if (first) first.setAttribute('data-sb-autofocus', '');
+          release = trapFocus(nav, function () { close(true); });
+        }
+      }
+      closers.push(close);
+      off.push(on(burger, 'click', function () { if (check.checked) close(true); else open(); }));
+      if (backdrop) off.push(on(backdrop, 'click', function (e) { e.preventDefault(); close(true); }));
+      off.push(on(list, 'click', function (e) { if (e.target.closest('a')) close(false); }));
+      off.push(on(nav, 'keydown', function (e) {
+        if ((e.key === 'Escape' || e.key === 'Esc') && check.checked && !side) { e.stopPropagation(); close(true); }
+      }));
+      off.push(on(nav, 'focusout', function (e) {
+        if (!side && check.checked && e.relatedTarget && !nav.contains(e.relatedTarget)) close(false);
+      }));
+      off.push(on(document, 'click', function (e) { if (!nav.contains(e.target)) close(false); }));
+      off.push(on(global, 'resize', function () {
+        if (!check.checked) return;
+        if (navFolded(nav)) place(); else close(false);
+      }, { passive: true }));
+      closers.push(function () { burger.setAttribute('tabindex', '-1'); });
+    });
+    if (closers.length) {
+      mount(function () {
+        closers.forEach(function (fn) { fn(false); });
+        off.forEach(function (un) { un(); });
+      });
+    }
   }
 
   /* ── Feature: menu submenus ──────────────────────────────────────────────
@@ -1806,16 +1929,16 @@
       // Pointing at another item of a horizontal menu shows only its submenu: one opened by a click closes.
       off.push(on(li, 'mouseenter', function () {
         li.removeAttribute('data-closed');
-        if (li.closest('.sb-nav--horizontal')) { closeSiblings(li); fit(li); }
+        if (navFlyout(li)) { closeSiblings(li); fit(li); }
       }));
-      off.push(on(li, 'focusin', function () { if (li.closest('.sb-nav--horizontal')) fit(li); }));
+      off.push(on(li, 'focusin', function () { if (navFlyout(li)) fit(li); }));
       off.push(on(li, 'mouseleave', function () { li.removeAttribute('data-closed'); }));
       off.push(on(li, 'focusout', function (e) {
-        if (!li.contains(e.relatedTarget)) { li.removeAttribute('data-closed'); if (li.closest('.sb-nav--horizontal')) set(li, false); }
+        if (!li.contains(e.relatedTarget)) { li.removeAttribute('data-closed'); if (navFlyout(li)) set(li, false); }
       }));
       off.push(on(li, 'keydown', function (e) {
         if (e.key !== 'Escape' && e.key !== 'Esc') return;
-        if (!li.hasAttribute('data-open') && !li.matches(':focus-within')) return;
+        if (!li.hasAttribute('data-open') && (!li.matches(':focus-within') || !navFlyout(li))) return;
         e.stopPropagation();
         set(li, false);
         li.setAttribute('data-closed', '');
@@ -1859,6 +1982,7 @@
     ['fragments', initFragments],
     ['variants', initVariants],
     ['currentLinks', initCurrentLinks],
+    ['navToggles', initNavToggles],
     ['submenus', initSubmenus],
     ['anchors', initAnchors]
   ];
