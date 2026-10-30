@@ -647,6 +647,16 @@ unit('phase4 integration: server renderer, preview and public runtime (real MySQ
                 $rt->tenants->runAs(SBP4_TENANT_A, static fn() => \Slate\Module\StudioBuilder\Menu\StudioMenus::delete(SBP4_TENANT_A, 'footer'));
                 assert_true(str_contains(sbp4_public($rt, SBP4_TENANT_A, '/with-menu')->body, '>Own link</a>'), 'deleting the menu falls back to the block\'s own links');
 
+                // The Nav menu widget on a published page: a site menu's submenu behind the menu button, in one nav, with its links once.
+                $rt->tenants->runAs(SBP4_TENANT_A, static fn() => \Slate\Module\StudioBuilder\Menu\StudioMenus::save(SBP4_TENANT_A, 'main', 'Main menu', [['label' => 'Offers', 'url' => '/offers', 'depth' => 0], ['label' => 'Yoga', 'url' => '/yoga', 'depth' => 1]]));
+                sbp4_publish_page($rt, SBP4_TENANT_A, $publisher, 'with-toggle', sbp4_doc([sbp4_block('core.nav_menu', ['menu' => 'main', 'toggle_breakpoint' => 'mobile', 'toggle_mode' => 'offcanvas', 'pointer' => 'framed'])]));
+                $toggled = sbp4_public($rt, SBP4_TENANT_A, '/with-toggle')->body;
+                assert_eq(1, substr_count($toggled, 'class="sb-nav__list"'), 'one list of links, whatever the width');
+                assert_eq(1, substr_count($toggled, 'href="/yoga"'), 'each link is in the page once');
+                assert_true(preg_match('~<ul class="sb-nav__sub sb-nav__sub--1"~', $toggled) === 1 && str_contains($toggled, 'sb-nav--toggle-mobile sb-nav--menu-offcanvas') && str_contains($toggled, 'sb-nav--pointer-framed'), 'the published page keeps the submenu, the button and the pointer');
+                assert_true(preg_match('~aria-expanded="false" aria-controls="sb-blk_[a-z0-9]+-menu"~', $toggled) === 1, 'the button names the list it opens');
+                $rt->tenants->runAs(SBP4_TENANT_A, static fn() => \Slate\Module\StudioBuilder\Menu\StudioMenus::delete(SBP4_TENANT_A, 'main'));
+
                 // Homepage route mode.
                 assert_null($rt->tenants->runAs(SBP4_TENANT_A, static fn() => $rt->publicRuntime->handleHomepage()), 'no homepage published yet: existing landing page is preserved');
                 sbp4_publish_page($rt, SBP4_TENANT_A, $publisher, 'home', sbp4_doc([sbp4_heading('Alpha Homepage')]), 'page', 'homepage');

@@ -251,7 +251,10 @@ function ScrollEffectsSection({ idPrefix, interactions, hasBackground, tokens, o
           <p className="sbx-hint">{t('sticky_effects_hint')}</p>
           <Check label={t('sticky_shadow')} checked={sticky.shadow === true} onChange={(e) => setSticky({ ...sticky, shadow: e.target.checked })} />
           {sticky.edge === 'top' && (
+            <>
             <Check label={t('sticky_hide_on_scroll')} checked={sticky.hide_on_scroll === true} onChange={(e) => setSticky({ ...sticky, hide_on_scroll: e.target.checked })} />
+            <Check label={t('sticky_shrink')} checked={sticky.shrink === true} onChange={(e) => setSticky({ ...sticky, shrink: e.target.checked })} />
+            </>
           )}
           <ThemeColor id={`${idPrefix}-sticky-bg`} label={t('sticky_background')} value={sticky.background} tokens={tokens} onChange={(v) => setSticky({ ...sticky, background: v })} />
         </>

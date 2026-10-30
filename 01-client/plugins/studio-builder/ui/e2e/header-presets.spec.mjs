@@ -13,11 +13,12 @@ const DESIGNS = [
   ['system-header-split', 'Header — Split'],
   ['system-header-minimal', 'Header — Minimal'],
   ['system-header-two-tier', 'Header — Two-tier'],
+  ['system-header-hamburger', 'Header — Hamburger only'],
 ];
 
 const canvas = (page) => page.frameLocator('iframe.sbx-canvas__frame');
 
-test('a header page offers the five built-in headers, and applying one replaces its content', async ({ page }) => {
+test('a header page offers the six built-in headers, and applying one replaces its content', async ({ page }) => {
   await page.goto('/plugins/studio-builder/admin/page-new.php');
   await page.getByLabel('Title').fill(`Header presets ${Date.now()}`);
   await page.locator('#sb-type').selectOption('header_partial');
@@ -35,8 +36,8 @@ test('a header page offers the five built-in headers, and applying one replaces 
     await page.getByTestId('open-library').click();
     await expect(modal).toBeVisible();
     const headerTab = modal.locator('[data-lib-tab="header_preset"]');
-    // At least the five built-in designs (headers other tests saved as presets are listed too).
-    await expect.poll(async () => Number((await headerTab.textContent()).match(/\d+/)?.[0] || 0)).toBeGreaterThanOrEqual(5);
+    // At least the six built-in designs (headers other tests saved as presets are listed too).
+    await expect.poll(async () => Number((await headerTab.textContent()).match(/\d+/)?.[0] || 0)).toBeGreaterThanOrEqual(6);
     await headerTab.click();
     const card = modal.locator(`[data-template="${key}"]`);
     await expect(card).toContainText(name);
@@ -50,7 +51,7 @@ test('a header page offers the five built-in headers, and applying one replaces 
     // The design is on the canvas, and only one header's worth of it: the brand appears once per row the design has.
     await expect(canvas(page).locator('.sb-link', { hasText: 'Your brand' }).first()).toBeAttached({ timeout: 20_000 });
     await expect(canvas(page).locator('.sb-nav').first()).toBeAttached();
-    await expect(canvas(page).locator('[data-sb-offcanvas-open]').first()).toBeAttached();
+    await expect(canvas(page).locator('.sb-nav__burger').first()).toBeAttached();
     const brands = await canvas(page).locator('.sb-link', { hasText: 'Your brand' }).count();
     expect(brands, `${key}: the header was replaced, not stacked`).toBeLessThanOrEqual(2);
   }
