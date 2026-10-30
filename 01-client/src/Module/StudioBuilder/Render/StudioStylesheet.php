@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '51';
+    public const VERSION = '52';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -567,6 +567,20 @@ final class StudioStylesheet
             . ':where(.sb-video__overlay:hover,.sb-video__overlay:focus-visible) .sb-video__play{background:rgba(0,0,0,.8)}'
             . '@media ' . StyleSurface::HOVER_MOTION . '{:where(.sb-video__overlay:hover,.sb-video__overlay:focus-visible) .sb-video__play{transform:scale(1.06)}}'
             . '.sb-video__overlay:focus-visible{outline:3px solid #fff;outline-offset:-3px}'
+            // Audio ── a card with its own play button; the provider's player opens under it on click.
+            . '.sb-audio{display:flex;flex-direction:column;gap:.75rem;padding:1.5rem;background:var(--sb-surface-accent);color:var(--sb-text-inverse);border-radius:var(--sb-radius-md)}'
+            . '.sb-audio--empty{background:var(--sb-surface-secondary);color:var(--sb-text-primary)}'
+            . '.sb-audio__head{display:flex;align-items:center;justify-content:space-between;gap:1rem}.sb-audio__text{min-width:0}'
+            . '.sb-audio__title{margin:0;font-size:1.5rem;font-weight:600;line-height:1.25;color:inherit}.sb-audio__subtitle{margin:.25rem 0 0;color:inherit;opacity:.9}'
+            . '.sb-audio__play{flex:none;display:flex;align-items:center;justify-content:center;width:3.5rem;height:3.5rem;padding:0;border:0;border-radius:50%;background:#fff;color:var(--sb-color-accent);cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}'
+            . '.sb-audio__play[hidden]{display:none}'
+            . '.sb-audio__play:focus-visible{outline:3px solid #fff;outline-offset:3px}'
+            . '@media ' . StyleSurface::HOVER_MOTION . '{.sb-audio__play:hover{transform:scale(1.06)}}'
+            . '.sb-audio__icon-pause{display:none}.sb-audio__icon-play,.sb-audio__icon-pause{line-height:0}'
+            . '.sb-audio[data-sb-audio-playing] .sb-audio__icon-pause{display:block}.sb-audio[data-sb-audio-playing] .sb-audio__icon-play{display:none}'
+            . '.sb-audio__bar{display:flex;align-items:center;gap:1rem}.sb-audio__seek{flex:1;min-width:0;margin:0;accent-color:currentColor}.sb-audio__time{flex:none;font-variant-numeric:tabular-nums;font-size:.875rem}'
+            . '.sb-audio__embed{display:block;width:100%;border:0;border-radius:.5rem}'
+            . '.sb-body a.sb-audio__link{align-self:flex-start;color:inherit;font-size:.875rem;text-decoration:underline;text-underline-offset:.2em}'
             . '.sb-video-lightbox__frame{width:min(92vw,151vh)}.sb-video-lightbox__frame.sb-video--aspect-4-3{width:min(92vw,113vh)}'
             . '.sb-video-lightbox__frame.sb-video--aspect-1-1{width:min(92vw,85vh)}.sb-video-lightbox__frame.sb-video--aspect-9-16{width:min(92vw,48vh)}';
 

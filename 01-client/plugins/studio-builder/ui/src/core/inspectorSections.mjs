@@ -26,7 +26,7 @@ const TEXT_TYPES = new Set(['core.heading', 'core.text', 'core.rich_text', 'core
  * here as well. This hides sections in the editor only: it never changes what the document may contain,
  * because narrowing the server's capabilities would make already-stored styles invalid.
  */
-export const MEDIA_TYPES = new Set(['core.image', 'core.video', 'core.gallery']);
+export const MEDIA_TYPES = new Set(['core.image', 'core.video', 'core.audio', 'core.gallery']);
 
 /**
  * Blocks that draw no text of their own (a line, a gap, an icon, a map): Typography would be a dead section, so it is

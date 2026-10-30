@@ -220,7 +220,8 @@ function place(node, x, y, w, shapes, depth) {
       return h;
     }
     case 'core.image':
-    case 'core.video': {
+    case 'core.video':
+    case 'core.audio': {
       shapes.push({ k: 'box', x, y, w, h: 26 });
       return 26;
     }

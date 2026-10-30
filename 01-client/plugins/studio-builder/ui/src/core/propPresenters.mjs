@@ -68,6 +68,12 @@ export const PROP_PRESENTERS = Object.freeze({
     play_icon: { showIf: (p) => p.overlay === true },
     lightbox: { showIf: (p) => p.overlay === true },
   },
+  // The Audio: Source decides which address field shows.
+  'core.audio': {
+    source: { pills: true },
+    url: { showIf: (p) => p.source !== 'hosted' },
+    hosted_url: { showIf: (p) => p.source === 'hosted' },
+  },
   // The Icon's colours, size, frame and rotation are set from its Style section, not here. The older preset size and
   // colour token stay visible only while they hold a value the Style section does not show.
   'core.icon': {

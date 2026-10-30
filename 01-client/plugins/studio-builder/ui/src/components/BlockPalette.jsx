@@ -65,7 +65,7 @@ function DynamicPanel({ manifest, query, insertBlock }) {
 function MediaPanel({ manifest, query, insertBlock, insertBlockWithProps, mediaPicker }) {
   const pickerAvailable = mediaPickerAvailable(mediaPicker);
   const q = query.trim().toLowerCase();
-  const items = asList(manifest.blocks).filter((b) => isOffered(b) && ['core.image', 'core.gallery', 'core.video'].includes(b.type)
+  const items = asList(manifest.blocks).filter((b) => isOffered(b) && ['core.image', 'core.gallery', 'core.video', 'core.audio'].includes(b.type)
     && (!q || `${b.label} ${b.type}`.toLowerCase().includes(q)));
 
   const addImage = () => {

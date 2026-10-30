@@ -346,6 +346,122 @@
             "version": 1
         },
         {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "media",
+            "default_props": {
+                "hosted_url": null,
+                "source": "soundcloud",
+                "subtitle": "Show or station",
+                "title": "Episode title",
+                "url": ""
+            },
+            "description": "A podcast or radio card: SoundCloud, Spotify or a self-hosted file",
+            "field_schema": [
+                {
+                    "key": "source",
+                    "type": "enum",
+                    "label": "Source",
+                    "required": false,
+                    "default": "soundcloud",
+                    "allowed_values": [
+                        "soundcloud",
+                        "spotify",
+                        "hosted"
+                    ]
+                },
+                {
+                    "key": "url",
+                    "type": "string",
+                    "label": "Audio Link",
+                    "required": false,
+                    "default": "",
+                    "max_length": 1000
+                },
+                {
+                    "key": "hosted_url",
+                    "type": "url",
+                    "label": "Audio File",
+                    "required": false,
+                    "default": null,
+                    "max_length": 1000
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "label": "Title",
+                    "required": false,
+                    "default": "Episode title",
+                    "max_length": 200
+                },
+                {
+                    "key": "subtitle",
+                    "type": "string",
+                    "label": "Subtitle",
+                    "required": false,
+                    "default": "Show or station",
+                    "max_length": 200
+                }
+            ],
+            "icon": "video",
+            "inline_text": [],
+            "label": "Audio",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "card",
+                    "label": "Card"
+                },
+                {
+                    "key": "title",
+                    "label": "Title"
+                },
+                {
+                    "key": "subtitle",
+                    "label": "Subtitle"
+                },
+                {
+                    "key": "play",
+                    "label": "Play button"
+                },
+                {
+                    "key": "link",
+                    "label": "Source link"
+                }
+            ],
+            "title": "Audio",
+            "type": "core.audio",
+            "version": 1
+        },
+        {
             "allowed_binding_providers": [
                 "content.posts",
                 "content.authors",
