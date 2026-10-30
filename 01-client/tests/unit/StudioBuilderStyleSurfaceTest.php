@@ -382,7 +382,8 @@ unit('states: they render as pseudo-class rules scoped to the block, with the ba
     $css = $collector->css();
     $c = '.' . sbss_class($html);
     assert_true(str_contains($css, $c . '{transition:all 200ms ease;cursor:pointer}'), $css);
-    assert_true(str_contains($css, $c . ':hover{background-color:#e8734a !important;transform:scale(1.05) !important}'), $css);
+    assert_true(str_contains($css, $c . ':hover{background-color:#e8734a !important}'), $css);
+    assert_true(str_contains($css, '@media ' . StyleSurface::HOVER_MOTION . '{' . $c . ':hover{transform:scale(1.05) !important}}'), 'a scale needs no hover margin: ' . $css);
     assert_true(str_contains($css, $c . ':focus-within{box-shadow:0 0 0 3px #e8734a !important}'), 'a spread without a blur keeps the blur slot: ' . $css);
     assert_true(str_contains($css, $c . ':has(:disabled){opacity:0.5 !important}'), 'the bad colour is dropped, the opacity stays: ' . $css);
     assert_false(str_contains($css, 'url('), 'no url() anywhere: ' . $css);

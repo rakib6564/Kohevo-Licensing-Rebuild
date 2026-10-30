@@ -119,7 +119,15 @@ final class RenderCollector
         // `$states` is name => declarations from StyleSurface::stateRules(); the pseudo-class comes from its fixed map.
         foreach (StyleSurface::STATE_SELECTORS as $name => $selector) {
             if (isset($states[$name]) && $states[$name] !== '') {
-                $template .= ".\0" . $selector . '{' . $states[$name] . '}';
+                [$always, $motion] = $name === 'hover' ? StyleSurface::splitHoverMotion($states[$name]) : [$states[$name], ''];
+                if ($always !== '') {
+                    $template .= ".\0" . $selector . '{' . $always . '}';
+                }
+                if ($motion !== '') {
+                    $bridge = StyleSurface::hoverBridge($motion);
+                    $template .= '@media ' . StyleSurface::HOVER_MOTION . "{.\0" . $selector . '{' . $motion . '}'
+                        . ($bridge !== '' ? ".\0:not(.sb-parallax-bg)" . $selector . '::after{' . $bridge . '}' : '') . '}';
+                }
                 // A state's text colour is set on the wrapper, but the text inside has colours of its own: make it follow, as a base colour does.
                 if (preg_match('/(^|;)color:/', $states[$name]) === 1) {
                     $on = ".\0" . $selector;

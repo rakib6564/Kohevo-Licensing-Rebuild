@@ -32,6 +32,8 @@ function bg(string $c): array { return ['background' => ['color' => $c]]; }
 function grad(string $g): array { return ['background' => ['gradient' => $g]]; }
 function dim(array $d): array { return ['dimensions' => array_map(static fn($x) => is_int($x) ? $x . 'px' : $x, $d)]; }
 function radius(string $r): array { return ['border' => ['radius' => $r]]; }
+/** Rounds what sits at the top of a card: cards leave overflow open, so a lifted card's hover margin isn't clipped. */
+function top_radius(string $r): array { return ['border' => ['radius_corners' => ['tl' => $r, 'tr' => $r]]]; }
 function line(string $side, string $color, string $w = '1px'): array { return ['border' => [$side => ['width' => $w, 'style' => 'solid', 'color' => $color]]]; }
 function outline(string $color, string $r, string $w = '1px'): array { return ['border' => ['width' => $w, 'style' => 'solid', 'color' => $color, 'radius' => $r]]; }
 function shadow(int $x, int $y, int $blur, string $c, int $spread = 0): array { return ['shadow' => ['x' => "{$x}px", 'y' => "{$y}px", 'blur' => "{$blur}px", 'spread' => "{$spread}px", 'color' => $c]]; }
@@ -41,7 +43,7 @@ function place(string $mode, array $at = []): array { return ['position' => ['mo
 function center(): array { return ['align' => ['base' => 'center']]; }
 function S(array ...$parts): array { return array_replace_recursive([], ...$parts); }
 /** A hover zoom on an image whose frame clips it. */
-function zoom(float $scale, int $ms = 350): array { return ['s' => ['effects' => ['transition' => ['duration_ms' => $ms, 'easing' => 'ease']]], 'h' => ['effects' => ['transform' => ['scale' => $scale]]]]; }
+function zoom(float $scale, int $ms = 350, array $style = []): array { return ['s' => array_replace_recursive($style, ['effects' => ['transition' => ['duration_ms' => $ms, 'easing' => 'ease']]]), 'h' => ['effects' => ['transform' => ['scale' => $scale]]]]; }
 /** An icon tile: a coloured square (or disc) with the icon centred. */
 function tile(int $size, string $r, string $bg, ?string $fg = PINK): array { return S(dim(['width' => $size, 'height' => $size]), radius($r), bg($bg), $fg !== null ? col($fg) : [], flexc()); }
 
@@ -177,7 +179,7 @@ function native_map_base(): array
         'fx-grid4'            => ['s' => lay(['gap' => '22px']), 'props' => ['columns' => 4], 'tp' => ['columns' => 2], 'mp' => ['columns' => 1]],
         'yg-class'            => ['s' => S(place('relative'), dim(['min_width' => '0px']))],
         'yg-class__photo'     => ['s' => S(place('relative'), dim(['height' => 255, 'overflow' => 'hidden']), radius('15px'), bg('#eeeeee')), 'm' => dim(['height' => '230px'])],
-        'yg-class__img'       => ['s' => dim(['height' => '100%', 'object_fit' => 'cover'])] + zoom(1.035),
+        'yg-class__img'       => zoom(1.035, 350, dim(['height' => '100%', 'object_fit' => 'cover'])),
         'yg-class__num'       => ['s' => S(place('absolute', ['top' => 15, 'right' => 15]), dim(['height' => 40]), radius('999px'), bg('#ffffff'), col(PINK), ty('13px', 'bold', null, null, SYNE),
                                   pad(0, 14), flexc())],
         'fx-badge'            => [],
@@ -193,7 +195,7 @@ function native_map_base(): array
         'yg-trainer-grid'     => ['s' => lay(['row_gap' => '36px', 'column_gap' => '28px']), 'mp' => ['columns' => 1], 'm' => lay(['gap' => '25px'])],
         'fx-people'           => ['s' => lay(['row_gap' => '30px', 'column_gap' => '24px']), 'tp' => ['columns' => 3], 'mp' => ['columns' => 1], 'm' => lay(['gap' => '25px'])],
         'yg-trainer'          => ['s' => place('relative'), 'center' => true],
-        'yg-trainer__img'     => ['s' => S(dim(['height' => 345, 'overflow' => 'hidden', 'object_fit' => 'cover']), radius('14px'), bg('#eeeeee')), 't' => dim(['height' => '310px']), 'm' => dim(['height' => '350px'])] + zoom(1.04),
+        'yg-trainer__img'     => ['t' => dim(['height' => '310px']), 'm' => dim(['height' => '350px'])] + zoom(1.04, 350, S(dim(['height' => 345, 'overflow' => 'hidden', 'object_fit' => 'cover']), radius('14px'), bg('#eeeeee'))),
         'fx-people yg-trainer__img' => ['s' => S(dim(['height' => 300]), bg('#f3eef1')), 't' => dim(['height' => '300px']), 'm' => dim(['height' => '320px'])],
         'yg-trainer__name'    => ['s' => S(mar(17, null, null, null), ty('21px'))],
         'yg-trainer__role'    => ['s' => S(mar(4, null, null, null), col(BODY), ty('14px'))],
@@ -213,7 +215,7 @@ function native_map_base(): array
 
         // ── Blog and event cards ──
         'yg-post'             => ['s' => S(dim(['min_width' => '0px', 'overflow' => 'hidden']), radius('14px'), bg('#ffffff'), shadow(0, 5, 23, 'rgba(24,16,37,.07)'))],
-        'yg-post__img'        => ['s' => S(dim(['height' => 235, 'overflow' => 'hidden', 'object_fit' => 'cover']), bg('#eeeeee'))] + zoom(1.035, 300),
+        'yg-post__img'        => zoom(1.035, 300, S(dim(['height' => 235, 'overflow' => 'hidden', 'object_fit' => 'cover']), bg('#eeeeee'))),
         'fx-press yg-post__img' => ['s' => dim(['height' => 200])],
         'yg-post__body'       => ['s' => pad(24), 'm' => pad(20)],
         'yg-post__title'      => ['s' => S(ty('21px', null, '1.35'), mar(null, null, 10, null)), 'h' => col(PINK)],
