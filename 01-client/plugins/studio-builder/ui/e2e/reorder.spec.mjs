@@ -173,6 +173,14 @@ test.describe('phone', () => {
     const [a, b] = await topIds(page, sheet);
     const handle = sheet.getByTestId(`row-handle-${a}`);
     await expect(handle).toBeVisible();
+    // The sheet slides up: measure once it has stopped, or the finger lands where the rows used to be.
+    let last = null;
+    await expect.poll(async () => {
+      const box = JSON.stringify(await handle.boundingBox());
+      const still = box === last;
+      last = box;
+      return still;
+    }).toBe(true);
     const hb = await handle.boundingBox();
     expect(hb.width).toBeGreaterThanOrEqual(38);
     expect(hb.height).toBeGreaterThanOrEqual(38);

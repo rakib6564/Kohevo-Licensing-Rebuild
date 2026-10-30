@@ -1522,6 +1522,12 @@
     if (!slots.length && !forms.length) return;
     if (!global.fetch || !global.FormData) return;
 
+    // Only the newest content for a slot may land: a slower, older answer must not overwrite it.
+    function nextTurn(slot) {
+      slot.__sbFragmentTurn = (slot.__sbFragmentTurn || 0) + 1;
+      return slot.__sbFragmentTurn;
+    }
+
     function load(slot) {
       var url = slot.getAttribute('data-sb-fragment');
       if (!url || !sameOrigin(url)) return;
@@ -1534,6 +1540,7 @@
         url = target.toString();
       }
       slot.setAttribute('data-sb-fragment-state', 'loading');
+      var turn = nextTurn(slot);
       fetch(url, { credentials: 'same-origin', headers: { Accept: 'text/html', 'X-Studio-Fragment': '1' } })
         .then(function (res) {
           var type = res.headers.get('Content-Type') || '';
@@ -1541,16 +1548,18 @@
           return res.text();
         })
         .then(function (html) {
+          if (slot.__sbFragmentTurn !== turn) return;
           slot.innerHTML = html;
           slot.setAttribute('data-sb-fragment-state', 'ready');
         })
         .catch(function () { slot.setAttribute('data-sb-fragment-state', 'error'); });
     }
 
-    function refresh(group) {
+    // `fresh` is a slot that already holds the answer (and any message in it): reloading it would wipe that message.
+    function refresh(group, fresh) {
       if (!group) return;
       qsa(document, '[data-sb-fragment][data-sb-fragment-group]').forEach(function (slot) {
-        if (slot.getAttribute('data-sb-fragment-group') === group) load(slot);
+        if (slot !== fresh && slot.getAttribute('data-sb-fragment-group') === group) load(slot);
       });
     }
 
@@ -1576,13 +1585,14 @@
             global.location.assign(data.redirect);
             return;
           }
-          if (slot && typeof data.html === 'string') slot.innerHTML = data.html;
+          var fresh = slot && typeof data.html === 'string' ? slot : null;
+          if (fresh) { nextTurn(fresh); fresh.innerHTML = data.html; }
           if (note && typeof data.message === 'string') {
             note.textContent = data.message;
             note.setAttribute('data-sb-state', r.ok ? 'ok' : 'error');
           }
           var group = form.getAttribute('data-sb-fragment-group') || (slot && slot.getAttribute('data-sb-fragment-group'));
-          if (r.ok) refresh(group);
+          if (r.ok) refresh(group, fresh);
         })
         .catch(function () {
           if (note) { note.textContent = note.getAttribute('data-sb-fragment-error') || ''; note.setAttribute('data-sb-state', 'error'); }
