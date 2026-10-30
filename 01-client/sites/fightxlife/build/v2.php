@@ -220,8 +220,8 @@ function native_v2(): array
         'v2-nav'         => ['t' => lay(['order' => 2]), 'm' => lay(['order' => 2]), 'parts' => [
                 'list' => lay(['gap' => '6px']), // no display here: it would beat the rule that folds the list away
                 'link' => S(lay(['display' => 'flex', 'align' => 'center']), pad(10, 10), col(INK), fam('body', '15px', 'bold'), fx(TRANS)),
-                'link:hover' => col(PINK), 'current' => col(PINK),
-                'submenu' => S(radius('18px'), shadow(0, 22, 50, 'rgba(70,10,48,.16)', -10)), 'sublink' => S(col(INK), ty('14.5px')), 'sublink:hover' => S(col(PINK), bg('#fff0f7')),
+                'link:hover' => col(PINK), 'current' => col(PINK_DEEP),
+                'submenu' => S(pad(10, 10), radius('18px'), shadow(0, 22, 50, 'rgba(70,10,48,.16)', -10)), 'sublink' => S(col(INK), ty('14.5px', 'bold')), 'sublink:hover' => S(col(PINK_DEEP), bg('#fff0f7')),
                 'burger' => S(sz(['width' => 44, 'height' => 44]), radius('12px'), bg('#fff0f7'), col(PINK)),
                 'panel' => S(pad(128, 28, 32, 28), // clears the close button, which stays where the header puts it (at most 114px down)
                      shadow(-10, 0, 35, 'rgba(20,10,35,.14)'))]],
