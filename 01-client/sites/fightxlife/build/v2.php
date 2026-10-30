@@ -231,7 +231,7 @@ function native_v2(): array
                                   'button' => S($pill, sz(['height' => 50]), pad(0, 26), ty('14px'), fx(['cursor' => 'pointer']))]],
         'v2-foot-sec'    => ['s' => S(grad('linear-gradient(135deg,#f2189a 0%,#e9008a 45%,#b8006f 100%)'), col('#ffffff'), $V(0, 70)), 'm' => $V(0, 50)],
         'v2-foot'        => ['s' => lay(['tracks' => 'minmax(0,1.55fr) minmax(330px,1fr)', 'gap' => '60px', 'align' => 'start']), 't' => lay(['tracks' => '1fr', 'gap' => '40px'])],
-        'v2-foot__cols'  => ['s' => S(lay(['tracks' => 'minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)', 'gap' => '24px']), pad(80, null, 0, null)), 't' => S(lay(['tracks' => 'minmax(0,1fr) minmax(0,1fr)', 'gap' => '30px']), pad(0, null, null, null)), 'm' => lay(['row_gap' => '26px', 'column_gap' => '18px'])],
+        'v2-foot__cols'  => ['s' => S(lay(['tracks' => 'minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)', 'gap' => '24px']), pad(80, null, 0, null)), 't' => S(lay(['tracks' => 'minmax(0,1fr) minmax(0,1fr)', 'gap' => '30px']), pad(56, null, null, null)), 'm' => S(lay(['row_gap' => '26px', 'column_gap' => '18px']), pad(44, null, null, null))],
         'v2-foot__title' => ['s' => S(col('#ffffff'), ty('15px', 'bold', '1.3', '.06em'), ['typography' => ['transform' => 'uppercase']], mar(0, null, 16, null))],
         'v2-foot__nav'   => ['parts' => ['list' => S(lay(['display' => 'grid', 'row_gap' => '10px'])), 'link' => S(col('rgba(255,255,255,.86)'), ty('14.5px', null, '21px'), pad(0), fx(TRANS)), 'link:hover' => S(col('#ffffff'), fx(['transform' => ['translate_x' => '3px']]))]],
         'v2-foot__card'  => ['s' => S(mar(-80, null, 0, null), place('relative'), pad(34, 34, 30, 34), radius('26px'), bg('#ffffff'), col(BODY), shadow(0, 30, 70, 'rgba(60,0,35,.28)')),
@@ -246,7 +246,8 @@ function native_v2(): array
         'v2-bar-sec'     => ['s' => S(grad('linear-gradient(90deg,#4a4446 0%,#0c0905 70%)'), col('rgba(255,255,255,.75)'), ty('13.5px'), $V(20, 20))],
         'v2-bar'         => ['s' => lay(['gap' => '20px']), 'm' => S(lay(['direction' => 'column', 'gap' => '8px', 'align' => 'center']))],
         'v2-bar__copy'   => ['s' => S(col('#ffffff'), ty('14px', 'bold', null, null, SYNE))],
-        'v2-bar__nav'    => ['parts' => ['list' => lay(['display' => 'flex', 'gap' => '20px']), 'link' => S(col('rgba(255,255,255,.75)'), ty('13.5px'), pad(0)), 'link:hover' => col('#ffffff')]],
+        'v2-bar__nav'    => ['parts' => ['list' => lay(['display' => 'flex', 'gap' => '20px']), 'link' => S(col('rgba(255,255,255,.75)'), ty('13.5px'), pad(0)), 'link:hover' => col('#ffffff')],
+                              'mparts' => ['list' => lay(['justify' => 'center', 'row_gap' => '6px', 'column_gap' => '20px'])]],
     ];
 }
 
