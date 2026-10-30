@@ -147,7 +147,7 @@ function native_v2(): array
         // ── Projects (dark) ──
         'v2-dark'        => ['s' => S(grad('radial-gradient(1200px 500px at 85% 0%,rgba(233,0,138,.28),transparent 60%),linear-gradient(180deg,#140d12 0%,#0c0905 100%)'), col('#ffffff'), $V(140, 150)), 'm' => $V(84, 90)],
         'v2-bento'       => ['s' => lay(['tracks' => 'minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)', 'gap' => '34px', 'align' => 'stretch']), 't' => lay(['tracks' => '1fr 1fr', 'gap' => '24px']), 'm' => lay(['tracks' => '1fr', 'gap' => '20px'])],
-        'v2-quote'       => ['s' => S(place('relative'), pad(48, 42), radius('24px'), grad('linear-gradient(150deg,#ff3fa6 0%,#e9008a 55%,#b0006a 100%)'), shadow(0, 30, 60, 'rgba(233,0,138,.32)', -10), lay(['justify' => 'between'])),
+        'v2-quote'       => ['s' => S(place('relative'), pad(48, 42, 39, 42), radius('24px'), grad('linear-gradient(150deg,#ff3fa6 0%,#e9008a 55%,#b0006a 100%)'), shadow(0, 30, 60, 'rgba(233,0,138,.32)', -10), lay(['justify' => 'between'])),
                               't' => lay(['column_span' => 'full']), 'm' => pad(30, 24), 'reveal' => $up(0)],
         'v2-quote__mark' => ['s' => S(col('rgba(255,255,255,.35)'), ty('110px', 'bold', '.8', null, SYNE), mar(0, null, -6, null))],
         'v2-quote__title' => ['s' => S(col('#ffffff'), ty('15px', 'bold', null, '.1em'), ['typography' => ['transform' => 'uppercase']], mar(0, null, 14, null))],
@@ -155,15 +155,15 @@ function native_v2(): array
         'v2-quote__name' => ['s' => S(col('#ffffff'), ty('20px', null, '1.4', null, SCRIPT), mar(22, null, 4, null))],
         'v2-quote__role' => ['s' => S(col('rgba(255,255,255,.8)'), ty('13.5px'), mar(0, null, 24, null))],
         'v2-quote v2-more' => ['s' => col('#ffffff')],
-        'v2-tile'        => ['s' => S(radius('24px'), bg('#1d1519'), brd('rgba(255,255,255,.07)', '1px', '24px'), fx(['transition' => ['duration_ms' => 350, 'easing' => 'ease']])),
+        'v2-tile'        => ['s' => S(lay(['display' => 'flex', 'direction' => 'column']), radius('24px'), bg('#1d1519'), brd('rgba(255,255,255,.07)', '1px', '24px'), fx(['transition' => ['duration_ms' => 350, 'easing' => 'ease']])),
                               'h' => S(fx(['transform' => ['translate_y' => '-6px']]), ['border' => ['color' => 'rgba(255,124,195,.45)']])],
         'v2-tile--1'     => ['reveal' => $up(120)], 'v2-tile--2' => ['reveal' => $up(240)],
         'v2-tile__photo' => ['s' => S(dim(['height' => '240px', 'overflow' => 'hidden']), bg('#f4eef1'), top_radius('23px'))],
         'v2-tile__img'   => zoom(1.05, 600, dim(['height' => '100%', 'object_fit' => 'cover'])),
-        'v2-tile__body'  => ['s' => pad(34, 34, 38, 34), 'm' => pad(26, 24, 30, 24)],
+        'v2-tile__body'  => ['s' => S(lay(['display' => 'flex', 'direction' => 'column', 'grow' => 1]), pad(34, 34, 38, 34)), 'm' => pad(26, 24, 30, 24)],
         'v2-tile__title' => ['s' => S(col('#ffffff'), ty('22px', 'bold', '1.25'), mar(0, null, 16, null))],
         'v2-tile__text'  => ['s' => S(col('rgba(255,255,255,.7)'), ty('14.5px', null, '1.7'), mar(0, null, 16, null))],
-        'v2-tile v2-more' => ['s' => col('#ff7cc3')],
+        'v2-tile v2-more' => ['s' => S(col('#ff7cc3'), mar('auto', null, 0, null))], // on the card's bottom edge, level with the quote's link
 
         // ── Partners ──
         'v2-partners-sec' => ['s' => S(bg('#ffffff'), $V(140, 130)), 'm' => $V(84, 80)],
