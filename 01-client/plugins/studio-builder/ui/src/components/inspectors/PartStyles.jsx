@@ -23,7 +23,7 @@ import { IntField, SelectField, SliderField, SpacingBox, ThemeColor, TracksField
 
 const WEIGHTS = ['normal', 'medium', 'semibold', 'bold', 'extrabold'];
 const TRANSFORMS = ['none', 'uppercase', 'lowercase', 'capitalize'];
-const BORDER_STYLES = ['solid', 'dashed', 'dotted', 'double', 'none'];
+const BORDER_STYLES = ['solid', 'dashed', 'dotted', 'double', 'groove', 'none'];
 const FAMILIES = ['heading', 'body'];
 const DISPLAYS = ['block', 'flex', 'grid', 'inline-flex', 'inline-block', 'none'];
 const FITS = ['cover', 'contain', 'fill', 'none', 'scale-down'];

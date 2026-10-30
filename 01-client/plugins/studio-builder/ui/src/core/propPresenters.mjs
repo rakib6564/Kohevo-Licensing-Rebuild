@@ -68,6 +68,22 @@ export const PROP_PRESENTERS = Object.freeze({
     play_icon: { showIf: (p) => p.overlay === true },
     lightbox: { showIf: (p) => p.overlay === true },
   },
+  // The Countdown: Type decides between a date and a length, and each After Expire action has its own settings.
+  'core.countdown': {
+    countdown_type: { pills: true },
+    target: { showIf: (p) => p.countdown_type !== 'evergreen' },
+    evergreen_hours: { showIf: (p) => p.countdown_type === 'evergreen' },
+    evergreen_minutes: { showIf: (p) => p.countdown_type === 'evergreen' },
+    view: { pills: true },
+    custom_labels: { showIf: (p) => p.show_labels !== false },
+    label_days: { showIf: (p) => p.show_labels !== false && p.custom_labels === true && p.show_days !== false },
+    label_hours: { showIf: (p) => p.show_labels !== false && p.custom_labels === true && p.show_hours !== false },
+    label_minutes: { showIf: (p) => p.show_labels !== false && p.custom_labels === true && p.show_minutes !== false },
+    label_seconds: { showIf: (p) => p.show_labels !== false && p.custom_labels === true && p.show_seconds !== false },
+    done_text: { showIf: (p) => (p.expire_action || 'message') === 'message' },
+    message_align: { pills: true, showIf: (p) => (p.expire_action || 'message') === 'message' },
+    redirect_url: { showIf: (p) => p.expire_action === 'redirect' },
+  },
   'core.marquee': {
     direction: { pills: true },
   },

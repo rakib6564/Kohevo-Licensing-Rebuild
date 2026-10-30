@@ -330,7 +330,7 @@ final class CanonicalDocumentSchema
 
     public const ALLOWED_FONT_WEIGHTS = ['normal', 'medium', 'semibold', 'bold', 'extrabold', '100', '200', '300', '400', '500', '600', '700', '800', '900'];
     public const ALLOWED_TEXT_TRANSFORMS = ['none', 'uppercase', 'lowercase', 'capitalize'];
-    public const ALLOWED_BORDER_STYLES = ['none', 'solid', 'dashed', 'dotted', 'double'];
+    public const ALLOWED_BORDER_STYLES = ['none', 'solid', 'dashed', 'dotted', 'double', 'groove'];
     public const ALLOWED_SHADOW_PRESETS = ['none', 'sm', 'md', 'lg', 'xl', '2xl', 'inner'];
     public const ALLOWED_RADIUS_PRESETS = ['none', 'sm', 'md', 'lg', 'xl', '2xl', 'full'];
 

@@ -1666,6 +1666,34 @@
     });
   }
 
+  /** When a visitor's evergreen timer ends. It starts on their first view and survives a reload; a new length restarts it. */
+  function evergreenEnd(key, length) {
+    var name = 'sb-countdown-' + key;
+    if (key) {
+      try {
+        var saved = JSON.parse(global.localStorage.getItem(name));
+        if (saved && saved.length === length && saved.end > 0) return saved.end;
+      } catch (e) { /* no storage, or an unreadable entry: start again */ }
+    }
+    var end = Date.now() + length * 1000;
+    if (key) {
+      try { global.localStorage.setItem(name, JSON.stringify({ length: length, end: end })); } catch (e) { /* keep the timer for this view */ }
+    }
+    return end;
+  }
+
+  /** A finished countdown's action, set by the renderer on the public page only. */
+  function expire(el) {
+    var action = el.getAttribute('data-sb-countdown-expire');
+    if (action === 'hide') {
+      el.setAttribute('hidden', '');
+    } else if (action === 'redirect') {
+      var url = new URL(el.getAttribute('data-sb-href'), global.location.href);
+      // A page that redirects to itself would reload for ever.
+      if (/^https?:$/.test(url.protocol) && url.pathname !== global.location.pathname) global.location.replace(url.href);
+    }
+  }
+
   function initCountdown(root) {
     var els = qsa(root, '[data-sb-countdown]');
     if (!els.length) return;
@@ -1673,7 +1701,10 @@
     var timers = [];
     var live = [];
     els.forEach(function (el) {
-      var target = new Date(el.getAttribute('data-sb-countdown')).getTime();
+      var length = parseInt(el.getAttribute('data-sb-countdown-evergreen'), 10);
+      var target = length > 0
+        ? evergreenEnd(el.getAttribute('data-sb-countdown-key'), length)
+        : new Date(el.getAttribute('data-sb-countdown')).getTime();
       if (isNaN(target)) return;
       var parts = {
         d: qs(el, '[data-sb-cd="d"]'), h: qs(el, '[data-sb-cd="h"]'),
@@ -1686,13 +1717,16 @@
         if (diff <= 0) {
           el.setAttribute('data-sb-finished', '');
           ['d', 'h', 'm', 's'].forEach(function (k) { if (parts[k]) parts[k].textContent = '00'; });
+          expire(el);
           return false;
         }
+        // A unit that is switched off passes its time down: without days, hours count past 24.
         var secs = Math.floor(diff / 1000);
-        if (parts.d) parts.d.textContent = pad(Math.floor(secs / 86400));
-        if (parts.h) parts.h.textContent = pad(Math.floor((secs % 86400) / 3600));
-        if (parts.m) parts.m.textContent = pad(Math.floor((secs % 3600) / 60));
-        if (parts.s) parts.s.textContent = pad(secs % 60);
+        [['d', 86400], ['h', 3600], ['m', 60], ['s', 1]].forEach(function (u) {
+          if (!parts[u[0]]) return;
+          parts[u[0]].textContent = pad(Math.floor(secs / u[1]));
+          secs %= u[1];
+        });
         return true;
       }
 
@@ -1714,6 +1748,7 @@
       live.forEach(function (el) {
         el.removeAttribute('data-sb-live');
         el.removeAttribute('data-sb-finished');
+        el.removeAttribute('hidden');
         qsa(el, '[data-sb-cd]').forEach(function (n) { n.textContent = '00'; });
       });
     });

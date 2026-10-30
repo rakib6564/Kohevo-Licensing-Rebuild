@@ -89,6 +89,8 @@ final class BlockParts
             'box'    => ['label' => 'Box', 'selectors' => ['.sb-countdown__unit']],
             'number' => ['label' => 'Number', 'selectors' => ['.sb-countdown__num']],
             'unit'   => ['label' => 'Unit name', 'selectors' => ['.sb-countdown__name']],
+            'units'  => ['label' => 'Boxes row', 'selectors' => ['.sb-countdown__units']],
+            'message' => ['label' => 'Expire message', 'selectors' => ['.sb-countdown__done']],
         ],
         'core.nav_menu' => [
             'list'    => ['label' => 'Menu list', 'selectors' => ['.sb-nav__list']],

@@ -24,9 +24,24 @@ export function highlightMissing(props) {
   return !text.includes(phrase);
 }
 
+/** A stored UTC date-time as the local value a date-time input shows, or '' when it is not one. */
+export function datetimeToLocal(value) {
+  const date = new Date(typeof value === 'string' ? value : '');
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** A date-time input's local value as the UTC form the document stores, or '' when it is empty. */
+export function datetimeFromLocal(value) {
+  const date = new Date(value || '');
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
 export function controlFor(field) {
   if (field && field.type === 'string' && field.format === 'color') return 'color';
   if (field && field.type === 'string' && field.format === 'meta_field') return 'metafield';
+  if (field && field.type === 'string' && field.format === 'datetime') return 'datetime';
   return CONTROL[field && field.type] || null;
 }
 

@@ -108,3 +108,16 @@ test('Video: Source decides which address shows, and the poster, play icon and l
   for (const k of ['start', 'end']) assert.equal(field(k).type, 'number');
   for (const k of ['autoplay', 'muted', 'loop', 'controls', 'privacy', 'lazy_load', 'overlay', 'play_icon', 'lightbox']) assert.equal(field(k).type, 'boolean', k);
 });
+
+test('countdown: the type and the After Expire action decide which settings show', () => {
+  const show = (key, props) => PROP_PRESENTERS['core.countdown'][key].showIf(props);
+  assert.equal(show('target', {}), true);
+  assert.equal(show('target', { countdown_type: 'evergreen' }), false);
+  assert.equal(show('evergreen_hours', { countdown_type: 'evergreen' }), true);
+  assert.equal(show('done_text', {}), true, 'a block saved before the action existed keeps its message');
+  assert.equal(show('done_text', { expire_action: 'hide' }), false);
+  assert.equal(show('redirect_url', { expire_action: 'redirect' }), true);
+  assert.equal(show('label_days', { custom_labels: true }), true);
+  assert.equal(show('label_days', { custom_labels: true, show_days: false }), false);
+  assert.equal(show('label_days', { custom_labels: true, show_labels: false }), false);
+});
