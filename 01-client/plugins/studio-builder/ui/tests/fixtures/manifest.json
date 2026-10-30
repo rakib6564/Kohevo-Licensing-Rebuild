@@ -3431,7 +3431,10 @@
                 "pointer_color": null,
                 "style": "plain",
                 "toggle_align": "right",
+                "toggle_animation": "none",
                 "toggle_breakpoint": "none",
+                "toggle_cta_label": "",
+                "toggle_cta_url": null,
                 "toggle_full_width": true,
                 "toggle_icon": "hamburger",
                 "toggle_label": "Menu",
@@ -3554,7 +3557,8 @@
                     "default": "dropdown",
                     "allowed_values": [
                         "dropdown",
-                        "offcanvas"
+                        "offcanvas",
+                        "fullscreen"
                     ]
                 },
                 {
@@ -3563,6 +3567,18 @@
                     "label": "Dropdown spans the full width",
                     "required": false,
                     "default": true
+                },
+                {
+                    "key": "toggle_animation",
+                    "type": "enum",
+                    "label": "Opening animation",
+                    "required": false,
+                    "default": "none",
+                    "allowed_values": [
+                        "none",
+                        "fade",
+                        "slide"
+                    ]
                 },
                 {
                     "key": "toggle_icon",
@@ -3595,6 +3611,21 @@
                         "center",
                         "right"
                     ]
+                },
+                {
+                    "key": "toggle_cta_label",
+                    "type": "string",
+                    "label": "Button in the open menu",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "toggle_cta_url",
+                    "type": "url",
+                    "label": "Button link",
+                    "required": false,
+                    "default": null
                 },
                 {
                     "key": "items",
@@ -3736,6 +3767,10 @@
                     "key": "panel",
                     "label": "Open menu panel",
                     "states": false
+                },
+                {
+                    "key": "cta",
+                    "label": "Open menu button"
                 }
             ],
             "title": "Nav menu",
@@ -5512,6 +5547,335 @@
             "style_parts": [],
             "title": "Grid",
             "type": "layout.grid",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "columns": 3,
+                "label": "Menu item",
+                "url": null
+            },
+            "description": "One link of a Mega menu and its panel",
+            "field_schema": [
+                {
+                    "key": "label",
+                    "type": "string",
+                    "label": "Label",
+                    "required": true,
+                    "default": "Menu item",
+                    "max_length": 80
+                },
+                {
+                    "key": "url",
+                    "type": "url",
+                    "label": "URL",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "columns",
+                    "type": "number",
+                    "label": "Panel columns",
+                    "required": false,
+                    "default": 3,
+                    "min": 1,
+                    "max": 6,
+                    "integer_only": true
+                }
+            ],
+            "icon": "menu",
+            "inline_text": [],
+            "label": "Mega menu item",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Mega menu item",
+            "type": "layout.mega_item",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [
+                "layout.mega_item"
+            ],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "layout",
+            "default_props": {
+                "align": "left",
+                "aria_label": "Menu",
+                "panel_width": "content",
+                "pointer": "none",
+                "pointer_animation": "fade",
+                "pointer_color": null,
+                "toggle_align": "right",
+                "toggle_animation": "none",
+                "toggle_breakpoint": "tablet",
+                "toggle_cta_label": "",
+                "toggle_cta_url": null,
+                "toggle_full_width": true,
+                "toggle_icon": "hamburger",
+                "toggle_label": "Menu",
+                "toggle_mode": "dropdown"
+            },
+            "description": "Menu links that open wide panels of any content",
+            "field_schema": [
+                {
+                    "key": "aria_label",
+                    "type": "string",
+                    "label": "Menu name (for screen readers)",
+                    "required": false,
+                    "default": "Menu",
+                    "max_length": 80
+                },
+                {
+                    "key": "align",
+                    "type": "enum",
+                    "label": "Alignment",
+                    "required": false,
+                    "default": "left",
+                    "allowed_values": [
+                        "left",
+                        "center",
+                        "right"
+                    ]
+                },
+                {
+                    "key": "panel_width",
+                    "type": "enum",
+                    "label": "Panel content width",
+                    "required": false,
+                    "default": "content",
+                    "allowed_values": [
+                        "full",
+                        "content"
+                    ]
+                },
+                {
+                    "key": "pointer",
+                    "type": "enum",
+                    "label": "Hover pointer",
+                    "required": false,
+                    "default": "none",
+                    "allowed_values": [
+                        "none",
+                        "underline",
+                        "overline",
+                        "double_line",
+                        "framed",
+                        "background",
+                        "text"
+                    ]
+                },
+                {
+                    "key": "pointer_animation",
+                    "type": "enum",
+                    "label": "Pointer animation",
+                    "required": false,
+                    "default": "fade",
+                    "allowed_values": [
+                        "none",
+                        "fade",
+                        "slide",
+                        "grow"
+                    ]
+                },
+                {
+                    "key": "pointer_color",
+                    "type": "token_ref",
+                    "label": "Pointer colour",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "toggle_breakpoint",
+                    "type": "enum",
+                    "label": "Menu button shows on",
+                    "required": false,
+                    "default": "tablet",
+                    "allowed_values": [
+                        "none",
+                        "tablet",
+                        "mobile",
+                        "always"
+                    ]
+                },
+                {
+                    "key": "toggle_mode",
+                    "type": "enum",
+                    "label": "Menu opens as",
+                    "required": false,
+                    "default": "dropdown",
+                    "allowed_values": [
+                        "dropdown",
+                        "offcanvas",
+                        "fullscreen"
+                    ]
+                },
+                {
+                    "key": "toggle_full_width",
+                    "type": "boolean",
+                    "label": "Dropdown spans the full width",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "toggle_animation",
+                    "type": "enum",
+                    "label": "Opening animation",
+                    "required": false,
+                    "default": "none",
+                    "allowed_values": [
+                        "none",
+                        "fade",
+                        "slide"
+                    ]
+                },
+                {
+                    "key": "toggle_icon",
+                    "type": "enum",
+                    "label": "Menu button icon",
+                    "required": false,
+                    "default": "hamburger",
+                    "allowed_values": [
+                        "hamburger",
+                        "dots",
+                        "text_icon"
+                    ]
+                },
+                {
+                    "key": "toggle_label",
+                    "type": "string",
+                    "label": "Menu button label",
+                    "required": false,
+                    "default": "Menu",
+                    "max_length": 40
+                },
+                {
+                    "key": "toggle_align",
+                    "type": "enum",
+                    "label": "Menu button alignment",
+                    "required": false,
+                    "default": "right",
+                    "allowed_values": [
+                        "left",
+                        "center",
+                        "right"
+                    ]
+                },
+                {
+                    "key": "toggle_cta_label",
+                    "type": "string",
+                    "label": "Button in the open menu",
+                    "required": false,
+                    "default": "",
+                    "max_length": 60
+                },
+                {
+                    "key": "toggle_cta_url",
+                    "type": "url",
+                    "label": "Button link",
+                    "required": false,
+                    "default": null
+                }
+            ],
+            "icon": "menu",
+            "inline_text": [],
+            "label": "Mega menu",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "list",
+                    "label": "Menu list"
+                },
+                {
+                    "key": "link",
+                    "label": "Links"
+                },
+                {
+                    "key": "current",
+                    "label": "Current page link"
+                },
+                {
+                    "key": "submenu",
+                    "label": "Panels"
+                },
+                {
+                    "key": "grid",
+                    "label": "Panel columns"
+                },
+                {
+                    "key": "burger",
+                    "label": "Menu button"
+                },
+                {
+                    "key": "panel",
+                    "label": "Open menu panel",
+                    "states": false
+                },
+                {
+                    "key": "cta",
+                    "label": "Open menu button"
+                }
+            ],
+            "title": "Mega menu",
+            "type": "layout.mega_menu",
             "version": 1
         },
         {

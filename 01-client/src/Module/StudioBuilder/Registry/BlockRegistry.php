@@ -18,6 +18,9 @@ use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\ContainerRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\CountdownRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\AudioRenderer;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MarqueeRenderer;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MegaItemRenderer;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\MegaMenuRenderer;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\NavChrome;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\VideoRenderer;
 use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
@@ -303,6 +306,26 @@ final class BlockRegistry
         ));
 
         return $registry;
+    }
+
+    /**
+     * The menu button's fields, shared by the Nav menu and the Mega menu.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function menuToggleFields(string $breakpoint): array
+    {
+        return [
+            ['key' => 'toggle_breakpoint', 'type' => 'enum', 'label' => 'Menu button shows on', 'required' => false, 'allowed_values' => NavChrome::TOGGLES, 'default' => $breakpoint],
+            ['key' => 'toggle_mode', 'type' => 'enum', 'label' => 'Menu opens as', 'required' => false, 'allowed_values' => NavChrome::MODES, 'default' => 'dropdown'],
+            ['key' => 'toggle_full_width', 'type' => 'boolean', 'label' => 'Dropdown spans the full width', 'required' => false, 'default' => true],
+            ['key' => 'toggle_animation', 'type' => 'enum', 'label' => 'Opening animation', 'required' => false, 'allowed_values' => NavChrome::OPENINGS, 'default' => 'none'],
+            ['key' => 'toggle_icon', 'type' => 'enum', 'label' => 'Menu button icon', 'required' => false, 'allowed_values' => NavChrome::ICONS, 'default' => 'hamburger'],
+            ['key' => 'toggle_label', 'type' => 'string', 'label' => 'Menu button label', 'required' => false, 'default' => 'Menu', 'max_length' => 40],
+            ['key' => 'toggle_align', 'type' => 'enum', 'label' => 'Menu button alignment', 'required' => false, 'allowed_values' => NavChrome::ALIGNS, 'default' => 'right'],
+            ['key' => 'toggle_cta_label', 'type' => 'string', 'label' => 'Button in the open menu', 'required' => false, 'default' => '', 'max_length' => 60],
+            ['key' => 'toggle_cta_url', 'type' => 'url', 'label' => 'Button link', 'required' => false, 'default' => null],
+        ];
     }
 
     /**
@@ -1121,12 +1144,7 @@ final class BlockRegistry
                 ['key' => 'pointer_animation', 'type' => 'enum', 'label' => 'Pointer animation', 'required' => false, 'allowed_values' => ['none', 'fade', 'slide', 'grow'], 'default' => 'fade'],
                 ['key' => 'pointer_color', 'type' => 'token_ref', 'label' => 'Pointer colour', 'required' => false, 'default' => null],
                 ['key' => 'divider', 'type' => 'boolean', 'label' => 'Divider between items', 'required' => false, 'default' => false],
-                ['key' => 'toggle_breakpoint', 'type' => 'enum', 'label' => 'Menu button shows on', 'required' => false, 'allowed_values' => ['none', 'tablet', 'mobile', 'always'], 'default' => 'none'],
-                ['key' => 'toggle_mode', 'type' => 'enum', 'label' => 'Menu opens as', 'required' => false, 'allowed_values' => ['dropdown', 'offcanvas'], 'default' => 'dropdown'],
-                ['key' => 'toggle_full_width', 'type' => 'boolean', 'label' => 'Dropdown spans the full width', 'required' => false, 'default' => true],
-                ['key' => 'toggle_icon', 'type' => 'enum', 'label' => 'Menu button icon', 'required' => false, 'allowed_values' => ['hamburger', 'dots', 'text_icon'], 'default' => 'hamburger'],
-                ['key' => 'toggle_label', 'type' => 'string', 'label' => 'Menu button label', 'required' => false, 'default' => 'Menu', 'max_length' => 40],
-                ['key' => 'toggle_align', 'type' => 'enum', 'label' => 'Menu button alignment', 'required' => false, 'allowed_values' => ['left', 'center', 'right'], 'default' => 'right'],
+                ...self::menuToggleFields('none'),
                 [
                     'key'         => 'items',
                     'type'        => 'repeater',
@@ -1156,6 +1174,45 @@ final class BlockRegistry
             // Each link's text edits the matching item (top-level links only: a submenu link is not an item of the list);
             // a menu chosen on the Menus screen shows its own links, so not then.
             inlineText: [['prop' => 'items.*.label', 'selector' => '.sb-nav__list > .sb-nav__item > .sb-nav__link', 'unless' => 'menu']],
+        ));
+
+        // 38b. layout.mega_menu — a row of links whose panels hold any blocks; each child is a layout.mega_item (MegaMenuRenderer).
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'layout.mega_menu',
+            version: 1,
+            label: 'Mega menu',
+            title: 'Mega menu',
+            description: 'Menu links that open wide panels of any content',
+            category: 'layout',
+            icon: 'menu',
+            schema: FieldSchema::define([
+                ['key' => 'aria_label', 'type' => 'string', 'label' => 'Menu name (for screen readers)', 'required' => false, 'default' => 'Menu', 'max_length' => 80],
+                ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => NavChrome::ALIGNS, 'default' => 'left'],
+                ['key' => 'panel_width', 'type' => 'enum', 'label' => 'Panel content width', 'required' => false, 'allowed_values' => MegaMenuRenderer::WIDTHS, 'default' => 'content'],
+                ['key' => 'pointer', 'type' => 'enum', 'label' => 'Hover pointer', 'required' => false, 'allowed_values' => NavChrome::POINTERS, 'default' => 'none'],
+                ['key' => 'pointer_animation', 'type' => 'enum', 'label' => 'Pointer animation', 'required' => false, 'allowed_values' => NavChrome::ANIMATIONS, 'default' => 'fade'],
+                ['key' => 'pointer_color', 'type' => 'token_ref', 'label' => 'Pointer colour', 'required' => false, 'default' => null],
+                ...self::menuToggleFields('tablet'),
+            ]),
+            allowsChildren: true,
+            allowedChildTypes: ['layout.mega_item'],
+        ));
+
+        // 38c. layout.mega_item — one link of a Mega menu; its child blocks are the columns of the panel it opens.
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'layout.mega_item',
+            version: 1,
+            label: 'Mega menu item',
+            title: 'Mega menu item',
+            description: 'One link of a Mega menu and its panel',
+            category: 'layout',
+            icon: 'menu',
+            schema: FieldSchema::define([
+                ['key' => 'label', 'type' => 'string', 'label' => 'Label', 'required' => true, 'default' => 'Menu item', 'max_length' => 80],
+                ['key' => 'url', 'type' => 'url', 'label' => 'URL', 'required' => false, 'default' => null],
+                ['key' => 'columns', 'type' => 'number', 'label' => 'Panel columns', 'required' => false, 'default' => 3, 'min' => MegaItemRenderer::MIN_COLUMNS, 'max' => MegaItemRenderer::MAX_COLUMNS, 'integer_only' => true],
+            ]),
+            allowsChildren: true,
         ));
 
         // 39. core.map — an OpenStreetMap embed centred on a point (no key, no tracking cookies).

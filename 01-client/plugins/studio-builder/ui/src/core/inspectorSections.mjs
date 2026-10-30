@@ -42,7 +42,7 @@ const NO_BACKGROUND_TYPES = new Set(['core.map']);
  */
 export const INTERACTIVE_TYPES = new Set([
   'core.button', 'core.link', 'payment.button', 'payment.link', 'core.form', 'core.form_field',
-  'core.accordion', 'core.tabs', 'core.nav_menu', 'core.modal', 'layout.offcanvas', 'theme.search_box',
+  'core.accordion', 'core.tabs', 'core.nav_menu', 'layout.mega_menu', 'core.modal', 'layout.offcanvas', 'theme.search_box',
 ]);
 
 /** The states a block's States section offers, plus any it already stores. */

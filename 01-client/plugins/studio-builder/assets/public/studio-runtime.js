@@ -1852,7 +1852,8 @@
       var list = qs(nav, '.sb-nav__list');
       var backdrop = qs(nav, '.sb-nav__backdrop');
       if (!burger || !check || !list) return;
-      var side = nav.classList.contains('sb-nav--menu-offcanvas');
+      // A side panel and a full-screen menu cover the page: they hold focus and keep it from scrolling.
+      var side = nav.classList.contains('sb-nav--menu-offcanvas') || nav.classList.contains('sb-nav--menu-fullscreen');
       var release = null;
       burger.removeAttribute('tabindex');
 
@@ -1919,6 +1920,34 @@
     }
   }
 
+  /* ── Feature: mega menu panels ───────────────────────────────────────────
+   * A panel starts at the header's bottom edge and spans the window. Without this file it keeps the menu's own width.
+   */
+  function initMegaMenus(root) {
+    var off = [];
+    var navs = qsa(root, '[data-sb-mega]');
+    navs.forEach(function (nav) {
+      function place() {
+        var rect = nav.getBoundingClientRect();
+        var header = nav.closest('.sb-site-header');
+        var section = header && (nav.closest('.sb-section') || header);
+        if (section) nav.style.setProperty('--sb-mega-top', (section.getBoundingClientRect().bottom - rect.top) + 'px');
+        nav.style.setProperty('--sb-mega-left', (-rect.left) + 'px');
+        nav.style.setProperty('--sb-mega-vw', document.documentElement.clientWidth + 'px');
+      }
+      place();
+      off.push(on(nav, 'mouseover', place));
+      off.push(on(nav, 'focusin', place));
+      off.push(on(global, 'resize', place, { passive: true }));
+    });
+    if (navs.length) {
+      mount(function () {
+        off.forEach(function (un) { un(); });
+        navs.forEach(function (nav) { ['--sb-mega-top', '--sb-mega-left', '--sb-mega-vw'].forEach(function (name) { nav.style.removeProperty(name); }); });
+      });
+    }
+  }
+
   /* ── Feature: menu submenus ──────────────────────────────────────────────
    * NavMenuRenderer's submenus open on hover and keyboard focus with CSS alone; this adds the click and keyboard toggle.
    * Its button (the arrow, or an item with no address of its own) sets `aria-expanded` and `data-open` on the item;
@@ -1938,7 +1967,7 @@
     // A submenu that would run past the right edge of the window opens the other way (`data-flip`).
     function fit(li) {
       var sub = li.querySelector(':scope > .sb-nav__sub');
-      if (!sub) return;
+      if (!sub || sub.classList.contains('sb-nav__mega')) return;
       li.removeAttribute('data-flip');
       if (sub.getBoundingClientRect().right > document.documentElement.clientWidth - 8) li.setAttribute('data-flip', '');
     }
@@ -2018,6 +2047,7 @@
     ['variants', initVariants],
     ['currentLinks', initCurrentLinks],
     ['navToggles', initNavToggles],
+    ['megaMenus', initMegaMenus],
     ['submenus', initSubmenus],
     ['anchors', initAnchors]
   ];

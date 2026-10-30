@@ -216,15 +216,21 @@ function native_v2(): array
         'v2-head-sec'    => ['s' => S(bg('#ffffff'), $V(0, 0))],
         'v2-header'      => ['s' => S(lay(['tracks' => 'auto 1fr auto', 'align' => 'center', 'gap' => '20px']), dim(['height' => '92px'])), 't' => lay(['tracks' => '1fr auto auto', 'gap' => '12px']), 'm' => dim(['height' => '74px'])],
         'v2-brand'       => ['s' => dim(['width' => '140px']), 'm' => dim(['width' => '112px'])],
-        // One menu at every width: a row with underlined links, then a side panel behind its own button; folded, it moves after the donate button.
+        // One menu at every width: links with panels in a row, then a dropdown card behind its own button; folded, it moves after the donate button.
         'v2-nav'         => ['t' => lay(['order' => 2]), 'm' => lay(['order' => 2]), 'parts' => [
                 'list' => lay(['gap' => '6px']), // no display here: it would beat the rule that folds the list away
                 'link' => S(lay(['display' => 'flex', 'align' => 'center']), pad(10, 10), col(INK), fam('body', '15px', 'bold'), fx(TRANS)),
                 'link:hover' => col(PINK), 'current' => col(PINK_DEEP),
-                'submenu' => S(pad(10, 10), radius('18px'), shadow(0, 22, 50, 'rgba(70,10,48,.16)', -10)), 'sublink' => S(col(INK), ty('14.5px', 'bold')), 'sublink:hover' => S(col(PINK_DEEP), bg('#fff0f7')),
+                'submenu' => S(pad(30, 32), side('top', '#f6e8ef'), shadow(0, 26, 50, 'rgba(70,10,48,.14)', -14)), 'grid' => lay(['gap' => '32px']),
                 'burger' => S(sz(['width' => 44, 'height' => 44]), radius('12px'), bg('#fff0f7'), col(PINK)),
-                'panel' => S(pad(128, 28, 32, 28), // clears the close button, which stays where the header puts it (at most 114px down)
-                     shadow(-10, 0, 35, 'rgba(20,10,35,.14)'))]],
+                'panel' => S(pad(10, 22, 24, 22), radius('0 0 22px 22px')),
+                'cta' => S($pill, fx(['cursor' => 'pointer'])), 'cta:hover' => $pillHover]],
+        'v2-mega__title' => ['s' => S(col(INK), ty('20px', 'bold', '1.25', null, SYNE), mar(0, null, 12, null)), 'thide' => true],
+        'v2-mega__nav'   => ['parts' => ['list' => lay(['gap' => '2px']), 'link' => S(lay(['display' => 'block']), pad(9, 12), radius('12px'), col(INK), fam('body', '15px', 'bold'), fx(TRANS)),
+                'link:hover' => S(col(PINK_DEEP), bg('#fff0f7')), 'current' => S(col(PINK_DEEP), bg('#fff0f7'))]],
+        'v2-mega__img'   => ['s' => S(dim(['height' => '220px', 'object_fit' => 'cover', 'overflow' => 'hidden']), radius('18px')), 'thide' => true],
+        'v2-mega__cta'   => ['s' => S(lay(['display' => 'flex', 'direction' => 'column', 'justify' => 'center', 'gap' => '14px']), pad(26, 26), radius('18px'), bg('#fff0f7')), 'thide' => true],
+        'v2-mega__cta-title' => ['s' => S(col(INK), ty('18px', 'bold', '1.3', null, SYNE), mar(0, null, 0, null))],
         'v2-head__end'   => ['s' => lay(['gap' => '12px', 'align' => 'center', 'justify' => 'end'])],
         // 19px would run into the menu at 1024px, so the header keeps 14px and takes the deeper pink.
         'v2-donate'      => ['parts' => ['button' => S($outline, brd(PINK_DEEP, '2px', '999px'), col(PINK_DEEP), sz(['height' => 46]), pad(0, 22), ty('14px')),
@@ -351,6 +357,12 @@ foreach ($menus as $key => [$name, $items]) { StudioMenus::save($tid, $key, $nam
 say('  + menus: ' . implode(', ', array_keys($menus)));
 
 // ── Header ───────────────────────────────────────────────────────────────────────────────────────────────────────
+// One panel of the menu: the section's links, a photo and the call to support; folded, only the links.
+$megaItem = static fn(string $label, string $url, string $menu, string $photo): array => B('layout.mega_item', ['label' => $label, 'url' => $url, 'columns' => 3], [
+    BOX([H($label, 'h3', 'v2-mega__title'), B('core.nav_menu', ['menu' => $menu, 'items' => [], 'layout' => 'vertical', 'aria_label' => $label], [], 'v2-mega__nav')]),
+    V2IMG($photo, '', 'v2-mega__img'),
+    BOX([H('Faire avancer les actions de FightxLife', 'h3', 'v2-mega__cta-title'), V2BTN('Soutenir FightxLife', '/nous-soutenir/', 'v2-btn v2-btn--sm')], 'v2-mega__cta'),
+]);
 $header = [
     SEC('Top bar', [B('layout.flex', ['direction' => 'row', 'justify' => 'between', 'align' => 'center', 'gap' => 'none', 'wrap' => 'wrap'], [
         B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center', 'wrap' => 'wrap'], [
@@ -362,8 +374,14 @@ $header = [
     ], 'v2-top')], 'v2-top-sec'),
     SEC('Header', [B('layout.grid', ['columns' => 3, 'gap' => 'none', 'align' => 'center'], [
         V2IMG(V2_LOGO, 'FightxLife', 'v2-brand', ['link_to' => 'custom', 'url' => V2_HOME_URL]),
-        B('core.nav_menu', ['menu' => 'v2-header', 'items' => [], 'layout' => 'horizontal', 'align' => 'center', 'aria_label' => 'Navigation principale', 'pointer' => 'underline', 'pointer_animation' => 'grow',
-            'toggle_breakpoint' => 'tablet', 'toggle_mode' => 'offcanvas', 'toggle_label' => 'Ouvrir le menu'], [], 'v2-nav'),
+        B('layout.mega_menu', ['align' => 'center', 'aria_label' => 'Navigation principale', 'pointer' => 'underline', 'pointer_animation' => 'grow', 'toggle_breakpoint' => 'tablet', 'toggle_mode' => 'dropdown',
+            'toggle_animation' => 'slide', 'toggle_label' => 'Ouvrir le menu', 'toggle_cta_label' => 'Soutenir FightxLife', 'toggle_cta_url' => '/nous-soutenir/'], [
+            $megaItem('Nos actions', '/nos-actions/', 'v2-actions', '2022-05-waterfight-piscine.jpg'),
+            $megaItem('Nos cours', '/cours/', 'v2-cours', '2022-05-femininn.jpg'),
+            $megaItem('Projets & impact', '/notre-impact/', 'v2-projets', '2023-01-ny-20220827-smile-box-5262.jpg'),
+            $megaItem('À propos', '/a-propos/', 'v2-apropos', '2022-05-visite-hopitaux-4.jpg'),
+            B('layout.mega_item', ['label' => 'Contact', 'url' => '/contact/']),
+        ], 'v2-nav'),
         B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center', 'justify' => 'end'], [
             B('core.button', ['link' => L('Soutenir FightxLife', '/nous-soutenir/'), 'variant' => 'primary'], [], 'v2-donate', ['visibility' => ['auth_state' => 'any', 'devices' => ['md', 'lg']]]),
             B('core.button', ['link' => L('Soutenir', '/nous-soutenir/'), 'variant' => 'primary'], [], 'v2-donate', ['visibility' => ['auth_state' => 'any', 'devices' => ['base', 'sm']]]),

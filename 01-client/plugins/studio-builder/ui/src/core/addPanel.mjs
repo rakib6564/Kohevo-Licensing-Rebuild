@@ -11,7 +11,7 @@ import { isDynamicBlock } from '../components/blockKinds.mjs';
 export const BLOCK_CATEGORY_ORDER = ['layout', 'content', 'media', 'forms', 'business', 'advanced', 'theme'];
 
 /** Blocks added recently enough to carry a "New" badge in the Add panel. Drop a type from here when it is no longer news. */
-export const NEW_BLOCKS = Object.freeze(['core.nav_menu', 'core.map', 'core.divider', 'core.spacer', 'payment.button', 'payment.link']);
+export const NEW_BLOCKS = Object.freeze(['layout.mega_menu', 'core.nav_menu', 'core.map', 'core.divider', 'core.spacer', 'payment.button', 'payment.link']);
 export const isNewBlock = (def) => !!def && !def.variantKey && NEW_BLOCKS.includes(def.type);
 
 /** Cards shown per category before "View all". */

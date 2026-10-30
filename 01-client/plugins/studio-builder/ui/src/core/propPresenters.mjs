@@ -4,6 +4,18 @@
 
 /** The Nav menu has a menu button. */
 const navToggled = (p) => !!p.toggle_breakpoint && p.toggle_breakpoint !== 'none';
+const navPresenter = {
+  pointer_animation: { showIf: (p) => !!p.pointer && p.pointer !== 'none' && p.pointer !== 'text' },
+  pointer_color: { showIf: (p) => !!p.pointer && p.pointer !== 'none' },
+  toggle_mode: { pills: true, showIf: navToggled },
+  toggle_full_width: { showIf: (p) => navToggled(p) && (!p.toggle_mode || p.toggle_mode === 'dropdown') },
+  toggle_animation: { pills: true, showIf: navToggled },
+  toggle_icon: { showIf: navToggled },
+  toggle_label: { showIf: navToggled },
+  toggle_align: { pills: true, showIf: navToggled },
+  toggle_cta_label: { showIf: navToggled },
+  toggle_cta_url: { showIf: (p) => navToggled(p) && !!p.toggle_cta_label },
+};
 
 export const PROP_PRESENTERS = Object.freeze({
   'layout.flex': {
@@ -30,15 +42,8 @@ export const PROP_PRESENTERS = Object.freeze({
     variant: { pills: true },
   },
   // The menu button's options mean nothing without a button, and the dropdown's width only applies to a dropdown.
-  'core.nav_menu': {
-    pointer_animation: { showIf: (p) => !!p.pointer && p.pointer !== 'none' && p.pointer !== 'text' },
-    pointer_color: { showIf: (p) => !!p.pointer && p.pointer !== 'none' },
-    toggle_mode: { pills: true, showIf: navToggled },
-    toggle_full_width: { showIf: (p) => navToggled(p) && p.toggle_mode !== 'offcanvas' },
-    toggle_icon: { showIf: navToggled },
-    toggle_label: { showIf: navToggled },
-    toggle_align: { pills: true, showIf: navToggled },
-  },
+  'core.nav_menu': navPresenter,
+  'layout.mega_menu': { ...navPresenter, panel_width: { pills: true } },
   'core.button': {
     icon_position: { pills: true, showIf: (p) => !!p.icon && p.icon !== 'none' },
     icon_spacing: { showIf: (p) => !!p.icon && p.icon !== 'none' },
