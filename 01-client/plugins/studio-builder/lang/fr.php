@@ -1672,6 +1672,7 @@ return [
     'studio_field_panel_content_width' => 'Largeur du contenu du panneau',
     'studio_field_panel_columns' => 'Colonnes du panneau',
     'studio_part_panels' => 'Panneaux',
+    'studio_part_link_of_the_open_panel' => 'Lien du panneau ouvert',
     'studio_part_panel_columns' => 'Colonnes du panneau',
     'studio_part_open_menu_button' => 'Bouton du menu ouvert',
     'studio_mega_empty' => 'Ajoutez un élément de méga menu',

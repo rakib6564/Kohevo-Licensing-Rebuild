@@ -113,6 +113,7 @@ final class BlockParts
             'list'    => ['label' => 'Menu list', 'selectors' => ['.sb-nav--mega>.sb-nav__list']],
             'link'    => ['label' => 'Links', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent)']],
             'current' => ['label' => 'Current page link', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item>.sb-nav__link[aria-current="page"]', '.sb-nav--mega>.sb-nav__list>.sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)']],
+            'open'    => ['label' => 'Link of the open panel', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item:is(:hover,:focus-within,[data-open])>:is(.sb-nav__link,.sb-nav__parent)'], 'states' => false],
             'submenu' => ['label' => 'Panels', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item>.sb-nav__mega']],
             'grid'    => ['label' => 'Panel columns', 'selectors' => ['.sb-mega__grid']],
             'burger'  => ['label' => 'Menu button', 'selectors' => ['.sb-nav__burger']],

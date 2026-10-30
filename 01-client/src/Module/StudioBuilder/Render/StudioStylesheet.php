@@ -748,6 +748,10 @@ final class StudioStylesheet
             . '.sb-nav--anim-grow ' . $link . '::before,.sb-nav--anim-grow ' . $link . '::after{transform:scaleX(0);transition:opacity .2s ease,transform .2s ease}'
             . ':is(.sb-nav--pointer-framed,.sb-nav--pointer-background).sb-nav--anim-grow ' . $link . '::after{transform:scale(.85)}'
             . $marks($lit) . '{opacity:1;transform:none}'
+            // A parent of the current page stays marked, and a Mega menu item stays marked while its panel is open.
+            . '[class*="sb-nav--pointer-"] .sb-nav__list>.sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)::after,.sb-nav--mega[class*="sb-nav--pointer-"]>.sb-nav__list>.sb-nav__item:is(:hover,[data-open])>:is(.sb-nav__link,.sb-nav__parent)::after{opacity:1;transform:none}'
+            // A Nav menu in a panel takes no pointer from the Mega menu around it.
+            . '.sb-nav__mega .sb-nav:not([class*="sb-nav--pointer-"]) .sb-nav__link::before,.sb-nav__mega .sb-nav:not([class*="sb-nav--pointer-"]) .sb-nav__link::after{display:none}'
             . '@media (hover:hover){' . $marks(':hover') . '{opacity:1;transform:none}.sb-body .sb-nav--pointer-text a.sb-nav__link:hover{color:var(--sb-nav-pointer)}}'
             . '.sb-body .sb-nav--pointer-text a.sb-nav__link:is(:focus-visible,[aria-current="page"]),.sb-nav--pointer-text .sb-nav__parent:focus-visible{color:var(--sb-nav-pointer)}'
             . '@media (prefers-reduced-motion:reduce){[class*="sb-nav--anim-"] ' . $link . '::before,[class*="sb-nav--anim-"] ' . $link . '::after{transition:none;transform:none}.sb-nav__icon,.sb-nav__icon::before,.sb-nav__icon::after{transition:none}}';
@@ -756,6 +760,7 @@ final class StudioStylesheet
         $css .= '.sb-nav--mega .sb-nav__item{position:static}.sb-nav--mega{position:relative}'
             . '.sb-nav--horizontal.sb-nav--mega>.sb-nav__list>.sb-nav__item>.sb-nav__mega{top:var(--sb-mega-top,100%);left:var(--sb-mega-left,0);right:auto;width:var(--sb-mega-vw,100%);box-sizing:border-box;padding:1.75rem 1.5rem;border-radius:0}'
             . '.sb-nav--mega .sb-nav__mega::before{top:-3rem;height:3rem}'
+            . '.sb-nav--mega .sb-nav__mega .sb-nav__link{box-sizing:border-box;width:100%;white-space:normal}'
             . '.sb-mega__grid{display:grid;grid-template-columns:repeat(var(--sb-mega-cols,3),minmax(0,1fr));gap:1.5rem 2rem;margin:0 auto}'
             . '.sb-nav--mega-content .sb-mega__grid{max-width:var(--sb-layout-content,80rem)}'
             . '.sb-mega__empty{margin:0;padding:.75rem;border:1px dashed var(--sb-border-default)}'
@@ -785,7 +790,7 @@ final class StudioStylesheet
         return $n . '{position:relative}' . $n . ' .sb-nav__bar{display:flex}'
             . $n . ' .sb-nav__list{display:none;flex-direction:column;flex-wrap:nowrap;justify-content:flex-start;gap:0;background:var(--sb-surface-primary,#fff);color:var(--sb-text-primary,#1a1a1a);text-align:left}'
             . $open . '~.sb-nav__list{display:flex}'
-            . $drop . '{position:absolute;top:var(--sb-nav-top,100%);z-index:60;min-width:16rem;padding:.5rem 1rem;max-height:calc(100dvh - 5rem);box-sizing:border-box;overflow-y:auto;box-shadow:0 18px 40px -12px rgba(0,0,0,.22)}'
+            . $drop . '{position:absolute;top:var(--sb-nav-top,100%);z-index:60;min-width:16rem;padding:.5rem 1rem;max-height:calc(100dvh - 5rem);box-sizing:border-box;overflow-x:hidden;overflow-y:auto;box-shadow:0 18px 40px -12px rgba(0,0,0,.22)}'
             . $n . '.sb-nav--tgl-left.sb-nav--menu-dropdown .sb-nav__list{left:0}'
             . $n . '.sb-nav--tgl-right.sb-nav--menu-dropdown .sb-nav__list{right:0}'
             . $n . '.sb-nav--tgl-center.sb-nav--menu-dropdown .sb-nav__list{left:50%;transform:translateX(-50%)}'
@@ -800,9 +805,10 @@ final class StudioStylesheet
             . $full . ' .sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent){font-size:1.35rem}'
             . $full . ' .sb-nav__bar:has(.sb-nav__check:checked){z-index:10001}'
             . $n . ' .sb-nav__cta{display:block;padding:1rem 0 .5rem}' . $n . ' .sb-nav__list>.sb-nav__item.sb-nav__cta{border-top:0;padding:1rem 0 .5rem}'
-            . $n . '.sb-nav--horizontal.sb-nav--mega .sb-nav__list>.sb-nav__item>.sb-nav__mega{top:auto;left:auto;width:auto;padding:.25rem 0 .75rem!important;border:0!important;border-radius:0!important;box-shadow:none!important}' . $n . ' .sb-mega__grid{grid-template-columns:minmax(0,1fr)}'
+            . $n . '.sb-nav--horizontal.sb-nav--mega .sb-nav__list>.sb-nav__item>.sb-nav__mega{top:auto;left:auto;width:auto;padding:.25rem 0 .75rem!important;border:0!important;border-radius:0!important;box-shadow:none!important}' . $n . '.sb-nav--mega .sb-mega__grid{grid-template-columns:minmax(0,1fr)!important}'
             // A Nav menu inside a panel is not the list this rule set folds.
-            . $n . '.sb-nav--mega .sb-nav__mega .sb-nav__list{display:flex;position:static;max-height:none;padding:0;background:none;box-shadow:none}' . $n . ' .sb-nav__item{position:relative}'
+            . $n . '.sb-nav--mega .sb-nav__mega .sb-nav__item{display:block}' . $n . '.sb-nav--mega .sb-nav__mega .sb-nav__list>.sb-nav__item+.sb-nav__item{border-top:0}' . $n . '.sb-nav--mega .sb-nav__mega .sb-nav__link{width:100%}'
+            . $n . '.sb-nav--horizontal.sb-nav--mega .sb-nav__mega .sb-nav__list{display:flex;position:static;left:auto;width:auto;min-width:0;max-height:none;padding:0;overflow:visible;background:none;box-shadow:none}' . $n . ' .sb-nav__item{position:relative}'
             . $n . ' .sb-nav__list>.sb-nav__item{padding:0;border:0}' . $n . ' .sb-nav__list>.sb-nav__item+.sb-nav__item{border-top:1px solid var(--sb-border-default)}'
             . $n . ' .sb-nav__link,' . $n . ' .sb-nav__parent{display:block;padding:.65rem 0}'
             . $n . ' .sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent)::before,' . $n . ' .sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent)::after{display:none}'

@@ -5853,6 +5853,11 @@
                     "label": "Current page link"
                 },
                 {
+                    "key": "open",
+                    "label": "Link of the open panel",
+                    "states": false
+                },
+                {
                     "key": "submenu",
                     "label": "Panels"
                 },
