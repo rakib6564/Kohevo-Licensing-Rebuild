@@ -760,7 +760,7 @@ final class StudioStylesheet
             . '.sb-nav--mega-content .sb-mega__grid{max-width:var(--sb-layout-content,80rem)}'
             . '.sb-mega__empty{margin:0;padding:.75rem;border:1px dashed var(--sb-border-default)}'
             // The button at the end of a folded menu; hidden while the links show in a row.
-            . '.sb-nav__cta{display:none}.sb-nav__cta-link{display:block;padding:.8rem 1.25rem;text-align:center;font-weight:700;color:#fff;background:var(--sb-color-accent);border-radius:.5rem}'
+            . '.sb-nav__cta{display:none}.sb-nav__cta-link{display:block;padding:.8rem 1.25rem;text-align:center;font-weight:700;text-decoration:none;color:#fff;background:var(--sb-color-accent);border-radius:.5rem}'
             . '.sb-body .sb-nav a.sb-nav__cta-link{color:#fff}'
             // How a folded menu opens.
             . '@keyframes sb-nav-fade{from{opacity:0}}@keyframes sb-nav-slide{from{opacity:0;translate:0 -.75rem}}'
@@ -796,11 +796,11 @@ final class StudioStylesheet
             . $n . '.sb-nav--menu-offcanvas .sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__backdrop{display:block;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5)}'
             . $n . '.sb-nav--menu-offcanvas .sb-nav__bar:has(.sb-nav__check:checked){z-index:10001}'
             . $n . '.sb-nav--menu-offcanvas .sb-nav__check:checked~.sb-nav__burger{background:var(--sb-surface-primary,#fff);color:var(--sb-text-primary,#1a1a1a)}'
-            . $full . ' .sb-nav__list{position:fixed;inset:0;z-index:10000;box-sizing:border-box;padding:6rem 1.5rem 2rem;overflow-y:auto}'
+            . $full . ' .sb-nav__list{position:fixed;inset:0;z-index:10000;box-sizing:border-box;padding:8rem 1.5rem 2rem;overflow-y:auto}'
             . $full . ' .sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent){font-size:1.35rem}'
             . $full . ' .sb-nav__bar:has(.sb-nav__check:checked){z-index:10001}'
             . $n . ' .sb-nav__cta{display:block;padding:1rem 0 .5rem}' . $n . ' .sb-nav__list>.sb-nav__item.sb-nav__cta{border-top:0;padding:1rem 0 .5rem}'
-            . $n . '.sb-nav--mega .sb-nav__list>.sb-nav__item>.sb-nav__mega{top:auto;left:auto;width:auto;padding:.5rem 0 1rem;border:0;box-shadow:none}' . $n . ' .sb-mega__grid{grid-template-columns:minmax(0,1fr)}'
+            . $n . '.sb-nav--horizontal.sb-nav--mega .sb-nav__list>.sb-nav__item>.sb-nav__mega{top:auto;left:auto;width:auto;padding:.25rem 0 .75rem!important;border:0!important;border-radius:0!important;box-shadow:none!important}' . $n . ' .sb-mega__grid{grid-template-columns:minmax(0,1fr)}'
             // A Nav menu inside a panel is not the list this rule set folds.
             . $n . '.sb-nav--mega .sb-nav__mega .sb-nav__list{display:flex;position:static;max-height:none;padding:0;background:none;box-shadow:none}' . $n . ' .sb-nav__item{position:relative}'
             . $n . ' .sb-nav__list>.sb-nav__item{padding:0;border:0}' . $n . ' .sb-nav__list>.sb-nav__item+.sb-nav__item{border-top:1px solid var(--sb-border-default)}'
