@@ -33,6 +33,7 @@ define('V2_SLUG', V2_LIVE ? 'accueil' : 'accueil-v2');
 define('V2_HOME_URL', V2_LIVE ? '/' : '/accueil-v2/');
 const V2_MEMBRE = 'https://membre.fightxlife.com/connexion/';
 const V2_LOGO = '2022-05-cropped-logo-fxl-01-e1638355780533-1.png';
+const PINK_GRAD_HOVER = 'linear-gradient(140deg,#e9008a 0%,#a30062 100%)';
 const SCRIPT = 'Homemade Apple, cursive';
 const STENCIL = 'Saira Stencil One, sans-serif';
 const INK_SOFT = '#1b1418';
@@ -66,7 +67,7 @@ function native_v2(): array
     $base = S(sz(['height' => 56, 'min_width' => '0px']), pad(0, 28), ['border' => ['width' => '0px', 'radius' => '999px']], lay(['display' => 'inline-flex', 'justify' => 'center', 'align' => 'center']),
         fam('body', '15px', 'bold', '16px'), fx(['transition' => ['duration_ms' => 250, 'easing' => 'ease']]));
     $pill = S($base, col('#ffffff'), ['background' => ['gradient' => PINK_GRAD]], shadow(0, 12, 28, 'rgba(233,0,138,.28)', -6));
-    $pillHover = S(fx(['transform' => ['translate_y' => '-3px']]), shadow(0, 18, 34, 'rgba(233,0,138,.34)', -6));
+    $pillHover = S(['background' => ['gradient' => PINK_GRAD_HOVER]], fx(['transform' => ['translate_y' => '-3px']]), shadow(0, 18, 34, 'rgba(233,0,138,.34)', -6));
     // The donate buttons: an outline at rest, the brand fill on hover and keyboard focus. 19px bold is large text, which #e9008a passes on white both ways round.
     $outline = S($base, brd(PINK, '2px', '999px'), bg('transparent'), col(PINK), ty('19px'));
     $outlineFocus = S(bg(PINK), col('#ffffff'));
@@ -233,7 +234,7 @@ function native_v2(): array
         'v2-nl__form'    => ['props' => ['labels' => 'hidden', 'layout' => 'inline'], 't' => lay(['column_span' => 'full']),
                               'parts' => ['form' => S(pad(6), radius('999px'), bg('#ffffff'), brd('#f0e3ea', '1px', '999px'), shadow(0, 14, 34, 'rgba(70,10,48,.08)'), lay(['gap' => '0px'])),
                                   'input' => S(sz(['width' => '100%', 'height' => 50]), ['border' => ['width' => '0px']], pad(0, 18), col('#555555'), bg('transparent'), fam('body', '15px')),
-                                  'button' => S($pill, sz(['height' => 50]), pad(0, 26), ty('14px'), fx(['cursor' => 'pointer']))]],
+                                  'button' => S($pill, sz(['height' => 50]), pad(0, 26), ty('14px'), fx(['cursor' => 'pointer'])), 'button:hover' => $pillHover]],
         'v2-foot-sec'    => ['s' => S(grad('linear-gradient(135deg,#f2189a 0%,#e9008a 45%,#b8006f 100%)'), col('#ffffff'), $V(0, 70)), 'm' => $V(0, 50)],
         'v2-foot'        => ['s' => lay(['tracks' => 'minmax(0,1.55fr) minmax(330px,1fr)', 'gap' => '60px', 'align' => 'start']), 't' => lay(['tracks' => '1fr', 'gap' => '40px'])],
         'v2-foot__cols'  => ['s' => S(lay(['tracks' => 'minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)', 'gap' => '24px']), pad(80, null, 0, null)), 't' => S(lay(['tracks' => 'minmax(0,1fr) minmax(0,1fr)', 'gap' => '30px']), pad(56, null, null, null)), 'm' => S(lay(['row_gap' => '26px', 'column_gap' => '18px']), pad(44, null, null, null))],

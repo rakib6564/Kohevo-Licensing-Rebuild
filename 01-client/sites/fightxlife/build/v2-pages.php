@@ -220,7 +220,7 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
                 'label' => S(col(INK), fam('body', '14px', 'bold'), mar(0, 0, 6, 0)),
                 'input' => S(sz(['width' => '100%', 'height' => 52]), pad(0, 16), brd('#ead9e2', '1.5px', '14px'), bg('#fffafd'), col(INK), fam('body', '15px')),
                 'textarea' => sz(['height' => 160, 'min_height' => 160]),
-                'button' => S($pill, fx(['cursor' => 'pointer']))]],
+                'button' => S($pill, fx(['cursor' => 'pointer'])), 'button:hover' => $pillHover]],
         'v2-loop--featured' => ['parts' => ['image' => sz(['height' => 300])], 'mparts' => ['image' => sz(['height' => 210])]],
         'v2-event'       => ['s' => S(lay(['display' => 'flex', 'direction' => 'column']), radius('22px'), bg('#ffffff'), $lift, fx(['transition' => ['duration_ms' => 300, 'easing' => 'ease']])),
                               'h' => fx(['transform' => ['translate_y' => '-6px']]), 'reveal' => $up(0)],
