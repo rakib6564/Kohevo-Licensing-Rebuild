@@ -56,12 +56,12 @@ test('editor attributes are recognised', () => {
 
 test('morphing updates in place: the same elements, new class names and text, editor classes kept', () => {
   const live = new Doc(); const next = new Doc();
-  const a = h(live, 'section', { 'data-sb-node': 'sec_1', class: 'sb-section s-old sbx-selected', contenteditable: 'true' }, h(live, 'h2', { 'data-sb-node': 'blk_1', class: 'h-old' }, 'Old'));
+  const a = h(live, 'section', { 'data-sb-node': 'blk_top_1', class: 'sb-section s-old sbx-selected', contenteditable: 'true' }, h(live, 'h2', { 'data-sb-node': 'blk_1', class: 'h-old' }, 'Old'));
   live.body.appendChild(a);
-  next.body.appendChild(h(next, 'section', { 'data-sb-node': 'sec_1', class: 'sb-section s-new', 'data-extra': '1' }, h(next, 'h2', { 'data-sb-node': 'blk_1', class: 'h-new' }, 'New')));
+  next.body.appendChild(h(next, 'section', { 'data-sb-node': 'blk_top_1', class: 'sb-section s-new', 'data-extra': '1' }, h(next, 'h2', { 'data-sb-node': 'blk_1', class: 'h-new' }, 'New')));
   const heading = a.children[0];
   morphChildren(live.body, next.body);
-  assert.equal(live.body.children[0], a, 'same section element');
+  assert.equal(live.body.children[0], a, 'same Container element');
   assert.equal(a.children[0], heading, 'same heading element');
   assert.equal(a.getAttribute('class'), 'sb-section s-new sbx-selected');
   assert.equal(a.getAttribute('contenteditable'), 'true', 'the editor attribute stays');

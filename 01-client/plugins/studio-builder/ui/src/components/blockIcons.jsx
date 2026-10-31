@@ -14,7 +14,7 @@ import {
   IconMenuLinks,
   IconMapPin,
   IconBox,
-  IconLayoutSection,
+  IconLayoutRows,
   IconVideo,
   IconGallery,
   IconForm,
@@ -48,7 +48,7 @@ export const ICON_BY_NAME = {
   menu: IconMenuLinks,
   pin: IconMapPin,
   box: IconBox,
-  'layout-section': IconLayoutSection,
+  'layout-section': IconLayoutRows, // the manifest's icon name (the Offcanvas block)
   video: IconVideo,
   gallery: IconGallery,
   form: IconForm,
@@ -82,6 +82,6 @@ export function renderBlockIcon(type, icon, label) {
   if (i.includes('quote') || i.includes('testimonial')) return <IconQuotes size={18} />;
   if (i.includes('search')) return <IconSearch size={18} />;
   if (i.includes('check') || i.includes('list')) return <IconListCheck size={18} />;
-  if (i.includes('section')) return <IconLayoutSection size={18} />;
+  if (i.includes('section')) return <IconLayoutRows size={18} />;
   return <IconBox size={18} />;
 }

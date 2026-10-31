@@ -52,12 +52,12 @@ test('the operations never mutate the document they are given', () => {
 
 test('the layer lock refuses the new operations on a locked node, and only that node', () => {
   const locked = JSON.parse(JSON.stringify(fixture.document));
-  locked.sections[0].blocks[0].metadata = { locked: true };
-  const blockOps = fixture.cases.filter((c) => c.payload.block_id === fixture.document.sections[0].blocks[0].id && !c.error);
+  locked.containers[0].children[0].metadata = { locked: true };
+  const blockOps = fixture.cases.filter((c) => c.payload.block_id === fixture.document.containers[0].children[0].id && !c.error);
   assert.ok(blockOps.length > 0);
   for (const c of blockOps) assert.equal(lockViolation(locked, { op: c.op, payload: c.payload }), 'locked', `${c.name} on a locked block`);
-  const sectionLocked = JSON.parse(JSON.stringify(fixture.document));
-  sectionLocked.sections[1].locked = true;
-  assert.equal(lockViolation(sectionLocked, { op: 'update_section_style', payload: { section_id: sectionLocked.sections[1].id, style: {} } }), 'locked');
-  assert.equal(lockViolation(sectionLocked, { op: 'update_section_style', payload: { section_id: sectionLocked.sections[0].id, style: {} } }), null);
+  const topLocked = JSON.parse(JSON.stringify(fixture.document));
+  topLocked.containers[1].metadata.locked = true;
+  assert.equal(lockViolation(topLocked, { op: 'update_block_style', payload: { block_id: topLocked.containers[1].id, style: {} } }), 'locked');
+  assert.equal(lockViolation(topLocked, { op: 'update_block_style', payload: { block_id: topLocked.containers[0].id, style: {} } }), null);
 });

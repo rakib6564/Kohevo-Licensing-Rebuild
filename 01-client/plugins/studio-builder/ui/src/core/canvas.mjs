@@ -1,7 +1,7 @@
 // Kohevo Studio builder — canvas (iframe) bridge.
 //
 // The canvas document is the server's Editor-mode render (renderForEditor):
-// every section/block carries `data-sb-node` + `data-sb-type`. The frame is
+// every block carries `data-sb-node` + `data-sb-type`. The frame is
 // same-origin and sandboxed WITHOUT scripts, so nothing inside it runs; the
 // builder (parent) attaches its own listeners to the frame document to
 // resolve clicks/hover to node ids and to paint selection outlines. The
@@ -136,14 +136,20 @@ export function nodeElementFrom(target) {
  * Where a drop over a canvas node lands: `inside` the middle half of a node that takes children, else
  * `before` / `after` by which half the pointer is in. "Takes children" is the manifest's own rule
  * (`allowsChildren(type)`, the same one Layers uses), so a card, modal, form or Query Loop accepts a
- * drop and a leaf block that happens to render a <section> does not. A document section (type
- * `section`) always does.
+ * drop and a leaf block that happens to render a <section> tag does not.
  */
-export function canvasDropPosition({ type = '', tagName = '', fraction = 0.5, allowsChildren } = {}) {
-  const isSection = type === 'section' || (!type && String(tagName).toLowerCase() === 'section');
-  const takesChildren = isSection || (typeof allowsChildren === 'function' ? allowsChildren(type) === true : type.startsWith('layout.'));
+export function canvasDropPosition({ type = '', fraction = 0.5, allowsChildren } = {}) {
+  const takesChildren = typeof allowsChildren === 'function' ? allowsChildren(type) === true : type.startsWith('layout.') || type === 'core.container';
   if (takesChildren && fraction > 0.25 && fraction < 0.75) return 'inside';
   return fraction < 0.5 ? 'before' : 'after';
+}
+
+/** The top-level Container next to a point in a gap between them: the one above it (`after`), else the first (`before`). Null on an empty page. */
+function topLevelGap(doc, y) {
+  const tops = Array.from(doc.querySelectorAll(`.sb-top[${NODE_ATTR}]`));
+  if (!tops.length) return null;
+  const above = tops.filter((el) => el.getBoundingClientRect().bottom <= y);
+  return above.length ? { el: above[above.length - 1], pos: 'after' } : { el: tops[0], pos: 'before' };
 }
 
 export function attachCanvas(doc, handlers) {
@@ -359,12 +365,18 @@ export function attachCanvas(doc, handlers) {
   };
 
   const dragover = (e) => {
-    const el = nodeElementFrom(e.target);
-    if (!el) return;
+    let el = nodeElementFrom(e.target);
+    let pos = null;
+    if (!el) {
+      // Over no node: the page is empty, or the pointer is in a gap between top-level Containers.
+      const gap = topLevelGap(doc, e.clientY);
+      if (!gap) { e.preventDefault(); return; }
+      ({ el, pos } = gap);
+    }
     e.preventDefault();
     const rect = el.getBoundingClientRect();
     const y = (e.clientY - rect.top) / Math.max(1, rect.height);
-    const pos = canvasDropPosition({ type: el.getAttribute(TYPE_ATTR) || '', tagName: el.tagName || '', fraction: y, allowsChildren });
+    if (!pos) pos = canvasDropPosition({ type: el.getAttribute(TYPE_ATTR) || '', fraction: y, allowsChildren });
 
     if (dropTarget !== el || dropPos !== pos) {
       if (dropTarget) {
@@ -387,7 +399,11 @@ export function attachCanvas(doc, handlers) {
   const drop = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!dropTarget) return;
+    if (!dropTarget) {
+      // The empty page: the drop lands at the top level.
+      if (onDrop && !doc.querySelector(`[${NODE_ATTR}]`)) onDrop({ targetId: null, targetType: null, position: 'after', dataTransfer: e.dataTransfer });
+      return;
+    }
     const targetId = dropTarget.getAttribute(NODE_ATTR);
     const targetType = dropTarget.getAttribute(TYPE_ATTR);
     const pos = dropPos;

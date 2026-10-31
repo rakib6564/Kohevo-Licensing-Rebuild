@@ -86,7 +86,7 @@ unit('theme builder: an editor without studio-builder.admin / .publish cannot cr
     $tplId = (int) Database::insert('studiobuilder_templates', [
         'tenant_id' => current_tenant_id(), 'uuid' => sprintf('%08x-3333-4000-8000-%012x', random_int(0, 0x7fffffff), random_int(0, 0x7fffffff)),
         'template_key' => "sap-{$tag}", 'template_type' => 'header_preset', 'category' => 'header', 'name' => "SAP {$tag}",
-        'schema_version' => '1.0', 'document_json' => '{}', 'is_system' => 0, 'created_by' => 1,
+        'schema_version' => '2.0', 'document_json' => '{}', 'is_system' => 0, 'created_by' => 1,
     ]);
     try {
         [, $body] = sap_post(['_action' => 'create_template', 'name' => "SAP Created {$tag}", 'template_type' => 'header'], $editor);

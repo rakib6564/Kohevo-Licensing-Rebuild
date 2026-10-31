@@ -11,8 +11,8 @@ import { isDynamicBlock } from '../src/components/blockKinds.mjs';
 const here = dirname(fileURLToPath(import.meta.url));
 const manifest = JSON.parse(readFileSync(join(here, 'fixtures', 'manifest.json'), 'utf8'));
 const blocks = manifest.blocks;
-const emptyDoc = { document_type: 'page', sections: [] };
-const oneSection = { document_type: 'page', sections: [{ id: 'sec_a', blocks: [], layout: {} }] };
+const emptyDoc = { document_type: 'page', containers: [] };
+const oneContainer = { document_type: 'page', containers: [{ id: 'blk_a', type: 'core.container', children: [] }] };
 
 test('every block is reachable from a tab, and Elements never overlap Components', () => {
   for (const b of blocks) {
@@ -46,18 +46,18 @@ test('groupBlocks filters by title, description, category label and type', () =>
   assert.ok(groupBlocks(blocks, 'mise en page', (c) => (c === 'layout' ? 'Mise en page' : c)).length > 0, 'matches the translated category label');
 });
 
-test('insertion state: ok on an empty page (a section is created), refused at the limits with a reason', () => {
+test('insertion state: ok on an empty page (a Container is created), refused at the limits with a reason', () => {
   assert.deepEqual(blockInsertState(emptyDoc, manifest, null, 'core.heading'), { ok: true });
-  assert.deepEqual(blockInsertState(oneSection, manifest, 'sec_a', 'core.heading'), { ok: true });
-  // the only section is a global reference (it owns no blocks), so a new section would be needed — but the limit is reached
-  const onlyGlobal = { document_type: 'page', sections: [{ id: 'sec_g', global_ref: '0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f', blocks: [], layout: {} }] };
-  const noSections = { ...manifest, limits: { ...manifest.limits, max_sections: 1 } };
-  assert.deepEqual(blockInsertState(onlyGlobal, noSections, null, 'core.heading'), { ok: false, reason: 'sections_limit' });
-  const tiny = { ...manifest, limits: { ...manifest.limits, max_blocks: 1 } };
-  const full = { document_type: 'page', sections: [{ id: 'sec_a', layout: {}, blocks: [{ id: 'blk_a', type: 'core.text', props: {}, children: [] }] }] };
-  assert.deepEqual(blockInsertState(full, tiny, 'sec_a', 'core.heading'), { ok: false, reason: 'blocks_limit' });
-  assert.deepEqual(presetInsertState(onlyGlobal, noSections), { ok: false, reason: 'sections_limit' });
-  assert.deepEqual(presetInsertState(oneSection, manifest), { ok: true });
+  assert.deepEqual(blockInsertState(oneContainer, manifest, 'blk_a', 'core.heading'), { ok: true });
+  // the only Container is a global reference (it owns no children), so a new one would be needed — but the limit is reached
+  const onlyGlobal = { document_type: 'page', containers: [{ id: 'blk_g', type: 'core.container', global_ref: '0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f', children: [] }] };
+  const noRoom = { ...manifest, limits: { ...manifest.limits, max_containers: 1 } };
+  assert.deepEqual(blockInsertState(onlyGlobal, noRoom, null, 'core.heading'), { ok: false, reason: 'containers_limit' });
+  const tiny = { ...manifest, limits: { ...manifest.limits, max_blocks: 2 } };
+  const full = { document_type: 'page', containers: [{ id: 'blk_top', type: 'core.container', children: [{ id: 'blk_a', type: 'core.text', props: {}, children: [] }] }] };
+  assert.deepEqual(blockInsertState(full, tiny, 'blk_top', 'core.heading'), { ok: false, reason: 'blocks_limit' });
+  assert.deepEqual(presetInsertState(onlyGlobal, noRoom), { ok: false, reason: 'containers_limit' });
+  assert.deepEqual(presetInsertState(oneContainer, manifest), { ok: true });
   assert.equal(reasonKey('blocks_limit'), 'pal_reason_blocks_limit');
 });
 
@@ -112,10 +112,10 @@ test('variants group with their category and are found by search', () => {
 
 test('a variant obeys the same insertion rules as its block', () => {
   const card = variantCards(manifest).find((c) => c.variantKey === 'columns-2');
-  assert.deepEqual(blockInsertState(oneSection, manifest, null, card.type), { ok: true });
-  const tiny = { ...manifest, limits: { ...manifest.limits, max_blocks: 1 } };
-  const full = { document_type: 'page', sections: [{ id: 'sec_a', layout: {}, blocks: [{ id: 'blk_a', type: 'core.text', props: {}, children: [] }] }] };
-  assert.equal(blockInsertState(full, tiny, 'sec_a', card.type).reason, 'blocks_limit');
+  assert.deepEqual(blockInsertState(oneContainer, manifest, null, card.type), { ok: true });
+  const tiny = { ...manifest, limits: { ...manifest.limits, max_blocks: 2 } };
+  const full = { document_type: 'page', containers: [{ id: 'blk_top', type: 'core.container', children: [{ id: 'blk_a', type: 'core.text', props: {}, children: [] }] }] };
+  assert.equal(blockInsertState(full, tiny, 'blk_top', card.type).reason, 'blocks_limit');
 });
 
 test('a locked module block is listed but never offered or insertable', () => {
@@ -124,7 +124,7 @@ test('a locked module block is listed but never offered or insertable', () => {
   assert.equal(isLocked(locked), true);
   assert.equal(isOffered(locked), false);
   assert.ok(!blocksWithVariants(m).some((b) => b.type === 'coaching.demo_locked'), 'locked blocks stay out of the Elements tab and search');
-  assert.deepEqual(blockInsertState(oneSection, m, 'sec_a', 'coaching.demo_locked'), { ok: false, reason: 'locked' });
+  assert.deepEqual(blockInsertState(oneContainer, m, 'blk_a', 'coaching.demo_locked'), { ok: false, reason: 'locked' });
   assert.equal(reasonKey('locked'), 'pal_reason_locked');
 });
 

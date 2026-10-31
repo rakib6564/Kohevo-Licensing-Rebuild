@@ -16,7 +16,7 @@ import { syncLiveStructure } from '../core/liveStructure.mjs';
 import { adoptFragment, applyFragment, clearFragments } from '../core/liveFragment.mjs';
 import { STATUS } from '../core/sync.mjs';
 import { t } from '../core/messages.mjs';
-import { ancestorPath, asList, blockDefinition, canInsertBlock, canMoveBlock, findNode } from '../core/doc.mjs';
+import { CONTAINER_TYPE, ancestorPath, asList, blockDefinition, canInsertBlock, canInsertContainer, canMoveBlock, childrenOf, containersOf, findNode } from '../core/doc.mjs';
 import { effectivelyLocked, lockIndex } from '../core/layerLock.mjs';
 import { canvasMenuItems, pasteState, rowFor } from '../core/rowMenu.mjs';
 import { frameScale } from '../core/overlayGeometry.mjs';
@@ -49,7 +49,7 @@ function blockNavigation(doc) {
 }
 
 export const CanvasArea = memo(function CanvasArea({ interactive = true, collapsed = false, onToggleCollapse = null, onReloadCanvas = null }) {
-  const { boot, transport, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, moveSectionTo, duplicateNode, removeNode, applyOp, canvasView, setCanvasView, copyNode, cutNode, pasteNode, setLocked, toggleHidden, clipboardShortcut, editorShortcut, peekClipboard, labelOf, requestEdit } = useEditor();
+  const { boot, transport, viewport, canvasVersion = 0, manifest, insertBlock, moveBlockTo, duplicateNode, removeNode, applyOp, canvasView, setCanvasView, copyNode, cutNode, pasteNode, setLocked, toggleHidden, clipboardShortcut, editorShortcut, peekClipboard, labelOf, requestEdit } = useEditor();
   const isMobile = useIsMobileShell();
   const { selection, selectedIds, select, pick } = useSelection();
   const working = useEngineState((s) => s.working);
@@ -120,7 +120,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   // Direct inline text update: the canvas names the declared prop it edited (core/inlineText.mjs).
   const onInlineText = useCallback((nodeId, newText, prop) => {
     const info = findNode(working, nodeId);
-    if (!info || info.kind === 'section' || !prop) return;
+    if (!info || !prop) return;
     const node = info.node;
     applyOp && applyOp(ops.updateBlockProps(nodeId, propsWithInlineText(node.props, prop, newText)), { label: t('op_edit_block', { type: node.type }) });
   }, [working, applyOp]);
@@ -165,16 +165,13 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     } catch { return false; }
   }, []);
 
-  /** A new block or section is on the canvas as a placeholder: fetch its real markup now, in parallel with the save. */
+  /** A new block is on the canvas as a placeholder: fetch its real markup now, in parallel with the save. */
   const showFragments = useCallback((placeholders) => {
     if (!transport || typeof transport.renderBlock !== 'function') return;
     for (const el of placeholders) {
       const info = findNode(workingRef.current, el.getAttribute('data-sb-node'));
       if (!info) continue;
-      const isSection = info.kind === 'section';
-      if (isSection && typeof transport.renderSection !== 'function') continue;
-      const request = isSection ? transport.renderSection(boot.pageId, info.node) : transport.renderBlock(boot.pageId, info.node);
-      request.then((res) => {
+      transport.renderBlock(boot.pageId, info.node).then((res) => {
         if (!res || !res.ok || !res.data) return;
         let doc = null;
         try { doc = frameRef.current && frameRef.current.contentDocument; } catch { doc = null; }
@@ -182,7 +179,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
         if (!doc || el.ownerDocument !== doc || !el.isConnected || !el.classList.contains('sbx-pending')) return;
         const now = findNode(workingRef.current, el.getAttribute('data-sb-node'));
         if (!now) return;
-        const fragment = adoptFragment(res.data.html, now.node, doc, undefined, now.kind === 'section' ? 'section' : 'block');
+        const fragment = adoptFragment(res.data.html, now.node, doc);
         if (fragment && applyFragment(doc, el, fragment, now.node.id)) markSelected(doc, selectionRef.current, { scroll: false, ids: selectedIdsRef.current });
       }).catch(() => { /* the server's render after the save fills it in */ });
     }
@@ -200,7 +197,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       entry.timer = 0;
       if (entry.inFlight) { entry.dirty = true; return; }
       const info = findNode(workingRef.current, id);
-      if (!info || info.kind === 'section') { previewRef.current.delete(id); return; }
+      if (!info) { previewRef.current.delete(id); return; }
       const node = info.node;
       const seq = (entry.seq || 0) + 1;
       entry.seq = seq;
@@ -219,7 +216,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
         if (!now || now.node !== node) return; // edited again since: that edit's render follows
         const el = doc.querySelector(`[data-sb-node="${String(id).replace(/[^\w-]/g, '')}"]`);
         if (!el || el.classList.contains('sbx-pending')) return;
-        const fragment = adoptFragment(res.data.html, node, doc, undefined, 'block');
+        const fragment = adoptFragment(res.data.html, node, doc);
         if (fragment && applyFragment(doc, el, fragment, id)) markSelected(doc, selectionRef.current, { scroll: false, ids: selectedIdsRef.current });
       }).catch(() => { /* the server's render after the save shows it */ }).then(done, done);
     };
@@ -372,29 +369,26 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     const draggedId = dataTransfer.getData('application/x-kohevo-studio-node');
     if (!newType && !draggedId) return;
 
-    const targetInfo = findNode(working, targetId);
-    if (!targetInfo) return;
+    // No node under the pointer is the empty page: the top level.
+    const targetInfo = targetId ? findNode(working, targetId) : null;
+    if (targetId && !targetInfo) return;
 
-    let dest = null;
-    if (targetInfo.kind === 'section') {
-      dest = { parentId: targetId, index: asList(targetInfo.node.blocks).length };
-    } else if (position === 'inside') {
-      dest = { parentId: targetId, index: asList(targetInfo.node.children).length };
-    } else {
-      const idx = targetInfo.index + (position === 'after' ? 1 : 0);
-      dest = { parentId: targetInfo.parentId, index: idx };
-    }
-
-    if (!dest) return;
+    let dest;
+    if (!targetInfo) dest = { parentId: null, index: containersOf(working).length };
+    else if (position === 'inside') dest = { parentId: targetId, index: asList(targetInfo.node.children).length };
+    else dest = { parentId: targetInfo.parentId, index: targetInfo.index + (position === 'after' ? 1 : 0) };
 
     if (newType) {
-      if (canInsertBlock(working, manifest, dest.parentId, newType)) {
-        insertBlock(newType, dest);
-      }
+      // A widget dropped between top-level Containers gets a new Container of its own (the shell wraps it).
+      const wraps = dest.parentId === null && canInsertContainer(working, manifest) && !!blockDefinition(manifest, newType);
+      if (wraps || canInsertBlock(working, manifest, dest.parentId, newType)) insertBlock(newType, dest);
     } else if (draggedId) {
-      if (canMoveBlock(working, manifest, draggedId, dest.parentId)) {
-        moveBlockTo(draggedId, dest);
+      const moving = findNode(working, draggedId);
+      // An existing widget cannot sit at the top level: it goes into the Container it was dropped on, at that edge.
+      if (dest.parentId === null && targetInfo && moving && moving.node.type !== CONTAINER_TYPE) {
+        dest = { parentId: targetId, index: position === 'after' ? asList(targetInfo.node.children).length : 0 };
       }
+      if (canMoveBlock(working, manifest, draggedId, dest.parentId)) moveBlockTo(draggedId, dest);
     }
   }, [working, manifest, insertBlock, moveBlockTo]);
 
@@ -416,12 +410,9 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
     }
     const delta = action === 'up' ? -1 : action === 'down' ? 1 : 0;
     if (!delta) return;
-    if (info && info.kind === 'section') {
-      const to = info.index + delta;
-      if (to >= 0 && to < asList(working && working.sections).length && moveSectionTo) moveSectionTo(nodeId, to);
-    } else if (info && moveBlockTo) {
-      const to = info.index + delta;
-      if (to >= 0) moveBlockTo(nodeId, { parentId: info.parentId, index: delta > 0 ? to + 1 : to });
+    if (info && moveBlockTo) {
+      const to = info.index + delta; // a move's index counts after the block is taken out
+      if (to >= 0 && to < childrenOf(working, info.parentId).length) moveBlockTo(nodeId, { parentId: info.parentId, index: to });
     }
   };
 
@@ -532,7 +523,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       onInlineText: (id, text, prop) => onInlineTextRef.current(id, text, prop),
       inlineSpecs: (id) => {
         const info = findNode(workingRef.current, id);
-        return info && info.kind !== 'section' ? inlineSpecsFor(manifest, info.node) : [];
+        return info ? inlineSpecsFor(manifest, info.node) : [];
       },
       isLocked: (id) => effectivelyLocked(lockIndex(workingRef.current), id),
       allowsChildren: (type) => Boolean(blockDefinition(manifest, type)?.allows_children),
@@ -689,6 +680,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
         outlines={canvasView.outlines}
         labels={canvasView.labels}
         onAction={(action, id) => actionRef.current(action, id)}
+        onZoneMenu={(id, point) => openMenuForRef.current(id, point)}
       />
       </div>
       {menu && menuItems && (

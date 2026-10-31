@@ -11,7 +11,7 @@
  *     tenant's read-only RESOLVED theme values. No colour quantization, no
  *     custom token creation. A ref is emitted only if it exists in the token
  *     registry (`ThemeResolver::DEFAULT_TOKENS`).
- *   - closed schema scales (section padding_y, gap, section width): nearest
+ *   - closed schema scales (Container padding_y, gap, Container width): nearest
  *     bucket (ties -> the smaller bucket); the caller reports
  *     `style_quantized` whenever the value was not exactly a bucket value.
  *

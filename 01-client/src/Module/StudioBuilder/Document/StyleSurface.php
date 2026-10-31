@@ -84,6 +84,12 @@ final class StyleSurface
                 // `content_max` by side padding (see emitBoxed). No CSS property of their own, so the property is ''.
                 'content_width' => ['enum', '', ['boxed', 'full']],
                 'content_max'   => ['length', ''],
+                // The site's Layout width to box to (`full`: none); `content_max`, when set, is the author's own.
+                'content_size'  => ['enum', '', ['narrow', 'normal', 'wide', 'full']],
+                // `site`: the site's page gutter on both sides, which never goes when the viewport narrows.
+                'gutter'        => ['enum', '', ['site']],
+                // Top and bottom padding in the site's spacing scale, so a band follows Site settings. Padding wins over it.
+                'padding_y'     => ['enum', '', CanonicalDocumentSchema::ALLOWED_SPACING_SCALE],
             ],
             'position' => [
                 'mode'   => ['enum', 'position', ['static', 'relative', 'absolute', 'sticky']],
@@ -289,17 +295,45 @@ final class StyleSurface
             return;
         }
         // With no width of its own a boxed block holds its children to the site's content width (Site settings › Layout).
-        $max = isset($layout['content_max']) && self::fieldAccepts($layout['content_max'], ['length', ''])
-            ? trim((string) $layout['content_max'])
-            : 'var(--sb-layout-content,80rem)';
+        $size = $layout['content_size'] ?? null;
+        $max = match (true) {
+            isset($layout['content_max']) && self::fieldAccepts($layout['content_max'], ['length', '']) => trim((string) $layout['content_max']),
+            $size === 'full' => '100%',
+            is_string($size) && isset(self::CONTENT_SIZES[$size]) => 'var(--sb-layout-' . $size . ',' . self::CONTENT_SIZES[$size] . ')',
+            default => 'var(--sb-layout-content,80rem)',
+        };
+        $out[] = '--sb-box:' . $max;
         $padding = is_array($style['padding'] ?? null) ? $style['padding'] : [];
+        $own = [];
         foreach (['left', 'right'] as $side) {
-            $own = isset($padding[$side]) && self::fieldAccepts($padding[$side], ['padlen', '']) ? trim((string) $padding[$side]) : '0px';
+            $own[$side] = isset($padding[$side]) && self::fieldAccepts($padding[$side], ['padlen', '']) ? trim((string) $padding[$side]) : '0px';
+        }
+        $gutter = ($layout['gutter'] ?? null) === 'site';
+        foreach ($own as $side => $value) {
             // One declaration per side: the author's own padding is folded into this one, never left beside it.
             $out = array_values(array_filter($out, static fn (string $d): bool => !str_starts_with($d, 'padding-' . $side . ':')));
-            $out[] = 'padding-' . $side . ':max(' . $own . ',calc((100% - ' . $max . ')/2))';
+            // With a gutter the content box is the middle of what the author's padding leaves, gutter inside it.
+            $out[] = 'padding-' . $side . ':' . ($gutter
+                ? 'calc(' . $value . ' + var(--sb-type-section_gutter,1rem) + max(0px,(100% - ' . $own['left'] . ' - ' . $own['right'] . ' - var(--sb-box))/2))'
+                : 'max(' . $value . ',calc((100% - var(--sb-box))/2))');
         }
     }
+
+    /**
+     * @param array<string, mixed> $layout
+     * @param list<string> $out
+     */
+    private static function emitPaddingY(array $layout, array &$out): void
+    {
+        $size = $layout['padding_y'] ?? null;
+        if (is_string($size) && isset(\Slate\Module\StudioBuilder\Render\StudioStylesheet::PADDING[$size])) {
+            $value = \Slate\Module\StudioBuilder\Render\StudioStylesheet::PADDING[$size];
+            $out[] = 'padding-top:' . $value;
+            $out[] = 'padding-bottom:' . $value;
+        }
+    }
+
+    private const CONTENT_SIZES = ['narrow' => '42rem', 'normal' => '64rem', 'wide' => '80rem'];
 
     /** Numeric parts of `effects`: group => field => [min, max, unit]. */
     private const FLIPS = ['flip_x' => 'scaleX(-1)', 'flip_y' => 'scaleY(-1)'];
@@ -474,7 +508,7 @@ final class StyleSurface
         return self::isColourToken($v) ? 'var(--sb-' . str_replace('.', '-', $v) . ')' : $v;
     }
 
-    /** A size that is never negative (px, %, rem, vw...), as padding takes it: a section's custom width. */
+    /** A size that is never negative (px, %, rem, vw...), as padding takes it: a device's own boxed width. */
     public static function isSize(mixed $v): bool
     {
         return self::fieldAccepts($v, ['padlen', '']);
@@ -783,6 +817,7 @@ final class StyleSurface
                 self::emitFields($style[$key], self::fields()[$key], $out);
             }
         }
+        self::emitPaddingY(is_array($style['layout'] ?? null) ? $style['layout'] : [], $out);
         $more = self::moreFields();
         foreach (['margin', 'padding'] as $key) {
             if (isset($style[$key]) && is_array($style[$key])) {
@@ -938,155 +973,6 @@ final class StyleSurface
     {
         $s = rtrim(rtrim(number_format((float) $n, 3, '.', ''), '0'), '.');
         return $s === '' || $s === '-0' ? '0' : $s;
-    }
-
-    // ── section style ─────────────────────────────────────────────────────────
-
-    /**
-     * Issues for a section's `style`: {background, padding, border}.
-     *
-     * @return list<array{path: string, code: string, message: string}>
-     */
-    public static function sectionIssues(mixed $style, string $path): array
-    {
-        if (!is_array($style) || ($style !== [] && array_is_list($style))) {
-            return [self::issue($path, 'A section style must be an object.')];
-        }
-        $errors = [];
-        foreach ($style as $key => $value) {
-            $p = "{$path}.{$key}";
-            if ($key === 'padding') {
-                self::checkObject($value, self::moreFields()['padding'], $p, $errors);
-            } elseif ($key === 'border') {
-                self::sectionBorderIssues($value, $p, $errors);
-            } elseif ($key === 'background') {
-                if (!is_array($value) || ($value !== [] && array_is_list($value))) {
-                    $errors[] = self::issue($p, 'background must be an object.');
-                    continue;
-                }
-                foreach ($value as $bgKey => $bgVal) {
-                    if ($bgKey === 'color') {
-                        self::checkField($bgVal, ['color', 'background-color'], "{$p}.color", $errors);
-                    } elseif ($bgKey === 'gradient') {
-                        if (!is_string($bgVal) || !StyleValueGuard::isGradient($bgVal)) {
-                            $errors[] = self::issue("{$p}.gradient", 'Invalid gradient.');
-                        }
-                    } elseif (!in_array($bgKey, ['image', 'fit', 'repeat', 'position', 'overlay', 'attachment'], true)) {
-                        $errors[] = self::issue("{$p}.{$bgKey}", "Unknown field '{$bgKey}'.");
-                    }
-                }
-                // A section image must be a media_ref; a string here is not tolerated (the section style is new).
-                if (isset($value['image']) && !is_array($value['image'])) {
-                    $errors[] = self::issue("{$p}.image", 'A background image must be a media reference.');
-                }
-                array_push($errors, ...self::backgroundIssues($value, $p));
-            } else {
-                $errors[] = self::issue($p, "A section style cannot set '{$key}'.");
-            }
-        }
-        return $errors;
-    }
-
-    /**
-     * Declarations for a section's `style` (the background image URL is resolved by the caller).
-     *
-     * @param array<string, mixed> $style
-     */
-    public static function sectionDeclarations(array $style, ?string $backgroundUrl = null, bool $parallax = false): string
-    {
-        $out = [];
-        $bg  = is_array($style['background'] ?? null) ? $style['background'] : [];
-        if (isset($bg['color']) && self::fieldAccepts($bg['color'], ['color', 'background-color'])) {
-            $out[] = 'background-color:' . trim((string) $bg['color']);
-        }
-        if (isset($bg['gradient']) && !is_array($bg['image'] ?? null) && StyleValueGuard::isGradient($bg['gradient'])) {
-            $out[] = 'background-image:' . trim((string) $bg['gradient']);
-        }
-        self::emitBackgroundImage($style, $backgroundUrl, $out, $parallax);
-        if (isset($style['border']) && is_array($style['border'])) {
-            self::emitSectionBorder($style['border'], $out);
-        }
-        if (isset($style['padding']) && is_array($style['padding'])) {
-            // `!important`: padding the author set on a section in the Inspector must show even when the site's CSS
-            // spaces sections with a stronger selector (`.sb-main .sb-section{padding:…}`), as for a background image.
-            $padding = [];
-            self::emitFields($style['padding'], self::moreFields()['padding'], $padding);
-            foreach ($padding as $declaration) {
-                $out[] = $declaration . ' !important';
-            }
-        }
-        return implode(';', $out);
-    }
-
-    /**
-     * A section's border: the same fields a block's border has — one style, width, colour and radius for every side,
-     * then each side's width, style and colour and each corner's radius, which win over the all-sides value.
-     *
-     * @return array<string, array<int, mixed>>
-     */
-    private static function sectionBorderFields(): array
-    {
-        return [
-            'style'  => ['enum', 'border-style', CanonicalDocumentSchema::ALLOWED_BORDER_STYLES],
-            'width'  => ['length', 'border-width'],
-            'color'  => ['tcolor', 'border-color'],
-            // The radius presets, as the block classes (.sb-radius-*) write them.
-            'radius' => ['map', 'border-radius', [
-                'none' => '0', 'sm' => 'var(--sb-radius-sm,.25rem)', 'md' => 'var(--sb-radius-md,.5rem)', 'lg' => 'var(--sb-radius-lg,1rem)',
-                'xl' => '1.5rem', '2xl' => '2rem', 'full' => 'var(--sb-radius-full,9999px)',
-            ]],
-        ];
-    }
-
-    /** @param list<array{path: string, code: string, message: string}> $errors */
-    private static function sectionBorderIssues(mixed $border, string $path, array &$errors): void
-    {
-        if (!is_array($border) || ($border !== [] && array_is_list($border))) {
-            $errors[] = self::issue($path, 'border must be an object.');
-            return;
-        }
-        $all = self::sectionBorderFields();
-        $more = self::moreFields();
-        foreach ($border as $field => $v) {
-            $p = "{$path}.{$field}";
-            if (isset($all[$field])) {
-                self::checkField($v, $all[$field], $p, $errors);
-            } elseif (isset($more['border'][$field])) {
-                self::checkObject($v, $more['border'][$field], $p, $errors);
-            } elseif ($field === 'radius_corners') {
-                self::checkObject($v, $more['corners'], $p, $errors);
-            } else {
-                $errors[] = self::issue($p, "Unknown field '{$field}'.");
-            }
-        }
-    }
-
-    /**
-     * @param array<string, mixed> $border
-     * @param list<string> $out
-     */
-    private static function emitSectionBorder(array $border, array &$out): void
-    {
-        // A width with no style anywhere would draw nothing (the CSS default is none): it means a solid line.
-        $styled = isset($border['style']);
-        $wide = isset($border['width']);
-        foreach (self::SIDES as $side) {
-            $styled = $styled || isset($border[$side]['style']);
-            $wide = $wide || isset($border[$side]['width']);
-        }
-        if ($wide && !$styled) {
-            $out[] = 'border-style:solid';
-        }
-        self::emitFields($border, self::sectionBorderFields(), $out);
-        $more = self::moreFields();
-        foreach (self::SIDES as $side) {
-            if (isset($border[$side]) && is_array($border[$side])) {
-                self::emitFields($border[$side], $more['border'][$side], $out);
-            }
-        }
-        if (isset($border['radius_corners']) && is_array($border['radius_corners'])) {
-            self::emitFields($border['radius_corners'], $more['corners'], $out);
-        }
     }
 
     // ── interaction states ────────────────────────────────────────────────────
@@ -1564,7 +1450,9 @@ final class StyleSurface
     {
         $more   = self::moreFields();
         // The display type and the boxed content width are set for every device at once.
-        $layout = array_diff_key(self::fields()['layout'], ['display' => 1, 'content_width' => 1, 'content_max' => 1]);
+        $layout = array_diff_key(self::fields()['layout'], ['display' => 1, 'content_width' => 1, 'content_size' => 1, 'gutter' => 1]);
+        // Written as the custom property the boxed padding reads, so the padding follows a device's own width.
+        $layout['content_max'] = ['length', '--sb-box'];
         return [
             'typography' => ['size' => ['length', 'font-size']],
             'padding'    => $more['padding'],
@@ -1624,6 +1512,7 @@ final class StyleSurface
                     self::emitFields($style[$group], $fields, $out);
                 }
             }
+            self::emitPaddingY(is_array($style['layout'] ?? null) ? $style['layout'] : [], $out);
             if ($out !== []) {
                 $rules[$query] = implode(' !important;', $out) . ' !important';
             }

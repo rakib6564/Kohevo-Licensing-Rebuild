@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   SECTIONS, TABS, applicableSections, defaultOpenIds, inspectorContext, isSectionOpen, resetSectionState,
-  searchSections, sectionsFor, setSectionOpen, subscribeSections, PAGE_SECTION_SECTIONS, SECTION_DEF, statesFor, titleKeyOf,
+  searchSections, sectionsFor, setSectionOpen, subscribeSections, statesFor, titleKeyOf,
 } from '../src/core/inspectorSections.mjs';
 import { isExtraSection } from '../src/core/inspectorSections.mjs';
 
@@ -141,16 +141,12 @@ test('each kind of block opens the sections an author reaches for first', () => 
   assert.deepEqual(defaultOpenIds('style', ctxOf('core.card')), ['background', 'border', 'dimensions']);
 });
 
-test('a page section has the same three tabs, with its own smaller list of groups', () => {
-  const ctx = inspectorContext({ id: 'sec_1', style: {}, layout: { width: 'wide', gap: 'md' } }, SECTION_DEF);
-  const idsOf = (tab) => sectionsFor(tab, ctx, PAGE_SECTION_SECTIONS).map((s) => s.id);
-  assert.deepEqual(idsOf('content'), ['layout']);
-  assert.deepEqual(idsOf('style'), ['background', 'border']);
-  assert.deepEqual(idsOf('advanced'), ['advanced', 'motion', 'responsive']);
-  assert.deepEqual(defaultOpenIds('advanced', ctx, PAGE_SECTION_SECTIONS), ['advanced']);
-  assert.equal(PAGE_SECTION_SECTIONS.find((s) => s.id === 'layout').summary(ctx), 'wide · md');
-  assert.deepEqual(searchSections(ctx, 'padding', (s) => s.titleKey, PAGE_SECTION_SECTIONS).map((s) => s.id), ['advanced']);
-  assert.deepEqual(searchSections(ctx, 'radius', (s) => s.titleKey, PAGE_SECTION_SECTIONS).map((s) => s.id), ['border'], 'a section has its own border, sides and corners included');
+test('a top-level Container gets the one Container inspector: same tabs, same sections, as a nested one', () => {
+  const nested = ctxOf('core.container');
+  const top = inspectorContext({ id: 'blk_top', type: 'core.container', tag: 'section', style: { layout: { content_width: 'boxed', gutter: 'site' } }, metadata: { label: 'Hero' } }, nested.def);
+  for (const tab of TABS) assert.deepEqual(sectionsFor(tab, top).map((s) => s.id), sectionsFor(tab, nested).map((s) => s.id), tab);
+  assert.deepEqual(defaultOpenIds('advanced', top), defaultOpenIds('advanced', nested));
+  assert.ok(searchSections(top, 'radius', (s) => s.titleKey).some((s) => s.id === 'border'), 'its border, sides and corners included');
 });
 
 test('a container shows its flex and grid options under Content (closed) and titles its props Layout; a leaf block keeps Layout under Advanced', () => {

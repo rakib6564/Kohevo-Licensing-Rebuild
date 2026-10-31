@@ -52,7 +52,7 @@ function blk(extra = {}) {
   };
 }
 
-const doc1 = (block) => ({ sections: [{ id: 'sec_1', blocks: [block] }] });
+const doc1 = (block) => ({ containers: [{ id: 'blk_top', children: [block] }] });
 
 // ── Class and attribute deltas ───────────────────────────────────────────
 
@@ -171,10 +171,10 @@ test('structural and provider-driven changes always decline', () => {
 test('patchCanvas: adding a block reloads (shape is not a class patch)', () => {
   const canvas = { querySelector: () => null };
   const r = patch.patchCanvas(canvas, doc1(blk()), {
-    sections: [{ id: 'sec_1', blocks: [blk(), blk({ id: 'blk_2' })] }],
+    containers: [{ id: 'blk_top', children: [blk(), blk({ id: 'blk_2' })] }],
   });
   assert.equal(r.reload, true);
-  assert.equal(r.reason, 'section-shape');
+  assert.equal(r.reason, 'top-shape');
 });
 
 test('patchCanvas: a swapped node id reloads rather than patching the wrong node', () => {
@@ -195,6 +195,23 @@ test('patchCanvas: patches a located node and reports it', () => {
   assert.equal(el._classes.has('sb-animate-scale-up'), true);
 });
 
+test('patchCanvas: an edit deep in a Container patches that node; its parents are not edits', () => {
+  const inner = blk({ id: 'blk_2' });
+  const box = (child) => blk({ id: 'blk_box', type: 'layout.container', children: [child] });
+  const el = fakeEl();
+  const r = patch.patchCanvas({ querySelector: () => el }, doc1(box(inner)), doc1(box({ ...inner, animation: { type: 'scale_up' } })));
+  assert.equal(r.reload, false);
+  assert.deepEqual(r.ids, ['blk_2'], 'neither the box nor the top-level Container is reported');
+});
+
+test('patchCanvas: children reordered inside a parent reload', () => {
+  const a = blk({ id: 'blk_a' }); const b = blk({ id: 'blk_b' });
+  const box = (kids) => blk({ id: 'blk_box', type: 'layout.container', children: kids });
+  const r = patch.patchCanvas({ querySelector: () => null }, doc1(box([a, b])), doc1(box([b, a])));
+  assert.equal(r.reload, true);
+  assert.equal(r.reason, 'unpatchable-field');
+});
+
 test('patchCanvas: an identical document is a no-op, not a reload', () => {
   const canvas = { querySelector: () => null };
   const d = doc1(blk());
@@ -205,9 +222,9 @@ test('patchCanvas: an identical document is a no-op, not a reload', () => {
 
 test('indexBlocks: flattens nested children for comparison', () => {
   const idx = patch.indexBlocks({
-    sections: [{ id: 'sec_1', blocks: [blk({ children: [blk({ id: 'blk_2' })] })] }],
+    containers: [{ id: 'blk_top', children: [blk({ children: [blk({ id: 'blk_2' })] })] }],
   });
-  assert.deepEqual([...idx.keys()].sort(), ['blk_1', 'blk_2']);
+  assert.deepEqual([...idx.keys()].sort(), ['blk_1', 'blk_2', 'blk_top']);
 });
 test('hiding a device mirrors the renderer hideClasses()', () => {
   const p = patch.computeNodePatch(

@@ -11,7 +11,9 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Theme;
 
+use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
 use Slate\Module\StudioBuilder\Meta\PageMeta;
 use Slate\Module\StudioBuilder\Render\Chrome\ChromeSource;
@@ -193,8 +195,8 @@ final class ThemeTemplateResolver
     }
 
     /**
-     * The width of the section a Single template puts the page's content in (the section holding its first Post
-     * content block, at any depth), or null when the template has no Post content block.
+     * The width of the top-level Container a Single template puts the page's content in (the one holding its first
+     * Post content block, at any depth), or null when the template has no Post content block.
      *
      * @param array<string, mixed> $template the template's document
      */
@@ -211,13 +213,32 @@ final class ThemeTemplateResolver
             }
             return false;
         };
-        foreach (is_array($template['sections'] ?? null) ? $template['sections'] : [] as $section) {
-            if (is_array($section) && $holds(is_array($section['blocks'] ?? null) ? $section['blocks'] : [])) {
-                $width = $section['layout']['width'] ?? 'wide';
-                return in_array($width, \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::ALLOWED_CONTAINER_WIDTHS, true) ? $width : 'wide';
+        $containers = DocumentUpgrader::structure($template)['containers'] ?? null;
+        foreach (is_array($containers) ? $containers : [] as $container) {
+            if (is_array($container) && $holds(is_array($container['children'] ?? null) ? $container['children'] : [])) {
+                return self::containerWidth($container);
             }
         }
         return null;
+    }
+
+    /**
+     * A Container's content width in the Site settings' names: the Layout width it is boxed to, `full` for no limit,
+     * `default` for the site's content width, and `wide` for the author's own limit, which has no name.
+     *
+     * @param array<string, mixed> $container
+     */
+    private static function containerWidth(array $container): string
+    {
+        $layout = is_array($container['style']['layout'] ?? null) ? $container['style']['layout'] : [];
+        if (($layout['content_width'] ?? null) !== 'boxed') {
+            return 'full';
+        }
+        if (isset($layout['content_max'])) {
+            return 'wide';
+        }
+        $size = $layout['content_size'] ?? 'default';
+        return in_array($size, CanonicalDocumentSchema::ALLOWED_CONTAINER_WIDTHS, true) ? $size : 'default';
     }
 
     /**

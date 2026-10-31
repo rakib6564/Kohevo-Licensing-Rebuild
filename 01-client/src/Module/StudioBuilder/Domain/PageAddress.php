@@ -4,7 +4,7 @@
  *
  * Wraps the identity/lifecycle columns of a `studiobuilder_pages` row (target
  * architecture §3.1). Addressing is deliberately separate from the canonical
- * document: this object never carries `document_json`/`sections` — only a
+ * document: this object never carries `document_json`/`containers` — only a
  * page's route identity (uuid, slug, type), its lifecycle status, and its
  * revision pointers (`active_draft_revision_id`, `published_revision_id`).
  *

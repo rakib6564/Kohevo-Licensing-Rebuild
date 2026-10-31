@@ -5,20 +5,18 @@
 // or full iframe reloads.
 //
 // This module inspects working document changes and directly syncs:
-//   1. Section layout: width (and custom width), gap, columns and vertical padding.
-//   2. Block text props (heading, title, subtitle, eyebrow, text, content, buttonText, label, etc.)
-//   3. Complex block items (feature lists, cards, columns, portfolio items)
-//   4. Block alignment (classes). The rest of a block's style is CSS the server writes (scoped, content-addressed
+//   1. Block text props (heading, title, subtitle, eyebrow, text, content, buttonText, label, etc.)
+//   2. Complex block items (feature lists, cards, columns, portfolio items)
+//   3. Block alignment (classes). The rest of a block's style is CSS the server writes (scoped, content-addressed
 //      rules). `core/liveStyleSync.mjs` predicts it for the edits it can (and the server's render then confirms it);
 //      a style it cannot predict repaints the canvas from the server instead.
-//   5. Breakpoint visibility tokens and animation variables
+//   4. Breakpoint visibility tokens and animation variables
 //
 // When changes are non-structural (only props or styles changed), iframe reloads
 // are completely suppressed — guaranteeing instantaneous preview response.
 
 import { nodeIds } from './doc.mjs';
 import { styleChangeIsLive } from './liveStyleSync.mjs';
-import { isSize } from './styleValues.mjs';
 
 const BREAKPOINTS = ['base', 'sm', 'md', 'lg'];
 const HIDE_PREFIX = 'sb-hide-';
@@ -32,51 +30,9 @@ function isPlainObject(v) {
   return Boolean(v) && typeof v === 'object' && !Array.isArray(v);
 }
 
-const SPACING = ['none', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'];
-const SECTION_WIDTHS = ['default', 'narrow', 'normal', 'wide', 'full', 'custom'];
-
-/**
- * Mirrors DocumentRenderer::renderSection's layout classes (width and custom width, gap, columns, vertical padding) onto a
- * section already on the canvas. Returns 1 when painted.
- */
-function syncSectionLayout(secEl, sec) {
-  const inner = secEl.querySelector(':scope > .sb-section__inner');
-  if (!inner) return 0;
-  const layout = isPlainObject(sec.layout) ? sec.layout : {};
-  const prefix = (bp) => (bp === 'base' ? '' : `${bp}-`);
-
-  // The background token's rule is written only for the tokens a render used, so it is left to the server's repaint.
-  Array.from(secEl.classList).forEach((cls) => { if (/^sb-(\w+-)?py-/.test(cls)) secEl.classList.remove(cls); });
-  if (isPlainObject(layout.padding_y)) {
-    for (const bp of BREAKPOINTS) if (SPACING.includes(layout.padding_y[bp])) secEl.classList.add(`sb-${prefix(bp)}py-${layout.padding_y[bp]}`);
-  }
-
-  const width = SECTION_WIDTHS.includes(layout.width) ? layout.width : 'default';
-  const gap = SPACING.includes(layout.gap) ? layout.gap : 'md';
-  Array.from(inner.classList).forEach((cls) => { if (/^sb-(w-|gap-|(\w+-)?cols-|\w+-cw$)/.test(cls)) inner.classList.remove(cls); });
-  inner.classList.add(`sb-w-${width}`, `sb-gap-${gap}`);
-  const blockCount = Math.max(1, Array.isArray(sec.blocks) ? sec.blocks.length : 0);
-  if (isPlainObject(layout.columns)) {
-    for (const bp of BREAKPOINTS) {
-      const cols = layout.columns[bp];
-      if (Number.isInteger(cols) && cols >= 1 && cols <= 12) inner.classList.add(`sb-${prefix(bp)}cols-${Math.min(cols, blockCount)}`);
-    }
-  }
-  for (const bp of BREAKPOINTS) inner.style.removeProperty(bp === 'base' ? '--sb-cw' : `--sb-cw-${bp}`);
-  if (width === 'custom' && isPlainObject(layout.custom_width)) {
-    for (const bp of BREAKPOINTS) {
-      const size = layout.custom_width[bp];
-      if (!isSize(size)) continue; // as DocumentRenderer::customWidthVars leaves a bad size out
-      inner.style.setProperty(bp === 'base' ? '--sb-cw' : `--sb-cw-${bp}`, size.trim());
-      if (bp !== 'base') inner.classList.add(`sb-${bp}-cw`);
-    }
-  }
-  return 1;
-}
-
 /**
  * Checks whether changes between prevDoc and nextDoc require a full structural
- * iframe reload (e.g. sections or blocks added, removed, reordered, or types changed).
+ * iframe reload (e.g. blocks added, removed, reordered, or types changed).
  *
  * If this returns false, the document structure is identical and `syncLiveDOM`
  * has already updated all visuals in 0ms — no iframe reload is needed!
@@ -86,40 +42,28 @@ function syncSectionLayout(secEl, sec) {
  */
 export function isStructuralChange(prevDoc, nextDoc, tokens = null) {
   if (!prevDoc || !nextDoc) return true;
-  const prevSections = Array.isArray(prevDoc.sections) ? prevDoc.sections : [];
-  const nextSections = Array.isArray(nextDoc.sections) ? nextDoc.sections : [];
-  if (prevSections.length !== nextSections.length) return true;
-
-  for (let s = 0; s < nextSections.length; s += 1) {
-    const prevSec = prevSections[s];
-    const nextSec = nextSections[s];
-    if (!prevSec || !nextSec || prevSec.id !== nextSec.id) return true;
-    if (differs(prevSec.animation, nextSec.animation) || differs(prevSec.interactions, nextSec.interactions)) return true; // section motion: classes written by the server
-    if (differs(prevSec.style, nextSec.style) && !liveStyle({ kind: 'section', node: prevSec }, { kind: 'section', node: nextSec }, tokens)) return true; // section background/padding: scoped CSS from the server
-    if (blocksChanged(prevSec.blocks, nextSec.blocks, tokens)) return true;
-  }
-  return false;
+  return blocksChanged(prevDoc.containers, nextDoc.containers, tokens);
 }
 
 /**
  * Whether any content differs between the document the server last rendered and the one now saved: a block's props
- * (at any depth) or a section's own fields other than its blocks and style. The live patch paints the content it can
+ * (at any depth) or a top-level Container's own fields other than its children and style. The live patch paints the content it can
  * find a place for, by guessing selectors; when it cannot (an eyebrow that was empty has no element yet, an accordion
  * item's question, a field the patch does not know), nothing on the canvas changes. So a saved content change always
  * merges the server's render in place; only a save that changed no content may rely on the patch alone.
  */
 export function contentChanged(prevDoc, nextDoc) {
   if (!prevDoc || !nextDoc) return true;
-  const prevSections = Array.isArray(prevDoc.sections) ? prevDoc.sections : [];
-  const nextSections = Array.isArray(nextDoc.sections) ? nextDoc.sections : [];
-  if (prevSections.length !== nextSections.length) return true;
-  const sectionFields = (sec) => {
-    if (!isPlainObject(sec)) return null;
-    const { blocks, style, ...rest } = sec; // eslint-disable-line no-unused-vars
+  const prevTop = Array.isArray(prevDoc.containers) ? prevDoc.containers : [];
+  const nextTop = Array.isArray(nextDoc.containers) ? nextDoc.containers : [];
+  if (prevTop.length !== nextTop.length) return true;
+  const ownFields = (top) => {
+    if (!isPlainObject(top)) return null;
+    const { children, style, responsive, ...rest } = top; // eslint-disable-line no-unused-vars
     return rest;
   };
-  for (let s = 0; s < nextSections.length; s += 1) {
-    if (differs(sectionFields(prevSections[s]), sectionFields(nextSections[s]))) return true;
+  for (let s = 0; s < nextTop.length; s += 1) {
+    if (differs(ownFields(prevTop[s]), ownFields(nextTop[s]))) return true;
   }
   const prevBlocks = indexAllBlocks(prevDoc);
   const nextBlocks = indexAllBlocks(nextDoc);
@@ -147,7 +91,7 @@ function styleWithoutAlign(style) {
 
 /**
  * Block fields whose effect is CSS, a wrapper tag, attributes or motion classes and variables written only by the server's
- * renderer. Motion is here as it is for sections: the live patch cannot add an interaction's classes or its animation, so
+ * renderer. Motion is here because the live patch cannot add an interaction's classes or its animation, so
  * an entrance animation, its timing or an interaction showed only after a reload.
  */
 const SERVER_PAINTED_FIELDS = ['style_states', 'style_parts', 'tag', 'link', 'classNames', 'attributes', 'animation', 'interactions'];
@@ -238,16 +182,14 @@ function blocksChanged(prev, next, tokens = null) {
  */
 function indexAllBlocks(doc) {
   const map = new Map();
-  const sections = Array.isArray(doc && doc.sections) ? doc.sections : [];
-  sections.forEach((s) => {
-    const walk = (blocks) => {
-      (Array.isArray(blocks) ? blocks : []).forEach((b) => {
-        if (b && typeof b.id === 'string') map.set(b.id, b);
-        if (b && Array.isArray(b.children)) walk(b.children);
-      });
-    };
-    walk(s && s.blocks);
-  });
+  const walk = (blocks) => {
+
+    (Array.isArray(blocks) ? blocks : []).forEach((b) => {
+      if (b && typeof b.id === 'string') map.set(b.id, b);
+      if (b && Array.isArray(b.children)) walk(b.children);
+    });
+  };
+  walk(doc && doc.containers);
   return map;
 }
 
@@ -266,28 +208,6 @@ export function syncLiveDOM(canvasDoc, prevDoc, nextDoc, activeBreakpoint = 'bas
   let updateCount = 0;
 
   try {
-    // 1. Sync Sections
-    const prevSections = new Map(
-      (Array.isArray(prevDoc && prevDoc.sections) ? prevDoc.sections : []).map((s) => [s.id, s])
-    );
-    const nextSections = Array.isArray(nextDoc.sections) ? nextDoc.sections : [];
-
-    nextSections.forEach((sec) => {
-      if (!sec || !sec.id) return;
-      const prevSec = prevSections.get(sec.id);
-      if (prevSec === sec) return; // Unchanged reference
-
-      const secEl = canvasDoc.querySelector(`[data-sb-node="${cssEscape(sec.id)}"]`);
-      if (!secEl) return;
-
-      // Section layout: the classes DocumentRenderer::renderSection writes, so a width (or gap, columns, padding)
-      // picked in the Inspector shows at once instead of after the save and the server's repaint.
-      if (differs(prevSec && prevSec.layout, sec.layout)) {
-        updateCount += syncSectionLayout(secEl, sec);
-      }
-    });
-
-    // 2. Sync Blocks
     const prevBlocks = indexAllBlocks(prevDoc);
     const nextBlocks = indexAllBlocks(nextDoc);
 

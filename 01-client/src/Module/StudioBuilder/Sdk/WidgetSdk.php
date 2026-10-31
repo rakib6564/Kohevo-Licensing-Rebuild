@@ -134,7 +134,7 @@ final class WidgetSdk
      */
     public function migrate(array $data): array
     {
-        if (isset($data['sections'])) {
+        if (isset($data['containers']) || isset($data['sections'])) {
             return WidgetMigrator::migrateDocument($data);
         }
         return WidgetMigrator::migrateBlock($data);

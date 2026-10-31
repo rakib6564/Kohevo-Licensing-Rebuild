@@ -148,7 +148,7 @@ function sbr_clear_request(): void
 function sbr_block(string $type, array $props): array
 {
     return ['bindings' => [], 'children' => [], 'id' => CanonicalDocumentSchema::newBlockId(), 'props' => $props,
-        'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'type' => $type, 'version' => 1, 'visibility' => CanonicalDocumentSchema::defaultVisibility()];
+        'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'type' => $type, 'version' => ($type === 'core.container' ? 2 : 1), 'visibility' => CanonicalDocumentSchema::defaultVisibility()];
 }
 
 /** @return array<string, mixed> */
@@ -156,14 +156,7 @@ function sbr_doc(string $heading, array $seo = []): array
 {
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', '');
     $doc['seo'] = array_merge($doc['seo'], $seo);
-    $doc['sections'] = [[
-        'blocks'     => [sbr_block('core.heading', ['text' => $heading, 'level' => 'h2'])],
-        'global_ref' => null,
-        'id'         => CanonicalDocumentSchema::newSectionId(),
-        'label'      => 'Main',
-        'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-    ]];
+    $doc['containers'] = [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Main'], 'children' => [sbr_block('core.heading', ['text' => $heading, 'level' => 'h2'])], 'visibility' => CanonicalDocumentSchema::defaultVisibility()])];
     return $doc;
 }
 

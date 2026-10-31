@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Payment;
 
 use Slate\Data\Database;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 
 final class LivePaymentBlocks
 {
@@ -49,12 +50,8 @@ final class LivePaymentBlocks
      */
     public static function findInDocument(array $document, string $blockId): ?array
     {
-        $stack = [];
-        foreach (is_array($document['sections'] ?? null) ? $document['sections'] : [] as $section) {
-            if (is_array($section) && is_array($section['blocks'] ?? null)) {
-                array_push($stack, ...array_values($section['blocks']));
-            }
-        }
+        $containers = DocumentUpgrader::structure($document)['containers'] ?? null;
+        $stack = is_array($containers) ? array_values($containers) : [];
         while ($stack !== []) {
             $block = array_pop($stack);
             if (!is_array($block)) {

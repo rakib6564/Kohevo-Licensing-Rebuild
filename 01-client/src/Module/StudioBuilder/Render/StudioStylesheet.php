@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '58';
+    public const VERSION = '59';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -33,7 +33,7 @@ final class StudioStylesheet
     // Padding and gap sizes follow the site's three Spacing tokens (Site settings). Each size is a
     // fixed multiple of one token, so with the default tokens (.75rem, 1.5rem, 3rem) every size is
     // what it has always been, and editing a token scales the sizes built on it.
-    private const PADDING = [
+    public const PADDING = [
         'none' => '0',
         'xs'   => 'calc(var(--sb-space-sm,.75rem)*2/3)',
         'sm'   => 'calc(var(--sb-space-sm,.75rem)*4/3)',
@@ -51,7 +51,7 @@ final class StudioStylesheet
         'xl'   => 'calc(var(--sb-space-lg,3rem)*2/3)',
         '2xl'  => 'var(--sb-space-lg,3rem)',
     ];
-    /** Section widths => [Site settings › Layout token, its default]; `full` is no limit. */
+    /** Layout widths => [Site settings › Layout token, its default]; `full` is no limit. */
     private const WIDTHS  = ['default' => ['content', '80rem'], 'narrow' => ['narrow', '42rem'], 'normal' => ['normal', '64rem'], 'wide' => ['wide', '80rem'], 'full' => null];
     private const ALIGN   = ['left' => 'left', 'center' => 'center', 'right' => 'right', 'justify' => 'justify'];
 
@@ -76,8 +76,6 @@ final class StudioStylesheet
             // A linked heading keeps the heading's colour (`.sb-heading__link` alone was outweighed by this rule).
             . '.sb-body a:not(.sb-button):not(.sb-heading__link){color:var(--sb-color-accent)}'
             . '.sb-main{display:block}'
-            . '.sb-section__inner{margin:0 auto;padding-left:var(--sb-type-section_gutter,1rem);padding-right:var(--sb-type-section_gutter,1rem);display:grid}'
-            . '.sb-section__inner>*{min-width:0}'
             // The default chrome's padding and rule; a custom header or footer partial renders exactly as designed.
             . '.sb-site-header:not(.sb-site-header--partial),.sb-site-footer:not(.sb-site-footer--partial){padding:1rem;border-color:var(--sb-border-default)}'
             . '.sb-site-header:not(.sb-site-header--partial){border-bottom:1px solid var(--sb-border-default)}'
@@ -275,16 +273,6 @@ final class StudioStylesheet
             . '.sb-preview-banner{position:sticky;top:0;z-index:10;padding:.5rem 1rem;background:#1e293b;color:#fff;font:600 .8rem/1.4 system-ui,sans-serif;text-align:center}'
             . '.sb-platform-signature{padding:.75rem 1rem;text-align:center;font-size:.75rem;color:#6b7280}'
             . '.sb-platform-signature img{height:1rem;width:auto;vertical-align:middle}'
-            . '.sb-layout-section{position:relative;width:100%}'
-            . '.sb-layout-section--boxed{max-width:var(--sb-layout-wide,80rem);margin-left:auto;margin-right:auto}'
-            . '.sb-layout-section--full{width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw)}'
-            . '.sb-layout-section--narrow{max-width:var(--sb-layout-narrow,42rem);margin-left:auto;margin-right:auto}'
-            . '.sb-layout-section--min-screen{min-height:100vh}'
-            . '.sb-layout-section--min-half-screen{min-height:50vh}'
-            . '.sb-layout-section--min-sm{min-height:16rem}'
-            . '.sb-layout-section--min-md{min-height:24rem}'
-            . '.sb-layout-section--min-lg{min-height:36rem}'
-            . '.sb-layout-section--min-xl{min-height:48rem}'
             . '.sb-container{width:100%;margin-left:auto;margin-right:auto}'
             . '.sb-container--compact{max-width:var(--sb-layout-narrow,42rem)}'
             . '.sb-container--constrained{max-width:var(--sb-layout-wide,80rem)}'
@@ -861,7 +849,7 @@ final class StudioStylesheet
     /**
      * Sticky and parallax (ScrollEffects). A sticky node is plain `position: sticky`, so it sticks without JavaScript;
      * studio-runtime.js adds `is-stuck` (for the shadow and the stuck background) and `is-hidden` (hide while scrolling
-     * down). A header or footer holding a sticky section lets it stick to the page, not inside its own wrapper.
+     * down). A header or footer holding a sticky Container lets it stick to the page, not inside its own wrapper.
      * A parallax background is painted by `::after`, taller than the node by the room it moves in; the runtime moves it.
      */
     public static function scrollEffectsCss(): string
@@ -875,11 +863,11 @@ final class StudioStylesheet
             . '.sb-sticky.is-stuck[data-sb-sticky-effect~="shadow"]{box-shadow:0 8px 24px -8px rgba(15,23,42,.25)}'
             . '.sb-sticky.is-stuck[data-sb-sticky-effect~="background"]{background-color:var(--sb-stuck-bg)!important}'
             . '.sb-sticky.is-hidden{transform:translate3d(0,calc(-100% - var(--sb-sticky-offset,0px)),0)}'
-            // Shrink: the runtime's `is-shrunk` tightens the header's sections and logo once the page has scrolled a little.
-            . '.sb-sticky[data-sb-sticky-effect~="shrink"] :is(.sb-section,.sb-section img){transition:padding .2s ease,max-height .2s ease}'
-            . '.sb-sticky.is-shrunk .sb-section{padding-top:.35rem!important;padding-bottom:.35rem!important}.sb-sticky.is-shrunk .sb-section img{max-height:2.25rem;width:auto}'
+            // Shrink: the runtime's `is-shrunk` tightens the header's Containers and logo once the page has scrolled a little.
+            . '.sb-sticky[data-sb-sticky-effect~="shrink"] :is(.sb-top,.sb-top img){transition:padding .2s ease,max-height .2s ease}'
+            . '.sb-sticky.is-shrunk .sb-top{padding-top:.35rem!important;padding-bottom:.35rem!important}.sb-sticky.is-shrunk .sb-top img{max-height:2.25rem;width:auto}'
             . '.sb-site-header--partial:has(>.sb-sticky),.sb-site-footer--partial:has(>.sb-sticky){display:contents}'
-            . '@media (prefers-reduced-motion:reduce){.sb-sticky,.sb-sticky :is(.sb-section,.sb-section img){transition:none!important}}';
+            . '@media (prefers-reduced-motion:reduce){.sb-sticky,.sb-sticky :is(.sb-top,.sb-top img){transition:none!important}}';
         foreach (['desktop' => '(min-width:1024px)', 'tablet' => '(min-width:768px) and (max-width:1023.98px)', 'mobile' => '(max-width:767.98px)'] as $device => $query) {
             $css .= '@media ' . $query . '{.sb-sticky.sb-sticky-off-' . $device . '{position:relative;top:auto;bottom:auto;transform:none}}';
         }

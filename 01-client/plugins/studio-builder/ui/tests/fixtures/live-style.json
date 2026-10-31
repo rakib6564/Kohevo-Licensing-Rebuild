@@ -1519,9 +1519,10 @@
             },
             "expected": {
                 "scoped": [
+                    "--sb-box:1300px",
                     "display:flex",
-                    "padding-left:max(0px,calc((100% - 1300px)/2))",
-                    "padding-right:max(0px,calc((100% - 1300px)/2))"
+                    "padding-left:max(0px,calc((100% - var(--sb-box))/2))",
+                    "padding-right:max(0px,calc((100% - var(--sb-box))/2))"
                 ],
                 "inline": [],
                 "classes": [],
@@ -1546,8 +1547,9 @@
             },
             "expected": {
                 "scoped": [
-                    "padding-left:max(2rem,calc((100% - 80rem)/2))",
-                    "padding-right:max(0px,calc((100% - 80rem)/2))",
+                    "--sb-box:80rem",
+                    "padding-left:max(2rem,calc((100% - var(--sb-box))/2))",
+                    "padding-right:max(0px,calc((100% - var(--sb-box))/2))",
                     "padding-top:1rem"
                 ],
                 "inline": [],
@@ -1592,8 +1594,9 @@
             },
             "expected": {
                 "scoped": [
-                    "padding-left:max(0px,calc((100% - var(--sb-layout-content,80rem))/2))",
-                    "padding-right:max(0px,calc((100% - var(--sb-layout-content,80rem))/2))"
+                    "--sb-box:var(--sb-layout-content,80rem)",
+                    "padding-left:max(0px,calc((100% - var(--sb-box))/2))",
+                    "padding-right:max(0px,calc((100% - var(--sb-box))/2))"
                 ],
                 "inline": [],
                 "classes": [],
@@ -1827,6 +1830,205 @@
                 ],
                 "inline": [],
                 "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
+        },
+        {
+            "name": "top-level Container: boxed to a site width with the gutter",
+            "block": {
+                "id": "blk_aaaaaaaaaaaaaaaaaaaaaaaa",
+                "type": "core.container",
+                "props": [],
+                "style": {
+                    "layout": {
+                        "content_width": "boxed",
+                        "gutter": "site",
+                        "content_size": "wide"
+                    },
+                    "padding": {
+                        "left": "40px"
+                    }
+                },
+                "children": []
+            },
+            "covered": true,
+            "expected": {
+                "scoped": [
+                    "--sb-box:var(--sb-layout-wide,80rem)",
+                    "padding-left:calc(40px + var(--sb-type-section_gutter,1rem) + max(0px,(100% - 40px - 0px - var(--sb-box))/2))",
+                    "padding-right:calc(0px + var(--sb-type-section_gutter,1rem) + max(0px,(100% - 40px - 0px - var(--sb-box))/2))"
+                ],
+                "inline": [],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
+        },
+        {
+            "name": "top-level Container: full size with the gutter",
+            "block": {
+                "id": "blk_aaaaaaaaaaaaaaaaaaaaaaaa",
+                "type": "core.container",
+                "props": [],
+                "style": {
+                    "layout": {
+                        "content_width": "boxed",
+                        "gutter": "site",
+                        "content_size": "full"
+                    }
+                },
+                "children": []
+            },
+            "covered": true,
+            "expected": {
+                "scoped": [
+                    "--sb-box:100%",
+                    "padding-left:calc(0px + var(--sb-type-section_gutter,1rem) + max(0px,(100% - 0px - 0px - var(--sb-box))/2))",
+                    "padding-right:calc(0px + var(--sb-type-section_gutter,1rem) + max(0px,(100% - 0px - 0px - var(--sb-box))/2))"
+                ],
+                "inline": [],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
+        },
+        {
+            "name": "top-level Container: scale padding, own padding wins",
+            "block": {
+                "id": "blk_aaaaaaaaaaaaaaaaaaaaaaaa",
+                "type": "core.container",
+                "props": [],
+                "style": {
+                    "layout": {
+                        "padding_y": "lg"
+                    },
+                    "padding": {
+                        "top": "5px"
+                    }
+                },
+                "children": []
+            },
+            "covered": true,
+            "expected": {
+                "scoped": [
+                    "padding-bottom:calc(var(--sb-space-lg,3rem)*4/3)",
+                    "padding-top:5px",
+                    "padding-top:calc(var(--sb-space-lg,3rem)*4/3)"
+                ],
+                "inline": [],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
+        },
+        {
+            "name": "top-level Container: per-device padding and width",
+            "block": {
+                "id": "blk_aaaaaaaaaaaaaaaaaaaaaaaa",
+                "type": "core.container",
+                "props": [],
+                "style": [],
+                "children": [],
+                "responsive": {
+                    "mobile": {
+                        "style": {
+                            "layout": {
+                                "padding_y": "md",
+                                "content_max": "90%"
+                            }
+                        }
+                    }
+                }
+            },
+            "covered": true,
+            "expected": {
+                "scoped": [],
+                "inline": [],
+                "classes": [],
+                "media": [
+                    {
+                        "query": "(max-width:767.98px)",
+                        "declarations": [
+                            "--sb-box:90% !important",
+                            "padding-top:calc(var(--sb-space-md,1.5rem)*4/3) !important",
+                            "padding-bottom:calc(var(--sb-space-md,1.5rem)*4/3) !important"
+                        ]
+                    }
+                ],
+                "reduceMotion": false
+            }
+        },
+        {
+            "name": "top-level Container: background and padding",
+            "block": {
+                "id": "blk_aaaaaaaaaaaaaaaaaaaaaaaa",
+                "type": "core.container",
+                "props": [],
+                "style": {
+                    "background": {
+                        "color": "#112233",
+                        "gradient": "linear-gradient(#000,#fff)"
+                    },
+                    "padding": {
+                        "top": "4rem",
+                        "bottom": "2rem"
+                    }
+                },
+                "children": []
+            },
+            "covered": true,
+            "expected": {
+                "scoped": [
+                    "padding-bottom:2rem",
+                    "padding-top:4rem"
+                ],
+                "inline": [
+                    "background-color:#112233",
+                    "background-image:linear-gradient(#000,#fff)"
+                ],
+                "classes": [],
+                "media": [],
+                "reduceMotion": false
+            }
+        },
+        {
+            "name": "top-level Container: border with a side and a corner",
+            "block": {
+                "id": "blk_aaaaaaaaaaaaaaaaaaaaaaaa",
+                "type": "core.container",
+                "props": [],
+                "style": {
+                    "border": {
+                        "style": "solid",
+                        "width": "1px",
+                        "color": "color.accent",
+                        "radius": "md",
+                        "bottom": {
+                            "width": "4px",
+                            "color": "#123456"
+                        },
+                        "radius_corners": {
+                            "tl": "0"
+                        }
+                    }
+                },
+                "children": []
+            },
+            "covered": true,
+            "expected": {
+                "scoped": [
+                    "border-bottom-color:#123456",
+                    "border-bottom-width:4px",
+                    "border-top-left-radius:0"
+                ],
+                "inline": [
+                    "border-width:1px"
+                ],
+                "classes": [
+                    "sb-border-solid",
+                    "sb-radius-md"
+                ],
                 "media": [],
                 "reduceMotion": false
             }

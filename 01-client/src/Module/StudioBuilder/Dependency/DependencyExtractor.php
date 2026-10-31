@@ -7,12 +7,11 @@
  * - Document-level token group (`settings.token_group` -> `token_group`)
  * - Document-level non-default template (`template_key` -> `partial`)
  * - Document-level SEO OpenGraph image (`seo.og_image_media_id` -> `media`)
- * - Section-level global reference (`section.global_ref` -> `partial`, key = the
+ * - A top-level Container's global reference (`global_ref` -> `partial`, key = the
  *   referenced Global Component's page uuid — Phase 6 live reference)
  * - Document-level chrome bindings (`settings.header_mode` / `footer_mode` other
  *   than `hidden` on a chromed document -> `partial` `chrome:header` / `chrome:footer`),
  *   so publishing a header/footer partial can drop exactly the artifacts that show chrome
- * - Section-level background token (`section.layout.background_token` -> `token_group`)
  * - Block-level style tokens (`block.style.*_token` -> `token_group`)
  * - Block-level props, bindings, and module entitlements via `BlockDefinitionInterface::extractDependencies()`
  * - Nested child blocks recursively
@@ -23,6 +22,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Dependency;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 
 final class DependencyExtractor
@@ -41,6 +41,8 @@ final class DependencyExtractor
      */
     public static function extract(array $normalizedDocument, BlockRegistry $registry): array
     {
+        $normalizedDocument = DocumentUpgrader::structure($normalizedDocument);
+
         /** @var array<string, DependencyRecord> $bySignature */
         $bySignature = [];
 
@@ -77,34 +79,16 @@ final class DependencyExtractor
             }
         }
 
-        // 2. Section and Block dependencies
-        $sections = is_array($normalizedDocument['sections'] ?? null) ? $normalizedDocument['sections'] : [];
-        foreach ($sections as $section) {
-            if (!is_array($section)) {
+        // 2. Block dependencies, from each top-level Container down
+        $containers = is_array($normalizedDocument['containers'] ?? null) ? $normalizedDocument['containers'] : [];
+        foreach ($containers as $container) {
+            if (!is_array($container)) {
                 continue;
             }
-            $secId = (string) ($section['id'] ?? 'sec_unknown');
-
-            if (!empty($section['global_ref']) && is_string($section['global_ref'])) {
-                $add(new DependencyRecord($secId, 'partial', $section['global_ref']));
+            if (!empty($container['global_ref']) && is_string($container['global_ref'])) {
+                $add(new DependencyRecord((string) ($container['id'] ?? 'blk_unknown'), 'partial', $container['global_ref']));
             }
-
-            $secBg = is_array($section['style']['background'] ?? null) ? $section['style']['background'] : [];
-            if (is_array($secBg['image'] ?? null) && is_int($secBg['image']['media_id'] ?? null) && $secBg['image']['media_id'] > 0) {
-                $add(new DependencyRecord($secId, 'media', (string) $secBg['image']['media_id']));
-            }
-
-            $bgToken = $section['layout']['background_token'] ?? null;
-            if (is_string($bgToken) && $bgToken !== '') {
-                $add(new DependencyRecord($secId, 'token_group', $bgToken));
-            }
-
-            $blocks = is_array($section['blocks'] ?? null) ? $section['blocks'] : [];
-            foreach ($blocks as $block) {
-                if (is_array($block)) {
-                    self::extractBlockDependencies($block, $registry, $add);
-                }
-            }
+            self::extractBlockDependencies($container, $registry, $add);
         }
 
         return array_values($bySignature);

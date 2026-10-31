@@ -14,14 +14,10 @@ use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 
 function sbau_doc(array $style, array $blockExtra = []): array
 {
-    return ['schema_version' => '1.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'sections' => [[
-        'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'S', 'global_ref' => null, 'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        'blocks' => [[
+    return ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [[
             'id' => CanonicalDocumentSchema::newBlockId(), 'type' => 'core.heading', 'version' => 1, 'props' => ['text' => 'x', 'level' => 'h2'],
             'style' => $style + CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [],
-        ] + $blockExtra],
-    ]]];
+        ] + $blockExtra]])]];
 }
 
 unit('style audit: a clean document has no findings', function (): void {
@@ -51,6 +47,6 @@ unit('style audit: it names every kind of styling the current rules refuse', fun
 unit('style audit: errors that are not about styling are not reported', function (): void {
     $registry = BlockRegistry::withAllCoreBlocks();
     $doc = sbau_doc([]);
-    $doc['sections'][0]['blocks'][0]['props'] = ['text' => 'x', 'level' => 'h9'];
+    $doc['containers'][0]['children'][0]['props'] = ['text' => 'x', 'level' => 'h9'];
     assert_eq([], StyleAudit::issues($doc, $registry), 'an invalid prop is somebody else\'s finding');
 });

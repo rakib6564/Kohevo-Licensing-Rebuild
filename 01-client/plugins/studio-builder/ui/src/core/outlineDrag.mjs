@@ -3,14 +3,12 @@
 
 /**
  * Where a drop lands relative to the row under the pointer. `fraction` is the pointer's vertical position
- * inside that row, 0 (top) to 1 (bottom). A section only takes sections before or after it, except that a
- * block dropped on a section goes inside it; a container row takes a block "inside" on its middle band.
+ * inside that row, 0 (top) to 1 (bottom). A container row takes a block "inside" on its middle band; a widget dropped on
+ * a top-level Container goes inside it, since only a Container can sit next to one.
  */
 export function dropPositionAt(fraction, row, dragged) {
   const y = Math.max(0, Math.min(1, Number.isFinite(fraction) ? fraction : 0.5));
-  if (dragged.kind === 'section' || row.kind === 'section') {
-    return row.kind === 'section' && dragged.kind !== 'section' ? 'inside' : (y < 0.5 ? 'before' : 'after');
-  }
+  if (row.top && !dragged.container) return 'inside';
   if (row.container && y > 0.3 && y < 0.7) return 'inside';
   return y < 0.5 ? 'before' : 'after';
 }

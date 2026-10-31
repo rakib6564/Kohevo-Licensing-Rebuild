@@ -51,6 +51,6 @@ test('a switched-off block is not offered, not searchable and cannot be inserted
   assert.deepEqual(blocksWithVariants(manifest).map((b) => b.type), ['core.heading']);
   assert.equal(searchAll({ blocks: manifest.blocks }, 'button').total, 0);
   assert.equal(searchAll({ blocks: manifest.blocks }, 'heading').total, 1);
-  const doc = { sections: [] };
+  const doc = { containers: [] };
   assert.deepEqual(blockInsertState(doc, manifest, null, 'core.button'), { ok: false, reason: 'disabled' });
 });

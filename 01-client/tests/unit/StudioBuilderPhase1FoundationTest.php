@@ -70,7 +70,7 @@ unit('studio-builder phase 1: plugin.json validates and declares commercial_modu
 
     assert_eq('studio-builder', $manifest['slug']);
     assert_eq('Kohevo Studio', $manifest['name']);
-    assert_eq('1.0.0', $manifest['version']);
+    assert_eq('1.1.0', $manifest['version']);
     assert_eq('Kohevo', $manifest['author']);
     assert_eq('studio-builder', $manifest['commercial_module']['entitlement'] ?? null);
 

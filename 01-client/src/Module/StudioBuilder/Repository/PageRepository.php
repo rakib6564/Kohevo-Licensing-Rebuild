@@ -33,7 +33,7 @@ final class PageRepository extends StudioRepository
     }
 
     /**
-     * A Global Component: the non-archived `section_preset` page with this
+     * A Global Component: the non-archived `container_preset` page with this
      * uuid, within the active tenant scope (Phase 6 live reference target).
      */
     public function findComponentByRef(string $ref): ?array

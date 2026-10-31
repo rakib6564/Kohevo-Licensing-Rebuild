@@ -1,4 +1,4 @@
-// AddSearchResults — one search over every Add-panel tab: sections, elements, dynamic blocks and
+// AddSearchResults — one search over every Add-panel tab: Containers, elements, dynamic blocks and
 // components, each under its own heading with a count. Typing in the search box shows this;
 // clearing it returns to the tabs.
 
@@ -6,7 +6,7 @@ import { memo, useMemo, useRef } from 'react';
 import { useEditor } from './EditorContext.jsx';
 import { TileGrid } from './ui/index.js';
 import { BlockCard, blockCategoryLabel, usePresetInsertState, useWhenVisible } from './AddPanelParts.jsx';
-import { PresetCard, categoryLabel } from './SectionPresetsPanel.jsx';
+import { PresetCard, categoryLabel } from './ContainerPresetsPanel.jsx';
 import { t } from '../core/messages.mjs';
 import { blocksWithVariants, searchAll } from '../core/addPanel.mjs';
 
@@ -31,7 +31,7 @@ export const AddSearchResults = memo(function AddSearchResults({ query, favorite
     <div ref={rootRef} className="sbx-search-results" data-testid="add-search-results" role="region" aria-label={t('pal_search_results')}>
       {found.presets.length > 0 && (
         <section>
-          {heading('pal_tab_sections', found.presets.length)}
+          {heading('pal_tab_containers', found.presets.length)}
           <ul className="sbx-presets__list">
             {found.presets.map((p) => <PresetCard key={p.template_key} preset={p} fav={favorites.has(p.template_key)} onToggleFavorite={onToggleFavorite} />)}
           </ul>

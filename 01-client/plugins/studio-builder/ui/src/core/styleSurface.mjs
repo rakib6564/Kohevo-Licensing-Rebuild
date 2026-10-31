@@ -30,6 +30,9 @@ export const OPTIONS = Object.freeze({
   states: ['hover', 'focus', 'active', 'disabled'],
   tags: ['div', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'figure', 'main', 'a'],
   contentWidth: ['boxed', 'full'],
+  contentSize: ['narrow', 'normal', 'wide', 'full'],
+  gutter: ['site'],
+  spacing: ['none', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'],
   attachment: ['scroll', 'fixed'],
 });
 
@@ -112,6 +115,9 @@ add('layout.column_span', (v) => v === 'full' || int(1, 12)(v));
 add('layout.row_span', (v) => v === 'full' || int(1, 12)(v));
 add('layout.content_width', enumOf(OPTIONS.contentWidth));
 add('layout.content_max', measure(false));
+add('layout.content_size', enumOf(OPTIONS.contentSize));
+add('layout.gutter', enumOf(OPTIONS.gutter));
+add('layout.padding_y', enumOf(OPTIONS.spacing));
 
 add('position.mode', enumOf(OPTIONS.position));
 for (const s of SIDES) {
@@ -218,18 +224,9 @@ export function setPaths(obj, pairs) {
   return pairs.reduce((acc, [path, value]) => setPath(acc, path, value), obj);
 }
 
-/**
- * Which of a section's Layout settings its style overrides. A style background (colour, image or
- * gradient) is drawn over the Layout background token, and a style top or bottom padding beats the
- * Layout vertical padding; the Inspector shows those Layout controls as overridden.
- */
-export function sectionStyleOverrides(style) {
-  const s = style && typeof style === 'object' ? style : {};
-  const bg = s.background && typeof s.background === 'object' ? s.background : {};
-  const pad = s.padding && typeof s.padding === 'object' ? s.padding : {};
+/** Whether a top or bottom padding in the style beats the Container's vertical spacing (`layout.padding_y`). */
+export function paddingBeatsSpacing(style) {
+  const pad = style && typeof style === 'object' && style.padding && typeof style.padding === 'object' ? style.padding : {};
   const set = (v) => v !== undefined && v !== null && v !== '';
-  return {
-    background: set(bg.color) || set(bg.image) || set(bg.gradient),
-    paddingY: set(pad.top) || set(pad.bottom),
-  };
+  return set(pad.top) || set(pad.bottom);
 }

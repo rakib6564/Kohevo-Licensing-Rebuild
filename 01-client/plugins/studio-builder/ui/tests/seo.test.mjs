@@ -8,7 +8,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { manifest, doc, section, heading } from './helpers.mjs';
+import { manifest, doc, topContainer, heading } from './helpers.mjs';
 import * as ops from '../src/core/operations.mjs';
 import { seoLimits, canonicalProblem, canonicalValue } from '../src/core/seo.mjs';
 
@@ -35,7 +35,7 @@ if (esbuild) {
 }
 
 const seoDoc = (seo) => {
-  const d = doc([section([heading('Hello')], 'Main')]);
+  const d = doc([topContainer([heading('Hello')], 'Main')]);
   d.seo = { ...d.seo, ...seo };
   return d;
 };

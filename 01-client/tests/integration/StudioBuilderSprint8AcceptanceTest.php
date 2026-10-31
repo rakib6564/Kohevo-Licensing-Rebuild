@@ -145,14 +145,7 @@ function s8_make_block(string $type, array $props, int $version = 1, array $chil
 
 function s8_make_section(array $blocks, string $label = 'Custom Widget Section'): array
 {
-    return [
-        'id'         => CanonicalDocumentSchema::newSectionId(),
-        'label'      => $label,
-        'global_ref' => null,
-        'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        'blocks'     => $blocks,
-    ];
+    return CanonicalDocumentSchema::newContainer(['metadata' => ['label' => $label], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => $blocks]);
 }
 
 unit('sprint8 integration: developer widget SDK, third-party plugin loading, versioning, sandboxing, and isolation', function (): void {
@@ -277,7 +270,7 @@ unit('sprint8 integration: developer widget SDK, third-party plugin loading, ver
             $customSection = s8_make_section([$testimonialBlock, $pricingBlock, $faultyBlock], 'Custom Widgets');
 
             // Apply operation to insert custom section
-            $op = new DocumentOperation('insert_section', ['index' => 0, 'section' => $customSection]);
+            $op = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => $customSection]);
             $saveRes = $rt->tenants->runAs(S8_TENANT_A, static fn() => $rt->app->applyDocumentOperation(
                 $actorA,
                 $pageId,
@@ -342,12 +335,12 @@ unit('sprint8 integration: developer widget SDK, third-party plugin loading, ver
             ];
 
             $oldDoc = CanonicalDocumentSchema::emptyDocument();
-            $oldDoc['sections'] = [
+            $oldDoc['containers'] = [
                 s8_make_section([$v1Block], 'Old Pricing Section'),
             ];
 
             $migratedDoc = Studio::migrate($oldDoc);
-            $migratedBlock = $migratedDoc['sections'][0]['blocks'][0];
+            $migratedBlock = $migratedDoc['containers'][0]['children'][0];
 
             assert_eq(2, $migratedBlock['version'], 'Block version upgraded to 2');
             assert_eq(49, $migratedBlock['props']['price'], 'Prop "cost" migrated to "price"');

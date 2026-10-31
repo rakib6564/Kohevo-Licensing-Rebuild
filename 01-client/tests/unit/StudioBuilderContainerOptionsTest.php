@@ -30,14 +30,10 @@ use Slate\Tenancy\TenantContext;
 /** A page with one container block carrying `$extra` (tag, link, style…). */
 function sbco_doc(array $extra = [], array $style = []): array
 {
-    return ['schema_version' => '1.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'sections' => [[
-        'id' => 'sec_aaaaaaaaaaaaaaaa', 'label' => 'S', 'global_ref' => null, 'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        'blocks' => [[
-            'id' => 'blk_aaaaaaaaaaaaaaaa', 'type' => 'core.container', 'version' => 1, 'props' => [],
+    return ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [[
+            'id' => 'blk_aaaaaaaaaaaaaaaa', 'type' => 'core.container', 'version' => 2, 'props' => [],
             'style' => $style + CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [],
-        ] + $extra],
-    ]]];
+        ] + $extra]])]];
 }
 
 function sbco_valid(array $extra = [], array $style = []): bool
@@ -50,23 +46,23 @@ function sbco_render(array $extra): string
 {
     $tenants  = new TenantContext();
     $renderer = new DocumentRenderer(BlockRegistry::withAllCoreBlocks(), BlockRendererRegistry::withCoreRenderers(), new CoreMediaResolver($tenants), new ProviderBindingResolver(new DataProviderRegistry(), $tenants));
-    return $renderer->renderBlock(sbco_doc($extra)['sections'][0]['blocks'][0], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), new RenderCollector(), false);
+    return $renderer->renderBlock(sbco_doc($extra)['containers'][0]['children'][0], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), new RenderCollector(), false);
 }
 
 // ── Boxed content width ───────────────────────────────────────────────────
 
 unit('container: boxed holds the children to the width with side padding, and the author padding stays the minimum', function (): void {
     $css = StyleSurface::declarations(['layout' => ['content_width' => 'boxed', 'content_max' => '1300px'], 'padding' => ['left' => '2rem', 'right' => '1rem']]);
-    assert_true(str_contains($css, 'padding-left:max(2rem,calc((100% - 1300px)/2))'), 'left side: ' . $css);
-    assert_true(str_contains($css, 'padding-right:max(1rem,calc((100% - 1300px)/2))'), 'right side');
+    assert_true(str_contains($css, 'padding-left:max(2rem,calc((100% - var(--sb-box))/2))'), 'left side: ' . $css);
+    assert_true(str_contains($css, 'padding-right:max(1rem,calc((100% - var(--sb-box))/2))') && str_contains($css, '--sb-box:1300px'), 'right side');
     assert_eq(1, substr_count($css, 'padding-left:'), 'one left padding, not the author\'s beside the boxed one');
-    assert_false(str_contains($css, 'content'), 'content_width and content_max are never CSS properties of their own');
+    assert_false(str_contains($css, 'content_') || str_contains($css, 'content-'), 'content_width and content_max are never CSS properties of their own');
 });
 
 unit('container: full width changes nothing; boxed without a width keeps to the site content width', function (): void {
     assert_eq('', StyleSurface::declarations(['layout' => ['content_width' => 'full', 'content_max' => '900px']]), 'full width');
     assert_eq(
-        'padding-left:max(0px,calc((100% - var(--sb-layout-content,80rem))/2));padding-right:max(0px,calc((100% - var(--sb-layout-content,80rem))/2))',
+        '--sb-box:var(--sb-layout-content,80rem);padding-left:max(0px,calc((100% - var(--sb-box))/2));padding-right:max(0px,calc((100% - var(--sb-box))/2))',
         StyleSurface::declarations(['layout' => ['content_width' => 'boxed']]),
         'boxed with no width of its own follows Site settings › Layout › Content width'
     );
@@ -88,7 +84,6 @@ unit('container: a background image can be fixed, and only scroll or fixed are a
     assert_false(str_contains(StyleSurface::declarations(['background' => ['attachment' => 'fixed']], null), 'attachment'), 'nothing without an image');
     assert_eq([], StyleSurface::backgroundIssues($bg, '$'), 'fixed is fine');
     assert_true(StyleSurface::backgroundIssues(['attachment' => 'local'], '$') !== [], 'local is not offered');
-    assert_eq([], StyleSurface::sectionIssues(['background' => $bg], '$'), 'a section background takes it too');
 });
 
 // ── main and the linked wrapper ───────────────────────────────────────────
@@ -117,30 +112,38 @@ unit('container: a linked wrapper renders its href; a new tab adds noopener; an 
 unit('container: changing the tag away from a drops the link', function (): void {
     $registry = BlockRegistry::withAllCoreBlocks();
     $doc = DocumentOperationApplier::applyOne(sbco_doc(), new DocumentOperation('update_block_tag', ['block_id' => 'blk_aaaaaaaaaaaaaaaa', 'tag' => 'a', 'link' => ['url' => '/menu']]), $registry);
-    assert_eq(['url' => '/menu'], $doc['sections'][0]['blocks'][0]['link'] ?? null, 'stored with the a tag');
+    assert_eq(['url' => '/menu'], $doc['containers'][0]['children'][0]['link'] ?? null, 'stored with the a tag');
     $doc = DocumentOperationApplier::applyOne($doc, new DocumentOperation('update_block_tag', ['block_id' => 'blk_aaaaaaaaaaaaaaaa', 'tag' => 'section']), $registry);
-    assert_false(array_key_exists('link', $doc['sections'][0]['blocks'][0]), 'the address goes with the a');
+    assert_false(array_key_exists('link', $doc['containers'][0]['children'][0]), 'the address goes with the a');
     assert_throws(StudioValidationException::class, static fn () => DocumentOperationApplier::applyOne(sbco_doc(), new DocumentOperation('update_block_tag', ['block_id' => 'blk_aaaaaaaaaaaaaaaa', 'tag' => 'a', 'link' => ['url' => 'data:text/html,x']]), $registry), 'unsafe link refused');
 });
 
 unit('container: saving keeps a linked wrapper\'s address, and only with the a tag', function (): void {
     $registry = BlockRegistry::withAllCoreBlocks();
     $kept = DocumentNormalizer::normalize(sbco_doc(['tag' => 'a', 'link' => ['url' => '/menu', 'new_tab' => true]]), $registry);
-    assert_eq(['new_tab' => true, 'url' => '/menu'], $kept['sections'][0]['blocks'][0]['link'] ?? null, 'the link survives a save');
+    assert_eq(['new_tab' => true, 'url' => '/menu'], $kept['containers'][0]['children'][0]['link'] ?? null, 'the link survives a save');
     $dropped = DocumentNormalizer::normalize(sbco_doc(['tag' => 'section', 'link' => ['url' => '/menu']]), $registry);
-    assert_false(array_key_exists('link', $dropped['sections'][0]['blocks'][0]), 'a stray link on another tag is not kept');
+    assert_false(array_key_exists('link', $dropped['containers'][0]['children'][0]), 'a stray link on another tag is not kept');
 });
 
-unit('a section takes a border like a block: one for every side, each side\'s width, style and colour, and each corner\'s radius', function (): void {
+unit('a top-level Container takes a border: one for every side, each side\'s width, style and colour, and each corner\'s radius', function (): void {
     $border = ['style' => 'solid', 'width' => '1px', 'color' => 'color.accent', 'radius' => 'md',
         'bottom' => ['width' => '4px', 'color' => '#123456'], 'radius_corners' => ['tl' => '0']];
-    assert_eq([], StyleSurface::sectionIssues(['border' => $border], '$'));
+    assert_eq([], StyleSurface::issues(['border' => $border], '$'));
+    $doc = sbco_doc();
+    $doc['containers'][0]['style']['border'] = $border;
+    assert_true(DocumentValidator::validate($doc, BlockRegistry::withAllCoreBlocks())->isValid(), 'a top-level Container takes it');
     assert_eq(
-        'border-style:solid;border-width:1px;border-color:var(--sb-color-accent);border-radius:var(--sb-radius-md,.5rem);border-bottom-width:4px;border-bottom-color:#123456;border-top-left-radius:0',
-        StyleSurface::sectionDeclarations(['border' => $border]),
-        'all sides first, then the side and corner that win over them'
+        'border-bottom-width:4px;border-bottom-color:#123456;border-top-left-radius:0',
+        StyleSurface::declarations(['border' => $border]),
+        'the side and corner that win over the all-sides values, which the block classes and inline style write'
     );
-    assert_eq(['$.border.width', '$.border.side', '$.border.top.width', '$.border.radius'], array_column(StyleSurface::sectionIssues(['border' => ['width' => 'red', 'side' => 1, 'top' => ['width' => 'x'], 'radius' => 'huge']], '$'), 'path'));
-    assert_eq('border-style:solid;border-top-width:2px', StyleSurface::sectionDeclarations(['border' => ['top' => ['width' => '2px']]]), 'a width with no style draws a solid line');
-    assert_eq('border-top-width:2px;border-top-style:dashed', StyleSurface::sectionDeclarations(['border' => ['top' => ['width' => '2px', 'style' => 'dashed']]]), 'a style the author chose is kept');
+    $issues = array_column(StyleSurface::issues(['border' => ['top' => ['width' => 'x']]], '$'), 'path');
+    assert_true($issues !== [], 'a side\'s width is checked');
+
+    // A section's border, stored before Containers, draws the same line.
+    $upgrade = static fn (array $border): array => \Slate\Module\StudioBuilder\Document\DocumentUpgrader::structure(['sections' => [['id' => 'sec_aaaaaaaaaaaaaaaa', 'style' => ['border' => $border], 'blocks' => []]]])['containers'][0]['style']['border'];
+    assert_eq('solid', $upgrade(['top' => ['width' => '2px']])['style'] ?? null, 'a side\'s width with no style draws a solid line');
+    assert_false(isset($upgrade(['top' => ['width' => '2px', 'style' => 'dashed']])['style']), 'a style the author chose on that side is kept');
+    assert_eq('dashed', $upgrade(['style' => 'dashed', 'width' => '1px'])['style'], 'as is one for every side');
 });

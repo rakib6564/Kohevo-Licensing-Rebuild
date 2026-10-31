@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { compileBlockStyle, compileSectionStyle, ruleText, tokenClassRules, MANAGED_CLASS, num } from '../src/core/liveStyle.mjs';
+import { compileBlockStyle, ruleText, tokenClassRules, MANAGED_CLASS, num } from '../src/core/liveStyle.mjs';
 
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/live-style.json', import.meta.url), 'utf8'));
 const tokens = new Set(fixture.tokens);
@@ -61,18 +61,39 @@ test('managed classes are the ones this file writes and nothing a theme or autho
   for (const c of ['sb-block', 'sb-block--core-heading', 'sb-align-center', 'sbx-selected', 'my-class', 'sb-heading', 'sb-hide-tablet']) assert.ok(!MANAGED_CLASS.test(c), c);
 });
 
-test('a section: background and padding are predicted, an image is left to the server', () => {
-  const ok = compileSectionStyle({ style: { background: { color: '#112233', gradient: 'linear-gradient(#000,#fff)' }, padding: { top: '4rem', bottom: '2rem' } } });
+test('a top-level Container: background and padding are predicted, an image is left to the server', () => {
+  const ok = compileBlockStyle({ type: 'core.container', style: { background: { color: '#112233', gradient: 'linear-gradient(#000,#fff)' }, padding: { top: '4rem', bottom: '2rem' } } });
   assert.equal(ok.covered, true);
-  assert.deepEqual(ok.scoped, ['background-color:#112233', 'background-image:linear-gradient(#000,#fff)', 'padding-top:4rem !important', 'padding-bottom:2rem !important']);
-  assert.equal(compileSectionStyle({ style: { background: { image: { media_id: 3 } } } }).covered, false);
-  assert.equal(compileSectionStyle({ style: {} }).covered, true);
+  assert.deepEqual(ok.scoped, ['padding-top:4rem', 'padding-bottom:2rem']);
+  assert.deepEqual(ok.inline, ['background-color:#112233', 'background-image:linear-gradient(#000,#fff)']);
+  assert.equal(compileBlockStyle({ style: { background: { image: { media_id: 3 } } } }).covered, false);
+  assert.equal(compileBlockStyle({ style: {} }).covered, true);
 });
 
-test('a section border paints on the canvas exactly as StyleSurface::sectionDeclarations writes it', () => {
+test('a Container border paints on the canvas as a block\'s does (the fixture holds what the server writes)', () => {
   const border = { style: 'solid', width: '1px', color: 'color.accent', radius: 'md', bottom: { width: '4px', color: '#123456' }, radius_corners: { tl: '0' } };
-  const out = compileSectionStyle({ style: { border } });
+  const out = compileBlockStyle({ type: 'core.container', style: { border } });
   assert.equal(out.covered, true, 'no repaint from the server is needed');
-  assert.equal(out.scoped.join(';'), 'border-style:solid;border-width:1px;border-color:var(--sb-color-accent);border-radius:var(--sb-radius-md,.5rem);border-bottom-width:4px;border-bottom-color:#123456;border-top-left-radius:0');
-  assert.equal(compileSectionStyle({ style: { border: { top: { width: '2px' } } } }).scoped.join(';'), 'border-style:solid;border-top-width:2px', 'a width with no style is a solid line');
+  assert.deepEqual(out.scoped, ['border-bottom-width:4px', 'border-bottom-color:#123456', 'border-top-left-radius:0']);
+  assert.deepEqual(out.inline, ['border-width:1px']);
+  assert.deepEqual(sorted(out.classes), ['sb-border-solid', 'sb-radius-md']);
+  assert.equal(compileBlockStyle({ style: { border: { top: { width: '2px' } } } }).scoped.join(';'), 'border-top-width:2px');
+});
+
+// The strings tests/unit/StudioBuilderContainerUpgradeTest.php asserts for StyleSurface, word for word.
+test('boxed output matches the server: the content box, the gutter inside it, and full size', () => {
+  const boxed = compileBlockStyle({ style: { layout: { content_width: 'boxed', gutter: 'site', content_size: 'wide' }, padding: { left: '40px' } } }).scoped;
+  assert.ok(boxed.includes('--sb-box:var(--sb-layout-wide,80rem)'), boxed.join(';'));
+  assert.ok(boxed.includes('padding-left:calc(40px + var(--sb-type-section_gutter,1rem) + max(0px,(100% - 40px - 0px - var(--sb-box))/2))'), boxed.join(';'));
+  assert.ok(boxed.includes('padding-right:calc(0px + var(--sb-type-section_gutter,1rem) + max(0px,(100% - 40px - 0px - var(--sb-box))/2))'), boxed.join(';'));
+  assert.ok(compileBlockStyle({ style: { layout: { content_width: 'boxed', gutter: 'site', content_size: 'full' } } }).scoped.includes('--sb-box:100%'));
+});
+
+test('spacing output matches the server: the site scale, per device, and own padding wins', () => {
+  const css = compileBlockStyle({ style: { layout: { padding_y: 'lg' }, padding: { top: '5px' } } }).scoped;
+  const scale = css.indexOf('padding-top:calc(var(--sb-space-lg,3rem)*4/3)');
+  assert.ok(scale >= 0 && scale < css.indexOf('padding-top:5px'), 'padding comes later, so it wins');
+  const device = compileBlockStyle({ style: {}, responsive: { mobile: { style: { layout: { padding_y: 'md', content_max: '90%' } } } } }).media.flatMap((m) => m.declarations);
+  assert.ok(device.includes('padding-top:calc(var(--sb-space-md,1.5rem)*4/3) !important'), device.join(';'));
+  assert.ok(device.includes('--sb-box:90% !important'), device.join(';'));
 });

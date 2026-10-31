@@ -3,14 +3,14 @@
  * Kohevo Studio (studio-builder) — Structured diff of two canonical documents.
  *
  * Phase 7 (AI + MCP). A human reviewing an AI-proposed draft needs to see
- * WHAT changed in the page's own vocabulary — sections, blocks, properties,
+ * WHAT changed in the page's own vocabulary — Containers, blocks, properties,
  * styles, settings, SEO, template, global-component references — not a raw
  * JSON text diff. This service compares two canonical Studio documents (the
  * decoded `document_json` of two revisions of the same page) structurally,
  * by node id, and returns bounded, transport-safe DATA:
  *
  *   - counts per change kind (the "at a glance" summary);
- *   - the changed sections and blocks, each with the kind of change
+ *   - the changed Containers and blocks, each with the kind of change
  *     (added / removed / moved / updated) and the changed keys;
  *   - settings / SEO / template changes with bounded before/after values;
  *   - global-component references added or removed;
@@ -27,6 +27,8 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Diff;
 
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
+
 final class RevisionDiff
 {
     public const CHANGE_ADDED   = 'added';
@@ -40,7 +42,7 @@ final class RevisionDiff
     public const MAX_VALUE_CHARS    = 120;
     public const MAX_LABEL_CHARS    = 80;
 
-    private const SECTION_COMPARED_KEYS = ['label', 'global_ref', 'layout', 'visibility'];
+    private const CONTAINER_COMPARED_KEYS = ['metadata', 'global_ref', 'props', 'style', 'responsive', 'visibility'];
     private const BLOCK_COMPARED_KEYS   = ['props', 'style', 'visibility', 'bindings'];
 
     private function __construct() {}
@@ -52,84 +54,87 @@ final class RevisionDiff
      */
     public static function compare(array $base, array $proposed): array
     {
-        $baseSections = self::indexSections($base);
-        $propSections = self::indexSections($proposed);
+        $base     = DocumentUpgrader::structure($base);
+        $proposed = DocumentUpgrader::structure($proposed);
+
+        $baseContainers = self::indexContainers($base);
+        $propContainers = self::indexContainers($proposed);
         $baseBlocks   = self::indexBlocks($base);
         $propBlocks   = self::indexBlocks($proposed);
 
-        $sectionOrder = self::relativeOrder(array_keys($baseSections), array_keys($propSections));
+        $containerOrder = self::relativeOrder(array_keys($baseContainers), array_keys($propContainers));
         $blockOrder   = self::relativeBlockOrder($baseBlocks, $propBlocks);
 
-        $sections = [];
+        $containers = [];
         $summary  = [
-            'sections_added' => 0, 'sections_removed' => 0, 'sections_moved' => 0, 'sections_updated' => 0,
+            'containers_added' => 0, 'containers_removed' => 0, 'containers_moved' => 0, 'containers_updated' => 0,
             'blocks_added' => 0, 'blocks_removed' => 0, 'blocks_moved' => 0, 'blocks_updated' => 0,
         ];
         $nodes = ['added' => [], 'removed' => [], 'moved' => [], 'updated' => []];
 
-        foreach ($propSections as $id => $sec) {
-            if (!isset($baseSections[$id])) {
-                $summary['sections_added']++;
+        foreach ($propContainers as $id => $con) {
+            if (!isset($baseContainers[$id])) {
+                $summary['containers_added']++;
                 $nodes['added'][] = $id;
-                $sections[] = [
+                $containers[] = [
                     'id'         => $id,
-                    'label'      => $sec['label'],
+                    'label'      => $con['label'],
                     'change'     => self::CHANGE_ADDED,
-                    'index'      => $sec['index'],
-                    'global_ref' => $sec['global_ref'],
-                    'blocks'     => count($sec['block_ids']),
+                    'index'      => $con['index'],
+                    'global_ref' => $con['global_ref'],
+                    'blocks'     => count($con['block_ids']),
                 ];
                 continue;
             }
-            $before = $baseSections[$id];
+            $before = $baseContainers[$id];
             $changedKeys = [];
-            foreach (self::SECTION_COMPARED_KEYS as $key) {
-                if (self::canonical($before['raw'][$key] ?? null) !== self::canonical($sec['raw'][$key] ?? null)) {
+            foreach (self::CONTAINER_COMPARED_KEYS as $key) {
+                if (self::canonical($before['raw'][$key] ?? null) !== self::canonical($con['raw'][$key] ?? null)) {
                     $changedKeys[] = $key;
                 }
             }
-            $moved = $sectionOrder[$id] ?? false;
+            $moved = $containerOrder[$id] ?? false;
             if ($moved || $changedKeys !== []) {
                 if ($moved) {
-                    $summary['sections_moved']++;
+                    $summary['containers_moved']++;
                     $nodes['moved'][] = $id;
                 }
                 if ($changedKeys !== []) {
-                    $summary['sections_updated']++;
+                    $summary['containers_updated']++;
                     $nodes['updated'][] = $id;
                 }
                 $entry = [
                     'id'           => $id,
-                    'label'        => $sec['label'],
+                    'label'        => $con['label'],
                     'change'       => $changedKeys !== [] ? self::CHANGE_UPDATED : self::CHANGE_MOVED,
                     'index_before' => $before['index'],
-                    'index_after'  => $sec['index'],
+                    'index_after'  => $con['index'],
                     'changed_keys' => $changedKeys,
                 ];
                 if (in_array('global_ref', $changedKeys, true)) {
                     $entry['global_ref_before'] = $before['global_ref'];
-                    $entry['global_ref_after']  = $sec['global_ref'];
+                    $entry['global_ref_after']  = $con['global_ref'];
                 }
                 if (in_array('label', $changedKeys, true)) {
                     $entry['label_before'] = $before['label'];
                 }
                 if (in_array('layout', $changedKeys, true)) {
-                    $entry['layout'] = self::changedMap($before['raw']['layout'] ?? [], $sec['raw']['layout'] ?? []);
+                    $entry['layout'] = self::changedMap($before['raw']['layout'] ?? [], $con['raw']['layout'] ?? []);
                 }
-                $sections[] = $entry;
+                $containers[] = $entry;
             }
         }
-        foreach ($baseSections as $id => $sec) {
-            if (!isset($propSections[$id])) {
-                $summary['sections_removed']++;
+        foreach ($baseContainers as $id => $con) {
+            if (!isset($propContainers[$id])) {
+                $summary['containers_removed']++;
                 $nodes['removed'][] = $id;
-                $sections[] = [
+                $containers[] = [
                     'id'         => $id,
-                    'label'      => $sec['label'],
+                    'label'      => $con['label'],
                     'change'     => self::CHANGE_REMOVED,
-                    'index'      => $sec['index'],
-                    'global_ref' => $sec['global_ref'],
-                    'blocks'     => count($sec['block_ids']),
+                    'index'      => $con['index'],
+                    'global_ref' => $con['global_ref'],
+                    'blocks'     => count($con['block_ids']),
                 ];
             }
         }
@@ -137,18 +142,18 @@ final class RevisionDiff
         $blocks = [];
         foreach ($propBlocks as $id => $blk) {
             if (!isset($baseBlocks[$id])) {
-                // A block inside an added section is reported once, as part of the section.
-                $inAddedSection = !isset($baseSections[$blk['section_id']]);
+                // A block inside an added Container is reported once, as part of the Container.
+                $inAddedContainer = !isset($baseContainers[$blk['container_id']]);
                 $summary['blocks_added']++;
                 $nodes['added'][] = $id;
-                if (!$inAddedSection) {
+                if (!$inAddedContainer) {
                     $blocks[] = [
                         'id'      => $id,
                         'type'    => $blk['type'],
                         'label'   => $blk['label'],
                         'change'  => self::CHANGE_ADDED,
                         'parent'  => $blk['parent_id'],
-                        'section' => $blk['section_id'],
+                        'container' => $blk['container_id'],
                         'index'   => $blk['index'],
                     ];
                 }
@@ -205,14 +210,14 @@ final class RevisionDiff
             if (!isset($propBlocks[$id])) {
                 $summary['blocks_removed']++;
                 $nodes['removed'][] = $id;
-                if (isset($propSections[$blk['section_id']])) {
+                if (isset($propContainers[$blk['container_id']])) {
                     $blocks[] = [
                         'id'      => $id,
                         'type'    => $blk['type'],
                         'label'   => $blk['label'],
                         'change'  => self::CHANGE_REMOVED,
                         'parent'  => $blk['parent_id'],
-                        'section' => $blk['section_id'],
+                        'container' => $blk['container_id'],
                         'index'   => $blk['index'],
                     ];
                 }
@@ -225,8 +230,8 @@ final class RevisionDiff
         $templateAfter  = self::text($proposed['template_key'] ?? null);
         $template = $templateBefore !== $templateAfter ? ['before' => $templateBefore, 'after' => $templateAfter] : null;
 
-        $baseRefs = self::refsOf($baseSections);
-        $propRefs = self::refsOf($propSections);
+        $baseRefs = self::refsOf($baseContainers);
+        $propRefs = self::refsOf($propContainers);
         $components = [
             'added'   => array_values(array_diff($propRefs, $baseRefs)),
             'removed' => array_values(array_diff($baseRefs, $propRefs)),
@@ -244,7 +249,7 @@ final class RevisionDiff
 
         $result = [
             'summary'    => $summary,
-            'sections'   => array_slice($sections, 0, self::MAX_LISTED_NODES),
+            'containers'   => array_slice($containers, 0, self::MAX_LISTED_NODES),
             'blocks'     => array_slice($blocks, 0, self::MAX_LISTED_NODES),
             'settings'   => $settings,
             'seo'        => $seo,
@@ -280,13 +285,13 @@ final class RevisionDiff
         foreach ($diff['seo'] as $key => $chg) {
             $out[] = 'SEO "' . $key . '" changed from ' . self::quote($chg['before']) . ' to ' . self::quote($chg['after']) . '.';
         }
-        foreach ($diff['sections'] as $sec) {
-            $name = 'Section "' . $sec['label'] . '"';
-            $out[] = match ($sec['change']) {
-                self::CHANGE_ADDED   => $name . ' added at position ' . ($sec['index'] + 1) . ($sec['global_ref'] !== null ? ' (global component reference)' : ' with ' . $sec['blocks'] . ' block(s)') . '.',
-                self::CHANGE_REMOVED => $name . ' removed (was position ' . ($sec['index'] + 1) . ').',
-                self::CHANGE_MOVED   => $name . ' moved from position ' . ($sec['index_before'] + 1) . ' to ' . ($sec['index_after'] + 1) . '.',
-                default              => $name . ' updated (' . implode(', ', $sec['changed_keys']) . ')' . (($sec['index_before'] ?? null) !== ($sec['index_after'] ?? null) ? ', moved to position ' . ($sec['index_after'] + 1) : '') . '.',
+        foreach ($diff['containers'] as $con) {
+            $name = 'Container "' . $con['label'] . '"';
+            $out[] = match ($con['change']) {
+                self::CHANGE_ADDED   => $name . ' added at position ' . ($con['index'] + 1) . ($con['global_ref'] !== null ? ' (global component reference)' : ' with ' . $con['blocks'] . ' block(s)') . '.',
+                self::CHANGE_REMOVED => $name . ' removed (was position ' . ($con['index'] + 1) . ').',
+                self::CHANGE_MOVED   => $name . ' moved from position ' . ($con['index_before'] + 1) . ' to ' . ($con['index_after'] + 1) . '.',
+                default              => $name . ' updated (' . implode(', ', $con['changed_keys']) . ')' . (($con['index_before'] ?? null) !== ($con['index_after'] ?? null) ? ', moved to position ' . ($con['index_after'] + 1) : '') . '.',
             };
         }
         foreach ($diff['blocks'] as $blk) {
@@ -386,22 +391,22 @@ final class RevisionDiff
      * @param array<string, mixed> $document
      * @return array<string, array{index: int, label: string, global_ref: ?string, block_ids: list<string>, raw: array<string, mixed>}>
      */
-    private static function indexSections(array $document): array
+    private static function indexContainers(array $document): array
     {
         $out = [];
-        $sections = is_array($document['sections'] ?? null) ? array_values($document['sections']) : [];
-        foreach ($sections as $i => $section) {
-            if (!is_array($section) || !is_string($section['id'] ?? null)) {
+        $containers = is_array($document['containers'] ?? null) ? array_values($document['containers']) : [];
+        foreach ($containers as $i => $container) {
+            if (!is_array($container) || !is_string($container['id'] ?? null)) {
                 continue;
             }
             $ids = [];
-            self::collectBlockIds(is_array($section['blocks'] ?? null) ? $section['blocks'] : [], $ids);
-            $out[$section['id']] = [
+            self::collectBlockIds(is_array($container['children'] ?? null) ? $container['children'] : [], $ids);
+            $out[$container['id']] = [
                 'index'      => $i,
-                'label'      => self::label($section['label'] ?? null, 'Section'),
-                'global_ref' => is_string($section['global_ref'] ?? null) ? self::text($section['global_ref']) : null,
+                'label'      => self::label($container['metadata']['label'] ?? null, 'Container'),
+                'global_ref' => is_string($container['global_ref'] ?? null) ? self::text($container['global_ref']) : null,
                 'block_ids'  => $ids,
-                'raw'        => $section,
+                'raw'        => $container,
             ];
         }
         return $out;
@@ -421,23 +426,23 @@ final class RevisionDiff
 
     /**
      * @param array<string, mixed> $document
-     * @return array<string, array{type: string, label: string, parent_id: string, section_id: string, index: int, raw: array<string, mixed>}>
+     * @return array<string, array{type: string, label: string, parent_id: string, container_id: string, index: int, raw: array<string, mixed>}>
      */
     private static function indexBlocks(array $document): array
     {
         $out = [];
-        $sections = is_array($document['sections'] ?? null) ? array_values($document['sections']) : [];
-        foreach ($sections as $section) {
-            if (!is_array($section) || !is_string($section['id'] ?? null)) {
+        $containers = is_array($document['containers'] ?? null) ? array_values($document['containers']) : [];
+        foreach ($containers as $container) {
+            if (!is_array($container) || !is_string($container['id'] ?? null)) {
                 continue;
             }
-            self::walkBlocks(is_array($section['blocks'] ?? null) ? $section['blocks'] : [], $section['id'], $section['id'], $out);
+            self::walkBlocks(is_array($container['children'] ?? null) ? $container['children'] : [], $container['id'], $container['id'], $out);
         }
         return $out;
     }
 
     /** @param list<mixed> $blocks @param array<string, array<string, mixed>> $out */
-    private static function walkBlocks(array $blocks, string $parentId, string $sectionId, array &$out): void
+    private static function walkBlocks(array $blocks, string $parentId, string $containerId, array &$out): void
     {
         foreach (array_values($blocks) as $i => $b) {
             if (!is_array($b) || !is_string($b['id'] ?? null)) {
@@ -448,11 +453,11 @@ final class RevisionDiff
                 'type'       => $type,
                 'label'      => self::blockLabel($b, $type),
                 'parent_id'  => $parentId,
-                'section_id' => $sectionId,
+                'container_id' => $containerId,
                 'index'      => $i,
                 'raw'        => $b,
             ];
-            self::walkBlocks(is_array($b['children'] ?? null) ? $b['children'] : [], $b['id'], $sectionId, $out);
+            self::walkBlocks(is_array($b['children'] ?? null) ? $b['children'] : [], $b['id'], $containerId, $out);
         }
     }
 
@@ -469,13 +474,13 @@ final class RevisionDiff
         return ucfirst(str_replace('_', ' ', $short));
     }
 
-    /** @param array<string, array<string, mixed>> $sections @return list<string> */
-    private static function refsOf(array $sections): array
+    /** @param array<string, array<string, mixed>> $containers @return list<string> */
+    private static function refsOf(array $containers): array
     {
         $refs = [];
-        foreach ($sections as $sec) {
-            if ($sec['global_ref'] !== null && $sec['global_ref'] !== '' && !in_array($sec['global_ref'], $refs, true)) {
-                $refs[] = $sec['global_ref'];
+        foreach ($containers as $con) {
+            if ($con['global_ref'] !== null && $con['global_ref'] !== '' && !in_array($con['global_ref'], $refs, true)) {
+                $refs[] = $con['global_ref'];
             }
         }
         return $refs;

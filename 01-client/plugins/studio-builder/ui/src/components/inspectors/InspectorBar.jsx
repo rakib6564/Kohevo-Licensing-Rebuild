@@ -1,7 +1,7 @@
 // InspectorBar — Reset · Discard · Apply, pinned to the bottom of the Inspector.
 //
 //   Reset    clears this block's look (style, device overrides, states) back to inherited; its content stays.
-//            For a section: its style (background, padding) and theme background.
+//            A Container keeps its box (Boxed or Full width, and how wide).
 //   Discard  puts the node back to how it was when it was selected.
 //   Apply    saves now, instead of waiting for the autosave.
 //
@@ -14,16 +14,16 @@ import { STATUS } from '../../core/sync.mjs';
 import { discardOps, editableState, hasChanged, hasStyle, resetOps } from '../../core/inspectorBar.mjs';
 import { t } from '../../core/messages.mjs';
 
-/** @param {{block: object, label: string, kind?: 'block'|'section'}} props `block` is the selected node */
-export function InspectorBar({ block, label, kind = 'block' }) {
+/** @param {{block: object, label: string}} props `block` is the selected node */
+export function InspectorBar({ block, label }) {
   const { engine, applyOp, announce } = useEditor();
   const status = useEngineState((s) => s.status);
   // The block as it was when it was selected: captured once per selection, never moved by later edits.
   const baseline = useRef({ id: null, state: null });
-  if (baseline.current.id !== block.id) baseline.current = { id: block.id, state: editableState(block, kind) };
+  if (baseline.current.id !== block.id) baseline.current = { id: block.id, state: editableState(block) };
 
-  const canReset = hasStyle(block, kind);
-  const canDiscard = hasChanged(block, baseline.current.state, kind);
+  const canReset = hasStyle(block);
+  const canDiscard = hasChanged(block, baseline.current.state);
   const canApply = status === STATUS.DIRTY || status === STATUS.ERROR;
 
   const run = (operations, message) => {
@@ -34,8 +34,8 @@ export function InspectorBar({ block, label, kind = 'block' }) {
 
   return (
     <div className="sbx-inspector__bar" role="group" aria-label={t('inspector_bar')} data-testid="inspector-bar">
-      <button type="button" className="sbx-btn" disabled={!canReset} title={t(kind === 'section' ? 'inspector_reset_section_hint' : 'inspector_reset_hint')} onClick={() => run(resetOps(block, kind), t('announce_reset'))}>{t('inspector_reset')}</button>
-      <button type="button" className="sbx-btn" disabled={!canDiscard} title={t(kind === 'section' ? 'inspector_discard_section_hint' : 'inspector_discard_hint')} onClick={() => run(discardOps(block, baseline.current.state, kind), t('announce_discarded'))}>{t('inspector_discard')}</button>
+      <button type="button" className="sbx-btn" disabled={!canReset} title={t('inspector_reset_hint')} onClick={() => run(resetOps(block), t('announce_reset'))}>{t('inspector_reset')}</button>
+      <button type="button" className="sbx-btn" disabled={!canDiscard} title={t('inspector_discard_hint')} onClick={() => run(discardOps(block, baseline.current.state), t('announce_discarded'))}>{t('inspector_discard')}</button>
       <button type="button" className="sbx-btn sbx-btn--primary" disabled={!canApply} title={t('inspector_apply_hint')} onClick={() => engine.save()}>{t('inspector_apply')}</button>
     </div>
   );

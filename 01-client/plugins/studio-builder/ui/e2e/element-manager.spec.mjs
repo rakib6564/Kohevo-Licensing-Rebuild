@@ -85,13 +85,13 @@ test('the server refuses to insert a switched-off element, and rejects an unknow
   }, { method, action, body });
 
   const doc = await call('GET', 'document');
-  const sections = (doc.json.data.document && doc.json.data.document.sections) || [];
-  const sectionId = sections[0] ? sections[0].id : 'sec_unknown'; // the guard runs before the target is looked up
+  const containers = (doc.json.data.document && doc.json.data.document.containers) || [];
+  const containerId = containers[0] ? containers[0].id : 'blk_unknown'; // the guard runs before the target is looked up
   const revisionId = (doc.json.data.revision && doc.json.data.revision.id) || null;
   const insert = () => call('POST', 'operations', {
     expected_revision_id: revisionId,
     revision_kind: 'manual',
-    operations: [{ op: 'insert_block', payload: { parent_id: sectionId, index: 0, block: { type: 'core.countdown' } } }],
+    operations: [{ op: 'insert_block', payload: { parent_id: containerId, index: 0, block: { type: 'core.countdown' } } }],
   });
   try {
     expect((await call('POST', 'save_elements', { disabled: ['core.countdown'] })).status).toBe(200);

@@ -32,8 +32,8 @@ const canvasDoc = () => {
 };
 const serverPage = (blockAttrs, kids = [], css = '.sb-x-aaaaaaaaaaaaaaaa{padding:1rem}.sb-x-bbbbbbbbbbbbbbbb{margin:0}', wrapper = 'main') => {
   const page = new El('html'); const main = page.add(new El(wrapper, { id: 'main' }));
-  const section = main.add(new El('section', { 'data-sb-node': 'sec_server' }));
-  const block = section.add(new El('div', blockAttrs));
+  const shell = main.add(new El('section', { 'data-sb-node': 'blk_server0' })); // the fresh Container a widget is rendered in
+  const block = shell.add(new El('div', blockAttrs));
   for (const k of kids) block.add(new El('div', k));
   const style = page.add(new El('style')); style.text = css;
   return page;
@@ -81,23 +81,27 @@ test('the CSS of the fragment rides in an editor-owned sheet that the server ren
   assert.equal(applyFragment(doc, new El('div'), { element: real, css: '' }, 'x'), false, 'a placeholder that is gone is not swapped');
 });
 
-test('a section comes out as the section itself, with the document ids for it and its blocks', () => {
+test('a Container comes out as itself, with the document ids for it and its children', () => {
   const page = new El('html'); const main = page.add(new El('main', { id: 'main' }));
-  const section = main.add(new El('section', { 'data-sb-node': 'sec_server', class: 'sb-section sb-x-aaaaaaaaaaaaaaaa' }));
-  const block = section.add(new El('div', { 'data-sb-node': 'blk_server1', class: 'sb-block sb-x-bbbbbbbbbbbbbbbb' }));
+  const top = main.add(new El('section', { 'data-sb-node': 'blk_server0', class: 'sb-top sb-x-aaaaaaaaaaaaaaaa' }));
+  const block = top.add(new El('div', { 'data-sb-node': 'blk_server1', class: 'sb-block sb-x-bbbbbbbbbbbbbbbb' }));
   block.add(new El('div', { 'data-sb-node': 'blk_server2' }));
   page.add(new El('style')).text = '.sb-x-aaaaaaaaaaaaaaaa{padding:1rem}.sb-x-bbbbbbbbbbbbbbbb{margin:0}';
-  const doc = { id: 'tmp_sec', blocks: [{ id: 'tmp_a', children: [{ id: 'tmp_b', children: [] }] }] };
-  const out = adoptFromPage(page, '<section class="sb-section">', doc, canvasDoc(), 'section');
-  assert.equal(out.element.getAttribute('data-sb-node'), 'tmp_sec');
+  const doc = { id: 'tmp_top', type: 'core.container', children: [{ id: 'tmp_a', children: [{ id: 'tmp_b', children: [] }] }] };
+  const out = adoptFromPage(page, '<section class="sb-top">', doc, canvasDoc());
+  assert.equal(out.element.getAttribute('data-sb-node'), 'tmp_top');
   assert.equal(out.element.kids[0].getAttribute('data-sb-node'), 'tmp_a');
   assert.equal(out.element.kids[0].kids[0].getAttribute('data-sb-node'), 'tmp_b');
 });
 
-test('a section render with a different number of nodes than the document is not used', () => {
-  const page = new El('html'); const main = page.add(new El('main'));
-  main.add(new El('section', { 'data-sb-node': 'sec_server' }));
-  assert.equal(adoptFromPage(page, '', { id: 'tmp_sec', blocks: [{ id: 'tmp_a', children: [] }] }, canvasDoc(), 'section'), null);
+test('a Container render with a different number of nodes than the document is not used', () => {
+  const page = new El('html'); const main = page.add(new El('main', { id: 'main' }));
+  const top = main.add(new El('section', { 'data-sb-node': 'blk_server0' }));
+  const doc = { id: 'tmp_top', type: 'core.container', children: [{ id: 'tmp_a', children: [] }] };
+  assert.equal(adoptFromPage(page, '', doc, canvasDoc()), null, 'one node short');
+  top.add(new El('div', { 'data-sb-node': 'blk_server1' }));
+  top.add(new El('div', { 'data-sb-node': 'blk_server2' }));
+  assert.equal(adoptFromPage(page, '', doc, canvasDoc()), null, 'one node over is not mistaken for the wrapper a widget gets');
 });
 
 test('a header page render is read from its header wrapper, which stands where <main> does', () => {

@@ -4,18 +4,18 @@ import { openBuilder, frameDocument, settled } from './helpers.mjs';
 
 const ROWS = '[role="treeitem"]';
 
-async function ensureSections(page, n) {
+async function ensureContainers(page, n) {
   await page.getByRole('tab', { name: /Layers/ }).click();
   for (let guard = 0; guard < n + 2; guard++) {
     const count = await page.locator(`${ROWS}[aria-level="1"]`).count();
     if (count >= n) break;
-    await page.getByRole('button', { name: /Add section/ }).first().click();
+    await page.getByRole('button', { name: /Add Container/ }).first().click();
     await expect.poll(() => page.locator(`${ROWS}[aria-level="1"]`).count(), { timeout: 15_000 }).toBeGreaterThan(count);
   }
   await settled(page);
 }
 
-async function firstSectionId(page) {
+async function firstContainerId(page) {
   await page.getByRole('tab', { name: /Layers/ }).click();
   return page.locator(`${ROWS}[aria-level="1"]`).first().getAttribute('data-row');
 }
@@ -26,10 +26,10 @@ async function rowAction(page, id, action) {
   await page.getByRole('menuitem').and(page.locator(`[data-action="${action}"]`)).click();
 }
 
-async function selectSection(page) {
+async function selectContainer(page) {
   await openBuilder(page);
-  await ensureSections(page, 2);
-  const id = await firstSectionId(page);
+  await ensureContainers(page, 2);
+  const id = await firstContainerId(page);
   await page.locator(`${ROWS}[data-row="${id}"]`).click();
   await expect(page.getByTestId('overlay-toolbar')).toBeVisible();
   return id;
@@ -40,7 +40,7 @@ test.beforeEach(async ({}, info) => {
 });
 
 test('selecting a node draws the box and toolbar in the parent, over the node, and writes nothing into the frame', async ({ page }) => {
-  const id = await selectSection(page);
+  const id = await selectContainer(page);
   const frame = await frameDocument(page);
 
   // The box sits on top of the node's rectangle (frame coordinates are scaled into the stage).
@@ -62,7 +62,7 @@ test('selecting a node draws the box and toolbar in the parent, over the node, a
 });
 
 test('the toolbar stays inside the canvas area and above the node when there is room', async ({ page }) => {
-  await selectSection(page);
+  await selectContainer(page);
   const bar = await page.getByTestId('overlay-toolbar').boundingBox();
   const wrap = await page.getByTestId('canvas-overlay').boundingBox();
   expect(bar.x).toBeGreaterThanOrEqual(wrap.x - 1);
@@ -72,7 +72,7 @@ test('the toolbar stays inside the canvas area and above the node when there is 
 });
 
 test('the toolbar is a keyboard toolbar: roving arrow keys, Enter activates (duplicate)', async ({ page }) => {
-  const id = await selectSection(page);
+  const id = await selectContainer(page);
   const bar = page.getByTestId('overlay-toolbar');
   await expect(bar).toHaveAttribute('role', 'toolbar');
 
@@ -109,7 +109,7 @@ test('the toolbar is a keyboard toolbar: roving arrow keys, Enter activates (dup
 });
 
 test('a locked layer keeps duplicate but disables move, edit and delete', async ({ page }) => {
-  const id = await selectSection(page);
+  const id = await selectContainer(page);
   await page.getByRole('tab', { name: /Layers/ }).click();
   await rowAction(page, id, 'lock');
   await page.locator(`${ROWS}[data-row="${id}"]`).click();
@@ -123,7 +123,7 @@ test('a locked layer keeps duplicate but disables move, edit and delete', async 
 });
 
 test('Escape removes the overlay; the box follows zoom changes from the bottom bar', async ({ page }) => {
-  const id = await selectSection(page);
+  const id = await selectContainer(page);
   const wide = (await page.locator(`[data-overlay-for="${id}"]`).boundingBox()).width;
   await page.getByTestId('zoom-out').click();
   await expect.poll(async () => (await page.locator(`[data-overlay-for="${id}"]`).boundingBox()).width).toBeLessThan(wide - 2);
@@ -162,7 +162,7 @@ test('bottom bar: zoom − / + steps, fit, guides toggle and the shortcut help',
 });
 
 test('the breadcrumb lives in the bottom bar and selects its segment', async ({ page }) => {
-  const id = await selectSection(page);
+  const id = await selectContainer(page);
   const crumbs = page.getByTestId('bottom-bar').getByRole('navigation');
   await expect(crumbs).toContainText('Page');
   await crumbs.getByRole('button', { name: 'Page' }).click();
@@ -195,7 +195,7 @@ async function boxDrift(page, id) {
 }
 
 test('the box lands on a node that is still animating in, and follows it until the animation ends', async ({ page }) => {
-  const id = await selectSection(page);
+  const id = await selectContainer(page);
   // An entrance animation starting under the selection (what a canvas repaint does to an animated block).
   await page.evaluate((nodeId) => {
     const doc = document.querySelector('iframe.sbx-canvas__frame').contentDocument;
@@ -219,7 +219,7 @@ test('the box lands on a node that is still animating in, and follows it until t
 });
 
 test('the box moves in the same frame as the canvas scrolls, not a frame behind', async ({ page }) => {
-  const id = await selectSection(page);
+  const id = await selectContainer(page);
   const lags = await page.evaluate(async (nodeId) => {
     const f = document.querySelector('iframe.sbx-canvas__frame');
     const win = f.contentWindow;

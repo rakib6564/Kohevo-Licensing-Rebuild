@@ -28,7 +28,7 @@ use Slate\Tenancy\TenantContext;
 function sbcl_box(array $props = [], array $style = [], array $states = []): array
 {
     $block = [
-        'id' => 'blk_dddddddddddddddd', 'type' => 'core.container', 'version' => 1, 'props' => $props,
+        'id' => 'blk_dddddddddddddddd', 'type' => 'core.container', 'version' => 2, 'props' => $props,
         'style' => $style + CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'bindings' => [], 'children' => [],
     ];
@@ -40,10 +40,7 @@ function sbcl_box(array $props = [], array $style = [], array $states = []): arr
 
 function sbcl_valid(array $block): bool
 {
-    $doc = ['schema_version' => '1.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'sections' => [[
-        'id' => 'sec_dddddddddddddddd', 'label' => 'S', 'global_ref' => null, 'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'blocks' => [$block],
-    ]]];
+    $doc = ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [$block]])]];
     return DocumentValidator::validate($doc, BlockRegistry::withAllCoreBlocks())->isValid();
 }
 

@@ -32,7 +32,7 @@ test('a visitor submits a Studio form: errors show beside the fields, then the s
     const created = (await call('create_page', { title: `E2E form ${stamp}`, slug: `e2e-form-${stamp}`, page_type: 'page', route_mode: 'standalone' })).j.data.page;
     const ops = await call('operations', {
       page_id: created.id, expected_revision_id: created.active_draft_revision_id, revision_kind: 'manual',
-      operations: [{ op: 'insert_section', payload: { index: 0, section: { label: 'Contact', blocks: [form] } } }],
+      operations: [{ op: 'insert_block', payload: { parent_id: null, index: 0, block: { type: 'core.container', metadata: { label: 'Contact' }, children: [form] } } }],
     });
     const rev = ops.j.data && ops.j.data.revision ? ops.j.data.revision.id : null;
     const p = await call('publish', { page_id: created.id, expected_revision_id: rev });

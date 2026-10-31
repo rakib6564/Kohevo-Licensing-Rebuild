@@ -317,15 +317,15 @@ unit('phase7 integration: AI + MCP through the real gateway (real MySQL, tenants
                 return $rt->tenants->runAs($tenant, static function () use ($rt, $actor, $title, $slug): array {
                     $created = $rt->app->createPage($actor, $title, $slug, 'page', 'standalone');
                     $r = $rt->app->applyDocumentOperation($actor, (int) $created['page']['id'], [
-                        new \Slate\Module\StudioBuilder\Operation\DocumentOperation('insert_section', ['index' => 0, 'section' => ['label' => 'Intro']]),
+                        new \Slate\Module\StudioBuilder\Operation\DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Intro']]]),
                     ], (int) $created['revision']['id'], 'seed', 'manual');
                     $doc = json_decode((string) $r['revision']['document_json'], true);
-                    $sec = (string) $doc['sections'][0]['id'];
+                    $sec = (string) $doc['containers'][0]['id'];
                     $r = $rt->app->applyDocumentOperation($actor, (int) $created['page']['id'], [
                         new \Slate\Module\StudioBuilder\Operation\DocumentOperation('insert_block', ['parent_id' => $sec, 'index' => 0, 'block' => sbp7_heading('Welcome to ' . $title)]),
                     ], (int) $r['revision']['id'], 'seed heading', 'manual');
                     $doc = json_decode((string) $r['revision']['document_json'], true);
-                    return ['id' => (int) $created['page']['id'], 'rev' => (int) $r['revision']['id'], 'section' => $sec, 'heading' => (string) $doc['sections'][0]['blocks'][0]['id']];
+                    return ['id' => (int) $created['page']['id'], 'rev' => (int) $r['revision']['id'], 'section' => $sec, 'heading' => (string) $doc['containers'][0]['children'][0]['id']];
                 });
             };
             $S->home = $mk(SBP7_A, $sessionEditorA, 'Home', 'home');
@@ -425,7 +425,7 @@ unit('phase7 integration: AI + MCP through the real gateway (real MySQL, tenants
                 assert_eq('entitlement_error', $e['error']);
                 // super-admin issuer: no super powers beyond the token's scopes; still no publish
                 $r = sbp7_ok(sbp7_call(sbp7_ctx($S->tokOwnerSuper), 'studio_get_structure', ['page_id' => $S->own['id']]), 'super issuer edit token reads structure');
-                assert_eq('Welcome to Own', $r['outline']['sections'][0]['blocks'][0]['label']);
+                assert_eq('Welcome to Own', $r['outline']['containers'][0]['children'][0]['label']);
                 $e = sbp7_err(sbp7_call(sbp7_ctx($S->tokOwnerSuper), 'studio_save_tokens', ['tokens' => ['surface.page' => '#000000']]), 'super issuer without tokens scope');
                 assert_eq('authorization_error', $e['error']);
                 $e = sbp7_err(sbp7_call(sbp7_ctx($S->tokOwnerSuperRead), 'studio_get_document', ['page_id' => $S->own['id']]), 'super issuer read-only token');
@@ -516,13 +516,13 @@ unit('phase7 integration: AI + MCP through the real gateway (real MySQL, tenants
                 $e = sbp7_err(sbp7_call($b, 'studio_apply_template', ['page_id' => $S->beta['id'], 'template_key' => 'home-page', 'expected_revision_id' => $S->beta['rev']]), 'B applies A template');
                 assert_eq('not_found', $e['error']);
                 $st = sbp7_ok(sbp7_call($a, 'studio_get_page', ['page_id' => $S->home['id']]), 'status')['page'];
-                $cmp = sbp7_ok(sbp7_call($a, 'studio_create_global_component', ['title' => 'Site intro', 'slug' => 'site-intro', 'page_id' => $S->home['id'], 'section_id' => $S->home['section'], 'expected_revision_id' => (int) $st['active_draft_revision_id']]), 'A creates component');
+                $cmp = sbp7_ok(sbp7_call($a, 'studio_create_global_component', ['title' => 'Site intro', 'slug' => 'site-intro', 'page_id' => $S->home['id'], 'container_id' => $S->home['section'], 'expected_revision_id' => (int) $st['active_draft_revision_id']]), 'A creates component');
                 $S->componentId = (int) $cmp['component']['id'];
                 $S->ref = (string) $cmp['component']['ref'];
                 assert_eq('ai_operation', $cmp['revision']['revision_kind'], 'the page rewrite is an AI revision');
                 $S->homeRev = (int) $cmp['revision']['id'];
                 assert_eq([], sbp7_ok(sbp7_call($b, 'studio_get_components'), 'B components')['components']);
-                $e = sbp7_err(sbp7_call($b, 'studio_apply_operations', ['page_id' => $S->beta['id'], 'expected_revision_id' => $S->beta['rev'], 'operations' => [['op' => 'insert_section', 'payload' => ['index' => 0, 'section' => ['label' => 'Stolen', 'global_ref' => $S->ref, 'blocks' => []]]]]]), 'B references A component');
+                $e = sbp7_err(sbp7_call($b, 'studio_apply_operations', ['page_id' => $S->beta['id'], 'expected_revision_id' => $S->beta['rev'], 'operations' => [['op' => 'insert_block', 'payload' => ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Stolen'], 'global_ref' => $S->ref, 'children' => []]]]]]), 'B references A component');
                 assert_eq('validation_error', $e['error']);
                 assert_eq('cross_tenant_or_missing_partial', $e['details']['errors'][0]['code']);
                 assert_eq(0, sbp7_count('SELECT COUNT(*) FROM studiobuilder_dependencies WHERE tenant_id = ? AND dependency_key = ?', [SBP7_B, $S->ref]));
@@ -539,10 +539,10 @@ unit('phase7 integration: AI + MCP through the real gateway (real MySQL, tenants
                 $a = sbp7_ctx($S->tokEditA);
                 $rev = static fn(): int => (int) sbp7_ok(sbp7_call($a, 'studio_get_page', ['page_id' => $S->home['id']]), 'status')['page']['active_draft_revision_id'];
                 $structure = sbp7_ok(sbp7_call($a, 'studio_get_structure', ['page_id' => $S->home['id']]), 'structure')['outline'];
-                $secId = (string) $structure['sections'][0]['id'];
+                $secId = (string) $structure['containers'][0]['id'];
                 // The intro section became a global reference above; add a local section to work in.
-                $r = sbp7_ok(sbp7_call($a, 'studio_apply_operations', ['page_id' => $S->home['id'], 'expected_revision_id' => $rev(), 'operations' => [['op' => 'insert_section', 'payload' => ['index' => 1, 'section' => ['label' => 'Local']]]]]), 'local section');
-                $local = (string) $r['outline']['sections'][1]['id'];
+                $r = sbp7_ok(sbp7_call($a, 'studio_apply_operations', ['page_id' => $S->home['id'], 'expected_revision_id' => $rev(), 'operations' => [['op' => 'insert_block', 'payload' => ['parent_id' => null, 'index' => 1, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Local']]]]]]), 'local section');
+                $local = (string) $r['outline']['containers'][1]['id'];
                 $S->localSection = $local;
                 $insert = static fn(array $block): array => ['page_id' => $S->home['id'], 'expected_revision_id' => $rev(), 'operations' => [['op' => 'insert_block', 'payload' => ['parent_id' => $local, 'index' => 0, 'block' => $block]]]];
                 $refused = static function (array $args, string $what) use ($a): array {
@@ -570,7 +570,7 @@ unit('phase7 integration: AI + MCP through the real gateway (real MySQL, tenants
                 assert_true(in_array('unsafe_content', $refused($insert(['type' => 'core.heading', 'props' => ['text' => "'; DROP TABLE studiobuilder_pages; --", 'level' => 'h2']]), 'sql in text'), true));
                 assert_true(in_array('unsafe_content', $refused($insert(['type' => 'core.heading', 'props' => ['text' => 'Hello ${process.env.SECRET} {{ $user }} <%= 1 %>', 'level' => 'h2']]), 'template expressions'), true));
                 $r = sbp7_ok(sbp7_call($a, 'studio_apply_operations', $insert(['type' => 'core.heading', 'props' => ['text' => SBP7_INJECTION . ' & {{ 7*7 }} <b>', 'level' => 'h2']]) + ['include_document' => true]), 'injection-looking text');
-                $heading = $r['document']['sections'][1]['blocks'][0];
+                $heading = $r['document']['containers'][1]['children'][0];
                 assert_eq(SBP7_INJECTION . ' & {{ 7*7 }} <b>', $heading['props']['text'], 'stored verbatim as data');
                 $html = sbp7_ok(sbp7_call($a, 'studio_preview', ['page_id' => $S->home['id'], 'include_html' => true]), 'preview html')['html'];
                 assert_true(str_contains($html, '&amp; {{ 7*7 }} &lt;b&gt;') && !str_contains($html, ' <b>'), 'escaped on render');
@@ -578,7 +578,7 @@ unit('phase7 integration: AI + MCP through the real gateway (real MySQL, tenants
                 $hostile = '<p>ok</p><script>alert(2)</script><iframe src="https://evil.example"></iframe><style>body{display:none}</style><p onclick="x()">t</p>';
                 $rich = sbp7_call($a, 'studio_apply_operations', $insert(['type' => 'core.rich_text', 'props' => ['content' => $hostile]]) + ['include_document' => true]);
                 if ($rich['ok']) {
-                    $stored = (string) $rich['data']['document']['sections'][1]['blocks'][0]['props']['content'];
+                    $stored = (string) $rich['data']['document']['containers'][1]['children'][0]['props']['content'];
                     assert_true(!str_contains($stored, '<script') && !str_contains($stored, '<iframe') && !str_contains($stored, '<style') && !str_contains($stored, 'onclick'), 'rich text is sanitized on write: ' . $stored);
                 } else {
                     assert_eq('validation_error', $rich['error']['error'], 'or refused outright');
@@ -701,8 +701,8 @@ unit('phase7 integration: AI + MCP through the real gateway (real MySQL, tenants
                 $pid = (int) $created['page']['id'];
                 assert_eq(['ai_operation', 'ai_operation'], array_column(sbp7_ok(sbp7_call($a, 'studio_get_revisions', ['page_id' => $pid]), 'revisions')['revisions'], 'revision_kind'), 'creation + template = two AI revisions');
                 $adm = sbp7_ctx($S->tokAdminA);
-                sbp7_ok(sbp7_call($adm, 'studio_save_template', ['page_id' => $S->home['id'], 'node_id' => $S->localSection, 'template_key' => 'local-section', 'template_type' => 'section_preset', 'name' => 'Local section']), 'admin token saves a section preset');
-                $e = sbp7_err(sbp7_call($a, 'studio_save_template', ['page_id' => $S->home['id'], 'node_id' => $S->localSection, 'template_key' => 'x', 'template_type' => 'section_preset', 'name' => 'X']), 'edit token saves template');
+                sbp7_ok(sbp7_call($adm, 'studio_save_template', ['page_id' => $S->home['id'], 'node_id' => $S->localSection, 'template_key' => 'local-section', 'template_type' => 'container_preset', 'name' => 'Local section']), 'admin token saves a section preset');
+                $e = sbp7_err(sbp7_call($a, 'studio_save_template', ['page_id' => $S->home['id'], 'node_id' => $S->localSection, 'template_key' => 'x', 'template_type' => 'container_preset', 'name' => 'X']), 'edit token saves template');
                 assert_eq('authorization_error', $e['error'], 'templates need the admin scope');
                 $ins = sbp7_ok(sbp7_call($a, 'studio_insert_template', ['page_id' => $pid, 'template_key' => 'local-section', 'index' => 0, 'expected_revision_id' => $rev($pid)]), 'insert template');
                 assert_eq('ai_operation', $ins['revision']['revision_kind'], 'a preset insertion by AI is an AI revision');
@@ -798,7 +798,7 @@ unit('phase7 integration: AI + MCP through the real gateway (real MySQL, tenants
                 $status = sbp7_ok(sbp7_assistant($rt, SBP7_A, $withEdit, 'studio_get_page', ['page_id' => $S->beta['id'] === 0 ? 0 : $S->home['id']]), 'status')['page'];
                 $structure = sbp7_ok(sbp7_assistant($rt, SBP7_A, $withEdit, 'studio_get_structure', ['page_id' => $S->home['id']]), 'structure')['outline'];
                 $localSection = null;
-                foreach ($structure['sections'] as $sec) {
+                foreach ($structure['containers'] as $sec) {
                     if ($sec['global_ref'] === null) {
                         $localSection = $sec['id'];
                         break;
@@ -807,9 +807,9 @@ unit('phase7 integration: AI + MCP through the real gateway (real MySQL, tenants
                 assert_true($localSection !== null);
                 Database::query('DROP TABLE IF EXISTS admin_sessions'); // the lazy DDL fires again inside the audited command
                 $_SESSION = ['slate_user' => ['id' => $S->editorA, 'tenant_id' => SBP7_A]];
-                $r = sbp7_ok(sbp7_assistant($rt, SBP7_A, $withEdit, 'studio_create_global_component', ['title' => 'Assistant component', 'slug' => 'assistant-component', 'page_id' => $S->home['id'], 'section_id' => $localSection, 'expected_revision_id' => (int) $status['active_draft_revision_id']]), 'assistant creates a component inside an owned transaction with a live session');
+                $r = sbp7_ok(sbp7_assistant($rt, SBP7_A, $withEdit, 'studio_create_global_component', ['title' => 'Assistant component', 'slug' => 'assistant-component', 'page_id' => $S->home['id'], 'container_id' => $localSection, 'expected_revision_id' => (int) $status['active_draft_revision_id']]), 'assistant creates a component inside an owned transaction with a live session');
                 assert_eq('ai_operation', $r['revision']['revision_kind']);
-                assert_eq('section_preset', $r['component']['page_type']);
+                assert_eq('container_preset', $r['component']['page_type']);
                 Database::query('DROP TABLE IF EXISTS admin_sessions');
                 $_SESSION = ['slate_user' => ['id' => $S->editorA, 'tenant_id' => SBP7_A]];
                 $r2 = sbp7_ok(sbp7_assistant($rt, SBP7_A, $withEdit, 'studio_apply_operations', ['page_id' => $S->home['id'], 'expected_revision_id' => (int) $r['revision']['id'], 'operations' => [['op' => 'update_seo', 'payload' => ['seo' => ['title' => 'After the hazard']]]]]), 'assistant mutation with a live session');

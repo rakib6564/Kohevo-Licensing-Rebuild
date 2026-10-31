@@ -3,11 +3,11 @@
  * Kohevo Studio (studio-builder) — Legacy Document Converter.
  *
  * Pure, isolated conversion utility for translating historical v1/v2 document
- * fixtures into a Kohevo Studio Canonical Document (`schema_version = "1.0"`).
+ * fixtures into a Kohevo Studio Canonical Document (`schema_version = "2.0"`).
  *
  * IMPORTANT:
  * - Never called automatically by `DocumentValidator` (Studio write paths accept
- *   ONLY `schema_version = "1.0"`).
+ *   ONLY `schema_version = "2.0"`).
  * - Does not read or revive dormant legacy tables (`content_pages`, `content_revisions`).
  * - Output must still pass `DocumentValidator::validate()` and `DocumentNormalizer::normalize()`
  *   before any Studio persistence.
@@ -21,7 +21,7 @@ final class LegacyDocumentConverter
 {
     /**
      * Convert a historical v1 envelope (`{"schema": 1, "sections": [...]}`) or v2 prototype
-     * (`{"version": 2, "header": {...}, "sections": [...]}`) into a Studio `"1.0"` document structure.
+     * (`{"version": 2, "header": {...}, "sections": [...]}`) into a Studio `"2.0"` document structure.
      *
      * @param array<string, mixed> $legacy
      * @param array<string, string> $blockTypeMap Optional map of legacy block types to Studio namespaced types
@@ -51,15 +51,15 @@ final class LegacyDocumentConverter
         $doc['seo']['description'] = $seoDesc;
 
         $rawSections = is_array($legacy['sections'] ?? null) ? $legacy['sections'] : [];
-        $sections = [];
+        $containers = [];
 
         foreach ($rawSections as $idx => $rawSec) {
             if (!is_array($rawSec)) {
                 continue;
             }
             $secSeed = (string) ($rawSec['id'] ?? ('s_' . $idx));
-            $secId   = 'sec_' . substr(hash('sha256', 'sec:' . $secSeed . ':' . $idx), 0, 24);
-            $label   = (string) ($rawSec['name'] ?? ($rawSec['label'] ?? ('Section ' . ($idx + 1))));
+            $containerId = 'blk_' . substr(hash('sha256', 'container:' . $secSeed . ':' . $idx), 0, 24);
+            $label   = (string) ($rawSec['name'] ?? ($rawSec['label'] ?? ('Container ' . ($idx + 1))));
 
             $blocks = [];
             foreach ((array) ($rawSec['blocks'] ?? []) as $bIdx => $rawBlk) {
@@ -86,17 +86,14 @@ final class LegacyDocumentConverter
                 ];
             }
 
-            $sections[] = [
-                'blocks'     => $blocks,
-                'global_ref' => null,
-                'id'         => $secId,
-                'label'      => $label,
-                'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-                'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-            ];
+            $containers[] = CanonicalDocumentSchema::newContainer([
+                'id'       => $containerId,
+                'metadata' => ['label' => mb_substr($label, 0, CanonicalDocumentSchema::BLOCK_LABEL_MAX_LENGTH, 'UTF-8')],
+                'children' => $blocks,
+            ]);
         }
 
-        $doc['sections'] = $sections;
+        $doc['containers'] = $containers;
         return $doc;
     }
 

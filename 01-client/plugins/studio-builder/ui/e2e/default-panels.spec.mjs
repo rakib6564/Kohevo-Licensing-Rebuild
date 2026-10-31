@@ -32,15 +32,15 @@ test('the editor opens on Add > Elements, and Layers starts with every layer col
     await expect(page.locator('[role="treeitem"][aria-expanded="true"]')).toHaveCount(0);
     await expect(page.locator('[role="treeitem"][aria-level="2"]')).toHaveCount(0);
   } finally {
-    // The reload cleared undo, so take the container off the way an author would: select its section and delete it.
+    // The reload cleared undo, so take the container off the way an author would: select its Container and delete it.
     await page.getByRole('tab', { name: /^Layers$/ }).click();
-    const sections = page.locator('[role="treeitem"][aria-level="1"]');
-    if ((await sections.count()) > before) {
-      page.once('dialog', (d) => d.accept()); // "Delete this section and all of its blocks?"
-      await sections.last().click();
+    const tops = page.locator('[role="treeitem"][aria-level="1"]');
+    if ((await tops.count()) > before) {
+      page.once('dialog', (d) => d.accept()); // "Delete this Container and all of its blocks?"
+      await tops.last().click();
       await page.getByRole('button', { name: 'Remove item', exact: true }).first().click();
       await settled(page);
-      await expect(sections).toHaveCount(before);
+      await expect(tops).toHaveCount(before);
     }
   }
 });

@@ -22,15 +22,15 @@ import { useState } from 'react';
 import { Check, Field, Pills } from '../ui/index.js';
 import { SliderField, ThemeColor } from './SurfaceControls.jsx';
 
-/** `block` is the block (or, with `section`, the section) whose motion is edited; `tokens` are the theme colours offered. */
-export function MotionInspector({ block, applyOp, label, section = false, tokens }) {
+/** `block` is the block whose motion is edited; `tokens` are the theme colours offered. */
+export function MotionInspector({ block, applyOp, label, tokens }) {
   const idPrefix = `sbx-motion-${block.id}`;
   const animation = normalizeAnimation(block.animation);
   const interactions = normalizeInteractions(block.interactions);
   const entranceOn = animation.type !== 'none';
 
-  const commitAnimation = (next) => applyOp((section ? ops.updateSectionAnimation : ops.updateBlockAnimation)(block.id, next), { label });
-  const commitInteractions = (next) => applyOp((section ? ops.updateSectionInteractions : ops.updateBlockInteractions)(block.id, next), { label });
+  const commitAnimation = (next) => applyOp(ops.updateBlockAnimation(block.id, next), { label });
+  const commitInteractions = (next) => applyOp(ops.updateBlockInteractions(block.id, next), { label });
 
   const choosePreset = (type) => {
     if (type === 'none') {
@@ -49,10 +49,10 @@ export function MotionInspector({ block, applyOp, label, section = false, tokens
 
   return (
     <>
-      <ScrollEffectsSection
+      <ScrollEffectsGroup
         idPrefix={idPrefix}
         interactions={interactions}
-        hasBackground={section || block.type === 'core.container'}
+        hasBackground={block.type === 'core.container'}
         tokens={tokens}
         onChange={commitInteractions}
       />
@@ -129,7 +129,7 @@ export function MotionInspector({ block, applyOp, label, section = false, tokens
           </div>
         </fieldset>
 
-      <InteractionSection
+      <InteractionGroup
         idPrefix={idPrefix}
         interactions={interactions}
         onChange={commitInteractions}
@@ -168,7 +168,7 @@ function RangeField({ id, label, range, value, hint, onChange }) {
  * can genuinely deliver on its own — it chooses WHAT MOVES, while the trigger
  * above chooses WHEN.
  */
-function InteractionSection({ idPrefix, interactions, onChange }) {
+function InteractionGroup({ idPrefix, interactions, onChange }) {
   const trigger = interactions.trigger || '';
   const hoverAnim = asObject(interactions.animation).type || 'none';
 
@@ -214,7 +214,7 @@ function InteractionSection({ idPrefix, interactions, onChange }) {
  * Sticky and parallax (interactions.sticky / interactions.parallax). Off is the absence of the object; each control
  * writes the whole `interactions` back through the normaliser, so the trigger above is kept.
  */
-function ScrollEffectsSection({ idPrefix, interactions, hasBackground, tokens, onChange }) {
+function ScrollEffectsGroup({ idPrefix, interactions, hasBackground, tokens, onChange }) {
   const sticky = interactions.sticky || null;
   const parallax = interactions.parallax || null;
   const setSticky = (next) => onChange(normalizeInteractions({ ...interactions, sticky: next }));
@@ -362,10 +362,10 @@ export function DeviceChecks({ idPrefix, legend, devices, onChange }) {
 }
 
 /** The entrance preset as one select (the reference's "Entrance Animation"); the Motion group keeps timing and triggers. */
-export function EntranceSelect({ block, applyOp, label, section = false }) {
+export function EntranceSelect({ block, applyOp, label }) {
   const id = `sbx-entrance-${block.id}`;
   const animation = normalizeAnimation(block.animation);
-  const commit = (next) => applyOp((section ? ops.updateSectionAnimation : ops.updateBlockAnimation)(block.id, next), { label });
+  const commit = (next) => applyOp(ops.updateBlockAnimation(block.id, next), { label });
   return (
     <Field label={t('entrance_animation')} htmlFor={id}>
       <select

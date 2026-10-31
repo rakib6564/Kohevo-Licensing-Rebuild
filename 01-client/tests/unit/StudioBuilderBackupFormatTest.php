@@ -19,7 +19,7 @@ function sbbk_page(array $changes = []): array
 {
     return $changes + [
         'uuid' => '11111111-2222-4333-8444-555555555555', 'title' => 'Home', 'slug' => 'home', 'page_type' => 'page',
-        'status' => 'published', 'route_mode' => 'homepage', 'working' => ['sections' => []], 'published' => null,
+        'status' => 'published', 'route_mode' => 'homepage', 'working' => ['containers' => []], 'published' => null,
     ];
 }
 
@@ -35,7 +35,7 @@ unit('studio backup: a manifest is accepted only in the current format', functio
 
 unit('studio backup: a page record must be complete and of a known type', function (): void {
     assert_true(Format::pageProblem(sbbk_page()) === null);
-    assert_true(Format::pageProblem(sbbk_page(['published' => ['sections' => []]])) === null, 'with a published document');
+    assert_true(Format::pageProblem(sbbk_page(['published' => ['containers' => []]])) === null, 'with a published document');
     assert_true(Format::pageProblem(sbbk_page(['uuid' => '../../evil'])) !== null, 'a uuid that is not one');
     assert_true(Format::pageProblem(sbbk_page(['page_type' => 'user'])) !== null, 'an unknown type');
     assert_true(Format::pageProblem(sbbk_page(['working' => 'x'])) !== null, 'no working document');

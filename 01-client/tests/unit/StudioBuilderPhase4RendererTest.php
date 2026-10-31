@@ -169,7 +169,7 @@ function sbp4u_block(string $type, array $props = [], array $extra = []): array
         'props'      => $props,
         'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
         'type'       => $type,
-        'version'    => 1,
+        'version'    => ($type === 'core.container' ? 2 : 1),
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
     ], $extra);
 }
@@ -180,14 +180,7 @@ function sbp4u_doc(array $blocks, array $settings = [], array $seo = []): array
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', 'About us');
     $doc['settings'] = array_merge($doc['settings'], $settings);
     $doc['seo'] = array_merge($doc['seo'], $seo);
-    $doc['sections'] = [[
-        'blocks'     => $blocks,
-        'global_ref' => null,
-        'id'         => CanonicalDocumentSchema::newSectionId(),
-        'label'      => 'Main',
-        'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-    ]];
+    $doc['containers'] = [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Main'], 'children' => $blocks, 'visibility' => CanonicalDocumentSchema::defaultVisibility()])];
     return $doc;
 }
 
@@ -546,7 +539,7 @@ unit('phase4 cache: mode policies and tenant/revision-safe keys', function (): v
     $preview = $p['tenants']->runAs(SBP4U_TENANT, static fn() => $p['compiler']->fingerprint(sbp4u_page(), sbp4u_revision($doc), sbp4u_preview()));
     assert_true($public !== $preview, 'preview and public compilations can never share a content hash');
     $edited = $doc;
-    $edited['sections'][0]['blocks'][0]['props']['text'] = 'y';
+    $edited['containers'][0]['children'][0]['props']['text'] = 'y';
     $publicEdited = $p['tenants']->runAs(SBP4U_TENANT, static fn() => $p['compiler']->fingerprint(sbp4u_page(), sbp4u_revision($edited), sbp4u_public()));
     assert_true($public !== $publicEdited, 'any document change changes the content hash');
 });
@@ -607,6 +600,7 @@ unit('phase4 stylesheet: the generated CSS is the CSS its VERSION shipped, so a 
         '56' => 'ec3089af475e317c318b9d2b868ff95d2f01851d',
         '57' => '13446f9a71d0f0b160525e1bc58aae305b34bb75',
         '58' => 'e1b3d07c5af5c24a82bd6b3d32adb084b1e803ea',
+        '59' => '9a0210c42d8a5ee8380f50c944c9d431ebdb8fe8',
     ];
     $version = \Slate\Module\StudioBuilder\Render\StudioStylesheet::VERSION;
     $hash = sha1(\Slate\Module\StudioBuilder\Render\StudioStylesheet::css());

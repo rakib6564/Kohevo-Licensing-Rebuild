@@ -289,15 +289,9 @@ unit('sprint5 integration: dynamic bindings, query builder, loop, blog archive a
                 'children'   => [],
             ];
 
-            $section = [
-                'id'         => CanonicalDocumentSchema::newSectionId(),
-                'label'      => 'Blog Query Section',
-                'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-                'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                'blocks'     => [$dynamicHeadingBlock, $loopBlock],
-            ];
+            $section = CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Blog Query Section'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [$dynamicHeadingBlock, $loopBlock]]);
 
-            $opInsert = new DocumentOperation('insert_section', ['index' => 0, 'section' => $section]);
+            $opInsert = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => $section]);
             $editRes = $rt->tenants->runAs(S5_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA_Alice, $blogPageId, [$opInsert], $blogRevId, 'Add Query Loop and Dynamic Heading'));
             $blogRevId = (int) $editRes['revision']['id'];
 

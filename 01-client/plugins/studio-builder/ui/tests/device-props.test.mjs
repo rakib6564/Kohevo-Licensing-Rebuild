@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { deviceChoices, hasDeviceProp, readDeviceProp, writeDeviceProp } from '../src/core/deviceProps.mjs';
 import { isStructuralChange } from '../src/core/canvasLiveSync.mjs';
-import { block, doc, section } from './helpers.mjs';
+import { block, doc, topContainer } from './helpers.mjs';
 
 test('write keeps the device style and removes what is left empty', () => {
   const start = { mobile: { style: { padding: { top: '4px' } } } };
@@ -41,7 +41,7 @@ test('the manifest marks the column-like fields per device', () => {
 
 test('a per-device value repaints the block from the server (the markup carries it)', () => {
   const g = block('core.gallery', { columns: '6' });
-  const before = doc([section([g])]);
-  const after = doc([section([{ ...g, responsive: { mobile: { props: { columns: '2' } } } }])]);
+  const before = doc([topContainer([g])]);
+  const after = doc([topContainer([{ ...g, responsive: { mobile: { props: { columns: '2' } } } }])]);
   assert.equal(isStructuralChange(before, after), true);
 });

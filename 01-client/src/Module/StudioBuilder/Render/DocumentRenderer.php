@@ -1,6 +1,6 @@
 <?php
 /**
- * Kohevo Studio (studio-builder) — Section/block render walk.
+ * Kohevo Studio (studio-builder) — Block render walk.
  *
  * The ONE walk every runtime (Editor, Preview, Public) uses. For each block:
  *
@@ -17,16 +17,15 @@
  * Fallbacks are empty in public output (no hint about module or licence
  * state) and a short labelled notice in authoring contexts.
  *
- * Phase 6 — live Global Component references: a section whose `global_ref`
- * is set owns no blocks; it renders the PUBLISHED content of the referenced
- * component (resolved by the compiler into `$components`, published revision
- * only) inside a placeholder `<section class="sb-section--global">`. The
- * embedded content is rendered by this same walk (same validation, same
- * renderers, same deferral of dynamic nodes) but never emits editor node
- * metadata of its own — in the builder canvas a click inside a component
- * selects the referencing section, whose inspector links to the component.
- * A missing/unpublished component is an inert fallback like any other
- * unavailable node.
+ * Phase 6 — live Global Component references: a top-level Container whose
+ * `global_ref` is set owns no children; it renders the PUBLISHED content of the
+ * referenced component (resolved by the compiler into `$components`, published
+ * revision only) inside a placeholder. The embedded content is rendered by this
+ * same walk (same validation, same renderers, same deferral of dynamic nodes)
+ * but never emits editor node metadata of its own — in the builder canvas a
+ * click inside a component selects the referencing Container, whose inspector
+ * links to the component. A missing/unpublished component is an inert fallback
+ * like any other unavailable node.
  */
 
 declare(strict_types=1);
@@ -56,6 +55,8 @@ final class DocumentRenderer
     public const EMBEDDED_KEY = '__sb_embedded';
     /** Set on a deferred block of the canvas's frame (RenderContext::framing()), so it is filled as framing too. */
     public const FRAMING_KEY = '__sb_framing';
+    /** Marker on a Container at the top of a document (never a canonical document key). */
+    private const TOP_KEY = '__sb_top';
 
     private const STYLE_UTILITIES = [
         'border_token'  => 'bd',
@@ -75,17 +76,17 @@ final class DocumentRenderer
     ) {}
 
     /**
-     * @param list<array<string, mixed>> $sections prepared (normalized) sections
+     * @param list<array<string, mixed>> $containers prepared (normalized) top-level Containers
      * @param array<string, list<array<string, mixed>>> $components ref => the referenced
-     *        Global Component's PREPARED published sections (resolved by the compiler);
+     *        Global Component's PREPARED published Containers (resolved by the compiler);
      *        a ref absent from this map renders as unavailable
      */
-    public function renderSections(array $sections, RenderContext $context, ResolvedTheme $theme, RenderCollector $collector, bool $deferDynamic, array $components = []): string
+    public function renderContainers(array $containers, RenderContext $context, ResolvedTheme $theme, RenderCollector $collector, bool $deferDynamic, array $components = []): string
     {
         $html = '';
-        foreach ($sections as $section) {
-            if (is_array($section)) {
-                $html .= $this->renderSection($section, $context, $theme, $collector, $deferDynamic, $components);
+        foreach ($containers as $container) {
+            if (is_array($container)) {
+                $html .= $this->renderTop($container, $context, $theme, $collector, $deferDynamic, $components);
             }
         }
         return SiteLinks::rebase($html, $context->site->basePath());
@@ -212,6 +213,7 @@ final class DocumentRenderer
 
         $classes = array_merge(
             ['sb-block', 'sb-block--' . str_replace(['.', '_'], '-', $type)],
+            !empty($block[self::TOP_KEY]) ? ['sb-top'] : [],
             $wrapperClasses,
             $scopedClasses,
             $this->styleClasses(is_array($block['style'] ?? null) ? $block['style'] : [], $theme, $collector),
@@ -283,126 +285,49 @@ final class DocumentRenderer
     }
 
     /**
-     * @param array<string, mixed> $section
+     * @param array<string, mixed> $container
      * @param array<string, list<array<string, mixed>>> $components
      */
-    private function renderSection(array $section, RenderContext $context, ResolvedTheme $theme, RenderCollector $collector, bool $deferDynamic, array $components = []): string
+    private function renderTop(array $container, RenderContext $context, ResolvedTheme $theme, RenderCollector $collector, bool $deferDynamic, array $components): string
     {
-        $visibility = is_array($section['visibility'] ?? null) ? $section['visibility'] : [];
+        $ref = $container['global_ref'] ?? null;
+        if (is_string($ref) && $ref !== '') {
+            return $this->renderGlobalContainer($container, $ref, $context, $theme, $collector, $deferDynamic, $components);
+        }
+        $container[self::TOP_KEY] = true;
+        return $this->renderBlock($container, $context, $theme, $collector, $deferDynamic);
+    }
+
+    /**
+     * The placeholder of a live Global Component reference. The consuming Container keeps only its visibility (where it
+     * shows); layout and content come entirely from the component's own published Containers, rendered with embedded
+     * blocks (no editor node metadata of their own).
+     *
+     * @param array<string, mixed> $container
+     * @param array<string, list<array<string, mixed>>> $components
+     */
+    private function renderGlobalContainer(array $container, string $ref, RenderContext $context, ResolvedTheme $theme, RenderCollector $collector, bool $deferDynamic, array $components): string
+    {
+        $visibility = is_array($container['visibility'] ?? null) ? $container['visibility'] : [];
         if (!$context->includesAuthState((string) ($visibility['auth_state'] ?? 'any'))) {
             return '';
         }
-
-        $globalRef = $section['global_ref'] ?? null;
-        if (is_string($globalRef) && $globalRef !== '') {
-            return $this->renderGlobalSection($section, $globalRef, $context, $theme, $collector, $deferDynamic, $components);
-        }
-
-        $blocks = is_array($section['blocks'] ?? null) ? $section['blocks'] : [];
-        $inner = '';
-        foreach ($blocks as $block) {
-            if (is_array($block)) {
-                $inner .= $this->renderBlock($block, $context, $theme, $collector, $deferDynamic);
-            }
-        }
-
-        $layout = is_array($section['layout'] ?? null) ? $section['layout'] : CanonicalDocumentSchema::defaultSectionLayout();
-
-        $sectionStyle = is_array($section['style'] ?? null) ? $section['style'] : [];
-        $sectionClass = $collector->scopedRule((string) ($section['id'] ?? ''), StyleSurface::sectionDeclarations($sectionStyle, $this->backgroundImageUrl($sectionStyle), ScrollEffects::hasParallaxBackground($section)));
-        $scroll = ScrollEffects::render($section);
-
-        ['animationClasses' => $animationClasses, 'interactionClasses' => $interactionClasses, 'interactionAttrs' => $interactionAttrs, 'motionVars' => $motionVars] = $this->motionOf($section);
-
-        $outer = ['sb-section', $sectionClass, $collector->tokenClass('bg', $layout['background_token'] ?? null, $theme)];
-        foreach ((array) ($layout['padding_y'] ?? []) as $bp => $value) {
-            $prefix = StudioStylesheet::prefix((string) $bp);
-            if ($prefix !== null && in_array($value, CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, true)) {
-                $outer[] = 'sb-' . $prefix . 'py-' . $value;
-            }
-        }
-        $outer = array_merge($outer, self::hideClasses($visibility), $animationClasses, $interactionClasses, $scroll['classes']);
-
-        $width = in_array($layout['width'] ?? null, CanonicalDocumentSchema::ALLOWED_SECTION_WIDTHS, true) ? $layout['width'] : 'default';
-        $gap   = in_array($layout['gap'] ?? null, CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, true) ? $layout['gap'] : 'md';
-        $innerClasses = ['sb-section__inner', 'sb-w-' . $width, 'sb-gap-' . $gap];
-        $innerVars = self::customWidthVars($width, $layout, $innerClasses);
-
-        // Schema 1.0 has no per-block column spans: blocks are equal-width grid
-        // items, and a breakpoint's track count is capped at the block count so
-        // a lone block is never squeezed into 1/12th of the row.
-        $blockCount = max(1, count($blocks));
-        foreach ((array) ($layout['columns'] ?? []) as $bp => $cols) {
-            $prefix = StudioStylesheet::prefix((string) $bp);
-            if ($prefix !== null && is_int($cols) && $cols >= 1 && $cols <= 12) {
-                $innerClasses[] = 'sb-' . $prefix . 'cols-' . min($cols, $blockCount);
-            }
-        }
-
-        $metadata = empty($section[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($section['id'] ?? ''), 'section') : '';
-        $sectionVars = $motionVars . implode(';', $scroll['vars']);
-        $styleAttr = $sectionVars !== '' ? ' style="' . Html::e($sectionVars) . '"' : '';
-        $innerStyle = $innerVars !== '' ? ' style="' . Html::e($innerVars) . '"' : '';
-        return '<section' . Html::classAttr($outer) . $metadata . $interactionAttrs . $scroll['attrs'] . $styleAttr . '>'
-            . '<div' . Html::classAttr($innerClasses) . $innerStyle . '>' . $inner . '</div></section>';
-    }
-
-    /**
-     * A custom section width: each device's size becomes a custom property (`--sb-cw`, `--sb-cw-md`...) and a device
-     * other than the phone gets the class that reads its own (`sb-md-cw`), so a device with no size keeps the one below it.
-     * A size the validator would reject is left out, so nothing but a plain size reaches the style attribute.
-     *
-     * @param array<string, mixed> $layout
-     * @param list<string>         $classes
-     */
-    private static function customWidthVars(string $width, array $layout, array &$classes): string
-    {
-        if ($width !== 'custom' || !is_array($layout['custom_width'] ?? null)) {
-            return '';
-        }
-        $vars = [];
-        foreach (CanonicalDocumentSchema::ALLOWED_BREAKPOINTS as $bp) {
-            $size = $layout['custom_width'][$bp] ?? null;
-            if (!StyleSurface::isSize($size)) {
-                continue;
-            }
-            $vars[] = '--sb-cw' . ($bp === 'base' ? '' : '-' . $bp) . ':' . trim((string) $size);
-            if ($bp !== 'base') {
-                $classes[] = 'sb-' . $bp . '-cw';
-            }
-        }
-        return implode(';', $vars);
-    }
-
-    /**
-     * The placeholder of a live Global Component reference. The consuming
-     * section keeps only its visibility (where it shows); layout and content
-     * come entirely from the component's own published sections, rendered
-     * with embedded blocks (no editor node metadata of their own).
-     *
-     * @param array<string, mixed> $section
-     * @param array<string, list<array<string, mixed>>> $components
-     */
-    private function renderGlobalSection(array $section, string $ref, RenderContext $context, ResolvedTheme $theme, RenderCollector $collector, bool $deferDynamic, array $components): string
-    {
-        $visibility = is_array($section['visibility'] ?? null) ? $section['visibility'] : [];
-        $classes = array_merge(['sb-section', 'sb-section--global'], self::hideClasses($visibility));
-        $open = '<section' . Html::classAttr($classes) . $this->nodeMetadata($context, (string) ($section['id'] ?? ''), 'section') . '>';
+        $classes = array_merge(['sb-block', 'sb-block--core-container', 'sb-top', 'sb-global'], self::hideClasses($visibility));
+        $open = '<div' . Html::classAttr($classes) . $this->nodeMetadata($context, (string) ($container['id'] ?? ''), CanonicalDocumentSchema::CONTAINER_TYPE) . '>';
 
         if (!isset($components[$ref]) || !is_array($components[$ref])) {
-            return $open . $this->unavailable('component_unavailable', $context) . '</section>';
+            return $open . $this->unavailable('component_unavailable', $context) . '</div>';
         }
 
         $inner = '';
-        foreach ($components[$ref] as $componentSection) {
-            if (!is_array($componentSection) || !empty($componentSection['global_ref'])) {
+        foreach ($components[$ref] as $component) {
+            if (!is_array($component) || !empty($component['global_ref'])) {
                 continue; // references are one level deep — never resolved recursively
             }
-            $componentSection[self::EMBEDDED_KEY] = true;
-            $componentSection['blocks'] = self::markEmbedded(is_array($componentSection['blocks'] ?? null) ? $componentSection['blocks'] : []);
-            $inner .= $this->renderSection($componentSection, $context, $theme, $collector, $deferDynamic, []);
+            $embedded = self::markEmbedded([$component]);
+            $inner .= $this->renderTop($embedded[0], $context, $theme, $collector, $deferDynamic, []);
         }
-        return $open . $inner . '</section>';
+        return $open . $inner . '</div>';
     }
 
     /**
@@ -525,7 +450,7 @@ final class DocumentRenderer
      * @param array<string, mixed> $style
      */
     /**
-     * The motion a block or a section carries: entrance-animation classes, interaction classes and trigger
+     * The motion a block carries: entrance-animation classes, interaction classes and trigger
      * attribute, and the timing custom properties (already terminated by `;` when present).
      *
      * @param array<string, mixed> $node

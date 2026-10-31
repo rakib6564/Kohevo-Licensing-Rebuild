@@ -68,7 +68,7 @@ final class StudioImportReport
     /** @var array<string, int> */
     private array $kindCounts = ['page' => 0, 'global_component' => 0, 'template' => 0, 'tokens' => 0];
 
-    private int $sections = 0;
+    private int $containers = 0;
     private int $blocks = 0;
 
     private ?string $sourceHash = null;
@@ -159,8 +159,8 @@ final class StudioImportReport
     public function preview(string $item, string $kind, array $document): void
     {
         $counts = PackageDocumentMapper::counts($document);
-        $this->sections += $counts['sections'];
-        $this->blocks   += $counts['blocks'];
+        $this->containers += $counts['containers'];
+        $this->blocks     += $counts['blocks'];
         $this->previews[] = ['item' => $item, 'kind' => $kind, 'document' => $document];
     }
 
@@ -196,7 +196,7 @@ final class StudioImportReport
                 'templates_count'         => $this->kindCounts['template'],
                 'global_components_count' => $this->kindCounts['global_component'],
                 'tokens_count'            => $this->kindCounts['tokens'],
-                'sections_count'          => $this->sections,
+                'containers_count'        => $this->containers,
                 'blocks_count'            => $this->blocks,
                 'warnings_count'          => count($issues) - $errors,
                 'errors_count'            => $errors,

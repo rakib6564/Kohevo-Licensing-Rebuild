@@ -100,7 +100,7 @@ unit('phase9c seo validation: og_image_media_id — a positive integer, tenant m
 unit('phase9c seo: unknown seo keys stay refused and the document schema is unchanged', function (): void {
     assert_eq(['$.seo.json_ld:unknown_property'], sbs9u_seo_errors(['json_ld' => '{}']));
     assert_eq(['$.seo.hreflang:unknown_property'], sbs9u_seo_errors(['hreflang' => []]));
-    assert_eq('1.0', CanonicalDocumentSchema::SCHEMA_VERSION);
+    assert_eq('2.0', CanonicalDocumentSchema::SCHEMA_VERSION);
     assert_eq(['title', 'description', 'canonical_url', 'robots', 'og_image_media_id'], CanonicalDocumentSchema::ALLOWED_SEO_KEYS);
 });
 

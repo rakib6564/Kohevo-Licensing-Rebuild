@@ -131,12 +131,12 @@ function sbdl_page(StudioRuntime $rt, StudioActor $actor, string $slug, array $b
 {
     $created = sbdl_ok(sbdl_call($rt, SBDL_A, $actor, 'POST', 'create_page', ['title' => ucfirst($slug), 'slug' => $slug, 'page_type' => 'page', 'route_mode' => 'standalone']), "create {$slug}");
     $id = (int) $created['page']['id'];
-    $ops = [['op' => 'insert_section', 'payload' => ['index' => 0, 'section' => ['label' => 'Main']]]];
+    $ops = [['op' => 'insert_block', 'payload' => ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Main']]]]];
     if ($settings !== []) {
         $ops[] = ['op' => 'update_settings', 'payload' => ['settings' => $settings + CanonicalDocumentSchema::defaultSettings()]];
     }
     $r = sbdl_ok(sbdl_call($rt, SBDL_A, $actor, 'POST', 'operations', ['page_id' => $id, 'expected_revision_id' => (int) $created['page']['active_draft_revision_id'], 'operations' => $ops]), "{$slug} section");
-    $section = (string) $r['document']['sections'][0]['id'];
+    $section = (string) $r['document']['containers'][0]['id'];
     foreach ($blocks as $i => $block) {
         $r = sbdl_ok(sbdl_call($rt, SBDL_A, $actor, 'POST', 'operations', ['page_id' => $id, 'expected_revision_id' => (int) $r['revision']['id'], 'operations' => [
             ['op' => 'insert_block', 'payload' => ['parent_id' => $section, 'index' => $i, 'block' => $block]],
@@ -199,7 +199,7 @@ unit('draft/live integration: lists, payments, locks and live changes follow wha
             // ── 2. A payment button is payable only while a PUBLISHED document holds it ──────────────────
             $button = ['type' => 'payment.button', 'props' => ['label' => 'Buy', 'amount' => 10, 'currency' => 'USD', 'description' => 'Starter', 'success_path' => '']];
             $pay = sbdl_page($rt, $publisher, 'pay', [$button]);
-            $blockId = (string) $pay['document']['sections'][0]['blocks'][0]['id'];
+            $blockId = (string) $pay['document']['containers'][0]['children'][0]['id'];
             assert_null($inA(static fn() => LivePaymentBlocks::propsOf(SBDL_A, $blockId)), 'a button that only exists in a draft is not payable');
             $payRev = sbdl_publish($rt, $publisher, $pay['id'], $pay['rev']);
             $live = $inA(static fn() => LivePaymentBlocks::propsOf(SBDL_A, $blockId));
@@ -208,7 +208,7 @@ unit('draft/live integration: lists, payments, locks and live changes follow wha
             $r = sbdl_ok(sbdl_call($rt, SBDL_A, $editor, 'POST', 'operations', ['page_id' => $pay['id'], 'expected_revision_id' => $payRev, 'operations' => [
                 ['op' => 'insert_block', 'payload' => ['parent_id' => $pay['section'], 'index' => 1, 'block' => ['type' => 'payment.button', 'props' => ['label' => 'Gold', 'amount' => 0.5, 'currency' => 'USD', 'description' => 'Gold plan', 'success_path' => '']]]],
             ]]), 'a draft-only cheap button');
-            $draftOnly = (string) $r['document']['sections'][0]['blocks'][1]['id'];
+            $draftOnly = (string) $r['document']['containers'][0]['children'][1]['id'];
             assert_null($inA(static fn() => LivePaymentBlocks::propsOf(SBDL_A, $draftOnly)), 'an editor cannot mint a payable price in a draft');
             sbdl_ok(sbdl_call($rt, SBDL_A, $publisher, 'POST', 'archive_page', ['page_id' => $pay['id']]), 'archive the pay page');
             assert_null($inA(static fn() => LivePaymentBlocks::propsOf(SBDL_A, $blockId)), 'an archived page holds no payable button');
@@ -217,29 +217,29 @@ unit('draft/live integration: lists, payments, locks and live changes follow wha
             $lockedPage = sbdl_page($rt, $editor, 'locked', [['type' => 'core.heading', 'props' => ['text' => 'Keep me', 'level' => 'h2']]]);
             $beforeExtra = $lockedPage['rev'];
             $r = sbdl_ok(sbdl_call($rt, SBDL_A, $editor, 'POST', 'operations', ['page_id' => $lockedPage['id'], 'expected_revision_id' => $beforeExtra, 'operations' => [
-                ['op' => 'insert_section', 'payload' => ['index' => 1, 'section' => ['label' => 'Second']]],
+                ['op' => 'insert_block', 'payload' => ['parent_id' => null, 'index' => 1, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Second']]]],
             ]]), 'second section');
             $beforeLock = (int) $r['revision']['id'];
             $r = sbdl_ok(sbdl_call($rt, SBDL_A, $editor, 'POST', 'operations', ['page_id' => $lockedPage['id'], 'expected_revision_id' => $beforeLock, 'operations' => [
-                ['op' => 'update_section_locked', 'payload' => ['section_id' => $lockedPage['section'], 'locked' => true]],
+                ['op' => 'update_block_meta', 'payload' => ['block_id' => $lockedPage['section'], 'locked' => true]],
             ]]), 'lock the first section');
             $rev = (int) $r['revision']['id'];
             $doc = sbdl_ok(sbdl_call($rt, SBDL_A, $editor, 'GET', 'document', ['page' => $lockedPage['id']]), 'document')['document'];
 
             $dropped = $doc;
-            array_shift($dropped['sections']);
+            array_shift($dropped['containers']);
             $res = sbdl_call($rt, SBDL_A, $editor, 'POST', 'save_draft', ['page_id' => $lockedPage['id'], 'expected_revision_id' => $rev, 'revision_kind' => 'manual', 'document' => $dropped]);
             assert_eq('node_locked', sbdl_code($res), 'a saved document cannot drop a locked section: ' . substr($res->body(), 0, 300));
             $edited = $doc;
-            $edited['sections'][0]['blocks'][0]['props']['text'] = 'Changed';
+            $edited['containers'][0]['children'][0]['props']['text'] = 'Changed';
             assert_eq('node_locked', sbdl_code(sbdl_call($rt, SBDL_A, $editor, 'POST', 'save_draft', ['page_id' => $lockedPage['id'], 'expected_revision_id' => $rev, 'revision_kind' => 'manual', 'document' => $edited])), 'nor edit inside it');
             $other = $doc;
-            $other['sections'][1]['label'] = 'Renamed second';
+            $other['containers'][1]['metadata']['label'] = 'Renamed second';
             $saved = sbdl_ok(sbdl_call($rt, SBDL_A, $editor, 'POST', 'save_draft', ['page_id' => $lockedPage['id'], 'expected_revision_id' => $rev, 'revision_kind' => 'manual', 'document' => $other]), 'an unlocked section can still change');
             $rev = (int) $saved['revision']['id'];
             assert_eq('node_locked', sbdl_code(sbdl_call($rt, SBDL_A, $ai, 'POST', 'rollback', ['page_id' => $lockedPage['id'], 'target_revision_id' => $beforeExtra - 1, 'expected_revision_id' => $rev])), 'a rollback to before the locked section existed is refused');
             $undo = sbdl_ok(sbdl_call($rt, SBDL_A, $editor, 'POST', 'rollback', ['page_id' => $lockedPage['id'], 'target_revision_id' => $beforeLock, 'expected_revision_id' => $rev]), 'undoing the lock itself still works');
-            assert_true(empty($undo['document']['sections'][0]['locked']), 'the section is unlocked again');
+            assert_true(empty($undo['document']['containers'][0]['metadata']['locked']), 'the section is unlocked again');
 
             // ── 4. Changing a published page directly needs publish, and never an AI ─────────────────────
             assert_eq(403, sbdl_call($rt, SBDL_A, $editor, 'POST', 'archive_page', ['page_id' => $post['id']])->status, 'an editor cannot take a live page offline');

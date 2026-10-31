@@ -159,15 +159,15 @@ unit('media usage integration: a file a Studio page uses cannot be deleted; a pa
             $created = sbmu_ok(sbmu_call($rt, SBMU_A, $editor, 'create_page', ['title' => 'Uses media', 'slug' => 'uses-media', 'page_type' => 'page', 'route_mode' => 'standalone']), 'create');
             $pageId = (int) $created['page']['id'];
             $r = sbmu_ok(sbmu_call($rt, SBMU_A, $editor, 'operations', ['page_id' => $pageId, 'expected_revision_id' => (int) $created['page']['active_draft_revision_id'], 'operations' => [
-                ['op' => 'insert_section', 'payload' => ['index' => 0, 'section' => ['label' => 'Main', 'style' => ['background' => ['image' => ['media_id' => $hero, 'alt' => '']]]]]],
+                ['op' => 'insert_block', 'payload' => ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Main'], 'style' => ['background' => ['image' => ['media_id' => $hero, 'alt' => '']]]]]],
             ]]), 'section with background');
-            $sec = (string) $r['document']['sections'][0]['id'];
+            $sec = (string) $r['document']['containers'][0]['id'];
             $r = sbmu_ok(sbmu_call($rt, SBMU_A, $editor, 'operations', ['page_id' => $pageId, 'expected_revision_id' => (int) $r['revision']['id'], 'operations' => [
                 ['op' => 'insert_block', 'payload' => ['parent_id' => $sec, 'index' => 0, 'block' => ['type' => 'core.image', 'props' => ['media' => ['media_id' => $photo, 'alt' => 'Photo']]]]],
                 ['op' => 'insert_block', 'payload' => ['parent_id' => $sec, 'index' => 1, 'block' => ['type' => 'core.heading', 'props' => ['text' => 'Hello', 'level' => 'h2']]]],
             ]]), 'image block');
             $rev = (int) $r['revision']['id'];
-            $heading = (string) $r['document']['sections'][0]['blocks'][1]['id'];
+            $heading = (string) $r['document']['containers'][0]['children'][1]['id'];
 
             $inA(static function () use ($photo, $hero, $spare): void {
                 assert_eq(1, Media::usageCountByPath('/uploads/media/2026/10/mu-photo.png'), 'the image block counts');

@@ -16,9 +16,10 @@ final class ElementCss
     /** block id => css, across a document: what a save may not change without the right. */
     public static function collect(array $document): array
     {
+        $document = DocumentUpgrader::structure($document);
         $found = [];
-        foreach (is_array($document['sections'] ?? null) ? $document['sections'] : [] as $section) {
-            self::walk(is_array($section) ? $section : [], $found);
+        foreach (is_array($document['containers'] ?? null) ? $document['containers'] : [] as $container) {
+            self::walk(is_array($container) ? $container : [], $found);
         }
         ksort($found);
         return $found;

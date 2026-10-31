@@ -38,7 +38,7 @@ import { createTransport } from '../core/api.mjs';
 import { SyncEngine, STATUS } from '../core/sync.mjs';
 import { EditLock } from '../core/lock.mjs';
 import { t, errorMessage } from '../core/messages.mjs';
-import { asList, blockDefinition, documentRows, findNode, insertionPoint, nodeLabel, sectionsOf } from '../core/doc.mjs';
+import { CONTAINER_TYPE, blockDefinition, containersOf, documentRows, findNode, insertionPoint, nodeLabel } from '../core/doc.mjs';
 import {
   EMPTY_SELECTION, actionIds, clickSelect, pruneSelection, remapSelection, selectOnly, selectionCount, setFocus as focusNode, setHover as hoverNode,
 } from '../core/selection.mjs';
@@ -154,14 +154,14 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
 
   useEffect(() => { if (manifest) refreshLibrary(); }, [manifest, refreshLibrary]);
 
-  // Built-in section presets load the first time the Add panel needs them (the first call also seeds them
+  // Built-in Container presets load the first time the Add panel needs them (the first call also seeds them
   // for this tenant), not on every page load: a phone with the Add sheet closed never pays for it.
   const [presets, setPresets] = useState(null);
   const presetsRequested = useRef(false);
   const ensurePresets = useCallback(async () => {
-    if (presetsRequested.current || typeof transport.sectionPresets !== 'function') return;
+    if (presetsRequested.current || typeof transport.containerPresets !== 'function') return;
     presetsRequested.current = true;
-    const res = await transport.sectionPresets();
+    const res = await transport.containerPresets();
     setPresets(res.ok ? res.data.presets : []);
   }, [transport]);
 
@@ -198,7 +198,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   // ── Actions ────────────────────────────────────────────────────────────
   const labelOf = useCallback((id) => {
     const info = findNode(engine.getSnapshot().working, id);
-    return info ? nodeLabel(info.node, manifest, info.kind) : '';
+    return info ? nodeLabel(info.node, manifest) : '';
   }, [engine, manifest]);
 
   const select = useCallback((id, { announceIt = true } = {}) => {
@@ -249,35 +249,38 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
 
   const applyOp = useCallback((operation, options = {}) => engine.apply(operation, options), [engine]);
 
-  const insertSection = useCallback((index) => {
+  /** A new top-level Container (with the server's defaults) at `index`, or at the end of the page; it asks for its layout on the canvas. */
+  const insertContainer = useCallback((index) => {
     const working = engine.getSnapshot().working;
-    const at = Number.isInteger(index) ? index : sectionsOf(working).length;
-    const provisionalId = ops.provisionalId('sec');
-    if (engine.apply(ops.insertSection(at, { label: t('section') }), { provisionalId, label: t('section') })) {
+    const at = Number.isInteger(index) ? index : containersOf(working).length;
+    const provisionalId = ops.provisionalId('blk');
+    const label = t('container');
+    if (engine.apply(ops.insertContainer(at), { provisionalId, label })) {
       setSelection(provisionalId);
       requestEdit();
-      announce(t('announce_inserted', { label: t('section') }));
+      setLayoutChooser(provisionalId);
+      announce(t('announce_inserted', { label }));
     }
     return provisionalId;
   }, [engine, announce, requestEdit]);
 
   const commitInsert = useCallback((type, target, props = null, bindings = null) => {
     const def = blockDefinition(manifest, type);
+    const label = def ? def.label : type;
     const provisionalId = ops.provisionalId('blk');
     const block = { type };
     if (props) block.props = { ...(def ? def.default_props : {}), ...props };
     if (bindings && Object.keys(bindings).length) block.bindings = bindings;
-    // A setup dialog can stay open while a section made for this block is saved and given its real id; the parent
-    // remembered when it opened is then gone, so look for the insertion point again instead of dropping the block.
+    // A setup dialog can stay open while the parent remembered when it opened is saved and given its real id, or removed:
+    // look for the insertion point again instead of dropping the block.
     const working = engine.getSnapshot().working;
-    const where = target.parentId && !findNode(working, target.parentId)
-      ? (insertionPoint(working, manifest, selectionRef.current, type) || target)
-      : target;
-    if (engine.apply(ops.insertBlock(where.parentId, where.index, block), { provisionalId, label: def ? def.label : type })) {
-      setSelection(provisionalId);
+    const stale = target.parentId && !findNode(working, target.parentId);
+    const where = stale ? (insertionPoint(working, manifest, selectionRef.current, type) || { parentId: null, index: containersOf(working).length }) : target;
+    if (engine.apply(ops.insertOperation(def, where, block), { provisionalId, label })) {
+      setSelection(ops.insertedId(where, type, provisionalId));
       requestEdit();
-      if (type === 'core.container') setLayoutChooser(provisionalId);
-      announce(t('announce_inserted', { label: def ? def.label : type }));
+      if (type === CONTAINER_TYPE) setLayoutChooser(provisionalId);
+      announce(t('announce_inserted', { label }));
     }
   }, [engine, manifest, announce, requestEdit]);
 
@@ -285,11 +288,8 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   const insertBlock = useCallback((type, target = null) => {
     const def = blockDefinition(manifest, type);
     if (!def) return;
-    let where = target || insertionPoint(engine.getSnapshot().working, manifest, selectionRef.current, type);
-    if (!where) {
-      const sectionId = insertSection();
-      where = { parentId: sectionId, index: 0 };
-    }
+    const working = engine.getSnapshot().working;
+    const where = target || insertionPoint(working, manifest, selectionRef.current, type) || { parentId: null, index: containersOf(working).length };
     const setup = setupFields(def);
     const { bindings, needsParams } = defaultBindings(def, manifest);
     if (setup.length || needsParams.length) {
@@ -297,30 +297,27 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
       return;
     }
     commitInsert(type, where, null, bindings);
-  }, [engine, manifest, insertSection, commitInsert]);
+  }, [engine, manifest, commitInsert]);
 
   /** Insert a block pre-filled with props (e.g. an Image picked from the media library). */
   const insertBlockWithProps = useCallback((type, props) => {
     const def = blockDefinition(manifest, type);
     if (!def) return;
-    let where = insertionPoint(engine.getSnapshot().working, manifest, selectionRef.current, type);
-    if (!where) {
-      const sectionId = insertSection();
-      where = { parentId: sectionId, index: 0 };
-    }
+    const working = engine.getSnapshot().working;
+    const where = insertionPoint(working, manifest, selectionRef.current, type) || { parentId: null, index: containersOf(working).length };
     commitInsert(type, where, props, defaultBindings(def, manifest).bindings);
-  }, [engine, manifest, insertSection, commitInsert]);
+  }, [engine, manifest, commitInsert]);
 
   const removeNode = useCallback((id, { confirmed = false } = {}) => {
     const info = findNode(engine.getSnapshot().working, id);
     if (!info) return;
-    const label = nodeLabel(info.node, manifest, info.kind);
-    const operation = info.kind === 'section' ? ops.removeSection(id) : ops.removeBlock(id);
+    const label = nodeLabel(info.node, manifest);
+    const operation = ops.removeBlock(id);
     // Locked layers are refused before any "are you sure?" prompt.
     if (lockViolation(engine.getSnapshot().working, operation)) { announce(t('announce_locked')); return; }
-    if (!confirmed && info.kind === 'section' && info.node.blocks && info.node.blocks.length && !window.confirm(t('confirm_remove_section'))) return;
+    if (!confirmed && info.parentId === null && info.node.children && info.node.children.length && !window.confirm(t('confirm_remove_container'))) return;
     if (engine.apply(operation, { label })) {
-      if (selectionRef.current === id) setSelection(info.kind === 'block' ? info.parentId : null);
+      if (selectionRef.current === id) setSelection(info.parentId);
       announce(t('announce_removed', { label }));
     }
   }, [engine, manifest, announce]);
@@ -328,16 +325,15 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   const duplicateNode = useCallback((id) => {
     const info = findNode(engine.getSnapshot().working, id);
     if (!info) return;
-    const label = nodeLabel(info.node, manifest, info.kind);
-    const operation = info.kind === 'section' ? ops.duplicateSection(id) : ops.duplicateBlock(id);
+    const label = nodeLabel(info.node, manifest);
     // The copy (and every node in it) gets a provisional id that holds until the server mints the real ones.
     const copyLabel = `${label}${t('nav_page_copy_suffix')}`;
-    if (engine.apply(operation, { provisionalId: ops.provisionalId(info.kind === 'section' ? 'sec' : 'blk'), label: copyLabel })) {
+    if (engine.apply(ops.duplicateBlock(id), { provisionalId: ops.provisionalId('blk'), label: copyLabel })) {
       announce(t('announce_inserted', { label: copyLabel }));
     }
   }, [engine, manifest, announce]);
 
-  // ── Clipboard: Copy / Cut / Paste of a section or block, across pages ─────────
+  // ── Clipboard: Copy / Cut / Paste of a block, across pages ─────────
   const [notice, setNotice] = useState('');
   const noticeTimer = useRef(0);
   /** Say it twice: to screen readers, and as a short note on screen (a refused paste must not be silent). */
@@ -352,11 +348,11 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   const copyNode = useCallback(async (id, view = null) => {
     const info = findNode(engine.getSnapshot().working, id);
     if (!info) return false;
-    const envelope = buildEnvelope(info.kind, info.node);
+    const envelope = buildEnvelope(info.node);
     if (!envelope) { notify(t('clip_invalid')); return false; }
     const res = await writeClipboard(envelope, view ? view.navigator : undefined);
     if (!res.ok) { notify(t(res.reasonKey)); return false; }
-    announce(t('announce_copied', { label: nodeLabel(info.node, manifest, info.kind) }));
+    announce(t('announce_copied', { label: nodeLabel(info.node, manifest) }));
     return true;
   }, [engine, manifest, announce, notify]);
 
@@ -365,10 +361,10 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     const info = findNode(working, id);
     if (!info) return false;
     // A locked layer (or one holding a locked layer) cannot be removed, so it is not copied away either.
-    if (lockViolation(working, info.kind === 'section' ? ops.removeSection(id) : ops.removeBlock(id))) { announce(t('announce_locked')); return false; }
+    if (lockViolation(working, ops.removeBlock(id))) { announce(t('announce_locked')); return false; }
     if (!(await copyNode(id, view))) return false;
     removeNode(id, { confirmed: true });
-    announce(t('announce_cut', { label: nodeLabel(info.node, manifest, info.kind) }));
+    announce(t('announce_cut', { label: nodeLabel(info.node, manifest) }));
     return true;
   }, [engine, manifest, announce, copyNode, removeNode]);
 
@@ -380,32 +376,11 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     const working = engine.getSnapshot().working;
     const plan = planPaste({ doc: working, manifest, envelope, targetId: targetId && findNode(working, targetId) ? targetId : null, mode });
     if (!plan.ok) { notify(t(plan.reasonKey)); return false; }
-    const fresh = regenerateIds(envelope.node, envelope.kind);
-    const label = envelope.kind === 'section' ? (fresh.label || t('section')) : nodeLabel(fresh, manifest, 'block');
-    let landed = null;
-    if (envelope.kind === 'section') {
-      const sectionId = ops.provisionalId('sec');
-      const { id: _id, blocks, ...rest } = fresh;
-      // The section goes in empty and its blocks follow one by one: the server mints ids for a block's subtree, not for a section's blocks.
-      if (!engine.apply(ops.insertSection(plan.index, { ...rest, blocks: [] }), { provisionalId: sectionId, label })) { notify(t('clip_rejected')); return false; }
-      asList(blocks).forEach((b, i) => {
-        const { id: _bid, ...block } = b;
-        engine.apply(ops.insertBlock(sectionId, i, block), { provisionalId: ops.provisionalId('blk'), label: nodeLabel(block, manifest, 'block') });
-      });
-      landed = sectionId;
-    } else {
-      let parentId = plan.parentId;
-      let index = plan.index;
-      if (plan.newSection) {
-        parentId = ops.provisionalId('sec');
-        if (!engine.apply(ops.insertSection(plan.sectionIndex, { label: t('section') }), { provisionalId: parentId, label: t('section') })) { notify(t('clip_rejected')); return false; }
-        index = 0;
-      }
-      const { id: blockId, ...block } = fresh;
-      if (!engine.apply(ops.insertBlock(parentId, index, block), { provisionalId: blockId, label })) { notify(t('clip_rejected')); return false; }
-      landed = blockId;
-    }
-    setSelection(landed);
+    const { id: blockId, ...block } = regenerateIds(envelope.node);
+    const label = nodeLabel(block, manifest);
+    const operation = plan.newContainer ? ops.insertContainer(plan.index, { children: [block] }) : ops.insertBlock(plan.parentId, plan.index, block);
+    if (!engine.apply(operation, { provisionalId: blockId, label })) { notify(t('clip_rejected')); return false; }
+    setSelection(plan.newContainer ? `${blockId}_0` : blockId);
     announce(t('announce_pasted', { label }));
     return true;
   }, [engine, manifest, announce, notify]);
@@ -415,7 +390,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     if (!info) return;
     const hidden = !!(info.node.visibility && Array.isArray(info.node.visibility.devices) && info.node.visibility.devices.length === 0);
     const visibility = { ...(info.node.visibility || {}), devices: hidden ? ['base', 'sm', 'md', 'lg'] : [] };
-    engine.apply(info.kind === 'section' ? ops.updateSectionVisibility(id, visibility) : ops.updateBlockVisibility(id, visibility), { label: labelOf(id) });
+    engine.apply(ops.updateBlockVisibility(id, visibility), { label: labelOf(id) });
   }, [engine, labelOf]);
 
   /**
@@ -442,32 +417,21 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     return true;
   }, [copyNode, cutNode, pasteNode]);
 
-  const updateSectionLabel = useCallback((id, label) => {
-    const info = findNode(engine.getSnapshot().working, id);
-    if (!info || info.kind !== 'section') return;
-    engine.apply(ops.updateSectionLabel(id, label), { label });
-  }, [engine]);
-
-  /** Name a layer: a section's label, or a block's display name (empty clears it). */
+  /** Name a layer (empty clears it). */
   const renameNode = useCallback((id, label) => {
     const info = findNode(engine.getSnapshot().working, id);
     if (!info) return;
     const name = String(label || '').trim();
-    if (info.kind === 'section') {
-      if (name) engine.apply(ops.updateSectionLabel(id, name), { label: name });
-      return;
-    }
     if (engine.apply(ops.updateBlockMeta(id, { label: name || null }), { label: name || t('layer_name_cleared') })) {
       announce(t('announce_renamed', { label: name || labelOf(id) }));
     }
   }, [engine, announce, labelOf]);
 
-  /** Lock or unlock a layer (a section, or a block and everything inside it). */
+  /** Lock or unlock a layer (a block and everything inside it). */
   const setLocked = useCallback((id, locked) => {
     const info = findNode(engine.getSnapshot().working, id);
     if (!info) return;
-    const operation = info.kind === 'section' ? ops.updateSectionLocked(id, locked) : ops.updateBlockMeta(id, { locked });
-    if (engine.apply(operation, { label: labelOf(id) })) {
+    if (engine.apply(ops.updateBlockMeta(id, { locked }), { label: labelOf(id) })) {
       announce(t(locked ? 'announce_layer_locked' : 'announce_layer_unlocked', { label: labelOf(id) }));
     }
   }, [engine, announce, labelOf]);
@@ -475,12 +439,6 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
   const moveBlockTo = useCallback((id, target) => {
     if (!target) return;
     if (engine.apply(ops.moveBlock(id, target.parentId, target.index), { label: labelOf(id) })) {
-      announce(t('announce_moved', { label: labelOf(id) }));
-    }
-  }, [engine, labelOf, announce]);
-
-  const moveSectionTo = useCallback((id, toIndex) => {
-    if (engine.apply(ops.moveSection(id, toIndex), { label: labelOf(id) })) {
       announce(t('announce_moved', { label: labelOf(id) }));
     }
   }, [engine, labelOf, announce]);
@@ -529,7 +487,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
 
   const insertTemplate = useCallback(async (tpl) => {
     const working = engine.getSnapshot().working;
-    const target = insertTargetFor(working, tpl, selectionRef.current, (d, sel) => insertionPoint(d, manifest, sel, 'core.container'));
+    const target = insertTargetFor(working, tpl, selectionRef.current, (d, sel) => insertionPoint(d, manifest, sel, CONTAINER_TYPE));
     if (!target) {
       announce(t('empty_page'));
       return false;
@@ -548,12 +506,12 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     return true;
   }, [transport, announce, refreshLibrary]);
 
-  /** Insert a LIVE reference to a global component (a section with global_ref; no local blocks). */
+  /** Insert a LIVE reference to a global component (a top-level Container with global_ref; no children of its own). */
   const insertComponentRef = useCallback((component) => {
     const working = engine.getSnapshot().working;
     const index = referenceIndexFor(working, selectionRef.current);
-    const provisionalId = ops.provisionalId('sec');
-    if (engine.apply(ops.insertGlobalSection(index, component.ref, component.title), { provisionalId, label: component.title })) {
+    const provisionalId = ops.provisionalId('blk');
+    if (engine.apply(ops.insertGlobalContainer(index, component.ref, component.title), { provisionalId, label: component.title })) {
       setSelection(provisionalId);
       announce(t('announce_component_inserted'));
       return true;
@@ -561,9 +519,9 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     return false;
   }, [engine, announce]);
 
-  const detachComponent = useCallback(async (sectionId) => {
-    if (!window.confirm(t('global_section_detach_confirm'))) return false;
-    const ok = await engine.command((base) => transport.detachComponent({ ...base, section_id: sectionId }), { label: t('announce_component_detached') });
+  const detachComponent = useCallback(async (containerId) => {
+    if (!window.confirm(t('global_container_detach_confirm'))) return false;
+    const ok = await engine.command((base) => transport.detachComponent({ ...base, container_id: containerId }), { label: t('announce_component_detached') });
     if (ok) { setSelection(null); refreshLibrary(); }
     return ok;
   }, [engine, transport, refreshLibrary]);
@@ -577,11 +535,11 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     return true;
   }, [transport, announce, refreshLibrary]);
 
-  const createComponent = useCallback(async ({ title, slug, sectionId, openAfter }) => {
+  const createComponent = useCallback(async ({ title, slug, containerId, openAfter }) => {
     let created = null;
-    if (sectionId) {
+    if (containerId) {
       const ok = await engine.command(async (base) => {
-        const res = await transport.createComponent({ ...base, title, slug, section_id: sectionId });
+        const res = await transport.createComponent({ ...base, title, slug, container_id: containerId });
         if (res.ok) created = res.data.component;
         return res;
       }, { label: t('announce_component_created') });
@@ -666,7 +624,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
 
   const ctx = useMemo(() => ({
     boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView,
-    insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf,
+    insertBlock, insertBlockWithProps, insertContainer, duplicateNode, renameNode, setLocked, removeNode, moveBlockTo, labelOf,
     copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, editorShortcut, peekClipboard: peekMemory,
     viewport: viewportByKey(viewportKey), setViewport: changeViewport, tokensSaved: onTokensSaved, refreshManifest, panelRequest, requestPanel, requestEdit, layoutChooser, setLayoutChooser, structureOpen, setStructureOpen, toggleStructure,
     library: libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate,
@@ -679,7 +637,7 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     openHistory: () => setHistoryOpen(true),
     openTheme: manifest && manifest.permissions && (manifest.permissions.tokens || manifest.permissions.view) ? () => setDialog('theme') : null,
     openPackages: manifest && manifest.permissions && manifest.permissions.view ? () => setDialog('package') : null,
-  }), [boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertSection, duplicateNode, updateSectionLabel, renameNode, setLocked, removeNode, moveBlockTo, moveSectionTo, labelOf, copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, editorShortcut, viewportKey, changeViewport, onTokensSaved, refreshManifest, panelRequest, requestPanel, requestEdit, layoutChooser, setLayoutChooser, structureOpen, setStructureOpen, toggleStructure,
+  }), [boot, engine, manifest, transport, mediaApi, announce, applyOp, canvasView, setCanvasView, insertBlock, insertBlockWithProps, insertContainer, duplicateNode, renameNode, setLocked, removeNode, moveBlockTo, labelOf, copyNode, cutNode, pasteNode, toggleHidden, clipboardShortcut, editorShortcut, viewportKey, changeViewport, onTokensSaved, refreshManifest, panelRequest, requestPanel, requestEdit, layoutChooser, setLayoutChooser, structureOpen, setStructureOpen, toggleStructure,
     libraryWithPresets, refreshLibrary, ensurePresets, applyTemplate, insertTemplate, deleteTemplate, insertComponentRef, detachComponent, publishComponent, createPartial, canvasVersion]);
 
   const selectionCtx = useMemo(() => ({

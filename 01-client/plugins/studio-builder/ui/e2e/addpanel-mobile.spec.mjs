@@ -29,14 +29,14 @@ test('Blocks sheet: Elements show a touch-sized category rail and View all works
 
 test('the built-in presets are not requested (or seeded) until the Add sheet is opened', async ({ page }) => {
   const calls = [];
-  page.on('request', (r) => { if (/action=section_presets/.test(r.url())) calls.push(r.url()); });
+  page.on('request', (r) => { if (/action=container_presets/.test(r.url())) calls.push(r.url()); });
   await openBuilder(page);
   await page.waitForTimeout(1500); // generous: anything fired on load would have fired by now
   expect(calls).toHaveLength(0);
   await page.getByTestId('mobile-dock-blocks').click();
   const sheet = page.locator('.sbx-left.is-mobile-open');
   await sheet.getByRole('tab', { name: /^Add$/ }).click();
-  await sheet.getByRole('tab', { name: 'Sections' }).click();
-  await expect(sheet.getByRole('tabpanel', { name: 'Add' }).getByTestId('section-presets')).toBeVisible();
+  await sheet.getByRole('tab', { name: 'Containers' }).click();
+  await expect(sheet.getByRole('tabpanel', { name: 'Add' }).getByTestId('container-presets')).toBeVisible();
   expect(calls).toHaveLength(1);
 });

@@ -17,6 +17,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Service;
 
 use Slate\Data\Database;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\FormFieldRenderer;
 use Slate\Module\StudioBuilder\Schema\FieldSchema;
 
@@ -56,11 +57,7 @@ final class StudioFormSync
                 $walk(is_array($block['children'] ?? null) ? $block['children'] : []);
             }
         };
-        foreach ((array) ($document['sections'] ?? []) as $section) {
-            if (is_array($section)) {
-                $walk(is_array($section['blocks'] ?? null) ? $section['blocks'] : []);
-            }
-        }
+        $walk((array) (DocumentUpgrader::structure($document)['containers'] ?? []));
         return $out;
     }
 

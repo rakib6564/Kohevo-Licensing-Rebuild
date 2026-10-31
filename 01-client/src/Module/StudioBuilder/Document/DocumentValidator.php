@@ -3,10 +3,10 @@
  * Kohevo Studio (studio-builder) — Strict Canonical Document Validator.
  *
  * Enforces all Phase 2 validation invariants on the Kohevo Studio Canonical
- * Document (schema_version = "1.0"):
+ * Document (schema_version = "2.0"):
  * - Fails closed on any invalid type, unknown property, or constraint violation.
  * - Rejects `tenant_id` anywhere in the document tree.
- * - Enforces byte size, JSON depth, section count, total block count, and nesting depth.
+ * - Enforces byte size, JSON depth, Container count, total block count, and nesting depth.
  * - Validates every block against `BlockRegistry` and its `FieldSchema`.
  * - Enforces block entitlement, RBAC permission, children capability, symbolic tokens,
  *   safe media references, and declarative bindings.
@@ -60,11 +60,7 @@ final class DocumentValidator
                 }
             }
         };
-        foreach ((array) ($document['sections'] ?? []) as $section) {
-            if (is_array($section) && is_array($section['blocks'] ?? null)) {
-                $walk($section['blocks']);
-            }
-        }
+        $walk((array) ($document['containers'] ?? []));
         return $out;
     }
 
@@ -78,7 +74,7 @@ final class DocumentValidator
      * @param string|array<string, mixed> $document
      * @param array{
      *   max_bytes?: int,
-     *   max_sections?: int,
+     *   max_containers?: int,
      *   max_blocks?: int,
      *   max_depth?: int,
      *   media_exists?: callable(int $mediaId): bool,
@@ -95,7 +91,7 @@ final class DocumentValidator
         array $options = [],
     ): ValidationResult {
         $maxBytes    = (int) ($options['max_bytes'] ?? CanonicalDocumentSchema::MAX_DOCUMENT_BYTES);
-        $maxSections = (int) ($options['max_sections'] ?? CanonicalDocumentSchema::MAX_SECTIONS);
+        $maxContainers = (int) ($options['max_containers'] ?? CanonicalDocumentSchema::MAX_CONTAINERS);
         $maxBlocks   = (int) ($options['max_blocks'] ?? CanonicalDocumentSchema::MAX_BLOCKS_PER_DOCUMENT);
         $maxDepth    = (int) ($options['max_depth'] ?? CanonicalDocumentSchema::MAX_NESTING_DEPTH);
 
@@ -149,7 +145,7 @@ final class DocumentValidator
             }
         }
 
-        // 4. schema_version must be strictly "1.0"
+        // 4. schema_version must be strictly the current one
         $schemaVersion = $decoded['schema_version'] ?? null;
         if (!is_string($schemaVersion) || $schemaVersion !== CanonicalDocumentSchema::SCHEMA_VERSION) {
             $errors[] = ValidationResult::issue(
@@ -189,13 +185,13 @@ final class DocumentValidator
             self::validateSeo($decoded['seo'], $options, $errors);
         }
 
-        // 9. sections & blocks
-        $sections = $decoded['sections'] ?? null;
-        if (!is_array($sections) || !array_is_list($sections)) {
-            $errors[] = ValidationResult::issue('$.sections', 'invalid_sections', 'sections must be a sequential JSON array.');
+        // 9. containers & blocks: the top level holds Containers and nothing else.
+        $containers = $decoded['containers'] ?? null;
+        if (!is_array($containers) || !array_is_list($containers)) {
+            $errors[] = ValidationResult::issue('$.containers', 'invalid_containers', 'containers must be a sequential JSON array.');
         } else {
-            if (count($sections) > $maxSections) {
-                $errors[] = ValidationResult::issue('$.sections', 'max_sections_exceeded', "Document exceeds maximum of {$maxSections} sections.");
+            if (count($containers) > $maxContainers) {
+                $errors[] = ValidationResult::issue('$.containers', 'max_containers_exceeded', "Document exceeds maximum of {$maxContainers} top-level Containers.");
             }
 
             $seenIds = [];
@@ -203,18 +199,15 @@ final class DocumentValidator
             // Phase 6: live global references are only valid in referencing document types.
             $options['_document_type'] = is_string($docType) ? $docType : '';
 
-            foreach ($sections as $sIdx => $section) {
-                self::validateSection(
-                    $section,
-                    "$.sections[{$sIdx}]",
-                    $registry,
-                    $options,
-                    $seenIds,
-                    $totalBlocks,
-                    $maxBlocks,
-                    $maxDepth,
-                    $errors
-                );
+            foreach ($containers as $cIdx => $container) {
+                $path = "$.containers[{$cIdx}]";
+                if (is_array($container) && ($container['type'] ?? null) !== CanonicalDocumentSchema::CONTAINER_TYPE) {
+                    $errors[] = ValidationResult::issue("{$path}.type", 'top_level_not_container', 'Only a Container can sit at the top level of a page; put this block inside one.');
+                }
+                if (is_array($container) && array_key_exists('global_ref', $container)) {
+                    self::validateGlobalRef($container, $path, $options, $errors);
+                }
+                self::validateBlock($container, $path, 1, $registry, $options, $seenIds, $totalBlocks, $maxBlocks, $maxDepth, $errors);
             }
         }
 
@@ -324,7 +317,7 @@ final class DocumentValidator
             self::validateConditions($settings['conditions'], $errors);
         }
 
-        // The same sticky shape a section or block takes (edge, offset, devices, shadow, background, hide on scroll).
+        // The same sticky shape a block takes (edge, offset, devices, shadow, background, hide on scroll).
         if (isset($settings['sticky_header'])) {
             foreach (ScrollEffects::issues(['sticky' => $settings['sticky_header']], '$.settings') as $issue) {
                 $issue['path'] = str_replace('$.settings.sticky', '$.settings.sticky_header', $issue['path']);
@@ -466,240 +459,31 @@ final class DocumentValidator
     }
 
     /**
+     * A LIVE reference to a Global Component (Phase 6). The Container then owns no content of its own: its children must be
+     * empty and the referenced component is rendered from its published revision. A component, header or footer document
+     * may not reference one (references are one level deep).
+     *
+     * @param array<string, mixed> $container
      * @param array<string, mixed> $options
-     * @param array<string, string> $seenIds
      * @param list<array{path: string, code: string, message: string}> $errors
      */
-    private static function validateSection(
-        mixed $section,
-        string $path,
-        BlockRegistry $registry,
-        array $options,
-        array &$seenIds,
-        int &$totalBlocks,
-        int $maxBlocks,
-        int $maxDepth,
-        array &$errors,
-    ): void {
-        if (!is_array($section) || array_is_list($section)) {
-            $errors[] = ValidationResult::issue($path, 'invalid_section', 'Section must be a JSON object.');
-            return;
-        }
-
-        foreach (array_keys($section) as $k) {
-            $ks = (string) $k;
-            if ($ks === 'tenant_id') {
-                continue;
-            }
-            if (!in_array($ks, CanonicalDocumentSchema::ALLOWED_SECTION_KEYS, true)) {
-                $errors[] = ValidationResult::issue("{$path}.{$ks}", 'unknown_property', "Unknown section property '{$ks}'.");
-            }
-        }
-
-        if (array_key_exists('style', $section)) {
-            foreach (StyleSurface::sectionIssues($section['style'], "{$path}.style") as $issue) {
-                $errors[] = ValidationResult::issue($issue['path'], $issue['code'], $issue['message']);
-            }
-            $secImage = is_array($section['style']) && is_array($section['style']['background'] ?? null) ? ($section['style']['background']['image'] ?? null) : null;
-            if (is_array($secImage) && isset($secImage['media_id']) && is_int($secImage['media_id']) && $secImage['media_id'] > 0
-                && isset($options['media_exists']) && is_callable($options['media_exists']) && !$options['media_exists']($secImage['media_id'])) {
-                $errors[] = ValidationResult::issue("{$path}.style.background.image.media_id", 'cross_tenant_or_missing_media', "Referenced media_id {$secImage['media_id']} does not exist in the active tenant.");
-            }
-        }
-
-        foreach (CanonicalDocumentSchema::REQUIRED_SECTION_KEYS as $reqKey) {
-            if (!array_key_exists($reqKey, $section)) {
-                $errors[] = ValidationResult::issue("{$path}.{$reqKey}", 'required_field', "Missing required section field '{$reqKey}'.");
-            }
-        }
-
-        // Section ID
-        $secId = $section['id'] ?? null;
-        if (!is_string($secId) || preg_match(CanonicalDocumentSchema::SECTION_ID_PATTERN, $secId) !== 1) {
-            $errors[] = ValidationResult::issue("{$path}.id", 'invalid_node_id', 'Section id must match ' . CanonicalDocumentSchema::SECTION_ID_PATTERN . '.');
-        } else {
-            if (isset($seenIds[$secId])) {
-                $errors[] = ValidationResult::issue("{$path}.id", 'duplicate_node_id', "Duplicate node id '{$secId}' (already used at {$seenIds[$secId]}).");
-            } else {
-                $seenIds[$secId] = "{$path}.id";
-            }
-        }
-
-        // Section label
-        $label = $section['label'] ?? null;
-        if (!is_string($label) || mb_strlen($label, 'UTF-8') > 120 || FieldSchema::containsExecutableOrSqlFragment($label)) {
-            $errors[] = ValidationResult::issue("{$path}.label", 'invalid_section_label', 'Section label must be a safe string <= 120 chars.');
-        }
-
-        self::validateMotion($section, $path, $errors, true);
-
-        // Layer lock (editor aid): a boolean when present.
-        if (array_key_exists('locked', $section) && !is_bool($section['locked'])) {
-            $errors[] = ValidationResult::issue("{$path}.locked", 'invalid_locked', 'section.locked must be a boolean.');
-        }
-
-        // global_ref — a LIVE reference to a Global Component (Phase 6). The
-        // section then owns no content of its own: its blocks must be empty and
-        // the referenced component is rendered from its published revision. A
-        // component / header / footer document may not reference (one level).
-        if (array_key_exists('global_ref', $section) && $section['global_ref'] !== null) {
-            $gRef = $section['global_ref'];
-            if (!is_string($gRef) || preg_match(CanonicalDocumentSchema::GLOBAL_REF_PATTERN, $gRef) !== 1) {
-                $errors[] = ValidationResult::issue("{$path}.global_ref", 'invalid_global_ref', 'section.global_ref must be null or a valid symbolic reference key.');
-            } elseif (isset($options['partial_exists']) && is_callable($options['partial_exists']) && !($options['partial_exists'])($gRef)) {
-                $errors[] = ValidationResult::issue("{$path}.global_ref", 'cross_tenant_or_missing_partial', "Referenced global_ref '{$gRef}' does not exist in the active tenant.");
-            }
-            $docType = (string) ($options['_document_type'] ?? '');
-            if ($docType !== '' && !in_array($docType, CanonicalDocumentSchema::GLOBAL_REF_DOCUMENT_TYPES, true)) {
-                $errors[] = ValidationResult::issue("{$path}.global_ref", 'global_ref_not_allowed', "A '{$docType}' document cannot reference a global component (references are one level deep).");
-            }
-            $refBlocks = $section['blocks'] ?? null;
-            if (is_array($refBlocks) && $refBlocks !== []) {
-                $errors[] = ValidationResult::issue("{$path}.blocks", 'global_ref_owns_no_blocks', 'A section that references a global component must not carry local blocks.');
-            }
-        }
-
-        // layout
-        if (array_key_exists('layout', $section)) {
-            self::validateSectionLayout($section['layout'], "{$path}.layout", $errors);
-        }
-
-        // visibility
-        if (array_key_exists('visibility', $section)) {
-            self::validateVisibility($section['visibility'], "{$path}.visibility", $errors);
-        }
-
-        // blocks
-        $blocks = $section['blocks'] ?? null;
-        if (!is_array($blocks) || !array_is_list($blocks)) {
-            $errors[] = ValidationResult::issue("{$path}.blocks", 'invalid_blocks', 'section.blocks must be a sequential JSON array.');
-            return;
-        }
-
-        foreach ($blocks as $bIdx => $block) {
-            self::validateBlock(
-                $block,
-                "{$path}.blocks[{$bIdx}]",
-                1,
-                $registry,
-                $options,
-                $seenIds,
-                $totalBlocks,
-                $maxBlocks,
-                $maxDepth,
-                $errors
-            );
-        }
-    }
-
-    /**
-     * @param list<array{path: string, code: string, message: string}> $errors
-     */
-    private static function validateSectionLayout(mixed $layout, string $path, array &$errors): void
+    private static function validateGlobalRef(array $container, string $path, array $options, array &$errors): void
     {
-        if (!is_array($layout) || ($layout !== [] && array_is_list($layout))) {
-            $errors[] = ValidationResult::issue($path, 'invalid_layout', 'section.layout must be a JSON object.');
+        $gRef = $container['global_ref'];
+        if ($gRef === null) {
             return;
         }
-
-        foreach (array_keys($layout) as $k) {
-            $ks = (string) $k;
-            if ($ks === 'tenant_id') {
-                continue;
-            }
-            if (!in_array($ks, CanonicalDocumentSchema::ALLOWED_LAYOUT_KEYS, true)) {
-                $errors[] = ValidationResult::issue("{$path}.{$ks}", 'unknown_property', "Unknown section layout property '{$ks}'.");
-            }
+        if (!is_string($gRef) || preg_match(CanonicalDocumentSchema::GLOBAL_REF_PATTERN, $gRef) !== 1) {
+            $errors[] = ValidationResult::issue("{$path}.global_ref", 'invalid_global_ref', 'global_ref must be null or a valid symbolic reference key.');
+        } elseif (isset($options['partial_exists']) && is_callable($options['partial_exists']) && !($options['partial_exists'])($gRef)) {
+            $errors[] = ValidationResult::issue("{$path}.global_ref", 'cross_tenant_or_missing_partial', "Referenced global_ref '{$gRef}' does not exist in the active tenant.");
         }
-
-        if (isset($layout['columns'])) {
-            self::validateResponsiveColumns($layout['columns'], "{$path}.columns", $errors);
+        $docType = (string) ($options['_document_type'] ?? '');
+        if ($docType !== '' && !in_array($docType, CanonicalDocumentSchema::GLOBAL_REF_DOCUMENT_TYPES, true)) {
+            $errors[] = ValidationResult::issue("{$path}.global_ref", 'global_ref_not_allowed', "A '{$docType}' document cannot reference a global component (references are one level deep).");
         }
-
-        if (isset($layout['width']) && (!is_string($layout['width']) || !in_array($layout['width'], CanonicalDocumentSchema::ALLOWED_SECTION_WIDTHS, true))) {
-            $errors[] = ValidationResult::issue("{$path}.width", 'invalid_layout_width', 'Invalid section layout width.');
-        }
-
-        // A custom width per device: a breakpoint map of sizes, as the Inspector's other size fields take them.
-        if (isset($layout['custom_width'])) {
-            $custom = $layout['custom_width'];
-            if (!is_array($custom) || $custom === [] || array_is_list($custom)) {
-                $errors[] = ValidationResult::issue("{$path}.custom_width", 'invalid_custom_width', 'section.layout.custom_width must be a breakpoint map of sizes.');
-            } else {
-                foreach ($custom as $bp => $size) {
-                    if (!in_array((string) $bp, CanonicalDocumentSchema::ALLOWED_BREAKPOINTS, true)) {
-                        $errors[] = ValidationResult::issue("{$path}.custom_width.{$bp}", 'invalid_breakpoint', "Unknown breakpoint '{$bp}'.");
-                    } elseif (!StyleSurface::isSize($size)) {
-                        $errors[] = ValidationResult::issue("{$path}.custom_width.{$bp}", 'invalid_custom_width', 'A custom width is a size such as 960px, 90%, 60rem or 80vw.');
-                    }
-                }
-            }
-        }
-
-        if (isset($layout['gap']) && (!is_string($layout['gap']) || !in_array($layout['gap'], CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, true))) {
-            $errors[] = ValidationResult::issue("{$path}.gap", 'invalid_layout_gap', 'Invalid section layout gap token.');
-        }
-
-        if (isset($layout['padding_y'])) {
-            self::validateResponsiveSpacing($layout['padding_y'], "{$path}.padding_y", $errors);
-        }
-
-        if (array_key_exists('background_token', $layout) && $layout['background_token'] !== null) {
-            if (!is_string($layout['background_token']) || preg_match(CanonicalDocumentSchema::TOKEN_REF_PATTERN, $layout['background_token']) !== 1) {
-                $errors[] = ValidationResult::issue("{$path}.background_token", 'invalid_token_ref', 'section.layout.background_token must be a valid symbolic design token.');
-            }
-        }
-    }
-
-    /**
-     * @param list<array{path: string, code: string, message: string}> $errors
-     */
-    private static function validateResponsiveColumns(mixed $columns, string $path, array &$errors): void
-    {
-        if (is_int($columns)) {
-            if ($columns < 1 || $columns > 12) {
-                $errors[] = ValidationResult::issue($path, 'invalid_columns', 'Columns must be between 1 and 12.');
-            }
-            return;
-        }
-        if (!is_array($columns) || $columns === [] || array_is_list($columns)) {
-            $errors[] = ValidationResult::issue($path, 'invalid_columns', 'Columns must be an integer (1..12) or breakpoint map.');
-            return;
-        }
-        foreach ($columns as $bp => $cols) {
-            if (!in_array((string) $bp, CanonicalDocumentSchema::ALLOWED_BREAKPOINTS, true)) {
-                $errors[] = ValidationResult::issue("{$path}.{$bp}", 'invalid_breakpoint', "Unknown breakpoint '{$bp}'.");
-                continue;
-            }
-            if (!is_int($cols) || $cols < 1 || $cols > 12) {
-                $errors[] = ValidationResult::issue("{$path}.{$bp}", 'invalid_columns', 'Breakpoint columns must be an integer between 1 and 12.');
-            }
-        }
-    }
-
-    /**
-     * @param list<array{path: string, code: string, message: string}> $errors
-     */
-    private static function validateResponsiveSpacing(mixed $spacing, string $path, array &$errors): void
-    {
-        if (is_string($spacing)) {
-            if (!in_array($spacing, CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, true)) {
-                $errors[] = ValidationResult::issue($path, 'invalid_spacing', 'Spacing value must be a valid spacing scale token.');
-            }
-            return;
-        }
-        if (!is_array($spacing) || $spacing === [] || array_is_list($spacing)) {
-            $errors[] = ValidationResult::issue($path, 'invalid_spacing', 'Spacing must be a scale token or breakpoint map.');
-            return;
-        }
-        foreach ($spacing as $bp => $val) {
-            if (!in_array((string) $bp, CanonicalDocumentSchema::ALLOWED_BREAKPOINTS, true)) {
-                $errors[] = ValidationResult::issue("{$path}.{$bp}", 'invalid_breakpoint', "Unknown breakpoint '{$bp}'.");
-                continue;
-            }
-            if (!is_string($val) || !in_array($val, CanonicalDocumentSchema::ALLOWED_SPACING_SCALE, true)) {
-                $errors[] = ValidationResult::issue("{$path}.{$bp}", 'invalid_spacing', 'Breakpoint spacing must be a valid spacing scale token.');
-            }
+        if (is_array($container['children'] ?? null) && $container['children'] !== []) {
+            $errors[] = ValidationResult::issue("{$path}.children", 'global_ref_owns_no_blocks', 'A Container that references a global component must not carry local blocks.');
         }
     }
 
@@ -856,7 +640,7 @@ final class DocumentValidator
             }
         }
 
-        self::validateMotion($block, $path, $errors, false);
+        self::validateMotion($block, $path, $errors);
 
         // Validate optional editor metadata (display name + layer lock) if present
         if (array_key_exists('metadata', $block)) {
@@ -895,6 +679,11 @@ final class DocumentValidator
         }
 
         // Wrapper element (B2-P3b): an allow-listed semantic tag.
+        // A live reference belongs to a top-level Container (checked with the top level); nowhere else.
+        if ($depth > 1 && array_key_exists('global_ref', $block) && $block['global_ref'] !== null) {
+            $errors[] = ValidationResult::issue("{$path}.global_ref", 'global_ref_not_allowed', 'Only a top-level Container can reference a global component.');
+        }
+
         if (array_key_exists('tag', $block) && (!is_string($block['tag']) || !in_array($block['tag'], CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS, true))) {
             $errors[] = ValidationResult::issue("{$path}.tag", 'invalid_tag', 'block.tag must be one of: ' . implode(', ', CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS) . '.');
         }
@@ -1102,18 +891,18 @@ final class DocumentValidator
     }
 
     /**
-     * `animation` and `interactions` of a block or a section: shapes and enums only (the stylesheet owns the CSS), and the
+     * `animation` and `interactions` of a block: shapes and enums only (the stylesheet owns the CSS), and the
      * sticky and parallax settings `interactions` carries (ScrollEffects).
      *
      * @param array<string, mixed> $node
      * @param list<mixed> $errors
      */
-    private static function validateMotion(array $node, string $path, array &$errors, bool $isSection): void
+    private static function validateMotion(array $node, string $path, array &$errors): void
     {
         if (array_key_exists('animation', $node)) {
             $animation = $node['animation'];
             if (!is_array($animation) || ($animation !== [] && array_is_list($animation))) {
-                $errors[] = ValidationResult::issue("{$path}.animation", 'invalid_animation', ($isSection ? 'section' : 'block') . '.animation must be a JSON object.');
+                $errors[] = ValidationResult::issue("{$path}.animation", 'invalid_animation', 'block.animation must be a JSON object.');
             } elseif (isset($animation['type']) && (!is_string($animation['type']) || !in_array($animation['type'], CanonicalDocumentSchema::ALLOWED_ANIMATION_TYPES, true))) {
                 $errors[] = ValidationResult::issue("{$path}.animation.type", 'invalid_animation_type', 'Invalid animation type.');
             }
@@ -1121,7 +910,7 @@ final class DocumentValidator
         if (array_key_exists('interactions', $node)) {
             $interactions = $node['interactions'];
             if (!is_array($interactions) || ($interactions !== [] && array_is_list($interactions))) {
-                $errors[] = ValidationResult::issue("{$path}.interactions", 'invalid_interactions', ($isSection ? 'section' : 'block') . '.interactions must be a JSON object.');
+                $errors[] = ValidationResult::issue("{$path}.interactions", 'invalid_interactions', 'block.interactions must be a JSON object.');
             } elseif (isset($interactions['trigger']) && (!is_string($interactions['trigger']) || !in_array($interactions['trigger'], CanonicalDocumentSchema::ALLOWED_INTERACTION_TRIGGERS, true))) {
                 $errors[] = ValidationResult::issue("{$path}.interactions.trigger", 'invalid_interaction_trigger', 'Invalid interaction trigger.');
             }

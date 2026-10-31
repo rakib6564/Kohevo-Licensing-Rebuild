@@ -307,19 +307,12 @@ unit('sprint8 unit: WidgetMigrator transforms older block and document versions'
 
     // 2. Migrate full document
     $doc = CanonicalDocumentSchema::emptyDocument();
-    $doc['sections'][] = [
-        'id'         => CanonicalDocumentSchema::newSectionId(),
-        'label'      => 'Stats Section',
-        'global_ref' => null,
-        'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        'blocks'     => [$oldBlock],
-    ];
+    $doc['containers'][] = CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Stats Section'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [$oldBlock]]);
 
     $migratedDoc = Studio::migrate($doc);
-    assert_eq(2, $migratedDoc['sections'][0]['blocks'][0]['version']);
-    assert_eq('99', $migratedDoc['sections'][0]['blocks'][0]['props']['value']);
-    assert_eq('%', $migratedDoc['sections'][0]['blocks'][0]['props']['suffix']);
+    assert_eq(2, $migratedDoc['containers'][0]['children'][0]['version']);
+    assert_eq('99', $migratedDoc['containers'][0]['children'][0]['props']['value']);
+    assert_eq('%', $migratedDoc['containers'][0]['children'][0]['props']['suffix']);
 
     WidgetSdk::reset();
 });

@@ -104,7 +104,7 @@ test('an Off-canvas drawer keeps its part styles once the runtime has moved it t
     const created = (await call('create_page', { title: `E2E drawer ${stamp}`, slug: `e2e-drawer-${stamp}`, page_type: 'page', route_mode: 'standalone' })).j.data.page;
     const ops = await call('operations', {
       page_id: created.id, expected_revision_id: created.active_draft_revision_id, revision_kind: 'manual',
-      operations: [{ op: 'insert_section', payload: { index: 0, section: { label: 'Drawer', blocks: [drawer] } } }],
+      operations: [{ op: 'insert_block', payload: { parent_id: null, index: 0, block: { type: 'core.container', metadata: { label: 'Drawer' }, children: [drawer] } } }],
     });
     const rev = ops.j.data && ops.j.data.revision ? ops.j.data.revision.id : null;
     const p = await call('publish', { page_id: created.id, expected_revision_id: rev });

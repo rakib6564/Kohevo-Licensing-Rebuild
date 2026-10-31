@@ -240,16 +240,12 @@ use Slate\Module\StudioBuilder\Document\DocumentValidator;
 function sbss_validate_block(array $style, array $extra = []): \Slate\Module\StudioBuilder\Schema\ValidationResult
 {
     $doc = [
-        'schema_version' => '1.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [],
-        'sections' => [[
-            'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'S', 'global_ref' => null, 'layout' => [],
-            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-            'blocks' => [[
+        'schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [],
+        'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [[
                 'id' => CanonicalDocumentSchema::newBlockId(), 'type' => 'core.heading', 'version' => 1,
                 'props' => ['text' => 'x', 'level' => 'h2'], 'style' => $style + CanonicalDocumentSchema::defaultBlockStyle(),
                 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [],
-            ] + $extra],
-        ]],
+            ] + $extra]])],
     ];
     return DocumentValidator::validate($doc, BlockRegistry::withAllCoreBlocks());
 }
@@ -402,16 +398,13 @@ unit('states: the normalizer drops empty states and keeps keys sorted', function
         'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'bindings' => [], 'children' => [], 'style_states' => $states,
     ];
-    $doc = fn (array $b) => ['schema_version' => '1.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'sections' => [[
-        'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'S', 'global_ref' => null, 'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'blocks' => [$b],
-    ]]];
+    $doc = fn (array $b) => ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [$b]])]];
     $registry = BlockRegistry::withAllCoreBlocks();
     $out = DocumentNormalizer::normalize($doc($block(['hover' => [], 'focus' => ['opacity' => 0.5, 'color' => '#fff']])), $registry);
-    $states = $out['sections'][0]['blocks'][0]['style_states'] ?? null;
+    $states = $out['containers'][0]['children'][0]['style_states'] ?? null;
     assert_eq(['focus' => ['color' => '#fff', 'opacity' => 0.5]], $states, 'the empty hover state is gone and keys are sorted');
     $none = DocumentNormalizer::normalize($doc($block(['hover' => []])), $registry);
-    assert_false(array_key_exists('style_states', $none['sections'][0]['blocks'][0]), 'an all-empty map is not stored');
+    assert_false(array_key_exists('style_states', $none['containers'][0]['children'][0]), 'an all-empty map is not stored');
 });
 
 // ═══ Slice 3: background image (media_ref), fit, repeat, focal point, overlay ═══
@@ -517,14 +510,11 @@ unit('background: a typed legacy URL is still ignored, never rendered', function
 });
 
 unit('background: the image is a tracked media dependency', function (): void {
-    $doc = ['schema_version' => '1.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'sections' => [[
-        'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'S', 'global_ref' => null, 'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'blocks' => [[
+    $doc = ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [[
             'id' => 'blk_aaaaaaaaaaaaaaaaaaaaaaaa', 'type' => 'core.heading', 'version' => 1, 'props' => ['text' => 'x', 'level' => 'h2'],
             'style' => ['background' => ['image' => ['media_id' => 7, 'alt' => '']]] + CanonicalDocumentSchema::defaultBlockStyle(),
             'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [],
-        ]],
-    ]]];
+        ]]])]];
     $records = DependencyExtractor::extract($doc, BlockRegistry::withAllCoreBlocks());
     $media = array_values(array_filter($records, static fn ($r) => $r->dependencyType === 'media'));
     assert_eq(1, count($media), 'one media dependency');
@@ -533,19 +523,16 @@ unit('background: the image is a tracked media dependency', function (): void {
 });
 
 unit('background: the editor\'s tenant check refuses a media id the tenant does not own', function (): void {
-    $doc = ['schema_version' => '1.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'sections' => [[
-        'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'S', 'global_ref' => null, 'layout' => [],
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'blocks' => [[
+    $doc = ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [[
             'id' => CanonicalDocumentSchema::newBlockId(), 'type' => 'core.heading', 'version' => 1, 'props' => ['text' => 'x', 'level' => 'h2'],
             'style' => ['background' => ['image' => ['media_id' => 99, 'alt' => '']]] + CanonicalDocumentSchema::defaultBlockStyle(),
             'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [],
-        ]],
-    ]]];
+        ]]])]];
     $own = static fn (int $id): bool => $id === 7;
     $r = DocumentValidator::validate($doc, BlockRegistry::withAllCoreBlocks(), ['media_exists' => $own]);
     assert_false($r->isValid(), 'media 99 is not this tenant\'s');
     assert_true(str_contains(json_encode($r->errors()), 'cross_tenant_or_missing_media'));
-    $doc['sections'][0]['blocks'][0]['style']['background']['image']['media_id'] = 7;
+    $doc['containers'][0]['children'][0]['style']['background']['image']['media_id'] = 7;
     assert_true(DocumentValidator::validate($doc, BlockRegistry::withAllCoreBlocks(), ['media_exists' => $own])->isValid(), 'media 7 is');
 });
 
@@ -821,14 +808,14 @@ unit('presets: corner and shadow presets use the matching tokens, and fall back 
     assert_true(str_contains($css, '.sb-radius-xl{border-radius:1.5rem}'), 'sizes with no token keep a fixed value');
 });
 
-unit('widths: layout sections and containers follow the Page width tokens', function (): void {
+unit('widths: containers follow the Page width tokens', function (): void {
     \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
     $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
-    assert_true(str_contains($css, '.sb-layout-section--boxed{max-width:var(--sb-layout-wide,80rem)'), 'boxed = Wide');
-    assert_true(str_contains($css, '.sb-layout-section--narrow{max-width:var(--sb-layout-narrow,42rem)'), 'narrow = Narrow');
+    assert_true(str_contains(StyleSurface::declarations(['layout' => ['content_width' => 'boxed', 'content_size' => 'wide']]), '--sb-box:var(--sb-layout-wide,80rem)'), 'wide = Wide');
+    assert_true(str_contains(StyleSurface::declarations(['layout' => ['content_width' => 'boxed', 'content_size' => 'narrow']]), '--sb-box:var(--sb-layout-narrow,'), 'narrow = Narrow');
     assert_true(str_contains($css, '.sb-container--constrained{max-width:var(--sb-layout-wide,80rem)}'), 'constrained = Wide');
     assert_true(str_contains($css, '.sb-container--compact{max-width:var(--sb-layout-narrow,42rem)}'), 'compact = Narrow');
-    assert_false((bool) preg_match('/\.sb-(layout-section|container)--[a-z]+\{max-width:\d+(rem|px)/', $css), 'no hard-coded section or container width is left');
+    assert_false((bool) preg_match('/\.sb-container--[a-z]+\{max-width:\d+(rem|px)/', $css), 'no hard-coded container width is left');
 });
 
 unit('text colours: post excerpt and content use variables the theme defines', function (): void {
@@ -889,7 +876,7 @@ function sbss_render_block(array $block): array
     $renderer  = new DocumentRenderer(BlockRegistry::withAllCoreBlocks(), BlockRendererRegistry::withCoreRenderers(), new CoreMediaResolver($tenants), new ProviderBindingResolver(new DataProviderRegistry(), $tenants));
     $collector = new RenderCollector();
     $html = $renderer->renderBlock($block + [
-        'id' => 'blk_eeeeeeeeeeeeeeeeeeeeeeee', 'version' => 1,
+        'id' => 'blk_eeeeeeeeeeeeeeeeeeeeeeee', 'version' => $block['type'] === 'core.container' ? 2 : 1,
         'style' => CanonicalDocumentSchema::defaultBlockStyle(),
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'bindings' => [], 'children' => [], 'animation' => [], 'interactions' => [],
@@ -920,10 +907,10 @@ unit('core.container: a horizontal container wraps unless Wrap is "nowrap" (CL-M
     assert_eq(['wrap', 'nowrap'], $field['allowed_values'] ?? null, 'the Inspector offers it');
 });
 
-unit('layout.section: "Full width" reaches both window edges without a sideways scroll (CL-M2)', function (): void {
+unit('core.container: "Full" has no limit, so the band reaches both window edges without a sideways scroll (CL-M2)', function (): void {
     \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
     $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
-    assert_true(str_contains($css, '.sb-layout-section--full{width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw)}'), 'full width breaks out of the section column');
+    assert_true(str_contains(StyleSurface::declarations(['layout' => ['content_width' => 'boxed', 'content_size' => 'full']]), '--sb-box:100%'), 'full width has no limit');
     assert_true((bool) preg_match('/body\.sb-body\{[^}]*overflow-x:clip/', $css), 'and the page clips the scrollbar sliver instead of scrolling sideways');
 });
 
@@ -959,8 +946,9 @@ unit('Site settings: the tokens marked "used only by blocks" are exactly the one
     \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
     $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
     $unused = [];
-    // A new section's background token is a default use too.
-    $sectionDefault = (string) (CanonicalDocumentSchema::defaultSectionLayout()['background_token'] ?? '');
+    // A new Container's background token and its site gutter are default uses too.
+    $css .= StyleSurface::declarations(CanonicalDocumentSchema::newContainer()['style']);
+    $sectionDefault = (string) (CanonicalDocumentSchema::newContainer()['style']['surface_token'] ?? '');
     foreach (array_keys(ThemeResolver::DEFAULT_TOKENS) as $ref) {
         if ($ref !== $sectionDefault && !str_contains($css, 'var(' . \Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme::cssVarName($ref))) {
             $unused[] = $ref;

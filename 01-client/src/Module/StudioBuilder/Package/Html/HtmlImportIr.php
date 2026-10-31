@@ -7,7 +7,7 @@
  * objects, closures, source HTML, raw CSS, paths other than the site-relative
  * `/uploads/…` media hint, or environment data):
  *
- *   section  { loc, label, layout: {padding_y?, gap?, width?, background_token?},
+ *   top      { loc, label, layout: {padding_y?, gap?, width?, background_token?},
  *              visibility: ?list<breakpoint>, nodes: list<node> }
  *   node     { type: heading|rich|image|button|container|hero|features, loc,
  *              text:   {…}   semantic text (plain strings; `rich.html` is
@@ -59,20 +59,20 @@ final class HtmlImportIr
     /**
      * The first bound the IR violates, or null.
      *
-     * @param list<array<string, mixed>> $sections
+     * @param list<array<string, mixed>> $containers
      */
-    public static function check(array $sections): ?string
+    public static function check(array $containers): ?string
     {
         $count = 0;
         $stack = [];
-        foreach ($sections as $section) {
-            if (count($section['nodes'] ?? []) > self::MAX_CHILDREN) {
-                return 'A section holds more than ' . self::MAX_CHILDREN . ' imported nodes.';
+        foreach ($containers as $container) {
+            if (count($container['nodes'] ?? []) > self::MAX_CHILDREN) {
+                return 'A Container holds more than ' . self::MAX_CHILDREN . ' imported nodes.';
             }
-            foreach ($section['nodes'] ?? [] as $node) {
+            foreach ($container['nodes'] ?? [] as $node) {
                 $stack[] = [$node, 1];
             }
-            if (($problem = self::plainData($section, 0)) !== null) {
+            if (($problem = self::plainData($container, 0)) !== null) {
                 return $problem;
             }
         }

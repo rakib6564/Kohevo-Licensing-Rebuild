@@ -240,9 +240,9 @@ function sbp8_ids(array $document): array
             $walk(is_array($b['children'] ?? null) ? $b['children'] : []);
         }
     };
-    foreach ($document['sections'] ?? [] as $s) {
+    foreach ($document['containers'] ?? [] as $s) {
         $ids[] = (string) $s['id'];
-        $walk($s['blocks'] ?? []);
+        $walk($s['children'] ?? []);
     }
     return $ids;
 }
@@ -257,9 +257,9 @@ function sbp8_shape(array $document): array
         }
         return $blocks;
     };
-    foreach ($document['sections'] ?? [] as $i => $s) {
-        $document['sections'][$i]['id'] = '*';
-        $document['sections'][$i]['blocks'] = $strip($s['blocks'] ?? []);
+    foreach ($document['containers'] ?? [] as $i => $s) {
+        $document['containers'][$i]['id'] = '*';
+        $document['containers'][$i]['children'] = $strip($s['children'] ?? []);
     }
     return $document;
 }
@@ -268,7 +268,7 @@ function sbp8_shape(array $document): array
 function sbp8_block(string $type, array $props, array $extra = []): array
 {
     return $extra + [
-        'id' => 'blk_' . bin2hex(random_bytes(12)), 'type' => $type, 'version' => 1, 'props' => $props,
+        'id' => 'blk_' . bin2hex(random_bytes(12)), 'type' => $type, 'version' => ($type === 'core.container' ? 2 : 1), 'props' => $props,
         'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'bindings' => [], 'children' => [],
     ];
@@ -325,8 +325,8 @@ function sbp8_map_media(array $document, array $map): array
         }
         return $blocks;
     };
-    foreach ($document['sections'] ?? [] as $i => $s) {
-        $document['sections'][$i]['blocks'] = $walk($s['blocks'] ?? []);
+    foreach ($document['containers'] ?? [] as $i => $s) {
+        $document['containers'][$i]['children'] = $walk($s['children'] ?? []);
     }
     if (isset($document['seo']['og_image_media_id'], $map[$document['seo']['og_image_media_id']])) {
         $document['seo']['og_image_media_id'] = $map[$document['seo']['og_image_media_id']];
@@ -387,10 +387,10 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
             $S->componentA = $comp['component'];
             $compPage = sbp8_ok(sbp8_call($rt, SBP8_A, $editor, 'GET', 'document', ['page' => $S->componentA['id']]), 'component doc');
             $r = sbp8_ok(sbp8_call($rt, SBP8_A, $editor, 'POST', 'operations', ['page_id' => $S->componentA['id'], 'expected_revision_id' => (int) $compPage['revision']['id'], 'operations' => [
-                ['op' => 'insert_section', 'payload' => ['index' => 0, 'section' => ['label' => 'Promo']]],
+                ['op' => 'insert_block', 'payload' => ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Promo']]]],
             ]]), 'component section');
             $r = sbp8_ok(sbp8_call($rt, SBP8_A, $editor, 'POST', 'operations', ['page_id' => $S->componentA['id'], 'expected_revision_id' => (int) $r['revision']['id'], 'operations' => [
-                ['op' => 'insert_block', 'payload' => ['parent_id' => $r['document']['sections'][0]['id'], 'index' => 0, 'block' => ['type' => 'core.heading', 'props' => ['text' => 'Spring promo', 'level' => 'h2']]]],
+                ['op' => 'insert_block', 'payload' => ['parent_id' => $r['document']['containers'][0]['id'], 'index' => 0, 'block' => ['type' => 'core.heading', 'props' => ['text' => 'Spring promo', 'level' => 'h2']]]],
             ]]), 'component block');
             sbp8_ok(sbp8_call($rt, SBP8_A, $publisher, 'POST', 'publish', ['page_id' => $S->componentA['id'], 'expected_revision_id' => (int) $r['revision']['id']]), 'publish component');
 
@@ -401,11 +401,11 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
             assert_eq(1, preg_match('/^[0-9a-f-]{36}$/', $S->pageAUuid));
             $rev = (int) $created['page']['active_draft_revision_id'];
             $r = sbp8_ok(sbp8_call($rt, SBP8_A, $editor, 'POST', 'operations', ['page_id' => $S->pageA, 'expected_revision_id' => $rev, 'operations' => [
-                ['op' => 'insert_section', 'payload' => ['index' => 0, 'section' => ['label' => 'Main']]],
+                ['op' => 'insert_block', 'payload' => ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Main']]]],
                 ['op' => 'update_seo', 'payload' => ['seo' => ['title' => 'Alpha', 'og_image_media_id' => $S->heroA]]],
                 ['op' => 'update_settings', 'payload' => ['settings' => ['token_group' => 'default']]],
             ]]), 'A section');
-            $sec = (string) $r['document']['sections'][0]['id'];
+            $sec = (string) $r['document']['containers'][0]['id'];
             $rev = (int) $r['revision']['id'];
             foreach ([
                 ['type' => 'core.heading', 'props' => ['text' => 'Welcome to Alpha', 'level' => 'h1']],
@@ -418,10 +418,10 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 ]]), "A block {$i}");
                 $rev = (int) $r['revision']['id'];
             }
-            $container = (string) $r['document']['sections'][0]['blocks'][3]['id'];
+            $container = (string) $r['document']['containers'][0]['children'][3]['id'];
             $r = sbp8_ok(sbp8_call($rt, SBP8_A, $editor, 'POST', 'operations', ['page_id' => $S->pageA, 'expected_revision_id' => $rev, 'operations' => [
                 ['op' => 'insert_block', 'payload' => ['parent_id' => $container, 'index' => 0, 'block' => ['type' => 'core.heading', 'props' => ['text' => 'Nested child', 'level' => 'h3']]]],
-                ['op' => 'insert_section', 'payload' => ['index' => 1, 'section' => ['label' => 'Promo ref', 'global_ref' => $S->componentA['ref'], 'blocks' => []]]],
+                ['op' => 'insert_block', 'payload' => ['parent_id' => null, 'index' => 1, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Promo ref'], 'global_ref' => $S->componentA['ref'], 'children' => []]]],
             ]]), 'A nested child + reference');
             $S->pageARev = (int) $r['revision']['id'];
 
@@ -454,10 +454,10 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 assert_eq(['content_hash', 'document', 'key', 'kind', 'media', 'page_type', 'route_mode', 'slug', 'title'], array_keys($page));
                 assert_eq([['key' => 1, 'mime' => 'image/jpeg', 'path' => '/uploads/media/2026/01/alpha-hero.jpg'], ['key' => 2, 'mime' => 'image/png', 'path' => '/uploads/media/2026/01/alpha-photo.png']], $page['media'], 'media travel as descriptors, not ids or binaries');
                 assert_eq(1, $page['document']['seo']['og_image_media_id'], 'media ids are renumbered to package-local keys');
-                assert_eq(1, $page['document']['sections'][0]['blocks'][1]['props']['media']['media_id']);
-                assert_eq(2, $page['document']['sections'][0]['blocks'][2]['props']['media']['media_id']);
+                assert_eq(1, $page['document']['containers'][0]['children'][1]['props']['media']['media_id']);
+                assert_eq(2, $page['document']['containers'][0]['children'][2]['props']['media']['media_id']);
                 assert_eq($S->componentA['ref'], $pkg['items'][1]['source_ref'], 'a component carries its source uuid as a package-local reference only');
-                assert_eq('Spring promo', $pkg['items'][1]['document']['sections'][0]['blocks'][0]['props']['text'], 'the component\'s published content');
+                assert_eq('Spring promo', $pkg['items'][1]['document']['containers'][0]['children'][0]['props']['text'], 'the component\'s published content');
                 assert_eq(['surface.page' => '#fafafa', 'text.primary' => '#222222'], $pkg['items'][3]['tokens'], 'only the stored token overrides');
                 assert_eq($before + 1, sbp8_count("SELECT COUNT(*) FROM audit_log WHERE action = 'studio.package.exported'"), 'export is audited');
                 $row = Database::row("SELECT tenant_id, target, meta_json FROM audit_log WHERE action = 'studio.package.exported' ORDER BY id DESC LIMIT 1");
@@ -477,7 +477,7 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
             // ── 3/4/5/unknown keys: the envelope fails closed ──────────────
             unit('phase8a int 2: tampered items, unknown keys / kinds and tenant_id anywhere are rejected before anything is planned', function () use ($rt, $editor, $S): void {
                 $tampered = $S->minPkg;
-                $tampered['items'][0]['document']['sections'][0]['blocks'][0]['props']['text'] = 'Changed after export';
+                $tampered['items'][0]['document']['containers'][0]['children'][0]['props']['text'] = 'Changed after export';
                 $rep = sbp8_report(sbp8_import($rt, SBP8_B, $editor, $tampered, true));
                 assert_true(in_array('invalid_package', sbp8_codes($rep, 'error'), true));
                 assert_true(str_contains(json_encode($rep['issues']), 'content_hash'), 'the hash mismatch is named');
@@ -491,7 +491,7 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 assert_true(in_array('unknown_item_type', sbp8_codes(sbp8_report(sbp8_import($rt, SBP8_B, $editor, sbp8_rehash($kind), true))), true));
 
                 $tenant = $S->minPkg;
-                $tenant['items'][0]['document']['sections'][0]['blocks'][0]['props']['tenant_id'] = SBP8_A;
+                $tenant['items'][0]['document']['containers'][0]['children'][0]['props']['tenant_id'] = SBP8_A;
                 $rep = sbp8_report(sbp8_import($rt, SBP8_B, $editor, sbp8_rehash($tenant), true));
                 assert_true(in_array('forbidden_tenant_id', sbp8_codes($rep, 'error'), true), 'tenant_id deep inside a document');
                 $tenant2 = $S->minPkg + [];
@@ -553,7 +553,7 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 assert_eq('draft', $row['status']);
                 assert_null($row['published_revision_id'], 'import never publishes');
                 $compRow = $rt->tenants->runAs(SBP8_B, static fn() => $rt->pages->find((int) $component['page_id']));
-                assert_eq('section_preset', $compRow['page_type']);
+                assert_eq('container_preset', $compRow['page_type']);
                 assert_null($compRow['published_revision_id'], 'an imported component stays a draft');
                 assert_eq(['import', 'import'], array_column(Database::rows('SELECT revision_kind FROM studiobuilder_revisions WHERE tenant_id = ? AND page_id = ? ORDER BY id', [SBP8_B, (int) $page['page_id']]), 'revision_kind'), 'every revision written by the import is an import revision');
                 assert_eq(0, sbp8_count("SELECT COUNT(*) FROM studiobuilder_revisions WHERE tenant_id = ? AND revision_kind = 'publish'", [SBP8_B]), 'no publish revision in B');
@@ -563,14 +563,14 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 $newIds = sbp8_ids($doc);
                 assert_eq([], array_values(array_intersect($srcIds, $newIds)), 'every section/block id was re-minted');
                 assert_eq(count($newIds), count(array_unique($newIds)));
-                $blocks = $doc['sections'][0]['blocks'];
+                $blocks = $doc['containers'][0]['children'];
                 assert_eq(['core.heading', 'core.hero', 'core.container'], array_column($blocks, 'type'), 'the unresolved core.image was omitted');
                 assert_eq($S->heroB, $blocks[1]['props']['media']['media_id'], 'the explicitly mapped media id of B');
                 assert_eq($S->heroB, $doc['seo']['og_image_media_id']);
                 assert_eq('Nested child', $blocks[2]['children'][0]['props']['text']);
                 assert_true(!in_array($blocks[2]['children'][0]['id'], $srcIds, true), 'nested child ids are re-minted too');
-                assert_eq($component['ref'], $doc['sections'][1]['global_ref'], 'the reference points at the NEW component');
-                assert_eq([], $doc['sections'][1]['blocks']);
+                assert_eq($component['ref'], $doc['containers'][1]['global_ref'], 'the reference points at the NEW component');
+                assert_eq([], $doc['containers'][1]['children']);
                 assert_eq('alpha-layout', $doc['template_key']);
 
                 // Inert until published: the reference renders nothing publicly, and nothing is public yet at all.
@@ -603,7 +603,7 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 $tplOnly = ['package_format' => 'kohevo-studio-package', 'package_version' => '1.0', 'exported_at' => '2026-09-30T00:00:00Z', 'items' => [$S->pkg['items'][2]]];
                 $rt->tenants->runAs(SBP8_B, static fn() => $rt->templates->insert([
                     'uuid' => '0e0e0e0e-0e0e-4e0e-8e0e-0e0e0e0e0e0e', 'template_key' => 'kohevo-starter', 'template_type' => 'page_template', 'category' => 'system',
-                    'name' => 'Starter', 'schema_version' => '1.0', 'document_json' => CanonicalJson::encode(CanonicalDocumentSchema::emptyDocument()), 'is_system' => 1,
+                    'name' => 'Starter', 'schema_version' => '2.0', 'document_json' => CanonicalJson::encode(CanonicalDocumentSchema::emptyDocument()), 'is_system' => 1,
                 ]));
                 $sys = $tplOnly;
                 $sys['items'][0]['template_key'] = 'kohevo-starter';
@@ -667,7 +667,7 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 $row = $rt->tenants->runAs(SBP8_B, static fn() => $rt->pages->find($S->importedB));
                 assert_eq((int) $pubRev, (int) $row['published_revision_id'], 'the published revision is never replaced by an import');
                 assert_eq('landing-alpha', $row['slug'], 'replace keeps the target page address');
-                assert_eq(['core.heading', 'core.hero', 'core.container'], array_column(sbp8_draft($rt, SBP8_B, $S->importedB)['sections'][0]['blocks'], 'type'));
+                assert_eq(['core.heading', 'core.hero', 'core.container'], array_column(sbp8_draft($rt, SBP8_B, $S->importedB)['containers'][0]['children'], 'type'));
             });
 
             // ── 24/25/6/unknown blocks/versions/27: document + route rules ──
@@ -691,20 +691,20 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
 
                 $fresh = array_merge($base, ['slug' => 'fresh-page']);
                 $broken = $fresh;
-                $broken['document']['sections'][0]['layout']['width'] = 'enormous';
+                $broken['document']['containers'][0]['style']['layout']['content_size'] = 'enormous';
                 assert_true(in_array('invalid_document', sbp8_codes(sbp8_report(sbp8_import($rt, SBP8_B, $editor, $one($broken), true)), 'error'), true));
                 $unknown = $fresh;
-                $unknown['document']['sections'][0]['blocks'][0]['type'] = 'evil.script';
+                $unknown['document']['containers'][0]['children'][0]['type'] = 'evil.script';
                 assert_eq(['unknown_block_type'], sbp8_codes(sbp8_report(sbp8_import($rt, SBP8_B, $editor, $one($unknown), true)), 'error'));
                 $version = $fresh;
-                $version['document']['sections'][0]['blocks'][0]['version'] = 99;
+                $version['document']['containers'][0]['children'][0]['version'] = 99;
                 assert_eq(['invalid_block_version'], sbp8_codes(sbp8_report(sbp8_import($rt, SBP8_B, $editor, $one($version), true)), 'error'));
                 $script = $fresh;
-                $script['document']['sections'][0]['blocks'][0] = sbp8_block('core.rich_text', ['content' => '<p>x</p><script>alert(1)</script>']);
+                $script['document']['containers'][0]['children'][0] = sbp8_block('core.rich_text', ['content' => '<p>x</p><script>alert(1)</script>']);
                 assert_true(in_array('invalid_document', sbp8_codes(sbp8_report(sbp8_import($rt, SBP8_B, $editor, $one($script), true)), 'error'), true), 'unsafe rich text is refused, never stored');
 
                 $module = $fresh;
-                $module['document']['sections'][0]['blocks'][0] = sbp8_block('booking.services', ['heading' => 'Book'], ['bindings' => ['items' => ['provider' => 'booking.services', 'params' => [], 'mapping' => []]]]);
+                $module['document']['containers'][0]['children'][0] = sbp8_block('booking.services', ['heading' => 'Book'], ['bindings' => ['items' => ['provider' => 'booking.services', 'params' => [], 'mapping' => []]]]);
                 $rep = sbp8_report(sbp8_import($rt, SBP8_B, $editor, $one($module), true));
                 assert_true(in_array('unentitled_module', sbp8_codes($rep, 'error'), true), 'B has no booking entitlement');
                 $rep = sbp8_report(sbp8_import($rt, SBP8_A, $editor, $one(array_merge($module, ['slug' => 'booking-ok'])), true));
@@ -712,8 +712,8 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
 
                 // Duplicate ids in the SOURCE are harmless: everything is re-minted.
                 $dupIds = $fresh;
-                $dupIds['document']['sections'][0]['blocks'][1]['id'] = $dupIds['document']['sections'][0]['blocks'][0]['id'];
-                $dupIds['document']['sections'][1]['id'] = $dupIds['document']['sections'][0]['id'];
+                $dupIds['document']['containers'][0]['children'][1]['id'] = $dupIds['document']['containers'][0]['children'][0]['id'];
+                $dupIds['document']['containers'][1]['id'] = $dupIds['document']['containers'][0]['id'];
                 $rep = sbp8_report(sbp8_import($rt, SBP8_B, $editor, $one($dupIds), true));
                 assert_true($rep['can_commit'], 'colliding source ids are re-minted, not trusted: ' . json_encode($rep['issues']));
             });
@@ -724,17 +724,17 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 // A package claiming A's REAL media id as its key, pointing at A's path.
                 $item['media'] = [['key' => $S->imageA, 'mime' => 'image/png', 'path' => '/uploads/media/2026/01/alpha-photo.png']];
                 $item['document']['seo']['og_image_media_id'] = $S->imageA;
-                $item['document']['sections'][0]['blocks'] = [
+                $item['document']['containers'][0]['children'] = [
                     sbp8_block('core.hero', ['heading' => 'H', 'media' => ['media_id' => $S->imageA, 'alt' => '']]),
                     sbp8_block('core.image', ['media' => ['media_id' => $S->imageA, 'alt' => '']]),
                 ];
-                $item['document']['sections'] = [$item['document']['sections'][0]];
+                $item['document']['containers'] = [$item['document']['containers'][0]];
                 $pkg = sbp8_rehash(['package_format' => 'kohevo-studio-package', 'package_version' => '1.0', 'exported_at' => '2026-09-30T00:00:00Z', 'items' => [$item]]);
                 $data = sbp8_ok(sbp8_import($rt, SBP8_B, $editor, $pkg, false), 'foreign media commit');
                 $doc = sbp8_draft($rt, SBP8_B, (int) $data['report']['committed']['pages'][0]['page_id']);
                 assert_null($doc['seo']['og_image_media_id'], 'the OG image becomes null');
-                assert_eq(['core.hero'], array_column($doc['sections'][0]['blocks'], 'type'), 'the required image is omitted');
-                assert_true(!isset($doc['sections'][0]['blocks'][0]['props']['media']) || $doc['sections'][0]['blocks'][0]['props']['media'] === null, 'the optional hero media becomes null');
+                assert_eq(['core.hero'], array_column($doc['containers'][0]['children'], 'type'), 'the required image is omitted');
+                assert_true(!isset($doc['containers'][0]['children'][0]['props']['media']) || $doc['containers'][0]['children'][0]['props']['media'] === null, 'the optional hero media becomes null');
                 assert_true(!str_contains(json_encode($doc), '"media_id":' . $S->imageA), 'A\'s media id never becomes a canonical reference in B');
 
                 // An explicit mapping onto ANOTHER tenant's media id is refused.
@@ -763,12 +763,12 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 $ref['slug'] = 'ref-probe';
                 $rep = sbp8_report(sbp8_import($rt, SBP8_B, $editor, sbp8_rehash(['package_format' => 'kohevo-studio-package', 'package_version' => '1.0', 'exported_at' => '2026-09-30T00:00:00Z', 'items' => [$ref]]), true));
                 assert_true(in_array('unresolved_global_component', sbp8_codes($rep, 'warning'), true));
-                assert_eq(null, $rep['preview_documents'][0]['document']['sections'][1]['global_ref'], 'the section became an empty owned section');
+                assert_eq(null, $rep['preview_documents'][0]['document']['containers'][1]['global_ref'], 'the section became an empty owned section');
                 $rep = sbp8_report(sbp8_import($rt, SBP8_B, $editor, sbp8_rehash(['package_format' => 'kohevo-studio-package', 'package_version' => '1.0', 'exported_at' => '2026-09-30T00:00:00Z', 'items' => [$ref]]), true, ['component_map' => [$S->componentA['ref'] => $S->componentA['ref']]]));
                 assert_true(in_array('unresolved_global_component', sbp8_codes($rep, 'error'), true), 'A\'s component is not a component of B');
                 // Mapped onto B's own (imported) component: resolves.
                 $rep = sbp8_report(sbp8_import($rt, SBP8_B, $editor, sbp8_rehash(['package_format' => 'kohevo-studio-package', 'package_version' => '1.0', 'exported_at' => '2026-09-30T00:00:00Z', 'items' => [$ref]]), true, ['component_map' => [$S->componentA['ref'] => $S->importedBComponent['ref']]]));
-                assert_eq($S->importedBComponent['ref'], $rep['preview_documents'][0]['document']['sections'][1]['global_ref']);
+                assert_eq($S->importedBComponent['ref'], $rep['preview_documents'][0]['document']['containers'][1]['global_ref']);
             });
 
             // ── 26: permission matrix, entitlement, AI origin, CSRF ────────
@@ -817,7 +817,7 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 $imported = sbp8_draft($rt, SBP8_B, (int) $data['report']['committed']['pages'][0]['page_id']);
 
                 $expected = sbp8_map_media($source, [$S->heroA => $S->heroB, $S->imageA => $S->imageB]);
-                $expected['sections'][1]['global_ref'] = $newComponent;
+                $expected['containers'][1]['global_ref'] = $newComponent;
                 assert_eq(sbp8_shape($expected), sbp8_shape($imported), 'semantically identical after the explicit mapping');
                 assert_eq([], array_values(array_intersect(sbp8_ids($source), sbp8_ids($imported))), 'with fresh ids');
             });
@@ -829,7 +829,7 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 $withBlock = static function (string $slug, array $block) use ($S): array {
                     $item = array_merge($S->minPkg['items'][0], ['slug' => $slug]);
                     $item['document']['template_key'] = 'default';
-                    $item['document']['sections'] = [array_merge($item['document']['sections'][0], ['blocks' => [$block]])];
+                    $item['document']['containers'] = [array_merge($item['document']['containers'][0], ['children' => [$block]])];
                     return $item;
                 };
 
@@ -839,7 +839,7 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 assert_eq([], sbp8_codes($dry, 'error'), 'the dry run accepts it');
                 assert_true(in_array('block_upgraded', sbp8_codes($dry, 'warning'), true), 'and reports the upgrade');
                 $data = sbp8_ok(sbp8_import($rt2, SBP8_B, $editor, $pkg, false), 'commit upgraded import');
-                $block = sbp8_draft($rt2, SBP8_B, (int) $data['report']['committed']['pages'][0]['page_id'])['sections'][0]['blocks'][0];
+                $block = sbp8_draft($rt2, SBP8_B, (int) $data['report']['committed']['pages'][0]['page_id'])['containers'][0]['children'][0];
                 assert_eq(['probe.note', 2, ['text' => 'Exported at v1']], [$block['type'], $block['version'], $block['props']], 'stored at the current version');
 
                 // No upgrade path: refused, and the report names the block and both versions.
@@ -849,16 +849,12 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 assert_true(str_contains((string) ($messages[0] ?? ''), "Block 'probe.legacy' is version 1; this site supports version 2"), 'named in the report: ' . json_encode($messages));
 
                 // Stored templates written by an older Studio: applied and inserted at the current version.
-                $section = static fn(string $caption): array => [
-                    'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'Old', 'global_ref' => null,
-                    'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                    'blocks' => [sbp8_block('probe.note', ['caption' => $caption])],
-                ];
+                $section = static fn(string $caption): array => CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Old'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [sbp8_block('probe.note', ['caption' => $caption])]]);
                 $pageTpl = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Old page template');
-                $pageTpl['sections'] = [$section('Applied from v1')];
-                $presetTpl = CanonicalDocumentSchema::emptyDocument('section_preset', 'default', 'Old preset');
-                $presetTpl['sections'] = [$section('Inserted from v1')];
-                foreach ([['old-page-tpl', 'page_template', $pageTpl], ['old-section-tpl', 'section_preset', $presetTpl]] as [$key, $type, $doc]) {
+                $pageTpl['containers'] = [$section('Applied from v1')];
+                $presetTpl = CanonicalDocumentSchema::emptyDocument('container_preset', 'default', 'Old preset');
+                $presetTpl['containers'] = [$section('Inserted from v1')];
+                foreach ([['old-page-tpl', 'page_template', $pageTpl], ['old-section-tpl', 'container_preset', $presetTpl]] as [$key, $type, $doc]) {
                     $rt2->tenants->runAs(SBP8_B, static fn() => $rt2->templates->insert([
                         'uuid' => sprintf('%08x-5555-4000-8000-%012x', random_int(0, 0x7fffffff), random_int(0, 0x7fffffff)), 'template_key' => $key, 'template_type' => $type, 'category' => 'general',
                         'name' => $key, 'schema_version' => CanonicalDocumentSchema::SCHEMA_VERSION, 'document_json' => CanonicalJson::encode($doc), 'is_system' => 0,
@@ -867,10 +863,10 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 $created = sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'create_page', ['title' => 'Old templates', 'slug' => 'old-templates', 'page_type' => 'page', 'route_mode' => 'standalone']), 'target page');
                 $pageId = (int) $created['page']['id'];
                 $r = sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'apply_template', ['page_id' => $pageId, 'template_key' => 'old-page-tpl', 'expected_revision_id' => (int) $created['page']['active_draft_revision_id']]), 'apply old template');
-                $applied = sbp8_draft($rt2, SBP8_B, $pageId)['sections'][0]['blocks'][0];
+                $applied = sbp8_draft($rt2, SBP8_B, $pageId)['containers'][0]['children'][0];
                 assert_eq([2, ['text' => 'Applied from v1']], [$applied['version'], $applied['props']], 'apply upgrades the stored template');
                 sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'insert_template', ['page_id' => $pageId, 'template_key' => 'old-section-tpl', 'index' => 1, 'parent_id' => null, 'expected_revision_id' => (int) $r['revision']['id']]), 'insert old preset');
-                $inserted = sbp8_draft($rt2, SBP8_B, $pageId)['sections'][1]['blocks'][0];
+                $inserted = sbp8_draft($rt2, SBP8_B, $pageId)['containers'][1]['children'][0];
                 assert_eq([2, ['text' => 'Inserted from v1']], [$inserted['version'], $inserted['props']], 'insert upgrades the stored preset');
             });
 
@@ -879,14 +875,10 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 $rt2 = sbp8_probe_runtime();
                 $old = static function (string $caption, array $extra = []): array {
                     $doc = CanonicalDocumentSchema::emptyDocument($extra['type'] ?? 'page', 'default', 'Stored at v1');
-                    $doc['sections'] = [[
-                        'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'Old', 'global_ref' => null,
-                        'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                        'blocks' => [sbp8_block('probe.note', ['caption' => $caption])],
-                    ]];
+                    $doc['containers'] = [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Old'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [sbp8_block('probe.note', ['caption' => $caption])]])];
                     return $doc;
                 };
-                $probeOf = static fn(array $doc, int $s = 0): array => [$doc['sections'][$s]['blocks'][0]['version'], $doc['sections'][$s]['blocks'][0]['props']];
+                $probeOf = static fn(array $doc, int $s = 0): array => [$doc['containers'][$s]['children'][0]['version'], $doc['containers'][$s]['children'][0]['props']];
                 $page = $rt2->tenants->runAs(SBP8_B, static fn(): array => sbp8_stored_page(SBP8_B, 'stored-v1', 'page', $old('Saved at v1'), true));
                 $storedJson = (string) Database::value('SELECT document_json FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [SBP8_B, $page['rev']]);
 
@@ -913,14 +905,128 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 assert_eq([2, ['text' => 'Saved at v1']], $probeOf($pkg['items'][0]['document']), 'exported at v2');
 
                 // Detaching a component stored at v1 copies its content at v2.
-                $component = $rt2->tenants->runAs(SBP8_B, static fn(): array => sbp8_stored_page(SBP8_B, 'stored-component', 'section_preset', $old('Component at v1', ['type' => 'section_preset']), true));
+                $component = $rt2->tenants->runAs(SBP8_B, static fn(): array => sbp8_stored_page(SBP8_B, 'stored-component', 'container_preset', $old('Component at v1', ['type' => 'container_preset']), true));
                 $host = $old('Host');
-                $host['sections'][] = ['id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'Ref', 'global_ref' => $component['uuid'], 'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'blocks' => []];
+                $host['containers'][] = CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Ref'], 'global_ref' => $component['uuid'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => []]);
                 $hostPage = $rt2->tenants->runAs(SBP8_B, static fn(): array => sbp8_stored_page(SBP8_B, 'stored-host', 'page', $host, false));
-                sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'detach_component', ['page_id' => $hostPage['id'], 'section_id' => $host['sections'][1]['id'], 'expected_revision_id' => $hostPage['rev']]), 'detach stored component');
+                sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'detach_component', ['page_id' => $hostPage['id'], 'container_id' => $host['containers'][1]['id'], 'expected_revision_id' => $hostPage['rev']]), 'detach stored component');
                 $detached = sbp8_draft($rt2, SBP8_B, $hostPage['id']);
                 assert_eq([2, ['text' => 'Component at v1']], $probeOf($detached, 1), 'detached copy at v2');
                 assert_eq([2, ['text' => 'Host']], $probeOf($detached, 0), 'and the host page\'s own block too');
+            });
+
+            // ── Documents stored before Containers (schema 1.0) ─────────────
+            unit('phase8a int 14: section-based documents stored as schema 1.0 load, edit, render, publish, roll back, diff, export, import, detach and act as templates; the stored revision is never rewritten', function () use ($editor, $publisher, $viewer): void {
+                $rt2 = sbp8_probe_runtime();
+                $heading = static fn(string $text): array => sbp8_block('core.heading', ['text' => $text, 'level' => 'h2']);
+                $section = static fn(string $id, string $label, array $blocks, array $extra = []): array => $extra + [
+                    'id' => 'sec_' . str_repeat($id, 16), 'label' => $label, 'global_ref' => null, 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+                    'layout' => ['background_token' => 'surface.muted', 'columns' => ['base' => 1, 'md' => 2], 'gap' => 'lg', 'padding_y' => ['base' => 'sm', 'md' => 'lg'], 'width' => 'narrow'],
+                    'blocks' => $blocks,
+                ];
+                $legacy = static fn(string $type, array $sections): array => ['schema_version' => '1.0', 'document_type' => $type, 'template_key' => 'default', 'settings' => [], 'seo' => [], 'sections' => $sections];
+                $old = $legacy('page', [
+                    $section('a', 'Intro', [$heading('Legacy one'), $heading('Legacy two')], ['style' => ['border' => ['top' => ['width' => '2px']]], 'animation' => ['type' => 'fade_up']]),
+                    $section('b', 'Second', [sbp8_block('probe.note', ['caption' => 'Stored block'])]),
+                ]);
+                $page = $rt2->tenants->runAs(SBP8_B, static fn(): array => sbp8_stored_page(SBP8_B, 'stored-sections', 'page', $old, true));
+                $storedJson = (string) Database::value('SELECT document_json FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [SBP8_B, $page['rev']]);
+                $containerId = 'blk_' . str_repeat('a', 16);
+                $assertUpgraded = static function (array $doc, string $what) use ($containerId): void {
+                    assert_eq('2.0', $doc['schema_version'], "{$what}: the current format");
+                    assert_true(!array_key_exists('sections', $doc), "{$what}: no sections key");
+                    assert_eq($containerId, $doc['containers'][0]['id'], "{$what}: the same id on every read");
+                    assert_eq('Intro', $doc['containers'][0]['metadata']['label'], "{$what}: the label");
+                    assert_eq('core.container', $doc['containers'][0]['type'], "{$what}: a Container");
+                    assert_eq('Legacy one', $doc['containers'][0]['children'][0]['props']['text'], "{$what}: its blocks");
+                    assert_eq(['text' => 'Stored block'], $doc['containers'][1]['children'][0]['props'], "{$what}: block upgrades still run");
+                };
+
+                // A published page written by an older Studio is served as it is, before anyone opens it.
+                $served = $rt2->tenants->runAs(SBP8_B, static fn() => $rt2->publicRuntime->handlePath('stored-sections'));
+                assert_true($served !== null && $served->status === 200, 'the stored page is served');
+                assert_true(str_contains($served->body, 'Legacy one'), 'with its content');
+                assert_true((bool) preg_match('/<section class="[^"]*\bsb-section\b/', $served->body), 'a section element that keeps the class site CSS looks for');
+                assert_true(str_contains($served->body, '--sb-box:var(--sb-layout-narrow,'), 'at its width');
+
+                // Editor load: the current format, with stable ids.
+                $loaded = sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'GET', 'document', ['page' => $page['id']]), 'load 1.0 page');
+                $assertUpgraded($loaded['document'], 'load');
+                assert_eq($loaded['document'], sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'GET', 'document', ['page' => $page['id']]), 'load again')['document'], 'two reads, one document');
+                $canvas = $rt2->tenants->runAs(SBP8_B, static fn() => $rt2->app->renderForEditor($editor, $page['id']));
+                assert_true(str_contains($canvas->html, 'data-sb-node="' . $containerId . '"'), 'the canvas selects the Container by the id the editor holds');
+
+                // An edit by that id writes a NEW revision in the current format; the stored one is untouched.
+                $r = sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'operations', ['page_id' => $page['id'], 'expected_revision_id' => $page['rev'], 'operations' => [
+                    ['op' => 'update_block_meta', 'payload' => ['block_id' => $containerId, 'label' => 'Intro renamed']],
+                    ['op' => 'insert_block', 'payload' => ['parent_id' => $containerId, 'index' => 2, 'block' => $heading('Added later')]],
+                ]]), 'edit 1.0 page');
+                $edited = CanonicalJson::decode((string) Database::value('SELECT document_json FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [SBP8_B, (int) $r['revision']['id']]));
+                assert_eq('2.0', $edited['schema_version'], 'the next save writes the current format');
+                assert_true(!str_contains((string) json_encode($edited), '"sections"'), 'and no trace of the old one');
+                assert_eq($storedJson, (string) Database::value('SELECT document_json FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [SBP8_B, $page['rev']]), 'history is never rewritten');
+
+                // A diff across the two formats reports the edit, nothing else.
+                $review = sbp8_ok(sbp8_call($rt2, SBP8_B, $viewer, 'GET', 'diff', ['page' => $page['id'], 'base' => $page['rev'], 'proposed' => (int) $r['revision']['id']]), 'diff 1.0 and 2.0')['review'];
+                $summary = $review['diff']['summary'] ?? $review['summary'] ?? [];
+                assert_eq(0, $summary['containers_added'] ?? null, 'the upgrade itself is not a change');
+                assert_eq(0, $summary['containers_removed'] ?? null);
+                assert_eq(1, $summary['containers_updated'] ?? null, 'the renamed Container');
+                assert_eq(1, $summary['blocks_added'] ?? null);
+                assert_eq(0, $summary['blocks_updated'] ?? null, 'nor is the block upgrade');
+                assert_false($summary['settings_changed'] ?? true, 'and the settings and SEO defaults are not');
+                assert_false($summary['seo_changed'] ?? true);
+
+                // Publish, then roll back to the 1.0 revision: both write the current format.
+                $pub = sbp8_ok(sbp8_call($rt2, SBP8_B, $publisher, 'POST', 'publish', ['page_id' => $page['id'], 'expected_revision_id' => (int) $r['revision']['id']]), 'publish');
+                $published = CanonicalJson::decode((string) Database::value('SELECT r.document_json FROM studiobuilder_revisions r JOIN studiobuilder_pages p ON p.published_revision_id = r.id AND p.tenant_id = r.tenant_id WHERE p.id = ? AND p.tenant_id = ?', [$page['id'], SBP8_B]));
+                assert_eq('2.0', $published['schema_version'], 'published in the current format');
+                sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'rollback', ['page_id' => $page['id'], 'target_revision_id' => $page['rev'], 'expected_revision_id' => (int) ($pub['revision']['id'] ?? 0)]), 'rollback to 1.0');
+                $assertUpgraded(sbp8_draft($rt2, SBP8_B, $page['id']), 'rollback');
+
+                // Export carries the current format, and a package written before Containers still imports.
+                $pkg = sbp8_ok(sbp8_call($rt2, SBP8_B, $viewer, 'GET', 'export_package', ['page' => $page['id'], 'include_components' => '0', 'include_template' => '0']), 'export')['package'];
+                $assertUpgraded($pkg['items'][0]['document'], 'export');
+                $legacyItem = $pkg['items'][0];
+                $legacyItem['slug'] = 'imported-sections';
+                $legacyItem['document'] = $old;
+                $legacyPkg = sbp8_rehash(array_replace($pkg, ['items' => [$legacyItem]]));
+                $dry = sbp8_report(sbp8_import($rt2, SBP8_B, $editor, $legacyPkg, true));
+                assert_eq([], sbp8_codes($dry, 'error'), 'a 1.0 package passes the dry run');
+                $data = sbp8_ok(sbp8_import($rt2, SBP8_B, $editor, $legacyPkg, false), 'commit 1.0 package');
+                $imported = sbp8_draft($rt2, SBP8_B, (int) $data['report']['committed']['pages'][0]['page_id']);
+                assert_eq('2.0', $imported['schema_version'], 'stored in the current format');
+                assert_eq('Legacy one', $imported['containers'][0]['children'][0]['props']['text'], 'with its content');
+                assert_true($imported['containers'][0]['id'] !== $containerId, 'and fresh ids');
+
+                // Templates stored as sections: applied and inserted as Containers, with fresh ids.
+                foreach ([['old-format-page', 'page_template', $legacy('page', [$section('c', 'Applied', [$heading('From a stored page template')])])], ['old-format-preset', 'container_preset', $legacy('section_preset', [$section('d', 'Inserted', [$heading('From a stored preset')])])]] as [$key, $type, $doc]) {
+                    $rt2->tenants->runAs(SBP8_B, static fn() => $rt2->templates->insert([
+                        'uuid' => sprintf('%08x-7777-4000-8000-%012x', random_int(0, 0x7fffffff), random_int(0, 0x7fffffff)), 'template_key' => $key, 'template_type' => $type, 'category' => 'general',
+                        'name' => $key, 'schema_version' => '1.0', 'document_json' => CanonicalJson::encode($doc), 'is_system' => 0,
+                    ]));
+                }
+                $created = sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'create_page', ['title' => 'From old templates', 'slug' => 'from-old-format', 'page_type' => 'page', 'route_mode' => 'standalone']), 'target page');
+                $target = (int) $created['page']['id'];
+                $tr = sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'apply_template', ['page_id' => $target, 'template_key' => 'old-format-page', 'expected_revision_id' => (int) $created['page']['active_draft_revision_id']]), 'apply 1.0 template');
+                sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'insert_template', ['page_id' => $target, 'template_key' => 'old-format-preset', 'index' => 1, 'parent_id' => null, 'expected_revision_id' => (int) $tr['revision']['id']]), 'insert 1.0 preset');
+                $fromTemplates = sbp8_draft($rt2, SBP8_B, $target);
+                assert_eq('2.0', $fromTemplates['schema_version']);
+                assert_eq(['Applied', 'Inserted'], array_map(static fn(array $c): string => (string) $c['metadata']['label'], $fromTemplates['containers']), 'each a Container');
+                assert_eq('From a stored preset', $fromTemplates['containers'][1]['children'][0]['props']['text']);
+                assert_true($fromTemplates['containers'][1]['id'] !== 'blk_' . str_repeat('d', 16), 'an inserted preset gets fresh ids');
+
+                // A component stored as sections, referenced from a section: rendered live, then detached into an owned copy.
+                $component = $rt2->tenants->runAs(SBP8_B, static fn(): array => sbp8_stored_page(SBP8_B, 'stored-section-component', 'container_preset', $legacy('section_preset', [$section('e', 'Shared', [$heading('Shared legacy text')])]), true));
+                $hostDoc = $legacy('page', [$section('f', 'Own', [$heading('Host text')]), $section('9', 'Ref', [], ['global_ref' => $component['uuid']])]);
+                $host = $rt2->tenants->runAs(SBP8_B, static fn(): array => sbp8_stored_page(SBP8_B, 'stored-section-host', 'page', $hostDoc, false));
+                $hostCanvas = $rt2->tenants->runAs(SBP8_B, static fn() => $rt2->app->renderForEditor($editor, $host['id']));
+                assert_true(str_contains($hostCanvas->html, 'Shared legacy text'), 'a section reference still shows its component');
+                sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'detach_component', ['page_id' => $host['id'], 'container_id' => 'blk_' . str_repeat('9', 16), 'expected_revision_id' => $host['rev']]), 'detach 1.0 reference');
+                $detached = sbp8_draft($rt2, SBP8_B, $host['id']);
+                assert_null($detached['containers'][1]['global_ref'] ?? null, 'an owned copy');
+                assert_eq('Shared legacy text', $detached['containers'][1]['children'][0]['props']['text'], 'of the component\'s content');
+                assert_eq('2.0', $detached['schema_version']);
             });
 
             // ── Rate limit: packages have their own small bucket ─────────────

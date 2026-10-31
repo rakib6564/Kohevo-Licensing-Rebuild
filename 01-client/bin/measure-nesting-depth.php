@@ -25,7 +25,7 @@ function cnt($b){$n=1; foreach($b["children"] as $c)$n+=cnt($c); return $n;}
 foreach ([1,4,5,6] as $depth) {
   $blocks=[]; $total=0; while(true){ $c=chain($depth); $k=cnt($c); if($total+$k>250)break; $blocks[]=$c; $total+=$k; }
   $doc=CanonicalDocumentSchema::emptyDocument('page','default','T');
-  $doc['sections']=[['blocks'=>$blocks,'global_ref'=>null,'id'=>CanonicalDocumentSchema::newSectionId(),'label'=>'M','layout'=>CanonicalDocumentSchema::defaultSectionLayout(),'visibility'=>CanonicalDocumentSchema::defaultVisibility()]];
+  $doc['containers']=[CanonicalDocumentSchema::newContainer(['metadata'=>['label'=>'M'],'children'=>$blocks])];
   $json=CanonicalJson::encode($doc);
   $page=new PageAddress(5,'11111111-2222-4333-8444-555555555555','T','t','page','published','standalone',9,9);
   $ctx=RenderContext::forPublic(101,new SiteContext('https://a.test','A','https://a.test/l.png','https://a.test/f.png','en'),static fn()=>true);

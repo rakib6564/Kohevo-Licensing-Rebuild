@@ -1,4 +1,4 @@
-// SaveTemplateDialog — save the page, the selected section or the selected
+// SaveTemplateDialog — save the page, the selected Container or the selected
 // block as a reusable template (studio-builder.admin). The server reads the
 // content from the stored working revision; only metadata travels.
 

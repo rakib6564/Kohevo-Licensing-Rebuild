@@ -80,18 +80,12 @@ function sbp5s_render(array $style): string
 function sbp5s_validate(array $style): \Slate\Module\StudioBuilder\Schema\ValidationResult
 {
     $doc = [
-        'schema_version' => '1.0',
+        'schema_version' => '2.0',
         'document_type'  => 'page',
         'template_key'   => 'default',
         'settings'       => [],
         'seo'            => [],
-        'sections'       => [[
-            'id'         => CanonicalDocumentSchema::newSectionId(),
-            'label'      => 'Styled',
-            'global_ref' => null,
-            'layout'     => [],
-            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-            'blocks'     => [[
+        'containers'       => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Styled'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [[
                 'id'         => CanonicalDocumentSchema::newBlockId(),
                 'type'       => 'core.heading',
                 'version'    => 1,
@@ -100,8 +94,7 @@ function sbp5s_validate(array $style): \Slate\Module\StudioBuilder\Schema\Valida
                 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
                 'bindings'   => [],
                 'children'   => [],
-            ]],
-        ]],
+            ]]])],
     ];
     return DocumentValidator::validate($doc, BlockRegistry::withAllCoreBlocks());
 }

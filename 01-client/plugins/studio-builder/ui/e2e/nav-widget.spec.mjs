@@ -128,7 +128,7 @@ test('a sticky header with Shrink tightens after a little scroll and comes back 
   const header = page.locator('header.sb-site-header').first();
   await page.evaluate(() => window.scrollTo(0, 200));
   await expect(header).toHaveClass(/is-shrunk/);
-  await expect(page.locator('header.sb-site-header .sb-section').first()).toHaveCSS('padding-top', '5.6px');
+  await expect(page.locator('header.sb-site-header .sb-top').first()).toHaveCSS('padding-top', '5.6px');
   await page.evaluate(() => window.scrollTo(0, 0));
   await expect(header).not.toHaveClass(/is-shrunk/);
 });

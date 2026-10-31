@@ -5,7 +5,7 @@
  * Seeds a full suite of modern website components and theme templates into Kohevo Studio:
  * 1. Site-wide Theme Templates (Headers, Footers, Single Case Studies, Archives, 404 Pages)
  *    with ThemeTemplateResolver conditions, Canonical Document Schema v1.0, and backing pages.
- * 2. Re-usable Section Presets & Component Blocks (Hero, Bento Grid, Stats, Tabs, FAQ, Carousel,
+ * 2. Re-usable Container Presets & Component Blocks (Hero, Bento Grid, Stats, Tabs, FAQ, Carousel,
  *    Pricing Bento, CTA Banner, Contact Hub) for the Studio Library.
  *
  * Usage:
@@ -26,6 +26,7 @@ use Slate\Data\Database;
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 use Slate\Module\StudioBuilder\StudioPermissions;
@@ -219,7 +220,7 @@ $createThemeTemplate = function(
     return $tplId;
 };
 
-$createSectionPreset = function(
+$createContainerPreset = function(
     string $templateKey,
     string $name,
     string $category,
@@ -229,7 +230,7 @@ $createSectionPreset = function(
     $existing = Database::row("SELECT id FROM studiobuilder_templates WHERE tenant_id = ? AND template_key = ?", [$tenantId, $templateKey]);
     if ($existing !== null) {
         if (!$force) {
-            echo "  [skip] Section preset '{$templateKey}' already exists (ID: {$existing['id']})\n";
+            echo "  [skip] Container preset '{$templateKey}' already exists (ID: {$existing['id']})\n";
             return (int) $existing['id'];
         }
         Database::query("UPDATE studiobuilder_templates SET document_json = ?, name = ?, description = ?, updated_at = ? WHERE id = ? AND tenant_id = ?", [
@@ -240,7 +241,7 @@ $createSectionPreset = function(
             $existing['id'],
             $tenantId,
         ]);
-        echo "  ✓ [Section Preset] Updated: '{$name}' (Tpl ID: {$existing['id']})\n";
+        echo "  ✓ [Container Preset] Updated: '{$name}' (Tpl ID: {$existing['id']})\n";
         return (int) $existing['id'];
     }
 
@@ -249,7 +250,7 @@ $createSectionPreset = function(
         'tenant_id'          => $tenantId,
         'uuid'               => $tplUuid,
         'template_key'       => $templateKey,
-        'template_type'      => 'section_preset',
+        'template_type'      => 'container_preset',
         'category'           => $category,
         'name'               => $name,
         'description'        => $description,
@@ -261,7 +262,7 @@ $createSectionPreset = function(
         'updated_at'         => date('Y-m-d H:i:s'),
     ]);
 
-    echo "  ✓ [Section Preset] Seeded: '{$name}' (ID: {$tplId}, cat: {$category})\n";
+    echo "  ✓ [Container Preset] Seeded: '{$name}' (ID: {$tplId}, cat: {$category})\n";
     return $tplId;
 };
 
@@ -274,16 +275,15 @@ echo "\n--- 1. Seeding Modern Site-Wide Theme Templates ---\n";
 $docHeaderGlass = CanonicalDocumentSchema::emptyDocument('header_partial', 'default', 'Site Header');
 $docHeaderGlass['settings']['conditions'] = ['rules' => [['type' => 'include', 'condition' => 'entire_site']]];
 $docHeaderGlass['settings']['template_type'] = 'header';
-$docHeaderGlass['sections'] = [
-    [
-        'id'         => CanonicalDocumentSchema::newSectionId(),
+$docHeaderGlass['containers'] = [
+    DocumentUpgrader::sectionToContainer([
+        'id'         => CanonicalDocumentSchema::newBlockId(),
         'label'      => 'Sticky Glass Navigation',
-        'global_ref' => null,
-        'layout'     => array_merge(CanonicalDocumentSchema::defaultSectionLayout(), [
+        'layout'     => [
             'background_token' => 'surface.transparent',
             'padding_y'        => ['base' => 'sm', 'md' => 'sm'],
             'width'            => 'full',
-        ]),
+        ],
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'blocks'     => [
             [
@@ -299,7 +299,7 @@ $docHeaderGlass['sections'] = [
                 'children'   => [],
             ],
         ],
-    ],
+    ]),
 ];
 
 $createThemeTemplate(
@@ -318,16 +318,15 @@ $createThemeTemplate(
 $docFooterLuxury = CanonicalDocumentSchema::emptyDocument('footer_partial', 'default', 'Site Footer');
 $docFooterLuxury['settings']['conditions'] = ['rules' => [['type' => 'include', 'condition' => 'entire_site']]];
 $docFooterLuxury['settings']['template_type'] = 'footer';
-$docFooterLuxury['sections'] = [
-    [
-        'id'         => CanonicalDocumentSchema::newSectionId(),
+$docFooterLuxury['containers'] = [
+    DocumentUpgrader::sectionToContainer([
+        'id'         => CanonicalDocumentSchema::newBlockId(),
         'label'      => 'Mega Footer & Social Proof',
-        'global_ref' => null,
-        'layout'     => array_merge(CanonicalDocumentSchema::defaultSectionLayout(), [
+        'layout'     => [
             'background_token' => 'surface.secondary',
             'padding_y'        => ['base' => 'xl', 'md' => '2xl'],
             'width'            => 'wide',
-        ]),
+        ],
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'blocks'     => [
             [
@@ -343,7 +342,7 @@ $docFooterLuxury['sections'] = [
                 'children'   => [],
             ],
         ],
-    ],
+    ]),
 ];
 
 $createThemeTemplate(
@@ -362,16 +361,15 @@ $createThemeTemplate(
 $docSingleCaseStudy = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Case Study');
 $docSingleCaseStudy['settings']['conditions'] = ['rules' => [['type' => 'include', 'condition' => 'singular', 'value' => 'portfolio']]];
 $docSingleCaseStudy['settings']['template_type'] = 'single';
-$docSingleCaseStudy['sections'] = [
-    [
-        'id'         => CanonicalDocumentSchema::newSectionId(),
+$docSingleCaseStudy['containers'] = [
+    DocumentUpgrader::sectionToContainer([
+        'id'         => CanonicalDocumentSchema::newBlockId(),
         'label'      => 'Case Study Header & Hero',
-        'global_ref' => null,
-        'layout'     => array_merge(CanonicalDocumentSchema::defaultSectionLayout(), [
+        'layout'     => [
             'background_token' => 'surface.secondary',
             'padding_y'        => ['base' => 'xl', 'md' => '2xl'],
             'width'            => 'wide',
-        ]),
+        ],
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'blocks'     => [
             [
@@ -395,16 +393,15 @@ $docSingleCaseStudy['sections'] = [
                 'children'   => [],
             ],
         ],
-    ],
-    [
-        'id'         => CanonicalDocumentSchema::newSectionId(),
+    ]),
+    DocumentUpgrader::sectionToContainer([
+        'id'         => CanonicalDocumentSchema::newBlockId(),
         'label'      => 'Key Metrics Impact Row',
-        'global_ref' => null,
-        'layout'     => array_merge(CanonicalDocumentSchema::defaultSectionLayout(), [
+        'layout'     => [
             'background_token' => 'surface.primary',
             'padding_y'        => ['base' => 'lg', 'md' => 'lg'],
             'width'            => 'wide',
-        ]),
+        ],
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'blocks'     => [
             [
@@ -425,16 +422,15 @@ $docSingleCaseStudy['sections'] = [
                 'children'   => [],
             ],
         ],
-    ],
-    [
-        'id'         => CanonicalDocumentSchema::newSectionId(),
+    ]),
+    DocumentUpgrader::sectionToContainer([
+        'id'         => CanonicalDocumentSchema::newBlockId(),
         'label'      => 'Main Case Study Body',
-        'global_ref' => null,
-        'layout'     => array_merge(CanonicalDocumentSchema::defaultSectionLayout(), [
+        'layout'     => [
             'background_token' => 'surface.primary',
             'padding_y'        => ['base' => 'xl', 'md' => 'xl'],
             'width'            => 'normal',
-        ]),
+        ],
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'blocks'     => [
             [
@@ -448,7 +444,7 @@ $docSingleCaseStudy['sections'] = [
                 'children'   => [],
             ],
         ],
-    ],
+    ]),
 ];
 
 $createThemeTemplate(
@@ -467,16 +463,15 @@ $createThemeTemplate(
 $docArchivePortfolio = CanonicalDocumentSchema::emptyDocument('system', 'default', 'Selected Work Archive');
 $docArchivePortfolio['settings']['conditions'] = ['rules' => [['type' => 'include', 'condition' => 'entire_site']]];
 $docArchivePortfolio['settings']['template_type'] = 'archive';
-$docArchivePortfolio['sections'] = [
-    [
-        'id'         => CanonicalDocumentSchema::newSectionId(),
+$docArchivePortfolio['containers'] = [
+    DocumentUpgrader::sectionToContainer([
+        'id'         => CanonicalDocumentSchema::newBlockId(),
         'label'      => 'Archive Header & Filter',
-        'global_ref' => null,
-        'layout'     => array_merge(CanonicalDocumentSchema::defaultSectionLayout(), [
+        'layout'     => [
             'background_token' => 'surface.secondary',
             'padding_y'        => ['base' => 'xl', 'md' => '2xl'],
             'width'            => 'wide',
-        ]),
+        ],
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'blocks'     => [
             [
@@ -507,7 +502,7 @@ $docArchivePortfolio['sections'] = [
                 'children'   => [],
             ],
         ],
-    ],
+    ]),
 ];
 
 $createThemeTemplate(
@@ -526,16 +521,15 @@ $createThemeTemplate(
 $doc404 = CanonicalDocumentSchema::emptyDocument('system', 'default', '404 Page Not Found');
 $doc404['settings']['conditions'] = ['rules' => [['type' => 'include', 'condition' => 'entire_site']]];
 $doc404['settings']['template_type'] = '404';
-$doc404['sections'] = [
-    [
-        'id'         => CanonicalDocumentSchema::newSectionId(),
+$doc404['containers'] = [
+    DocumentUpgrader::sectionToContainer([
+        'id'         => CanonicalDocumentSchema::newBlockId(),
         'label'      => '404 Hero Experience',
-        'global_ref' => null,
-        'layout'     => array_merge(CanonicalDocumentSchema::defaultSectionLayout(), [
+        'layout'     => [
             'background_token' => 'surface.secondary',
             'padding_y'        => ['base' => '2xl', 'md' => '2xl'],
             'width'            => 'narrow',
-        ]),
+        ],
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'blocks'     => [
             [
@@ -551,7 +545,7 @@ $doc404['sections'] = [
                 'children'   => [],
             ],
         ],
-    ],
+    ]),
 ];
 
 $createThemeTemplate(
@@ -570,25 +564,23 @@ $createThemeTemplate(
 // =========================================================================
 // SECTION 2: SEED REUSABLE SECTION PRESETS & COMPONENT BLOCKS
 // =========================================================================
-echo "\n--- 2. Seeding Modern Section Presets & Component Blocks ---\n";
+echo "\n--- 2. Seeding Modern Container Presets & Component Blocks ---\n";
 
-// Helper to wrap section into a valid section_preset document
-$wrapSection = function(string $key, string $label, array $blocks, array $layout = []): array {
-    $doc = CanonicalDocumentSchema::emptyDocument('section_preset', 'default', $label);
-    $doc['sections'] = [
-        [
-            'id'         => CanonicalDocumentSchema::newSectionId(),
-            'label'      => $label,
-            'global_ref' => null,
-            'layout'     => array_merge(CanonicalDocumentSchema::defaultSectionLayout(), $layout),
-            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-            'blocks'     => $blocks,
-        ],
+// Helper to wrap a Container into a valid container_preset document
+$wrapContainer = function(string $key, string $label, array $blocks, array $layout = []): array {
+    $doc = CanonicalDocumentSchema::emptyDocument(CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE, 'default', $label);
+    $doc['containers'] = [
+        DocumentUpgrader::sectionToContainer([
+            'id'     => CanonicalDocumentSchema::newBlockId(),
+            'label'  => $label,
+            'layout' => $layout,
+            'blocks' => $blocks,
+        ]),
     ];
     return $doc;
 };
 
-// 2.1 Modern Hero Section Preset
+// 2.1 Modern Hero Container Preset
 $heroBlocks = [
     [
         'id'         => CanonicalDocumentSchema::newBlockId(),
@@ -603,12 +595,12 @@ $heroBlocks = [
         'children'   => [],
     ],
 ];
-$createSectionPreset(
+$createContainerPreset(
     'preset-hero-modern',
     'Modern SaaS & Creative Hero',
     'hero',
     'High-converting hero section with live status badge, gradient headline, dual CTAs, and client marquee trust strip.',
-    $wrapSection('preset-hero-modern', 'Modern Hero Section', $heroBlocks, ['padding_y' => ['base' => 'xl', 'md' => '2xl']])
+    $wrapContainer('preset-hero-modern', 'Modern Hero Section', $heroBlocks, ['padding_y' => ['base' => 'xl', 'md' => '2xl']])
 );
 
 // 2.2 Bento Grid Features & Architecture Preset
@@ -626,12 +618,12 @@ $bentoBlocks = [
         'children'   => [],
     ],
 ];
-$createSectionPreset(
+$createContainerPreset(
     'preset-bento-features',
     'Bento Grid Features & Architecture',
     'features',
     'Asymmetric 3-card Bento grid highlighting design systems, visual builder, and server rendering performance.',
-    $wrapSection('preset-bento-features', 'Bento Grid Features', $bentoBlocks, ['padding_y' => ['base' => 'xl', 'md' => 'xl']])
+    $wrapContainer('preset-bento-features', 'Bento Grid Features', $bentoBlocks, ['padding_y' => ['base' => 'xl', 'md' => 'xl']])
 );
 
 // 2.3 High-Impact Performance Metrics Preset
@@ -654,12 +646,12 @@ $statsBlocks = [
         'children'   => [],
     ],
 ];
-$createSectionPreset(
+$createContainerPreset(
     'preset-stats-metrics',
     'High-Impact Performance Metrics & Stats',
     'stats',
     '4-card stat counter row with gradient accents and enterprise proof points.',
-    $wrapSection('preset-stats-metrics', 'Metrics & Stats Row', $statsBlocks, ['padding_y' => ['base' => 'lg', 'md' => 'lg']])
+    $wrapContainer('preset-stats-metrics', 'Metrics & Stats Row', $statsBlocks, ['padding_y' => ['base' => 'lg', 'md' => 'lg']])
 );
 
 // 2.4 Interactive Technology Stack Tabs Preset
@@ -690,12 +682,12 @@ $tabsBlocks = [
         'children'   => [],
     ],
 ];
-$createSectionPreset(
+$createContainerPreset(
     'preset-interactive-tabs',
     'Interactive Technology Stack Tabs',
     'interactive',
     'Tabbed switcher block detailing front-end, back-end, and cloud edge capabilities.',
-    $wrapSection('preset-interactive-tabs', 'Interactive Stack Tabs', $tabsBlocks, ['padding_y' => ['base' => 'lg', 'md' => 'xl']])
+    $wrapContainer('preset-interactive-tabs', 'Interactive Stack Tabs', $tabsBlocks, ['padding_y' => ['base' => 'lg', 'md' => 'xl']])
 );
 
 // 2.5 Interactive FAQ Accordion Preset
@@ -730,12 +722,12 @@ $faqBlocks = [
         'children'   => [],
     ],
 ];
-$createSectionPreset(
+$createContainerPreset(
     'preset-faq-accordion',
     'Interactive FAQ Accordion',
     'faq',
     'Expandable 4-question interactive accordion addressing scope, security, customization, and retainers.',
-    $wrapSection('preset-faq-accordion', 'FAQ Accordion Section', $faqBlocks, ['padding_y' => ['base' => 'lg', 'md' => 'xl']])
+    $wrapContainer('preset-faq-accordion', 'FAQ Accordion Section', $faqBlocks, ['padding_y' => ['base' => 'lg', 'md' => 'xl']])
 );
 
 // 2.6 Luxury Client Testimonials Carousel Preset
@@ -769,12 +761,12 @@ $carouselBlocks = [
         'children'   => [],
     ],
 ];
-$createSectionPreset(
+$createContainerPreset(
     'preset-testimonial-carousel',
     'Luxury Client Testimonials Carousel',
     'testimonials',
     'Interactive client testimonial carousel featuring 5-star ratings, executive endorsements, and outcome metrics.',
-    $wrapSection('preset-testimonial-carousel', 'Testimonials Carousel', $carouselBlocks, ['padding_y' => ['base' => 'lg', 'md' => 'xl']])
+    $wrapContainer('preset-testimonial-carousel', 'Testimonials Carousel', $carouselBlocks, ['padding_y' => ['base' => 'lg', 'md' => 'xl']])
 );
 
 // 2.7 SaaS & Agency 3-Tier Pricing Bento Preset
@@ -792,12 +784,12 @@ $pricingBlocks = [
         'children'   => [],
     ],
 ];
-$createSectionPreset(
+$createContainerPreset(
     'preset-pricing-bento',
     'SaaS & Agency 3-Tier Pricing Bento Grid',
     'pricing',
     'High-converting 3-column pricing bento with highlighted Popular tier, feature lists, and action buttons.',
-    $wrapSection('preset-pricing-bento', 'Pricing Bento Grid', $pricingBlocks, ['padding_y' => ['base' => 'xl', 'md' => '2xl']])
+    $wrapContainer('preset-pricing-bento', 'Pricing Bento Grid', $pricingBlocks, ['padding_y' => ['base' => 'xl', 'md' => '2xl']])
 );
 
 // 2.8 Conversion-Driven Gradient CTA Banner Preset
@@ -815,12 +807,12 @@ $ctaBlocks = [
         'children'   => [],
     ],
 ];
-$createSectionPreset(
+$createContainerPreset(
     'preset-cta-gradient',
     'Conversion-Driven Gradient CTA Banner',
     'cta',
     'Full-width vibrant gradient call to action banner with dual action buttons and inquiry reassurance.',
-    $wrapSection('preset-cta-gradient', 'Gradient CTA Banner', $ctaBlocks, ['padding_y' => ['base' => 'xl', 'md' => 'xl']])
+    $wrapContainer('preset-cta-gradient', 'Gradient CTA Banner', $ctaBlocks, ['padding_y' => ['base' => 'xl', 'md' => 'xl']])
 );
 
 // 2.9 Modern Contact & Consultation Hub Preset
@@ -838,12 +830,12 @@ $contactBlocks = [
         'children'   => [],
     ],
 ];
-$createSectionPreset(
+$createContainerPreset(
     'preset-contact-hub',
     'Modern Contact & Consultation Hub',
     'contact',
     'Two-column consultation hub with direct channels, expected response commitments, and structured inquiry form.',
-    $wrapSection('preset-contact-hub', 'Contact & Consultation Hub', $contactBlocks, ['padding_y' => ['base' => 'xl', 'md' => '2xl']])
+    $wrapContainer('preset-contact-hub', 'Contact & Consultation Hub', $contactBlocks, ['padding_y' => ['base' => 'xl', 'md' => '2xl']])
 );
 
 echo "\n=========================================================\n";
