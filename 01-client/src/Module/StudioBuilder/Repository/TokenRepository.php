@@ -20,4 +20,14 @@ final class TokenRepository extends StudioRepository
             ->where('token_group', $tokenGroup)
             ->first();
     }
+
+    /**
+     * The token groups this tenant has stored overrides for.
+     *
+     * @return list<string>
+     */
+    public function groups(): array
+    {
+        return array_map(static fn(array $row): string => (string) $row['token_group'], $this->query()->get());
+    }
 }

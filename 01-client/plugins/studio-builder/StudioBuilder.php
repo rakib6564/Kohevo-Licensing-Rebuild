@@ -221,6 +221,8 @@ class StudioBuilder extends Plugin
             // Scripts run on every public page: Studio administrators only, as on the screen itself.
             ['slug' => 'studio-code-tracking', 'label' => $t('studio_nav_tracking', 'Tracking & code'), 'file' => 'admin/code-tracking.php', 'icon' => 'edit-3', 'section' => $search, 'perm' => 'studio-builder.admin'],
             ['slug' => 'studio-types-fields', 'label' => $t('studio_nav_content_types', 'Content types'), 'file' => 'admin/types-fields.php', 'icon' => 'tag', 'section' => $advanced],
+            // A backup holds every draft and the site's scripts: Studio administrators only.
+            ['slug' => 'studio-backup', 'label' => $t('studio_nav_backup', 'Backup'), 'file' => 'admin/backup.php', 'icon' => 'package', 'section' => $advanced, 'perm' => 'studio-builder.admin'],
             ['slug' => 'studio-reviews', 'label' => $t('studio_nav_history', 'History'), 'file' => 'admin/reviews.php', 'icon' => 'clock', 'section' => $advanced],
             ['slug' => 'studio-ai-mcp', 'label' => $t('studio_nav_ai_mcp', 'AI & MCP'), 'file' => 'admin/ai-mcp.php', 'icon' => 'sparkles', 'section' => $advanced],
         ]);

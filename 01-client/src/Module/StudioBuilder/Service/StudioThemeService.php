@@ -44,6 +44,12 @@ final class StudioThemeService
         private readonly ThemeResolver $themes,
     ) {}
 
+    /** @return list<string> the groups this tenant has stored overrides for */
+    public function storedGroups(): array
+    {
+        return $this->tokens->groups();
+    }
+
     /** @return list<string> the token refs a tenant may override */
     public static function editableTokens(): array
     {

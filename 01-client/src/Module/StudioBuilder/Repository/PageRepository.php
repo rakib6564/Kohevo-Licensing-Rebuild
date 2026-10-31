@@ -65,6 +65,16 @@ final class PageRepository extends StudioRepository
     }
 
     /**
+     * Every page of the tenant that is not archived, for a backup: no limit, and in a stable order.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function allForBackup(): array
+    {
+        return $this->query()->where('status', '<>', 'archived')->orderBy('id', 'ASC')->get();
+    }
+
+    /**
      * Every page that is not archived, newest change first. Archived pages are left out in SQL, before the limit: filtering
      * them afterwards let a run of recently archived pages (a bulk delete) use up the limit and hide live ones.
      *

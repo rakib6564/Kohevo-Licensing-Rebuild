@@ -20,4 +20,14 @@ final class TemplateRepository extends StudioRepository
             ->where('template_key', $templateKey)
             ->first();
     }
+
+    /**
+     * The tenant's own templates, for a backup. System templates come with the plugin.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function allCustom(): array
+    {
+        return $this->query()->where('is_system', 0)->orderBy('id', 'ASC')->get();
+    }
 }
