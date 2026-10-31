@@ -97,6 +97,23 @@ class Notifications
     }
 
     /** Fetch one notification (tenant-scoped) or null. */
+    /**
+     * A notification's link on this site. Links are stored as full addresses, so one saved before the site moved to
+     * another folder or domain still names the old place: its admin or plugin path is kept and put on SLATE_URL.
+     * Any other address comes back unchanged, for the caller's own checks.
+     */
+    public static function localUrl(string $url): string
+    {
+        $base = defined('SLATE_URL') ? rtrim((string) SLATE_URL, '/') : '';
+        if ($base === '' || $url === '' || str_starts_with($url, $base . '/')) {
+            return $url;
+        }
+        if (preg_match('~^https?://[^/?#]+(?:/[^?#]*?)?(/(?:admin|plugins)/[^\\s]*)$~i', $url, $m) !== 1) {
+            return $url;
+        }
+        return $base . $m[1];
+    }
+
     public static function get(int $id): ?array
     {
         self::ensureSchema();

@@ -18,7 +18,7 @@ if (isset($_GET['go'])) {
     $n  = Notifications::get($id);
     Notifications::markRead($id, true);
     $target = ($n && !empty($n['url']))
-        ? slate_safe_redirect_target($n['url'], SLATE_URL . '/admin/notifications.php')
+        ? slate_safe_redirect_target(Notifications::localUrl((string)$n['url']), SLATE_URL . '/admin/notifications.php')
         : SLATE_URL . '/admin/notifications.php';
     header('Location: ' . $target);
     exit;
@@ -185,7 +185,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
     ?>
     <div class="data-list" data-single-open>
         <?php foreach ($rows as $n):
-            $nUrl  = (string)($n['url'] ?? '');
+            $nUrl  = Notifications::localUrl((string)($n['url'] ?? ''));
             $time  = function_exists('slate_admin_time_ago')
                    ? slate_admin_time_ago((string)($n['created_at'] ?? ''))
                    : I18n::localDate('j M Y, H:i', strtotime((string)($n['created_at'] ?? 'now')));
