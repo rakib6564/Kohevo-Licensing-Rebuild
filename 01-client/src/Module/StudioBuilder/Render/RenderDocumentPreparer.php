@@ -40,7 +40,7 @@ final class RenderDocumentPreparer
     /** Marker key for an inert, non-renderable block (never a canonical document key). */
     public const UNAVAILABLE_KEY = '__sb_unavailable';
 
-    private const PROBE_SECTION_ID = 'sec_0000000000000000';
+    private const PROBE_CONTAINER_ID = 'blk_0000000000000000';
 
     /**
      * @param string|array<string, mixed> $document
@@ -61,15 +61,15 @@ final class RenderDocumentPreparer
             return ['document' => DocumentNormalizer::normalize($decoded, $registry), 'degraded' => false];
         }
 
-        $rawSections = $decoded['sections'] ?? null;
-        if (!is_array($rawSections) || !array_is_list($rawSections)) {
-            throw new StudioRenderException('Studio document has no renderable sections.', ['reason' => 'invalid_envelope']);
+        $rawContainers = $decoded['containers'] ?? null;
+        if (!is_array($rawContainers) || !array_is_list($rawContainers)) {
+            throw new StudioRenderException('Studio document has no renderable Containers.', ['reason' => 'invalid_envelope']);
         }
 
         $envelope = $decoded;
-        foreach ($rawSections as $i => $section) {
-            if (is_array($section) && !array_is_list($section)) {
-                $envelope['sections'][$i]['blocks'] = [];
+        foreach ($rawContainers as $i => $container) {
+            if (is_array($container) && !array_is_list($container)) {
+                $envelope['containers'][$i]['children'] = [];
             }
         }
         $envelopeResult = DocumentValidator::validate($envelope, $registry);
@@ -83,11 +83,11 @@ final class RenderDocumentPreparer
         $normalized = DocumentNormalizer::normalize($envelope, $registry);
         $seen  = [];
         $count = 0;
-        foreach ($normalized['sections'] as $i => $section) {
-            $rawBlocks = $rawSections[$i]['blocks'] ?? [];
-            $normalized['sections'][$i]['blocks'] = self::prepareBlocks(
+        foreach (array_keys($normalized['containers']) as $i) {
+            $rawBlocks = $rawContainers[$i]['children'] ?? [];
+            $normalized['containers'][$i]['children'] = self::prepareBlocks(
                 is_array($rawBlocks) && array_is_list($rawBlocks) ? $rawBlocks : [],
-                1,
+                2,
                 $registry,
                 $seen,
                 $count,
@@ -142,14 +142,7 @@ final class RenderDocumentPreparer
         $probeBlock = $raw;
         $probeBlock['children'] = [];
         $probe = CanonicalDocumentSchema::emptyDocument();
-        $probe['sections'] = [[
-            'blocks'     => [$probeBlock],
-            'global_ref' => null,
-            'id'         => self::PROBE_SECTION_ID,
-            'label'      => 'probe',
-            'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        ]];
+        $probe['containers'] = [CanonicalDocumentSchema::newContainer(['id' => self::PROBE_CONTAINER_ID, 'children' => [$probeBlock]])];
 
         $result = DocumentValidator::validate($probe, $registry);
         if (!$result->isValid()) {
@@ -157,7 +150,7 @@ final class RenderDocumentPreparer
             return self::unavailable(in_array('invalid_block_version', $codes, true) ? 'unsupported_block_version' : 'invalid_block');
         }
 
-        $block = DocumentNormalizer::normalize($probe, $registry)['sections'][0]['blocks'][0];
+        $block = DocumentNormalizer::normalize($probe, $registry)['containers'][0]['children'][0];
         $children = $raw['children'] ?? [];
         $block['children'] = ($definition->allowsChildren() && is_array($children) && array_is_list($children))
             ? self::prepareBlocks($children, $depth + 1, $registry, $seen, $count)

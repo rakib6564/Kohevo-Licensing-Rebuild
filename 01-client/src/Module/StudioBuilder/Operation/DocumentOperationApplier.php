@@ -7,15 +7,15 @@
  *
  * This class does NOT validate or normalize the resulting document — it only
  * performs the requested structural edit, failing closed when a referenced
- * section/block id does not exist, an unregistered block type is inserted, or
+ * block id does not exist, an unregistered block type is inserted, or
  * a block is inserted into a parent that does not allow children. The caller
  * (a future `ApplyDocumentOperation` command / `StudioRevisionService` draft
  * write) MUST always pass the result through
  * `DocumentNormalizer::validateAndNormalize()` before persisting it, exactly
  * like any other authored document.
  *
- * Section/block updates use whole-value replace semantics for `props`, `style`,
- * `visibility`, `bindings`, and section `layout`/`visibility` (the client sends
+ * Block updates use whole-value replace semantics for `props`, `style`,
+ * `visibility` and `bindings` (the client sends
  * the complete new sub-object, the same contract a block property panel would
  * use). `update_settings` / `update_seo` use a shallow merge into the existing
  * map, since those are typically edited one field at a time.
@@ -65,14 +65,6 @@ final class DocumentOperationApplier
             DocumentOperation::OP_UPDATE_SETTINGS => self::updateSettings($document, $payload),
             DocumentOperation::OP_UPDATE_SEO => self::updateSeo($document, $payload),
             DocumentOperation::OP_UPDATE_TEMPLATE => self::updateTemplate($document, $payload),
-            DocumentOperation::OP_INSERT_SECTION => self::insertSection($document, $payload),
-            DocumentOperation::OP_REMOVE_SECTION => self::removeSection($document, $payload),
-            DocumentOperation::OP_MOVE_SECTION => self::moveSection($document, $payload),
-            DocumentOperation::OP_DUPLICATE_SECTION => self::duplicateSection($document, $payload),
-            DocumentOperation::OP_UPDATE_SECTION_LABEL => self::updateSectionLabel($document, $payload),
-            DocumentOperation::OP_UPDATE_SECTION_LAYOUT => self::updateSectionField($document, $payload, 'layout'),
-            DocumentOperation::OP_UPDATE_SECTION_VISIBILITY => self::updateSectionField($document, $payload, 'visibility'),
-            DocumentOperation::OP_UPDATE_SECTION_LOCKED => self::updateSectionLocked($document, $payload),
             DocumentOperation::OP_INSERT_BLOCK => self::insertBlock($document, $payload, $registry),
             DocumentOperation::OP_REMOVE_BLOCK => self::removeBlock($document, $payload),
             DocumentOperation::OP_MOVE_BLOCK => self::moveBlock($document, $payload, $registry),
@@ -92,9 +84,6 @@ final class DocumentOperationApplier
             DocumentOperation::OP_UPDATE_BLOCK_TAG => self::updateBlockTag($document, $payload),
             DocumentOperation::OP_UPDATE_BLOCK_CUSTOM_CSS => self::updateBlockCustomCss($document, $payload),
             DocumentOperation::OP_RESET_BLOCK_STYLE_PROPERTY => self::resetBlockStyleProperty($document, $payload),
-            DocumentOperation::OP_UPDATE_SECTION_STYLE => self::updateSectionStyle($document, $payload),
-            DocumentOperation::OP_UPDATE_SECTION_ANIMATION => self::updateSectionObjectField($document, $payload, 'animation'),
-            DocumentOperation::OP_UPDATE_SECTION_INTERACTIONS => self::updateSectionObjectField($document, $payload, 'interactions'),
             default => throw new StudioValidationException([
                 ['path' => '$.op', 'code' => 'unknown_operation', 'message' => "Unknown Studio document operation '{$operation->op}'."],
             ]),
@@ -146,188 +135,6 @@ final class DocumentOperationApplier
         return $document;
     }
 
-    // ── Section operations ─────────────────────────────────────────────────
-
-    /**
-     * @param array<string, mixed> $document
-     * @param array<string, mixed> $payload
-     * @return array<string, mixed>
-     */
-    private static function insertSection(array $document, array $payload): array
-    {
-        $index = self::requireInt($payload, 'index', '$.payload.index');
-        $section = $payload['section'] ?? null;
-
-        if ($section !== null && (!is_array($section) || array_is_list($section))) {
-            throw new StudioValidationException([
-                ['path' => '$.payload.section', 'code' => 'invalid_section', 'message' => 'payload.section must be an object or null.'],
-            ]);
-        }
-
-        $newSection = is_array($section) ? $section : [];
-        $newSection['id']         = CanonicalDocumentSchema::newSectionId();
-        $newSection['label']      ??= 'New Section';
-        $newSection['global_ref'] ??= null;
-        $newSection['layout']     = is_array($newSection['layout'] ?? null) ? $newSection['layout'] : CanonicalDocumentSchema::defaultSectionLayout();
-        $newSection['visibility'] = is_array($newSection['visibility'] ?? null) ? $newSection['visibility'] : CanonicalDocumentSchema::defaultVisibility();
-        $newSection['blocks']     = is_array($newSection['blocks'] ?? null) ? $newSection['blocks'] : [];
-
-        $sections = is_array($document['sections'] ?? null) ? array_values($document['sections']) : [];
-        $clampedIndex = max(0, min($index, count($sections)));
-        array_splice($sections, $clampedIndex, 0, [$newSection]);
-
-        $document['sections'] = $sections;
-        return $document;
-    }
-
-    /**
-     * @param array<string, mixed> $document
-     * @param array<string, mixed> $payload
-     * @return array<string, mixed>
-     */
-    private static function removeSection(array $document, array $payload): array
-    {
-        $sectionId = self::requireString($payload, 'section_id', '$.payload.section_id');
-        $sections  = is_array($document['sections'] ?? null) ? $document['sections'] : [];
-
-        $found = false;
-        $out = [];
-        foreach ($sections as $section) {
-            if (is_array($section) && ($section['id'] ?? null) === $sectionId) {
-                $found = true;
-                continue;
-            }
-            $out[] = $section;
-        }
-
-        self::assertFound($found, 'section_id', $sectionId, 'section');
-        $document['sections'] = $out;
-        return $document;
-    }
-
-    /**
-     * @param array<string, mixed> $document
-     * @param array<string, mixed> $payload
-     * @return array<string, mixed>
-     */
-    private static function moveSection(array $document, array $payload): array
-    {
-        $sectionId = self::requireString($payload, 'section_id', '$.payload.section_id');
-        $toIndex   = self::requireInt($payload, 'to_index', '$.payload.to_index');
-
-        $sections = is_array($document['sections'] ?? null) ? array_values($document['sections']) : [];
-
-        $foundIndex = null;
-        foreach ($sections as $idx => $section) {
-            if (is_array($section) && ($section['id'] ?? null) === $sectionId) {
-                $foundIndex = $idx;
-                break;
-            }
-        }
-        self::assertFound($foundIndex !== null, 'section_id', $sectionId, 'section');
-
-        $section = $sections[$foundIndex];
-        array_splice($sections, $foundIndex, 1);
-        $clampedIndex = max(0, min($toIndex, count($sections)));
-        array_splice($sections, $clampedIndex, 0, [$section]);
-
-        $document['sections'] = $sections;
-        return $document;
-    }
-
-    /**
-     * Replace `section.layout` or `section.visibility` wholesale.
-     *
-     * @param array<string, mixed> $document
-     * @param array<string, mixed> $payload
-     * @return array<string, mixed>
-     */
-    private static function updateSectionField(array $document, array $payload, string $field): array
-    {
-        $sectionId = self::requireString($payload, 'section_id', '$.payload.section_id');
-        $value     = self::requireObject($payload, $field, "\$.payload.{$field}");
-
-        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
-        $found = false;
-        foreach ($sections as $idx => $section) {
-            if (is_array($section) && ($section['id'] ?? null) === $sectionId) {
-                $sections[$idx][$field] = $value;
-                $found = true;
-                break;
-            }
-        }
-        self::assertFound($found, 'section_id', $sectionId, 'section');
-
-        $document['sections'] = $sections;
-        return $document;
-    }
-
-    /**
-     * Duplicate a section directly after itself, minting a fresh section ID
-     * and fresh IDs for all blocks in its subtree.
-     *
-     * @param array<string, mixed> $document
-     * @param array<string, mixed> $payload
-     * @return array<string, mixed>
-     */
-    private static function duplicateSection(array $document, array $payload): array
-    {
-        $sectionId = self::requireString($payload, 'section_id', '$.payload.section_id');
-        $sections = is_array($document['sections'] ?? null) ? array_values($document['sections']) : [];
-
-        $foundIndex = null;
-        foreach ($sections as $idx => $section) {
-            if (is_array($section) && ($section['id'] ?? null) === $sectionId) {
-                $foundIndex = $idx;
-                break;
-            }
-        }
-        self::assertFound($foundIndex !== null, 'section_id', $sectionId, 'section');
-
-        $source = $sections[$foundIndex];
-        $cloned = $source;
-        $cloned['id'] = CanonicalDocumentSchema::newSectionId();
-        $cloned['label'] = ($source['label'] ?? 'Section') . ' (Copy)';
-        $blocks = is_array($source['blocks'] ?? null) ? $source['blocks'] : [];
-        $cloned['blocks'] = DocumentCopier::copyBlocks($blocks);
-
-        array_splice($sections, $foundIndex + 1, 0, [$cloned]);
-        $document['sections'] = $sections;
-        return $document;
-    }
-
-    /**
-     * Rename / update section label.
-     *
-     * @param array<string, mixed> $document
-     * @param array<string, mixed> $payload
-     * @return array<string, mixed>
-     */
-    private static function updateSectionLabel(array $document, array $payload): array
-    {
-        $sectionId = self::requireString($payload, 'section_id', '$.payload.section_id');
-        $label = self::requireString($payload, 'label', '$.payload.label');
-        if (mb_strlen($label, 'UTF-8') > 120 || FieldSchema::containsExecutableOrSqlFragment($label)) {
-            throw new StudioValidationException([
-                ['path' => '$.payload.label', 'code' => 'invalid_section_label', 'message' => 'Section label must be a safe string <= 120 chars.'],
-            ]);
-        }
-
-        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
-        $found = false;
-        foreach ($sections as $idx => $section) {
-            if (is_array($section) && ($section['id'] ?? null) === $sectionId) {
-                $sections[$idx]['label'] = $label;
-                $found = true;
-                break;
-            }
-        }
-        self::assertFound($found, 'section_id', $sectionId, 'section');
-
-        $document['sections'] = $sections;
-        return $document;
-    }
-
     // ── Block operations ────────────────────────────────────────────────────
 
     /**
@@ -337,7 +144,7 @@ final class DocumentOperationApplier
      */
     private static function insertBlock(array $document, array $payload, BlockRegistry $registry): array
     {
-        $parentId = self::requireString($payload, 'parent_id', '$.payload.parent_id');
+        $parentId = self::parentId($payload);
         $index    = self::requireInt($payload, 'index', '$.payload.index');
         $block    = self::requireObject($payload, 'block', '$.payload.block');
 
@@ -378,37 +185,39 @@ final class DocumentOperationApplier
             }
         }
 
-        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
+        return self::placeBlock($document, $parentId, $index, $newBlock, $registry);
+    }
 
-        // Try inserting directly into a section's top-level blocks first.
-        foreach ($sections as $sIdx => $section) {
-            if (!is_array($section) || ($section['id'] ?? null) !== $parentId) {
-                continue;
+    /** `parent_id`: a block's id, or null for the top level of the page. */
+    private static function parentId(array $payload): ?string
+    {
+        return ($payload['parent_id'] ?? null) === null ? null : self::requireString($payload, 'parent_id', '$.payload.parent_id');
+    }
+
+    /**
+     * Put a block under `$parentId` (null: the top level, where only a Container may sit) at `$index`.
+     *
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $block
+     * @return array<string, mixed>
+     */
+    private static function placeBlock(array $document, ?string $parentId, int $index, array $block, BlockRegistry $registry): array
+    {
+        $containers = is_array($document['containers'] ?? null) ? array_values($document['containers']) : [];
+        if ($parentId === null) {
+            if (($block['type'] ?? null) !== CanonicalDocumentSchema::CONTAINER_TYPE) {
+                throw new StudioValidationException([
+                    ['path' => '$.payload.parent_id', 'code' => 'top_level_not_container', 'message' => 'Only a Container can sit at the top level of a page; put this block inside one.'],
+                ]);
             }
-            $blocks = is_array($section['blocks'] ?? null) ? array_values($section['blocks']) : [];
-            $clampedIndex = max(0, min($index, count($blocks)));
-            array_splice($blocks, $clampedIndex, 0, [$newBlock]);
-            $sections[$sIdx]['blocks'] = $blocks;
-            $document['sections'] = $sections;
+            array_splice($containers, max(0, min($index, count($containers))), 0, [$block]);
+            $document['containers'] = $containers;
             return $document;
         }
-
-        // Otherwise, the parent must be an existing block that allows children.
         $inserted = false;
-        foreach ($sections as $sIdx => $section) {
-            if (!is_array($section)) {
-                continue;
-            }
-            $blocks = is_array($section['blocks'] ?? null) ? $section['blocks'] : [];
-            $blocks = self::insertIntoBlockChildren($blocks, $parentId, $index, $newBlock, $registry, $inserted);
-            $sections[$sIdx]['blocks'] = $blocks;
-            if ($inserted) {
-                break;
-            }
-        }
-
-        self::assertFound($inserted, 'parent_id', $parentId, 'section or child-capable block');
-        $document['sections'] = $sections;
+        $containers = self::insertIntoBlockChildren($containers, $parentId, $index, $block, $registry, $inserted);
+        self::assertFound($inserted, 'parent_id', $parentId, 'child-capable block');
+        $document['containers'] = $containers;
         return $document;
     }
 
@@ -463,19 +272,9 @@ final class DocumentOperationApplier
     private static function removeBlock(array $document, array $payload): array
     {
         $blockId = self::requireString($payload, 'block_id', '$.payload.block_id');
-        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
-
         $found = false;
-        foreach ($sections as $sIdx => $section) {
-            if (!is_array($section)) {
-                continue;
-            }
-            $blocks = is_array($section['blocks'] ?? null) ? $section['blocks'] : [];
-            $sections[$sIdx]['blocks'] = self::removeBlockRecursive($blocks, $blockId, $found);
-        }
-
+        $document['containers'] = self::removeBlockRecursive(is_array($document['containers'] ?? null) ? $document['containers'] : [], $blockId, $found);
         self::assertFound($found, 'block_id', $blockId, 'block');
-        $document['sections'] = $sections;
         return $document;
     }
 
@@ -505,7 +304,7 @@ final class DocumentOperationApplier
 
     /**
      * Detach a block by id from wherever it currently lives and re-insert it as
-     * a child of `parent_id` (a section id or another block id) at `index`.
+     * a child of `parent_id` (a block id, or null for the top level) at `index`.
      *
      * @param array<string, mixed> $document
      * @param array<string, mixed> $payload
@@ -514,28 +313,15 @@ final class DocumentOperationApplier
     private static function moveBlock(array $document, array $payload, BlockRegistry $registry): array
     {
         $blockId  = self::requireString($payload, 'block_id', '$.payload.block_id');
-        $parentId = self::requireString($payload, 'parent_id', '$.payload.parent_id');
+        $parentId = self::parentId($payload);
         $index    = self::requireInt($payload, 'index', '$.payload.index');
 
-        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
-
         $extracted = null;
-        foreach ($sections as $sIdx => $section) {
-            if (!is_array($section)) {
-                continue;
-            }
-            $blocks = is_array($section['blocks'] ?? null) ? $section['blocks'] : [];
-            $blocks = self::extractBlockRecursive($blocks, $blockId, $extracted);
-            $sections[$sIdx]['blocks'] = $blocks;
-        }
-
+        $document['containers'] = self::extractBlockRecursive(is_array($document['containers'] ?? null) ? $document['containers'] : [], $blockId, $extracted);
         self::assertFound($extracted !== null, 'block_id', $blockId, 'block');
 
-        $insertPayload = ['parent_id' => $parentId, 'index' => $index, 'block' => $extracted];
-        // Re-use insertBlock's registry/allowsChildren checks, but with the
-        // already-existing block (preserve id/version instead of minting new ones).
-        $document['sections'] = $sections;
-        return self::reinsertExtractedBlock($document, $parentId, $index, $extracted, $registry);
+        // The block keeps its id and version: this is a move, not a new block.
+        return self::placeBlock($document, $parentId, $index, $extracted, $registry);
     }
 
     /**
@@ -564,45 +350,6 @@ final class DocumentOperationApplier
     }
 
     /**
-     * @param array<string, mixed> $document
-     * @param array<string, mixed> $block
-     * @return array<string, mixed>
-     */
-    private static function reinsertExtractedBlock(array $document, string $parentId, int $index, array $block, BlockRegistry $registry): array
-    {
-        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
-
-        foreach ($sections as $sIdx => $section) {
-            if (!is_array($section) || ($section['id'] ?? null) !== $parentId) {
-                continue;
-            }
-            $blocks = is_array($section['blocks'] ?? null) ? array_values($section['blocks']) : [];
-            $clampedIndex = max(0, min($index, count($blocks)));
-            array_splice($blocks, $clampedIndex, 0, [$block]);
-            $sections[$sIdx]['blocks'] = $blocks;
-            $document['sections'] = $sections;
-            return $document;
-        }
-
-        $inserted = false;
-        foreach ($sections as $sIdx => $section) {
-            if (!is_array($section)) {
-                continue;
-            }
-            $blocks = is_array($section['blocks'] ?? null) ? $section['blocks'] : [];
-            $blocks = self::insertIntoBlockChildren($blocks, $parentId, $index, $block, $registry, $inserted);
-            $sections[$sIdx]['blocks'] = $blocks;
-            if ($inserted) {
-                break;
-            }
-        }
-
-        self::assertFound($inserted, 'parent_id', $parentId, 'section or child-capable block');
-        $document['sections'] = $sections;
-        return $document;
-    }
-
-    /**
      * Replace `block.props` / `style` / `visibility` / `bindings` wholesale for a target block id.
      *
      * @param array<string, mixed> $document
@@ -614,18 +361,9 @@ final class DocumentOperationApplier
         $blockId = self::requireString($payload, 'block_id', '$.payload.block_id');
         $value   = self::requireObject($payload, $field, "\$.payload.{$field}");
 
-        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
         $found = false;
-        foreach ($sections as $sIdx => $section) {
-            if (!is_array($section)) {
-                continue;
-            }
-            $blocks = is_array($section['blocks'] ?? null) ? $section['blocks'] : [];
-            $sections[$sIdx]['blocks'] = self::updateBlockFieldRecursive($blocks, $blockId, $field, $value, $found);
-        }
-
+        $document['containers'] = self::updateBlockFieldRecursive(is_array($document['containers'] ?? null) ? $document['containers'] : [], $blockId, $field, $value, $found);
         self::assertFound($found, 'block_id', $blockId, 'block');
-        $document['sections'] = $sections;
         return $document;
     }
 
@@ -641,18 +379,9 @@ final class DocumentOperationApplier
         $blockId = self::requireString($payload, 'block_id', '$.payload.block_id');
         $value   = self::requireList($payload, $field, "\$.payload.{$field}");
 
-        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
         $found = false;
-        foreach ($sections as $sIdx => $section) {
-            if (!is_array($section)) {
-                continue;
-            }
-            $blocks = is_array($section['blocks'] ?? null) ? $section['blocks'] : [];
-            $sections[$sIdx]['blocks'] = self::updateBlockFieldRecursive($blocks, $blockId, $field, $value, $found);
-        }
-
+        $document['containers'] = self::updateBlockFieldRecursive(is_array($document['containers'] ?? null) ? $document['containers'] : [], $blockId, $field, $value, $found);
         self::assertFound($found, 'block_id', $blockId, 'block');
-        $document['sections'] = $sections;
         return $document;
     }
 
@@ -684,7 +413,7 @@ final class DocumentOperationApplier
     }
 
     /**
-     * Duplicate a block directly after itself in its parent container or section,
+     * Duplicate a block directly after itself in its parent,
      * re-minting fresh IDs for the block and all children in its subtree.
      *
      * @param array<string, mixed> $document
@@ -694,22 +423,9 @@ final class DocumentOperationApplier
     private static function duplicateBlock(array $document, array $payload): array
     {
         $blockId = self::requireString($payload, 'block_id', '$.payload.block_id');
-        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
-
         $duplicated = false;
-        foreach ($sections as $sIdx => $section) {
-            if (!is_array($section)) {
-                continue;
-            }
-            $blocks = is_array($section['blocks'] ?? null) ? $section['blocks'] : [];
-            $sections[$sIdx]['blocks'] = self::duplicateBlockRecursive($blocks, $blockId, $duplicated);
-            if ($duplicated) {
-                break;
-            }
-        }
-
+        $document['containers'] = self::duplicateBlockRecursive(is_array($document['containers'] ?? null) ? $document['containers'] : [], $blockId, $duplicated);
         self::assertFound($duplicated, 'block_id', $blockId, 'block');
-        $document['sections'] = $sections;
         return $document;
     }
 
@@ -744,43 +460,7 @@ final class DocumentOperationApplier
         return $result;
     }
 
-    /**
-     * Lock or unlock a section. `locked: false` removes the key so unlocked
-     * documents stay byte-identical to ones that never used the feature.
-     *
-     * @param array<string, mixed> $document
-     * @param array<string, mixed> $payload
-     * @return array<string, mixed>
-     */
-    private static function updateSectionLocked(array $document, array $payload): array
-    {
-        $sectionId = self::requireString($payload, 'section_id', '$.payload.section_id');
-        if (!is_bool($payload['locked'] ?? null)) {
-            throw new StudioValidationException([
-                ['path' => '$.payload.locked', 'code' => 'invalid_payload_field', 'message' => 'payload.locked must be a boolean.'],
-            ]);
-        }
-
-        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
-        $found = false;
-        foreach ($sections as $idx => $section) {
-            if (is_array($section) && ($section['id'] ?? null) === $sectionId) {
-                if ($payload['locked']) {
-                    $sections[$idx]['locked'] = true;
-                } else {
-                    unset($sections[$idx]['locked']);
-                }
-                $found = true;
-                break;
-            }
-        }
-        self::assertFound($found, 'section_id', $sectionId, 'section');
-
-        $document['sections'] = $sections;
-        return $document;
-    }
-
-    // ── B2-P3b: states, tag, section style, single-property reset ──────────
+    // ── B2-P3b: states, tag, single-property reset ──────────
 
     /**
      * Run `$change` on the block with this id (anywhere in the tree) and store what it returns;
@@ -819,18 +499,9 @@ final class DocumentOperationApplier
      */
     private static function changeBlockInDocument(array $document, string $blockId, callable $change): array
     {
-        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
         $found = false;
-        foreach ($sections as $sIdx => $section) {
-            if (is_array($section)) {
-                $sections[$sIdx]['blocks'] = self::changeBlock(is_array($section['blocks'] ?? null) ? $section['blocks'] : [], $blockId, $change, $found);
-                if ($found) {
-                    break;
-                }
-            }
-        }
+        $document['containers'] = self::changeBlock(is_array($document['containers'] ?? null) ? $document['containers'] : [], $blockId, $change, $found);
         self::assertFound($found, 'block_id', $blockId, 'block');
-        $document['sections'] = $sections;
         return $document;
     }
 
@@ -935,66 +606,6 @@ final class DocumentOperationApplier
             }
             return $block;
         });
-    }
-
-    /**
-     * Replace a section's `style` wholesale; an empty object removes the key.
-     *
-     * @param array<string, mixed> $document
-     * @param array<string, mixed> $payload
-     * @return array<string, mixed>
-     */
-    /**
-     * Replace a section's `animation` or `interactions` object; `{}` removes the key (canonical form).
-     *
-     * @param array<string, mixed> $document
-     * @param array<string, mixed> $payload
-     * @return array<string, mixed>
-     */
-    private static function updateSectionObjectField(array $document, array $payload, string $field): array
-    {
-        $sectionId = self::requireString($payload, 'section_id', '$.payload.section_id');
-        $value     = self::requireObject($payload, $field, "\$.payload.{$field}");
-
-        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
-        $found = false;
-        foreach ($sections as $idx => $section) {
-            if (is_array($section) && ($section['id'] ?? null) === $sectionId) {
-                if ($value === []) {
-                    unset($sections[$idx][$field]);
-                } else {
-                    $sections[$idx][$field] = $value;
-                }
-                $found = true;
-                break;
-            }
-        }
-        self::assertFound($found, 'section_id', $sectionId, 'section');
-        $document['sections'] = $sections;
-        return $document;
-    }
-
-    private static function updateSectionStyle(array $document, array $payload): array
-    {
-        $sectionId = self::requireString($payload, 'section_id', '$.payload.section_id');
-        $style     = self::requireObject($payload, 'style', '$.payload.style');
-
-        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
-        $found = false;
-        foreach ($sections as $idx => $section) {
-            if (is_array($section) && ($section['id'] ?? null) === $sectionId) {
-                if ($style === []) {
-                    unset($sections[$idx]['style']);
-                } else {
-                    $sections[$idx]['style'] = $style;
-                }
-                $found = true;
-                break;
-            }
-        }
-        self::assertFound($found, 'section_id', $sectionId, 'section');
-        $document['sections'] = $sections;
-        return $document;
     }
 
     /**
@@ -1125,21 +736,9 @@ final class DocumentOperationApplier
             $patch['locked'] = $payload['locked'];
         }
 
-        $sections = is_array($document['sections'] ?? null) ? $document['sections'] : [];
         $found = false;
-        foreach ($sections as $sIdx => $section) {
-            if (!is_array($section)) {
-                continue;
-            }
-            $blocks = is_array($section['blocks'] ?? null) ? $section['blocks'] : [];
-            $sections[$sIdx]['blocks'] = self::patchBlockMetaRecursive($blocks, $blockId, $patch, $found);
-            if ($found) {
-                break;
-            }
-        }
-
+        $document['containers'] = self::patchBlockMetaRecursive(is_array($document['containers'] ?? null) ? $document['containers'] : [], $blockId, $patch, $found);
         self::assertFound($found, 'block_id', $blockId, 'block');
-        $document['sections'] = $sections;
         return $document;
     }
 

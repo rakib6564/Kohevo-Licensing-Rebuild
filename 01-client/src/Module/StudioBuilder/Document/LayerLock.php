@@ -2,7 +2,7 @@
 /**
  * Kohevo Studio (studio-builder) — layer lock rules.
  *
- * A section carries `locked: true`; a block carries `metadata.locked: true`.
+ * A block carries `metadata.locked: true`.
  * A node is *effectively* locked when it or any ancestor is locked. The lock
  * stops accidental or automated edits (the AI/MCP path goes through the same
  * operation applier): while a node is effectively locked, its content cannot be
@@ -44,29 +44,15 @@ final class LayerLock
         DocumentOperation::OP_RESET_BLOCK_STYLE_PROPERTY,
     ];
 
-    /** Section operations that edit a section's own label, layout or visibility, or move it. */
-    private const SECTION_EDIT_OPS = [
-        DocumentOperation::OP_UPDATE_SECTION_LABEL,
-        DocumentOperation::OP_UPDATE_SECTION_LAYOUT,
-        DocumentOperation::OP_UPDATE_SECTION_VISIBILITY,
-        DocumentOperation::OP_UPDATE_SECTION_STYLE,
-        DocumentOperation::OP_UPDATE_SECTION_ANIMATION,
-        DocumentOperation::OP_UPDATE_SECTION_INTERACTIONS,
-        DocumentOperation::OP_MOVE_SECTION,
-    ];
-
     /** True when the node itself (not its ancestors) is locked. */
     public static function isLocked(array $node): bool
     {
-        if (($node['locked'] ?? null) === true) {
-            return true;
-        }
         $meta = $node['metadata'] ?? null;
         return is_array($meta) && ($meta['locked'] ?? null) === true;
     }
 
     /**
-     * Flat id → {parent, locked} map for every section and block.
+     * Flat id → {parent, locked} map for every block.
      *
      * @param array<string, mixed> $document
      * @return array<string, array{parent: ?string, locked: bool}>
@@ -74,7 +60,7 @@ final class LayerLock
     public static function index(array $document): array
     {
         $index = [];
-        $walk = static function (array $blocks, string $parent) use (&$walk, &$index): void {
+        $walk = static function (array $blocks, ?string $parent) use (&$walk, &$index): void {
             foreach ($blocks as $block) {
                 if (!is_array($block) || !is_string($block['id'] ?? null)) {
                     continue;
@@ -86,16 +72,7 @@ final class LayerLock
                 }
             }
         };
-        foreach ((array) ($document['sections'] ?? []) as $section) {
-            if (!is_array($section) || !is_string($section['id'] ?? null)) {
-                continue;
-            }
-            $index[$section['id']] = ['parent' => null, 'locked' => self::isLocked($section)];
-            $blocks = $section['blocks'] ?? null;
-            if (is_array($blocks)) {
-                $walk($blocks, $section['id']);
-            }
-        }
+        $walk((array) ($document['containers'] ?? []), null);
         return $index;
     }
 
@@ -152,12 +129,10 @@ final class LayerLock
         $p  = $operation->payload;
 
         $touchesLock = in_array($op, self::BLOCK_EDIT_OPS, true)
-            || in_array($op, self::SECTION_EDIT_OPS, true)
             || in_array($op, [
                 DocumentOperation::OP_INSERT_BLOCK,
                 DocumentOperation::OP_MOVE_BLOCK,
                 DocumentOperation::OP_REMOVE_BLOCK,
-                DocumentOperation::OP_REMOVE_SECTION,
                 DocumentOperation::OP_UPDATE_BLOCK_META,
             ], true);
         if (!$touchesLock) {
@@ -171,10 +146,6 @@ final class LayerLock
             self::refuseIf(self::locked($index, $id('block_id')), 'block_id', 'edit');
             return;
         }
-        if (in_array($op, self::SECTION_EDIT_OPS, true)) {
-            self::refuseIf(self::locked($index, $id('section_id')), 'section_id', 'edit');
-            return;
-        }
 
         switch ($op) {
             case DocumentOperation::OP_INSERT_BLOCK:
@@ -186,9 +157,6 @@ final class LayerLock
                 break;
             case DocumentOperation::OP_REMOVE_BLOCK:
                 self::refuseIf(self::lockedOrHolds($index, $id('block_id')), 'block_id', 'remove');
-                break;
-            case DocumentOperation::OP_REMOVE_SECTION:
-                self::refuseIf(self::lockedOrHolds($index, $id('section_id')), 'section_id', 'remove');
                 break;
             case DocumentOperation::OP_UPDATE_BLOCK_META:
                 $blockId = $id('block_id');
@@ -253,19 +221,11 @@ final class LayerLock
         }
     }
 
-    /** @return array<string, array<string, mixed>> every section and block by id */
+    /** @return array<string, array<string, mixed>> every block by id */
     private static function nodesById(array $document): array
     {
         $out = [];
-        $stack = [];
-        foreach ((array) ($document['sections'] ?? []) as $section) {
-            if (is_array($section) && is_string($section['id'] ?? null)) {
-                $out[$section['id']] = $section;
-                foreach ((array) ($section['blocks'] ?? []) as $block) {
-                    $stack[] = $block;
-                }
-            }
-        }
+        $stack = array_values((array) ($document['containers'] ?? []));
         while ($stack !== []) {
             $block = array_pop($stack);
             if (!is_array($block) || !is_string($block['id'] ?? null)) {
@@ -282,7 +242,6 @@ final class LayerLock
     /** @param array<string, mixed> $node */
     private static function withoutOwnLock(array $node): string
     {
-        unset($node['locked']);
         if (is_array($node['metadata'] ?? null)) {
             unset($node['metadata']['locked']);
             if ($node['metadata'] === []) {

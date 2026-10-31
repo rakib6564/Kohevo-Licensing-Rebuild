@@ -7,7 +7,7 @@
  *     CanonicalJson::fingerprint(normalize($document)) === CanonicalJson::fingerprint(normalize(normalize($document)))
  *
  * - Strips transient editor-only metadata (`_editor`, `_ui`, `_selected`, etc.) when called via `stripTransientMetadata()`.
- * - Validates and normalizes `settings`, `seo`, `sections`, `layout`, `visibility`, `blocks`, `props`, `style`, `bindings`, and `children`.
+ * - Validates and normalizes `settings`, `seo`, `containers`, `visibility`, `props`, `style`, `bindings`, and `children`.
  * - Applies registered `FieldSchema` defaults to every block's `props`.
  */
 
@@ -49,7 +49,8 @@ final class DocumentNormalizer
             ? CanonicalJson::decode($document, (int) ($validationOptions['max_bytes'] ?? CanonicalDocumentSchema::MAX_DOCUMENT_BYTES))
             : $document;
 
-        $cleaned = self::stripTransientMetadata($decoded);
+        // A document in the older format is accepted from anywhere and comes out in the current one.
+        $cleaned = DocumentUpgrader::structure(self::stripTransientMetadata($decoded));
         DocumentValidator::assertValid($cleaned, $registry, $validationOptions);
 
         $normalized = self::normalize($cleaned, $registry);
@@ -119,90 +120,23 @@ final class DocumentNormalizer
             ? (int) $seo['og_image_media_id']
             : null;
 
-        $normalizedSections = [];
-        foreach ((array) ($cleaned['sections'] ?? []) as $section) {
-            if (is_array($section)) {
-                $normalizedSections[] = self::normalizeSection($section, $registry);
+        $containers = [];
+        foreach ((array) ($cleaned['containers'] ?? []) as $container) {
+            if (is_array($container)) {
+                $containers[] = self::normalizeBlock($container, $registry);
             }
         }
 
         $normalized = [
             'document_type'  => (string) ($cleaned['document_type'] ?? 'page'),
             'schema_version' => CanonicalDocumentSchema::SCHEMA_VERSION,
-            'sections'       => $normalizedSections,
+            'containers'     => $containers,
             'seo'            => CanonicalJson::sortKeysRecursively($seo),
             'settings'       => CanonicalJson::sortKeysRecursively($settings),
             'template_key'   => (string) ($cleaned['template_key'] ?? 'default'),
         ];
 
         return CanonicalJson::sortKeysRecursively($normalized);
-    }
-
-    /**
-     * @param array<string, mixed> $section
-     * @return array<string, mixed>
-     */
-    private static function normalizeSection(array $section, BlockRegistry $registry): array
-    {
-        $rawLayout = is_array($section['layout'] ?? null) ? $section['layout'] : [];
-        $layout    = array_merge(CanonicalDocumentSchema::defaultSectionLayout(), $rawLayout);
-
-        if (is_int($layout['columns'])) {
-            $layout['columns'] = ['base' => $layout['columns']];
-        } elseif (is_array($layout['columns'])) {
-            $layout['columns'] = CanonicalJson::sortKeysRecursively($layout['columns']);
-        }
-
-        if (is_string($layout['padding_y'])) {
-            $layout['padding_y'] = ['base' => $layout['padding_y']];
-        } elseif (is_array($layout['padding_y'])) {
-            $layout['padding_y'] = CanonicalJson::sortKeysRecursively($layout['padding_y']);
-        }
-
-        $visibility = self::normalizeVisibility(
-            is_array($section['visibility'] ?? null) ? $section['visibility'] : []
-        );
-
-        $normalizedBlocks = [];
-        foreach ((array) ($section['blocks'] ?? []) as $block) {
-            if (is_array($block)) {
-                $normalizedBlocks[] = self::normalizeBlock($block, $registry);
-            }
-        }
-
-        $normalizedSection = [
-            'blocks'     => $normalizedBlocks,
-            'global_ref' => isset($section['global_ref']) && $section['global_ref'] !== '' ? (string) $section['global_ref'] : null,
-            'id'         => (string) $section['id'],
-            'label'      => trim((string) ($section['label'] ?? '')),
-            'layout'     => CanonicalJson::sortKeysRecursively($layout),
-            'visibility' => $visibility,
-        ];
-        // Section style: present only when it holds something (canonical form).
-        if (is_array($section['style'] ?? null) && $section['style'] !== []) {
-            $style = [];
-            foreach ($section['style'] as $key => $value) {
-                if (is_array($value) && $value === []) {
-                    continue;
-                }
-                $style[(string) $key] = is_array($value) ? CanonicalJson::sortKeysRecursively($value) : $value;
-            }
-            if ($style !== []) {
-                $normalizedSection['style'] = CanonicalJson::sortKeysRecursively($style);
-            }
-        }
-        // Section motion: present only when it holds something (canonical form).
-        foreach (['animation', 'interactions'] as $motionKey) {
-            if (is_array($section[$motionKey] ?? null) && $section[$motionKey] !== []) {
-                $normalizedSection[$motionKey] = CanonicalJson::sortKeysRecursively($section[$motionKey]);
-            }
-        }
-        // Canonical form: the lock key exists only while the section is locked.
-        if (($section['locked'] ?? null) === true) {
-            $normalizedSection['locked'] = true;
-        }
-
-        return CanonicalJson::sortKeysRecursively($normalizedSection);
     }
 
     /**
@@ -272,6 +206,10 @@ final class DocumentNormalizer
         }
         if (array_key_exists('animation', $block) && is_array($block['animation'])) {
             $normalizedBlock['animation'] = CanonicalJson::sortKeysRecursively($block['animation']);
+        }
+        // A live Global Component reference: present only while set.
+        if (is_string($block['global_ref'] ?? null) && $block['global_ref'] !== '') {
+            $normalizedBlock['global_ref'] = $block['global_ref'];
         }
         // The wrapper tag: absent for the default `div`.
         if (isset($block['tag']) && is_string($block['tag']) && $block['tag'] !== 'div') {
