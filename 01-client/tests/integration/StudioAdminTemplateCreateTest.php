@@ -125,7 +125,8 @@ unit('theme builder create: every type is created through the Studio services as
         $byType = array_column(array_map(static fn(array $m): array => [$m['template']['template_type'] . '/' . $m['template']['category'], json_decode((string) $m['template']['document_json'], true)], $made), 1, 0);
         assert_eq('single', $byType['page_template/single']['settings']['template_type'] ?? null, 'a Single template keeps its role');
         assert_eq('singular', $byType['page_template/single']['settings']['conditions']['rules'][0]['condition'] ?? null, 'and its display condition');
-        assert_true(!isset($byType['container_preset/section']['settings']['template_type']) && !isset($byType['container_preset/section']['settings']['conditions']), 'a section preset carries no theme role or conditions');
+        assert_true(isset($byType['container_preset/container']), 'a Container preset is made');
+        assert_true(!isset($byType['container_preset/container']['settings']['template_type']) && !isset($byType['container_preset/container']['settings']['conditions']), 'a Container preset carries no theme role or conditions');
     } finally {
         stcre_cleanup($tag);
         $unentitle();
@@ -193,7 +194,7 @@ unit('theme builder: "Edit in canvas" on a built-in header makes a draft header 
         assert_true(is_array($page) && $page['page_type'] === 'header_partial', 'a header page to edit in the canvas');
         assert_true($page['published_revision_id'] === null, 'a draft: not live until it is published');
         $draft = json_decode((string) Database::value('SELECT document_json FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [$tid, (int) $page['active_draft_revision_id']]), true);
-        assert_eq(array_column($design['document']['containers'], 'label'), array_column($draft['containers'], 'label'), 'the design\'s sections');
+        assert_eq(array_map(static fn(array $c): ?string => $c['metadata']['label'] ?? null, $design['document']['containers']), array_map(static fn(array $c): ?string => $c['metadata']['label'] ?? null, $draft['containers']), 'the design\'s Containers');
         assert_eq('entire_site', $draft['settings']['conditions']['rules'][0]['condition'] ?? null, 'for the whole site once published');
         $system = Database::value("SELECT COUNT(*) FROM studiobuilder_templates WHERE tenant_id = ? AND template_key = 'system-header-split' AND is_system = 0", [$tid]);
         assert_eq(0, (int) $system, 'the built-in design itself is untouched');

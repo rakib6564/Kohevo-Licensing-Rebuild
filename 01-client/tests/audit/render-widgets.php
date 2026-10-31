@@ -93,10 +93,7 @@ function audit_sample(array $field, int $n = 1): mixed
 /** Render one block alone and return its markup (the <main> contents) plus the page CSS, or null when it cannot render. */
 $renderOne = static function (array $block) use ($tenants, $tenantId, $compiler, $assembler, $slots, $ctx, $page): ?string {
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Audit');
-    $doc['sections'] = [[
-        'blocks' => [$block], 'global_ref' => null, 'id' => 'sec_audit0000000000000000', 'label' => 'a',
-        'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-    ]];
+    $doc['containers'] = [CanonicalDocumentSchema::newContainer(['id' => 'blk_audit0000000000000000', 'metadata' => ['label' => 'a'], 'children' => [$block]])];
     try {
         $compiled = $tenants->runAs($tenantId, static fn() => $compiler->compile($page, ['id' => 9, 'page_id' => 5, 'document_json' => CanonicalJson::encode($doc)], $ctx));
         $html = $assembler->assemble($compiled, $slots->fill($compiled, $ctx), $ctx);
@@ -138,12 +135,9 @@ foreach ($registry->all() as $definition) {
     foreach ($blocks as &$b) { unset($b['_probe']); } unset($b);
 
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Audit ' . $type);
-    $doc['sections'] = [];
+    $doc['containers'] = [];
     foreach ($blocks as $i => $b) {
-        $doc['sections'][] = [
-            'blocks' => [$b], 'global_ref' => null, 'id' => CanonicalDocumentSchema::newSectionId(),
-            'label' => 'probe-' . $i, 'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        ];
+        $doc['containers'][] = CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'probe-' . $i], 'children' => [$b]]);
     }
     try {
         $compiled = $tenants->runAs($tenantId, static fn() => $compiler->compile($page, ['id' => 9, 'page_id' => 5, 'document_json' => CanonicalJson::encode($doc)], $ctx));
@@ -195,7 +189,7 @@ foreach ($registry->all() as $definition) {
             }
         }
     }
-    $report[$type] = ['probes' => array_keys(array_merge(['base' => 1], $probes)), 'sections' => count($doc['sections'])];
+    $report[$type] = ['probes' => array_keys(array_merge(['base' => 1], $probes)), 'containers' => count($doc['containers'])];
 }
 file_put_contents($out . '/props.json', json_encode($propEffects, JSON_PRETTY_PRINT));
 file_put_contents($out . '/index.json', json_encode(['widgets' => $report, 'probes' => array_keys($probes)], JSON_PRETTY_PRINT));

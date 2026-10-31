@@ -396,7 +396,7 @@ unit('header presets integration: seeded on first use apart from the sections, i
                 $doc = $r['document'];
                 assert_eq('header_partial', $doc['document_type']);
                 assert_eq(count($preset['document']['containers']), count($doc['containers']), "{$preset['key']} replaced the header's sections");
-                assert_eq(array_column($preset['document']['containers'], 'label'), array_column($doc['containers'], 'label'));
+                assert_eq(array_map(static fn(array $c): ?string => $c['metadata']['label'] ?? null, $preset['document']['containers']), array_map(static fn(array $c): ?string => $c['metadata']['label'] ?? null, $doc['containers']));
                 $ids = sbpa_ids($doc);
                 assert_eq(count($ids), count(array_unique($ids)), "{$preset['key']}: ids are unique");
                 $html = sbpa_canvas($rt, SBPA_TENANT_A, $editor, $page['id']);
