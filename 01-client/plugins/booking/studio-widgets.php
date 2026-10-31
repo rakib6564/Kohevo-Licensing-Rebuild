@@ -52,6 +52,7 @@ return [
             category: 'business',
             icon: 'calendar',
             schema: FieldSchema::define([
+                ['key' => 'look', 'type' => 'enum', 'label' => 'Look', 'required' => false, 'allowed_values' => ['card', 'flat'], 'default' => 'card'],
                 ['key' => 'min_height', 'type' => 'number', 'label' => 'Minimum height (px)', 'required' => false, 'default' => 560, 'integer_only' => true, 'min' => 200, 'max' => 2400],
             ]),
             requiredEntitlement: 'booking',
@@ -84,5 +85,22 @@ return [
     'providers' => [
         new BookingServicesProvider(),
         new BookingEmbedTargetProvider(),
+    ],
+    // The classes of the booking page in the frame, and of the editor's preview (BookingEmbedRenderer); EmbedStyle carries them in.
+    'parts' => [
+        'booking.embed' => [
+            'card'         => ['label' => 'Card', 'selectors' => ['.book-card']],
+            'heading'      => ['label' => 'Step heading', 'selectors' => ['.book-card > h1', '.sb-form-card__title']],
+            'step'         => ['label' => 'Steps', 'selectors' => ['.book-step']],
+            'step_current' => ['label' => 'Current step', 'selectors' => ['.book-step.is-current']],
+            'service'      => ['label' => 'Service card', 'selectors' => ['.book-card-link']],
+            'service_name' => ['label' => 'Service name', 'selectors' => ['.book-card-title']],
+            'service_meta' => ['label' => 'Service price and length', 'selectors' => ['.book-card-meta']],
+            'day'          => ['label' => 'Calendar days', 'selectors' => ['.book-cal-day']],
+            'day_selected' => ['label' => 'Selected day', 'selectors' => ['.book-cal-day.is-selected']],
+            'slot'         => ['label' => 'Time slots', 'selectors' => ['.book-slot']],
+            'slot_selected' => ['label' => 'Selected time', 'selectors' => ['.book-slot.is-selected']],
+            'button'       => ['label' => 'Button', 'selectors' => ['.btn.btn-primary']],
+        ],
     ],
 ];

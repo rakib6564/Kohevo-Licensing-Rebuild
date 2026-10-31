@@ -47,19 +47,19 @@ test('a theme colour is picked from the palette, replaces a literal colour on th
     const frame = await frameDocument(page);
     const quote = frame.locator('[data-sb-type="core.quote"]').last();
 
-    const picker = page.locator('[id$="-tcolor-token"]');
+    const picker = page.locator('[id$="-tcolor-swatch"]');
+    const options = page.locator('.sbx-cp .sbx-cp__opt');
     await picker.click();
-    await page.getByRole('listbox').getByRole('option').nth(1).click();
-    await expect(literal).toHaveValue('');
+    await options.nth(1).click();
+    await expect(literal).not.toHaveValue('#e8734a');
     await expect(quote).toHaveClass(/sb-fg--/);
     await settled(page);
     await expect(quote).toHaveClass(/sb-fg--/);
-    await expect(picker).not.toContainText('Custom');
 
     await picker.click();
-    await page.getByRole('listbox').getByRole('option').first().click();
+    await options.first().click();
     await expect(quote).not.toHaveClass(/sb-fg--/);
-    await expect(picker).toContainText('Custom');
+    await expect(literal).toHaveValue('');
   } finally {
     await restore(page, before);
   }

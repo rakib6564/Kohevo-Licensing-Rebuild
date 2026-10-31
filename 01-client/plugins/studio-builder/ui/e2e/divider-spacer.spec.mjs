@@ -64,8 +64,8 @@ test('a Divider is added from the Layout group and its choices change the line o
     const asTheme = await hr.evaluate((el) => getComputedStyle(el).borderTopColor);
     await page.locator('[id^="sbx-blk-"][id$="-tab-style"]').click();
     const border = await openSection(page, 'border');
-    await border.locator('.sbx-color__theme .sbx-tp__btn').first().click();
-    await page.getByRole('listbox').getByRole('option').filter({ hasText: /Accent/ }).first().click();
+    await border.locator('button.sbx-color__swatch').first().click();
+    await border.locator('.sbx-cp').getByRole('button', { name: /Accent/ }).first().click();
     await settled(page);
     await expect.poll(() => hr.evaluate((el) => getComputedStyle(el).borderTopColor), { timeout: 15_000 }).not.toBe(asTheme);
   } finally {

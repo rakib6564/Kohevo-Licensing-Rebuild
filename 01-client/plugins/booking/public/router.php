@@ -13,6 +13,8 @@
  * weekly recurring bookings.
  */
 
+use Slate\Module\StudioBuilder\Render\EmbedStyle;
+
 if (!defined('SLATE_ROOT')) {
     require_once dirname(__DIR__, 3) . '/config.php';
 }
@@ -308,7 +310,7 @@ bookpub_render_step4($service, $provider, $date, $slot, $party, [], '', $embed);
  * <!DOCTYPE>/<head>/<body> at all.
  */
 function bookpub_qs(array $params, bool $embed, bool $inPageContext = true): string {
-    if ($embed) $params['embed'] = 1;
+    if ($embed) $params = ['embed' => 1] + $params + bookpub_embed_look();
     // Keep the host page's address (validated) so the success page can send the visitor back to it.
     if (!isset($params['return']) && ($ret = bookpub_return_url()) !== '') $params['return'] = $ret;
     // Fragment mode has to survive every step link, not just the first --
@@ -340,7 +342,29 @@ function bookpub_home(bool $embed): string {
     // bookpub_qs()'s query strings. Otherwise keep the absolute /book
     // anchor documented above (escaping a sub-route reliably).
     if ($embed && bookpub_is_fragment()) return '?embed=1&portal=1';
-    return SLATE_URL . '/book' . ($embed ? '?embed=1' : '');
+    return SLATE_URL . '/book' . ($embed ? '?' . bookpub_embed_query() : '');
+}
+
+/** What a Studio frame asked for its look (`chrome`, the EmbedStyle sheet), carried from step to step. */
+function bookpub_embed_look(): array {
+    $look = [];
+    if ((string)($_REQUEST['chrome'] ?? '') === '0') $look['chrome'] = '0';
+    if (EmbedStyle::incoming() !== '') $look[EmbedStyle::PARAM] = EmbedStyle::incoming();
+    return $look;
+}
+
+/** `embed=1` and that look, for an address built by hand. */
+function bookpub_embed_query(): string {
+    return http_build_query(['embed' => 1] + bookpub_embed_look());
+}
+
+/** The same as hidden fields, for a form that stays in the frame. */
+function bookpub_embed_look_fields(): string {
+    $out = '';
+    foreach (bookpub_embed_look() as $k => $v) {
+        $out .= '<input type="hidden" name="' . e($k) . '" value="' . e($v) . '">';
+    }
+    return $out;
 }
 
 /**
@@ -606,8 +630,9 @@ function bookpub_layout_start(string $title, bool $embed): void {
             echo '<link rel="stylesheet" href="' . e(plugin_url('booking', 'assets/css/public.css'))
                . '?v=' . $bookCssVer . '">';
         }
+        if ($embed) echo EmbedStyle::styleTag();
         ?>
-    </head><body class="book-public<?= $embed ? ' book-public-embed' : '' ?><?= ($embed && ($_GET['chrome'] ?? '') === '0') ? ' book-public-bare' : '' ?>">
+    </head><body class="book-public<?= $embed ? ' book-public-embed' : '' ?><?= ($embed && (string)($_REQUEST['chrome'] ?? '') === '0') ? ' book-public-bare' : '' ?>">
     <main class="book-shell">
         <article class="book-card">
     <?php
@@ -888,7 +913,7 @@ function bookpub_render_step3(array $service, array $provider, string $date, int
     <form method="get" class="book-date-form" id="<?= e($dateFormId) ?>">
         <input type="hidden" name="service"  value="<?= (int)$service['id'] ?>">
         <input type="hidden" name="provider" value="<?= (int)$provider['id'] ?>">
-        <?php if ($embed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
+        <?php if ($embed): ?><input type="hidden" name="embed" value="1"><?= bookpub_embed_look_fields() ?><?php endif; ?>
         <?php if ($embed && bookpub_is_fragment()): ?><input type="hidden" name="portal" value="1"><?php endif; ?>
 
         <span class="field-label"><?= __('booking_date', 'Date') ?></span>
@@ -1196,7 +1221,7 @@ function bookpub_render_step4(array $service, array $provider, string $date, str
             <input type="hidden" name="slot" value="<?= e($slot) ?>">
         <?php endif; ?>
         <input type="hidden" name="party"    value="<?= (int)$party ?>">
-        <?php if ($embed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
+        <?php if ($embed): ?><input type="hidden" name="embed" value="1"><?= bookpub_embed_look_fields() ?><?php endif; ?>
         <?php if ($embed && bookpub_is_fragment()): ?><input type="hidden" name="portal" value="1"><?php endif; ?>
 
         <?php if ($addons): ?>
@@ -1457,7 +1482,7 @@ function bookpub_render_payment(array $appt, bool $embed): void {
 
     $pubKey      = StripePaymentAPI::publishableKey();
     $intentUrl   = SLATE_URL . '/plugins/booking/public/pay-intent.php';
-    $doneUrl     = SLATE_URL . '/book/pay/done?token=' . rawurlencode($token) . ($embed ? '&embed=1' : '');
+    $doneUrl     = SLATE_URL . '/book/pay/done?token=' . rawurlencode($token) . ($embed ? '&' . bookpub_embed_query() : '');
     $applePayOn  = (Database::setting('stripe-payment.wallet_apple_pay')  ?? '1') !== '0';
     $googlePayOn = (Database::setting('stripe-payment.wallet_google_pay') ?? '1') !== '0';
 
@@ -1904,7 +1929,7 @@ function bookpub_manage_view(array $appt, bool $embed, string $error): void {
     echo '<form method="get" class="book-date-form">';
     echo '<input type="hidden" name="_route_path" value="manage">';
     echo '<input type="hidden" name="token" value="' . e($token) . '">';
-    if ($embed) echo '<input type="hidden" name="embed" value="1">';
+    if ($embed) echo '<input type="hidden" name="embed" value="1">' . bookpub_embed_look_fields();
     if ($embed && bookpub_is_fragment()) echo '<input type="hidden" name="portal" value="1">';
     echo '<input type="hidden" name="date" value="' . e($date) . '">';
 

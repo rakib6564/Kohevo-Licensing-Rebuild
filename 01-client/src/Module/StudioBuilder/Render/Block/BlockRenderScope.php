@@ -131,6 +131,12 @@ final class BlockRenderScope
         return $this->context;
     }
 
+    /** The site's design tokens as a `:root` rule, for a frame that has its own document (EmbedStyle). */
+    public function themeRootCss(): string
+    {
+        return $this->theme->rootCss();
+    }
+
     public function site(): SiteContext
     {
         return $this->context->site;

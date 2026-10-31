@@ -12,6 +12,8 @@
  *   /forms/<slug>/thanks   → success page (after submit)
  */
 
+use Slate\Module\StudioBuilder\Render\EmbedStyle;
+
 if (!defined('SLATE_ROOT')) {
     require_once dirname(__DIR__, 3) . '/config.php';
 }
@@ -199,6 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // chrome-less, true-height rendering (else it reverts to the
                     // full layout and leaves a tall gap in the host iframe).
                     if (forms_is_bare()) $q['chrome'] = '0';
+                    if ($embed && EmbedStyle::incoming() !== '') $q[EmbedStyle::PARAM] = EmbedStyle::incoming();
                     $dest = SLATE_URL . '/forms/' . $form['slug'] . '/thanks?' . http_build_query($q);
                 }
                 if ($wantsJson) {
@@ -320,6 +323,7 @@ function forms_public_layout_start(string $title, bool $embed): void {
             body.forms-bare textarea{min-height:130px;resize:vertical;}
         </style>
         <?php endif; ?>
+        <?php if ($embed) echo EmbedStyle::styleTag(); ?>
     </head>
     <body class="forms-public<?= $embed ? ' forms-public-embed' : '' ?><?= forms_is_bare() ? ' forms-bare' : '' ?>">
     <?php

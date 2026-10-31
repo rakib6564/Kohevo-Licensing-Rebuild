@@ -9,7 +9,7 @@ import { ColorField, DraftText } from './StyleControls.jsx';
 import { SelectField, SliderField, SpacingBox } from './SurfaceControls.jsx';
 import { DeviceStyle } from './DeviceStyle.jsx';
 import { asObject } from '../../core/doc.mjs';
-import { OPTIONS, getPath, isColourToken, setPath, setPaths } from '../../core/styleSurface.mjs';
+import { OPTIONS, getPath, setPath, setPaths } from '../../core/styleSurface.mjs';
 import { setTextLiteral, setTextToken } from '../../core/tokenStyle.mjs';
 import { t } from '../../core/messages.mjs';
 
@@ -18,12 +18,6 @@ const fields = (style, onChange) => ({
   put: (path, value) => onChange(setPath(style, path, value)),
   putAll: (pairs) => onChange(setPaths(style, pairs)),
 });
-
-/** A theme colour or a literal one, in the same path. */
-function AnyColor({ id, label, value, onChange, tokens }) {
-  const token = isColourToken(value) ? value : null;
-  return <ColorField id={id} label={label} value={token ? undefined : value} onChange={onChange} tokens={tokens} token={token} onToken={(ref) => onChange(ref ?? undefined)} />;
-}
 
 const NEW_TEXT_SHADOW = Object.freeze({ x: '0px', y: '2px', blur: '4px', color: 'rgba(0,0,0,0.3)' });
 
@@ -44,7 +38,7 @@ export function TextShadowField({ style, onChange, tokens }) {
         <DraftText id={`${id}-x`} path="text_shadow.x" label={t('shadow_x')} value={ts && ts.x} placeholder="0px" bareUnit="px" onCommit={(v) => put('x', v, NEW_TEXT_SHADOW.x)} />
         <DraftText id={`${id}-y`} path="text_shadow.y" label={t('shadow_y')} value={ts && ts.y} placeholder="2px" bareUnit="px" onCommit={(v) => put('y', v, NEW_TEXT_SHADOW.y)} />
         <DraftText id={`${id}-blur`} path="text_shadow.blur" label={t('shadow_blur')} value={ts && ts.blur} placeholder="4px" bareUnit="px" onCommit={(v) => put('blur', v, undefined)} />
-        <AnyColor id={`${id}-color`} label={t('shadow_color')} value={ts ? ts.color : undefined} tokens={tokens} onChange={(v) => put('color', v, NEW_TEXT_SHADOW.color)} />
+        <ColorField id={`${id}-color`} label={t('shadow_color')} value={ts ? ts.color : undefined} tokens={tokens} onChange={(v) => put('color', v, NEW_TEXT_SHADOW.color)} />
         {ts && <button type="button" className="sbx-btn sbx-btn--xs" onClick={() => { const next = { ...style }; delete next.text_shadow; onChange(next); }}>{t('text_shadow_remove')}</button>}
       </Popover>
     </div>
@@ -61,7 +55,7 @@ export function TextStrokeField({ style, onChange, tokens }) {
       <span className="sbx-field__label">{t('text_stroke')}</span>
       <Popover label={t('edit_text_stroke')} row={<span className="sbx-pop__summary">{width || t('none')}</span>}>
         <DraftText id={`${id}-w`} path="typography.stroke_width" label={t('text_stroke_width')} value={width} placeholder="1px" bareUnit="px" onCommit={(v) => f.put('typography.stroke_width', v)} />
-        <AnyColor id={`${id}-c`} label={t('text_stroke_color')} value={f.get('typography.stroke_color')} tokens={tokens} onChange={(v) => f.put('typography.stroke_color', v)} />
+        <ColorField id={`${id}-c`} label={t('text_stroke_color')} value={f.get('typography.stroke_color')} tokens={tokens} onChange={(v) => f.put('typography.stroke_color', v)} />
       </Popover>
     </div>
   );
@@ -75,7 +69,7 @@ export function BlendField({ style, onChange }) {
 }
 
 /** The text colour (one value: typography.color, or a theme text token). */
-export function TextColorField({ style, onChange, tokens, label = null }) {
+export function TextColorField({ style, onChange, tokens, label = null, colourProps = null }) {
   const id = useId();
   const typo = asObject(style.typography);
   return (
@@ -87,6 +81,7 @@ export function TextColorField({ style, onChange, tokens, label = null }) {
       tokens={tokens}
       token={style.text_token}
       onToken={(ref) => onChange(setTextToken(style, ref))}
+      {...colourProps}
     />
   );
 }
@@ -95,7 +90,7 @@ export function TextColorField({ style, onChange, tokens, label = null }) {
  * Normal / Hover. Normal is the children (the block's own colours). Hover edits the hover state: the text colour, and with
  * `withSurface` the background and border colours, beside the transition duration that eases into it.
  */
-export function NormalHover({ label, style, states, onStyle, onStates, withSurface = false, colorLabel = null, children }) {
+export function NormalHover({ label, style, states, onStyle, onStates, withSurface = false, colorLabel = null, tokens, colours = null, children }) {
   const id = useId();
   const [tab, setTab] = useState('normal');
   const all = asObject(states);
@@ -106,6 +101,7 @@ export function NormalHover({ label, style, states, onStyle, onStates, withSurfa
     if (Object.keys(next).length === 0) delete merged.hover; else merged.hover = next;
     onStates(merged);
   };
+  const shown = (field) => (colours ? colours(field, 'hover') : {});
   return (
     <div className="sbx-normalhover" data-testid="normal-hover">
       <Pills
@@ -117,11 +113,11 @@ export function NormalHover({ label, style, states, onStyle, onStates, withSurfa
       />
       {tab === 'normal' ? children : (
         <>
-          <ColorField id={`${id}-hc`} label={colorLabel || t('text_color')} value={getPath(hover, 'color')} onChange={(v) => putHover('color', v)} />
+          <ColorField id={`${id}-hc`} label={colorLabel || t('text_color')} value={getPath(hover, 'color')} tokens={tokens} onChange={(v) => putHover('color', v)} {...shown('text')} />
           {withSurface && (
             <>
-              <ColorField id={`${id}-hbg`} label={t('background_color')} value={getPath(hover, 'background.color')} onChange={(v) => putHover('background.color', v)} />
-              <ColorField id={`${id}-hbd`} label={t('border_color')} value={getPath(hover, 'border.color')} onChange={(v) => putHover('border.color', v)} />
+              <ColorField id={`${id}-hbg`} label={t('background_color')} value={getPath(hover, 'background.color')} tokens={tokens} onChange={(v) => putHover('background.color', v)} {...shown('background')} />
+              <ColorField id={`${id}-hbd`} label={t('border_color')} value={getPath(hover, 'border.color')} tokens={tokens} onChange={(v) => putHover('border.color', v)} {...shown('border')} />
             </>
           )}
           <SliderField

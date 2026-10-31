@@ -36,6 +36,8 @@ import { IconButton } from './InspectorIcons.jsx';
 import { optionLabel } from '../../core/optionLabels.mjs';
 import { Field, Popover } from '../ui/index.js';
 import { DeviceStyle } from './DeviceStyle.jsx';
+import { colourFieldProps, partField } from '../../core/effectiveColour.mjs';
+import { useCanvasComputed } from '../../hooks/useCanvasComputed.js';
 import { RESPONSIVE_SCOPES, legacyHideDevices } from '../../core/responsiveStyle.mjs';
 
 /** What a layout block is before an author picks a display: a Container and Flex are flex boxes, a Grid is a grid. */
@@ -50,6 +52,7 @@ export function BlockInspector({ info }) {
   const working = useEngineState((s) => s.working);
   const block = info.node;
   const def = blockDefinition(manifest, block.type);
+  const computed = useCanvasComputed(block.id, block);
   const idPrefix = `sbx-blk-${block.id}`;
 
   if (!def) {
@@ -79,6 +82,16 @@ export function BlockInspector({ info }) {
 
   // The theme's colour tokens: what the colour fields of a group's card offer next to a literal colour.
   const colourTokens = tokensFor(manifest, COLOUR_TOKEN_CATEGORIES);
+
+  // What each field really shows on the page, and where an edit of it has to go (core/effectiveColour.mjs).
+  const saveParts = (next) => save(ops.updateBlockStyleParts(block.id, next));
+  const mainPart = asList(def.style_parts).find((p) => p.key === 'button');
+  const effectiveCtx = { tokens: colourTokens, computed, partLabel: mainPart ? mainPart.label : null };
+  const colours = (field, state = 'normal') => colourFieldProps(block, field, state, effectiveCtx, saveParts);
+  const normalColours = (field) => colours(field);
+  const held = (path) => partField(block, path, effectiveCtx, saveParts);
+  const heldWeight = held('typography.weight');
+  const surface = { colours: normalColours, held, computed };
 
   const sections = {
     content: () => (
@@ -117,10 +130,10 @@ export function BlockInspector({ info }) {
         <Field label={t('font_weight')} htmlFor={`${idPrefix}-typo-weight`}>
           <select
             id={`${idPrefix}-typo-weight`}
-            value={asObject(style.typography).weight || ''}
-            onChange={(e) => patchTypography({ weight: e.target.value || undefined })}
+            value={heldWeight ? heldWeight.value : asObject(style.typography).weight || ''}
+            onChange={(e) => (heldWeight ? heldWeight.put(e.target.value || undefined) : patchTypography({ weight: e.target.value || undefined }))}
           >
-            <option value="">{t('inherit')}</option>
+            <option value="">{computed ? `${t('inherit')} · ${computed.fontWeight}` : t('inherit')}</option>
             <option value="normal">{t('fw_normal')}</option>
             <option value="medium">{t('fw_medium')}</option>
             <option value="semibold">{t('fw_semibold')}</option>
@@ -151,7 +164,7 @@ export function BlockInspector({ info }) {
           row={(
             <>
               {weight}
-              <StyleControls style={style} capabilities={capabilities} only="typography" typoPart="main" mediaPicker={boot.mediaPicker} onChange={saveStyle} deviceScope={deviceScope} tokens={tokens} noTextColor={noTextColor} />
+              <StyleControls style={style} capabilities={capabilities} only="typography" typoPart="main" mediaPicker={boot.mediaPicker} onChange={saveStyle} deviceScope={deviceScope} tokens={tokens} noTextColor={noTextColor} {...surface} />
             </>
           )}
         >
@@ -178,8 +191,10 @@ export function BlockInspector({ info }) {
         states={block.style_states}
         onStyle={saveStyle}
         onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))}
+        tokens={colourTokens}
+        colours={colours}
       >
-        <StyleControls style={style} capabilities={capabilities} only="background" mediaPicker={boot.mediaPicker} onChange={saveStyle} tokens={manifest && manifest.tokens} />
+        <StyleControls style={style} capabilities={capabilities} only="background" mediaPicker={boot.mediaPicker} onChange={saveStyle} tokens={manifest && manifest.tokens} {...surface} />
         {block.type === CONTAINER_TYPE && (
           <>
             {/* A Container's background video: its own prop, kept with the rest of its background. */}
@@ -194,7 +209,7 @@ export function BlockInspector({ info }) {
     // Every side's width, style and colour and every corner's radius are in view, not behind a pencil.
     border: () => (
       <>
-        <StyleControls style={style} capabilities={capabilities} only="border" onChange={saveStyle} tokens={manifest && manifest.tokens} />
+        <StyleControls style={style} capabilities={capabilities} only="border" onChange={saveStyle} tokens={manifest && manifest.tokens} {...surface} />
         <BorderExtras style={style} onChange={saveStyle} tokens={colourTokens} />
       </>
     ),
@@ -220,7 +235,7 @@ export function BlockInspector({ info }) {
     layout: () => <LayoutPane style={style} onChange={saveStyle} deviceScope={deviceScope} defaultDisplay={LAYOUT_DISPLAY[block.type]} itemOnly={block.type === CONTAINER_TYPE} />,
     position: () => <PositionPane style={style} onChange={saveStyle} />,
     effects: () => <EffectsPane style={style} onChange={saveStyle} />,
-    states: () => <StatesPane type={block.type} states={block.style_states} onChange={(next) => save(ops.updateBlockStyleStates(block.id, next))} />,
+    states: () => <StatesPane type={block.type} states={block.style_states} tokens={colourTokens} colours={colours} onChange={(next) => save(ops.updateBlockStyleStates(block.id, next))} />,
     parts: () => (
       <>
         <p className="sbx-hint">{t('section_parts_hint')}</p>
@@ -233,9 +248,9 @@ export function BlockInspector({ info }) {
         {sections.align({ label: t('button_position') })}
         {sections.typography({ noTextColor: true })}
         <TextShadowField style={style} onChange={saveStyle} tokens={colourTokens} />
-        <NormalHover label={def.label} style={style} states={block.style_states} onStyle={saveStyle} onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))} withSurface>
-          <TextColorField style={style} onChange={saveStyle} tokens={capabilities.includes('text_token') ? tokensFor(manifest, STYLE_TOKEN_CATEGORIES.text_token) : undefined} />
-          <StyleControls style={style} capabilities={capabilities} only="background" mediaPicker={boot.mediaPicker} onChange={saveStyle} tokens={manifest && manifest.tokens} />
+        <NormalHover label={def.label} style={style} states={block.style_states} onStyle={saveStyle} onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))} tokens={colourTokens} colours={colours} withSurface>
+          <TextColorField style={style} onChange={saveStyle} tokens={capabilities.includes('text_token') ? tokensFor(manifest, STYLE_TOKEN_CATEGORIES.text_token) : undefined} colourProps={colours('text')} />
+          <StyleControls style={style} capabilities={capabilities} only="background" mediaPicker={boot.mediaPicker} onChange={saveStyle} tokens={manifest && manifest.tokens} {...surface} />
         </NormalHover>
         {sections.shadow()}
         {sections.border()}
@@ -250,8 +265,8 @@ export function BlockInspector({ info }) {
         <TextStrokeField style={style} onChange={saveStyle} tokens={colourTokens} />
         <TextShadowField style={style} onChange={saveStyle} tokens={colourTokens} />
         <BlendField style={style} onChange={saveStyle} />
-        <NormalHover label={def.label} style={style} states={block.style_states} onStyle={saveStyle} onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))}>
-          <TextColorField style={style} onChange={saveStyle} tokens={capabilities.includes('text_token') ? tokensFor(manifest, STYLE_TOKEN_CATEGORIES.text_token) : undefined} />
+        <NormalHover label={def.label} style={style} states={block.style_states} onStyle={saveStyle} onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))} tokens={colourTokens} colours={colours}>
+          <TextColorField style={style} onChange={saveStyle} tokens={capabilities.includes('text_token') ? tokensFor(manifest, STYLE_TOKEN_CATEGORIES.text_token) : undefined} colourProps={colours('text')} />
         </NormalHover>
       </>
     ),
@@ -259,7 +274,7 @@ export function BlockInspector({ info }) {
     text_style: () => (
       <>
         {sections.align({ label: t('align') })}
-        <TextColorField style={style} onChange={saveStyle} tokens={capabilities.includes('text_token') ? tokensFor(manifest, STYLE_TOKEN_CATEGORIES.text_token) : undefined} />
+        <TextColorField style={style} onChange={saveStyle} tokens={capabilities.includes('text_token') ? tokensFor(manifest, STYLE_TOKEN_CATEGORIES.text_token) : undefined} colourProps={colours('text')} />
         {sections.typography({ noTextColor: true })}
         <TextShadowField style={style} onChange={saveStyle} tokens={colourTokens} />
       </>
@@ -277,8 +292,8 @@ export function BlockInspector({ info }) {
     // An Icon's one Style section: its primary colour per state, then the frame's secondary colour, size, padding, rotation and border.
     icon_style: () => (
       <>
-        <NormalHover label={def.label} colorLabel={t('icon_primary_color')} style={style} states={block.style_states} onStyle={saveStyle} onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))}>
-          <TextColorField label={t('icon_primary_color')} style={style} onChange={saveStyle} tokens={capabilities.includes('text_token') ? tokensFor(manifest, STYLE_TOKEN_CATEGORIES.text_token) : undefined} />
+        <NormalHover label={def.label} colorLabel={t('icon_primary_color')} style={style} states={block.style_states} onStyle={saveStyle} onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))} tokens={colourTokens} colours={colours}>
+          <TextColorField label={t('icon_primary_color')} style={style} onChange={saveStyle} tokens={capabilities.includes('text_token') ? tokensFor(manifest, STYLE_TOKEN_CATEGORIES.text_token) : undefined} colourProps={colours('text')} />
         </NormalHover>
         <IconProps props={props} onProps={(next) => save(ops.updateBlockProps(block.id, next))} tokens={colourTokens} />
       </>
