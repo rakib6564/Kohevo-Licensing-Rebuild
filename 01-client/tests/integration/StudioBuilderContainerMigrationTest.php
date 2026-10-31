@@ -80,10 +80,10 @@ unit('container migration: section_preset rows become container_preset, the ENUM
 
         $pages = sbcm_column($pdo, 'studiobuilder_pages', 'page_type');
         assert_eq("enum('page','landing','system','header_partial','footer_partial','container_preset')", $pages['COLUMN_TYPE'], 'the old name is gone from the page column');
-        assert_eq('page', $pages['COLUMN_DEFAULT']);
+        assert_eq('page', trim((string) $pages['COLUMN_DEFAULT'], "'")); // MariaDB reports a default with its quotes
         $templates = sbcm_column($pdo, 'studiobuilder_templates', 'template_type');
         assert_eq("enum('page_template','container_preset','header_preset','footer_preset','block_preset')", $templates['COLUMN_TYPE'], 'and from the template column');
-        assert_eq('container_preset', $templates['COLUMN_DEFAULT'], 'with the default install.sql gives a new site');
+        assert_eq('container_preset', trim((string) $templates['COLUMN_DEFAULT'], "'"), 'with the default install.sql gives a new site');
 
         StudioSchemaManager::runMigrations('1.0.0');
         assert_eq($expected, $asExpected($rows()), 'running it again changes nothing');
