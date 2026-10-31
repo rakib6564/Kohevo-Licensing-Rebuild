@@ -203,3 +203,9 @@ test('serverRenderedEdits: a server-rendered block whose props changed is shown 
   assert.deepEqual(serverRenderedEdits(before, doc([quote('Old'), heading('Same')])), [], 'a removed block is not fetched');
   assert.deepEqual(serverRenderedEdits(null, before), []);
 });
+
+test('a Text size repaints from the server at once; typing its content stays a live patch', () => {
+  const doc = (props) => ({ sections: [{ id: 's1', blocks: [{ id: 'b1', type: 'core.text', props, style: {} }] }] });
+  assert.deepEqual(serverRenderedEdits(doc({ content: 'a', size: 'base' }), doc({ content: 'a', size: 'xl' })), ['b1']);
+  assert.deepEqual(serverRenderedEdits(doc({ content: 'a', size: 'base' }), doc({ content: 'b', size: 'base' })), []);
+});

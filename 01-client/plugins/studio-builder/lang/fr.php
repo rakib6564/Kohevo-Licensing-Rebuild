@@ -712,7 +712,6 @@ return [
     'studio_ui_bg_overlay_note' => 'Superposition de {percent} % sur l’image',
     'studio_ui_bg_overlay_remove' => 'Retirer la superposition',
     'studio_ui_bg_image_covers' => 'Une image est définie et recouvre cette couleur.',
-    'studio_ui_align_device' => 'Alignement par appareil',
     'studio_ui_columns' => 'Colonnes',
     'studio_ui_padding_y' => 'Marge intérieure verticale',
     'studio_ui_width' => 'Largeur',

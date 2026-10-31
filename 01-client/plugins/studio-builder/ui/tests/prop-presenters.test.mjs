@@ -49,7 +49,7 @@ test('an icon presenter has an icon for each allowed value', () => {
 });
 
 test('presentersFor returns null for blocks that keep plain selects', () => {
-  assert.equal(presentersFor('core.quote'), null);
+  assert.equal(presentersFor('core.accordion'), null);
   assert.ok(presentersFor('layout.flex').direction);
 });
 

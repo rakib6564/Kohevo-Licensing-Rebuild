@@ -25,7 +25,7 @@ test('alignment is one icon group per device, and the device buttons also switch
 
     await openSection(page, 'align');
     const body = page.locator('[data-section="align"] .sbx-isec__body');
-    await expect(body.getByRole('group', { name: /^Alignment by device — / })).toBeVisible();
+    await expect(body.getByRole('group', { name: /^Alignment — / })).toBeVisible();
     await expect(body.locator('select')).toHaveCount(1); // only the sm override, hidden in <details>
 
     await body.getByRole('button', { name: 'Tablet' }).click();

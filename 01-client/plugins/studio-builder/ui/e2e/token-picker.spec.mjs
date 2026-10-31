@@ -25,31 +25,32 @@ test('the token picker lists named tokens under readable headings and stores the
 
     await openSection(page, 'tokens');
     const body = page.locator('[data-section="tokens"] .sbx-isec__body');
-    for (const label of ['Surface colour', 'Text colour', 'Spacing', 'Corner radius', 'Shadow', 'Font']) {
+    for (const label of ['Spacing', 'Corner radius', 'Shadow', 'Font']) {
       await expect(body.getByText(label, { exact: true })).toBeVisible();
     }
+    // The colour tokens are picked in the colour controls.
+    await expect(body.getByText('Surface colour', { exact: true })).toHaveCount(0);
+    await expect(body.getByText('Text colour', { exact: true })).toHaveCount(0);
     await expect(body.locator('select')).toHaveCount(0);
 
-    const surface = body.getByRole('combobox', { name: /^Surface colour/ });
-    await surface.click();
+    const radius = body.getByRole('combobox', { name: /^Corner radius/ });
+    await radius.click();
     const list = body.getByRole('listbox');
-    await expect(list.getByText('Surfaces', { exact: true })).toBeVisible();
-    await expect(list.getByText('Accent', { exact: true }).first()).toBeVisible();
-    await expect(list).not.toContainText('surface.primary');
-    await expect(list).not.toContainText('color.accent');
-    await list.getByRole('option', { name: /^Main surface/ }).click();
-    await expect(surface).toContainText('Main surface');
-    await expect(surface).toHaveAttribute('title', 'surface.primary');
+    await expect(list.getByText('Corner radius', { exact: true })).toBeVisible();
+    await expect(list).not.toContainText('radius.md');
+    await list.getByRole('option', { name: /^Medium/ }).click();
+    await expect(radius).toContainText('Medium');
+    await expect(radius).toHaveAttribute('title', 'radius.md');
 
     // keyboard: reopen, move, choose, and Escape closes without changing
-    await surface.focus();
+    await radius.focus();
     await page.keyboard.press('Enter');
     await expect(list).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(list).toHaveCount(0);
-    await surface.click();
+    await radius.click();
     await body.getByRole('listbox').getByRole('option', { name: /^Default/ }).click();
-    await expect(surface).toContainText('Default');
+    await expect(radius).toContainText('Default');
   } finally {
     for (let i = 0; i < 16; i++) {
       await settled(page);

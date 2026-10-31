@@ -194,15 +194,17 @@ test('the Container block has one Container section under Content, like the refe
   assert.ok(!ids('content', ctxOf('layout.flex')).includes('container'));
 });
 
-test('Style Alignment is named so it cannot be mistaken for the block\'s own Alignment field', () => {
+test('Style Alignment is the only one a text block has; a menu or divider keeps its own in Content', () => {
   const text = inspectorContext({ id: 'blk_1', type: 'core.quote', style: {} }, { style_capabilities: ['align', 'opacity'], binding_slots: [], field_schema: [{ key: 'align', type: 'enum', allowed_values: ['left', 'center', 'right'] }] });
   const flex = inspectorContext({ id: 'blk_2', type: 'layout.flex', style: {} }, { style_capabilities: ['align'], binding_slots: [], allows_children: true, field_schema: [{ key: 'align', type: 'enum', allowed_values: ['start', 'center', 'end', 'stretch'] }] });
   const heading = inspectorContext({ id: 'blk_3', type: 'core.heading', style: {} }, { style_capabilities: ['align'], binding_slots: [], field_schema: [{ key: 'text', type: 'string' }] });
   const align = SECTIONS.find((s) => s.id === 'align');
-  assert.equal(titleKeyOf(align, text), 'align_device');
+  assert.equal(titleKeyOf(align, text), 'align');
   assert.equal(titleKeyOf(align, flex), 'align_text');
   assert.equal(titleKeyOf(align, heading), 'align');
   assert.ok(ids('style', text).includes('align'));
+  const line = inspectorContext({ id: 'blk_4', type: 'core.divider', style: {} }, { style_capabilities: ['align'], binding_slots: [], field_schema: [] });
+  assert.ok(!ids('style', line).includes('align'));
 });
 
 test('States: every block offers Hover; only blocks a visitor can focus or press offer Focus and Active; a stored state still shows', () => {
