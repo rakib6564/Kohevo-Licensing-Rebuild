@@ -44,8 +44,8 @@ const canvasCss = (page) => page.frameLocator('iframe.sbx-canvas__frame').locato
 );
 
 async function pickTheme(page, scope, option = 1) {
-  await scope.locator('.sbx-tp__btn').click();
-  await page.getByRole('listbox').getByRole('option').nth(option).click();
+  await scope.locator('button.sbx-color__swatch').first().click();
+  await scope.locator('.sbx-cp .sbx-cp__opt').nth(option).click();
 }
 
 test('the border has a theme colour: it reaches the canvas as a class, and Custom takes it back', async ({ page }) => {
@@ -57,13 +57,12 @@ test('the border has a theme colour: it reaches the canvas as a class, and Custo
     await insertQuote(page);
     const border = await openSection(page, 'border');
     const quote = page.frameLocator('iframe.sbx-canvas__frame').locator('[data-sb-type="core.quote"]').last();
-    const theme = border.locator('.sbx-color__theme').first();
+    const theme = border.locator('.sbx-color').first();
     await pickTheme(page, theme);
     await expect(quote).toHaveClass(/sb-bd--/);
     await settled(page);
     await expect(quote).toHaveClass(/sb-bd--/);
-    await theme.locator('.sbx-tp__btn').click();
-    await page.getByRole('listbox').getByRole('option').first().click();
+    await pickTheme(page, theme, 0);
     await expect(quote).not.toHaveClass(/sb-bd--/);
   } finally {
     await restore(page, before);
@@ -81,7 +80,7 @@ test('a side border, the custom shadow and the text decoration take theme colour
     // a side of the border, in the Border group's per-side details
     const border = await openSection(page, 'border');
     await border.locator('details.sbx-more summary').click();
-    const top = border.locator('details.sbx-more fieldset', { has: page.getByText('Top', { exact: true }) }).first().locator('.sbx-color__theme');
+    const top = border.locator('details.sbx-more fieldset', { has: page.getByText('Top', { exact: true }) }).first().locator('.sbx-color').last();
     await pickTheme(page, top);
     await settled(page);
     await expect.poll(() => canvasCss(page), { timeout: 15_000 }).toMatch(/border-top-color:\s*var\(--sb-/);
@@ -91,7 +90,7 @@ test('a side border, the custom shadow and the text decoration take theme colour
     await shadow.getByRole('button', { name: 'Edit shadow' }).click();
     const shadowCard = shadow.getByRole('dialog', { name: 'Edit shadow' });
     await shadowCard.getByRole('button', { name: 'Custom shadow' }).click();
-    await pickTheme(page, shadowCard.locator('.sbx-color__theme'));
+    await pickTheme(page, shadowCard.locator('.sbx-color'));
     await settled(page);
     await expect.poll(() => canvasCss(page), { timeout: 15_000 }).toMatch(/box-shadow:[^;]*var\(--sb-/);
     await shadowCard.getByRole('button', { name: 'Done' }).click();
@@ -101,7 +100,7 @@ test('a side border, the custom shadow and the text decoration take theme colour
     await typo.getByRole('button', { name: 'Edit typography' }).click();
     const typoCard = typo.getByRole('dialog', { name: 'Edit typography' });
     await typoCard.getByLabel('Text decoration', { exact: true }).selectOption('underline');
-    await pickTheme(page, typoCard.locator('.sbx-color__theme'));
+    await pickTheme(page, typoCard.locator('.sbx-color').last());
     await settled(page);
     await expect.poll(() => canvasCss(page), { timeout: 15_000 }).toMatch(/text-decoration-color:\s*var\(--sb-/);
   } finally {

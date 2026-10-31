@@ -13,7 +13,8 @@
 import { useState } from 'react';
 import { asList, asObject } from '../../core/doc.mjs';
 import { writePart } from '../../core/partStyles.mjs';
-import { FILTER, OPTIONS, TRANSFORM, getPath, setPath, setPaths } from '../../core/styleSurface.mjs';
+import { FILTER, OPTIONS, TRANSFORM, colourCss, getPath, isColourToken, setPath, setPaths } from '../../core/styleSurface.mjs';
+import { tokenLabel } from '../../core/tokenPicker.mjs';
 import { DEVICE_KEYS, OVERRIDE_DEVICES } from '../../core/responsiveStyle.mjs';
 import { t } from '../../core/messages.mjs';
 import { useEditor } from '../EditorContext.jsx';
@@ -90,6 +91,11 @@ export function PartStyles({ blockId, parts, value, responsive, tokens, onChange
   const select = (path, label, options, labels = null) => (
     <SelectField key={path} id={`${id}-${path.replace(/\./g, '-')}`} label={label} value={get(path)} options={options} optionLabels={labels} onChange={(v) => put(path, v)} />
   );
+  // A state with no colour of its own shows the part's Normal colour.
+  const normalOf = (path) => {
+    const v = shownState === 'normal' || get(path) ? undefined : getPath(asObject(source[part]), path);
+    return v ? { css: colourCss(v), label: isColourToken(v) ? tokenLabel(v) : v, source: 'normal' } : null;
+  };
   const display = get('layout.display');
   const hasGradient = typeof get('background.gradient') === 'string';
 
@@ -121,7 +127,7 @@ export function PartStyles({ blockId, parts, value, responsive, tokens, onChange
 
       <fieldset className="sbx-fieldset">
         <legend>{t('part_text')}</legend>
-        {!perDevice && <ThemeColor id={`${id}-color`} label={t('text_color')} value={get('color')} tokens={tokens} onChange={(v) => put('color', v)} />}
+        {!perDevice && <ThemeColor id={`${id}-color`} label={t('text_color')} value={get('color')} tokens={tokens} effective={normalOf('color')} onChange={(v) => put('color', v)} />}
         {!perDevice && select('typography.family', t('font_family'), FAMILIES, { heading: t('font_heading'), body: t('font_body') })}
         {length('typography.size', t('font_size'), '16px')}
         {!perDevice && (
@@ -137,7 +143,7 @@ export function PartStyles({ blockId, parts, value, responsive, tokens, onChange
       {!perDevice && (
         <fieldset className="sbx-fieldset">
           <legend>{t('part_fill')}</legend>
-          <ThemeColor id={`${id}-bg`} label={t('background_color')} value={get('background.color')} tokens={tokens} onChange={(v) => put('background.color', v)} />
+          <ThemeColor id={`${id}-bg`} label={t('background_color')} value={get('background.color')} tokens={tokens} effective={normalOf('background.color')} onChange={(v) => put('background.color', v)} />
           <Check label={t('part_gradient')} checked={hasGradient} onChange={(e) => put('background.gradient', e.target.checked ? 'linear-gradient(135deg, #ff4dae, #e9008a)' : undefined)} />
           {hasGradient && <GradientField value={get('background.gradient')} onChange={(v) => put('background.gradient', v || undefined)} />}
           <SliderField id={`${id}-opacity`} label={t('part_opacity')} value={get('opacity')} min={0} max={100} unit="%" neutral={100} onChange={(v) => put('opacity', v)} />
@@ -151,7 +157,7 @@ export function PartStyles({ blockId, parts, value, responsive, tokens, onChange
             {length('border.width', t('border_width'), '0px')}
             {select('border.style', t('border_style'), BORDER_STYLES)}
             {select('border.sides', t('part_border_sides'), BORDER_SIDES, Object.fromEntries(BORDER_SIDES.map((k) => [k, t(`part_sides_${k}`)])))}
-            <ThemeColor id={`${id}-bcolor`} label={t('border_color')} value={get('border.color')} tokens={tokens} onChange={(v) => put('border.color', v)} />
+            <ThemeColor id={`${id}-bcolor`} label={t('border_color')} value={get('border.color')} tokens={tokens} effective={normalOf('border.color')} onChange={(v) => put('border.color', v)} />
           </>
         )}
         {length('border.radius', t('border_radius'), '0px')}

@@ -349,7 +349,7 @@ unit('states: unknown states, unknown keys, base-only fields and hostile values 
         'layout not allowed'    => ['hover' => ['layout' => ['display' => 'none']]],
         'z_index not allowed'   => ['hover' => ['z_index' => 5]],
         'colour url'            => ['hover' => ['color' => 'url(x)']],
-        'colour token'          => ['hover' => ['color' => 'text.primary']],
+        'non-colour token'      => ['hover' => ['color' => 'space.md']],
         'background url'        => ['hover' => ['background' => ['color' => 'url(x)']]],
         'background image key'  => ['hover' => ['background' => ['image' => 'x.png']]],
         'gradient url'          => ['hover' => ['background' => ['gradient' => 'linear-gradient(url(x), red)']]],
@@ -973,4 +973,11 @@ unit('Site settings: the tokens marked "used only by blocks" are exactly the one
     $marked = $listed[1];
     sort($marked);
     assert_eq($unused, $marked, 'the editor marks exactly the tokens with no default use');
+});
+
+unit('a state colour may be a theme colour, written as the theme property; a literal is unchanged', function (): void {
+    assert_eq([], StyleSurface::stateIssues(['hover' => ['color' => 'text.accent', 'background' => ['color' => 'surface.accent'], 'border' => ['color' => 'color.accent'], 'typography' => ['color' => 'text.muted']]], 'style_states'));
+    assert_eq('color:var(--sb-text-accent);background-color:var(--sb-surface-accent);border-color:var(--sb-color-accent)', StyleSurface::stateDeclarations(['color' => 'text.accent', 'background' => ['color' => 'surface.accent'], 'border' => ['color' => 'color.accent']]));
+    assert_eq('color:#e9008a', StyleSurface::stateDeclarations(['color' => '#e9008a']), 'stored literals render as before');
+    assert_true(StyleSurface::stateIssues(['hover' => ['color' => 'space.md']], 'style_states') !== [], 'a token that is not a colour is refused');
 });

@@ -12,7 +12,7 @@ import { asObject } from '../../core/doc.mjs';
 import { getPath, setPath } from '../../core/styleSurface.mjs';
 import { t } from '../../core/messages.mjs';
 
-export function BackgroundStates({ style, states, onStyle, onStates, children }) {
+export function BackgroundStates({ style, states, onStyle, onStates, tokens, colours = null, children }) {
   const id = useId();
   const [tab, setTab] = useState('normal');
   const all = asObject(states);
@@ -39,7 +39,7 @@ export function BackgroundStates({ style, states, onStyle, onStates, children })
       {tab === 'normal' ? children : (
         <div className="sbx-bg-hover" data-testid="bg-hover">
           <p className="sbx-hint">{t('bg_hover_hint')}</p>
-          <ColorField id={`${id}-hover-bg`} label={t('background_color')} value={getPath(hover, 'background.color')} onChange={(v) => putHover('background.color', v)} />
+          <ColorField id={`${id}-hover-bg`} label={t('background_color')} value={getPath(hover, 'background.color')} tokens={tokens} onChange={(v) => putHover('background.color', v)} {...(colours ? colours('background', 'hover') : {})} />
           <SliderField
             id={`${id}-hover-duration`}
             label={t('bg_transition')}

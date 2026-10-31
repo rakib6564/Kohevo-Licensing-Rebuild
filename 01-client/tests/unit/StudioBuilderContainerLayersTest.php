@@ -81,12 +81,13 @@ unit('overlay: a colour or a gradient, not both and not neither; only known blen
     assert_false($ok(['color' => '#000', 'image' => 'x']), 'nothing else');
 });
 
-unit('overlay: a hover state changes its colour and opacity, a literal colour only, and wins over the base', function (): void {
+unit('overlay: a hover state changes its colour and opacity, a theme colour too, and wins over the base', function (): void {
     $box = sbcl_box([], ['overlay' => ['color' => '#000000', 'opacity' => 0.3]], ['hover' => ['overlay' => ['opacity' => 0.7]]]);
     assert_true(sbcl_valid($box));
     $out = sbcl_render($box);
     assert_true((bool) preg_match('/:hover\{--sb-ov-display:block !important;--sb-ov-op:0\.7 !important\}/', $out['css']), $out['css']);
-    assert_false(sbcl_valid(sbcl_box([], ['overlay' => ['color' => '#000000']], ['hover' => ['overlay' => ['color' => 'color.accent']]])), 'a state colour is literal, as every state colour');
+    assert_true(sbcl_valid(sbcl_box([], ['overlay' => ['color' => '#000000']], ['hover' => ['overlay' => ['color' => 'color.accent']]])), 'a state takes a theme colour, as every state colour');
+    assert_false(sbcl_valid(sbcl_box([], ['overlay' => ['color' => '#000000']], ['hover' => ['overlay' => ['color' => 'space.md']]])), 'a token that is not a colour is refused');
 });
 
 // ── Shape dividers and the background video ───────────────────────────────

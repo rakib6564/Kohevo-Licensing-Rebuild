@@ -1746,16 +1746,17 @@ html, body.sbx-body {
   overflow: hidden;
   cursor: pointer;
 }
-.sbx-color__picker {
-  position: absolute;
-  inset: -4px;
-  width: calc(100% + 8px);
-  height: calc(100% + 8px);
-  padding: 0;
-  border: 0;
-  opacity: 0;
-  cursor: pointer;
-}
+.sbx-color { position: relative; }
+.sbx-color__swatch { padding: 0; background-color: transparent; }
+.sbx-color__fill { position: absolute; inset: 0; }
+/* An inherited colour is painted, but dashed and with a dim placeholder: nothing is set on this block. */
+.sbx-color[data-state="inherited"] .sbx-color__swatch { border-style: dashed; }
+.sbx-color__source { grid-column: 1 / -1; margin: 4px 0 0; }
+.sbx-cp { position: absolute; z-index: 30; top: calc(100% + 4px); right: 0; width: 240px; max-width: calc(100vw - 32px); max-height: 300px; overflow: auto; padding: 4px; border: 1px solid var(--sbx-border); border-radius: var(--sbx-r-xl); background: var(--sbx-card-bg); box-shadow: var(--sbx-shadow-lg); }
+.sbx-cp.is-up { top: auto; bottom: calc(100% + 4px); }
+.sbx-cp__opt { width: 100%; border: 0; background: none; color: inherit; font: inherit; text-align: left; }
+.sbx-cp__opt:hover, .sbx-cp__opt:focus-visible { background: var(--sbx-accent-tint); }
+.sbx-cp__native { flex: none; width: 20px; height: 20px; padding: 0; border: 1px solid var(--sbx-border); border-radius: 5px; background: none; cursor: pointer; }
 .sbx-color__swatch:focus-within { outline: 2px solid var(--sbx-accent); outline-offset: 1px; }
 .sbx-field--inline input[type="color"] {
   width: 2.5rem;
@@ -3269,8 +3270,6 @@ html, body.sbx-body {
 .sbx-devstyle .sbx-hint { margin: 0 0 var(--sbx-s-2); }
 
 /* A theme colour or spacing picker sits under the literal field it can replace. */
-.sbx-color__theme { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
-.sbx-color__theme .sbx-field__label { font-size: var(--sbx-fs-sm); color: var(--sbx-text-dim); }
 
 /* Reset · Discard · Apply: pinned under the Inspector's controls. */
 .sbx-inspector__bar { position: sticky; bottom: 0; display: flex; gap: 8px; padding: 10px 0; margin-top: 12px; background: var(--sbx-panel); border-top: 1px solid var(--sbx-border); z-index: 2; }
@@ -3456,8 +3455,6 @@ html, body.sbx-body {
   .sbx-left .sbx-isec__body .sbx-pop__row { position: relative; display: block; padding-right: 34px; }
   .sbx-left .sbx-isec__body .sbx-pop__row > .sbx-iconbtn { position: absolute; top: 2px; right: 0; }
   .sbx-left .sbx-bg-image-pane .sbx-pop__row { padding-right: 0; }
-  .sbx-left .sbx-color__theme { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(84px, 38%) minmax(0, 1fr); align-items: center; column-gap: 10px; margin-top: 4px; }
-  .sbx-left .sbx-color__theme .sbx-tp, .sbx-left .sbx-color__theme .sbx-tp__btn { width: 100%; }
 }
 
 /* A literal colour field: swatch, text, clear. */
