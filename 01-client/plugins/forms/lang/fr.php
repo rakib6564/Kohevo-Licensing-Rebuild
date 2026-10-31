@@ -602,4 +602,5 @@ return [
     'forms_js_tel' => 'Saisissez un numéro de téléphone valide.',
     'forms_js_check' => 'Veuillez vérifier ce champ.',
     'forms_js_review_empty' => 'Aucune réponse à relire pour le moment.',
+    'forms_bar_new' => 'Formulaire',
 ];

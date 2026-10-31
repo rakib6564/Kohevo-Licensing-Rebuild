@@ -42,6 +42,7 @@ class Booking extends Plugin {
         BookingPlusAPI::ensureSchema();
 
         Hook::addFilter('admin_nav_items',           [$this, 'addAdminNav']);
+        Hook::addFilter('front_admin_bar_items', [$this, 'addFrontBarItems']);
         Hook::addFilter('admin_dashboard_widgets',   [$this, 'addAdminDashboardWidget']);
         Hook::addFilter('customer_dashboard_widgets',[$this, 'addCustomerDashboardWidget']);
         Hook::addFilter('customer_dashboard_kpis',   [$this, 'addCustomerDashboardKpi']);
@@ -111,6 +112,22 @@ class Booking extends Plugin {
         } catch (\Throwable $e) {
             slate_log('Booking: stripe event handling failed: ' . $e->getMessage(), 'error');
         }
+    }
+
+    /** Booking on the admin bar, with the count of appointments still waiting for an answer. */
+    public function addFrontBarItems(array $items): array {
+        if (!Auth::can('booking.view') || !ModuleGuard::allows('booking')) return $items;
+        try {
+            $waiting = (int) Database::value(
+                "SELECT COUNT(*) FROM booking_appointments WHERE tenant_id = ? AND status = 'awaiting_approval' AND starts_at >= NOW()",
+                [current_tenant_id()]
+            );
+        } catch (\Throwable $e) {
+            $waiting = 0;
+        }
+        $items[] = ['id' => 'booking', 'label' => __('booking_bar_label', 'Booking'), 'href' => $this->url('admin/appointments.php'), 'perm' => 'booking.view', 'order' => 50, 'menu' => 'bar', 'count' => $waiting];
+        $items[] = ['id' => 'new-appointment', 'label' => __('booking_new_appointment', 'New appointment'), 'href' => $this->url('admin/new.php'), 'perm' => 'booking.manage_appointments', 'order' => 40, 'menu' => 'new'];
+        return $items;
     }
 
     public function addAdminNav(array $items): array {

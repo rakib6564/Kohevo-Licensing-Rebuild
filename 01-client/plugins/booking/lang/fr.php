@@ -998,4 +998,5 @@ return [
     'booking_embed_autoheight_hint' => 'Le script ajuste la hauteur du cadre à chaque étape — pas de barre de défilement, rien n’est coupé.',
     'booking_settings_embed_code_label' => 'Code d’intégration',
     'booking_settings_embed_code_hint' => 'Collez les deux lignes à l’endroit où le widget doit apparaître. Le script adapte la hauteur du cadre à chaque étape. Ajoutez &amp;chrome=0 à l’adresse pour un rendu à plat, sans bordure de carte.',
+    'booking_bar_label' => 'Réservations',
 ];

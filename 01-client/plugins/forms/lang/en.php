@@ -54,4 +54,5 @@ return [
     'forms_js_tel' => 'Enter a valid phone number.',
     'forms_js_check' => 'Please check this field.',
     'forms_js_review_empty' => 'No answers to review yet.',
+    'forms_bar_new' => 'Form',
 ];

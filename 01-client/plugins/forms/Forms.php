@@ -19,6 +19,7 @@ class Forms extends Plugin {
     public function boot(): void {
         Hook::addFilter('admin_nav_items',          [$this, 'addAdminNav']);
         Hook::addFilter('admin_dashboard_widgets',  [$this, 'addDashboardWidget']);
+        Hook::addFilter('front_admin_bar_items',    [$this, 'addFrontBarItems']);
         Hook::addFilter('public_routes',            [$this, 'addPublicRoutes']);
         Hook::addFilter('i18n_lang_paths',          [$this, 'addLangPath']);
 
@@ -29,6 +30,22 @@ class Forms extends Plugin {
         FormsIntegrations::register();
 
         // Studio widgets (Add › Components) are declared in studio-widgets.php.
+    }
+
+    /** Forms on the admin bar, with the count of unread submissions. */
+    public function addFrontBarItems(array $items): array {
+        if (!Auth::can('forms.view') || !ModuleGuard::allows('forms')) return $items;
+        try {
+            $unread = (int) Database::value(
+                "SELECT COUNT(*) FROM forms_submissions WHERE tenant_id = ? AND read_at IS NULL",
+                [current_tenant_id()]
+            );
+        } catch (\Throwable $e) {
+            $unread = 0;
+        }
+        $items[] = ['id' => 'forms', 'label' => __('forms', 'Forms'), 'href' => $this->url('admin/submissions.php'), 'perm' => 'forms.view', 'order' => 40, 'menu' => 'bar', 'count' => $unread];
+        $items[] = ['id' => 'new-form', 'label' => __('forms_bar_new', 'Form'), 'href' => $this->url('admin/edit.php'), 'perm' => 'forms.manage', 'order' => 30, 'menu' => 'new'];
+        return $items;
     }
 
     public function addAdminNav(array $items): array {

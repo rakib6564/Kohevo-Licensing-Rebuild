@@ -368,7 +368,7 @@ final class StudioCompiler
      *
      * @return list<string>
      */
-    private static function tagsOf(mixed $decoded): array
+    public static function tagsOf(mixed $decoded): array
     {
         $tags = is_array($decoded) && is_array($decoded['settings'] ?? null) ? ($decoded['settings']['tags'] ?? []) : [];
         $tags = is_string($tags) ? explode(',', $tags) : (is_array($tags) ? $tags : []);

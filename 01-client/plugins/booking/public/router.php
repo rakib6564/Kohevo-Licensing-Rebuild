@@ -667,6 +667,7 @@ function bookpub_layout_end(bool $embed): void {
         // assets/js/embed.js (also understood by the Content Builder block).
         echo '<script>' . bookpub_embed_reporter_js() . '</script>';
     }
+    echo \Slate\Services\Admin\FrontAdminBar::scriptTag();
     echo '</body></html>';
 }
 

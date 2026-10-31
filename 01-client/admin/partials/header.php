@@ -40,6 +40,9 @@
 if (!defined('SLATE_ROOT')) exit;
 Auth::require();
 
+// Sessions from before the admin bar, or a hint the browser dropped.
+if (!\Slate\Services\Auth\AdminHint::isPresent()) \Slate\Services\Auth\AdminHint::set();
+
 // Admin pages must never be cached — stale renders after a deploy are
 // a real problem (see the Phase 0 hotfix story). Headers must be sent
 // BEFORE any output, so this is the right place. Output buffer also

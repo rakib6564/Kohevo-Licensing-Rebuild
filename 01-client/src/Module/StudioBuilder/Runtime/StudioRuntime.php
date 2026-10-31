@@ -44,5 +44,6 @@ final class StudioRuntime
         public readonly StudioCompilationInvalidator $invalidator,
         public readonly StudioApplicationService $app,
         public readonly StudioPublicRuntime $publicRuntime,
+        public readonly PublishedPageParts $pageParts,
     ) {}
 }
