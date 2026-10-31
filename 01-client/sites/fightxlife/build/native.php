@@ -454,9 +454,12 @@ function native_more(): array
                 'link' => S(col(PINK), ['typography' => ['decoration' => 'underline']]), 'bold' => col(INK)]],
 
         // ── Query loops ──
-        'fx-recent'       => ['parts' => ['grid' => lay(['display' => 'block']), 'card' => S(pad(12, 0), ['border' => ['width' => '0px', 'radius' => '0px']], bg('transparent')), 'card:not_first' => side('top', '#e9e9e9'),
+        // A row that tints as a whole: no lift or shadow, which would need room the sidebar does not have.
+        'fx-recent'       => ['parts' => ['grid' => lay(['display' => 'grid', 'gap' => '6px']),
+                'card' => S(pad(14, 16), ['border' => ['width' => '0px', 'radius' => '14px']], bg('transparent'), shadow(0, 0, 0, 'transparent'), fx(['transition' => ['duration_ms' => 220, 'easing' => 'ease']])),
+                'card:hover' => S(bg('#fff0f7'), shadow(0, 0, 0, 'transparent'), fx(['transform' => ['translate_x' => '4px']])),
                 'body' => pad(0), 'button_row' => lay(['display' => 'none']), 'button' => lay(['display' => 'none']),
-                'title' => S(mar(0, 0, 4, 0), fam('heading', '14px', 'bold', '20px'), col('#333333')), 'title:hover' => col(PINK), 'meta' => S(ty('12px'), col('#999999'))]],
+                'title' => S(mar(0, 0, 6, 0), fam('heading', '14px', 'bold', '20px'), col('#333333')), 'card_title' => col(PINK_DEEP), 'meta' => S(mar(0, 0, 0, 0), ty('12px'), col('#8a7f85'))]],
         'yg-post-meta'    => ['parts' => ['meta' => lay(['display' => 'flex', 'justify' => 'center', 'align' => 'center', 'gap' => '15px']), 'item:not_first' => S(side('left', '#dddddd'), pad(null, null, null, 15))]],
         'fx-info__val'    => ['parts' => ['paragraph' => mar(0)]],
         'fx-info__list'   => ['parts' => ['list' => S(mar(4, 0, 0, 0), pad(null, null, null, 18))]],

@@ -54,6 +54,7 @@ final class BlockParts
             'image'    => ['label' => 'Image', 'selectors' => ['.sb-post-card__media']],
             'category' => ['label' => 'Category', 'selectors' => ['.sb-post-card__category']],
             'title'    => ['label' => 'Title', 'selectors' => ['.sb-post-card__title', '.sb-post-card__title a']],
+            'card_title' => ['label' => 'Title while the card is pointed at', 'selectors' => ['.sb-post-card:hover .sb-post-card__title', '.sb-post-card:hover .sb-post-card__title a'], 'states' => false],
             'excerpt'  => ['label' => 'Excerpt', 'selectors' => ['.sb-post-card__excerpt']],
             'meta'     => ['label' => 'Date and author', 'selectors' => ['.sb-post-card__meta']],
             'button'   => ['label' => 'Read more', 'selectors' => ['.sb-post-card .sb-button']],

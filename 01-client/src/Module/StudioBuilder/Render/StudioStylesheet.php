@@ -356,6 +356,8 @@ final class StudioStylesheet
             . '@media (max-width:767.98px){.sb-query-loop .sb-query-loop__grid{grid-template-columns:minmax(0,1fr)}}'
             . '.sb-post-card{display:flex;flex-direction:column;border:1px solid var(--sb-border-default,#e2e8f0);border-radius:var(--sb-radius-md,.5rem);overflow:hidden;background:var(--sb-surface-secondary,#ffffff);transition:box-shadow .2s ease}'
             . '.sb-post-card:hover{box-shadow:var(--sb-shadow-md,0 4px 6px -1px rgba(0,0,0,0.1))}'
+            // A minimal card is one link: the title's reaches over the whole card.
+            . '.sb-post-card--minimal{position:relative}.sb-post-card--minimal .sb-post-card__title a::after{content:"";position:absolute;inset:0}'
             // A card may leave overflow open (the hover margin of a lifted card needs it), so the image rounds itself.
             . '.sb-post-card__media{overflow:hidden;border-top-left-radius:inherit;border-top-right-radius:inherit}'
             . '.sb-post-card__media img{width:100%;height:12rem;object-fit:cover;display:block}'

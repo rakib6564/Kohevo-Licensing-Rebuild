@@ -4044,6 +4044,11 @@
                     "label": "Title"
                 },
                 {
+                    "key": "card_title",
+                    "label": "Title while the card is pointed at",
+                    "states": false
+                },
+                {
                     "key": "excerpt",
                     "label": "Excerpt"
                 },

@@ -1672,6 +1672,7 @@ return [
     'studio_field_panel_content_width' => 'Largeur du contenu du panneau',
     'studio_field_panel_columns' => 'Colonnes du panneau',
     'studio_part_panels' => 'Panneaux',
+    'studio_part_title_while_the_card_is_pointed_at' => 'Titre au survol de la carte',
     'studio_part_link_of_the_open_panel' => 'Lien du panneau ouvert',
     'studio_part_panel_columns' => 'Colonnes du panneau',
     'studio_part_open_menu_button' => 'Bouton du menu ouvert',
