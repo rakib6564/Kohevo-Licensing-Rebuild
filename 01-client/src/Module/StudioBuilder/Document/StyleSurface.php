@@ -580,8 +580,8 @@ final class StyleSurface
             $p = "{$path}.{$key}";
             switch ((string) $key) {
                 case 'color':
-                    if (!self::fieldAccepts($value, [$state ? 'color' : 'tcolor', 'color'])) {
-                        $errors[] = self::issue($p, $state ? 'An overlay colour in a state must be a literal colour.' : 'Invalid overlay colour.');
+                    if (!self::fieldAccepts($value, ['tcolor', 'color'])) {
+                        $errors[] = self::issue($p, 'Invalid overlay colour.');
                     }
                     break;
                 case 'gradient':
@@ -621,7 +621,7 @@ final class StyleSurface
     {
         $out = [];
         $paint = null;
-        if (isset($ov['color']) && self::fieldAccepts($ov['color'], [$state ? 'color' : 'tcolor', 'color'])) {
+        if (isset($ov['color']) && self::fieldAccepts($ov['color'], ['tcolor', 'color'])) {
             $paint = self::colourCss(trim((string) $ov['color']));
         } elseif (isset($ov['gradient']) && StyleValueGuard::isGradient($ov['gradient'])) {
             $paint = trim((string) $ov['gradient']);
@@ -1108,7 +1108,7 @@ final class StyleSurface
                 $kp = "{$p}.{$key}";
                 switch ((string) $key) {
                     case 'color':
-                        self::checkField($value, ['color', 'color'], $kp, $errors);
+                        self::checkField($value, ['tcolor', 'color'], $kp, $errors);
                         break;
                     case 'opacity':
                         if (!self::inRange($value, 0, 1)) {
@@ -1123,13 +1123,13 @@ final class StyleSurface
                         }
                         break;
                     case 'background':
-                        self::checkLimitedObject($value, ['color' => ['color', 'background-color'], 'gradient' => ['gradient']], $kp, $errors);
+                        self::checkLimitedObject($value, ['color' => ['tcolor', 'background-color'], 'gradient' => ['gradient']], $kp, $errors);
                         break;
                     case 'border':
-                        self::checkLimitedObject($value, ['color' => ['color', 'border-color']], $kp, $errors);
+                        self::checkLimitedObject($value, ['color' => ['tcolor', 'border-color']], $kp, $errors);
                         break;
                     case 'typography':
-                        self::checkLimitedObject($value, ['color' => ['color', 'color']] + $more['typography'], $kp, $errors);
+                        self::checkLimitedObject($value, ['color' => ['tcolor', 'color']] + $more['typography'], $kp, $errors);
                         break;
                     case 'overlay':
                         self::checkOverlay($value, $kp, $errors, true);
@@ -1182,24 +1182,24 @@ final class StyleSurface
     public static function stateDeclarations(array $p): string
     {
         $out = [];
-        $colorDef = ['color', 'color'];
+        $colorDef = ['tcolor', 'color'];
         if (isset($p['color']) && self::fieldAccepts($p['color'], $colorDef)) {
-            $out[] = 'color:' . trim((string) $p['color']);
+            $out[] = 'color:' . self::colourCss((string) $p['color']);
         }
         $t = is_array($p['typography'] ?? null) ? $p['typography'] : [];
         if (isset($t['color']) && self::fieldAccepts($t['color'], $colorDef)) {
-            $out[] = 'color:' . trim((string) $t['color']);
+            $out[] = 'color:' . self::colourCss((string) $t['color']);
         }
         $bg = is_array($p['background'] ?? null) ? $p['background'] : [];
         if (isset($bg['color']) && self::fieldAccepts($bg['color'], $colorDef)) {
-            $out[] = 'background-color:' . trim((string) $bg['color']);
+            $out[] = 'background-color:' . self::colourCss((string) $bg['color']);
         }
         if (isset($bg['gradient']) && StyleValueGuard::isGradient($bg['gradient'])) {
             $out[] = 'background-image:' . trim((string) $bg['gradient']);
         }
         $bd = is_array($p['border'] ?? null) ? $p['border'] : [];
         if (isset($bd['color']) && self::fieldAccepts($bd['color'], $colorDef)) {
-            $out[] = 'border-color:' . trim((string) $bd['color']);
+            $out[] = 'border-color:' . self::colourCss((string) $bd['color']);
         }
         if (isset($p['shadow']) && is_string($p['shadow']) && StyleValueGuard::isShadow($p['shadow'])) {
             $out[] = 'box-shadow:' . trim($p['shadow']);

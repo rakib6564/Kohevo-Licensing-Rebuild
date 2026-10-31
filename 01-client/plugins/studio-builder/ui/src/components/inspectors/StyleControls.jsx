@@ -20,54 +20,100 @@
 // overwritten — the renderer already skips emitting a literal when a token ref
 // is present, so a literal and a ref never both reach the page.
 
-import { useId, useMemo, useRef, useState } from 'react';
-import { STYLE_TOKEN_CATEGORIES } from '../../core/fields.mjs';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { STYLE_TOKEN_CATEGORIES, swatchHex } from '../../core/fields.mjs';
 import { setBorderLiteral, setBorderToken, setSurfaceToken, setTextLiteral, setTextToken } from '../../core/tokenStyle.mjs';
 import { asObject } from '../../core/doc.mjs';
 import { parseOverlay } from '../../core/overlayColor.mjs';
 import { t } from '../../core/messages.mjs';
 import { Pills, Field, Popover } from '../ui/index.js';
 import { acceptsDraft } from '../../core/styleValues.mjs';
-import { OPTIONS, acceptsSurfaceDraft, setPath } from '../../core/styleSurface.mjs';
+import { OPTIONS, acceptsSurfaceDraft, isColourToken, setPath } from '../../core/styleSurface.mjs';
+import { groupForPicker, sampleStyle, tokenLabel } from '../../core/tokenPicker.mjs';
 import { optionLabel } from '../../core/optionLabels.mjs';
 import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
 import { DeviceStyle } from './DeviceStyle.jsx';
 import { MediaControl } from '../fields/MediaControl.jsx';
 import { FocalPad, OverlayField } from './BackgroundWidgets.jsx';
-import { TokenPicker } from '../fields/TokenPicker.jsx';
+/** Where an inherited or part-held value comes from, in the author's words. */
+export function sourceHint(effective) {
+  if (!effective) return null;
+  switch (effective.source) {
+    case 'part': return t('eff_part', { part: effective.detail });
+    case 'variant': return t('eff_variant', { variant: optionLabel(effective.detail) });
+    case 'normal': return t('eff_normal');
+    case 'stylesheet': return t('eff_stylesheet');
+    default: return null;
+  }
+}
+
 /**
- * A colour control that accepts a token reference or a literal hex.
+ * The one colour control: a swatch that opens one picker (Inherit, the theme's colours, a custom colour) beside a text
+ * box for a typed colour. The stored data does not change: a theme colour goes through `onToken` (a `*_token` key or the
+ * same path, by caller; with none given, the token's ref goes through `onChange`), a literal through `onChange`, and
+ * empty means inherit.
  *
- * `<input type="color">` cannot represent `#fff` or a token ref, so the text
- * input is the source of truth and the swatch is a convenience that writes back
- * into it. An empty text field means "inherit".
+ * `effective` (core/effectiveColour.mjs) is what the field shows when nothing is set here: it paints the swatch and the
+ * placeholder, marked as inherited, with where it comes from under the row. `tokens` omitted: a custom colour only.
  */
-export function ColorField({ id, label, value, onChange, tokens, token, onToken }) {
-  const literal = typeof value === 'string' && /^#[0-9a-f]{3,8}$/i.test(value) ? value.slice(0, 7) : '';
+export function ColorField({ id, label, value, onChange, tokens, token, onToken, effective = null }) {
+  const tokenRef = token ?? (isColourToken(value) ? value : null);
+  const literal = tokenRef ? undefined : value;
+  const known = tokenRef ? (tokens || []).find((tk) => tk.ref === tokenRef) : null;
   // Typing `#e8` is not yet a colour: keep the draft locally and commit only
   // once it is one (or empty), so a half-typed value never reaches the document.
   const [draft, setDraft] = useState(null);
-  const shown = draft ?? value ?? '';
+  const [open, setOpen] = useState(false);
+  const [flip, setFlip] = useState(false);
+  const root = useRef(null);
+  const swatch = useRef(null);
+  const shown = draft ?? (tokenRef ? tokenLabel(tokenRef) : literal ?? '');
   const invalid = draft !== null && !acceptsDraft('color', draft);
+  const hasOwn = !!tokenRef || (typeof literal === 'string' && literal !== '');
+  const fill = tokenRef ? (known && known.value) || (effective && effective.css) : hasOwn ? literal : effective && effective.css;
+  const hint = hasOwn && effective && effective.source !== 'part' ? null : sourceHint(effective);
+  const groups = useMemo(() => groupForPicker(tokens), [tokens]);
+  const pickToken = onToken || ((ref) => onChange(ref ?? undefined));
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (root.current && !root.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [open]);
+
+  const toggle = () => {
+    if (!open && swatch.current) {
+      const rect = swatch.current.getBoundingClientRect();
+      setFlip(window.innerHeight - rect.bottom < 320 && rect.top > 320);
+    }
+    setOpen(!open);
+  };
+  const close = () => { setOpen(false); if (swatch.current) swatch.current.focus(); };
+  const clear = () => { setDraft(null); if (tokenRef) pickToken(null); else onChange(undefined); close(); };
+
   return (
     <Field label={label} htmlFor={`${id}-text`}>
-      <div className="sbx-color">
-        <span className="sbx-color__swatch" style={literal ? { background: literal } : undefined}>
-          <input
-            type="color"
-            className="sbx-color__picker"
-            value={literal || '#000000'}
-            onChange={(e) => { setDraft(null); onChange(e.target.value); }}
-            tabIndex={-1}
-            aria-label={label}
-          />
-        </span>
+      <div className="sbx-color" ref={root} data-state={hasOwn ? 'set' : effective ? 'inherited' : 'empty'}>
+        <button
+          type="button"
+          ref={swatch}
+          id={`${id}-swatch`}
+          className="sbx-color__swatch"
+          aria-label={`${label}: ${t('colour_open')}`}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          title={tokenRef || undefined}
+          onClick={toggle}
+        >
+          {fill && <span className="sbx-color__fill" style={{ background: fill }} />}
+        </button>
         <input
           id={`${id}-text`}
           type="text"
           className="sbx-input"
           value={shown}
-          placeholder={t('inherit')}
+          placeholder={effective ? effective.label : t('inherit')}
           aria-invalid={invalid || undefined}
           aria-describedby={invalid ? `${id}-err` : undefined}
           onChange={(e) => {
@@ -77,14 +123,53 @@ export function ColorField({ id, label, value, onChange, tokens, token, onToken 
           }}
           onBlur={() => { if (!invalid) setDraft(null); }}
         />
+        {open && (
+          <div
+            role="dialog"
+            aria-label={label}
+            className={`sbx-cp${flip ? ' is-up' : ''}`}
+            onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } }}
+          >
+            <button type="button" className={`sbx-tp__opt sbx-cp__opt${hasOwn ? '' : ' is-selected'}`} aria-pressed={!hasOwn} onClick={clear}>
+              <span className="sbx-tp__sample sbx-tp__sample--none" aria-hidden="true" />
+              <span className="sbx-tp__label">{t('inherit')}</span>
+              <span className="sbx-tp__hint">{effective ? String(effective.label).slice(0, 18) : ''}</span>
+            </button>
+            {groups.map((g) => (
+              <div key={g.category} role="group" aria-label={g.heading}>
+                <div className="sbx-tp__heading">{g.heading}</div>
+                {g.items.map((o) => (
+                  <button
+                    type="button"
+                    key={o.ref}
+                    title={o.ref}
+                    className={`sbx-tp__opt sbx-cp__opt${o.ref === tokenRef ? ' is-selected' : ''}`}
+                    aria-pressed={o.ref === tokenRef}
+                    onClick={() => { setDraft(null); pickToken(o.ref); close(); }}
+                  >
+                    <span className="sbx-tp__sample sbx-tp__sample--color" style={sampleStyle(o.category, o.value)} aria-hidden="true" />
+                    <span className="sbx-tp__label">{o.label}</span>
+                    <span className="sbx-tp__hint">{String(o.value).slice(0, 18)}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
+            <div className="sbx-tp__heading">{t('colour_custom')}</div>
+            <label className="sbx-tp__opt sbx-cp__opt">
+              <input
+                type="color"
+                className="sbx-cp__native"
+                value={swatchHex(literal) || swatchHex(effective && effective.css) || '#000000'}
+                onChange={(e) => { setDraft(null); onChange(e.target.value); }}
+                aria-label={`${label}: ${t('colour_custom')}`}
+              />
+              <span className="sbx-tp__label">{t('colour_custom')}</span>
+            </label>
+          </div>
+        )}
       </div>
       {invalid && <p className="sbx-field__error" id={`${id}-err`} role="alert">{t('invalid_css_value')}</p>}
-      {onToken && tokens && tokens.length > 0 && (
-        <div className="sbx-color__theme">
-          <span className="sbx-field__label">{t('tok_theme_colour')}</span>
-          <TokenPicker id={`${id}-token`} label={t('tok_theme_colour')} value={token ?? null} tokens={tokens} noneLabel={t('tok_custom')} onChange={onToken} />
-        </div>
-      )}
+      {hint && <p className="sbx-hint sbx-color__source" data-testid="colour-source">{hint}</p>}
     </Field>
   );
 }
@@ -106,13 +191,14 @@ export function unitOf(value) {
  * `units` adds a unit switch (px, rem, em, %…): a bare number takes the chosen unit when it is committed, and picking
  * another unit rewrites a number already there. Anything that is not number + unit (`auto`, `calc()`, a token)
  * is still accepted as typed. `bareUnit` does the same for a bare number without showing a switch (the margin and
- * padding boxes use it, with one unit chooser for all four sides).
+ * padding boxes use it, with one unit chooser for all four sides). `inherited`: the value the field really has while empty,
+ * whose unit the switch shows.
  */
-export function DraftText({ id, label, value, placeholder, onCommit, hint, kind, path, units, bareUnit }) {
+export function DraftText({ id, label, value, placeholder, onCommit, hint, kind, path, units, bareUnit, inherited }) {
   const [error, setError] = useState(false);
   const [chosen, setChosen] = useState(null);
   const inputRef = useRef(null);
-  const currentUnit = chosen || unitOf(value) || (units ? units[0] : '');
+  const currentUnit = chosen || unitOf(value) || unitOf(inherited) || (units ? units[0] : '');
   const appendUnit = bareUnit || (units ? currentUnit : '');
 
   const commit = (raw, unit = appendUnit) => {
@@ -172,6 +258,11 @@ export function DraftText({ id, label, value, placeholder, onCommit, hint, kind,
       {hint && <p className="sbx-hint">{hint}</p>}
     </Field>
   );
+}
+
+/** The empty choice of a select: what the block shows with nothing chosen, when the stylesheet gives it something. */
+function inheritedOption(computed, nothing = 'none') {
+  return computed && computed !== nothing ? `${t('inherit')} · ${computed}` : t('none');
 }
 
 /** Mirrors CanonicalDocumentSchema::ALLOWED_SHADOW_PRESETS. */
@@ -241,9 +332,12 @@ export function GradientField({ value, onChange }) {
  * @param {(next: Record<string, unknown>) => void} props.onChange
  * @param {string} [props.only]                  render just this section (typography, background, border, shadow, dimensions, opacity)
  * @param {boolean} [props.mediaPicker]            whether the media library picker is available to this user
+ * @param {(field: string) => object} [props.colours] a colour field's props (core/effectiveColour.mjs): what it shows, where edits go
+ * @param {(path: string) => ?object} [props.held]    a field the block's main part holds (partField): shown and edited there
+ * @param {?object} [props.computed]                 the block's computed look on the canvas (useCanvasComputed)
  */
 /** `noTextColor`: the text colour is edited elsewhere (a Button's or Heading's Normal / Hover tabs). */
-export function StyleControls({ style, capabilities, onChange, mediaPicker, only, deviceScope, tokens, typoPart = 'all', noTextColor = false }) {
+export function StyleControls({ style, capabilities, onChange, mediaPicker, only, deviceScope, tokens, typoPart = 'all', noTextColor = false, colours = null, held = null, computed = null }) {
   const id = useId();
   const mainTypo = typoPart !== 'more';
   const moreTypo = typoPart !== 'main';
@@ -256,6 +350,13 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
   const typo = asObject(style.typography);
   const bg = asObject(style.background);
   const border = asObject(style.border);
+  const colourProps = (field) => (colours ? colours(field) : {});
+  const heldBy = (path) => (held ? held(path) : null);
+  const heldHint = (h) => (h ? t('eff_part', { part: h.hintDetail }) : undefined);
+  const heldSize = heldBy('typography.size');
+  const heldStyle = heldBy('border.style');
+  const heldRadius = heldBy('border.radius');
+  const heldWidth = heldBy('border.width');
   const dims = asObject(style.dimensions);
   const [bgMode, setBgMode] = useState(() => (isMediaRef(bg.image) ? 'image' : (bg.gradient ? 'gradient' : 'color')));
 
@@ -320,7 +421,10 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
           {!only && <legend>{t('typography')}</legend>}
           {mainTypo && (
             <>
-            {deviceScope ? (
+            {heldSize ? (
+              // The block's main part sets the size; a size on the block itself would never show.
+              <DraftText id={`${id}-size`} kind="length" label={t('font_size')} value={heldSize.value} units={['px', 'rem', 'em', '%']} placeholder="" hint={heldHint(heldSize)} onCommit={(v) => { if (v !== undefined) heldSize.put(v); }} />
+            ) : deviceScope ? (
               // The font size is the one typography field that can differ per device (a plain string; a stored breakpoint map is left alone).
               <DeviceStyle scope={deviceScope} paths={RESPONSIVE_SCOPES.size} label={t('font_size')}>
                 {(view) => (
@@ -330,7 +434,8 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
                     label={t('font_size')}
                     value={asObject(view.style.typography).size}
                     units={['px', 'rem', 'em', '%']}
-                    placeholder="1.5rem"
+                    placeholder={(computed && computed.fontSize) || '1.5rem'}
+                    inherited={computed ? computed.fontSize : undefined}
                     onCommit={(v) => view.onChange(setPath(view.style, 'typography.size', v))}
                   />
                 )}
@@ -342,7 +447,8 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
                 label={t('font_size')}
                 value={typo.size}
                 units={['px', 'rem', 'em', '%']}
-                placeholder="1.5rem"
+                placeholder={(computed && computed.fontSize) || '1.5rem'}
+                inherited={computed ? computed.fontSize : undefined}
                 onCommit={(v) => patchNested('typography', 'size', v)}
               />
             )}
@@ -388,6 +494,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
               tokens={capabilities.includes('text_token') ? textTokens : undefined}
               token={style.text_token}
               onToken={(ref) => onChange(setTextToken(style, ref))}
+              {...colourProps('text')}
             />
           )}
         </fieldset>
@@ -467,6 +574,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
               tokens={capabilities.includes('surface_token') ? surfaceTokens : undefined}
               token={style.surface_token}
               onToken={(ref) => onChange(setSurfaceToken(style, ref))}
+              {...colourProps('background')}
             />
           )}
 
@@ -482,23 +590,26 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
           <Field label={t('border_style')} htmlFor={`${id}-border-style`}>
             <select
               id={`${id}-border-style`}
-              value={border.style ?? ''}
-              onChange={(e) => patchNested('border', 'style', e.target.value || undefined)}
+              value={heldStyle ? heldStyle.value : border.style ?? ''}
+              onChange={(e) => (heldStyle ? heldStyle.put(e.target.value || undefined) : patchNested('border', 'style', e.target.value || undefined))}
             >
-              <option value="">{t('none')}</option>
+              <option value="">{inheritedOption(computed && computed.borderStyle)}</option>
               <option value="solid">{t('bs_solid')}</option>
               <option value="dashed">{t('bs_dashed')}</option>
               <option value="dotted">{t('bs_dotted')}</option>
               <option value="double">{t('bs_double')}</option>
             </select>
           </Field>
+          {heldRadius ? (
+            <DraftText id={`${id}-border-radius`} kind="length" label={t('border_radius')} value={String(heldRadius.value)} placeholder="" hint={heldHint(heldRadius)} onCommit={(v) => { if (v !== undefined) heldRadius.put(v); }} />
+          ) : (
           <Field label={t('border_radius')} htmlFor={`${id}-border-radius`}>
             <select
               id={`${id}-border-radius`}
               value={RADIUS_PRESETS.includes(border.radius) ? border.radius : ''}
               onChange={(e) => patchNested('border', 'radius', e.target.value || undefined)}
             >
-              <option value="">{t('none')}</option>
+              <option value="">{inheritedOption(computed && computed.borderRadius, '0px')}</option>
               <option value="sm">{t('size_sm')}</option>
               <option value="md">{t('size_md')}</option>
               <option value="lg">{t('size_lg')}</option>
@@ -507,13 +618,15 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
               <option value="full">{t('size_full_pill')}</option>
             </select>
           </Field>
+          )}
           <DraftText
             id={`${id}-border-width`}
             kind="borderWidth"
             label={t('border_width')}
-            value={border.width}
-            placeholder="1px"
-            onCommit={(v) => patchNested('border', 'width', v)}
+            value={heldWidth ? heldWidth.value : border.width}
+            placeholder={(computed && computed.borderWidth) || '1px'}
+            hint={heldHint(heldWidth)}
+            onCommit={(v) => { if (heldWidth) { if (v !== undefined) heldWidth.put(v); } else patchNested('border', 'width', v); }}
           />
           <ColorField
             id={`${id}-border-color`}
@@ -523,6 +636,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
             tokens={capabilities.includes('border_token') ? borderTokens : undefined}
             token={style.border_token}
             onToken={(ref) => onChange(setBorderToken(style, ref))}
+            {...colourProps('border')}
           />
         </fieldset>
       )}
