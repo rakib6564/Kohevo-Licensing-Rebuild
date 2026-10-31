@@ -1,5 +1,5 @@
 {
-    "system-section-hero-classic": [
+    "system-container-hero-classic": [
         {
             "bg": "surface.primary",
             "nodes": [
@@ -9,7 +9,7 @@
             ]
         }
     ],
-    "system-section-hero-centered": [
+    "system-container-hero-centered": [
         {
             "bg": "surface.primary",
             "nodes": [
@@ -45,7 +45,7 @@
             ]
         }
     ],
-    "system-section-hero-split": [
+    "system-container-hero-split": [
         {
             "bg": "surface.primary",
             "nodes": [
@@ -86,7 +86,7 @@
             ]
         }
     ],
-    "system-section-features-grid": [
+    "system-container-features-grid": [
         {
             "bg": "surface.primary",
             "nodes": [
@@ -107,7 +107,7 @@
             ]
         }
     ],
-    "system-section-features-split": [
+    "system-container-features-split": [
         {
             "bg": "surface.primary",
             "nodes": [
@@ -140,7 +140,7 @@
             ]
         }
     ],
-    "system-section-features-list": [
+    "system-container-features-list": [
         {
             "bg": "surface.primary",
             "nodes": [
@@ -154,7 +154,7 @@
             ]
         }
     ],
-    "system-section-services-overview": [
+    "system-container-services-overview": [
         {
             "bg": "surface.primary",
             "nodes": [
@@ -176,7 +176,7 @@
             ]
         }
     ],
-    "system-section-stats": [
+    "system-container-stats": [
         {
             "bg": "surface.secondary",
             "nodes": [
@@ -187,7 +187,7 @@
             ]
         }
     ],
-    "system-section-about": [
+    "system-container-about": [
         {
             "bg": "surface.primary",
             "nodes": [
@@ -219,7 +219,7 @@
             ]
         }
     ],
-    "system-section-faq": [
+    "system-container-faq": [
         {
             "bg": "surface.primary",
             "nodes": [
@@ -235,7 +235,7 @@
             ]
         }
     ],
-    "system-section-gallery": [
+    "system-container-gallery": [
         {
             "bg": "surface.primary",
             "nodes": [
@@ -256,7 +256,7 @@
             ]
         }
     ],
-    "system-section-testimonials": [
+    "system-container-testimonials": [
         {
             "bg": "surface.secondary",
             "nodes": [
@@ -272,7 +272,7 @@
             ]
         }
     ],
-    "system-section-pricing": [
+    "system-container-pricing": [
         {
             "bg": "surface.primary",
             "nodes": [
@@ -354,7 +354,7 @@
             ]
         }
     ],
-    "system-section-cta": [
+    "system-container-cta": [
         {
             "bg": "surface.inverse",
             "nodes": [
@@ -378,7 +378,7 @@
             ]
         }
     ],
-    "system-section-team": [
+    "system-container-team": [
         {
             "bg": "surface.primary",
             "nodes": [
@@ -444,7 +444,7 @@
             ]
         }
     ],
-    "system-section-contact": [
+    "system-container-contact": [
         {
             "bg": "surface.primary",
             "nodes": [
@@ -489,7 +489,7 @@
             ]
         }
     ],
-    "system-section-footer": [
+    "system-container-footer": [
         {
             "bg": "surface.secondary",
             "nodes": [

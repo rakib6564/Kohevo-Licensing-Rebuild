@@ -37,7 +37,8 @@ class FakeDoc {
 
 const tokens = { has: (ref) => ['text.primary', 'surface.accent'].includes(ref) };
 const block = (style = {}, extra = {}) => ({ id: 'blk_aaaaaaaaaaaaaaaaaaaaaaaa', type: 'core.heading', props: { text: 'x' }, style, children: [], ...extra });
-const docOf = (b, section = {}) => ({ sections: [{ id: 'sec_aaaaaaaaaaaaaaaaaaaaaaaa', style: {}, blocks: [b], ...section }] });
+const TOP = 'blk_bbbbbbbbbbbbbbbbbbbbbbbb';
+const docOf = (b, top = {}) => ({ containers: [{ id: TOP, type: 'core.container', style: {}, children: [b], ...top }] });
 
 test('a style edit the client can predict is not a structural change, one it cannot is', () => {
   const before = docOf(block({ padding: { top: '1rem' } }));
@@ -46,20 +47,21 @@ test('a style edit the client can predict is not a structural change, one it can
   assert.equal(isStructuralChange(before, docOf(block({ padding: { top: '1rem' }, text_token: 'text.nope' })), tokens), true, 'a token the theme lacks is the server\'s');
   assert.equal(isStructuralChange(before, docOf(block({ padding: { top: '2rem' } }, { style_states: { hover: { opacity: 0.5 } } })), tokens), true, 'states are the server\'s');
   assert.equal(isStructuralChange(before, docOf(block({ background: { image: { media_id: 3 } } })), tokens), true, 'a background image is the server\'s');
-  assert.equal(isStructuralChange(docOf(block()), { sections: [] }, tokens), true, 'removing a section is still structural');
+  assert.equal(isStructuralChange(docOf(block()), { containers: [] }, tokens), true, 'removing a top-level Container is still structural');
 });
 
-test('a per-device override and a section background are live too', () => {
+test('a per-device override and a top-level Container background are live too', () => {
   const a = docOf(block());
   const b = docOf(block({}, { responsive: { tablet: { style: { typography: { size: '22px' } } } } }));
   assert.equal(isStructuralChange(a, b, tokens), false);
-  const sec = isStructuralChange(docOf(block(), { style: {} }), docOf(block(), { style: { background: { color: '#112233' } } }), tokens);
-  assert.equal(sec, false);
+  const top = isStructuralChange(docOf(block(), { style: {} }), docOf(block(), { style: { background: { color: '#112233' } } }), tokens);
+  assert.equal(top, false);
 });
 
-test('styleChangeIsLive: both sides must be predictable and of one kind', () => {
+test('styleChangeIsLive: both sides must be predictable', () => {
   assert.equal(styleChangeIsLive({ kind: 'block', node: block() }, { kind: 'block', node: block({ opacity: 0.5 }) }, tokens), true);
-  assert.equal(styleChangeIsLive({ kind: 'block', node: block() }, { kind: 'section', node: {} }, tokens), false);
+  assert.equal(styleChangeIsLive({ kind: 'block', node: block() }, { kind: 'block', node: block({ text_token: 'text.nope' }) }, tokens), false);
+  assert.equal(styleChangeIsLive({ kind: 'block', node: block({ text_token: 'text.nope' }) }, { kind: 'block', node: block() }, tokens), false);
   assert.equal(styleChangeIsLive(null, { kind: 'block', node: block() }, tokens), false);
 });
 
@@ -111,12 +113,13 @@ test('a style the client cannot predict leaves the element and the sheet as they
   assert.equal(canvas.getElementById('sbx-live-style'), null);
 });
 
-test('a section keeps its surface class and only gives up its scoped rule class', () => {
+test('a top-level Container keeps its surface class and only gives up its scoped rule class', () => {
   const canvas = new FakeDoc();
-  const el = canvas.add('sec_aaaaaaaaaaaaaaaaaaaaaaaa', { class: 'sb-section sb-bg--surface-primary sb-x-0123456789abcdef' });
-  const server = docOf(block(), { style: {} });
-  const working = docOf(block(), { style: { background: { color: '#102030' }, padding: { top: '5rem' } } });
+  const el = canvas.add(TOP, { class: 'sb-section sb-bg--surface-accent sb-x-0123456789abcdef' });
+  const server = docOf(block(), { style: { surface_token: 'surface.accent' } });
+  const working = docOf(block(), { style: { surface_token: 'surface.accent', background: { color: '#102030' }, padding: { top: '5rem' } } });
   assert.equal(syncLiveStyles(canvas, server, working, tokens, new Map()), 1);
-  assert.deepEqual(el.cls().sort(), ['sb-bg--surface-primary', 'sb-section']);
-  assert.match(canvas.getElementById('sbx-live-style').textContent, /background-color:#102030;padding-top:5rem/);
+  assert.deepEqual(el.cls().sort(), ['sb-bg--surface-accent', 'sb-section']);
+  assert.equal(el.getAttribute('style'), 'background-color:#102030', 'a block\'s background is inline');
+  assert.match(canvas.getElementById('sbx-live-style').textContent, /padding-top:5rem/);
 });

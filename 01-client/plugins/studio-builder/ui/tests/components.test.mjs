@@ -7,7 +7,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { manifest, doc, section, heading, block, container } from './helpers.mjs';
+import { manifest, doc, topContainer, heading, block, container } from './helpers.mjs';
 import * as ops from '../src/core/operations.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -36,7 +36,7 @@ if (esbuild) {
 const h = heading('Welcome to Alpha');
 const feature = block('core.feature_list', { title: 'Why us', columns: 3, items: [{ heading: 'Fast', body: '', url: null }], card_options: { bordered: true, surface_token: null } });
 const hero = block('core.hero', { eyebrow: '', heading: 'Hi', subheading: '', primary_cta: null, media: null, accent_token: null });
-const pageDoc = doc([section([h, feature, container([hero])], 'Intro'), section([], 'Footer area')]);
+const pageDoc = doc([topContainer([h, feature, container([hero])], 'Intro'), topContainer([], 'Footer area')]);
 
 test('shell loads: top bar, structure tree, sandboxed server canvas, property panel', { skip: skipReason || false }, () => {
   const html = entry.render({ manifest, document: pageDoc, revisionId: 42 });
@@ -47,7 +47,7 @@ test('shell loads: top bar, structure tree, sandboxed server canvas, property pa
   assert.ok(!/<iframe[^>]*sandbox="[^"]*allow-scripts/.test(html), 'canvas never gets allow-scripts');
   assert.match(html, /canvas\.php\?page=1&amp;v=42/, 'canvas is the server renderForEditor() output for the current revision');
   assert.match(html, /About us/);
-  assert.equal((html.match(/role="treeitem"/g) || []).length, 6, 'every section and block appears in the structure');
+  assert.equal((html.match(/role="treeitem"/g) || []).length, 6, 'every Container and block appears in the structure');
   assert.match(html, /Welcome to Alpha/);
   assert.match(html, /Page settings/, 'with nothing selected the page settings are shown');
 });
@@ -69,11 +69,13 @@ test('selection highlights the node and generates the property panel from the ma
   assert.match(heroHtml, /Move out of container/, 'keyboard alternative to drag & drop');
 });
 
-test('section selection shows responsive layout controls in the canonical breakpoints', { skip: skipReason || false }, () => {
-  const html = entry.render({ manifest, document: pageDoc, selection: pageDoc.sections[0].id, viewportKey: 'tablet' });
-  assert.match(html, /<legend>Columns<\/legend>/);
+test('a grid Container selection shows responsive layout controls in the canonical breakpoints', { skip: skipReason || false }, () => {
+  const top = pageDoc.containers[0];
+  const grid = { ...pageDoc, containers: [{ ...top, style: { ...top.style, layout: { ...top.style.layout, display: 'grid', columns: 3 } } }, ...pageDoc.containers.slice(1)] };
+  const html = entry.render({ manifest, document: grid, selection: top.id, viewportKey: 'tablet' });
+  assert.match(html, />Grid columns</);
   for (const d of ['Desktop', 'Tablet', 'Mobile']) assert.ok(html.includes(`aria-label="${d}"`), `device ${d}`);
-  assert.match(html, /aria-pressed="true"[^>]*aria-label="Tablet"[^>]*title="Tablet \(md\)"|title="Tablet \(md\)"/, 'the active viewport device is marked');
+  assert.match(html, /aria-label="Tablet"[^>]*title="Tablet"|title="Tablet"[^>]*aria-label="Tablet"/, 'the device control is named');
   assert.match(html, /width:820px/, 'tablet viewport = 820px frame (md)');
   assert.match(html, /aria-pressed="true"[^>]*aria-label="Tablet"/);
 });
@@ -98,10 +100,10 @@ test('save state and conflict state are visible and blocking', { skip: skipReaso
   assert.match(shared, /Someone else has this page open/);
 });
 
-test('an empty page offers "Add section" and nothing else to edit', { skip: skipReason || false }, () => {
+test('an empty page offers "Add Container" and nothing else to edit', { skip: skipReason || false }, () => {
   const html = entry.render({ manifest, document: doc([]) });
   assert.match(html, /This page is empty/);
-  assert.match(html, /Add section/);
+  assert.match(html, /Add Container/);
 });
 
 // ── Phase 7 — AI-origin indicators and the review handoff ────────────────
@@ -124,7 +126,7 @@ test('the review dialog shows the structured diff as text, the exact-revision pr
     page: { id: 1, title: 'About us' },
     base_revision: { id: 41, revision_number: 6, revision_kind: 'publish' },
     proposed_revision: { id: 42, revision_number: 7, revision_kind: 'ai_operation' },
-    diff: { summary: { changed: true, sections_added: 0, sections_removed: 0, sections_moved: 0, sections_updated: 0, blocks_added: 1, blocks_removed: 0, blocks_moved: 0, blocks_updated: 1, settings_changed: false, seo_changed: false, template_changed: false },
+    diff: { summary: { changed: true, containers_added: 0, containers_removed: 0, containers_moved: 0, containers_updated: 0, blocks_added: 1, blocks_removed: 0, blocks_moved: 0, blocks_updated: 1, settings_changed: false, seo_changed: false, template_changed: false },
       lines: ['Heading (core.heading) updated: text "Welcome" → "<script>alert(1)</script>".', 'Rich text (core.rich_text) added.'] },
     publish_impact: { proposed_is_current_draft: true, proposed_is_published: false, requires_publish: true, shared_content: false, dependent_pages: null },
   };

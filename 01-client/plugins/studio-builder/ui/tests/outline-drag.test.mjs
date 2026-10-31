@@ -2,27 +2,29 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { autoScrollDelta, dropPositionAt, isSelfOrDescendant } from '../src/core/outlineDrag.mjs';
 
-const sec = { kind: 'section', container: true };
-const box = { kind: 'block', container: true };
-const leaf = { kind: 'block', container: false };
+const top = { top: true, container: true };
+const box = { container: true };
+const leaf = { container: false };
+const widget = { container: false };
+const boxed = { container: true };
 
-test('a block over a section goes inside it; sections only go before or after sections', () => {
-  assert.equal(dropPositionAt(0.1, sec, { kind: 'block' }), 'inside');
-  assert.equal(dropPositionAt(0.9, sec, { kind: 'block' }), 'inside');
-  assert.equal(dropPositionAt(0.2, sec, { kind: 'section' }), 'before');
-  assert.equal(dropPositionAt(0.8, sec, { kind: 'section' }), 'after');
-  assert.equal(dropPositionAt(0.5, box, { kind: 'section' }), 'after', 'a section never drops into a block');
+test('a widget over a top-level Container goes inside it; a Container goes before, after or in its middle', () => {
+  assert.equal(dropPositionAt(0.1, top, widget), 'inside', 'a widget cannot sit next to one');
+  assert.equal(dropPositionAt(0.9, top, widget), 'inside');
+  assert.equal(dropPositionAt(0.2, top, boxed), 'before');
+  assert.equal(dropPositionAt(0.8, top, boxed), 'after');
+  assert.equal(dropPositionAt(0.5, top, boxed), 'inside', 'Containers nest');
 });
 
 test('a container row takes a block on its middle band, other rows split at the half', () => {
-  assert.equal(dropPositionAt(0.5, box, { kind: 'block' }), 'inside');
-  assert.equal(dropPositionAt(0.2, box, { kind: 'block' }), 'before');
-  assert.equal(dropPositionAt(0.8, box, { kind: 'block' }), 'after');
-  assert.equal(dropPositionAt(0.5, leaf, { kind: 'block' }), 'after', 'a leaf has no inside');
-  assert.equal(dropPositionAt(0.4, leaf, { kind: 'block' }), 'before');
-  assert.equal(dropPositionAt(NaN, leaf, { kind: 'block' }), 'after', 'garbage is treated as the middle');
-  assert.equal(dropPositionAt(-3, leaf, { kind: 'block' }), 'before');
-  assert.equal(dropPositionAt(9, leaf, { kind: 'block' }), 'after');
+  assert.equal(dropPositionAt(0.5, box, widget), 'inside');
+  assert.equal(dropPositionAt(0.2, box, widget), 'before');
+  assert.equal(dropPositionAt(0.8, box, widget), 'after');
+  assert.equal(dropPositionAt(0.5, leaf, widget), 'after', 'a leaf has no inside');
+  assert.equal(dropPositionAt(0.4, leaf, widget), 'before');
+  assert.equal(dropPositionAt(NaN, leaf, widget), 'after', 'garbage is treated as the middle');
+  assert.equal(dropPositionAt(-3, leaf, widget), 'before');
+  assert.equal(dropPositionAt(9, leaf, widget), 'after');
 });
 
 test('auto-scroll: nothing in the middle, faster the nearer the edge, signed by direction', () => {

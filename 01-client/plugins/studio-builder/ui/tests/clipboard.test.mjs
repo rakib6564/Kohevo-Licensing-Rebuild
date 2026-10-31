@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { block, container, doc, heading, manifest, section } from './helpers.mjs';
+import { block, container, doc, heading, manifest, topContainer } from './helpers.mjs';
 import {
   MAX_CLIPBOARD_BYTES, buildEnvelope, clearMemory, parseEnvelope, planPaste, readClipboard, regenerateIds, writeClipboard,
 } from '../src/core/clipboard.mjs';
@@ -8,8 +8,8 @@ import { canvasMenuItems, pasteState, rowFor } from '../src/core/rowMenu.mjs';
 import { lockIndex } from '../src/core/layerLock.mjs';
 import { applyLocal, OPS, insertBlock } from '../src/core/operations.mjs';
 
-const ids = (node) => [node.id, ...[...(node.children || []), ...(node.blocks || [])].flatMap(ids)];
-const blockEnv = (b) => buildEnvelope('block', b);
+const ids = (node) => [node.id, ...(node.children || []).flatMap(ids)];
+const blockEnv = (b) => buildEnvelope(b);
 const text = (env) => JSON.stringify(env);
 
 test('copy keeps the tree and drops every id and every lock', () => {
@@ -60,22 +60,22 @@ test('parse keeps only known keys and strips prototype poison', () => {
   assert.equal(Object.keys(r.envelope.node.props).includes('__proto__'), false);
 });
 
-test('a section copy carries its blocks, drops its lock, and keeps a global reference', () => {
-  const s = section([heading('A'), container([heading('B')])], 'Hero');
-  s.locked = true;
-  const env = buildEnvelope('section', s);
-  assert.equal(env.node.label, 'Hero');
-  assert.equal(env.node.locked, undefined);
-  assert.equal(env.node.blocks.length, 2);
-  const g = section([], 'Shared');
+test('a top-level Container copy carries its children, drops its lock, and keeps a global reference', () => {
+  const s = topContainer([heading('A'), container([heading('B')])], 'Hero');
+  s.metadata.locked = true;
+  const env = buildEnvelope(s);
+  assert.equal(env.node.metadata.label, 'Hero');
+  assert.equal(env.node.metadata.locked, undefined);
+  assert.equal(env.node.children.length, 2);
+  const g = topContainer([], 'Shared');
   g.global_ref = 'footer-cta';
-  assert.equal(buildEnvelope('section', g).node.global_ref, 'footer-cta');
+  assert.equal(buildEnvelope(g).node.global_ref, 'footer-cta');
 });
 
-test('regenerateIds gives every section and block a new provisional id, every time', () => {
-  const env = buildEnvelope('section', section([heading('A'), container([heading('B')])]));
-  const a = regenerateIds(env.node, 'section');
-  const b = regenerateIds(env.node, 'section');
+test('regenerateIds gives every block of a Container a new provisional id, every time', () => {
+  const env = buildEnvelope(topContainer([heading('A'), container([heading('B')])]));
+  const a = regenerateIds(env.node);
+  const b = regenerateIds(env.node);
   const all = [...ids(a), ...ids(b)];
   assert.equal(all.length, 8);
   assert.equal(new Set(all).size, 8);
@@ -86,12 +86,12 @@ test('regenerateIds gives every section and block a new provisional id, every ti
 const page = () => {
   const h = heading('A');
   const box = container([heading('In')]);
-  const s1 = section([h, box], 'One');
-  const s2 = section([heading('Two')], 'Two');
+  const s1 = topContainer([h, box], 'One');
+  const s2 = topContainer([heading('Two')], 'Two');
   return { d: doc([s1, s2]), h, box, s1, s2 };
 };
 
-test('paste target: after a block, inside a container or section, or at the end of the page', () => {
+test('paste target: after a block, inside a container, or at the end of the page', () => {
   const { d, h, box, s1, s2 } = page();
   const env = blockEnv(heading('New'));
   const run = (targetId, mode) => planPaste({ doc: d, manifest, envelope: env, targetId, mode });
@@ -99,22 +99,29 @@ test('paste target: after a block, inside a container or section, or at the end 
   assert.deepEqual(run(box.id, 'inside'), { ok: true, kind: 'block', parentId: box.id, index: 1 });
   assert.deepEqual(run(box.id, 'after'), { ok: true, kind: 'block', parentId: s1.id, index: 2 });
   assert.deepEqual(run(s1.id, 'inside'), { ok: true, kind: 'block', parentId: s1.id, index: 2 });
-  assert.deepEqual(run(s1.id, 'after'), { ok: true, kind: 'block', parentId: s1.id, index: 2 });
+  assert.deepEqual(run(s1.id, 'after'), { ok: true, kind: 'block', newContainer: true, index: 1 }, 'next to a top-level Container: a widget gets its own');
   assert.deepEqual(run(null, 'after'), { ok: true, kind: 'block', parentId: s2.id, index: 1 });
   assert.deepEqual(run('gone', 'after'), { ok: true, kind: 'block', parentId: s2.id, index: 1 });
 });
 
-test('paste target: a block into an empty page asks for a new section', () => {
+test('paste target: a block into an empty page asks for a new Container', () => {
   const r = planPaste({ doc: doc([]), manifest, envelope: blockEnv(heading('x')), targetId: null });
-  assert.deepEqual(r, { ok: true, kind: 'block', newSection: true, sectionIndex: 0 });
+  assert.deepEqual(r, { ok: true, kind: 'block', newContainer: true, index: 0 });
 });
 
-test('paste target: a section lands after the target section, whatever was selected', () => {
+test('paste target: a Container lands where the target says, and at the end of the page with none', () => {
   const { d, h, s1 } = page();
-  const env = buildEnvelope('section', section([heading('N')]));
-  assert.deepEqual(planPaste({ doc: d, manifest, envelope: env, targetId: s1.id }), { ok: true, kind: 'section', index: 1 });
-  assert.deepEqual(planPaste({ doc: d, manifest, envelope: env, targetId: h.id, mode: 'inside' }), { ok: true, kind: 'section', index: 1 });
-  assert.deepEqual(planPaste({ doc: d, manifest, envelope: env, targetId: null }), { ok: true, kind: 'section', index: 2 });
+  const env = buildEnvelope(topContainer([heading('N')]));
+  assert.deepEqual(planPaste({ doc: d, manifest, envelope: env, targetId: s1.id }), { ok: true, kind: 'block', parentId: null, index: 1 });
+  assert.deepEqual(planPaste({ doc: d, manifest, envelope: env, targetId: h.id }), { ok: true, kind: 'block', parentId: s1.id, index: 1 }, 'Containers nest');
+  assert.deepEqual(planPaste({ doc: d, manifest, envelope: env, targetId: null }), { ok: true, kind: 'block', parentId: null, index: 2 });
+});
+
+test('paste target: a global reference only lands at the top level, after the target\'s top-level Container', () => {
+  const { d, h } = page();
+  const g = topContainer([], 'Shared');
+  g.global_ref = 'footer-cta';
+  assert.deepEqual(planPaste({ doc: d, manifest, envelope: buildEnvelope(g), targetId: h.id, mode: 'inside' }), { ok: true, kind: 'block', parentId: null, index: 1 });
 });
 
 test('paste obeys the same rules as an insert: locks, leaves, limits, unknown and unavailable blocks', () => {
@@ -122,47 +129,62 @@ test('paste obeys the same rules as an insert: locks, leaves, limits, unknown an
   const env = blockEnv(heading('New'));
   // a leaf cannot hold children
   assert.equal(planPaste({ doc: d, manifest, envelope: env, targetId: h.id, mode: 'inside' }).reasonKey, 'clip_not_allowed');
-  // a locked section refuses
-  s1.locked = true;
-  assert.equal(planPaste({ doc: d, manifest, envelope: env, targetId: s1.id }).reasonKey, 'clip_locked');
-  delete s1.locked;
+  // a locked Container refuses
+  s1.metadata.locked = true;
+  assert.equal(planPaste({ doc: d, manifest, envelope: env, targetId: s1.id, mode: 'inside' }).reasonKey, 'clip_locked');
+  assert.equal(planPaste({ doc: d, manifest, envelope: env, targetId: s1.id, mode: 'after' }).ok, true, 'a new Container next to it is not inside the lock');
+  delete s1.metadata.locked;
   // a locked block's parent refuses insertion next to it
   h.metadata = { locked: true };
   assert.equal(planPaste({ doc: d, manifest, envelope: env, targetId: h.id, mode: 'after' }).ok, true, 'next to a locked block is its parent that counts');
   // unknown type
   const unknown = { kohevoStudio: 1, kind: 'block', node: { type: 'vendor.nope', children: [] } };
-  assert.equal(planPaste({ doc: d, manifest, envelope: unknown, targetId: s1.id }).reasonKey, 'clip_unavailable');
+  assert.equal(planPaste({ doc: d, manifest, envelope: unknown, targetId: s1.id, mode: 'inside' }).reasonKey, 'clip_unavailable');
   // a block the site is not entitled to
   const gated = { ...manifest, blocks: manifest.blocks.map((b) => (b.type === 'core.heading' ? { ...b, locked: true } : b)) };
-  assert.equal(planPaste({ doc: d, manifest: gated, envelope: env, targetId: s1.id }).reasonKey, 'clip_unavailable');
+  assert.equal(planPaste({ doc: d, manifest: gated, envelope: env, targetId: s1.id, mode: 'inside' }).reasonKey, 'clip_unavailable');
   // block limit
-  const tight = { ...manifest, limits: { ...manifest.limits, max_blocks: 4 } };
-  assert.equal(planPaste({ doc: d, manifest: tight, envelope: env, targetId: s1.id }).reasonKey, 'clip_blocks_limit');
-  // section limit
-  const one = { ...manifest, limits: { ...manifest.limits, max_sections: 2 } };
-  assert.equal(planPaste({ doc: d, manifest: one, envelope: buildEnvelope('section', section([])), targetId: s1.id }).reasonKey, 'clip_sections_limit');
-  // a global (shared) section owns no blocks
+  const tight = { ...manifest, limits: { ...manifest.limits, max_blocks: 6 } };
+  assert.equal(planPaste({ doc: d, manifest: tight, envelope: env, targetId: s1.id, mode: 'inside' }).reasonKey, 'clip_blocks_limit');
+  const roomForOne = { ...manifest, limits: { ...manifest.limits, max_blocks: 7 } };
+  assert.equal(planPaste({ doc: d, manifest: roomForOne, envelope: env, targetId: s1.id, mode: 'inside' }).ok, true);
+  assert.equal(planPaste({ doc: d, manifest: roomForOne, envelope: env, targetId: s1.id, mode: 'after' }).reasonKey, 'clip_blocks_limit', 'the wrapping Container counts too');
+  // Container limit
+  const one = { ...manifest, limits: { ...manifest.limits, max_containers: 2 } };
+  assert.equal(planPaste({ doc: d, manifest: one, envelope: buildEnvelope(topContainer([])), targetId: s1.id }).reasonKey, 'clip_containers_limit');
+  assert.equal(planPaste({ doc: d, manifest: one, envelope: env, targetId: s1.id, mode: 'after' }).reasonKey, 'clip_containers_limit', 'a widget wrapped at the top level too');
+  // a global (shared) Container owns no children
   s1.global_ref = 'x';
-  assert.equal(planPaste({ doc: d, manifest, envelope: env, targetId: s1.id }).reasonKey, 'clip_global');
+  assert.equal(planPaste({ doc: d, manifest, envelope: env, targetId: s1.id, mode: 'inside' }).reasonKey, 'clip_global');
 });
 
 test('paste refuses a subtree deeper than the nesting limit', () => {
+  // `deep` is as tall as fits directly inside a top-level Container: one level less than the limit.
+  const max = manifest.limits.max_nesting_depth;
   let deep = heading('leaf');
-  for (let i = 0; i < 5; i += 1) deep = container([deep]);
-  const d = doc([section([container([])])]);
-  const inner = d.sections[0].blocks[0];
+  for (let i = 0; i < max - 2; i += 1) deep = container([deep]);
+  const d = doc([topContainer([container([])])]);
+  const inner = d.containers[0].children[0];
   const r = planPaste({ doc: d, manifest, envelope: blockEnv(deep), targetId: inner.id, mode: 'inside' });
   assert.equal(r.reasonKey, 'clip_not_allowed');
-  assert.equal(planPaste({ doc: d, manifest, envelope: blockEnv(deep), targetId: d.sections[0].id }).ok, true);
+  assert.equal(planPaste({ doc: d, manifest, envelope: blockEnv(deep), targetId: d.containers[0].id, mode: 'inside' }).ok, true);
+});
+
+test('paste refuses a Container too tall for the top level', () => {
+  const max = manifest.limits.max_nesting_depth;
+  let tall = container([]);
+  for (let i = 1; i < max; i += 1) tall = container([tall]); // exactly `max` levels
+  assert.equal(planPaste({ doc: doc([]), manifest, envelope: blockEnv(tall), targetId: null }).ok, true, 'the limit itself fits');
+  assert.equal(planPaste({ doc: doc([]), manifest, envelope: blockEnv(container([tall])), targetId: null }).reasonKey, 'clip_not_allowed');
 });
 
 test('the pasted block lands in the local document with fresh ids all the way down', () => {
   const { d, s2 } = page();
   const env = blockEnv(container([heading('In')]));
-  const fresh = regenerateIds(env.node, 'block');
+  const fresh = regenerateIds(env.node);
   const { id, ...payload } = fresh;
   const next = applyLocal(d, insertBlock(s2.id, 1, payload), { manifest, provisionalId: id });
-  const pasted = next.sections[1].blocks[1];
+  const pasted = next.containers[1].children[1];
   assert.equal(pasted.id, id);
   assert.equal(pasted.children.length, 1);
   assert.equal(pasted.children[0].props.text, 'In');
@@ -179,7 +201,7 @@ test('menu items: the canvas menu offers edit, duplicate, copy, paste, cut, lock
   assert.ok(items.every((i) => !i.disabled));
 });
 
-test('menu items: a container also offers Paste inside; a section too', () => {
+test('menu items: a nested Container offers Paste inside; a top-level one too', () => {
   const { d, box, s1 } = page();
   for (const id of [box.id, s1.id]) {
     const row = rowFor(d, id);
@@ -200,10 +222,10 @@ test('menu items: a locked layer cannot be cut or deleted, a child of a locked p
   assert.equal(at(h.id).delete.disabled, true);
   assert.equal(at(h.id).unlock.disabled, undefined);
   assert.equal(at(h.id).copy.disabled, undefined);
-  assert.equal(at(s1.id).cut.disabled, true, 'a section holding a locked block cannot be cut');
+  assert.equal(at(s1.id).cut.disabled, true, 'a Container holding a locked block cannot be cut');
   assert.equal(at(box.id).cut.disabled, false);
   delete h.metadata;
-  s1.locked = true;
+  s1.metadata.locked = true;
   assert.equal(at(box.id).cut.disabled, true);
   assert.equal(at(box.id, blockEnv(heading('x'))).paste_inside.disabled, true, 'nothing can be pasted into a locked parent once the clipboard is known');
 });
@@ -211,7 +233,7 @@ test('menu items: a locked layer cannot be cut or deleted, a child of a locked p
 test('menu items: with a known clipboard, Paste is disabled with the reason', () => {
   const { d, h } = page();
   const row = rowFor(d, h.id);
-  const lonely = { ...manifest, limits: { ...manifest.limits, max_blocks: 3 } };
+  const lonely = { ...manifest, limits: { ...manifest.limits, max_blocks: 5 } };
   const state = pasteState({ row, doc: d, manifest: lonely, envelope: blockEnv(heading('x')) });
   assert.deepEqual(state.after, { disabled: true, reasonKey: 'clip_blocks_limit' });
   assert.equal(state.inside, null, 'a leaf block has no Paste inside');
