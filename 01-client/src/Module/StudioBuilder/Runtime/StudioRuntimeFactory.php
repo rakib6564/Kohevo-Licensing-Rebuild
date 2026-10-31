@@ -93,13 +93,14 @@ final class StudioRuntimeFactory
         $documents = new DocumentRenderer($registry, $renderers, $media, new ProviderBindingResolver($providers, $tenants));
         $themeTemplates = new \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver($pages, $revisions);
 
+        $chrome = new ChromeResolver($pages, $revisions, $themeTemplates);
         $compiler = new StudioCompiler(
             $tenants,
             $registry,
             $renderers,
             $documents,
             $themes,
-            new ChromeResolver($pages, $revisions, $themeTemplates),
+            $chrome,
             $media,
             $compilations,
             new GlobalComponentResolver($pages, $revisions),
@@ -146,6 +147,7 @@ final class StudioRuntimeFactory
             $tenants, $registry, $renderers, $providers,
             $pages, $revisions, $templates, $dependencies, $compilations, $tokens,
             $compiler, $render, $invalidator, $app, $publicRuntime,
+            new PublishedPageParts($pages, $revisions, $chrome),
         );
     }
 

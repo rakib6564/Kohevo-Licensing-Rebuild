@@ -1376,4 +1376,12 @@ return array (
     'mlt_autotranslate_key_placeholder' => 'Facultatif : la clé API de votre service de traduction',
     'mlt_autotranslate_key_encryption_failed' => 'La clé API n’a pas été enregistrée : le chiffrement est indisponible (vérifiez APP_SECRET). Les clés ne sont jamais stockées en clair.',
     'mlt_switcher_invalid' => 'Non enregistré : les couleurs doivent être des valeurs hexadécimales comme #111827, et le style et la position doivent faire partie des options proposées.',
+    'admin_bar_label' => 'Barre d’administration',
+    'admin_bar_new' => 'Nouveau',
+    'admin_bar_menu' => 'Menu',
+    'admin_bar_profile' => 'Profil',
+    'admin_bar_count' => '%d nouveau(x)',
+    'admin_bar_new_media' => 'Fichier média',
+    'admin_bar_new_user' => 'Utilisateur',
+    'admin_bar_edit_more' => 'Autres éléments à modifier',
 );

@@ -116,6 +116,6 @@ final class ChromeResolver
         if ($revision === null) {
             return null;
         }
-        return ChromeSource::partial((int) $revision['id'], (string) $revision['document_json']);
+        return ChromeSource::partial((int) $revision['id'], (string) $revision['document_json'], (int) $row['id']);
     }
 }

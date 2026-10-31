@@ -86,7 +86,7 @@ function shop_page(string $title, string $body): string {
         . 'input,select,textarea{font:inherit;padding:8px;width:100%;box-sizing:border-box}label{display:block;margin:12px 0 4px;font-weight:600}'
         . '.sb-button{display:inline-block;padding:10px 18px;background:#1b1b1b;color:#fff;border:0;border-radius:4px;text-decoration:none;cursor:pointer}'
         . '.sb-shop-error{color:#b00020}.sb-shop-cart__image{width:56px;height:56px;object-fit:cover}</style></head><body>'
-        . '<p><a href="' . e(rtrim((string) SLATE_URL, '/') . '/') . '">← ' . e($site) . '</a></p><h1>' . e($title) . '</h1>' . $body . '</body></html>';
+        . '<p><a href="' . e(rtrim((string) SLATE_URL, '/') . '/') . '">← ' . e($site) . '</a></p><h1>' . e($title) . '</h1>' . $body . \Slate\Services\Admin\FrontAdminBar::scriptTag() . '</body></html>';
 }
 
 function shop_money(int $cents, string $currency): string {

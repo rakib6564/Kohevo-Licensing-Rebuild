@@ -244,4 +244,6 @@ return [
     'shop_view_order'               => 'View your order',
     'shop_was'                      => 'Was',
     'shop_your_details'             => 'Your details',
+    'shop_bar_label' => 'Shop',
+    'shop_bar_new_product' => 'Product',
 ];

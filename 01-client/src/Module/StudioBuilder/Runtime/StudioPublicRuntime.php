@@ -175,6 +175,32 @@ final class StudioPublicRuntime
         return $this->serve(fn(): ?array => $this->pages->findPublishedHomepage(StudioRenderService::PUBLIC_PAGE_TYPES), $ifNoneMatch);
     }
 
+    /**
+     * The id of the published page served at `$path` ('' is the homepage), or null. Templates and anything else that
+     * is not one page of the site have none. For the admin bar's Edit link; nothing here reaches a visitor.
+     */
+    public function publishedPageIdAt(string $path): ?int
+    {
+        $tenantId = $this->tenants->isScoped() ? $this->tenants->id() : 0;
+        if ($tenantId <= 0 || !$this->isEntitled($tenantId, self::ENTITLEMENT_KEY)) {
+            return null;
+        }
+        try {
+            $path = trim($path, '/');
+            if ($path === '') {
+                $row = $this->pages->findPublishedHomepage(StudioRenderService::PUBLIC_PAGE_TYPES);
+            } elseif (($typed = PageRoutes::split($path)) !== null) {
+                $row = $this->findPublishedTyped($typed['prefix'], $typed['slug']);
+            } else {
+                $slug = $this->slugFromPath($path);
+                $row = $slug === null ? null : $this->findPublishedBySlug($slug);
+            }
+        } catch (\Throwable $ignored) {
+            return null;
+        }
+        return $row === null ? null : (int) $row['id'];
+    }
+
     public function handleNotFound(?string $ifNoneMatch = null): ?PublicResponse
     {
         $tpl = $this->resolveThemeTemplate(fn(ThemeTemplateResolver $t): ?array => $t->resolveNotFound());

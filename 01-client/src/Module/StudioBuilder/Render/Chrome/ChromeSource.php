@@ -17,6 +17,7 @@ final class ChromeSource
         public readonly string $kind,
         public readonly ?int $revisionId = null,
         public readonly ?string $documentJson = null,
+        public readonly ?int $pageId = null,
     ) {}
 
     public static function hidden(): self
@@ -29,9 +30,9 @@ final class ChromeSource
         return new self(self::BUILTIN);
     }
 
-    public static function partial(int $revisionId, string $documentJson): self
+    public static function partial(int $revisionId, string $documentJson, ?int $pageId = null): self
     {
-        return new self(self::PARTIAL, $revisionId, $documentJson);
+        return new self(self::PARTIAL, $revisionId, $documentJson, $pageId);
     }
 
     /** Identity of this source for the compilation fingerprint (a republished partial changes it). */

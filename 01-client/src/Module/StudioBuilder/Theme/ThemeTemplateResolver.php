@@ -49,7 +49,7 @@ final class ThemeTemplateResolver
     public function resolveChrome(string $region, PageAddress $page, array $context = []): ?ChromeSource
     {
         $hit = $this->chromeTemplate($region, $page, $context);
-        return $hit !== null ? ChromeSource::partial((int) $hit['revision']['id'], (string) $hit['revision']['document_json']) : null;
+        return $hit !== null ? ChromeSource::partial((int) $hit['revision']['id'], (string) $hit['revision']['document_json'], (int) $hit['page']['id']) : null;
     }
 
     /**

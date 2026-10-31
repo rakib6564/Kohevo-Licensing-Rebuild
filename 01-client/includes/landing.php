@@ -339,6 +339,7 @@ function slate_render_landing(): void {
     </main>
 
 </div>
+<?= \Slate\Services\Admin\FrontAdminBar::scriptTag() ?>
 </body>
 </html>
     <?php
