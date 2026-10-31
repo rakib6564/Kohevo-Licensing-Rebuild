@@ -28,6 +28,8 @@ final class ElementVariantCatalog
             self::v('row', 'layout.flex', 'layout', 'box', 'Row', 'Elements in a line that wraps on small screens', ['direction' => 'row', 'wrap' => 'wrap', 'align' => 'center']),
             self::v('row-between', 'layout.flex', 'layout', 'box', 'Spread row', 'A row with the first and last element pushed to the edges', ['direction' => 'row', 'wrap' => 'wrap', 'justify' => 'between', 'align' => 'center']),
             self::v('centered', 'layout.flex', 'layout', 'box', 'Centered stack', 'Elements one under another, centered both ways', ['direction' => 'column', 'justify' => 'center', 'align' => 'center']),
+            self::v('saved-form', 'forms.embed', 'forms', 'form', 'Saved form', 'A form from your Forms plugin, chosen from a list', ['look' => 'flat']),
+            self::v('booking', 'booking.embed', 'forms', 'calendar', 'Booking', 'Your booking flow, or one service', ['look' => 'flat']),
             self::v('textarea', 'core.form_field', 'forms', 'form', 'Text area', 'A multi-line input for a form', ['name' => 'message', 'label' => 'Message', 'field_type' => 'textarea']),
             self::v('select', 'core.form_field', 'forms', 'form', 'Dropdown', 'A list to choose one option from', ['name' => 'choice', 'label' => 'Choose one', 'field_type' => 'select', 'options' => 'Option one, Option two, Option three']),
         ];
