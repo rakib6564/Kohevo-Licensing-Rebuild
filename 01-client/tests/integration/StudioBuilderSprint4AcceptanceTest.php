@@ -181,12 +181,7 @@ unit('sprint4 integration: multi-page website from reusable design primitives (t
             assert_true($cmpUuid !== '', 'global component has ref (uuid)');
 
             // Add Header navigation contents to the Global Component
-            $secHeader = [
-                'id' => CanonicalDocumentSchema::newSectionId(),
-                'label' => 'Header Nav Bar',
-                'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
-                'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                'blocks' => [
+            $secHeader = CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Header Nav Bar'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [
                     [
                         'id' => CanonicalDocumentSchema::newBlockId(),
                         'type' => 'layout.container',
@@ -218,9 +213,8 @@ unit('sprint4 integration: multi-page website from reusable design primitives (t
                             ],
                         ],
                     ],
-                ],
-            ];
-            $opCmpSec = new DocumentOperation('insert_section', ['index' => 0, 'section' => $secHeader]);
+                ]]);
+            $opCmpSec = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => $secHeader]);
             $cmpRes = $rt->tenants->runAs(S4_TENANT_A, static fn(): array => $rt->app->applyDocumentOperation($actorA, $cmpId, [$opCmpSec], $cmpRevId, 'Add Header Elements'));
             $cmpRevId = (int) $cmpRes['revision']['id'];
 
@@ -235,24 +229,12 @@ unit('sprint4 integration: multi-page website from reusable design primitives (t
             $homeRevId = (int) $homeCreated['revision']['id'];
 
             // Insert reference to Global Component (sec.global_ref = $cmpUuid)
-            $refSec = [
-                'id' => CanonicalDocumentSchema::newSectionId(),
-                'label' => 'Global Header Ref',
-                'global_ref' => $cmpUuid,
-                'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
-                'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                'blocks' => [],
-            ];
-            $opRef = new DocumentOperation('insert_section', ['index' => 0, 'section' => $refSec]);
+            $refSec = CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Global Header Ref'], 'global_ref' => $cmpUuid, 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => []]);
+            $opRef = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => $refSec]);
 
             // Insert Local Hero Section
-            $heroSecId = CanonicalDocumentSchema::newSectionId();
-            $heroSec = [
-                'id' => $heroSecId,
-                'label' => 'Hero Banner Section',
-                'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
-                'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                'blocks' => [
+            $heroSecId = CanonicalDocumentSchema::newBlockId();
+            $heroSec = CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Hero Banner Section'], 'id' => $heroSecId, 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [
                     [
                         'id' => CanonicalDocumentSchema::newBlockId(),
                         'type' => 'core.heading',
@@ -263,15 +245,14 @@ unit('sprint4 integration: multi-page website from reusable design primitives (t
                         'bindings' => [],
                         'children' => [],
                     ],
-                ],
-            ];
-            $opHero = new DocumentOperation('insert_section', ['index' => 1, 'section' => $heroSec]);
+                ]]);
+            $opHero = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 1, 'block' => $heroSec]);
 
             $homeEdit = $rt->tenants->runAs(S4_TENANT_A, static fn(): array => $rt->app->applyDocumentOperation($actorA, $homePageId, [$opRef, $opHero], $homeRevId, 'Add Header Ref and Hero'));
             $homeRevId = (int) $homeEdit['revision']['id'];
             // insert_section always mints new IDs — read actual section IDs from the saved document
             $homeDoc = CanonicalJson::decode((string) $homeEdit['revision']['document_json']);
-            $heroSecId = (string) $homeDoc['sections'][1]['id']; // hero is at index 1
+            $heroSecId = (string) $homeDoc['containers'][1]['id']; // hero is at index 1
             $homePub = $rt->tenants->runAs(S4_TENANT_A, static fn(): array => $rt->app->publish($actorA, $homePageId, $homeRevId));
             assert_eq('published', $homePub['page']['status']);
             $homeRevId = (int) $homePub['page']['active_draft_revision_id'];
@@ -281,21 +262,14 @@ unit('sprint4 integration: multi-page website from reusable design primitives (t
             $aboutPageId = (int) $aboutCreated['page']['id'];
             $aboutRevId = (int) $aboutCreated['revision']['id'];
 
-            $aboutRefSecId = CanonicalDocumentSchema::newSectionId();
-            $aboutRefSec = [
-                'id' => $aboutRefSecId,
-                'label' => 'Global Header Ref',
-                'global_ref' => $cmpUuid,
-                'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
-                'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                'blocks' => [],
-            ];
-            $opAboutRef = new DocumentOperation('insert_section', ['index' => 0, 'section' => $aboutRefSec]);
+            $aboutRefSecId = CanonicalDocumentSchema::newBlockId();
+            $aboutRefSec = CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Global Header Ref'], 'id' => $aboutRefSecId, 'global_ref' => $cmpUuid, 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => []]);
+            $opAboutRef = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => $aboutRefSec]);
             $aboutEdit = $rt->tenants->runAs(S4_TENANT_A, static fn(): array => $rt->app->applyDocumentOperation($actorA, $aboutPageId, [$opAboutRef], $aboutRevId, 'Add Header Ref'));
             $aboutRevId = (int) $aboutEdit['revision']['id'];
             // insert_section always mints a new section ID — read the actual one from the saved document
             $aboutDoc = CanonicalJson::decode((string) $aboutEdit['revision']['document_json']);
-            $aboutRefSecId = (string) $aboutDoc['sections'][0]['id'];
+            $aboutRefSecId = (string) $aboutDoc['containers'][0]['id'];
             $aboutPub = $rt->tenants->runAs(S4_TENANT_A, static fn(): array => $rt->app->publish($actorA, $aboutPageId, $aboutRevId));
             assert_eq('published', $aboutPub['page']['status']);
             $aboutRevId = (int) $aboutPub['page']['active_draft_revision_id'];
@@ -321,7 +295,7 @@ unit('sprint4 integration: multi-page website from reusable design primitives (t
             // 6. Live Component Update & Propagation:
             // Update the CTA in the Global Component from "Join Now" to "Get Started Today" and republish
             $cmpDoc = CanonicalJson::decode((string) $cmpRes['revision']['document_json']);
-            $btnBlockId = (string) $cmpDoc['sections'][0]['blocks'][0]['children'][1]['id'];
+            $btnBlockId = (string) $cmpDoc['containers'][0]['children'][0]['children'][1]['id'];
             $opUpdateBtn = new DocumentOperation('update_block_props', [
                 'block_id' => $btnBlockId,
                 'props' => ['link' => ['href' => '/get-started', 'label' => 'Get Started Today', 'target' => '_self'], 'variant' => 'primary'],
@@ -341,8 +315,8 @@ unit('sprint4 integration: multi-page website from reusable design primitives (t
             $detachRes = $rt->tenants->runAs(S4_TENANT_A, static fn(): array => $rt->app->detachGlobalSection($actorA, $aboutPageId, $aboutRefSecId, $aboutRevId));
             $aboutRevId = (int) $detachRes['revision']['id'];
             $detachedDoc = CanonicalJson::decode((string) $detachRes['revision']['document_json']);
-            assert_null($detachedDoc['sections'][0]['global_ref'] ?? null, 'detached section no longer has global_ref');
-            assert_true(count($detachedDoc['sections'][0]['blocks']) > 0, 'detached section now owns local blocks');
+            assert_null($detachedDoc['containers'][0]['global_ref'] ?? null, 'detached section no longer has global_ref');
+            assert_true(count($detachedDoc['containers'][0]['children']) > 0, 'detached section now owns local blocks');
 
             // 8. Reusable Section Templates:
             // Save the Hero Section from Home Page as a reusable template
@@ -351,7 +325,7 @@ unit('sprint4 integration: multi-page website from reusable design primitives (t
                 $homePageId,
                 $heroSecId,
                 'hero-reusable-preset',
-                'section_preset',
+                'container_preset',
                 'heroes',
                 'Hero Reusable Preset',
                 'A reusable hero section preset'
@@ -366,8 +340,8 @@ unit('sprint4 integration: multi-page website from reusable design primitives (t
             $insertTplRes = $rt->tenants->runAs(S4_TENANT_A, static fn(): array => $rt->app->insertTemplate($actorA, $pricingPageId, 'hero-reusable-preset', 0, null, $pricingRevId));
             $pricingRevId = (int) $insertTplRes['revision']['id'];
             $pricingDoc = CanonicalJson::decode((string) $insertTplRes['revision']['document_json']);
-            assert_eq(1, count($pricingDoc['sections']), 'pricing page has 1 section from template');
-            assert_true($pricingDoc['sections'][0]['id'] !== $heroSecId, 'inserted section has brand new ID');
+            assert_eq(1, count($pricingDoc['containers']), 'pricing page has 1 section from template');
+            assert_true($pricingDoc['containers'][0]['id'] !== $heroSecId, 'inserted section has brand new ID');
 
             $pricingPub = $rt->tenants->runAs(S4_TENANT_A, static fn(): array => $rt->app->publish($actorA, $pricingPageId, $pricingRevId));
             assert_eq('published', $pricingPub['page']['status']);

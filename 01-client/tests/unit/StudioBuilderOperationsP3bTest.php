@@ -96,8 +96,8 @@ unit('p3b ops: the layer lock refuses them on a locked node', function (): void 
     $f = sbop_fixture();
     $registry = BlockRegistry::withAllCoreBlocks();
     $locked = $f['document'];
-    $locked['sections'][0]['blocks'][0]['metadata'] = ['locked' => true];
-    $target = $f['document']['sections'][0]['blocks'][0]['id'];
+    $locked['containers'][0]['children'][0]['metadata'] = ['locked' => true];
+    $target = $f['document']['containers'][0]['children'][0]['id'];
     $tried = 0;
     foreach ($f['cases'] as $c) {
         if (($c['payload']['block_id'] ?? null) !== $target || !empty($c['error'])) {
@@ -114,9 +114,9 @@ unit('p3b ops: the layer lock refuses them on a locked node', function (): void 
     assert_true($tried > 0, 'some cases target the locked block');
 
     $sec = $f['document'];
-    $sec['sections'][1]['locked'] = true;
-    assert_throws(StudioValidationException::class, static fn () => DocumentOperationApplier::applyOne($sec, new DocumentOperation('update_section_style', ['section_id' => $sec['sections'][1]['id'], 'style' => []]), $registry), 'a locked section keeps its style');
-    DocumentOperationApplier::applyOne($sec, new DocumentOperation('update_section_style', ['section_id' => $sec['sections'][0]['id'], 'style' => []]), $registry);
+    $sec['containers'][1]['locked'] = true;
+    assert_throws(StudioValidationException::class, static fn () => DocumentOperationApplier::applyOne($sec, new DocumentOperation('update_section_style', ['section_id' => $sec['containers'][1]['id'], 'style' => []]), $registry), 'a locked section keeps its style');
+    DocumentOperationApplier::applyOne($sec, new DocumentOperation('update_section_style', ['section_id' => $sec['containers'][0]['id'], 'style' => []]), $registry);
 });
 
 // ── Validation of the new schema keys ────────────────────────────────────
@@ -124,14 +124,10 @@ unit('p3b ops: the layer lock refuses them on a locked node', function (): void 
 /** A one-section document with the given section extras and block extras. */
 function sbop_doc(array $sectionExtra = [], array $blockExtra = [], array $blockStyle = []): array
 {
-    return ['schema_version' => '1.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'sections' => [[
-        'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'S', 'global_ref' => null, 'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        'blocks' => [[
+    return ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [[
             'id' => CanonicalDocumentSchema::newBlockId(), 'type' => 'core.heading', 'version' => 1, 'props' => ['text' => 'x', 'level' => 'h2'],
             'style' => $blockStyle + CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [],
-        ] + $blockExtra],
-    ] + $sectionExtra]];
+        ] + $blockExtra]]) + $sectionExtra]];
 }
 
 unit('p3b schema: block tag is an allow-listed element name', function (): void {
@@ -178,26 +174,26 @@ unit('p3b schema: a section background image must belong to the tenant', functio
     $doc = sbop_doc(['style' => ['background' => ['image' => ['media_id' => 99, 'alt' => '']]]]);
     $own = static fn (int $id): bool => $id === 7;
     assert_false(DocumentValidator::validate($doc, $registry, ['media_exists' => $own])->isValid(), 'media 99 is not this tenant\'s');
-    $doc['sections'][0]['style']['background']['image']['media_id'] = 7;
+    $doc['containers'][0]['style']['background']['image']['media_id'] = 7;
     assert_true(DocumentValidator::validate($doc, $registry, ['media_exists' => $own])->isValid(), 'media 7 is');
 });
 
 unit('p3b schema: the normalizer keeps a section style and a tag only when they say something', function (): void {
     $registry = BlockRegistry::withAllCoreBlocks();
     $out = DocumentNormalizer::normalize(sbop_doc(['style' => ['padding' => ['top' => '2rem'], 'background' => []]], ['tag' => 'section']), $registry);
-    assert_eq(['padding' => ['top' => '2rem']], $out['sections'][0]['style'], 'the empty background is dropped');
-    assert_eq('section', $out['sections'][0]['blocks'][0]['tag']);
+    assert_eq(['padding' => ['top' => '2rem']], $out['containers'][0]['style'], 'the empty background is dropped');
+    assert_eq('section', $out['containers'][0]['children'][0]['tag']);
     $plain = DocumentNormalizer::normalize(sbop_doc(['style' => []], ['tag' => 'div']), $registry);
-    assert_false(array_key_exists('style', $plain['sections'][0]), 'an empty section style is not stored');
-    assert_false(array_key_exists('tag', $plain['sections'][0]['blocks'][0]), 'the default tag is not stored');
+    assert_false(array_key_exists('style', $plain['containers'][0]), 'an empty section style is not stored');
+    assert_false(array_key_exists('tag', $plain['containers'][0]['children'][0]), 'the default tag is not stored');
 });
 
 unit('p3b schema: documents that use none of this are normalized exactly as before', function (): void {
     $registry = BlockRegistry::withAllCoreBlocks();
     $out = DocumentNormalizer::normalize(sbop_doc(), $registry);
-    assert_false(array_key_exists('style', $out['sections'][0]));
-    assert_false(array_key_exists('tag', $out['sections'][0]['blocks'][0]));
-    assert_false(array_key_exists('style_states', $out['sections'][0]['blocks'][0]));
+    assert_false(array_key_exists('style', $out['containers'][0]));
+    assert_false(array_key_exists('tag', $out['containers'][0]['children'][0]));
+    assert_false(array_key_exists('style_states', $out['containers'][0]['children'][0]));
 });
 
 // ── The whole pipeline: the stored document → the public page ─────────────
@@ -266,7 +262,7 @@ unit('p3b render: a stored block with a refused value is left out of the page en
     $ctx     = \Slate\Module\StudioBuilder\Render\RenderContext::forPublic(101, new \Slate\Module\StudioBuilder\Render\SiteContext('https://a.test', 'A', 'https://a.test/l.png', 'https://a.test/f.png', 'en'), static fn () => true);
 
     $doc = sbop_doc([], [], ['typography' => ['size' => 'url(https://evil.test/x)']]);
-    $doc['sections'][0]['blocks'][] = ['id' => CanonicalDocumentSchema::newBlockId(), 'type' => 'core.heading', 'version' => 1, 'props' => ['text' => 'KEEP ME', 'level' => 'h2'], 'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => []];
+    $doc['containers'][0]['children'][] = ['id' => CanonicalDocumentSchema::newBlockId(), 'type' => 'core.heading', 'version' => 1, 'props' => ['text' => 'KEEP ME', 'level' => 'h2'], 'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => []];
     $out = $tenants->runAs(101, static fn () => $comp->compile($page, ['id' => 9, 'page_id' => 5, 'document_json' => CanonicalJson::encode($doc)], $ctx));
     assert_true(str_contains($out->html, 'KEEP ME'), 'the clean sibling still renders');
     assert_false(str_contains($out->html, 'evil.test') || str_contains($out->css, 'evil.test'), 'the refused value is nowhere in the output');

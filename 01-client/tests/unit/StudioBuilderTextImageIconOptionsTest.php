@@ -43,10 +43,7 @@ function sbtii_block(string $type, array $props, array $style = []): array
 
 function sbtii_valid(array $block): bool
 {
-    $doc = ['schema_version' => '1.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'sections' => [[
-        'id' => 'sec_cccccccccccccccc', 'label' => 'S', 'global_ref' => null, 'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'blocks' => [$block],
-    ]]];
+    $doc = ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'id' => 'blk_cccccccccccccccc', 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [$block]])]];
     return DocumentValidator::validate($doc, BlockRegistry::withAllCoreBlocks())->isValid();
 }
 

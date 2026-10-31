@@ -29,66 +29,66 @@ use Slate\Module\StudioBuilder\Runtime\StudioPublicRuntime;
 /** A small document: section s1 (block b1 with child b2), section s2. */
 function sba2_doc(array $over = []): array
 {
-    $doc = ['sections' => [
-        ['id' => 's1', 'label' => 'One', 'blocks' => [
+    $doc = ['containers' => [
+        \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'One'], 'id' => 's1', 'children' => [
             ['id' => 'b1', 'type' => 'core.container', 'props' => ['gap' => 'md'], 'children' => [
                 ['id' => 'b2', 'type' => 'core.heading', 'props' => ['text' => 'Hi', 'level' => 'h2'], 'children' => []],
             ]],
-        ]],
-        ['id' => 's2', 'label' => 'Two', 'blocks' => []],
+        ]]),
+        \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Two'], 'id' => 's2', 'children' => []]),
     ]];
     return array_replace_recursive($doc, $over);
 }
 
 unit('layer lock: a whole-document write cannot drop or edit a locked layer, but can undo the lock itself', function (): void {
     $current = sba2_doc();
-    $current['sections'][0]['locked'] = true;
+    $current['containers'][0]['locked'] = true;
 
     $dropped = $current;
-    array_shift($dropped['sections']);
+    array_shift($dropped['containers']);
     assert_throws(StudioValidationException::class, static fn() => LayerLock::assertPreserved($current, $dropped), 'removing a locked section');
 
     $edited = $current;
-    $edited['sections'][0]['blocks'][0]['children'][0]['props']['text'] = 'Changed';
+    $edited['containers'][0]['children'][0]['children'][0]['props']['text'] = 'Changed';
     assert_throws(StudioValidationException::class, static fn() => LayerLock::assertPreserved($current, $edited), 'editing a block inside it');
 
     $filled = $current;
-    $filled['sections'][0]['blocks'][] = ['id' => 'b9', 'type' => 'core.heading', 'props' => [], 'children' => []];
+    $filled['containers'][0]['children'][] = ['id' => 'b9', 'type' => 'core.heading', 'props' => [], 'children' => []];
     assert_throws(StudioValidationException::class, static fn() => LayerLock::assertPreserved($current, $filled), 'inserting into it');
 
     $unlocked = $current;
-    unset($unlocked['sections'][0]['locked']);
+    unset($unlocked['containers'][0]['locked']);
     LayerLock::assertPreserved($current, $unlocked); // undoing the lock (or an unlock) is the one change it accepts
 
     $other = $current;
-    $other['sections'][1]['label'] = 'Renamed';
-    $other['sections'][] = ['id' => 's3', 'label' => 'New', 'blocks' => []];
+    $other['containers'][1]['label'] = 'Renamed';
+    $other['containers'][] = \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'New'], 'id' => 's3', 'children' => []]);
     LayerLock::assertPreserved($current, $other); // unlocked layers change freely
 
     $reordered = $current;
-    $reordered['sections'][0] = array_reverse($current['sections'][0], true);
+    $reordered['containers'][0] = array_reverse($current['containers'][0], true);
     LayerLock::assertPreserved($current, $reordered); // key order is not a change
 
-    LayerLock::assertPreserved(sba2_doc(), ['sections' => []]); // no lock, nothing to keep
+    LayerLock::assertPreserved(sba2_doc(), ['containers' => []]); // no lock, nothing to keep
     assert_true(true);
 });
 
 unit('layer lock: a locked block (metadata.locked) is kept the same way, children included', function (): void {
     $current = sba2_doc();
-    $current['sections'][0]['blocks'][0]['metadata'] = ['locked' => true];
+    $current['containers'][0]['children'][0]['metadata'] = ['locked' => true];
     $edited = $current;
-    $edited['sections'][0]['blocks'][0]['children'] = [];
+    $edited['containers'][0]['children'][0]['children'] = [];
     assert_throws(StudioValidationException::class, static fn() => LayerLock::assertPreserved($current, $edited), 'emptying a locked container');
     $unlocked = $current;
-    unset($unlocked['sections'][0]['blocks'][0]['metadata']);
+    unset($unlocked['containers'][0]['children'][0]['metadata']);
     LayerLock::assertPreserved($current, $unlocked);
     assert_true(true);
 });
 
 unit('payments: the live button is found by its id anywhere in a document, and only a payment button counts', function (): void {
     $doc = sba2_doc();
-    $doc['sections'][1]['blocks'][] = ['id' => 'blk_pay', 'type' => 'payment.button', 'props' => ['amount' => 10, 'currency' => 'USD'], 'children' => []];
-    $doc['sections'][0]['blocks'][0]['children'][] = ['id' => 'blk_nested', 'type' => 'payment.button', 'props' => ['amount' => 20], 'children' => []];
+    $doc['containers'][1]['children'][] = ['id' => 'blk_pay', 'type' => 'payment.button', 'props' => ['amount' => 10, 'currency' => 'USD'], 'children' => []];
+    $doc['containers'][0]['children'][0]['children'][] = ['id' => 'blk_nested', 'type' => 'payment.button', 'props' => ['amount' => 20], 'children' => []];
     assert_eq(['amount' => 10, 'currency' => 'USD'], LivePaymentBlocks::findInDocument($doc, 'blk_pay'));
     assert_eq(['amount' => 20], LivePaymentBlocks::findInDocument($doc, 'blk_nested'), 'nested in a container');
     assert_null(LivePaymentBlocks::findInDocument($doc, 'b2'), 'a heading with that id is not a payment button');

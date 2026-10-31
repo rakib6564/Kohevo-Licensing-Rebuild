@@ -48,14 +48,10 @@ function sba6_background_document(): array
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Unit');
     $style = CanonicalDocumentSchema::defaultBlockStyle();
     $style['background'] = ['color' => '#112233', 'image' => ['media_id' => 9]];
-    $doc['sections'] = [[
-        'id' => 'sec_' . str_repeat('a', 24), 'label' => 'Hero', 'global_ref' => null,
-        'style' => ['background' => ['image' => ['media_id' => 7], 'fit' => 'cover']],
-        'blocks' => [[
+    $doc['containers'] = [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Hero'], 'id' => 'blk_' . str_repeat('a', 24), 'style' => ['background' => ['image' => ['media_id' => 7], 'fit' => 'cover']], 'children' => [[
             'id' => 'blk_' . str_repeat('b', 24), 'type' => 'core.heading', 'version' => 1, 'props' => ['text' => 'Hi', 'level' => 2],
             'style' => $style, 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [],
-        ]],
-    ]];
+        ]]])];
     return $doc;
 }
 
@@ -65,12 +61,12 @@ unit('packages: section and block background images are exported, mapped on impo
     assert_eq([7, 9], PackageDocumentMapper::mediaIds($doc, $registry), 'background images are collected');
 
     $mapped = PackageDocumentMapper::rewriteMedia($doc, $registry, static fn(int $id): ?int => $id + 100);
-    assert_eq(107, $mapped['document']['sections'][0]['style']['background']['image']['media_id']);
-    assert_eq(109, $mapped['document']['sections'][0]['blocks'][0]['style']['background']['image']['media_id']);
+    assert_eq(107, $mapped['document']['containers'][0]['style']['background']['image']['media_id']);
+    assert_eq(109, $mapped['document']['containers'][0]['children'][0]['style']['background']['image']['media_id']);
     assert_eq([], $mapped['unresolved']);
 
     $none = PackageDocumentMapper::rewriteMedia($doc, $registry, static fn(int $id): ?int => null);
-    $section = $none['document']['sections'][0];
+    $section = $none['document']['containers'][0];
     assert_true(!isset($section['style']['background']['image']), 'an unmapped section image is removed, never pointing at an unrelated image');
     assert_eq('cover', $section['style']['background']['fit']);
     assert_true(!isset($section['blocks'][0]['style']['background']['image']));

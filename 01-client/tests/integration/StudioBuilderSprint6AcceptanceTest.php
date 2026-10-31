@@ -138,14 +138,7 @@ function s6_block(string $type, array $props, array $children = []): array
 
 function s6_section(array $blocks, string $label = 'Section'): array
 {
-    return [
-        'id'         => CanonicalDocumentSchema::newSectionId(),
-        'label'      => $label,
-        'global_ref' => null,
-        'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        'blocks'     => $blocks,
-    ];
+    return CanonicalDocumentSchema::newContainer(['metadata' => ['label' => $label], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => $blocks]);
 }
 
 unit('sprint6 integration: theme builder, conditional headers, archives, 404, and multi-tenant isolation', function (): void {
@@ -190,7 +183,7 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             $secHdrDef = s6_section([
                 s6_block('core.heading', ['text' => 'Tenant A Global Header', 'level' => 'h2']),
             ], 'Default Header');
-            $opHdrDef = new DocumentOperation('insert_section', ['index' => 0, 'section' => $secHdrDef]);
+            $opHdrDef = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => $secHdrDef]);
             $hdrDefEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, $hdrDefId, [$opHdrDef], $hdrDefRev, 'Add header content'));
             $hdrDefRev = (int) $hdrDefEdit['revision']['id'];
             $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, $hdrDefId, $hdrDefRev));
@@ -202,7 +195,7 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             $secHdrEng = s6_section([
                 s6_block('core.heading', ['text' => 'Engineering Hub Special Header', 'level' => 'h2']),
             ], 'Engineering Header');
-            $opHdrEng = new DocumentOperation('insert_section', ['index' => 0, 'section' => $secHdrEng]);
+            $opHdrEng = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => $secHdrEng]);
             $opHdrEngCond = new DocumentOperation('update_settings', ['settings' => [
                 'template_type' => 'header',
                 'conditions'    => [
@@ -220,7 +213,7 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             $secFtrDef = s6_section([
                 s6_block('core.text', ['content' => 'Tenant A Global Footer Copyright 2026']),
             ], 'Default Footer');
-            $opFtrDef = new DocumentOperation('insert_section', ['index' => 0, 'section' => $secFtrDef]);
+            $opFtrDef = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => $secFtrDef]);
             $ftrDefEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, $ftrDefId, [$opFtrDef], $ftrDefRev, 'Add footer content'));
             $ftrDefRev = (int) $ftrDefEdit['revision']['id'];
             $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, $ftrDefId, $ftrDefRev));
@@ -233,7 +226,7 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
                 s6_block('core.heading', ['text' => 'Custom 404: Page Not Found in Kohevo Studio', 'level' => 'h1']),
                 s6_block('theme.search_box', ['placeholder' => 'Search across site...']),
             ], '404 Section');
-            $op404Sec = new DocumentOperation('insert_section', ['index' => 0, 'section' => $sec404]);
+            $op404Sec = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => $sec404]);
             $op404Set = new DocumentOperation('update_settings', ['settings' => [
                 'template_type' => '404',
             ]]);
@@ -248,7 +241,7 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             $secArchive = s6_section([
                 s6_block('theme.archive_title', ['level' => 'h1']),
             ], 'Archive Section');
-            $opArcSec = new DocumentOperation('insert_section', ['index' => 0, 'section' => $secArchive]);
+            $opArcSec = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => $secArchive]);
             $opArcSet = new DocumentOperation('update_settings', ['settings' => [
                 'template_type' => 'archive',
             ]]);
@@ -265,7 +258,7 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
                 s6_block('theme.post_meta', ['show_category' => true]),
                 s6_block('core.text', ['content' => 'Deep technical post content on microservices.']),
             ], 'Post 1 Section');
-            $opP1Sec = new DocumentOperation('insert_section', ['index' => 0, 'section' => $secP1]);
+            $opP1Sec = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => $secP1]);
             $opP1Set = new DocumentOperation('update_settings', ['settings' => ['category' => 'Engineering']]);
             $p1Edit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, $p1Id, [$opP1Sec, $opP1Set], $p1Rev, 'Add post 1 content'));
             $p1Rev = (int) $p1Edit['revision']['id'];
@@ -279,7 +272,7 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
                 s6_block('theme.post_title', ['level' => 'h1']),
                 s6_block('core.text', ['content' => 'Visual hierarchy and design token architecture.']),
             ], 'Post 2 Section');
-            $opP2Sec = new DocumentOperation('insert_section', ['index' => 0, 'section' => $secP2]);
+            $opP2Sec = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => $secP2]);
             $opP2Set = new DocumentOperation('update_settings', ['settings' => ['category' => 'Design']]);
             $p2Edit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, $p2Id, [$opP2Sec, $opP2Set], $p2Rev, 'Add post 2 content'));
             $p2Rev = (int) $p2Edit['revision']['id'];
@@ -352,7 +345,7 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
                 s6_block('theme.search_box', ['placeholder' => 'Search across site...']),
             ], 'Search Section');
             $tplSearchEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, $tplSearchId, [
-                new DocumentOperation('insert_section', ['index' => 0, 'section' => $secSearch]),
+                new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => $secSearch]),
                 new DocumentOperation('update_settings', ['settings' => ['template_type' => 'search']]),
             ], (int) $tplSearch['revision']['id'], 'Add search content'));
             $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, $tplSearchId, (int) $tplSearchEdit['revision']['id']));
@@ -434,7 +427,7 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             ], 'Single Section');
             $singleSection['layout']['width'] = 'narrow';
             $tplSingleEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, $tplSingleId, [
-                new DocumentOperation('insert_section', ['index' => 0, 'section' => $singleSection]),
+                new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => $singleSection]),
                 new DocumentOperation('update_settings', ['settings' => [
                     'template_type' => 'single',
                     'conditions'    => ['rules' => [['condition' => 'category', 'value' => 'Engineering', 'type' => 'include']]],
@@ -462,15 +455,15 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             assert_true(strpos($editor->html, 'Engineering single layout') < strpos($editor->html, 'Deep technical post content'), 'the template content comes first, as live');
             assert_true((bool) preg_match('~<h1 class="sb-post-title[^"]*">Engineering Deep Dive</h1>~', $editor->html), 'the template\'s Post title shows the page');
             $stored = static fn(int $pageId): array => json_decode((string) $pdo->query('SELECT r.document_json FROM studiobuilder_revisions r JOIN studiobuilder_pages p ON p.published_revision_id = r.id WHERE p.id = ' . $pageId)->fetchColumn(), true);
-            $ownSection = $stored($p1Id)['sections'][0];
+            $ownSection = $stored($p1Id)['containers'][0];
             assert_true(str_contains($editor->html, 'data-sb-node="' . $ownSection['id'] . '"'), 'the page\'s own section is selectable');
             assert_true(str_contains($editor->html, 'data-sb-node="' . $ownSection['blocks'][2]['id'] . '"'), 'and its blocks');
-            $templateSection = $stored($tplSingleId)['sections'][0];
+            $templateSection = $stored($tplSingleId)['containers'][0];
             assert_false(str_contains($editor->html, 'data-sb-node="' . $templateSection['id'] . '"'), 'the template\'s section is not');
             foreach ($templateSection['blocks'] as $templateBlock) {
                 assert_false(str_contains($editor->html, 'data-sb-node="' . $templateBlock['id'] . '"'), 'nor is any template block, dynamic ones included: ' . $templateBlock['type']);
             }
-            assert_false(str_contains($editor->html, 'data-sb-node="' . $stored($hdrEngId)['sections'][0]['id'] . '"'), 'nor the header');
+            assert_false(str_contains($editor->html, 'data-sb-node="' . $stored($hdrEngId)['containers'][0]['id'] . '"'), 'nor the header');
             $preview = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->renderPreview($actorA, $p1Id));
             assert_true(str_contains($preview->html, 'Engineering single layout') && str_contains($preview->html, 'Engineering Hub Special Header'), 'the preview has the same template and header');
 
@@ -517,7 +510,7 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
 
             // Publishing a change to the template reaches the page without republishing the page.
             $tplSingleDraft = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->loadEditorDocument($actorA, $tplSingleId));
-            $headingId = (string) $tplSingleDraft['document']['sections'][0]['blocks'][0]['id'];
+            $headingId = (string) $tplSingleDraft['document']['containers'][0]['children'][0]['id'];
             $tplSingleEdit2 = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, $tplSingleId, [
                 new DocumentOperation('update_block_props', ['block_id' => $headingId, 'props' => ['text' => 'Engineering layout v2', 'level' => 'h2']]),
             ], (int) $tplSingleDraft['revision']['id'], 'Rename'));
@@ -529,14 +522,14 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             // neither, whose unpublished draft adds category=Engineering and tag "launch", keeps the default header.
             $hdrTag = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->createPage($actorA, 'Launch Header', 'launch-header', 'header_partial', 'standalone'));
             $hdrTagEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, (int) $hdrTag['page']['id'], [
-                new DocumentOperation('insert_section', ['index' => 0, 'section' => s6_section([s6_block('core.heading', ['text' => 'Launch Tag Header', 'level' => 'h2'])], 'Launch Header')]),
+                new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => s6_section([s6_block('core.heading', ['text' => 'Launch Tag Header', 'level' => 'h2'])], 'Launch Header')]),
                 new DocumentOperation('update_settings', ['settings' => ['template_type' => 'header', 'conditions' => ['rules' => [['action' => 'include', 'condition' => 'tag', 'value' => 'launch']]]]]),
             ], (int) $hdrTag['revision']['id'], 'Launch header'));
             $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, (int) $hdrTag['page']['id'], (int) $hdrTagEdit['revision']['id']));
 
             $plain = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->createPage($actorA, 'Plain Post', 'plain-post', 'page', 'standalone'));
             $plainEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, (int) $plain['page']['id'], [
-                new DocumentOperation('insert_section', ['index' => 0, 'section' => s6_section([s6_block('core.text', ['content' => 'Plain post body.'])], 'Plain')]),
+                new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => s6_section([s6_block('core.text', ['content' => 'Plain post body.'])], 'Plain')]),
             ], (int) $plain['revision']['id'], 'Plain content'));
             $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, (int) $plain['page']['id'], (int) $plainEdit['revision']['id']));
             $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, (int) $plain['page']['id'], [
@@ -560,7 +553,7 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             // TB-14: "Preview as page" on a page that hides its header and footer keeps them hidden, as the live site does.
             $bare = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->createPage($actorA, 'Bare Landing', 'bare-landing', 'page', 'standalone'));
             $bareEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, (int) $bare['page']['id'], [
-                new DocumentOperation('insert_section', ['index' => 0, 'section' => s6_section([s6_block('core.text', ['content' => 'Bare landing body.'])], 'Bare')]),
+                new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => s6_section([s6_block('core.text', ['content' => 'Bare landing body.'])], 'Bare')]),
                 new DocumentOperation('update_settings', ['settings' => ['header_mode' => 'hidden', 'footer_mode' => 'hidden']]),
             ], (int) $bare['revision']['id'], 'No chrome'));
             $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, (int) $bare['page']['id'], (int) $bareEdit['revision']['id']));
@@ -587,7 +580,7 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             $siteFooter = static function (string $title, string $slug, string $text) use ($rt, $actorA): int {
                 $f = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->createPage($actorA, $title, $slug, 'footer_partial', 'standalone'));
                 $e = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, (int) $f['page']['id'], [
-                    new DocumentOperation('insert_section', ['index' => 0, 'section' => s6_section([s6_block('core.text', ['content' => $text])], $title)]),
+                    new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => s6_section([s6_block('core.text', ['content' => $text])], $title)]),
                     new DocumentOperation('update_settings', ['settings' => ['template_type' => 'footer', 'conditions' => ['rules' => [['action' => 'include', 'condition' => 'entire_site']]]]]),
                 ], (int) $f['revision']['id'], $title));
                 $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, (int) $f['page']['id'], (int) $e['revision']['id']));
@@ -630,7 +623,7 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             // A Query loop on the archive template lists that category's posts, not every post.
             $arcDoc = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->loadEditorDocument($actorA, $tplArchiveId));
             $arcLoop = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, $tplArchiveId, [
-                new DocumentOperation('insert_section', ['index' => 1, 'section' => s6_section([s6_block('core.query_loop', ['per_page' => 12])], 'Posts')]),
+                new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 1, 'block' => s6_section([s6_block('core.query_loop', ['per_page' => 12])], 'Posts')]),
             ], (int) $arcDoc['revision']['id'], 'Add a loop'));
             $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->publish($actorA, $tplArchiveId, (int) $arcLoop['revision']['id']));
             $cats = static fn(string $html): array => array_values(array_unique(preg_match_all('~<span class="sb-post-card__category">([^<]*)</span>~', $html, $m) ? $m[1] : []));

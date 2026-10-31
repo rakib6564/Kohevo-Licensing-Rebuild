@@ -86,14 +86,7 @@ function sbp6u_block(string $type, array $props = [], array $extra = []): array
 /** @return array<string, mixed> */
 function sbp6u_section(array $blocks, ?string $globalRef = null, string $label = 'Main'): array
 {
-    return [
-        'blocks'     => $blocks,
-        'global_ref' => $globalRef,
-        'id'         => CanonicalDocumentSchema::newSectionId(),
-        'label'      => $label,
-        'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-    ];
+    return CanonicalDocumentSchema::newContainer(['metadata' => ['label' => $label], 'children' => $blocks, 'global_ref' => $globalRef, 'visibility' => CanonicalDocumentSchema::defaultVisibility()]);
 }
 
 /** @return array<string, mixed> */
@@ -101,7 +94,7 @@ function sbp6u_doc(array $sections, string $type = 'page', array $settings = [])
 {
     $doc = CanonicalDocumentSchema::emptyDocument($type, 'default', 'Doc');
     $doc['settings'] = array_merge($doc['settings'], $settings);
-    $doc['sections'] = $sections;
+    $doc['containers'] = $sections;
     return $doc;
 }
 
@@ -128,9 +121,9 @@ function sbp6u_render_sections(array $doc, RenderContext $ctx, array $components
     $prepared = RenderDocumentPreparer::prepare($doc, $registry)['document'];
     $preparedComponents = [];
     foreach ($components as $ref => $componentDoc) {
-        $preparedComponents[$ref] = RenderDocumentPreparer::prepare($componentDoc, $registry)['document']['sections'];
+        $preparedComponents[$ref] = RenderDocumentPreparer::prepare($componentDoc, $registry)['document']['containers'];
     }
-    return sbp6u_renderer()->renderSections($prepared['sections'], $ctx, new ResolvedTheme('default', ThemeResolver::DEFAULT_TOKENS), new RenderCollector(), true, $preparedComponents);
+    return sbp6u_renderer()->renderSections($prepared['containers'], $ctx, new ResolvedTheme('default', ThemeResolver::DEFAULT_TOKENS), new RenderCollector(), true, $preparedComponents);
 }
 
 function sbp6u_editor_ctx(): RenderContext
@@ -165,14 +158,14 @@ unit('phase6 validator: a global reference owns no blocks, exists in the tenant,
     $foreign = sbp6u_doc([sbp6u_section([], 'ffffffff-0000-4000-8000-000000000000')]);
     assert_true(in_array('cross_tenant_or_missing_partial', sbp6u_codes($foreign, $exists), true), 'a reference that does not resolve in the active tenant fails closed');
 
-    foreach (['section_preset', 'header_partial', 'footer_partial'] as $type) {
+    foreach (['container_preset', 'header_partial', 'footer_partial'] as $type) {
         $nested = sbp6u_doc([sbp6u_section([], SBP6U_REF)], $type);
         assert_true(in_array('global_ref_not_allowed', sbp6u_codes($nested, $exists), true), "a {$type} document may not reference (one level deep, no cycles)");
     }
 
     $normalized = DocumentNormalizer::normalize($ok, $registry);
-    assert_eq(SBP6U_REF, $normalized['sections'][0]['global_ref'], 'normalization keeps the reference');
-    assert_eq([], $normalized['sections'][0]['blocks']);
+    assert_eq(SBP6U_REF, $normalized['containers'][0]['global_ref'], 'normalization keeps the reference');
+    assert_eq([], $normalized['containers'][0]['children']);
     assert_true(preg_match(CanonicalDocumentSchema::COMPONENT_REF_PATTERN, SBP6U_REF) === 1, 'a component ref is a v4 uuid');
     assert_true(preg_match(CanonicalDocumentSchema::GLOBAL_REF_PATTERN, SBP6U_REF) === 1, 'and a valid global_ref');
 });
@@ -183,7 +176,7 @@ unit('phase6 dependencies: a reference indexes the component uuid; chrome region
     $registry = ModuleBlockDefinitions::studioRegistry();
     $doc = DocumentNormalizer::normalize(sbp6u_doc([sbp6u_section([], SBP6U_REF), sbp6u_section([sbp6u_heading('x')])]), $registry);
     $sigs = array_map(static fn($d): string => $d->uniqueSignature(), DependencyExtractor::extract($doc, $registry));
-    assert_true(in_array($doc['sections'][0]['id'] . '|partial|' . SBP6U_REF, $sigs, true), 'component reference recorded under the existing partial type');
+    assert_true(in_array($doc['containers'][0]['id'] . '|partial|' . SBP6U_REF, $sigs, true), 'component reference recorded under the existing partial type');
     assert_true(in_array(DependencyExtractor::ROOT_NODE_ID . '|partial|' . DependencyExtractor::CHROME_HEADER_KEY, $sigs, true));
     assert_true(in_array(DependencyExtractor::ROOT_NODE_ID . '|partial|' . DependencyExtractor::CHROME_FOOTER_KEY, $sigs, true));
 
@@ -192,13 +185,13 @@ unit('phase6 dependencies: a reference indexes the component uuid; chrome region
     assert_false(in_array(DependencyExtractor::ROOT_NODE_ID . '|partial|' . DependencyExtractor::CHROME_HEADER_KEY, $sigs, true), 'a hidden header is not a dependency (no needless rebuild)');
     assert_true(in_array(DependencyExtractor::ROOT_NODE_ID . '|partial|' . DependencyExtractor::CHROME_FOOTER_KEY, $sigs, true), 'custom mode depends on footer partials (it falls back to the site footer)');
 
-    foreach (['header_partial', 'footer_partial', 'section_preset'] as $type) {
+    foreach (['header_partial', 'footer_partial', 'container_preset'] as $type) {
         $bare = DocumentNormalizer::normalize(sbp6u_doc([sbp6u_section([sbp6u_heading('x')])], $type), $registry);
         $sigs = array_map(static fn($d): string => $d->uniqueSignature(), DependencyExtractor::extract($bare, $registry));
         assert_true(!in_array(DependencyExtractor::ROOT_NODE_ID . '|partial|' . DependencyExtractor::CHROME_HEADER_KEY, $sigs, true), "{$type} documents have no chrome");
     }
 
-    $refs = GlobalComponentResolver::referencesIn(['sections' => [['global_ref' => SBP6U_REF], ['global_ref' => null], ['global_ref' => SBP6U_REF], ['global_ref' => '<bad>']]]);
+    $refs = GlobalComponentResolver::referencesIn(['containers' => [['global_ref' => SBP6U_REF], ['global_ref' => null], ['global_ref' => SBP6U_REF], ['global_ref' => '<bad>']]]);
     assert_eq([SBP6U_REF], $refs, 'distinct, well-formed refs only');
     assert_eq(ComponentSource::MISSING, (new GlobalComponentResolver())->resolve(SBP6U_REF)->kind, 'without repositories every reference is missing (fail closed)');
 });
@@ -220,17 +213,17 @@ unit('phase6 copy: DocumentCopier re-mints every id, drops any reference, and bl
 
     // insert_block with children (a block preset): fresh ids for the whole subtree, only into child-capable blocks.
     $doc = sbp6u_doc([sbp6u_section([])]);
-    $sec = $doc['sections'][0]['id'];
+    $sec = $doc['containers'][0]['id'];
     $op = new DocumentOperation(DocumentOperation::OP_INSERT_BLOCK, ['parent_id' => $sec, 'index' => 0, 'block' => $container]);
     $out = DocumentOperationApplier::apply($doc, [$op], $registry);
-    $inserted = $out['sections'][0]['blocks'][0];
+    $inserted = $out['containers'][0]['children'][0];
     assert_eq(1, count($inserted['children']), 'children of a container preset are inserted');
     assert_true($inserted['id'] !== $container['id'] && $inserted['children'][0]['id'] !== $inner['id']);
     assert_true(DocumentValidator::validate($out, $registry)->isValid(), 'the result is a valid canonical document');
 
     $leafWithKids = sbp6u_block('core.heading', ['text' => 'H', 'level' => 'h2'], ['children' => [$inner]]);
     $out2 = DocumentOperationApplier::apply($doc, [new DocumentOperation(DocumentOperation::OP_INSERT_BLOCK, ['parent_id' => $sec, 'index' => 0, 'block' => $leafWithKids])], $registry);
-    assert_eq([], $out2['sections'][0]['blocks'][0]['children'], 'a non-container never receives children');
+    assert_eq([], $out2['containers'][0]['children'][0]['children'], 'a non-container never receives children');
 });
 
 unit('phase6 templates: extraction builds page / section / block presets from a document and refuses to preset a live reference', function (): void {
@@ -241,22 +234,22 @@ unit('phase6 templates: extraction builds page / section / block presets from a 
     $doc = sbp6u_doc([$local, $ref]);
 
     $page = StudioTemplateService::extractTemplateDocument($doc, null, 'page_template');
-    assert_eq(2, count($page['sections']));
-    assert_true($page['sections'][0]['id'] !== $local['id'], 'owned content is copied');
-    assert_eq(SBP6U_REF, $page['sections'][1]['global_ref'], 'a page template keeps live references as references');
+    assert_eq(2, count($page['containers']));
+    assert_true($page['containers'][0]['id'] !== $local['id'], 'owned content is copied');
+    assert_eq(SBP6U_REF, $page['containers'][1]['global_ref'], 'a page template keeps live references as references');
 
-    $sec = StudioTemplateService::extractTemplateDocument($doc, $local['id'], 'section_preset');
-    assert_eq('section_preset', $sec['document_type']);
-    assert_eq(1, count($sec['sections']));
-    assert_eq('Hello', $sec['sections'][0]['blocks'][0]['props']['text']);
+    $sec = StudioTemplateService::extractTemplateDocument($doc, $local['id'], 'container_preset');
+    assert_eq('container_preset', $sec['document_type']);
+    assert_eq(1, count($sec['containers']));
+    assert_eq('Hello', $sec['containers'][0]['children'][0]['props']['text']);
     assert_true(DocumentValidator::validate($sec, $registry)->isValid());
 
     $blk = StudioTemplateService::extractTemplateDocument($doc, $h['id'], 'block_preset');
-    assert_eq(1, count($blk['sections'][0]['blocks']));
-    assert_true($blk['sections'][0]['blocks'][0]['id'] !== $h['id']);
+    assert_eq(1, count($blk['containers'][0]['children']));
+    assert_true($blk['containers'][0]['children'][0]['id'] !== $h['id']);
 
-    assert_throws(StudioValidationException::class, static fn() => StudioTemplateService::extractTemplateDocument($doc, $ref['id'], 'section_preset'), 'a reference cannot become a copy preset');
-    assert_throws(StudioValidationException::class, static fn() => StudioTemplateService::extractTemplateDocument($doc, $h['id'], 'section_preset'), 'kind mismatch');
+    assert_throws(StudioValidationException::class, static fn() => StudioTemplateService::extractTemplateDocument($doc, $ref['id'], 'container_preset'), 'a reference cannot become a copy preset');
+    assert_throws(StudioValidationException::class, static fn() => StudioTemplateService::extractTemplateDocument($doc, $h['id'], 'container_preset'), 'kind mismatch');
     assert_throws(StudioValidationException::class, static fn() => StudioTemplateService::extractTemplateDocument($doc, null, 'block_preset'), 'a block preset needs a node');
     assert_throws(StudioValidationException::class, static fn() => StudioTemplateService::extractTemplateDocument($doc, null, 'evil_type'));
 });
@@ -264,16 +257,16 @@ unit('phase6 templates: extraction builds page / section / block presets from a 
 // ── 4. Renderer: live references ────────────────────────────────────────────
 
 unit('phase6 renderer: a referencing section renders the component\'s published content embedded, without its own node metadata', function (): void {
-    $componentDoc = sbp6u_doc([sbp6u_section([sbp6u_heading('Shared Header Text')], null, 'Comp')], 'section_preset');
+    $componentDoc = sbp6u_doc([sbp6u_section([sbp6u_heading('Shared Header Text')], null, 'Comp')], 'container_preset');
     $pageDoc = sbp6u_doc([sbp6u_section([], SBP6U_REF, 'Placeholder'), sbp6u_section([sbp6u_heading('Local text')])]);
-    $placeholderId = $pageDoc['sections'][0]['id'];
-    $componentBlockId = $componentDoc['sections'][0]['blocks'][0]['id'];
+    $placeholderId = $pageDoc['containers'][0]['id'];
+    $componentBlockId = $componentDoc['containers'][0]['children'][0]['id'];
 
     $editor = sbp6u_render_sections($pageDoc, sbp6u_editor_ctx(), [SBP6U_REF => $componentDoc]);
     assert_true(str_contains($editor, 'Shared Header Text'), 'component content is rendered into the page');
     assert_true(str_contains($editor, 'class="sb-section sb-section--global" data-sb-node="' . $placeholderId . '" data-sb-type="section"'), 'the placeholder section is selectable in the canvas');
     assert_true(!str_contains($editor, 'data-sb-node="' . $componentBlockId . '"'), 'embedded blocks expose no node metadata of their own');
-    assert_true(!str_contains($editor, 'data-sb-node="' . $componentDoc['sections'][0]['id'] . '"'), 'nor do embedded sections');
+    assert_true(!str_contains($editor, 'data-sb-node="' . $componentDoc['containers'][0]['id'] . '"'), 'nor do embedded sections');
     assert_true(str_contains($editor, 'Local text'), 'local sections render as before');
 
     $public = sbp6u_render_sections($pageDoc, sbp6u_public_ctx(), [SBP6U_REF => $componentDoc]);
@@ -286,10 +279,10 @@ unit('phase6 renderer: a referencing section renders the component\'s published 
     assert_true(!str_contains($missingPublic, 'unavailable') && !str_contains($missingPublic, 'Shared Header Text'), 'public output leaks nothing about a missing component');
 
     // A component's own nested references are never followed (one level).
-    $nestedComponent = sbp6u_doc([['blocks' => [], 'global_ref' => 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'n', 'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility()]], 'page');
+    $nestedComponent = sbp6u_doc([CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'n'], 'children' => [], 'global_ref' => 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'visibility' => CanonicalDocumentSchema::defaultVisibility()])], 'page');
     $registry = ModuleBlockDefinitions::studioRegistry();
-    $preparedNested = RenderDocumentPreparer::prepare($nestedComponent, $registry)['document']['sections'];
-    $html = sbp6u_renderer()->renderSections(RenderDocumentPreparer::prepare($pageDoc, $registry)['document']['sections'], sbp6u_editor_ctx(), new ResolvedTheme('default', ThemeResolver::DEFAULT_TOKENS), new RenderCollector(), true, [SBP6U_REF => $preparedNested]);
+    $preparedNested = RenderDocumentPreparer::prepare($nestedComponent, $registry)['document']['containers'];
+    $html = sbp6u_renderer()->renderSections(RenderDocumentPreparer::prepare($pageDoc, $registry)['document']['containers'], sbp6u_editor_ctx(), new ResolvedTheme('default', ThemeResolver::DEFAULT_TOKENS), new RenderCollector(), true, [SBP6U_REF => $preparedNested]);
     assert_true(str_contains($html, 'sb-section--global') && !str_contains($html, 'bbbbbbbb-bbbb'), 'nested references render nothing and never recurse');
 });
 
@@ -351,9 +344,9 @@ unit('phase6 api: the new commands are POST-only, allowlisted, CSRF-guarded, and
 
     $r = $api->handle($post('insert_template', ['page_id' => 1, 'template_key' => 'promo', 'index' => 0]), $editor);
     assert_eq('required_field', $first($r)['code'], 'inserting a preset requires expected_revision_id too');
-    $r = $api->handle($post('detach_component', ['page_id' => 1, 'section_id' => 'sec_0123456789abcdef01234567']), $editor);
+    $r = $api->handle($post('detach_component', ['page_id' => 1, 'section_id' => 'blk_0123456789abcdef01234567']), $editor);
     assert_eq('required_field', $first($r)['code']);
-    $r = $api->handle($post('create_component', ['title' => 'T', 'slug' => 't', 'page_id' => 1, 'section_id' => 'sec_0123456789abcdef01234567']), $editor);
+    $r = $api->handle($post('create_component', ['title' => 'T', 'slug' => 't', 'page_id' => 1, 'section_id' => 'blk_0123456789abcdef01234567']), $editor);
     assert_eq('required_field', $first($r)['code'], 'creating a component FROM a section is a document write');
 
     $r = $api->handle($post('insert_template', ['page_id' => 1, 'template_key' => 'promo', 'index' => -1, 'expected_revision_id' => 1]), $editor);
@@ -378,14 +371,14 @@ unit('phase6 api: the new commands are POST-only, allowlisted, CSRF-guarded, and
 });
 
 unit('phase6 single templates: the content width is the width of the section holding Post content, at any depth', function (): void {
-    $section = static fn(array $blocks, ?string $width = null): array => ['layout' => $width === null ? [] : ['width' => $width], 'blocks' => $blocks];
+    $section = static fn(array $blocks, ?string $width = null): array => CanonicalDocumentSchema::newContainer(['layout' => $width === null ? [] : ['width' => $width] /*TODO*/, 'children' => $blocks]);
     $content = ['type' => 'theme.post_content', 'props' => []];
     $title   = ['type' => 'theme.post_title', 'props' => []];
-    assert_eq('narrow', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['sections' => [$section([$title], 'full'), $section([$content], 'narrow')]]), 'the section with the content, not the first one');
-    assert_eq('normal', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['sections' => [$section([['type' => 'layout.container', 'children' => [$content]]], 'normal')]]), 'nested in a container');
-    assert_eq('wide', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['sections' => [$section([$content])]]), 'a section with no width is wide, as rendered');
-    assert_eq('wide', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['sections' => [$section([$content], 'huge')]]), 'an unknown width renders wide');
-    assert_null(\Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['sections' => [$section([$title], 'narrow')]]), 'no Post content block: no content width');
+    assert_eq('narrow', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['containers' => [$section([$title], 'full'), $section([$content], 'narrow')]]), 'the section with the content, not the first one');
+    assert_eq('normal', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['containers' => [$section([['type' => 'layout.container', 'children' => [$content]]], 'normal')]]), 'nested in a container');
+    assert_eq('wide', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['containers' => [$section([$content])]]), 'a section with no width is wide, as rendered');
+    assert_eq('wide', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['containers' => [$section([$content], 'huge')]]), 'an unknown width renders wide');
+    assert_null(\Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['containers' => [$section([$title], 'narrow')]]), 'no Post content block: no content width');
     assert_null(\Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth([]), 'an empty document');
 });
 

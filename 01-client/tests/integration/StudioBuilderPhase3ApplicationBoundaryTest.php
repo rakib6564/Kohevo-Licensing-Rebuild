@@ -223,16 +223,9 @@ function sbp3_doc(BlockRegistry $registry, string $heading = 'Hello', array $ove
         'version'    => 1,
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
     ], $overrides);
-    $section = [
-        'blocks'     => [$hero],
-        'global_ref' => null,
-        'id'         => CanonicalDocumentSchema::newSectionId(),
-        'label'      => 'Main',
-        'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-    ];
+    $section = CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Main'], 'children' => [$hero], 'visibility' => CanonicalDocumentSchema::defaultVisibility()]);
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', $heading);
-    $doc['sections'] = [$section];
+    $doc['containers'] = [$section];
     return $doc;
 }
 
@@ -348,7 +341,7 @@ unit('phase3 integration: application boundary, entitlement, RBAC, data provider
             // ── 2. Block entitlement enforcement ────────────────────────────
 
             $gatedDoc = sbp3_doc($registry, 'Gated', []);
-            $gatedDoc['sections'][0]['blocks'][] = [
+            $gatedDoc['containers'][0]['children'][] = [
                 'bindings' => [], 'children' => [], 'id' => CanonicalDocumentSchema::newBlockId(),
                 'props' => [], 'style' => CanonicalDocumentSchema::defaultBlockStyle(),
                 'type' => 'test.gated', 'version' => 1, 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
@@ -385,7 +378,7 @@ unit('phase3 integration: application boundary, entitlement, RBAC, data provider
             $keptSave = $tenants->runAs(SBP3_TENANT_A, static fn(): array => $app->saveDraft($editor, $pageIdA, $gatedDoc, $savedGated['revision']['id']));
             assert_true($keptSave['revision']['id'] > 0, 'a page keeping a gated block it already had still saves after the module is revoked');
             $moreGated = $gatedDoc;
-            $moreGated['sections'][0]['blocks'][] = array_merge(end($gatedDoc['sections'][0]['blocks']), ['id' => CanonicalDocumentSchema::newBlockId()]);
+            $moreGated['containers'][0]['children'][] = array_merge(end($gatedDoc['containers'][0]['children']), ['id' => CanonicalDocumentSchema::newBlockId()]);
             $revokedRejected = false;
             try {
                 $tenants->runAs(SBP3_TENANT_A, static fn() => $app->saveDraft($editor, $pageIdA, $moreGated, $keptSave['revision']['id']));
@@ -421,7 +414,7 @@ unit('phase3 integration: application boundary, entitlement, RBAC, data provider
 
             // An element's Custom CSS is code on a public page: only an administrator may change it, an editor may keep it.
             $styled = sbp3_doc($registry, 'css');
-            $styled['sections'][0]['blocks'][0]['custom_css'] = 'selector{color:red}';
+            $styled['containers'][0]['children'][0]['custom_css'] = 'selector{color:red}';
             $cssPage = $tenants->runAs(SBP3_TENANT_A, static fn(): array => $app->createPage($admin, 'Element CSS', 'element-css', 'page', 'standalone'));
             $cssHead = $cssPage['revision']['id'];
             assert_throws(StudioAuthorizationException::class, function () use ($tenants, $app, $editor, $cssPage, $cssHead, $styled): void {
@@ -432,10 +425,10 @@ unit('phase3 integration: application boundary, entitlement, RBAC, data provider
             assert_true(($keptAgain['revision']['id'] ?? 0) > 0, 'an editor can save a page that already has it, unchanged');
 
             assert_throws(StudioAuthorizationException::class, function () use ($tenants, $app, $editor, $registry): void {
-                $tenants->runAs(SBP3_TENANT_A, static fn() => $app->saveTemplate($editor, 'edit-cannot-admin', 'section_preset', 'test', 'X', null, sbp3_doc($registry, 'X')));
+                $tenants->runAs(SBP3_TENANT_A, static fn() => $app->saveTemplate($editor, 'edit-cannot-admin', 'container_preset', 'test', 'X', null, sbp3_doc($registry, 'X')));
             }, 'admin-only template administration remains protected from a mere editor');
 
-            $tplResult = $tenants->runAs(SBP3_TENANT_A, static fn(): array => $app->saveTemplate($admin, 'admin-template', 'section_preset', 'test', 'Admin Template', null, sbp3_doc($registry, 'Admin Preset')));
+            $tplResult = $tenants->runAs(SBP3_TENANT_A, static fn(): array => $app->saveTemplate($admin, 'admin-template', 'container_preset', 'test', 'Admin Template', null, sbp3_doc($registry, 'Admin Preset')));
             assert_eq('admin-template', $tplResult['template_key']);
 
             // ── 4. Real data providers ───────────────────────────────────────

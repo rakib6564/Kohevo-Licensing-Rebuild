@@ -101,13 +101,13 @@ function sbbki_heading(StudioRuntime $rt, StudioActor $actor, int $pageId, strin
 {
     $state = $rt->app->loadEditorDocument($actor, $pageId);
     $ops = [];
-    foreach ($state['document']['sections'] as $section) {
-        $ops[] = new DocumentOperation('remove_section', ['section_id' => $section['id']]);
+    foreach ($state['document']['containers'] as $section) {
+        $ops[] = new DocumentOperation('remove_block', ['block_id' => $section['id']]);
     }
-    $ops[] = new DocumentOperation('insert_section', ['index' => 0, 'section' => ['label' => 'Main']]);
+    $ops[] = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Main']]]);
     $rev = (int) $rt->app->applyDocumentOperation($actor, $pageId, $ops, (int) $state['revision']['id'])['revision']['id'];
     $state = $rt->app->loadEditorDocument($actor, $pageId);
-    $section = (string) $state['document']['sections'][0]['id'];
+    $section = (string) $state['document']['containers'][0]['id'];
     $blocks = [new DocumentOperation('insert_block', ['parent_id' => $section, 'index' => 0, 'block' => ['type' => 'core.heading', 'props' => ['text' => $text]]])];
     if ($mediaId !== null) {
         $blocks[] = new DocumentOperation('insert_block', ['parent_id' => $section, 'index' => 1, 'block' => ['type' => 'core.image', 'props' => ['media' => ['media_id' => $mediaId, 'alt' => 'x']]]]);
@@ -121,7 +121,7 @@ function sbbki_content(StudioRuntime $rt, int $pageId, int $revisionId): array
     $rev = $rt->revisions->findByIdForPage($pageId, $revisionId);
     $text = null;
     $media = null;
-    foreach (CanonicalJson::decode((string) $rev['document_json'])['sections'] ?? [] as $section) {
+    foreach (CanonicalJson::decode((string) $rev['document_json'])['containers'] ?? [] as $section) {
         foreach ($section['blocks'] as $block) {
             $text ??= $block['type'] === 'core.heading' ? (string) $block['props']['text'] : null;
             $media ??= $block['type'] === 'core.image' ? (int) $block['props']['media']['media_id'] : null;
@@ -199,12 +199,12 @@ unit('studio backup integration: back up, change, restore, and move to another s
                 sbbki_heading($rt, $full, $draft, 'Plans draft');
 
                 $app->createGlobalComponent($full, 'Promo', 'promo');
-                $component = $rt->pages->findBySlug('promo', 'section_preset');
+                $component = $rt->pages->findBySlug('promo', 'container_preset');
                 $componentId = (int) $component['id'];
                 $app->publish($full, $componentId, sbbki_heading($rt, $full, $componentId, 'Promo text'));
                 $withRef = (int) $app->createPage($full, 'Offers', 'offers', 'page', 'standalone')['page']['id'];
                 $offers = $app->loadEditorDocument($full, $withRef);
-                $app->applyDocumentOperation($full, $withRef, [new DocumentOperation('insert_section', ['index' => 0, 'section' => ['label' => 'Promo', 'global_ref' => (string) $component['uuid'], 'blocks' => []]])], (int) $offers['revision']['id']);
+                $app->applyDocumentOperation($full, $withRef, [new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Promo'], 'global_ref' => (string) $component['uuid'], 'children' => []]])], (int) $offers['revision']['id']);
                 $app->saveTemplateFromPage($full, $draft, null, 'bk-plans', 'page_template', 'general', 'Plans template', null);
                 $app->saveDesignTokens($full, 'default', ['color.accent' => '#123456']);
 
@@ -293,11 +293,11 @@ unit('studio backup integration: back up, change, restore, and move to another s
                 assert_true($rt->templates->findByKey('bk-plans') !== null, 'the template moved');
                 assert_eq(['default'], $result['token_groups']);
                 assert_eq('#123456', (string) json_decode((string) Database::value("SELECT tokens_json FROM studiobuilder_tokens WHERE tenant_id = ? AND token_group = 'default'", [SBBK_B]), true)['color.accent'], 'the tokens moved');
-                $promo = $rt->pages->findBySlug('promo', 'section_preset');
+                $promo = $rt->pages->findBySlug('promo', 'container_preset');
                 assert_eq('published', (string) $promo['status'], 'the component is live');
                 $offers = $rt->pages->findBySlug('offers', 'page');
                 $doc = CanonicalJson::decode((string) $rt->revisions->findByIdForPage((int) $offers['id'], (int) $offers['active_draft_revision_id'])['document_json']);
-                assert_eq((string) $promo['uuid'], (string) $doc['sections'][0]['global_ref'], 'a reference to a component still resolves');
+                assert_eq((string) $promo['uuid'], (string) $doc['containers'][0]['global_ref'], 'a reference to a component still resolves');
                 $row = $rt->pages->findByUuid($componentUuid);
                 assert_true($row !== null, 'a moved page keeps its uuid');
                 assert_eq('published', (string) $row['status']);

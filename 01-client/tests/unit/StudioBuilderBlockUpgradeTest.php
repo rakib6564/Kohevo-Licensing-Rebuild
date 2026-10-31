@@ -60,11 +60,7 @@ function sbup_block(string $type, int $version, array $props, array $children = 
 function sbup_doc(array $blocks): array
 {
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Upgrade');
-    $doc['sections'][] = [
-        'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'Main', 'global_ref' => null,
-        'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        'blocks' => $blocks,
-    ];
+    $doc['containers'][] = CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Main'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => $blocks]);
     return $doc;
 }
 
@@ -78,11 +74,11 @@ unit('block upgrade: older blocks are stepped up one version at a time, nested c
         sbup_block('core.heading', 1, ['text' => 'Current', 'level' => 'h2']),
     ]);
     $out = DocumentUpgrader::upgrade($doc, $registry);
-    $blocks = $out['document']['sections'][0]['blocks'];
+    $blocks = $out['document']['containers'][0]['children'];
     assert_eq([3, ['text' => 'From v1']], [$blocks[0]['version'], $blocks[0]['props']], 'v1 -> v3 through both steps');
     assert_eq([3, ['text' => 'From v2']], [$blocks[1]['version'], $blocks[1]['props']], 'v2 -> v3 through the last step');
     assert_eq([3, ['text' => 'Inside']], [$blocks[2]['children'][0]['version'], $blocks[2]['children'][0]['props']], 'a nested child is upgraded');
-    assert_eq($doc['sections'][0]['blocks'][3], $blocks[3], 'a current block is untouched');
+    assert_eq($doc['containers'][0]['children'][3], $blocks[3], 'a current block is untouched');
     assert_eq($nested['id'], $blocks[2]['children'][0]['id'], 'ids and everything but props/version stay');
     assert_eq([
         ['path' => '$.sections[0].blocks[0]', 'type' => 'probe.note', 'from' => 1, 'to' => 3],
@@ -92,7 +88,7 @@ unit('block upgrade: older blocks are stepped up one version at a time, nested c
 
     $flat = sbup_doc([sbup_block('probe.note', 1, ['caption' => 'Saved long ago'])]);
     $valid = ValidatedDocument::from(DocumentUpgrader::upgrade($flat, $registry)['document'], $registry)->toArray();
-    assert_eq('Saved long ago', $valid['sections'][0]['blocks'][0]['props']['text'], 'the upgraded document validates');
+    assert_eq('Saved long ago', $valid['containers'][0]['children'][0]['props']['text'], 'the upgraded document validates');
     assert_eq(DocumentUpgrader::upgrade($flat, $registry)['document'], DocumentUpgrader::upgrade(DocumentUpgrader::upgrade($flat, $registry)['document'], $registry)['document'], 'upgrading twice changes nothing more');
 });
 
@@ -145,11 +141,11 @@ unit('block upgrade: rendering upgrades older blocks in memory; only a block wit
     $doc = sbup_doc([sbup_block('probe.note', 1, ['caption' => 'Published at v1']), sbup_block('core.heading', 1, ['text' => 'Current', 'level' => 'h2'])]);
     $prepared = \Slate\Module\StudioBuilder\Render\RenderDocumentPreparer::prepare(\Slate\Module\StudioBuilder\Document\CanonicalJson::encode($doc), $registry);
     assert_false($prepared['degraded'], 'the whole document validates after the upgrade');
-    $block = $prepared['document']['sections'][0]['blocks'][0];
+    $block = $prepared['document']['containers'][0]['children'][0];
     assert_eq([3, ['text' => 'Published at v1']], [$block['version'], $block['props']]);
 
     $gap = \Slate\Module\StudioBuilder\Render\RenderDocumentPreparer::prepare(sbup_doc([sbup_block('probe.gap', 1, ['text' => 'x']), sbup_block('core.heading', 1, ['text' => 'Kept', 'level' => 'h2'])]), $registry);
     assert_true($gap['degraded'], 'no path: degraded');
-    assert_true(isset($gap['document']['sections'][0]['blocks'][0][\Slate\Module\StudioBuilder\Render\RenderDocumentPreparer::UNAVAILABLE_KEY]), 'that block alone is unavailable');
-    assert_eq('Kept', $gap['document']['sections'][0]['blocks'][1]['props']['text'], 'the rest of the page still renders');
+    assert_true(isset($gap['document']['containers'][0]['children'][0][\Slate\Module\StudioBuilder\Render\RenderDocumentPreparer::UNAVAILABLE_KEY]), 'that block alone is unavailable');
+    assert_eq('Kept', $gap['document']['containers'][0]['children'][1]['props']['text'], 'the rest of the page still renders');
 });

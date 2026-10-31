@@ -128,7 +128,7 @@ function sba6i_page(StudioRuntime $rt, StudioActor $actor, string $slug, string 
 function sba6i_edit(StudioRuntime $rt, StudioActor $actor, int $pageId, int $rev, string $label): int
 {
     $r = sba6i_ok(sba6i_call($rt, $actor, 'operations', ['page_id' => $pageId, 'expected_revision_id' => $rev, 'operations' => [
-        ['op' => 'insert_section', 'payload' => ['index' => 0, 'section' => ['label' => $label]]],
+        ['op' => 'insert_block', 'payload' => ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => $label]]]],
     ]]), "edit {$label}");
     return (int) $r['revision']['id'];
 }
@@ -198,7 +198,7 @@ unit('audit step 6 integration: revisions, menus, document type, component refer
             Database::query('UPDATE studiobuilder_pages SET active_draft_revision_id = ? WHERE id = ?', [$restore, $q['id']]);
 
             $doc = CanonicalJson::decode($json);
-            $doc['sections'][0]['label'] = 'Body edited';
+            $doc['containers'][0]['label'] = 'Body edited';
             $inA(static fn() => $rt->app->saveDraft($editor, $q['id'], $doc, $restore, 'autosave'));
             $left = array_map('intval', array_column(Database::all("SELECT id FROM studiobuilder_revisions WHERE tenant_id = ? AND page_id = ? AND revision_kind = 'autosave'", [SBA6_A, $q['id']]), 'id'));
             $gone = array_values(array_diff($ids, $left));
@@ -266,8 +266,8 @@ unit('audit step 6 integration: revisions, menus, document type, component refer
             $u = sba6i_page($rt, $editor, 'uses-archived');
             $u['rev'] = sba6i_edit($rt, $editor, $u['id'], $u['rev'], 'Promo');
             $uDoc = $inA(static fn() => $rt->app->loadEditorDocument($editor, $u['id']))['document'];
-            $uDoc['sections'][0]['global_ref'] = $compUuid;
-            $uDoc['sections'][0]['blocks'] = [];
+            $uDoc['containers'][0]['global_ref'] = $compUuid;
+            $uDoc['containers'][0]['children'] = [];
             $service = new StudioRevisionService($rt->tenants, $rt->pages, $rt->revisions, $rt->dependencies, $rt->registry);
             $code = '';
             try {
@@ -284,10 +284,10 @@ unit('audit step 6 integration: revisions, menus, document type, component refer
             $admin = StudioActor::authenticated(93, [StudioPermissions::VIEW, StudioPermissions::EDIT, StudioPermissions::ADMIN]);
             $inA(static fn() => $rt->app->saveTemplateFromPage($admin, $src['id'], null, 'a6-page', 'page_template', 'general', 'A6 page', null));
             $tplJson = (string) sba6i_value('SELECT document_json FROM studiobuilder_templates WHERE tenant_id = ? AND template_key = ?', [SBA6_A, 'a6-page']);
-            $tplSectionIds = array_column((array) (CanonicalJson::decode($tplJson)['sections'] ?? []), 'id');
+            $tplSectionIds = array_column((array) (CanonicalJson::decode($tplJson)['containers'] ?? []), 'id');
             $dest = sba6i_page($rt, $editor, 'template-dest');
             $applied = $inA(static fn() => $rt->app->applyTemplate($editor, 'a6-page', $dest['id'], $dest['rev']));
-            $appliedIds = array_column((array) (CanonicalJson::decode((string) $applied['revision']['document_json'])['sections'] ?? []), 'id');
+            $appliedIds = array_column((array) (CanonicalJson::decode((string) $applied['revision']['document_json'])['containers'] ?? []), 'id');
             assert_true($tplSectionIds !== [] && count($appliedIds) === count($tplSectionIds), 'the template\'s sections were applied');
             assert_eq([], array_values(array_intersect($tplSectionIds, $appliedIds)), 'with ids of their own');
         });

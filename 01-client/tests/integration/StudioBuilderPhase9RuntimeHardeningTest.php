@@ -156,14 +156,7 @@ function sbr_doc(string $heading, array $seo = []): array
 {
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', '');
     $doc['seo'] = array_merge($doc['seo'], $seo);
-    $doc['sections'] = [[
-        'blocks'     => [sbr_block('core.heading', ['text' => $heading, 'level' => 'h2'])],
-        'global_ref' => null,
-        'id'         => CanonicalDocumentSchema::newSectionId(),
-        'label'      => 'Main',
-        'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-    ]];
+    $doc['containers'] = [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Main'], 'children' => [sbr_block('core.heading', ['text' => $heading, 'level' => 'h2'])], 'visibility' => CanonicalDocumentSchema::defaultVisibility()])];
     return $doc;
 }
 

@@ -54,7 +54,7 @@ unit('sprint2 unit: ControlSchema tabs, sections, and standard presets', functio
     $arr = $cs->toArray();
     assert_true(isset($arr['content']));
     assert_eq('Content', $arr['content']['label']);
-    assert_eq(1, count($arr['content']['sections']));
+    assert_eq(1, count($arr['content']['containers']));
 
     $standard = ControlSchema::standard(
         contentControls: [['key' => 'label', 'type' => 'text']],
@@ -87,14 +87,8 @@ unit('sprint2 unit: DocumentValidator accepts valid visual styles and rejects ma
     $blocks = BlockRegistry::withAllCoreBlocks();
 
     $baseDoc = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Test Page');
-    $baseDoc['sections'] = [
-        [
-            'id' => CanonicalDocumentSchema::newSectionId(),
-            'label' => 'Hero',
-            'global_ref' => null,
-            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-            'layout' => ['width' => 'wide', 'padding_y' => ['base' => 'md']],
-            'blocks' => [
+    $baseDoc['containers'] = [
+        CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Hero'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'layout' => ['width' => 'wide', 'padding_y' => ['base' => 'md']] /*TODO*/, 'children' => [
                 [
                     'id' => CanonicalDocumentSchema::newBlockId(),
                     'type' => 'core.heading',
@@ -128,8 +122,7 @@ unit('sprint2 unit: DocumentValidator accepts valid visual styles and rejects ma
                         'desktop' => ['align' => 'left'],
                     ],
                 ],
-            ],
-        ],
+            ]]),
     ];
 
     $res = DocumentValidator::validate($baseDoc, $blocks);
@@ -137,7 +130,7 @@ unit('sprint2 unit: DocumentValidator accepts valid visual styles and rejects ma
 
     // A size breakpoint map used to be accepted and then rendered as no size at all (CL-M7): refused now.
     $mapDoc = $baseDoc;
-    $mapDoc['sections'][0]['blocks'][0]['style']['typography']['size'] = ['base' => '1rem', 'md' => '2rem'];
+    $mapDoc['containers'][0]['children'][0]['style']['typography']['size'] = ['base' => '1rem', 'md' => '2rem'];
     $mapRes = DocumentValidator::validate($mapDoc, $blocks);
     assert_false($mapRes->isValid(), 'a typography size map is refused');
     assert_true(in_array('invalid_style_value', array_column($mapRes->errors(), 'code'), true), 'as an invalid style value');
@@ -159,7 +152,7 @@ unit('sprint2 unit: DocumentValidator accepts valid visual styles and rejects ma
 
     foreach ($maliciousStyles as $idx => $badStyle) {
         $badDoc = $baseDoc;
-        $badDoc['sections'][0]['blocks'][0]['style'] = $badStyle;
+        $badDoc['containers'][0]['children'][0]['style'] = $badStyle;
         $badRes = DocumentValidator::validate($badDoc, $blocks);
         assert_false($badRes->isValid(), "Malicious/invalid style #{$idx} should be rejected");
     }
@@ -169,14 +162,8 @@ unit('sprint2 unit: DocumentValidator accepts valid visual styles and rejects ma
 
 unit('sprint2 unit: DocumentOperation & Applier handle responsive overrides, classNames, and attributes', function (): void {
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Page');
-    $doc['sections'] = [
-        [
-            'id' => CanonicalDocumentSchema::newSectionId(),
-            'label' => 'Section',
-            'global_ref' => null,
-            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-            'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
-            'blocks' => [
+    $doc['containers'] = [
+        CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Section'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [
                 [
                     'id' => 'blk_1',
                     'type' => 'core.heading',
@@ -187,8 +174,7 @@ unit('sprint2 unit: DocumentOperation & Applier handle responsive overrides, cla
                     'children' => [],
                     'style' => [],
                 ],
-            ],
-        ],
+            ]]),
     ];
 
     $applier = new DocumentOperationApplier();
@@ -200,20 +186,20 @@ unit('sprint2 unit: DocumentOperation & Applier handle responsive overrides, cla
         'mobile' => ['align' => 'center', 'hide' => true],
     ]);
     $doc1 = $applier->apply($doc, [$opResp], $blocks);
-    $b1 = $doc1['sections'][0]['blocks'][0];
+    $b1 = $doc1['containers'][0]['children'][0];
     assert_true(isset($b1['responsive']['mobile']['hide']));
     assert_eq('center', $b1['responsive']['mobile']['align']);
 
     // 2. update_block_class_names
     $opClass = DocumentOperation::updateBlockClassNames('blk_1', ['custom-cta', 'glow-effect']);
     $doc2 = $applier->apply($doc1, [$opClass], $blocks);
-    $b2 = $doc2['sections'][0]['blocks'][0];
+    $b2 = $doc2['containers'][0]['children'][0];
     assert_eq(['custom-cta', 'glow-effect'], $b2['classNames']);
 
     // 3. update_block_attributes
     $opAttr = DocumentOperation::updateBlockAttributes('blk_1', ['data-id' => 'hero-123', 'role' => 'banner']);
     $doc3 = $applier->apply($doc2, [$opAttr], $blocks);
-    $b3 = $doc3['sections'][0]['blocks'][0];
+    $b3 = $doc3['containers'][0]['children'][0];
     assert_eq('hero-123', $b3['attributes']['data-id']);
     assert_eq('banner', $b3['attributes']['role']);
 });

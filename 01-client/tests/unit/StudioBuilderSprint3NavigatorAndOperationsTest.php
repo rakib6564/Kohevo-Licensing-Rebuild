@@ -36,13 +36,13 @@ unit('sprint3 unit: DocumentOperation supports duplicate_block, duplicate_sectio
     assert_eq(DocumentOperation::OP_DUPLICATE_BLOCK, $opDupB->op);
     assert_eq(['block_id' => 'blk_1111111111111111'], $opDupB->payload);
 
-    $opDupS = DocumentOperation::duplicateSection('sec_2222222222222222');
+    $opDupS = DocumentOperation::duplicateBlock('blk_2222222222222222');
     assert_eq(DocumentOperation::OP_DUPLICATE_SECTION, $opDupS->op);
-    assert_eq(['section_id' => 'sec_2222222222222222'], $opDupS->payload);
+    assert_eq(['section_id' => 'blk_2222222222222222'], $opDupS->payload);
 
-    $opLabel = DocumentOperation::updateSectionLabel('sec_2222222222222222', 'New Hero Label');
+    $opLabel = DocumentOperation::updateBlockMeta('blk_2222222222222222', ['label' => 'New Hero Label']);
     assert_eq(DocumentOperation::OP_UPDATE_SECTION_LABEL, $opLabel->op);
-    assert_eq(['section_id' => 'sec_2222222222222222', 'label' => 'New Hero Label'], $opLabel->payload);
+    assert_eq(['section_id' => 'blk_2222222222222222', 'label' => 'New Hero Label'], $opLabel->payload);
 
     // Payload validation: missing keys fail closed
     assert_throws(StudioValidationException::class, static function (): void {
@@ -62,9 +62,9 @@ unit('sprint3 unit: DocumentOperationApplier duplicateBlock duplicates deep subt
     $reg = BlockRegistry::withAllCoreBlocks();
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default');
 
-    $opSec = new DocumentOperation('insert_section', ['index' => 0, 'section' => ['label' => 'Main']]);
+    $opSec = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Main']]]);
     $doc = DocumentOperationApplier::applyOne($doc, $opSec, $reg);
-    $secId = $doc['sections'][0]['id'];
+    $secId = $doc['containers'][0]['id'];
 
     $innerButton = [
         'id' => CanonicalDocumentSchema::newBlockId(),
@@ -102,15 +102,15 @@ unit('sprint3 unit: DocumentOperationApplier duplicateBlock duplicates deep subt
     $opInsert = new DocumentOperation('insert_block', ['parent_id' => $secId, 'index' => 0, 'block' => $container]);
     $doc = DocumentOperationApplier::applyOne($doc, $opInsert, $reg);
 
-    $origContainerId = $doc['sections'][0]['blocks'][0]['id'];
-    $origHeadingId = $doc['sections'][0]['blocks'][0]['children'][0]['id'];
-    $origButtonId = $doc['sections'][0]['blocks'][0]['children'][1]['id'];
+    $origContainerId = $doc['containers'][0]['children'][0]['id'];
+    $origHeadingId = $doc['containers'][0]['children'][0]['children'][0]['id'];
+    $origButtonId = $doc['containers'][0]['children'][0]['children'][1]['id'];
 
     // Duplicate the entire container with its children
     $opDup = DocumentOperation::duplicateBlock($origContainerId);
     $docAfterDup = DocumentOperationApplier::applyOne($doc, $opDup, $reg);
 
-    $blocks = $docAfterDup['sections'][0]['blocks'];
+    $blocks = $docAfterDup['containers'][0]['children'];
     assert_eq(2, count($blocks), 'container duplicated in section');
 
     $firstContainer = $blocks[0];
@@ -139,9 +139,9 @@ unit('sprint3 unit: DocumentOperationApplier duplicateSection duplicates section
     $reg = BlockRegistry::withAllCoreBlocks();
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default');
 
-    $opSec = new DocumentOperation('insert_section', ['index' => 0, 'section' => ['label' => 'Features']]);
+    $opSec = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Features']]]);
     $doc = DocumentOperationApplier::applyOne($doc, $opSec, $reg);
-    $secId = $doc['sections'][0]['id'];
+    $secId = $doc['containers'][0]['id'];
 
     $btn = [
         'id' => CanonicalDocumentSchema::newBlockId(),
@@ -156,12 +156,12 @@ unit('sprint3 unit: DocumentOperationApplier duplicateSection duplicates section
     $opInsert = new DocumentOperation('insert_block', ['parent_id' => $secId, 'index' => 0, 'block' => $btn]);
     $doc = DocumentOperationApplier::applyOne($doc, $opInsert, $reg);
 
-    $opDupSec = DocumentOperation::duplicateSection($secId);
+    $opDupSec = DocumentOperation::duplicateBlock($secId);
     $docAfterDup = DocumentOperationApplier::applyOne($doc, $opDupSec, $reg);
 
-    assert_eq(2, count($docAfterDup['sections']), 'section duplicated');
-    $sec1 = $docAfterDup['sections'][0];
-    $sec2 = $docAfterDup['sections'][1];
+    assert_eq(2, count($docAfterDup['containers']), 'section duplicated');
+    $sec1 = $docAfterDup['containers'][0];
+    $sec2 = $docAfterDup['containers'][1];
 
     assert_eq($secId, $sec1['id']);
     assert_true($sec2['id'] !== $secId, 'cloned section receives fresh ID');
@@ -180,22 +180,22 @@ unit('sprint3 unit: DocumentOperationApplier updateSectionLabel renames section 
     $reg = BlockRegistry::withAllCoreBlocks();
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default');
 
-    $opSec = new DocumentOperation('insert_section', ['index' => 0, 'section' => ['label' => 'Original Label']]);
+    $opSec = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Original Label']]]);
     $doc = DocumentOperationApplier::applyOne($doc, $opSec, $reg);
-    $secId = $doc['sections'][0]['id'];
+    $secId = $doc['containers'][0]['id'];
 
-    $opRename = DocumentOperation::updateSectionLabel($secId, 'Our Client Testimonials');
+    $opRename = DocumentOperation::updateBlockMeta($secId, ['label' => 'Our Client Testimonials']);
     $doc = DocumentOperationApplier::applyOne($doc, $opRename, $reg);
-    assert_eq('Our Client Testimonials', $doc['sections'][0]['label']);
+    assert_eq('Our Client Testimonials', $doc['containers'][0]['label']);
 
     // Hostile / unsafe input rejected
     assert_throws(StudioValidationException::class, static function () use ($doc, $secId, $reg): void {
-        $hostile = DocumentOperation::updateSectionLabel($secId, '<script>alert(1)</script>');
+        $hostile = DocumentOperation::updateBlockMeta($secId, ['label' => '<script>alert(1)</script>']);
         DocumentOperationApplier::applyOne($doc, $hostile, $reg);
     }, 'rejects script in label');
 
     assert_throws(StudioValidationException::class, static function () use ($doc, $secId, $reg): void {
-        $hostile = DocumentOperation::updateSectionLabel($secId, 'Title UNION SELECT 1,2,3');
+        $hostile = DocumentOperation::updateBlockMeta($secId, ['label' => 'Title UNION SELECT 1,2,3']);
         DocumentOperationApplier::applyOne($doc, $hostile, $reg);
     }, 'rejects sql in label');
 });

@@ -142,14 +142,7 @@ function s7_make_block(string $type, array $props, array $children = [], ?array 
 
 function s7_make_section(array $blocks, string $label = 'Marketing Section'): array
 {
-    return [
-        'id'         => CanonicalDocumentSchema::newSectionId(),
-        'label'      => $label,
-        'global_ref' => null,
-        'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        'blocks'     => $blocks,
-    ];
+    return CanonicalDocumentSchema::newContainer(['metadata' => ['label' => $label], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => $blocks]);
 }
 
 unit('sprint7 integration: production marketing website with animation, modal, offcanvas, forms, video, gallery, and isolation', function (): void {
@@ -328,9 +321,9 @@ unit('sprint7 integration: production marketing website with animation, modal, o
             $secInteractive = s7_make_section([$offcanvasDrawer, $contactModal], 'Interactive Navigation & Actions');
             $secMedia = s7_make_section([$videoShowcase, $videoOverlay, $customerGallery], 'Media & Video');
 
-            $op1 = new DocumentOperation('insert_section', ['index' => 0, 'section' => $secHero]);
-            $op2 = new DocumentOperation('insert_section', ['index' => 1, 'section' => $secInteractive]);
-            $op3 = new DocumentOperation('insert_section', ['index' => 2, 'section' => $secMedia]);
+            $op1 = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => $secHero]);
+            $op2 = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 1, 'block' => $secInteractive]);
+            $op3 = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 2, 'block' => $secMedia]);
 
             $resEdit = $rt->tenants->runAs(S7_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, $pageId, [$op1, $op2, $op3], $revId, 'Build complete marketing page'));
             $revId = (int) $resEdit['revision']['id'];

@@ -77,7 +77,7 @@ unit('element manager: only inserting a switched-off block is blocked, including
 });
 
 unit('element manager: the usage scan counts blocks and pages, nested blocks included', function (): void {
-    $doc = static fn (array $sections): array => ['sections' => $sections];
+    $doc = static fn (array $sections): array => ['containers' => $sections];
     $pages = [
         ['title' => 'Home', 'document' => $doc([
             ['blocks' => [['type' => 'core.heading'], ['type' => 'layout.flex', 'children' => [['type' => 'core.heading'], ['type' => 'core.button']]]]],
@@ -85,7 +85,7 @@ unit('element manager: the usage scan counts blocks and pages, nested blocks inc
         ])],
         ['title' => 'About', 'document' => $doc([['blocks' => [['type' => 'core.button']]]])],
         ['title' => 'Empty', 'document' => $doc([])],
-        ['title' => 'Broken', 'document' => ['sections' => 'nope']],
+        ['title' => 'Broken', 'document' => ['containers' => 'nope']],
     ];
     $usage = BlockUsage::count($pages);
     assert_eq(3, $usage['core.heading']['blocks']);

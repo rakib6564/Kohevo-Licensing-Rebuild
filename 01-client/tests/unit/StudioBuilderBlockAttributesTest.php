@@ -56,10 +56,10 @@ function sbat_doc(array $attributes): array
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default');
     $doc = DocumentOperationApplier::applyOne(
         $doc,
-        new DocumentOperation('insert_section', ['index' => 0, 'section' => ['label' => 'Main']]),
+        new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Main']]]),
         BlockRegistry::withAllCoreBlocks()
     );
-    $doc['sections'][0]['blocks'][] = sbat_block($attributes);
+    $doc['containers'][0]['children'][] = sbat_block($attributes);
     return $doc;
 }
 
@@ -122,7 +122,7 @@ unit('block attributes: malformed names, reserved prefixes, bare prefixes and ba
 unit('block attributes: update_block_attributes cannot store a handler (builder and AI/MCP share the applier)', function (): void {
     $reg = BlockRegistry::withAllCoreBlocks();
     $doc = sbat_doc([]);
-    $id  = $doc['sections'][0]['blocks'][0]['id'];
+    $id  = $doc['containers'][0]['children'][0]['id'];
     $doc = DocumentOperationApplier::applyOne($doc, DocumentOperation::updateBlockAttributes($id, ['data-ok' => '1']), $reg);
     DocumentNormalizer::validateAndNormalize($doc, $reg);
 

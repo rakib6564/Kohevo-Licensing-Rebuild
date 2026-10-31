@@ -6,7 +6,7 @@
  * The handler used to insert the template, its backing page and revision #1
  * with raw SQL: uuids from mt_rand, a 16-bit key suffix, the name stored
  * unchecked, the starter document never validated (a Section Preset was
- * stored with settings.template_type 'section_preset', which the editor's
+ * stored with settings.template_type 'container_preset', which the editor's
  * validator refuses), and exception text — SQL included — shown in the
  * flash. Now it goes through the Studio services in one transaction, like
  * the editor: the template and the page's first draft are canonical,
@@ -100,7 +100,7 @@ unit('theme builder create: every type is created through the Studio services as
     $tag = 'stcre' . bin2hex(random_bytes(3));
     $registry = ModuleBlockDefinitions::studioRegistry();
     try {
-        foreach (['header', 'footer', 'single', 'archive', 'not_found', 'section_preset'] as $uiType) {
+        foreach (['header', 'footer', 'single', 'archive', 'not_found', 'container_preset'] as $uiType) {
             [$status, $body] = stcre_post(['_action' => 'create_template', 'name' => "Made {$uiType} {$tag}", 'template_type' => $uiType, 'condition_rule' => 'all_posts']);
             assert_eq(303, $status, "{$uiType}: back to the list (POST/redirect/GET)");
             assert_true(str_contains(stcre_flash($body), 'created as draft'), "{$uiType}: success flash, got: " . stcre_flash($body));
@@ -125,7 +125,7 @@ unit('theme builder create: every type is created through the Studio services as
         $byType = array_column(array_map(static fn(array $m): array => [$m['template']['template_type'] . '/' . $m['template']['category'], json_decode((string) $m['template']['document_json'], true)], $made), 1, 0);
         assert_eq('single', $byType['page_template/single']['settings']['template_type'] ?? null, 'a Single template keeps its role');
         assert_eq('singular', $byType['page_template/single']['settings']['conditions']['rules'][0]['condition'] ?? null, 'and its display condition');
-        assert_true(!isset($byType['section_preset/section']['settings']['template_type']) && !isset($byType['section_preset/section']['settings']['conditions']), 'a section preset carries no theme role or conditions');
+        assert_true(!isset($byType['container_preset/section']['settings']['template_type']) && !isset($byType['container_preset/section']['settings']['conditions']), 'a section preset carries no theme role or conditions');
     } finally {
         stcre_cleanup($tag);
         $unentitle();
@@ -141,7 +141,7 @@ unit('theme builder create: a header can start from a built-in design; an unknow
         $walk = static function (array $blocks) use (&$walk, &$out): void {
             foreach ($blocks as $b) { $out[] = (string) $b['type']; $walk(is_array($b['children'] ?? null) ? $b['children'] : []); }
         };
-        foreach ($doc['sections'] as $sec) { $walk($sec['blocks']); }
+        foreach ($doc['containers'] as $sec) { $walk($sec['blocks']); }
         return $out;
     };
     try {
@@ -163,8 +163,8 @@ unit('theme builder create: a header can start from a built-in design; an unknow
             assert_eq($types($design['document']), $types($draft), "{$design['key']}: the header holds the design's blocks");
             assert_eq('header', $draft['settings']['template_type'] ?? null, "{$design['key']}: still a header");
             assert_true(!empty($draft['settings']['conditions']['rules']), "{$design['key']}: keeps the display condition chosen on the form");
-            $catalogueIds = array_column($design['document']['sections'], 'id');
-            assert_eq([], array_values(array_intersect($catalogueIds, array_column($draft['sections'], 'id'))), "{$design['key']}: the copy has its own ids");
+            $catalogueIds = array_column($design['document']['containers'], 'id');
+            assert_eq([], array_values(array_intersect($catalogueIds, array_column($draft['containers'], 'id'))), "{$design['key']}: the copy has its own ids");
         }
         $rev = Database::row('SELECT document_json FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [current_tenant_id(), (int) $made["Design unknown {$tag}"]['page']['active_draft_revision_id']]);
         assert_eq(['core.heading'], $types(json_decode((string) $rev['document_json'], true)), 'a key that is not a header design starts from the blank header');
@@ -193,7 +193,7 @@ unit('theme builder: "Edit in canvas" on a built-in header makes a draft header 
         assert_true(is_array($page) && $page['page_type'] === 'header_partial', 'a header page to edit in the canvas');
         assert_true($page['published_revision_id'] === null, 'a draft: not live until it is published');
         $draft = json_decode((string) Database::value('SELECT document_json FROM studiobuilder_revisions WHERE tenant_id = ? AND id = ?', [$tid, (int) $page['active_draft_revision_id']]), true);
-        assert_eq(array_column($design['document']['sections'], 'label'), array_column($draft['sections'], 'label'), 'the design\'s sections');
+        assert_eq(array_column($design['document']['containers'], 'label'), array_column($draft['containers'], 'label'), 'the design\'s sections');
         assert_eq('entire_site', $draft['settings']['conditions']['rules'][0]['condition'] ?? null, 'for the whole site once published');
         $system = Database::value("SELECT COUNT(*) FROM studiobuilder_templates WHERE tenant_id = ? AND template_key = 'system-header-split' AND is_system = 0", [$tid]);
         assert_eq(0, (int) $system, 'the built-in design itself is untouched');

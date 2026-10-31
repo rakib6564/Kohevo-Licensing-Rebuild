@@ -182,14 +182,7 @@ function sbp4_doc(array $blocks, string $type = 'page', array $settings = [], ar
     $doc = CanonicalDocumentSchema::emptyDocument($type, 'default', '');
     $doc['settings'] = array_merge($doc['settings'], $settings);
     $doc['seo'] = array_merge($doc['seo'], $seo);
-    $doc['sections'] = [[
-        'blocks'     => $blocks,
-        'global_ref' => null,
-        'id'         => CanonicalDocumentSchema::newSectionId(),
-        'label'      => 'Main',
-        'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-    ]];
+    $doc['containers'] = [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Main'], 'children' => $blocks, 'visibility' => CanonicalDocumentSchema::defaultVisibility()])];
     return $doc;
 }
 

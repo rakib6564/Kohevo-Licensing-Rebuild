@@ -39,7 +39,7 @@ function sbsp_blocks(array $document): array
             $walk(is_array($b['children'] ?? null) ? $b['children'] : []);
         }
     };
-    foreach ($document['sections'] as $s) {
+    foreach ($document['containers'] as $s) {
         $walk($s['blocks']);
     }
     return $out;
@@ -69,9 +69,9 @@ unit('section presets: every preset validates through the real pipeline and norm
         $once  = ValidatedDocument::from($p['document'], $registry, [])->toArray();
         $twice = ValidatedDocument::from($once, $registry, [])->toArray();
         assert_eq(CanonicalJson::encode($once), CanonicalJson::encode($twice), "{$p['key']} normalizes idempotently");
-        assert_eq('section_preset', $once['document_type']);
-        assert_eq(1, count($once['sections']), "{$p['key']} holds exactly one section");
-        assert_true(empty($once['sections'][0]['global_ref']), "{$p['key']} owns its content (no live reference)");
+        assert_eq('container_preset', $once['document_type']);
+        assert_eq(1, count($once['containers']), "{$p['key']} holds exactly one section");
+        assert_true(empty($once['containers'][0]['global_ref']), "{$p['key']} owns its content (no live reference)");
     }
 });
 
@@ -79,7 +79,7 @@ unit('section presets: no preset is a bare primitive, and every block type is re
     $registry = ModuleBlockDefinitions::studioRegistry();
     foreach (SectionPresetCatalog::all() as $p) {
         $blocks = sbsp_blocks($p['document']);
-        $top = $p['document']['sections'][0]['blocks'];
+        $top = $p['document']['containers'][0]['children'];
         assert_true(!(count($top) === 1 && $blocks[0]['children'] === [] && in_array($top[0]['type'], SBSP_PRIMITIVES, true)), "{$p['key']} is not a bare primitive");
         foreach ($blocks as $b) {
             assert_true($registry->get((string) $b['type']) !== null, "{$p['key']}: {$b['type']} is registered");
@@ -98,7 +98,7 @@ unit('section presets: deterministic — rebuilding gives byte-identical documen
     foreach (SectionPresetCatalog::all() as $p) {
         assert_eq($first[$p['key']], CanonicalJson::encode($p['document']), "{$p['key']} is stable across rebuilds");
         $ids = array_map(static fn(array $b): string => (string) $b['id'], sbsp_blocks($p['document']));
-        $ids[] = (string) $p['document']['sections'][0]['id'];
+        $ids[] = (string) $p['document']['containers'][0]['id'];
         assert_eq(count($ids), count(array_unique($ids)), "{$p['key']} ids are unique");
         foreach ($ids as $id) {
             assert_true(preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $id) === 1 || preg_match(CanonicalDocumentSchema::SECTION_ID_PATTERN, $id) === 1, "{$p['key']} id {$id} matches the id pattern");

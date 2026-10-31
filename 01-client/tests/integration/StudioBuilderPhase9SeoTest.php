@@ -143,14 +143,7 @@ function sbs9_doc(string $heading, array $seo = [], string $type = 'page'): arra
 {
     $doc = CanonicalDocumentSchema::emptyDocument($type, 'default', '');
     $doc['seo'] = array_merge($doc['seo'], $seo);
-    $doc['sections'] = [[
-        'blocks'     => [sbs9_block('core.heading', ['text' => $heading, 'level' => 'h2'])],
-        'global_ref' => null,
-        'id'         => CanonicalDocumentSchema::newSectionId(),
-        'label'      => 'Main',
-        'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-    ]];
+    $doc['containers'] = [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Main'], 'children' => [sbs9_block('core.heading', ['text' => $heading, 'level' => 'h2'])], 'visibility' => CanonicalDocumentSchema::defaultVisibility()])];
     return $doc;
 }
 
@@ -576,11 +569,11 @@ unit('phase9c integration: SEO settings, sitemap.xml, robots.txt and slug hygien
                 assert_eq(0, (int) Database::value("SELECT COUNT(*) FROM studiobuilder_pages WHERE tenant_id = ? AND slug = 'about' AND page_type = 'landing'", [SBS9_A]));
 
                 // Non-public document types never occupy a public address.
-                foreach (['section_preset', 'header_partial', 'footer_partial'] as $type) {
+                foreach (['container_preset', 'header_partial', 'footer_partial'] as $type) {
                     $created = $create(SBS9_A, 'about', $type);
                     assert_eq($type, (string) $created['page']['page_type'], "{$type} 'about' is allowed next to the page");
                 }
-                $create(SBS9_A, 'admin', 'section_preset'); // not a public address, so not a reserved-route problem
+                $create(SBS9_A, 'admin', 'container_preset'); // not a public address, so not a reserved-route problem
                 // Existing valid slugs are still valid.
                 foreach (['valid-slug', 'a', 'a1-b2', 'team-2026'] as $slug) {
                     $create(SBS9_A, $slug, 'page');

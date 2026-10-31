@@ -65,7 +65,8 @@ final class LayerLock
                 if (!is_array($block) || !is_string($block['id'] ?? null)) {
                     continue;
                 }
-                $index[$block['id']] = ['parent' => $parent, 'locked' => self::isLocked($block)];
+                // First seen wins: a repeated id (refused later, by the validator) must not point a block at its own descendant.
+                $index[$block['id']] ??= ['parent' => $parent, 'locked' => self::isLocked($block)];
                 $children = $block['children'] ?? null;
                 if (is_array($children)) {
                     $walk($children, $block['id']);

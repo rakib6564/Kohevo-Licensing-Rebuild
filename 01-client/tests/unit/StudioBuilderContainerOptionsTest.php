@@ -30,14 +30,10 @@ use Slate\Tenancy\TenantContext;
 /** A page with one container block carrying `$extra` (tag, link, style…). */
 function sbco_doc(array $extra = [], array $style = []): array
 {
-    return ['schema_version' => '1.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'sections' => [[
-        'id' => 'sec_aaaaaaaaaaaaaaaa', 'label' => 'S', 'global_ref' => null, 'layout' => CanonicalDocumentSchema::defaultSectionLayout(),
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        'blocks' => [[
-            'id' => 'blk_aaaaaaaaaaaaaaaa', 'type' => 'core.container', 'version' => 1, 'props' => [],
+    return ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'id' => 'blk_aaaaaaaaaaaaaaaa', 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [[
+            'id' => 'blk_aaaaaaaaaaaaaaaa', 'type' => 'core.container', 'version' => 2, 'props' => [],
             'style' => $style + CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [],
-        ] + $extra],
-    ]]];
+        ] + $extra]])]];
 }
 
 function sbco_valid(array $extra = [], array $style = []): bool
@@ -50,7 +46,7 @@ function sbco_render(array $extra): string
 {
     $tenants  = new TenantContext();
     $renderer = new DocumentRenderer(BlockRegistry::withAllCoreBlocks(), BlockRendererRegistry::withCoreRenderers(), new CoreMediaResolver($tenants), new ProviderBindingResolver(new DataProviderRegistry(), $tenants));
-    return $renderer->renderBlock(sbco_doc($extra)['sections'][0]['blocks'][0], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), new RenderCollector(), false);
+    return $renderer->renderBlock(sbco_doc($extra)['containers'][0]['children'][0], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), new RenderCollector(), false);
 }
 
 // ── Boxed content width ───────────────────────────────────────────────────
@@ -117,18 +113,18 @@ unit('container: a linked wrapper renders its href; a new tab adds noopener; an 
 unit('container: changing the tag away from a drops the link', function (): void {
     $registry = BlockRegistry::withAllCoreBlocks();
     $doc = DocumentOperationApplier::applyOne(sbco_doc(), new DocumentOperation('update_block_tag', ['block_id' => 'blk_aaaaaaaaaaaaaaaa', 'tag' => 'a', 'link' => ['url' => '/menu']]), $registry);
-    assert_eq(['url' => '/menu'], $doc['sections'][0]['blocks'][0]['link'] ?? null, 'stored with the a tag');
+    assert_eq(['url' => '/menu'], $doc['containers'][0]['children'][0]['link'] ?? null, 'stored with the a tag');
     $doc = DocumentOperationApplier::applyOne($doc, new DocumentOperation('update_block_tag', ['block_id' => 'blk_aaaaaaaaaaaaaaaa', 'tag' => 'section']), $registry);
-    assert_false(array_key_exists('link', $doc['sections'][0]['blocks'][0]), 'the address goes with the a');
+    assert_false(array_key_exists('link', $doc['containers'][0]['children'][0]), 'the address goes with the a');
     assert_throws(StudioValidationException::class, static fn () => DocumentOperationApplier::applyOne(sbco_doc(), new DocumentOperation('update_block_tag', ['block_id' => 'blk_aaaaaaaaaaaaaaaa', 'tag' => 'a', 'link' => ['url' => 'data:text/html,x']]), $registry), 'unsafe link refused');
 });
 
 unit('container: saving keeps a linked wrapper\'s address, and only with the a tag', function (): void {
     $registry = BlockRegistry::withAllCoreBlocks();
     $kept = DocumentNormalizer::normalize(sbco_doc(['tag' => 'a', 'link' => ['url' => '/menu', 'new_tab' => true]]), $registry);
-    assert_eq(['new_tab' => true, 'url' => '/menu'], $kept['sections'][0]['blocks'][0]['link'] ?? null, 'the link survives a save');
+    assert_eq(['new_tab' => true, 'url' => '/menu'], $kept['containers'][0]['children'][0]['link'] ?? null, 'the link survives a save');
     $dropped = DocumentNormalizer::normalize(sbco_doc(['tag' => 'section', 'link' => ['url' => '/menu']]), $registry);
-    assert_false(array_key_exists('link', $dropped['sections'][0]['blocks'][0]), 'a stray link on another tag is not kept');
+    assert_false(array_key_exists('link', $dropped['containers'][0]['children'][0]), 'a stray link on another tag is not kept');
 });
 
 unit('a section takes a border like a block: one for every side, each side\'s width, style and colour, and each corner\'s radius', function (): void {

@@ -43,7 +43,7 @@ unit('scroll effects: sticky and parallax validate with fixed shapes and refuse 
         assert_true(!DocumentValidator::validate(sbsm_doc(sbsm_section(['interactions' => $interactions])), $registry)->isValid(), "refused: {$why}");
     }
     $kept = DocumentNormalizer::normalize(sbsm_doc(sbsm_section(['interactions' => ['sticky' => ['edge' => 'bottom', 'devices' => ['mobile']]]])), $registry);
-    assert_eq(['sticky' => ['devices' => ['mobile'], 'edge' => 'bottom']], $kept['sections'][0]['interactions'], 'the canonical form keeps the settings');
+    assert_eq(['sticky' => ['devices' => ['mobile'], 'edge' => 'bottom']], $kept['containers'][0]['interactions'], 'the canonical form keeps the settings');
 });
 
 unit('scroll effects: a sticky section is sticky in the stylesheet, with its edge, offset, devices and stuck effects on the tag', function (): void {

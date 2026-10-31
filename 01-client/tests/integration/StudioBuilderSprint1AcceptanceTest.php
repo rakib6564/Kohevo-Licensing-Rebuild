@@ -251,11 +251,11 @@ unit('sprint1 integration: full nested visual tree (Hero -> Container -> Heading
 
             // 3. Persist the tree via application service operations
             // Insert an outer section first, then the nested layout tree into it
-            $opSec = new DocumentOperation('insert_section', ['index' => 0, 'section' => ['label' => 'Hero Section']]);
+            $opSec = new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Hero Section']]]);
             $sRes = $rt->tenants->runAs(S1_TENANT_A, static fn(): array => $rt->app->applyDocumentOperation($actorA, $pageId, [$opSec], $revId, 'Insert Hero Section'));
             $revId = (int) $sRes['revision']['id'];
             $secDoc = CanonicalJson::decode((string) $sRes['revision']['document_json']);
-            $secId = (string) $secDoc['sections'][0]['id'];
+            $secId = (string) $secDoc['containers'][0]['id'];
 
             $opBlock = new DocumentOperation('insert_block', ['parent_id' => $secId, 'index' => 0, 'block' => $sectionBlock]);
             $insertRes = $rt->tenants->runAs(S1_TENANT_A, static fn(): array => $rt->app->applyDocumentOperation($actorA, $pageId, [$opBlock], $revId, 'Insert Visual Tree'));
@@ -267,9 +267,9 @@ unit('sprint1 integration: full nested visual tree (Hero -> Container -> Heading
             assert_true(count($revisions) >= 3, 'immutable revision history persisted (created + section + blocks)');
             $editorState = $rt->tenants->runAs(S1_TENANT_A, fn(): array => $rt->app->loadEditorDocument($actorA, $pageId));
             $latestDoc = $editorState['document'];
-            assert_eq('layout.section', $latestDoc['sections'][0]['blocks'][0]['type']);
-            assert_eq('layout.container', $latestDoc['sections'][0]['blocks'][0]['children'][0]['type']);
-            assert_eq(3, count($latestDoc['sections'][0]['blocks'][0]['children'][0]['children']));
+            assert_eq('layout.section', $latestDoc['containers'][0]['children'][0]['type']);
+            assert_eq('layout.container', $latestDoc['containers'][0]['children'][0]['children'][0]['type']);
+            assert_eq(3, count($latestDoc['containers'][0]['children'][0]['children'][0]['children']));
 
             // 5. Publish page to compile public artifact
             $pubRes = $rt->tenants->runAs(S1_TENANT_A, static fn(): array => $rt->app->publish($actorA, $pageId, $revId));

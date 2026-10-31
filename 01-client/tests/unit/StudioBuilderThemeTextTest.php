@@ -43,7 +43,7 @@ function sbtt_render_editor(array $block): string
         new ProviderBindingResolver(new DataProviderRegistry(), new TenantContext())
     );
     return $renderer->renderSections(
-        sbdc_doc($block)['sections'],
+        sbdc_doc($block)['containers'],
         RenderContext::forEditor(101, new SiteContext('https://example.test', 'Test Site'), StudioActor::authenticated(1, StudioPermissions::ALL, true)),
         (new ThemeResolver())->resolve('default'),
         new RenderCollector(),

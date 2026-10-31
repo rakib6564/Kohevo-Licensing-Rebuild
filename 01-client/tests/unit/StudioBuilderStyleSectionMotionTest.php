@@ -30,20 +30,16 @@ use Slate\Tenancy\TenantContext;
 
 function sbsm_section(array $extra = []): array
 {
-    return $extra + [
-        'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'S', 'global_ref' => null, 'layout' => [],
-        'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-        'blocks' => [[
+    return $extra + CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'layout' => [] /*TODO*/, 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [[
             'id' => CanonicalDocumentSchema::newBlockId(), 'type' => 'core.heading', 'version' => 1,
             'props' => ['text' => 'x', 'level' => 'h2'], 'style' => CanonicalDocumentSchema::defaultBlockStyle(),
             'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [],
-        ]],
-    ];
+        ]]]);
 }
 
 function sbsm_doc(array $section): array
 {
-    return ['schema_version' => '1.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'sections' => [$section]];
+    return ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [$section]];
 }
 
 function sbsm_render(array $section): string
@@ -80,10 +76,10 @@ unit('section motion: animation and interactions validate with the block rules, 
 unit('section motion: the canonical form keeps motion only while it holds something', function (): void {
     $registry = BlockRegistry::withAllCoreBlocks();
     $with = DocumentNormalizer::normalize(sbsm_doc(sbsm_section(['animation' => ['type' => 'fade_in'], 'interactions' => ['trigger' => 'hover']])), $registry);
-    assert_eq(['type' => 'fade_in'], $with['sections'][0]['animation']);
-    assert_eq(['trigger' => 'hover'], $with['sections'][0]['interactions']);
+    assert_eq(['type' => 'fade_in'], $with['containers'][0]['animation']);
+    assert_eq(['trigger' => 'hover'], $with['containers'][0]['interactions']);
     $empty = DocumentNormalizer::normalize(sbsm_doc(sbsm_section(['animation' => [], 'interactions' => []])), $registry);
-    assert_true(!array_key_exists('animation', $empty['sections'][0]) && !array_key_exists('interactions', $empty['sections'][0]), 'empty objects are dropped');
+    assert_true(!array_key_exists('animation', $empty['containers'][0]) && !array_key_exists('interactions', $empty['containers'][0]), 'empty objects are dropped');
 });
 
 unit('section motion: the section element carries the classes, trigger attribute and timing; one without motion is unchanged', function (): void {

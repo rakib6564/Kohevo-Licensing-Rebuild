@@ -176,7 +176,7 @@ function sbp5_find(array $document, string $id): ?array
             $walk(is_array($b['children'] ?? null) ? $b['children'] : []);
         }
     };
-    foreach ($document['sections'] ?? [] as $s) {
+    foreach ($document['containers'] ?? [] as $s) {
         if (($s['id'] ?? null) === $id) {
             return $s;
         }
@@ -188,7 +188,7 @@ function sbp5_find(array $document, string $id): ?array
 /** @param array<string, mixed> $document @return list<string> */
 function sbp5_block_ids(array $document, int $section = 0): array
 {
-    return array_map(static fn(array $b): string => (string) $b['id'], $document['sections'][$section]['blocks'] ?? []);
+    return array_map(static fn(array $b): string => (string) $b['id'], $document['containers'][$section]['children'] ?? []);
 }
 
 unit('phase5 integration: builder command/query API (real MySQL, tenants 101/202/303)', function (): void {
@@ -254,10 +254,10 @@ unit('phase5 integration: builder command/query API (real MySQL, tenants 101/202
             unit('phase5 int 2: insert section/blocks are canonical operations that create autosave revisions', function () use ($rt, $editor, $S): void {
                 $r = sbp5_ok(sbp5_call($rt, SBP5_TENANT_A, $editor, 'POST', 'operations', [
                     'page_id' => $S->pageA, 'expected_revision_id' => $S->revA, 'revision_kind' => 'autosave',
-                    'operations' => [['op' => 'insert_section', 'payload' => ['index' => 0, 'section' => ['label' => 'Intro']]]],
+                    'operations' => [['op' => 'insert_block', 'payload' => ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Intro']]]]],
                 ]), 'insert_section');
                 assert_eq('autosave', $r['revision']['revision_kind']);
-                $S->section = (string) $r['document']['sections'][0]['id'];
+                $S->section = (string) $r['document']['containers'][0]['id'];
                 assert_true(preg_match('/^sec_[a-z0-9]{16,32}$/', $S->section) === 1, 'the SERVER minted the section id');
                 $rev = (int) $r['revision']['id'];
 
@@ -304,7 +304,7 @@ unit('phase5 integration: builder command/query API (real MySQL, tenants 101/202
                 assert_eq('Welcome to Alpha', $h['props']['text']);
                 assert_eq(['base' => 'center', 'md' => 'left'], $h['style']['align']);
                 assert_eq(['md', 'lg'], sbp5_find($reloaded['document'], $S->rich)['visibility']['devices']);
-                assert_eq(['base' => 1, 'md' => 3], $reloaded['document']['sections'][0]['layout']['columns']);
+                assert_eq(['base' => 1, 'md' => 3], $reloaded['document']['containers'][0]['layout']['columns']);
                 assert_eq('About Alpha', $reloaded['document']['seo']['title']);
             });
 
@@ -312,21 +312,21 @@ unit('phase5 integration: builder command/query API (real MySQL, tenants 101/202
             unit('phase5 int 4: move a block across containers, reorder sections, remove a block', function () use ($rt, $editor, $S): void {
                 $r = sbp5_ok(sbp5_call($rt, SBP5_TENANT_A, $editor, 'POST', 'operations', [
                     'page_id' => $S->pageA, 'expected_revision_id' => $S->rev, 'revision_kind' => 'autosave',
-                    'operations' => [['op' => 'insert_section', 'payload' => ['index' => 1, 'section' => ['label' => 'Second']]]],
+                    'operations' => [['op' => 'insert_block', 'payload' => ['parent_id' => null, 'index' => 1, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Second']]]]],
                 ]), 'second section');
-                $second = (string) $r['document']['sections'][1]['id'];
+                $second = (string) $r['document']['containers'][1]['id'];
                 $r = sbp5_ok(sbp5_call($rt, SBP5_TENANT_A, $editor, 'POST', 'operations', [
                     'page_id' => $S->pageA, 'expected_revision_id' => (int) $r['revision']['id'], 'revision_kind' => 'autosave',
                     'operations' => [
                         ['op' => 'move_block', 'payload' => ['block_id' => $S->heading, 'parent_id' => $S->container, 'index' => 1]],
                         ['op' => 'move_block', 'payload' => ['block_id' => $S->button, 'parent_id' => $second, 'index' => 0]],
-                        ['op' => 'move_section', 'payload' => ['section_id' => $second, 'to_index' => 0]],
+                        ['op' => 'move_block', 'payload' => ['block_id' => $second, 'parent_id' => null, 'index' => 0]],
                         ['op' => 'remove_block', 'payload' => ['block_id' => $S->rich]],
                     ],
                 ]), 'move batch');
                 $S->rev = (int) $r['revision']['id'];
                 $doc = $r['document'];
-                assert_eq($second, $doc['sections'][0]['id'], 'sections reordered');
+                assert_eq($second, $doc['containers'][0]['id'], 'sections reordered');
                 assert_eq([$S->button], sbp5_block_ids($doc, 0), 'block moved across sections');
                 assert_eq($S->heading, sbp5_find($doc, $S->container)['children'][0]['id'], 'block moved into a container');
                 assert_null(sbp5_find($doc, $S->rich), 'block removed');
@@ -467,7 +467,7 @@ unit('phase5 integration: builder command/query API (real MySQL, tenants 101/202
                 assert_true(!in_array('booking.services', $provKeysB, true) && !in_array('memberships.plans', $provKeysB, true), 'no unentitled data providers are described');
                 $sec = sbp5_ok(sbp5_call($rt, SBP5_TENANT_B, $editor, 'POST', 'operations', ['page_id' => $pageB, 'expected_revision_id' => $revB, 'operations' => [['op' => 'insert_section', 'payload' => ['index' => 0]]]]), 'B section');
                 $r = sbp5_call($rt, SBP5_TENANT_B, $editor, 'POST', 'operations', ['page_id' => $pageB, 'expected_revision_id' => (int) $sec['revision']['id'], 'operations' => [
-                    ['op' => 'insert_block', 'payload' => ['parent_id' => (string) $sec['document']['sections'][0]['id'], 'index' => 0, 'block' => ['type' => 'booking.services', 'bindings' => ['items' => ['provider' => 'booking.services']]]]],
+                    ['op' => 'insert_block', 'payload' => ['parent_id' => (string) $sec['document']['containers'][0]['id'], 'index' => 0, 'block' => ['type' => 'booking.services', 'bindings' => ['items' => ['provider' => 'booking.services']]]]],
                 ]]);
                 assert_eq(422, $r->status, 'a crafted request cannot insert an unentitled module block');
             });
@@ -510,7 +510,7 @@ unit('phase5 integration: builder command/query API (real MySQL, tenants 101/202
                 assert_true($heading !== null, 'the page has a heading to build a section from');
                 $heading['id'] = 'tmp_h';
                 $heading['props']['text'] = 'Section rendered before saving';
-                $section = ['id' => 'tmp_s', 'label' => 'Draft', 'blocks' => [$heading]];
+                $section = \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Draft'], 'id' => 'tmp_s', 'children' => [$heading]]);
                 $revisions = sbp5_count('SELECT COUNT(*) FROM studiobuilder_revisions WHERE tenant_id = ? AND page_id = ?', [SBP5_TENANT_A, $S->pageA]);
 
                 $r = sbp5_ok(sbp5_call($rt, SBP5_TENANT_A, $editor, 'POST', 'render_section', ['page_id' => $S->pageA, 'section' => $section]), 'render_section');

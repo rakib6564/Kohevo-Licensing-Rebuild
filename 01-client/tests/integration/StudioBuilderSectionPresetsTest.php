@@ -182,13 +182,13 @@ function sbpa_make_page(StudioRuntime $rt, int $tenantId, StudioActor $actor, st
     $created = sbpa_ok(sbpa_call($rt, $tenantId, $actor, 'POST', 'create_page', ['title' => $title, 'slug' => $slug, 'page_type' => $pageType, 'route_mode' => 'standalone']), "create {$slug}");
     $pageId = (int) $created['page']['id'];
     $rev = (int) $created['page']['active_draft_revision_id'];
-    $ops = [['op' => 'insert_section', 'payload' => ['index' => 0, 'section' => ['label' => $title . ' section']]]];
+    $ops = [['op' => 'insert_block', 'payload' => ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => $title . ' section']]]]];
     if ($settings !== []) {
         $ops[] = ['op' => 'update_settings', 'payload' => ['settings' => $settings]];
     }
     $r = sbpa_ok(sbpa_call($rt, $tenantId, $actor, 'POST', 'operations', ['page_id' => $pageId, 'expected_revision_id' => $rev, 'operations' => $ops]), "section {$slug}");
     $rev = (int) $r['revision']['id'];
-    $sectionId = (string) $r['document']['sections'][0]['id'];
+    $sectionId = (string) $r['document']['containers'][0]['id'];
     foreach ($blocks as $i => $block) {
         $r = sbpa_ok(sbpa_call($rt, $tenantId, $actor, 'POST', 'operations', ['page_id' => $pageId, 'expected_revision_id' => $rev, 'operations' => [
             ['op' => 'insert_block', 'payload' => ['parent_id' => $sectionId, 'index' => $i, 'block' => $block]],
@@ -226,7 +226,7 @@ function sbpa_ids(array $document): array
             $walk(is_array($b['children'] ?? null) ? $b['children'] : []);
         }
     };
-    foreach ($document['sections'] ?? [] as $s) {
+    foreach ($document['containers'] ?? [] as $s) {
         $ids[] = (string) $s['id'];
         $walk($s['blocks'] ?? []);
     }
@@ -270,11 +270,11 @@ unit('section presets integration: seeding, protection, isolation and insertion 
             assert_eq(0, $sysCount(SBPA_TENANT_A), 'listing the library does not seed');
 
             // 1. First call seeds; the rows are system templates of the right shape.
-            $first = sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $viewer, 'GET', 'section_presets'), 'first call (a viewer may read)')['presets'];
+            $first = sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $viewer, 'GET', 'container_presets'), 'first call (a viewer may read)')['presets'];
             assert_eq($expected, array_column($first, 'template_key'), 'every catalogue key is present, in catalogue order');
             assert_eq(count($expected), $sysCount(SBPA_TENANT_A));
             foreach ($first as $row) {
-                assert_true($row['is_system'] === true && $row['template_type'] === 'section_preset', "{$row['template_key']} is a system section preset");
+                assert_true($row['is_system'] === true && $row['template_type'] === 'container_preset', "{$row['template_key']} is a system section preset");
                 assert_true(is_array($row['outline'] ?? null) && $row['outline'] !== [], "{$row['template_key']} has a wireframe outline");
                 assert_true(!isset($row['document_json']) && !isset($row['document']), 'no document body reaches the panel');
             }
@@ -285,22 +285,22 @@ unit('section presets integration: seeding, protection, isolation and insertion 
             $before = $rt->tenants->runAs(SBPA_TENANT_A, static fn() => Database::all("SELECT template_key, updated_at FROM studiobuilder_templates WHERE tenant_id = ? AND is_system = 1 ORDER BY template_key", [SBPA_TENANT_A]));
             // the per-request memo is process-wide: clear it so the second call exercises the DB path
             (new \ReflectionProperty(\Slate\Module\StudioBuilder\Application\StudioApplicationService::class, 'presetsSynced'))->setValue(null, []);
-            sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'GET', 'section_presets'), 'second call');
+            sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'GET', 'container_presets'), 'second call');
             $after = $rt->tenants->runAs(SBPA_TENANT_A, static fn() => Database::all("SELECT template_key, updated_at FROM studiobuilder_templates WHERE tenant_id = ? AND is_system = 1 ORDER BY template_key", [SBPA_TENANT_A]));
             assert_eq($before, $after, 'unchanged presets are not rewritten');
             assert_eq(count($expected), $sysCount(SBPA_TENANT_A), 'no duplicates');
 
             // 3. Isolation: tenant B has none until it asks; then it has its own copies; tenant C (no entitlement) is refused.
             assert_eq(0, $sysCount(SBPA_TENANT_B), 'tenant B untouched by tenant A');
-            sbpa_ok(sbpa_call($rt, SBPA_TENANT_B, $editor, 'GET', 'section_presets'), 'tenant B call');
+            sbpa_ok(sbpa_call($rt, SBPA_TENANT_B, $editor, 'GET', 'container_presets'), 'tenant B call');
             assert_eq(count($expected), $sysCount(SBPA_TENANT_B));
-            $c = sbpa_call($rt, SBPA_TENANT_C, $editor, 'GET', 'section_presets');
+            $c = sbpa_call($rt, SBPA_TENANT_C, $editor, 'GET', 'container_presets');
             assert_true(!$c->isOk(), 'a tenant without the studio-builder entitlement cannot read presets');
             assert_eq(0, $sysCount(SBPA_TENANT_C));
 
             // 4. System presets are immutable server-side (overwrite and delete), even for an admin.
             $page = sbpa_make_page($rt, SBPA_TENANT_A, $editor, 'Home', 'home', 'page', [['type' => 'core.heading', 'props' => ['text' => 'Home', 'level' => 'h1']]]);
-            $overwrite = sbpa_call($rt, SBPA_TENANT_A, $admin, 'POST', 'save_template', ['page_id' => $page['id'], 'node_id' => $page['section'], 'template_key' => 'system-section-faq', 'template_type' => 'section_preset', 'category' => 'content', 'name' => 'Mine', 'description' => null, 'thumbnail_media_id' => null]);
+            $overwrite = sbpa_call($rt, SBPA_TENANT_A, $admin, 'POST', 'save_template', ['page_id' => $page['id'], 'node_id' => $page['section'], 'template_key' => 'system-section-faq', 'template_type' => 'container_preset', 'category' => 'content', 'name' => 'Mine', 'description' => null, 'thumbnail_media_id' => null]);
             assert_eq('system_template_immutable', sbpa_first_code($overwrite), 'cannot overwrite a system preset');
             $delete = sbpa_call($rt, SBPA_TENANT_A, $admin, 'POST', 'delete_template', ['template_key' => 'system-section-faq']);
             assert_eq('system_template_immutable', sbpa_first_code($delete), 'cannot delete a system preset');
@@ -308,9 +308,9 @@ unit('section presets integration: seeding, protection, isolation and insertion 
             // 5. A tenant template that already owns a preset key is never clobbered.
             sbpa_seed(SBPA_TENANT_C, $iid, ['studio-builder']);
             $own = sbpa_make_page($rt, SBPA_TENANT_C, $editor, 'Own', 'own', 'page', [['type' => 'core.heading', 'props' => ['text' => 'Mine', 'level' => 'h2']]]);
-            sbpa_ok(sbpa_call($rt, SBPA_TENANT_C, $admin, 'POST', 'save_template', ['page_id' => $own['id'], 'node_id' => $own['section'], 'template_key' => 'system-section-cta', 'template_type' => 'section_preset', 'category' => 'cta', 'name' => 'Tenant owned CTA', 'description' => null, 'thumbnail_media_id' => null]), 'tenant template on a preset key');
+            sbpa_ok(sbpa_call($rt, SBPA_TENANT_C, $admin, 'POST', 'save_template', ['page_id' => $own['id'], 'node_id' => $own['section'], 'template_key' => 'system-section-cta', 'template_type' => 'container_preset', 'category' => 'cta', 'name' => 'Tenant owned CTA', 'description' => null, 'thumbnail_media_id' => null]), 'tenant template on a preset key');
             (new \ReflectionProperty(\Slate\Module\StudioBuilder\Application\StudioApplicationService::class, 'presetsSynced'))->setValue(null, []);
-            sbpa_ok(sbpa_call($rt, SBPA_TENANT_C, $editor, 'GET', 'section_presets'), 'seed beside a colliding tenant key');
+            sbpa_ok(sbpa_call($rt, SBPA_TENANT_C, $editor, 'GET', 'container_presets'), 'seed beside a colliding tenant key');
             $row = $rt->tenants->runAs(SBPA_TENANT_C, static fn() => $rt->templates->findByKey('system-section-cta'));
             assert_true((int) $row['is_system'] === 0 && $row['name'] === 'Tenant owned CTA', 'the tenant\'s own template survives untouched');
             assert_eq(count($expected) - 1, $sysCount(SBPA_TENANT_C), 'every other preset is still seeded');
@@ -320,7 +320,7 @@ unit('section presets integration: seeding, protection, isolation and insertion 
                 $status = sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'GET', 'status', ['page' => $page['id']]), 'status')['page'];
                 $r = sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'POST', 'insert_template', ['page_id' => $page['id'], 'template_key' => $key, 'index' => 0, 'expected_revision_id' => (int) $status['active_draft_revision_id']]), "insert {$key}");
                 $doc = $r['document'];
-                assert_true(count($doc['sections']) >= 2, "{$key} added a section");
+                assert_true(count($doc['containers']) >= 2, "{$key} added a section");
                 $ids = sbpa_ids($doc);
                 assert_eq(count($ids), count(array_unique($ids)), "{$key}: ids stay unique after insertion");
             }
@@ -373,17 +373,17 @@ unit('header presets integration: seeded on first use apart from the sections, i
                 assert_true(!isset($row['document_json']) && !isset($row['document']), 'no document body reaches the panel');
             }
             assert_eq(6, $count('header_preset'));
-            assert_eq(0, $count('section_preset'), 'headers are seeded on their own, not with the sections');
+            assert_eq(0, $count('container_preset'), 'headers are seeded on their own, not with the sections');
 
             // 2. Idempotent, and the sections' seeding leaves the headers alone (and the other way round).
             $rows = static fn() => $rt->tenants->runAs(SBPA_TENANT_A, static fn() => Database::all("SELECT template_key, updated_at FROM studiobuilder_templates WHERE tenant_id = ? AND is_system = 1 AND template_type = 'header_preset' ORDER BY template_key", [SBPA_TENANT_A]));
             $before = $rows();
             $resetMemos();
             sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'GET', 'header_presets'), 'second call');
-            sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'GET', 'section_presets'), 'section presets');
+            sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'GET', 'container_presets'), 'section presets');
             assert_eq($before, $rows(), 'unchanged headers are not rewritten');
             assert_eq(6, $count('header_preset'), 'no duplicates');
-            assert_eq(count(SectionPresetCatalog::all()), $count('section_preset'), 'the sections seed only sections');
+            assert_eq(count(SectionPresetCatalog::all()), $count('container_preset'), 'the sections seed only sections');
 
             // 3. Immutable, even for an admin.
             assert_eq('system_template_immutable', sbpa_first_code(sbpa_call($rt, SBPA_TENANT_A, $admin, 'POST', 'delete_template', ['template_key' => 'system-header-classic'])), 'cannot delete a system header');
@@ -395,8 +395,8 @@ unit('header presets integration: seeded on first use apart from the sections, i
                 $r = sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'POST', 'apply_template', ['page_id' => $page['id'], 'template_key' => $preset['key'], 'expected_revision_id' => (int) $status['active_draft_revision_id']]), "apply {$preset['key']}");
                 $doc = $r['document'];
                 assert_eq('header_partial', $doc['document_type']);
-                assert_eq(count($preset['document']['sections']), count($doc['sections']), "{$preset['key']} replaced the header's sections");
-                assert_eq(array_column($preset['document']['sections'], 'label'), array_column($doc['sections'], 'label'));
+                assert_eq(count($preset['document']['containers']), count($doc['containers']), "{$preset['key']} replaced the header's sections");
+                assert_eq(array_column($preset['document']['containers'], 'label'), array_column($doc['containers'], 'label'));
                 $ids = sbpa_ids($doc);
                 assert_eq(count($ids), count(array_unique($ids)), "{$preset['key']}: ids are unique");
                 $html = sbpa_canvas($rt, SBPA_TENANT_A, $editor, $page['id']);

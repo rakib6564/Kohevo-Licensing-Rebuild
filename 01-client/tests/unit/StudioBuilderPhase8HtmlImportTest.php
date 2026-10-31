@@ -68,7 +68,7 @@ function sb8h_blocks(array $doc): array
 {
     $out = [];
     $stack = [];
-    foreach (array_reverse($doc['sections']) as $s) {
+    foreach (array_reverse($doc['containers']) as $s) {
         foreach (array_reverse($s['blocks']) as $b) {
             $stack[] = $b;
         }
@@ -224,7 +224,7 @@ unit('phase8b unit: output overflow is refused, never truncated — > 50 section
     sb8h_error($r, 'output_limit_exceeded');
     assert_eq('blocks', $r['issues'][0]['detail'] ?? null, '270 blocks > 250');
     $ok = sb8h_convert(str_repeat('<section><h2>S</h2><p>t</p></section>', 50));
-    assert_eq(50, count(sb8h_doc($ok)['sections']));
+    assert_eq(50, count(sb8h_doc($ok)['containers']));
 });
 
 // ── 5. Security boundary ───────────────────────────────────────────────────
@@ -378,7 +378,7 @@ unit('phase8b unit: sections — section/article/main become sections, header/fo
         . '<footer><p>© 2026</p></footer>'
     );
     $doc = sb8h_doc($r);
-    assert_eq(['Site', 'Loose', 'A', 'B', 'C', ''], array_column($doc['sections'], 'label'));
+    assert_eq(['Site', 'Loose', 'A', 'B', 'C', ''], array_column($doc['containers'], 'label'));
     assert_eq(2, count(array_filter($r['issues'], static fn(array $i): bool => $i['code'] === 'chrome_not_imported')));
     $unsupported = array_column(array_filter($r['issues'], static fn(array $i): bool => $i['code'] === 'unsupported_element'), 'detail');
     foreach (['nav', 'table', 'hr', 'details', 'dialog'] as $t) {
@@ -389,7 +389,7 @@ unit('phase8b unit: sections — section/article/main become sections, header/fo
         assert_true(!str_contains($json, $mark), "{$mark} not imported");
     }
     assert_eq('page', $doc['document_type'], 'never a header_partial / footer_partial');
-    foreach ($doc['sections'] as $s) {
+    foreach ($doc['containers'] as $s) {
         assert_eq(['base' => 1], $s['layout']['columns'], 'stacked blocks (the default 12-column layout would place them side by side)');
         assert_eq(null, $s['global_ref']);
     }
@@ -416,7 +416,7 @@ unit('phase8b unit: flex/grid wrappers become core.container (direction from the
             $walk($b['children'], $depth + 1);
         }
     };
-    foreach ($d2['sections'] as $s) {
+    foreach ($d2['containers'] as $s) {
         $walk($s['blocks'], 1);
     }
     assert_true($max <= \Slate\Module\StudioBuilder\Package\Html\HtmlStructureMapper::MAX_CANONICAL_DEPTH, "nesting {$max} <= the importer's own limit (4)");
@@ -465,7 +465,7 @@ unit('phase8b unit: CSS maps only onto canonical enums — align, padding_y / ga
     $css = '.s{text-align:center;padding:3rem 0;gap:24px;max-width:1200px}.n{padding-top:64px;padding-bottom:1rem;max-width:none}.j{text-align:justify}';
     $r = sb8h_convert('<section class="s"><h2>A</h2><p>a</p></section><section class="n"><h2>B</h2><p class="j">b</p></section>', $css);
     $doc = sb8h_doc($r);
-    [$s1, $s2] = $doc['sections'];
+    [$s1, $s2] = $doc['containers'];
     assert_eq(['base' => 'md'], $s1['layout']['padding_y'], '3rem is a tie between md (2rem) and lg (4rem): the smaller wins');
     assert_eq('lg', $s1['layout']['gap'], '24px = 1.5rem is exactly lg');
     assert_eq('wide', $s1['layout']['width'], '1200px = 75rem -> nearest wide');

@@ -65,10 +65,7 @@ function sbel_block(string $type, array $props = []): array
 function sbel_doc(array $blocks): array
 {
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Elements');
-    $doc['sections'] = [[
-        'blocks' => $blocks, 'global_ref' => null, 'id' => CanonicalDocumentSchema::newSectionId(), 'label' => 'Main',
-        'layout' => CanonicalDocumentSchema::defaultSectionLayout(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-    ]];
+    $doc['containers'] = [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Main'], 'children' => $blocks, 'visibility' => CanonicalDocumentSchema::defaultVisibility()])];
     return $doc;
 }
 
@@ -109,7 +106,7 @@ unit('elements: starter content normalises in, so a fresh list and quote are vis
     $registry = ModuleBlockDefinitions::studioRegistry();
     $doc = DocumentNormalizer::normalize(sbel_doc([sbel_block('core.list'), sbel_block('core.quote'), sbel_block('core.icon')]), $registry);
     $byType = [];
-    foreach ($doc['sections'][0]['blocks'] as $b) {
+    foreach ($doc['containers'][0]['children'] as $b) {
         $byType[$b['type']] = $b['props'];
     }
     assert_true(count($byType['core.list']['items']) === 3, 'list gets three starter items');
