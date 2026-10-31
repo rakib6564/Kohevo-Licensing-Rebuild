@@ -122,7 +122,7 @@ function sbbki_content(StudioRuntime $rt, int $pageId, int $revisionId): array
     $text = null;
     $media = null;
     foreach (CanonicalJson::decode((string) $rev['document_json'])['containers'] ?? [] as $section) {
-        foreach ($section['blocks'] as $block) {
+        foreach ($section['children'] as $block) {
             $text ??= $block['type'] === 'core.heading' ? (string) $block['props']['text'] : null;
             $media ??= $block['type'] === 'core.image' ? (int) $block['props']['media']['media_id'] : null;
         }

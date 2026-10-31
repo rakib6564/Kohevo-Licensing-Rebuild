@@ -46,7 +46,7 @@ unit('form pipeline: a Studio form maps to a Forms definition with its fields in
     $offsite = StudioFormSync::definitionFor(sbfp_form(['redirect_url' => '//evil.test/x']));
     assert_eq(null, $offsite['redirect_url'], 'a protocol-relative address is not a same-site path');
 
-    $doc = ['containers' => [['blocks' => [sbfp_form(), sbfp_form(['action' => 'https://example.test/hook'])]]]];
+    $doc = ['containers' => [['children' => [sbfp_form(), sbfp_form(['action' => 'https://example.test/hook'])]]]];
     assert_eq(1, count(StudioFormSync::formsIn($doc)), 'a form with its own Action URL is left alone');
 });
 

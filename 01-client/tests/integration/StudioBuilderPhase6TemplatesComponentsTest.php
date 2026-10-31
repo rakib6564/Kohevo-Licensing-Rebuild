@@ -241,7 +241,7 @@ function sbp6_ids(array $document): array
     };
     foreach ($document['containers'] ?? [] as $s) {
         $ids[] = (string) $s['id'];
-        $walk($s['blocks'] ?? []);
+        $walk($s['children'] ?? []);
     }
     return $ids;
 }

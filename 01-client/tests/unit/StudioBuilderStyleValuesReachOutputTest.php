@@ -58,7 +58,7 @@ function sbsv_validate(array $block): \Slate\Module\StudioBuilder\Schema\Validat
 {
     return DocumentValidator::validate([
         'schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [],
-        'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'layout' => [] /*TODO*/, 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [$block]])],
+        'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [$block]])],
     ], BlockRegistry::withAllCoreBlocks());
 }
 

@@ -226,7 +226,7 @@ unit('sprint3 integration: navigator operations (duplicate, move, rename, visibi
             $renRes = $rt->tenants->runAs(S3_TENANT_A, static fn(): array => $rt->app->applyDocumentOperation($actorA, $pageId, [$opRename], $revId, 'Rename Section'));
             $revId = (int) $renRes['revision']['id'];
             $renDoc = CanonicalJson::decode((string) $renRes['revision']['document_json']);
-            assert_eq('Spotlight Hero', $renDoc['containers'][0]['label']);
+            assert_eq('Spotlight Hero', $renDoc['containers'][0]['metadata']['label']);
 
             // 3b. Test update_section_label: hostile / injected label rejected
             assert_throws(StudioValidationException::class, static function () use ($rt, $actorA, $pageId, $secId, $revId): void {

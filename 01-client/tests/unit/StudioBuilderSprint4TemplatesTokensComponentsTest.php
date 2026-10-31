@@ -51,7 +51,7 @@ unit('sprint4 unit: StudioTemplateService extracts section preset with preserved
     assert_eq(CanonicalDocumentSchema::SCHEMA_VERSION, $extracted['schema_version']);
     assert_eq('container_preset', $extracted['document_type']);
     assert_eq(1, count($extracted['containers']), 'extracted 1 section');
-    assert_eq('Reusable Call To Action', $extracted['containers'][0]['label']);
+    assert_eq('Reusable Call To Action', $extracted['containers'][0]['metadata']['label']);
     assert_eq('core.button', $extracted['containers'][0]['children'][0]['type']);
     assert_eq('Contact Us', $extracted['containers'][0]['children'][0]['props']['link']['label']);
 });
@@ -61,7 +61,7 @@ unit('sprint4 unit: StudioGlobalComponentService reference and detach operations
     $componentUuid = '01923456-789a-7bcd-ef01-23456789abcd';
 
     // 1. Reference section creation
-    $refSec = StudioGlobalComponentService::referenceSectionFor($sec, $componentUuid);
+    $refSec = StudioGlobalComponentService::referenceContainerFor($sec, $componentUuid);
     assert_eq($componentUuid, $refSec['global_ref'], 'holds global_ref uuid');
     assert_eq([], $refSec['blocks'], 'global reference owns no local blocks');
     assert_eq('Global Header Section', $refSec['label']);

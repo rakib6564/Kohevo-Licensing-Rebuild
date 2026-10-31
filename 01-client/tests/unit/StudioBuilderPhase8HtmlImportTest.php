@@ -69,7 +69,7 @@ function sb8h_blocks(array $doc): array
     $out = [];
     $stack = [];
     foreach (array_reverse($doc['containers']) as $s) {
-        foreach (array_reverse($s['blocks']) as $b) {
+        foreach (array_reverse($s['children']) as $b) {
             $stack[] = $b;
         }
     }
@@ -417,7 +417,7 @@ unit('phase8b unit: flex/grid wrappers become core.container (direction from the
         }
     };
     foreach ($d2['containers'] as $s) {
-        $walk($s['blocks'], 1);
+        $walk($s['children'], 1);
     }
     assert_true($max <= \Slate\Module\StudioBuilder\Package\Html\HtmlStructureMapper::MAX_CANONICAL_DEPTH, "nesting {$max} <= the importer's own limit (4)");
     assert_true(str_contains(json_encode($d2), 'leaf'), 'nothing is lost by flattening');

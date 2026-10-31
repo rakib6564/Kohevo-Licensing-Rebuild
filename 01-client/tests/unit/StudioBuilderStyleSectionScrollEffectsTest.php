@@ -70,8 +70,8 @@ unit('scroll effects: a sticky section is sticky in the stylesheet, with its edg
 
 unit('scroll effects: a parallax background is painted by the layer the runtime moves; an element parallax moves the node', function (): void {
     $style = ['background' => ['image' => ['media_id' => 5, 'alt' => ''], 'fit' => 'cover']];
-    $normal = StyleSurface::sectionDeclarations($style, 'https://example.test/a.jpg');
-    $moving = StyleSurface::sectionDeclarations($style, 'https://example.test/a.jpg', true);
+    $normal = StyleSurface::declarations($style, 'https://example.test/a.jpg');
+    $moving = StyleSurface::declarations($style, 'https://example.test/a.jpg', true);
     assert_true(str_contains($normal, 'background-image:url("https://example.test/a.jpg")'), 'without parallax the node paints the image');
     assert_true(!str_contains($moving, 'background-image:') && str_contains($moving, '--sb-pbg-image:url("https://example.test/a.jpg")') && str_contains($moving, '--sb-pbg-size:cover'), 'with it the layer does');
 

@@ -30,7 +30,7 @@ use Slate\Tenancy\TenantContext;
 function sbdc_block(string $type, array $props, array $responsive = [], array $children = []): array
 {
     $b = [
-        'id' => CanonicalDocumentSchema::newBlockId(), 'type' => $type, 'version' => 1, 'props' => $props,
+        'id' => CanonicalDocumentSchema::newBlockId(), 'type' => $type, 'version' => ($type === 'core.container' ? 2 : 1), 'props' => $props,
         'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'bindings' => [], 'children' => $children,
     ];
@@ -39,7 +39,7 @@ function sbdc_block(string $type, array $props, array $responsive = [], array $c
 
 function sbdc_doc(array $block): array
 {
-    return ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'layout' => [] /*TODO*/, 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [$block]])]];
+    return ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [$block]])]];
 }
 
 function sbdc_render(array $block): string
@@ -50,7 +50,7 @@ function sbdc_render(array $block): string
         new CoreMediaResolver(new TenantContext()),
         new ProviderBindingResolver(new DataProviderRegistry(), new TenantContext())
     );
-    return $renderer->renderSections(
+    return $renderer->renderContainers(
         sbdc_doc($block)['containers'],
         RenderContext::forPublic(101, new SiteContext('https://example.test', 'Test Site')),
         (new ThemeResolver())->resolve('default'),

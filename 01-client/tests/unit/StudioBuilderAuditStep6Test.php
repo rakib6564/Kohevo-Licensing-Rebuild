@@ -69,9 +69,9 @@ unit('packages: section and block background images are exported, mapped on impo
     $section = $none['document']['containers'][0];
     assert_true(!isset($section['style']['background']['image']), 'an unmapped section image is removed, never pointing at an unrelated image');
     assert_eq('cover', $section['style']['background']['fit']);
-    assert_true(!isset($section['blocks'][0]['style']['background']['image']));
-    assert_eq('#112233', $section['blocks'][0]['style']['background']['color'], 'the rest of the background is kept');
-    assert_eq(['$.sections[0].style.background.image', '$.sections[0].blocks[0].style.background.image'], array_column($none['unresolved'], 'path'));
+    assert_true(!isset($section['children'][0]['style']['background']['image']));
+    assert_eq('#112233', $section['children'][0]['style']['background']['color'], 'the rest of the background is kept');
+    assert_eq(['$.containers[0].style.background.image', '$.containers[0].children[0].style.background.image'], array_column($none['unresolved'], 'path'));
 });
 
 unit('pay throttle: the client address trusts a forwarding header only from a trusted proxy; IPv6 is counted per /64', function (): void {

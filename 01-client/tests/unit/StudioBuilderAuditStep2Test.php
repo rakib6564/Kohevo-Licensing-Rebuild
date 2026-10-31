@@ -42,7 +42,7 @@ function sba2_doc(array $over = []): array
 
 unit('layer lock: a whole-document write cannot drop or edit a locked layer, but can undo the lock itself', function (): void {
     $current = sba2_doc();
-    $current['containers'][0]['locked'] = true;
+    $current['containers'][0]['metadata']['locked'] = true;
 
     $dropped = $current;
     array_shift($dropped['containers']);
@@ -57,11 +57,11 @@ unit('layer lock: a whole-document write cannot drop or edit a locked layer, but
     assert_throws(StudioValidationException::class, static fn() => LayerLock::assertPreserved($current, $filled), 'inserting into it');
 
     $unlocked = $current;
-    unset($unlocked['containers'][0]['locked']);
+    unset($unlocked['containers'][0]['metadata']['locked']);
     LayerLock::assertPreserved($current, $unlocked); // undoing the lock (or an unlock) is the one change it accepts
 
     $other = $current;
-    $other['containers'][1]['label'] = 'Renamed';
+    $other['containers'][1]['metadata']['label'] = 'Renamed';
     $other['containers'][] = \Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'New'], 'id' => 's3', 'children' => []]);
     LayerLock::assertPreserved($current, $other); // unlocked layers change freely
 

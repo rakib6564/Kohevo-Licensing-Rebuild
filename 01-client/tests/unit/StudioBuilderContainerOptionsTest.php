@@ -30,7 +30,7 @@ use Slate\Tenancy\TenantContext;
 /** A page with one container block carrying `$extra` (tag, link, style…). */
 function sbco_doc(array $extra = [], array $style = []): array
 {
-    return ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'id' => 'blk_aaaaaaaaaaaaaaaa', 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [[
+    return ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [[
             'id' => 'blk_aaaaaaaaaaaaaaaa', 'type' => 'core.container', 'version' => 2, 'props' => [],
             'style' => $style + CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [],
         ] + $extra]])]];
@@ -53,16 +53,16 @@ function sbco_render(array $extra): string
 
 unit('container: boxed holds the children to the width with side padding, and the author padding stays the minimum', function (): void {
     $css = StyleSurface::declarations(['layout' => ['content_width' => 'boxed', 'content_max' => '1300px'], 'padding' => ['left' => '2rem', 'right' => '1rem']]);
-    assert_true(str_contains($css, 'padding-left:max(2rem,calc((100% - 1300px)/2))'), 'left side: ' . $css);
-    assert_true(str_contains($css, 'padding-right:max(1rem,calc((100% - 1300px)/2))'), 'right side');
+    assert_true(str_contains($css, 'padding-left:max(2rem,calc((100% - var(--sb-box))/2))'), 'left side: ' . $css);
+    assert_true(str_contains($css, 'padding-right:max(1rem,calc((100% - var(--sb-box))/2))') && str_contains($css, '--sb-box:1300px'), 'right side');
     assert_eq(1, substr_count($css, 'padding-left:'), 'one left padding, not the author\'s beside the boxed one');
-    assert_false(str_contains($css, 'content'), 'content_width and content_max are never CSS properties of their own');
+    assert_false(str_contains($css, 'content_') || str_contains($css, 'content-'), 'content_width and content_max are never CSS properties of their own');
 });
 
 unit('container: full width changes nothing; boxed without a width keeps to the site content width', function (): void {
     assert_eq('', StyleSurface::declarations(['layout' => ['content_width' => 'full', 'content_max' => '900px']]), 'full width');
     assert_eq(
-        'padding-left:max(0px,calc((100% - var(--sb-layout-content,80rem))/2));padding-right:max(0px,calc((100% - var(--sb-layout-content,80rem))/2))',
+        '--sb-box:var(--sb-layout-content,80rem);padding-left:max(0px,calc((100% - var(--sb-box))/2));padding-right:max(0px,calc((100% - var(--sb-box))/2))',
         StyleSurface::declarations(['layout' => ['content_width' => 'boxed']]),
         'boxed with no width of its own follows Site settings › Layout › Content width'
     );
@@ -84,7 +84,6 @@ unit('container: a background image can be fixed, and only scroll or fixed are a
     assert_false(str_contains(StyleSurface::declarations(['background' => ['attachment' => 'fixed']], null), 'attachment'), 'nothing without an image');
     assert_eq([], StyleSurface::backgroundIssues($bg, '$'), 'fixed is fine');
     assert_true(StyleSurface::backgroundIssues(['attachment' => 'local'], '$') !== [], 'local is not offered');
-    assert_eq([], StyleSurface::sectionIssues(['background' => $bg], '$'), 'a section background takes it too');
 });
 
 // ── main and the linked wrapper ───────────────────────────────────────────
@@ -127,16 +126,16 @@ unit('container: saving keeps a linked wrapper\'s address, and only with the a t
     assert_false(array_key_exists('link', $dropped['containers'][0]['children'][0]), 'a stray link on another tag is not kept');
 });
 
-unit('a section takes a border like a block: one for every side, each side\'s width, style and colour, and each corner\'s radius', function (): void {
+unit('a top-level Container takes a border: one for every side, each side\'s width, style and colour, and each corner\'s radius', function (): void {
     $border = ['style' => 'solid', 'width' => '1px', 'color' => 'color.accent', 'radius' => 'md',
         'bottom' => ['width' => '4px', 'color' => '#123456'], 'radius_corners' => ['tl' => '0']];
-    assert_eq([], StyleSurface::sectionIssues(['border' => $border], '$'));
+    assert_eq([], StyleSurface::issues(['border' => $border], '$'));
     assert_eq(
         'border-style:solid;border-width:1px;border-color:var(--sb-color-accent);border-radius:var(--sb-radius-md,.5rem);border-bottom-width:4px;border-bottom-color:#123456;border-top-left-radius:0',
-        StyleSurface::sectionDeclarations(['border' => $border]),
+        StyleSurface::declarations(['border' => $border]),
         'all sides first, then the side and corner that win over them'
     );
-    assert_eq(['$.border.width', '$.border.side', '$.border.top.width', '$.border.radius'], array_column(StyleSurface::sectionIssues(['border' => ['width' => 'red', 'side' => 1, 'top' => ['width' => 'x'], 'radius' => 'huge']], '$'), 'path'));
-    assert_eq('border-style:solid;border-top-width:2px', StyleSurface::sectionDeclarations(['border' => ['top' => ['width' => '2px']]]), 'a width with no style draws a solid line');
-    assert_eq('border-top-width:2px;border-top-style:dashed', StyleSurface::sectionDeclarations(['border' => ['top' => ['width' => '2px', 'style' => 'dashed']]]), 'a style the author chose is kept');
+    assert_eq(['$.border.width', '$.border.side', '$.border.top.width', '$.border.radius'], array_column(StyleSurface::issues(['border' => ['width' => 'red', 'side' => 1, 'top' => ['width' => 'x'], 'radius' => 'huge']], '$'), 'path'));
+    assert_eq('border-style:solid;border-top-width:2px', StyleSurface::declarations(['border' => ['top' => ['width' => '2px']]]), 'a width with no style draws a solid line');
+    assert_eq('border-top-width:2px;border-top-style:dashed', StyleSurface::declarations(['border' => ['top' => ['width' => '2px', 'style' => 'dashed']]]), 'a style the author chose is kept');
 });

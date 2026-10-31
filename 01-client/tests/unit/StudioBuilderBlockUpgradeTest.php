@@ -81,9 +81,10 @@ unit('block upgrade: older blocks are stepped up one version at a time, nested c
     assert_eq($doc['containers'][0]['children'][3], $blocks[3], 'a current block is untouched');
     assert_eq($nested['id'], $blocks[2]['children'][0]['id'], 'ids and everything but props/version stay');
     assert_eq([
-        ['path' => '$.sections[0].blocks[0]', 'type' => 'probe.note', 'from' => 1, 'to' => 3],
-        ['path' => '$.sections[0].blocks[1]', 'type' => 'probe.note', 'from' => 2, 'to' => 3],
-        ['path' => '$.sections[0].blocks[2].children[0]', 'type' => 'probe.note', 'from' => 1, 'to' => 3],
+        ['path' => '$.containers[0].children[0]', 'type' => 'probe.note', 'from' => 1, 'to' => 3],
+        ['path' => '$.containers[0].children[1]', 'type' => 'probe.note', 'from' => 2, 'to' => 3],
+        ['path' => '$.containers[0].children[2]', 'type' => 'core.container', 'from' => 1, 'to' => 2],
+        ['path' => '$.containers[0].children[2].children[0]', 'type' => 'probe.note', 'from' => 1, 'to' => 3],
     ], $out['upgraded']);
 
     $flat = sbup_doc([sbup_block('probe.note', 1, ['caption' => 'Saved long ago'])]);
@@ -111,7 +112,7 @@ unit('block upgrade: no full path, a failing step, a newer or unknown block are 
         $errors = $e->errors();
     }
     assert_eq('invalid_block_version', $errors[0]['code'] ?? null);
-    assert_eq('$.sections[0].blocks[0].version', $errors[0]['path'] ?? null);
+    assert_eq('$.containers[0].children[0].version', $errors[0]['path'] ?? null);
     assert_eq("Block 'probe.gap' is version 1; this site supports version 3 and has no upgrade from version 1.", $errors[0]['message'] ?? null, 'the refusal names the block and both versions');
 });
 

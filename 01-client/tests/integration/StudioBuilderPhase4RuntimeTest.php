@@ -171,7 +171,7 @@ function sbp4_block(string $type, array $props = [], array $extra = []): array
         'props'      => $props,
         'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
         'type'       => $type,
-        'version'    => 1,
+        'version'    => ($type === 'core.container' ? 2 : 1),
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
     ], $extra);
 }

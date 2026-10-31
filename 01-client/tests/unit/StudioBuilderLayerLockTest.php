@@ -76,12 +76,11 @@ function sbll_refused(array $doc, DocumentOperation $op, string $why): void
 
 unit('layer lock: new operations are part of the vocabulary and validate their payload', function (): void {
     assert_true(in_array(DocumentOperation::OP_UPDATE_BLOCK_META, DocumentOperation::ALLOWED_OPS, true));
-    assert_true(in_array(DocumentOperation::OP_UPDATE_SECTION_LOCKED, DocumentOperation::ALLOWED_OPS, true));
-    assert_eq(['section_id' => 'sec_a', 'locked' => true], DocumentOperation::updateBlockMeta('sec_a', ['locked' => true])->payload);
+    assert_eq(['block_id' => 'blk_b', 'locked' => true], DocumentOperation::updateBlockMeta('blk_b', ['locked' => true])->payload);
     assert_eq(['block_id' => 'blk_a', 'label' => 'Hero'], DocumentOperation::updateBlockMeta('blk_a', ['label' => 'Hero'])->payload);
     assert_throws(StudioValidationException::class, static function (): void {
-        new DocumentOperation(DocumentOperation::OP_UPDATE_SECTION_LOCKED, ['section_id' => 'sec_a']);
-    }, 'update_section_locked requires locked');
+        new DocumentOperation('update_section_locked', ['section_id' => 'sec_a', 'locked' => true]);
+    }, 'the retired update_section_locked is refused');
 });
 
 unit('layer lock: rename and lock round-trip through validate + normalize in a minimal canonical form', function (): void {
@@ -94,7 +93,7 @@ unit('layer lock: rename and lock round-trip through validate + normalize in a m
     $norm = DocumentNormalizer::validateAndNormalize($doc, $reg);
 
     assert_eq(['label' => 'Hero wrapper', 'locked' => true], $norm['containers'][0]['children'][0]['metadata']);
-    assert_true($norm['containers'][0]['locked'] === true, 'locked section survives normalization');
+    assert_true($norm['containers'][0]['metadata']['locked'] === true, 'a locked top-level Container survives normalization');
     assert_true(!array_key_exists('metadata', $norm['containers'][0]['children'][1]), 'untouched blocks stay metadata-free');
 
     // Unlocking and clearing the label returns to the plain canonical shape.
@@ -103,7 +102,7 @@ unit('layer lock: rename and lock round-trip through validate + normalize in a m
     $doc = sbll_apply($doc, DocumentOperation::updateBlockMeta($container, ['label' => null]));
     $norm = DocumentNormalizer::validateAndNormalize($doc, $reg);
     assert_true(!array_key_exists('metadata', $norm['containers'][0]['children'][0]), 'empty metadata is removed');
-    assert_true(!array_key_exists('locked', $norm['containers'][0]), 'unlocked section has no lock key');
+    assert_true(!array_key_exists('locked', $norm['containers'][0]['metadata'] ?? []), 'an unlocked Container has no lock key');
 });
 
 unit('layer lock: bad labels, unknown metadata keys and non-boolean flags are rejected', function (): void {
@@ -130,7 +129,7 @@ unit('layer lock: bad labels, unknown metadata keys and non-boolean flags are re
         DocumentNormalizer::validateAndNormalize($tampered, $reg);
     }, 'unknown metadata key');
     $tampered = $doc;
-    $tampered['containers'][0]['locked'] = 'true';
+    $tampered['containers'][0]['metadata']['locked'] = 'true';
     assert_throws(StudioValidationException::class, static function () use ($tampered, $reg): void {
         DocumentNormalizer::validateAndNormalize($tampered, $reg);
     }, 'section.locked must be boolean');
@@ -186,7 +185,7 @@ unit('layer lock: a locked section refuses edits, moves, removal and inserts; it
     $doc = sbll_apply($doc, DocumentOperation::updateBlockMeta($sec, ['locked' => true]));
 
     sbll_refused($doc, DocumentOperation::updateBlockMeta($sec, ['label' => 'Renamed']), 'section rename');
-    sbll_refused($doc, new DocumentOperation('update_section_layout', ['section_id' => $sec, 'layout' => CanonicalDocumentSchema::defaultSectionLayout()]), 'section layout');
+    sbll_refused($doc, new DocumentOperation('update_block_style', ['block_id' => $sec, 'style' => []]), 'container style');
     sbll_refused($doc, new DocumentOperation('move_block', ['block_id' => $sec, 'parent_id' => null, 'index' => 0]), 'section move');
     sbll_refused($doc, new DocumentOperation('remove_block', ['block_id' => $sec]), 'section remove');
     sbll_refused($doc, new DocumentOperation('insert_block', ['parent_id' => $sec, 'index' => 0, 'block' => ['type' => 'core.heading']]), 'insert into locked section');
@@ -226,7 +225,7 @@ unit('layer lock: an AI assistant can rename layers but can never lock or unlock
         return $m->invoke(null, ['operations' => $operations]);
     };
     $blk = 'blk_' . str_repeat('a', 16);
-    $sec = 'sec_' . str_repeat('b', 16);
+    $sec = 'blk_' . str_repeat('b', 16);
 
     $ok = $call([['op' => 'update_block_meta', 'payload' => ['block_id' => $blk, 'label' => 'Hero']]]);
     assert_eq('update_block_meta', $ok[0]->op, 'renaming is allowed');

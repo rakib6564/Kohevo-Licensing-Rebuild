@@ -85,7 +85,7 @@ function sbp5s_validate(array $style): \Slate\Module\StudioBuilder\Schema\Valida
         'template_key'   => 'default',
         'settings'       => [],
         'seo'            => [],
-        'containers'       => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Styled'], 'layout' => [] /*TODO*/, 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [[
+        'containers'       => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Styled'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [[
                 'id'         => CanonicalDocumentSchema::newBlockId(),
                 'type'       => 'core.heading',
                 'version'    => 1,

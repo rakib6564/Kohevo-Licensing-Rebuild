@@ -36,7 +36,7 @@ use Slate\Module\StudioBuilder\Http\StudioApiRequest;
 use Slate\Module\StudioBuilder\Http\StudioApiResponse;
 use Slate\Module\StudioBuilder\Http\StudioAuthoringApi;
 use Slate\Module\StudioBuilder\Presets\HeaderPresetCatalog;
-use Slate\Module\StudioBuilder\Presets\SectionPresetCatalog;
+use Slate\Module\StudioBuilder\Presets\ContainerPresetCatalog;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntime;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 use Slate\Module\StudioBuilder\StudioPermissions;
@@ -228,7 +228,7 @@ function sbpa_ids(array $document): array
     };
     foreach ($document['containers'] ?? [] as $s) {
         $ids[] = (string) $s['id'];
-        $walk($s['blocks'] ?? []);
+        $walk($s['children'] ?? []);
     }
     return $ids;
 }
@@ -261,7 +261,7 @@ unit('section presets integration: seeding, protection, isolation and insertion 
             $viewer = StudioActor::authenticated(60, [StudioPermissions::VIEW]);
             $editor = StudioActor::authenticated(61, [StudioPermissions::VIEW, StudioPermissions::EDIT]);
             $admin  = StudioActor::authenticated(64, [StudioPermissions::VIEW, StudioPermissions::EDIT, StudioPermissions::ADMIN]);
-            $expected = array_column(SectionPresetCatalog::all(), 'key');
+            $expected = array_column(ContainerPresetCatalog::all(), 'key');
             $sysCount = static fn(int $tenant): int => $rt->tenants->runAs($tenant, static fn(): int => sbpa_count("SELECT COUNT(*) FROM studiobuilder_templates WHERE tenant_id = ? AND is_system = 1", [$tenant]));
 
             // Nothing is seeded until the Add panel asks; the plain library listing stays tenant-owned only.
@@ -383,7 +383,7 @@ unit('header presets integration: seeded on first use apart from the sections, i
             sbpa_ok(sbpa_call($rt, SBPA_TENANT_A, $editor, 'GET', 'container_presets'), 'section presets');
             assert_eq($before, $rows(), 'unchanged headers are not rewritten');
             assert_eq(6, $count('header_preset'), 'no duplicates');
-            assert_eq(count(SectionPresetCatalog::all()), $count('container_preset'), 'the sections seed only sections');
+            assert_eq(count(ContainerPresetCatalog::all()), $count('container_preset'), 'the sections seed only sections');
 
             // 3. Immutable, even for an admin.
             assert_eq('system_template_immutable', sbpa_first_code(sbpa_call($rt, SBPA_TENANT_A, $admin, 'POST', 'delete_template', ['template_key' => 'system-header-classic'])), 'cannot delete a system header');

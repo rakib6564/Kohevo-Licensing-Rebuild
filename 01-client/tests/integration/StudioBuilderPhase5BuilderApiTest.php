@@ -180,7 +180,7 @@ function sbp5_find(array $document, string $id): ?array
         if (($s['id'] ?? null) === $id) {
             return $s;
         }
-        $walk($s['blocks'] ?? []);
+        $walk($s['children'] ?? []);
     }
     return $found;
 }

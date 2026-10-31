@@ -45,7 +45,7 @@ use Slate\Module\StudioBuilder\StudioPermissions;
 function sbu8_block(string $type, array $props, array $children = []): array
 {
     return [
-        'id' => 'blk_' . bin2hex(random_bytes(12)), 'type' => $type, 'version' => 1, 'props' => $props,
+        'id' => 'blk_' . bin2hex(random_bytes(12)), 'type' => $type, 'version' => ($type === 'core.container' ? 2 : 1), 'props' => $props,
         'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'bindings' => [], 'children' => $children,
     ];
@@ -130,7 +130,7 @@ unit('phase8a unit: tenant_id is rejected at ANY depth, and tampering is detecte
     $p['items'][0]['document']['containers'][0]['children'][2]['children'][0]['props']['tenant_id'] = 7;
     $issues = StudioPackageFormat::validate(sbu8_rehash($p));
     assert_true(in_array('forbidden_tenant_id', sbu8_codes($issues), true));
-    assert_true(in_array('$.items[0].document.sections[0].blocks[2].children[0].props.tenant_id', array_column($issues, 'path'), true), 'the exact path is named');
+    assert_true(in_array('$.items[0].document.containers[0].children[2].children[0].props.tenant_id', array_column($issues, 'path'), true), 'the exact path is named');
     $p = sbu8_package() + ['tenant_id' => 1];
     assert_true(in_array('forbidden_tenant_id', sbu8_codes(StudioPackageFormat::validate($p)), true));
 
@@ -216,8 +216,8 @@ unit('phase8a unit: global references are remapped through the explicit map; an 
     $un = PackageDocumentMapper::rewriteGlobalRefs($doc, static fn(string $r): ?string => null);
     assert_null($un['document']['containers'][1]['global_ref']);
     assert_eq([], $un['document']['containers'][1]['children']);
-    assert_eq('Ref', $un['document']['containers'][1]['label']);
-    assert_eq([['path' => '$.sections[1].global_ref', 'ref' => '11111111-1111-4111-8111-111111111111']], $un['unresolved']);
+    assert_eq('Ref', $un['document']['containers'][1]['metadata']['label']);
+    assert_eq([['path' => '$.containers[1].global_ref', 'ref' => '11111111-1111-4111-8111-111111111111']], $un['unresolved']);
     assert_eq(1, preg_match(CanonicalDocumentSchema::COMPONENT_REF_PATTERN, PackageDocumentMapper::placeholderUuid('x')), 'placeholder component refs are well formed');
 });
 
@@ -229,7 +229,7 @@ unit('phase8a unit: the import report is deterministic, maps validator codes ont
         $calls = [
             static fn() => $r->warning('unresolved_media', 'b', '$.x', 'w'),
             static fn() => $r->error('route_collision', 'a', '$.slug', 'e'),
-            static fn() => $r->validatorErrors('a', '$.items[0].document', [['path' => '$.sections[0].blocks[0].type', 'code' => 'block_module_not_entitled', 'message' => 'm'], ['path' => '$.x', 'code' => 'invalid_layout_width', 'message' => 'm']]),
+            static fn() => $r->validatorErrors('a', '$.items[0].document', [['path' => '$.containers[0].children[0].type', 'code' => 'block_module_not_entitled', 'message' => 'm'], ['path' => '$.x', 'code' => 'invalid_layout_width', 'message' => 'm']]),
         ];
         foreach ($reverse ? array_reverse($calls) : $calls as $c) {
             $c();

@@ -141,7 +141,7 @@ unit('theme builder create: a header can start from a built-in design; an unknow
         $walk = static function (array $blocks) use (&$walk, &$out): void {
             foreach ($blocks as $b) { $out[] = (string) $b['type']; $walk(is_array($b['children'] ?? null) ? $b['children'] : []); }
         };
-        foreach ($doc['containers'] as $sec) { $walk($sec['blocks']); }
+        foreach ($doc['containers'] as $sec) { $walk($sec['children']); }
         return $out;
     };
     try {

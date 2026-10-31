@@ -242,7 +242,7 @@ function sbp8_ids(array $document): array
     };
     foreach ($document['containers'] ?? [] as $s) {
         $ids[] = (string) $s['id'];
-        $walk($s['blocks'] ?? []);
+        $walk($s['children'] ?? []);
     }
     return $ids;
 }
@@ -259,7 +259,7 @@ function sbp8_shape(array $document): array
     };
     foreach ($document['containers'] ?? [] as $i => $s) {
         $document['containers'][$i]['id'] = '*';
-        $document['containers'][$i]['children'] = $strip($s['blocks'] ?? []);
+        $document['containers'][$i]['children'] = $strip($s['children'] ?? []);
     }
     return $document;
 }
@@ -268,7 +268,7 @@ function sbp8_shape(array $document): array
 function sbp8_block(string $type, array $props, array $extra = []): array
 {
     return $extra + [
-        'id' => 'blk_' . bin2hex(random_bytes(12)), 'type' => $type, 'version' => 1, 'props' => $props,
+        'id' => 'blk_' . bin2hex(random_bytes(12)), 'type' => $type, 'version' => ($type === 'core.container' ? 2 : 1), 'props' => $props,
         'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'bindings' => [], 'children' => [],
     ];
@@ -326,7 +326,7 @@ function sbp8_map_media(array $document, array $map): array
         return $blocks;
     };
     foreach ($document['containers'] ?? [] as $i => $s) {
-        $document['containers'][$i]['children'] = $walk($s['blocks'] ?? []);
+        $document['containers'][$i]['children'] = $walk($s['children'] ?? []);
     }
     if (isset($document['seo']['og_image_media_id'], $map[$document['seo']['og_image_media_id']])) {
         $document['seo']['og_image_media_id'] = $map[$document['seo']['og_image_media_id']];

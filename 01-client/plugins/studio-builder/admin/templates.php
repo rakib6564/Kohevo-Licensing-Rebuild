@@ -670,7 +670,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 $displayTypeLabel = match ($displayType) {
                     'header'    => __('studio_kind_header', 'Header'),
                     'footer'    => __('studio_kind_footer', 'Footer'),
-                    'container' => __('studio_ui_section', 'Container'),
+                    'container' => __('studio_ui_container', 'Container'),
                     'single'    => __('studio_tpl_kind_single', 'Single'),
                     'archive'   => __('studio_tpl_kind_archive', 'Archive'),
                     'not_found' => __('studio_tpl_kind_not_found', '404'),

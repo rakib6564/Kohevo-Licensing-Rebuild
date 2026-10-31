@@ -135,7 +135,7 @@ function sbs9_seed(int $tenantId, string $installationId, array $entitlements): 
 function sbs9_block(string $type, array $props): array
 {
     return ['bindings' => [], 'children' => [], 'id' => CanonicalDocumentSchema::newBlockId(), 'props' => $props,
-        'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'type' => $type, 'version' => 1, 'visibility' => CanonicalDocumentSchema::defaultVisibility()];
+        'style' => CanonicalDocumentSchema::defaultBlockStyle(), 'type' => $type, 'version' => ($type === 'core.container' ? 2 : 1), 'visibility' => CanonicalDocumentSchema::defaultVisibility()];
 }
 
 /** @return array<string, mixed> */

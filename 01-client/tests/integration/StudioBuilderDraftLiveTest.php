@@ -234,12 +234,12 @@ unit('draft/live integration: lists, payments, locks and live changes follow wha
             $edited['containers'][0]['children'][0]['props']['text'] = 'Changed';
             assert_eq('node_locked', sbdl_code(sbdl_call($rt, SBDL_A, $editor, 'POST', 'save_draft', ['page_id' => $lockedPage['id'], 'expected_revision_id' => $rev, 'revision_kind' => 'manual', 'document' => $edited])), 'nor edit inside it');
             $other = $doc;
-            $other['containers'][1]['label'] = 'Renamed second';
+            $other['containers'][1]['metadata']['label'] = 'Renamed second';
             $saved = sbdl_ok(sbdl_call($rt, SBDL_A, $editor, 'POST', 'save_draft', ['page_id' => $lockedPage['id'], 'expected_revision_id' => $rev, 'revision_kind' => 'manual', 'document' => $other]), 'an unlocked section can still change');
             $rev = (int) $saved['revision']['id'];
             assert_eq('node_locked', sbdl_code(sbdl_call($rt, SBDL_A, $ai, 'POST', 'rollback', ['page_id' => $lockedPage['id'], 'target_revision_id' => $beforeExtra - 1, 'expected_revision_id' => $rev])), 'a rollback to before the locked section existed is refused');
             $undo = sbdl_ok(sbdl_call($rt, SBDL_A, $editor, 'POST', 'rollback', ['page_id' => $lockedPage['id'], 'target_revision_id' => $beforeLock, 'expected_revision_id' => $rev]), 'undoing the lock itself still works');
-            assert_true(empty($undo['document']['containers'][0]['locked']), 'the section is unlocked again');
+            assert_true(empty($undo['document']['containers'][0]['metadata']['locked']), 'the section is unlocked again');
 
             // ── 4. Changing a published page directly needs publish, and never an AI ─────────────────────
             assert_eq(403, sbdl_call($rt, SBDL_A, $editor, 'POST', 'archive_page', ['page_id' => $post['id']])->status, 'an editor cannot take a live page offline');

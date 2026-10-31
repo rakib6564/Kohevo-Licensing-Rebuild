@@ -124,7 +124,7 @@ function s7_make_block(string $type, array $props, array $children = [], ?array 
     $block = [
         'id'         => CanonicalDocumentSchema::newBlockId(),
         'type'       => $type,
-        'version'    => 1,
+        'version'    => ($type === 'core.container' ? 2 : 1),
         'props'      => $props,
         'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),

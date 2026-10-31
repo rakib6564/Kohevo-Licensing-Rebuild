@@ -167,9 +167,9 @@ unit('sprint3 unit: DocumentOperationApplier duplicateSection duplicates section
     assert_true($sec2['id'] !== $secId, 'cloned section receives fresh ID');
     assert_true(str_starts_with($sec2['id'], 'sec_'), 'cloned section ID has canonical prefix');
     assert_eq('Features (Copy)', $sec2['label']);
-    assert_eq(1, count($sec2['blocks']));
-    assert_true($sec2['blocks'][0]['id'] !== $sec1['blocks'][0]['id'], 'cloned section block receives fresh ID');
-    assert_eq('Features', $sec2['blocks'][0]['props']['link']['label']);
+    assert_eq(1, count($sec2['children']));
+    assert_true($sec2['children'][0]['id'] !== $sec1['children'][0]['id'], 'cloned section block receives fresh ID');
+    assert_eq('Features', $sec2['children'][0]['props']['link']['label']);
 
     // Document remains 100% schema valid
     $res = DocumentValidator::validate($docAfterDup, $reg);
@@ -186,7 +186,7 @@ unit('sprint3 unit: DocumentOperationApplier updateSectionLabel renames section 
 
     $opRename = DocumentOperation::updateBlockMeta($secId, ['label' => 'Our Client Testimonials']);
     $doc = DocumentOperationApplier::applyOne($doc, $opRename, $reg);
-    assert_eq('Our Client Testimonials', $doc['containers'][0]['label']);
+    assert_eq('Our Client Testimonials', $doc['containers'][0]['metadata']['label']);
 
     // Hostile / unsafe input rejected
     assert_throws(StudioValidationException::class, static function () use ($doc, $secId, $reg): void {

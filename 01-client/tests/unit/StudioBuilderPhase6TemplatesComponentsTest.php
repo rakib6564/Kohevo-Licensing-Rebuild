@@ -78,7 +78,7 @@ function sbp6u_block(string $type, array $props = [], array $extra = []): array
         'props'      => $props,
         'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
         'type'       => $type,
-        'version'    => 1,
+        'version'    => ($type === 'core.container' ? 2 : 1),
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
     ], $extra);
 }
@@ -123,7 +123,7 @@ function sbp6u_render_sections(array $doc, RenderContext $ctx, array $components
     foreach ($components as $ref => $componentDoc) {
         $preparedComponents[$ref] = RenderDocumentPreparer::prepare($componentDoc, $registry)['document']['containers'];
     }
-    return sbp6u_renderer()->renderSections($prepared['containers'], $ctx, new ResolvedTheme('default', ThemeResolver::DEFAULT_TOKENS), new RenderCollector(), true, $preparedComponents);
+    return sbp6u_renderer()->renderContainers($prepared['containers'], $ctx, new ResolvedTheme('default', ThemeResolver::DEFAULT_TOKENS), new RenderCollector(), true, $preparedComponents);
 }
 
 function sbp6u_editor_ctx(): RenderContext
@@ -204,12 +204,12 @@ unit('phase6 copy: DocumentCopier re-mints every id, drops any reference, and bl
     $container = sbp6u_block('core.container', ['direction' => 'vertical', 'gap' => 'md'], ['children' => [$inner]]);
     $section = sbp6u_section([$container, sbp6u_heading('Top')], SBP6U_REF, 'Src');
 
-    $copy = DocumentCopier::copySection($section);
+    $copy = DocumentCopier::copyBlock($section);
     assert_true($copy['id'] !== $section['id'] && preg_match(CanonicalDocumentSchema::SECTION_ID_PATTERN, $copy['id']) === 1);
     assert_null($copy['global_ref'], 'a copy owns its content — never a live reference');
     assert_true($copy['blocks'][0]['id'] !== $container['id'] && $copy['blocks'][0]['children'][0]['id'] !== $inner['id'], 'nested ids are re-minted');
     assert_eq('Inner', $copy['blocks'][0]['children'][0]['props']['text'], 'content is preserved');
-    assert_true(DocumentCopier::copySection($section)['id'] !== $copy['id'], 'every copy is independent');
+    assert_true(DocumentCopier::copyBlock($section)['id'] !== $copy['id'], 'every copy is independent');
 
     // insert_block with children (a block preset): fresh ids for the whole subtree, only into child-capable blocks.
     $doc = sbp6u_doc([sbp6u_section([])]);
@@ -282,7 +282,7 @@ unit('phase6 renderer: a referencing section renders the component\'s published 
     $nestedComponent = sbp6u_doc([CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'n'], 'children' => [], 'global_ref' => 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'visibility' => CanonicalDocumentSchema::defaultVisibility()])], 'page');
     $registry = ModuleBlockDefinitions::studioRegistry();
     $preparedNested = RenderDocumentPreparer::prepare($nestedComponent, $registry)['document']['containers'];
-    $html = sbp6u_renderer()->renderSections(RenderDocumentPreparer::prepare($pageDoc, $registry)['document']['containers'], sbp6u_editor_ctx(), new ResolvedTheme('default', ThemeResolver::DEFAULT_TOKENS), new RenderCollector(), true, [SBP6U_REF => $preparedNested]);
+    $html = sbp6u_renderer()->renderContainers(RenderDocumentPreparer::prepare($pageDoc, $registry)['document']['containers'], sbp6u_editor_ctx(), new ResolvedTheme('default', ThemeResolver::DEFAULT_TOKENS), new RenderCollector(), true, [SBP6U_REF => $preparedNested]);
     assert_true(str_contains($html, 'sb-section--global') && !str_contains($html, 'bbbbbbbb-bbbb'), 'nested references render nothing and never recurse');
 });
 

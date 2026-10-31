@@ -26,7 +26,7 @@ use Slate\Tenancy\TenantContext;
 function sbbh_block(string $type, array $props, array $style = []): array
 {
     return [
-        'id' => 'blk_bbbbbbbbbbbbbbbb', 'type' => $type, 'version' => 1, 'props' => $props,
+        'id' => 'blk_bbbbbbbbbbbbbbbb', 'type' => $type, 'version' => ($type === 'core.container' ? 2 : 1), 'props' => $props,
         'style' => $style + CanonicalDocumentSchema::defaultBlockStyle(), 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
         'bindings' => [], 'children' => [],
     ];
@@ -34,7 +34,7 @@ function sbbh_block(string $type, array $props, array $style = []): array
 
 function sbbh_valid(array $block): bool
 {
-    $doc = ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'id' => 'blk_bbbbbbbbbbbbbbbb', 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [$block]])]];
+    $doc = ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [$block]])]];
     return DocumentValidator::validate($doc, BlockRegistry::withAllCoreBlocks())->isValid();
 }
 

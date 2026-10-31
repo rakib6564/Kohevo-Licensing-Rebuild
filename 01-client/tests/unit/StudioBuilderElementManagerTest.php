@@ -80,10 +80,10 @@ unit('element manager: the usage scan counts blocks and pages, nested blocks inc
     $doc = static fn (array $sections): array => ['containers' => $sections];
     $pages = [
         ['title' => 'Home', 'document' => $doc([
-            ['blocks' => [['type' => 'core.heading'], ['type' => 'layout.flex', 'children' => [['type' => 'core.heading'], ['type' => 'core.button']]]]],
-            ['blocks' => [['type' => 'core.heading']]],
+            ['children' => [['type' => 'core.heading'], ['type' => 'layout.flex', 'children' => [['type' => 'core.heading'], ['type' => 'core.button']]]]],
+            ['children' => [['type' => 'core.heading']]],
         ])],
-        ['title' => 'About', 'document' => $doc([['blocks' => [['type' => 'core.button']]]])],
+        ['title' => 'About', 'document' => $doc([['children' => [['type' => 'core.button']]]])],
         ['title' => 'Empty', 'document' => $doc([])],
         ['title' => 'Broken', 'document' => ['containers' => 'nope']],
     ];
@@ -99,7 +99,7 @@ unit('element manager: the usage scan counts blocks and pages, nested blocks inc
 
     $many = [];
     for ($i = 0; $i < 9; $i++) {
-        $many[] = ['title' => "P{$i}", 'document' => $doc([['blocks' => [['type' => 'core.text']]]])];
+        $many[] = ['title' => "P{$i}", 'document' => $doc([['children' => [['type' => 'core.text']]]])];
     }
     $u = BlockUsage::count($many);
     assert_eq(9, $u['core.text']['pages']);

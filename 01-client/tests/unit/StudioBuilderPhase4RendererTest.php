@@ -169,7 +169,7 @@ function sbp4u_block(string $type, array $props = [], array $extra = []): array
         'props'      => $props,
         'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
         'type'       => $type,
-        'version'    => 1,
+        'version'    => ($type === 'core.container' ? 2 : 1),
         'visibility' => CanonicalDocumentSchema::defaultVisibility(),
     ], $extra);
 }
@@ -600,6 +600,7 @@ unit('phase4 stylesheet: the generated CSS is the CSS its VERSION shipped, so a 
         '56' => 'ec3089af475e317c318b9d2b868ff95d2f01851d',
         '57' => '13446f9a71d0f0b160525e1bc58aae305b34bb75',
         '58' => 'e1b3d07c5af5c24a82bd6b3d32adb084b1e803ea',
+        '59' => '9a0210c42d8a5ee8380f50c944c9d431ebdb8fe8',
     ];
     $version = \Slate\Module\StudioBuilder\Render\StudioStylesheet::VERSION;
     $hash = sha1(\Slate\Module\StudioBuilder\Render\StudioStylesheet::css());

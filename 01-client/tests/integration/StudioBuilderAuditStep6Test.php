@@ -198,7 +198,7 @@ unit('audit step 6 integration: revisions, menus, document type, component refer
             Database::query('UPDATE studiobuilder_pages SET active_draft_revision_id = ? WHERE id = ?', [$restore, $q['id']]);
 
             $doc = CanonicalJson::decode($json);
-            $doc['containers'][0]['label'] = 'Body edited';
+            $doc['containers'][0]['metadata']['label'] = 'Body edited';
             $inA(static fn() => $rt->app->saveDraft($editor, $q['id'], $doc, $restore, 'autosave'));
             $left = array_map('intval', array_column(Database::all("SELECT id FROM studiobuilder_revisions WHERE tenant_id = ? AND page_id = ? AND revision_kind = 'autosave'", [SBA6_A, $q['id']]), 'id'));
             $gone = array_values(array_diff($ids, $left));

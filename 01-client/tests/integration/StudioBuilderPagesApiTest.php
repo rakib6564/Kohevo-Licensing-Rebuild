@@ -35,7 +35,7 @@ use Slate\Module\StudioBuilder\Exception\StudioValidationException;
 use Slate\Module\StudioBuilder\Http\StudioApiRequest;
 use Slate\Module\StudioBuilder\Http\StudioApiResponse;
 use Slate\Module\StudioBuilder\Http\StudioAuthoringApi;
-use Slate\Module\StudioBuilder\Presets\SectionPresetCatalog;
+use Slate\Module\StudioBuilder\Presets\ContainerPresetCatalog;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntime;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 use Slate\Module\StudioBuilder\StudioPermissions;
@@ -227,7 +227,7 @@ function sbpg_ids(array $document): array
     };
     foreach ($document['containers'] ?? [] as $s) {
         $ids[] = (string) $s['id'];
-        $walk($s['blocks'] ?? []);
+        $walk($s['children'] ?? []);
     }
     return $ids;
 }

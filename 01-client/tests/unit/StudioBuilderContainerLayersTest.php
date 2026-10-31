@@ -40,7 +40,7 @@ function sbcl_box(array $props = [], array $style = [], array $states = []): arr
 
 function sbcl_valid(array $block): bool
 {
-    $doc = ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'id' => 'blk_dddddddddddddddd', 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [$block]])]];
+    $doc = ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [$block]])]];
     return DocumentValidator::validate($doc, BlockRegistry::withAllCoreBlocks())->isValid();
 }
 

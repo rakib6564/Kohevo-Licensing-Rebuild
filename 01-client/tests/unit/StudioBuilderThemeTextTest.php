@@ -42,7 +42,7 @@ function sbtt_render_editor(array $block): string
         new CoreMediaResolver(new TenantContext()),
         new ProviderBindingResolver(new DataProviderRegistry(), new TenantContext())
     );
-    return $renderer->renderSections(
+    return $renderer->renderContainers(
         sbdc_doc($block)['containers'],
         RenderContext::forEditor(101, new SiteContext('https://example.test', 'Test Site'), StudioActor::authenticated(1, StudioPermissions::ALL, true)),
         (new ThemeResolver())->resolve('default'),
@@ -77,7 +77,6 @@ unit('text settings: the base stylesheet reads them, with today\'s values as fal
         '.sb-text{margin:0 0 var(--sb-type-flow,1rem);line-height:var(--sb-type-body_leading,1.6)}',
         '.sb-text--base{font-size:var(--sb-type-body_size,1rem)}',
         '.sb-text--inherit{font-size:inherit;line-height:inherit}',
-        '.sb-section__inner{margin:0 auto;padding-left:var(--sb-type-section_gutter,1rem);padding-right:var(--sb-type-section_gutter,1rem)',
         '.sb-icon{display:flex;margin:0 0 var(--sb-type-flow,1rem)}',
         '.sb-nav{margin:0 0 var(--sb-type-flow,1rem)}',
         '.sb-body a:not(.sb-button):not(.sb-heading__link){color:var(--sb-color-accent)}',
@@ -105,6 +104,10 @@ unit('parts: "all but the first" draws a line between items, never before the fi
     $list = sbdc_block('core.list', ['style' => 'check']);
     assert_false(sbtt_valid($list + ['style_parts' => ['marker:not_first' => ['color' => '#e9008a']]]), 'a pseudo-element part takes no state');
     assert_false(sbtt_valid($meta + ['style_parts' => ['item:first' => ['color' => '#000000']]]), 'only the listed states');
+});
+
+unit('text settings: the section gutter reaches a top-level Container through its own padding', function (): void {
+    assert_true(str_contains(StyleSurface::declarations(['layout' => ['content_width' => 'boxed', 'gutter' => 'site']]), 'var(--sb-type-section_gutter,1rem)'));
 });
 
 unit('grid children span rows as they span columns, per device too', function (): void {

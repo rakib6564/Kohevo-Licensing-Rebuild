@@ -30,7 +30,7 @@ use Slate\Tenancy\TenantContext;
 
 function sbsm_section(array $extra = []): array
 {
-    return $extra + CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'layout' => [] /*TODO*/, 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [[
+    return $extra + CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [[
             'id' => CanonicalDocumentSchema::newBlockId(), 'type' => 'core.heading', 'version' => 1,
             'props' => ['text' => 'x', 'level' => 'h2'], 'style' => CanonicalDocumentSchema::defaultBlockStyle(),
             'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'bindings' => [], 'children' => [],
@@ -50,7 +50,7 @@ function sbsm_render(array $section): string
         new CoreMediaResolver(new TenantContext()),
         new ProviderBindingResolver(new DataProviderRegistry(), new TenantContext())
     );
-    return $renderer->renderSections(
+    return $renderer->renderContainers(
         [$section],
         RenderContext::forPublic(SBP5S_TENANT, new SiteContext('https://example.test', 'Test Site')),
         (new ThemeResolver())->resolve('default'),

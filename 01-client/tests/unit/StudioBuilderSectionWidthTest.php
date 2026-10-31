@@ -29,7 +29,7 @@ use Slate\Tenancy\TenantContext;
 function sbsw_doc(array $layout): array
 {
     $merged = array_filter(array_replace(CanonicalDocumentSchema::defaultSectionLayout(), $layout), static fn($v): bool => $v !== null);
-    return ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'id' => 'blk_aaaaaaaaaaaaaaaa', 'layout' => $merged /*TODO*/, 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => []])]];
+    return ['schema_version' => '2.0', 'document_type' => 'page', 'template_key' => 'default', 'settings' => [], 'seo' => [], 'containers' => [CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'S'], 'layout' => $merged /*TODO*/, 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => []])]];
 }
 
 function sbsw_valid(array $layout): bool
@@ -42,7 +42,7 @@ function sbsw_inner(array $layout): string
 {
     $tenants  = new TenantContext();
     $renderer = new DocumentRenderer(BlockRegistry::withAllCoreBlocks(), BlockRendererRegistry::withCoreRenderers(), new CoreMediaResolver($tenants), new ProviderBindingResolver(new DataProviderRegistry(), $tenants));
-    $html = $renderer->renderSections(sbsw_doc($layout)['containers'], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), new RenderCollector(), false);
+    $html = $renderer->renderContainers(sbsw_doc($layout)['containers'], RenderContext::forPublic(101, new SiteContext('https://example.test', 'T')), (new ThemeResolver())->resolve('default'), new RenderCollector(), false);
     return preg_match('/<div class="sb-section__inner[^>]*>/', $html, $m) === 1 ? $m[0] : '';
 }
 
