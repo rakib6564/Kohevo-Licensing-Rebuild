@@ -57,7 +57,7 @@ const EN = {
   section_content: 'Content',
   section_tokens: 'Theme tokens',
   inspector_search: 'Search settings',
-  inspector_matches: '{n} matching Containers',
+  inspector_matches: '{n} matching groups',
   inspector_no_match: 'No setting matches that search.',
   tab_content: 'Content',
   tab_style: 'Style',

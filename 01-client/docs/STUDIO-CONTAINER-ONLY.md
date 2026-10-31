@@ -77,4 +77,7 @@ operation names fail as unknown, with a message naming the replacement. MCP tool
 - A Section whose blocks all render nothing now leaves no box on a public page, like any Container.
 - `.sb-section__inner` no longer exists, so site CSS aimed at it stops applying. `.sb-section` still matches upgraded
   Containers, but a Section's padding no longer carries `!important`.
+- A nested `layout.section` set to full width no longer breaks out to 100vw, and its boxed background now fills the row.
+- Built-in Container presets stack their children, where section presets made equal columns.
+- Duplicating a top-level Container no longer adds " (Copy)" to its name.
 - A `sm`-only (640px) column or padding value has no device in the panel; it folds into the phone's value.

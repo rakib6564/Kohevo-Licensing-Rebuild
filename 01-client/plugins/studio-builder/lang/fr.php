@@ -542,7 +542,7 @@ return [
     'studio_ui_section_content' => 'Contenu',
     'studio_ui_section_tokens' => 'Jetons du thème',
     'studio_ui_inspector_search' => 'Rechercher un réglage',
-    'studio_ui_inspector_matches' => '{n} conteneurs correspondantes',
+    'studio_ui_inspector_matches' => '{n} groupes correspondants',
     'studio_ui_inspector_no_match' => 'Aucun réglage ne correspond à cette recherche.',
     'studio_ui_tab_content' => 'Contenu',
     'studio_ui_tab_advanced' => 'Avancé',
