@@ -450,7 +450,7 @@ final class DocumentRenderer
      * @param array<string, mixed> $style
      */
     /**
-     * The motion a block or a section carries: entrance-animation classes, interaction classes and trigger
+     * The motion a block carries: entrance-animation classes, interaction classes and trigger
      * attribute, and the timing custom properties (already terminated by `;` when present).
      *
      * @param array<string, mixed> $node

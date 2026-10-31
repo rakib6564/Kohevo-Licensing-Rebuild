@@ -508,7 +508,7 @@ final class StyleSurface
         return self::isColourToken($v) ? 'var(--sb-' . str_replace('.', '-', $v) . ')' : $v;
     }
 
-    /** A size that is never negative (px, %, rem, vw...), as padding takes it: a section's custom width. */
+    /** A size that is never negative (px, %, rem, vw...), as padding takes it: a device's own boxed width. */
     public static function isSize(mixed $v): bool
     {
         return self::fieldAccepts($v, ['padlen', '']);

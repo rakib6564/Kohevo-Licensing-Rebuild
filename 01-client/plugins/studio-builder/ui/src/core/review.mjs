@@ -35,7 +35,7 @@ export function revisionKindLabel(kind) {
 export function summaryCounters(review) {
   const s = review && review.diff && review.diff.summary ? review.diff.summary : {};
   const keys = [
-    'sections_added', 'sections_removed', 'sections_moved', 'sections_updated',
+    'containers_added', 'containers_removed', 'containers_moved', 'containers_updated',
     'blocks_added', 'blocks_removed', 'blocks_moved', 'blocks_updated',
   ];
   const out = keys.filter((k) => Number.isInteger(s[k]) && s[k] > 0).map((k) => ({ key: k, count: s[k] }));

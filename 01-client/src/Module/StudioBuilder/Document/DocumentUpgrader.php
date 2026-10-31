@@ -65,8 +65,8 @@ final class DocumentUpgrader
         if (is_array($document['containers'] ?? null)) {
             $document['containers'] = self::layoutSections($document['containers']);
         }
-        if (($document['document_type'] ?? null) === 'section_preset') {
-            $document['document_type'] = CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE;
+        if (is_string($document['document_type'] ?? null)) {
+            $document['document_type'] = self::typeName($document['document_type']);
         }
         if (!array_key_exists('sections', $document) || array_key_exists('containers', $document)) {
             return $document;
@@ -81,6 +81,15 @@ final class DocumentUpgrader
             $document['containers'] = self::layoutSections($document['containers']);
         }
         return $document;
+    }
+
+    /**
+     * A page, document or template type under its current name, for anything read from outside the database: a package,
+     * a backup. (StudioSchemaManager moves the stored rows.)
+     */
+    public static function typeName(string $type): string
+    {
+        return $type === 'section_preset' ? CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE : $type;
     }
 
     /**

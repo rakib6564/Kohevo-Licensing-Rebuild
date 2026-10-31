@@ -5,7 +5,7 @@
  * Implements deterministic document migration for versioned widgets (Section 31.2):
  * - Detects blocks saved with older schema versions (e.g. block version 1 when definition is version 2)
  * - Sequentially executes registered migration callbacks without re-interpreting old documents
- * - Recurses through nested sections, containers, and children
+ * - Recurses through Containers and children
  */
 
 declare(strict_types=1);
@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Sdk;
 
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 
 final class WidgetMigrator
 {
@@ -64,28 +65,19 @@ final class WidgetMigrator
      */
     public static function migrateDocument(array $document): array
     {
-        if (!isset($document['sections']) || !is_array($document['sections'])) {
+        $document = DocumentUpgrader::structure($document);
+        if (!isset($document['containers']) || !is_array($document['containers'])) {
             return $document;
         }
 
-        $migratedSections = [];
-        foreach ($document['sections'] as $section) {
-            if (!is_array($section)) {
-                continue;
+        $migrated = [];
+        foreach ($document['containers'] as $container) {
+            if (is_array($container)) {
+                $migrated[] = self::migrateBlock($container);
             }
-            if (isset($section['blocks']) && is_array($section['blocks'])) {
-                $migratedBlocks = [];
-                foreach ($section['blocks'] as $block) {
-                    if (is_array($block)) {
-                        $migratedBlocks[] = self::migrateBlock($block);
-                    }
-                }
-                $section['blocks'] = $migratedBlocks;
-            }
-            $migratedSections[] = $section;
         }
 
-        $document['sections'] = $migratedSections;
+        $document['containers'] = $migrated;
         return CanonicalJson::sortKeysRecursively($document);
     }
 }

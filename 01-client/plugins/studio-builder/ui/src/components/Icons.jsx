@@ -247,7 +247,7 @@ export function IconBox({ size = 18, className = '' }) {
   );
 }
 
-export function IconLayoutSection({ size = 18, className = '' }) {
+export function IconLayoutRows({ size = 18, className = '' }) {
   return (
     <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="3" y="3" width="18" height="18" rx="2" />

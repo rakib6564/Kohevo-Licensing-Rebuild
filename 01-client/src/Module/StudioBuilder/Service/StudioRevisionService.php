@@ -517,7 +517,7 @@ final class StudioRevisionService
     {
         $refs = [];
         foreach ($deps as $dep) {
-            // Section component references only (a uuid); `chrome:*` and `template:*` keys are not components.
+            // Container component references only (a uuid); `chrome:*` and `template:*` keys are not components.
             if ($dep->dependencyType === 'partial' && preg_match(CanonicalDocumentSchema::COMPONENT_REF_PATTERN, $dep->dependencyKey) === 1) {
                 $refs[$dep->dependencyKey] = true;
             }
@@ -539,7 +539,7 @@ final class StudioRevisionService
             );
             if ($status === null || $status === false || $status === 'archived') {
                 throw new StudioValidationException([
-                    ['path' => '$.sections', 'code' => 'cross_tenant_or_missing_partial', 'message' => "Referenced global_ref '{$ref}' does not exist in the active tenant."],
+                    ['path' => '$.containers', 'code' => 'cross_tenant_or_missing_partial', 'message' => "Referenced global_ref '{$ref}' does not exist in the active tenant."],
                 ]);
             }
         }

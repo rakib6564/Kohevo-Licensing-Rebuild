@@ -4,7 +4,7 @@
 //   delete           the element goes.
 //   move / reorder   the elements are re-seated among their siblings.
 //   duplicate/paste  the source element is cloned (the render of identical content is identical), ids rewritten.
-//   new block/section a placeholder stands in until the server's markup is merged in.
+//   new block a placeholder stands in until the server's markup is merged in.
 //   id remap         a provisional id the server has replaced is renamed on its element, never rebuilt.
 //
 // The server's render still follows (the editor morphs it in after the save) and replaces all of this, so nothing here
@@ -32,26 +32,19 @@ function indexDoc(doc) {
     }
     kids.set(parentId, list);
   };
-  const roots = [];
-  for (const s of asList(doc && doc.sections)) {
-    if (!s || !s.id) continue;
-    map.set(s.id, { node: s, parentId: ROOT, kind: 'section' });
-    roots.push(s.id);
-    walkBlocks(s.blocks, s.id);
-  }
-  kids.set(ROOT, roots);
+  walkBlocks(doc && doc.containers, ROOT);
   return { map, kids };
 }
 
 /** Everything about a node but its ids, so two nodes that would render alike compare equal. */
 function signature(node) {
-  const { id, children, blocks, ...rest } = node; // eslint-disable-line no-unused-vars
-  return JSON.stringify([rest, asList(blocks !== undefined ? blocks : children).map(signature)]);
+  const { id, children, ...rest } = node; // eslint-disable-line no-unused-vars
+  return JSON.stringify([rest, asList(children).map(signature)]);
 }
 
 function preorder(node, out = []) {
   out.push(node.id);
-  for (const c of asList(node.blocks !== undefined ? node.blocks : node.children)) preorder(c, out);
+  for (const c of asList(node.children)) preorder(c, out);
   return out;
 }
 
@@ -78,17 +71,17 @@ function cleanClone(source, ids) {
 function placeholder(canvasDoc, node) {
   const el = canvasDoc.createElement('div');
   el.setAttribute(ATTR, node.id);
-  el.setAttribute('data-sb-type', node.type || 'section');
+  el.setAttribute('data-sb-type', node.type || 'core.container');
   el.setAttribute('class', 'sb-block sbx-pending');
   el.setAttribute('style', 'min-height:3.5rem;display:flex;align-items:center;justify-content:center;border:1px dashed #8b5cf6;border-radius:6px;color:#8b5cf6;font:500 13px/1 system-ui,sans-serif;opacity:.7');
-  el.textContent = String(node.type || 'section').split('.').pop().replace(/_/g, ' ');
+  el.textContent = String(node.type || 'core.container').split('.').pop().replace(/_/g, ' ');
   return el;
 }
 
 /**
  * Bring the canvas from `prevDoc`'s structure to `nextDoc`'s.
  * @returns {{changed: number, complete: boolean, pending: Element[]}} `complete` is false when part of it was left for the
- *   server's render; `pending` are the placeholders standing in for new blocks and sections (their real markup can be fetched now).
+ *   server's render; `pending` are the placeholders standing in for new blocks (their real markup can be fetched now).
  */
 export function syncLiveStructure(canvasDoc, prevDoc, nextDoc) {
   if (!canvasDoc || !canvasDoc.querySelector || !prevDoc || !nextDoc) return { changed: 0, complete: false, pending: [] };

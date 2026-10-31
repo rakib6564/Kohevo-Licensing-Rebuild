@@ -28,9 +28,9 @@ body.sb-body { background: var(--sl-paper); color: var(--sl-ink); font-family: v
 .sb-body .sb-text--sm { font-size: .92rem; }
 .sb-body .sb-rich-text a, .sb-body .sb-post-body a { color: var(--sl-clay-deep); text-underline-offset: .2em; }
 
-/* Section rhythm: the same generous step at every seam. */
-.sb-main > .sb-section, .sb-main .sb-section { padding-top: var(--sl-rhythm); padding-bottom: var(--sl-rhythm); }
-.sb-body .sb-section__inner { padding-left: clamp(1.25rem, 4vw, 3rem); padding-right: clamp(1.25rem, 4vw, 3rem); }
+/* Container rhythm: the same generous step at every seam. */
+.sb-main > .sb-top, .sb-main .sb-top { padding-top: var(--sl-rhythm); padding-bottom: var(--sl-rhythm); }
+.sb-body { --sb-type-section_gutter: clamp(1.25rem, 4vw, 3rem); }
 
 /* Eyebrows: small, tracked, clay. */
 .sb-body .sb-hero__eyebrow, .sb-body .sl-eyebrow, .sb-body .sl-eyebrow .sb-text {
@@ -40,7 +40,7 @@ body.sb-body { background: var(--sl-paper); color: var(--sl-ink); font-family: v
 /* ── Header: Menu · wordmark · Book, centred on every screen ─────────── */
 /* No backdrop-filter here: it would make the header the containing block of the fixed overlay and clip it. */
 .sb-site-header { position: sticky; top: 0; z-index: 40; background: var(--sl-paper); border-bottom: 1px solid var(--sl-line); }
-.sb-site-header > .sb-section { padding-top: 1.15rem; padding-bottom: 1.15rem; background: transparent; }
+.sb-site-header > .sb-top { padding-top: 1.15rem; padding-bottom: 1.15rem; background: transparent; }
 .sb-site-header p, .sb-site-header ul { margin: 0; }
 .sb-body .sl-header { display: flex; align-items: center; }
 .sb-body .sl-header > .sb-block { flex: 1 1 0; min-width: 0; margin: 0; }
@@ -223,8 +223,8 @@ html.sb-scroll-lock, html.sb-scroll-lock body { overflow: hidden; }
 .sb-body .sb-query-loop .sb-card, .sb-body .sb-catalog--posts .sb-card { background: transparent; border-top: 1px solid var(--sl-line); }
 
 /* ── Footer ───────────────────────────────────────────────────────────── */
-.sb-site-footer, .sb-site-footer .sb-section { background: var(--sl-deep); color: var(--sl-on-deep); }
-.sb-site-footer .sb-section { padding-top: clamp(4rem, 8vw, 6.5rem); padding-bottom: 2.5rem; }
+.sb-site-footer, .sb-site-footer .sb-top { background: var(--sl-deep); color: var(--sl-on-deep); }
+.sb-site-footer .sb-top { padding-top: clamp(4rem, 8vw, 6.5rem); padding-bottom: 2.5rem; }
 .sb-site-footer .sb-heading, .sb-site-footer h3 { color: var(--sl-paper); font-size: 1.6rem; }
 .sb-site-footer .sl-wordmark .sb-heading, .sb-site-footer .sl-wordmark h3 { font-size: 2.1rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 500; }
 .sb-site-footer .sb-text, .sb-site-footer .sb-list__item, .sb-site-footer .sb-nav__link { color: var(--sl-on-deep); }

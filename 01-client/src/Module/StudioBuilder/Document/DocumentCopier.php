@@ -3,16 +3,15 @@
  * Kohevo Studio (studio-builder) — Copy semantics for canonical content.
  *
  * The ONE place that turns canonical content into an independent copy:
- * every section and block id is re-minted (`CanonicalDocumentSchema::
- * newSectionId()` / `newBlockId()`), so the copy can be inserted into any
- * document without colliding with the source or with an earlier copy.
+ * every block id is re-minted (`CanonicalDocumentSchema::newBlockId()`), so
+ * the copy can be inserted into any document without colliding with the source or with an earlier copy.
  * Nothing else about the content is interpreted here — the copy still goes
  * through the full validate/normalize pipeline of whatever document it lands
  * in.
  *
  * This is the "Reusable preset" concept (target architecture §9): the
  * receiving document OWNS the copy. It is deliberately distinct from a live
- * "Global reference" (`section.global_ref`), which copies nothing.
+ * "Global reference" (a top-level Container's `global_ref`), which copies nothing.
  */
 
 declare(strict_types=1);

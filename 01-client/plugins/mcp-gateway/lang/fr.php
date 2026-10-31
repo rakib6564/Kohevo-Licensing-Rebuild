@@ -126,7 +126,7 @@ return [
     'mcp_gateway_chat_prompt_studio_1' => 'Lister les pages Studio et indiquer lesquelles ont des modifications en brouillon non publiées.',
     'mcp_gateway_chat_prompt_studio_2' => 'Afficher la structure de la page Studio « [title] ».',
     'mcp_gateway_chat_prompt_studio_3' => 'Sur la page Studio « [title] », remplacer le titre principal par « [new heading] » en tant que brouillon.',
-    'mcp_gateway_chat_prompt_studio_4' => 'Ajouter une section avec un titre « [text] » et un paragraphe « [text] » à la fin de la page Studio « [title] » en tant que brouillon.',
+    'mcp_gateway_chat_prompt_studio_4' => 'Ajouter un conteneur avec un titre « [text] » et un paragraphe « [text] » à la fin de la page Studio « [title] » en tant que brouillon.',
     'mcp_gateway_chat_prompt_studio_5' => 'Afficher les différences entre le brouillon actuel de la page Studio « [title] » et sa version publiée.',
     'mcp_gateway_chat_prompt_studio_6' => 'Donner le lien d\'aperçu du brouillon actuel de la page Studio « [title] » pour que je puisse le vérifier et le publier.',
 

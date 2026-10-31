@@ -447,7 +447,7 @@ final class StudioBackupService
             if ($existing !== null && (bool) $existing['is_system']) {
                 return; // comes with the plugin; never overwritten
             }
-            $this->templates->saveTemplate($key, (string) ($template['template_type'] ?? ''), (string) ($template['category'] ?? 'general'), (string) ($template['name'] ?? ''),
+            $this->templates->saveTemplate($key, DocumentUpgrader::typeName((string) ($template['template_type'] ?? '')), (string) ($template['category'] ?? 'general'), (string) ($template['name'] ?? ''),
                 isset($template['description']) ? (string) $template['description'] : null, $mapMedia($template['document']), $actorId, $options, null, true);
             $out['templates']++;
         } catch (StudioValidationException $e) {
@@ -652,6 +652,9 @@ final class StudioBackupService
         for ($n = 1; $n <= $total; $n++) {
             $name = StudioBackupFormat::pageEntry($n);
             $page = self::entry($zip, $name);
+            if (is_array($page) && is_string($page['page_type'] ?? null)) {
+                $page['page_type'] = DocumentUpgrader::typeName($page['page_type']);
+            }
             $problem = StudioBackupFormat::pageProblem($page);
             if ($problem !== null) {
                 $blocked[] = ['title' => $name, 'reason' => $problem];
@@ -704,7 +707,7 @@ final class StudioBackupService
     /** @param array<string, mixed> $document @param array<string, mixed> $options */
     private function validated(array $document, string $pageType, array $options): ValidatedDocument
     {
-        if (($document['document_type'] ?? null) !== $pageType) {
+        if ((DocumentUpgrader::structure($document)['document_type'] ?? null) !== $pageType) {
             throw self::invalid("The document is not a '{$pageType}' document.");
         }
         return ValidatedDocument::from($this->upgraded($document), $this->registry, $options);

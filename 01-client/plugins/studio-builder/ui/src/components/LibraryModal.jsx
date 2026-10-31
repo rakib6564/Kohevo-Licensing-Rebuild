@@ -53,7 +53,7 @@ export const LibraryModal = memo(function LibraryModal({ onClose }) {
                   {tpl.thumbnail_url ? <img className="sbx-libmodal__thumb" src={tpl.thumbnail_url} alt="" /> : <span className="sbx-libmodal__thumb sbx-libmodal__thumb--empty" aria-hidden="true" />}
                   <div className="sbx-libmodal__meta">
                     <strong>{tpl.name}</strong>
-                    {tpl.summary && <span className="sbx-muted">{t('library_summary', { sections: tpl.summary.sections, blocks: tpl.summary.blocks })}</span>}
+                    {tpl.summary && <span className="sbx-muted">{t('library_summary', { containers: tpl.summary.containers, blocks: tpl.summary.blocks })}</span>}
                   </div>
                   <button type="button" className="sbx-btn sbx-btn--primary sbx-btn--xs sbx-libmodal__action" data-testid="library-insert" disabled={blocked}
                     onClick={() => run(() => (templateAction(tpl) === 'apply' ? applyTemplate(tpl) : insertTemplate(tpl)))}>

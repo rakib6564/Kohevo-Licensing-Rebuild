@@ -53,7 +53,7 @@ final class GridRenderer implements BlockRendererInterface, WrapperClassesInterf
             $align = 'stretch';
         }
 
-        // More than two columns collapse to one on a phone, as section columns and the Query Loop do; the
+        // More than two columns collapse to one on a phone, as the Query Loop does; the
         // chosen count applies from tablet width up. A count the author set per device is wrapperStyle's.
         $colClasses = $scope->hasDeviceValue('columns') ? ['sb-dcols'] : ($cols > 2 ? ['sb-cols-1', 'sb-md-cols-' . $cols] : ['sb-cols-' . $cols]);
         $classes = [

@@ -10,7 +10,7 @@
  * a revision that was valid when written can stop validating later — a block
  * type is unregistered, a block version is bumped, a field schema tightens.
  * Rather than taking the whole page down, the envelope (settings, seo,
- * sections) must still validate, and then EVERY block is validated on its own
+ * top-level Containers) must still validate, and then EVERY block is validated on its own
  * through the same public validator/normalizer. A block that fails becomes an
  * inert `unavailable` marker the renderer turns into a non-executable
  * fallback; it is never rendered from raw, unvalidated input.

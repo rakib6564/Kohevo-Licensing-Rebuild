@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '58';
+    public const VERSION = '59';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -849,7 +849,7 @@ final class StudioStylesheet
     /**
      * Sticky and parallax (ScrollEffects). A sticky node is plain `position: sticky`, so it sticks without JavaScript;
      * studio-runtime.js adds `is-stuck` (for the shadow and the stuck background) and `is-hidden` (hide while scrolling
-     * down). A header or footer holding a sticky section lets it stick to the page, not inside its own wrapper.
+     * down). A header or footer holding a sticky Container lets it stick to the page, not inside its own wrapper.
      * A parallax background is painted by `::after`, taller than the node by the room it moves in; the runtime moves it.
      */
     public static function scrollEffectsCss(): string
@@ -863,7 +863,7 @@ final class StudioStylesheet
             . '.sb-sticky.is-stuck[data-sb-sticky-effect~="shadow"]{box-shadow:0 8px 24px -8px rgba(15,23,42,.25)}'
             . '.sb-sticky.is-stuck[data-sb-sticky-effect~="background"]{background-color:var(--sb-stuck-bg)!important}'
             . '.sb-sticky.is-hidden{transform:translate3d(0,calc(-100% - var(--sb-sticky-offset,0px)),0)}'
-            // Shrink: the runtime's `is-shrunk` tightens the header's sections and logo once the page has scrolled a little.
+            // Shrink: the runtime's `is-shrunk` tightens the header's Containers and logo once the page has scrolled a little.
             . '.sb-sticky[data-sb-sticky-effect~="shrink"] :is(.sb-top,.sb-top img){transition:padding .2s ease,max-height .2s ease}'
             . '.sb-sticky.is-shrunk .sb-top{padding-top:.35rem!important;padding-bottom:.35rem!important}.sb-sticky.is-shrunk .sb-top img{max-height:2.25rem;width:auto}'
             . '.sb-site-header--partial:has(>.sb-sticky),.sb-site-footer--partial:has(>.sb-sticky){display:contents}'

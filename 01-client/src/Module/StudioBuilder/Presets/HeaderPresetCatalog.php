@@ -3,7 +3,7 @@
  * Kohevo Studio (studio-builder) — the built-in header catalogue.
  *
  * Six ready-made site headers, built only from registered blocks, synced as system `header_preset` templates exactly
- * like SectionPresetCatalog's sections: reserved keys, immutable, copyable, offered in the builder Library while a
+ * like ContainerPresetCatalog's presets: reserved keys, immutable, copyable, offered in the builder Library while a
  * header is open and as the starting design of a new Theme Builder header.
  *
  * Pure and deterministic: no database, no clock, no randomness. Ids are derived from the preset key, so a rebuild is
@@ -14,9 +14,8 @@
  *
  * Every menu carries its own menu button (the Nav menu's `toggle_*` props), so one list of links serves every screen.
  *
- * Each section is one column wide: a section's blocks are equal-width columns, and the phone-only and wide-only rows a
- * header needs would otherwise split it in half. Grids that centre the brand keep three columns on a phone (a grid of
- * more than two columns otherwise collapses to one there).
+ * Each top-level Container stacks its rows, so a phone-only row and a wide-only row never share a line. Grids that centre
+ * the brand keep three columns on a phone (a grid of more than two columns otherwise collapses to one there).
  */
 
 declare(strict_types=1);
@@ -27,7 +26,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
 final class HeaderPresetCatalog
 {
-    public const VERSION = 2;
+    public const VERSION = 3;
 
     /** Template keys are `system-header-<slug>`: reserved, immutable, copyable. */
     public const KEY_PREFIX = 'system-header-';
@@ -64,17 +63,17 @@ final class HeaderPresetCatalog
     private static function build(): array
     {
         $presets = [];
-        /** @param callable(callable): list<array<string, mixed>> $sections */
-        $add = static function (string $slug, string $name, string $description, callable $sections) use (&$presets): void {
+        /** @param callable(callable): list<array<string, mixed>> $containers */
+        $add = static function (string $slug, string $name, string $description, callable $containers) use (&$presets): void {
             $key = self::KEY_PREFIX . $slug;
             $n = 0;
-            $id = static function (string $prefix = 'blk') use ($key, &$n): string {
+            $id = static function () use ($key, &$n): string {
                 $n++;
-                return $prefix . '_' . substr(hash('sha256', $key . ':' . $n), 0, 24);
+                return 'blk_' . substr(hash('sha256', $key . ':' . $n), 0, 24);
             };
             $document = CanonicalDocumentSchema::emptyDocument('header_partial', 'default', $name);
             $document['settings']['template_type'] = 'header';
-            $document['sections'] = $sections($id);
+            $document['containers'] = $containers($id);
             $presets[$key] = [
                 'key' => $key, 'slug' => $slug, 'name' => $name, 'category' => self::CATEGORY,
                 'description' => $description, 'document' => $document,
@@ -84,7 +83,7 @@ final class HeaderPresetCatalog
         // 1. Classic: brand on the left, menu and a button on the right.
         $add('classic', 'Header — Classic', 'Brand on the left, menu and a button on the right.',
             static fn(callable $id): array => [
-                self::section($id, 'Header', [
+                self::container($id, 'Header', [
                     self::classicRow($id),
                 ]),
             ]);
@@ -92,7 +91,7 @@ final class HeaderPresetCatalog
         // 2. Centred: a menu button, the brand at the true centre, a button.
         $add('centered', 'Header — Centred', 'Menu button, centred brand and a button: balanced on every screen.',
             static fn(callable $id): array => [
-                self::section($id, 'Header', [
+                self::container($id, 'Header', [
                     self::threeColumns($id, [
                         self::menu($id, 'horizontal', 'left', null, ['toggle_breakpoint' => 'always', 'toggle_mode' => 'offcanvas', 'toggle_align' => 'left']),
                         self::brand($id, 'center'),
@@ -104,7 +103,7 @@ final class HeaderPresetCatalog
         // 3. Split: links either side of a centred brand; one menu button on a phone.
         $add('split', 'Header — Split', 'Links on either side of a centred brand.',
             static fn(callable $id): array => [
-                self::section($id, 'Header', [
+                self::container($id, 'Header', [
                     self::threeColumns($id, [
                         self::menu($id, 'horizontal', 'left', [['label' => 'Home', 'url' => '/'], ['label' => 'About', 'url' => '/about']]),
                         self::brand($id, 'center'),
@@ -120,7 +119,7 @@ final class HeaderPresetCatalog
         // 4. Minimal: the brand and one labelled menu button that opens a full-width panel.
         $add('minimal', 'Header — Minimal', 'Brand and a single Menu button that opens a full-width panel.',
             static fn(callable $id): array => [
-                self::section($id, 'Header', [
+                self::container($id, 'Header', [
                     self::block($id, 'layout.flex', ['direction' => 'row', 'wrap' => 'nowrap', 'justify' => 'between', 'align' => 'center', 'gap' => 'md'], [
                         self::brand($id),
                         self::menu($id, 'horizontal', 'right', null, ['toggle_breakpoint' => 'always', 'toggle_icon' => 'text_icon']),
@@ -131,7 +130,7 @@ final class HeaderPresetCatalog
         // 5. Two-tier: a slim contact bar above a classic row.
         $add('two-tier', 'Header — Two-tier', 'A slim contact bar above the brand, menu and a button.',
             static fn(callable $id): array => [
-                self::section($id, 'Top bar', [
+                self::container($id, 'Top bar', [
                     self::block($id, 'layout.flex', ['direction' => 'row', 'wrap' => 'wrap', 'justify' => 'between', 'align' => 'center', 'gap' => 'md'], [
                         self::block($id, 'layout.flex', ['direction' => 'row', 'wrap' => 'wrap', 'justify' => 'start', 'align' => 'center', 'gap' => 'sm'], [
                             self::block($id, 'core.icon', ['name' => 'mail', 'size' => 'sm', 'align' => 'left', 'color_token' => null, 'label' => 'Email']),
@@ -141,8 +140,8 @@ final class HeaderPresetCatalog
                         ]),
                         self::block($id, 'core.link', ['link' => ['label' => 'Free consultation', 'href' => '/contact'], 'style' => 'arrow', 'align' => 'right'], [], [], self::WIDE),
                     ]),
-                ], ['background_token' => 'surface.secondary', 'padding_y' => ['base' => 'xs']]),
-                self::section($id, 'Header', [
+                ], 'surface.secondary', 'xs'),
+                self::container($id, 'Header', [
                     self::classicRow($id),
                 ]),
             ]);
@@ -150,7 +149,7 @@ final class HeaderPresetCatalog
         // 6. Hamburger only: the brand and a hamburger that slides the menu in, on every screen.
         $add('hamburger', 'Header — Hamburger only', 'Brand and a hamburger that opens the menu in a side panel, on every screen.',
             static fn(callable $id): array => [
-                self::section($id, 'Header', [
+                self::container($id, 'Header', [
                     self::block($id, 'layout.flex', ['direction' => 'row', 'wrap' => 'nowrap', 'justify' => 'between', 'align' => 'center', 'gap' => 'md'], [
                         self::brand($id),
                         self::menu($id, 'horizontal', 'right', null, ['toggle_breakpoint' => 'always', 'toggle_mode' => 'offcanvas']),
@@ -164,22 +163,18 @@ final class HeaderPresetCatalog
     // ── building blocks ─────────────────────────────────────────────────────────
 
     /**
-     * @param list<array<string, mixed>> $blocks
-     * @param array<string, mixed> $layout
+     * @param list<array<string, mixed>> $children
      * @return array<string, mixed>
      */
-    private static function section(callable $id, string $label, array $blocks, array $layout = []): array
+    private static function container(callable $id, string $label, array $children, string $surface = 'surface.primary', string $paddingY = 'sm'): array
     {
-        return [
-            'id'         => $id('sec'),
-            'label'      => $label,
-            'global_ref' => null,
-            'layout'     => array_merge(CanonicalDocumentSchema::defaultSectionLayout(), [
-                'columns' => ['base' => 1, 'md' => 1], 'padding_y' => ['base' => 'sm'], 'width' => 'wide',
-            ], $layout),
-            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-            'blocks'     => $blocks,
-        ];
+        return CanonicalDocumentSchema::newContainer([
+            'id'       => $id(),
+            'metadata' => ['label' => $label],
+            'props'    => ['gap' => 'md'],
+            'style'    => ['surface_token' => $surface, 'layout' => ['content_width' => 'boxed', 'content_size' => 'wide', 'gutter' => 'site', 'padding_y' => $paddingY]],
+            'children' => $children,
+        ]);
     }
 
     /**

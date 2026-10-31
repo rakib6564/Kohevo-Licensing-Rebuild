@@ -3,7 +3,7 @@
  * Kohevo Studio (studio-builder) — Strict Canonical Document Validator.
  *
  * Enforces all Phase 2 validation invariants on the Kohevo Studio Canonical
- * Document (schema_version = "1.0"):
+ * Document (schema_version = "2.0"):
  * - Fails closed on any invalid type, unknown property, or constraint violation.
  * - Rejects `tenant_id` anywhere in the document tree.
  * - Enforces byte size, JSON depth, Container count, total block count, and nesting depth.
@@ -145,7 +145,7 @@ final class DocumentValidator
             }
         }
 
-        // 4. schema_version must be strictly "1.0"
+        // 4. schema_version must be strictly the current one
         $schemaVersion = $decoded['schema_version'] ?? null;
         if (!is_string($schemaVersion) || $schemaVersion !== CanonicalDocumentSchema::SCHEMA_VERSION) {
             $errors[] = ValidationResult::issue(
@@ -317,7 +317,7 @@ final class DocumentValidator
             self::validateConditions($settings['conditions'], $errors);
         }
 
-        // The same sticky shape a section or block takes (edge, offset, devices, shadow, background, hide on scroll).
+        // The same sticky shape a block takes (edge, offset, devices, shadow, background, hide on scroll).
         if (isset($settings['sticky_header'])) {
             foreach (ScrollEffects::issues(['sticky' => $settings['sticky_header']], '$.settings') as $issue) {
                 $issue['path'] = str_replace('$.settings.sticky', '$.settings.sticky_header', $issue['path']);
@@ -891,7 +891,7 @@ final class DocumentValidator
     }
 
     /**
-     * `animation` and `interactions` of a block or a section: shapes and enums only (the stylesheet owns the CSS), and the
+     * `animation` and `interactions` of a block: shapes and enums only (the stylesheet owns the CSS), and the
      * sticky and parallax settings `interactions` carries (ScrollEffects).
      *
      * @param array<string, mixed> $node

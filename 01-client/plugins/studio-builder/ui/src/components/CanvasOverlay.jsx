@@ -8,7 +8,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useEditor, useEngineState, useSelection } from './EditorContext.jsx';
-import { asList, blockDefinition, childrenOf, findNode, sectionsOf } from '../core/doc.mjs';
+import { asList, asObject, blockDefinition, childrenOf, containersOf, findNode, isGlobalContainer } from '../core/doc.mjs';
 import * as ops from '../core/operations.mjs';
 import { effectivelyLocked, lockIndex } from '../core/layerLock.mjs';
 import { clipTo, frameScale, placeFloating, rect, selectionCorners, stepId, toOverlayRect, unionRect } from '../core/overlayGeometry.mjs';
@@ -31,11 +31,11 @@ function emptyZoneIds(doc, manifest) {
     for (const b of asList(blocks)) {
       if (!b || !b.id) continue;
       const kids = asList(b.children);
-      if (ZONE_TYPES.has(b.type) && kids.length === 0 && blockDefinition(manifest, b.type)) out.push(b.id);
+      if (ZONE_TYPES.has(b.type) && kids.length === 0 && !isGlobalContainer(b) && blockDefinition(manifest, b.type)) out.push(b.id);
       walk(kids);
     }
   };
-  for (const section of sectionsOf(doc)) walk(section.blocks);
+  walk(containersOf(doc));
   return out;
 }
 
@@ -133,7 +133,7 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
       const visible = clipTo(full, bounds);
       if (visible) items.push({ id, rect: full, visible });
     }
-    // Layout aids (phone Responsive view): thin outlines for every node, name tags for sections.
+    // Layout aids (phone Responsive view): thin outlines for every node, name tags for the top-level Containers.
     const place = (id) => {
       const el = doc.querySelector(`[${NODE_ATTR}="${cssEscape(id)}"]`);
       if (!el) return null;
@@ -154,9 +154,9 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
     }
     const labelTags = [];
     if (labels) {
-      for (const section of sectionsOf(workingRef.current)) {
-        const hit = place(section.id);
-        if (hit) labelTags.push({ ...hit, text: section.label || t('section') });
+      for (const top of containersOf(workingRef.current)) {
+        const hit = place(top.id);
+        if (hit) labelTags.push({ ...hit, text: asObject(top.metadata).label || t('container') });
       }
     }
     const zones = [];
@@ -282,7 +282,7 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
 
   const info = single && selection ? findNode(working, selection) : null;
   const locked = !!info && effectivelyLocked(lockIndex(working), info.node.id);
-  const siblings = info ? (info.kind === 'section' ? sectionsOf(working) : childrenOf(working, info.parentId)) : [];
+  const siblings = info ? childrenOf(working, info.parentId) : [];
   const buttons = info ? [
     { action: 'up', label: t('move_up'), disabled: locked || info.index <= 0 },
     { action: 'down', label: t('move_down'), disabled: locked || info.index >= siblings.length - 1 },
@@ -373,7 +373,7 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
         <span
           key={`l-${l.id}`}
           className="sbx-overlay__label"
-          data-testid="overlay-section-label"
+          data-testid="overlay-container-label"
           style={{ left: l.visible.left + 4, top: l.visible.top + 4 }}
           aria-hidden="true"
         >

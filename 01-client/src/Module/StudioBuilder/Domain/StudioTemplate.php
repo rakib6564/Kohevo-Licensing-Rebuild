@@ -22,7 +22,7 @@ final class StudioTemplate
 {
     public const ALLOWED_TEMPLATE_TYPES = [
         'page_template',
-        'section_preset',
+        'container_preset',
         'header_preset',
         'footer_preset',
         'block_preset',

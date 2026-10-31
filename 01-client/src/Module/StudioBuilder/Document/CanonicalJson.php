@@ -131,7 +131,7 @@ final class CanonicalJson
 
         // Known map paths that must always serialize as JSON objects `{}` even when empty in PHP
         $isKnownObjectMap = (bool) preg_match(
-            '/^(\$\.settings|\$\.seo|\$\.sections\[\d+\]\.layout|\$\.sections\[\d+\]\.visibility|.*\.(props|style|visibility|bindings))$/',
+            '/^(\$\.settings|\$\.seo|.*\.(props|style|visibility|bindings))$/',
             $path
         );
 

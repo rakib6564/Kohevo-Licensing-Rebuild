@@ -4,8 +4,8 @@
 //                      "Apply to page" replaces the page document (apply_template,
 //                      with expected_revision_id); "Insert copy" adds an owned copy
 //                      through the operation pipeline (insert_template).
-//   Global components  LIVE references (server: section_preset pages). "Insert
-//                      reference" adds a section with global_ref = component ref;
+//   Global components  LIVE references (server: container_preset pages). "Insert
+//                      reference" adds a Container with global_ref = component ref;
 //                      the page owns no copy and renders the component's published
 //                      version. Editing happens in the component itself.
 //
@@ -62,7 +62,7 @@ export const LibraryPanel = memo(function LibraryPanel() {
                     {tpl.description && <p className="sbx-library__desc">{tpl.description}</p>}
                     {tpl.summary && (
                       <p className="sbx-muted sbx-library__meta">
-                        {t('library_summary', { sections: tpl.summary.sections, blocks: tpl.summary.blocks })}
+                        {t('library_summary', { containers: tpl.summary.containers, blocks: tpl.summary.blocks })}
                         {asList(tpl.summary.block_labels).length ? ` · ${tpl.summary.block_labels.join(', ')}` : ''}
                       </p>
                     )}

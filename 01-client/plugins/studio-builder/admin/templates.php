@@ -91,13 +91,13 @@ $typeConfigs = [
         'role'          => '404',
         'label'         => '404 Not Found',
     ],
-    'section_preset' => [
-        'template_type' => 'section_preset',
-        'page_type'     => 'section_preset',
-        'doc_type'      => 'section_preset',
-        'category'      => 'section',
-        'role'          => 'section_preset',
-        'label'         => 'Section Preset',
+    'container_preset' => [
+        'template_type' => 'container_preset',
+        'page_type'     => 'container_preset',
+        'doc_type'      => 'container_preset',
+        'category'      => 'container',
+        'role'          => 'container_preset',
+        'label'         => 'Container Preset',
     ],
 ];
 
@@ -190,101 +190,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Canonical starter document
                 $starterDoc = CanonicalDocumentSchema::emptyDocument($cfg['doc_type'], 'default', $name);
                 $starterDoc['seo']['robots'] = 'noindex,nofollow';
-                // A section preset is inserted into pages; it has no display conditions and no theme role.
-                if ($uiType !== 'section_preset') {
+                // A Container preset is inserted into pages; it has no display conditions and no theme role.
+                if ($uiType !== 'container_preset') {
                     $starterDoc['settings']['conditions'] = ['rules' => $conditionRules];
                     $starterDoc['settings']['template_type'] = $cfg['role'];
                 }
 
-                $secId = CanonicalDocumentSchema::newSectionId();
-                $blkId = CanonicalDocumentSchema::newBlockId();
+                $starterBlock = static fn(string $type, array $props): array => [
+                    'id'         => CanonicalDocumentSchema::newBlockId(),
+                    'type'       => $type,
+                    'version'    => 1,
+                    'props'      => $props,
+                    'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
+                    'visibility' => CanonicalDocumentSchema::defaultVisibility(),
+                    'bindings'   => [],
+                    'children'   => [],
+                ];
+                $starterContainer = static fn(string $label, array $block, string $paddingY, string $phonePaddingY, array $layout = []): array => CanonicalDocumentSchema::newContainer([
+                    'metadata'   => ['label' => mb_substr($label, 0, CanonicalDocumentSchema::BLOCK_LABEL_MAX_LENGTH, 'UTF-8')],
+                    'props'      => ['gap' => 'md'],
+                    'style'      => ['surface_token' => 'surface.primary', 'layout' => ['content_width' => 'boxed', 'gutter' => 'site', 'padding_y' => $paddingY] + $layout],
+                    'responsive' => ['mobile' => ['style' => ['layout' => ['padding_y' => $phonePaddingY]]]],
+                    'children'   => [$block],
+                ]);
 
                 if ($uiType === 'header' && $headerDesign !== null) {
-                    // The built-in design's sections, copied with new ids (the catalogue's ids are shared by every site).
-                    $starterDoc['sections'] = array_map(
-                        static fn(array $section): array => DocumentCopier::copySection($section),
-                        $headerDesign['document']['sections'],
-                    );
+                    // The built-in design's Containers, copied with new ids (the catalogue's ids are shared by every site).
+                    $starterDoc['containers'] = DocumentCopier::copyBlocks($headerDesign['document']['containers']);
                 } elseif ($uiType === 'header') {
-                    $starterDoc['sections'] = [
-                        [
-                            'id'         => $secId,
-                            'label'      => 'Header Navigation',
-                            'global_ref' => null,
-                            'layout'     => array_merge(CanonicalDocumentSchema::defaultSectionLayout(), [
-                                'padding_y' => ['base' => 'sm', 'md' => 'md'],
-                                'width'     => 'wide',
-                            ]),
-                            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                            'blocks'     => [
-                                [
-                                    'id'         => $blkId,
-                                    'type'       => 'core.heading',
-                                    'version'    => 1,
-                                    'props'      => [
-                                        'text'  => $name,
-                                        'level' => 'h2',
-                                    ],
-                                    'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
-                                    'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                                    'bindings'   => [],
-                                    'children'   => [],
-                                ],
-                            ],
-                        ],
-                    ];
+                    $starterDoc['containers'] = [$starterContainer('Header Navigation', $starterBlock('core.heading', ['text' => $name, 'level' => 'h2']), 'md', 'sm', ['content_size' => 'wide'])];
                 } elseif ($uiType === 'footer') {
-                    $starterDoc['sections'] = [
-                        [
-                            'id'         => $secId,
-                            'label'      => 'Footer Chrome',
-                            'global_ref' => null,
-                            'layout'     => array_merge(CanonicalDocumentSchema::defaultSectionLayout(), [
-                                'padding_y' => ['base' => 'md', 'md' => 'lg'],
-                                'width'     => 'wide',
-                            ]),
-                            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                            'blocks'     => [
-                                [
-                                    'id'         => $blkId,
-                                    'type'       => 'core.rich_text',
-                                    'version'    => 1,
-                                    'props'      => [
-                                        'content' => '<p>© ' . date('Y') . ' ' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '. All rights reserved.</p>',
-                                    ],
-                                    'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
-                                    'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                                    'bindings'   => [],
-                                    'children'   => [],
-                                ],
-                            ],
-                        ],
-                    ];
+                    $starterDoc['containers'] = [$starterContainer('Footer Chrome', $starterBlock('core.rich_text', [
+                        'content' => '<p>© ' . date('Y') . ' ' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '. All rights reserved.</p>',
+                    ]), 'lg', 'md', ['content_size' => 'wide'])];
                 } else {
-                    $starterDoc['sections'] = [
-                        [
-                            'id'         => $secId,
-                            'label'      => $name . ' Layout',
-                            'global_ref' => null,
-                            'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-                            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                            'blocks'     => [
-                                [
-                                    'id'         => $blkId,
-                                    'type'       => 'core.heading',
-                                    'version'    => 1,
-                                    'props'      => [
-                                        'text'  => $name,
-                                        'level' => 'h1',
-                                    ],
-                                    'style'      => CanonicalDocumentSchema::defaultBlockStyle(),
-                                    'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                                    'bindings'   => [],
-                                    'children'   => [],
-                                ],
-                            ],
-                        ],
-                    ];
+                    $starterDoc['containers'] = [$starterContainer($name . ' Layout', $starterBlock('core.heading', ['text' => $name, 'level' => 'h1']), 'lg', 'md')];
                 }
 
                 // Through the Studio services, as the editor saves: the template and the backing page's draft are
@@ -439,7 +379,7 @@ $counts = [
     'single'    => 0,
     'archive'   => 0,
     'not_found' => 0,
-    'sections'  => 0,
+    'containers' => 0,
 ];
 
 foreach ($allTemplates as $t) {
@@ -449,8 +389,8 @@ foreach ($allTemplates as $t) {
         $counts['header']++;
     } elseif ($tt === 'footer_preset' || $cat === 'footer') {
         $counts['footer']++;
-    } elseif ($tt === 'section_preset' || $tt === 'block_preset' || $cat === 'section' || $cat === 'component') {
-        $counts['sections']++;
+    } elseif ($tt === 'container_preset' || $tt === 'block_preset' || $cat === 'container' || $cat === 'component') {
+        $counts['containers']++;
     } elseif ($cat === 'single' || $cat === 'single_page') {
         $counts['single']++;
     } elseif ($cat === 'archive' || $cat === 'loop_grid') {
@@ -473,8 +413,8 @@ $templates = array_filter($allTemplates, static function(array $t) use ($typeFil
     if ($typeFilter === 'footer') {
         return $tt === 'footer_preset' || $cat === 'footer';
     }
-    if ($typeFilter === 'sections') {
-        return $tt === 'section_preset' || $tt === 'block_preset' || $cat === 'section' || $cat === 'component';
+    if ($typeFilter === 'containers') {
+        return $tt === 'container_preset' || $tt === 'block_preset' || $cat === 'container' || $cat === 'component';
     }
     if ($typeFilter === 'single') {
         return $cat === 'single' || $cat === 'single_page';
@@ -574,8 +514,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <a href="<?= e(plugin_url('studio-builder', 'admin/templates.php?type=not_found')) ?>" class="sb-pill-item <?= $typeFilter === 'not_found' ? 'active' : '' ?>">
                 <?= sb_svg('alert-circle', 14) ?> <?= e(__('studio_tpl_filter_not_found', '404 Pages')) ?> (<?= $counts['not_found'] ?>)
             </a>
-            <a href="<?= e(plugin_url('studio-builder', 'admin/templates.php?type=sections')) ?>" class="sb-pill-item <?= $typeFilter === 'sections' ? 'active' : '' ?>">
-                <?= sb_svg('overview', 14) ?> <?= e(__('studio_tpl_filter_sections', 'Sections & Components')) ?> (<?= $counts['sections'] ?>)
+            <a href="<?= e(plugin_url('studio-builder', 'admin/templates.php?type=containers')) ?>" class="sb-pill-item <?= $typeFilter === 'containers' ? 'active' : '' ?>">
+                <?= sb_svg('overview', 14) ?> <?= e(__('studio_tpl_filter_containers', 'Containers & Components')) ?> (<?= $counts['containers'] ?>)
             </a>
         </div>
 
@@ -637,7 +577,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         <option value="single"><?= e(__('studio_tpl_type_single', 'Single Post / Page (Dynamic single item view)')) ?></option>
                         <option value="archive"><?= e(__('studio_tpl_type_archive', 'Archive & Loop Grid (Dynamic collection feed)')) ?></option>
                         <option value="not_found"><?= e(__('studio_tpl_type_not_found', '404 Error (Custom Not Found page)')) ?></option>
-                        <option value="section_preset"><?= e(__('studio_tpl_type_section', 'Section & Component Preset (Reusable block layout)')) ?></option>
+                        <option value="container_preset"><?= e(__('studio_tpl_type_container', 'Container & Component Preset (Reusable block layout)')) ?></option>
                     </select>
                 </div>
                 <div class="sb-field">
@@ -720,7 +660,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 $displayType = match(true) {
                     $tType === 'header_preset' || $tCat === 'header' => 'header',
                     $tType === 'footer_preset' || $tCat === 'footer' => 'footer',
-                    $tType === 'section_preset' || $tType === 'block_preset' || $tCat === 'section' || $tCat === 'component' => 'section',
+                    $tType === 'container_preset' || $tType === 'block_preset' || $tCat === 'container' || $tCat === 'component' => 'container',
                     $tCat === 'single' => 'single',
                     $tCat === 'archive' => 'archive',
                     $tCat === 'not_found' => 'not_found',
@@ -730,7 +670,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 $displayTypeLabel = match ($displayType) {
                     'header'    => __('studio_kind_header', 'Header'),
                     'footer'    => __('studio_kind_footer', 'Footer'),
-                    'section'   => __('studio_ui_section', 'Section'),
+                    'container' => __('studio_ui_section', 'Container'),
                     'single'    => __('studio_tpl_kind_single', 'Single'),
                     'archive'   => __('studio_tpl_kind_archive', 'Archive'),
                     'not_found' => __('studio_tpl_kind_not_found', '404'),
@@ -747,7 +687,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     'single'  => '#0ea5e9',
                     'archive' => '#10b981',
                     'not_found' => '#f59e0b',
-                    'section' => '#10b981',
+                    'container' => '#10b981',
                     default   => '#64748b',
                 };
             ?>

@@ -337,9 +337,7 @@ function v2_relink(array &$node): void
     if (isset($node['props']['content']) && is_string($node['props']['content'])) {
         $node['props']['content'] = (string) preg_replace_callback('~href="([^"]+)"~', static fn($m) => 'href="' . htmlspecialchars(V2URL(html_entity_decode($m[1])), ENT_QUOTES) . '"', $node['props']['content']);
     }
-    foreach (['blocks', 'children'] as $k) {
-        if (isset($node[$k]) && is_array($node[$k])) { foreach ($node[$k] as &$c) { v2_relink($c); } unset($c); }
-    }
+    if (isset($node['children']) && is_array($node['children'])) { foreach ($node['children'] as &$c) { v2_relink($c); } unset($c); }
 }
 
 // ── Menus (V2 structure, « 0. Menu ») ────────────────────────────────────────────────────────────────────────────
@@ -368,7 +366,7 @@ $megaItem = static fn(string $label, string $url, string $menu, string $photo): 
     BOX([H('Faire avancer les actions de FightxLife', 'h3', 'v2-mega__cta-title'), V2BTN('Soutenir FightxLife', '/nous-soutenir/', 'v2-btn v2-btn--sm')], 'v2-mega__cta'),
 ]);
 $header = [
-    SEC('Top bar', [B('layout.flex', ['direction' => 'row', 'justify' => 'between', 'align' => 'center', 'gap' => 'none', 'wrap' => 'wrap'], [
+    TOP('Top bar', [B('layout.flex', ['direction' => 'row', 'justify' => 'between', 'align' => 'center', 'gap' => 'none', 'wrap' => 'wrap'], [
         B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center', 'wrap' => 'wrap'], [
             LNK('+32 483 12 72 98', 'tel:+32483127298', 'v2-top__item'), LNK('contact@fightxlife.com', 'mailto:contact@fightxlife.com', 'v2-top__item'),
             LNK('Rue Gabrielle Petit 32, 1080 Molenbeek', 'https://goo.gl/maps/aJW74coL3FB9Ld96A', 'v2-top__item')], 'v2-top__contact'),
@@ -376,7 +374,7 @@ $header = [
             V2SOCIAL('linkedin', 'https://www.linkedin.com/company/fightxlife/', 'FightxLife sur LinkedIn', 'v2-social'), V2SOCIAL('facebook', 'https://www.facebook.com/Fightxlife', 'FightxLife sur Facebook', 'v2-social'),
             V2SOCIAL('instagram', 'https://www.instagram.com/fightxlife', 'FightxLife sur Instagram', 'v2-social'), LNK('Espace membre', V2_MEMBRE, 'v2-top__member'), B('shop.mini_cart', ['label' => 'Panier', 'show_total' => false], [], 'v2-cart')], 'v2-top__right'),
     ], 'v2-top')], 'v2-top-sec'),
-    SEC('Header', [B('layout.grid', ['columns' => 3, 'gap' => 'none', 'align' => 'center'], [
+    TOP('Header', [B('layout.grid', ['columns' => 3, 'gap' => 'none', 'align' => 'center'], [
         V2IMG(V2_LOGO, 'FightxLife', 'v2-brand', ['link_to' => 'custom', 'url' => V2_HOME_URL]),
         B('layout.mega_menu', ['align' => 'center', 'aria_label' => 'Navigation principale', 'pointer' => 'underline', 'pointer_animation' => 'grow', 'toggle_breakpoint' => 'tablet', 'toggle_mode' => 'dropdown',
             'toggle_animation' => 'slide', 'toggle_label' => 'Ouvrir le menu', 'toggle_cta_label' => 'Soutenir FightxLife', 'toggle_cta_url' => '/nous-soutenir/'], [
@@ -397,14 +395,14 @@ $header = [
 $footCol = static fn(string $title, string $menu): array => BOX([H($title, 'h3', 'v2-foot__title'), B('core.nav_menu', ['menu' => $menu, 'items' => [], 'layout' => 'vertical', 'aria_label' => $title], [], 'v2-foot__nav')]);
 $footRow = static fn(string $icon, array $line): array => B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center'], [ICO($icon, 'v2-foot__ico'), $line], 'v2-foot__row');
 $footer = [
-    SEC('Newsletter', [B('layout.grid', ['columns' => 3, 'gap' => 'none', 'align' => 'center'], [
+    TOP('Newsletter', [B('layout.grid', ['columns' => 3, 'gap' => 'none', 'align' => 'center'], [
         ICO('mail', 'v2-nl__icon'),
         BOX([H('Abonne-toi à notre newsletter', 'h2', 'v2-nl__title'), T('Reste informé de nos actions, événements, galas et plus encore… C’est promis, nous ne te spammerons pas !', 'v2-nl__text')]),
         B('core.form', ['form_name' => 'newsletter', 'submit_text' => 'S’abonner', 'submit_variant' => 'primary', 'success_message' => 'Merci ! Ton inscription à la newsletter est bien enregistrée.'], [
             B('core.form_field', ['field_type' => 'email', 'name' => 'email', 'label' => 'Email', 'placeholder' => 'Ton adresse email', 'required' => true]),
         ], 'v2-nl__form', ['id' => STABLE_ID('newsletter-form')]),
     ], 'v2-nl')], 'v2-news-strip'),
-    SEC('Footer', [B('layout.grid', ['columns' => 2, 'gap' => 'none'], [
+    TOP('Footer', [B('layout.grid', ['columns' => 2, 'gap' => 'none'], [
         B('layout.grid', ['columns' => 4, 'gap' => 'none'], [
             $footCol('Nos actions', 'v2-actions'), $footCol('Nos cours', 'v2-cours'), $footCol('Projets & impact', 'v2-projets'), $footCol('À propos', 'v2-apropos'),
         ], 'v2-foot__cols'),
@@ -420,15 +418,15 @@ $footer = [
             V2BTN('Contacter l’association', '/contact/', 'v2-btn v2-btn--block'),
         ], 'v2-foot__card'),
     ], 'v2-foot')], 'v2-foot-sec'),
-    SEC('Footer bar', [B('layout.flex', ['direction' => 'row', 'justify' => 'between', 'align' => 'center', 'gap' => 'none', 'wrap' => 'wrap'], [
+    TOP('Footer bar', [B('layout.flex', ['direction' => 'row', 'justify' => 'between', 'align' => 'center', 'gap' => 'none', 'wrap' => 'wrap'], [
         T('© ' . date('Y') . ' FightxLife • Tous droits réservés', 'v2-bar__copy'),
         B('core.nav_menu', ['menu' => 'v2-legal', 'items' => [], 'layout' => 'horizontal', 'aria_label' => 'Mentions'], [], 'v2-bar__nav'),
     ], 'v2-bar')], 'v2-bar-sec'),
 ];
 
 // The live site's grey wave mesh behind the newsletter, on the right.
-$footer[0]['blocks'][0]['style']['background'] = ['image' => ['media_id' => MID('/uploads/media/fxl/2022-05-bg-footer.png'), 'alt' => '', 'focal_point' => [0.5, 0.5]], 'fit' => 'cover', 'position' => 'bottom-right'];
-$footer[0]['style'] = ['background' => ['gradient' => 'linear-gradient(170deg,#ffffff 48%,#cfc6ca 78%,#3a3236 100%)']];
+$footer[0]['children'][0]['style']['background'] = ['image' => ['media_id' => MID('/uploads/media/fxl/2022-05-bg-footer.png'), 'alt' => '', 'focal_point' => [0.5, 0.5]], 'fit' => 'cover', 'position' => 'bottom-right'];
+$footer[0]['style']['background'] = ['gradient' => 'linear-gradient(170deg,#ffffff 48%,#cfc6ca 78%,#3a3236 100%)'];
 
 // ── Home page (« 1. Accueil ») ───────────────────────────────────────────────────────────────────────────────────
 $axis = static fn(int $n, string $img, string $alt, string $icon, string $title, array $text, string $link, string $href): array => BOX([
@@ -453,8 +451,8 @@ $supportBand = BOX([BOX([
 $supportBand['style']['background'] = ['image' => ['media_id' => MID('/uploads/media/fxl/2022-05-enfant-malade.jpg'), 'alt' => '', 'focal_point' => [0.75, 0.3]], 'fit' => 'cover', 'position' => 'right',
     'overlay' => ['color' => 'rgba(26,4,18,.12)']];
 
-$sections = [
-    SEC('Hero', [B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
+$containers = [
+    TOP('Hero', [B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
         BOX([
             B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center'], [ICO('heart', 'v2-badge__dot'), T('Association d’accompagnement face au cancer')], 'v2-badge'),
             H('Aux côtés des personnes touchées par le cancer et de leurs proches', 'h1', 'v2-hero__title', 'touchées par le cancer'),
@@ -469,17 +467,17 @@ $sections = [
             BOX([T('« Une jolie bulle d’oxygène et de défoulement qui me permet de reprendre le sport en respectant mon rythme. »', 'v2-hero__qtext'), T('Jayne, WaterxFight', 'v2-hero__qname')], 'v2-hero__quote'),
         ], 'v2-hero__art'),
     ], 'v2-hero')], 'v2-hero-sec'),
-    SEC('Intro', [B('layout.grid', ['columns' => 2, 'gap' => 'none'], [
+    TOP('Intro', [B('layout.grid', ['columns' => 2, 'gap' => 'none'], [
         BOX([KICK('Qui accompagnons-nous ?'), T('FightxLife accompagne les enfants, les adolescents et les adultes touchés par la maladie, ainsi que leurs proches, pour les aider à rester en mouvement, garder du lien et trouver du soutien à chaque étape de leur parcours.', 'v2-intro__text')]),
         BOX([KICK('Où agissons-nous ?'), T('L’association propose des cours adaptés à Bruxelles et mène également des actions dans les hôpitaux, les écoles et différents lieux en Belgique, à travers le sport, la sensibilisation et des projets pensés au plus près des personnes concernées.', 'v2-intro__text')], 'v2-intro__second'),
     ], 'v2-intro')], 'v2-intro-sec'),
-    SEC('La force de vivre', [
+    TOP('La force de vivre', [
         KICK('FightxLife', 'v2-kick v2-force__kick'),
         B('core.marquee', ['text' => 'La force de vivre', 'duration' => 60], [], 'v2-force__marquee'),
         B('core.video', ['source' => 'youtube', 'url' => 'https://www.youtube.com/watch?v=jwMB0uoajXQ', 'aspect_ratio' => '16:9', 'privacy' => true, 'lazy_load' => true, 'controls' => true,
             'autoplay' => true, 'muted' => true], [], 'v2-force__video'),
     ], 'v2-force-sec'),
-    SEC('Trois manières d’agir', [
+    TOP('Trois manières d’agir', [
         V2HEAD('Trois manières d’agir face au cancer', 'face au cancer', [
             'Parce que chaque parcours est différent, FightxLife agit à plusieurs endroits de la vie : quand il faut retrouver confiance dans son corps, traverser le quotidien à l’hôpital ou aider les autres à mieux comprendre la maladie.']),
         B('layout.grid', ['columns' => 3, 'gap' => 'none'], [
@@ -494,7 +492,7 @@ $sections = [
                 'Dans les écoles, les associations et lors d’événements, FightxLife aide les enfants, les jeunes et le grand public à mieux comprendre le cancer, la santé et la prévention.'], 'Découvrir nos actions d’information et de prévention', '/information-prevention/'),
         ], 'v2-cards'),
     ], 'v2-axes-sec'),
-    SEC('Des projets qui créent du lien', [
+    TOP('Des projets qui créent du lien', [
         V2HEAD('Des projets qui créent du lien', 'créent du lien', [
             'Dans les cours, les écoles ou les services d’oncologie pédiatrique, FightxLife développe des projets qui partent d’une même idée : permettre aux personnes touchées par le cancer de rester reliées aux autres et créer autour d’elles davantage de compréhension et de solidarité.']),
         B('layout.grid', ['columns' => 3, 'gap' => 'none'], [
@@ -510,7 +508,7 @@ $sections = [
                 'Son univers sert aussi de support pédagogique dans les écoles.'], 'Rencontrer Benkick', '/benkick-mascotte/'),
         ], 'v2-bento'),
     ], 'v2-dark'),
-    SEC('Agir ensemble', [B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
+    TOP('Agir ensemble', [B('layout.grid', ['columns' => 2, 'gap' => 'none', 'align' => 'center'], [
         BOX([
             V2HEAD('Agir ensemble', 'ensemble', [
                 'Les actions de FightxLife se construisent aussi grâce aux collaborations développées avec des hôpitaux, des écoles, des associations, des institutions, des fondations, des entreprises et d’autres acteurs engagés.',
@@ -520,8 +518,8 @@ $sections = [
         B('core.gallery', ['columns' => '3', 'gap' => 'md', 'aspect_ratio' => 'auto', 'rounded' => false,
             'images' => array_map(static fn(string $f): array => ['url' => '/uploads/media/fxl/' . $f, 'alt' => 'Partenaire de FightxLife', 'caption' => ''], $logos)], [], 'v2-logos'),
     ], 'v2-split')], 'v2-partners-sec'),
-    SEC('Soutenir', [$supportBand], 'v2-support-sec'),
-    SEC('La vie de FightxLife', [
+    TOP('Soutenir', [$supportBand], 'v2-support-sec'),
+    TOP('La vie de FightxLife', [
         V2HEAD('La vie de FightxLife', 'FightxLife', ['Dans un hôpital, une école, autour d’un cours ou lors d’un événement, découvrez les dernières actions de FightxLife et les prochains rendez-vous de l’association.']),
         B('core.query_loop', ['source' => 'posts', 'category' => 'Actualités', 'per_page' => 3, 'columns' => 3, 'card_variant' => 'card', 'show_author' => false, 'show_category' => true,
             'enable_pagination' => false, 'read_more_text' => 'Lire la suite →', 'empty_message' => ''], [], 'v2-loop'),
@@ -530,7 +528,7 @@ $sections = [
 ];
 // The V2 document's anchors: the section container's HTML id (Advanced › ID in the editor).
 foreach ([2 => 'axes', 3 => 'projets', 4 => 'partenaires', 5 => 'soutenir', 6 => 'vie-association'] as $i => $anchor) {
-    $sections[$i]['blocks'][0]['attributes'] = ['id' => $anchor];
+    $containers[$i]['children'][0]['attributes'] = ['id' => $anchor];
 }
 
 // ── Build ────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -539,13 +537,13 @@ $v1slugs = v2_switch($V2PAGES, $V2MAP);
 $only = ['conditions' => ['rules' => V2_LIVE
     ? [['type' => 'include', 'condition' => 'entire_site'], ...array_map(static fn(string $s): array => ['type' => 'exclude', 'condition' => 'slug', 'value' => $s], $v1slugs)]
     : array_map(static fn(string $s): array => ['type' => 'include', 'condition' => 'slug', 'value' => $s], $V2SLUGS)]];
-foreach ([&$header, &$footer, &$sections] as &$tree) { foreach ($tree as &$sec) { v2_relink($sec); } unset($sec); }
+foreach ([&$header, &$footer, &$containers] as &$tree) { foreach ($tree as &$sec) { v2_relink($sec); } unset($sec); }
 unset($tree);
 $v2ids = [];
 $v2ids['header'] = build_page('v2-header', V2_LIVE ? 'Header' : 'Header V2 (aperçu)', 'header_partial', 'standalone', $header,
     $only + ['sticky_header' => ['edge' => 'top', 'offset' => 0, 'devices' => ['desktop', 'tablet', 'mobile'], 'shadow' => true, 'background' => '#ffffff']]);
 $v2ids['footer'] = build_page('v2-footer', V2_LIVE ? 'Footer' : 'Footer V2 (aperçu)', 'footer_partial', 'standalone', $footer, $only);
-$v2ids['/'] = build_page(V2_SLUG, V2_LIVE ? 'Accueil' : 'Accueil V2 (aperçu)', 'page', V2_LIVE ? 'homepage' : 'standalone', $sections, V2_LIVE ? [] : ['seo_robots' => 'noindex,nofollow'],
+$v2ids['/'] = build_page(V2_SLUG, V2_LIVE ? 'Accueil' : 'Accueil V2 (aperçu)', 'page', V2_LIVE ? 'homepage' : 'standalone', $containers, V2_LIVE ? [] : ['seo_robots' => 'noindex,nofollow'],
     'FightxLife | Association d’accompagnement face au cancer',
     'FightxLife accompagne les personnes touchées par le cancer et leurs proches : cours adaptés à Bruxelles, actions hospitalières et sensibilisation en Belgique.',
     MID('/uploads/media/fxl/2022-05-femininn.jpg') ?: null);

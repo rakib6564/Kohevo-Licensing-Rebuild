@@ -1,4 +1,4 @@
-// SectionPresetsPanel — the Add panel's Sections tab: the built-in, composed section presets
+// ContainerPresetsPanel — the Add panel's Containers tab: the built-in, composed Container presets
 // (system templates from the server), grouped by category, with a wireframe thumbnail each.
 // One click inserts a real, editable copy through the template pipeline (insert_template).
 
@@ -13,7 +13,7 @@ import { groupPresets as groupPresetsBy } from '../core/library.mjs';
 
 export const categoryLabel = (slug) => t(`preset_cat_${String(slug).replace(/-/g, '_')}`);
 
-/** One preset card: wireframe, name, description; disabled with a visible reason at the section limit. */
+/** One preset card: wireframe, name, description; disabled with a visible reason at the Container limit. */
 export function PresetCard({ preset: p, fav, onToggleFavorite }) {
   const { insertTemplate } = useEditor();
   const state = usePresetInsertState();
@@ -27,7 +27,7 @@ export function PresetCard({ preset: p, fav, onToggleFavorite }) {
         aria-disabled={disabled || undefined}
         aria-describedby={disabled ? reasonId : undefined}
         onClick={disabled ? undefined : () => insertTemplate(p)}
-        aria-label={t('pal_insert_section', { name: p.name })}
+        aria-label={t('pal_insert_container', { name: p.name })}
         title={p.description || undefined}
       >
         <Wireframe outline={p.outline} />
@@ -49,7 +49,7 @@ export function PresetCard({ preset: p, fav, onToggleFavorite }) {
   );
 }
 
-export const SectionPresetsPanel = memo(function SectionPresetsPanel({ query, favorites, onToggleFavorite }) {
+export const ContainerPresetsPanel = memo(function ContainerPresetsPanel({ query, favorites, onToggleFavorite }) {
   const { library = null, ensurePresets } = useEditor();
   const rootRef = useRef(null);
   useWhenVisible(rootRef, () => { if (ensurePresets) ensurePresets(); });
@@ -57,10 +57,10 @@ export const SectionPresetsPanel = memo(function SectionPresetsPanel({ query, fa
 
   if (!library || library.presets === undefined) return <p ref={rootRef} className="sbx-muted" role="status">{t('loading')}</p>;
   if (!asList(library.presets).length) return <p ref={rootRef} className="sbx-muted">{t('pal_presets_unavailable')}</p>;
-  if (!groups.length) return <p ref={rootRef} className="sbx-palette__empty sbx-muted">{t('pal_no_sections')}</p>;
+  if (!groups.length) return <p ref={rootRef} className="sbx-palette__empty sbx-muted">{t('pal_no_containers')}</p>;
 
   return (
-    <div ref={rootRef} className="sbx-presets" data-testid="section-presets">
+    <div ref={rootRef} className="sbx-presets" data-testid="container-presets">
       {groups.map((g) => (
         <section key={g.category} className="sbx-presets__group" aria-labelledby={`sbx-preset-cat-${g.category}`}>
           <h3 id={`sbx-preset-cat-${g.category}`} className="sbx-palette__category">{categoryLabel(g.category)}</h3>

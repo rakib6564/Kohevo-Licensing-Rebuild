@@ -1943,7 +1943,7 @@
         if (side) return;
         var rect = nav.getBoundingClientRect();
         var header = nav.closest('.sb-site-header');
-        var section = header && (nav.closest('.sb-section') || header);
+        var section = header && (nav.closest('.sb-top') || header);
         if (section) nav.style.setProperty('--sb-nav-top', (section.getBoundingClientRect().bottom - rect.top) + 'px');
         if (nav.classList.contains('sb-nav--menu-full')) {
           nav.style.setProperty('--sb-nav-left', (-rect.left) + 'px');
@@ -2011,7 +2011,7 @@
       function place() {
         var rect = nav.getBoundingClientRect();
         var header = nav.closest('.sb-site-header');
-        var section = header && (nav.closest('.sb-section') || header);
+        var section = header && (nav.closest('.sb-top') || header);
         if (section) nav.style.setProperty('--sb-mega-top', (section.getBoundingClientRect().bottom - rect.top) + 'px');
         nav.style.setProperty('--sb-mega-left', (-rect.left) + 'px');
         nav.style.setProperty('--sb-mega-vw', document.documentElement.clientWidth + 'px');

@@ -65,6 +65,14 @@ const ok = (path, v) => surfaceAccepts(path, v);
 
 // ── scoped rule: StyleSurface::declarations ─────────────────────────────────
 
+/** StyleSurface::CONTENT_SIZES: each site width's fallback. */
+const CONTENT_SIZES = { narrow: '42rem', normal: '64rem', wide: '80rem' };
+/** StudioStylesheet::PADDING. */
+const PADDING = {
+  none: '0', xs: 'calc(var(--sb-space-sm,.75rem)*2/3)', sm: 'calc(var(--sb-space-sm,.75rem)*4/3)', md: 'calc(var(--sb-space-md,1.5rem)*4/3)',
+  lg: 'calc(var(--sb-space-lg,3rem)*4/3)', xl: 'calc(var(--sb-space-lg,3rem)*2)', '2xl': 'calc(var(--sb-space-lg,3rem)*8/3)',
+};
+
 const LAYOUT = [
   ['display', 'display'], ['direction', 'flex-direction'], ['wrap', 'flex-wrap'], ['justify', 'justify-content', JUSTIFY], ['align', 'align-items', ALIGN], ['align_content', 'align-content', ALIGN_CONTENT],
   ['gap', 'gap'], ['row_gap', 'row-gap'], ['column_gap', 'column-gap'], ['order', 'order'], ['grow', 'flex-grow'], ['shrink', 'flex-shrink'],
@@ -98,19 +106,34 @@ function emitTable(group, values, table, out) {
 }
 
 /**
- * StyleSurface::emitBoxed: a boxed block holds its children to `layout.content_max` (or, with none, the site's content
- * width) with side padding, one declaration a side.
+ * StyleSurface::emitBoxed: a boxed block holds its children to `layout.content_max` (or, with none, the site width
+ * `layout.content_size` names, or the site's content width) with side padding, one declaration a side.
  */
 function emitBoxed(style, out) {
   const layout = isObj(style.layout) ? style.layout : {};
   if (layout.content_width !== 'boxed') return;
-  const max = layout.content_max !== undefined && ok('layout.content_max', layout.content_max) ? String(layout.content_max).trim() : 'var(--sb-layout-content,80rem)';
+  const size = layout.content_size;
+  let max = 'var(--sb-layout-content,80rem)';
+  if (layout.content_max !== undefined && ok('layout.content_max', layout.content_max)) max = String(layout.content_max).trim();
+  else if (size === 'full') max = '100%';
+  else if (typeof size === 'string' && size in CONTENT_SIZES) max = `var(--sb-layout-${size},${CONTENT_SIZES[size]})`;
+  out.push(`--sb-box:${max}`);
   const padding = isObj(style.padding) ? style.padding : {};
+  const own = {};
+  for (const side of ['left', 'right']) own[side] = side in padding && ok(`padding.${side}`, padding[side]) ? String(padding[side]).trim() : '0px';
+  const gutter = layout.gutter === 'site';
   for (const side of ['left', 'right']) {
-    const own = side in padding && ok(`padding.${side}`, padding[side]) ? String(padding[side]).trim() : '0px';
     for (let i = out.length - 1; i >= 0; i--) if (out[i].startsWith(`padding-${side}:`)) out.splice(i, 1);
-    out.push(`padding-${side}:max(${own},calc((100% - ${max})/2))`);
+    out.push(`padding-${side}:${gutter
+      ? `calc(${own[side]} + var(--sb-type-section_gutter,1rem) + max(0px,(100% - ${own.left} - ${own.right} - var(--sb-box))/2))`
+      : `max(${own[side]},calc((100% - var(--sb-box))/2))`}`);
   }
+}
+
+/** StyleSurface::emitPaddingY: top and bottom padding from the site's spacing scale. */
+function emitPaddingY(layout, out) {
+  const size = isObj(layout) ? layout.padding_y : undefined;
+  if (typeof size === 'string' && size in PADDING) out.push(`padding-top:${PADDING[size]}`, `padding-bottom:${PADDING[size]}`);
 }
 
 function emitSides(group, values, out) {
@@ -175,6 +198,7 @@ export function scopedDeclarations(style) {
     if ('mode' in style.position && ok('position.mode', style.position.mode)) out.push(`position:${style.position.mode}`);
     for (const side of SIDES) if (side in style.position && ok(`position.${side}`, style.position[side])) out.push(`${side}:${String(style.position[side]).trim()}`);
   }
+  emitPaddingY(style.layout, out);
   emitSides('margin', style.margin, out);
   emitSides('padding', style.padding, out);
   emitBoxed(style, out);
@@ -305,6 +329,9 @@ export const MANAGED_CLASS = /^(sb-x-[0-9a-f]{16}|sb-(font|rad|shd|pad|bg|fg|bd)
 
 // ── per-device overrides: StyleSurface::responsiveRules ─────────────────────
 
+// A device's own boxed width is written as the custom property the boxed padding reads.
+const RESPONSIVE_LAYOUT = [...LAYOUT.filter(([field]) => field !== 'display'), ['content_max', '--sb-box']];
+
 export function responsiveDeclarations(responsive) {
   const rules = [];
   if (!isObj(responsive)) return rules;
@@ -315,12 +342,13 @@ export function responsiveDeclarations(responsive) {
     if (isObj(style.typography) && isMeasure(style.typography.size, false)) out.push(`font-size:${style.typography.size.trim()}`);
     emitSides('padding', style.padding, out);
     emitSides('margin', style.margin, out);
-    emitTable('layout', style.layout, LAYOUT.filter(([field]) => field !== 'display'), out);
+    emitTable('layout', style.layout, RESPONSIVE_LAYOUT, out);
     if (isObj(style.dimensions)) {
       for (const [field, prop] of [['width', 'width'], ['height', 'height'], ['min_height', 'min-height'], ['max_width', 'max-width']]) {
         if (isMeasure(style.dimensions[field], true)) out.push(`${prop}:${style.dimensions[field].trim()}`);
       }
     }
+    emitPaddingY(style.layout, out);
     if (out.length) rules.push({ query, declarations: out.map((d) => `${d} !important`) });
   }
   return rules;
@@ -369,42 +397,6 @@ function emitBorderSides(border, out) {
       }
     }
   }
-}
-
-// StyleSurface::sectionBorderFields: the radius presets as the block classes write them.
-const SECTION_RADIUS = { none: '0', sm: 'var(--sb-radius-sm,.25rem)', md: 'var(--sb-radius-md,.5rem)', lg: 'var(--sb-radius-lg,1rem)', xl: '1.5rem', '2xl': '2rem', full: 'var(--sb-radius-full,9999px)' };
-
-/** StyleSurface::emitSectionBorder: all sides, then the sides and corners; a width with no style is a solid line. */
-function emitSectionBorder(border, out) {
-  const sides = SIDES.filter((side) => isObj(border[side]));
-  const styled = 'style' in border || sides.some((side) => 'style' in border[side]);
-  const wide = 'width' in border || sides.some((side) => 'width' in border[side]);
-  if (wide && !styled) out.push('border-style:solid');
-  if ('style' in border && ok('border.top.style', border.style)) out.push(`border-style:${border.style}`);
-  if ('width' in border && ok('border.top.width', border.width)) out.push(`border-width:${String(border.width).trim()}`);
-  if ('color' in border && ok('border.top.color', border.color)) out.push(`border-color:${colourCss(border.color)}`);
-  if (typeof border.radius === 'string' && border.radius in SECTION_RADIUS) out.push(`border-radius:${SECTION_RADIUS[border.radius]}`);
-  emitBorderSides(border, out);
-}
-
-// ── a section's own style: StyleSurface::sectionDeclarations ────────────────
-
-export function compileSectionStyle(section) {
-  const style = isObj(section && section.style) ? section.style : {};
-  let covered = true;
-  for (const key of Object.keys(style)) {
-    if (!['background', 'padding', 'border'].includes(key) && style[key] !== null && style[key] !== undefined && style[key] !== '') covered = false;
-  }
-  const bg = isObj(style.background) ? style.background : {};
-  if (bg.image !== undefined && bg.image !== null) covered = false;
-  const scoped = [];
-  if ('color' in bg && typeof bg.color === 'string' && isColor(bg.color) && !isToken(bg.color.trim())) scoped.push(`background-color:${String(bg.color).trim()}`);
-  if ('gradient' in bg && !isObj(bg.image) && isGradient(bg.gradient)) scoped.push(`background-image:${String(bg.gradient).trim()}`);
-  if (isObj(style.border)) emitSectionBorder(style.border, scoped);
-  const padding = [];
-  emitSides('padding', style.padding, padding);
-  scoped.push(...padding.map((d) => `${d} !important`)); // as the server: the author's section padding beats site CSS
-  return { covered, scoped };
 }
 
 // ── CSS text for the canvas ─────────────────────────────────────────────────

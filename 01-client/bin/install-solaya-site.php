@@ -14,7 +14,7 @@
  *   php bin/install-solaya-site.php --apply    remove the current Studio site and build this one
  *
  * "Remove" is reversible: each Studio page is renamed `archived-<date>-<id>-<slug>` (so its address is free)
- * and archived, so it can be restored from Studio. Studio templates are deleted, except the built-in Library sections. Media, forms submissions,
+ * and archived, so it can be restored from Studio. Studio templates are deleted, except the built-in Library presets. Media, forms submissions,
  * bookings and membership data are never touched. Back up the database before --apply on a live site.
  */
 
@@ -29,6 +29,7 @@ require __DIR__ . '/../config.php';
 
 use Slate\Module\StudioBuilder\Application\StudioActor;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Runtime\StudioRuntimeFactory;
 use Slate\Module\StudioBuilder\StudioPermissions;
 use Slate\Services\Media\Media;
@@ -109,23 +110,21 @@ function GRID2(string $align, array $children): array
 }
 
 /**
- * A page section holding `$blocks`, one column wide: a section's blocks are equal-width columns up to its column count,
- * so a single column stacks them, and grids inside the section make the real columns.
+ * A top-level Container holding `$blocks` in one column: grids inside it make the real columns.
  */
-function SEC(string $label, array $blocks, string $width = 'wide', string $surface = 'surface.primary', array $padding = ['base' => 'md', 'md' => 'lg'], string $audience = 'any'): array
+function TOP(string $label, array $blocks, string $width = 'wide', string $surface = 'surface.primary', array $padding = ['base' => 'md', 'md' => 'lg'], string $audience = 'any'): array
 {
-    $section = [
-        'id'         => CanonicalDocumentSchema::newSectionId(),
+    $source = [
+        'id'         => CanonicalDocumentSchema::newBlockId(),
         'label'      => $label,
-        'global_ref' => null,
         'layout'     => ['background_token' => $surface, 'columns' => ['base' => 1, 'md' => 1], 'gap' => 'md', 'padding_y' => $padding, 'width' => $width],
         'visibility' => ['auth_state' => $audience, 'devices' => ['base', 'sm', 'md', 'lg']],
         'blocks'     => $blocks,
     ];
     if (!in_array($label, ['Header', 'Footer', 'Hero', 'Intro', 'About', 'Contact', 'Book', 'Journal', 'Article'], true)) {
-        $section['animation'] = ['type' => 'fade_up'];
+        $source['animation'] = ['type' => 'fade_up'];
     }
-    return $section;
+    return DocumentUpgrader::sectionToContainer($source);
 }
 
 function link_to(string $label, string $href): array { return ['label' => $label, 'href' => $href, 'target' => '_self']; }
@@ -267,7 +266,7 @@ if ($discovery <= 0) {
 
 // ── 3. Remove the current Studio site ────────────────────────────────────────────────────────────────────────────
 $stamp = date('Ymd');
-$order = "FIELD(page_type, 'page', 'landing', 'system', 'header_partial', 'footer_partial', 'section_preset'), id";
+$order = "FIELD(page_type, 'page', 'landing', 'system', 'header_partial', 'footer_partial', 'container_preset'), id";
 $current = Database::rows("SELECT id, slug, page_type, title FROM studiobuilder_pages WHERE tenant_id = ? AND status <> 'archived' ORDER BY {$order}", [$tid]);
 foreach ($current as $p) {
     say("  - page      #{$p['id']} {$p['page_type']} /{$p['slug']}");
@@ -280,8 +279,8 @@ foreach ($current as $p) {
 }
 $templates = Database::rows('SELECT template_key, template_type FROM studiobuilder_templates WHERE tenant_id = ? ORDER BY id', [$tid]);
 foreach ($templates as $t) {
-    // The built-in Library sections are Studio's own (reserved, kept in sync by Studio), not site content.
-    if (str_starts_with((string) $t['template_key'], \Slate\Module\StudioBuilder\Presets\SectionPresetCatalog::KEY_PREFIX)) {
+    // The built-in Library presets are Studio's own (reserved, kept in sync by Studio), not site content.
+    if (str_starts_with((string) $t['template_key'], \Slate\Module\StudioBuilder\Presets\ContainerPresetCatalog::KEY_PREFIX)) {
         continue;
     }
     say("  - template  {$t['template_key']} ({$t['template_type']})");
@@ -301,7 +300,7 @@ $menu = [
 ];
 
 // Menu · wordmark · Book, the same on every screen. "Menu" opens a full-width overlay (styled in solaya.css).
-$header = [SEC('Header', [
+$header = [TOP('Header', [
     B('layout.flex', ['direction' => 'row', 'justify' => 'between', 'align' => 'center', 'gap' => 'md', 'wrap' => 'nowrap'], [
         B('layout.offcanvas', ['drawer_id' => 'solaya-menu', 'position' => 'top', 'title' => 'Solaya', 'trigger_text' => 'Menu', 'trigger_variant' => 'ghost'], [
             B('core.nav_menu', ['items' => $menu, 'layout' => 'vertical', 'aria_label' => 'Main menu'], [], ['classNames' => ['sl-overlay-nav']]),
@@ -318,7 +317,7 @@ $header = [SEC('Header', [
 ], 'wide', 'surface.primary', ['base' => 'sm'])];
 
 $year = date('Y');
-$footer = [SEC('Footer', [
+$footer = [TOP('Footer', [
     B('layout.grid', ['columns' => 3, 'gap' => 'lg', 'align' => 'start'], [
         B('core.container', ['direction' => 'vertical', 'gap' => 'sm'], [
             B('core.heading', ['text' => 'Solaya', 'level' => 'h3']),
@@ -356,8 +355,8 @@ $pages = [];
 
 $pages['home'] = ['title' => 'Solaya: nutrition and hypnosis for body and mind', 'route' => 'homepage',
     'description' => 'Solaya is the practice of Stéphanie Giambertone: nutrition assessments, hypnosis sessions and the three-month Body & Soul programme. Start with a free discovery call.',
-    'sections' => [
-        SEC('Hero', [B('core.hero', [
+    'containers' => [
+        TOP('Hero', [B('core.hero', [
             'eyebrow' => 'Nutrition · Hypnosis · Holistic support',
             'heading' => 'Feel at home in your body and your mind',
             'highlight' => 'at home', 'highlight_italic' => true,
@@ -365,11 +364,11 @@ $pages['home'] = ['title' => 'Solaya: nutrition and hypnosis for body and mind',
             'primary_cta' => link_to('Book a free discovery call', '/book-a-call'),
             'media' => $img('hero'),
         ])], 'wide', 'surface.secondary', ['base' => 'lg', 'md' => 'xl']),
-        SEC('Approach', [
+        TOP('Approach', [
             EYEBROW('The Solaya approach', true),
             B('core.heading', ['text' => 'What we eat, how we rest and the stories we tell ourselves all shape how we feel.', 'level' => 'h2', 'highlight' => 'how we feel', 'highlight_italic' => true], [], ['classNames' => ['sl-statement'], 'style' => ['align' => ['base' => 'center']]]),
         ], 'normal'),
-        SEC('Ways to work together', [
+        TOP('Ways to work together', [
             GRID2('end', [
                 B('core.container', ['direction' => 'vertical', 'gap' => 'sm'], [
                     EYEBROW('Ways to work together'),
@@ -379,7 +378,7 @@ $pages['home'] = ['title' => 'Solaya: nutrition and hypnosis for body and mind',
             ]),
             B('core.feature_list', ['columns' => 3, 'items' => $serviceCards]),
         ]),
-        SEC('How it works', [GRID2('center', [
+        TOP('How it works', [GRID2('center', [
             B('core.image', ['media' => $img('about'), 'aspect_ratio' => 'auto', 'rounded' => false], [], ['classNames' => ['sl-arch']]),
             B('core.container', ['direction' => 'vertical', 'gap' => 'md'], [
                 EYEBROW('How it works'),
@@ -388,13 +387,13 @@ $pages['home'] = ['title' => 'Solaya: nutrition and hypnosis for body and mind',
                 B('core.button', ['link' => link_to('See all services', '/services'), 'variant' => 'secondary']),
             ]),
         ])], 'wide', 'surface.secondary'),
-        SEC('Solaya in numbers', [B('core.stats', ['items' => [
+        TOP('Solaya in numbers', [B('core.stats', ['items' => [
             ['value' => 20, 'decimals' => 0, 'prefix' => '', 'suffix' => ' min', 'label' => 'Free discovery call'],
             ['value' => 5, 'decimals' => 0, 'prefix' => '', 'suffix' => '', 'label' => 'Ways to work together'],
             ['value' => 3, 'decimals' => 0, 'prefix' => '', 'suffix' => ' months', 'label' => 'Body & Soul programme'],
             ['value' => 21, 'decimals' => 0, 'prefix' => '', 'suffix' => ' days', 'label' => 'Notice for regressive hypnosis'],
         ]])]),
-        SEC('Three steps', [
+        TOP('Three steps', [
             EYEBROW('Three steps', true),
             B('core.heading', ['text' => 'Simple from the start', 'level' => 'h2'], [], centered()),
             B('core.spacer', ['size' => 'sm']),
@@ -404,7 +403,7 @@ $pages['home'] = ['title' => 'Solaya: nutrition and hypnosis for body and mind',
                 STEP('03', 'Follow through', 'Follow-up sessions and, in the programme, daily tracking and a 1:1 chat.'),
             ]),
         ]),
-        SEC('Start here', [B('layout.section', ['tag' => 'section', 'content_width' => 'boxed', 'padding_y' => 'none', 'min_height' => 'auto'], [
+        TOP('Start here', [
             B('layout.container', ['width' => 'constrained', 'alignment' => 'center', 'padding' => 'none'], [
                 B('core.card', ['variant' => 'filled', 'padding' => 'lg'], [
                     EYEBROW('Begin here', true),
@@ -413,13 +412,13 @@ $pages['home'] = ['title' => 'Solaya: nutrition and hypnosis for body and mind',
                     B('core.button', ['link' => link_to('Book a free discovery call', '/book-a-call'), 'variant' => 'primary', 'size' => 'lg']),
                 ], ['classNames' => ['sl-cta'], 'style' => ['align' => ['base' => 'center']]]),
             ]),
-        ])]),
+        ]),
     ]];
 
 $pages['services'] = ['title' => 'Services', 'route' => 'standalone',
     'description' => 'Discovery call, nutrition assessment, emotional serenity hypnosis, spiritual regressive hypnosis and Body & Soul follow-up: durations, payment and booking rules.',
-    'sections' => [
-        SEC('Intro', [
+    'containers' => [
+        TOP('Intro', [
             EYEBROW('What we offer'),
             B('core.heading', ['text' => 'Services', 'level' => 'h1']),
             B('core.text', ['content' => 'Five ways to work with Solaya. Each one starts with a conversation, and the free discovery call is open to everyone.', 'size' => 'lg']),
@@ -429,8 +428,8 @@ $pages['services'] = ['title' => 'Services', 'route' => 'standalone',
                 B('core.icon', ['name' => 'leaf', 'label' => 'Nutrition and hypnosis', 'size' => 'md']),
             ]),
         ], 'wide', 'surface.secondary'),
-        SEC('Book', [B('booking.services', ['heading' => 'Book a session', 'cta_label' => 'Book', 'show_prices' => false], [], ['bindings' => ['items' => ['provider' => 'booking.services', 'params' => []]]])]),
-        SEC('Each service', [
+        TOP('Book', [B('booking.services', ['heading' => 'Book a session', 'cta_label' => 'Book', 'show_prices' => false], [], ['bindings' => ['items' => ['provider' => 'booking.services', 'params' => []]]])]),
+        TOP('Each service', [
             B('core.heading', ['text' => 'Each service in detail', 'level' => 'h2']),
             B('core.tabs', ['options' => ['position' => 'top'], 'items' => [
                 ['label' => 'Discovery Call', 'content' => 'A free 20-minute introductory call to get acquainted and point you in the right direction. Online.'],
@@ -440,7 +439,7 @@ $pages['services'] = ['title' => 'Services', 'route' => 'standalone',
                 ['label' => 'Body & Soul follow-up', 'content' => 'A 30 or 45-minute follow-up for clients of the Body & Soul programme, included in the monthly programme payment.'],
             ]]),
         ]),
-        SEC('At a glance', [
+        TOP('At a glance', [
             B('core.heading', ['text' => 'At a glance', 'level' => 'h2']),
             B('core.table', ['caption' => 'Durations and how each session is paid', 'striped' => true, 'header' => 'Service | Duration | Payment', 'rows' => [
                 ['cells' => 'Discovery Call | 20 min | Free'],
@@ -451,7 +450,7 @@ $pages['services'] = ['title' => 'Services', 'route' => 'standalone',
             ]]),
             B('payment.button', ['label' => 'Pay for a nutrition assessment', 'amount' => 1, 'currency' => 'EUR', 'description' => 'Nutrition Assessment', 'success_path' => 'book-a-call'], [], staff_only()),
         ], 'wide', 'surface.secondary'),
-        SEC('Questions', [
+        TOP('Questions', [
             B('core.heading', ['text' => 'Questions', 'level' => 'h2']),
             B('core.accordion', ['allow_multiple' => false, 'items' => [
                 ['heading' => 'Why is a discovery call needed before regressive hypnosis?', 'body' => 'It is a long and deep session. The discovery call makes sure it is the right step for you and that you know what to expect.'],
@@ -465,8 +464,8 @@ $todo[] = 'Services: set real prices in Booking → Services, then set the "Pay 
 
 $pages['programme'] = ['title' => 'Body & Soul Programme', 'route' => 'standalone',
     'description' => 'The three-month Body & Soul programme: daily tracking, goals, 1:1 chat, meal structure, recipes and an end-of-programme summary, with app access.',
-    'sections' => [
-        SEC('Intro', [
+    'containers' => [
+        TOP('Intro', [
             GRID2('center', [
                 B('core.container', ['direction' => 'vertical', 'gap' => 'md'], [
                     EYEBROW('Three months'),
@@ -479,7 +478,7 @@ $pages['programme'] = ['title' => 'Body & Soul Programme', 'route' => 'standalon
                 B('core.image', ['media' => $img('programme'), 'aspect_ratio' => 'auto', 'rounded' => false], [], ['classNames' => ['sl-arch']]),
             ]),
         ], 'wide', 'surface.secondary'),
-        SEC('What is included', [
+        TOP('What is included', [
             B('core.heading', ['text' => 'What is included', 'level' => 'h2']),
             B('core.list', ['style' => 'check', 'items' => [
                 ['text' => 'Daily tracking'], ['text' => 'Personal goals'], ['text' => '1:1 chat'],
@@ -488,8 +487,8 @@ $pages['programme'] = ['title' => 'Body & Soul Programme', 'route' => 'standalon
             ]]),
             B('core.countdown', ['label' => 'Next programme intake in', 'target' => gmdate('Y-m-d\TH:i:s\Z', strtotime('+60 days')), 'done_text' => 'The programme intake is open.'], [], staff_only()),
         ]),
-        SEC('Join', [B('membership.plans', ['heading' => 'Join the programme', 'cta_label' => 'Join', 'show_prices' => false], [], ['bindings' => ['items' => ['provider' => 'membership.plans', 'params' => []]]])], 'normal', 'surface.secondary'),
-        SEC('Questions', [
+        TOP('Join', [B('membership.plans', ['heading' => 'Join the programme', 'cta_label' => 'Join', 'show_prices' => false], [], ['bindings' => ['items' => ['provider' => 'membership.plans', 'params' => []]]])], 'normal', 'surface.secondary'),
+        TOP('Questions', [
             B('core.heading', ['text' => 'Questions about the programme?', 'level' => 'h2']),
             B('forms.form_card', ['button_label' => 'Ask a question', 'show_description' => true], [], ['bindings' => ['form' => ['provider' => 'forms.form', 'params' => ['slug' => $formSlug]]]]),
         ], 'normal'),
@@ -498,8 +497,8 @@ $todo[] = 'Programme: set the programme price in Membership → Plans. The "Next
 
 $pages['about'] = ['title' => 'About', 'route' => 'standalone',
     'description' => 'Solaya is the practice of Stéphanie Giambertone, bringing together nutrition and hypnosis.',
-    'sections' => [
-        SEC('About', [GRID2('center', [
+    'containers' => [
+        TOP('About', [GRID2('center', [
             B('core.container', ['direction' => 'vertical', 'gap' => 'md'], [
                 EYEBROW('About'),
                 B('core.heading', ['text' => 'A practice for body and mind', 'level' => 'h1', 'highlight' => 'body and mind', 'highlight_italic' => true]),
@@ -507,8 +506,8 @@ $pages['about'] = ['title' => 'About', 'route' => 'standalone',
             ]),
             B('core.image', ['media' => $img('about'), 'aspect_ratio' => 'auto', 'rounded' => false], [], ['classNames' => ['sl-arch']]),
         ])], 'wide', 'surface.secondary', ['base' => 'lg', 'md' => 'xl']),
-        SEC('Approach', [B('core.quote', ['text' => 'Nutrition and hypnosis, brought together so that body and mind are looked after as one.', 'author' => 'Solaya', 'role' => 'Our approach', 'align' => 'center'])], 'normal'),
-        SEC('Principles', [
+        TOP('Approach', [B('core.quote', ['text' => 'Nutrition and hypnosis, brought together so that body and mind are looked after as one.', 'author' => 'Solaya', 'role' => 'Our approach', 'align' => 'center'])], 'normal'),
+        TOP('Principles', [
             EYEBROW('Principles', true),
             B('core.carousel', ['options' => ['autoplay_ms' => 0, 'loop' => true, 'per_view' => 1], 'slides' => [
                 ['image' => null, 'quote' => 'A conversation comes before any plan.', 'author' => 'Listen first', 'caption' => ''],
@@ -516,8 +515,8 @@ $pages['about'] = ['title' => 'About', 'route' => 'standalone',
                 ['image' => null, 'quote' => 'Support continues between sessions, not only during them.', 'author' => 'Follow through', 'caption' => ''],
             ]]),
         ], 'normal', 'surface.secondary'),
-        SEC('Video', [B('core.video', ['url' => 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', 'aspect_ratio' => '16:9', 'controls' => true], [], staff_only())], 'normal', 'surface.primary', ['base' => 'md', 'md' => 'lg'], 'authenticated'),
-        SEC('Gallery', [
+        TOP('Video', [B('core.video', ['url' => 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', 'aspect_ratio' => '16:9', 'controls' => true], [], staff_only())], 'normal', 'surface.primary', ['base' => 'md', 'md' => 'lg'], 'authenticated'),
+        TOP('Gallery', [
             EYEBROW('The feel of Solaya'),
             B('core.heading', ['text' => 'Quiet, warm, unhurried', 'level' => 'h2']),
             B('core.gallery', ['columns' => '3', 'gap' => 'md', 'aspect_ratio' => '4:3', 'rounded' => true, 'images' => [
@@ -531,8 +530,8 @@ $todo[] = 'About: the video block shows a placeholder video to staff only. Repla
 
 $pages['journal'] = ['title' => 'Journal', 'route' => 'standalone',
     'description' => 'Notes from Solaya on preparing for sessions and getting the most from them.',
-    'sections' => [
-        SEC('Journal', [
+    'containers' => [
+        TOP('Journal', [
             EYEBROW('Notes from Solaya'),
             B('core.heading', ['text' => 'Journal', 'level' => 'h1']),
             B('core.text', ['content' => 'Practical notes on preparing for your sessions.', 'size' => 'lg']),
@@ -542,8 +541,8 @@ $pages['journal'] = ['title' => 'Journal', 'route' => 'standalone',
 
 $pages['contact'] = ['title' => 'Contact', 'route' => 'standalone',
     'description' => 'Send Solaya a message, or book a free 20-minute discovery call.',
-    'sections' => [
-        SEC('Contact', [
+    'containers' => [
+        TOP('Contact', [
             EYEBROW('Get in touch'),
             B('core.heading', ['text' => 'Contact', 'level' => 'h1']),
             GRID2('start', [
@@ -565,14 +564,14 @@ $pages['contact'] = ['title' => 'Contact', 'route' => 'standalone',
                 ]),
             ]),
         ]),
-        SEC('Map', [B('core.map', ['title' => 'Solaya', 'height' => 'md', 'zoom' => 13], [], staff_only())], 'wide', 'surface.secondary', ['base' => 'md', 'md' => 'lg'], 'authenticated'),
+        TOP('Map', [B('core.map', ['title' => 'Solaya', 'height' => 'md', 'zoom' => 13], [], staff_only())], 'wide', 'surface.secondary', ['base' => 'md', 'md' => 'lg'], 'authenticated'),
     ]];
 $todo[] = 'Contact: the map shows a placeholder location to staff only. Set the practice address coordinates and make it public, or remove it. The call-back form in the modal is a native Studio form: check where its submissions go before relying on it.';
 
 $pages['book-a-call'] = ['title' => 'Book a discovery call', 'route' => 'standalone',
     'description' => 'Book a free 20-minute discovery call with Solaya.',
-    'sections' => [
-        SEC('Book', [
+    'containers' => [
+        TOP('Book', [
             EYEBROW('Free · 20 minutes · Online'),
             B('core.heading', ['text' => 'Book a free discovery call', 'level' => 'h1']),
             B('core.text', ['content' => 'Twenty minutes, free, online. Choose a time that suits you.']),
@@ -597,8 +596,8 @@ $articles = [
 foreach ($articles as $slug => [$title, $image, $excerpt, $body]) {
     $pages[$slug] = ['title' => $title, 'route' => 'standalone', 'description' => $excerpt,
         'settings' => ['category' => 'journal', 'excerpt' => $excerpt],
-        'sections' => [
-            SEC('Article', [
+        'containers' => [
+            TOP('Article', [
                 B('core.image', ['media' => $img($image), 'aspect_ratio' => '16:9', 'rounded' => true]),
                 B('core.rich_text', ['content' => $body]),
                 B('core.button', ['link' => link_to('Book a free discovery call', '/book-a-call'), 'variant' => 'secondary']),
@@ -609,22 +608,22 @@ foreach ($articles as $slug => [$title, $image, $excerpt, $body]) {
 // ── 6. Theme templates: single article, archive and search, 404 ─────────────────────────────────────────────────
 $themeTemplates = [
     'solaya-journal-article' => ['Journal article', 'single', [['type' => 'include', 'condition' => 'category', 'value' => 'journal']], [
-        SEC('Article', [
+        TOP('Article', [
             B('theme.post_title', ['level' => 'h1']),
             B('theme.post_meta', ['show_author' => false, 'show_category' => true, 'show_date' => true]),
             B('theme.field_value', ['field' => 'summary', 'fallback' => '', 'show_label' => false, 'tag' => 'div']),
             B('theme.post_content'),
-        ], 'wide'), // wide, so an article's own section width decides how wide it reads
+        ], 'wide'), // wide, so an article's own Container width decides how wide it reads
     ]],
     'solaya-archive' => ['Archive and search', 'archive', [['type' => 'include', 'condition' => 'archive'], ['type' => 'include', 'condition' => 'search']], [
-        SEC('Archive', [
+        TOP('Archive', [
             B('theme.archive_title', ['level' => 'h1']),
             B('theme.search_box', ['placeholder' => 'Search the journal', 'button_text' => 'Search']),
             B('core.query_loop', ['source' => 'posts', 'columns' => 3, 'per_page' => 9, 'show_author' => false]),
         ]),
     ]],
     'solaya-not-found' => ['Page not found', 'not_found', [['type' => 'include', 'condition' => '404']], [
-        SEC('Not found', [
+        TOP('Not found', [
             B('core.heading', ['text' => 'This page could not be found', 'level' => 'h1']),
             B('core.text', ['content' => 'The address may have changed. Try a search, or go back to the home page.']),
             B('theme.search_box', ['placeholder' => 'Search Solaya', 'button_text' => 'Search']),
@@ -647,12 +646,12 @@ function check_document(array $doc): string
 }
 
 // ── 7. Build ─────────────────────────────────────────────────────────────────────────────────────────────────────
-/** Create a page of `$pageType`, save `$sections` as its draft and publish it. */
-function build_page(string $slug, string $title, string $pageType, string $route, array $sections, array $settings = [], string $description = '', ?string $docType = null, ?string $seoTitle = null): int
+/** Create a page of `$pageType`, save `$containers` as its draft and publish it. */
+function build_page(string $slug, string $title, string $pageType, string $route, array $containers, array $settings = [], string $description = '', ?string $docType = null, ?string $seoTitle = null): int
 {
     global $runtime, $actor, $APPLY;
     $doc = CanonicalDocumentSchema::emptyDocument($docType ?? $pageType, 'default', $seoTitle ?? $title);
-    $doc['sections'] = $sections;
+    $doc['containers'] = $containers;
     $doc['settings'] = array_replace($doc['settings'], $settings);
     if ($description !== '') {
         $doc['seo']['description'] = $description;
@@ -661,7 +660,7 @@ function build_page(string $slug, string $title, string $pageType, string $route
         $doc['seo']['robots'] = 'noindex,nofollow'; // a template's own page is never public
     }
     if (!$APPLY) {
-        say("  + {$pageType}" . str_repeat(' ', max(1, 15 - strlen($pageType))) . "/{$slug}  (" . count($sections) . ' sections, ' . check_document($doc) . ')');
+        say("  + {$pageType}" . str_repeat(' ', max(1, 15 - strlen($pageType))) . "/{$slug}  (" . count($containers) . ' Containers, ' . check_document($doc) . ')');
         return 0;
     }
     $created = $runtime->app->createPage($actor, $title, $slug, $pageType, $route);
@@ -676,17 +675,17 @@ build_page('default', 'Header', 'header_partial', 'standalone', $header);
 build_page('default', 'Footer', 'footer_partial', 'standalone', $footer);
 foreach ($pages as $slug => $p) {
     $seo = $p['route'] === 'homepage' ? $p['title'] : "{$p['title']} | Solaya";
-    build_page($slug, $p['title'], 'page', $p['route'], $p['sections'], $p['settings'] ?? [], $p['description'] ?? '', null, $seo);
+    build_page($slug, $p['title'], 'page', $p['route'], $p['containers'], $p['settings'] ?? [], $p['description'] ?? '', null, $seo);
 }
-foreach ($themeTemplates as $key => [$name, $role, $rules, $sections]) {
+foreach ($themeTemplates as $key => [$name, $role, $rules, $containers]) {
     $doc = CanonicalDocumentSchema::emptyDocument('system', 'default', $name);
     $doc['seo']['robots'] = 'noindex,nofollow';
     $doc['settings']['conditions'] = ['rules' => $rules];
     $doc['settings']['template_type'] = $role === 'not_found' ? '404' : $role;
-    $doc['sections'] = $sections;
+    $doc['containers'] = $containers;
     if ($APPLY) {
         $runtime->app->saveTemplate($actor, $key, 'page_template', $role, $name, "Solaya {$name} template", $doc);
-        build_page('template-' . $key, "[Theme] {$name}", 'system', 'standalone', $sections, ['conditions' => ['rules' => $rules], 'template_type' => $doc['settings']['template_type']], '', null, "{$name} | Solaya");
+        build_page('template-' . $key, "[Theme] {$name}", 'system', 'standalone', $containers, ['conditions' => ['rules' => $rules], 'template_type' => $doc['settings']['template_type']], '', null, "{$name} | Solaya");
     } else {
         say("  + template  {$key} ({$role}, " . check_document($doc) . ')');
     }
@@ -701,8 +700,8 @@ $used = [];
 $walk = static function (array $blocks) use (&$walk, &$used): void {
     foreach ($blocks as $b) { $used[$b['type']] = true; $walk($b['children'] ?? []); }
 };
-foreach (array_merge([$header, $footer], array_column($pages, 'sections'), array_map(fn($t) => $t[3], $themeTemplates)) as $secs) {
-    foreach ($secs as $s) { $walk($s['blocks']); }
+foreach (array_merge([$header, $footer], array_column($pages, 'containers'), array_map(fn($t) => $t[3], $themeTemplates)) as $secs) {
+    foreach ($secs as $s) { $walk($s['children']); }
 }
 $native = array_filter(array_keys($defs), fn($t) => preg_match('/^(core|layout|theme|booking|forms|membership|payment)\./', $t) === 1);
 $missing = array_values(array_diff($native, array_keys($used)));

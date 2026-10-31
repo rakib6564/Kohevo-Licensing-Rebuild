@@ -11,7 +11,7 @@
  * existing canonical services:
  *
  *   tokens              StudioThemeService::saveTokens()
- *   global components   StudioPageAddressService::createPage(section_preset, kind 'import')
+ *   global components   StudioPageAddressService::createPage(container_preset, kind 'import')
  *                       + StudioRevisionService::createDraftRevision(kind 'import')
  *   templates           StudioTemplateService::saveTemplate()
  *   pages (create)      StudioPageAddressService::createPage(kind 'import')
@@ -26,7 +26,7 @@
  * Import rules (see architecture/KOHEVO-STUDIO-PHASE8A-PACKAGES.md):
  *   - identities: new pages and components get fresh uuids from createPage();
  *     a component's `source_ref` is package-local and is rewritten through an
- *     explicit source -> target map; section/block/child ids are re-minted.
+ *     explicit source -> target map; block and child ids are re-minted.
  *   - media: never a binary, never a foreign id. A reference resolves through
  *     (1) the caller's explicit `media_map` (source path -> target media id,
  *     verified to be an image of THIS tenant), else (2) a tenant-local managed
@@ -34,7 +34,7 @@
  *     (PackageDocumentMapper) with an `unresolved_media` warning.
  *   - global references: to a component in the package, or through the
  *     caller's explicit `component_map` (verified tenant-local), else the
- *     section becomes an empty owned section (`unresolved_global_component`).
+ *     Container becomes an empty owned Container (`unresolved_global_component`).
  *     Imported components stay DRAFTS; pages referencing them render the
  *     reference inert until a person publishes the component.
  *   - templates: kept key only when free in this tenant (collision = error;
@@ -289,7 +289,7 @@ final class StudioPackageService
             $byKind[(string) $item['kind']][] = ['index' => $i, 'item' => $item];
         }
 
-        [$mintSection, $mintBlock] = $dryRun ? PackageDocumentMapper::deterministicMinters($packageHash) : [null, null];
+        $mintBlock = $dryRun ? PackageDocumentMapper::deterministicMinter($packageHash) : null;
         $work = [];
 
         // ── Replace-mode target (tenant-scoped, explicit page id + expected revision) ──
@@ -401,11 +401,11 @@ final class StudioPackageService
                 continue;
             }
             if (PackageDocumentMapper::globalRefs((array) $item['document']) !== []) {
-                $report->error('invalid_document', $key, "\$.items[{$i}].document.sections", 'A global component cannot contain another global component (references are one level deep).', 'global_ref_not_allowed');
+                $report->error('invalid_document', $key, "\$.items[{$i}].document.containers", 'A global component cannot contain another global component (references are one level deep).', 'global_ref_not_allowed');
                 continue;
             }
             // A component names no package-only template: its template_key must already exist here (else 'default').
-            $doc = $this->prepareDocument($item, $i, CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE, $report, $options, $refResolver, $validationOptions, $mintSection, $mintBlock, $stats, $componentUse);
+            $doc = $this->prepareDocument($item, $i, CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE, $report, $options, $refResolver, $validationOptions, $mintBlock, $stats, $componentUse);
             if ($doc === null) {
                 continue;
             }
@@ -417,11 +417,12 @@ final class StudioPackageService
         // ── Templates ──
         foreach ($byKind[StudioPackageFormat::KIND_TEMPLATE] as ['index' => $i, 'item' => $item]) {
             $key = (string) $item['key'];
-            $doc = $this->prepareDocument($item, $i, null, $report, $options, $refResolver, $options2, $mintSection, $mintBlock, $stats, $componentUse, $packageTemplates);
+            $doc = $this->prepareDocument($item, $i, null, $report, $options, $refResolver, $options2, $mintBlock, $stats, $componentUse, $packageTemplates);
             if ($doc === null) {
                 continue;
             }
             try {
+                $item['template_type'] = DocumentUpgrader::typeName((string) $item['template_type']);
                 $clean = $this->templates->validateTemplate((string) $item['template_key'], (string) $item['template_type'], (string) $item['category'], (string) $item['name'], $item['description'] === null ? null : (string) $item['description'], $doc, $options2);
             } catch (StudioValidationException $e) {
                 $report->validatorErrors($key, "\$.items[{$i}]", $e->errors());
@@ -457,7 +458,7 @@ final class StudioPackageService
                 }
                 $pageSlugs[$sig] = true;
             }
-            $doc = $this->prepareDocument($item, $i, $pageType, $report, $options, $refResolver, $options2, $mintSection, $mintBlock, $stats, $componentUse, $packageTemplates);
+            $doc = $this->prepareDocument($item, $i, $pageType, $report, $options, $refResolver, $options2, $mintBlock, $stats, $componentUse, $packageTemplates);
             if ($doc === null) {
                 continue;
             }
@@ -558,7 +559,6 @@ final class StudioPackageService
         array $options,
         callable $refResolver,
         array $validationOptions,
-        ?callable $mintSection,
         ?callable $mintBlock,
         array &$stats,
         array &$componentUse,
@@ -567,7 +567,7 @@ final class StudioPackageService
         $key  = (string) $item['key'];
         $kind = (string) $item['kind'];
         $base = "\$.items[{$i}].document";
-        $doc  = (array) $item['document'];
+        $doc  = DocumentUpgrader::structure((array) $item['document']);
 
         if ($expectedType !== null && ($doc['document_type'] ?? null) !== $expectedType) {
             $report->error('page_type_mismatch', $key, "{$base}.document_type", "The document must be a '{$expectedType}' document.");
@@ -582,14 +582,14 @@ final class StudioPackageService
             $report->warning('block_upgraded', $key, $base . substr($u['path'], 1), "Block '{$u['type']}' was saved at version {$u['from']} and was upgraded to version {$u['to']}.");
         }
 
-        // Global references -> package components / explicit map, else an empty owned section.
+        // Global references -> package components / explicit map, else an empty owned Container.
         foreach (PackageDocumentMapper::globalRefs($doc) as $ref) {
             $componentUse[$ref][] = $key;
         }
         $refs = PackageDocumentMapper::rewriteGlobalRefs($doc, $refResolver);
         $doc = $refs['document'];
         foreach ($refs['unresolved'] as $u) {
-            $report->warning('unresolved_global_component', $key, $base . substr($u['path'], 1), 'This section referenced a global component that is not in the package or mapped; it was imported as an empty section.');
+            $report->warning('unresolved_global_component', $key, $base . substr($u['path'], 1), 'This Container referenced a global component that is not in the package or mapped; it was imported as an empty Container.');
         }
 
         // Template key: a package template, an existing template of this site, else 'default'.
@@ -654,7 +654,7 @@ final class StudioPackageService
         }
 
         // Fresh ids everywhere (never trust the package's ids — they may even collide).
-        $doc = PackageDocumentMapper::remintIds($doc, $mintSection, $mintBlock);
+        $doc = PackageDocumentMapper::remintIds($doc, $mintBlock);
 
         if ($kind === StudioPackageFormat::KIND_TEMPLATE) {
             return $doc; // validated by StudioTemplateService::validateTemplate() (document + preset shape rules)

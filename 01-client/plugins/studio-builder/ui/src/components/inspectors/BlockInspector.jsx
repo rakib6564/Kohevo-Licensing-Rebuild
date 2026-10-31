@@ -20,6 +20,7 @@ import { MotionInspector } from './MotionInspector.jsx';
 import { PartStyles } from './PartStyles.jsx';
 import { ClassNamesField, DataAttributes, IdentityFields } from './AdvancedControls.jsx';
 import { ContainerPane } from './ContainerPane.jsx';
+import { GlobalContainerPanel } from './GlobalContainerPanel.jsx';
 import { BackgroundStates } from './BackgroundStates.jsx';
 import { BlendField, NormalHover, PaddingBox, TextColorField, TextShadowField, TextStrokeField } from './TextBlockStyle.jsx';
 import { IconProps, ImageStates } from './MediaBlockStyle.jsx';
@@ -27,7 +28,7 @@ import { OverlayStates, ShapeDividers } from './ContainerLayers.jsx';
 import { InspectorShell } from './InspectorShell.jsx';
 import { InspectorHeader } from './InspectorHeader.jsx';
 import { InspectorBar } from './InspectorBar.jsx';
-import { asList, asObject, blockDefinition, blockIndentTarget, blockMoveTarget, blockOutdentTarget } from '../../core/doc.mjs';
+import { asList, asObject, blockDefinition, blockIndentTarget, blockMoveTarget, blockOutdentTarget, isGlobalContainer } from '../../core/doc.mjs';
 import { STYLE_TOKEN_CATEGORIES, tokensFor } from '../../core/fields.mjs';
 import { CONTAINER_TYPE, MEDIA_TYPES, alignTitleKey } from '../../core/inspectorSections.mjs';
 import * as ops from '../../core/operations.mjs';
@@ -48,8 +49,9 @@ const Z_INDEX_MIN = -999;
 const Z_INDEX_MAX = 999;
 
 export function BlockInspector({ info }) {
-  const { manifest, boot, applyOp, removeNode, moveBlockTo, viewport } = useEditor();
+  const { manifest, boot, applyOp, removeNode, moveBlockTo, viewport, insertContainer, openSaveTemplate, openComponentDialog } = useEditor();
   const working = useEngineState((s) => s.working);
+  const pageType = useEngineState((s) => (s.page ? s.page.page_type : 'page'));
   const block = info.node;
   const def = blockDefinition(manifest, block.type);
   const computed = useCanvasComputed(block.id, block);
@@ -73,6 +75,10 @@ export function BlockInspector({ info }) {
   const down = blockMoveTarget(working, manifest, block.id, 'down');
   const indent = blockIndentTarget(working, manifest, block.id);
   const outdent = blockOutdentTarget(working, manifest, block.id);
+  const top = info.parentId === null;
+  const global = isGlobalContainer(block);
+  const perms = (manifest && manifest.permissions) || {};
+  const canReference = asList(manifest && manifest.components && manifest.components.referencing_types).includes(pageType);
   const capabilities = asList(def.style_capabilities);
   const save = (op) => applyOp(op, { label: def.label });
   const saveStyle = (next) => save(ops.updateBlockStyle(block.id, next));
@@ -178,6 +184,7 @@ export function BlockInspector({ info }) {
       <ContainerPane
         key={block.id}
         block={block}
+        top={top}
         style={style}
         onChange={saveStyle}
         deviceScope={deviceScope}
@@ -402,20 +409,37 @@ export function BlockInspector({ info }) {
     attributes: () => <DataAttributes block={block} onChange={(attrs) => save(ops.updateBlockAttributes(block.id, attrs))} />,
   };
 
+  const label = asObject(block.metadata).label || def.label;
+  const tools = (
+    <div className="sbx-inspector__tools" role="group" aria-label={def.label}>
+      <IconButton icon="up" label={t('move_up')} disabled={!up} onClick={() => moveBlockTo(block.id, up)} />
+      <IconButton icon="down" label={t('move_down')} disabled={!down} onClick={() => moveBlockTo(block.id, down)} />
+      {!top && <IconButton icon="indent" label={t('indent')} disabled={!indent} onClick={() => moveBlockTo(block.id, indent)} />}
+      {!global && <IconButton icon="outdent" label={t('outdent')} disabled={!outdent} onClick={() => moveBlockTo(block.id, outdent)} />}
+      {top && <IconButton icon="plus" label={t('add_container')} onClick={() => insertContainer(info.index + 1)} />}
+      {top && !global && perms.admin && openSaveTemplate && <IconButton icon="save" label={t('library_save_template')} onClick={openSaveTemplate} />}
+      {top && !global && perms.edit && canReference && openComponentDialog && <IconButton icon="component" label={t('library_new_component')} onClick={openComponentDialog} />}
+      {top && <IconButton icon="trash" label={t('remove')} danger onClick={() => removeNode(block.id)} />}
+    </div>
+  );
+
+  if (global) {
+    return (
+      <div className="sbx-inspector">
+        <InspectorHeader node={block} def={def} />
+        {tools}
+        <GlobalContainerPanel container={block} label={label} />
+      </div>
+    );
+  }
+
   return (
     <InspectorShell
       idPrefix={idPrefix}
       node={block}
       def={def}
       header={<InspectorHeader node={block} def={def} />}
-      actions={(
-        <div className="sbx-inspector__tools" role="group" aria-label={def.label}>
-          <IconButton icon="up" label={t('move_up')} disabled={!up} onClick={() => moveBlockTo(block.id, up)} />
-          <IconButton icon="down" label={t('move_down')} disabled={!down} onClick={() => moveBlockTo(block.id, down)} />
-          <IconButton icon="indent" label={t('indent')} disabled={!indent} onClick={() => moveBlockTo(block.id, indent)} />
-          <IconButton icon="outdent" label={t('outdent')} disabled={!outdent} onClick={() => moveBlockTo(block.id, outdent)} />
-        </div>
-      )}
+      actions={tools}
       footer={<InspectorBar block={block} label={def.label} />}
       renderSection={(id) => (sections[id] ? sections[id]() : null)}
     />

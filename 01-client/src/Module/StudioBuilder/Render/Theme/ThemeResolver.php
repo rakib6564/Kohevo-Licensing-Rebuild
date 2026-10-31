@@ -42,8 +42,8 @@ final class ThemeResolver
         'color.accent'      => '#1f2937',
         'font.body'         => 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
         'font.heading'      => 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-        // Site settings › Layout: the content width a section set to Default (and a boxed container) keeps to, like
-        // Elementor's site-wide Content width; then the widths a section can pick instead.
+        // Site settings › Layout: the content width a boxed Container keeps to, like
+        // Elementor's site-wide Content width; then the widths a Container can pick instead.
         'layout.content'    => '80rem',
         'layout.narrow'     => '42rem',
         'layout.normal'     => '64rem',
@@ -71,7 +71,7 @@ final class ThemeResolver
         'text.muted'        => '#57534e',
         'text.primary'      => '#111111',
         // Site settings › Text: body size and line height, heading line height, the space after a paragraph, list,
-        // menu or icon (and before a button row), the space under a heading, and a section's side gutter.
+        // menu or icon (and before a button row), the space under a heading, and a Container's side gutter.
         'type.body_leading'    => '1.6',
         'type.body_size'       => '1rem',
         'type.flow'            => '1rem',

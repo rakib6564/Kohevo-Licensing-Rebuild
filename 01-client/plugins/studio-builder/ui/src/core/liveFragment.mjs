@@ -1,6 +1,6 @@
-// The real markup for a block or section the author has just inserted, fetched while the save is still on its way.
+// The real markup for a block the author has just inserted, fetched while the save is still on its way.
 //
-// `core/liveStructure.mjs` puts a placeholder where the node goes; the server renders it (`render_block` / `render_section`,
+// `core/liveStructure.mjs` puts a placeholder where the node goes; the server renders it (`render_block`,
 // read-only, nothing stored) and this file turns that page into the one element to swap in, with the document's own ids and
 // only the CSS rules that element's classes need. The server's render after the save then replaces it like everything else.
 
@@ -11,7 +11,7 @@ const FRAGMENT_SHEET = 'sbx-frag-';
 
 function preorder(node, out = []) {
   out.push(node.id);
-  for (const c of asList(node.blocks !== undefined ? node.blocks : node.children)) preorder(c, out);
+  for (const c of asList(node.children)) preorder(c, out);
   return out;
 }
 
@@ -32,24 +32,23 @@ export function rulesFor(cssText, classes, Sheet = globalThis.CSSStyleSheet) {
 const UNAVAILABLE = /class="[^"]*\bsb-unavailable\b/;
 
 /**
- * Turn the server's page for one block (or section) into an element of the open canvas.
- * @param {Document} page   the parsed `render_block` / `render_section` response page
+ * Turn the server's page for one block into an element of the open canvas.
+ * @param {Document} page   the parsed `render_block` response page
  * @param {string} html     the same page as text (to tell an "unavailable" notice from a render)
- * @param {object} node     the block or section as the document has it now (its ids are the ones the element gets)
+ * @param {object} node     the block as the document has it now (its ids are the ones the element gets)
  * @param {Document} canvasDoc  the open canvas document
- * @param {'block'|'section'} [kind]  what `node` is
  * @returns {{element: Element, css: string} | null}  null when the render is unusable (the placeholder stays)
  */
-export function adoptFromPage(page, html, node, canvasDoc, kind = 'block') {
+export function adoptFromPage(page, html, node, canvasDoc) {
   if (!page || !node || !canvasDoc || UNAVAILABLE.test(html || '')) return null;
   const main = page.querySelector('#main'); // <main>, or the header/footer wrapper of a header or footer page
-  const section = main && main.querySelector(`[${ATTR}]`); // the one fresh section
-  const root = kind === 'section' ? section : section && section.querySelector(`[${ATTR}]`); // the section, or the block first inside it
-  if (!root) return null;
-
+  if (!main) return null;
   const ids = preorder(node);
-  const els = [root, ...Array.from(root.querySelectorAll(`[${ATTR}]`))];
-  if (els.length !== ids.length) return null;
+  // The block is the page's only content, or the only child of the fresh Container a widget needs to sit at the top level.
+  const found = Array.from(main.querySelectorAll(`[${ATTR}]`));
+  const els = found.length === ids.length + 1 ? found.slice(1) : found;
+  if (!els.length || els.length !== ids.length) return null;
+  const root = els[0];
   els.forEach((e, i) => e.setAttribute(ATTR, ids[i]));
 
   const element = canvasDoc.importNode(root, true);
@@ -62,9 +61,9 @@ export function adoptFromPage(page, html, node, canvasDoc, kind = 'block') {
 }
 
 /** The same, from the response text. */
-export function adoptFragment(html, node, canvasDoc, Parser = globalThis.DOMParser, kind = 'block') {
+export function adoptFragment(html, node, canvasDoc, Parser = globalThis.DOMParser) {
   if (!html || typeof Parser !== 'function') return null;
-  return adoptFromPage(new Parser().parseFromString(html, 'text/html'), html, node, canvasDoc, kind);
+  return adoptFromPage(new Parser().parseFromString(html, 'text/html'), html, node, canvasDoc);
 }
 
 /** Swap a placeholder for the block's real element, and keep the CSS rules it needs until the server's render replaces them. */

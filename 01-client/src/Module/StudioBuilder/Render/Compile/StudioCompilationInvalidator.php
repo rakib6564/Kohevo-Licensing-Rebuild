@@ -88,7 +88,7 @@ final class StudioCompilationInvalidator
 
     /**
      * Phase 6: a Global Component changed (published, archived) — every page
-     * whose sections reference it (`partial` / component uuid) recompiles.
+     * whose Containers reference it (`partial` / component uuid) recompiles.
      */
     public function invalidateComponent(string $componentRef): int
     {

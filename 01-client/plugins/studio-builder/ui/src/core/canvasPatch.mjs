@@ -262,22 +262,20 @@ function findTextHost(el, { tags, from }) {
 /** All block nodes in a document, as a Map for O(1) comparison. */
 export function indexBlocks(doc) {
   const map = new Map();
-  const sections = doc && Array.isArray(doc.sections) ? doc.sections : [];
-  sections.forEach((section) => {
-    const walk = (blocks) => {
-      (Array.isArray(blocks) ? blocks : []).forEach((b) => {
-        if (b && typeof b.id === 'string') map.set(b.id, b);
-        if (b && Array.isArray(b.children)) walk(b.children);
-      });
-    };
-    walk(section && section.blocks);
-  });
+  const walk = (blocks) => {
+
+    (Array.isArray(blocks) ? blocks : []).forEach((b) => {
+      if (b && typeof b.id === 'string') map.set(b.id, b);
+      if (b && Array.isArray(b.children)) walk(b.children);
+    });
+  };
+  walk(doc && doc.containers);
   return map;
 }
 
-function sectionSignature(doc) {
-  const sections = doc && Array.isArray(doc.sections) ? doc.sections : [];
-  return sections.map((s) => `${s.id}:${(s.blocks || []).length}`).join('|');
+function topSignature(doc) {
+  const containers = doc && Array.isArray(doc.containers) ? doc.containers : [];
+  return containers.map((s) => `${s.id}:${(s.children || []).length}`).join('|');
 }
 
 /**
@@ -289,10 +287,10 @@ export function patchCanvas(canvasDoc, prevDoc, nextDoc) {
   const none = { patched: 0, ids: [], reload: false, reason: '' };
   if (!canvasDoc || !canvasDoc.querySelector) return { ...none, reload: true, reason: 'no-canvas' };
 
-  // Section shape (count / block counts) is the one thing a class patch can
+  // The top level's shape (Container count / child counts) is the one thing a class patch can
   // never express. Anything structural reloads — same as before this phase.
-  if (sectionSignature(prevDoc) !== sectionSignature(nextDoc)) {
-    return { ...none, reload: true, reason: 'section-shape' };
+  if (topSignature(prevDoc) !== topSignature(nextDoc)) {
+    return { ...none, reload: true, reason: 'top-shape' };
   }
 
   const before = indexBlocks(prevDoc);

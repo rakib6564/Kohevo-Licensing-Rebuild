@@ -1,9 +1,9 @@
 <?php
 /**
- * Kohevo Studio (studio-builder) — the composed section preset catalogue.
+ * Kohevo Studio (studio-builder) — the composed Container preset catalogue.
  *
  * Pure and deterministic: no database, no clock, no randomness. Each entry is a real,
- * editable `section_preset` document built only from registered blocks and their declared
+ * editable `container_preset` document built only from registered blocks and their declared
  * props (heading, text, button, grid, feature list, accordion, form, ...). Inserting one
  * copies it into the page through the template pipeline, which re-mints every id.
  *
@@ -21,12 +21,12 @@ namespace Slate\Module\StudioBuilder\Presets;
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 
-final class SectionPresetCatalog
+final class ContainerPresetCatalog
 {
-    public const VERSION = 1;
+    public const VERSION = 2;
 
-    /** Template keys are `system-section-<slug>`: reserved, immutable, copyable. */
-    public const KEY_PREFIX = 'system-section-';
+    /** Template keys are `system-container-<slug>`: reserved, immutable, copyable. */
+    public const KEY_PREFIX = 'system-container-';
 
     /** Category slugs in display order; labels are translated by the UI/service. */
     public const CATEGORIES = ['hero', 'features', 'content', 'social-proof', 'pricing', 'cta', 'team', 'contact', 'footer'];
@@ -51,22 +51,15 @@ final class SectionPresetCatalog
     private static function build(): array
     {
         $presets = [];
-        $add = static function (string $slug, string $name, string $category, string $description, array $layout, callable $blocks) use (&$presets): void {
+        $add = static function (string $slug, string $name, string $category, string $description, array $look, callable $blocks) use (&$presets): void {
             $key = self::KEY_PREFIX . $slug;
             $n = 0;
             $ctx = static function () use ($key, &$n): string {
                 $n++;
                 return 'blk_' . substr(hash('sha256', $key . ':' . $n), 0, 24);
             };
-            $document = CanonicalDocumentSchema::emptyDocument('section_preset', 'default', $name);
-            $document['sections'] = [[
-                'id'         => 'sec_' . substr(hash('sha256', $key . ':section'), 0, 24),
-                'label'      => $name,
-                'global_ref' => null,
-                'layout'     => array_merge(CanonicalDocumentSchema::defaultSectionLayout(), $layout),
-                'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-                'blocks'     => $blocks($ctx),
-            ]];
+            $document = CanonicalDocumentSchema::emptyDocument(CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE, 'default', $name);
+            $document['containers'] = [self::container('blk_' . substr(hash('sha256', $key . ':container'), 0, 24), $name, $look, $blocks($ctx))];
             $presets[$key] = [
                 'key' => $key, 'slug' => $slug, 'name' => $name, 'category' => $category,
                 'description' => $description, 'document' => $document,
@@ -74,7 +67,7 @@ final class SectionPresetCatalog
         };
 
         // ── Hero ────────────────────────────────────────────────────────────────
-        $add('hero-classic', 'Hero — Classic', 'hero', 'Headline, short pitch and one button.', ['padding_y' => ['base' => 'xl', 'md' => '2xl']],
+        $add('hero-classic', 'Hero — Classic', 'hero', 'Headline, short pitch and one button.', ['padding_y' => '2xl', 'phone_padding_y' => 'xl'],
             static fn(callable $id): array => [
                 self::block($id, 'core.hero', [
                     'eyebrow' => 'Welcome',
@@ -84,7 +77,7 @@ final class SectionPresetCatalog
                 ]),
             ]);
 
-        $add('hero-centered', 'Hero — Centered', 'hero', 'Centered headline with two buttons.', ['padding_y' => ['base' => 'xl', 'md' => '2xl'], 'width' => 'narrow'],
+        $add('hero-centered', 'Hero — Centered', 'hero', 'Centered headline with two buttons.', ['padding_y' => '2xl', 'phone_padding_y' => 'xl', 'size' => 'narrow'],
             static fn(callable $id): array => [
                 self::block($id, 'layout.container', ['width' => 'compact', 'alignment' => 'center', 'padding' => 'none'], [
                     self::text($id, 'Introducing', 'sm', 'center'),
@@ -97,7 +90,7 @@ final class SectionPresetCatalog
                 ]),
             ]);
 
-        $add('hero-split', 'Hero — Split', 'hero', 'Pitch on the left, key points on the right.', ['padding_y' => ['base' => 'xl', 'md' => '2xl']],
+        $add('hero-split', 'Hero — Split', 'hero', 'Pitch on the left, key points on the right.', ['padding_y' => '2xl', 'phone_padding_y' => 'xl'],
             static fn(callable $id): array => [
                 self::block($id, 'layout.grid', ['columns' => 2, 'gap' => 'xl', 'align' => 'center'], [
                     self::block($id, 'layout.container', ['width' => 'full', 'alignment' => 'left', 'padding' => 'none'], [
@@ -137,7 +130,7 @@ final class SectionPresetCatalog
                 ]),
             ]);
 
-        $add('features-list', 'Features — Checklist', 'features', 'A single-column list of benefits.', ['width' => 'narrow'],
+        $add('features-list', 'Features — Checklist', 'features', 'A single-column list of benefits.', ['size' => 'narrow'],
             static fn(callable $id): array => [
                 self::heading($id, 'What is included', 'h2'),
                 self::block($id, 'core.rich_text', ['content' => '<ul><li>Everything you need to get started</li><li>Onboarding and training</li><li>Regular updates</li><li>Friendly support</li></ul>']),
@@ -154,7 +147,7 @@ final class SectionPresetCatalog
                 ]]),
             ]);
 
-        $add('stats', 'Numbers', 'features', 'Four headline figures.', ['padding_y' => ['base' => 'lg', 'md' => 'lg'], 'background_token' => 'surface.secondary'],
+        $add('stats', 'Numbers', 'features', 'Four headline figures.', ['padding_y' => 'lg', 'phone_padding_y' => 'lg', 'surface' => 'surface.secondary'],
             static fn(callable $id): array => [
                 self::block($id, 'core.stats', ['items' => [
                     ['value' => 10, 'label' => 'Years of experience', 'suffix' => '+'],
@@ -180,7 +173,7 @@ final class SectionPresetCatalog
                 ]),
             ]);
 
-        $add('faq', 'FAQ', 'content', 'Questions and answers that expand.', ['width' => 'narrow'],
+        $add('faq', 'FAQ', 'content', 'Questions and answers that expand.', ['size' => 'narrow'],
             static fn(callable $id): array => [
                 self::heading($id, 'Frequently asked questions', 'h2', 'center'),
                 self::block($id, 'core.accordion', ['allow_multiple' => false, 'items' => [
@@ -199,7 +192,7 @@ final class SectionPresetCatalog
             ]);
 
         // ── Social proof ────────────────────────────────────────────────────────
-        $add('testimonials', 'Testimonials', 'social-proof', 'Customer quotes in a slider.', ['background_token' => 'surface.secondary'],
+        $add('testimonials', 'Testimonials', 'social-proof', 'Customer quotes in a slider.', ['surface' => 'surface.secondary'],
             static fn(callable $id): array => [
                 self::heading($id, 'What customers say', 'h2', 'center'),
                 self::block($id, 'core.carousel', ['slides' => [
@@ -228,7 +221,7 @@ final class SectionPresetCatalog
             ]);
 
         // ── Call to action ──────────────────────────────────────────────────────
-        $add('cta', 'Call to Action', 'cta', 'A closing banner with one button.', ['padding_y' => ['base' => 'xl', 'md' => 'xl'], 'background_token' => 'surface.inverse'],
+        $add('cta', 'Call to Action', 'cta', 'A closing banner with one button.', ['padding_y' => 'xl', 'phone_padding_y' => 'xl', 'surface' => 'surface.inverse'],
             static fn(callable $id): array => [
                 self::block($id, 'layout.container', ['width' => 'compact', 'alignment' => 'center', 'padding' => 'none'], [
                     self::heading($id, 'Ready to get started?', 'h2', 'center', 'text.inverse'),
@@ -271,7 +264,7 @@ final class SectionPresetCatalog
             ]);
 
         // ── Footer ──────────────────────────────────────────────────────────────
-        $add('footer', 'Footer', 'footer', 'Links in columns with a copyright line.', ['padding_y' => ['base' => 'lg', 'md' => 'lg'], 'background_token' => 'surface.secondary'],
+        $add('footer', 'Footer', 'footer', 'Links in columns with a copyright line.', ['padding_y' => 'lg', 'phone_padding_y' => 'lg', 'surface' => 'surface.secondary'],
             static fn(callable $id): array => [
                 self::block($id, 'layout.grid', ['columns' => 3, 'gap' => 'lg', 'align' => 'start'], [
                     self::block($id, 'layout.container', ['width' => 'full', 'alignment' => 'left', 'padding' => 'none'], [
@@ -294,6 +287,33 @@ final class SectionPresetCatalog
     }
 
     // ── builders ────────────────────────────────────────────────────────────────
+
+    /**
+     * The preset's one top-level Container, its children stacked.
+     *
+     * @param array{padding_y?: string, phone_padding_y?: string, size?: string, surface?: string} $look
+     * @param list<array<string, mixed>> $children
+     * @return array<string, mixed>
+     */
+    private static function container(string $id, string $label, array $look, array $children): array
+    {
+        $look += ['padding_y' => 'lg', 'phone_padding_y' => 'md', 'surface' => 'surface.primary'];
+        $layout = ['content_width' => 'boxed', 'gutter' => 'site', 'padding_y' => $look['padding_y']];
+        if (isset($look['size'])) {
+            $layout['content_size'] = $look['size'];
+        }
+        $container = CanonicalDocumentSchema::newContainer([
+            'id'       => $id,
+            'metadata' => ['label' => $label],
+            'props'    => ['gap' => 'md'],
+            'style'    => ['surface_token' => $look['surface'], 'layout' => $layout],
+            'children' => $children,
+        ]);
+        if ($look['phone_padding_y'] !== $look['padding_y']) {
+            $container['responsive'] = ['mobile' => ['style' => ['layout' => ['padding_y' => $look['phone_padding_y']]]]];
+        }
+        return $container;
+    }
 
     /**
      * @param array<string, mixed> $props

@@ -16,12 +16,11 @@
  *     (StudioRevisionService::createDraftRevision). It no longer reads the
  *     page's current draft pointer itself — that silently made "apply" the
  *     only mutation able to overwrite a newer draft.
- *   - `insertOperations()` turns a section/header/footer/block preset into
- *     canonical `insert_section` / `insert_block` operations (fresh ids via
- *     DocumentCopier) so a preset lands in a page through the same operation
+ *   - `insertOperations()` turns a Container/header/footer/block preset into
+ *     canonical `insert_block` operations (fresh ids via DocumentCopier) so a preset lands in a page through the same operation
  *     pipeline as any other edit. Copy semantics: no reference is recorded.
  *   - `extractTemplateDocument()` builds a template from a page's current
- *     document (whole page, one section, or one block) server-side.
+ *     document (whole page, one Container, or one block) server-side.
  *   - `deleteTemplate()` with system-template and in-use protection.
  *   - optional tenant-owned thumbnail (`thumbnail_media_id`, validated by the
  *     same `media_exists` check as authored media references).
@@ -51,10 +50,10 @@ use Slate\Tenancy\TenantContext;
 final class StudioTemplateService
 {
     /** Template types that are inserted INTO a document (copy) rather than applied to it. */
-    public const INSERTABLE_TYPES = ['section_preset', 'header_preset', 'footer_preset', 'block_preset'];
+    public const INSERTABLE_TYPES = ['container_preset', 'header_preset', 'footer_preset', 'block_preset'];
 
-    /** Preset types whose document is a synthetic `section_preset` document wrapping the content. */
-    private const WRAPPED_TYPES = ['section_preset', 'block_preset'];
+    /** Preset types whose document is a synthetic `container_preset` document wrapping the content. */
+    private const WRAPPED_TYPES = ['container_preset', 'block_preset'];
 
     public const MAX_CATEGORY_LENGTH    = 64;
     public const MAX_DESCRIPTION_LENGTH = 1000;
@@ -343,15 +342,16 @@ final class StudioTemplateService
         // A template stored by an older Studio is brought up to this site's block versions first.
         $rawDocument = DocumentUpgrader::upgrade($template->document, $this->registry)['document'];
         $rawDocument['document_type'] = (string) $page['page_type'];
-        // Every page that applies the template gets its own section and block ids, so the same ids never appear in two
-        // documents (a page and a component made from the same template, say). A section's live component reference
-        // is kept: only the ids are new.
-        if (is_array($rawDocument['sections'] ?? null)) {
-            foreach ($rawDocument['sections'] as $i => $section) {
-                if (is_array($section)) {
-                    $ref = $section['global_ref'] ?? null;
-                    $rawDocument['sections'][$i] = DocumentCopier::copySection($section);
-                    $rawDocument['sections'][$i]['global_ref'] = $ref;
+        // Every page that applies the template gets its own block ids, so the same ids never appear in two documents
+        // (a page and a component made from the same template, say). A Container's live component reference is kept:
+        // only the ids are new.
+        if (is_array($rawDocument['containers'] ?? null)) {
+            foreach ($rawDocument['containers'] as $i => $container) {
+                if (is_array($container)) {
+                    $rawDocument['containers'][$i] = DocumentCopier::copyBlock($container);
+                    if (!empty($container['global_ref'])) {
+                        $rawDocument['containers'][$i]['global_ref'] = $container['global_ref'];
+                    }
                 }
             }
         }
@@ -404,12 +404,12 @@ final class StudioTemplateService
 
     /**
      * The canonical operations that insert a reusable preset into a document
-     * as an OWNED COPY (fresh section/block ids; never a `global_ref`):
+     * as an OWNED COPY (fresh block ids; never a `global_ref`):
      *
-     *   section_preset / header_preset / footer_preset  → one `insert_section` per
-     *       template section, at `$index`, `$index + 1`, …
+     *   container_preset / header_preset / footer_preset  → one top-level `insert_block`
+     *       per template Container, at `$index`, `$index + 1`, …
      *   block_preset  → one `insert_block` of the preset's block into
-     *       `$parentId` (a section id or a child-capable block id) at `$index`
+     *       `$parentId` (a child-capable block id) at `$index`
      *
      * The result still goes through the full operation pipeline (applier →
      * validate → normalize → dependency extraction → revision), so an
@@ -430,31 +430,26 @@ final class StudioTemplateService
                 ['path' => '$.template_key', 'code' => 'template_not_insertable', 'message' => "Template '{$templateKey}' is a page template; apply it to the page instead of inserting it."],
             ]);
         }
-        $sections = [];
-        foreach ((array) ($template->document['sections'] ?? []) as $section) {
-            if (is_array($section)) {
-                $sections[] = DocumentCopier::copySection(DocumentUpgrader::upgradeSection($section, $this->registry));
-            }
-        }
-        if ($sections === []) {
+        $containers = DocumentCopier::copyBlocks((array) (DocumentUpgrader::upgrade($template->document, $this->registry)['document']['containers'] ?? []));
+        if ($containers === []) {
             throw new StudioValidationException([
                 ['path' => '$.template_key', 'code' => 'template_empty', 'message' => "Template '{$templateKey}' has no content to insert."],
             ]);
         }
 
         if ($template->templateType === 'block_preset') {
-            $block = $sections[0]['blocks'][0] ?? null;
+            $block = $containers[0]['children'][0] ?? null;
             if (!is_array($block) || $parentId === null || $parentId === '') {
                 throw new StudioValidationException([
-                    ['path' => '$.parent_id', 'code' => 'required_field', 'message' => 'A block preset needs a parent section or container to be inserted into.'],
+                    ['path' => '$.parent_id', 'code' => 'required_field', 'message' => 'A block preset needs a parent Container to be inserted into.'],
                 ]);
             }
             return [new DocumentOperation(DocumentOperation::OP_INSERT_BLOCK, ['parent_id' => $parentId, 'index' => $index, 'block' => $block])];
         }
 
         $operations = [];
-        foreach ($sections as $i => $section) {
-            $operations[] = new DocumentOperation(DocumentOperation::OP_INSERT_SECTION, ['index' => $index + $i, 'section' => $section]);
+        foreach ($containers as $i => $container) {
+            $operations[] = new DocumentOperation(DocumentOperation::OP_INSERT_BLOCK, ['parent_id' => null, 'index' => $index + $i, 'block' => $container]);
         }
         return $operations;
     }
@@ -462,8 +457,8 @@ final class StudioTemplateService
     /**
      * Build the canonical document a template of `$templateType` stores, from
      * a page's current working document: the whole document (page / header /
-     * footer templates), one section (section_preset) or one block
-     * (block_preset). Content is copied with fresh ids; a section that is a
+     * footer templates), one Container (container_preset) or one block
+     * (block_preset). Content is copied with fresh ids; a Container that is a
      * live global reference cannot become a preset (the component itself is
      * the reusable object).
      *
@@ -478,12 +473,13 @@ final class StudioTemplateService
             ]);
         }
 
+        $pageDocument = DocumentUpgrader::structure($pageDocument);
         if (!in_array($templateType, self::WRAPPED_TYPES, true)) {
             $document = $pageDocument;
-            $document['sections'] = [];
-            foreach ((array) ($pageDocument['sections'] ?? []) as $section) {
-                if (is_array($section)) {
-                    $document['sections'][] = empty($section['global_ref']) ? DocumentCopier::copySection($section) : $section;
+            $document['containers'] = [];
+            foreach ((array) ($pageDocument['containers'] ?? []) as $container) {
+                if (is_array($container)) {
+                    $document['containers'][] = empty($container['global_ref']) ? DocumentCopier::copyBlock($container) : $container;
                 }
             }
             return $document;
@@ -491,7 +487,7 @@ final class StudioTemplateService
 
         if ($nodeId === null || $nodeId === '') {
             throw new StudioValidationException([
-                ['path' => '$.node_id', 'code' => 'required_field', 'message' => 'A section or block id is required for this template type.'],
+                ['path' => '$.node_id', 'code' => 'required_field', 'message' => 'A block id is required for this template type.'],
             ]);
         }
         $found = DocumentCopier::findNode($pageDocument, $nodeId);
@@ -500,33 +496,25 @@ final class StudioTemplateService
         }
 
         $wrapper = CanonicalDocumentSchema::emptyDocument(CanonicalDocumentSchema::COMPONENT_DOCUMENT_TYPE);
-        if ($templateType === 'section_preset') {
-            if ($found['kind'] !== 'section') {
+        if (!empty($found['node']['global_ref'])) {
+            throw new StudioValidationException([
+                ['path' => '$.node_id', 'code' => 'cannot_preset_reference', 'message' => 'A Container that references a global component cannot be saved as a preset; edit the component instead.'],
+            ]);
+        }
+        if ($templateType === 'container_preset') {
+            if (($found['node']['type'] ?? null) !== CanonicalDocumentSchema::CONTAINER_TYPE) {
                 throw new StudioValidationException([
-                    ['path' => '$.node_id', 'code' => 'node_kind_mismatch', 'message' => 'A section preset must be saved from a section.'],
+                    ['path' => '$.node_id', 'code' => 'node_kind_mismatch', 'message' => 'A Container preset must be saved from a Container.'],
                 ]);
             }
-            if (!empty($found['node']['global_ref'])) {
-                throw new StudioValidationException([
-                    ['path' => '$.node_id', 'code' => 'cannot_preset_reference', 'message' => 'A section that references a global component cannot be saved as a preset; edit the component instead.'],
-                ]);
-            }
-            $wrapper['sections'] = [DocumentCopier::copySection($found['node'])];
+            $wrapper['containers'] = [DocumentCopier::copyBlock($found['node'])];
             return $wrapper;
         }
 
-        if ($found['kind'] !== 'block') {
-            throw new StudioValidationException([
-                ['path' => '$.node_id', 'code' => 'node_kind_mismatch', 'message' => 'A block preset must be saved from a block.'],
-            ]);
-        }
-        $section = DocumentCopier::copySection([
-            'label'      => 'Block preset',
-            'layout'     => CanonicalDocumentSchema::defaultSectionLayout(),
-            'visibility' => CanonicalDocumentSchema::defaultVisibility(),
-            'blocks'     => [$found['node']],
-        ]);
-        $wrapper['sections'] = [$section];
+        $wrapper['containers'] = [DocumentCopier::copyBlock(CanonicalDocumentSchema::newContainer([
+            'metadata' => ['label' => 'Block preset'],
+            'children' => [$found['node']],
+        ]))];
         return $wrapper;
     }
 
@@ -536,12 +524,12 @@ final class StudioTemplateService
      * sending the document body to the browser.
      *
      * @param array<string, mixed> $document
-     * @return array{sections: int, blocks: int, block_labels: list<string>}
+     * @return array{containers: int, blocks: int, block_labels: list<string>}
      */
     public function summarize(array $document): array
     {
-        $sections = 0;
-        $blocks   = 0;
+        $containers = 0;
+        $blocks     = 0;
         $labels   = [];
         $walk = function (array $list) use (&$walk, &$blocks, &$labels): void {
             foreach ($list as $block) {
@@ -558,13 +546,13 @@ final class StudioTemplateService
                 $walk(is_array($block['children'] ?? null) ? $block['children'] : []);
             }
         };
-        foreach ((array) ($document['sections'] ?? []) as $section) {
-            if (is_array($section)) {
-                $sections++;
-                $walk(is_array($section['blocks'] ?? null) ? $section['blocks'] : []);
+        foreach ((array) (DocumentUpgrader::structure($document)['containers'] ?? []) as $container) {
+            if (is_array($container)) {
+                $containers++;
+                $walk(is_array($container['children'] ?? null) ? $container['children'] : []);
             }
         }
-        return ['sections' => $sections, 'blocks' => $blocks, 'block_labels' => $labels];
+        return ['containers' => $containers, 'blocks' => $blocks, 'block_labels' => $labels];
     }
 
     /**
@@ -595,19 +583,19 @@ final class StudioTemplateService
      */
     private static function assertDocumentFitsType(array $document, string $templateType): void
     {
-        $sections = (array) ($document['sections'] ?? []);
+        $containers = (array) ($document['containers'] ?? []);
         if ($templateType === 'block_preset') {
-            $blocks = is_array($sections[0]['blocks'] ?? null) ? $sections[0]['blocks'] : [];
-            if (count($sections) !== 1 || count($blocks) !== 1) {
+            $blocks = is_array($containers[0]['children'] ?? null) ? $containers[0]['children'] : [];
+            if (count($containers) !== 1 || count($blocks) !== 1) {
                 throw new StudioValidationException([
-                    ['path' => '$.document', 'code' => 'block_preset_shape', 'message' => 'A block preset holds exactly one section with exactly one block.'],
+                    ['path' => '$.document', 'code' => 'block_preset_shape', 'message' => 'A block preset holds exactly one Container with exactly one block.'],
                 ]);
             }
         }
-        foreach ($sections as $i => $section) {
-            if (in_array($templateType, self::INSERTABLE_TYPES, true) && is_array($section) && !empty($section['global_ref'])) {
+        foreach ($containers as $i => $container) {
+            if (in_array($templateType, self::INSERTABLE_TYPES, true) && is_array($container) && !empty($container['global_ref'])) {
                 throw new StudioValidationException([
-                    ['path' => "\$.document.sections[{$i}].global_ref", 'code' => 'cannot_preset_reference', 'message' => 'A reusable preset holds owned content, never a live global reference.'],
+                    ['path' => "\$.document.containers[{$i}].global_ref", 'code' => 'cannot_preset_reference', 'message' => 'A reusable preset holds owned content, never a live global reference.'],
                 ]);
             }
         }
