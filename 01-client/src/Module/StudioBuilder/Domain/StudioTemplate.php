@@ -59,7 +59,8 @@ final class StudioTemplate
                 ['path' => '$.name', 'code' => 'invalid_name', 'message' => 'StudioTemplate name must be a non-empty string of at most 191 characters.'],
             ]);
         }
-        if ($this->schemaVersion !== CanonicalDocumentSchema::SCHEMA_VERSION) {
+        // A template stored before Containers keeps its row and its "1.0" document; DocumentUpgrader turns it on read.
+        if (!in_array($this->schemaVersion, [CanonicalDocumentSchema::SCHEMA_VERSION, CanonicalDocumentSchema::LEGACY_SCHEMA_VERSION], true)) {
             throw new StudioValidationException([
                 ['path' => '$.schema_version', 'code' => 'unsupported_schema_version', 'message' => 'StudioTemplate schema_version must match the current canonical document schema.'],
             ]);

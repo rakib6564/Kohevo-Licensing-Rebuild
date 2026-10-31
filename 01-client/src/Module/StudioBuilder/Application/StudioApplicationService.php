@@ -81,6 +81,7 @@ use Slate\Module\StudioBuilder\Dependency\DependencyExtractor;
 use Slate\Module\StudioBuilder\Diff\RevisionDiff;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
+use Slate\Module\StudioBuilder\Document\DocumentNormalizer;
 use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Document\DocumentValidator;
 use Slate\Module\StudioBuilder\Document\ElementCss;
@@ -1776,6 +1777,21 @@ final class StudioApplicationService
     }
 
     /**
+     * A stored revision as a diff reads it. A section-based one is brought to the form its next save writes, so moving
+     * to Containers shows as no change: only what an author changed does.
+     *
+     * @param array<string, mixed> $document
+     * @return array<string, mixed>
+     */
+    private function comparable(array $document): array
+    {
+        if (($document['schema_version'] ?? null) !== CanonicalDocumentSchema::LEGACY_SCHEMA_VERSION) {
+            return $document;
+        }
+        return DocumentNormalizer::normalize(DocumentUpgrader::upgrade($document, $this->registry)['document'], $this->registry);
+    }
+
+    /**
      * Recent revisions of one page (newest first), as summaries — the history
      * list a rollback is chosen from. Never includes a document body.
      *
@@ -1848,8 +1864,8 @@ final class StudioApplicationService
             }
         }
 
-        $baseDocument     = $base !== null ? CanonicalJson::decode((string) $base['document_json']) : CanonicalDocumentSchema::emptyDocument((string) $page['page_type']);
-        $proposedDocument = CanonicalJson::decode((string) $proposed['document_json']);
+        $baseDocument     = $base !== null ? $this->comparable(CanonicalJson::decode((string) $base['document_json'])) : CanonicalDocumentSchema::emptyDocument((string) $page['page_type']);
+        $proposedDocument = $this->comparable(CanonicalJson::decode((string) $proposed['document_json']));
 
         $depsBefore = $this->dependencySignatures($baseDocument);
         $depsAfter  = $this->dependencySignatures($proposedDocument);
