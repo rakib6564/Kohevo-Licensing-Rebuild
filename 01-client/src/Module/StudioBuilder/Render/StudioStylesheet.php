@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '57';
+    public const VERSION = '58';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -115,6 +115,11 @@ final class StudioStylesheet
             . '.sb-layered{isolation:isolate}:where(.sb-layered){position:relative}'
             . '.sb-bg-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;pointer-events:none;border-radius:inherit}'
             . '@media (prefers-reduced-motion:reduce){.sb-bg-video{display:none}}'
+            . '.sb-bg-slides{position:absolute;inset:0;z-index:-2;overflow:hidden;pointer-events:none;border-radius:inherit}'
+            . '.sb-bg-slides>span{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;animation:sb-slide calc(var(--sb-slides,1) * var(--sb-slide-s,5s)) linear calc(var(--sb-slide,0) * var(--sb-slide-s,5s)) infinite}'
+            . '.sb-bg-slides>span:first-child{opacity:1}'
+            . '@keyframes sb-slide{0%{opacity:0}5%{opacity:1}30%{opacity:1}36%{opacity:0}100%{opacity:0}}'
+            . '@media (prefers-reduced-motion:reduce){.sb-bg-slides>span{animation:none}}'
             . '.sb-shape{position:absolute;left:0;right:0;overflow:hidden;line-height:0;pointer-events:none;z-index:-1;color:var(--sb-surface-primary,#fff)}'
             . '.sb-shape--front{z-index:2}.sb-shape--top{top:-1px}.sb-shape--bottom{bottom:-1px;transform:rotate(180deg)}'
             . '.sb-shape svg{display:block;position:relative;left:50%;width:var(--sb-shape-w,100%);height:var(--sb-shape-h,60px);transform:translateX(-50%);fill:currentColor}'
@@ -389,12 +394,32 @@ final class StudioStylesheet
             . '.sb-animate-move-right{animation:sb-move-right var(--sb-anim-duration,.5s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
             . '.sb-animate-reveal-left{animation:sb-reveal-left var(--sb-anim-duration,.7s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
             . '.sb-animate-reveal-up{animation:sb-reveal-up var(--sb-anim-duration,.7s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-fade-left{animation:sb-fade-left var(--sb-anim-duration,.6s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-fade-right{animation:sb-fade-right var(--sb-anim-duration,.6s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-zoom-in{animation:sb-zoom-in var(--sb-anim-duration,.6s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-zoom-out{animation:sb-zoom-out var(--sb-anim-duration,.6s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-bounce-in{animation:sb-bounce-in var(--sb-anim-duration,.6s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-flip-x{animation:sb-flip-x var(--sb-anim-duration,.6s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-flip-y{animation:sb-flip-y var(--sb-anim-duration,.6s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-rotate-in{animation:sb-rotate-in var(--sb-anim-duration,.6s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-light-speed{animation:sb-light-speed var(--sb-anim-duration,.6s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
+            . '.sb-animate-pulse{animation:sb-pulse var(--sb-anim-duration,.6s) var(--sb-anim-easing,ease) var(--sb-anim-delay,0s) both}'
             . '@keyframes sb-fade-in{from{opacity:0}to{opacity:1}}'
             . '@keyframes sb-fade-up{from{opacity:0;translate:0 24px}to{opacity:1;translate:0 0}}'
             . '@keyframes sb-fade-down{from{opacity:0;translate:0 -24px}to{opacity:1;translate:0 0}}'
             . '@keyframes sb-scale-up{from{opacity:0;scale:.92}to{opacity:1;scale:1}}'
             . '@keyframes sb-slide-in{from{translate:-100% 0}to{translate:0 0}}'
             . '@keyframes sb-move-left{from{opacity:0;translate:48px 0}to{opacity:1;translate:0 0}}'
+            . '@keyframes sb-fade-left{from{opacity:0;translate:32px 0}to{opacity:1;translate:0 0}}'
+            . '@keyframes sb-fade-right{from{opacity:0;translate:-32px 0}to{opacity:1;translate:0 0}}'
+            . '@keyframes sb-zoom-in{from{opacity:0;scale:.5}to{opacity:1;scale:1}}'
+            . '@keyframes sb-zoom-out{from{opacity:0;scale:1.4}to{opacity:1;scale:1}}'
+            . '@keyframes sb-bounce-in{from{opacity:0;scale:.3}55%{opacity:1;scale:1.08}75%{scale:.96}to{opacity:1;scale:1}}'
+            . '@keyframes sb-flip-x{from{opacity:0;rotate:x 80deg}to{opacity:1;rotate:x 0deg}}'
+            . '@keyframes sb-flip-y{from{opacity:0;rotate:y 80deg}to{opacity:1;rotate:y 0deg}}'
+            . '@keyframes sb-rotate-in{from{opacity:0;rotate:-120deg}to{opacity:1;rotate:0deg}}'
+            . '@keyframes sb-light-speed{from{opacity:0;translate:60% 0}70%{opacity:1;translate:-4% 0}to{opacity:1;translate:0 0}}'
+            . '@keyframes sb-pulse{from{scale:1}50%{scale:1.06}to{scale:1}}'
             . '@keyframes sb-move-right{from{opacity:0;translate:-48px 0}to{opacity:1;translate:0 0}}'
             . '@keyframes sb-reveal-left{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}'
             . '@keyframes sb-reveal-up{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0 0 0 0)}}'
@@ -426,6 +451,16 @@ final class StudioStylesheet
             . '.sb-interaction-viewport-enter.sb-animate-move-right{animation-name:sb-move-right}'
             . '.sb-interaction-viewport-enter.sb-animate-reveal-left{animation-name:sb-reveal-left}'
             . '.sb-interaction-viewport-enter.sb-animate-reveal-up{animation-name:sb-reveal-up}'
+            . '.sb-interaction-viewport-enter.sb-animate-fade-left{animation-name:sb-fade-left}'
+            . '.sb-interaction-viewport-enter.sb-animate-fade-right{animation-name:sb-fade-right}'
+            . '.sb-interaction-viewport-enter.sb-animate-zoom-in{animation-name:sb-zoom-in}'
+            . '.sb-interaction-viewport-enter.sb-animate-zoom-out{animation-name:sb-zoom-out}'
+            . '.sb-interaction-viewport-enter.sb-animate-bounce-in{animation-name:sb-bounce-in}'
+            . '.sb-interaction-viewport-enter.sb-animate-flip-x{animation-name:sb-flip-x}'
+            . '.sb-interaction-viewport-enter.sb-animate-flip-y{animation-name:sb-flip-y}'
+            . '.sb-interaction-viewport-enter.sb-animate-rotate-in{animation-name:sb-rotate-in}'
+            . '.sb-interaction-viewport-enter.sb-animate-light-speed{animation-name:sb-light-speed}'
+            . '.sb-interaction-viewport-enter.sb-animate-pulse{animation-name:sb-pulse}'
             . '}'
             // Scroll: tied to the scroll position for as long as the block crosses the screen. With no
             // animation the block drifts gently against the scroll; with one, the animation follows the

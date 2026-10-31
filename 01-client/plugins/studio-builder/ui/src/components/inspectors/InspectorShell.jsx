@@ -5,10 +5,10 @@
 // caller (`renderSection`). Open / closed state lives in that module too, keyed by block type for the session, so
 // a section the author opened on one heading stays open on the next. A closed section renders no controls at all.
 
-import { useId, useMemo, useState, useSyncExternalStore } from 'react';
+import { Fragment, useId, useMemo, useState, useSyncExternalStore } from 'react';
 import { t } from '../../core/messages.mjs';
 import {
-  SECTIONS, applicableSections, defaultOpenIds, inspectorContext, isSectionOpen, searchSections, setSectionOpen, subscribeSections, titleKeyOf,
+  SECTIONS, applicableSections, defaultOpenIds, inspectorContext, isExtraSection, isSectionOpen, searchSections, setSectionOpen, subscribeSections, titleKeyOf,
 } from '../../core/inspectorSections.mjs';
 import { Tabs } from './controls.jsx';
 import { Icon, SectionIcon } from './InspectorIcons.jsx';
@@ -67,7 +67,7 @@ export function InspectorShell({ idPrefix, node, def, header, actions, footer, r
   const typeKey = typeKeyProp || node.type;
 
   const activeTab = groups.some((g) => g.tab === tab) ? tab : (groups[0] ? groups[0].tab : 'content');
-  const tabs = groups.map((g) => ({ key: g.tab, label: t(TAB_LABEL[g.tab]), icon: <Icon name={`tab_${g.tab}`} size={16} className="sbx-tab__icon" /> }));
+  const tabs = groups.map((g) => ({ key: g.tab, label: t(g.tab === 'content' && node.type === 'core.container' ? 'section_layout' : TAB_LABEL[g.tab]), icon: <Icon name={`tab_${g.tab}`} size={16} className="sbx-tab__icon" /> }));
   const matches = useMemo(() => searchSections(ctx, query, (s) => t(titleKeyOf(s, ctx)), registry), [ctx, query, registry]);
   const searching = query.trim() !== '';
 
@@ -101,8 +101,12 @@ export function InspectorShell({ idPrefix, node, def, header, actions, footer, r
           {tabs.length > 1 && <Tabs tabs={tabs} active={activeTab} onChange={setTab} idPrefix={idPrefix} />}
           {groups.filter((g) => g.tab === activeTab).map((g) => (
             <div key={g.tab} role="tabpanel" id={`${idPrefix}-panel-${g.tab}`} aria-labelledby={`${idPrefix}-tab-${g.tab}`} className="sbx-isec-list">
-              {g.sections.map((s) => (
-                <Section key={s.id} typeKey={typeKey} section={s} ctx={ctx} idPrefix={idPrefix} render={renderSection} registry={registry} />
+              {g.sections.map((s, i) => (
+                <Fragment key={s.id}>
+                  {/* Kohevo's own sections, after the ones every author knows from the reference. */}
+                  {i > 0 && isExtraSection(s, ctx) && !isExtraSection(g.sections[i - 1], ctx) && <h3 className="sbx-isec-more" data-testid="more-options">{t('inspector_more_options')}</h3>}
+                  <Section typeKey={typeKey} section={s} ctx={ctx} idPrefix={idPrefix} render={renderSection} registry={registry} />
+                </Fragment>
               ))}
             </div>
           ))}

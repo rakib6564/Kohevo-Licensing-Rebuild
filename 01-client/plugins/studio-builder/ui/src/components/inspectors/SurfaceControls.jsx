@@ -364,6 +364,45 @@ export function PositionPane({ style, onChange }) {
 
 const FILTER_NEUTRAL = { blur: 0, brightness: 100, contrast: 100, saturate: 100, grayscale: 0 };
 
+/** Rotate, offset, scale, skew and flip, on the block's style or (through Normal / Hover) its hover state. */
+export function TransformFields({ style, onChange }) {
+  const id = useId();
+  const f = useFields(style, onChange);
+  const slider = (path, label, [min, max, unit], neutral, step = 1) => (
+    <SliderField key={path} id={pathId(id, path)} label={label} value={f.get(path)} min={min} max={max} step={step} unit={unit} neutral={neutral} onChange={(v) => f.put(path, v)} />
+  );
+  return (
+    <>
+      {slider('effects.transform.rotate', t('fx_rotate'), TRANSFORM.rotate, 0)}
+      <Length id={id} path="effects.transform.translate_x" label={t('fx_translate_x')} get={f.get} put={f.put} placeholder="0" />
+      <Length id={id} path="effects.transform.translate_y" label={t('fx_translate_y')} get={f.get} put={f.put} placeholder="0" />
+      {slider('effects.transform.scale', t('fx_scale'), TRANSFORM.scale, 1, 0.05)}
+      {slider('effects.transform.skew_x', t('fx_skew_x'), TRANSFORM.skew_x, 0)}
+      {slider('effects.transform.skew_y', t('fx_skew_y'), TRANSFORM.skew_y, 0)}
+      <Check label={t('fx_flip_x')} checked={f.get('effects.transform.flip_x') === true} onChange={(e) => f.put('effects.transform.flip_x', e.target.checked ? true : undefined)} />
+      <Check label={t('fx_flip_y')} checked={f.get('effects.transform.flip_y') === true} onChange={(e) => f.put('effects.transform.flip_y', e.target.checked ? true : undefined)} />
+    </>
+  );
+}
+
+/** Transform with Normal and Hover tabs, as in the reference; Hover writes the hover state's own transform. */
+export function TransformStates({ label, style, states, onStyle, onStates }) {
+  const [tab, setTab] = useState('normal');
+  const all = asObject(states);
+  const hover = asObject(all.hover);
+  const onHover = (next) => {
+    const merged = { ...all };
+    if (Object.keys(next).length === 0) delete merged.hover; else merged.hover = next;
+    onStates(merged);
+  };
+  return (
+    <div className="sbx-normalhover" data-testid="transform-states">
+      <Pills role="tablist" label={label} value={tab} options={[{ value: 'normal', label: t('state_normal') }, { value: 'hover', label: t('state_hover') }]} onChange={setTab} />
+      {tab === 'normal' ? <TransformFields style={style} onChange={onStyle} /> : <TransformFields style={hover} onChange={onHover} />}
+    </div>
+  );
+}
+
 export function EffectsPane({ style, onChange }) {
   const id = useId();
   const f = useFields(style, onChange);
@@ -372,15 +411,6 @@ export function EffectsPane({ style, onChange }) {
   );
   return (
     <>
-      <fieldset className="sbx-fieldset">
-        <legend>{t('effects_transform')}</legend>
-        {slider('effects.transform.rotate', t('fx_rotate'), TRANSFORM.rotate, 0)}
-        {slider('effects.transform.scale', t('fx_scale'), TRANSFORM.scale, 1, 0.05)}
-        {slider('effects.transform.skew_x', t('fx_skew_x'), TRANSFORM.skew_x, 0)}
-        {slider('effects.transform.skew_y', t('fx_skew_y'), TRANSFORM.skew_y, 0)}
-        <Length id={id} path="effects.transform.translate_x" label={t('fx_translate_x')} get={f.get} put={f.put} placeholder="0" />
-        <Length id={id} path="effects.transform.translate_y" label={t('fx_translate_y')} get={f.get} put={f.put} placeholder="0" />
-      </fieldset>
       <fieldset className="sbx-fieldset">
         <legend>{t('effects_filter')}</legend>
         {Object.entries(FILTER).map(([name, range]) => slider(`effects.filter.${name}`, t(`fx_${name}`), range, FILTER_NEUTRAL[name]))}

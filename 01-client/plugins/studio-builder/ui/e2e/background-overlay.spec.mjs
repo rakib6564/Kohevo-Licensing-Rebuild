@@ -44,10 +44,10 @@ test('an overlay shows on the image preview, is named under it, and can be remov
     await page.getByRole('tab', { name: 'Style' }).click();
     const bg = await openSection(page, 'background');
     const modes = bg.getByRole('radiogroup', { name: 'Background type' });
-    await modes.getByRole('button', { name: 'Image' }).click();
+    await modes.getByRole('button', { name: 'Classic' }).click();
     await expect(bg.getByTestId('bg-overlay-note')).toHaveCount(0);
     await chooseImage(page, bg);
-    await expect(modes.getByRole('button', { name: 'Image' })).toHaveClass(/has-value/);
+    await expect(modes.getByRole('button', { name: 'Classic' })).toHaveClass(/has-value/);
     await expect(modes.getByRole('button', { name: 'Gradient' })).not.toHaveClass(/has-value/);
     await expect(bg.getByTestId('bg-preview-tint')).toHaveCount(0);
 
@@ -59,11 +59,7 @@ test('an overlay shows on the image preview, is named under it, and can be remov
     await expect(bg.getByTestId('bg-preview-tint')).toBeVisible();
     await expect(bg.getByTestId('bg-overlay-note')).toContainText('Overlay 90%');
 
-    // The Color tab does not hide that an image paints over it.
-    await modes.getByRole('button', { name: 'Color' }).click();
-    await expect(bg.getByTestId('bg-covered-hint')).toBeVisible();
-    await modes.getByRole('button', { name: 'Image' }).click();
-
+    await bg.getByRole('button', { name: 'Edit image options' }).click(); // the note sits under the open card
     await bg.getByTestId('bg-overlay-note').getByRole('button', { name: 'Remove overlay' }).click();
     await expect(bg.getByTestId('bg-overlay-note')).toHaveCount(0);
     await expect(bg.getByTestId('bg-preview-tint')).toHaveCount(0);

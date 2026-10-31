@@ -8,15 +8,15 @@
 // Plus move/indent/outdent/delete actions (keyboard-accessible alternatives
 // to drag & drop). Every change is a canonical operation.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useEditor, useEngineState } from '../EditorContext.jsx';
 import { FieldControl, ObjectFields, TokenSelect } from '../fields/FieldControl.jsx';
 import { presentersFor, layoutOwnedProps } from '../../core/propPresenters.mjs';
 import { ResponsiveSelect, VisibilityControls } from './controls.jsx';
 import { StyleControls } from './StyleControls.jsx';
-import { BorderExtras, DimensionsExtras, EffectsPane, LayoutPane, PositionPane, ShadowExtras, SpacingPane, StatesPane, TypographyExtras } from './SurfaceControls.jsx';
+import { BorderExtras, DimensionsExtras, EffectsPane, LayoutPane, PositionPane, ShadowExtras, SpacingPane, StatesPane, TransformStates, TypographyExtras } from './SurfaceControls.jsx';
 import { COLOUR_TOKEN_CATEGORIES, OPTIONS } from '../../core/styleSurface.mjs';
-import { EntranceSelect, MotionInspector } from './MotionInspector.jsx';
+import { MotionInspector } from './MotionInspector.jsx';
 import { PartStyles } from './PartStyles.jsx';
 import { ClassNamesField, DataAttributes, IdentityFields } from './AdvancedControls.jsx';
 import { ContainerPane } from './ContainerPane.jsx';
@@ -205,14 +205,30 @@ export function BlockInspector({ info }) {
         tokens={colourTokens}
         colours={colours}
       >
-        <StyleControls style={style} capabilities={capabilities} only="background" mediaPicker={boot.mediaPicker} onChange={saveStyle} tokens={manifest && manifest.tokens} {...surface} />
-        {block.type === CONTAINER_TYPE && (
-          <>
-            {/* A Container's background video: its own prop, kept with the rest of its background. */}
-            <ObjectFields schema={asList(def.field_schema).filter((f) => f.key === 'bg_video')} value={props} manifest={manifest} blockType={block.type} onChange={(next) => save(ops.updateBlockProps(block.id, next))} />
-            <p className="sbx-hint">{t('bg_video_hint')}</p>
-          </>
-        )}
+        <StyleControls
+          style={style}
+          capabilities={capabilities}
+          only="background"
+          mediaPicker={boot.mediaPicker}
+          onChange={saveStyle}
+          tokens={manifest && manifest.tokens}
+          {...surface}
+          bgPanes={block.type === CONTAINER_TYPE ? {
+            // A Container's video and slideshow: its own props, kept with the rest of its background.
+            video: (
+              <>
+                <ObjectFields schema={asList(def.field_schema).filter((f) => f.key === 'bg_video')} value={props} manifest={manifest} blockType={block.type} onChange={(next) => save(ops.updateBlockProps(block.id, next))} />
+                <p className="sbx-hint">{t('bg_video_hint')}</p>
+              </>
+            ),
+            slideshow: (
+              <>
+                <ObjectFields schema={asList(def.field_schema).filter((f) => f.key === 'bg_slides' || f.key === 'bg_slide_seconds')} value={props} manifest={manifest} blockType={block.type} onChange={(next) => save(ops.updateBlockProps(block.id, next))} />
+                <p className="sbx-hint">{t('bg_slides_hint')}</p>
+              </>
+            ),
+          } : undefined}
+        />
       </BackgroundStates>
     ),
     overlay: () => <OverlayStates style={style} states={block.style_states} onStyle={saveStyle} onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))} tokens={manifest && manifest.tokens} />,
@@ -222,6 +238,7 @@ export function BlockInspector({ info }) {
       <>
         <StyleControls style={style} capabilities={capabilities} only="border" onChange={saveStyle} tokens={manifest && manifest.tokens} {...surface} />
         <BorderExtras style={style} onChange={saveStyle} tokens={colourTokens} />
+        {block.type === CONTAINER_TYPE && sections.shadow()}
       </>
     ),
     shadow: () => {
@@ -244,7 +261,7 @@ export function BlockInspector({ info }) {
       </>
     ),
     layout: () => <LayoutPane style={style} onChange={saveStyle} deviceScope={deviceScope} defaultDisplay={LAYOUT_DISPLAY[block.type]} itemOnly={block.type === CONTAINER_TYPE} />,
-    position: () => <PositionPane style={style} onChange={saveStyle} />,
+    transform: () => <TransformStates label={def.label} style={style} states={block.style_states} onStyle={saveStyle} onStates={(next) => save(ops.updateBlockStyleStates(block.id, next))} />,
     effects: () => <EffectsPane style={style} onChange={saveStyle} />,
     states: () => <StatesPane type={block.type} states={block.style_states} tokens={colourTokens} colours={colours} onChange={(next) => save(ops.updateBlockStyleStates(block.id, next))} />,
     parts: () => (
@@ -369,6 +386,8 @@ export function BlockInspector({ info }) {
         <DeviceStyle scope={deviceScope} paths={RESPONSIVE_SCOPES.spacing} label={t('section_spacing')}>
           {(view) => <SpacingPane style={view.style} onChange={view.onChange} tokens={capabilities.includes('spacing_token') ? tokensFor(manifest, STYLE_TOKEN_CATEGORIES.spacing_token) : null} />}
         </DeviceStyle>
+        {block.type === CONTAINER_TYPE && <LayoutPane style={style} onChange={saveStyle} deviceScope={deviceScope} itemOnly />}
+        {capabilities.includes('position') && <PositionPane style={style} onChange={saveStyle} />}
         <Field label={t('z_index_label')} htmlFor={`${idPrefix}-z-index`}>
           <input
             id={`${idPrefix}-z-index`}
@@ -386,12 +405,12 @@ export function BlockInspector({ info }) {
             }}
           />
         </Field>
-        <EntranceSelect block={block} applyOp={applyOp} label={def.label} />
         <IdentityFields block={block} doc={working} part="id" onChange={(attrs) => save(ops.updateBlockAttributes(block.id, attrs))} />
         <ClassNamesField id={`${idPrefix}-classes`} value={classNames} onChange={(list) => save(ops.updateBlockClassNames(block.id, list))} />
       </>
     ),
     identity: () => <IdentityFields block={block} doc={working} part="a11y" onChange={(attrs) => save(ops.updateBlockAttributes(block.id, attrs))} />,
+    custom_css: () => <ElementCssField block={block} admin={!!(manifest && manifest.permissions && manifest.permissions.admin)} onChange={(css) => save(ops.updateBlockCustomCss(block.id, css))} />,
     attributes: () => <DataAttributes block={block} onChange={(attrs) => save(ops.updateBlockAttributes(block.id, attrs))} />,
   };
 
@@ -412,6 +431,29 @@ export function BlockInspector({ info }) {
       footer={<InspectorBar block={block} label={def.label} />}
       renderSection={(id) => (sections[id] ? sections[id]() : null)}
     />
+  );
+}
+
+/** The element's own CSS, saved when the field is left. `selector` stands for this element; administrators only. */
+function ElementCssField({ block, admin, onChange }) {
+  const [draft, setDraft] = useState(block.custom_css || '');
+  useEffect(() => { setDraft(block.custom_css || ''); }, [block.id, block.custom_css]);
+  if (!admin) return <p className="sbx-hint">{t('element_css_admin')}</p>;
+  return (
+    <Field label={t('section_custom_css')} htmlFor={`sbx-element-css-${block.id}`}>
+      <textarea
+        id={`sbx-element-css-${block.id}`}
+        className="sbx-input sbx-code"
+        rows={8}
+        spellCheck={false}
+        maxLength={8192}
+        placeholder={'selector { color: red; }'}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => { if (draft !== (block.custom_css || '')) onChange(draft); }}
+      />
+      <p className="sbx-hint">{t('element_css_hint')}</p>
+    </Field>
   );
 }
 

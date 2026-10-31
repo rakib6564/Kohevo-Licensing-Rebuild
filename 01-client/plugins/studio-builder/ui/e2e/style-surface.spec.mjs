@@ -186,7 +186,7 @@ test('Effects sliders write only values the server accepts, and the custom shado
   try {
     await insertQuote(page);
     await styleTab(page);
-    await openSection(page, 'effects');
+    await openSection(page, 'transform');
     await page.getByLabel('Rotate', { exact: true }).fill('15');
     await openSection(page, 'shadow');
     await page.locator('[data-section="shadow"]').getByRole('button', { name: 'Edit shadow' }).click();

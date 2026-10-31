@@ -884,6 +884,16 @@ final class DocumentValidator
             }
         }
 
+        // An element's own CSS: a string within the ceiling. Who may change it is decided where a draft is saved, and an
+        // imported package may not bring any (`element_css` => false).
+        if (array_key_exists('custom_css', $block)) {
+            if (($options['element_css'] ?? true) === false) {
+                $errors[] = ValidationResult::issue("{$path}.custom_css", 'element_css_refused', 'Custom CSS cannot be imported.');
+            } elseif (!is_string($block['custom_css']) || strlen($block['custom_css']) > CanonicalDocumentSchema::MAX_ELEMENT_CSS_BYTES) {
+                $errors[] = ValidationResult::issue("{$path}.custom_css", 'invalid_element_css', 'block.custom_css must be a string of at most ' . CanonicalDocumentSchema::MAX_ELEMENT_CSS_BYTES . ' bytes.');
+            }
+        }
+
         // Wrapper element (B2-P3b): an allow-listed semantic tag.
         if (array_key_exists('tag', $block) && (!is_string($block['tag']) || !in_array($block['tag'], CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS, true))) {
             $errors[] = ValidationResult::issue("{$path}.tag", 'invalid_tag', 'block.tag must be one of: ' . implode(', ', CanonicalDocumentSchema::ALLOWED_BLOCK_TAGS) . '.');

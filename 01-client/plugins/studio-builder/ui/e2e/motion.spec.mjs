@@ -47,6 +47,7 @@ test('a block takes a reveal preset and a section takes its own motion; both rea
     await insertBlock(page, 'core.heading');
     await page.locator('[id^="sbx-blk-"][id$="-tab-style"]').click();
     await openSection(page, 'motion');
+    await page.getByTestId('motion-more').locator('summary').click();
     const presets = page.locator('[data-section="motion"]').getByRole('radiogroup', { name: 'Entrance' });
     await presets.getByRole('radio', { name: /Reveal up/ }).click();
     await settled(page);
@@ -57,6 +58,7 @@ test('a block takes a reveal preset and a section takes its own motion; both rea
     await page.locator('[role="treeitem"]').first().click();
     await showEdit(page);
     await openSection(page, 'motion');
+    await page.getByTestId('motion-more').locator('summary').click();
     const sectionPresets = page.getByRole('radiogroup', { name: 'Entrance' });
     await sectionPresets.getByRole('radio', { name: /Move left/ }).click();
     await page.locator('select[id$="-trigger"]').selectOption('viewport-enter');
@@ -78,6 +80,7 @@ test('a block\'s interaction and its animation reach the canvas without a reload
     await insertBlock(page, 'core.heading');
     await page.locator('[id^="sbx-blk-"][id$="-tab-style"]').click();
     await openSection(page, 'motion');
+    await page.getByTestId('motion-more').locator('summary').click();
     await page.locator('select[id^="sbx-motion-"][id$="-trigger"]').selectOption('hover');
     await page.locator('select[id^="sbx-motion-"][id$="-trigger-anim"]').selectOption('fade_in');
     await settled(page);

@@ -40,6 +40,7 @@ final class LayerLock
         DocumentOperation::OP_UPDATE_BLOCK_STYLE_STATES,
         DocumentOperation::OP_UPDATE_BLOCK_STYLE_PARTS,
         DocumentOperation::OP_UPDATE_BLOCK_TAG,
+        DocumentOperation::OP_UPDATE_BLOCK_CUSTOM_CSS,
         DocumentOperation::OP_RESET_BLOCK_STYLE_PROPERTY,
     ];
 

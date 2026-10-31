@@ -12,6 +12,7 @@ import { SelectField, SliderField } from './SurfaceControls.jsx';
 import { asObject } from '../../core/doc.mjs';
 import { OPTIONS, getPath, isColourToken, setPath } from '../../core/styleSurface.mjs';
 import { t } from '../../core/messages.mjs';
+import { SHAPE_NAMES, SHAPE_PATHS } from '../../core/shapes.mjs';
 
 /** An overlay with neither a colour nor a gradient is not an overlay: drop it rather than store an invalid one. */
 function withOverlay(style, next) {
@@ -105,8 +106,7 @@ export function OverlayStates({ style, states, onStyle, onStates, tokens }) {
   );
 }
 
-/** Mirrors ContainerRenderer::SHAPE_NAMES (the first is "none"). */
-export const SHAPE_NAMES = Object.freeze(['wave', 'curve', 'tilt', 'triangle', 'mountains']);
+export { SHAPE_NAMES };
 const DEFAULT_SHAPE_HEIGHT = 60;
 
 export function ShapeDividers({ props, onProps, tokens }) {
@@ -127,7 +127,17 @@ export function ShapeDividers({ props, onProps, tokens }) {
         ]}
         onChange={setSide}
       />
-      <SelectField id={`${id}-${side}-type`} label={t('shape_type')} value={shape} options={SHAPE_NAMES} emptyLabel={t('none')} onChange={(v) => put('', v || 'none')} />
+      <div className="sbx-field" role="radiogroup" aria-label={t('shape_type')}>
+        <span className="sbx-field__label">{t('shape_type')}</span>
+        <div className="sbx-shapes" data-testid="shape-picker">
+          <button type="button" role="radio" aria-checked={!shape} aria-label={t('none')} title={t('none')} className={`sbx-shape${!shape ? ' is-active' : ''}`} onClick={() => put('', 'none')}><span>{t('none')}</span></button>
+          {SHAPE_NAMES.map((name) => (
+            <button key={name} type="button" role="radio" aria-checked={shape === name} aria-label={t(`shape_${name}`)} title={t(`shape_${name}`)} className={`sbx-shape${shape === name ? ' is-active' : ''}`} onClick={() => put('', name)}>
+              <svg viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true">{SHAPE_PATHS[name].split('|').map((d, i, all) => <path key={d} d={d} fillOpacity={all.length > 1 ? 0.35 : undefined} />)}</svg>
+            </button>
+          ))}
+        </div>
+      </div>
       {shape && (
         <>
           <div className="sbx-field">

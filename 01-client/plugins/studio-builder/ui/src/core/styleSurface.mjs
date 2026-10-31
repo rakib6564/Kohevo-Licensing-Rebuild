@@ -153,6 +153,7 @@ for (const f of ['x', 'y', 'blur', 'spread']) add(`shadow.${f}`, measure(false))
 add('shadow.color', tcolour);
 
 for (const [f, [min, max]] of Object.entries(TRANSFORM)) add(`effects.transform.${f}`, num(min, max));
+for (const f of ['flip_x', 'flip_y']) add(`effects.transform.${f}`, (v) => v === true);
 add('effects.transform.translate_x', measure(false));
 add('effects.transform.translate_y', measure(false));
 for (const [f, [min, max]] of Object.entries(FILTER)) add(`effects.filter.${f}`, num(min, max));

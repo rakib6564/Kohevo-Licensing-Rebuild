@@ -14,10 +14,11 @@
 import { asObject } from '../../core/doc.mjs';
 import {
   ANIMATION_TYPES, DELAY_RANGE, DURATION_RANGE, EASINGS, INTERACTION_TRIGGERS,
-  MOTION_PRESETS, PARALLAX_SPEED, SCROLL_DEVICES, STICKY_OFFSET, clampMs, motionLabel, normalizeAnimation, normalizeInteractions,
+  MOTION_PRESETS, MOUSE_LEVELS, PARALLAX_SPEED, SCROLL_LEVELS, SCROLL_DEVICES, STICKY_OFFSET, clampMs, motionLabel, normalizeAnimation, normalizeInteractions,
 } from '../../core/motion.mjs';
 import * as ops from '../../core/operations.mjs';
 import { t } from '../../core/messages.mjs';
+import { useState } from 'react';
 import { Check, Field, Pills } from '../ui/index.js';
 import { SliderField, ThemeColor } from './SurfaceControls.jsx';
 
@@ -48,35 +49,14 @@ export function MotionInspector({ block, applyOp, label, section = false, tokens
 
   return (
     <>
+      <ScrollEffectsSection
+        idPrefix={idPrefix}
+        interactions={interactions}
+        hasBackground={section || block.type === 'core.container'}
+        tokens={tokens}
+        onChange={commitInteractions}
+      />
       <section className="sbx-motion-section">
-        <h3 className="sbx-fieldset-legend">{t('motion_entrance')}</h3>
-        <p className="sbx-hint">{t('motion_entrance_hint')}</p>
-
-        {/* Presets as real radio buttons: one arrow-key tab stop, and the
-            current choice is announced, which a row of buttons would not do. */}
-        <fieldset className="sbx-fieldset">
-          <legend className="sbx-sr-only">{t('motion_entrance')}</legend>
-          <div className="sbx-motion-presets" role="radiogroup" aria-label={t('motion_entrance')}>
-            {MOTION_PRESETS.map((preset) => {
-              const active = animation.type === preset.value;
-              return (
-                <button
-                  key={preset.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  title={motionLabel('preset', preset, 'hint')}
-                  className={`sbx-motion-preset${active ? ' is-active' : ''}`}
-                  onClick={() => choosePreset(preset.value)}
-                >
-                  <span className="sbx-motion-preset__label">{motionLabel('preset', preset)}</span>
-                  <span className="sbx-motion-preset__hint">{motionLabel('preset', preset, 'hint')}</span>
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-
         {/* The presets are a shortcut; this select is the authoritative
             control (and the only place 'none' is spelled out). */}
         <Field label={t('motion_entrance')} htmlFor={`${idPrefix}-type`}>
@@ -121,19 +101,41 @@ export function MotionInspector({ block, applyOp, label, section = false, tokens
         )}
       </section>
 
+      <details className="sbx-more" data-testid="motion-more">
+        <summary>{t('motion_more')}</summary>
+        <p className="sbx-hint">{t('motion_entrance_hint')}</p>
+        {/* Presets as real radio buttons: one arrow-key tab stop, and the
+            current choice is announced, which a row of buttons would not do. */}
+        <fieldset className="sbx-fieldset">
+          <legend className="sbx-sr-only">{t('motion_entrance')}</legend>
+          <div className="sbx-motion-presets" role="radiogroup" aria-label={t('motion_entrance')}>
+            {MOTION_PRESETS.map((preset) => {
+              const active = animation.type === preset.value;
+              return (
+                <button
+                  key={preset.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  title={motionLabel('preset', preset, 'hint')}
+                  className={`sbx-motion-preset${active ? ' is-active' : ''}`}
+                  onClick={() => choosePreset(preset.value)}
+                >
+                  <span className="sbx-motion-preset__label">{motionLabel('preset', preset)}</span>
+                  <span className="sbx-motion-preset__hint">{motionLabel('preset', preset, 'hint')}</span>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+
       <InteractionSection
         idPrefix={idPrefix}
         interactions={interactions}
         onChange={commitInteractions}
       />
 
-      <ScrollEffectsSection
-        idPrefix={idPrefix}
-        interactions={interactions}
-        hasBackground={section || block.type === 'core.container'}
-        tokens={tokens}
-        onChange={commitInteractions}
-      />
+      </details>
     </>
   );
 }
@@ -221,44 +223,23 @@ function ScrollEffectsSection({ idPrefix, interactions, hasBackground, tokens, o
 
   return (
     <section className="sbx-motion-section" data-scroll-effects>
-      <h3 className="sbx-fieldset-legend">{t('scroll_effects')}</h3>
-
-      <Field label={t('sticky')}>
-        <Pills
-          label={t('sticky')}
-          value={sticky ? sticky.edge : ''}
-          options={[
-            { value: '', label: t('sticky_off') },
-            { value: 'top', label: t('sticky_top') },
-            { value: 'bottom', label: t('sticky_bottom') },
-          ]}
-          onChange={(edge) => setSticky(edge ? { ...(sticky || {}), edge } : null)}
-        />
-      </Field>
-      {sticky && (
-        <>
-          <SliderField
-            id={`${idPrefix}-sticky-offset`}
-            label={t('sticky_offset')}
-            value={sticky.offset}
-            min={STICKY_OFFSET.min}
-            max={STICKY_OFFSET.max}
-            unit="px"
-            neutral={0}
-            onChange={(v) => setSticky({ ...sticky, offset: v })}
-          />
-          <DeviceChecks idPrefix={`${idPrefix}-sticky`} legend={t('sticky_on')} devices={sticky.devices} onChange={(devices) => setSticky({ ...sticky, devices })} />
-          <p className="sbx-hint">{t('sticky_effects_hint')}</p>
-          <Check label={t('sticky_shadow')} checked={sticky.shadow === true} onChange={(e) => setSticky({ ...sticky, shadow: e.target.checked })} />
-          {sticky.edge === 'top' && (
-            <>
-            <Check label={t('sticky_hide_on_scroll')} checked={sticky.hide_on_scroll === true} onChange={(e) => setSticky({ ...sticky, hide_on_scroll: e.target.checked })} />
-            <Check label={t('sticky_shrink')} checked={sticky.shrink === true} onChange={(e) => setSticky({ ...sticky, shrink: e.target.checked })} />
-            </>
-          )}
-          <ThemeColor id={`${idPrefix}-sticky-bg`} label={t('sticky_background')} value={sticky.background} tokens={tokens} onChange={(v) => setSticky({ ...sticky, background: v })} />
-        </>
-      )}
+      
+      <LevelEffects
+        idPrefix={`${idPrefix}-scroll`}
+        title={t('scrolling_effects')}
+        fields={SCROLL_LEVELS}
+        value={interactions.scroll}
+        onChange={(scroll) => onChange(normalizeInteractions({ ...interactions, scroll }))}
+      >
+        {interactions.scroll && <DeviceChecks idPrefix={`${idPrefix}-scroll`} legend={t('scroll_on')} devices={interactions.scroll.devices} onChange={(devices) => onChange(normalizeInteractions({ ...interactions, scroll: { ...interactions.scroll, devices } }))} />}
+      </LevelEffects>
+      <LevelEffects
+        idPrefix={`${idPrefix}-mouse`}
+        title={t('mouse_effects')}
+        fields={MOUSE_LEVELS}
+        value={interactions.mouse}
+        onChange={(mouse) => onChange(normalizeInteractions({ ...interactions, mouse }))}
+      />
 
       <Field label={t('parallax')}>
         <Pills
@@ -297,7 +278,65 @@ function ScrollEffectsSection({ idPrefix, interactions, hasBackground, tokens, o
         </>
       )}
       <p className="sbx-hint">{t('scroll_effects_hint')}</p>
+
+      <Field label={t('sticky')}>
+        <Pills
+          label={t('sticky')}
+          value={sticky ? sticky.edge : ''}
+          options={[
+            { value: '', label: t('sticky_off') },
+            { value: 'top', label: t('sticky_top') },
+            { value: 'bottom', label: t('sticky_bottom') },
+          ]}
+          onChange={(edge) => setSticky(edge ? { ...(sticky || {}), edge } : null)}
+        />
+      </Field>
+      {sticky && (
+        <>
+          <SliderField
+            id={`${idPrefix}-sticky-offset`}
+            label={t('sticky_offset')}
+            value={sticky.offset}
+            min={STICKY_OFFSET.min}
+            max={STICKY_OFFSET.max}
+            unit="px"
+            neutral={0}
+            onChange={(v) => setSticky({ ...sticky, offset: v })}
+          />
+          <DeviceChecks idPrefix={`${idPrefix}-sticky`} legend={t('sticky_on')} devices={sticky.devices} onChange={(devices) => setSticky({ ...sticky, devices })} />
+          <p className="sbx-hint">{t('sticky_effects_hint')}</p>
+          <Check label={t('sticky_shadow')} checked={sticky.shadow === true} onChange={(e) => setSticky({ ...sticky, shadow: e.target.checked })} />
+          {sticky.edge === 'top' && (
+            <>
+            <Check label={t('sticky_hide_on_scroll')} checked={sticky.hide_on_scroll === true} onChange={(e) => setSticky({ ...sticky, hide_on_scroll: e.target.checked })} />
+            <Check label={t('sticky_shrink')} checked={sticky.shrink === true} onChange={(e) => setSticky({ ...sticky, shrink: e.target.checked })} />
+            </>
+          )}
+          <ThemeColor id={`${idPrefix}-sticky-bg`} label={t('sticky_background')} value={sticky.background} tokens={tokens} onChange={(v) => setSticky({ ...sticky, background: v })} />
+        </>
+      )}
+
     </section>
+  );
+}
+
+/** An effect with a switch, as in the reference: on, each of its levels is a slider. A level of 0 is off. */
+function LevelEffects({ idPrefix, title, fields, value, onChange, children }) {
+  const [open, setOpen] = useState(!!value);
+  const on = open || !!value;
+  return (
+    <div className="sbx-leveleffects" data-testid={idPrefix.endsWith('mouse') ? 'mouse-effects' : 'scrolling-effects'}>
+      <div className="sbx-switchrow">
+        <span id={`${idPrefix}-switch`}>{title}</span>
+        <button type="button" role="switch" className="sbx-switch" aria-checked={on} aria-labelledby={`${idPrefix}-switch`} onClick={() => { setOpen(!on); if (on) onChange(undefined); }}>
+          <span className="sbx-switch__knob" />
+        </button>
+      </div>
+      {on && Object.entries(fields).map(([key, min]) => (
+        <SliderField key={key} id={`${idPrefix}-${key}`} label={t(`level_${key}`)} value={asObject(value)[key]} min={min} max={10} neutral={0} onChange={(v) => onChange({ ...asObject(value), [key]: v ?? 0 })} />
+      ))}
+      {children}
+    </div>
   );
 }
 

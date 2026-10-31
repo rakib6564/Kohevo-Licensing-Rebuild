@@ -131,7 +131,7 @@ final class CanonicalDocumentSchema
     public const ALLOWED_SECTION_STYLE_KEYS = ['background', 'padding'];
 
     /** `animation.type` values (the entrance presets); the stylesheet owns the matching keyframes. */
-    public const ALLOWED_ANIMATION_TYPES = ['fade_in', 'fade_up', 'fade_down', 'scale_up', 'slide_in', 'move_left', 'move_right', 'reveal_left', 'reveal_up', 'none'];
+    public const ALLOWED_ANIMATION_TYPES = ['fade_in', 'fade_up', 'fade_down', 'scale_up', 'slide_in', 'move_left', 'move_right', 'reveal_left', 'reveal_up', 'fade_left', 'fade_right', 'zoom_in', 'zoom_out', 'bounce_in', 'flip_x', 'flip_y', 'rotate_in', 'light_speed', 'pulse', 'none'];
 
     /** `interactions.trigger` values. */
     public const ALLOWED_INTERACTION_TRIGGERS = ['hover', 'focus', 'click', 'viewport-enter', 'scroll', 'load'];
@@ -207,6 +207,7 @@ final class CanonicalDocumentSchema
         'style_parts',
         'tag',
         'link',
+        'custom_css',
     ];
 
     /** Exact attribute names an author may set on a block wrapper. */
@@ -291,7 +292,11 @@ final class CanonicalDocumentSchema
         'style_parts',
         'tag',
         'link',
+        'custom_css',
     ];
+
+    /** An element's own stylesheet: a few rules, not a file. */
+    public const MAX_ELEMENT_CSS_BYTES = 8192;
 
     /**
      * Range of an author's `style.z_index`. The ceiling sits below the platform

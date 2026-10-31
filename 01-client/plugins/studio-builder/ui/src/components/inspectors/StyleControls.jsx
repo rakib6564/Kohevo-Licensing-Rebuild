@@ -337,7 +337,7 @@ export function GradientField({ value, onChange }) {
  * @param {?object} [props.computed]                 the block's computed look on the canvas (useCanvasComputed)
  */
 /** `noTextColor`: the text colour is edited elsewhere (a Button's or Heading's Normal / Hover tabs). */
-export function StyleControls({ style, capabilities, onChange, mediaPicker, only, deviceScope, tokens, typoPart = 'all', noTextColor = false, colours = null, held = null, computed = null }) {
+export function StyleControls({ style, capabilities, onChange, mediaPicker, only, deviceScope, tokens, typoPart = 'all', noTextColor = false, colours = null, held = null, computed = null, bgPanes = null }) {
   const id = useId();
   const mainTypo = typoPart !== 'more';
   const moreTypo = typoPart !== 'main';
@@ -358,7 +358,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
   const heldRadius = heldBy('border.radius');
   const heldWidth = heldBy('border.width');
   const dims = asObject(style.dimensions);
-  const [bgMode, setBgMode] = useState(() => (isMediaRef(bg.image) ? 'image' : (bg.gradient ? 'gradient' : 'color')));
+  const [bgMode, setBgMode] = useState(() => (bgPanes ? (bg.gradient ? 'gradient' : 'classic') : (isMediaRef(bg.image) ? 'image' : (bg.gradient ? 'gradient' : 'color'))));
 
   /**
    * Merge one field into a nested style object. A field cleared to undefined
@@ -516,24 +516,26 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
             role="radiogroup"
             label={t('bg_type')}
             value={bgMode}
-            options={['image', 'color', 'gradient'].map((m) => ({ value: m, label: t(`bg_mode_${m}`), hasValue: m === 'image' ? hasImage : (m === 'color' ? !!bgColor || !!style.surface_token : !!bg.gradient) }))}
+            options={(bgPanes ? ['classic', 'gradient', ...Object.keys(bgPanes)] : ['image', 'color', 'gradient']).map((m) => ({ value: m, label: t(`bg_mode_${m}`), hasValue: m === 'classic' ? hasImage || !!bgColor : (m === 'image' ? hasImage : (m === 'color' ? !!bgColor || !!style.surface_token : (m === 'gradient' ? !!bg.gradient : false))) }))}
             onChange={setBgMode}
           />
 
-          {bgMode === 'image' && (
+          {(bgMode === 'image' || bgMode === 'classic') && (
             <div className="sbx-bg-image-pane">
               {isMediaRef(bg.image) ? (
                 <Popover label={t('edit_bg_image')} row={bgMedia}>
-                <Field label={t('bg_fit')} htmlFor={`${id}-bg-fit`}>
-                  <select id={`${id}-bg-fit`} value={BG_FIT.includes(bg.fit) ? bg.fit : 'cover'} onChange={(e) => patchBackground({ fit: e.target.value })}>
-                    <option value="cover">{t('fit_cover')}</option>
-                    <option value="contain">{t('fit_contain')}</option>
-                    <option value="auto">{t('fit_auto')}</option>
-                  </select>
-                </Field>
-                <Field label={t('bg_repeat')} htmlFor={`${id}-bg-repeat`}>
-                  <select id={`${id}-bg-repeat`} value={BG_REPEAT.includes(bg.repeat) ? bg.repeat : 'no-repeat'} onChange={(e) => patchBackground({ repeat: e.target.value })}>
-                    {BG_REPEAT.map((r) => <option key={r} value={r}>{t(`repeat_${r.replace('-', '_')}`)}</option>)}
+                {/* A named position replaces the focal point, which would otherwise win. */}
+                <Field label={t('bg_position')} htmlFor={`${id}-bg-position`}>
+                  <select
+                    id={`${id}-bg-position`}
+                    value={BG_POSITIONS.includes(bg.position) ? bg.position : ''}
+                    onChange={(e) => {
+                      const { focal_point: _focal, ...image } = bg.image;
+                      patchBackground({ position: e.target.value || undefined, image: e.target.value ? image : bg.image });
+                    }}
+                  >
+                    <option value="">{t('tag_default')}</option>
+                    {BG_POSITIONS.map((p) => <option key={p} value={p}>{optionLabel(p)}</option>)}
                   </select>
                 </Field>
                 {/* Fixed keeps the picture still while the page scrolls past it. */}
@@ -543,10 +545,22 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
                     {OPTIONS.attachment.map((a) => <option key={a} value={a}>{optionLabel(a)}</option>)}
                   </select>
                 </Field>
+                <Field label={t('bg_repeat')} htmlFor={`${id}-bg-repeat`}>
+                  <select id={`${id}-bg-repeat`} value={BG_REPEAT.includes(bg.repeat) ? bg.repeat : 'no-repeat'} onChange={(e) => patchBackground({ repeat: e.target.value })}>
+                    {BG_REPEAT.map((r) => <option key={r} value={r}>{t(`repeat_${r.replace('-', '_')}`)}</option>)}
+                  </select>
+                </Field>
+                <Field label={t('bg_fit')} htmlFor={`${id}-bg-fit`}>
+                  <select id={`${id}-bg-fit`} value={BG_FIT.includes(bg.fit) ? bg.fit : 'cover'} onChange={(e) => patchBackground({ fit: e.target.value })}>
+                    <option value="cover">{t('fit_cover')}</option>
+                    <option value="contain">{t('fit_contain')}</option>
+                    <option value="auto">{t('fit_auto')}</option>
+                  </select>
+                </Field>
                 <FocalPad
                   id={`${id}-bg`}
                   value={bg.image.focal_point}
-                  onChange={(fp) => patchBackground({ image: { ...bg.image, focal_point: fp } })}
+                  onChange={(fp) => patchBackground({ image: { ...bg.image, focal_point: fp }, position: undefined })}
                 />
                 <OverlayField
                   id={`${id}-bg`}
@@ -565,7 +579,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
           )}
 
           {bgMode === 'color' && hasImage && <p className="sbx-hint" data-testid="bg-covered-hint">{t('bg_image_covers')}</p>}
-          {bgMode === 'color' && (
+          {(bgMode === 'color' || bgMode === 'classic') && (
             <ColorField
               id={`${id}-bg`}
               label={t('background_color')}
@@ -581,6 +595,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
           {bgMode === 'gradient' && (
             <GradientField value={bg.gradient} onChange={(v) => patchBackground({ gradient: v })} />
           )}
+          {bgPanes && bgPanes[bgMode]}
         </fieldset>
       )}
 

@@ -289,6 +289,18 @@ final class BlockRegistry
                 ['key' => 'wrap', 'type' => 'enum', 'label' => 'Wrap', 'required' => false, 'allowed_values' => ['wrap', 'nowrap'], 'default' => 'wrap'],
                 // Set from the Style tab: a video behind the children, and a shape divider at the top and the bottom edge.
                 ['key' => 'bg_video', 'type' => 'url', 'label' => 'Background Video', 'required' => false],
+                [
+                    'key'         => 'bg_slides',
+                    'type'        => 'repeater',
+                    'label'       => 'Background Slideshow',
+                    'required'    => false,
+                    'default'     => [],
+                    'max_items'   => 12,
+                    'item_schema' => FieldSchema::define([
+                        ['key' => 'url', 'type' => 'url', 'label' => 'Image URL', 'required' => true, 'max_length' => 1000],
+                    ]),
+                ],
+                ['key' => 'bg_slide_seconds', 'type' => 'number', 'label' => 'Seconds per slide', 'required' => false, 'default' => 5, 'min' => 2, 'max' => 30, 'integer_only' => true],
                 ['key' => 'shape_top', 'type' => 'enum', 'label' => 'Top Shape', 'required' => false, 'allowed_values' => ContainerRenderer::SHAPE_NAMES, 'default' => 'none'],
                 ['key' => 'shape_top_color', 'type' => 'token_ref', 'label' => 'Top Shape Colour', 'required' => false, 'default' => null],
                 ['key' => 'shape_top_width', 'type' => 'number', 'label' => 'Top Shape Width', 'required' => false, 'default' => 100, 'min' => 100, 'max' => 300, 'integer_only' => true],

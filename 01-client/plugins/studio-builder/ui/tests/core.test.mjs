@@ -82,7 +82,7 @@ test('operations use the canonical {op, payload} vocabulary', () => {
   assert.deepEqual(ops.duplicateBlock('blk_1'), { op: 'duplicate_block', payload: { block_id: 'blk_1' } });
   assert.deepEqual(ops.duplicateSection('sec_1'), { op: 'duplicate_section', payload: { section_id: 'sec_1' } });
   assert.deepEqual(ops.updateSectionLabel('sec_1', 'Renamed'), { op: 'update_section_label', payload: { section_id: 'sec_1', label: 'Renamed' } });
-  const serverOps = ['update_settings', 'update_seo', 'update_template', 'insert_section', 'remove_section', 'move_section',
+  const serverOps = ['update_block_custom_css', 'update_settings', 'update_seo', 'update_template', 'insert_section', 'remove_section', 'move_section',
     'duplicate_section', 'update_section_label', 'update_section_layout',
     'update_section_visibility', 'insert_block', 'remove_block', 'move_block', 'duplicate_block', 'update_block_props', 'update_block_style', 'update_block_visibility', 'update_block_bindings',
     'update_block_responsive', 'update_block_class_names', 'update_block_attributes',
@@ -136,7 +136,7 @@ test('motion: the vocabulary matches the server enums exactly', () => {
   // DocumentValidator::validateBlock() lists these; a drift here is a
   // guaranteed save failure, so the lists are pinned by value.
   assert.deepEqual(motion.ANIMATION_TYPES.map((o) => o.value),
-    ['none', 'fade_in', 'fade_up', 'fade_down', 'scale_up', 'slide_in', 'move_left', 'move_right', 'reveal_left', 'reveal_up']);
+    ['none', 'fade_in', 'fade_up', 'fade_down', 'scale_up', 'slide_in', 'move_left', 'move_right', 'reveal_left', 'reveal_up', 'fade_left', 'fade_right', 'zoom_in', 'zoom_out', 'bounce_in', 'flip_x', 'flip_y', 'rotate_in', 'light_speed', 'pulse']);
   assert.deepEqual(motion.INTERACTION_TRIGGERS.filter((o) => o.value).map((o) => o.value),
     ['hover', 'focus', 'click', 'viewport-enter', 'scroll', 'load']);
 });

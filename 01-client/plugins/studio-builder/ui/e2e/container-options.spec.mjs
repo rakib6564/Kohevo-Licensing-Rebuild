@@ -139,3 +139,29 @@ test('Background has Normal and Hover tabs; the border widths are linked', async
   await top.blur();
   await expect.poll(() => nodeIn(page, id).evaluate((el) => ['Top', 'Right', 'Bottom', 'Left'].map((s) => getComputedStyle(el)[`border${s}Width`]).join(' '))).toBe('3px 3px 3px 3px');
 });
+
+test('a Container\'s tabs follow the reference: Layout, Style, Advanced in its order, Kohevo\'s own under More options', async ({ page }) => {
+  await addContainer(page);
+  const sections = () => page.locator('[role="tabpanel"] [data-section]').evaluateAll((els) => els.map((e) => e.dataset.section));
+  await expect(page.locator('[id$="-tab-content"]')).toHaveText('Layout');
+  await page.locator('[id$="-tab-style"]').click();
+  expect((await sections()).slice(0, 4)).toEqual(['background', 'overlay', 'border', 'shape_divider']);
+  await expect(page.getByTestId('more-options')).toHaveCount(1);
+  await page.screenshot({ path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/style.png` : undefined });
+  await page.locator('[data-section="shape_divider"] .sbx-isec__toggle').click();
+  await expect(page.getByTestId('shape-picker').getByRole('radio')).toHaveCount(19);
+  await page.locator('[id$="-tab-advanced"]').click();
+  expect((await sections()).slice(0, 6)).toEqual(['advanced', 'motion', 'transform', 'responsive', 'attributes', 'custom_css']);
+  await page.screenshot({ path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/advanced.png` : undefined });
+  await page.locator('[data-section="motion"] .sbx-isec__toggle').click();
+  await page.getByTestId('scrolling-effects').getByRole('switch').click();
+  await page.screenshot({ path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/motion.png` : undefined });
+  await page.locator('[id$="-scroll-vertical"]').first().fill('3');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.locator('[data-section="custom_css"] .sbx-isec__toggle').click();
+  await page.locator('[id^="sbx-element-css-"]').fill('selector { outline: 3px solid rgb(1, 2, 3); }');
+  await page.locator('[id^="sbx-element-css-"]').blur();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByRole('status').filter({ hasText: /saved/i }).first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('[id^="sbx-element-css-"]')).toHaveValue(/outline/);
+});

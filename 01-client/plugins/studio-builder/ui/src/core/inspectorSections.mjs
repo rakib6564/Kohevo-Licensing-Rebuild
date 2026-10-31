@@ -82,6 +82,7 @@ export const TEXT_EDITOR_TYPES = new Set(['core.rich_text', 'core.text']);
 export const IMAGE_TYPE = 'core.image';
 export const ICON_TYPE = 'core.icon';
 const OWN_STYLE = {
+  [CONTAINER_TYPE]: ['shadow'], // under Border, as in the reference
   [BUTTON_TYPE]: ['align', 'typography', 'background', 'border', 'shadow'],
   [HEADING_TYPE]: ['align', 'typography'],
   'core.rich_text': ['align', 'typography'],
@@ -116,38 +117,40 @@ export const SECTIONS = Object.freeze([
   { id: 'content', tab: 'content', titleKey: 'section_content', titleFor: (ctx) => (isContainer(ctx) ? 'section_layout' : OWN_TITLE[ctx.node.type] || 'section_content'), appliesTo: (ctx) => !isBoxContainer(ctx), summary: () => '', openFor: () => true },
   { id: 'container', tab: 'content', titleKey: 'section_container', keywords: ['flex', 'grid', 'width', 'boxed', 'full width', 'min height', 'height', 'direction', 'justify', 'align', 'gap', 'wrap', 'overflow', 'html tag', 'link'], appliesTo: isBoxContainer, summary: (ctx) => containerSummary(ctx.style.layout), openFor: () => true },
   { id: 'data', tab: 'content', titleKey: 'tab_data', appliesTo: (ctx) => asList(ctx.def.binding_slots).length > 0, summary: (ctx) => (count(ctx.node.bindings) ? String(count(ctx.node.bindings)) : ''), openFor: () => false },
-  // One group with what every element needs: margin, padding, z-index, entrance animation, CSS ID and classes.
-  { id: 'advanced', tab: 'advanced', titleKey: 'section_advanced', keywords: ['margin', 'padding', 'spacing', 'z-index', 'stacking', 'entrance', 'animation', 'css id', 'class'], appliesTo: () => true, summary: (ctx) => advancedSummary(ctx), openFor: () => true },
-  { id: 'layout', tab: (ctx) => (isContainer(ctx) && !isBoxContainer(ctx) ? 'content' : 'advanced'), titleKey: 'section_layout', titleFor: (ctx) => (isBoxContainer(ctx) ? 'layout_as_item' : isContainer(ctx) ? 'section_flex_grid' : 'section_layout'), keywords: ['flex', 'grid', 'display', 'order', 'grow', 'shrink', 'basis'], appliesTo: (ctx) => has(ctx, 'layout'), summary: (ctx) => layoutSummary(ctx.style.layout), openFor: () => false },
 
   { id: 'button_style', tab: 'style', titleKey: 'section_button', keywords: ['position', 'typography', 'text shadow', 'colour', 'color', 'hover', 'background', 'box shadow', 'border', 'radius', 'padding'], appliesTo: (ctx) => ctx.node.type === BUTTON_TYPE, summary: () => '', openFor: () => true },
   { id: 'heading_style', tab: 'style', titleKey: 'section_heading', keywords: ['alignment', 'typography', 'text stroke', 'text shadow', 'blend', 'colour', 'color', 'hover'], appliesTo: (ctx) => ctx.node.type === HEADING_TYPE, summary: () => '', openFor: () => true },
   { id: 'text_style', tab: 'style', titleKey: 'section_text_editor', titleFor: (ctx) => OWN_TITLE[ctx.node.type], keywords: ['alignment', 'typography', 'text shadow', 'colour', 'color'], appliesTo: (ctx) => TEXT_EDITOR_TYPES.has(ctx.node.type), summary: () => '', openFor: () => true },
   { id: 'image_style', tab: 'style', titleKey: 'section_image', keywords: ['alignment', 'width', 'max width', 'height', 'object fit', 'opacity', 'css filters', 'blur', 'hover', 'zoom', 'border', 'radius', 'box shadow'], appliesTo: (ctx) => ctx.node.type === IMAGE_TYPE, summary: () => '', openFor: () => true },
   { id: 'icon_style', tab: 'style', titleKey: 'section_icon', keywords: ['primary', 'secondary', 'colour', 'color', 'hover', 'size', 'padding', 'rotate', 'border width'], appliesTo: (ctx) => ctx.node.type === ICON_TYPE, summary: () => '', openFor: () => true },
-  { id: 'align', tab: 'style', titleKey: 'align', titleFor: alignTitleKey, appliesTo: (ctx) => has(ctx, 'align') && !inOwnStyle(ctx, 'align') && (!(isBoxContainer(ctx) || ctx.node.type === ICON_TYPE || CONTENT_ALIGN_TYPES.has(ctx.node.type)) || setOn(ctx, 'align')), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
-  { id: 'typography', tab: 'style', titleKey: 'typography', appliesTo: (ctx) => (has(ctx, 'typography') || has(ctx, 'color')) && !MEDIA_TYPES.has(ctx.node.type) && !NO_TEXT_TYPES.has(ctx.node.type) && !inOwnStyle(ctx, 'typography') && (!isBoxContainer(ctx) || setOn(ctx, 'typography') || setOn(ctx, 'color')), summary: (ctx) => typographySummary(ctx.style), openFor: (ctx) => TEXT_TYPES.has(ctx.node.type) },
+  { id: 'align', extra: isBoxContainer, tab: 'style', titleKey: 'align', titleFor: alignTitleKey, appliesTo: (ctx) => has(ctx, 'align') && !inOwnStyle(ctx, 'align') && (!(isBoxContainer(ctx) || ctx.node.type === ICON_TYPE || CONTENT_ALIGN_TYPES.has(ctx.node.type)) || setOn(ctx, 'align')), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
+  { id: 'typography', extra: isBoxContainer, tab: 'style', titleKey: 'typography', appliesTo: (ctx) => (has(ctx, 'typography') || has(ctx, 'color')) && !MEDIA_TYPES.has(ctx.node.type) && !NO_TEXT_TYPES.has(ctx.node.type) && !inOwnStyle(ctx, 'typography') && (!isBoxContainer(ctx) || setOn(ctx, 'typography') || setOn(ctx, 'color')), summary: (ctx) => typographySummary(ctx.style), openFor: (ctx) => TEXT_TYPES.has(ctx.node.type) },
   { id: 'background', tab: surfaceTab, titleKey: 'background_label', appliesTo: (ctx) => has(ctx, 'background') && !NO_BACKGROUND_TYPES.has(ctx.node.type) && !inOwnStyle(ctx, 'background'), summary: (ctx) => backgroundSummary(ctx.style.background), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
   // A Container's overlay (a layer over its background) and its shape dividers, as in the reference editor.
   { id: 'overlay', tab: 'style', titleKey: 'section_overlay', keywords: ['overlay', 'colour', 'color', 'gradient', 'opacity', 'blend', 'hover'], appliesTo: (ctx) => isBoxContainer(ctx) && has(ctx, 'overlay'), summary: (ctx) => { const o = asObject(ctx.style.overlay); return o.gradient ? 'gradient' : (typeof o.color === 'string' ? o.color : ''); }, openFor: () => false },
+  { id: 'border', tab: surfaceTab, titleKey: 'border', keywords: ['box shadow', 'shadow', 'radius'], appliesTo: (ctx) => has(ctx, 'border') && !inOwnStyle(ctx, 'border'), summary: (ctx) => borderSummary(ctx.style.border), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
   { id: 'shape_divider', tab: 'style', titleKey: 'section_shape_divider', keywords: ['shape', 'divider', 'wave', 'curve', 'tilt', 'triangle', 'mountains'], appliesTo: isBoxContainer, summary: (ctx) => ['top', 'bottom'].map((s) => ctx.node.props && ctx.node.props[`shape_${s}`]).filter((v) => v && v !== 'none').join(' · '), openFor: () => false },
-  { id: 'border', tab: surfaceTab, titleKey: 'border', appliesTo: (ctx) => has(ctx, 'border') && !inOwnStyle(ctx, 'border'), summary: (ctx) => borderSummary(ctx.style.border), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
   { id: 'shadow', tab: 'style', titleKey: 'box_shadow', appliesTo: (ctx) => has(ctx, 'shadow') && !inOwnStyle(ctx, 'shadow'), summary: (ctx) => (typeof ctx.style.shadow === 'string' ? ctx.style.shadow : (ctx.style.shadow ? '…' : '')), openFor: () => false },
   // An image's, video's or gallery's size sits with its other settings (Content), where authors look for it.
-  { id: 'dimensions', tab: (ctx) => (MEDIA_TYPES.has(ctx.node.type) ? 'content' : isContainer(ctx) ? 'style' : 'advanced'), titleKey: 'dimensions_label', appliesTo: (ctx) => has(ctx, 'dimensions') && !inOwnStyle(ctx, 'dimensions'), summary: (ctx) => dimensionsSummary(ctx.style.dimensions), openFor: (ctx) => isContainer(ctx) && !isBoxContainer(ctx) },
-  { id: 'opacity', tab: 'style', titleKey: 'opacity_label', appliesTo: (ctx) => has(ctx, 'opacity') && !inOwnStyle(ctx, 'opacity'), summary: (ctx) => (typeof ctx.style.opacity === 'number' ? `${Math.round(ctx.style.opacity * 100)}%` : ''), openFor: () => false },
+  { id: 'opacity', extra: isBoxContainer, tab: 'style', titleKey: 'opacity_label', appliesTo: (ctx) => has(ctx, 'opacity') && !inOwnStyle(ctx, 'opacity'), summary: (ctx) => (typeof ctx.style.opacity === 'number' ? `${Math.round(ctx.style.opacity * 100)}%` : ''), openFor: () => false },
   // A widget with named parts (BlockParts.php) styles each on its own: open by default, as it is what such a widget is styled with.
-  { id: 'parts', tab: 'style', titleKey: 'section_parts', appliesTo: (ctx) => asList(ctx.def && ctx.def.style_parts).length > 0, summary: (ctx) => partsSummary(ctx.node), openFor: () => false, keywords: ['part', 'title', 'label', 'number', 'input', 'tab', 'hover'] },
-  { id: 'states', tab: 'style', titleKey: 'section_states', appliesTo: () => true, summary: (ctx) => Object.keys(asObject(ctx.node.style_states)).join(' · '), openFor: () => false },
-  { id: 'tokens', tab: 'style', titleKey: 'section_tokens', appliesTo: (ctx) => Object.keys(STYLE_TOKEN_CATEGORIES).some((k) => has(ctx, k)), summary: (ctx) => String(Object.keys(STYLE_TOKEN_CATEGORIES).filter((k) => ctx.style[k]).length || ''), openFor: () => false },
+  { id: 'parts', extra: isBoxContainer, tab: 'style', titleKey: 'section_parts', appliesTo: (ctx) => asList(ctx.def && ctx.def.style_parts).length > 0, summary: (ctx) => partsSummary(ctx.node), openFor: () => false, keywords: ['part', 'title', 'label', 'number', 'input', 'tab', 'hover'] },
+  { id: 'states', extra: isBoxContainer, tab: 'style', titleKey: 'section_states', appliesTo: () => true, summary: (ctx) => Object.keys(asObject(ctx.node.style_states)).join(' · '), openFor: () => false },
+  { id: 'tokens', extra: isBoxContainer, tab: 'style', titleKey: 'section_tokens', appliesTo: (ctx) => Object.keys(STYLE_TOKEN_CATEGORIES).some((k) => has(ctx, k)), summary: (ctx) => String(Object.keys(STYLE_TOKEN_CATEGORIES).filter((k) => ctx.style[k]).length || ''), openFor: () => false },
 
-  { id: 'position', tab: 'advanced', titleKey: 'section_position', appliesTo: (ctx) => has(ctx, 'position'), summary: (ctx) => asObject(ctx.style.position).mode || '', openFor: () => false },
-  { id: 'effects', tab: 'advanced', titleKey: 'section_effects', appliesTo: (ctx) => has(ctx, 'effects'), summary: (ctx) => Object.keys(asObject(ctx.style.effects)).join(' · '), openFor: () => false },
-  { id: 'motion', tab: 'advanced', titleKey: 'section_motion_effects', appliesTo: () => true, summary: (ctx) => motionSummary(ctx.node), openFor: () => false },
+  // Advanced follows the reference: Layout (margin, padding, the item fields, position, z-index, CSS ID and classes), Motion
+  // Effects, Transform, Responsive, Attributes. What the reference does not have comes after them, under More options.
+  { id: 'advanced', tab: 'advanced', titleKey: 'section_advanced', keywords: ['margin', 'padding', 'spacing', 'z-index', 'stacking', 'css id', 'class', 'position', 'order', 'align self', 'size', 'grow', 'shrink'], appliesTo: () => true, summary: (ctx) => advancedSummary(ctx), openFor: () => true },
+  { id: 'motion', tab: 'advanced', titleKey: 'section_motion_effects', keywords: ['scrolling effects', 'mouse effects', 'parallax', 'sticky', 'entrance', 'animation'], appliesTo: () => true, summary: (ctx) => motionSummary(ctx.node), openFor: () => false },
+  { id: 'transform', tab: 'advanced', titleKey: 'section_transform', keywords: ['rotate', 'offset', 'scale', 'skew', 'flip'], appliesTo: (ctx) => has(ctx, 'effects'), summary: (ctx) => (Object.keys(asObject(asObject(ctx.style.effects).transform)).length ? '•' : ''), openFor: () => false },
   { id: 'responsive', tab: 'advanced', titleKey: 'tab_responsive', appliesTo: () => true, summary: (ctx) => responsiveSummary(ctx.node), openFor: () => false },
-  { id: 'identity', tab: 'advanced', titleKey: 'section_a11y', appliesTo: () => true, summary: (ctx) => a11ySummary(ctx.node.attributes), openFor: () => false },
-  { id: 'tag', tab: 'advanced', titleKey: 'wrapper_tag', appliesTo: (ctx) => !isBoxContainer(ctx), summary: (ctx) => (typeof ctx.node.tag === 'string' ? ctx.node.tag : ''), openFor: () => false },
   { id: 'attributes', tab: 'advanced', titleKey: 'section_data_attributes', appliesTo: () => true, summary: (ctx) => dataAttributeSummary(ctx.node.attributes), openFor: () => false },
+  { id: 'custom_css', tab: 'advanced', titleKey: 'section_custom_css', keywords: ['css', 'code', 'selector'], appliesTo: () => true, summary: (ctx) => (ctx.node.custom_css ? '•' : ''), openFor: () => false },
+  { id: 'effects', tab: 'advanced', titleKey: 'section_effects', extra: () => true, appliesTo: (ctx) => has(ctx, 'effects'), summary: (ctx) => Object.keys(asObject(ctx.style.effects)).join(' · '), openFor: () => false },
+  { id: 'identity', tab: 'advanced', titleKey: 'section_a11y', extra: () => true, appliesTo: () => true, summary: (ctx) => a11ySummary(ctx.node.attributes), openFor: () => false },
+  { id: 'tag', tab: 'advanced', titleKey: 'wrapper_tag', extra: () => true, appliesTo: (ctx) => !isBoxContainer(ctx), summary: (ctx) => (typeof ctx.node.tag === 'string' ? ctx.node.tag : ''), openFor: () => false },
+  { id: 'layout', extra: (ctx) => !isContainer(ctx), tab: (ctx) => (isContainer(ctx) ? 'content' : 'advanced'), titleKey: 'section_layout', titleFor: (ctx) => (isBoxContainer(ctx) ? 'layout_as_item' : isContainer(ctx) ? 'section_flex_grid' : 'section_layout'), keywords: ['flex', 'grid', 'display', 'order', 'grow', 'shrink', 'basis'], appliesTo: (ctx) => has(ctx, 'layout') && !isBoxContainer(ctx), summary: (ctx) => layoutSummary(ctx.style.layout), openFor: () => false },
+  { id: 'dimensions', extra: (ctx) => !MEDIA_TYPES.has(ctx.node.type), tab: (ctx) => (MEDIA_TYPES.has(ctx.node.type) ? 'content' : isContainer(ctx) ? 'style' : 'advanced'), titleKey: 'dimensions_label', appliesTo: (ctx) => has(ctx, 'dimensions') && !inOwnStyle(ctx, 'dimensions'), summary: (ctx) => dimensionsSummary(ctx.style.dimensions), openFor: (ctx) => isContainer(ctx) && !isBoxContainer(ctx) },
 ]);
 
 /** The tab a section sits under for this block. */
@@ -191,7 +194,7 @@ export const PAGE_SECTION_SECTIONS = Object.freeze([
   { id: 'layout', tab: 'content', titleKey: 'section_layout', appliesTo: () => true, summary: (ctx) => pageLayoutSummary(ctx.node.layout), openFor: () => true },
   { id: 'background', tab: 'style', titleKey: 'background_label', appliesTo: () => true, summary: (ctx) => backgroundSummary(ctx.style.background), openFor: () => true },
   { id: 'border', tab: 'style', titleKey: 'border', keywords: ['border', 'radius', 'corner', 'side', 'outline'], appliesTo: () => true, summary: (ctx) => borderSummary(asObject(ctx.style).border), openFor: () => false },
-  { id: 'advanced', tab: 'advanced', titleKey: 'section_advanced', keywords: ['padding', 'spacing', 'entrance', 'animation'], appliesTo: () => true, summary: (ctx) => spacingSummary({ padding: asObject(ctx.style).padding }), openFor: () => true },
+  { id: 'advanced', tab: 'advanced', titleKey: 'section_advanced', keywords: ['padding', 'spacing'], appliesTo: () => true, summary: (ctx) => spacingSummary({ padding: asObject(ctx.style).padding }), openFor: () => true },
   { id: 'motion', tab: 'advanced', titleKey: 'section_motion_effects', appliesTo: () => true, summary: (ctx) => motionSummary(ctx.node), openFor: () => false },
   { id: 'responsive', tab: 'advanced', titleKey: 'tab_responsive', appliesTo: () => true, summary: (ctx) => visibilitySummary(ctx.node.visibility), openFor: () => false },
 ]);
@@ -275,7 +278,13 @@ export function inspectorContext(node, def) {
 
 /** The sections of one tab that apply to this block, in display order. */
 export function sectionsFor(tab, ctx, list = SECTIONS) {
-  return list.filter((s) => tabOf(s, ctx) === tab && s.appliesTo(ctx));
+  const shown = list.filter((s) => tabOf(s, ctx) === tab && s.appliesTo(ctx));
+  return [...shown.filter((s) => !isExtraSection(s, ctx)), ...shown.filter((s) => isExtraSection(s, ctx))];
+}
+
+/** Is this section one of Kohevo's own, shown after the reference's sections under More options? */
+export function isExtraSection(section, ctx) {
+  return typeof section.extra === 'function' && section.extra(ctx) === true;
 }
 
 /** Every applicable section across the tabs, grouped. */
