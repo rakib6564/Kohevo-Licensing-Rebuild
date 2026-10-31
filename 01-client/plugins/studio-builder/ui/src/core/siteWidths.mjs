@@ -29,12 +29,20 @@ export function siteContentPx(manifest) {
   return m ? m[1] : null;
 }
 
-/** What a boxed Container offers, in order: `default` is no `content_size`, and `custom` an own `content_max`. */
-export const BOX_WIDTHS = Object.freeze(['default', 'narrow', 'normal', 'wide', 'full', 'custom']);
+const CUSTOM_WIDTH = 'custom';
+
+/** The widths `style.layout.content_size` can name when the manifest lists none. */
+export const BOX_WIDTHS = Object.freeze(['default', 'narrow', 'normal', 'wide', 'full']);
+
+/** What a boxed Container offers, in order: the manifest's widths (`default` is no `content_size`), then `custom`, an own `content_max`. */
+export function boxWidths(manifest) {
+  const listed = asList(manifest && manifest.vocabulary && manifest.vocabulary.container_widths);
+  return [...(listed.length ? listed : BOX_WIDTHS), CUSTOM_WIDTH];
+}
 
 /** Which of BOX_WIDTHS a Container's `style.layout` says. */
 export function boxWidthOf(layout) {
   const l = layout && typeof layout === 'object' ? layout : {};
-  if (l.content_max !== undefined) return 'custom';
+  if (l.content_max !== undefined) return CUSTOM_WIDTH;
   return BOX_WIDTHS.includes(l.content_size) ? l.content_size : 'default';
 }

@@ -273,6 +273,8 @@ export function indexBlocks(doc) {
   return map;
 }
 
+const childIds = (block) => (Array.isArray(block.children) ? block.children : []).map((c) => c && c.id);
+
 function topSignature(doc) {
   const containers = doc && Array.isArray(doc.containers) ? doc.containers : [];
   return containers.map((s) => `${s.id}:${(s.children || []).length}`).join('|');
@@ -297,13 +299,21 @@ export function patchCanvas(canvasDoc, prevDoc, nextDoc) {
   const after = indexBlocks(nextDoc);
   if (before.size !== after.size) return { ...none, reload: true, reason: 'node-count' };
 
+  for (const id of after.keys()) if (!before.has(id)) return { ...none, reload: true, reason: 'node-set' };
+
   const ids = [];
   for (const [id, nextBlock] of after) {
     const prevBlock = before.get(id);
-    if (!prevBlock) return { ...none, reload: true, reason: 'node-set' };
     if (prevBlock === nextBlock) continue;
 
-    const patch = computeNodePatch(prevBlock, nextBlock);
+    // Every parent of an edited block is a new object too, and its children are walked in their own turn: only the
+    // parent's own fields, and which children it has, count here. A top-level Container is the parent of everything.
+    if (!sameValue(childIds(prevBlock), childIds(nextBlock))) return { ...none, reload: true, reason: 'unpatchable-field' };
+    const prevOwn = { ...prevBlock, children: null };
+    const nextOwn = { ...nextBlock, children: null };
+    if (sameValue(prevOwn, nextOwn)) continue;
+
+    const patch = computeNodePatch(prevOwn, nextOwn);
     if (!patch) return { ...none, reload: true, reason: 'unpatchable-field' };
 
     const el = canvasDoc.querySelector(`[${NODE_ATTR}="${cssEscape(id)}"]`);

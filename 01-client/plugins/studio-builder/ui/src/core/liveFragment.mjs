@@ -4,7 +4,7 @@
 // read-only, nothing stored) and this file turns that page into the one element to swap in, with the document's own ids and
 // only the CSS rules that element's classes need. The server's render after the save then replaces it like everything else.
 
-import { asList } from './doc.mjs';
+import { CONTAINER_TYPE, asList } from './doc.mjs';
 
 const ATTR = 'data-sb-node';
 const FRAGMENT_SHEET = 'sbx-frag-';
@@ -44,9 +44,9 @@ export function adoptFromPage(page, html, node, canvasDoc) {
   const main = page.querySelector('#main'); // <main>, or the header/footer wrapper of a header or footer page
   if (!main) return null;
   const ids = preorder(node);
-  // The block is the page's only content, or the only child of the fresh Container a widget needs to sit at the top level.
+  // A Container is the page's only content. Any other block is the only child of the fresh Container it needs at the top level.
   const found = Array.from(main.querySelectorAll(`[${ATTR}]`));
-  const els = found.length === ids.length + 1 ? found.slice(1) : found;
+  const els = node.type === CONTAINER_TYPE ? found : found.slice(1);
   if (!els.length || els.length !== ids.length) return null;
   const root = els[0];
   els.forEach((e, i) => e.setAttribute(ATTR, ids[i]));

@@ -19,7 +19,7 @@ import { blockLinkIssue } from '../../core/operations.mjs';
 import { asList, asObject } from '../../core/doc.mjs';
 import { optionLabel } from '../../core/optionLabels.mjs';
 import { sizedLabel } from '../../core/optionValues.mjs';
-import { BOX_WIDTHS, boxWidthLabel, boxWidthOf, siteContentPx } from '../../core/siteWidths.mjs';
+import { boxWidthLabel, boxWidthOf, boxWidths, siteContentPx } from '../../core/siteWidths.mjs';
 import { templateCapsWidth } from '../../core/layoutTemplate.mjs';
 import { t } from '../../core/messages.mjs';
 
@@ -317,7 +317,7 @@ export function ContainerPane({ block, style, onChange, deviceScope, onTag, top 
         <>
           <Field label={t('container_width')} htmlFor={`${id}-box-width`} hint={boxWidth === 'default' ? t('container_width_site', { width: `${siteContentWidth}px` }) : null}>
             <select id={`${id}-box-width`} value={boxWidth} onChange={(e) => setBoxWidth(e.target.value)}>
-              {BOX_WIDTHS.map((w) => <option key={w} value={w}>{boxWidthLabel(manifest, w)}</option>)}
+              {boxWidths(manifest).map((w) => <option key={w} value={w}>{boxWidthLabel(manifest, w)}</option>)}
             </select>
           </Field>
           {boxWidth === 'custom' && (

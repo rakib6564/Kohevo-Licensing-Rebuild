@@ -188,7 +188,9 @@ export function planPaste({ doc, manifest, envelope, targetId = null, mode = 'af
 
   if (dest.parentId === null) {
     if (!canInsertContainer(doc, manifest)) return fail('clip_containers_limit');
-    if (node.type === CONTAINER_TYPE) return { ok: true, kind: 'block', parentId: null, index: dest.index };
+    if (node.type === CONTAINER_TYPE) {
+      return canContain(doc, manifest, null, node.type, subtreeHeight(node)) ? { ok: true, kind: 'block', parentId: null, index: dest.index } : fail('clip_not_allowed');
+    }
     if (countBlocks(doc) + countNodes(node) + 1 > maxBlocks) return fail('clip_blocks_limit');
     if (subtreeHeight(node) + 1 > (limits.max_nesting_depth || 7)) return fail('clip_not_allowed');
     return { ok: true, kind: 'block', newContainer: true, index: dest.index };

@@ -276,17 +276,8 @@ export function StudioShell({ boot, transport: injectedTransport = null, lockEna
     const working = engine.getSnapshot().working;
     const stale = target.parentId && !findNode(working, target.parentId);
     const where = stale ? (insertionPoint(working, manifest, selectionRef.current, type) || { parentId: null, index: containersOf(working).length }) : target;
-    let operation;
-    let landed = provisionalId;
-    if (where.parentId !== null) operation = ops.insertBlock(where.parentId, where.index, block);
-    else if (type === CONTAINER_TYPE) operation = ops.insertContainer(where.index, block.props ? { props: block.props } : {});
-    else {
-      // Only a Container can sit at the top level: this widget gets its own, in the same one operation (one undo step).
-      operation = ops.insertContainer(where.index, { children: [ops.newBlock(def, block.props, block.bindings)] });
-      landed = `${provisionalId}_0`;
-    }
-    if (engine.apply(operation, { provisionalId, label })) {
-      setSelection(landed);
+    if (engine.apply(ops.insertOperation(def, where, block), { provisionalId, label })) {
+      setSelection(ops.insertedId(where, type, provisionalId));
       requestEdit();
       if (type === CONTAINER_TYPE) setLayoutChooser(provisionalId);
       announce(t('announce_inserted', { label }));

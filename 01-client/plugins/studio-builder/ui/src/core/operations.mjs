@@ -132,6 +132,19 @@ export const resetBlockStyleProperty = (blockId, property, state = null) => op(O
 export const updateSettings = (settings) => op(OPS.UPDATE_SETTINGS, { settings });
 export const updateSeo = (seo) => op(OPS.UPDATE_SEO, { seo });
 
+/**
+ * The one operation that puts a new `block` ({type, props?, bindings?}) at `where` ({parentId, index}). Only a Container can
+ * sit at the top level: a widget there gets its own, in the same operation, so the two are one undo step.
+ */
+export function insertOperation(def, where, block) {
+  if (where.parentId !== null) return insertBlock(where.parentId, where.index, block);
+  if (block.type === CONTAINER_TYPE) return insertContainer(where.index, block.props ? { props: block.props } : {});
+  return insertContainer(where.index, { children: [newBlock(def, block.props, block.bindings)] });
+}
+
+/** Where the new block itself landed: inside the wrapping Container when `insertOperation` made one. */
+export const insertedId = (where, type, provisionalId) => (where.parentId === null && type !== CONTAINER_TYPE ? `${provisionalId}_0` : provisionalId);
+
 // ── Id bookkeeping ──────────────────────────────────────────────────────────
 
 // Keys an inserted block may carry besides its core fields (the server keeps the same list).
@@ -280,6 +293,7 @@ export function applyLocal(doc, operation, ctx = {}) {
     case OPS.UPDATE_BLOCK_ANIMATION:
     case OPS.UPDATE_BLOCK_INTERACTIONS: {
       const field = operation.op.replace('update_block_', '');
+      if (p[field] === null || typeof p[field] !== 'object') throw new Error(`${field} must be an object`); // DocumentOperationApplier::requireObject
       let hit = false;
       const next = mapBlocks(doc, (b) => {
         if (b.id !== p.block_id) return b;
