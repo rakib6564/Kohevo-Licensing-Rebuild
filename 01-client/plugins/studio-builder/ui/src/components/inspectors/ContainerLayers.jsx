@@ -86,7 +86,7 @@ export function OverlayStates({ style, states, onStyle, onStates, tokens }) {
         </>
       ) : (
         <div data-testid="overlay-hover">
-          <ColorField id={`${id}-hcolor`} label={t('background_color')} value={getPath(hover, 'overlay.color')} onChange={(v) => putHover('overlay.color', v)} />
+          <ColorField id={`${id}-hcolor`} label={t('background_color')} value={getPath(hover, 'overlay.color')} tokens={tokens} onChange={(v) => putHover('overlay.color', v)} effective={ov.color ? { css: ov.color, label: ov.color, source: 'normal' } : null} />
           <SliderField id={`${id}-hop`} label={t('opacity_label')} value={getPath(hover, 'overlay.opacity')} min={0} max={1} step={0.05} neutral={1} onChange={(v) => putHover('overlay.opacity', v)} />
           <SliderField
             id={`${id}-duration`}
