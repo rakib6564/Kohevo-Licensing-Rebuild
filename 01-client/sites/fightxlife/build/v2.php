@@ -211,7 +211,7 @@ function native_v2(): array
         'v2-top__right'  => ['s' => lay(['gap' => '6px'])],
         'v2-top__member' => ['s' => S(col('#ffffff'), ty('12.5px', 'bold'), pad(6, 14), radius('999px'), brd('rgba(255,255,255,.28)', '1px', '999px'), mar(null, null, null, 10), fx(TRANS)),
                               'h' => S(bg(PINK), ['border' => ['color' => PINK]])],
-        'v2-cart'        => ['s' => S(col('#ffffff'), ty('12.5px', 'bold'), mar(null, null, null, 12))],
+        'v2-cart'        => ['s' => S(ty('12.5px', 'bold'), mar(null, null, null, 12)), 'parts' => ['count' => S(bg(PINK), col('#ffffff'))]],
         'v2-social'      => ['s' => S(tile(30, '50%', 'transparent', null), col('rgba(255,255,255,.8)'), fx(TRANS)), 'h' => S(bg(PINK), col('#ffffff'))],
         'v2-head-sec'    => ['s' => S(bg('#ffffff'), $V(0, 0))],
         'v2-header'      => ['s' => S(lay(['tracks' => 'auto 1fr auto', 'align' => 'center', 'gap' => '20px']), dim(['height' => '92px'])), 't' => lay(['tracks' => '1fr auto auto', 'gap' => '12px']), 'm' => dim(['height' => '74px'])],
