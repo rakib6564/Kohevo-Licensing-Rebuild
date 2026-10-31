@@ -79,9 +79,9 @@ function native_v2(): array
         // ── Type ──
         'v2-kick'        => ['s' => S(col(PINK), ty('19px', '400', '1.5', null, SCRIPT), mar(0, null, 6, null))],
         'v2-kick--light' => ['s' => col('#ff7cc3')],
-        'v2-h2'          => ['s' => S(ty('clamp(30px,3.2vw,44px)', 'bold', '1.14', '-.025em'), mar(0, null, 18, null)), 'm' => ty('29px'), 'parts' => ['highlight' => col(PINK)]],
-        'v2-lead'        => ['s' => S(col(BODY), ty('16.5px', null, '1.75'), mar(0, null, 14, null)), 'm' => ty('15.5px')],
-        'v2-head'        => ['s' => mar(0, null, 46, null), 'm' => mar(0, null, 30, null)],
+        'v2-h2'          => ['s' => S(ty('clamp(30px,3.2vw,44px)', 'bold', '1.14', '-.025em'), mar(0, null, 22, null)), 'm' => ty('29px'), 'parts' => ['highlight' => col(PINK)]],
+        'v2-lead'        => ['s' => S(col(BODY), ty('16.5px', null, '1.75'), mar(0, null, 18, null)), 'm' => ty('15.5px')],
+        'v2-head'        => ['s' => mar(0, null, 64, null), 'm' => mar(0, null, 40, null), 'reveal' => $up(0)],
         'v2-head--center' => ['s' => S(dim(['max_width' => '780px']), mar(null, 'auto', null, 'auto')), 'center' => true],
         'v2-more'        => ['s' => S(col(PINK), ty('15px', 'bold'), fx(TRANS)), 'h' => fx(['transform' => ['translate_x' => '4px']])],
         'v2-dark v2-h2'  => ['s' => col('#ffffff')],
@@ -93,7 +93,7 @@ function native_v2(): array
         'v2-ghost'       => ['parts' => ['button' => S($base, bg('#ffffff'), col(INK), brd('#eadde4', '1.5px', '999px'), shadow(0, 8, 20, 'rgba(40,10,30,.06)', -6)),
                 'button:hover' => S(col(PINK), ['border' => ['color' => PINK]], fx(['transform' => ['translate_y' => '-3px']]))], 'mparts' => ['button' => S(sz(['height' => 52]), pad(0, 22), ty('14.5px'))]],
         'v2-btn--block'  => ['s' => dim(['width' => '100%']), 'parts' => ['button' => sz(['width' => '100%'])]],
-        'v2-actions'     => ['s' => S(lay(['gap' => '14px']), mar(26, null, 0, null)), 'm' => lay(['gap' => '10px'])],
+        'v2-actions'     => ['s' => S(lay(['gap' => '16px']), mar(34, null, 0, null)), 'm' => lay(['gap' => '12px'])],
 
         // ── Hero ──
         'v2-hero-sec'    => ['s' => S(grad('linear-gradient(180deg,#fff7fb 0%,#ffffff 78%)'), $V(90, 150), dim(['overflow' => 'hidden'])), 't' => $V(64, 116), 'm' => $V(44, 88)],
@@ -111,7 +111,7 @@ function native_v2(): array
         'v2-tick'        => ['s' => S(lay(['display' => 'flex', 'align' => 'center', 'gap' => '8px']), col(INK), ty('14px', 'bold'))],
         'v2-tick__ico'   => ['s' => col(PINK), 'props' => ['size_px' => 18]],
         'v2-hero__art'   => ['s' => S(place('relative'), pad(0, 0, 40, 40)), 'm' => pad(0, 0, 30, 18),
-                              'anim' => ['type' => 'scale_up', 'duration_ms' => 1000, 'delay_ms' => 120, 'easing' => EASE]],
+                              'anim' => ['type' => 'fade_up', 'duration_ms' => 1000, 'delay_ms' => 120, 'easing' => EASE]],
         'v2-hero__main'  => ['s' => S(dim(['height' => '540px', 'object_fit' => 'cover', 'overflow' => 'hidden']), radius('30px'), shadow(...LIFT)), 't' => dim(['height' => '460px']), 'm' => dim(['height' => '360px'])],
         'v2-hero__small' => ['s' => S(place('absolute', ['left' => 0, 'bottom' => 0]), dim(['width' => '210px', 'height' => '210px', 'object_fit' => 'cover', 'overflow' => 'hidden']), radius('24px'),
                                   brd('#ffffff', '7px', '24px'), shadow(0, 20, 40, 'rgba(70,10,48,.18)')), 'm' => dim(['width' => '130px', 'height' => '130px'])],
@@ -147,7 +147,7 @@ function native_v2(): array
         // ── Projects (dark) ──
         'v2-dark'        => ['s' => S(grad('radial-gradient(1200px 500px at 85% 0%,rgba(233,0,138,.28),transparent 60%),linear-gradient(180deg,#140d12 0%,#0c0905 100%)'), col('#ffffff'), $V(140, 150)), 'm' => $V(84, 90)],
         'v2-bento'       => ['s' => lay(['tracks' => 'minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)', 'gap' => '34px', 'align' => 'stretch']), 't' => lay(['tracks' => '1fr 1fr', 'gap' => '24px']), 'm' => lay(['tracks' => '1fr', 'gap' => '20px'])],
-        'v2-quote'       => ['s' => S(place('relative'), pad(48, 42), radius('24px'), grad('linear-gradient(150deg,#ff3fa6 0%,#e9008a 55%,#b0006a 100%)'), shadow(0, 30, 60, 'rgba(233,0,138,.32)', -10), lay(['justify' => 'between'])),
+        'v2-quote'       => ['s' => S(place('relative'), pad(48, 42, 39, 42), radius('24px'), grad('linear-gradient(150deg,#ff3fa6 0%,#e9008a 55%,#b0006a 100%)'), shadow(0, 30, 60, 'rgba(233,0,138,.32)', -10), lay(['justify' => 'between'])),
                               't' => lay(['column_span' => 'full']), 'm' => pad(30, 24), 'reveal' => $up(0)],
         'v2-quote__mark' => ['s' => S(col('rgba(255,255,255,.35)'), ty('110px', 'bold', '.8', null, SYNE), mar(0, null, -6, null))],
         'v2-quote__title' => ['s' => S(col('#ffffff'), ty('15px', 'bold', null, '.1em'), ['typography' => ['transform' => 'uppercase']], mar(0, null, 14, null))],
@@ -155,21 +155,21 @@ function native_v2(): array
         'v2-quote__name' => ['s' => S(col('#ffffff'), ty('20px', null, '1.4', null, SCRIPT), mar(22, null, 4, null))],
         'v2-quote__role' => ['s' => S(col('rgba(255,255,255,.8)'), ty('13.5px'), mar(0, null, 24, null))],
         'v2-quote v2-more' => ['s' => col('#ffffff')],
-        'v2-tile'        => ['s' => S(radius('24px'), bg('#1d1519'), brd('rgba(255,255,255,.07)', '1px', '24px'), fx(['transition' => ['duration_ms' => 350, 'easing' => 'ease']])),
+        'v2-tile'        => ['s' => S(lay(['display' => 'flex', 'direction' => 'column']), radius('24px'), bg('#1d1519'), brd('rgba(255,255,255,.07)', '1px', '24px'), fx(['transition' => ['duration_ms' => 350, 'easing' => 'ease']])),
                               'h' => S(fx(['transform' => ['translate_y' => '-6px']]), ['border' => ['color' => 'rgba(255,124,195,.45)']])],
         'v2-tile--1'     => ['reveal' => $up(120)], 'v2-tile--2' => ['reveal' => $up(240)],
         'v2-tile__photo' => ['s' => S(dim(['height' => '240px', 'overflow' => 'hidden']), bg('#f4eef1'), top_radius('23px'))],
         'v2-tile__img'   => zoom(1.05, 600, dim(['height' => '100%', 'object_fit' => 'cover'])),
-        'v2-tile__body'  => ['s' => pad(34, 34, 38, 34), 'm' => pad(26, 24, 30, 24)],
+        'v2-tile__body'  => ['s' => S(lay(['display' => 'flex', 'direction' => 'column', 'grow' => 1]), pad(34, 34, 38, 34)), 'm' => pad(26, 24, 30, 24)],
         'v2-tile__title' => ['s' => S(col('#ffffff'), ty('22px', 'bold', '1.25'), mar(0, null, 16, null))],
         'v2-tile__text'  => ['s' => S(col('rgba(255,255,255,.7)'), ty('14.5px', null, '1.7'), mar(0, null, 16, null))],
-        'v2-tile v2-more' => ['s' => col('#ff7cc3')],
+        'v2-tile v2-more' => ['s' => S(col('#ff7cc3'), mar('auto', null, 0, null))], // on the card's bottom edge, level with the quote's link
 
         // ── Partners ──
         'v2-partners-sec' => ['s' => S(bg('#ffffff'), $V(140, 130)), 'm' => $V(84, 80)],
         'v2-split'       => ['s' => lay(['tracks' => 'minmax(0,1fr) minmax(0,1.05fr)', 'gap' => '96px', 'align' => 'center']), 't' => lay(['tracks' => '1fr', 'gap' => '52px'])],
         'v2-split__copy' => ['reveal' => $up(0)],
-        'v2-logos'       => ['props' => ['columns' => '3'], 'reveal' => ['type' => 'fade_in', 'duration_ms' => 900, 'easing' => EASE],
+        'v2-logos'       => ['props' => ['columns' => '3'], 'reveal' => $up(0),
                               'parts' => ['grid' => lay(['gap' => '16px', 'align' => 'center']),
                                   'item' => S(sz(['height' => 108, 'overflow' => 'visible']), lay(['display' => 'flex', 'justify' => 'center', 'align' => 'center']), pad(18), radius('18px'), bg('#ffffff'), shadow(0, 14, 34, 'rgba(70,10,48,.08)', -6), fx(TRANS)),
                                   'item:hover' => S(fx(['transform' => ['translate_y' => '-4px']]), shadow(0, 20, 40, 'rgba(70,10,48,.14)', -6)),
@@ -180,7 +180,7 @@ function native_v2(): array
         // ── Support (photo band) ──
         'v2-support-sec' => ['s' => S(bg('#ffffff'), $V(0, 140)), 'm' => $V(0, 84)],
         'v2-support'     => ['s' => S(place('relative'), radius('30px'), dim(['overflow' => 'hidden', 'min_height' => '580px']), pad(90, 80), lay(['justify' => 'center'])),
-                              't' => pad(54, 40), 'm' => S(pad(34, 22), dim(['min_height' => '0px'])), 'reveal' => ['type' => 'scale_up', 'duration_ms' => 900, 'easing' => EASE]],
+                              't' => pad(54, 40), 'm' => S(pad(34, 22), dim(['min_height' => '0px'])), 'reveal' => $up(0)],
         'v2-support__card' => ['s' => S(dim(['max_width' => '560px']), pad(48, 48), radius('24px'), bg('rgba(255,255,255,.96)'), shadow(0, 30, 70, 'rgba(20,0,12,.25)')), 'm' => pad(26, 22)],
         'v2-support__list' => ['props' => ['style' => 'check'], 'parts' => ['list' => S(mar(8, 0, 8, 0), lay(['row_gap' => '14px'])), 'item' => S(col(INK), ty('15px', null, '22px')), 'marker' => col(PINK)]],
 
@@ -211,20 +211,30 @@ function native_v2(): array
         'v2-top__right'  => ['s' => lay(['gap' => '6px'])],
         'v2-top__member' => ['s' => S(col('#ffffff'), ty('12.5px', 'bold'), pad(6, 14), radius('999px'), brd('rgba(255,255,255,.28)', '1px', '999px'), mar(null, null, null, 10), fx(TRANS)),
                               'h' => S(bg(PINK), ['border' => ['color' => PINK]])],
-        'v2-cart'        => ['s' => S(col('#ffffff'), ty('12.5px', 'bold'), mar(null, null, null, 12))],
+        'v2-cart'        => ['s' => S(ty('12.5px', 'bold'), mar(null, null, null, 12)), 'parts' => ['count' => S(bg(PINK), col('#ffffff'))]],
         'v2-social'      => ['s' => S(tile(30, '50%', 'transparent', null), col('rgba(255,255,255,.8)'), fx(TRANS)), 'h' => S(bg(PINK), col('#ffffff'))],
         'v2-head-sec'    => ['s' => S(bg('#ffffff'), $V(0, 0))],
         'v2-header'      => ['s' => S(lay(['tracks' => 'auto 1fr auto', 'align' => 'center', 'gap' => '20px']), dim(['height' => '92px'])), 't' => lay(['tracks' => '1fr auto auto', 'gap' => '12px']), 'm' => dim(['height' => '74px'])],
         'v2-brand'       => ['s' => dim(['width' => '140px']), 'm' => dim(['width' => '112px'])],
-        // One menu at every width: a row with underlined links, then a side panel behind its own button; folded, it moves after the donate button.
+        // One menu at every width: links with panels in a row, then a dropdown card behind its own button; folded, it moves after the donate button.
         'v2-nav'         => ['t' => lay(['order' => 2]), 'm' => lay(['order' => 2]), 'parts' => [
                 'list' => lay(['gap' => '6px']), // no display here: it would beat the rule that folds the list away
                 'link' => S(lay(['display' => 'flex', 'align' => 'center']), pad(10, 10), col(INK), fam('body', '15px', 'bold'), fx(TRANS)),
-                'link:hover' => col(PINK), 'current' => col(PINK_DEEP),
-                'submenu' => S(pad(10, 10), radius('18px'), shadow(0, 22, 50, 'rgba(70,10,48,.16)', -10)), 'sublink' => S(col(INK), ty('14.5px', 'bold')), 'sublink:hover' => S(col(PINK_DEEP), bg('#fff0f7')),
+                'link:hover' => col(PINK_DEEP), 'open' => col(PINK_DEEP), 'current' => col(PINK_DEEP),
+                'submenu' => S(pad(34, 32, 38, 32), side('top', '#f6e8ef'), shadow(0, 30, 54, 'rgba(70,10,48,.16)', -16)), 'grid' => lay(['gap' => '36px', 'tracks' => '1fr 1.25fr 1fr', 'align' => 'stretch']),
                 'burger' => S(sz(['width' => 44, 'height' => 44]), radius('12px'), bg('#fff0f7'), col(PINK)),
-                'panel' => S(pad(128, 28, 32, 28), // clears the close button, which stays where the header puts it (at most 114px down)
-                     shadow(-10, 0, 35, 'rgba(20,10,35,.14)'))]],
+                'panel' => pad(10, 22, 24, 22),
+                'cta' => S($pill, sz(['width' => '100%']), ['typography' => ['decoration' => 'none']]), 'cta:hover' => $pillHover]],
+        'v2-mega__title' => ['s' => S(col(PINK_DEEP), ty('13px', 'bold', '1.3', '.08em'), ['typography' => ['transform' => 'uppercase']], mar(0, null, 14, 12)), 'thide' => true],
+        // The page being viewed is a filled row; pointing at a link only tints it, so the two never read alike.
+        'v2-mega__nav'   => ['s' => mar(0, null, 0, null), 'parts' => ['list' => lay(['gap' => '4px']),
+                'link' => S(lay(['display' => 'block']), pad(11, 14), radius('12px'), col(INK), fam('body', '15px', 'bold', '20px'), fx(TRANS)),
+                'link:hover' => S(col(PINK_DEEP), bg('#fff0f7')), 'current' => S(col('#ffffff'), bg(PINK_DEEP)), 'current:hover' => S(col('#ffffff'), bg(PINK_DEEP))]],
+        'v2-mega__img'   => ['s' => S(dim(['height' => '250px', 'object_fit' => 'cover', 'overflow' => 'hidden']), radius('18px')), 'thide' => true],
+        'v2-mega__cta'   => ['s' => S(lay(['display' => 'flex', 'direction' => 'column', 'justify' => 'center', 'gap' => '18px']), pad(28, 28), radius('18px'), grad('linear-gradient(135deg,#ff3fa6 0%,#e9008a 55%,#a3005f 100%)')), 'thide' => true],
+        'v2-mega__cta-title' => ['s' => S(col('#ffffff'), ty('19px', 'bold', '1.3', null, SYNE), mar(0, null, 0, null))],
+        'v2-mega__cta v2-btn' => ['parts' => ['button' => S(['background' => ['gradient' => 'linear-gradient(140deg,#ffffff 0%,#ffffff 100%)']], col(PINK_DEEP), shadow(0, 12, 26, 'rgba(60,0,35,.28)', -8)),
+                'button:hover' => S(['background' => ['gradient' => 'linear-gradient(140deg,#fff0f7 0%,#ffe0f0 100%)']], col(PINK_DEEP))]],
         'v2-head__end'   => ['s' => lay(['gap' => '12px', 'align' => 'center', 'justify' => 'end'])],
         // 19px would run into the menu at 1024px, so the header keeps 14px and takes the deeper pink.
         'v2-donate'      => ['parts' => ['button' => S($outline, brd(PINK_DEEP, '2px', '999px'), col(PINK_DEEP), sz(['height' => 46]), pad(0, 22), ty('14px')),
@@ -351,6 +361,12 @@ foreach ($menus as $key => [$name, $items]) { StudioMenus::save($tid, $key, $nam
 say('  + menus: ' . implode(', ', array_keys($menus)));
 
 // ── Header ───────────────────────────────────────────────────────────────────────────────────────────────────────
+// One panel of the menu: the section's links, a photo and the call to support; folded, only the links.
+$megaItem = static fn(string $label, string $url, string $menu, string $photo): array => B('layout.mega_item', ['label' => $label, 'url' => $url, 'columns' => 3], [
+    BOX([H($label, 'h3', 'v2-mega__title'), B('core.nav_menu', ['menu' => $menu, 'items' => [], 'layout' => 'vertical', 'aria_label' => $label], [], 'v2-mega__nav')]),
+    V2IMG($photo, '', 'v2-mega__img'),
+    BOX([H('Faire avancer les actions de FightxLife', 'h3', 'v2-mega__cta-title'), V2BTN('Soutenir FightxLife', '/nous-soutenir/', 'v2-btn v2-btn--sm')], 'v2-mega__cta'),
+]);
 $header = [
     SEC('Top bar', [B('layout.flex', ['direction' => 'row', 'justify' => 'between', 'align' => 'center', 'gap' => 'none', 'wrap' => 'wrap'], [
         B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center', 'wrap' => 'wrap'], [
@@ -362,8 +378,14 @@ $header = [
     ], 'v2-top')], 'v2-top-sec'),
     SEC('Header', [B('layout.grid', ['columns' => 3, 'gap' => 'none', 'align' => 'center'], [
         V2IMG(V2_LOGO, 'FightxLife', 'v2-brand', ['link_to' => 'custom', 'url' => V2_HOME_URL]),
-        B('core.nav_menu', ['menu' => 'v2-header', 'items' => [], 'layout' => 'horizontal', 'align' => 'center', 'aria_label' => 'Navigation principale', 'pointer' => 'underline', 'pointer_animation' => 'grow',
-            'toggle_breakpoint' => 'tablet', 'toggle_mode' => 'offcanvas', 'toggle_label' => 'Ouvrir le menu'], [], 'v2-nav'),
+        B('layout.mega_menu', ['align' => 'center', 'aria_label' => 'Navigation principale', 'pointer' => 'underline', 'pointer_animation' => 'grow', 'toggle_breakpoint' => 'tablet', 'toggle_mode' => 'dropdown',
+            'toggle_animation' => 'slide', 'toggle_label' => 'Ouvrir le menu', 'toggle_cta_label' => 'Soutenir FightxLife', 'toggle_cta_url' => '/nous-soutenir/'], [
+            $megaItem('Nos actions', '/nos-actions/', 'v2-actions', '2022-05-waterfight-piscine.jpg'),
+            $megaItem('Nos cours', '/cours/', 'v2-cours', '2022-05-femininn.jpg'),
+            $megaItem('Projets & impact', '/notre-impact/', 'v2-projets', '2023-01-ny-20220827-smile-box-5262.jpg'),
+            $megaItem('À propos', '/a-propos/', 'v2-apropos', '2022-05-visite-hopitaux-4.jpg'),
+            B('layout.mega_item', ['label' => 'Contact', 'url' => '/contact/']),
+        ], 'v2-nav'),
         B('layout.flex', ['direction' => 'row', 'gap' => 'none', 'align' => 'center', 'justify' => 'end'], [
             B('core.button', ['link' => L('Soutenir FightxLife', '/nous-soutenir/'), 'variant' => 'primary'], [], 'v2-donate', ['visibility' => ['auth_state' => 'any', 'devices' => ['md', 'lg']]]),
             B('core.button', ['link' => L('Soutenir', '/nous-soutenir/'), 'variant' => 'primary'], [], 'v2-donate', ['visibility' => ['auth_state' => 'any', 'devices' => ['base', 'sm']]]),

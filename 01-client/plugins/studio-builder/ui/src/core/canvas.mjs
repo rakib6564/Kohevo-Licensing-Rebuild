@@ -32,7 +32,9 @@ const OVERLAY_CSS = `
 /* Selection never changes layout: no position override here (an absolute or sticky block would move),
    and the box, name chip and toolbar are drawn outside the page by CanvasOverlay. */
 /* A menu folded behind its button has no runtime here: selecting it shows its links, so they can be edited in place. */
-[data-sb-type="core.nav_menu"].sbx-selected .sb-nav__list { display: flex; }
+[data-sb-type="core.nav_menu"].sbx-selected .sb-nav__list, [data-sb-type="layout.mega_menu"]:is(.sbx-selected, :has(.sbx-selected)) .sb-nav__list { display: flex; }
+/* A Mega menu panel stays open while its item, or anything in it, is selected, so its blocks can be edited. */
+[data-sb-type="layout.mega_item"]:is(.sbx-selected, :has(.sbx-selected)) > .sb-nav__mega { opacity: 1; visibility: visible; transform: none; display: block; }
 [${NODE_ATTR}].sbx-selected {
   outline: 2px solid #8b5cf6 !important;
   outline-offset: -1px;

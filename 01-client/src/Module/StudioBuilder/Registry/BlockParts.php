@@ -54,6 +54,7 @@ final class BlockParts
             'image'    => ['label' => 'Image', 'selectors' => ['.sb-post-card__media']],
             'category' => ['label' => 'Category', 'selectors' => ['.sb-post-card__category']],
             'title'    => ['label' => 'Title', 'selectors' => ['.sb-post-card__title', '.sb-post-card__title a']],
+            'card_title' => ['label' => 'Title while the card is pointed at', 'selectors' => ['.sb-post-card:hover .sb-post-card__title', '.sb-post-card:hover .sb-post-card__title a'], 'states' => false],
             'excerpt'  => ['label' => 'Excerpt', 'selectors' => ['.sb-post-card__excerpt']],
             'meta'     => ['label' => 'Date and author', 'selectors' => ['.sb-post-card__meta']],
             'button'   => ['label' => 'Read more', 'selectors' => ['.sb-post-card .sb-button']],
@@ -106,6 +107,19 @@ final class BlockParts
             'burger'  => ['label' => 'Menu button', 'selectors' => ['.sb-nav__burger']],
             // Only an open menu matches, so a panel's look never reaches the links shown in a row.
             'panel'   => ['label' => 'Open menu panel', 'selectors' => ['.sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__list'], 'states' => false],
+            'cta'     => ['label' => 'Open menu button', 'selectors' => ['.sb-nav__cta-link']],
+        ],
+        // The menu's own links are named from the top of the menu: a panel can hold a Nav menu with parts of its own.
+        'layout.mega_menu' => [
+            'list'    => ['label' => 'Menu list', 'selectors' => ['.sb-nav--mega>.sb-nav__list']],
+            'link'    => ['label' => 'Links', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent)']],
+            'current' => ['label' => 'Current page link', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item>.sb-nav__link[aria-current="page"]', '.sb-nav--mega>.sb-nav__list>.sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)']],
+            'open'    => ['label' => 'Link of the open panel', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item:is(:hover,:focus-within,[data-open])>:is(.sb-nav__link,.sb-nav__parent)'], 'states' => false],
+            'submenu' => ['label' => 'Panels', 'selectors' => ['.sb-nav--mega>.sb-nav__list>.sb-nav__item>.sb-nav__mega']],
+            'grid'    => ['label' => 'Panel columns', 'selectors' => ['.sb-mega__grid']],
+            'burger'  => ['label' => 'Menu button', 'selectors' => ['.sb-nav__burger']],
+            'panel'   => ['label' => 'Open menu panel', 'selectors' => ['.sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__list'], 'states' => false],
+            'cta'     => ['label' => 'Open menu button', 'selectors' => ['.sb-nav__cta-link']],
         ],
         'core.carousel' => [
             'quote'  => ['label' => 'Quote', 'selectors' => ['.sb-carousel__quote']],

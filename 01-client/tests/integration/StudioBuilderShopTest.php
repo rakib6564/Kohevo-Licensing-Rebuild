@@ -220,6 +220,11 @@ unit('shop: catalogue, cart, checkout, payment and the Studio storefront (real M
                 $html = shop_view_cart(ShopStoreAPI::cartTotals());
                 assert_true(str_contains($html, 'Club &lt;b&gt;T-shirt&lt;/b&gt;') && !str_contains($html, '<b>T-shirt'), 'the cart escapes product names');
                 assert_true(str_contains($html, 'name="_csrf"'), 'its forms carry the session token');
+                assert_true(!str_contains($html, 'sb-shop-cart__continue'), 'no shop page set, no "Continue shopping" button');
+                ShopStoreAPI::setSetting('shop_page', 'boutique');
+                $html = shop_view_cart(ShopStoreAPI::cartTotals());
+                assert_true((bool) preg_match('#sb-shop-cart__foot">.*sb-shop-cart__continue" href="[^"]*/boutique/?">.*sb-shop-cart__totals#s', $html), 'the button leads to the shop page and sits before the totals');
+                ShopStoreAPI::setSetting('shop_page', '');
                 assert_true(str_contains(shop_view_mini(ShopStoreAPI::cartTotals()), 'data-count="4"'));
                 assert_true(str_contains(shop_view_mini(ShopStoreAPI::cartTotals(), false, 'Panier <b>'), '<span class="sb-shop-mini__label">Panier &lt;b&gt;</span>'), 'the widget\'s own label, escaped');
 

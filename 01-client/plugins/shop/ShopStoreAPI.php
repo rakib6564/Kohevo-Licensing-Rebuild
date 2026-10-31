@@ -90,6 +90,7 @@ class ShopStoreAPI {
             'cart_page'         => 'cart',
             'checkout_page'     => 'checkout',
             'thanks_page'       => 'order-received',
+            'shop_page'         => '',
             'notify_email'      => '',
         ];
     }
@@ -137,6 +138,11 @@ class ShopStoreAPI {
         $slug = strtolower(trim(self::setting($setting), " /"));
         if (!preg_match('#^[a-z0-9-]+(/[a-z0-9-]+)*$#', $slug)) $slug = self::settingDefaults()[$setting] ?? '';
         return rtrim((string) SLATE_URL, '/') . self::withSlash('/' . $slug);
+    }
+
+    /** The address "Continue shopping" leads to: the page the Shop page setting names, or '' when none is set. */
+    public static function shopPageUrl(): string {
+        return trim(self::setting('shop_page'), " /") === '' ? '' : self::pageUrl('shop_page');
     }
 
     /** A path as Studio writes the site's addresses: with a trailing slash when the site's setting asks for one. */

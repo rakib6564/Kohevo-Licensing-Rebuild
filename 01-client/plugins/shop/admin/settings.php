@@ -56,6 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach (['product_prefix', 'cart_page', 'checkout_page', 'thanks_page'] as $k) {
             if (!$slugOk(strtolower(trim($in($k), '/')))) $errors[$k] = __('shop_err_address_format', 'Use lowercase letters, digits and hyphens.');
         }
+        $shopPage = strtolower(trim($in('shop_page'), '/'));
+        if ($shopPage !== '' && !$slugOk($shopPage)) $errors['shop_page'] = __('shop_err_address_format', 'Use lowercase letters, digits and hyphens.');
         // A Studio content type with the same address prefix would be served there first: products would never show.
         if (!isset($errors['product_prefix']) && class_exists(\Slate\Module\StudioBuilder\Meta\PageRoutes::class)) {
             $taken = array_search(strtolower(trim($in('product_prefix'), '/')), \Slate\Module\StudioBuilder\Meta\PageRoutes::prefixes((int) current_tenant_id()), true);
@@ -77,6 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach (['product_prefix', 'cart_page', 'checkout_page', 'thanks_page'] as $k) {
                 ShopStoreAPI::setSetting($k, strtolower(trim($in($k), '/')));
             }
+            ShopStoreAPI::setSetting('shop_page', $shopPage);
             AuditLog::record('shop.settings_saved', 'shop');
             $_SESSION['shop_flash'] = ['type' => 'success', 'msg' => __('shop_saved', 'Saved.')];
             header('Location: ' . $self);
@@ -168,6 +171,14 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 <label class="field-label" for="thanks_page"><?= __('shop_thanks_page', 'Order received page') ?></label>
                 <input type="text" id="thanks_page" name="thanks_page" value="<?= $val('thanks_page', ShopStoreAPI::setting('thanks_page')) ?>">
                 <?= $err('thanks_page') ?>
+            </div>
+        </div>
+        <div class="field-row field-row-2">
+            <div class="field">
+                <label class="field-label" for="shop_page"><?= __('shop_shop_page', 'Shop page') ?></label>
+                <input type="text" id="shop_page" name="shop_page" value="<?= $val('shop_page', ShopStoreAPI::setting('shop_page')) ?>">
+                <div class="field-hint"><?= __('shop_shop_page_hint', 'The cart’s “Continue shopping” button leads here. Leave empty to hide it.') ?></div>
+                <?= $err('shop_page') ?>
             </div>
         </div>
         <div class="field-row field-row-2">

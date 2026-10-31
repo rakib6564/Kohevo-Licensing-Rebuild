@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '54';
+    public const VERSION = '56';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -356,6 +356,8 @@ final class StudioStylesheet
             . '@media (max-width:767.98px){.sb-query-loop .sb-query-loop__grid{grid-template-columns:minmax(0,1fr)}}'
             . '.sb-post-card{display:flex;flex-direction:column;border:1px solid var(--sb-border-default,#e2e8f0);border-radius:var(--sb-radius-md,.5rem);overflow:hidden;background:var(--sb-surface-secondary,#ffffff);transition:box-shadow .2s ease}'
             . '.sb-post-card:hover{box-shadow:var(--sb-shadow-md,0 4px 6px -1px rgba(0,0,0,0.1))}'
+            // A minimal card is one link: the title's reaches over the whole card.
+            . '.sb-post-card--minimal{position:relative}.sb-post-card--minimal .sb-post-card__title a::after{content:"";position:absolute;inset:0}'
             // A card may leave overflow open (the hover margin of a lifted card needs it), so the image rounds itself.
             . '.sb-post-card__media{overflow:hidden;border-top-left-radius:inherit;border-top-right-radius:inherit}'
             . '.sb-post-card__media img{width:100%;height:12rem;object-fit:cover;display:block}'
@@ -748,9 +750,30 @@ final class StudioStylesheet
             . '.sb-nav--anim-grow ' . $link . '::before,.sb-nav--anim-grow ' . $link . '::after{transform:scaleX(0);transition:opacity .2s ease,transform .2s ease}'
             . ':is(.sb-nav--pointer-framed,.sb-nav--pointer-background).sb-nav--anim-grow ' . $link . '::after{transform:scale(.85)}'
             . $marks($lit) . '{opacity:1;transform:none}'
+            // A parent of the current page stays marked, and a Mega menu item stays marked while its panel is open.
+            . '[class*="sb-nav--pointer-"] .sb-nav__list>.sb-nav__item.is-current-parent>:is(.sb-nav__link,.sb-nav__parent)::after,.sb-nav--mega[class*="sb-nav--pointer-"]>.sb-nav__list>.sb-nav__item:is(:hover,[data-open])>:is(.sb-nav__link,.sb-nav__parent)::after{opacity:1;transform:none}'
+            // A Nav menu in a panel takes no pointer from the Mega menu around it.
+            . '.sb-nav__mega .sb-nav:not([class*="sb-nav--pointer-"]) .sb-nav__link::before,.sb-nav__mega .sb-nav:not([class*="sb-nav--pointer-"]) .sb-nav__link::after{display:none}'
             . '@media (hover:hover){' . $marks(':hover') . '{opacity:1;transform:none}.sb-body .sb-nav--pointer-text a.sb-nav__link:hover{color:var(--sb-nav-pointer)}}'
             . '.sb-body .sb-nav--pointer-text a.sb-nav__link:is(:focus-visible,[aria-current="page"]),.sb-nav--pointer-text .sb-nav__parent:focus-visible{color:var(--sb-nav-pointer)}'
             . '@media (prefers-reduced-motion:reduce){[class*="sb-nav--anim-"] ' . $link . '::before,[class*="sb-nav--anim-"] ' . $link . '::after{transition:none;transform:none}.sb-nav__icon,.sb-nav__icon::before,.sb-nav__icon::after{transition:none}}';
+
+        // Mega menu: a panel opens from the menu's row, and the runtime stretches it to the window under the header.
+        $css .= '.sb-nav--mega .sb-nav__item{position:static}.sb-nav--mega{position:relative}'
+            . '.sb-nav--horizontal.sb-nav--mega>.sb-nav__list>.sb-nav__item>.sb-nav__mega{top:var(--sb-mega-top,100%);left:var(--sb-mega-left,0);right:auto;width:var(--sb-mega-vw,100%);box-sizing:border-box;padding:1.75rem 1.5rem;border-radius:0}'
+            . '.sb-nav--mega .sb-nav__mega::before{top:-3rem;height:3rem}'
+            . '.sb-nav--mega .sb-nav__mega .sb-nav__link{box-sizing:border-box;width:100%;white-space:normal}'
+            . '.sb-mega__grid{display:grid;grid-template-columns:repeat(var(--sb-mega-cols,3),minmax(0,1fr));gap:1.5rem 2rem;margin:0 auto}'
+            . '.sb-nav--mega-content .sb-mega__grid{max-width:var(--sb-layout-content,80rem)}'
+            . '.sb-mega__empty{margin:0;padding:.75rem;border:1px dashed var(--sb-border-default)}'
+            // The button at the end of a folded menu; hidden while the links show in a row.
+            . '.sb-nav__cta{display:none}.sb-nav__cta-link{display:block;padding:.8rem 1.25rem;text-align:center;font-weight:700;text-decoration:none;color:#fff;background:var(--sb-color-accent);border-radius:.5rem}'
+            . '.sb-body .sb-nav a.sb-nav__cta-link{color:#fff}'
+            // How a folded menu opens.
+            . '@keyframes sb-nav-fade{from{opacity:0}}@keyframes sb-nav-slide{from{opacity:0;translate:0 -.75rem}}'
+            . '.sb-nav--open-fade .sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__list{animation:sb-nav-fade .22s ease}'
+            . '.sb-nav--open-slide .sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__list{animation:sb-nav-slide .25s ease}'
+            . '@media (prefers-reduced-motion:reduce){[class*="sb-nav--open-"] .sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__list{animation:none}}';
 
         foreach (['always' => null, 'tablet' => '(max-width:1023.98px)', 'mobile' => '(max-width:767.98px)'] as $when => $query) {
             $rules = self::navFoldedCss('.sb-nav--toggle-' . $when);
@@ -765,10 +788,11 @@ final class StudioStylesheet
         $open = $n . ' .sb-nav__bar:has(.sb-nav__check:checked)';
         $drop = $n . '.sb-nav--menu-dropdown .sb-nav__list';
         $side = $n . '.sb-nav--menu-offcanvas .sb-nav__list';
+        $full = $n . '.sb-nav--menu-fullscreen';
         return $n . '{position:relative}' . $n . ' .sb-nav__bar{display:flex}'
             . $n . ' .sb-nav__list{display:none;flex-direction:column;flex-wrap:nowrap;justify-content:flex-start;gap:0;background:var(--sb-surface-primary,#fff);color:var(--sb-text-primary,#1a1a1a);text-align:left}'
             . $open . '~.sb-nav__list{display:flex}'
-            . $drop . '{position:absolute;top:var(--sb-nav-top,100%);z-index:60;min-width:16rem;padding:.5rem 1rem;box-shadow:0 18px 40px -12px rgba(0,0,0,.22)}'
+            . $drop . '{position:absolute;top:var(--sb-nav-top,100%);z-index:60;min-width:16rem;padding:.5rem 1rem;max-height:calc(100dvh - 5rem);box-sizing:border-box;overflow-x:hidden;overflow-y:auto;box-shadow:0 18px 40px -12px rgba(0,0,0,.22)}'
             . $n . '.sb-nav--tgl-left.sb-nav--menu-dropdown .sb-nav__list{left:0}'
             . $n . '.sb-nav--tgl-right.sb-nav--menu-dropdown .sb-nav__list{right:0}'
             . $n . '.sb-nav--tgl-center.sb-nav--menu-dropdown .sb-nav__list{left:50%;transform:translateX(-50%)}'
@@ -779,6 +803,14 @@ final class StudioStylesheet
             . $n . '.sb-nav--menu-offcanvas .sb-nav__bar:has(.sb-nav__check:checked)~.sb-nav__backdrop{display:block;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5)}'
             . $n . '.sb-nav--menu-offcanvas .sb-nav__bar:has(.sb-nav__check:checked){z-index:10001}'
             . $n . '.sb-nav--menu-offcanvas .sb-nav__check:checked~.sb-nav__burger{background:var(--sb-surface-primary,#fff);color:var(--sb-text-primary,#1a1a1a)}'
+            . $full . ' .sb-nav__list{position:fixed;inset:0;z-index:10000;box-sizing:border-box;padding:8rem 1.5rem 2rem;overflow-y:auto}'
+            . $full . ' .sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent){font-size:1.35rem}'
+            . $full . ' .sb-nav__bar:has(.sb-nav__check:checked){z-index:10001}'
+            . $n . ' .sb-nav__cta{display:block;padding:1rem 0 .5rem}' . $n . ' .sb-nav__list>.sb-nav__item.sb-nav__cta{border-top:0;padding:1rem 0 .5rem}'
+            . $n . '.sb-nav--horizontal.sb-nav--mega .sb-nav__list>.sb-nav__item>.sb-nav__mega{top:auto;left:auto;width:auto;padding:.25rem 0 .75rem!important;border:0!important;border-radius:0!important;box-shadow:none!important}' . $n . '.sb-nav--mega .sb-mega__grid{grid-template-columns:minmax(0,1fr)!important}'
+            // A Nav menu inside a panel is not the list this rule set folds.
+            . $n . '.sb-nav--mega .sb-nav__mega .sb-nav__item{display:block}' . $n . '.sb-nav--mega .sb-nav__mega .sb-nav__list>.sb-nav__item+.sb-nav__item{border-top:0}' . $n . '.sb-nav--mega .sb-nav__mega .sb-nav__link{width:100%}'
+            . $n . '.sb-nav--horizontal.sb-nav--mega .sb-nav__mega .sb-nav__list{display:flex;position:static;left:auto;width:auto;min-width:0;max-height:none;padding:0;overflow:visible;background:none;box-shadow:none}' . $n . ' .sb-nav__item{position:relative}'
             . $n . ' .sb-nav__list>.sb-nav__item{padding:0;border:0}' . $n . ' .sb-nav__list>.sb-nav__item+.sb-nav__item{border-top:1px solid var(--sb-border-default)}'
             . $n . ' .sb-nav__link,' . $n . ' .sb-nav__parent{display:block;padding:.65rem 0}'
             . $n . ' .sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent)::before,' . $n . ' .sb-nav__list>.sb-nav__item>:is(.sb-nav__link,.sb-nav__parent)::after{display:none}'
@@ -911,11 +943,12 @@ final class StudioStylesheet
             . '.sb-shop-cart__qty-input{width:4rem;padding:.4rem;font:inherit;border:1px solid var(--sb-border-default);border-radius:var(--sb-radius-sm,.375rem)}'
             . '.sb-shop-cart__update,.sb-shop-cart__remove{font:inherit;background:none;border:0;cursor:pointer;color:var(--sb-text-muted);text-decoration:underline}'
             . '.sb-shop-cart__remove{font-size:1.25rem;text-decoration:none}'
-            . '.sb-shop-cart__totals{margin:1.25rem 0 0;margin-left:auto;max-width:22rem;display:flex;flex-direction:column;gap:.35rem}'
+            . '.sb-shop-cart__foot{display:flex;justify-content:space-between;align-items:flex-start;gap:1.5rem;margin-top:1.25rem}'
+            . '.sb-shop-cart__totals{margin-left:auto;flex:0 1 22rem;display:flex;flex-direction:column;gap:.35rem}'
             . '.sb-shop-cart__subtotal{display:flex;justify-content:space-between;margin:0;font-size:1.1rem}'
             . '.sb-shop-cart__vat,.sb-shop-cart__free{margin:0;font-size:.85rem;color:var(--sb-text-muted)}'
             . '@media (max-width:767.98px){.sb-shop-cart__table thead{display:none}.sb-shop-cart__table tr{display:grid;grid-template-columns:1fr auto;gap:.25rem .75rem;padding:.75rem 0;border-bottom:1px solid var(--sb-border-default)}'
-            . '.sb-shop-cart__table td{border:0;padding:0}.sb-shop-cart__product{grid-column:1/-1}.sb-shop-cart__totals{max-width:none}}'
+            . '.sb-shop-cart__table td{border:0;padding:0}.sb-shop-cart__product{grid-column:1/-1}.sb-shop-cart__foot{flex-direction:column-reverse;align-items:stretch}.sb-shop-cart__totals{flex:none;margin-left:0}}'
             . '.sb-shop-checkout__form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,22rem);gap:2rem;align-items:start}'
             . '@media (max-width:767.98px){.sb-shop-checkout__form{grid-template-columns:minmax(0,1fr)}}'
             . '.sb-shop-checkout fieldset{border:0;margin:0 0 1.25rem;padding:0}.sb-shop-checkout legend{font-weight:700;margin:0 0 .5rem;padding:0}'

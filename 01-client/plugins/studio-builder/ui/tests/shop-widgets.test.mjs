@@ -32,7 +32,7 @@ test('the widgets an author styles piece by piece list their parts', () => {
   const parts = (type) => byType[type].style_parts.map((p) => p.key);
   assert.deepEqual(parts('shop.products'), ['card', 'image', 'body', 'icon', 'link', 'title', 'price', 'button', 'badge', 'filter', 'pager', 'grid']);
   assert.deepEqual(parts('shop.product_add_to_cart'), ['button', 'options', 'option_labels', 'variant_price', 'quantity', 'message']);
-  assert.deepEqual(parts('shop.cart'), ['table', 'title', 'options', 'totals', 'button']);
+  assert.deepEqual(parts('shop.cart'), ['table', 'title', 'options', 'totals', 'button', 'continue']);
   assert.deepEqual(parts('shop.checkout'), ['fields', 'labels', 'summary', 'button']);
   assert.deepEqual(byType['shop.product_title'].style_parts, [], 'a one-element widget is styled as a whole');
 });

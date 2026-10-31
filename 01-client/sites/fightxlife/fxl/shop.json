@@ -4,6 +4,7 @@
   "currency": "EUR",
   "product_prefix": "produit",
   "cart_page": "panier",
+  "shop_page": "e-shop",
   "checkout_page": "commande",
   "thanks_page": "commande-recue",
   "shipping_enabled": "1",

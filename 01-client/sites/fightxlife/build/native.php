@@ -454,9 +454,12 @@ function native_more(): array
                 'link' => S(col(PINK), ['typography' => ['decoration' => 'underline']]), 'bold' => col(INK)]],
 
         // ── Query loops ──
-        'fx-recent'       => ['parts' => ['grid' => lay(['display' => 'block']), 'card' => S(pad(12, 0), ['border' => ['width' => '0px', 'radius' => '0px']], bg('transparent')), 'card:not_first' => side('top', '#e9e9e9'),
+        // A row that tints as a whole: no lift or shadow, which would need room the sidebar does not have.
+        'fx-recent'       => ['parts' => ['grid' => lay(['display' => 'grid', 'gap' => '6px']),
+                'card' => S(pad(14, 16), ['border' => ['width' => '0px', 'radius' => '14px']], bg('transparent'), shadow(0, 0, 0, 'transparent'), fx(['transition' => ['duration_ms' => 220, 'easing' => 'ease']])),
+                'card:hover' => S(bg('#fff0f7'), shadow(0, 0, 0, 'transparent'), fx(['transform' => ['translate_x' => '4px']])),
                 'body' => pad(0), 'button_row' => lay(['display' => 'none']), 'button' => lay(['display' => 'none']),
-                'title' => S(mar(0, 0, 4, 0), fam('heading', '14px', 'bold', '20px'), col('#333333')), 'title:hover' => col(PINK), 'meta' => S(ty('12px'), col('#999999'))]],
+                'title' => S(mar(0, 0, 6, 0), fam('heading', '14px', 'bold', '20px'), col('#333333')), 'card_title' => col(PINK_DEEP), 'meta' => S(mar(0, 0, 0, 0), ty('12px'), col('#8a7f85'))]],
         'yg-post-meta'    => ['parts' => ['meta' => lay(['display' => 'flex', 'justify' => 'center', 'align' => 'center', 'gap' => '15px']), 'item:not_first' => S(side('left', '#dddddd'), pad(null, null, null, 15))]],
         'fx-info__val'    => ['parts' => ['paragraph' => mar(0)]],
         'fx-info__list'   => ['parts' => ['list' => S(mar(4, 0, 0, 0), pad(null, null, null, 18))]],
@@ -507,7 +510,8 @@ function native_more(): array
         'fx-shop-meta'    => ['parts' => ['label' => S(col(INK), fam('body', '13px', 'bold')), 'value' => S(col(BODY), fam('body', '13px'))]],
         // Cart, checkout and the order: the site's inputs, card and pink pill.
         'fx-shop-cart'    => ['parts' => ['title' => S(col(INK), fam('heading', '17px', 'bold')), 'options' => col(BODY),
-                'totals' => S(pad(24), radius('14px'), bg('#ffffff'), shadow(0, 8, 30, 'rgba(22,12,39,.1)')), 'button' => S($pill, fx(['cursor' => 'pointer']))]],
+                'totals' => S(pad(24), radius('14px'), bg('#ffffff'), shadow(0, 8, 30, 'rgba(22,12,39,.1)')), 'button' => S($pill, fx(['cursor' => 'pointer'])),
+                'continue' => S($pill, ['background' => ['gradient' => 'linear-gradient(140deg,#595959 0%,#0c0905 100%)']], fx(['cursor' => 'pointer']))]],
         'fx-shop-checkout' => ['parts' => ['fields' => S($input, sz(['height' => 50])), 'labels' => S(col(INK), fam('body', '14px', 'bold')),
                 'summary' => S(pad(26), radius('14px'), bg('#ffffff'), shadow(0, 8, 30, 'rgba(22,12,39,.1)')), 'button' => S($pill, sz(['width' => '100%']), fx(['cursor' => 'pointer']))]],
         'fx-shop-order'   => ['parts' => ['lead' => S(col(INK), fam('body', '17px')), 'total' => S(col(INK), fam('heading', '20px', 'bold'))]],
@@ -572,5 +576,14 @@ function native_apply(array &$b, array $anc, bool $centred = false): void
     $down = array_merge($anc, $cls);
     foreach ($b['children'] as &$child) { native_apply($child, $down, $centreKids); }
     unset($child);
+    // `stagger` (cards to a row): the children fade up in turn, each row starting over, and the block itself stays still.
+    $rows = 0;
+    foreach ($cls as $c) { $rows = max($rows, (int) ($map[$c]['stagger'] ?? 0)); }
+    if ($rows > 0) {
+        foreach ($b['children'] as $i => &$child) {
+            $child['interactions'] = ['trigger' => 'viewport-enter', 'animation' => ['type' => 'fade_up', 'duration_ms' => 800, 'delay_ms' => ($i % $rows) * 120, 'easing' => EASE]];
+        }
+        unset($child);
+    }
     if ($keep) { $b['classNames'] = $keep; } else { unset($b['classNames']); }
 }
