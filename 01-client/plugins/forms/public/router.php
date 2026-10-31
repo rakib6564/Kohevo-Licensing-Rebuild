@@ -356,6 +356,7 @@ function forms_public_layout_end(bool $embed): void {
            . 'if(window.ResizeObserver){try{new ResizeObserver(h).observe(el||document.body);}catch(e){}}'
            . 'var n=0,iv=setInterval(function(){h();if(++n>30)clearInterval(iv);},200);})();</script>';
     }
+    echo \Slate\Services\Admin\FrontAdminBar::scriptTag();
     echo '</body></html>';
 }
 

@@ -1247,7 +1247,6 @@ const EN = {
   bg_overlay_note: 'Overlay {percent}% on top of the image',
   bg_overlay_remove: 'Remove overlay',
   bg_image_covers: 'An image is set and is drawn over this colour.',
-  align_device: 'Alignment by device',
   columns: 'Columns',
   padding_y: 'Vertical padding',
   width: 'Width',

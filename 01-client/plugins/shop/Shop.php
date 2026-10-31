@@ -23,6 +23,7 @@ class Shop extends Plugin {
         }
 
         Hook::addFilter('admin_nav_items',         [$this, 'addAdminNav']);
+        Hook::addFilter('front_admin_bar_items', [$this, 'addFrontBarItems']);
         Hook::addFilter('admin_dashboard_widgets', [$this, 'addDashboardWidget']);
         Hook::addFilter('i18n_lang_paths',         [$this, 'addLangPath']);
 
@@ -47,6 +48,19 @@ class Shop extends Plugin {
         } catch (\Throwable $e) {
             slate_log('Shop: stripe event handling failed: ' . $e->getMessage(), 'error');
         }
+    }
+
+    /** The shop on the admin bar, with the count of paid orders to fulfil. */
+    public function addFrontBarItems(array $items): array {
+        if (!Auth::can('shop.view') || !ModuleGuard::allows('shop')) return $items;
+        try {
+            $toFulfil = (int) Database::value("SELECT COUNT(*) FROM shop_orders WHERE tenant_id = ? AND status = 'paid'", [current_tenant_id()]);
+        } catch (\Throwable $e) {
+            $toFulfil = 0;
+        }
+        $items[] = ['id' => 'shop', 'label' => __('shop_bar_label', 'Shop'), 'href' => $this->url('admin/orders.php'), 'perm' => 'shop.view', 'order' => 60, 'menu' => 'bar', 'count' => $toFulfil];
+        $items[] = ['id' => 'new-product', 'label' => __('shop_bar_new_product', 'Product'), 'href' => $this->url('admin/products.php?new=1'), 'perm' => 'shop.manage_products', 'order' => 50, 'menu' => 'new'];
+        return $items;
     }
 
     public function addAdminNav(array $items): array {

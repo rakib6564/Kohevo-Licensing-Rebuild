@@ -37,6 +37,7 @@ export const PROP_PRESENTERS = Object.freeze({
   },
   'core.card': {
     variant: { pills: true },
+    surface_token: { showIf: (p) => !!p.surface_token },
   },
   // The menu button's options mean nothing without a button, and the dropdown's width only applies to a dropdown.
   'core.nav_menu': navPresenter,
@@ -52,9 +53,16 @@ export const PROP_PRESENTERS = Object.freeze({
   'core.rich_text': {
     columns_gap: { showIf: (p) => typeof p.columns === 'number' && p.columns > 1 },
   },
+  // Size and alignment live in the Style section. The older colour token stays visible only while it holds a value.
   'core.text': {
+    size: { showIf: () => false },
+    align: { showIf: () => false },
+    color_token: { showIf: (p) => !!p.color_token },
     columns_gap: { showIf: (p) => typeof p.columns === 'number' && p.columns > 1 },
   },
+  'core.quote': { align: { showIf: () => false } },
+  'core.link': { align: { showIf: () => false } },
+  'theme.post_title': { align: { showIf: () => false } },
   'core.image': {
     url: { showIf: (p) => p.link_to === 'custom' },
     new_tab: { showIf: (p) => p.link_to === 'media' || p.link_to === 'custom' },

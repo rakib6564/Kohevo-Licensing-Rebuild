@@ -1380,9 +1380,11 @@
         var rect = el.getBoundingClientRect();
         var edge = el.getAttribute('data-sb-sticky');
         var offset = parseFloat(style.getPropertyValue('--sb-sticky-offset')) || 0;
+        // The admin bar moves every top-sticky node down by its own height.
+        var bar = parseFloat(global.getComputedStyle(document.documentElement).getPropertyValue('--kohevo-bar-h')) || 0;
         var stuck = edge === 'bottom'
           ? rect.bottom >= vh - offset - 1 && y + vh < document.documentElement.scrollHeight - 1
-          : y > 0 && rect.top <= offset + 1;
+          : y > 0 && rect.top <= offset + bar + 1;
         var hides = stuck && edge !== 'bottom' && /(^|\s)hide(\s|$)/.test(el.getAttribute('data-sb-sticky-effect') || '');
         var hidden = el.classList.contains('is-hidden');
         if (hides && down && y > rect.height + offset) hidden = true;
@@ -2187,4 +2189,17 @@
   }
 
   global.StudioRuntime = StudioRuntime;
+
+  /* ── Admin bar ────────────────────────────────────────────────────────────
+   * This page is the same for everyone, so it holds no sign of who is viewing it. A signed-in admin's browser carries
+   * a hint cookie (not proof of anything): only then is the bar's script fetched, and it asks the server for the bar.
+   * The script takes this file's `?v=`.
+   */
+  var runtimeScript = document.currentScript;
+  if (runtimeScript && runtimeScript.src && document.body && document.body.classList.contains('sb-body--public')
+    && /(?:^|;\s*)kohevo_admin_hint=1(?:;|$)/.test(document.cookie)) {
+    var bar = document.createElement('script');
+    bar.src = runtimeScript.src.replace(/plugins\/studio-builder\/assets\/public\/studio-runtime\.js/, 'assets/js/front-admin-bar.js');
+    document.head.appendChild(bar);
+  }
 }(window));

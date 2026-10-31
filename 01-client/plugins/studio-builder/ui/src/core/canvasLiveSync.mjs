@@ -112,6 +112,10 @@ export const isServerRenderedType = (type) => {
   return SERVER_RENDERED_TYPES.has(t) || !(t.startsWith('core.') || t.startsWith('layout.'));
 };
 
+/** A Text's content is patched in place, but its other props (Size, Drop Cap, Columns) are classes only the server writes. */
+const textClassEdit = (before, block) => block.type === 'core.text'
+  && differs({ ...before.props, content: null }, { ...block.props, content: null });
+
 /**
  * The blocks, at any depth, that kept their id and type but whose props changed, and whose markup only the server
  * builds (isServerRenderedType). The live patch cannot paint them, so the canvas fetches each one's render on its own
@@ -125,8 +129,8 @@ export function serverRenderedEdits(prevDoc, nextDoc) {
   const out = [];
   for (const [id, block] of indexAllBlocks(nextDoc)) {
     const before = prev.get(id);
-    if (!before || before === block || before.type !== block.type || !isServerRenderedType(block.type)) continue;
-    if (differs(before.props, block.props)) out.push(id);
+    if (!before || before === block || before.type !== block.type) continue;
+    if (isServerRenderedType(block.type) ? differs(before.props, block.props) : textClassEdit(before, block)) out.push(id);
   }
   return out;
 }

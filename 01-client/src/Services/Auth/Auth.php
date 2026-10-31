@@ -34,6 +34,7 @@ declare(strict_types=1);
 
 namespace Slate\Services\Auth;
 
+use Slate\Services\Auth\AdminHint;
 use Slate\Services\Auth\MfaRepository;
 use Slate\Tenancy\TenantContext;
 
@@ -190,6 +191,7 @@ class Auth {
             'tenant_id'=> (int)$user['tenant_id'],
         ];
         self::recordAdminSession((int)$user['id'], $previousSessionId);
+        AdminHint::set();
 
         self::clearLoginFailures('admin', $user['email']);
         \Hook::doAction('user_logged_in', (int)$user['id']);
@@ -202,6 +204,7 @@ class Auth {
         if ($uid !== null) (new SessionRepository(new TenantContext()))->revokeBySession($uid, session_id());
         unset($_SESSION['slate_user']);
         self::regenerateSessionId();
+        AdminHint::clear();
         if ($uid !== null) \Hook::doAction('user_logged_out', $uid);
     }
 
@@ -476,6 +479,7 @@ class Auth {
             'role_id' => (int)$user['role_id'], 'tenant_id' => (int)$user['tenant_id'],
         ];
         self::recordAdminSession($userId, $previousSessionId);
+        AdminHint::set();
         unset($_SESSION['slate_mfa_pending']);
         \Database::update('users', ['last_login_at' => slate_db_now()], 'id = ?', [$userId]);
         // Same reset-scoping as attemptLogin() — this is the MFA-gated
