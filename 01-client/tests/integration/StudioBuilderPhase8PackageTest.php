@@ -691,7 +691,7 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
 
                 $fresh = array_merge($base, ['slug' => 'fresh-page']);
                 $broken = $fresh;
-                $broken['document']['containers'][0]['layout']['width'] = 'enormous';
+                $broken['document']['containers'][0]['style']['layout']['content_size'] = 'enormous';
                 assert_true(in_array('invalid_document', sbp8_codes(sbp8_report(sbp8_import($rt, SBP8_B, $editor, $one($broken), true)), 'error'), true));
                 $unknown = $fresh;
                 $unknown['document']['containers'][0]['children'][0]['type'] = 'evil.script';
@@ -829,7 +829,7 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 $withBlock = static function (string $slug, array $block) use ($S): array {
                     $item = array_merge($S->minPkg['items'][0], ['slug' => $slug]);
                     $item['document']['template_key'] = 'default';
-                    $item['document']['containers'] = [array_merge($item['document']['containers'][0], ['blocks' => [$block]])];
+                    $item['document']['containers'] = [array_merge($item['document']['containers'][0], ['children' => [$block]])];
                     return $item;
                 };
 

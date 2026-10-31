@@ -61,7 +61,7 @@ unit('header presets: six headers with unique, reserved keys and one-line copy',
         assert_true(mb_strlen($p['description']) <= 80, "{$p['key']} description stays one line");
         assert_eq($p, HeaderPresetCatalog::find($p['key']), "find() returns {$p['key']}");
     }
-    assert_eq(null, HeaderPresetCatalog::find('system-section-hero-classic'), 'find() only knows headers');
+    assert_eq(null, HeaderPresetCatalog::find('system-container-hero-classic'), 'find() only knows headers');
 });
 
 unit('header presets: every header validates through the real pipeline as a header document, idempotently', function (): void {

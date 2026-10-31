@@ -1,6 +1,6 @@
 <?php
 /**
- * Integration tests for Kohevo Studio (studio-builder) — B2-P2a built-in section presets.
+ * Integration tests for Kohevo Studio (studio-builder) — B2-P2a built-in Container presets.
  *
  * Real MySQL (throwaway database), the production wiring and the builder's real HTTP
  * controller. Tenant 101 has studio-builder; 202 has studio-builder too (isolation); 303 has
@@ -234,7 +234,7 @@ function sbpa_ids(array $document): array
 }
 
 
-unit('section presets integration: seeding, protection, isolation and insertion (real MySQL, tenants 101/202/303)', function (): void {
+unit('container presets integration: seeding, protection, isolation and insertion (real MySQL, tenants 101/202/303)', function (): void {
     $dbName = 'slate_sbpa_' . slate_test_ns();
     $pdo = sbpa_fresh_db($dbName);
 
@@ -300,18 +300,18 @@ unit('section presets integration: seeding, protection, isolation and insertion 
 
             // 4. System presets are immutable server-side (overwrite and delete), even for an admin.
             $page = sbpa_make_page($rt, SBPA_TENANT_A, $editor, 'Home', 'home', 'page', [['type' => 'core.heading', 'props' => ['text' => 'Home', 'level' => 'h1']]]);
-            $overwrite = sbpa_call($rt, SBPA_TENANT_A, $admin, 'POST', 'save_template', ['page_id' => $page['id'], 'node_id' => $page['section'], 'template_key' => 'system-section-faq', 'template_type' => 'container_preset', 'category' => 'content', 'name' => 'Mine', 'description' => null, 'thumbnail_media_id' => null]);
+            $overwrite = sbpa_call($rt, SBPA_TENANT_A, $admin, 'POST', 'save_template', ['page_id' => $page['id'], 'node_id' => $page['section'], 'template_key' => 'system-container-faq', 'template_type' => 'container_preset', 'category' => 'content', 'name' => 'Mine', 'description' => null, 'thumbnail_media_id' => null]);
             assert_eq('system_template_immutable', sbpa_first_code($overwrite), 'cannot overwrite a system preset');
-            $delete = sbpa_call($rt, SBPA_TENANT_A, $admin, 'POST', 'delete_template', ['template_key' => 'system-section-faq']);
+            $delete = sbpa_call($rt, SBPA_TENANT_A, $admin, 'POST', 'delete_template', ['template_key' => 'system-container-faq']);
             assert_eq('system_template_immutable', sbpa_first_code($delete), 'cannot delete a system preset');
 
             // 5. A tenant template that already owns a preset key is never clobbered.
             sbpa_seed(SBPA_TENANT_C, $iid, ['studio-builder']);
             $own = sbpa_make_page($rt, SBPA_TENANT_C, $editor, 'Own', 'own', 'page', [['type' => 'core.heading', 'props' => ['text' => 'Mine', 'level' => 'h2']]]);
-            sbpa_ok(sbpa_call($rt, SBPA_TENANT_C, $admin, 'POST', 'save_template', ['page_id' => $own['id'], 'node_id' => $own['section'], 'template_key' => 'system-section-cta', 'template_type' => 'container_preset', 'category' => 'cta', 'name' => 'Tenant owned CTA', 'description' => null, 'thumbnail_media_id' => null]), 'tenant template on a preset key');
+            sbpa_ok(sbpa_call($rt, SBPA_TENANT_C, $admin, 'POST', 'save_template', ['page_id' => $own['id'], 'node_id' => $own['section'], 'template_key' => 'system-container-cta', 'template_type' => 'container_preset', 'category' => 'cta', 'name' => 'Tenant owned CTA', 'description' => null, 'thumbnail_media_id' => null]), 'tenant template on a preset key');
             (new \ReflectionProperty(\Slate\Module\StudioBuilder\Application\StudioApplicationService::class, 'presetsSynced'))->setValue(null, []);
             sbpa_ok(sbpa_call($rt, SBPA_TENANT_C, $editor, 'GET', 'container_presets'), 'seed beside a colliding tenant key');
-            $row = $rt->tenants->runAs(SBPA_TENANT_C, static fn() => $rt->templates->findByKey('system-section-cta'));
+            $row = $rt->tenants->runAs(SBPA_TENANT_C, static fn() => $rt->templates->findByKey('system-container-cta'));
             assert_true((int) $row['is_system'] === 0 && $row['name'] === 'Tenant owned CTA', 'the tenant\'s own template survives untouched');
             assert_eq(count($expected) - 1, $sysCount(SBPA_TENANT_C), 'every other preset is still seeded');
 

@@ -150,7 +150,7 @@ unit('theme builder create: a header can start from a built-in design; an unknow
             assert_eq(303, $status, $design['key']);
             assert_true(str_contains(stcre_flash($body), 'created as draft'), "{$design['key']}: success flash, got: " . stcre_flash($body));
         }
-        [$status] = stcre_post(['_action' => 'create_template', 'name' => "Design unknown {$tag}", 'template_type' => 'header', 'header_design' => 'system-section-hero-classic']);
+        [$status] = stcre_post(['_action' => 'create_template', 'name' => "Design unknown {$tag}", 'template_type' => 'header', 'header_design' => 'system-container-hero-classic']);
         assert_eq(303, $status, 'created (from the blank header)');
         $made = [];
         foreach (stcre_created($tag) as $m) { $made[(string) $m['template']['name']] = $m; }
@@ -198,7 +198,7 @@ unit('theme builder: "Edit in canvas" on a built-in header makes a draft header 
         $system = Database::value("SELECT COUNT(*) FROM studiobuilder_templates WHERE tenant_id = ? AND template_key = 'system-header-split' AND is_system = 0", [$tid]);
         assert_eq(0, (int) $system, 'the built-in design itself is untouched');
 
-        [$status, $body] = stcre_post(['_action' => 'use_header_design', 'header_design' => 'system-section-hero-classic']);
+        [$status, $body] = stcre_post(['_action' => 'use_header_design', 'header_design' => 'system-container-hero-classic']);
         assert_eq(200, $status);
         assert_true(str_contains(stcre_flash($body), 'does not exist'), 'an unknown design is refused: ' . stcre_flash($body));
         assert_eq(1, (int) Database::value('SELECT COUNT(*) FROM studiobuilder_templates WHERE tenant_id = ? AND id > ?', [$tid, $before]), 'nothing more was created');

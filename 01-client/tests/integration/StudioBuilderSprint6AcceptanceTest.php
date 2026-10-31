@@ -425,7 +425,7 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
                 s6_block('theme.post_meta', ['show_category' => true, 'show_author' => false, 'show_date' => false]),
                 s6_block('theme.post_content', []),
             ], 'Single Section');
-            $singleSection['layout']['width'] = 'narrow';
+            $singleSection['style']['layout']['content_size'] = 'narrow';
             $tplSingleEdit = $rt->tenants->runAs(S6_TENANT_A, static fn() => $rt->app->applyDocumentOperation($actorA, $tplSingleId, [
                 new DocumentOperation('insert_block', ['parent_id' => null, 'index' => 0, 'block' => $singleSection]),
                 new DocumentOperation('update_settings', ['settings' => [
