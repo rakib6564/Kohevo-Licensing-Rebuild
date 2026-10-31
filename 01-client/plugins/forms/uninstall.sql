@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS `forms_integration_queue`;
+DROP TABLE IF EXISTS `forms_integrations`;
 -- Forms plugin — uninstall.
 DROP TABLE IF EXISTS `forms_spam_log`;
 DROP TABLE IF EXISTS `forms_webhook_log`;

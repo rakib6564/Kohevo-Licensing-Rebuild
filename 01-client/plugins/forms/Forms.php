@@ -12,6 +12,7 @@
  */
 
 require_once __DIR__ . '/FormsAPI.php';
+require_once __DIR__ . '/lib/FormsIntegrations.php';
 
 class Forms extends Plugin {
 
@@ -24,6 +25,8 @@ class Forms extends Plugin {
         // MCP AI Gateway integration (expose forms tools to AI assistants)
         require_once __DIR__ . '/FormsMcpHandler.php';
         FormsMcpHandler::register();
+
+        FormsIntegrations::register();
 
         // Studio widgets (Add › Components) are declared in studio-widgets.php.
     }
@@ -67,6 +70,17 @@ class Forms extends Plugin {
             'order' => 233,
             'group' => 'form-builder',
         ];
+        if (Auth::can('forms.manage') || Auth::isSuperAdmin()) {
+            $items[] = [
+                'slug'  => 'forms-integrations',
+                'label' => __('forms_integrations', 'Integrations'),
+                'href'  => $this->url('admin/integrations.php'),
+                'icon'  => 'link',
+                'perm'  => 'forms.manage',
+                'order' => 234,
+                'group' => 'form-builder',
+            ];
+        }
         return $items;
     }
 
