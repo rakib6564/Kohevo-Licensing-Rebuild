@@ -31,9 +31,12 @@ use Slate\Module\StudioBuilder\Provider\BookingEmbedTargetProvider;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
 use Slate\Module\StudioBuilder\Provider\FormsFormEmbedProvider;
 use Slate\Module\StudioBuilder\Provider\PublicDataProviderInterface;
+use Slate\Module\StudioBuilder\Presets\ElementVariantCatalog;
+use Slate\Module\StudioBuilder\Registry\BlockParts;
 use Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
 use Slate\Module\StudioBuilder\Render\DocumentRenderer;
+use Slate\Module\StudioBuilder\Render\EmbedStyle;
 use Slate\Module\StudioBuilder\Render\Media\MediaResolverInterface;
 use Slate\Module\StudioBuilder\Render\Media\ResolvedMedia;
 use Slate\Module\StudioBuilder\Render\ProviderBindingResolver;
@@ -249,7 +252,7 @@ unit('forms.embed (public): a same-origin frame onto the form\'s own page, never
     sbeb_seed();
     $page = sbeb_page();
     $html = sbeb_render(sbeb_form_block(1), 'public', $page);
-    assert_true(str_contains($html, '<iframe class="sb-embed-frame sb-embed-frame--form" src="https://acme.test/forms/contact-us?embed=1"'), 'a frame onto the Forms module\'s embed page');
+    assert_true(str_contains($html, '<iframe class="sb-embed-frame sb-embed-frame--form" src="https://acme.test/forms/contact-us?embed=1&amp;sb_style='), 'a frame onto the Forms module\'s embed page');
     assert_true(str_contains($html, 'loading="lazy"') && str_contains($html, 'min-height:420px'), 'lazy, with room before it has loaded');
     assert_false(str_contains($html, '<form') || str_contains($html, 'csrf'), 'no form and no CSRF token in the cacheable page (the token would belong to no visitor)');
     assert_false(str_contains($html, 'forms-logic') || str_contains($html, '<script'), 'no script or stylesheet of the Forms module on the page');
@@ -260,7 +263,7 @@ unit('forms.embed (public): a same-origin frame onto the form\'s own page, never
 unit('forms.embed (preview): the working form too, in its frame', function (): void {
     sbeb_seed();
     $html = sbeb_render(sbeb_form_block(1), 'preview');
-    assert_true(str_contains($html, 'src="https://acme.test/forms/contact-us?embed=1"'));
+    assert_true(str_contains($html, 'src="https://acme.test/forms/contact-us?embed=1&amp;sb_style='));
 });
 
 unit('forms.embed (editor): a static preview card, never the form, a script or a frame', function (): void {
@@ -269,7 +272,7 @@ unit('forms.embed (editor): a static preview card, never the form, a script or a
     $html = sbeb_render(sbeb_form_block(1), 'editor');
     assert_eq($before, FormsAPI::$renders, 'the Forms renderer is not called for the script-less canvas');
     assert_true(str_contains($html, 'Contact &lt;us&gt;') && str_contains($html, 'Say &quot;hi&quot;'), 'name and description, escaped');
-    assert_true(str_contains($html, '<li>Your &lt;name&gt; *</li>') && str_contains($html, '<li>Email</li>'), 'the visible fields, required marked, escaped');
+    assert_true(str_contains($html, 'field-label">Your &lt;name&gt; *</span>') && str_contains($html, 'field-label">Email</span>'), 'the visible fields, required marked, escaped');
     assert_true(!str_contains($html, 'utm') && !str_contains($html, 'Step 2'), 'hidden and step fields are not listed');
     foreach (['<script', '<iframe', '<form', '<input', '<link', 'contact-us'] as $forbidden) {
         assert_true(!str_contains($html, $forbidden), "no {$forbidden} in the editor preview");
@@ -344,7 +347,7 @@ unit('booking.embed (public): the safe booking iframe for one service, with the 
     $page = sbeb_page();
     $one = sbeb_render(sbeb_booking_block(10), 'public', $page);
     $two = sbeb_render(sbeb_booking_block(10), 'public', $page);
-    assert_true(str_contains($one, '<iframe class="sb-embed-frame" src="https://acme.test/book?embed=1&amp;service=10" data-kohevo-booking'), 'the booking route with embed=1 and the service');
+    assert_true(str_contains($one, '<iframe class="sb-embed-frame" src="https://acme.test/book?embed=1&amp;service=10&amp;sb_style='), 'the booking route with embed=1 and the service');
     assert_true(str_contains($one, 'loading="lazy"') && str_contains($one, 'style="min-height:560px"'), 'lazy, with the reserved height');
     assert_true(str_contains($one, '<script src="https://acme.test/plugins/booking/assets/js/embed.js" async></script>'), 'the booking plugin\'s own sizing helper');
     assert_true(!str_contains($two, 'embed.js') && str_contains($two, '<iframe'), 'the helper is emitted once');
@@ -354,9 +357,9 @@ unit('booking.embed (public): the safe booking iframe for one service, with the 
 unit('booking.embed (public): no service chosen embeds the whole booking page; the height is bounded', function (): void {
     sbeb_seed();
     $whole = sbeb_render(sbeb_booking_block(null), 'public');
-    assert_true(str_contains($whole, 'src="https://acme.test/book?embed=1"') && !str_contains($whole, 'service='), 'whole page');
+    assert_true(str_contains($whole, 'src="https://acme.test/book?embed=1&amp;sb_style=') && !str_contains($whole, 'service='), 'whole page');
     $unbound = sbeb_render(sbeb_booking_block(null, ['min_height' => 560], false), 'public');
-    assert_true(str_contains($unbound, 'src="https://acme.test/book?embed=1"'), 'a block with no binding at all is the whole page too');
+    assert_true(str_contains($unbound, 'src="https://acme.test/book?embed=1&amp;sb_style='), 'a block with no binding at all is the whole page too');
     assert_true(str_contains(sbeb_render(sbeb_booking_block(null, ['min_height' => 99999]), 'public'), 'min-height:2400px'), 'clamped high');
     assert_true(str_contains(sbeb_render(sbeb_booking_block(null, ['min_height' => 5]), 'public'), 'min-height:200px'), 'clamped low');
     assert_true(str_contains(sbeb_render(sbeb_booking_block(null, []), 'public'), 'min-height:560px'), 'default');
@@ -444,5 +447,46 @@ unit('forms embed: the site stylesheet defines the variables the Forms styleshee
     assert_true(str_contains($css, '.sb-block--forms-embed{--f-accent:var(--sb-color-accent)'), 'the accent variable is mapped to the site accent');
     foreach (['--f-accent-d', '--f-ink', '--f-muted', '--f-line', '--f-surface', '--f-soft', '--f-ring'] as $variable) {
         assert_true(str_contains($css, $variable . ':'), "{$variable} is defined for the embed");
+    }
+});
+
+unit('embed design: a block\'s parts become one sheet, scoped to outweigh the plugin\'s own embed rules', function (): void {
+    $block = ['style_parts' => ['button' => ['color' => '#ff0000'], 'button:hover' => ['color' => '#00ff00']]];
+    $css = EmbedStyle::compile($block, 'forms.embed', ':root{--sb-color-accent:#123}');
+    assert_true(str_starts_with($css, ':root{--sb-color-accent:#123}'), 'the site tokens come first');
+    assert_true(str_contains($css, ':root:root body .btn.btn-primary{'), 'the part is scoped');
+    assert_true(str_contains($css, ':root:root body .btn.btn-primary:hover{'), 'its hover too');
+});
+
+unit('embed design: only a name that fits is read, so a frame address cannot open another file', function (): void {
+    $root = sys_get_temp_dir() . '/sbeb-' . bin2hex(random_bytes(4));
+    mkdir($root . '/uploads/studio-embed', 0755, true);
+    file_put_contents($root . '/uploads/studio-embed/' . str_repeat('a', 32) . '.css', 'body{color:red}');
+    file_put_contents($root . '/secret.css', 'nope');
+    $_GET[EmbedStyle::PARAM] = str_repeat('a', 32);
+    assert_eq('<style id="sb-embed-style">body{color:red}</style>', EmbedStyle::styleTag($root));
+    foreach (['../../secret', str_repeat('A', 32), str_repeat('b', 32), ['x']] as $bad) {
+        $_GET[EmbedStyle::PARAM] = $bad;
+        assert_eq('', EmbedStyle::styleTag($root));
+    }
+    unset($_GET[EmbedStyle::PARAM]);
+});
+
+unit('embed design: Form and Booking offer style parts and are listed with the form elements', function (): void {
+    foreach (['forms.embed', 'booking.embed'] as $type) {
+        assert_true(isset(BlockParts::for($type)['card'], BlockParts::for($type)['button']), "{$type} has parts");
+    }
+    $types = array_column(ElementVariantCatalog::all(), 'type', 'key');
+    assert_eq('forms.embed', $types['saved-form']);
+    assert_eq('booking.embed', $types['booking']);
+    $booking = (string) file_get_contents(SLATE_ROOT . '/plugins/booking/public/router.php');
+    $forms = (string) file_get_contents(SLATE_ROOT . '/plugins/forms/public/router.php') . file_get_contents(SLATE_ROOT . '/plugins/forms/FormsAPI.php');
+    foreach ([['forms.embed', $forms . file_get_contents(SLATE_ROOT . '/plugins/forms/assets/js/forms-logic.js')], ['booking.embed', $booking . file_get_contents(SLATE_ROOT . '/plugins/booking/assets/css/public.css')]] as [$type, $source]) {
+        foreach (BlockParts::for($type) as $key => $def) {
+            preg_match_all('/\.((?:forms|book|field|btn|alert)[a-z0-9_-]*)/', implode(' ', $def['selectors']), $m);
+            foreach ($m[1] as $class) {
+                assert_true(str_contains($source, $class), "{$type}.{$key}: the plugin page has no .{$class}");
+            }
+        }
     }
 });
