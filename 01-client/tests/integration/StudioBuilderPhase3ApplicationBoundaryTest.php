@@ -535,7 +535,7 @@ unit('phase3 integration: application boundary, entitlement, RBAC, data provider
 
             // ── 6. applyDocumentOperation end-to-end ─────────────────────────
 
-            $opInsertSection = new DocumentOperation(DocumentOperation::OP_INSERT_SECTION, ['index' => 1, 'section' => ['label' => 'New Section']]);
+            $opInsertSection = new DocumentOperation(DocumentOperation::OP_INSERT_BLOCK, ['parent_id' => null, 'index' => 1, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'New Section']]]);
             $opResult = $tenants->runAs(SBP3_TENANT_A, static fn(): array => $app->applyDocumentOperation($editor, $pageIdA, [$opInsertSection], $savedWithMedia['revision']['id']));
             assert_true($opResult['revision']['id'] > 0);
             $opRevId = (int) $opResult['revision']['id'];
@@ -549,7 +549,7 @@ unit('phase3 integration: application boundary, entitlement, RBAC, data provider
             });
 
             $badBlockOp = new DocumentOperation(DocumentOperation::OP_INSERT_BLOCK, [
-                'parent_id' => 'sec_does_not_matter_00000000',
+                'parent_id' => 'blk_does_not_matter_00000000',
                 'index'     => 0,
                 'block'     => ['type' => 'not.a.real.block'],
             ]);

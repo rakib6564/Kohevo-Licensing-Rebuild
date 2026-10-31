@@ -259,15 +259,11 @@ unit('sprint2 integration: visual styling (typography, border, shadow, responsiv
 
             $sectionBlock = [
                 'id' => CanonicalDocumentSchema::newBlockId(),
-                'type' => 'layout.section',
-                'version' => 1,
-                'props' => [
-                    'tag' => 'section',
-                    'content_width' => 'boxed',
-                    'min_height' => 'screen',
-                    'padding_y' => 'xl',
-                ],
-                'style' => CanonicalDocumentSchema::defaultBlockStyle(),
+                'type' => 'core.container',
+                'version' => CanonicalDocumentSchema::CONTAINER_VERSION,
+                'tag' => 'section',
+                'props' => [],
+                'style' => ['layout' => ['content_width' => 'boxed', 'content_size' => 'wide', 'padding_y' => 'xl'], 'dimensions' => ['min_height' => '100vh']] + CanonicalDocumentSchema::defaultBlockStyle(),
                 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
                 'bindings' => [],
                 'children' => [$containerBlock],

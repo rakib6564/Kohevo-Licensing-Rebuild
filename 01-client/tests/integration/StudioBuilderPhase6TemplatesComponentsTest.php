@@ -442,14 +442,14 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
                 $r1 = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'insert_template', ['page_id' => $S->about, 'template_key' => 'intro-section', 'index' => 1, 'expected_revision_id' => $rev]), 'insert section preset');
                 $rev = (int) $r1['revision']['id'];
                 $inserted = $r1['document']['containers'][1];
-                assert_eq('About section', $inserted['label']);
+                assert_eq('About section', $inserted['metadata']['label']);
                 assert_null($inserted['global_ref'], 'a preset copy is local content');
-                assert_eq('About Alpha', $inserted['blocks'][0]['props']['text']);
-                assert_true(!in_array($inserted['id'], $tplIds, true) && !in_array($inserted['blocks'][0]['id'], $tplIds, true), 'fresh ids');
+                assert_eq('About Alpha', $inserted['children'][0]['props']['text']);
+                assert_true(!in_array($inserted['id'], $tplIds, true) && !in_array($inserted['children'][0]['id'], $tplIds, true), 'fresh ids');
 
                 $r2 = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'insert_template', ['page_id' => $S->about, 'template_key' => 'intro-section', 'index' => 2, 'expected_revision_id' => $rev]), 'insert again');
                 $rev = (int) $r2['revision']['id'];
-                assert_true($r2['document']['containers'][2]['id'] !== $inserted['id'] && $r2['document']['containers'][2]['children'][0]['id'] !== $inserted['blocks'][0]['id'], 'every insertion is an independent copy');
+                assert_true($r2['document']['containers'][2]['id'] !== $inserted['id'] && $r2['document']['containers'][2]['children'][0]['id'] !== $inserted['children'][0]['id'], 'every insertion is an independent copy');
                 assert_eq(0, sbp6_count('SELECT COUNT(*) FROM studiobuilder_dependencies WHERE tenant_id = ? AND page_id = ? AND revision_id = ? AND dependency_type = \'partial\' AND dependency_key NOT LIKE \'chrome:%\'', [SBP6_TENANT_A, $S->about, $rev]), 'a copy records no hidden dependency on the template');
 
                 // Block preset into a container, and refused into a non-container.
@@ -487,11 +487,11 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
                     ['op' => 'update_block_props', 'payload' => ['block_id' => $S->aboutHeading, 'props' => ['text' => 'Moved intro heading', 'level' => 'h2']]],
                 ]]), 'mark heading');
                 $S->aboutRev = (int) $mark['revision']['id'];
-                $stale = sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'create_component', ['title' => 'Site intro', 'slug' => 'site-intro', 'page_id' => $S->about, 'section_id' => $S->aboutSection, 'expected_revision_id' => $S->aboutRev - 1]);
+                $stale = sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'create_component', ['title' => 'Site intro', 'slug' => 'site-intro', 'page_id' => $S->about, 'container_id' => $S->aboutSection, 'expected_revision_id' => $S->aboutRev - 1]);
                 assert_eq(409, $stale->status, 'stale revision: nothing created');
                 assert_eq(0, sbp6_count('SELECT COUNT(*) FROM studiobuilder_pages WHERE tenant_id = ? AND page_type = \'container_preset\'', [SBP6_TENANT_A]), 'the failed transaction left no component page');
 
-                $created = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'create_component', ['title' => 'Site intro', 'slug' => 'site-intro', 'page_id' => $S->about, 'section_id' => $S->aboutSection, 'expected_revision_id' => $S->aboutRev]), 'create component from section');
+                $created = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'create_component', ['title' => 'Site intro', 'slug' => 'site-intro', 'page_id' => $S->about, 'container_id' => $S->aboutSection, 'expected_revision_id' => $S->aboutRev]), 'create component from section');
                 $component = $created['component'];
                 $S->componentId = (int) $component['id'];
                 $S->ref = (string) $component['ref'];
@@ -502,8 +502,8 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
                 $S->aboutRev = (int) $created['revision']['id'];
                 $refSection = $created['document']['containers'][0];
                 assert_eq($S->ref, $refSection['global_ref'], 'the page section is now a live reference');
-                assert_eq([], $refSection['blocks'], 'and owns no copy of the content');
-                assert_eq('About section', $refSection['label']);
+                assert_eq([], $refSection['children'], 'and owns no copy of the content');
+                assert_eq('About section', $refSection['metadata']['label']);
                 $componentDoc = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'GET', 'document', ['page' => $S->componentId]), 'component doc')['document'];
                 assert_eq('container_preset', $componentDoc['document_type']);
                 assert_eq('Moved intro heading', $componentDoc['containers'][0]['children'][0]['props']['text'], 'the component holds the moved content');
@@ -533,7 +533,7 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
                 assert_eq(0, sbp6_count('SELECT COUNT(*) FROM studiobuilder_compilations WHERE tenant_id = ? AND page_id = ?', [SBP6_TENANT_A, $S->about]), 'publishing the component dropped the dependent artifact');
                 assert_eq(1, sbp6_count('SELECT COUNT(*) FROM studiobuilder_compilations WHERE tenant_id = ? AND page_id = ?', [SBP6_TENANT_A, $S->target]), 'an unrelated page keeps its artifact');
                 $public = sbp6_public($rt, SBP6_TENANT_A, '/about');
-                assert_true(str_contains($public, 'Moved intro heading') && str_contains($public, 'sb-section--global'), 'the public page now embeds the published component');
+                assert_true(str_contains($public, 'Moved intro heading') && str_contains($public, 'sb-global'), 'the public page now embeds the published component');
                 assert_true(!str_contains($public, 'data-sb-node'));
                 $canvas = sbp6_canvas($rt, SBP6_TENANT_A, $editor, $S->about);
                 assert_true(str_contains($canvas, 'Moved intro heading') && str_contains($canvas, 'data-sb-node="' . $refSection['id'] . '"'), 'the builder canvas embeds it under the selectable placeholder');
@@ -564,7 +564,7 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
                 assert_eq(422, $r->status);
                 assert_eq('cross_tenant_or_missing_partial', sbp6_first_code($r));
                 assert_eq(0, sbp6_count('SELECT COUNT(*) FROM studiobuilder_dependencies WHERE tenant_id = ? AND dependency_key = ?', [SBP6_TENANT_B, $S->ref]), 'no cross-tenant dependency row');
-                assert_eq(404, sbp6_call($rt, SBP6_TENANT_B, $editor, 'POST', 'detach_component', ['page_id' => $S->about, 'section_id' => 'blk_0123456789abcdef01234567', 'expected_revision_id' => 1])->status);
+                assert_eq(404, sbp6_call($rt, SBP6_TENANT_B, $editor, 'POST', 'detach_component', ['page_id' => $S->about, 'container_id' => 'blk_0123456789abcdef01234567', 'expected_revision_id' => 1])->status);
 
                 // A reference with local blocks, or a reference inside a component/partial, is refused.
                 $st = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'GET', 'status', ['page' => $S->about]), 'status')['page'];
@@ -592,15 +592,15 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
                 assert_eq('published', (string) $rt->tenants->runAs(SBP6_TENANT_A, static fn() => $rt->pages->find($S->componentId))['status'], 'the refused archive changed nothing');
 
                 // Detach on the second page: the reference becomes an owned copy of the PUBLISHED content; stale detach is refused.
-                assert_eq(409, sbp6_call($rt, SBP6_TENANT_A, $editor2, 'POST', 'detach_component', ['page_id' => $second['id'], 'section_id' => $secondRefSection, 'expected_revision_id' => $second['rev']])->status);
-                $d = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'detach_component', ['page_id' => $second['id'], 'section_id' => $secondRefSection, 'expected_revision_id' => $secondRev]), 'detach');
+                assert_eq(409, sbp6_call($rt, SBP6_TENANT_A, $editor2, 'POST', 'detach_component', ['page_id' => $second['id'], 'container_id' => $secondRefSection, 'expected_revision_id' => $second['rev']])->status);
+                $d = sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'detach_component', ['page_id' => $second['id'], 'container_id' => $secondRefSection, 'expected_revision_id' => $secondRev]), 'detach');
                 $secondRev = (int) $d['revision']['id'];
                 $local = $d['document']['containers'][1];
                 assert_null($local['global_ref']);
-                assert_eq('About Alpha v2', $local['blocks'][0]['props']['text'], 'the copy is the published component content');
+                assert_eq('About Alpha v2', $local['children'][0]['props']['text'], 'the copy is the published component content');
                 assert_true($local['id'] !== $secondRefSection, 'a new, owned section');
                 assert_eq(0, sbp6_count('SELECT COUNT(*) FROM studiobuilder_dependencies WHERE tenant_id = ? AND page_id = ? AND revision_id = ? AND dependency_key = ?', [SBP6_TENANT_A, $second['id'], $secondRev, $S->ref]), 'the dependency is gone with the reference');
-                assert_eq('not_a_global_reference', sbp6_first_code(sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'detach_component', ['page_id' => $second['id'], 'section_id' => $local['id'], 'expected_revision_id' => $secondRev])));
+                assert_eq('not_a_global_reference', sbp6_first_code(sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'detach_component', ['page_id' => $second['id'], 'container_id' => $local['id'], 'expected_revision_id' => $secondRev])));
                 assert_eq(1, sbp6_ok(sbp6_call($rt, SBP6_TENANT_A, $editor, 'GET', 'components'), 'components')['components'][0]['usage_count']);
 
                 // A component created blank (no source section) writes no page revision.
@@ -742,7 +742,7 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
                     'save_template'    => ['page_id' => $S->about, 'node_id' => null, 'template_key' => 'zzz', 'template_type' => 'page_template', 'name' => 'Z'],
                     'delete_template'  => ['template_key' => 'intro-section'],
                     'create_component' => ['title' => 'Z', 'slug' => 'zzz'],
-                    'detach_component' => ['page_id' => $S->about, 'section_id' => $S->aboutSection, 'expected_revision_id' => $rev],
+                    'detach_component' => ['page_id' => $S->about, 'container_id' => $S->aboutSection, 'expected_revision_id' => $rev],
                     'save_tokens'      => ['group' => 'default', 'tokens' => ['surface.page' => '#000000']],
                 ];
                 foreach ($writes as $action => $body) {
@@ -759,8 +759,8 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
                 assert_eq(404, sbp6_call($rt, SBP6_TENANT_B, $editor, 'POST', 'apply_template', ['page_id' => $S->about, 'template_key' => 'about-page', 'expected_revision_id' => $rev])->status);
                 assert_eq(404, sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'apply_template', ['page_id' => 999999, 'template_key' => 'about-page', 'expected_revision_id' => $rev])->status);
                 assert_eq(404, sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'apply_template', ['page_id' => $S->about, 'template_key' => 'no-such-template', 'expected_revision_id' => $rev])->status);
-                assert_eq(404, sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'detach_component', ['page_id' => $S->about, 'section_id' => 'blk_0000000000000000000000ff', 'expected_revision_id' => $rev])->status);
-                assert_eq(404, sbp6_call($rt, SBP6_TENANT_B, $editor, 'POST', 'create_component', ['title' => 'Z', 'slug' => 'zzz', 'page_id' => $S->about, 'section_id' => $S->aboutSection, 'expected_revision_id' => $rev])->status);
+                assert_eq(404, sbp6_call($rt, SBP6_TENANT_A, $editor, 'POST', 'detach_component', ['page_id' => $S->about, 'container_id' => 'blk_0000000000000000000000ff', 'expected_revision_id' => $rev])->status);
+                assert_eq(404, sbp6_call($rt, SBP6_TENANT_B, $editor, 'POST', 'create_component', ['title' => 'Z', 'slug' => 'zzz', 'page_id' => $S->about, 'container_id' => $S->aboutSection, 'expected_revision_id' => $rev])->status);
                 assert_eq(404, sbp6_call($rt, SBP6_TENANT_B, $admin, 'POST', 'save_template', ['page_id' => $S->about, 'node_id' => null, 'template_key' => 'zzz', 'template_type' => 'page_template', 'name' => 'Z'])->status);
                 assert_eq($before, $count(), 'no refused request wrote anything');
             });

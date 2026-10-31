@@ -457,10 +457,10 @@ unit('sprint6 integration: theme builder, conditional headers, archives, 404, an
             $stored = static fn(int $pageId): array => json_decode((string) $pdo->query('SELECT r.document_json FROM studiobuilder_revisions r JOIN studiobuilder_pages p ON p.published_revision_id = r.id WHERE p.id = ' . $pageId)->fetchColumn(), true);
             $ownSection = $stored($p1Id)['containers'][0];
             assert_true(str_contains($editor->html, 'data-sb-node="' . $ownSection['id'] . '"'), 'the page\'s own section is selectable');
-            assert_true(str_contains($editor->html, 'data-sb-node="' . $ownSection['blocks'][2]['id'] . '"'), 'and its blocks');
+            assert_true(str_contains($editor->html, 'data-sb-node="' . $ownSection['children'][2]['id'] . '"'), 'and its blocks');
             $templateSection = $stored($tplSingleId)['containers'][0];
             assert_false(str_contains($editor->html, 'data-sb-node="' . $templateSection['id'] . '"'), 'the template\'s section is not');
-            foreach ($templateSection['blocks'] as $templateBlock) {
+            foreach ($templateSection['children'] as $templateBlock) {
                 assert_false(str_contains($editor->html, 'data-sb-node="' . $templateBlock['id'] . '"'), 'nor is any template block, dynamic ones included: ' . $templateBlock['type']);
             }
             assert_false(str_contains($editor->html, 'data-sb-node="' . $stored($hdrEngId)['containers'][0]['id'] . '"'), 'nor the header');

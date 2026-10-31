@@ -7,7 +7,7 @@
  *   - Global design tokens (saveDesignTokens, ThemeResolver, :root CSS compilation).
  *   - Reusable sections (saveTemplateFromPage, insertTemplate as owned copies).
  *   - Global components (createGlobalComponent, live global_ref references, live multi-page propagation).
- *   - Component detach (detachGlobalSection converts reference into owned local tree with fresh IDs).
+ *   - Component detach (detachGlobalContainer converts reference into owned local tree with fresh IDs).
  *   - Multi-page consistent rendering and public serving under HTTP 200.
  *   - Strict multi-tenant isolation.
  */
@@ -312,7 +312,7 @@ unit('sprint4 integration: multi-page website from reusable design primitives (t
             assert_true(str_contains($aboutServed2->body, 'Get Started Today'), 'about immediately renders updated global component CTA');
 
             // 7. Component Detach on About Page
-            $detachRes = $rt->tenants->runAs(S4_TENANT_A, static fn(): array => $rt->app->detachGlobalSection($actorA, $aboutPageId, $aboutRefSecId, $aboutRevId));
+            $detachRes = $rt->tenants->runAs(S4_TENANT_A, static fn(): array => $rt->app->detachGlobalContainer($actorA, $aboutPageId, $aboutRefSecId, $aboutRevId));
             $aboutRevId = (int) $detachRes['revision']['id'];
             $detachedDoc = CanonicalJson::decode((string) $detachRes['revision']['document_json']);
             assert_null($detachedDoc['containers'][0]['global_ref'] ?? null, 'detached section no longer has global_ref');

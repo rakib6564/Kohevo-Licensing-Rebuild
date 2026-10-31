@@ -183,8 +183,8 @@ unit('studio-builder phase 1 integration: provisioning, schema verification, RBA
             $plugin = \PluginLoader::get('studio-builder');
             assert_true($plugin instanceof \StudioBuilder, 'Booted plugin instance must be StudioBuilder');
             assert_true(StudioSchemaManager::schemaIsCurrent(), 'All 7 studiobuilder_* tables and columns must be verified');
-            assert_eq('1.0.0', (string) $plugin->setting('applied_version'));
-            assert_eq('1.0.0', (string) $plugin->setting('schema_verified'));
+            assert_eq('1.1.0', (string) $plugin->setting('applied_version'));
+            assert_eq('1.1.0', (string) $plugin->setting('schema_verified'));
 
             // Now both license entitlement AND active plugin are satisfied
             assert_true(ModuleGuard::isEntitled('studio-builder'));

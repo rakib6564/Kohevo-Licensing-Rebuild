@@ -909,7 +909,7 @@ unit('phase8a integration: JSON package export / import (real MySQL, tenants 101
                 $host = $old('Host');
                 $host['containers'][] = CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Ref'], 'global_ref' => $component['uuid'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => []]);
                 $hostPage = $rt2->tenants->runAs(SBP8_B, static fn(): array => sbp8_stored_page(SBP8_B, 'stored-host', 'page', $host, false));
-                sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'detach_component', ['page_id' => $hostPage['id'], 'section_id' => $host['containers'][1]['id'], 'expected_revision_id' => $hostPage['rev']]), 'detach stored component');
+                sbp8_ok(sbp8_call($rt2, SBP8_B, $editor, 'POST', 'detach_component', ['page_id' => $hostPage['id'], 'container_id' => $host['containers'][1]['id'], 'expected_revision_id' => $hostPage['rev']]), 'detach stored component');
                 $detached = sbp8_draft($rt2, SBP8_B, $hostPage['id']);
                 assert_eq([2, ['text' => 'Component at v1']], $probeOf($detached, 1), 'detached copy at v2');
                 assert_eq([2, ['text' => 'Host']], $probeOf($detached, 0), 'and the host page\'s own block too');

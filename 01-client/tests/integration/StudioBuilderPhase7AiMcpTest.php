@@ -516,7 +516,7 @@ unit('phase7 integration: AI + MCP through the real gateway (real MySQL, tenants
                 $e = sbp7_err(sbp7_call($b, 'studio_apply_template', ['page_id' => $S->beta['id'], 'template_key' => 'home-page', 'expected_revision_id' => $S->beta['rev']]), 'B applies A template');
                 assert_eq('not_found', $e['error']);
                 $st = sbp7_ok(sbp7_call($a, 'studio_get_page', ['page_id' => $S->home['id']]), 'status')['page'];
-                $cmp = sbp7_ok(sbp7_call($a, 'studio_create_global_component', ['title' => 'Site intro', 'slug' => 'site-intro', 'page_id' => $S->home['id'], 'section_id' => $S->home['section'], 'expected_revision_id' => (int) $st['active_draft_revision_id']]), 'A creates component');
+                $cmp = sbp7_ok(sbp7_call($a, 'studio_create_global_component', ['title' => 'Site intro', 'slug' => 'site-intro', 'page_id' => $S->home['id'], 'container_id' => $S->home['section'], 'expected_revision_id' => (int) $st['active_draft_revision_id']]), 'A creates component');
                 $S->componentId = (int) $cmp['component']['id'];
                 $S->ref = (string) $cmp['component']['ref'];
                 assert_eq('ai_operation', $cmp['revision']['revision_kind'], 'the page rewrite is an AI revision');
@@ -807,7 +807,7 @@ unit('phase7 integration: AI + MCP through the real gateway (real MySQL, tenants
                 assert_true($localSection !== null);
                 Database::query('DROP TABLE IF EXISTS admin_sessions'); // the lazy DDL fires again inside the audited command
                 $_SESSION = ['slate_user' => ['id' => $S->editorA, 'tenant_id' => SBP7_A]];
-                $r = sbp7_ok(sbp7_assistant($rt, SBP7_A, $withEdit, 'studio_create_global_component', ['title' => 'Assistant component', 'slug' => 'assistant-component', 'page_id' => $S->home['id'], 'section_id' => $localSection, 'expected_revision_id' => (int) $status['active_draft_revision_id']]), 'assistant creates a component inside an owned transaction with a live session');
+                $r = sbp7_ok(sbp7_assistant($rt, SBP7_A, $withEdit, 'studio_create_global_component', ['title' => 'Assistant component', 'slug' => 'assistant-component', 'page_id' => $S->home['id'], 'container_id' => $localSection, 'expected_revision_id' => (int) $status['active_draft_revision_id']]), 'assistant creates a component inside an owned transaction with a live session');
                 assert_eq('ai_operation', $r['revision']['revision_kind']);
                 assert_eq('container_preset', $r['component']['page_type']);
                 Database::query('DROP TABLE IF EXISTS admin_sessions');

@@ -4,7 +4,7 @@
  *
  * Verifies Sprint 1 Acceptance Criteria (Section 57):
  *   A developer must be able to create:
- *     Hero Section (layout.section)
+ *     Hero Section (core.container)
  *      └─ Container (layout.container)
  *          ├─ Heading (core.heading)
  *          ├─ Text (core.text)
@@ -234,16 +234,11 @@ unit('sprint1 integration: full nested visual tree (Hero -> Container -> Heading
 
             $sectionBlock = [
                 'id' => CanonicalDocumentSchema::newBlockId(),
-                'type' => 'layout.section',
-                'version' => 1,
-                'props' => [
-                    'tag' => 'section',
-                    'content_width' => 'boxed',
-                    'min_height' => 'screen',
-                    'padding_y' => 'xl',
-                    'background_token' => null,
-                ],
-                'style' => CanonicalDocumentSchema::defaultBlockStyle(),
+                'type' => 'core.container',
+                'version' => CanonicalDocumentSchema::CONTAINER_VERSION,
+                'tag' => 'section',
+                'props' => [],
+                'style' => ['layout' => ['content_width' => 'boxed', 'content_size' => 'wide', 'padding_y' => 'xl'], 'dimensions' => ['min_height' => '100vh']] + CanonicalDocumentSchema::defaultBlockStyle(),
                 'visibility' => CanonicalDocumentSchema::defaultVisibility(),
                 'bindings' => [],
                 'children' => [$containerBlock],
@@ -267,7 +262,7 @@ unit('sprint1 integration: full nested visual tree (Hero -> Container -> Heading
             assert_true(count($revisions) >= 3, 'immutable revision history persisted (created + section + blocks)');
             $editorState = $rt->tenants->runAs(S1_TENANT_A, fn(): array => $rt->app->loadEditorDocument($actorA, $pageId));
             $latestDoc = $editorState['document'];
-            assert_eq('layout.section', $latestDoc['containers'][0]['children'][0]['type']);
+            assert_eq('core.container', $latestDoc['containers'][0]['children'][0]['type']);
             assert_eq('layout.container', $latestDoc['containers'][0]['children'][0]['children'][0]['type']);
             assert_eq(3, count($latestDoc['containers'][0]['children'][0]['children'][0]['children']));
 
@@ -282,7 +277,8 @@ unit('sprint1 integration: full nested visual tree (Hero -> Container -> Heading
             $html = $served->body;
 
             // Verify compiled layout structure
-            assert_true(str_contains($html, 'sb-layout-section sb-layout-section--boxed sb-py-xl sb-layout-section--min-screen'), 'hero section classes present');
+            assert_true(str_contains($html, '<section class="sb-block sb-block--core-container'), 'the hero Container keeps its tag');
+            assert_true(str_contains($html, '--sb-box:var(--sb-layout-wide,80rem)') && str_contains($html, 'min-height:100vh'), 'hero width and height present');
             assert_true(str_contains($html, 'sb-container sb-container--constrained sb-container--align-center sb-pad-md'), 'layout container classes present');
             assert_true(str_contains($html, 'Build something remarkable'), 'heading text present');
             assert_true(str_contains($html, 'Visual composition runtime for modern multi-tenant sites.'), 'body text present');

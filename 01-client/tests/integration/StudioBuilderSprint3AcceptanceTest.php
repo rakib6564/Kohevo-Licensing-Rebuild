@@ -3,10 +3,10 @@
  * Integration test for Kohevo Studio (studio-builder) — Sprint 3 Acceptance.
  *
  * Verifies Sprint 3 Acceptance Criteria (Section 59):
- *   - Operations: duplicate_block, duplicate_section, update_section_label, update_block_visibility.
+ *   - Operations: duplicate_block, update_block_meta, update_block_visibility.
  *   - Duplicate Block creates a deep clone of subtree with fresh block IDs, identical props/styles/responsive overrides.
- *   - Duplicate Section creates a cloned section with minted section ID and freshly minted block IDs.
- *   - Section label update renames section safely and rejects SQL/script injection fragments.
+ *   - Duplicating a top-level Container creates a clone with a minted id and freshly minted block ids.
+ *   - A label update renames a Container safely and rejects SQL/script injection fragments.
  *   - Hidden blocks are omitted from public HTML render.
  *   - Rollback / undo server round-trip restores previous draft revision.
  *   - Public runtime serves duplicated blocks and sections under HTTP 200.
@@ -268,11 +268,11 @@ unit('sprint3 integration: navigator operations (duplicate, move, rename, visibi
             $clonedSec = $dupSecDoc['containers'][1];
             $clonedSecId = (string) $clonedSec['id'];
             assert_true($clonedSecId !== $secId, 'cloned section has new unique section ID');
-            assert_true(str_starts_with($clonedSecId, 'sec_'), 'cloned section ID has canonical sec_ prefix');
-            assert_eq('Spotlight Hero (Copy)', $clonedSec['label'], 'cloned section has (Copy) suffix in label');
+            assert_true(str_starts_with($clonedSecId, 'blk_'), 'cloned Container ID has the canonical blk_ prefix');
+            assert_eq('Spotlight Hero', $clonedSec['metadata']['label'], 'a cloned Container keeps its label, like any block');
 
             // Cloned section children must also have freshly minted IDs
-            $clonedSecContainer = $clonedSec['blocks'][0];
+            $clonedSecContainer = $clonedSec['children'][0];
             assert_true($clonedSecContainer['id'] !== $dupDoc['containers'][0]['children'][0]['id'], 'cloned section container has fresh ID');
 
             // 7. Test rollback / undo server operation
