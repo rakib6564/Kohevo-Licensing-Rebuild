@@ -38,10 +38,14 @@ import { Field, Popover } from '../ui/index.js';
 import { DeviceStyle } from './DeviceStyle.jsx';
 import { colourFieldProps, partField } from '../../core/effectiveColour.mjs';
 import { useCanvasComputed } from '../../hooks/useCanvasComputed.js';
+import { ALIGN_PROP_TYPES, alignPropBlocks, effectiveAlign } from '../../core/alignProp.mjs';
 import { RESPONSIVE_SCOPES, legacyHideDevices } from '../../core/responsiveStyle.mjs';
 
 /** What a layout block is before an author picks a display: a Container and Flex are flex boxes, a Grid is a grid. */
 const LAYOUT_DISPLAY = Object.freeze({ 'core.container': 'flex', 'layout.flex': 'flex', 'layout.grid': 'grid' });
+
+/** The token styles a colour control already offers as its theme colours. */
+const COLOUR_CONTROL_TOKENS = ['surface_token', 'text_token', 'border_token'];
 
 /** Mirrors CanonicalDocumentSchema::Z_INDEX_MIN / Z_INDEX_MAX. */
 const Z_INDEX_MIN = -999;
@@ -93,6 +97,13 @@ export function BlockInspector({ info }) {
   const heldWeight = held('typography.weight');
   const surface = { colours: normalColours, held, computed };
 
+  // Style's Alignment is the one control, for a block whose older prop still holds the value too.
+  const hasAlignProp = ALIGN_PROP_TYPES.has(block.type);
+  const saveAlign = (align) => {
+    if (hasAlignProp && alignPropBlocks(props)) save(ops.updateBlockProps(block.id, { ...props, align: 'left' }));
+    saveStyle({ ...style, align: Object.keys(align).length ? align : null });
+  };
+
   const sections = {
     content: () => (
       <ObjectFields
@@ -119,10 +130,10 @@ export function BlockInspector({ info }) {
         label={label || t(alignTitleKey({ def, node: block }))}
         hideLegend={!label}
         icons="text"
-        value={style.align ?? null}
+        value={hasAlignProp ? effectiveAlign(props, style) : (style.align ?? null)}
         options={asList(manifest.vocabulary.alignments)}
         activeBreakpoint={viewport.breakpoint}
-        onChange={(align) => saveStyle({ ...style, align: Object.keys(align).length ? align : null })}
+        onChange={saveAlign}
       />
     ),
     typography: ({ noTextColor = false } = {}) => {
@@ -307,7 +318,8 @@ export function BlockInspector({ info }) {
       </Field>
     ),
     opacity: () => <StyleControls style={style} capabilities={capabilities} only="opacity" onChange={saveStyle} />,
-    tokens: () => Object.keys(STYLE_TOKEN_CATEGORIES).filter((k) => capabilities.includes(k)).map((key) => (
+    // The colour tokens are picked in the colour controls; they stay here only while one holds a value.
+    tokens: () => Object.keys(STYLE_TOKEN_CATEGORIES).filter((k) => capabilities.includes(k) && (!COLOUR_CONTROL_TOKENS.includes(k) || style[k])).map((key) => (
       <Field label={t(`tok_field_${key}`)} htmlFor={`${idPrefix}-${key}`} key={key}>
         <TokenSelect
           id={`${idPrefix}-${key}`}

@@ -56,11 +56,11 @@ export function statesFor(type, stored) {
 const SURFACE_TYPES = new Set(['core.button', 'core.card']);
 
 /** A block that holds other blocks: how it arranges and spaces them is what an author edits first. */
-/** A block whose own content already carries a left/centre/right `align` field: Style's Alignment is then the per-device one. */
-const hasTextAlignField = (ctx) => asList(ctx.def && ctx.def.field_schema).some((f) => f && f.key === 'align' && asList(f.allowed_values).includes('left'));
+/** Blocks whose Content Alignment positions the block itself (a menu, a line), so Style's text alignment would do nothing. */
+const CONTENT_ALIGN_TYPES = new Set(['core.nav_menu', 'layout.mega_menu', 'core.divider']);
 
-/** What Style's Alignment is called: it must not read like the block's own Alignment field in Content. */
-export const alignTitleKey = (ctx) => (isContainer(ctx) ? 'align_text' : (hasTextAlignField(ctx) ? 'align_device' : 'align'));
+/** What Style's Alignment is called. */
+export const alignTitleKey = (ctx) => (isContainer(ctx) ? 'align_text' : 'align');
 
 const isContainer = (ctx) => !!ctx.def && ctx.def.allows_children === true;
 
@@ -125,7 +125,7 @@ export const SECTIONS = Object.freeze([
   { id: 'text_style', tab: 'style', titleKey: 'section_text_editor', titleFor: (ctx) => OWN_TITLE[ctx.node.type], keywords: ['alignment', 'typography', 'text shadow', 'colour', 'color'], appliesTo: (ctx) => TEXT_EDITOR_TYPES.has(ctx.node.type), summary: () => '', openFor: () => true },
   { id: 'image_style', tab: 'style', titleKey: 'section_image', keywords: ['alignment', 'width', 'max width', 'height', 'object fit', 'opacity', 'css filters', 'blur', 'hover', 'zoom', 'border', 'radius', 'box shadow'], appliesTo: (ctx) => ctx.node.type === IMAGE_TYPE, summary: () => '', openFor: () => true },
   { id: 'icon_style', tab: 'style', titleKey: 'section_icon', keywords: ['primary', 'secondary', 'colour', 'color', 'hover', 'size', 'padding', 'rotate', 'border width'], appliesTo: (ctx) => ctx.node.type === ICON_TYPE, summary: () => '', openFor: () => true },
-  { id: 'align', tab: 'style', titleKey: 'align', titleFor: alignTitleKey, appliesTo: (ctx) => has(ctx, 'align') && !inOwnStyle(ctx, 'align') && (!(isBoxContainer(ctx) || ctx.node.type === ICON_TYPE) || setOn(ctx, 'align')), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
+  { id: 'align', tab: 'style', titleKey: 'align', titleFor: alignTitleKey, appliesTo: (ctx) => has(ctx, 'align') && !inOwnStyle(ctx, 'align') && (!(isBoxContainer(ctx) || ctx.node.type === ICON_TYPE || CONTENT_ALIGN_TYPES.has(ctx.node.type)) || setOn(ctx, 'align')), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
   { id: 'typography', tab: 'style', titleKey: 'typography', appliesTo: (ctx) => (has(ctx, 'typography') || has(ctx, 'color')) && !MEDIA_TYPES.has(ctx.node.type) && !NO_TEXT_TYPES.has(ctx.node.type) && !inOwnStyle(ctx, 'typography') && (!isBoxContainer(ctx) || setOn(ctx, 'typography') || setOn(ctx, 'color')), summary: (ctx) => typographySummary(ctx.style), openFor: (ctx) => TEXT_TYPES.has(ctx.node.type) },
   { id: 'background', tab: surfaceTab, titleKey: 'background_label', appliesTo: (ctx) => has(ctx, 'background') && !NO_BACKGROUND_TYPES.has(ctx.node.type) && !inOwnStyle(ctx, 'background'), summary: (ctx) => backgroundSummary(ctx.style.background), openFor: (ctx) => SURFACE_TYPES.has(ctx.node.type) },
   // A Container's overlay (a layer over its background) and its shape dividers, as in the reference editor.
