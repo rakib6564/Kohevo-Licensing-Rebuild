@@ -241,8 +241,8 @@ unit('elements 2: card renders its children inside a padded surface and counts a
         }
         return sbel_doc([$node]);
     };
-    assert_true(DocumentValidator::validate($nest(CanonicalDocumentSchema::MAX_NESTING_DEPTH - 1), $registry)->isValid(), 'cards up to the limit validate');
-    assert_false(DocumentValidator::validate($nest(CanonicalDocumentSchema::MAX_NESTING_DEPTH), $registry)->isValid(), 'one level more does not');
+    assert_true(DocumentValidator::validate($nest(CanonicalDocumentSchema::MAX_NESTING_DEPTH - 2), $registry)->isValid(), 'cards up to the limit validate');
+    assert_false(DocumentValidator::validate($nest(CanonicalDocumentSchema::MAX_NESTING_DEPTH - 1), $registry)->isValid(), 'one level more does not');
     assert_false($registry->get('core.card')->validateProps(['variant' => 'neon'])->isValid(), 'unknown variant rejected');
 });
 

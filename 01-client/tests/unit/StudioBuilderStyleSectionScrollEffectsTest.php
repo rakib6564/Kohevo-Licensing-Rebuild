@@ -97,8 +97,8 @@ unit('scroll effects: the runtime marks every sticky node, not only the first, a
 });
 
 unit('scroll effects: the markup and CSS match the browser fixture the runtime spec scrolls through', function (): void {
-    $header = sbsm_section(['id' => 'sec_sticky', 'interactions' => ['sticky' => ['edge' => 'top', 'shadow' => true, 'hide_on_scroll' => true]]]);
-    $tall = sbsm_section(['id' => 'sec_tall', 'interactions' => ['parallax' => ['speed' => 40]]]);
+    $header = sbsm_section(['id' => 'blk_sticky', 'interactions' => ['sticky' => ['edge' => 'top', 'shadow' => true, 'hide_on_scroll' => true]]]);
+    $tall = sbsm_section(['id' => 'blk_tall', 'interactions' => ['parallax' => ['speed' => 40]]]);
     $html = '<header class="sb-site-header sb-site-header--partial">' . sbsm_render($header) . '</header>'
         . '<main>' . sbsm_render($tall) . '</main>';
     $html = (string) preg_replace('/ data-sb-node="[^"]*" data-sb-type="[^"]*"/', '', $html); // block ids are random

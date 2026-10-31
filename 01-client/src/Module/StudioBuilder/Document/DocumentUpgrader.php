@@ -198,7 +198,14 @@ final class DocumentUpgrader
      */
     private static function border(array $border, array &$style): array
     {
-        if (isset($border['width']) && !isset($border['style'])) {
+        // A width with no style anywhere, on the whole border or on one side, drew a solid line.
+        $styled = isset($border['style']);
+        $wide = isset($border['width']);
+        foreach (['top', 'right', 'bottom', 'left'] as $side) {
+            $styled = $styled || isset($border[$side]['style']);
+            $wide = $wide || isset($border[$side]['width']);
+        }
+        if ($wide && !$styled) {
             $border['style'] = 'solid';
         }
         if (is_string($border['color'] ?? null) && preg_match(CanonicalDocumentSchema::TOKEN_REF_PATTERN, $border['color']) === 1) {

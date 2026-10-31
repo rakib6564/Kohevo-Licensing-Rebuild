@@ -172,7 +172,7 @@ unit('phase8a unit: media descriptors are exactly {key, path, mime}; filesystem 
 
 // ── 2. Document mapper ────────────────────────────────────────────────────
 
-unit('phase8a unit: re-minting replaces every section, block and nested child id (even colliding source ids) and keeps everything else', function (): void {
+unit('phase8a unit: re-minting replaces every Container, block and nested child id (even colliding source ids) and keeps everything else', function (): void {
     $doc = sbu8_document();
     $doc['containers'][0]['children'][1]['id'] = $doc['containers'][0]['children'][0]['id']; // collision in the source
     $out = PackageDocumentMapper::remintIds($doc);
@@ -181,12 +181,10 @@ unit('phase8a unit: re-minting replaces every section, block and nested child id
     assert_eq([], array_intersect($old, $new));
     assert_eq(count($new), count(array_unique($new)), 'unique after re-minting');
     foreach ($new as $id) {
-        assert_true(preg_match('/^(sec|blk)_[a-z0-9]{24}$/', $id) === 1);
+        assert_true(preg_match('/^blk_[a-z0-9]{24}$/', $id) === 1);
     }
     assert_eq('11111111-1111-4111-8111-111111111111', $out['containers'][1]['global_ref'], 're-minting keeps references (remapping is separate)');
-    [$s, $b] = PackageDocumentMapper::deterministicMinters('seed');
-    [$s2, $b2] = PackageDocumentMapper::deterministicMinters('seed');
-    assert_eq(PackageDocumentMapper::remintIds($doc, $s, $b), PackageDocumentMapper::remintIds($doc, $s2, $b2), 'dry-run minting is reproducible');
+    assert_eq(PackageDocumentMapper::remintIds($doc, PackageDocumentMapper::deterministicMinter('seed')), PackageDocumentMapper::remintIds($doc, PackageDocumentMapper::deterministicMinter('seed')), 'dry-run minting is reproducible');
 });
 
 unit('phase8a unit: media downgrade contract — OG image -> null, optional media -> null, a block with required media is omitted (at any depth); a resolved id is written', function (): void {
@@ -208,13 +206,13 @@ unit('phase8a unit: media downgrade contract — OG image -> null, optional medi
     assert_eq(501, $some['containers'][0]['children'][0]['props']['media']['media_id']);
 });
 
-unit('phase8a unit: global references are remapped through the explicit map; an unmapped one becomes an empty owned section', function (): void {
+unit('phase8a unit: global references are remapped through the explicit map; an unmapped one becomes an empty owned Container', function (): void {
     $doc = sbu8_document();
     $mapped = PackageDocumentMapper::rewriteGlobalRefs($doc, static fn(string $r): ?string => '22222222-2222-4222-8222-222222222222');
     assert_eq('22222222-2222-4222-8222-222222222222', $mapped['document']['containers'][1]['global_ref']);
     assert_eq([], $mapped['unresolved']);
     $un = PackageDocumentMapper::rewriteGlobalRefs($doc, static fn(string $r): ?string => null);
-    assert_null($un['document']['containers'][1]['global_ref']);
+    assert_null($un['document']['containers'][1]['global_ref'] ?? null);
     assert_eq([], $un['document']['containers'][1]['children']);
     assert_eq('Ref', $un['document']['containers'][1]['metadata']['label']);
     assert_eq([['path' => '$.containers[1].global_ref', 'ref' => '11111111-1111-4111-8111-111111111111']], $un['unresolved']);

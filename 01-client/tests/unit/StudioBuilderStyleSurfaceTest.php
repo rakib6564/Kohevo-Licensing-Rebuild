@@ -815,7 +815,7 @@ unit('widths: containers follow the Page width tokens', function (): void {
     assert_true(str_contains(StyleSurface::declarations(['layout' => ['content_width' => 'boxed', 'content_size' => 'narrow']]), '--sb-box:var(--sb-layout-narrow,'), 'narrow = Narrow');
     assert_true(str_contains($css, '.sb-container--constrained{max-width:var(--sb-layout-wide,80rem)}'), 'constrained = Wide');
     assert_true(str_contains($css, '.sb-container--compact{max-width:var(--sb-layout-narrow,42rem)}'), 'compact = Narrow');
-    assert_false((bool) preg_match('/\.sb-(layout-section|container)--[a-z]+\{max-width:\d+(rem|px)/', $css), 'no hard-coded section or container width is left');
+    assert_false((bool) preg_match('/\.sb-container--[a-z]+\{max-width:\d+(rem|px)/', $css), 'no hard-coded container width is left');
 });
 
 unit('text colours: post excerpt and content use variables the theme defines', function (): void {
@@ -907,10 +907,10 @@ unit('core.container: a horizontal container wraps unless Wrap is "nowrap" (CL-M
     assert_eq(['wrap', 'nowrap'], $field['allowed_values'] ?? null, 'the Inspector offers it');
 });
 
-unit('layout.section: "Full width" reaches both window edges without a sideways scroll (CL-M2)', function (): void {
+unit('core.container: "Full" has no limit, so the band reaches both window edges without a sideways scroll (CL-M2)', function (): void {
     \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
     $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
-    assert_true(str_contains($css, '.sb-layout-section--full{width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw)}'), 'full width breaks out of the section column');
+    assert_true(str_contains(StyleSurface::declarations(['layout' => ['content_width' => 'boxed', 'content_size' => 'full']]), '--sb-box:100%'), 'full width has no limit');
     assert_true((bool) preg_match('/body\.sb-body\{[^}]*overflow-x:clip/', $css), 'and the page clips the scrollbar sliver instead of scrolling sideways');
 });
 
@@ -946,7 +946,8 @@ unit('Site settings: the tokens marked "used only by blocks" are exactly the one
     \Slate\Module\StudioBuilder\Render\StudioStylesheet::resetCache();
     $css = \Slate\Module\StudioBuilder\Render\StudioStylesheet::css();
     $unused = [];
-    // A new Container's background token is a default use too.
+    // A new Container's background token and its site gutter are default uses too.
+    $css .= StyleSurface::declarations(CanonicalDocumentSchema::newContainer()['style']);
     $sectionDefault = (string) (CanonicalDocumentSchema::newContainer()['style']['surface_token'] ?? '');
     foreach (array_keys(ThemeResolver::DEFAULT_TOKENS) as $ref) {
         if ($ref !== $sectionDefault && !str_contains($css, 'var(' . \Slate\Module\StudioBuilder\Render\Theme\ResolvedTheme::cssVarName($ref))) {

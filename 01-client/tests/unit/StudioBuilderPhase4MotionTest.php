@@ -195,7 +195,7 @@ unit('phase4: applying both motion operations writes the document fields', funct
         'settings' => [],
         'seo'      => [],
         'containers' => [[
-            'blocks' => [['id' => 'blk_motion_1', 'type' => 'core.heading']],
+            'children' => [['id' => 'blk_motion_1', 'type' => 'core.heading']],
         ]],
     ];
 

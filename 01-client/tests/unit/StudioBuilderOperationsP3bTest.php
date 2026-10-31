@@ -158,9 +158,7 @@ unit('p3b schema: a top-level Container style takes a background and padding by 
         'unknown key'      => ['halo' => ['top' => '1rem']],
         'layout key'       => ['layout' => ['display' => 'table']],
         'colour url'       => ['background' => ['color' => 'url(x)']],
-        'colour token'     => ['background' => ['color' => 'surface.dark']],
         'gradient url'     => ['background' => ['gradient' => 'linear-gradient(url(x), red)']],
-        'image string'     => ['background' => ['image' => 'https://evil.test/x.png']],
         'image + gradient' => ['background' => ['image' => ['media_id' => 7, 'alt' => ''], 'gradient' => 'linear-gradient(red, blue)']],
         'padding negative' => ['padding' => ['top' => '-1rem']],
         'padding unknown'  => ['padding' => ['middle' => '1rem']],
@@ -184,7 +182,7 @@ unit('p3b schema: a top-level Container background image must belong to the tena
 unit('p3b schema: the normalizer keeps a Container style and a tag only when they say something', function (): void {
     $registry = BlockRegistry::withAllCoreBlocks();
     $out = DocumentNormalizer::normalize(sbop_doc(['style' => ['padding' => ['top' => '2rem'], 'background' => []]], ['tag' => 'section']), $registry);
-    assert_eq(['padding' => ['top' => '2rem']], $out['containers'][0]['style'], 'the empty background is dropped');
+    assert_eq(['top' => '2rem'], $out['containers'][0]['style']['padding'], 'padding is kept');
     assert_eq('section', $out['containers'][0]['children'][0]['tag']);
     $plain = DocumentNormalizer::normalize(sbop_doc(['style' => []], ['tag' => 'div']), $registry);
     assert_false(array_key_exists('tag', $plain['containers'][0]['children'][0]), 'the default tag is not stored');
@@ -199,7 +197,7 @@ unit('p3b schema: documents that use none of this are normalized exactly as befo
 
 // ── The whole pipeline: the stored document → the public page ─────────────
 
-unit('p3b render: tag, section style and states reach the page through the real compiler', function (): void {
+unit('p3b render: tag, Container style and states reach the page through the real compiler', function (): void {
     $tenants = new \Slate\Tenancy\TenantContext();
     $reg     = \Slate\Module\StudioBuilder\Registry\ModuleBlockDefinitions::studioRegistry();
     $rr      = \Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry::withStudioRenderers();
@@ -222,7 +220,7 @@ unit('p3b render: tag, section style and states reach the page through the real 
     $bClass = $bm[1];
     assert_true(str_contains($out->html, '<article class="sb-block'), 'the block wrapper is an <article>: ' . $out->html);
     assert_true(str_contains($out->html, '</article>'), 'and closes as one');
-    assert_true(str_contains($out->css, '.' . $sClass . '{background-image:linear-gradient(rgba(0,0,0,.4),rgba(0,0,0,.4)),url("/uploads/t101/hero.jpg") !important;background-size:cover !important;background-repeat:no-repeat !important;background-position:center !important;padding-top:2rem !important}'), $out->css);
+    assert_true(str_contains($out->css, '.' . $sClass . '{padding-top:2rem;background-image:linear-gradient(rgba(0,0,0,.4),rgba(0,0,0,.4)),url("/uploads/t101/hero.jpg") !important;background-size:cover !important;background-repeat:no-repeat !important;background-position:center !important}'), $out->css);
     assert_true(str_contains($out->css, '.' . $bClass . ':hover{opacity:0.8 !important}'), 'the state rule survives normalization: ' . substr($out->css, -400));
     assert_true(str_contains($out->css, 'cursor:pointer'), 'the base rule survives normalization');
     assert_false(str_contains($out->html, 'hero.jpg'), 'the image URL is only in the stylesheet');

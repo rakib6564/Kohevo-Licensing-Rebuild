@@ -1272,7 +1272,7 @@ final class HtmlStructureMapper
         return [
             'id'         => $id,
             'type'       => $type,
-            'version'    => 1,
+            'version'    => $type === CanonicalDocumentSchema::CONTAINER_TYPE ? CanonicalDocumentSchema::CONTAINER_VERSION : 1,
             'props'      => $props,
             'style'      => $style,
             'visibility' => ['auth_state' => 'any', 'devices' => $node['visibility'] ?? self::ALL_DEVICES],

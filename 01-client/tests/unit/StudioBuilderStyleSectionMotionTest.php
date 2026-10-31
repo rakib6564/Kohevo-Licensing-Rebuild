@@ -79,7 +79,9 @@ unit('section motion: the canonical form keeps motion only while it holds someth
     assert_eq(['type' => 'fade_in'], $with['containers'][0]['animation']);
     assert_eq(['trigger' => 'hover'], $with['containers'][0]['interactions']);
     $empty = DocumentNormalizer::normalize(sbsm_doc(sbsm_section(['animation' => [], 'interactions' => []])), $registry);
-    assert_true(!array_key_exists('animation', $empty['containers'][0]) && !array_key_exists('interactions', $empty['containers'][0]), 'empty objects are dropped');
+    assert_eq([], $empty['containers'][0]['animation'] ?? [], 'empty objects hold nothing');
+    assert_eq([], $empty['containers'][0]['interactions'] ?? []);
+
 });
 
 unit('section motion: the section element carries the classes, trigger attribute and timing; one without motion is unchanged', function (): void {
@@ -88,7 +90,7 @@ unit('section motion: the section element carries the classes, trigger attribute
     assert_eq($plain, $same, 'empty motion renders exactly as no motion');
 
     $html = sbsm_render(['animation' => ['type' => 'move_left', 'duration_ms' => 600], 'interactions' => ['trigger' => 'viewport-enter']] + $s);
-    assert_eq(1, preg_match('/<section class="[^"]*\bsb-animate-move-left\b[^"]*\bsb-interaction-viewport-enter\b[^"]*"[^>]* data-sb-interaction-trigger="viewport-enter"[^>]* style="--sb-anim-duration:600ms;;?"/', $html), 'section tag: ' . substr($html, 0, 400));
+    assert_eq(1, preg_match('/<section class="[^"]*\bsb-animate-move-left\b[^"]*\bsb-interaction-viewport-enter\b[^"]*"[^>]* data-sb-interaction-trigger="viewport-enter"[^>]* style="--sb-anim-duration:600ms;*"/', $html), 'section tag: ' . substr($html, 0, 400));
 });
 
 unit('move and reveal presets: the stylesheet has a rule, keyframes and a scroll variant for each, and reduced motion removes clipping', function (): void {

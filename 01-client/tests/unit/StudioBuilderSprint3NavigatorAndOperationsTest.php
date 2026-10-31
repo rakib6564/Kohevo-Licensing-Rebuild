@@ -31,18 +31,18 @@ use Slate\Module\StudioBuilder\Operation\DocumentOperation;
 use Slate\Module\StudioBuilder\Operation\DocumentOperationApplier;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 
-unit('sprint3 unit: DocumentOperation supports duplicate_block, duplicate_section, and update_section_label', function (): void {
+unit('sprint3 unit: DocumentOperation supports duplicate_block and update_block_meta, on a top-level Container too', function (): void {
     $opDupB = DocumentOperation::duplicateBlock('blk_1111111111111111');
     assert_eq(DocumentOperation::OP_DUPLICATE_BLOCK, $opDupB->op);
     assert_eq(['block_id' => 'blk_1111111111111111'], $opDupB->payload);
 
     $opDupS = DocumentOperation::duplicateBlock('blk_2222222222222222');
-    assert_eq(DocumentOperation::OP_DUPLICATE_SECTION, $opDupS->op);
-    assert_eq(['section_id' => 'blk_2222222222222222'], $opDupS->payload);
+    assert_eq(DocumentOperation::OP_DUPLICATE_BLOCK, $opDupS->op);
+    assert_eq(['block_id' => 'blk_2222222222222222'], $opDupS->payload);
 
     $opLabel = DocumentOperation::updateBlockMeta('blk_2222222222222222', ['label' => 'New Hero Label']);
-    assert_eq(DocumentOperation::OP_UPDATE_SECTION_LABEL, $opLabel->op);
-    assert_eq(['section_id' => 'blk_2222222222222222', 'label' => 'New Hero Label'], $opLabel->payload);
+    assert_eq(DocumentOperation::OP_UPDATE_BLOCK_META, $opLabel->op);
+    assert_eq(['block_id' => 'blk_2222222222222222', 'label' => 'New Hero Label'], $opLabel->payload);
 
     // Payload validation: missing keys fail closed
     assert_throws(StudioValidationException::class, static function (): void {
@@ -50,12 +50,14 @@ unit('sprint3 unit: DocumentOperation supports duplicate_block, duplicate_sectio
     }, 'duplicate_block requires block_id');
 
     assert_throws(StudioValidationException::class, static function (): void {
-        new DocumentOperation(DocumentOperation::OP_DUPLICATE_SECTION, []);
-    }, 'duplicate_section requires section_id');
+        new DocumentOperation(DocumentOperation::OP_UPDATE_BLOCK_META, []);
+    }, 'update_block_meta requires block_id');
 
-    assert_throws(StudioValidationException::class, static function (): void {
-        new DocumentOperation(DocumentOperation::OP_UPDATE_SECTION_LABEL, ['section_id' => 'sec_123']);
-    }, 'update_section_label requires label');
+    foreach (['duplicate_section', 'update_section_label'] as $retired) {
+        assert_throws(StudioValidationException::class, static function () use ($retired): void {
+            new DocumentOperation($retired, ['section_id' => 'sec_123', 'label' => 'x']);
+        }, "{$retired} is retired");
+    }
 });
 
 unit('sprint3 unit: DocumentOperationApplier duplicateBlock duplicates deep subtree with fresh IDs', function (): void {
@@ -135,7 +137,7 @@ unit('sprint3 unit: DocumentOperationApplier duplicateBlock duplicates deep subt
     assert_true($res->isValid(), 'document is schema valid after duplicate_block');
 });
 
-unit('sprint3 unit: DocumentOperationApplier duplicateSection duplicates section and contents', function (): void {
+unit('sprint3 unit: DocumentOperationApplier duplicateBlock duplicates a top-level Container and its contents', function (): void {
     $reg = BlockRegistry::withAllCoreBlocks();
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default');
 
@@ -165,8 +167,8 @@ unit('sprint3 unit: DocumentOperationApplier duplicateSection duplicates section
 
     assert_eq($secId, $sec1['id']);
     assert_true($sec2['id'] !== $secId, 'cloned section receives fresh ID');
-    assert_true(str_starts_with($sec2['id'], 'sec_'), 'cloned section ID has canonical prefix');
-    assert_eq('Features (Copy)', $sec2['label']);
+    assert_true(str_starts_with($sec2['id'], 'blk_'), 'cloned Container ID has canonical prefix');
+    assert_eq('Features', $sec2['metadata']['label'], 'a copy keeps its label, like any block');
     assert_eq(1, count($sec2['children']));
     assert_true($sec2['children'][0]['id'] !== $sec1['children'][0]['id'], 'cloned section block receives fresh ID');
     assert_eq('Features', $sec2['children'][0]['props']['link']['label']);
@@ -176,7 +178,7 @@ unit('sprint3 unit: DocumentOperationApplier duplicateSection duplicates section
     assert_true($res->isValid(), 'document is schema valid after duplicate_section');
 });
 
-unit('sprint3 unit: DocumentOperationApplier updateSectionLabel renames section safely and rejects injection', function (): void {
+unit('sprint3 unit: DocumentOperationApplier updateBlockMeta renames a top-level Container safely and rejects injection', function (): void {
     $reg = BlockRegistry::withAllCoreBlocks();
     $doc = CanonicalDocumentSchema::emptyDocument('page', 'default');
 

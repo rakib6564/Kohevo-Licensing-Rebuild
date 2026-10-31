@@ -54,7 +54,7 @@ unit('sprint2 unit: ControlSchema tabs, sections, and standard presets', functio
     $arr = $cs->toArray();
     assert_true(isset($arr['content']));
     assert_eq('Content', $arr['content']['label']);
-    assert_eq(1, count($arr['content']['containers']));
+    assert_eq(1, count($arr['content']['sections']));
 
     $standard = ControlSchema::standard(
         contentControls: [['key' => 'label', 'type' => 'text']],
@@ -88,7 +88,7 @@ unit('sprint2 unit: DocumentValidator accepts valid visual styles and rejects ma
 
     $baseDoc = CanonicalDocumentSchema::emptyDocument('page', 'default', 'Test Page');
     $baseDoc['containers'] = [
-        CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Hero'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'layout' => ['width' => 'wide', 'padding_y' => ['base' => 'md']] /*TODO*/, 'children' => [
+        CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Hero'], 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => [
                 [
                     'id' => CanonicalDocumentSchema::newBlockId(),
                     'type' => 'core.heading',

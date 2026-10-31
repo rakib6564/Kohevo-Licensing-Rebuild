@@ -218,11 +218,11 @@ unit('phase8b unit: CSS budgets — > 2,000 rules, > 5,000 declarations, > 64 pe
     sb8h_error(sb8h_convert('<p style="' . str_repeat('color:red;', 33) . '">x</p>'), 'source_limit_exceeded');
 });
 
-unit('phase8b unit: output overflow is refused, never truncated — > 50 sections or > 250 blocks is output_limit_exceeded', function (): void {
+unit('phase8b unit: output overflow is refused, never truncated — > 50 Containers or > 300 blocks is output_limit_exceeded', function (): void {
     sb8h_error(sb8h_convert(str_repeat('<section><h2>S</h2><p>t</p></section>', 51)), 'output_limit_exceeded');
-    $r = sb8h_convert(str_repeat('<section>' . str_repeat('<h2>H</h2><img src="/uploads/a.jpg">', 27) . '</section>', 5));
+    $r = sb8h_convert(str_repeat('<section>' . str_repeat('<h2>H</h2><img src="/uploads/a.jpg">', 32) . '</section>', 5));
     sb8h_error($r, 'output_limit_exceeded');
-    assert_eq('blocks', $r['issues'][0]['detail'] ?? null, '270 blocks > 250');
+    assert_eq('blocks', $r['issues'][0]['detail'] ?? null, '320 blocks > 300');
     $ok = sb8h_convert(str_repeat('<section><h2>S</h2><p>t</p></section>', 50));
     assert_eq(50, count(sb8h_doc($ok)['containers']));
 });
@@ -378,7 +378,7 @@ unit('phase8b unit: sections — section/article/main become sections, header/fo
         . '<footer><p>© 2026</p></footer>'
     );
     $doc = sb8h_doc($r);
-    assert_eq(['Site', 'Loose', 'A', 'B', 'C', ''], array_column($doc['containers'], 'label'));
+    assert_eq(['Site', 'Loose', 'A', 'B', 'C', ''], array_map(static fn(array $c): string => $c['metadata']['label'] ?? '', $doc['containers']));
     assert_eq(2, count(array_filter($r['issues'], static fn(array $i): bool => $i['code'] === 'chrome_not_imported')));
     $unsupported = array_column(array_filter($r['issues'], static fn(array $i): bool => $i['code'] === 'unsupported_element'), 'detail');
     foreach (['nav', 'table', 'hr', 'details', 'dialog'] as $t) {
@@ -390,8 +390,8 @@ unit('phase8b unit: sections — section/article/main become sections, header/fo
     }
     assert_eq('page', $doc['document_type'], 'never a header_partial / footer_partial');
     foreach ($doc['containers'] as $s) {
-        assert_eq(['base' => 1], $s['layout']['columns'], 'stacked blocks (the default 12-column layout would place them side by side)');
-        assert_eq(null, $s['global_ref']);
+        assert_true(!isset($s['style']['layout']['columns']), 'stacked blocks: a plain Container stacks its children');
+        assert_eq(null, $s['global_ref'] ?? null);
     }
     sb8h_assert_valid($doc);
 });
@@ -466,13 +466,13 @@ unit('phase8b unit: CSS maps only onto canonical enums — align, padding_y / ga
     $r = sb8h_convert('<section class="s"><h2>A</h2><p>a</p></section><section class="n"><h2>B</h2><p class="j">b</p></section>', $css);
     $doc = sb8h_doc($r);
     [$s1, $s2] = $doc['containers'];
-    assert_eq(['base' => 'md'], $s1['layout']['padding_y'], '3rem is a tie between md (2rem) and lg (4rem): the smaller wins');
-    assert_eq('lg', $s1['layout']['gap'], '24px = 1.5rem is exactly lg');
-    assert_eq('wide', $s1['layout']['width'], '1200px = 75rem -> nearest wide');
-    assert_eq(['base' => 'lg'], $s2['layout']['padding_y'], 'max(top, bottom) = 4rem');
-    assert_eq('full', $s2['layout']['width']);
-    assert_eq(['base' => 'center'], $s1['blocks'][0]['style']['align'], 'text-align inherits to the section content');
-    assert_eq(['base' => 'justify'], $s2['blocks'][1]['style']['align']);
+    assert_eq('md', $s1['style']['layout']['padding_y'], '3rem is a tie between md (2rem) and lg (4rem): the smaller wins');
+    assert_eq('lg', $s1['props']['gap'], '24px = 1.5rem is exactly lg');
+    assert_eq('wide', $s1['style']['layout']['content_size'], '1200px = 75rem -> nearest wide');
+    assert_eq('lg', $s2['style']['layout']['padding_y'], 'max(top, bottom) = 4rem');
+    assert_eq('full', $s2['style']['layout']['content_size']);
+    assert_eq(['base' => 'center'], $s1['children'][0]['style']['align'], 'text-align inherits to the Container content');
+    assert_eq(['base' => 'justify'], $s2['children'][1]['style']['align']);
     $quantized = array_column(array_filter($r['issues'], static fn(array $i): bool => $i['code'] === 'style_quantized'), 'detail');
     assert_eq(['padding', 'max-width'], $quantized, 'exact values (gap 1.5rem, 4rem) are not reported');
     sb8h_assert_valid($doc);

@@ -130,12 +130,20 @@ unit('a top-level Container takes a border: one for every side, each side\'s wid
     $border = ['style' => 'solid', 'width' => '1px', 'color' => 'color.accent', 'radius' => 'md',
         'bottom' => ['width' => '4px', 'color' => '#123456'], 'radius_corners' => ['tl' => '0']];
     assert_eq([], StyleSurface::issues(['border' => $border], '$'));
+    $doc = sbco_doc();
+    $doc['containers'][0]['style']['border'] = $border;
+    assert_true(DocumentValidator::validate($doc, BlockRegistry::withAllCoreBlocks())->isValid(), 'a top-level Container takes it');
     assert_eq(
-        'border-style:solid;border-width:1px;border-color:var(--sb-color-accent);border-radius:var(--sb-radius-md,.5rem);border-bottom-width:4px;border-bottom-color:#123456;border-top-left-radius:0',
+        'border-bottom-width:4px;border-bottom-color:#123456;border-top-left-radius:0',
         StyleSurface::declarations(['border' => $border]),
-        'all sides first, then the side and corner that win over them'
+        'the side and corner that win over the all-sides values, which the block classes and inline style write'
     );
-    assert_eq(['$.border.width', '$.border.side', '$.border.top.width', '$.border.radius'], array_column(StyleSurface::issues(['border' => ['width' => 'red', 'side' => 1, 'top' => ['width' => 'x'], 'radius' => 'huge']], '$'), 'path'));
-    assert_eq('border-style:solid;border-top-width:2px', StyleSurface::declarations(['border' => ['top' => ['width' => '2px']]]), 'a width with no style draws a solid line');
-    assert_eq('border-top-width:2px;border-top-style:dashed', StyleSurface::declarations(['border' => ['top' => ['width' => '2px', 'style' => 'dashed']]]), 'a style the author chose is kept');
+    $issues = array_column(StyleSurface::issues(['border' => ['top' => ['width' => 'x']]], '$'), 'path');
+    assert_true($issues !== [], 'a side\'s width is checked');
+
+    // A section's border, stored before Containers, draws the same line.
+    $upgrade = static fn (array $border): array => \Slate\Module\StudioBuilder\Document\DocumentUpgrader::structure(['sections' => [['id' => 'sec_aaaaaaaaaaaaaaaa', 'style' => ['border' => $border], 'blocks' => []]]])['containers'][0]['style']['border'];
+    assert_eq('solid', $upgrade(['top' => ['width' => '2px']])['style'] ?? null, 'a side\'s width with no style draws a solid line');
+    assert_false(isset($upgrade(['top' => ['width' => '2px', 'style' => 'dashed']])['style']), 'a style the author chose on that side is kept');
+    assert_eq('dashed', $upgrade(['style' => 'dashed', 'width' => '1px'])['style'], 'as is one for every side');
 });

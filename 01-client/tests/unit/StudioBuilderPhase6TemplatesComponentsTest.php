@@ -205,10 +205,10 @@ unit('phase6 copy: DocumentCopier re-mints every id, drops any reference, and bl
     $section = sbp6u_section([$container, sbp6u_heading('Top')], SBP6U_REF, 'Src');
 
     $copy = DocumentCopier::copyBlock($section);
-    assert_true($copy['id'] !== $section['id'] && preg_match(CanonicalDocumentSchema::SECTION_ID_PATTERN, $copy['id']) === 1);
-    assert_null($copy['global_ref'], 'a copy owns its content — never a live reference');
-    assert_true($copy['blocks'][0]['id'] !== $container['id'] && $copy['blocks'][0]['children'][0]['id'] !== $inner['id'], 'nested ids are re-minted');
-    assert_eq('Inner', $copy['blocks'][0]['children'][0]['props']['text'], 'content is preserved');
+    assert_true($copy['id'] !== $section['id'] && preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $copy['id']) === 1);
+    assert_null($copy['global_ref'] ?? null, 'a copy owns its content — never a live reference');
+    assert_true($copy['children'][0]['id'] !== $container['id'] && $copy['children'][0]['children'][0]['id'] !== $inner['id'], 'nested ids are re-minted');
+    assert_eq('Inner', $copy['children'][0]['children'][0]['props']['text'], 'content is preserved');
     assert_true(DocumentCopier::copyBlock($section)['id'] !== $copy['id'], 'every copy is independent');
 
     // insert_block with children (a block preset): fresh ids for the whole subtree, only into child-capable blocks.
@@ -264,7 +264,7 @@ unit('phase6 renderer: a referencing section renders the component\'s published 
 
     $editor = sbp6u_render_sections($pageDoc, sbp6u_editor_ctx(), [SBP6U_REF => $componentDoc]);
     assert_true(str_contains($editor, 'Shared Header Text'), 'component content is rendered into the page');
-    assert_true(str_contains($editor, 'class="sb-section sb-section--global" data-sb-node="' . $placeholderId . '" data-sb-type="section"'), 'the placeholder section is selectable in the canvas');
+    assert_true(str_contains($editor, 'class="sb-block sb-block--core-container sb-top sb-global" data-sb-node="' . $placeholderId . '" data-sb-type="core.container"'), 'the placeholder section is selectable in the canvas');
     assert_true(!str_contains($editor, 'data-sb-node="' . $componentBlockId . '"'), 'embedded blocks expose no node metadata of their own');
     assert_true(!str_contains($editor, 'data-sb-node="' . $componentDoc['containers'][0]['id'] . '"'), 'nor do embedded sections');
     assert_true(str_contains($editor, 'Local text'), 'local sections render as before');
@@ -283,7 +283,7 @@ unit('phase6 renderer: a referencing section renders the component\'s published 
     $registry = ModuleBlockDefinitions::studioRegistry();
     $preparedNested = RenderDocumentPreparer::prepare($nestedComponent, $registry)['document']['containers'];
     $html = sbp6u_renderer()->renderContainers(RenderDocumentPreparer::prepare($pageDoc, $registry)['document']['containers'], sbp6u_editor_ctx(), new ResolvedTheme('default', ThemeResolver::DEFAULT_TOKENS), new RenderCollector(), true, [SBP6U_REF => $preparedNested]);
-    assert_true(str_contains($html, 'sb-section--global') && !str_contains($html, 'bbbbbbbb-bbbb'), 'nested references render nothing and never recurse');
+    assert_true(str_contains($html, 'sb-global') && !str_contains($html, 'bbbbbbbb-bbbb'), 'nested references render nothing and never recurse');
 });
 
 // ── 5. Design tokens ────────────────────────────────────────────────────────
@@ -344,10 +344,10 @@ unit('phase6 api: the new commands are POST-only, allowlisted, CSRF-guarded, and
 
     $r = $api->handle($post('insert_template', ['page_id' => 1, 'template_key' => 'promo', 'index' => 0]), $editor);
     assert_eq('required_field', $first($r)['code'], 'inserting a preset requires expected_revision_id too');
-    $r = $api->handle($post('detach_component', ['page_id' => 1, 'section_id' => 'blk_0123456789abcdef01234567']), $editor);
+    $r = $api->handle($post('detach_component', ['page_id' => 1, 'container_id' => 'blk_0123456789abcdef01234567']), $editor);
     assert_eq('required_field', $first($r)['code']);
-    $r = $api->handle($post('create_component', ['title' => 'T', 'slug' => 't', 'page_id' => 1, 'section_id' => 'blk_0123456789abcdef01234567']), $editor);
-    assert_eq('required_field', $first($r)['code'], 'creating a component FROM a section is a document write');
+    $r = $api->handle($post('create_component', ['title' => 'T', 'slug' => 't', 'page_id' => 1, 'container_id' => 'blk_0123456789abcdef01234567']), $editor);
+    assert_eq('required_field', $first($r)['code'], 'creating a component FROM a Container is a document write');
 
     $r = $api->handle($post('insert_template', ['page_id' => 1, 'template_key' => 'promo', 'index' => -1, 'expected_revision_id' => 1]), $editor);
     assert_eq('invalid_index', $first($r)['code']);
@@ -370,14 +370,19 @@ unit('phase6 api: the new commands are POST-only, allowlisted, CSRF-guarded, and
     assert_eq('invalid_tokens', $first($r)['code'], 'token refs are symbolic names');
 });
 
-unit('phase6 single templates: the content width is the width of the section holding Post content, at any depth', function (): void {
-    $section = static fn(array $blocks, ?string $width = null): array => CanonicalDocumentSchema::newContainer(['layout' => $width === null ? [] : ['width' => $width] /*TODO*/, 'children' => $blocks]);
+unit('phase6 single templates: the content width is the width of the top-level Container holding Post content, at any depth', function (): void {
+    $section = static fn(array $blocks, ?string $width = null): array => CanonicalDocumentSchema::newContainer([
+        'style' => ['layout' => $width === 'full' ? ['content_width' => 'full'] : ['content_width' => 'boxed'] + ($width === null ? [] : ['content_size' => $width])],
+        'children' => $blocks,
+    ]);
     $content = ['type' => 'theme.post_content', 'props' => []];
     $title   = ['type' => 'theme.post_title', 'props' => []];
-    assert_eq('narrow', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['containers' => [$section([$title], 'full'), $section([$content], 'narrow')]]), 'the section with the content, not the first one');
+    assert_eq('narrow', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['containers' => [$section([$title], 'full'), $section([$content], 'narrow')]]), 'the Container with the content, not the first one');
     assert_eq('normal', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['containers' => [$section([['type' => 'layout.container', 'children' => [$content]]], 'normal')]]), 'nested in a container');
-    assert_eq('wide', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['containers' => [$section([$content])]]), 'a section with no width is wide, as rendered');
-    assert_eq('wide', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['containers' => [$section([$content], 'huge')]]), 'an unknown width renders wide');
+    assert_eq('default', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['containers' => [$section([$content])]]), 'a Container with no width is the site content width, as rendered');
+    assert_eq('default', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['containers' => [$section([$content], 'huge')]]), 'an unknown width renders as Default');
+    assert_eq('wide', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['containers' => [CanonicalDocumentSchema::newContainer(['style' => ['layout' => ['content_width' => 'boxed', 'content_max' => '900px']], 'children' => [$content]])]]), 'an author\'s own limit has no name');
+    assert_eq('narrow', \Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['sections' => [['layout' => ['width' => 'narrow'], 'blocks' => [$content]]]]), 'a stored section-based template reads the same');
     assert_null(\Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth(['containers' => [$section([$title], 'narrow')]]), 'no Post content block: no content width');
     assert_null(\Slate\Module\StudioBuilder\Theme\ThemeTemplateResolver::contentWidth([]), 'an empty document');
 });

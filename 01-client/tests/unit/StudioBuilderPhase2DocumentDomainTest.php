@@ -109,8 +109,8 @@ unit('phase2 document domain: CanonicalDocumentSchema shape helpers and opaque i
 
     $sec1 = CanonicalDocumentSchema::newBlockId();
     $sec2 = CanonicalDocumentSchema::newBlockId();
-    assert_true((bool) preg_match(CanonicalDocumentSchema::SECTION_ID_PATTERN, $sec1));
-    assert_true($sec1 !== $sec2, 'section ids must be unique per call');
+    assert_true((bool) preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $sec1));
+    assert_true($sec1 !== $sec2, 'block ids must be unique per call');
 
     $blk1 = CanonicalDocumentSchema::newBlockId();
     assert_true((bool) preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $blk1));
@@ -304,7 +304,7 @@ unit('phase2 document domain: DocumentValidator fails closed on structural viola
     $unknownBlockType = sb2_document([sb2_section([sb2_block($registry, 'core.hero', ['type' => 'core.does_not_exist'])])]);
     assert_false(DocumentValidator::validate($unknownBlockType, $registry)->isValid());
 
-    // Nesting depth: MAX_NESTING_DEPTH (6) levels of containers around a hero is the last valid shape; one more fails.
+    // Nesting depth: the top-level Container is level 1, so a hero under MAX_NESTING_DEPTH (7) - 2 more containers sits at the limit; one more fails.
     $nest = static function (int $containers) use ($registry): array {
         $node = sb2_block($registry, 'core.hero');
         for ($i = 0; $i < $containers; $i++) {
@@ -313,11 +313,11 @@ unit('phase2 document domain: DocumentValidator fails closed on structural viola
         return sb2_document([sb2_section([$node])]);
     };
     $maxDepth = CanonicalDocumentSchema::MAX_NESTING_DEPTH;
-    assert_eq(6, $maxDepth, 'the approved nesting limit is 6');
-    assert_true(DocumentValidator::validate($nest($maxDepth - 1), $registry)->isValid(), 'a hero at exactly the maximum depth is valid');
-    assert_false(DocumentValidator::validate($nest($maxDepth), $registry)->isValid(), 'nesting beyond MAX_NESTING_DEPTH must fail');
+    assert_eq(7, $maxDepth, 'the approved nesting limit is 7');
+    assert_true(DocumentValidator::validate($nest($maxDepth - 2), $registry)->isValid(), 'a hero at exactly the maximum depth is valid');
+    assert_false(DocumentValidator::validate($nest($maxDepth - 1), $registry)->isValid(), 'nesting beyond MAX_NESTING_DEPTH must fail');
 
-    // max_blocks / max_sections overrides
+    // max_blocks / max_containers overrides
     $twoBlocks = sb2_document([sb2_section([
         sb2_block($registry, 'core.hero'),
         sb2_block($registry, 'core.heading', ['props' => ['text' => 'Heading', 'level' => 'h2']]),
@@ -326,8 +326,8 @@ unit('phase2 document domain: DocumentValidator fails closed on structural viola
     assert_false($maxBlocksResult->isValid(), 'max_blocks override must be enforced');
 
     $twoSections = sb2_document([sb2_section(), sb2_section()]);
-    $maxSectionsResult = DocumentValidator::validate($twoSections, $registry, ['max_sections' => 1]);
-    assert_false($maxSectionsResult->isValid(), 'max_sections override must be enforced');
+    $maxSectionsResult = DocumentValidator::validate($twoSections, $registry, ['max_containers' => 1]);
+    assert_false($maxSectionsResult->isValid(), 'max_containers override must be enforced');
 
     assert_throws(StudioValidationException::class, function () use ($missingSchemaVersion, $registry): void {
         DocumentValidator::assertValid($missingSchemaVersion, $registry);
@@ -356,7 +356,7 @@ unit('phase2 document domain: DependencyExtractor produces deduplicated, determi
         'props'    => ['form_id' => 7],
         'bindings' => ['results' => ['provider' => 'forms.submissions', 'params' => [], 'mapping' => []]],
     ]);
-    $section = sb2_section([$hero, $formBlock], CanonicalDocumentSchema::newContainer(['global_ref' => 'partial.shared_header', 'layout' => array_merge(CanonicalDocumentSchema::defaultSectionLayout(), ['background_token' => 'surface.accent']) /*TODO*/]));
+    $section = sb2_section([$hero, $formBlock], ['global_ref' => 'partial.shared_header', 'style' => ['surface_token' => 'surface.accent']]);
 
     $doc = sb2_document([$section]);
     $doc['settings']['token_group'] = 'seasonal';
@@ -402,14 +402,14 @@ unit('phase2 document domain: DependencyExtractor produces deduplicated, determi
 
 // ── 7. LegacyDocumentConverter ───────────────────────────────────────────────
 
-unit('phase2 document domain: LegacyDocumentConverter produces a schema "1.0" document that validates', function (): void {
+unit('phase2 document domain: LegacyDocumentConverter produces a current document that validates', function (): void {
     $registry = sb2_registry();
 
     $v1 = [
         'type'     => 'page',
         'template' => 'Default',
         'seo'      => ['title' => 'Legacy Page', 'description' => 'A legacy page.'],
-        'containers' => [
+        'sections' => [
             [
                 'id'     => 'legacy-sec-1',
                 'name'   => 'Intro',
@@ -420,7 +420,7 @@ unit('phase2 document domain: LegacyDocumentConverter produces a schema "1.0" do
         ],
     ];
     $converted = LegacyDocumentConverter::convertToCanonicalV1($v1, ['hero' => 'core.hero']);
-    assert_eq('1.0', $converted['schema_version']);
+    assert_eq('2.0', $converted['schema_version']);
     assert_eq('default', $converted['template_key']);
 
     $normalized = DocumentNormalizer::normalize($converted, $registry);
@@ -430,8 +430,8 @@ unit('phase2 document domain: LegacyDocumentConverter produces a schema "1.0" do
     $v2 = [
         'version' => 2,
         'header'  => ['type' => 'landing', 'template' => 'promo', 'seo' => ['title' => 'V2 Page']],
-        'containers' => [
-            CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Hero Area'], 'id' => 's1', 'children' => [['id' => 'b1', 'type' => 'core.hero', 'props' => ['heading' => 'V2 Heading']]]]),
+        'sections' => [
+            ['label' => 'Hero Area', 'id' => 's1', 'blocks' => [['id' => 'b1', 'type' => 'core.hero', 'props' => ['heading' => 'V2 Heading']]]],
         ],
     ];
     $convertedV2 = LegacyDocumentConverter::convertToCanonicalV1($v2);
@@ -448,23 +448,23 @@ unit('phase2 document domain: DocumentOperation rejects unknown ops and missing 
         new DocumentOperation('not_a_real_op', []);
     });
     assert_throws(StudioValidationException::class, function (): void {
-        new DocumentOperation(DocumentOperation::OP_REMOVE_SECTION, []);
+        new DocumentOperation(DocumentOperation::OP_REMOVE_BLOCK, []);
     }, 'missing required payload key must fail closed');
 
-    $op = DocumentOperation::fromArray(['op' => DocumentOperation::OP_REMOVE_SECTION, 'payload' => ['section_id' => 'sec_x']]);
-    assert_eq(DocumentOperation::OP_REMOVE_SECTION, $op->op);
-    assert_eq(['section_id' => 'sec_x'], $op->payload);
+    $op = DocumentOperation::fromArray(['op' => DocumentOperation::OP_REMOVE_BLOCK, 'payload' => ['block_id' => 'blk_x']]);
+    assert_eq(DocumentOperation::OP_REMOVE_BLOCK, $op->op);
+    assert_eq(['block_id' => 'blk_x'], $op->payload);
 });
 
 unit('phase2 document domain: DocumentOperationApplier applies section/block mutations and fails closed', function (): void {
     $registry = sb2_registry();
     $doc = sb2_document();
 
-    // insert_section
-    $doc = DocumentOperationApplier::applyOne($doc, new DocumentOperation(DocumentOperation::OP_INSERT_SECTION, ['index' => 0, 'section' => ['label' => 'First']]), $registry);
+    // a top-level Container
+    $doc = DocumentOperationApplier::applyOne($doc, new DocumentOperation(DocumentOperation::OP_INSERT_BLOCK, ['parent_id' => null, 'index' => 0, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'First']]]), $registry);
     assert_eq(1, count($doc['containers']));
     $sectionId = $doc['containers'][0]['id'];
-    assert_true((bool) preg_match(CanonicalDocumentSchema::SECTION_ID_PATTERN, $sectionId));
+    assert_true((bool) preg_match(CanonicalDocumentSchema::BLOCK_ID_PATTERN, $sectionId));
 
     // insert_block into the section
     $doc = DocumentOperationApplier::applyOne($doc, new DocumentOperation(DocumentOperation::OP_INSERT_BLOCK, [
@@ -502,10 +502,10 @@ unit('phase2 document domain: DocumentOperationApplier applies section/block mut
     assert_eq('Updated', $doc['containers'][0]['children'][0]['props']['text']);
     assert_eq('h3', $doc['containers'][0]['children'][0]['props']['level']);
 
-    // insert a second section, then move_section
-    $doc = DocumentOperationApplier::applyOne($doc, new DocumentOperation(DocumentOperation::OP_INSERT_SECTION, ['index' => 1, 'section' => ['label' => 'Second']]), $registry);
+    // insert a second top-level Container, then move it to the front
+    $doc = DocumentOperationApplier::applyOne($doc, new DocumentOperation(DocumentOperation::OP_INSERT_BLOCK, ['parent_id' => null, 'index' => 1, 'block' => ['type' => 'core.container', 'metadata' => ['label' => 'Second']]]), $registry);
     $secondSectionId = $doc['containers'][1]['id'];
-    $doc = DocumentOperationApplier::applyOne($doc, new DocumentOperation(DocumentOperation::OP_MOVE_SECTION, ['section_id' => $secondSectionId, 'to_index' => 0]), $registry);
+    $doc = DocumentOperationApplier::applyOne($doc, new DocumentOperation(DocumentOperation::OP_MOVE_BLOCK, ['block_id' => $secondSectionId, 'parent_id' => null, 'index' => 0]), $registry);
     assert_eq($secondSectionId, $doc['containers'][0]['id']);
 
     // move_block across sections
@@ -525,8 +525,8 @@ unit('phase2 document domain: DocumentOperationApplier applies section/block mut
     $doc = DocumentOperationApplier::applyOne($doc, new DocumentOperation(DocumentOperation::OP_REMOVE_BLOCK, ['block_id' => $blockId]), $registry);
     assert_eq(0, count($doc['containers'][0]['children']));
 
-    // remove_section
-    $doc = DocumentOperationApplier::applyOne($doc, new DocumentOperation(DocumentOperation::OP_REMOVE_SECTION, ['section_id' => $sourceSectionId]), $registry);
+    // remove a top-level Container
+    $doc = DocumentOperationApplier::applyOne($doc, new DocumentOperation(DocumentOperation::OP_REMOVE_BLOCK, ['block_id' => $sourceSectionId]), $registry);
     assert_eq(1, count($doc['containers']));
 
     // operation targeting a nonexistent id must fail closed

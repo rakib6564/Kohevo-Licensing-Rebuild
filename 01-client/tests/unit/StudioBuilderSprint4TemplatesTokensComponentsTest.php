@@ -57,14 +57,14 @@ unit('sprint4 unit: StudioTemplateService extracts section preset with preserved
 });
 
 unit('sprint4 unit: StudioGlobalComponentService reference and detach operations mint fresh IDs', function (): void {
-    $sec = CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Global Header Section'], 'id' => 'blk_source_1', 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => []]);
+    $sec = CanonicalDocumentSchema::newContainer(['metadata' => ['label' => 'Global Header Section'], 'id' => 'blk_source_0000000001', 'visibility' => CanonicalDocumentSchema::defaultVisibility(), 'children' => []]);
     $componentUuid = '01923456-789a-7bcd-ef01-23456789abcd';
 
     // 1. Reference section creation
     $refSec = StudioGlobalComponentService::referenceContainerFor($sec, $componentUuid);
     assert_eq($componentUuid, $refSec['global_ref'], 'holds global_ref uuid');
-    assert_eq([], $refSec['blocks'], 'global reference owns no local blocks');
-    assert_eq('Global Header Section', $refSec['label']);
+    assert_eq([], $refSec['children'], 'global reference owns no local blocks');
+    assert_eq('Global Header Section', $refSec['metadata']['label']);
 
     // 2. DocumentCopier deep subtree copy mints fresh block IDs
     $originalBlocks = [
@@ -141,7 +141,6 @@ unit('sprint4 unit: StudioStylesheet contains global body, typography, button, a
     assert_true(str_contains($css, '.sb-button--secondary'));
     assert_true(str_contains($css, '.sb-button--outline'));
     assert_true(str_contains($css, '.sb-button--ghost'));
-    assert_true(str_contains($css, '.sb-layout-section'));
     assert_true(str_contains($css, '.sb-container'));
     assert_true(str_contains($css, '.sb-flex'));
     assert_true(str_contains($css, '.sb-grid'));
