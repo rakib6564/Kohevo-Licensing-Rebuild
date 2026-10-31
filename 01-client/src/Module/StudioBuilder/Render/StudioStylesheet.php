@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '57';
+    public const VERSION = '58';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -261,7 +261,6 @@ final class StudioStylesheet
             . '.sb-catalog__price{font-weight:600;color:var(--sb-text-primary)}'
             . '.sb-stack{display:flex}.sb-stack--vertical{flex-direction:column}.sb-stack--horizontal{flex-direction:row;flex-wrap:wrap}.sb-stack--horizontal.sb-stack--nowrap{flex-wrap:nowrap}'
             . '.sb-embed-card__kind{margin:0 0 .25rem;font-size:.75rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--sb-text-muted)}'
-            . '.sb-embed-card__fields{margin:.75rem 0 0;padding-left:1.25rem;color:var(--sb-text-muted)}'
             . '.sb-embed-card__note{margin:.75rem 0 0;font-size:.8125rem;color:var(--sb-text-muted)}'
             . '.sb-embed-frame{width:100%;border:0;display:block}'
             . '.sb-pay{margin:var(--sb-type-flow,1rem) 0 0}.sb-pay__button{cursor:pointer;border:0;font:inherit}'
@@ -1012,6 +1011,17 @@ final class StudioStylesheet
         return $w('d') . '@media (max-width:1023.98px){' . $w('t') . '}' . '@media (max-width:767.98px){' . $w('m') . '}'
             . '.sb-form>.sb-form-hidden{display:none}'
             . '.sb-hp{position:absolute!important;left:-9999px;width:1px;height:1px;overflow:hidden}'
+            // The editor's preview of a framed form or booking flow: the same classes the frame's page uses, so part styles show.
+            . '.sb-embed-card .field{margin:0 0 .75rem}'
+            . '.sb-embed-card .field-label{display:block;font-weight:500;font-size:.875rem;margin-bottom:.25rem}'
+            . '.sb-embed-input{display:block;height:2.5rem;box-sizing:border-box;border:1px solid var(--sb-border-default);border-radius:var(--sb-radius-sm)}'
+            . '.sb-embed-input--area{height:6rem}'
+            . '.sb-embed-card .btn-primary{display:inline-block;padding:.625rem 1.25rem;border-radius:var(--sb-radius-sm);background:var(--sb-color-accent);color:#fff;font-weight:600}'
+            . '.sb-embed-card .book-stepper{display:flex;gap:.5rem;list-style:none;margin:0 0 1rem;padding:0}'
+            . '.sb-embed-card .book-step{padding:.25rem .625rem;border:1px solid var(--sb-border-default);border-radius:var(--sb-radius-full);font-size:.8rem}'
+            . '.sb-embed-card .book-step.is-current,.sb-embed-card :is(.book-cal-day,.book-slot).is-selected{background:var(--sb-color-accent);border-color:var(--sb-color-accent);color:#fff}'
+            . '.sb-embed-card :is(.book-cal-days,.book-slots){display:flex;flex-wrap:wrap;gap:.375rem;margin:0 0 .75rem}'
+            . '.sb-embed-card :is(.book-cal-day,.book-slot){padding:.375rem .625rem;border:1px solid var(--sb-border-default);border-radius:var(--sb-radius-sm);font-size:.875rem}'
             . '.sb-form-choices{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:.375rem}'
             . '.sb-form-choices legend{font-weight:500;font-size:.875rem;margin-bottom:.25rem;padding:0}'
             . '.sb-form-check{display:flex;align-items:center;gap:.5rem;font-weight:400}'

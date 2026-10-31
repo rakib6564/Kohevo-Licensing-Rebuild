@@ -14,10 +14,22 @@
             ],
             "category": "business",
             "default_props": {
+                "look": "card",
                 "min_height": 560
             },
             "description": "Your booking flow, or one service, on the page",
             "field_schema": [
+                {
+                    "key": "look",
+                    "type": "enum",
+                    "label": "Look",
+                    "required": false,
+                    "default": "card",
+                    "allowed_values": [
+                        "card",
+                        "flat"
+                    ]
+                },
                 {
                     "key": "min_height",
                     "type": "number",
@@ -59,7 +71,56 @@
                 "text_shadow",
                 "overlay"
             ],
-            "style_parts": [],
+            "style_parts": [
+                {
+                    "key": "card",
+                    "label": "Card"
+                },
+                {
+                    "key": "heading",
+                    "label": "Step heading"
+                },
+                {
+                    "key": "step",
+                    "label": "Steps"
+                },
+                {
+                    "key": "step_current",
+                    "label": "Current step"
+                },
+                {
+                    "key": "service",
+                    "label": "Service card"
+                },
+                {
+                    "key": "service_name",
+                    "label": "Service name"
+                },
+                {
+                    "key": "service_meta",
+                    "label": "Service price and length"
+                },
+                {
+                    "key": "day",
+                    "label": "Calendar days"
+                },
+                {
+                    "key": "day_selected",
+                    "label": "Selected day"
+                },
+                {
+                    "key": "slot",
+                    "label": "Time slots"
+                },
+                {
+                    "key": "slot_selected",
+                    "label": "Selected time"
+                },
+                {
+                    "key": "button",
+                    "label": "Button"
+                }
+            ],
             "title": "Booking",
             "type": "booking.embed",
             "version": 1
@@ -5203,9 +5264,23 @@
                 }
             ],
             "category": "business",
-            "default_props": [],
+            "default_props": {
+                "look": "card"
+            },
             "description": "One of your forms, working on the page",
-            "field_schema": [],
+            "field_schema": [
+                {
+                    "key": "look",
+                    "type": "enum",
+                    "label": "Look",
+                    "required": false,
+                    "default": "card",
+                    "allowed_values": [
+                        "card",
+                        "flat"
+                    ]
+                }
+            ],
             "icon": "form",
             "inline_text": [],
             "label": "Form",
@@ -5236,7 +5311,52 @@
                 "text_shadow",
                 "overlay"
             ],
-            "style_parts": [],
+            "style_parts": [
+                {
+                    "key": "card",
+                    "label": "Card"
+                },
+                {
+                    "key": "title",
+                    "label": "Title"
+                },
+                {
+                    "key": "description",
+                    "label": "Description"
+                },
+                {
+                    "key": "field",
+                    "label": "Field"
+                },
+                {
+                    "key": "label",
+                    "label": "Labels"
+                },
+                {
+                    "key": "input",
+                    "label": "Inputs"
+                },
+                {
+                    "key": "textarea",
+                    "label": "Text areas"
+                },
+                {
+                    "key": "choice",
+                    "label": "Choices"
+                },
+                {
+                    "key": "help",
+                    "label": "Help text"
+                },
+                {
+                    "key": "error",
+                    "label": "Error messages"
+                },
+                {
+                    "key": "button",
+                    "label": "Submit button"
+                }
+            ],
             "title": "Form",
             "type": "forms.embed",
             "version": 1
@@ -8787,6 +8907,28 @@
                 "direction": "column",
                 "justify": "center",
                 "align": "center"
+            }
+        },
+        {
+            "key": "saved-form",
+            "type": "forms.embed",
+            "category": "forms",
+            "icon": "form",
+            "title": "Saved form",
+            "description": "A form from your Forms plugin, chosen from a list",
+            "props": {
+                "look": "flat"
+            }
+        },
+        {
+            "key": "booking",
+            "type": "booking.embed",
+            "category": "forms",
+            "icon": "calendar",
+            "title": "Booking",
+            "description": "Your booking flow, or one service",
+            "props": {
+                "look": "flat"
             }
         },
         {

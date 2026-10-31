@@ -28,8 +28,8 @@ export const isLocked = (def) => !!def && def.locked === true;
 /** Kohevo component blocks (module-backed): the Components tab. */
 export const isComponentBlock = (def) => !!def && def.category === 'business';
 
-/** Plain building blocks: the Elements tab (everything that is neither data-bound nor a Kohevo component). */
-export const isElementBlock = (def) => !!def && !isDynamicBlock(def) && !isComponentBlock(def);
+/** Plain building blocks: the Elements tab (neither data-bound nor a Kohevo component, or a ready-made variant of one). */
+export const isElementBlock = (def) => !!def && (!!def.variantKey || !isDynamicBlock(def)) && !isComponentBlock(def);
 
 /**
  * Add-panel cards for the manifest's variants (a ready-set configuration of an existing block type).

@@ -18,6 +18,7 @@ namespace Slate\Module\StudioBuilder\Render\Block\ModuleRenderers;
 
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
+use Slate\Module\StudioBuilder\Render\EmbedStyle;
 use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Render\RenderMode;
 
@@ -60,17 +61,21 @@ final class FormEmbedRenderer implements BlockRendererInterface
     private function previewCard(array $form): string
     {
         $desc = CatalogFormat::str($form, 'description');
+        $submit = CatalogFormat::str($form, 'submit_label');
         $labels = array_values(array_filter(explode("\n", CatalogFormat::str($form, 'field_labels')), static fn(string $l): bool => $l !== ''));
-        $items = '';
-        foreach ($labels as $label) {
-            $items .= '<li>' . Html::e($label) . '</li>';
+        $kinds = explode("\n", CatalogFormat::str($form, 'field_kinds'));
+        $fields = '';
+        foreach ($labels as $i => $label) {
+            $control = ($kinds[$i] ?? '') === 'textarea' ? 'sb-embed-input sb-embed-input--area' : 'sb-embed-input';
+            $fields .= '<div class="field"><span class="field-label">' . Html::e($label) . '</span><span class="' . $control . '"></span></div>';
         }
 
-        return '<div class="sb-form-card sb-embed-card">'
+        return '<div class="sb-form-card sb-embed-card forms-public-card">'
             . '<p class="sb-embed-card__kind">' . Html::e(Html::t('studio_embed_form_kind', 'Form')) . '</p>'
             . '<h3 class="sb-form-card__title">' . Html::e(CatalogFormat::str($form, 'title')) . '</h3>'
             . ($desc !== '' ? '<p class="sb-form-card__description">' . Html::text($desc) . '</p>' : '')
-            . ($items !== '' ? '<ul class="sb-embed-card__fields">' . $items . '</ul>' : '')
+            . $fields
+            . '<p class="forms-submit-row"><span class="btn btn-primary">' . Html::e($submit !== '' ? $submit : Html::t('studio_embed_form_submit', 'Send')) . '</span></p>'
             . '<p class="sb-embed-card__note">' . Html::e(Html::t('studio_embed_form_note', 'Visitors see the working form here. Preview the page to try it.')) . '</p>'
             . '</div>';
     }
@@ -86,7 +91,10 @@ final class FormEmbedRenderer implements BlockRendererInterface
         if (!class_exists('FormsAPI')) {
             return CatalogFormat::unavailable($scope);
         }
-        $src = $scope->site()->absoluteUrl('forms/' . rawurlencode($slug)) . '?embed=1';
+        $style = EmbedStyle::publish($scope, $scope->themeRootCss());
+        $src = $scope->site()->absoluteUrl('forms/' . rawurlencode($slug)) . '?embed=1'
+            . ($scope->string('look', 'card') === 'flat' ? '&chrome=0' : '')
+            . ($style !== '' ? '&' . EmbedStyle::PARAM . '=' . $style : '');
         return '<iframe class="sb-embed-frame sb-embed-frame--form" src="' . Html::e($src) . '"'
             . ' title="' . Html::e($title !== '' ? $title : Html::t('studio_embed_form_kind', 'Form')) . '"'
             . ' style="min-height:' . self::MIN_HEIGHT . 'px" loading="lazy"></iframe>';

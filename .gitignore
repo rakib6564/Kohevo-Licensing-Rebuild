@@ -52,3 +52,6 @@ production-artifacts/*.zip
 
 # Local assistant/editor state (machine-specific)
 .claude/
+
+# Sheets EmbedStyle writes while a render runs (tests, local preview).
+01-client/uploads/studio-embed/
