@@ -572,5 +572,14 @@ function native_apply(array &$b, array $anc, bool $centred = false): void
     $down = array_merge($anc, $cls);
     foreach ($b['children'] as &$child) { native_apply($child, $down, $centreKids); }
     unset($child);
+    // `stagger` (cards to a row): the children fade up in turn, each row starting over, and the block itself stays still.
+    $rows = 0;
+    foreach ($cls as $c) { $rows = max($rows, (int) ($map[$c]['stagger'] ?? 0)); }
+    if ($rows > 0) {
+        foreach ($b['children'] as $i => &$child) {
+            $child['interactions'] = ['trigger' => 'viewport-enter', 'animation' => ['type' => 'fade_up', 'duration_ms' => 800, 'delay_ms' => ($i % $rows) * 120, 'easing' => EASE]];
+        }
+        unset($child);
+    }
     if ($keep) { $b['classNames'] = $keep; } else { unset($b['classNames']); }
 }

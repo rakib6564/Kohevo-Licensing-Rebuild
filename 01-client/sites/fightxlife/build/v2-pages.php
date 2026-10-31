@@ -107,7 +107,7 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         'v2-phero__lead' => ['s' => S(col(INK), ty('18.5px', null, '1.65'), mar(0, null, 18, null)), 'm' => ty('16.5px'), 'anim' => ['type' => 'fade_up', 'duration_ms' => 800, 'delay_ms' => 150, 'easing' => EASE]],
         'v2-phero__text' => ['anim' => ['type' => 'fade_up', 'duration_ms' => 800, 'delay_ms' => 220, 'easing' => EASE], 'parts' => $rich + ['paragraph' => S(col(BODY), ty('16px', null, '28px'), mar(18, 0, 0, 0))]],
         'v2-phero__photo' => ['s' => S(dim(['aspect_ratio' => '16/15', 'object_fit' => 'cover', 'overflow' => 'hidden']), radius('30px'), shadow(...LIFT)), 't' => dim(['width' => '100%', 'height' => '400px']), 'm' => dim(['width' => '100%', 'height' => '280px']),
-                              'anim' => ['type' => 'scale_up', 'duration_ms' => 1000, 'delay_ms' => 120, 'easing' => EASE]],
+                              'anim' => ['type' => 'fade_up', 'duration_ms' => 1000, 'delay_ms' => 120, 'easing' => EASE]],
         'v2-phero__links' => ['s' => S(lay(['gap' => '24px']), mar(26, null, 0, null))],
 
         // ── Sections ──
@@ -124,7 +124,7 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         'v2-split2--bal' => ['s' => lay(['tracks' => 'minmax(0,3fr) minmax(0,7fr)', 'gap' => '96px', 'align' => 'center'])],
         'v2-split2__photo' => ['s' => S(dim(['height' => '440px', 'object_fit' => 'cover', 'overflow' => 'hidden']), radius('26px'), shadow(...LIFT)), 't' => lay(['order' => 2]), 'm' => S(dim(['height' => '280px']), lay(['order' => 2])), // stacked, the text comes first
            
-                              'reveal' => ['type' => 'scale_up', 'duration_ms' => 900, 'easing' => EASE]],
+                              'reveal' => $up(0)],
         'v2-split2__copy' => ['reveal' => $up(0)],
         'v2-split2--top' => ['s' => lay(['tracks' => 'minmax(0,3fr) minmax(0,7fr)', 'align' => 'start', 'gap' => '64px'])],
         'v2-contact-side' => ['s' => lay(['gap' => '18px']), 't' => lay(['order' => 2]), 'm' => lay(['order' => 2])], // stacked, the form comes first
@@ -137,7 +137,7 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         'v2-links'       => ['s' => S(lay(['gap' => '26px']), mar(16, null, 0, null))],
 
         // ── Cards (the H3 blocks) ──
-        'v2-grid'        => ['s' => S(lay(['gap' => '38px', 'align' => 'stretch']), mar(8, null, 0, null)), 'props' => ['columns' => 3], 't' => lay(['gap' => '24px']), 'm' => lay(['gap' => '32px']), 'tp' => ['columns' => 2], 'mp' => ['columns' => 1]],
+        'v2-grid'        => ['s' => S(lay(['gap' => '38px', 'align' => 'stretch']), mar(8, null, 0, null)), 'props' => ['columns' => 3], 't' => lay(['gap' => '24px']), 'm' => lay(['gap' => '32px']), 'tp' => ['columns' => 2], 'mp' => ['columns' => 1], 'stagger' => 3],
         'v2-grid--2'     => ['props' => ['columns' => 2]],
         'v2-grid--4'     => ['props' => ['columns' => 4], 'tp' => ['columns' => 2]],
         'v2-box'         => ['s' => S(lay(['display' => 'flex', 'direction' => 'column']), place('relative'), radius('22px'), bg('#ffffff'), $lift, fx(['transition' => ['duration_ms' => 350, 'easing' => 'ease']])),
@@ -159,7 +159,7 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         'v2-ghost--sm'   => ['parts' => ['button' => S(sz(['height' => 46]), pad(0, 20), ty('14px'))]],
 
         // ── Facts (Label : value) ──
-        'v2-facts'       => ['s' => S(lay(['gap' => '20px']), mar(10, null, 0, null)), 'props' => ['columns' => 3], 'tp' => ['columns' => 2], 'mp' => ['columns' => 1], 'reveal' => $up(0)],
+        'v2-facts'       => ['s' => S(lay(['gap' => '20px']), mar(10, null, 0, null)), 'props' => ['columns' => 3], 'tp' => ['columns' => 2], 'mp' => ['columns' => 1], 'stagger' => 3],
         'v2-facts--2'    => ['props' => ['columns' => 2]],
         'v2-facts--1'    => ['s' => mar(0, null, 0, null), 'props' => ['columns' => 1], 'tp' => ['columns' => 1]],
         'v2-infos'       => ['s' => lay(['tracks' => 'minmax(0,1fr) minmax(0,1fr)', 'gap' => '38px', 'align' => 'stretch']), 't' => lay(['tracks' => '1fr', 'gap' => '24px'])],
@@ -170,10 +170,10 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         'v2-fact--in'    => ['s' => S(pad(12, 16), radius('12px'), bg('#fbf6f8'), ['border' => ['width' => '0px']], shadow(0, 0, 0, 'transparent'), mar(0, null, 10, null))],
 
         // ── Figures and quotes ──
-        'v2-stats'       => ['s' => lay(['gap' => '32px']), 'props' => ['columns' => 3], 'tp' => ['columns' => 2], 'mp' => ['columns' => 1], 'reveal' => $up(0)],
+        'v2-stats'       => ['s' => lay(['gap' => '32px']), 'props' => ['columns' => 3], 'tp' => ['columns' => 2], 'mp' => ['columns' => 1], 'stagger' => 3],
         'v2-team__block' => ['s' => mar(0, null, 60, null), 'reveal' => $up(0)],
         'v2-team__group' => ['s' => S(col(PINK), ty('15px', 'bold', null, '.06em'), mar(0, null, 26, null)), 'center' => true],
-        'v2-team'        => ['s' => lay(['gap' => '32px', 'justify' => 'center']), 'm' => lay(['gap' => '14px'])],
+        'v2-team'        => ['s' => lay(['gap' => '32px', 'justify' => 'center']), 'm' => lay(['gap' => '14px']), 'stagger' => 4],
         'v2-team__card'  => ['s' => S(dim(['width' => '220px']), pad(30, 20), radius('22px'), bg('#ffffff'), $lift, fx(['transition' => ['duration_ms' => 300, 'easing' => 'ease']])),
                               'h' => fx(['transform' => ['translate_y' => '-6px']]), 'm' => S(dim(['width' => '46%']), pad(18, 10)), 'center' => true],
         'v2-team__photo' => ['s' => S(dim(['width' => '120px', 'height' => '120px', 'object_fit' => 'cover', 'overflow' => 'hidden']), radius('999px'), mar(0, 'auto', 14, 'auto'), brd('#ffd3ea', '4px', '999px')), 'm' => dim(['width' => '92px', 'height' => '92px'])],
@@ -186,14 +186,14 @@ function native_v2_pages(array $pill, array $pillHover, array $base, \Closure $u
         // A short note closing a section: italic, with room above and below.
         'v2-note'        => ['s' => S(['typography' => ['style' => 'italic']], mar(60, 'auto', 28, 'auto')), 'm' => mar(40, 'auto', 16, 'auto')],
         'v2-stat__text'  => ['s' => S(col(BODY), ty('15px', null, '1.55'))],
-        'v2-quotes'      => ['s' => lay(['gap' => '34px']), 'props' => ['columns' => 3], 'mp' => ['columns' => 1], 'reveal' => $up(0)],
+        'v2-quotes'      => ['s' => lay(['gap' => '34px']), 'props' => ['columns' => 3], 'mp' => ['columns' => 1], 'stagger' => 3],
         'v2-q'           => ['s' => S(pad(38, 34), radius('22px'), grad('linear-gradient(150deg,#ff3fa6 0%,#e9008a 60%,#b0006a 100%)'), shadow(0, 24, 50, 'rgba(233,0,138,.25)', -10))],
         'v2-q__text'     => ['s' => S(col('#ffffff'), ty('19px', 'bold', '1.4', null, SYNE))],
         'v2-q__name'     => ['s' => S(col('#ffffff'), ty('19px', null, '1.4', null, SCRIPT), mar(16, null, 0, null))],
 
         // ── Call-to-action band ──
         'v2-band'        => ['s' => S(place('relative'), pad(76, 72), radius('28px'), grad('linear-gradient(135deg,#ff3fa6 0%,#e9008a 50%,#a3005f 100%)'), shadow(0, 30, 70, 'rgba(233,0,138,.3)', -12)),
-                              't' => pad(56, 44), 'm' => pad(42, 24), 'center' => true, 'reveal' => ['type' => 'scale_up', 'duration_ms' => 900, 'easing' => EASE]],
+                              't' => pad(56, 44), 'm' => pad(42, 24), 'center' => true, 'reveal' => $up(0)],
         'v2-band v2-kick' => ['s' => col('#ffd3ea')],
         'v2-band v2-h2'  => ['s' => col('#ffffff'), 'parts' => ['highlight' => col('#ffd3ea')]],
         'v2-band v2-text' => ['parts' => ['paragraph' => S(col('rgba(255,255,255,.9)'), ty('16.5px', null, '28px'), mar(0, 0, 12, 0)), 'link' => col('#ffffff'), 'bold' => col('#ffffff'), 'item' => col('rgba(255,255,255,.9)'), 'marker' => col('#ffffff')]],
