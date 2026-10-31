@@ -182,15 +182,46 @@ class StudioBuilder extends Plugin
         }
         $t = static fn (string $key, string $default): string => function_exists('__') ? __($key, $default) : $default;
         if (\Auth::can('studio-builder.edit')) {
-            $pageId = StudioRuntimeFactory::build()->publicRuntime->publishedPageIdAt((string) $path);
+            $runtime = StudioRuntimeFactory::build();
+            $pageId = $runtime->publicRuntime->publishedPageIdAt((string) $path);
             if ($pageId !== null) {
                 $items[] = ['id' => 'edit-page', 'label' => $t('studio_bar_edit_page', 'Edit page'), 'href' => $this->url('admin/builder.php') . '?page=' . $pageId,
-                    'perm' => 'studio-builder.edit', 'order' => 10, 'menu' => 'bar', 'primary' => true];
+                    'perm' => 'studio-builder.edit', 'order' => 10, 'menu' => 'bar', 'primary' => true, 'children' => $this->frontBarEditMenu($runtime, $pageId)];
             }
         }
         $items[] = ['id' => 'pages', 'label' => $t('studio_nav_pages', 'Pages'), 'href' => $this->url('admin/pages.php'), 'perm' => 'studio-builder.view', 'order' => 20, 'menu' => 'bar'];
         $items[] = ['id' => 'new-page', 'label' => $t('studio_bar_new_page', 'Page'), 'href' => $this->url('admin/page-new.php'), 'perm' => 'studio-builder.edit', 'order' => 10, 'menu' => 'new'];
         return $items;
+    }
+
+    /**
+     * The Edit menu: the parts this page shows, each in the builder, then the site-wide screens.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function frontBarEditMenu(\Slate\Module\StudioBuilder\Runtime\StudioRuntime $runtime, int $pageId): array
+    {
+        $t = static fn (string $key, string $default): string => function_exists('__') ? __($key, $default) : $default;
+        $tags = [
+            'header'    => $t('studio_bar_tag_header', 'Header'),
+            'footer'    => $t('studio_bar_tag_footer', 'Footer'),
+            'template'  => $t('studio_bar_tag_template', 'Template'),
+            'component' => $t('studio_bar_tag_component', 'Component'),
+        ];
+        $menu = [];
+        try {
+            foreach ($runtime->pageParts->of($pageId, current_tenant_id()) as $part) {
+                $menu[] = ['label' => $part['title'], 'href' => $this->url('admin/builder.php') . '?page=' . $part['id'],
+                    'perm' => 'studio-builder.edit', 'tag' => $tags[$part['role']], 'group' => 'page'];
+            }
+        } catch (\Throwable $e) {
+            // The page's own Edit link and the site items still work.
+        }
+        $website = $t('studio_bar_tag_website', 'Website');
+        $menu[] = ['label' => $t('studio_bar_site_settings', 'Site settings'), 'href' => $this->url('admin/global-settings.php'), 'perm' => 'studio-builder.edit', 'tag' => $website, 'group' => 'site'];
+        $menu[] = ['label' => $t('studio_nav_templates', 'Templates'), 'href' => $this->url('admin/templates.php'), 'perm' => 'studio-builder.view', 'tag' => $website, 'group' => 'site'];
+        $menu[] = ['label' => $t('studio_nav_menus', 'Menus'), 'href' => $this->url('admin/menus.php'), 'perm' => 'studio-builder.view', 'tag' => $website, 'group' => 'site'];
+        return $menu;
     }
 
     /** The page "Open builder" opens: the homepage, else the first live page, else the first page; null with none. */

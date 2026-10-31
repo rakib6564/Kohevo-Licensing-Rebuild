@@ -335,4 +335,5 @@ return [
     'admin_bar_count' => '%d new',
     'admin_bar_new_media' => 'Media file',
     'admin_bar_new_user' => 'User',
+    'admin_bar_edit_more' => 'More to edit',
 ];

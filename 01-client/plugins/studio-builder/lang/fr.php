@@ -2780,4 +2780,10 @@ return [
     'studio_backup_delete_confirm' => 'Supprimer cette sauvegarde ?',
     'studio_bar_edit_page' => 'Modifier la page',
     'studio_bar_new_page' => 'Page',
+    'studio_bar_tag_header' => 'En-tête',
+    'studio_bar_tag_footer' => 'Pied de page',
+    'studio_bar_tag_template' => 'Modèle',
+    'studio_bar_tag_component' => 'Composant',
+    'studio_bar_tag_website' => 'Site',
+    'studio_bar_site_settings' => 'Réglages du site',
 ];

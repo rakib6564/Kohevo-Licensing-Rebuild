@@ -67,6 +67,29 @@ unit('FrontAdminBar::render: no Kohevo mark when a white-labelled site passes no
     assert_false(str_contains($html, 'Kohevo'));
 });
 
+unit('FrontAdminBar: the Edit menu lists only what the admin may open, tagged, divided by group', function () use ($frontBarView) {
+    $items = FrontAdminBar::visibleItems([
+        ['label' => 'Edit', 'href' => '/e', 'perm' => 'yes', 'primary' => true, 'children' => [
+            ['label' => 'Main <h>', 'href' => '/h', 'perm' => 'yes', 'tag' => 'Header', 'group' => 'page'],
+            ['label' => 'Secret', 'href' => '/s', 'perm' => 'no', 'tag' => 'Website', 'group' => 'site'],
+            ['label' => 'Menus', 'href' => '/m', 'perm' => 'yes', 'tag' => 'Website', 'group' => 'site'],
+        ]],
+    ], static fn (string $perm): bool => $perm === 'yes');
+    $html = FrontAdminBar::render($frontBarView(['items' => $items]));
+    assert_true(str_contains($html, 'id="kb-edit"'));
+    assert_true(str_contains($html, 'Main &lt;h&gt;'));
+    assert_false(str_contains($html, 'Secret'));
+    assert_eq(1, substr_count($html, 'class="sep"'));
+    assert_true(strpos($html, 'class="primary"') < strpos($html, 'id="kb-links"'));
+});
+
+unit('Page parts are worked out for the signed-in author only, never while rendering a public page', function () {
+    $root = __DIR__ . '/../../';
+    assert_false(str_contains((string) file_get_contents($root . 'src/Module/StudioBuilder/Runtime/StudioPublicRuntime.php'), 'PublishedPageParts'));
+    assert_false(str_contains((string) file_get_contents($root . 'src/Module/StudioBuilder/Render/PageDocumentAssembler.php'), 'pageParts'));
+    assert_true(str_contains((string) file_get_contents($root . 'plugins/studio-builder/StudioBuilder.php'), "pageParts->of("));
+});
+
 unit('AdminHint: readable by script, carries no identity, ends with the browser session, stays on the site path', function () {
     $options = AdminHint::cookieOptions();
     assert_false($options['httponly']);

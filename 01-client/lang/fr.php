@@ -1383,4 +1383,5 @@ return array (
     'admin_bar_count' => '%d nouveau(x)',
     'admin_bar_new_media' => 'Fichier média',
     'admin_bar_new_user' => 'Utilisateur',
+    'admin_bar_edit_more' => 'Autres éléments à modifier',
 );

@@ -15,7 +15,8 @@
  *    'order' => 40, 'menu' => 'bar', 'count' => 3]
  *
  * `menu` is `bar` (a link on the bar) or `new` (an entry under New); `primary`
- * marks the page's edit link.
+ * marks the page's edit link, whose `children` open from a button beside it
+ * (each with `tag`, and `group` to divide them).
  */
 
 declare(strict_types=1);
@@ -62,6 +63,9 @@ final class FrontAdminBar
             $perm = (string) ($item['perm'] ?? '');
             if ($perm !== '' && !$can($perm)) {
                 continue;
+            }
+            if (isset($item['children'])) {
+                $item['children'] = self::visibleItems(is_array($item['children']) ? $item['children'] : [], $can);
             }
             $visible[] = $item;
         }
@@ -122,7 +126,7 @@ final class FrontAdminBar
             }
             $link = '<li><a href="' . $esc((string) $item['href']) . '"' . (!empty($item['primary']) ? ' class="primary"' : '') . '>' . $text . '</a></li>';
             if (!empty($item['primary'])) {
-                $primary .= $link;
+                $primary .= empty($item['children']) ? $link : self::editMenu($item, $esc);
             } elseif (($item['menu'] ?? 'bar') === 'new') {
                 $new .= $link;
             } else {
@@ -152,6 +156,29 @@ final class FrontAdminBar
             . '<div class="user menu">' . self::menuButton('kb-user', '<span class="avatar" aria-hidden="true">' . $esc($initial) . '</span><span class="name">' . $esc($name) . '</span>')
             . '<ul id="kb-user" hidden>' . $userItems . '</ul></div>'
             . '</nav>';
+    }
+
+    /**
+     * The edit link with its menu: one click still edits the page, the button beside it opens the rest.
+     *
+     * @param array<string, mixed> $item
+     */
+    private static function editMenu(array $item, \Closure $esc): string
+    {
+        $rows = '';
+        $group = null;
+        foreach ($item['children'] as $child) {
+            if ($group !== null && ($child['group'] ?? '') !== $group) {
+                $rows .= '<li class="sep" role="separator"></li>';
+            }
+            $group = (string) ($child['group'] ?? '');
+            $tag = (string) ($child['tag'] ?? '');
+            $rows .= '<li><a class="row" href="' . $esc((string) $child['href']) . '"><span class="title">' . $esc((string) $child['label']) . '</span>'
+                . ($tag !== '' ? '<span class="tag">' . $esc($tag) . '</span>' : '') . '</a></li>';
+        }
+        return '<li class="menu edit"><a class="primary" href="' . $esc((string) $item['href']) . '">' . $esc((string) $item['label']) . '</a>'
+            . self::menuButton('kb-edit', '<span class="sr">' . $esc(__('admin_bar_edit_more', 'More to edit')) . '</span>')
+            . '<ul id="kb-edit" hidden>' . $rows . '</ul></li>';
     }
 
     private static function menuButton(string $id, string $content): string
