@@ -328,4 +328,11 @@ return [
     'plugin_uninstall_type_prompt' => 'This permanently deletes all data of "%1$s". To confirm, type: %2$s',
     'plugin_uninstall_type_mismatch' => 'What you typed does not match. Nothing was removed.',
     'plugin_confirm_mismatch' => 'Confirmation did not match. Nothing was removed.',
+    'admin_bar_label' => 'Admin bar',
+    'admin_bar_new' => 'New',
+    'admin_bar_menu' => 'Menu',
+    'admin_bar_profile' => 'Profile',
+    'admin_bar_count' => '%d new',
+    'admin_bar_new_media' => 'Media file',
+    'admin_bar_new_user' => 'User',
 ];

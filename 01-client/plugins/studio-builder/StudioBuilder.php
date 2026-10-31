@@ -60,6 +60,7 @@ class StudioBuilder extends Plugin
         \Hook::addFilter('admin_nav_items', [$this, 'addAdminNav']);
         \Hook::addAction('admin_head', [$this, 'adminHead']);
         \Hook::addFilter('admin_topbar_actions', [$this, 'addTopbarActions']);
+        \Hook::addFilter('front_admin_bar_items', [$this, 'addFrontBarItems'], 10, 2);
         \Hook::addFilter('i18n_lang_paths', [$this, 'addLangPath']);
         // The media library will not delete a file a Studio page still uses.
         // Registered once even if the plugin boots again: a second copy would count every use twice.
@@ -166,6 +167,30 @@ class StudioBuilder extends Plugin
             . ' onclick="var r=document.documentElement,c=r.dataset.sbDensity===\'comfortable\';if(c){delete r.dataset.sbDensity}else{r.dataset.sbDensity=\'comfortable\'}try{localStorage.setItem(\'sb-density\',c?\'compact\':\'comfortable\')}catch(e){}">'
             . $icon('<line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>') . '</button>';
         return $actions;
+    }
+
+    /**
+     * `front_admin_bar_items`: Edit for the page being viewed, Pages, and New page.
+     *
+     * @param array<int, array<string, mixed>> $items
+     * @return array<int, array<string, mixed>>
+     */
+    public function addFrontBarItems(array $items, mixed $path = ''): array
+    {
+        if (!self::isEntitled()) {
+            return $items;
+        }
+        $t = static fn (string $key, string $default): string => function_exists('__') ? __($key, $default) : $default;
+        if (\Auth::can('studio-builder.edit')) {
+            $pageId = StudioRuntimeFactory::build()->publicRuntime->publishedPageIdAt((string) $path);
+            if ($pageId !== null) {
+                $items[] = ['id' => 'edit-page', 'label' => $t('studio_bar_edit_page', 'Edit page'), 'href' => $this->url('admin/builder.php') . '?page=' . $pageId,
+                    'perm' => 'studio-builder.edit', 'order' => 10, 'menu' => 'bar', 'primary' => true];
+            }
+        }
+        $items[] = ['id' => 'pages', 'label' => $t('studio_nav_pages', 'Pages'), 'href' => $this->url('admin/pages.php'), 'perm' => 'studio-builder.view', 'order' => 20, 'menu' => 'bar'];
+        $items[] = ['id' => 'new-page', 'label' => $t('studio_bar_new_page', 'Page'), 'href' => $this->url('admin/page-new.php'), 'perm' => 'studio-builder.edit', 'order' => 10, 'menu' => 'new'];
+        return $items;
     }
 
     /** The page "Open builder" opens: the homepage, else the first live page, else the first page; null with none. */

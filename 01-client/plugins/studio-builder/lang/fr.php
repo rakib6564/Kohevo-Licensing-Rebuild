@@ -2778,4 +2778,6 @@ return [
     'studio_backup_download' => 'Télécharger',
     'studio_backup_restore' => 'Restaurer',
     'studio_backup_delete_confirm' => 'Supprimer cette sauvegarde ?',
+    'studio_bar_edit_page' => 'Modifier la page',
+    'studio_bar_new_page' => 'Page',
 ];

@@ -243,4 +243,6 @@ return [
     'shop_view_order'               => 'Voir votre commande',
     'shop_was'                      => 'Avant',
     'shop_your_details'             => 'Vos coordonnées',
+    'shop_bar_label' => 'Boutique',
+    'shop_bar_new_product' => 'Produit',
 ];
