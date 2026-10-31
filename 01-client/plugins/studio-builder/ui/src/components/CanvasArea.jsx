@@ -680,6 +680,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
         outlines={canvasView.outlines}
         labels={canvasView.labels}
         onAction={(action, id) => actionRef.current(action, id)}
+        onZoneMenu={(id, point) => openMenuForRef.current(id, point)}
       />
       </div>
       {menu && menuItems && (

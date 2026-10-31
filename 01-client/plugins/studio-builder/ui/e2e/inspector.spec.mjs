@@ -97,7 +97,7 @@ test('search lists the matching sections from every tab, opened, and Escape clea
     await search.fill('border');
     await expect(page.locator('[data-searching="true"] [data-section]')).toHaveCount(1);
     await expect(toggleOf(page, 'border')).toHaveAttribute('aria-expanded', 'true');
-    await expect(page.getByRole('status').filter({ hasText: '1 matching sections' })).toHaveCount(1);
+    await expect(page.getByRole('status').filter({ hasText: '1 matching groups' })).toHaveCount(1);
 
     await search.fill('z-index');
     await expect(page.locator('[data-searching="true"] [data-section="advanced"]')).toHaveCount(1); // found on the Advanced tab

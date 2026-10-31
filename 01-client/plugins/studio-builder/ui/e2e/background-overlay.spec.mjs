@@ -37,10 +37,9 @@ test('an overlay shows on the image preview, is named under it, and can be remov
     await page.getByRole('tab', { name: /^Add$/ }).click();
     const panel = page.locator('#sbx-leftpanel-blocks');
     await panel.getByRole('tab', { name: 'Elements' }).click();
-    await panel.locator('[data-chip="layout"]').click();
-    await panel.locator('[data-block-type="core.container"]').click();
+    await panel.locator('[data-chip="content"]').click();
+    await panel.locator('[data-block-type="core.quote"]').click(); // a Container's Classic tab holds image and colour together
     await settled(page);
-    await page.getByTestId('chooser-close').click().catch(() => {});
     await page.getByRole('tab', { name: 'Style' }).click();
     const bg = await openSection(page, 'background');
     const modes = bg.getByRole('radiogroup', { name: 'Background type' });

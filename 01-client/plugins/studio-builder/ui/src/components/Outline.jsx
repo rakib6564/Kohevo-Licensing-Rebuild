@@ -445,7 +445,7 @@ export const Outline = memo(function Outline() {
               aria-setsize={row.setSize}
               aria-posinset={row.index + 1}
               aria-selected={selection === row.id || picked.has(row.id)}
-              aria-expanded={row.container ? !isRowCollapsed : undefined}
+              aria-expanded={row.hasChildren ? !isRowCollapsed : undefined}
               aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight Delete F2 Shift+F10"
               tabIndex={row.id === activeId ? 0 : -1}
               className={`sbx-tree__row sbx-tree__row--${row.top ? 'top' : 'block'}${selection === row.id || picked.has(row.id) ? ' is-selected' : ''}${picked.size > 1 && picked.has(row.id) ? ' is-picked' : ''}${isProvisionalId(row.id) ? ' is-pending' : ''}${isHidden ? ' is-hidden' : ''}${dragId === row.id ? ' is-dragging' : ''}${ownLock ? ' is-locked' : ''}${lockedByAncestor ? ' is-locked-inherited' : ''}${hint}`}

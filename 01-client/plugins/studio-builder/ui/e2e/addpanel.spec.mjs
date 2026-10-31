@@ -41,23 +41,23 @@ test('Elements are grouped by category with a rail; "View all" drills into one c
   expect(await panel(page).locator('.sbx-elements__group').count()).toBeGreaterThan(1);
 });
 
-test('one search covers sections, elements and components; clearing it brings the tabs back', async ({ page }) => {
+test('one search covers Containers, elements and components; clearing it brings the tabs back', async ({ page }) => {
   await openBuilder(page);
-  await openTab(page, 'Sections');
-  await expect(panel(page).getByTestId('section-presets')).toBeVisible(); // the presets load after the page
+  await openTab(page, 'Containers');
+  await expect(panel(page).getByTestId('container-presets')).toBeVisible(); // the presets load after the page
   const search = panel(page).getByRole('searchbox');
   await search.fill('hero');
   const results = panel(page).getByTestId('add-search-results');
   await expect(results).toBeVisible();
   const headings = await results.locator('h3').allTextContents();
-  expect(headings[0]).toMatch(/^Sections/);
+  expect(headings[0]).toMatch(/^Containers/);
   expect(headings.join('|')).toMatch(/Elements/);
-  await expect(results.locator('[data-preset="system-section-hero-classic"]')).toBeVisible();
+  await expect(results.locator('[data-preset="system-container-hero-classic"]')).toBeVisible();
   await expect(results.locator('[data-block-type="core.hero"]')).toBeVisible();
   await search.fill('zzzz-nothing');
   await expect(panel(page).getByTestId('search-empty')).toBeVisible();
   await search.fill('');
-  await expect(panel(page).getByTestId('section-presets')).toBeVisible();
+  await expect(panel(page).getByTestId('container-presets')).toBeVisible();
 });
 
 test('Components lists only real things — no placeholder header/footer cards', async ({ page }) => {
@@ -87,7 +87,7 @@ test('at the block limit, cards are disabled and say why (and insert nothing)', 
     const res = await route.fetch();
     const json = await res.json();
     const manifest = (json.data || json).manifest || json.data || json;
-    manifest.limits = { ...manifest.limits, max_blocks: 1 };
+    manifest.limits = { ...manifest.limits, max_blocks: 2 }; // on the empty sandbox page, a heading and the Container made for it
     await route.fulfill({ response: res, json });
   });
   await openBuilder(page);
@@ -98,9 +98,8 @@ test('at the block limit, cards are disabled and say why (and insert nothing)', 
   try {
     const heading = panel(page).locator('[data-block-type="core.heading"]').first();
     await expect(heading).not.toHaveAttribute('aria-disabled', 'true');
-    const rowsBefore = await page.locator('[role="treeitem"]').count();
     await heading.click();
-    inserted = 1 + (rowsBefore === 0 ? 1 : 0); // the block, plus the section created for it on an empty page
+    inserted = 1; // the block and the Container made for it are one step
     await settled(page);
     const another = panel(page).locator('[data-block-type]').nth(1);
     await expect(another).toHaveAttribute('aria-disabled', 'true');

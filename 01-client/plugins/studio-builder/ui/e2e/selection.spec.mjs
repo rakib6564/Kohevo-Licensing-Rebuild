@@ -4,7 +4,7 @@ import { openBuilder, frameDocument, settled, layerCount, restoreLayers } from '
 
 const ROWS = '[role="treeitem"]';
 
-// These specs add sections to the shared sandbox page (some a whole Team section). Each test notes how many layers the
+// These specs add Containers to the shared sandbox page (some a whole Team preset). Each test notes how many layers the
 // page had when it opened, and undoes back to that afterwards, so the specs that run next do not inherit the leftovers.
 let baseline = null;
 async function open(page) {
@@ -23,16 +23,18 @@ test.afterEach(async ({ page }) => {
   }
 });
 
-/** Make sure the page has at least `n` top-level sections (not rows: a section with blocks is many rows), adding through the Layers panel like an author. */
-async function ensureSections(page, n) {
+/** Make sure the page has at least `n` top-level Containers (not rows: a Container with blocks is many rows), adding through the Layers panel like an author. */
+async function ensureContainers(page, n) {
   await page.getByRole('tab', { name: /Layers/ }).click();
   for (let guard = 0; guard < n + 2; guard++) {
     const count = await page.locator(`${ROWS}[aria-level="1"]`).count();
     if (count >= n) break;
-    await page.getByRole('button', { name: /Add section/ }).first().click();
+    await page.getByRole('button', { name: /Add Container/ }).first().click();
     await expect.poll(() => page.locator(`${ROWS}[aria-level="1"]`).count(), { timeout: 15_000 }).toBeGreaterThan(count);
   }
   await settled(page);
+  // A new Container asks for its layout, and the question sits over it: answer it so the canvas can be clicked.
+  await page.getByTestId('chooser-close').click({ timeout: 1_000 }).catch(() => {});
 }
 
 async function topLevelRowIds(page) {
@@ -46,7 +48,7 @@ test.beforeEach(async ({}, info) => {
 
 test('Cmd/Ctrl-click in Layers multi-selects: the Inspector shows the count and the canvas outlines both nodes', async ({ page }) => {
   await open(page);
-  await ensureSections(page, 2);
+  await ensureContainers(page, 2);
   const [a, b] = await topLevelRowIds(page);
 
   await page.locator(`${ROWS}[data-row="${a}"]`).click();
@@ -67,7 +69,7 @@ test('Cmd/Ctrl-click in Layers multi-selects: the Inspector shows the count and 
 
 test('Cmd/Ctrl-click on the canvas adds to the selection and Layers reflects it', async ({ page }) => {
   await open(page);
-  await ensureSections(page, 2);
+  await ensureContainers(page, 2);
   const [a, b] = await topLevelRowIds(page);
 
   // The canvas repaints after a save, and a click that lands while it does is lost: tap the first node until the
@@ -90,7 +92,7 @@ test('Cmd/Ctrl-click on the canvas adds to the selection and Layers reflects it'
 
 test('Escape clears the whole selection', async ({ page }) => {
   await open(page);
-  await ensureSections(page, 2);
+  await ensureContainers(page, 2);
   const [a, b] = await topLevelRowIds(page);
   await page.locator(`${ROWS}[data-row="${a}"]`).click();
   await page.getByRole('tab', { name: /Layers/ }).click();
@@ -106,8 +108,8 @@ test('a canvas node the editor does not have and nothing around it is refused wi
   await open(page);
   await settled(page);
   await page.getByRole('tab', { name: /^Add$/ }).click();
-  await page.getByRole('tab', { name: 'Sections' }).click();
-  await page.locator('#sbx-leftpanel-blocks [data-preset="system-section-team"] .sbx-preset-card__insert').click();
+  await page.getByRole('tab', { name: 'Containers' }).click();
+  await page.locator('#sbx-leftpanel-blocks [data-preset="system-container-team"] .sbx-preset-card__insert').click();
   await settled(page);
   await expect(page.frameLocator('iframe.sbx-canvas__frame').locator('[data-sb-node^="blk_"]').first()).toBeVisible();
   // A canvas repaint right after the insert can drop the injected node, so draw it again until the click lands on it.
@@ -135,20 +137,21 @@ test('a canvas that drifted from the document repaints by itself', async ({ page
   await open(page);
   await settled(page);
   await page.getByRole('tab', { name: /^Add$/ }).click();
-  await page.getByRole('tab', { name: 'Sections' }).click();
-  await page.locator('#sbx-leftpanel-blocks [data-preset="system-section-team"] .sbx-preset-card__insert').click();
+  await page.getByRole('tab', { name: 'Containers' }).click();
+  await page.locator('#sbx-leftpanel-blocks [data-preset="system-container-team"] .sbx-preset-card__insert').click();
   await settled(page);
   const frame = page.frameLocator('iframe.sbx-canvas__frame');
   await expect(frame.locator('[data-sb-node^="blk_"]').first()).toBeVisible();
-  // A section the document does not have, as if a patch had been missed.
+  // A Container the document does not have, as if a patch had been missed.
   await (await frameDocument(page)).evaluate(() => {
     const el = document.createElement('section');
-    el.setAttribute('data-sb-node', 'sec_stale_ghost');
-    el.setAttribute('data-sb-type', 'section');
-    el.textContent = 'ghost section';
+    el.setAttribute('data-sb-node', 'blk_stale_ghost');
+    el.setAttribute('data-sb-type', 'core.container');
+    el.className = 'sb-top';
+    el.textContent = 'ghost Container';
     document.body.prepend(el);
   });
-  await expect(frame.locator('[data-sb-node="sec_stale_ghost"]')).toHaveCount(0, { timeout: 15_000 });
+  await expect(frame.locator('[data-sb-node="blk_stale_ghost"]')).toHaveCount(0, { timeout: 15_000 });
   await expect(frame.locator('[data-sb-node^="blk_"]').first()).toBeVisible();
 });
 
@@ -157,11 +160,12 @@ test('clicking content the editor does not own selects the nearest node it does 
   await open(page);
   await settled(page);
   await page.getByRole('tab', { name: /^Add$/ }).click();
-  await page.getByRole('tab', { name: 'Sections' }).click();
-  await page.locator('#sbx-leftpanel-blocks [data-preset="system-section-team"] .sbx-preset-card__insert').click();
+  await page.getByRole('tab', { name: 'Containers' }).click();
+  await page.locator('#sbx-leftpanel-blocks [data-preset="system-container-team"] .sbx-preset-card__insert').click();
   await settled(page);
   const frame = page.frameLocator('iframe.sbx-canvas__frame');
-  const block = frame.locator('[data-sb-node^="blk_"]').first();
+  // A block inside the new Container: the insert has already selected the Container itself, and the ghost must move the selection.
+  const block = frame.locator('main .sb-top [data-sb-node^="blk_"]').first();
   await expect(block).toBeVisible();
   const owner = await block.getAttribute('data-sb-node');
   // A node the editor has never heard of, drawn inside a real block (what a template or shared part would do).

@@ -1,4 +1,4 @@
-// Canvas right-click menu and the clipboard (copy, cut, paste) for sections.
+// Canvas right-click menu and the clipboard (copy, cut, paste) for Containers.
 // Each test restores the shared sandbox page to the layer count it started with.
 import { test, expect } from '@playwright/test';
 import { openBuilder, layerCount, restoreLayers, settled } from './helpers.mjs';
@@ -9,13 +9,13 @@ test.beforeEach(async ({}, info) => {
   test.skip(info.project.name !== 'desktop', 'docked layout (desktop)');
 });
 
-// The page's own sections: Layers also lists the shared header and footer as level-1 rows, which are not ours.
-const OWN = `${ROWS}[aria-level="1"][data-row^="sec_"]`;
+// The page's own Containers: Layers also lists the shared header and footer as level-1 rows, which are not ours.
+const OWN = `${ROWS}[aria-level="1"][data-row^="blk_"]`;
 
-async function ensureSection(page) {
+async function ensureContainer(page) {
   await page.getByRole('tab', { name: /^Layers$/ }).click();
   if ((await page.locator(OWN).count()) === 0) {
-    await page.getByRole('button', { name: /Add section/ }).first().click();
+    await page.getByRole('button', { name: /Add Container/ }).first().click();
     await expect.poll(() => page.locator(OWN).count(), { timeout: 15_000 }).toBeGreaterThan(0);
   }
   await settled(page);
@@ -35,7 +35,7 @@ async function openMenu(page, target) {
 test('right-click opens the menu in the builder, Escape closes it and returns focus', async ({ page }) => {
   await openBuilder(page);
   const before = await layerCount(page);
-  const own = await ensureSection(page);
+  const own = await ensureContainer(page);
   const start = await layerCount(page);
   const frame = page.frameLocator('iframe.sbx-canvas__frame');
   const menu = await openMenu(page, frame.locator(`[data-sb-node="${own}"]`));
@@ -49,15 +49,15 @@ test('right-click opens the menu in the builder, Escape closes it and returns fo
   await restoreLayers(page, before);
 });
 
-test('copy then paste a section from the menu adds one, and undo removes it', async ({ page }) => {
+test('copy then paste a Container from the menu adds one, and undo removes it', async ({ page }) => {
   await openBuilder(page);
   const before = await layerCount(page);
-  const own = await ensureSection(page);
+  const own = await ensureContainer(page);
   const start = await layerCount(page);
   const frame = page.frameLocator('iframe.sbx-canvas__frame');
-  const section = frame.locator(`[data-sb-node="${own}"]`);
-  await (await openMenu(page, section)).getByRole('menuitem', { name: 'Copy' }).click();
-  await (await openMenu(page, section)).getByRole('menuitem', { name: 'Paste after' }).click();
+  const container = frame.locator(`[data-sb-node="${own}"]`);
+  await (await openMenu(page, container)).getByRole('menuitem', { name: 'Copy' }).click();
+  await (await openMenu(page, container)).getByRole('menuitem', { name: 'Paste after' }).click();
   await expect.poll(() => layerCount(page), { timeout: 20_000 }).toBeGreaterThan(start);
   await restoreLayers(page, before);
 });

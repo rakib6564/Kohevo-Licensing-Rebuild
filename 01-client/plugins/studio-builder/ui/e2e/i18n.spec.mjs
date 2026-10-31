@@ -45,15 +45,15 @@ test('block inspector controls are French (tabs, placeholders, select options)',
   test.skip(info.project.name !== 'desktop', 'desktop inspector');
   await openFrench(page);
   await page.getByRole('tab', { name: 'Calques' }).click();
-  let steps = 0; // undo steps to take back: the section (when the page had none) and the block
+  let steps = 0; // undo steps to take back: the Container (when the page had none) and the block
   try {
     if ((await page.locator('[data-row]').count()) === 0) {
       steps++;
-      await page.getByRole('button', { name: /Ajouter une section/ }).first().click();
+      await page.getByRole('button', { name: /Ajouter un conteneur/ }).first().click();
       await expect.poll(() => page.locator('[data-row]').count(), { timeout: 15_000 }).toBeGreaterThan(0);
       await settled(page);
     }
-    // selecting the new section opens the inspector asynchronously: keep trying until the Add panel stays put
+    // selecting the new Container opens the inspector asynchronously: keep trying until the Add panel stays put
     await expect(async () => {
       await page.getByRole('tab', { name: 'Ajouter' }).click();
       await page.locator('#sbx-leftpanel-blocks').getByRole('tab', { name: /Éléments/ }).click();

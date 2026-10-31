@@ -100,7 +100,7 @@ test('with nothing selected Edit says so, and its shortcuts open the other tabs'
   await openBuilder(page);
   await showEdit(page);
   const panel = page.getByTestId('inspector-panel');
-  await expect(panel.getByText(/Select a block or section/)).toBeVisible();
+  await expect(panel.getByText(/Select a block or Container/)).toBeVisible();
   await panel.getByRole('button', { name: 'Add elements' }).click();
   await expect(page.getByRole('tab', { name: /^Add$/ })).toHaveAttribute('aria-selected', 'true');
   await showEdit(page);

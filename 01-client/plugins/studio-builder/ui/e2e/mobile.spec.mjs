@@ -5,12 +5,12 @@ import { openBuilder, frameDocument, settled } from './helpers.mjs';
 
 const dock = (page, key) => page.getByTestId(`mobile-dock-${key}`);
 
-async function ensureSection(page) {
+async function ensureContainer(page) {
   const frame = await frameDocument(page);
   if (await frame.locator('[data-sb-node]').count()) { await settled(page); return; }
   await dock(page, 'blocks').click();
   await page.getByRole('tab', { name: /Layers/ }).click();
-  await page.getByRole('button', { name: /Add section/ }).first().click();
+  await page.getByRole('button', { name: /Add Container/ }).first().click();
   await expect.poll(async () => (await frameDocument(page)).locator('[data-sb-node]').count(), { timeout: 15_000 }).toBeGreaterThan(0);
   await settled(page);
   await page.getByRole('button', { name: 'Close panel' }).click();
@@ -49,7 +49,7 @@ test('a phone starts on the Mobile device and the canvas fills the width instead
 
 test('selecting a node does not open the sheet; the contextual bar shows and Edit opens the sheet', async ({ page }) => {
   await openBuilder(page);
-  await ensureSection(page);
+  await ensureContainer(page);
   // The canvas re-renders after load/save; retry the tap until the shell has picked it up.
   await expect(async () => {
     const frame = await frameDocument(page);
@@ -146,7 +146,7 @@ test('the Theme sheet saves a real design token and resets it', async ({ page })
 
 test('Responsive view: device preset, zoom and layout aids drive the canvas', async ({ page }) => {
   await openBuilder(page);
-  await ensureSection(page);
+  await ensureContainer(page);
   await page.getByTestId('open-responsive-view').click();
   const sheet = page.getByTestId('sheet-responsive');
   await expect(sheet).toBeVisible();
@@ -161,7 +161,7 @@ test('Responsive view: device preset, zoom and layout aids drive the canvas', as
   await page.getByTestId('rv-labels').check();
   await page.getByTestId('rv-outlines').check();
   await page.getByTestId('sheet-responsive-close').click();
-  await expect(page.getByTestId('overlay-section-label').first()).toBeVisible();
+  await expect(page.getByTestId('overlay-container-label').first()).toBeVisible();
   expect(await page.locator('.sbx-overlay__outline').count()).toBeGreaterThan(0);
 
   // dark preview and spacing guides are listed but disabled, never faked

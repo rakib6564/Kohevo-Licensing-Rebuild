@@ -90,8 +90,9 @@ function ToolbarButton({ action, label, disabled, tabIndex, onClick, onFocus, re
  * @param {number} props.scale                  canvas zoom (re-measure on change)
  * @param {boolean} props.enabled               false in preview modes: nothing is drawn
  * @param {(action: string, id: string) => void} props.onAction
+ * @param {(id: string, point: {x: number, y: number}) => void} [props.onZoneMenu]  right-click on an empty Container's own controls, in frame coordinates
  */
-export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, scale, enabled, outlines = false, labels = false, onAction }) {
+export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, scale, enabled, outlines = false, labels = false, onAction, onZoneMenu }) {
   const { labelOf, manifest, applyOp, requestPanel, openLibraryModal, layoutChooser, setLayoutChooser } = useEditor();
   const { selection, selectedIds, select } = useSelection();
   const working = useEngineState((s) => s.working);
@@ -331,6 +332,15 @@ export const CanvasOverlay = memo(function CanvasOverlay({ frameRef, stageRef, s
             className={`sbx-overlay__zone${roomy ? '' : ' is-compact'}`}
             data-testid="overlay-empty"
             data-zone-for={z.id}
+            onContextMenu={(e) => {
+              // The zone's buttons and chooser sit over the Container, so the frame never sees this right-click.
+              const frame = frameRef.current;
+              if (!frame || !onZoneMenu) return;
+              e.preventDefault();
+              const fr = frame.getBoundingClientRect();
+              const s = fr.width / frame.clientWidth || 1;
+              onZoneMenu(z.id, { x: (e.clientX - fr.left) / s, y: (e.clientY - fr.top) / s });
+            }}
             style={{ left: z.visible.left, top: z.visible.top, width: z.visible.width, height: z.visible.height }}
           >
             {choosing ? (

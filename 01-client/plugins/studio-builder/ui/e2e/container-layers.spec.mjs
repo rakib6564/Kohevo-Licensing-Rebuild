@@ -82,15 +82,16 @@ test('Shape Divider: a wave at the top and a tilt at the bottom, behind the chil
   const id = await addContainer(page);
   await openSection(page, 'shape_divider');
   const shapes = page.getByTestId('shape-dividers');
-  await shapes.getByLabel('Type').selectOption('wave');
+  await shapes.getByRole('radio', { name: 'Wave', exact: true }).click();
   await expect.poll(() => nodeIn(page, id).locator('.sb-shape--top svg path').count(), { timeout: 20_000 }).toBe(1);
   await expect(shapes.getByText('Bring to front')).toBeVisible();
   await shapes.getByRole('tab', { name: 'Bottom' }).click();
-  await shapes.getByLabel('Type').selectOption('tilt');
+  await shapes.getByRole('radio', { name: 'Tilt', exact: true }).click();
   await expect.poll(() => nodeIn(page, id).locator('.sb-shape--bottom').count(), { timeout: 20_000 }).toBe(1);
   await expect.poll(() => nodeIn(page, id).evaluate((el) => getComputedStyle(el).isolation)).toBe('isolate');
 
   await openSection(page, 'background');
+  await page.locator('[data-section="background"]').getByRole('radiogroup', { name: 'Background type' }).getByRole('button', { name: 'Video' }).click();
   const video = page.locator('[data-section="background"]').getByLabel('Background Video');
   await video.fill('https://cdn.example.test/loop.mp4');
   await video.blur();
