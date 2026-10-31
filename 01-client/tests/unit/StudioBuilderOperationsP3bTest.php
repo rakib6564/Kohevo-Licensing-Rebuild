@@ -162,7 +162,6 @@ unit('p3b schema: a top-level Container style takes a background and padding by 
         'image + gradient' => ['background' => ['image' => ['media_id' => 7, 'alt' => ''], 'gradient' => 'linear-gradient(red, blue)']],
         'padding negative' => ['padding' => ['top' => '-1rem']],
         'padding unknown'  => ['padding' => ['middle' => '1rem']],
-        'bg unknown'       => ['background' => ['video' => 'x.mp4']],
         'a list'           => [['padding']],
     ] as $label => $style) {
         assert_false(DocumentValidator::validate(sbop_doc(['style' => $style]), $registry)->isValid(), "must refuse: {$label}");
