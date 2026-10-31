@@ -613,7 +613,7 @@ $pages['boutique'] = ['Boutique', 'standalone', [BANNER('Boutique', 'Boutique', 
     ['seo_title' => 'Boutique - Fightxlife', 'seo_desc' => 'La boutique FightxLife : casquettes, sweats et t-shirts pour soutenir la lutte contre le cancer.']];
 // The Shop's own pages, at the live store's addresses (Shop settings in fxl/shop.json). Never search results.
 $pages['panier'] = ['Panier', 'standalone', [BANNER('Panier', 'Panier', 'Panier', PAGEBG('e-shop')),
-    SEC('Panier', [WRAP([B('shop.cart', [], [], 'fx-shop-cart'), BOX([BTN('Continuer mes achats', '/e-shop/', 'yg-btn yg-btn--dark')], 'yg-center')])], 'yg-content')],
+    SEC('Panier', [WRAP([B('shop.cart', [], [], 'fx-shop-cart')])], 'yg-content')],
     ['seo_title' => 'Panier - Fightxlife', 'seo_desc' => 'Ton panier sur la boutique FightxLife.', 'seo_robots' => 'noindex,follow']];
 $pages['commande'] = ['Commande', 'standalone', [BANNER('Commande', 'Commande', 'Commande', PAGEBG('e-shop')),
     SEC('Commande', [WRAP([B('shop.checkout', [], [], 'fx-shop-checkout')])], 'yg-content')],

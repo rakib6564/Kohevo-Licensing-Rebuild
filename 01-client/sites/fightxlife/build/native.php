@@ -510,7 +510,8 @@ function native_more(): array
         'fx-shop-meta'    => ['parts' => ['label' => S(col(INK), fam('body', '13px', 'bold')), 'value' => S(col(BODY), fam('body', '13px'))]],
         // Cart, checkout and the order: the site's inputs, card and pink pill.
         'fx-shop-cart'    => ['parts' => ['title' => S(col(INK), fam('heading', '17px', 'bold')), 'options' => col(BODY),
-                'totals' => S(pad(24), radius('14px'), bg('#ffffff'), shadow(0, 8, 30, 'rgba(22,12,39,.1)')), 'button' => S($pill, fx(['cursor' => 'pointer']))]],
+                'totals' => S(pad(24), radius('14px'), bg('#ffffff'), shadow(0, 8, 30, 'rgba(22,12,39,.1)')), 'button' => S($pill, fx(['cursor' => 'pointer'])),
+                'continue' => S($pill, ['background' => ['gradient' => 'linear-gradient(140deg,#595959 0%,#0c0905 100%)']], fx(['cursor' => 'pointer']))]],
         'fx-shop-checkout' => ['parts' => ['fields' => S($input, sz(['height' => 50])), 'labels' => S(col(INK), fam('body', '14px', 'bold')),
                 'summary' => S(pad(26), radius('14px'), bg('#ffffff'), shadow(0, 8, 30, 'rgba(22,12,39,.1)')), 'button' => S($pill, sz(['width' => '100%']), fx(['cursor' => 'pointer']))]],
         'fx-shop-order'   => ['parts' => ['lead' => S(col(INK), fam('body', '17px')), 'total' => S(col(INK), fam('heading', '20px', 'bold'))]],

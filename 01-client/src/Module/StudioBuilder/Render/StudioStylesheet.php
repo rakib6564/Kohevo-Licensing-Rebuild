@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '55';
+    public const VERSION = '56';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -943,11 +943,12 @@ final class StudioStylesheet
             . '.sb-shop-cart__qty-input{width:4rem;padding:.4rem;font:inherit;border:1px solid var(--sb-border-default);border-radius:var(--sb-radius-sm,.375rem)}'
             . '.sb-shop-cart__update,.sb-shop-cart__remove{font:inherit;background:none;border:0;cursor:pointer;color:var(--sb-text-muted);text-decoration:underline}'
             . '.sb-shop-cart__remove{font-size:1.25rem;text-decoration:none}'
-            . '.sb-shop-cart__totals{margin:1.25rem 0 0;margin-left:auto;max-width:22rem;display:flex;flex-direction:column;gap:.35rem}'
+            . '.sb-shop-cart__foot{display:flex;justify-content:space-between;align-items:flex-start;gap:1.5rem;margin-top:1.25rem}'
+            . '.sb-shop-cart__totals{margin-left:auto;flex:0 1 22rem;display:flex;flex-direction:column;gap:.35rem}'
             . '.sb-shop-cart__subtotal{display:flex;justify-content:space-between;margin:0;font-size:1.1rem}'
             . '.sb-shop-cart__vat,.sb-shop-cart__free{margin:0;font-size:.85rem;color:var(--sb-text-muted)}'
             . '@media (max-width:767.98px){.sb-shop-cart__table thead{display:none}.sb-shop-cart__table tr{display:grid;grid-template-columns:1fr auto;gap:.25rem .75rem;padding:.75rem 0;border-bottom:1px solid var(--sb-border-default)}'
-            . '.sb-shop-cart__table td{border:0;padding:0}.sb-shop-cart__product{grid-column:1/-1}.sb-shop-cart__totals{max-width:none}}'
+            . '.sb-shop-cart__table td{border:0;padding:0}.sb-shop-cart__product{grid-column:1/-1}.sb-shop-cart__foot{flex-direction:column-reverse;align-items:stretch}.sb-shop-cart__totals{flex:none;margin-left:0}}'
             . '.sb-shop-checkout__form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,22rem);gap:2rem;align-items:start}'
             . '@media (max-width:767.98px){.sb-shop-checkout__form{grid-template-columns:minmax(0,1fr)}}'
             . '.sb-shop-checkout fieldset{border:0;margin:0 0 1.25rem;padding:0}.sb-shop-checkout legend{font-weight:700;margin:0 0 .5rem;padding:0}'

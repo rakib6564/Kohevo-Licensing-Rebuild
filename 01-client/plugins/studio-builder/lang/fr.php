@@ -1675,6 +1675,7 @@ return [
     'studio_part_title_while_the_card_is_pointed_at' => 'Titre au survol de la carte',
     'studio_part_link_of_the_open_panel' => 'Lien du panneau ouvert',
     'studio_part_panel_columns' => 'Colonnes du panneau',
+    'studio_part_continue_shopping_button' => 'Bouton Continuer mes achats',
     'studio_part_open_menu_button' => 'Bouton du menu ouvert',
     'studio_mega_empty' => 'Ajoutez un élément de méga menu',
     'studio_field_submenu_links' => 'Liens du sous-menu',

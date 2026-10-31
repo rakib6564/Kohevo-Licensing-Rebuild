@@ -169,6 +169,7 @@ return [
             'options' => ['label' => 'Chosen options', 'selectors' => ['.sb-shop-cart__options']],
             'totals' => ['label' => 'Totals', 'selectors' => ['.sb-shop-cart__totals']],
             'button' => ['label' => 'Checkout button', 'selectors' => ['.sb-shop-cart__checkout']],
+            'continue' => ['label' => 'Continue shopping button', 'selectors' => ['.sb-shop-cart__continue']],
         ],
         'shop.checkout' => [
             'fields'  => ['label' => 'Fields', 'selectors' => ['.sb-shop-checkout__field input', '.sb-shop-checkout__field select', '.sb-shop-checkout__field textarea']],

@@ -105,12 +105,18 @@ function shop_view_mini(array $totals, bool $showTotal = true, string $label = '
         . '</a>';
 }
 
+/** The cart's "Continue shopping" button, when the Shop settings name a shop page. */
+function shop_view_continue(): string {
+    $url = ShopStoreAPI::shopPageUrl();
+    return $url === '' ? '' : '<p class="sb-button-row"><a class="sb-button sb-button--secondary sb-shop-cart__continue" href="' . e($url) . '">' . e(__('shop_continue_shopping', 'Continue shopping')) . '</a></p>';
+}
+
 /** The cart with quantity and remove controls (each a small CSRF-protected form). */
 function shop_view_cart(array $totals, string $notice = ''): string {
     if ($totals['lines'] === []) {
         return '<div class="sb-shop-cart sb-shop-cart--empty">'
             . ($notice !== '' ? '<p class="sb-shop-notice" role="status">' . e($notice) . '</p>' : '')
-            . '<p class="sb-shop-cart__empty">' . e(__('shop_cart_empty', 'Your cart is empty.')) . '</p></div>';
+            . '<p class="sb-shop-cart__empty">' . e(__('shop_cart_empty', 'Your cart is empty.')) . '</p>' . shop_view_continue() . '</div>';
     }
     $action = e(ShopStoreAPI::endpoint('cart.php'));
     $rows = '';
@@ -148,9 +154,9 @@ function shop_view_cart(array $totals, string $notice = ''): string {
         . '<table class="sb-shop-cart__table"><thead><tr><th scope="col">' . e(__('shop_product', 'Product')) . '</th><th scope="col">' . e(__('shop_price', 'Price'))
         . '</th><th scope="col">' . e(__('shop_quantity', 'Quantity')) . '</th><th scope="col">' . e(__('shop_total', 'Total')) . '</th><th scope="col"><span class="sb-shop-sr">' . e(__('shop_remove', 'Remove')) . '</span></th></tr></thead>'
         . '<tbody>' . $rows . '</tbody></table>'
-        . '<div class="sb-shop-cart__totals"><p class="sb-shop-cart__subtotal"><span>' . e(__('shop_subtotal', 'Subtotal')) . '</span> <strong>' . shop_money((int) $totals['subtotal_cents'], $cur) . '</strong></p>'
+        . '<div class="sb-shop-cart__foot">' . shop_view_continue() . '<div class="sb-shop-cart__totals"><p class="sb-shop-cart__subtotal"><span>' . e(__('shop_subtotal', 'Subtotal')) . '</span> <strong>' . shop_money((int) $totals['subtotal_cents'], $cur) . '</strong></p>'
         . '<p class="sb-shop-cart__vat">' . e(__('shop_prices_incl_vat', 'Prices include VAT. Shipping is calculated at checkout.')) . '</p>' . $freeNote
-        . '<p class="sb-button-row"><a class="sb-button sb-button--primary sb-shop-cart__checkout" href="' . e(ShopStoreAPI::pageUrl('checkout_page')) . '">' . e(__('shop_go_checkout', 'Proceed to checkout')) . '</a></p></div>'
+        . '<p class="sb-button-row"><a class="sb-button sb-button--primary sb-shop-cart__checkout" href="' . e(ShopStoreAPI::pageUrl('checkout_page')) . '">' . e(__('shop_go_checkout', 'Proceed to checkout')) . '</a></p></div></div>'
         . '</div>';
 }
 

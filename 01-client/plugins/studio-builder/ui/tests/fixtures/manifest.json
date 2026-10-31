@@ -6720,6 +6720,10 @@
                 {
                     "key": "button",
                     "label": "Checkout button"
+                },
+                {
+                    "key": "continue",
+                    "label": "Continue shopping button"
                 }
             ],
             "title": "Cart",
