@@ -79,6 +79,7 @@ final class FormsFormEmbedProvider implements PublicDataProviderInterface, Param
             'description'  => (string) ($form['description'] ?? ''),
             'submit_label' => (string) ($form['submit_label'] ?? ''),
             'field_labels' => self::fieldLabels($form['fields'] ?? []),
+            'field_kinds'  => self::fieldLabels($form['fields'] ?? [], true),
         ]];
     }
 
@@ -97,8 +98,11 @@ final class FormsFormEmbedProvider implements PublicDataProviderInterface, Param
         return $out;
     }
 
-    /** The labels of the fields a visitor fills in, one per line (a required field ends with " *"). */
-    private static function fieldLabels(mixed $fields): string
+    /**
+     * The labels of the fields a visitor fills in, one per line (a required field ends with " *"), or with `$kinds` their
+     * types, line for line, so the editor's preview draws a text area as one.
+     */
+    private static function fieldLabels(mixed $fields, bool $kinds = false): string
     {
         $lines = [];
         foreach (is_array($fields) ? $fields : [] as $field) {
@@ -109,7 +113,7 @@ final class FormsFormEmbedProvider implements PublicDataProviderInterface, Param
             if ($label === '') {
                 continue;
             }
-            $lines[] = mb_substr($label, 0, 80, 'UTF-8') . (!empty($field['required']) ? ' *' : '');
+            $lines[] = $kinds ? preg_replace('/[^a-z_]/', '', (string) ($field['type'] ?? '')) : mb_substr($label, 0, 80, 'UTF-8') . (!empty($field['required']) ? ' *' : '');
             if (count($lines) >= self::MAX_LABELS) {
                 break;
             }

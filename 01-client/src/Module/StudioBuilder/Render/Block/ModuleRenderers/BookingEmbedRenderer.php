@@ -22,6 +22,7 @@ namespace Slate\Module\StudioBuilder\Render\Block\ModuleRenderers;
 
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
+use Slate\Module\StudioBuilder\Render\EmbedStyle;
 use Slate\Module\StudioBuilder\Render\Html;
 use Slate\Module\StudioBuilder\Render\RenderMode;
 
@@ -68,8 +69,9 @@ final class BookingEmbedRenderer implements BlockRendererInterface
         $price = $isService ? CatalogFormat::price($row['price_cents'] ?? null, $row['currency'] ?? null) : '';
         $title = $isService ? CatalogFormat::str($row, 'name') : Html::t('studio_embed_booking_page', 'Your booking page');
 
-        return '<div class="sb-form-card sb-embed-card">'
+        return '<div class="sb-form-card sb-embed-card book-card">'
             . '<p class="sb-embed-card__kind">' . Html::e(Html::t('studio_embed_booking_kind', 'Booking')) . '</p>'
+            . '<ol class="book-stepper">' . self::previewStep(1, 'is-done') . self::previewStep(2, 'is-current') . self::previewStep(3, '') . '</ol>'
             . '<h3 class="sb-form-card__title">' . Html::e($title) . '</h3>'
             . ($desc !== '' ? '<p class="sb-form-card__description">' . Html::text($desc) . '</p>' : '')
             . ($isService
@@ -78,14 +80,25 @@ final class BookingEmbedRenderer implements BlockRendererInterface
                     . ($price !== '' ? ' <span class="sb-catalog__price">' . Html::e($price) . '</span>' : '')
                     . '</p>'
                 : '<p class="sb-embed-card__note">' . Html::e(Html::t('studio_embed_booking_all', 'Visitors pick a service, a time and book.')) . '</p>')
+            . '<div class="book-cal-days"><span class="book-cal-day">13</span><span class="book-cal-day">14</span><span class="book-cal-day is-selected">15</span><span class="book-cal-day">16</span><span class="book-cal-day">17</span></div>'
+            . '<div class="book-slots"><span class="book-slot">09:00</span><span class="book-slot is-selected">10:00</span><span class="book-slot">11:00</span></div>'
+            . '<p class="book-actions"><span class="btn btn-primary">' . Html::e(Html::t('studio_embed_booking_continue', 'Continue')) . '</span></p>'
             . '<p class="sb-embed-card__note">' . Html::e(Html::t('studio_embed_booking_note', 'Visitors see the working booking flow here. Preview the page to try it.')) . '</p>'
             . '</div>';
+    }
+
+    private static function previewStep(int $number, string $state): string
+    {
+        return '<li class="book-step ' . $state . '"><span class="book-step-num">' . $number . '</span></li>';
     }
 
     private function frame(BlockRenderScope $scope, int $serviceId): string
     {
         $site = $scope->site();
-        $src = $site->absoluteUrl('book') . '?embed=1' . ($serviceId > 0 ? '&service=' . $serviceId : '');
+        $style = EmbedStyle::publish($scope, $scope->themeRootCss());
+        $src = $site->absoluteUrl('book') . '?embed=1' . ($serviceId > 0 ? '&service=' . $serviceId : '')
+            . ($scope->string('look', 'card') === 'flat' ? '&chrome=0' : '')
+            . ($style !== '' ? '&' . EmbedStyle::PARAM . '=' . $style : '');
         $min = $scope->prop('min_height');
         $min = is_int($min) ? max(self::MIN_HEIGHT_MIN, min(self::MIN_HEIGHT_MAX, $min)) : self::MIN_HEIGHT_DEFAULT;
 
