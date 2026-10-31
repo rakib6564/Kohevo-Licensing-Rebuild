@@ -201,3 +201,13 @@ html[data-sb-density="comfortable"] {
     .sb-pill-filter::-webkit-scrollbar { display: none; }
     .sb-pill-item { white-space: nowrap; }
 }
+
+/* Backup */
+.sb-backup-actions { margin-bottom: 18px; }
+.sb-backup-list { margin: 10px 0 0; padding-left: 18px; }
+.sb-backup-list li + li { margin-top: 5px; }
+.sb-backup-warn { color: var(--warning, #b45309); }
+.sb-backup-bad { color: var(--danger, #b91c1c); }
+.sb-backup-check { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.sb-backup-empty { padding: 32px; text-align: center; color: var(--sb-muted); }
+.sb-admin > .sb-card + .sb-screen-head { margin-top: 18px; }

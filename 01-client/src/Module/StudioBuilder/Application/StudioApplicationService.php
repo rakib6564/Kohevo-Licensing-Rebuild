@@ -76,6 +76,7 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Application;
 
+use Slate\Module\StudioBuilder\Backup\StudioBackupStore;
 use Slate\Module\StudioBuilder\Dependency\DependencyExtractor;
 use Slate\Module\StudioBuilder\Diff\RevisionDiff;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
@@ -183,6 +184,8 @@ final class StudioApplicationService
      * saveDraft/operations, never selectable by a client, never by an AI-origin actor.
      */
     public const IMPORT_REVISION_KIND = 'import';
+
+    private ?StudioBackupService $backups = null;
 
     // ── Page address commands ───────────────────────────────────────────────
 
@@ -2040,6 +2043,123 @@ final class StudioApplicationService
             throw new StudioAuthorizationException(StudioPermissions::EDIT);
         }
         return self::IMPORT_REVISION_KIND;
+    }
+
+    // ── Whole-site backup ───────────────────────────────────────────────────
+
+    /**
+     * Back up everything Studio keeps for this site to a file in `$store`. A backup holds code snippets and every draft,
+     * so it is an administrator's action, even to read.
+     *
+     * @return array{id: string, counts: array<string, int>}
+     */
+    public function createBackup(StudioActor $actor, StudioBackupStore $store, bool $withMedia = true, string $kind = StudioBackupStore::KIND_MANUAL): array
+    {
+        $tenantId = $this->authorizeBackup($actor);
+        $path = $store->newPath($kind);
+        $counts = $this->backups()->write($tenantId, $path, $withMedia, function_exists('site_url') ? (string) site_url() : '');
+        $store->prune($kind);
+        $this->audit($actor, 'studio.backup.created', basename($path), ['kind' => $kind, 'with_media' => $withMedia, 'counts' => $counts]);
+        return ['id' => basename($path), 'counts' => $counts];
+    }
+
+    /** What restoring this file would do, writing nothing. @return array<string, mixed> */
+    public function previewBackup(StudioActor $actor, string $path): array
+    {
+        $this->authorizeBackup($actor);
+        $backups = $this->backups();
+        $zip = $backups->open($path);
+        try {
+            return $backups->preview($zip, $this->buildValidationOptions($actor));
+        } finally {
+            $zip->close();
+        }
+    }
+
+    /**
+     * Restore a backup. A safety backup of the site as it is now is taken first: a restore cannot start without one. Only
+     * one restore runs per site at a time.
+     *
+     * @return array<string, mixed> what happened, plus `safety_id`
+     */
+    public function restoreBackup(StudioActor $actor, StudioBackupStore $store, string $path): array
+    {
+        $tenantId = $this->authorizeBackup($actor);
+        $revisionKind = $this->importKind($actor);
+        $lock = 'studio_backup_' . $tenantId;
+        if ((int) Database::value('SELECT GET_LOCK(?, 0)', [$lock]) !== 1) {
+            throw new StudioValidationException([['path' => '$', 'code' => 'backup_busy', 'message' => 'A restore is already running on this site.']]);
+        }
+        try {
+            $backups = $this->backups();
+            $zip = $backups->open($path);
+            try {
+                $backups->manifest($zip); // a file that is not a backup never costs a safety backup
+                $safety = $this->createBackup($actor, $store, false, StudioBackupStore::KIND_SAFETY);
+                $result = $backups->restore(
+                    $zip,
+                    $tenantId,
+                    (int) $actor->userId,
+                    $this->buildValidationOptions($actor),
+                    fn(int $pageId, int $revisionId): array => $this->publish($actor, $pageId, $revisionId, 'Restored from a backup'),
+                    function (int $pageId, array $changes) use ($actor): void {
+                        $this->updatePageAddress($actor, $pageId, $changes);
+                    },
+                );
+            } finally {
+                $zip->close();
+            }
+        } finally {
+            Database::value('SELECT RELEASE_LOCK(?)', [$lock]);
+        }
+        $this->invalidator?->invalidateTokenGroup('default');
+        $this->audit($actor, 'studio.backup.restored', basename($path), [
+            'revision_kind' => $revisionKind, 'safety_id' => $safety['id'], 'created' => $result['created'], 'updated' => $result['updated'],
+            'unchanged' => $result['unchanged'], 'failed' => count($result['failed']),
+        ]);
+        return $result + ['safety_id' => $safety['id']];
+    }
+
+    /** The file of a backup, for download: audited, because the file leaves the site. */
+    public function backupDownload(StudioActor $actor, StudioBackupStore $store, string $id): ?string
+    {
+        $this->authorizeBackup($actor);
+        $path = $store->path($id);
+        if ($path !== null) {
+            $this->audit($actor, 'studio.backup.downloaded', $id, []);
+        }
+        return $path;
+    }
+
+    public function deleteBackup(StudioActor $actor, StudioBackupStore $store, string $id): bool
+    {
+        $this->authorizeBackup($actor);
+        $deleted = $store->delete($id);
+        if ($deleted) {
+            $this->audit($actor, 'studio.backup.deleted', $id, []);
+        }
+        return $deleted;
+    }
+
+    /** A restore publishes pages and replaces tokens and settings, so it takes every right those need, and a person. */
+    private function authorizeBackup(StudioActor $actor): int
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::ADMIN);
+        $this->importKind($actor);
+        foreach ([StudioPermissions::PUBLISH, StudioPermissions::TOKENS] as $permission) {
+            if (!$actor->can($permission)) {
+                throw new StudioAuthorizationException($permission);
+            }
+        }
+        return $tenantId;
+    }
+
+    private function backups(): StudioBackupService
+    {
+        return $this->backups ??= new StudioBackupService(
+            $this->pageRepo, $this->revisionRepo, $this->templateRepo,
+            $this->pages, $this->revisions, $this->templates, $this->themeService, $this->registry,
+        );
     }
 
     private function requirePackages(): StudioPackageService

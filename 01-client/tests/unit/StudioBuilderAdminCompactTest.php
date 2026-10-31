@@ -65,9 +65,10 @@ unit('compact admin: the sidebar lists each Studio screen once, Home first, then
 unit('compact admin: Code & tracking is in the sidebar only for Studio administrators, as on the screen itself', function (): void {
     $bySlug = array_column(StudioBuilder::navItems(), null, 'slug');
     assert_eq('studio-builder.admin', $bySlug['studio-code-tracking']['perm'] ?? null);
+    assert_eq('studio-builder.admin', $bySlug['studio-backup']['perm'] ?? null, 'a backup holds those same scripts');
     assert_true(str_contains((string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/admin/code-tracking.php'), "\$isAdmin = Auth::can('studio-builder.admin') || Auth::isSuperAdmin();\nif (!\$isAdmin) {"), 'the screen refuses everyone else');
     foreach (StudioBuilder::navItems() as $item) {
-        if ($item['slug'] !== 'studio-code-tracking') {
+        if (!in_array($item['slug'], ['studio-code-tracking', 'studio-backup'], true)) {
             assert_true(!isset($item['perm']), "{$item['slug']} uses the Studio view permission");
         }
     }
