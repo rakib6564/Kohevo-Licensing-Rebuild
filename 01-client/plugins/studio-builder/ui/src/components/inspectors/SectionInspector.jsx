@@ -13,7 +13,7 @@ import { TokenSelect } from '../fields/FieldControl.jsx';
 import { MediaControl } from '../fields/MediaControl.jsx';
 import { IconLayoutSection } from '../Icons.jsx';
 import { IconButton } from './InspectorIcons.jsx';
-import { EntranceSelect, MotionInspector } from './MotionInspector.jsx';
+import { MotionInspector } from './MotionInspector.jsx';
 import { InspectorShell } from './InspectorShell.jsx';
 import { InspectorBar } from './InspectorBar.jsx';
 import { PAGE_SECTION_SECTIONS, SECTION_DEF } from '../../core/inspectorSections.mjs';
@@ -212,7 +212,6 @@ export function SectionInspector({ info }) {
     advanced: () => (
       <>
         <SpacingBox id={`${idPrefix}-style`} group="padding" label={t('section_style_padding')} get={(path) => getPath(style, path)} putAll={putStyleAll} />
-        <EntranceSelect block={section} applyOp={applyOp} label={label} section />
       </>
     ),
     motion: () => <MotionInspector block={section} applyOp={applyOp} label={label} section tokens={tokensFor(manifest, ['surface', 'color'])} />,

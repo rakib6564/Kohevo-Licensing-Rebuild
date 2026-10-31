@@ -927,6 +927,8 @@
             "binding_slots": [],
             "category": "layout",
             "default_props": {
+                "bg_slide_seconds": 5,
+                "bg_slides": [],
                 "bg_video": null,
                 "direction": "vertical",
                 "gap": "md",
@@ -992,6 +994,34 @@
                     "default": null
                 },
                 {
+                    "key": "bg_slides",
+                    "type": "repeater",
+                    "label": "Background Slideshow",
+                    "required": false,
+                    "default": [],
+                    "max_items": 12,
+                    "item_schema": [
+                        {
+                            "key": "url",
+                            "type": "url",
+                            "label": "Image URL",
+                            "required": true,
+                            "default": null,
+                            "max_length": 1000
+                        }
+                    ]
+                },
+                {
+                    "key": "bg_slide_seconds",
+                    "type": "number",
+                    "label": "Seconds per slide",
+                    "required": false,
+                    "default": 5,
+                    "min": 2,
+                    "max": 30,
+                    "integer_only": true
+                },
+                {
                     "key": "shape_top",
                     "type": "enum",
                     "label": "Top Shape",
@@ -1003,7 +1033,20 @@
                         "curve",
                         "tilt",
                         "triangle",
-                        "mountains"
+                        "mountains",
+                        "waves",
+                        "curve_asym",
+                        "triangle_asym",
+                        "pyramids",
+                        "zigzag",
+                        "drops",
+                        "clouds",
+                        "arrow",
+                        "split",
+                        "tilt_opacity",
+                        "fan_opacity",
+                        "waves_opacity",
+                        "book"
                     ]
                 },
                 {
@@ -1059,7 +1102,20 @@
                         "curve",
                         "tilt",
                         "triangle",
-                        "mountains"
+                        "mountains",
+                        "waves",
+                        "curve_asym",
+                        "triangle_asym",
+                        "pyramids",
+                        "zigzag",
+                        "drops",
+                        "clouds",
+                        "arrow",
+                        "split",
+                        "tilt_opacity",
+                        "fan_opacity",
+                        "waves_opacity",
+                        "book"
                     ]
                 },
                 {

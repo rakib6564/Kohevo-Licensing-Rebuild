@@ -90,6 +90,7 @@ final class DocumentOperationApplier
             DocumentOperation::OP_UPDATE_BLOCK_STYLE_STATES => self::updateBlockStyleStates($document, $payload),
             DocumentOperation::OP_UPDATE_BLOCK_STYLE_PARTS => self::updateBlockStyleParts($document, $payload),
             DocumentOperation::OP_UPDATE_BLOCK_TAG => self::updateBlockTag($document, $payload),
+            DocumentOperation::OP_UPDATE_BLOCK_CUSTOM_CSS => self::updateBlockCustomCss($document, $payload),
             DocumentOperation::OP_RESET_BLOCK_STYLE_PROPERTY => self::resetBlockStyleProperty($document, $payload),
             DocumentOperation::OP_UPDATE_SECTION_STYLE => self::updateSectionStyle($document, $payload),
             DocumentOperation::OP_UPDATE_SECTION_ANIMATION => self::updateSectionObjectField($document, $payload, 'animation'),
@@ -879,6 +880,28 @@ final class DocumentOperationApplier
      * Set the block's wrapper element; null or `div` (the default) removes the key. An `a` wrapper takes `payload.link`
      * ({url, new_tab}); any other tag drops the block's link, so a stale address never lingers.
      *
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function updateBlockCustomCss(array $document, array $payload): array
+    {
+        $blockId = self::requireString($payload, 'block_id', '$.payload.block_id');
+        $css = $payload['css'] ?? null;
+        if (!is_string($css)) {
+            throw new StudioValidationException([['path' => '$.payload.css', 'code' => 'invalid_element_css', 'message' => 'payload.css must be a string.']]);
+        }
+        return self::changeBlockInDocument($document, $blockId, static function (array $block) use ($css): array {
+            if (trim($css) === '') {
+                unset($block['custom_css']);
+            } else {
+                $block['custom_css'] = $css;
+            }
+            return $block;
+        });
+    }
+
+    /**
      * @param array<string, mixed> $document
      * @param array<string, mixed> $payload
      * @return array<string, mixed>

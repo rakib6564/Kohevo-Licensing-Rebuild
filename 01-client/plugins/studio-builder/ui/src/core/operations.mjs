@@ -43,6 +43,7 @@ export const OPS = Object.freeze({
   UPDATE_BLOCK_STYLE_STATES: 'update_block_style_states',
   UPDATE_BLOCK_STYLE_PARTS: 'update_block_style_parts',
   UPDATE_BLOCK_TAG: 'update_block_tag',
+  UPDATE_BLOCK_CUSTOM_CSS: 'update_block_custom_css',
   RESET_BLOCK_STYLE_PROPERTY: 'reset_block_style_property',
   UPDATE_SECTION_STYLE: 'update_section_style',
   UPDATE_SECTION_ANIMATION: 'update_section_animation',
@@ -135,6 +136,7 @@ export const updateBlockStyleStates = (blockId, styleStates) => op(OPS.UPDATE_BL
 export const updateBlockStyleParts = (blockId, styleParts) => op(OPS.UPDATE_BLOCK_STYLE_PARTS, { block_id: blockId, style_parts: styleParts });
 /** Choose the block's wrapper element; null (or `div`) is the default. */
 /** `link` ({url, new_tab}) is only for the `a` tag: where the linked wrapper points. */
+export const updateBlockCustomCss = (blockId, css) => op(OPS.UPDATE_BLOCK_CUSTOM_CSS, { block_id: blockId, css });
 export const updateBlockTag = (blockId, tag, link) => op(OPS.UPDATE_BLOCK_TAG, link ? { block_id: blockId, tag, link } : { block_id: blockId, tag });
 /** Replace a section's style ({background, padding}); `{}` clears it. */
 /** Replace a section's entrance animation; `{}` clears it. */

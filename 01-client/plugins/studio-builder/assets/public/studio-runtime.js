@@ -329,6 +329,87 @@
       layers.forEach(function (el) { el.style.removeProperty('--sb-parallax-y'); });
     });
   }
+  /** `y:3 o:5` as {y: 3, o: 5}: the levels the renderer wrote. */
+  function effectLevels(el, attr) {
+    var out = {};
+    (el.getAttribute(attr) || '').split(/\s+/).forEach(function (pair) {
+      var kv = pair.split(':');
+      if (kv.length === 2) out[kv[0]] = parseFloat(kv[1]) || 0;
+    });
+    return out;
+  }
+
+  /* ── Feature: scrolling effects ───────────────────────────────
+   * [data-sb-scroll] holds a level per effect, -10 to 10. Progress runs from -1 as the node enters at the bottom to 1
+   * as it leaves at the top; the individual translate, rotate and scale properties leave any transform of its own alone.
+   */
+  function initScrollEffects(root) {
+    var els = qsa(root, '[data-sb-scroll]');
+    if (!els.length || reducedMotion()) return;
+    var ticking = false;
+    function clear(el) {
+      ['translate', 'rotate', 'scale', 'opacity', 'filter'].forEach(function (p) { el.style.removeProperty(p); });
+    }
+    function update() {
+      ticking = false;
+      var vh = global.innerHeight || 1;
+      els.forEach(function (el) {
+        if (offOnThisDevice(el, 'data-sb-scroll-off')) { clear(el); return; }
+        var rect = el.getBoundingClientRect();
+        var p = clamp((vh - rect.top) / (vh + rect.height), 0, 1) * 2 - 1;
+        var l = effectLevels(el, 'data-sb-scroll');
+        if (l.y || l.x) el.style.translate = ((l.x || 0) * p * -12).toFixed(1) + 'px ' + ((l.y || 0) * p * -12).toFixed(1) + 'px';
+        if (l.r) el.style.rotate = (l.r * p * 3).toFixed(2) + 'deg';
+        if (l.s) el.style.scale = (1 + l.s * p * 0.03).toFixed(3);
+        // Clearest in the middle of the screen, as in "fade in, then out".
+        if (l.o) el.style.opacity = (1 - Math.abs(p) * l.o / 10).toFixed(3);
+        if (l.b) el.style.filter = 'blur(' + (Math.abs(p) * l.b).toFixed(1) + 'px)';
+      });
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      global.requestAnimationFrame(update);
+    }
+    global.addEventListener('scroll', onScroll, { passive: true });
+    global.addEventListener('resize', onScroll, { passive: true });
+    update();
+    mount(function () {
+      global.removeEventListener('scroll', onScroll);
+      global.removeEventListener('resize', onScroll);
+      els.forEach(clear);
+    });
+  }
+
+  /* ── Feature: mouse effects ───────────────────────────────────
+   * [data-sb-mouse]: t follows the pointer across the page, i tilts towards it while it is over the node. Pointers that
+   * can hover only, as in the reference, so phones stay still.
+   */
+  function initMouseEffects(root) {
+    var els = qsa(root, '[data-sb-mouse]');
+    if (!els.length || reducedMotion() || !global.matchMedia || !global.matchMedia('(hover: hover)').matches) return;
+    function onMove(e) {
+      var w = global.innerWidth || 1;
+      var h = global.innerHeight || 1;
+      els.forEach(function (el) {
+        var l = effectLevels(el, 'data-sb-mouse');
+        if (l.t) el.style.translate = ((e.clientX / w - 0.5) * l.t * 8).toFixed(1) + 'px ' + ((e.clientY / h - 0.5) * l.t * 8).toFixed(1) + 'px';
+        if (l.i) {
+          var r = el.getBoundingClientRect();
+          var over = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+          var rx = over ? (0.5 - (e.clientY - r.top) / r.height) * l.i * 3 : 0;
+          var ry = over ? ((e.clientX - r.left) / r.width - 0.5) * l.i * 3 : 0;
+          el.style.transform = 'perspective(800px) rotateX(' + rx.toFixed(2) + 'deg) rotateY(' + ry.toFixed(2) + 'deg)';
+        }
+      });
+    }
+    global.addEventListener('mousemove', onMove, { passive: true });
+    mount(function () {
+      global.removeEventListener('mousemove', onMove);
+      els.forEach(function (el) { el.style.removeProperty('translate'); el.style.removeProperty('transform'); });
+    });
+  }
+
 /* ── Feature: click and scroll interaction triggers ──────────────────────
    * The renderer marks a block with `data-sb-interaction-trigger`.
    *   click:  each click (re)plays the block's chosen animation: data-sb-play is removed, a reflow restarts
@@ -2029,6 +2110,8 @@
     ['stagger', initStagger],
     ['counters', initCounters],
     ['parallax', initParallax],
+    ['scroll-effects', initScrollEffects],
+    ['mouse-effects', initMouseEffects],
     ['interactions', initInteractions],
     ['sticky', initSticky],
     ['overlays', initOverlays],

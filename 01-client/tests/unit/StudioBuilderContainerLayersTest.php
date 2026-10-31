@@ -99,7 +99,7 @@ unit('shape dividers: a known shape at the top or the bottom, flipped or in fron
     assert_true(str_contains($html, 'sb-layered'), 'the wrapper is the layers\' stacking context');
     assert_false(str_contains(sbcl_render(sbcl_box())['html'], 'sb-shape'), 'none by default');
     assert_false(str_contains(sbcl_render(sbcl_box())['html'], 'sb-layered'), 'and a plain Container renders as it did');
-    assert_false(sbcl_valid(sbcl_box(['shape_top' => 'zigzag'])), 'only the library\'s shapes');
+    assert_false(sbcl_valid(sbcl_box(['shape_top' => 'star'])), 'only the library\'s shapes');
     assert_false(sbcl_valid(sbcl_box(['shape_top' => 'wave', 'shape_top_height' => 900])), 'height within 0-500');
 });
 

@@ -5,6 +5,7 @@ import {
   SECTIONS, TABS, applicableSections, defaultOpenIds, inspectorContext, isSectionOpen, resetSectionState,
   searchSections, sectionsFor, setSectionOpen, subscribeSections, PAGE_SECTION_SECTIONS, SECTION_DEF, statesFor, titleKeyOf,
 } from '../src/core/inspectorSections.mjs';
+import { isExtraSection } from '../src/core/inspectorSections.mjs';
 
 const manifest = JSON.parse(readFileSync(new URL('./fixtures/manifest.json', import.meta.url), 'utf8'));
 const def = (type) => manifest.blocks.find((b) => b.type === type);
@@ -27,7 +28,7 @@ test('a text block shows content, the full style stack and the advanced fields, 
   assert.deepEqual(ids('content', ctx), ['content']);
   assert.deepEqual(ids('style', ctx), ['align', 'typography', 'background', 'border', 'shadow', 'opacity', 'parts', 'states', 'tokens']);
   // Background and Border are Style for every block; a leaf block keeps Layout and Dimensions under Advanced, after the one group of everyday fields.
-  assert.deepEqual(ids('advanced', ctx), ['advanced', 'layout', 'dimensions', 'position', 'effects', 'motion', 'responsive', 'identity', 'tag', 'attributes']);
+  assert.deepEqual(ids('advanced', ctx), ['advanced', 'motion', 'transform', 'responsive', 'attributes', 'custom_css', 'effects', 'identity', 'tag', 'layout', 'dimensions']);
 });
 
 test('a block with no text of its own has no Typography section, a text block does; a map has no Background', () => {
@@ -51,7 +52,7 @@ test('a block whose definition narrows style_capabilities hides the sections it 
   assert.deepEqual(ids('style', narrow), ['align', 'opacity', 'states']);
   const bare = inspectorContext({ id: 'blk_1', type: 'x.y', style: {} }, { style_capabilities: [], binding_slots: [] });
   assert.deepEqual(ids('style', bare), ['states']); // states needs no capability
-  assert.deepEqual(ids('advanced', bare), ['advanced', 'motion', 'responsive', 'identity', 'tag', 'attributes']); // nor do the everyday fields
+  assert.deepEqual(ids('advanced', bare), ['advanced', 'motion', 'responsive', 'attributes', 'custom_css', 'identity', 'tag']); // nor do the everyday fields
 });
 
 test('the Data section appears only for a block with binding slots', () => {
@@ -176,8 +177,10 @@ test('the Container block has one Container section under Content, like the refe
   assert.deepEqual(ids('content', box), ['container']);
   assert.equal(titleKeyOf(SECTIONS.find((x) => x.id === 'container'), box), 'section_container');
   // How it sits in its own parent stays, under Advanced; the HTML element is in the Container section.
-  assert.ok(ids('advanced', box).includes('layout'));
-  assert.equal(titleKeyOf(SECTIONS.find((x) => x.id === 'layout'), box), 'layout_as_item');
+  assert.ok(!ids('advanced', box).includes('layout'), 'inside Advanced\'s own Layout section');
+  assert.deepEqual(ids('style', box).slice(0, 4), ['background', 'overlay', 'border', 'shape_divider'], 'the reference\'s order');
+  assert.deepEqual(ids('advanced', box).slice(0, 6), ['advanced', 'motion', 'transform', 'responsive', 'attributes', 'custom_css'], 'the reference\'s order');
+  assert.ok(isExtraSection(SECTIONS.find((x) => x.id === 'effects'), box), 'Kohevo\'s own sections sit under More options');
   assert.ok(!ids('advanced', box).includes('tag'));
   // Text alignment and typography are not container options, but a value already set keeps its section.
   assert.ok(!ids('style', box).includes('align'));
@@ -248,7 +251,7 @@ test('an Icon\'s alignment is its own field under Content: the generic Style Ali
 
 test('a Container has a Background Overlay and a Shape Divider section under Style, after Background; other blocks do not', () => {
   const style = ids('style', ctxOf('core.container'));
-  assert.ok(style.indexOf('background') < style.indexOf('overlay') && style.indexOf('overlay') < style.indexOf('shape_divider'), style.join(' '));
+  assert.ok(style.indexOf('background') < style.indexOf('overlay') && style.indexOf('overlay') < style.indexOf('border') && style.indexOf('border') < style.indexOf('shape_divider'), style.join(' '));
   for (const type of ['layout.flex', 'core.card', 'core.heading']) {
     assert.ok(!ids('style', ctxOf(type)).includes('overlay') && !ids('style', ctxOf(type)).includes('shape_divider'), type);
   }

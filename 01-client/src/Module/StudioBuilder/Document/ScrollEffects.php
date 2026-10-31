@@ -11,6 +11,9 @@ namespace Slate\Module\StudioBuilder\Document;
  *                            shadow: bool, background: colour, hide_on_scroll: bool, shrink: bool}
  *   interactions.parallax = {layer: background|element, speed: 5-80 (% of the scroll), direction: up|down,
  *                            devices: [desktop, tablet, mobile]}
+ *   interactions.scroll   = {vertical, horizontal, rotate, scale: -10 to 10; transparency, blur: 0 to 10;
+ *                            devices: [desktop, tablet, mobile]}  each follows the node's way through the viewport
+ *   interactions.mouse    = {track: -10 to 10, tilt: 0 to 10}  the node follows the pointer; desktop only
  *
  * The renderer turns them into classes, `data-sb-*` attributes and custom properties only; the stylesheet holds the CSS and
  * studio-runtime.js the scroll work (the stuck state, hiding on scroll, the parallax offset). Without JavaScript a sticky
@@ -25,6 +28,9 @@ final class ScrollEffects
     public const MAX_OFFSET = 400;
     public const MIN_SPEED  = 5;
     public const MAX_SPEED  = 80;
+    /** Scrolling and mouse effects: the attribute letter of each, and the lowest level it takes (the highest is 10). */
+    public const SCROLL_FIELDS = ['vertical' => ['y', -10], 'horizontal' => ['x', -10], 'rotate' => ['r', -10], 'scale' => ['s', -10], 'transparency' => ['o', 0], 'blur' => ['b', 0]];
+    public const MOUSE_FIELDS  = ['track' => ['t', -10], 'tilt' => ['i', 0]];
 
     /**
      * @param array<string, mixed> $interactions
@@ -39,7 +45,56 @@ final class ScrollEffects
         if (array_key_exists('parallax', $interactions)) {
             self::parallaxIssues($interactions['parallax'], "{$path}.parallax", $errors);
         }
+        if (array_key_exists('scroll', $interactions)) {
+            self::levelIssues($interactions['scroll'], self::SCROLL_FIELDS, "{$path}.scroll", $errors);
+        }
+        if (array_key_exists('mouse', $interactions)) {
+            self::levelIssues($interactions['mouse'], self::MOUSE_FIELDS, "{$path}.mouse", $errors);
+        }
         return $errors;
+    }
+
+    /**
+     * @param array<string, array{0: string, 1: int}> $fields
+     * @param list<array{path: string, code: string, message: string}> $errors
+     */
+    private static function levelIssues(mixed $effect, array $fields, string $path, array &$errors): void
+    {
+        if (!self::isObject($effect)) {
+            $errors[] = self::issue($path, 'This effect must be an object.');
+            return;
+        }
+        foreach ($effect as $key => $value) {
+            if ($key === 'devices') {
+                $ok = self::devicesValid($value);
+            } elseif (isset($fields[$key])) {
+                $ok = is_int($value) && $value >= $fields[$key][1] && $value <= 10;
+            } else {
+                $errors[] = self::issue("{$path}.{$key}", "Unknown setting '{$key}'.");
+                continue;
+            }
+            if (!$ok) {
+                $errors[] = self::issue("{$path}.{$key}", "Invalid {$key}.");
+            }
+        }
+    }
+
+    /**
+     * The `y:3 o:5` value of a scroll or mouse attribute: checked integers only, so it needs no escaping. Empty when no
+     * effect is set.
+     *
+     * @param array<string, array{0: string, 1: int}> $fields
+     */
+    private static function levels(mixed $effect, array $fields): string
+    {
+        $out = [];
+        foreach (self::isObject($effect) ? $fields : [] as $key => [$letter, $min]) {
+            $value = $effect[$key] ?? 0;
+            if (is_int($value) && $value !== 0 && $value >= $min && $value <= 10) {
+                $out[] = $letter . ':' . $value;
+            }
+        }
+        return implode(' ', $out);
     }
 
     /** @param list<array{path: string, code: string, message: string}> $errors */
@@ -162,6 +217,19 @@ final class ScrollEffects
             if ($off !== []) {
                 $attrs .= ' data-sb-parallax-off="' . implode(' ', $off) . '"';
             }
+        }
+
+        $levels = self::levels($interactions['scroll'] ?? null, self::SCROLL_FIELDS);
+        if ($levels !== '') {
+            $attrs .= ' data-sb-scroll="' . $levels . '"';
+            $off = self::offDevices($interactions['scroll']['devices'] ?? null);
+            if ($off !== []) {
+                $attrs .= ' data-sb-scroll-off="' . implode(' ', $off) . '"';
+            }
+        }
+        $levels = self::levels($interactions['mouse'] ?? null, self::MOUSE_FIELDS);
+        if ($levels !== '') {
+            $attrs .= ' data-sb-mouse="' . $levels . '"';
         }
 
         return ['classes' => $classes, 'attrs' => $attrs, 'vars' => $vars];

@@ -419,6 +419,18 @@ unit('phase3 integration: application boundary, entitlement, RBAC, data provider
                 $tenants->runAs(SBP3_TENANT_A, static fn() => $app->saveDraft($viewer, $pageIdA, sbp3_doc($registry, 'x'), null));
             }, 'view cannot mutate');
 
+            // An element's Custom CSS is code on a public page: only an administrator may change it, an editor may keep it.
+            $styled = sbp3_doc($registry, 'css');
+            $styled['sections'][0]['blocks'][0]['custom_css'] = 'selector{color:red}';
+            $cssPage = $tenants->runAs(SBP3_TENANT_A, static fn(): array => $app->createPage($admin, 'Element CSS', 'element-css', 'page', 'standalone'));
+            $cssHead = $cssPage['revision']['id'];
+            assert_throws(StudioAuthorizationException::class, function () use ($tenants, $app, $editor, $cssPage, $cssHead, $styled): void {
+                $tenants->runAs(SBP3_TENANT_A, static fn() => $app->saveDraft($editor, $cssPage['page']['id'], $styled, $cssHead));
+            }, 'an editor cannot add Custom CSS');
+            $kept = $tenants->runAs(SBP3_TENANT_A, static fn(): array => $app->saveDraft($admin, $cssPage['page']['id'], $styled, $cssHead));
+            $keptAgain = $tenants->runAs(SBP3_TENANT_A, static fn(): array => $app->saveDraft($editor, $cssPage['page']['id'], $styled, $kept['revision']['id']));
+            assert_true(($keptAgain['revision']['id'] ?? 0) > 0, 'an editor can save a page that already has it, unchanged');
+
             assert_throws(StudioAuthorizationException::class, function () use ($tenants, $app, $editor, $registry): void {
                 $tenants->runAs(SBP3_TENANT_A, static fn() => $app->saveTemplate($editor, 'edit-cannot-admin', 'section_preset', 'test', 'X', null, sbp3_doc($registry, 'X')));
             }, 'admin-only template administration remains protected from a mere editor');

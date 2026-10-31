@@ -28,6 +28,16 @@ export const ANIMATION_TYPES = Object.freeze([
   { value: 'move_right', label: 'Move right' },
   { value: 'reveal_left', label: 'Reveal from left' },
   { value: 'reveal_up', label: 'Reveal upward' },
+  { value: 'fade_left', label: 'Fade left' },
+  { value: 'fade_right', label: 'Fade right' },
+  { value: 'zoom_in', label: 'Zoom in' },
+  { value: 'zoom_out', label: 'Zoom out' },
+  { value: 'bounce_in', label: 'Bounce in' },
+  { value: 'flip_x', label: 'Flip X' },
+  { value: 'flip_y', label: 'Flip Y' },
+  { value: 'rotate_in', label: 'Rotate in' },
+  { value: 'light_speed', label: 'Light speed' },
+  { value: 'pulse', label: 'Pulse' },
 ]);
 
 /** `interactions.trigger` — must match DocumentValidator's list, in order. */
@@ -131,6 +141,28 @@ export function normalizeInteractions(raw) {
   if (sticky) out.sticky = sticky;
   const parallax = normalizeParallax(i.parallax);
   if (parallax) out.parallax = parallax;
+  const scroll = normalizeLevels(i.scroll, SCROLL_LEVELS);
+  if (scroll) out.scroll = scroll;
+  const mouse = normalizeLevels(i.mouse, MOUSE_LEVELS);
+  if (mouse) out.mouse = mouse;
+  return out;
+}
+
+/** Scrolling and mouse effects: each field's lowest level; the highest is 10 (ScrollEffects::SCROLL_FIELDS, MOUSE_FIELDS). */
+export const SCROLL_LEVELS = Object.freeze({ vertical: -10, horizontal: -10, transparency: 0, blur: 0, rotate: -10, scale: -10 });
+export const MOUSE_LEVELS = Object.freeze({ track: -10, tilt: 0 });
+
+/** Whole levels in range, without the zeros; null when nothing is left, which turns the effect off. */
+function normalizeLevels(raw, fields) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const out = {};
+  for (const [key, min] of Object.entries(fields)) {
+    const n = Math.round(Number(raw[key]));
+    if (Number.isFinite(n) && n !== 0) out[key] = Math.max(min, Math.min(10, n));
+  }
+  if (Object.keys(out).length === 0) return null;
+  const devices = normalizeDevices(raw.devices);
+  if (fields === SCROLL_LEVELS && devices) out.devices = devices;
   return out;
 }
 

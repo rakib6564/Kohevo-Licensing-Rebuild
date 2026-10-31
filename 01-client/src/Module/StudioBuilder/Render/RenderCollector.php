@@ -184,6 +184,18 @@ final class RenderCollector
         return $this->deferred;
     }
 
+    /** An element's own CSS, after every generated rule so it wins at equal weight. Returns the class it is written under. */
+    public function elementCss(string $blockId, string $css): string
+    {
+        $class = 'sb-el-' . substr(hash('sha256', $blockId), 0, 12);
+        $compiled = \Slate\Module\StudioBuilder\Document\ElementCss::compile($css, $class);
+        if ($compiled === '') {
+            return '';
+        }
+        $this->cssRules['~~' . $class] = $compiled;
+        return $class;
+    }
+
     public function css(): string
     {
         ksort($this->cssRules, SORT_STRING);

@@ -302,6 +302,7 @@ final class StyleSurface
     }
 
     /** Numeric parts of `effects`: group => field => [min, max, unit]. */
+    private const FLIPS = ['flip_x' => 'scaleX(-1)', 'flip_y' => 'scaleY(-1)'];
     private const TRANSFORM = ['rotate' => [-360, 360, 'deg'], 'scale' => [0, 5, ''], 'skew_x' => [-90, 90, 'deg'], 'skew_y' => [-90, 90, 'deg']];
     private const FILTER    = ['blur' => [0, 50, 'px'], 'brightness' => [0, 300, '%'], 'contrast' => [0, 300, '%'], 'saturate' => [0, 300, '%'], 'grayscale' => [0, 100, '%']];
 
@@ -682,7 +683,13 @@ final class StyleSurface
             $p = "{$path}.{$key}";
             switch ((string) $key) {
                 case 'transform':
-                    self::checkNumberGroup($value, self::TRANSFORM + ['translate_x' => null, 'translate_y' => null], $p, $errors, true);
+                    $flips = is_array($value) ? array_intersect_key($value, self::FLIPS) : [];
+                    foreach ($flips as $flip => $on) {
+                        if (!is_bool($on)) {
+                            $errors[] = self::issue("{$p}.{$flip}", 'Must be true or false.');
+                        }
+                    }
+                    self::checkNumberGroup(is_array($value) ? array_diff_key($value, self::FLIPS) : $value, self::TRANSFORM + ['translate_x' => null, 'translate_y' => null], $p, $errors, true);
                     break;
                 case 'filter':
                     self::checkNumberGroup($value, self::FILTER, $p, $errors, false);
@@ -887,6 +894,11 @@ final class StyleSurface
         $sy = isset($t['skew_y']) && self::inRange($t['skew_y'], -90, 90) ? self::num($t['skew_y']) : null;
         if ($sx !== null || $sy !== null) {
             $fn[] = 'skew(' . ($sx ?? '0') . 'deg,' . ($sy ?? '0') . 'deg)';
+        }
+        foreach (self::FLIPS as $flip => $css) {
+            if (($t[$flip] ?? null) === true) {
+                $fn[] = $css;
+            }
         }
         if ($fn !== []) {
             $out[] = 'transform:' . implode(' ', $fn);

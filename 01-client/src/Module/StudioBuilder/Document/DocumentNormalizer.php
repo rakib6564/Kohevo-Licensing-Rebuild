@@ -282,6 +282,9 @@ final class DocumentNormalizer
             $normalizedBlock['link'] = CanonicalJson::sortKeysRecursively($block['link']);
         }
         // Part styles, like states: an empty part (and an empty map) is dropped.
+        if (is_string($block['custom_css'] ?? null) && trim($block['custom_css']) !== '') {
+            $normalizedBlock['custom_css'] = $block['custom_css'];
+        }
         if (array_key_exists('style_parts', $block) && is_array($block['style_parts'])) {
             $parts = [];
             foreach ($block['style_parts'] as $name => $partial) {

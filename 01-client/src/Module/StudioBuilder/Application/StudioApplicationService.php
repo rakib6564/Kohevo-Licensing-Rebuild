@@ -83,6 +83,7 @@ use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
 use Slate\Module\StudioBuilder\Document\DocumentUpgrader;
 use Slate\Module\StudioBuilder\Document\DocumentValidator;
+use Slate\Module\StudioBuilder\Document\ElementCss;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
 use Slate\Module\StudioBuilder\Meta\PageMeta;
@@ -338,11 +339,28 @@ final class StudioApplicationService
         if ($page !== null) {
             $rawDocument['document_type'] = (string) $page['page_type'];
         }
+        $this->assertElementCssAllowed($actor, $page !== null ? $this->currentDocument($pageId)[1] : [], $rawDocument);
         $validated = ValidatedDocument::from($rawDocument, $this->registry, $this->buildValidationOptions($actor, $pageId));
         $result = $this->revisions->createDraftRevision($pageId, $validated, $expectedRevisionId, (int) $actor->userId, $revisionKind, $summary);
         $this->audit($actor, 'studio.page.draft_saved', (string) $pageId, ['revision_kind' => $revisionKind, 'deduplicated' => $result['deduplicated'], 'revision_id' => (int) ($result['revision']['id'] ?? 0)]);
         return $result;
     }
+
+    /**
+     * @param array<string, mixed> $before the document as stored
+     * @param array<string, mixed> $after  the document about to be saved
+     */
+    private function assertElementCssAllowed(StudioActor $actor, array $before, array $after): void
+    {
+        if (ElementCss::collect($before) === ElementCss::collect($after)) {
+            return;
+        }
+        // Code on a public page: the same rule as the site stylesheet, and never written by an assistant.
+        if ($actor->isAiOrigin() || !$actor->can(StudioPermissions::ADMIN)) {
+            throw new StudioAuthorizationException(StudioPermissions::ADMIN);
+        }
+    }
+
 
     /**
      * Loads the page's current working document, applies the given operations
@@ -396,6 +414,7 @@ final class StudioApplicationService
         $this->assertBlocksAvailable($operations);
         [$page, $currentDocument] = $this->currentDocument($pageId);
         $mutatedDocument = DocumentOperationApplier::apply($currentDocument, $operations, $this->registry);
+        $this->assertElementCssAllowed($actor, $currentDocument, $mutatedDocument);
         $validated = ValidatedDocument::from($mutatedDocument, $this->registry, $this->buildValidationOptions($actor, $pageId));
 
         return $this->revisions->createDraftRevision($pageId, $validated, $expectedRevisionId, (int) $actor->userId, $revisionKind, $summary);
@@ -1219,7 +1238,7 @@ final class StudioApplicationService
     {
         $this->authorize($actor, StudioPermissions::EDIT);
         $revisionKind = $this->importKind($actor);
-        $validationOptions = $this->buildValidationOptions($actor);
+        $validationOptions = ['element_css' => false] + $this->buildValidationOptions($actor);
         $packages = $this->requirePackages();
 
         $plan = $packages->plan($package, $options, static fn(string $perm): bool => $actor->can($perm), $validationOptions, $dryRun);
@@ -1251,7 +1270,7 @@ final class StudioApplicationService
     {
         $this->authorize($actor, StudioPermissions::EDIT);
         $revisionKind = $this->importKind($actor);
-        $validationOptions = $this->buildValidationOptions($actor);
+        $validationOptions = ['element_css' => false] + $this->buildValidationOptions($actor);
         $packages = $this->requirePackages();
 
         $mode = (string) ($options['mode'] ?? StudioPackageService::MODE_CREATE);
