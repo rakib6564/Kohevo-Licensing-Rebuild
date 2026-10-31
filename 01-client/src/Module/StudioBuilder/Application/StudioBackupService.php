@@ -533,6 +533,7 @@ final class StudioBackupService
      */
     private function restoreMedia(\ZipArchive $zip, int $tenantId, array &$out): array
     {
+        Media::ensureSchema(); // a site that has not opened its library yet may lack the alt text columns
         $map = [];
         foreach ($this->mediaIndex($zip) as $row) {
             $plan = $this->mediaAction($zip, $row);

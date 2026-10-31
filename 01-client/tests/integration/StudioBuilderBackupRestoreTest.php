@@ -169,6 +169,13 @@ unit('studio backup integration: back up, change, restore, and move to another s
             $act = \PluginLoader::installFromDisk('studio-builder');
             assert_true(!empty($act['ok']), json_encode($act));
             Media::ensureSchema();
+            // ensureSchema() runs once per process, so in the full suite an earlier test has used it up on another database.
+            $mediaColumns = array_column(Database::rows('SHOW COLUMNS FROM media_files'), 'Field');
+            foreach (['alt_text' => 'VARCHAR(255) NULL', 'title' => 'VARCHAR(255) NULL', 'description' => 'TEXT NULL'] as $column => $definition) {
+                if (!in_array($column, $mediaColumns, true)) {
+                    Database::query("ALTER TABLE media_files ADD COLUMN `{$column}` {$definition}");
+                }
+            }
             sbbki_seed(SBBK_A, $iid, ['studio-builder']);
             sbbki_seed(SBBK_B, $iid, ['studio-builder']);
 
