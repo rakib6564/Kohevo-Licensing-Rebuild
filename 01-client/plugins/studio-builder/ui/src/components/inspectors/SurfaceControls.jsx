@@ -145,23 +145,11 @@ function Length({ id, path, label, get, put, placeholder, units }) {
 }
 
 /**
- * A colour field that can also take a theme colour. The stored value is either a literal colour or the token's ref, in the
- * same path (the server writes a token out as the theme's custom property), so a pick replaces the literal and the reverse.
- * With no `tokens` it is the plain colour field.
+ * A colour held in one path: a literal, or a theme token's ref (the server writes it out as the theme's custom property).
+ * `fallback` replaces a cleared value where the server requires one.
  */
-export function ThemeColor({ id, label, value, onChange, tokens, fallback }) {
-  const token = isColourToken(value) ? value : null;
-  return (
-    <ColorField
-      id={id}
-      label={label}
-      value={token ? undefined : value}
-      onChange={onChange}
-      tokens={tokens}
-      token={token}
-      onToken={(ref) => onChange(ref ?? fallback)}
-    />
-  );
+export function ThemeColor({ id, label, value, onChange, tokens, fallback, effective }) {
+  return <ColorField id={id} label={label} value={value} onChange={(v) => onChange(v ?? fallback)} tokens={tokens} effective={effective} />;
 }
 
 /**
@@ -526,7 +514,7 @@ export function TypographyExtras({ style, onChange, tokens }) {
  * differs: text colour, background, border colour, opacity and a transform. Transition and cursor belong to the
  * base style, so they are not offered here.
  */
-export function StatesPane({ type = null, states, onChange }) {
+export function StatesPane({ type = null, states, onChange, tokens, colours = null }) {
   const id = useId();
   const [tab, setTab] = useState('normal');
   const all = asObject(states);
@@ -554,9 +542,9 @@ export function StatesPane({ type = null, states, onChange }) {
       ) : (
         <>
           <p className="sbx-hint">{t(`state_${tab}_when`)}</p>
-          <ColorField id={pathId(id, `${tab}.color`)} label={t('state_text_color')} value={f.get('color')} onChange={(v) => f.put('color', v)} />
-          <ColorField id={pathId(id, `${tab}.bg`)} label={t('background_color')} value={f.get('background.color')} onChange={(v) => f.put('background.color', v)} />
-          <ColorField id={pathId(id, `${tab}.border`)} label={t('border_color')} value={f.get('border.color')} onChange={(v) => f.put('border.color', v)} />
+          <ColorField id={pathId(id, `${tab}.color`)} label={t('state_text_color')} value={f.get('color')} tokens={tokens} onChange={(v) => f.put('color', v)} {...(colours ? colours('text', tab) : {})} />
+          <ColorField id={pathId(id, `${tab}.bg`)} label={t('background_color')} value={f.get('background.color')} tokens={tokens} onChange={(v) => f.put('background.color', v)} {...(colours ? colours('background', tab) : {})} />
+          <ColorField id={pathId(id, `${tab}.border`)} label={t('border_color')} value={f.get('border.color')} tokens={tokens} onChange={(v) => f.put('border.color', v)} {...(colours ? colours('border', tab) : {})} />
           <SliderField id={pathId(id, `${tab}.opacity`)} label={t('opacity_label')} value={f.get('opacity')} min={0} max={1} step={0.05} neutral={1} onChange={(v) => f.put('opacity', v)} />
           <SliderField id={pathId(id, `${tab}.scale`)} label={t('fx_scale')} value={f.get('effects.transform.scale')} min={0} max={5} step={0.05} neutral={1} onChange={(v) => f.put('effects.transform.scale', v)} />
           <SliderField id={pathId(id, `${tab}.rotate`)} label={t('fx_rotate')} value={f.get('effects.transform.rotate')} min={-360} max={360} step={1} unit="°" neutral={0} onChange={(v) => f.put('effects.transform.rotate', v)} />
