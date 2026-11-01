@@ -162,6 +162,7 @@ final class StudioPublicRuntime
         return $this->serveTemplate(PageAddress::fromRow($tpl['page']), $ifNoneMatch, 200, [
             'archive_type' => 'content_type',
             'term'         => $label,
+            'archive_description' => (string) ($type['description'] ?? ''),
             'content_type' => $key,
         ]);
     }

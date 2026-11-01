@@ -81,6 +81,7 @@ final class DocumentOperationApplier
             DocumentOperation::OP_UPDATE_BLOCK_META => self::updateBlockMeta($document, $payload),
             DocumentOperation::OP_UPDATE_BLOCK_STYLE_STATES => self::updateBlockStyleStates($document, $payload),
             DocumentOperation::OP_UPDATE_BLOCK_STYLE_PARTS => self::updateBlockStyleParts($document, $payload),
+            DocumentOperation::OP_UPDATE_BLOCK_DYNAMIC => self::updateBlockDynamic($document, $payload),
             DocumentOperation::OP_UPDATE_BLOCK_TAG => self::updateBlockTag($document, $payload),
             DocumentOperation::OP_UPDATE_BLOCK_CUSTOM_CSS => self::updateBlockCustomCss($document, $payload),
             DocumentOperation::OP_RESET_BLOCK_STYLE_PROPERTY => self::resetBlockStyleProperty($document, $payload),
@@ -521,6 +522,27 @@ final class DocumentOperationApplier
                 unset($block['style_parts']);
             } else {
                 $block['style_parts'] = $parts;
+            }
+            return $block;
+        });
+    }
+
+    /**
+     * Replace the block's dynamic tags wholesale; an empty object removes the key.
+     *
+     * @param array<string, mixed> $document
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function updateBlockDynamic(array $document, array $payload): array
+    {
+        $blockId = self::requireString($payload, 'block_id', '$.payload.block_id');
+        $dynamic = self::requireObject($payload, 'dynamic', '$.payload.dynamic');
+        return self::changeBlockInDocument($document, $blockId, static function (array $block) use ($dynamic): array {
+            if ($dynamic === []) {
+                unset($block['dynamic']);
+            } else {
+                $block['dynamic'] = $dynamic;
             }
             return $block;
         });

@@ -398,8 +398,16 @@ final class StudioCompiler
                 $settings[$k] = $v;
             }
         }
+        $seo = is_array($decoded) && is_array($decoded['seo'] ?? null) ? $decoded['seo'] : [];
+        $when = $page->publishedAt !== null ? strtotime($page->publishedAt) : false;
+        // Any page answers the Post tags with its own title and address; a template's item has its own and wins.
+        $own = [
+            'page_id' => (int) $page->id, 'page_title' => $page->title, 'page_excerpt' => $settings['excerpt'] ?? '',
+            'page_url' => $context->site->absoluteUrl(\Slate\Module\StudioBuilder\Meta\PageRoutes::path($context->tenantId, (int) $page->id, $page->slug, $page->routeMode)),
+            'page_timestamp' => $when !== false ? $when : '', 'page_date' => $when !== false ? Html::date($when) : '', 'page_image_media_id' => (int) ($seo['og_image_media_id'] ?? 0),
+        ];
         if ($this->singleFor($page, $settings, $context) === null) {
-            return [];
+            return $own;
         }
         $author = '';
         try {
@@ -411,7 +419,7 @@ final class StudioCompiler
             // No author line rather than a wrong one.
         }
         $published = $page->publishedAt !== null ? strtotime($page->publishedAt) : false;
-        return [
+        return $own + [
             'post_title'  => $page->title,
             'post_excerpt' => $settings['excerpt'] ?? '',
             'post_date'   => $published !== false ? \Slate\Module\StudioBuilder\Render\Html::date($published) : '',

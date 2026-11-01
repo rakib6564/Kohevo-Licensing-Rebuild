@@ -50,11 +50,7 @@ export const PROP_PRESENTERS = Object.freeze({
   },
   'core.heading': {
 
-    text: { showIf: (p) => !p.source || p.source === 'static' },
-    source_field: { showIf: (p) => p.source === 'field' },
-    url: { showIf: (p) => !p.link_source || p.link_source === 'custom' },
-    link_field: { showIf: (p) => p.link_source === 'field' },
-    new_tab: { showIf: (p) => (typeof p.url === 'string' && p.url.trim() !== '') || p.link_source === 'post_url' || p.link_source === 'field' },
+    new_tab: { showIf: (p) => typeof p.url === 'string' && p.url.trim() !== '' },
   },
   // The Text Editor's columns gap matters only with more than one column.
   'core.rich_text': {
@@ -62,11 +58,7 @@ export const PROP_PRESENTERS = Object.freeze({
   },
   // Size and alignment live in the Style section. The older colour token stays visible only while it holds a value.
   'core.text': {
-    content: { showIf: (p) => !p.source || p.source === 'static' },
-    source_field: { showIf: (p) => p.source === 'field' },
-    url: { showIf: (p) => !p.link_source || p.link_source === 'custom' },
-    link_field: { showIf: (p) => p.link_source === 'field' },
-    new_tab: { showIf: (p) => (typeof p.url === 'string' && p.url.trim() !== '') || p.link_source === 'post_url' || p.link_source === 'field' },
+    new_tab: { showIf: (p) => typeof p.url === 'string' && p.url.trim() !== '' },
     size: { showIf: () => false },
     align: { showIf: () => false },
     color_token: { showIf: (p) => !!p.color_token },

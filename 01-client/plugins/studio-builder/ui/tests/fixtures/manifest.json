@@ -296,7 +296,7 @@
                         "heading": "How do I get started?"
                     },
                     {
-                        "body": "Yes \u2014 freeze for up to three months, in one go or in slices.",
+                        "body": "Yes — freeze for up to three months, in one go or in slices.",
                         "heading": "Can I freeze my membership?"
                     },
                     {
@@ -319,7 +319,7 @@
                         },
                         {
                             "heading": "Can I freeze my membership?",
-                            "body": "Yes \u2014 freeze for up to three months, in one go or in slices."
+                            "body": "Yes — freeze for up to three months, in one go or in slices."
                         },
                         {
                             "heading": "What should I bring?",
@@ -2467,40 +2467,12 @@
                 "highlight_underline": false,
                 "highlight_weight": "inherit",
                 "level": "h2",
-                "link_field": "",
-                "link_source": "custom",
                 "new_tab": false,
-                "source": "static",
-                "source_field": "",
                 "text": "Section Heading",
                 "url": null
             },
             "description": "Create hierarchy",
             "field_schema": [
-                {
-                    "key": "source",
-                    "type": "enum",
-                    "label": "Content from",
-                    "required": false,
-                    "default": "static",
-                    "allowed_values": [
-                        "static",
-                        "post_title",
-                        "post_excerpt",
-                        "post_date",
-                        "site_name",
-                        "field"
-                    ]
-                },
-                {
-                    "key": "source_field",
-                    "type": "string",
-                    "label": "Source field",
-                    "required": false,
-                    "default": "",
-                    "max_length": 64,
-                    "format": "meta_field"
-                },
                 {
                     "key": "text",
                     "type": "string",
@@ -2508,27 +2480,6 @@
                     "required": true,
                     "default": "Section Heading",
                     "max_length": 300
-                },
-                {
-                    "key": "link_source",
-                    "type": "enum",
-                    "label": "Link to",
-                    "required": false,
-                    "default": "custom",
-                    "allowed_values": [
-                        "custom",
-                        "post_url",
-                        "field"
-                    ]
-                },
-                {
-                    "key": "link_field",
-                    "type": "string",
-                    "label": "Link field",
-                    "required": false,
-                    "default": "",
-                    "max_length": 64,
-                    "format": "meta_field"
                 },
                 {
                     "key": "url",
@@ -5391,40 +5342,12 @@
                 "columns_gap": 20,
                 "content": "",
                 "drop_cap": false,
-                "link_field": "",
-                "link_source": "custom",
                 "new_tab": false,
                 "size": "base",
-                "source": "static",
-                "source_field": "",
                 "url": null
             },
             "description": "Plain-text body copy",
             "field_schema": [
-                {
-                    "key": "source",
-                    "type": "enum",
-                    "label": "Content from",
-                    "required": false,
-                    "default": "static",
-                    "allowed_values": [
-                        "static",
-                        "post_title",
-                        "post_excerpt",
-                        "post_date",
-                        "site_name",
-                        "field"
-                    ]
-                },
-                {
-                    "key": "source_field",
-                    "type": "string",
-                    "label": "Source field",
-                    "required": false,
-                    "default": "",
-                    "max_length": 64,
-                    "format": "meta_field"
-                },
                 {
                     "key": "content",
                     "type": "text",
@@ -5432,27 +5355,6 @@
                     "required": false,
                     "default": "",
                     "max_length": 5000
-                },
-                {
-                    "key": "link_source",
-                    "type": "enum",
-                    "label": "Link to",
-                    "required": false,
-                    "default": "custom",
-                    "allowed_values": [
-                        "custom",
-                        "post_url",
-                        "field"
-                    ]
-                },
-                {
-                    "key": "link_field",
-                    "type": "string",
-                    "label": "Link field",
-                    "required": false,
-                    "default": "",
-                    "max_length": 64,
-                    "format": "meta_field"
                 },
                 {
                     "key": "url",
@@ -8649,7 +8551,7 @@
             "binding_slots": [],
             "category": "theme",
             "default_props": {
-                "separator": " \u2022 ",
+                "separator": " • ",
                 "show_author": true,
                 "show_category": true,
                 "show_date": true
@@ -8682,7 +8584,7 @@
                     "type": "string",
                     "label": "Separator",
                     "required": false,
-                    "default": " \u2022 ",
+                    "default": " • ",
                     "max_length": 10
                 }
             ],

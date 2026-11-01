@@ -70,7 +70,7 @@ final class FieldValueRenderer implements BlockRendererInterface
     }
 
     /** @param array<string, mixed> $field */
-    private static function format(array $field, mixed $value): string
+    public static function format(array $field, mixed $value): string
     {
         $type = MetaFieldTypes::normalize((string) ($field['type'] ?? 'text'));
         $choices = [];

@@ -6,6 +6,7 @@
 // plus the boxed width (`layout.content_width` / `content_size` / `content_max`), `layout.padding_y` and `link`. A Container's older props (gap, direction,
 // wrap) still render; they show here as what the fields start from until the layout overrides them.
 
+import { DynamicField } from '../fields/DynamicControl.jsx';
 import { useEffect, useId, useState } from 'react';
 import { Field, Check } from '../ui/index.js';
 import { useEditor, useEngineState } from '../EditorContext.jsx';
@@ -227,6 +228,7 @@ function TagFields({ id, block, onTag }) {
       {tag === 'main' && <p className="sbx-hint">{t('container_main_hint')}</p>}
       {tag === 'a' && (
         <>
+          <DynamicField field={{ key: 'link', label: t('container_link_url') }} path="@link" kind="url">
           <Field label={t('container_link_url')} htmlFor={`${id}-href`} error={error || null} errorId={`${id}-href-err`}>
             <input
               id={`${id}-href`}
@@ -240,6 +242,7 @@ function TagFields({ id, block, onTag }) {
               onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
             />
           </Field>
+          </DynamicField>
           <Check label={t('container_link_new_tab')} checked={link.new_tab === true} disabled={!link.url} onChange={(e) => saveLink(draft, e.target.checked)} />
           <p className="sbx-hint">{t('container_link_hint')}</p>
         </>

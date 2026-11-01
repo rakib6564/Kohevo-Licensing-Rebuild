@@ -150,12 +150,8 @@ final class BlockRegistry
             category: 'content',
             icon: 'heading',
             schema: FieldSchema::define([
-                ['key' => 'source', 'type' => 'enum', 'label' => 'Content from', 'required' => false, 'allowed_values' => ['static', 'post_title', 'post_excerpt', 'post_date', 'site_name', 'field'], 'default' => 'static'],
-                ['key' => 'source_field', 'type' => 'string', 'label' => 'Source field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
                 ['key' => 'text', 'type' => 'string', 'label' => 'Heading Text', 'required' => true, 'default' => 'Section Heading', 'max_length' => 300],
                 // Title, Link, HTML Tag, then the highlight, in the order the reference editor shows them.
-                ['key' => 'link_source', 'type' => 'enum', 'label' => 'Link to', 'required' => false, 'allowed_values' => ['custom', 'post_url', 'field'], 'default' => 'custom'],
-                ['key' => 'link_field', 'type' => 'string', 'label' => 'Link field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
                 ['key' => 'url', 'type' => 'url', 'label' => 'Link', 'required' => false, 'default' => null],
                 ['key' => 'new_tab', 'type' => 'boolean', 'label' => 'Open in a new tab', 'required' => false, 'default' => false],
                 // The HTML element: a heading level, or div / span / p for text styled as a heading that is not one.
@@ -413,11 +409,7 @@ final class BlockRegistry
             category: 'content',
             icon: 'pilcrow',
             schema: FieldSchema::define([
-                ['key' => 'source', 'type' => 'enum', 'label' => 'Content from', 'required' => false, 'allowed_values' => ['static', 'post_title', 'post_excerpt', 'post_date', 'site_name', 'field'], 'default' => 'static'],
-                ['key' => 'source_field', 'type' => 'string', 'label' => 'Source field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
                 ['key' => 'content', 'type' => 'text', 'label' => 'Text Content', 'required' => false, 'default' => '', 'max_length' => 5000],
-                ['key' => 'link_source', 'type' => 'enum', 'label' => 'Link to', 'required' => false, 'allowed_values' => ['custom', 'post_url', 'field'], 'default' => 'custom'],
-                ['key' => 'link_field', 'type' => 'string', 'label' => 'Link field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
                 ['key' => 'url', 'type' => 'url', 'label' => 'Link', 'required' => false, 'default' => null],
                 ['key' => 'new_tab', 'type' => 'boolean', 'label' => 'Open in a new tab', 'required' => false, 'default' => false],
                 ['key' => 'size', 'type' => 'enum', 'label' => 'Size', 'required' => false, 'allowed_values' => ['xs', 'sm', 'base', 'lg', 'xl', 'lead', 'inherit'], 'default' => 'base'],

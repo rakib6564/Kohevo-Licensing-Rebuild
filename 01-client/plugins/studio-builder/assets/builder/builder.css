@@ -3518,3 +3518,19 @@ html, body.sbx-body {
 .sbx-icon-dialog__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; max-height: 52vh; overflow: auto; margin-bottom: 10px; }
 .sbx-icon-dialog__grid button { display: flex; align-items: center; justify-content: center; height: 52px; border: 1px solid transparent; border-radius: var(--sbx-r-sm); background: transparent; color: var(--sbx-text); cursor: pointer; }
 .sbx-icon-dialog__grid button:hover, .sbx-icon-dialog__grid button[aria-pressed='true'] { border-color: var(--sbx-accent); color: var(--sbx-text-bright); }
+
+/* Dynamic tags: the database button beside a setting, the tag chip, the tag list. */
+.sbx-dyn { position: relative; display: flex; gap: 6px; align-items: flex-start; }
+.sbx-dyn__control { flex: 1 1 auto; min-width: 0; }
+.sbx-dyn__open { flex: none; margin-top: 2px; }
+.sbx-dyn--set { display: block; }
+.sbx-dyn__chip { display: flex; align-items: center; gap: 2px; border: 1px solid var(--sbx-accent-border); border-radius: var(--sbx-radius); padding: 2px 4px; margin-top: 4px; }
+.sbx-dyn__name { flex: 1 1 auto; min-width: 0; display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; color: inherit; font: inherit; padding: 4px; cursor: pointer; text-align: left; }
+.sbx-dyn__name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sbx-dyn__picker { position: absolute; z-index: 40; top: 100%; left: 0; right: 0; margin-top: 4px; background: var(--sbx-panel-elevated); border: 1px solid var(--sbx-border-strong); border-radius: var(--sbx-radius); box-shadow: var(--sbx-shadow-lg); padding: 8px; }
+.sbx-dyn__search { width: 100%; box-sizing: border-box; margin-bottom: 6px; }
+.sbx-dyn__list { max-height: 320px; overflow-y: auto; }
+.sbx-dyn__group { margin: 8px 4px 2px; font-size: var(--sbx-fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; opacity: .7; }
+.sbx-dyn__item { display: block; width: 100%; background: none; border: 0; border-radius: var(--sbx-radius); color: inherit; font: inherit; text-align: left; padding: 5px 8px; cursor: pointer; }
+.sbx-dyn__item:hover, .sbx-dyn__item:focus-visible { background: var(--sbx-card-hover); }
+.sbx-dyn__settings { margin-top: 8px; display: grid; gap: 6px; }

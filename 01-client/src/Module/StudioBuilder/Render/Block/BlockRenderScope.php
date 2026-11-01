@@ -154,6 +154,10 @@ final class BlockRenderScope
      */
     public function image(mixed $mediaRef): ?ResolvedMedia
     {
+        // A dynamic tag's image: an address that has passed the URL allowlist, not a library id.
+        if (is_array($mediaRef) && ($mediaRef['media_id'] ?? null) === 0 && is_string($mediaRef['url'] ?? null) && !empty($this->block['dynamic'])) {
+            return new ResolvedMedia(0, $mediaRef['url']);
+        }
         if (!is_array($mediaRef) || !isset($mediaRef['media_id']) || !is_int($mediaRef['media_id']) || $mediaRef['media_id'] <= 0) {
             return null;
         }

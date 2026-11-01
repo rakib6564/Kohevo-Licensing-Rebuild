@@ -37,6 +37,7 @@ final class DocumentValidator
             'type'     => $block['type'] ?? null,
             'props'    => is_array($block['props'] ?? null) ? $block['props'] : [],
             'bindings' => is_array($block['bindings'] ?? null) ? $block['bindings'] : [],
+            'dynamic'  => is_array($block['dynamic'] ?? null) ? $block['dynamic'] : [],
         ]), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
     }
 
@@ -784,6 +785,10 @@ final class DocumentValidator
         } else {
             $propResult = $definition->validateProps($props, "{$path}.props");
             foreach ($propResult->errors() as $err) {
+                // A required setting a tag fills has no value of its own to require.
+                if (($err['code'] ?? '') === 'required_field' && is_array($block['dynamic'] ?? null) && isset($block['dynamic'][substr((string) ($err['path'] ?? ''), strlen("{$path}.props."))])) {
+                    continue;
+                }
                 $errors[] = $err;
             }
             // Verify tenant-scoped media_id references in props if media_exists callback is provided
@@ -800,6 +805,12 @@ final class DocumentValidator
             if (is_array($bgImage) && isset($bgImage['media_id']) && is_int($bgImage['media_id']) && $bgImage['media_id'] > 0
                 && isset($options['media_exists']) && is_callable($options['media_exists']) && !$options['media_exists']($bgImage['media_id'])) {
                 $errors[] = ValidationResult::issue("{$path}.style.background.image.media_id", 'cross_tenant_or_missing_media', "Referenced media_id {$bgImage['media_id']} does not exist in the active tenant.");
+            }
+        }
+
+        if (array_key_exists('dynamic', $block)) {
+            foreach (\Slate\Module\StudioBuilder\Render\Dynamic\DynamicTags::issues($block['dynamic']) as $message) {
+                $errors[] = ValidationResult::issue("{$path}.dynamic", 'invalid_dynamic', $message);
             }
         }
 

@@ -63,6 +63,7 @@ final class LoopTemplates
         return [
             'title' => (string) ($row['title'] ?? ''), 'post_title' => (string) ($row['title'] ?? ''), 'post_url' => (string) ($row['url'] ?? ''),
             'post_excerpt' => (string) ($row['excerpt'] ?? ''), 'post_image' => (string) ($row['featured_image'] ?? ''), 'post_date' => (string) ($row['date_formatted'] ?? ''),
+            'post_id' => (string) ($row['id'] ?? ''), 'post_timestamp' => (string) (strtotime((string) ($row['published_at'] ?? '')) ?: ''), 'category' => (string) ($row['category'] ?? ''), 'author_name' => (string) ($row['author_name'] ?? ''),
         ];
     }
 }

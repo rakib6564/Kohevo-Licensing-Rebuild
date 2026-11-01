@@ -39,8 +39,8 @@ use Slate\Module\StudioBuilder\Document\StyleValueGuard;
 use Slate\Module\StudioBuilder\Registry\BlockDefinitionInterface;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
-use Slate\Module\StudioBuilder\Render\Block\DynamicText;
 use Slate\Module\StudioBuilder\Render\Block\RepeatingChildrenInterface;
+use Slate\Module\StudioBuilder\Render\Dynamic\DynamicTags;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
 use Slate\Module\StudioBuilder\Render\Block\WrapperClassesInterface;
@@ -134,6 +134,7 @@ final class DocumentRenderer
         if (!empty($block[self::FRAMING_KEY])) {
             $context = $context->framing();
         }
+        $block = DynamicTags::apply($block, $definition, $context, $this->media);
 
         $entitlement = $definition->requiredEntitlement();
         if ($entitlement !== null && !$context->isEntitled($entitlement)) {
@@ -260,7 +261,7 @@ final class DocumentRenderer
         $inlineStyles = $this->buildInlineStyles(is_array($block['style'] ?? null) ? $block['style'] : []);
         // Joined with a `;`: the inline styles end without one, and run together with the timing variables the last
         // inline declaration (often the z-index) became invalid and was dropped as soon as a block had animation timing.
-        $combined     = implode(';', array_filter([trim($inlineStyles, " ;"), trim($motionVars, " ;"), implode(';', $scroll['vars']), $wrapperStyle], static fn(string $part): bool => $part !== ''));
+        $combined     = implode(';', array_filter([trim($inlineStyles, " ;"), trim($motionVars, " ;"), implode(';', $scroll['vars']), $wrapperStyle, self::dynamicBackground($block)], static fn(string $part): bool => $part !== ''));
         $styleAttr    = $combined !== '' ? ' style="' . Html::e($combined) . '"' : '';
 
         $metadata = empty($block[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($block['id'] ?? ''), $type) : '';
@@ -287,9 +288,16 @@ final class DocumentRenderer
     {
         return $renderer->isDynamic()
             || !empty($block['visibility']['when_field'])
-            || DynamicText::isDynamic($block)
+            || !empty($block['dynamic'])
             || $definition->requiredEntitlement() !== null
             || (is_array($block['bindings'] ?? null) && $block['bindings'] !== []);
+    }
+
+    /** A tag's background goes on the element: in a Loop Item one block id draws many items, so a scoped rule would be shared. */
+    private static function dynamicBackground(array $block): string
+    {
+        $url = StyleSurface::safeCssUrl((string) ($block[DynamicTags::BACKGROUND_KEY] ?? ''));
+        return $url === null || $url === '' ? '' : 'background-image:url(' . $url . ')';
     }
 
     private static function fieldHasValue(RenderContext $context, string $key): bool

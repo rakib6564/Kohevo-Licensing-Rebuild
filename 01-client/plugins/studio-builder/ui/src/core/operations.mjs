@@ -34,6 +34,7 @@ export const OPS = Object.freeze({
   UPDATE_BLOCK_META: 'update_block_meta',
   UPDATE_BLOCK_STYLE_STATES: 'update_block_style_states',
   UPDATE_BLOCK_STYLE_PARTS: 'update_block_style_parts',
+  UPDATE_BLOCK_DYNAMIC: 'update_block_dynamic',
   UPDATE_BLOCK_TAG: 'update_block_tag',
   UPDATE_BLOCK_CUSTOM_CSS: 'update_block_custom_css',
   RESET_BLOCK_STYLE_PROPERTY: 'reset_block_style_property',
@@ -119,6 +120,7 @@ export const updateBlockMeta = (blockId, meta) => op(OPS.UPDATE_BLOCK_META, { bl
 /** Replace a block's interaction states ({hover, focus, active, disabled}); `{}` clears them. */
 export const updateBlockStyleStates = (blockId, styleStates) => op(OPS.UPDATE_BLOCK_STYLE_STATES, { block_id: blockId, style_states: styleStates });
 /** The styles of a widget's parts (BlockParts.php): `{ <part>: partial, '<part>:hover': partial }`; `{}` clears them. */
+export const updateBlockDynamic = (blockId, dynamic) => op(OPS.UPDATE_BLOCK_DYNAMIC, { block_id: blockId, dynamic });
 export const updateBlockStyleParts = (blockId, styleParts) => op(OPS.UPDATE_BLOCK_STYLE_PARTS, { block_id: blockId, style_parts: styleParts });
 /** Choose the block's wrapper element; null (or `div`) is the default. */
 /** `link` ({url, new_tab}) is only for the `a` tag: where the linked wrapper points. */
@@ -148,7 +150,7 @@ export const insertedId = (where, type, provisionalId) => (where.parentId === nu
 // ── Id bookkeeping ──────────────────────────────────────────────────────────
 
 // Keys an inserted block may carry besides its core fields (the server keeps the same list).
-const INSERT_BLOCK_EXTRAS = ['responsive', 'attributes', 'classNames', 'conditions', 'metadata', 'interactions', 'animation', 'style_states', 'style_parts', 'tag', 'global_ref'];
+const INSERT_BLOCK_EXTRAS = ['responsive', 'attributes', 'classNames', 'conditions', 'metadata', 'interactions', 'animation', 'style_states', 'style_parts', 'dynamic', 'tag', 'global_ref'];
 
 const ID_KEYS = ['block_id', 'parent_id'];
 
@@ -353,6 +355,18 @@ export function applyLocal(doc, operation, ctx = {}) {
         const { style_parts: _old, ...rest } = b;
         const parts = asObject(p.style_parts);
         return Object.keys(parts).length ? { ...rest, style_parts: parts } : rest;
+      });
+      if (!hit) throw notFound(p.block_id);
+      return next;
+    }
+    case OPS.UPDATE_BLOCK_DYNAMIC: {
+      let hit = false;
+      const next = mapBlocks(doc, (b) => {
+        if (b.id !== p.block_id) return b;
+        hit = true;
+        const { dynamic: _old, ...rest } = b;
+        const dynamic = asObject(p.dynamic);
+        return Object.keys(dynamic).length ? { ...rest, dynamic } : rest;
       });
       if (!hit) throw notFound(p.block_id);
       return next;

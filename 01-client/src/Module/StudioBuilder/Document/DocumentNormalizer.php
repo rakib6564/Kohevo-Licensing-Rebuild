@@ -223,6 +223,10 @@ final class DocumentNormalizer
         if (is_string($block['custom_css'] ?? null) && trim($block['custom_css']) !== '') {
             $normalizedBlock['custom_css'] = $block['custom_css'];
         }
+        // Dynamic tags: present only while a setting has one.
+        if (is_array($block['dynamic'] ?? null) && $block['dynamic'] !== []) {
+            $normalizedBlock['dynamic'] = CanonicalJson::sortKeysRecursively($block['dynamic']);
+        }
         if (array_key_exists('style_parts', $block) && is_array($block['style_parts'])) {
             $parts = [];
             foreach ($block['style_parts'] as $name => $partial) {

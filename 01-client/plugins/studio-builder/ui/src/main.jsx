@@ -9,6 +9,7 @@ import { createRoot } from 'react-dom/client';
 import { StudioShell } from './components/StudioShell.jsx';
 import { setMessages } from './core/messages.mjs';
 import { setLoopTemplates, setMetaFields, setPostTypes } from './core/metaFields.mjs';
+import { setDynamicTags } from './core/dynamicTags.mjs';
 import { setContentTypes } from './core/conditions.mjs';
 
 function readBoot() {
@@ -27,6 +28,7 @@ const root = document.getElementById('sb-builder-root');
 if (boot && root) {
   if (boot.messages) setMessages(boot.messages);
   setMetaFields(boot.metaFields);
+  setDynamicTags(boot.dynamicTags);
   setPostTypes(boot.postTypes);
   setLoopTemplates(boot.loopTemplates);
   setContentTypes(boot.contentTypes);

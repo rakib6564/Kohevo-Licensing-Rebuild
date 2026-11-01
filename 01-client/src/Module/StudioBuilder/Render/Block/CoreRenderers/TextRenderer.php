@@ -11,7 +11,6 @@ namespace Slate\Module\StudioBuilder\Render\Block\CoreRenderers;
 
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
-use Slate\Module\StudioBuilder\Render\Block\DynamicText;
 use Slate\Module\StudioBuilder\Render\Html;
 
 final class TextRenderer implements BlockRendererInterface
@@ -60,8 +59,11 @@ final class TextRenderer implements BlockRendererInterface
         }
 
         $flow = Html::textFlow($scope, $classes);
-        $text = Html::text(DynamicText::text($scope, $content));
-        $url = DynamicText::url($scope);
+        if ($content === '' && !empty($scope->block()['dynamic']['content'])) {
+            return ''; // a tag with nothing to show
+        }
+        $text = Html::text($content);
+        $url = Html::safeUrl($scope->prop('url'));
         if ($url !== null) {
             $text = '<a class="sb-text__link" href="' . Html::e($url) . '"' . ($scope->bool('new_tab') ? ' target="_blank" rel="noopener noreferrer"' : '') . '>' . $text . '</a>';
         }

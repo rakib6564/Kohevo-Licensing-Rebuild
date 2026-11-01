@@ -63,7 +63,7 @@ final class DocumentUpgrader
     public static function structure(array $document): array
     {
         if (is_array($document['containers'] ?? null)) {
-            $document['containers'] = self::layoutSections($document['containers']);
+            $document['containers'] = self::textSources(self::layoutSections($document['containers']));
         }
         if (is_string($document['document_type'] ?? null)) {
             $document['document_type'] = self::typeName($document['document_type']);
@@ -78,9 +78,44 @@ final class DocumentUpgrader
             ? array_map(static fn (mixed $section): mixed => is_array($section) ? self::container($section) : $section, $sections)
             : $sections;
         if (is_array($document['containers'])) {
-            $document['containers'] = self::layoutSections($document['containers']);
+            $document['containers'] = self::textSources(self::layoutSections($document['containers']));
         }
         return $document;
+    }
+
+    /**
+     * A Heading's or Text's older "Content from" and "Link to" props as the dynamic tags they became.
+     *
+     * @param array<mixed> $blocks
+     * @return array<mixed>
+     */
+    private static function textSources(array $blocks): array
+    {
+        foreach ($blocks as $i => $block) {
+            if (!is_array($block)) {
+                continue;
+            }
+            if (is_array($block['children'] ?? null)) {
+                $block['children'] = self::textSources($block['children']);
+            }
+            $props = $block['props'] ?? null;
+            if (is_array($props) && in_array($block['type'] ?? '', ['core.heading', 'core.text'], true)) {
+                $tag = static fn(mixed $source, mixed $key): array => $source === 'field' ? ['tag' => 'field', 'key' => is_string($key) ? $key : ''] : ['tag' => (string) $source];
+                $dynamic = [];
+                if (in_array($props['source'] ?? '', ['post_title', 'post_excerpt', 'post_date', 'site_name'], true) || (($props['source'] ?? '') === 'field' && ($props['source_field'] ?? '') !== '')) {
+                    $dynamic[$block['type'] === 'core.text' ? 'content' : 'text'] = $tag($props['source'], $props['source_field'] ?? '');
+                }
+                if (($props['link_source'] ?? '') === 'post_url' || (($props['link_source'] ?? '') === 'field' && ($props['link_field'] ?? '') !== '')) {
+                    $dynamic['url'] = $tag($props['link_source'], $props['link_field'] ?? '');
+                }
+                unset($block['props']['source'], $block['props']['source_field'], $block['props']['link_source'], $block['props']['link_field']);
+                if ($dynamic !== []) {
+                    $block['dynamic'] = $dynamic + (is_array($block['dynamic'] ?? null) ? $block['dynamic'] : []);
+                }
+            }
+            $blocks[$i] = $block;
+        }
+        return $blocks;
     }
 
     /**

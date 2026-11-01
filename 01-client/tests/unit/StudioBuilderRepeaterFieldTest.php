@@ -6,13 +6,17 @@
 declare(strict_types=1);
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Document\DocumentNormalizer;
 use Slate\Module\StudioBuilder\Meta\LoopTemplates;
+use Slate\Module\StudioBuilder\Operation\DocumentOperation;
+use Slate\Module\StudioBuilder\Operation\DocumentOperationApplier;
 use Slate\Module\StudioBuilder\Meta\MetaFieldTypes;
 use Slate\Module\StudioBuilder\Meta\PageMeta;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
 use Slate\Module\StudioBuilder\Render\DocumentRenderer;
+use Slate\Module\StudioBuilder\Render\Dynamic\DynamicTags;
 use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
 use Slate\Module\StudioBuilder\Render\Media\CoreMediaResolver;
 use Slate\Module\StudioBuilder\Render\ProviderBindingResolver;
@@ -139,14 +143,63 @@ unit('icon library: every icon is plain shapes, and a stored name can only be a 
     assert_eq('', IconLibrary::svg('nope'));
 });
 
-unit('dynamic text: a Heading or Text can take the title, excerpt or a field, and link to the item', function (): void {
+unit('dynamic tags: a Heading or Text takes the title, a field or a link, with before, after and fallback', function (): void {
     $context = RenderContext::forPublic(101, new SiteContext('https://example.test', 'Chef'))->withAttributes(LoopTemplates::attributes(['title' => 'Ribs', 'url' => '/recipe/ribs/', 'excerpt' => 'Slow']));
     $field = ['key' => 'note', 'label' => 'Note', 'type' => 'text'];
-    $heading = sbrf_block('core.heading', ['text' => 'Mine', 'level' => 'h2', 'source' => 'post_title', 'link_source' => 'post_url']);
+    $heading = sbrf_block('core.heading', ['text' => 'Mine', 'level' => 'h2']) + ['dynamic' => ['text' => ['tag' => 'post_title', 'before' => 'Try ', 'after' => '!'], 'url' => ['tag' => 'post_url']]];
     $html = sbrf_render($heading, [], [], $context);
-    assert_true(str_contains($html, '>Ribs<') && str_contains($html, 'href="/recipe/ribs/"') && !str_contains($html, 'Mine'));
-    assert_true(str_contains(sbrf_render(sbrf_block('core.text', ['content' => 'Mine', 'source' => 'field', 'source_field' => 'note']), ['note' => 'From a field'], [$field], $context), 'From a field'));
-    assert_true(str_contains(sbrf_render(sbrf_block('core.text', ['content' => 'Mine', 'source' => 'post_excerpt']), [], [], RenderContext::forPublic(101, new SiteContext('https://example.test', 'Chef'))), 'Mine'), 'nothing to show keeps the own text');
+    assert_true(str_contains($html, '>Try Ribs!<') && str_contains($html, 'href="/recipe/ribs/"') && !str_contains($html, 'Mine'));
+    assert_true(str_contains(sbrf_render(sbrf_block('core.text', ['content' => 'Mine']) + ['dynamic' => ['content' => ['tag' => 'field', 'key' => 'note']]], ['note' => 'From a field'], [$field], $context), 'From a field'));
+    $empty = RenderContext::forPublic(101, new SiteContext('https://example.test', 'Chef'));
+    assert_eq('', sbrf_render(sbrf_block('core.text', ['content' => 'Mine']) + ['dynamic' => ['content' => ['tag' => 'post_excerpt']]], [], [], $empty), 'nothing to show leaves no box');
+    assert_true(str_contains(sbrf_render(sbrf_block('core.text', ['content' => 'Mine']) + ['dynamic' => ['content' => ['tag' => 'post_excerpt', 'fallback' => 'Soon']]], [], [], $empty), 'Soon'));
     assert_true(str_contains(sbrf_render(sbrf_block('core.text', ['content' => 'Go', 'url' => '/contact/', 'new_tab' => true]), [], []), 'target="_blank"'));
     assert_true(DocumentRenderer::isDynamicNode($heading, BlockRegistry::withAllCoreBlocks()->get('core.heading'), BlockRendererRegistry::withCoreRenderers()->get('core.heading')), 'never baked into a stored page');
 });
+
+unit('dynamic tags: values stay safe, and images, buttons and repeater rows take them too', function (): void {
+    $field = ['key' => 'pic', 'label' => 'Pic', 'type' => 'image'];
+    $evil = ['key' => 'evil', 'label' => 'Evil', 'type' => 'text'];
+    $link = ['key' => 'bad', 'label' => 'Bad', 'type' => 'url'];
+    $image = sbrf_render(sbrf_block('core.image', []) + ['dynamic' => ['media' => ['tag' => 'field', 'key' => 'pic']]], ['pic' => '/uploads/media/a.jpg'], [$field]);
+    assert_true(str_contains($image, 'src="/uploads/media/a.jpg"'));
+    assert_true(str_contains(sbrf_render(sbrf_block('core.image', []) + ['dynamic' => ['media' => ['tag' => 'field', 'key' => 'pic']]], ['pic' => 'javascript:alert(1)'], [$field]), 'javascript') === false);
+    $text = sbrf_render(sbrf_block('core.heading', ['text' => 'x', 'level' => 'h2']) + ['dynamic' => ['text' => ['tag' => 'field', 'key' => 'evil']]], ['evil' => '<script>alert(1)</script>'], [$evil]);
+    assert_true(!str_contains($text, '<script>'));
+    $rich = sbrf_render(sbrf_block('core.rich_text', ['content' => '<p>x</p>']) + ['dynamic' => ['content' => ['tag' => 'field', 'key' => 'evil']]], ['evil' => '<img src=x onerror=alert(1)>'], [$evil]);
+    assert_true(!str_contains($rich, '<img'));
+    $list = sbrf_render(sbrf_block('core.heading', ['text' => 'x', 'level' => 'h2', 'url' => '/own/']) + ['dynamic' => ['url' => ['tag' => 'field', 'key' => 'bad']]], ['bad' => 'javascript:alert(1)'], [$link]);
+    assert_true(str_contains($list, 'href="/own/"') && !str_contains($list, 'javascript'), 'a bad address keeps the own link');
+
+    $container = array_replace(sbrf_block('core.container', []), ['version' => BlockRegistry::withAllCoreBlocks()->get('core.container')->version(), 'dynamic' => ['@background' => ['tag' => 'field', 'key' => 'pic']]]);
+    $band = sbrf_render($container, ['pic' => '/uploads/media/a.jpg'], [$field]);
+    assert_true(str_contains($band, 'background-image:url('), 'a Container background sits on the element, so each Loop Item has its own');
+    $bad = sbrf_render($container, ['pic' => 'javascript:alert(1)'], [$field]);
+    assert_true(!str_contains($bad, 'background-image'));
+    $row = sbrf_render(sbrf_block('core.icon_list', ['items' => [['text' => 'Own', 'icon' => 'check']]]) + ['dynamic' => ['items.0.text' => ['tag' => 'field', 'key' => 'evil']]], ['evil' => 'Tagged row'], [$evil]);
+    assert_true(str_contains($row, 'Tagged row') && !str_contains($row, 'Own'));
+    $applied = DocumentOperationApplier::apply(['containers' => [$container]], [DocumentOperation::fromArray(['op' => 'update_block_dynamic', 'payload' => ['block_id' => $container['id'], 'dynamic' => ['@link' => ['tag' => 'post_url']]]])], BlockRegistry::withAllCoreBlocks());
+    assert_eq(['@link' => ['tag' => 'post_url']], $applied['containers'][0]['dynamic']);
+    $definition = BlockRegistry::withAllCoreBlocks()->get('core.icon_list');
+    assert_true(DynamicTags::fieldAt($definition, 'items.0.text') !== null && DynamicTags::fieldAt($definition, 'items.0.nope') === null);
+    assert_true(DynamicTags::fieldAt(BlockRegistry::withAllCoreBlocks()->get('core.heading'), 'highlight') === null, 'a word to match is no place for a tag');
+});
+
+unit('dynamic tags: the validator refuses a bad map, a required setting can be left to its tag, and older props become tags', function (): void {
+    assert_eq([], DynamicTags::issues(['text' => ['tag' => 'post_title', 'before' => 'A'], '@background' => ['tag' => 'field', 'key' => 'hero']]));
+    assert_true(DynamicTags::issues(['text' => ['tag' => 'nope']]) !== []);
+    assert_true(DynamicTags::issues(['text' => ['tag' => 'field']]) !== [], 'a field tag needs its field');
+    assert_true(DynamicTags::issues(['__proto' => ['tag' => 'post_title']]) !== []);
+    assert_true(DynamicTags::issues(['text' => ['tag' => 'post_title', 'onclick' => 'x']]) !== []);
+    assert_true(DynamicTags::issues(['text' => ['tag' => 'post_date', 'format' => '<b>']]) !== []);
+
+    $document = CanonicalDocumentSchema::emptyDocument();
+    $image = sbrf_block('core.image', []) + ['dynamic' => ['media' => ['tag' => 'featured_image']]];
+    $heading = sbrf_block('core.heading', ['text' => 'x', 'level' => 'h2', 'source' => 'post_title', 'link_source' => 'field', 'link_field' => 'menu']);
+    $document['containers'] = [array_replace(CanonicalDocumentSchema::newContainer(), ['children' => [$image, $heading]])];
+    $normal = DocumentNormalizer::validateAndNormalize($document, BlockRegistry::withAllCoreBlocks());
+    $kept = $normal['containers'][0]['children'][1];
+    assert_eq(['text' => ['tag' => 'post_title'], 'url' => ['key' => 'menu', 'tag' => 'field']], $kept['dynamic']);
+    assert_true(!array_key_exists('source', $kept['props']));
+});
+
