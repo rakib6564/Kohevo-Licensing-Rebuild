@@ -600,7 +600,7 @@ unit('phase5 integration: builder command/query API (real MySQL, tenants 101/202
             // ── 12. Schema unchanged ──
             unit('phase5 int 12: no new Studio tables or columns', function (): void {
                 $tables = array_column(Database::rows("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE 'studiobuilder\\_%' ORDER BY TABLE_NAME"), 'TABLE_NAME');
-                assert_eq(['studiobuilder_compilations', 'studiobuilder_dependencies', 'studiobuilder_locks', 'studiobuilder_pages', 'studiobuilder_revisions', 'studiobuilder_templates', 'studiobuilder_tokens'], $tables);
+                assert_eq(['studiobuilder_compilations', 'studiobuilder_dependencies', 'studiobuilder_google_cache', 'studiobuilder_locks', 'studiobuilder_pages', 'studiobuilder_revisions', 'studiobuilder_templates', 'studiobuilder_tokens'], $tables);
                 $lockCols = array_column(Database::rows("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'studiobuilder_locks' ORDER BY ORDINAL_POSITION"), 'COLUMN_NAME');
                 assert_eq(['id', 'tenant_id', 'page_id', 'user_id', 'lock_token', 'acquired_at', 'heartbeat_at', 'expires_at'], $lockCols);
             });

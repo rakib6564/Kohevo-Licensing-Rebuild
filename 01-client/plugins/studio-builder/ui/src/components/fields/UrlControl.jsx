@@ -7,6 +7,7 @@
 // and previews the chosen video.
 
 import { coerce } from '../../core/fields.mjs';
+import { SlotInput } from './DynamicControl.jsx';
 import { t } from '../../core/messages.mjs';
 import { mediaPickerAvailable, openMediaPicker } from '../../core/mediaPicker.mjs';
 import { isVideoTarget } from '../../core/mediaApi.mjs';
@@ -27,7 +28,9 @@ function isImageTarget(field, val) {
 export function UrlControl({ field, draft, update, problem, common, id, mediaPicker }) {
   const isVideo = isVideoTarget(field, draft);
   const isImage = !isVideo && isImageTarget(field, draft);
-  const pickerAvailable = mediaPickerAvailable(mediaPicker);
+  // A link goes to an address; only a setting that holds a file offers the library.
+  const isLink = /^(url|href|link)$/i.test(String((field && field.key) || '')) || /link/i.test(String((field && field.label) || ''));
+  const pickerAvailable = mediaPickerAvailable(mediaPicker) && !(isLink && !isVideo);
 
   const pickMedia = () => {
     openMediaPicker({
@@ -72,15 +75,18 @@ export function UrlControl({ field, draft, update, problem, common, id, mediaPic
       ) : null}
 
       <div className="sbx-media__row" style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <input
-          type="text"
-          inputMode="url"
-          {...common}
-          value={draft ?? ''}
-          placeholder={t('url_placeholder_path')}
-          onChange={(e) => update(coerce(field, e.target.value.trim()))}
-          style={{ flex: '1 1 140px', minWidth: 0 }}
-        />
+        <span style={{ flex: '1 1 140px', minWidth: 0 }}>
+          <SlotInput>
+            <input
+              type="text"
+              inputMode="url"
+              {...common}
+              value={draft ?? ''}
+              placeholder={t('url_placeholder_path')}
+              onChange={(e) => update(coerce(field, e.target.value.trim()))}
+            />
+          </SlotInput>
+        </span>
         {pickerAvailable ? (
           <button
             type="button"
@@ -97,7 +103,7 @@ export function UrlControl({ field, draft, update, problem, common, id, mediaPic
             <span>{draft ? t('change') : t(isVideo ? 'choose_video' : 'choose_image')}</span>
           </button>
         ) : null}
-        {draft ? (
+        {draft && pickerAvailable ? (
           <button
             type="button"
             className="sbx-btn sbx-btn--ghost"

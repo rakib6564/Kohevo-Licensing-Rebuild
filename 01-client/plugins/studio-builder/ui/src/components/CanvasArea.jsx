@@ -62,7 +62,9 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
   const path = useMemo(() => ancestorPath(working, selection, manifest), [working, selection, manifest]);
   const revisionId = useEngineState((s) => (s.revision ? s.revision.id : 0));
   const status = useEngineState((s) => s.status);
-  const canvasSrc = `${boot.canvasUrl}?page=${boot.pageId}&v=${revisionId}${canvasVersion ? `-${canvasVersion}` : ''}`;
+  const [previewItem, setPreviewItem] = useState(() => (asList(boot.previewItems).some((item) => item.id === boot.previewItem) ? boot.previewItem : 0));
+  const itemParam = previewItem ? `&item=${previewItem}` : '';
+  const canvasSrc = `${boot.canvasUrl}?page=${boot.pageId}${itemParam}&v=${revisionId}${canvasVersion ? `-${canvasVersion}` : ''}`;
   const [src, setSrc] = useState(() => canvasSrc);
   const [loading, setLoading] = useState(true);
   // Zoom, grid and the layout aids live in the shell so the bottom bar and the mobile
@@ -357,11 +359,11 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
       if (!ghostNodeIds(ids, working).length) { repaintsRef.current = 0; return; }
       if (repaintsRef.current >= 1) return;
       repaintsRef.current += 1;
-      const url = `${boot.canvasUrl}?page=${boot.pageId}&v=${revisionId}-g${Date.now()}`;
+      const url = `${boot.canvasUrl}?page=${boot.pageId}${itemParam}&v=${revisionId}-g${Date.now()}`;
       repaintInPlace(url).then((done) => { if (done !== true && done !== 'busy') reloadFrame(url); });
     }, 700);
     return () => clearTimeout(h);
-  }, [working, loading, interactive, boot.canvasUrl, boot.pageId, revisionId, repaintInPlace, reloadFrame]);
+  }, [working, loading, interactive, boot.canvasUrl, boot.pageId, itemParam, revisionId, repaintInPlace, reloadFrame]);
 
   const onCanvasDrop = useCallback(({ targetId, targetType, position, dataTransfer }) => {
     if (!dataTransfer) return;
@@ -571,7 +573,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
 
   const reloadCanvas = () => {
     setLoading(true);
-    setSrc(`${boot.canvasUrl}?page=${boot.pageId}&v=${Date.now()}`);
+    setSrc(`${boot.canvasUrl}?page=${boot.pageId}${itemParam}&v=${Date.now()}`);
     onReloadCanvas && onReloadCanvas();
   };
 
@@ -620,7 +622,7 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
             className="sbx-canvas__tool-btn"
             onClick={() => {
               setLoading(true);
-              setSrc(`${boot.canvasUrl}?page=${boot.pageId}&v=${Date.now()}`);
+              setSrc(`${boot.canvasUrl}?page=${boot.pageId}${itemParam}&v=${Date.now()}`);
               onReloadCanvas && onReloadCanvas();
             }}
             title={t('reload_canvas')}
@@ -630,6 +632,26 @@ export const CanvasArea = memo(function CanvasArea({ interactive = true, collaps
           </button>
         </div>
       </div>
+      )}
+
+      {asList(boot.previewItems).length > 0 && (
+        <div className="sbx-canvas__preview-item">
+          <label htmlFor="sbx-preview-item">{t('preview_item')}</label>
+          <select
+            id="sbx-preview-item"
+            value={previewItem || asList(boot.previewItems)[0].id}
+            onChange={(e) => {
+              const id = Number(e.target.value);
+              setPreviewItem(id);
+              setLoading(true);
+              setSrc(`${boot.canvasUrl}?page=${boot.pageId}&item=${id}&v=${Date.now()}`);
+            }}
+          >
+            {asList(boot.previewItems).map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+          </select>
+          <span>{t('preview_item_note')}</span>
+          <a href={`${String(boot.builderUrl || '').replace(/builder\.php$/, 'page-edit.php')}?id=${previewItem || asList(boot.previewItems)[0].id}`}>{t('preview_item_fields')}</a>
+        </div>
       )}
 
       <div className="sbx-canvas__stage-wrap">

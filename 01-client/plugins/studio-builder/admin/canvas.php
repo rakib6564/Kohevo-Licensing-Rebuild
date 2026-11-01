@@ -48,7 +48,7 @@ if ($pageId === false || $pageId === null) {
 }
 
 try {
-    $result = StudioRuntimeFactory::build()->app->renderForEditor(StudioActor::fromCurrentSession(), $pageId);
+    $result = StudioRuntimeFactory::build()->app->renderForEditor(StudioActor::fromCurrentSession(), $pageId, (int) ($_GET['item'] ?? 0));
     StudioHttpResponder::sendRender(new RenderResult($result->mode, $result->html, StudioCanvasPolicy::headers($result)));
 } catch (StudioException $e) {
     if ($e->httpStatus() >= 500) {

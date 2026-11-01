@@ -587,49 +587,12 @@
                 },
                 {
                     "key": "icon",
-                    "type": "enum",
+                    "type": "string",
                     "label": "Icon",
                     "required": false,
                     "default": "none",
-                    "allowed_values": [
-                        "none",
-                        "check",
-                        "check-circle",
-                        "star",
-                        "heart",
-                        "arrow-right",
-                        "mail",
-                        "phone",
-                        "map-pin",
-                        "clock",
-                        "calendar",
-                        "user",
-                        "users",
-                        "shield",
-                        "zap",
-                        "globe",
-                        "message",
-                        "gift",
-                        "award",
-                        "camera",
-                        "home",
-                        "search",
-                        "sparkle",
-                        "play",
-                        "leaf",
-                        "dollar",
-                        "menu",
-                        "menu-short",
-                        "close",
-                        "facebook",
-                        "twitter",
-                        "x-social",
-                        "instagram",
-                        "youtube",
-                        "linkedin",
-                        "whatsapp",
-                        "tiktok"
-                    ]
+                    "max_length": 40,
+                    "format": "icon"
                 },
                 {
                     "key": "icon_position",
@@ -1627,6 +1590,123 @@
             "binding_slots": [],
             "category": "content",
             "default_props": {
+                "after": "words",
+                "before": "Heading with",
+                "colored": "colored",
+                "level": "h2",
+                "new_tab": false,
+                "url": null
+            },
+            "description": "A heading with a coloured part",
+            "field_schema": [
+                {
+                    "key": "before",
+                    "type": "text",
+                    "label": "Before text",
+                    "required": false,
+                    "default": "Heading with",
+                    "max_length": 300
+                },
+                {
+                    "key": "colored",
+                    "type": "text",
+                    "label": "Colored text",
+                    "required": false,
+                    "default": "colored",
+                    "max_length": 300
+                },
+                {
+                    "key": "after",
+                    "type": "text",
+                    "label": "After text",
+                    "required": false,
+                    "default": "words",
+                    "max_length": 300
+                },
+                {
+                    "key": "url",
+                    "type": "url",
+                    "label": "Link",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "new_tab",
+                    "type": "boolean",
+                    "label": "Open in a new tab",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "level",
+                    "type": "enum",
+                    "label": "HTML Tag",
+                    "required": false,
+                    "default": "h2",
+                    "allowed_values": [
+                        "h1",
+                        "h2",
+                        "h3",
+                        "h4",
+                        "h5",
+                        "h6",
+                        "div",
+                        "span",
+                        "p"
+                    ]
+                }
+            ],
+            "icon": "heading",
+            "inline_text": [],
+            "label": "Dual Color Heading",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "highlight",
+                    "label": "Colored text"
+                },
+                {
+                    "key": "text",
+                    "label": "Plain text"
+                }
+            ],
+            "title": "Dual color heading",
+            "type": "core.dual_heading",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
                 "card_options": {
                     "bordered": true,
                     "surface_token": null
@@ -2134,14 +2214,122 @@
             "binding_slots": [],
             "category": "media",
             "default_props": {
+                "all_label": "All",
                 "aspect_ratio": "1:1",
+                "captions": "below",
                 "columns": "3",
                 "gap": "md",
+                "hover": "none",
                 "images": [],
-                "rounded": true
+                "layout": "grid",
+                "lazy_load": true,
+                "link_to": "lightbox",
+                "load_more_text": "Load more",
+                "order": "default",
+                "overlay_text": "caption",
+                "pagination": "none",
+                "per_page": 12,
+                "rounded": true,
+                "row_height": 240,
+                "show_filters": false,
+                "spacing": 0
             },
             "description": "Media image gallery",
             "field_schema": [
+                {
+                    "key": "images",
+                    "type": "repeater",
+                    "label": "Gallery Images",
+                    "required": false,
+                    "default": [],
+                    "max_items": 300,
+                    "item_schema": [
+                        {
+                            "key": "url",
+                            "type": "url",
+                            "label": "Image URL",
+                            "required": true,
+                            "default": null,
+                            "max_length": 1000
+                        },
+                        {
+                            "key": "alt",
+                            "type": "string",
+                            "label": "Alt Text",
+                            "required": false,
+                            "default": "",
+                            "max_length": 200
+                        },
+                        {
+                            "key": "caption",
+                            "type": "string",
+                            "label": "Caption",
+                            "required": false,
+                            "default": "",
+                            "max_length": 255
+                        },
+                        {
+                            "key": "category",
+                            "type": "string",
+                            "label": "Category",
+                            "required": false,
+                            "default": "",
+                            "max_length": 60
+                        },
+                        {
+                            "key": "width",
+                            "type": "number",
+                            "label": "Width (px)",
+                            "required": false,
+                            "default": 0,
+                            "min": 0,
+                            "max": 20000,
+                            "integer_only": true
+                        },
+                        {
+                            "key": "height",
+                            "type": "number",
+                            "label": "Height (px)",
+                            "required": false,
+                            "default": 0,
+                            "min": 0,
+                            "max": 20000,
+                            "integer_only": true
+                        }
+                    ]
+                },
+                {
+                    "key": "order",
+                    "type": "enum",
+                    "label": "Order By",
+                    "required": false,
+                    "default": "default",
+                    "allowed_values": [
+                        "default",
+                        "random"
+                    ]
+                },
+                {
+                    "key": "lazy_load",
+                    "type": "boolean",
+                    "label": "Lazy Load",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "layout",
+                    "type": "enum",
+                    "label": "Layout",
+                    "required": false,
+                    "default": "grid",
+                    "allowed_values": [
+                        "grid",
+                        "masonry",
+                        "justified",
+                        "mosaic",
+                        "slider"
+                    ]
+                },
                 {
                     "key": "columns",
                     "type": "enum",
@@ -2149,11 +2337,24 @@
                     "required": false,
                     "default": "3",
                     "allowed_values": [
+                        "1",
                         "2",
                         "3",
                         "4",
+                        "5",
                         "6"
                     ],
+                    "per_device": true
+                },
+                {
+                    "key": "spacing",
+                    "type": "number",
+                    "label": "Spacing",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 100,
+                    "integer_only": true,
                     "per_device": true
                 },
                 {
@@ -2180,8 +2381,21 @@
                         "auto",
                         "1:1",
                         "4:3",
-                        "16:9"
+                        "3:2",
+                        "16:9",
+                        "3:4",
+                        "4:5"
                     ]
+                },
+                {
+                    "key": "row_height",
+                    "type": "number",
+                    "label": "Row Height (justified)",
+                    "required": false,
+                    "default": 240,
+                    "min": 120,
+                    "max": 480,
+                    "integer_only": true
                 },
                 {
                     "key": "rounded",
@@ -2191,38 +2405,98 @@
                     "default": true
                 },
                 {
-                    "key": "images",
-                    "type": "repeater",
-                    "label": "Gallery Images",
+                    "key": "hover",
+                    "type": "enum",
+                    "label": "Hover Effect",
                     "required": false,
-                    "default": [],
-                    "max_items": 50,
-                    "item_schema": [
-                        {
-                            "key": "url",
-                            "type": "url",
-                            "label": "Image URL",
-                            "required": true,
-                            "default": null,
-                            "max_length": 1000
-                        },
-                        {
-                            "key": "alt",
-                            "type": "string",
-                            "label": "Alt Text",
-                            "required": false,
-                            "default": "",
-                            "max_length": 200
-                        },
-                        {
-                            "key": "caption",
-                            "type": "string",
-                            "label": "Caption",
-                            "required": false,
-                            "default": "",
-                            "max_length": 255
-                        }
+                    "default": "none",
+                    "allowed_values": [
+                        "none",
+                        "zoom",
+                        "lift",
+                        "dim",
+                        "color"
                     ]
+                },
+                {
+                    "key": "captions",
+                    "type": "enum",
+                    "label": "Captions",
+                    "required": false,
+                    "default": "below",
+                    "allowed_values": [
+                        "below",
+                        "hover",
+                        "none"
+                    ]
+                },
+                {
+                    "key": "link_to",
+                    "type": "enum",
+                    "label": "Link",
+                    "required": false,
+                    "default": "lightbox",
+                    "allowed_values": [
+                        "lightbox",
+                        "file",
+                        "none"
+                    ]
+                },
+                {
+                    "key": "overlay_text",
+                    "type": "enum",
+                    "label": "Overlay Text",
+                    "required": false,
+                    "default": "caption",
+                    "allowed_values": [
+                        "caption",
+                        "alt"
+                    ]
+                },
+                {
+                    "key": "pagination",
+                    "type": "enum",
+                    "label": "Pagination",
+                    "required": false,
+                    "default": "none",
+                    "allowed_values": [
+                        "none",
+                        "load_more",
+                        "infinite"
+                    ]
+                },
+                {
+                    "key": "per_page",
+                    "type": "number",
+                    "label": "Images per Page",
+                    "required": false,
+                    "default": 12,
+                    "min": 2,
+                    "max": 100,
+                    "integer_only": true
+                },
+                {
+                    "key": "load_more_text",
+                    "type": "string",
+                    "label": "Load More Text",
+                    "required": false,
+                    "default": "Load more",
+                    "max_length": 60
+                },
+                {
+                    "key": "show_filters",
+                    "type": "boolean",
+                    "label": "Show Category Filters",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "all_label",
+                    "type": "string",
+                    "label": "All Filter Label",
+                    "required": false,
+                    "default": "All",
+                    "max_length": 40
                 }
             ],
             "icon": "gallery",
@@ -2267,6 +2541,22 @@
                 {
                     "key": "image",
                     "label": "Images"
+                },
+                {
+                    "key": "caption",
+                    "label": "Captions"
+                },
+                {
+                    "key": "filter",
+                    "label": "Category filters"
+                },
+                {
+                    "key": "filter_active",
+                    "label": "Selected filter"
+                },
+                {
+                    "key": "more",
+                    "label": "Load more button"
                 }
             ],
             "title": "Gallery",
@@ -2302,8 +2592,8 @@
             "field_schema": [
                 {
                     "key": "text",
-                    "type": "string",
-                    "label": "Heading Text",
+                    "type": "text",
+                    "label": "Title",
                     "required": true,
                     "default": "Section Heading",
                     "max_length": 300
@@ -2397,12 +2687,12 @@
                 {
                     "prop": "text",
                     "selector": ".sb-heading__link",
-                    "multiline": false
+                    "multiline": true
                 },
                 {
                     "prop": "text",
                     "selector": ".sb-heading",
-                    "multiline": false
+                    "multiline": true
                 }
             ],
             "label": "Heading",
@@ -2660,48 +2950,12 @@
             "field_schema": [
                 {
                     "key": "name",
-                    "type": "enum",
+                    "type": "string",
                     "label": "Icon",
                     "required": false,
                     "default": "star",
-                    "allowed_values": [
-                        "check",
-                        "check-circle",
-                        "star",
-                        "heart",
-                        "arrow-right",
-                        "mail",
-                        "phone",
-                        "map-pin",
-                        "clock",
-                        "calendar",
-                        "user",
-                        "users",
-                        "shield",
-                        "zap",
-                        "globe",
-                        "message",
-                        "gift",
-                        "award",
-                        "camera",
-                        "home",
-                        "search",
-                        "sparkle",
-                        "play",
-                        "leaf",
-                        "dollar",
-                        "menu",
-                        "menu-short",
-                        "close",
-                        "facebook",
-                        "twitter",
-                        "x-social",
-                        "instagram",
-                        "youtube",
-                        "linkedin",
-                        "whatsapp",
-                        "tiktok"
-                    ]
+                    "max_length": 40,
+                    "format": "icon"
                 },
                 {
                     "key": "view",
@@ -2870,6 +3124,257 @@
             ],
             "title": "Icon",
             "type": "core.icon",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "apply_link": "full",
+                "divider": false,
+                "icon_gap": 8,
+                "icon_h_align": "left",
+                "icon_offset": 0,
+                "icon_size": 16,
+                "icon_v_align": "center",
+                "items": [
+                    {
+                        "icon": "check",
+                        "text": "List item"
+                    },
+                    {
+                        "icon": "x",
+                        "text": "List item"
+                    },
+                    {
+                        "icon": "circle-dot",
+                        "text": "List item"
+                    }
+                ],
+                "layout": "list",
+                "list_align": "left",
+                "space_between": 0
+            },
+            "description": "A list with an icon and a link on each item",
+            "field_schema": [
+                {
+                    "key": "layout",
+                    "type": "enum",
+                    "label": "Layout",
+                    "required": false,
+                    "default": "list",
+                    "allowed_values": [
+                        "list",
+                        "inline"
+                    ]
+                },
+                {
+                    "key": "items",
+                    "type": "repeater",
+                    "label": "Items",
+                    "required": false,
+                    "default": [
+                        {
+                            "text": "List item",
+                            "icon": "check"
+                        },
+                        {
+                            "text": "List item",
+                            "icon": "x"
+                        },
+                        {
+                            "text": "List item",
+                            "icon": "circle-dot"
+                        }
+                    ],
+                    "max_items": 100,
+                    "item_schema": [
+                        {
+                            "key": "text",
+                            "type": "string",
+                            "label": "Text",
+                            "required": false,
+                            "default": "",
+                            "max_length": 300
+                        },
+                        {
+                            "key": "icon",
+                            "type": "string",
+                            "label": "Icon",
+                            "required": false,
+                            "default": "check",
+                            "max_length": 40,
+                            "format": "icon"
+                        },
+                        {
+                            "key": "url",
+                            "type": "url",
+                            "label": "Link",
+                            "required": false,
+                            "default": null
+                        },
+                        {
+                            "key": "new_tab",
+                            "type": "boolean",
+                            "label": "Open in a new tab",
+                            "required": false,
+                            "default": false
+                        }
+                    ]
+                },
+                {
+                    "key": "apply_link",
+                    "type": "enum",
+                    "label": "Apply Link On",
+                    "required": false,
+                    "default": "full",
+                    "allowed_values": [
+                        "full",
+                        "inline"
+                    ]
+                },
+                {
+                    "key": "space_between",
+                    "type": "number",
+                    "label": "Space Between",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 100,
+                    "integer_only": true,
+                    "per_device": true
+                },
+                {
+                    "key": "list_align",
+                    "type": "enum",
+                    "label": "List Alignment",
+                    "required": false,
+                    "default": "left",
+                    "allowed_values": [
+                        "left",
+                        "center",
+                        "right"
+                    ],
+                    "per_device": true
+                },
+                {
+                    "key": "divider",
+                    "type": "boolean",
+                    "label": "Divider",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "icon_size",
+                    "type": "number",
+                    "label": "Icon Size",
+                    "required": false,
+                    "default": 16,
+                    "min": 6,
+                    "max": 100,
+                    "integer_only": true,
+                    "per_device": true
+                },
+                {
+                    "key": "icon_gap",
+                    "type": "number",
+                    "label": "Icon Gap",
+                    "required": false,
+                    "default": 8,
+                    "min": 0,
+                    "max": 50,
+                    "integer_only": true,
+                    "per_device": true
+                },
+                {
+                    "key": "icon_h_align",
+                    "type": "enum",
+                    "label": "Horizontal Alignment",
+                    "required": false,
+                    "default": "left",
+                    "allowed_values": [
+                        "left",
+                        "center",
+                        "right"
+                    ]
+                },
+                {
+                    "key": "icon_v_align",
+                    "type": "enum",
+                    "label": "Vertical Alignment",
+                    "required": false,
+                    "default": "center",
+                    "allowed_values": [
+                        "top",
+                        "center",
+                        "bottom"
+                    ]
+                },
+                {
+                    "key": "icon_offset",
+                    "type": "number",
+                    "label": "Adjust Vertical Position",
+                    "required": false,
+                    "default": 0,
+                    "min": -15,
+                    "max": 15,
+                    "integer_only": true,
+                    "per_device": true
+                }
+            ],
+            "icon": "list-check",
+            "inline_text": [],
+            "label": "Icon List",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "item",
+                    "label": "Item"
+                },
+                {
+                    "key": "icon",
+                    "label": "Icon"
+                },
+                {
+                    "key": "text",
+                    "label": "Text"
+                },
+                {
+                    "key": "divider",
+                    "label": "Divider"
+                }
+            ],
+            "title": "Icon list",
+            "type": "core.icon_list",
             "version": 1
         },
         {
@@ -3168,6 +3673,13 @@
                             "required": true,
                             "default": "",
                             "max_length": 300
+                        },
+                        {
+                            "key": "url",
+                            "type": "url",
+                            "label": "Link",
+                            "required": false,
+                            "default": null
                         }
                     ]
                 }
@@ -3918,6 +4430,7 @@
                 "empty_message": "No posts found.",
                 "enable_pagination": true,
                 "gap": "md",
+                "loop_template": "",
                 "order": "desc",
                 "order_by": "published_at",
                 "per_page": 6,
@@ -4113,6 +4626,15 @@
                     "label": "Pagination",
                     "required": false,
                     "default": true
+                },
+                {
+                    "key": "loop_template",
+                    "type": "string",
+                    "label": "Loop Item",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "loop_template"
                 },
                 {
                     "key": "empty_message",
@@ -4937,7 +5459,9 @@
                 "columns_gap": 20,
                 "content": "",
                 "drop_cap": false,
-                "size": "base"
+                "new_tab": false,
+                "size": "base",
+                "url": null
             },
             "description": "Plain-text body copy",
             "field_schema": [
@@ -4948,6 +5472,20 @@
                     "required": false,
                     "default": "",
                     "max_length": 5000
+                },
+                {
+                    "key": "url",
+                    "type": "url",
+                    "label": "Link",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "new_tab",
+                    "type": "boolean",
+                    "label": "Open in a new tab",
+                    "required": false,
+                    "default": false
                 },
                 {
                     "key": "size",
@@ -6145,49 +6683,12 @@
                 },
                 {
                     "key": "trigger_icon",
-                    "type": "enum",
+                    "type": "string",
                     "label": "Trigger Icon",
                     "required": false,
                     "default": "none",
-                    "allowed_values": [
-                        "none",
-                        "check",
-                        "check-circle",
-                        "star",
-                        "heart",
-                        "arrow-right",
-                        "mail",
-                        "phone",
-                        "map-pin",
-                        "clock",
-                        "calendar",
-                        "user",
-                        "users",
-                        "shield",
-                        "zap",
-                        "globe",
-                        "message",
-                        "gift",
-                        "award",
-                        "camera",
-                        "home",
-                        "search",
-                        "sparkle",
-                        "play",
-                        "leaf",
-                        "dollar",
-                        "menu",
-                        "menu-short",
-                        "close",
-                        "facebook",
-                        "twitter",
-                        "x-social",
-                        "instagram",
-                        "youtube",
-                        "linkedin",
-                        "whatsapp",
-                        "tiktok"
-                    ]
+                    "max_length": 40,
+                    "format": "icon"
                 },
                 {
                     "key": "trigger_icon_size",
@@ -7645,48 +8146,12 @@
                 },
                 {
                     "key": "icon",
-                    "type": "enum",
+                    "type": "string",
                     "label": "Card icon",
                     "required": false,
                     "default": "heart",
-                    "allowed_values": [
-                        "check",
-                        "check-circle",
-                        "star",
-                        "heart",
-                        "arrow-right",
-                        "mail",
-                        "phone",
-                        "map-pin",
-                        "clock",
-                        "calendar",
-                        "user",
-                        "users",
-                        "shield",
-                        "zap",
-                        "globe",
-                        "message",
-                        "gift",
-                        "award",
-                        "camera",
-                        "home",
-                        "search",
-                        "sparkle",
-                        "play",
-                        "leaf",
-                        "dollar",
-                        "menu",
-                        "menu-short",
-                        "close",
-                        "facebook",
-                        "twitter",
-                        "x-social",
-                        "instagram",
-                        "youtube",
-                        "linkedin",
-                        "whatsapp",
-                        "tiktok"
-                    ]
+                    "max_length": 40,
+                    "format": "icon"
                 },
                 {
                     "key": "empty_message",
@@ -7860,6 +8325,8 @@
             "default_props": {
                 "fallback": "",
                 "field": "",
+                "fit": "auto",
+                "link_to_post": false,
                 "show_label": false,
                 "tag": "div"
             },
@@ -7902,6 +8369,25 @@
                         "h2",
                         "h3",
                         "h4"
+                    ]
+                },
+                {
+                    "key": "link_to_post",
+                    "type": "boolean",
+                    "label": "Link to the item",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "fit",
+                    "type": "enum",
+                    "label": "Image fit",
+                    "required": false,
+                    "default": "auto",
+                    "allowed_values": [
+                        "auto",
+                        "cover",
+                        "contain"
                     ]
                 }
             ],
@@ -8015,6 +8501,164 @@
             "version": 1
         },
         {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "theme",
+            "default_props": [],
+            "description": "The item's short description, in a Loop Item",
+            "field_schema": [],
+            "icon": "list-check",
+            "inline_text": [],
+            "label": "Post Excerpt",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Post excerpt",
+            "type": "theme.post_excerpt",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "theme",
+            "default_props": {
+                "link_to_post": true
+            },
+            "description": "The item's featured image, in a Loop Item",
+            "field_schema": [
+                {
+                    "key": "link_to_post",
+                    "type": "boolean",
+                    "label": "Link to the item",
+                    "required": false,
+                    "default": true
+                }
+            ],
+            "icon": "image",
+            "inline_text": [],
+            "label": "Post Image",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "image",
+                    "label": "Image"
+                }
+            ],
+            "title": "Post image",
+            "type": "theme.post_image",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "theme",
+            "default_props": {
+                "text": "Read more"
+            },
+            "description": "A link to the item, in a Loop Item",
+            "field_schema": [
+                {
+                    "key": "text",
+                    "type": "string",
+                    "label": "Link text",
+                    "required": false,
+                    "default": "Read more",
+                    "max_length": 80
+                }
+            ],
+            "icon": "list-check",
+            "inline_text": [],
+            "label": "Post Link",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Post link",
+            "type": "theme.post_link",
+            "version": 1
+        },
+        {
             "allowed_binding_providers": [
                 "content.posts",
                 "content.authors"
@@ -8116,10 +8760,18 @@
             "default_props": {
                 "align": "left",
                 "level": "h1",
+                "link_to_post": false,
                 "text": ""
             },
             "description": "Dynamic article heading",
             "field_schema": [
+                {
+                    "key": "link_to_post",
+                    "type": "boolean",
+                    "label": "Link to the item",
+                    "required": false,
+                    "default": false
+                },
                 {
                     "key": "level",
                     "type": "enum",
@@ -8189,6 +8841,123 @@
             "style_parts": [],
             "title": "Post title",
             "type": "theme.post_title",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": true,
+            "binding_slots": [],
+            "category": "theme",
+            "default_props": {
+                "allow_multiple": false,
+                "body_field": "",
+                "display": "list",
+                "field": "",
+                "title_field": ""
+            },
+            "description": "The rows of a repeater field",
+            "field_schema": [
+                {
+                    "key": "field",
+                    "type": "string",
+                    "label": "Field",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "meta_field"
+                },
+                {
+                    "key": "display",
+                    "type": "enum",
+                    "label": "Show as",
+                    "required": false,
+                    "default": "list",
+                    "allowed_values": [
+                        "list",
+                        "accordion"
+                    ]
+                },
+                {
+                    "key": "title_field",
+                    "type": "string",
+                    "label": "Title sub-field",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "meta_field"
+                },
+                {
+                    "key": "body_field",
+                    "type": "string",
+                    "label": "Text sub-field",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "meta_field"
+                },
+                {
+                    "key": "allow_multiple",
+                    "type": "boolean",
+                    "label": "Allow several open",
+                    "required": false,
+                    "default": false
+                }
+            ],
+            "icon": "list-check",
+            "inline_text": [],
+            "label": "Repeater",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "row",
+                    "label": "Row"
+                },
+                {
+                    "key": "item",
+                    "label": "Accordion item"
+                },
+                {
+                    "key": "title",
+                    "label": "Accordion title"
+                },
+                {
+                    "key": "icon",
+                    "label": "Accordion icon"
+                },
+                {
+                    "key": "content",
+                    "label": "Accordion content"
+                }
+            ],
+            "title": "Repeater",
+            "type": "theme.repeater",
             "version": 1
         },
         {

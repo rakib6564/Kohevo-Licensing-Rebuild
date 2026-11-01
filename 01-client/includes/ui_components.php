@@ -714,7 +714,6 @@ if (!function_exists('slate_settings_tabs')) {
         $base = SLATE_URL . '/admin/settings.php?tab=';
         return [
             'general'      => ['label' => __('general',      'General'),      'icon' => 'settings', 'href' => $base . 'general'],
-            'permalinks'   => ['label' => __('permalinks',   'Permalinks'),   'icon' => 'link',      'href' => $base . 'permalinks'],
             'datetime'     => ['label' => __('datetime',     'Date & Time'),  'icon' => 'clock',     'href' => $base . 'datetime'],
             'branding'     => ['label' => __('branding',      'Branding'),    'icon' => 'palette',   'href' => $base . 'branding'],
             'media'        => ['label' => __('media',         'Media'),       'icon' => 'film',      'href' => $base . 'media'],

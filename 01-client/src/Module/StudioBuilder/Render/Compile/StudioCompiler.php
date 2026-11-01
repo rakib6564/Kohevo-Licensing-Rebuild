@@ -108,7 +108,7 @@ final class StudioCompiler
             $region = ['header_partial' => 'header', 'footer_partial' => 'footer'][$page->pageType] ?? null;
             $html = $region !== null && $single === null
                 ? $header . '<' . $region . ' class="sb-site-' . $region . ' sb-site-' . $region . '--partial" id="main">' . $main . '</' . $region . '>' . $footer
-                : $header . '<main class="sb-main sb-main--' . $width . '" id="main">' . $main . '</main>' . $footer;
+                : $header . '<main class="sb-main sb-main--' . $width . (($document['settings']['template_type'] ?? '') === 'loop' ? ' sb-main--loop' : '') . '" id="main">' . $main . '</main>' . $footer;
             $css  = StudioStylesheet::css() . $theme->rootCss() . $collector->css();
             $seo  = SeoHead::build(is_array($document['seo'] ?? null) ? $document['seo'] : [], $page, $context->site, $context->mode, $this->media, $context->tenantId);
         } catch (StudioRenderException $e) {
@@ -398,8 +398,16 @@ final class StudioCompiler
                 $settings[$k] = $v;
             }
         }
+        $seo = is_array($decoded) && is_array($decoded['seo'] ?? null) ? $decoded['seo'] : [];
+        $when = $page->publishedAt !== null ? strtotime($page->publishedAt) : false;
+        // Any page answers the Post tags with its own title and address; a template's item has its own and wins.
+        $own = [
+            'page_id' => (int) $page->id, 'page_title' => $page->title, 'page_excerpt' => $settings['excerpt'] ?? '',
+            'page_url' => $context->site->absoluteUrl(\Slate\Module\StudioBuilder\Meta\PageRoutes::path($context->tenantId, (int) $page->id, $page->slug, $page->routeMode)),
+            'page_timestamp' => $when !== false ? $when : '', 'page_date' => $when !== false ? Html::date($when) : '', 'page_image_media_id' => (int) ($seo['og_image_media_id'] ?? 0),
+        ];
         if ($this->singleFor($page, $settings, $context) === null) {
-            return [];
+            return $own;
         }
         $author = '';
         try {
@@ -411,8 +419,10 @@ final class StudioCompiler
             // No author line rather than a wrong one.
         }
         $published = $page->publishedAt !== null ? strtotime($page->publishedAt) : false;
-        return [
+        return $own + [
             'post_title'  => $page->title,
+            'post_excerpt' => $settings['excerpt'] ?? '',
+            'post_date'   => $published !== false ? \Slate\Module\StudioBuilder\Render\Html::date($published) : '',
             'post_url'    => $context->site->absoluteUrl(\Slate\Module\StudioBuilder\Meta\PageRoutes::path($context->tenantId, (int) $page->id, $page->slug, $page->routeMode)),
             'category'    => $settings['category'] ?? '',
             'author_name' => mb_substr(trim($author), 0, 120),

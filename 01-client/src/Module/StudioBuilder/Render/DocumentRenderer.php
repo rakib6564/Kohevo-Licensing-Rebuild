@@ -39,6 +39,8 @@ use Slate\Module\StudioBuilder\Document\StyleValueGuard;
 use Slate\Module\StudioBuilder\Registry\BlockDefinitionInterface;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
+use Slate\Module\StudioBuilder\Render\Block\RepeatingChildrenInterface;
+use Slate\Module\StudioBuilder\Render\Dynamic\DynamicTags;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
 use Slate\Module\StudioBuilder\Render\Block\WrapperClassesInterface;
@@ -106,6 +108,12 @@ final class DocumentRenderer
             return '';
         }
 
+        // A block tied to a field goes when the page shown leaves that field empty. The editor keeps it, to be selected.
+        $whenField = (string) ($visibility['when_field'] ?? '');
+        if (!$deferDynamic && $whenField !== '' && !$context->emitsNodeMetadata() && !self::fieldHasValue($context, $whenField)) {
+            return '';
+        }
+
         $type       = (string) ($block['type'] ?? '');
         $definition = $this->registry->get($type);
         $renderer   = $this->renderers->get($type);
@@ -126,6 +134,7 @@ final class DocumentRenderer
         if (!empty($block[self::FRAMING_KEY])) {
             $context = $context->framing();
         }
+        $block = DynamicTags::apply($block, $definition, $context, $this->media);
 
         $entitlement = $definition->requiredEntitlement();
         if ($entitlement !== null && !$context->isEntitled($entitlement)) {
@@ -134,9 +143,12 @@ final class DocumentRenderer
 
         $children = '';
         if ($definition->allowsChildren()) {
-            foreach ((array) ($block['children'] ?? []) as $child) {
-                if (is_array($child)) {
-                    $children .= $this->renderBlock($child, $context, $theme, $collector, $deferDynamic);
+            $contexts = $renderer instanceof RepeatingChildrenInterface ? $renderer->childContexts($block, $context) : [$context];
+            foreach ($contexts as $i => $childContext) {
+                foreach ((array) ($block['children'] ?? []) as $child) {
+                    if (is_array($child)) {
+                        $children .= $this->renderBlock($child, $i === 0 ? $childContext : $childContext->framing(), $theme, $collector, $deferDynamic);
+                    }
                 }
             }
         }
@@ -149,7 +161,13 @@ final class DocumentRenderer
                 ? $this->bindings->resolve($block, $definition, $context)
                 : [];
 
-            $scope = new BlockRenderScope($block, $context, $this->media, $theme, $collector, $children, $rows);
+            $scope = new BlockRenderScope($block, $context, $this->media, $theme, $collector, $children, $rows, function (string $json, RenderContext $inner) use ($theme, $collector): string {
+                $html = '';
+                foreach (RenderDocumentPreparer::prepare($json, $this->registry)['document']['containers'] ?? [] as $container) {
+                    $html .= is_array($container) ? $this->renderTop($container, $inner, $theme, $collector, false, []) : '';
+                }
+                return $html;
+            });
             $inner = $renderer->render($scope);
             $wrapperClasses = $renderer instanceof WrapperClassesInterface ? $renderer->wrapperClasses($scope) : [];
             $wrapperStyle = $renderer instanceof WrapperStyleInterface ? $renderer->wrapperStyle($scope) : '';
@@ -243,7 +261,7 @@ final class DocumentRenderer
         $inlineStyles = $this->buildInlineStyles(is_array($block['style'] ?? null) ? $block['style'] : []);
         // Joined with a `;`: the inline styles end without one, and run together with the timing variables the last
         // inline declaration (often the z-index) became invalid and was dropped as soon as a block had animation timing.
-        $combined     = implode(';', array_filter([trim($inlineStyles, " ;"), trim($motionVars, " ;"), implode(';', $scroll['vars']), $wrapperStyle], static fn(string $part): bool => $part !== ''));
+        $combined     = implode(';', array_filter([trim($inlineStyles, " ;"), trim($motionVars, " ;"), implode(';', $scroll['vars']), $wrapperStyle, self::dynamicBackground($block)], static fn(string $part): bool => $part !== ''));
         $styleAttr    = $combined !== '' ? ' style="' . Html::e($combined) . '"' : '';
 
         $metadata = empty($block[self::EMBEDDED_KEY]) ? $this->nodeMetadata($context, (string) ($block['id'] ?? ''), $type) : '';
@@ -269,8 +287,24 @@ final class DocumentRenderer
     public static function isDynamicNode(array $block, BlockDefinitionInterface $definition, BlockRendererInterface $renderer): bool
     {
         return $renderer->isDynamic()
+            || !empty($block['visibility']['when_field'])
+            || !empty($block['dynamic'])
             || $definition->requiredEntitlement() !== null
             || (is_array($block['bindings'] ?? null) && $block['bindings'] !== []);
+    }
+
+    /** A tag's background goes on the element: in a Loop Item one block id draws many items, so a scoped rule would be shared. */
+    private static function dynamicBackground(array $block): string
+    {
+        $url = StyleSurface::safeCssUrl((string) ($block[DynamicTags::BACKGROUND_KEY] ?? ''));
+        return $url === null || $url === '' ? '' : 'background-image:url(' . $url . ')';
+    }
+
+    private static function fieldHasValue(RenderContext $context, string $key): bool
+    {
+        $meta = $context->attribute('page_meta');
+        $value = is_array($meta) && is_array($meta['values'] ?? null) ? ($meta['values'][$key] ?? null) : null;
+        return !($value === null || $value === '' || $value === [] || $value === false);
     }
 
     /** Non-executable fallback: nothing in public output, a labelled notice when authoring. */

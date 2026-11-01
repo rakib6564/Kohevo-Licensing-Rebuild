@@ -34,7 +34,8 @@ final class RichTextSanitizer
 
     private const VOID_TAGS = ['br'];
 
-    public static function sanitize(string $html): string
+    /** @param bool $images keep `<img>`, for a rich text custom field */
+    public static function sanitize(string $html, bool $images = false): string
     {
         $parts = preg_split('/(<[^<>]*>)/', $html, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
         if ($parts === false) {
@@ -66,6 +67,11 @@ final class RichTextSanitizer
             $closing = $m[1] === '/';
             $tag     = strtolower($m[2]);
             $attrs   = trim(rtrim(trim($m[3]), '/'));
+
+            if ($images && $tag === 'img' && !$closing) {
+                $out .= self::imageTag($attrs);
+                continue;
+            }
 
             if (!in_array($tag, self::ALLOWED_TAGS, true)) {
                 continue;
@@ -108,6 +114,23 @@ final class RichTextSanitizer
     public static function isHighlightAttr(string $attrs): bool
     {
         return preg_match('/^class\s*=\s*(?:"' . Html::HIGHLIGHT_CLASS . '"|\'' . Html::HIGHLIGHT_CLASS . '\')$/i', trim($attrs)) === 1;
+    }
+
+    /** An image keeps its address and its alt text, nothing else; one with an unsafe address goes. */
+    private static function imageTag(string $attrString): string
+    {
+        $src = '';
+        $alt = '';
+        preg_match_all('/([a-zA-Z0-9_-]+)\s*=\s*(?:"([^"]*)"|\'([^\']*)\')/', $attrString, $matches, PREG_SET_ORDER);
+        foreach ($matches as $m) {
+            $value = html_entity_decode($m[2] !== '' ? $m[2] : ($m[3] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if (strtolower($m[1]) === 'src' && FieldSchema::isSafeUrl($value)) {
+                $src = trim($value);
+            } elseif (strtolower($m[1]) === 'alt') {
+                $alt = $value;
+            }
+        }
+        return $src === '' ? '' : '<img src="' . Html::e($src) . '" alt="' . Html::e($alt) . '" loading="lazy">';
     }
 
     private static function anchorOpenTag(string $attrString): string

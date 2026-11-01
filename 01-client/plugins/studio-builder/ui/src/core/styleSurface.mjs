@@ -24,7 +24,7 @@ export const OPTIONS = Object.freeze({
   fontStyle: ['normal', 'italic'],
   decoration: ['none', 'underline', 'line-through', 'overline'],
   decorationStyle: ['solid', 'dashed', 'dotted', 'wavy', 'double'],
-  blend: ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'],
+  blend: ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'saturation', 'color', 'difference', 'exclusion', 'hue', 'luminosity'],
   cursor: ['auto', 'default', 'pointer', 'text', 'move', 'not-allowed', 'grab'],
   easing: ['ease', 'ease-in', 'ease-out', 'ease-in-out', 'linear'],
   states: ['hover', 'focus', 'active', 'disabled'],

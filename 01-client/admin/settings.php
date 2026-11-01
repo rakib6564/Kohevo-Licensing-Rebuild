@@ -22,7 +22,6 @@ $currentNav = 'settings';
 // ─── Tab definitions ─────────────────────────────────────────
 $tabs = [
     'general'    => ['label' => __('general',    'General'),     'icon' => 'settings'],
-    'permalinks' => ['label' => __('permalinks', 'Permalinks'),  'icon' => 'link'],
     'datetime'   => ['label' => __('datetime',   'Date & Time'), 'icon' => 'clock'],
     'branding'   => ['label' => __('branding',   'Branding'),    'icon' => 'palette'],
     'media'      => ['label' => __('media',      'Media'),       'icon' => 'film'],
@@ -45,6 +44,11 @@ if ($activeTab === 'profile') $activeTab = 'general';
 // but its content lives on its own page, not as a block in this file --
 // send anyone who lands on ?tab=translations here (an old bookmark, a
 // stale link) to where the content actually is, instead of a blank tab.
+// Permalinks moved to Kohevo Studio; old links land there.
+if ($activeTab === 'permalinks' && is_file(SLATE_ROOT . '/plugins/studio-builder/admin/permalinks.php')) {
+    header('Location: ' . SLATE_URL . '/plugins/studio-builder/admin/permalinks.php', true, 302);
+    exit;
+}
 if ($activeTab === 'translations') {
     header('Location: ' . SLATE_URL . '/plugins/multilang-translate/admin/index.php');
     exit;
@@ -113,28 +117,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Database::setSetting('business_hours',   mb_substr(trim((string)($_POST['business_hours']   ?? '')), 0, 500));
             AuditLog::record('settings.updated', 'business');
             $redirectWithFlash(['type' => 'success', 'msg' => __('settings_saved', 'Settings saved.')], $activeTab);
-        }
-
-        // ── Permalinks tab ────────────────────────────────────
-        elseif ($action === 'save_permalinks') {
-            $struct = trim((string)($_POST['permalink_structure'] ?? '/p/%postname%'));
-            $allowedStructs = [
-                '/p/%postname%',
-                '/%year%/%monthnum%/%postname%',
-                '/?p=%id%',
-            ];
-            if (!in_array($struct, $allowedStructs, true)) {
-                $struct = '/p/%postname%';
-            }
-            $postBase = trim((string)($_POST['permalink_post_base'] ?? 'post'));
-            $postBase = preg_replace('/[^a-z0-9_-]/i', '', $postBase) ?: 'post';
-            $trailing = isset($_POST['permalink_trailing_slash']) ? '1' : '0';
-
-            Database::setSetting('permalink_structure', mb_substr($struct, 0, 100));
-            Database::setSetting('permalink_post_base', mb_substr($postBase, 0, 50));
-            Database::setSetting('permalink_trailing_slash', $trailing);
-            AuditLog::record('settings.updated', 'permalinks');
-            $redirectWithFlash(['type' => 'success', 'msg' => __('settings_saved', 'Permalinks settings saved.')], $activeTab);
         }
 
         // ── Date & Time tab ───────────────────────────────────
@@ -946,11 +928,6 @@ $sys = [
     'php_version'      => PHP_VERSION,
     'slate_version'    => defined('SLATE_VERSION') ? SLATE_VERSION : '1.0',
 ];
-$permalinksSet = [
-    'structure'      => $_safeText(Database::setting('permalink_structure') ?: '/p/%postname%', 100),
-    'post_base'      => $_safeText(Database::setting('permalink_post_base') ?: 'post', 50),
-    'trailing_slash' => Database::setting('permalink_trailing_slash') === '1',
-];
 $dateTimeSet = [
     'timezone'      => $_safeText(Database::setting('timezone') ?: 'UTC', 64),
     'date_format'   => $_safeText(Database::setting('date_format') ?: 'F j, Y', 32),
@@ -1220,60 +1197,6 @@ slate_render_settings_tabs($activeTab);
 
             <?php if ($canEdit): ?>
                 <button type="submit" class="btn btn-primary"><?= __('save_changes', 'Save changes') ?></button>
-            <?php endif; ?>
-        </form>
-    </div>
-
-<?php /* ══════════════════════════════════════════════════════
-   TAB: PERMALINKS
-══════════════════════════════════════════════════════ */ ?>
-<?php elseif ($activeTab === 'permalinks'): ?>
-
-    <div class="card">
-        <div class="card-header">
-            <h2><?= __('permalinks', 'Permalinks & URL Structure') ?></h2>
-            <p class="card-header-sub"><?= __('permalinks_sub', 'Configure how URLs are formed for published pages, posts, and custom content types.') ?></p>
-        </div>
-        <form method="post">
-            <?= csrf_field() ?>
-            <input type="hidden" name="_action" value="save_permalinks">
-            <input type="hidden" name="_tab"    value="permalinks">
-
-            <div class="field">
-                <label class="field-label"><?= __('url_structure', 'URL Structure') ?></label>
-                <div class="radio-group" style="display:flex;flex-direction:column;gap:12px;margin-top:8px;">
-                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-                        <input type="radio" name="permalink_structure" value="/p/%postname%" <?= $permalinksSet['structure'] === '/p/%postname%' ? 'checked' : '' ?>>
-                        <span><strong>Post name (Recommended)</strong> &mdash; <code><?= e(SLATE_URL) ?>/p/sample-post/</code></span>
-                    </label>
-                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-                        <input type="radio" name="permalink_structure" value="/%year%/%monthnum%/%postname%" <?= $permalinksSet['structure'] === '/%year%/%monthnum%/%postname%' ? 'checked' : '' ?>>
-                        <span><strong>Date and name</strong> &mdash; <code><?= e(SLATE_URL) ?>/<?= date('Y/m') ?>/sample-post/</code></span>
-                    </label>
-                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-                        <input type="radio" name="permalink_structure" value="/?p=%id%" <?= $permalinksSet['structure'] === '/?p=%id%' ? 'checked' : '' ?>>
-                        <span><strong>Plain</strong> &mdash; <code><?= e(SLATE_URL) ?>/?p=123</code></span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="field-row field-row-2" style="margin-top:20px;">
-                <div class="field">
-                    <label class="field-label" for="permalink_post_base"><?= __('blog_post_slug_base', 'Post Slug Base') ?></label>
-                    <input type="text" id="permalink_post_base" name="permalink_post_base" maxlength="50"
-                           value="<?= e($permalinksSet['post_base']) ?>" <?= $canEdit ? '' : 'disabled' ?>>
-                    <div class="field-hint">e.g. <code>post</code> or <code>blog</code> (default: <code>post</code>)</div>
-                </div>
-                <div class="field" style="display:flex;align-items:center;padding-top:24px;">
-                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                        <input type="checkbox" name="permalink_trailing_slash" value="1" <?= $permalinksSet['trailing_slash'] ? 'checked' : '' ?> <?= $canEdit ? '' : 'disabled' ?>>
-                        <span><strong><?= __('trailing_slash', 'Enforce trailing slashes') ?></strong> (e.g. <code>/about/</code>)</span>
-                    </label>
-                </div>
-            </div>
-
-            <?php if ($canEdit): ?>
-                <button type="submit" class="btn btn-primary" style="margin-top:16px;"><?= __('save_changes', 'Save changes') ?></button>
             <?php endif; ?>
         </form>
     </div>

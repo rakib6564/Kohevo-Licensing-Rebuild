@@ -14,7 +14,8 @@ import { getPath, setPath } from './styleSurface.mjs';
 export function inlineSpecsFor(manifest, node) {
   const def = node && node.type ? blockDefinition(manifest, node.type) : null;
   const props = asObject(node && node.props);
-  return asList(def && def.inline_text).filter((s) => s && typeof s.prop === 'string' && typeof s.selector === 'string'
+  const tagged = asObject(node && node.dynamic);
+  return asList(def && def.inline_text).filter((s) => s && typeof s.prop === 'string' && typeof s.selector === 'string' && !tagged[s.prop]
     && !(typeof s.unless === 'string' && props[s.unless] !== undefined && props[s.unless] !== null && props[s.unless] !== ''));
 }
 

@@ -1,0 +1,13 @@
+/* What native style cannot say yet. */
+/* The dish cards: the caption shows when a card is pointed at, as on the live site. */
+.cg-hover { position: relative; overflow: hidden; }
+.cg-hover .sb-block--core-rich-text { opacity: 0; transition: opacity .3s; }
+.cg-hover:hover .sb-block--core-rich-text, .cg-hover:focus-within .sb-block--core-rich-text { opacity: 1; }
+@media (hover: none) { .cg-hover .sb-block--core-rich-text { opacity: 1; position: static !important; } }
+/* The inclusion lists keep the live site's underlined rows. */
+.cg-included ul { list-style: none; margin: 0; padding: 0; }
+.cg-included li { padding: 14px 0; border-bottom: 1px solid rgba(255, 127, 0, .35); }
+/* Boxes count their padding, and nothing widens the page on a phone. */
+.sb-flex { box-sizing: border-box; min-width: 0; }
+html, body { overflow-x: clip; }
+@media (max-width: 767px) { .cg-abs { position: static !important; } }

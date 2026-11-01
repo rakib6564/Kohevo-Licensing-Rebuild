@@ -28,6 +28,6 @@ final class RichTextRenderer implements BlockRendererInterface
     {
         $classes = ['sb-rich-text'];
         $flow = Html::textFlow($scope, $classes);
-        return '<div' . Html::classAttr($classes) . $flow . '>' . RichTextSanitizer::sanitize($scope->string('content')) . '</div>';
+        return '<div' . Html::classAttr($classes) . $flow . '>' . RichTextSanitizer::sanitize($scope->string('content'), !empty($scope->block()['dynamic']['content'])) . '</div>';
     }
 }

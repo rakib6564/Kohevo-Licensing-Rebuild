@@ -67,7 +67,9 @@ test('Button: an icon, then one Style section with Hover colours, text shadow, l
   const id = await add(page, 'core.button');
   const panel = page.locator('#sbx-leftpanel-inspector');
   await expect(panel.getByLabel('Icon Position')).toHaveCount(0); // nothing to place yet
-  await panel.getByLabel('Icon', { exact: true }).selectOption('star');
+  await panel.getByTestId('icon-control').getByRole('button', { name: 'Icon Library' }).click();
+  await page.locator('.sbx-icon-dialog__search').fill('star');
+  await page.getByTestId('icon-grid').locator('button[title="star"]').click();
   await expect.poll(() => nodeIn(page, id).locator('.sb-button__icon svg').count(), { timeout: 20_000 }).toBe(1);
   await expect(panel.getByRole('group', { name: 'Icon Position' })).toBeVisible();
 

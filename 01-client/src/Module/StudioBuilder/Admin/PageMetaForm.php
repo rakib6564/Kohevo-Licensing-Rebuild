@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace Slate\Module\StudioBuilder\Admin;
 
 use Slate\Module\StudioBuilder\Meta\MetaFieldTypes;
+use Slate\Module\StudioBuilder\Render\Block\CoreRenderers\RepeaterRenderer;
 
 final class PageMetaForm
 {
@@ -84,8 +85,8 @@ final class PageMetaForm
                 foreach ($list as $f) {
                     $fk = (string) ($f['key'] ?? '');
                     $id = 'sb-m-' . $key . '-' . $fk;
-                    $wide = in_array(MetaFieldTypes::normalize((string) ($f['type'] ?? 'text')), ['textarea', 'richtext', 'gallery', 'list', 'keyvalue', 'checkboxes', 'multiselect', 'relations'], true);
-                    $out .= '<div class="sb-field' . ($wide ? ' sb-field--wide' : '') . '"><label class="sb-field__label" for="' . $h($id) . '">' . $h((string) ($f['label'] ?? $fk))
+                    $wide = in_array(MetaFieldTypes::normalize((string) ($f['type'] ?? 'text')), ['textarea', 'richtext', 'repeater', 'gallery', 'list', 'keyvalue', 'checkboxes', 'multiselect', 'relations'], true);
+                    $out .= '<div class="sb-field' . ($wide ? ' sb-field--wide' : '') . '"><label class="sb-field__label" id="' . $h($id) . '-l" for="' . $h($id) . '">' . $h((string) ($f['label'] ?? $fk))
                         . (!empty($f['required']) ? ' <span style="color:#ef4444;">*</span>' : '') . '</label>'
                         . self::input($f, $key === $current ? ($values[$fk] ?? null) : null, $id, $relationPages[(string) ($f['options']['target'] ?? '')] ?? [], $canEdit);
                     if ($showKeys) {
@@ -109,10 +110,106 @@ final class PageMetaForm
     /** Shows the chosen type's group and turns the others off, so their inputs never reach the server. */
     public static function script(string $formId, bool $canEdit): string
     {
-        return '<script>(function(){var f=document.getElementById(' . json_encode($formId) . ');if(!f)return;var s=f.querySelector("#sb-ctype");'
+        return self::fieldAssets() . '<script>(function(){var f=document.getElementById(' . json_encode($formId) . ');if(!f)return;var s=f.querySelector("#sb-ctype");'
             . 'function sync(){f.querySelectorAll(".sb-meta-group").forEach(function(g){var on=g.getAttribute("data-type")===s.value;g.hidden=!on;'
             . 'g.querySelectorAll("input,select,textarea").forEach(function(i){i.disabled=!on||' . ($canEdit ? 'false' : 'true') . ';});});}'
             . 's.addEventListener("change",sync);sync();})();</script>';
+    }
+
+    /**
+     * The rows of a repeater field, with a template the script copies for a new row.
+     *
+     * @param array<string, mixed> $f
+     * @param array<int, mixed> $rows
+     */
+    private static function repeater(array $f, array $rows, string $id, string $name, bool $canEdit): string
+    {
+        $row = static function (int|string $i, array $values) use ($f, $id, $name, $canEdit): string {
+            $inputs = '';
+            foreach (MetaFieldTypes::subfields($f) as $sub) {
+                $k = (string) $sub['key'];
+                $subId = $id . '-' . $i . '-' . $k;
+                $inputs .= '<div class="sb-field"><label class="sb-field__label" id="' . \e($subId) . '-l" for="' . \e($subId) . '">' . \e((string) ($sub['label'] ?? $k)) . '</label>'
+                    . self::input($sub, $values[$k] ?? null, $subId, [], $canEdit, $name . '[' . $i . '][' . $k . ']') . '</div>';
+            }
+            $tool = static fn(string $act, string $label): string => '<button type="button" data-rep-act="' . $act . '" title="' . \e($label) . '" aria-label="' . \e($label) . '">' . ['up' => '↑', 'down' => '↓', 'copy' => '⧉', 'del' => '×'][$act] . '</button>';
+            return '<div class="sb-rep__row" data-rep-row><div class="sb-rep__tools">' . ($canEdit ? $tool('up', \__('studio_move_up', 'Move up')) . $tool('down', \__('studio_move_down', 'Move down')) . $tool('copy', \__('studio_duplicate', 'Duplicate')) . $tool('del', \__('studio_delete', 'Delete')) : '') . '</div>' . $inputs . '</div>';
+        };
+        $out = '';
+        foreach (array_values(array_filter($rows, 'is_array')) as $i => $values) {
+            $out .= $row($i, $values);
+        }
+        return '<div class="sb-rep" data-rep data-next="' . count($rows) . '"><div data-rep-rows>' . $out . '</div>'
+            . ($canEdit ? '<template data-rep-tpl>' . $row('__i__', []) . '</template><button type="button" class="btn btn-outline" data-rep-add>+ ' . \e(\__('studio_add_item', 'Add item')) . '</button>' : '') . '</div>';
+    }
+
+    /** The rich text editor, the repeater rows and the image button, for every field on the form. */
+    private static function fieldAssets(): string
+    {
+        return <<<'HTML'
+<style>
+.sb-rte{border:1px solid #d1d5db;border-radius:8px;overflow:hidden;background:#fff}
+.sb-rte__bar{display:flex;flex-wrap:wrap;gap:4px;padding:6px;border-bottom:1px solid #e5e7eb;background:#f9fafb}
+.sb-rte__bar button{min-width:32px;height:30px;padding:0 8px;border:1px solid #d1d5db;border-radius:5px;background:#fff;color:#111827;font-weight:600;cursor:pointer}
+.sb-rte__bar button[aria-pressed=true]{background:#111827;color:#fff}
+.sb-rte__edit{min-height:180px;max-height:480px;overflow:auto;padding:12px 14px;line-height:1.6;outline:0}
+.sb-rte [hidden]{display:none!important}
+.sb-rte textarea{width:100%;border:0;padding:12px 14px;font-family:ui-monospace,monospace;font-size:13px}
+.sb-rep{display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb}
+.sb-rep [data-rep-rows]{display:flex;flex-direction:column;gap:12px;width:100%}
+.sb-rep__row{position:relative;display:flex;flex-direction:column;gap:10px;padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#fff}
+.sb-rep__tools{display:flex;justify-content:flex-end;gap:4px}
+.sb-rep__tools button{width:30px;height:28px;border:1px solid #d1d5db;border-radius:5px;background:#fff;color:#374151;cursor:pointer}
+.sb-img-field{display:flex;gap:10px;align-items:center}
+.sb-img-field__thumb{width:52px;height:52px;border-radius:6px;background:#f3f4f6;overflow:hidden;flex:none}
+.sb-img-field__thumb img{width:100%;height:100%;object-fit:cover}
+.sb-img-field input{flex:1;min-width:0}
+</style>
+<script>
+(function(){
+function sync(r){var e=r.querySelector('[data-rte-edit]'),s=r.querySelector('[data-rte-src]');if(!s.hidden){e.innerHTML=s.value;}else{s.value=e.innerHTML;}}
+document.addEventListener('input',function(ev){var e=ev.target.closest&&ev.target.closest('[data-rte-edit]');if(e){e.parentNode.querySelector('[data-rte-src]').value=e.innerHTML;}});
+document.addEventListener('submit',function(ev){ev.target.querySelectorAll('[data-rte]').forEach(sync);},true);
+document.addEventListener('mousedown',function(ev){var b=ev.target.closest&&ev.target.closest('.sb-rte__bar button');if(b){ev.preventDefault();}});
+document.addEventListener('click',function(ev){
+  var t=ev.target,b;
+  if(!t.closest){return;}
+  if((b=t.closest('.sb-rte__bar button'))){
+    var r=b.closest('[data-rte]'),e=r.querySelector('[data-rte-edit]'),s=r.querySelector('[data-rte-src]'),c=b.getAttribute('data-cmd');
+    if(c==='code'){sync(r);s.hidden=!s.hidden;e.hidden=!s.hidden;b.setAttribute('aria-pressed',String(!s.hidden));return;}
+    if(!s.hidden){return;}
+    e.focus();
+    if(c==='createLink'||c==='insertImage'){var u=window.prompt('https://');if(u){document.execCommand(c,false,u);}}
+    else{document.execCommand(c,false,b.getAttribute('data-arg')||null);}
+    s.value=e.innerHTML;return;
+  }
+  if((b=t.closest('[data-img-pick]'))){
+    var box=b.closest('[data-img-field]'),i=box.querySelector('input');
+    if(window.SbMediaPicker){window.SbMediaPicker.open(i.id);}return;
+  }
+  if((b=t.closest('[data-rep-add]'))){
+    var rep=b.closest('[data-rep]'),n=rep.getAttribute('data-next');rep.setAttribute('data-next',+n+1);
+    var w=document.createElement('div');w.innerHTML=rep.querySelector('[data-rep-tpl]').innerHTML.replace(/__i__/g,n);
+    rep.querySelector('[data-rep-rows]').appendChild(w.firstElementChild);return;
+  }
+  if((b=t.closest('[data-rep-act]'))){
+    var row=b.closest('[data-rep-row]'),a=b.getAttribute('data-rep-act'),box2=row.parentNode;
+    if(a==='del'){row.remove();}
+    if(a==='up'&&row.previousElementSibling){box2.insertBefore(row,row.previousElementSibling);}
+    if(a==='down'&&row.nextElementSibling){box2.insertBefore(row.nextElementSibling,row);}
+    if(a==='copy'){
+      row.querySelectorAll('[data-rte]').forEach(sync);
+      var rep2=row.closest('[data-rep]'),m=rep2.getAttribute('data-next');rep2.setAttribute('data-next',+m+1);
+      var from=row.querySelectorAll('input,textarea,select'),c2=row.cloneNode(true),to=c2.querySelectorAll('input,textarea,select');
+      to.forEach(function(el,k){el.value=from[k].value;});
+      c2.querySelectorAll('[name],[id],[for],[aria-labelledby]').forEach(function(el){['name','id','for','aria-labelledby'].forEach(function(at){var v=el.getAttribute(at);if(v){el.setAttribute(at,v.replace(/\[\d+\]\[/,'['+m+'][').replace(/-\d+-(?=[a-z0-9_]+(-l)?$)/,'-'+m+'-'));}});});
+      row.after(c2);
+    }
+  }
+});
+})();
+</script>
+HTML;
     }
 
     /**
@@ -121,14 +218,14 @@ final class PageMetaForm
      * @param array<string, mixed> $f
      * @param array<int, string> $pages page id => title, for a relation
      */
-    public static function input(array $f, mixed $value, string $id, array $pages, bool $canEdit): string
+    public static function input(array $f, mixed $value, string $id, array $pages, bool $canEdit, ?string $inputName = null): string
     {
         $h = static fn(mixed $s): string => \e(is_scalar($s) ? (string) $s : '');
         $type = MetaFieldTypes::normalize((string) ($f['type'] ?? 'text'));
-        $name = 'meta[' . (string) ($f['key'] ?? '') . ']';
+        $name = $inputName ?? 'meta[' . (string) ($f['key'] ?? '') . ']';
         $opt = is_array($f['options'] ?? null) ? $f['options'] : [];
         $ph = ' placeholder="' . $h($f['placeholder'] ?? '') . '"';
-        $req = !empty($f['required']) && !in_array($type, ['boolean', 'multiselect', 'checkboxes', 'gallery', 'list', 'relations', 'keyvalue', 'daterange'], true) ? ' required' : '';
+        $req = !empty($f['required']) && !in_array($type, ['boolean', 'multiselect', 'checkboxes', 'gallery', 'list', 'relations', 'keyvalue', 'daterange', 'richtext', 'repeater'], true) ? ' required' : '';
         $dis = $canEdit ? '' : ' disabled';
         $base = ' id="' . $h($id) . '" name="' . $h($name) . '"' . $req . $dis;
         $attr = '';
@@ -142,9 +239,20 @@ final class PageMetaForm
         $choices = is_array($opt['choices'] ?? null) ? $opt['choices'] : [];
 
         switch ($type) {
-            case 'textarea':
             case 'richtext':
-                return '<textarea' . $base . ' rows="' . ($type === 'richtext' ? 6 : 4) . '"' . $ph . (isset($opt['max_length']) ? ' maxlength="' . (int) $opt['max_length'] . '"' : '') . '>' . $h($value) . '</textarea>';
+                $html = is_scalar($value) ? RepeaterRenderer::rich($value) : '';
+                $tool = static fn(string $cmd, string $label, string $arg = ''): string => '<button type="button" data-cmd="' . $cmd . '" data-arg="' . $arg . '" title="' . $h($label) . '">' . $h($label) . '</button>';
+                return '<div class="sb-rte" data-rte><div class="sb-rte__bar">' . $tool('bold', 'B') . $tool('italic', 'I') . $tool('formatBlock', 'H2', 'h2') . $tool('formatBlock', 'H3', 'h3') . $tool('formatBlock', '¶', 'p')
+                    . $tool('insertUnorderedList', '•') . $tool('insertOrderedList', '1.') . $tool('createLink', \__('studio_rte_link', 'Link')) . $tool('insertImage', \__('studio_rte_image', 'Image')) . $tool('code', \__('studio_rte_code', 'Code')) . '</div>'
+                    . '<div class="sb-rte__edit" data-rte-edit' . ($canEdit ? ' contenteditable="true"' : '') . ' role="textbox" aria-multiline="true" aria-labelledby="' . $h($id) . '-l">' . $html . '</div>'
+                    . '<textarea' . $base . ' rows="10" hidden data-rte-src>' . $h($html) . '</textarea></div>';
+            case 'repeater':
+                return self::repeater($f, is_array($value) ? $value : [], $id, $name, $canEdit);
+            case 'image':
+                return '<div class="sb-img-field" data-img-field><span class="sb-img-field__thumb" id="preview_' . $h($id) . '">' . (is_string($value) && $value !== '' ? '<img src="' . $h($value) . '" alt="">' : '') . '</span><input type="text"' . $base . $ph . ' value="' . $h($value) . '">'
+                    . ($canEdit ? '<button type="button" class="btn btn-outline" data-img-pick>' . $h(\__('studio_choose_image', 'Choose image')) . '</button>' : '') . '</div>';
+            case 'textarea':
+                return '<textarea' . $base . ' rows="4"' . $ph . (isset($opt['max_length']) ? ' maxlength="' . (int) $opt['max_length'] . '"' : '') . '>' . $h($value) . '</textarea>';
             case 'number':
             case 'price':
             case 'rating':
@@ -214,7 +322,7 @@ final class PageMetaForm
                     $pairs[] = $k . ' : ' . (is_scalar($v) ? $v : '');
                 }
                 return '<textarea' . $base . ' rows="4" placeholder="key : value">' . $h(implode("\n", $pairs)) . '</textarea>';
-            default: // text, url-like fallbacks, image, file, video, location
+            default: // text, url-like fallbacks, file, video, location
                 return '<input type="text"' . $base . $ph . (isset($opt['max_length']) ? ' maxlength="' . (int) $opt['max_length'] . '"' : '') . ' value="' . $h($value) . '">';
         }
     }

@@ -18,7 +18,7 @@ const has = (ctx, key) => ctx.capabilities.includes(key);
 const count = (v) => (Array.isArray(v) ? v.length : Object.keys(asObject(v)).length);
 
 /** Text-led block types, where Typography is the section an author reaches for first. */
-const TEXT_TYPES = new Set(['core.heading', 'core.text', 'core.rich_text', 'core.button', 'core.quote', 'core.list', 'core.link']);
+const TEXT_TYPES = new Set(['core.heading', 'core.dual_heading', 'core.text', 'core.rich_text', 'core.button', 'core.quote', 'core.list', 'core.link']);
 
 /**
  * Pure media blocks: they have no text of their own, so Typography would be a dead section. Every block
@@ -85,6 +85,7 @@ const OWN_STYLE = {
   [CONTAINER_TYPE]: ['shadow'], // under Border, as in the reference
   [BUTTON_TYPE]: ['align', 'typography', 'background', 'border', 'shadow'],
   [HEADING_TYPE]: ['align', 'typography'],
+  'core.dual_heading': ['align', 'typography'],
   'core.rich_text': ['align', 'typography'],
   'core.text': ['align', 'typography'],
   [IMAGE_TYPE]: ['align', 'dimensions', 'border', 'shadow', 'opacity'],
@@ -122,6 +123,7 @@ export const SECTIONS = Object.freeze([
   { id: 'heading_style', tab: 'style', titleKey: 'section_heading', keywords: ['alignment', 'typography', 'text stroke', 'text shadow', 'blend', 'colour', 'color', 'hover'], appliesTo: (ctx) => ctx.node.type === HEADING_TYPE, summary: () => '', openFor: () => true },
   { id: 'text_style', tab: 'style', titleKey: 'section_text_editor', titleFor: (ctx) => OWN_TITLE[ctx.node.type], keywords: ['alignment', 'typography', 'text shadow', 'colour', 'color'], appliesTo: (ctx) => TEXT_EDITOR_TYPES.has(ctx.node.type), summary: () => '', openFor: () => true },
   { id: 'image_style', tab: 'style', titleKey: 'section_image', keywords: ['alignment', 'width', 'max width', 'height', 'object fit', 'opacity', 'css filters', 'blur', 'hover', 'zoom', 'border', 'radius', 'box shadow'], appliesTo: (ctx) => ctx.node.type === IMAGE_TYPE, summary: () => '', openFor: () => true },
+  { id: 'icon_list_style', tab: 'style', titleKey: 'section_icon_list', keywords: ['space between', 'alignment', 'divider', 'icon size', 'gap', 'vertical'], appliesTo: (ctx) => ctx.node.type === 'core.icon_list', summary: () => '', openFor: () => true },
   { id: 'icon_style', tab: 'style', titleKey: 'section_icon', keywords: ['primary', 'secondary', 'colour', 'color', 'hover', 'size', 'padding', 'rotate', 'border width'], appliesTo: (ctx) => ctx.node.type === ICON_TYPE, summary: () => '', openFor: () => true },
   { id: 'align', extra: isBoxContainer, tab: 'style', titleKey: 'align', titleFor: alignTitleKey, appliesTo: (ctx) => has(ctx, 'align') && !inOwnStyle(ctx, 'align') && (!(isBoxContainer(ctx) || ctx.node.type === ICON_TYPE || CONTENT_ALIGN_TYPES.has(ctx.node.type)) || setOn(ctx, 'align')), summary: (ctx) => alignSummary(ctx.style.align), openFor: () => false },
   { id: 'typography', extra: isBoxContainer, tab: 'style', titleKey: 'typography', appliesTo: (ctx) => (has(ctx, 'typography') || has(ctx, 'color')) && !MEDIA_TYPES.has(ctx.node.type) && !NO_TEXT_TYPES.has(ctx.node.type) && !inOwnStyle(ctx, 'typography') && (!isBoxContainer(ctx) || setOn(ctx, 'typography') || setOn(ctx, 'color')), summary: (ctx) => typographySummary(ctx.style), openFor: (ctx) => TEXT_TYPES.has(ctx.node.type) },

@@ -211,7 +211,7 @@ final class PageRepository extends StudioRepository
             return [];
         }
         return $this->query()
-            ->select('id', 'slug', 'page_type', 'route_mode', 'published_revision_id', 'published_at')
+            ->select('id', 'title', 'slug', 'page_type', 'route_mode', 'published_revision_id', 'published_at')
             ->where('status', 'published')
             ->whereIn('page_type', $pageTypes)
             ->whereNotNull('published_revision_id')

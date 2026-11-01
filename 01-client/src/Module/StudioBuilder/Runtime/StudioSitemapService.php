@@ -61,7 +61,7 @@ final class StudioSitemapService
     }
 
     /**
-     * @return list<array{loc: string, lastmod: ?string}> in a deterministic order: homepage first, then by slug
+     * @return list<array{loc: string, title: string, lastmod: ?string}> in a deterministic order: homepage first, then by slug
      */
     public function entries(SiteContext $site): array
     {
@@ -143,6 +143,7 @@ final class StudioSitemapService
             $entries[$own] ??= [
                 'home'    => $candidate['path'] === '/',
                 'loc'     => $own,
+                'title'   => (string) ($row['title'] ?? ''),
                 'lastmod' => self::lastmod($row['published_at'] ?? null),
             ];
         }
@@ -152,7 +153,7 @@ final class StudioSitemapService
                 foreach (($this->pluginItems)($this->tenants->id()) as $item) {
                     if (is_array($item) && is_string($item['path'] ?? null)) {
                         $own = $site->absoluteUrl($item['path']);
-                        $entries[$own] ??= ['home' => false, 'loc' => $own, 'lastmod' => self::lastmod($item['updated_at'] ?? null)];
+                        $entries[$own] ??= ['home' => false, 'loc' => $own, 'title' => (string) ($item['title'] ?? ''), 'lastmod' => self::lastmod($item['updated_at'] ?? null)];
                     }
                 }
             } catch (\Throwable) {
@@ -162,7 +163,7 @@ final class StudioSitemapService
 
         usort($entries, static fn(array $a, array $b): int => [$b['home'], $a['loc']] <=> [$a['home'], $b['loc']]);
         $entries = array_slice($entries, 0, self::MAX_URLS);
-        return array_map(static fn(array $e): array => ['loc' => $e['loc'], 'lastmod' => $e['lastmod']], $entries);
+        return array_map(static fn(array $e): array => ['loc' => $e['loc'], 'title' => $e['title'] ?? '', 'lastmod' => $e['lastmod']], $entries);
     }
 
     /** The sitemap document for the given entries (pure, deterministic, XML-escaped). */
@@ -191,6 +192,25 @@ final class StudioSitemapService
         $txt = "User-agent: *\nAllow: /\n";
         if ($site->baseUrl !== '') {
             $txt .= "\nSitemap: " . $site->absoluteUrl('/sitemap.xml') . "\n";
+        }
+        return $txt;
+    }
+
+    /**
+     * llms.txt: the site's name and the same pages the sitemap lists, as a plain Markdown list for AI crawlers.
+     *
+     * @param list<array{loc: string, title?: string}> $entries
+     */
+    public static function llmsTxt(array $entries, string $siteName): string
+    {
+        $txt = '# ' . $siteName . "\n\n## Pages\n";
+        foreach ($entries as $entry) {
+            $loc = (string) $entry['loc'];
+            $title = trim((string) ($entry['title'] ?? ''));
+            if ($title === '') {
+                $title = trim((string) parse_url($loc, PHP_URL_PATH), '/') ?: $siteName;
+            }
+            $txt .= '- [' . str_replace(['[', ']', "\n", "\r"], ['(', ')', ' ', ' '], $title) . '](' . $loc . ")\n";
         }
         return $txt;
     }

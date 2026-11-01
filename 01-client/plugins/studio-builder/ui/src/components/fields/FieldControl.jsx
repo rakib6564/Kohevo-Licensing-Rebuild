@@ -7,19 +7,24 @@
 // half-typed links/URLs are never autosaved (and never rejected by the
 // server mid-typing). Labels come from the server manifest and are text only.
 
-import { Fragment, lazy, memo, Suspense, useEffect, useId, useRef, useState } from 'react';
+import { Fragment, lazy, memo, Suspense, useContext, useEffect, useId, useRef, useState } from 'react';
 import { coerce, controlFor, datetimeFromLocal, datetimeToLocal, highlightMissing, hint, newRepeaterItem, swatchHex, tokensFor, clone } from '../../core/fields.mjs';
 import { asList, asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
 import { MediaControl } from './MediaControl.jsx';
+import { GalleryControl } from './GalleryControl.jsx';
+import { isGalleryImages } from '../../core/galleryImages.mjs';
+import { mediaPickerAvailable } from '../../core/mediaPicker.mjs';
 import { UrlControl } from './UrlControl.jsx';
 import { PropChoice, PropTiles } from './PropPresenters.jsx';
 import { TokenPicker } from './TokenPicker.jsx';
 import { optionLabel } from '../../core/optionLabels.mjs';
-import { getMetaFields, getPostTypes, isKnownMetaField, metaFieldGroups } from '../../core/metaFields.mjs';
+import { getLoopTemplates, getMetaFields, getPostTypes, isKnownMetaField, metaFieldGroups } from '../../core/metaFields.mjs';
 import { sizedLabeller, tableFor } from '../../core/optionValues.mjs';
 import { Check, Field } from '../ui/index.js';
 import { DeviceProp } from './DeviceProp.jsx';
+import { IconControl } from './IconControl.jsx';
+import { DynamicContext, DynamicField, SlotInput } from './DynamicControl.jsx';
 
 const RichTextEditor = lazy(() => import('./RichTextEditor.jsx'));
 
@@ -58,7 +63,7 @@ export const FieldRow = ({ id, label, required, problem, children, wide = false 
   </Field>
 );
 
-export const FieldControl = memo(function FieldControl({ field, value, onChange, manifest, mediaPicker, labelOf = null, device = null }) {
+export const FieldControl = memo(function FieldControl({ field, value, onChange, manifest, mediaPicker, labelOf = null, device = null, pathPrefix = '' }) {
   const id = useId();
   const kind = controlFor(field);
   const [draft, update, problem, external] = useDraft(value, field, onChange);
@@ -84,13 +89,13 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
     case 'text':
       return (
         <FieldRow id={id} label={field.label} required={field.required} problem={problem}>
-          <input type="text" {...common} value={draft ?? ''} maxLength={field.max_length || undefined} onChange={(e) => update(coerce(field, e.target.value))} />
+          <SlotInput><input type="text" {...common} value={draft ?? ''} maxLength={field.max_length || undefined} onChange={(e) => update(coerce(field, e.target.value))} /></SlotInput>
         </FieldRow>
       );
     case 'textarea':
       return (
-        <FieldRow id={id} label={field.label} required={field.required} problem={problem}>
-          <textarea {...common} rows={4} value={draft ?? ''} maxLength={field.max_length || undefined} onChange={(e) => update(e.target.value)} />
+        <FieldRow id={id} label={field.label} required={field.required} problem={problem} wide>
+          <SlotInput><textarea {...common} rows={3} value={draft ?? ''} maxLength={field.max_length || undefined} onChange={(e) => update(e.target.value)} /></SlotInput>
         </FieldRow>
       );
     case 'number':
@@ -139,6 +144,22 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
         </FieldRow>
       );
     }
+    case 'icon':
+      return (
+        <FieldRow id={id} label={field.label} required={field.required} problem={problem}>
+          <IconControl value={draft} empty={field.default === 'none' ? 'none' : ''} onChange={update} />
+        </FieldRow>
+      );
+    case 'looptemplate':
+      return (
+        <FieldRow id={id} label={field.label} required={field.required} problem={problem}>
+          <select {...common} value={draft ?? ''} onChange={(e) => update(e.target.value)}>
+            <option value="">{t('loop_template_auto')}</option>
+            <option value="none">{t('loop_template_none')}</option>
+            {getLoopTemplates().map((l) => <option key={l.uuid} value={l.uuid}>{l.title}</option>)}
+          </select>
+        </FieldRow>
+      );
     case 'checkbox':
       return (
         <div className="sbx-field sbx-field--check">
@@ -183,7 +204,7 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
         </FieldRow>
       );
     case 'link':
-      return <LinkControl field={field} value={draft} onChange={update} problem={problem} />;
+      return <LinkControl field={field} value={draft} onChange={update} problem={problem} path={`${pathPrefix}${field.key}`} />;
     case 'media':
       return <MediaControl field={field} value={draft} onChange={update} problem={problem} mediaPicker={mediaPicker} />;
     case 'richtext':
@@ -195,12 +216,15 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
         </FieldRow>
       );
     case 'repeater':
-      return <RepeaterControl field={field} value={asList(value)} onChange={onChange} manifest={manifest} mediaPicker={mediaPicker} />;
+      if (isGalleryImages(field) && mediaPickerAvailable(mediaPicker)) {
+        return <GalleryControl field={field} value={asList(value)} onChange={onChange} renderFields={(schema, v, change) => <DynamicContext.Provider value={null}><ObjectFields schema={schema} value={v} onChange={change} manifest={manifest} mediaPicker={mediaPicker} /></DynamicContext.Provider>} />;
+      }
+      return <RepeaterControl field={field} value={asList(value)} onChange={onChange} manifest={manifest} mediaPicker={mediaPicker} path={`${pathPrefix}${field.key}`} />;
     case 'object':
       return (
         <fieldset className="sbx-fieldset">
           <legend>{field.label}</legend>
-          <ObjectFields schema={field.properties} value={asObject(value)} onChange={onChange} manifest={manifest} mediaPicker={mediaPicker} device={device} pathPrefix={`${field.key}.`} />
+          <ObjectFields schema={field.properties} value={asObject(value)} onChange={onChange} manifest={manifest} mediaPicker={mediaPicker} device={device} pathPrefix={`${pathPrefix}${field.key}.`} />
         </fieldset>
       );
     default:
@@ -216,7 +240,7 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
 export function ObjectFields({ schema, value, onChange, manifest, mediaPicker, presenters = null, blockType = null, owned = [], device = null, pathPrefix = '' }) {
   // A presenter's `showIf(props)` hides a field that means nothing yet (an icon's position before there is an icon).
   return asList(schema).filter((f) => !(presenters && presenters[f.key] && presenters[f.key].showIf) || presenters[f.key].showIf(asObject(value))).map((f) => {
-    let field = objectField(f, value, onChange, manifest, mediaPicker, presenters, blockType, device);
+    let field = objectField(f, value, onChange, manifest, mediaPicker, presenters, blockType, device, pathPrefix);
     if (device && f.per_device === true) {
       field = <DeviceProp key={f.key} field={f} path={pathPrefix + f.key} device={device}>{field}</DeviceProp>;
     }
@@ -231,7 +255,7 @@ export function ObjectFields({ schema, value, onChange, manifest, mediaPicker, p
   });
 }
 
-function objectField(f, value, onChange, manifest, mediaPicker, presenters, blockType, device = null) {
+function objectField(f, value, onChange, manifest, mediaPicker, presenters, blockType, device = null, pathPrefix = '') {
   const set = (v) => onChange({ ...value, [f.key]: v });
   const presenter = presenters && presenters[f.key];
   const fieldId = blockType ? `${blockType}.${f.key}` : null;
@@ -247,13 +271,17 @@ function objectField(f, value, onChange, manifest, mediaPicker, presenters, bloc
       mediaPicker={mediaPicker}
       labelOf={labelOf}
       device={device}
+      pathPrefix={pathPrefix}
       onChange={set}
     />
   );
-  if (f.key === 'highlight' && highlightMissing(value)) {
-    return <Fragment key={f.key}>{control}<p className="sbx-hint sbx-hint--warn" role="status">{t('highlight_not_found')}</p></Fragment>;
+  const warning = f.key === 'highlight' && highlightMissing(value)
+    ? <p className="sbx-hint sbx-hint--warn" role="status">{t('highlight_not_found')}</p>
+    : null;
+  if (f.type !== 'repeater' && f.type !== 'object' && f.type !== 'link') {
+    return <Fragment key={f.key}><DynamicField field={f} path={`${pathPrefix}${f.key}`} inline={['string', 'text', 'url'].includes(f.type)}>{control}</DynamicField>{warning}</Fragment>;
   }
-  return control;
+  return warning ? <Fragment key={f.key}>{control}{warning}</Fragment> : control;
 }
 
 /** The token chooser: a named, sampled list (see TokenPicker). Kept under its old name for existing callers. */
@@ -261,7 +289,7 @@ export function TokenSelect(props) {
   return <TokenPicker {...props} />;
 }
 
-function LinkControl({ field, value, onChange, problem }) {
+function LinkControl({ field, value, onChange, problem, path }) {
   const id = useId();
   const link = asObject(value);
   const set = (patch) => {
@@ -273,27 +301,38 @@ function LinkControl({ field, value, onChange, problem }) {
   return (
     <fieldset className="sbx-fieldset" aria-describedby={problem ? `${id}-problem` : undefined}>
       <legend>{field.label}{field.required ? ' *' : ''}</legend>
-      <label className="sbx-field">
-        <span className="sbx-field__label">{t('link_label')}</span>
-        <input type="text" value={link.label ?? ''} maxLength={255} onChange={(e) => set({ label: e.target.value.replace(/[\r\n]+/g, ' ') })} />
-      </label>
-      <label className="sbx-field">
-        <span className="sbx-field__label">{t('link_href')}</span>
-        <input type="text" inputMode="url" value={link.href ?? ''} placeholder={t('url_placeholder_path')} onChange={(e) => set({ href: e.target.value.trim() })} />
-      </label>
+      <DynamicField field={{ key: 'label', type: 'string', label: t('link_label') }} path={`${path}.label`}>
+        <label className="sbx-field">
+          <span className="sbx-field__label">{t('link_label')}</span>
+          <input type="text" value={link.label ?? ''} maxLength={255} onChange={(e) => set({ label: e.target.value.replace(/[\r\n]+/g, ' ') })} />
+        </label>
+      </DynamicField>
+      <DynamicField field={{ key: 'href', type: 'url', label: t('link_href') }} path={`${path}.href`}>
+        <label className="sbx-field">
+          <span className="sbx-field__label">{t('link_href')}</span>
+          <input type="text" inputMode="url" value={link.href ?? ''} placeholder={t('url_placeholder_path')} onChange={(e) => set({ href: e.target.value.trim() })} />
+        </label>
+      </DynamicField>
       <Check label={t('link_new_tab')} checked={link.target === '_blank'} onChange={(e) => set({ target: e.target.checked ? '_blank' : '_self' })} />
       {problem ? <p className="sbx-field__error" id={`${id}-problem`} role="alert">{t(problem)}</p> : null}
     </fieldset>
   );
 }
 
-function RepeaterControl({ field, value, onChange, manifest, mediaPicker }) {
+function RepeaterControl({ field, value, onChange, manifest, mediaPicker, path }) {
   const max = field.max_items || 50;
+  const dynamic = useContext(DynamicContext);
+  // Tags sit by row number, so they follow a row that moves or goes.
+  const reorder = (order) => {
+    onChange(order.map((j) => value[j]));
+    if (dynamic) dynamic.moveRows(path, order);
+  };
+  const rows = value.map((_, j) => j);
   const move = (i, d) => {
-    const next = [...value];
-    const [item] = next.splice(i, 1);
-    next.splice(i + d, 0, item);
-    onChange(next);
+    const order = [...rows];
+    order.splice(i, 1);
+    order.splice(i + d, 0, i);
+    reorder(order);
   };
   return (
     <fieldset className="sbx-fieldset sbx-repeater">
@@ -305,7 +344,7 @@ function RepeaterControl({ field, value, onChange, manifest, mediaPicker }) {
             <span>
               <button type="button" className="sbx-btn sbx-btn--xs" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`${t('move_up')} ${i + 1}`}>↑</button>
               <button type="button" className="sbx-btn sbx-btn--xs" onClick={() => move(i, 1)} disabled={i === value.length - 1} aria-label={`${t('move_down')} ${i + 1}`}>↓</button>
-              <button type="button" className="sbx-btn sbx-btn--xs" onClick={() => onChange(value.filter((_, j) => j !== i))} aria-label={`${t('remove_item')} ${i + 1}`}>✕</button>
+              <button type="button" className="sbx-btn sbx-btn--xs" onClick={() => reorder(rows.filter((j) => j !== i))} aria-label={`${t('remove_item')} ${i + 1}`}>✕</button>
             </span>
           </div>
           <ObjectFields
@@ -313,6 +352,7 @@ function RepeaterControl({ field, value, onChange, manifest, mediaPicker }) {
             value={asObject(item)}
             manifest={manifest}
             mediaPicker={mediaPicker}
+            pathPrefix={`${path}.${i}.`}
             onChange={(v) => onChange(value.map((x, j) => (j === i ? v : x)))}
           />
         </div>

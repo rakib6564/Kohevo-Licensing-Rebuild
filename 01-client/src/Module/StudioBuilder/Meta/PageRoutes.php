@@ -11,6 +11,9 @@
  *
  * A prefix is one to three slug-shaped segments (`events`, `fr/evenements`). A type whose route is empty or `/` has no
  * prefix, and so does one whose route is not a valid prefix or starts with an address Theme Builder answers itself.
+ *
+ * A single page may have its own prefix in the `studio_page_prefixes` setting (page id => prefix, '' for none), which beats
+ * its type's: how a moved site keeps addresses that do not follow one pattern.
  */
 
 declare(strict_types=1);
@@ -23,12 +26,13 @@ use Slate\Module\StudioBuilder\Domain\PageAddress;
 final class PageRoutes
 {
     public const SETTING_TRAILING_SLASH = 'studio_url_trailing_slash';
+    public const SETTING_PAGE_PREFIXES = 'studio_page_prefixes';
     public const MAX_PREFIX_SEGMENTS = 3;
 
     /** First segments Theme Builder routes itself (archives, search); a prefix may not start with one. */
     private const ARCHIVE_SEGMENTS = ['category', 'tag', 'author', 'search'];
 
-    /** @var array<int, array{prefixes?: array<string, string>, types?: array<int, string>, slash?: bool}> per-request cache by tenant */
+    /** @var array<int, array{prefixes?: array<string, string>, own?: array<int, string>, types?: array<int, string>, slash?: bool}> per-request cache by tenant */
     private static array $cache = [];
 
     /** A route as a prefix: '' for none, null when it cannot be one. */
@@ -134,8 +138,33 @@ final class PageRoutes
         if ($pageId <= 0) {
             return '';
         }
+        $own = self::pagePrefixes($tenantId);
+        if (isset($own[$pageId])) {
+            return $own[$pageId];
+        }
         $type = self::typeOfPage($tenantId, $pageId);
         return $type !== '' ? (self::prefixes($tenantId)[$type] ?? '') : '';
+    }
+
+    /** @return array<int, string> page id => its own prefix, for the pages that have one */
+    private static function pagePrefixes(int $tenantId): array
+    {
+        if (!isset(self::$cache[$tenantId]['own'])) {
+            $out = [];
+            try {
+                $data = json_decode((string) Database::setting(self::SETTING_PAGE_PREFIXES, $tenantId), true);
+                foreach (is_array($data) ? $data : [] as $id => $route) {
+                    $prefix = self::normalizePrefix($route);
+                    if ($prefix !== null) {
+                        $out[(int) $id] = $prefix;
+                    }
+                }
+            } catch (\Throwable) {
+                // No settings to read: every page follows its type.
+            }
+            self::$cache[$tenantId]['own'] = $out;
+        }
+        return self::$cache[$tenantId]['own'];
     }
 
     public static function trailingSlash(int $tenantId): bool

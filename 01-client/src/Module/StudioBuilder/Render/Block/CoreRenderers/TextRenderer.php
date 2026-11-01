@@ -59,6 +59,14 @@ final class TextRenderer implements BlockRendererInterface
         }
 
         $flow = Html::textFlow($scope, $classes);
-        return '<p' . Html::classAttr($classes) . $flow . '>' . Html::text($content) . '</p>';
+        if ($content === '' && !empty($scope->block()['dynamic']['content'])) {
+            return ''; // a tag with nothing to show
+        }
+        $text = Html::text($content);
+        $url = Html::safeUrl($scope->prop('url'));
+        if ($url !== null) {
+            $text = '<a class="sb-text__link" href="' . Html::e($url) . '"' . ($scope->bool('new_tab') ? ' target="_blank" rel="noopener noreferrer"' : '') . '>' . $text . '</a>';
+        }
+        return '<p' . Html::classAttr($classes) . $flow . '>' . $text . '</p>';
     }
 }

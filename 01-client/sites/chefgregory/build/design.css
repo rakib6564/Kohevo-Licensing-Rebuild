@@ -1,0 +1,60 @@
+/* The check of the chef's logo and bandana. */
+.cg-check { background: repeating-conic-gradient(#f7f1e6 0 25%, #1d1815 0 50%) 0 0 / 16px 16px; }
+/* The tile's picture leans in; its heading takes the accent. */
+.cg-tile .cg-pic { overflow: hidden; }
+.cg-tile img { transition: transform .5s ease; }
+.cg-tile:hover img { transform: scale(1.03); }
+.cg-tile a:hover { color: #b4471d; }
+.cg-link a:hover, a.cg-link:hover { text-decoration: underline; text-underline-offset: 4px; }
+.cg-btn a, a.cg-btn { transition: background-color .2s, color .2s; }
+.cg-btn:hover a, a.cg-btn:hover { background-color: #8f3614 !important; border-color: #8f3614 !important; color: #fff !important; }
+.cg-btn--light:hover a, a.cg-btn--light:hover { background-color: #f7f1e6 !important; border-color: #f7f1e6 !important; color: #1d1815 !important; }
+.cg-btn--dark:hover a, a.cg-btn--dark:hover { background-color: #1d1815 !important; border-color: #1d1815 !important; color: #f7f1e6 !important; }
+/* The photo beside the menu card takes the card's full height. */
+@media (min-width: 768px) {
+  .cg-fill { position: relative; }
+  .cg-fill .cg-pic { position: absolute; inset: 0; height: 100% !important; }
+  .cg-fill .cg-pic img, .cg-fill .cg-pic picture { display: block; height: 100%; width: 100%; object-fit: cover; }
+}
+.cg-round, .cg-round img { border-radius: 50%; overflow: hidden; flex: none; }
+.cg-reviews .sb-carousel__quote, .cg-reviews .sb-carousel__author { text-align: center; }
+.cg-reviews .sb-carousel__dot { background: rgba(255, 255, 255, .4); }
+.cg-reviews .sb-carousel__dot[aria-current="true"], .cg-reviews .sb-carousel__dot.is-active, .cg-reviews .sb-carousel__dot[aria-selected="true"] { background: #fff; }
+.cg-rule hr, hr.cg-rule, .cg-rule { border-color: rgba(247, 241, 230, .18); }
+@media (max-width: 1024px) { .cg-head-cta { display: none; } }
+/* The whole header partial sticks: the top strip scrolls away, the menu bar stays. */
+.sb-site-header--partial { position: sticky; top: -35px; z-index: 50; }
+/* Inner pages. */
+.cg-prose p { margin: 0 0 1em; }
+.cg-prose p:last-child { margin-bottom: 0; }
+.cg-prose h2 { margin: 1.2em 0 .5em; color: #1d1815; font-family: 'Libre Caslon Display', serif; font-size: 34px; font-weight: 400; line-height: 1.2; }
+.cg-prose h2:first-child { margin-top: 0; }
+.cg-prose ul { margin: 0 0 1em; padding-left: 1.2em; }
+.cg-prose img { display: block; width: 100%; height: 380px; object-fit: cover; }
+.cg-prose blockquote { margin: 1em 0; padding-left: 22px; border-left: 3px solid #b4471d; }
+.cg-prose blockquote p:first-child { color: #1d1815; font-family: 'Libre Caslon Display', serif; font-size: 26px; line-height: 1.3; }
+@media (max-width: 767px) { .cg-prose h2 { font-size: 28px; } .cg-prose img { height: 220px; } }
+.cg-included ul { list-style: none; margin: 0; padding: 0; }
+.cg-included li { padding: 13px 0; border-bottom: 1px solid rgba(247, 241, 230, .2); color: #f7f1e6; }
+.cg-included li:last-child { border-bottom: 0; }
+@media (min-width: 768px) {
+  .cg-sticky { position: sticky; top: 96px; }
+  /* Seven services: the first runs the full width, six sit below it in pairs of three. */
+  .cg-svc-grid .sb-query-loop__item:first-child { grid-column: 1 / -1; }
+  .cg-svc-grid .sb-query-loop__item:first-child .cg-card-img { height: 400px !important; }
+}
+/* The inquiry form. */
+.cg-form .sb-form { row-gap: 18px; }
+.cg-form input, .cg-form select, .cg-form textarea { width: 100%; box-sizing: border-box; background: #fff; border: 1px solid #c9b99d; border-radius: 0; padding: 13px 14px; font: inherit; color: #1d1815; }
+.cg-form input:focus, .cg-form select:focus, .cg-form textarea:focus { outline: 2px solid #b4471d; outline-offset: 0; border-color: #b4471d; }
+.cg-form .sb-form-group > label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 600; color: #1d1815; }
+.cg-form button[type="submit"] { background: #b4471d; color: #fff; border: 0; border-radius: 0; padding: 16px 30px; font-size: 14px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; cursor: pointer; }
+.cg-form button[type="submit"]:hover { background: #8f3614; }
+/* Recipes read as plain lists. */
+.cg-recipe ul { margin: 8px 0 0; padding-left: 20px; }
+.cg-recipe li { margin-bottom: 4px; }
+.cg-recipe p { margin: 0 0 3px; }
+.cg-price { white-space: nowrap; flex: none; }
+.cg-toc ul { list-style: none; margin: 0; padding: 0; }
+.cg-toc li { padding: 11px 0; border-bottom: 1px solid #d9ccb5; }
+.cg-form .sb-block--core-heading { flex: 0 0 100%; width: 100%; }

@@ -20,7 +20,7 @@ final class StudioReservedRoutes
         '403', '404', '500',
         'account', 'admin', 'ai-assistant', 'api', 'assets', 'audit', 'bin', 'book', 'booking',
         'claude', 'coaching', 'config', 'cron', 'customer', 'data', 'db', 'db-backups', 'dev-server',
-        'docs', 'forms', 'includes', 'index', 'install', 'lang', 'licensing', 'login', 'logout',
+        'docs', 'feed', 'forms', 'includes', 'index', 'install', 'lang', 'licensing', 'login', 'logout',
         'mcp', 'mcp-gateway', 'media', 'media-library', 'member', 'membership', 'multilang-translate',
         'plugins', 'preview', 'public', 'register', 'robots', 'route', 'shop', 'sitemap', 'src',
         'storefront', 'stripe-payment', 'studio', 'studio-builder', 'templates', 'tests', 'uploads',

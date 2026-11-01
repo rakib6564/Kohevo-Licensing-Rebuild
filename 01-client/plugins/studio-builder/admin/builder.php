@@ -36,6 +36,12 @@ if ($sbPageId === false || $sbPageId === null) {
     try {
         $sbState = StudioRuntimeFactory::build()->app->loadEditorDocument(StudioActor::fromCurrentSession(), $sbPageId);
         $sbTitle = (string) $sbState['page']['title'];
+        $sbTemplateType = \Slate\Module\StudioBuilder\Meta\PageMeta::singleTemplateTypeOf($sbState);
+        $sbItemTemplate = StudioRuntimeFactory::build()->app->fieldsOnlyTemplateId(StudioActor::fromCurrentSession(), $sbPageId);
+        if ($sbItemTemplate > 0) {
+            header('Location: ' . plugin_url('studio-builder', 'admin/builder.php') . '?page=' . $sbItemTemplate . '&item=' . $sbPageId);
+            exit;
+        }
         unset($sbState);
     } catch (StudioException $e) {
         $sbStatus = $e->httpStatus();
@@ -125,6 +131,15 @@ try {
                 'postType' => $pt,
                 'postTypeLabel' => (string) ($sbMetaTypes[$pt]['singular'] ?? $pt),
             ];
+            foreach (\Slate\Module\StudioBuilder\Meta\MetaFieldTypes::subfields($f) as $sub) {
+                $sbMetaFields[] = [
+                    'key' => (string) $sub['key'],
+                    'label' => (string) ($f['label'] ?? $f['key']) . ' › ' . (string) ($sub['label'] ?? $sub['key']),
+                    'type' => (string) ($sub['type'] ?? 'text'),
+                    'postType' => $pt,
+                    'postTypeLabel' => (string) ($sbMetaTypes[$pt]['singular'] ?? $pt),
+                ];
+            }
         }
     }
 } catch (\Throwable $e) {
@@ -147,8 +162,32 @@ try {
     // The dialog keeps its built-in types.
 }
 
+// The published Loop Items, for the Query Loop's dropdown.
+$sbLoopTemplates = [];
+try {
+    foreach (\Slate\Module\StudioBuilder\Meta\LoopTemplates::published(current_tenant_id()) as $sbLoop) {
+        $sbLoopTemplates[] = ['uuid' => $sbLoop['uuid'], 'title' => $sbLoop['title'], 'postType' => $sbLoop['content_type']];
+    }
+} catch (\Throwable $e) {
+    // The dropdown offers Automatic and the built-in cards.
+}
+
+// A Single template's canvas shows one of its items; these are the ones it can be switched to.
+$sbPreviewItems = [];
+try {
+    if (($sbTemplateType ?? '') !== '') {
+        $sbPreviewItems = \Slate\Module\StudioBuilder\Meta\PageMeta::previewItems(current_tenant_id(), $sbTemplateType);
+    }
+} catch (\Throwable $e) {
+    // The canvas shows the newest item.
+}
+
 $sbBoot = [
     'pageId'     => $sbPageId,
+    'previewItems' => $sbPreviewItems,
+    'loopTemplates' => $sbLoopTemplates,
+    'iconsUrl' => plugin_url('studio-builder', 'assets/icons/icons.json'),
+    'previewItem'  => (int) ($_GET['item'] ?? 0),
     'allPages'   => $sbAllPages,
     'apiUrl'     => plugin_url('studio-builder', 'admin/api.php'),
     'canvasUrl'  => plugin_url('studio-builder', 'admin/canvas.php'),
@@ -159,6 +198,7 @@ $sbBoot = [
     'canvasSandbox' => StudioCanvasPolicy::IFRAME_SANDBOX,
     'mediaPicker'   => $sbMediaPicker,
     'metaFields'    => $sbMetaFields,
+    'dynamicTags'   => \Slate\Module\StudioBuilder\Render\Dynamic\DynamicTags::forEditor(),
     'contentTypes'  => $sbContentTypes,
     'postTypes'     => $sbPostTypes,
     'mediaApiUrl'   => plugin_url('studio-builder', 'admin/media-api.php'),
@@ -757,7 +797,47 @@ $sbBoot = [
         'theme_source_branding' => __('studio_ui_theme_source_branding', 'from branding'),
         'theme_source_studio' => __('studio_ui_theme_source_studio', 'Studio override'),
         'theme_reset' => __('studio_ui_theme_reset', 'Use inherited'),
+        'preview_item' => __('studio_ui_preview_item', 'Preview with'),
+        'section_icon_list' => __('studio_ui_section_icon_list', 'List & icon'),
+        'icon_library' => __('studio_ui_icon_library', 'Icon Library'),
+        'icon_search' => __('studio_ui_icon_search', 'Search all icons'),
+        'icon_all' => __('studio_ui_icon_all', 'All'),
+        'icon_none' => __('studio_ui_icon_none', 'No icon'),
+        'icon_none_found' => __('studio_ui_icon_none_found', 'No icon has that name.'),
+        'icon_remove' => __('studio_ui_icon_remove', 'Remove'),
+        'icon_show_more' => __('studio_ui_icon_show_more', 'Show more'),
+        'icon_cat_food' => __('studio_ui_icon_cat_food', 'Food & drink'),
+        'icon_cat_social' => __('studio_ui_icon_cat_social', 'Social'),
+        'icon_cat_arrows' => __('studio_ui_icon_cat_arrows', 'Arrows'),
+        'icon_cat_communication' => __('studio_ui_icon_cat_communication', 'Communication'),
+        'icon_cat_people' => __('studio_ui_icon_cat_people', 'People'),
+        'icon_cat_business' => __('studio_ui_icon_cat_business', 'Business & money'),
+        'icon_cat_media' => __('studio_ui_icon_cat_media', 'Media'),
+        'icon_cat_places' => __('studio_ui_icon_cat_places', 'Places & travel'),
+        'icon_cat_time' => __('studio_ui_icon_cat_time', 'Date & time'),
+        'icon_cat_weather' => __('studio_ui_icon_cat_weather', 'Weather'),
+        'icon_cat_interface' => __('studio_ui_icon_cat_interface', 'Interface'),
+        'loop_template_auto' => __('studio_ui_loop_template_auto', 'Automatic (by content type)'),
+        'loop_template_none' => __('studio_ui_loop_template_none', 'Built-in cards'),
+        'preview_item_note' => __('studio_ui_preview_item_note', 'Design changes here apply to every item.'),
+        'preview_item_fields' => __('studio_ui_preview_item_fields', 'Edit this item’s content'),
+        'when_field' => __('studio_ui_when_field', 'Show only if this field has a value'),
+        'when_field_always' => __('studio_ui_when_field_always', 'Always show'),
         'meta_field_none' => __('studio_ui_meta_field_none', 'Choose a field…'),
+        'dyn_tags' => __('studio_ui_dyn_tags', 'Dynamic tags'),
+        'dyn_search' => __('studio_ui_dyn_search', 'Search tags'),
+        'dyn_none' => __('studio_ui_dyn_none', 'No tag matches.'),
+        'dyn_fields_of' => __('studio_ui_dyn_fields_of', '{type} fields'),
+        'dyn_change' => __('studio_ui_dyn_change', 'Change tag'),
+        'dyn_settings' => __('studio_ui_dyn_settings', 'Tag settings'),
+        'dyn_clear' => __('studio_ui_dyn_clear', 'Remove tag'),
+        'dyn_field' => __('studio_ui_dyn_field', 'Field'),
+        'dyn_format' => __('studio_ui_dyn_format', 'Format'),
+        'dyn_format_default' => __('studio_ui_dyn_format_default', 'Default'),
+        'dyn_before' => __('studio_ui_dyn_before', 'Before'),
+        'dyn_after' => __('studio_ui_dyn_after', 'After'),
+        'dyn_fallback' => __('studio_ui_dyn_fallback', 'Fallback'),
+        'dyn_own_fallback' => __('studio_ui_dyn_own_fallback', 'The value set here shows when the tag is empty.'),
         'post_type_all' => __('studio_ui_post_type_all', 'All posts'),
         'post_type_missing' => __('studio_ui_post_type_missing', 'Deleted type ({key})'),
         'meta_field_missing' => __('studio_ui_meta_field_missing', '{key} (no longer defined)'),
@@ -1092,6 +1172,12 @@ $sbBoot = [
         'media_upload' => __('studio_ui_media_upload', 'Upload an image'),
         'media_uploading' => __('studio_ui_media_uploading', 'Uploading…'),
         'media_use' => __('studio_ui_media_use', 'Use this image'),
+        'media_use_several' => __('studio_ui_media_use_several', 'Add {n} images'),
+        'gallery_selected' => __('studio_ui_gallery_selected', '{n} images selected'),
+        'gallery_add' => __('studio_ui_gallery_add', 'Add images'),
+        'gallery_clear' => __('studio_ui_gallery_clear', 'Clear all'),
+        'gallery_clear_confirm' => __('studio_ui_gallery_clear_confirm', 'Remove every image from this gallery?'),
+        'gallery_edit_image' => __('studio_ui_gallery_edit_image', 'Edit image'),
         'media_replace' => __('studio_ui_media_replace', 'Replace image'),
         'media_empty' => __('studio_ui_media_empty', 'No images yet. Upload one to start.'),
         'media_none_found' => __('studio_ui_media_none_found', 'No image matches your search.'),

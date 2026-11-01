@@ -30,6 +30,18 @@ final class PublicResponse
     }
 
     /** @param array<string, string> $headers */
+    public static function unavailable(array $headers, string $body): self
+    {
+        return new self(503, $headers, $body);
+    }
+
+    /** @param array<string, string> $headers replacing any of the same name */
+    public function withHeaders(array $headers): self
+    {
+        return new self($this->status, $headers + $this->headers, $this->body);
+    }
+
+    /** @param array<string, string> $headers */
     public static function notModified(array $headers): self
     {
         return new self(304, $headers, '');

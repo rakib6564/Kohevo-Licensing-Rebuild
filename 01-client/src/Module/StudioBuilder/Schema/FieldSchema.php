@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Schema;
 
+use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
 use Slate\Module\StudioBuilder\Document\CanonicalJson;
 
@@ -478,6 +479,9 @@ final class FieldSchema implements \JsonSerializable
                 }
                 if ($len < $minLen) {
                     $errors[] = ValidationResult::issue($path, 'min_length_not_met', "String is shorter than minimum length of {$minLen}.");
+                }
+                if (($field['format'] ?? null) === 'icon' && $val !== '' && $val !== 'none' && !IconLibrary::has($val)) {
+                    $errors[] = ValidationResult::issue($path, 'unknown_icon', 'That icon is not in the library.');
                 }
                 if (isset($field['pattern']) && is_string($field['pattern']) && preg_match($field['pattern'], $val) !== 1) {
                     $errors[] = ValidationResult::issue($path, 'pattern_mismatch', 'String does not match required pattern.');

@@ -150,7 +150,7 @@ final class BlockRegistry
             category: 'content',
             icon: 'heading',
             schema: FieldSchema::define([
-                ['key' => 'text', 'type' => 'string', 'label' => 'Heading Text', 'required' => true, 'default' => 'Section Heading', 'max_length' => 300],
+                ['key' => 'text', 'type' => 'text', 'label' => 'Title', 'required' => true, 'default' => 'Section Heading', 'max_length' => 300],
                 // Title, Link, HTML Tag, then the highlight, in the order the reference editor shows them.
                 ['key' => 'url', 'type' => 'url', 'label' => 'Link', 'required' => false, 'default' => null],
                 ['key' => 'new_tab', 'type' => 'boolean', 'label' => 'Open in a new tab', 'required' => false, 'default' => false],
@@ -224,7 +224,7 @@ final class BlockRegistry
                 ['key' => 'variant', 'type' => 'enum', 'label' => 'Button Variant', 'required' => false, 'allowed_values' => ['primary', 'secondary', 'outline', 'ghost'], 'default' => 'primary'],
                 ['key' => 'size', 'type' => 'enum', 'label' => 'Button Size', 'required' => false, 'allowed_values' => ['sm', 'md', 'lg'], 'default' => 'md'],
                 ['key' => 'full_width', 'type' => 'boolean', 'label' => 'Full Width', 'required' => false, 'default' => false],
-                ['key' => 'icon', 'type' => 'enum', 'label' => 'Icon', 'required' => false, 'allowed_values' => ['none', ...IconLibrary::names()], 'default' => 'none'],
+                ['key' => 'icon', 'type' => 'string', 'format' => 'icon', 'max_length' => 40, 'pattern' => '/^[a-z0-9-]{0,40}$/', 'label' => 'Icon', 'required' => false, 'default' => 'none'],
                 ['key' => 'icon_position', 'type' => 'enum', 'label' => 'Icon Position', 'required' => false, 'allowed_values' => ['before', 'after'], 'default' => 'before'],
                 ['key' => 'icon_spacing', 'type' => 'number', 'label' => 'Icon Spacing', 'required' => false, 'default' => 8, 'min' => 0, 'max' => 50, 'integer_only' => true],
             ]),
@@ -410,6 +410,8 @@ final class BlockRegistry
             icon: 'pilcrow',
             schema: FieldSchema::define([
                 ['key' => 'content', 'type' => 'text', 'label' => 'Text Content', 'required' => false, 'default' => '', 'max_length' => 5000],
+                ['key' => 'url', 'type' => 'url', 'label' => 'Link', 'required' => false, 'default' => null],
+                ['key' => 'new_tab', 'type' => 'boolean', 'label' => 'Open in a new tab', 'required' => false, 'default' => false],
                 ['key' => 'size', 'type' => 'enum', 'label' => 'Size', 'required' => false, 'allowed_values' => ['xs', 'sm', 'base', 'lg', 'xl', 'lead', 'inherit'], 'default' => 'base'],
                 ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['left', 'center', 'right', 'justify'], 'default' => 'left'],
                 ['key' => 'color_token', 'type' => 'token_ref', 'label' => 'Color Token', 'required' => false, 'default' => null],
@@ -452,6 +454,7 @@ final class BlockRegistry
                 ['key' => 'show_excerpt', 'type' => 'boolean', 'label' => 'Show Excerpt', 'required' => false, 'default' => true],
                 ['key' => 'read_more_text', 'type' => 'string', 'label' => 'Button Text', 'required' => false, 'default' => 'Read More', 'max_length' => 80],
                 ['key' => 'enable_pagination', 'type' => 'boolean', 'label' => 'Pagination', 'required' => false, 'default' => true],
+                ['key' => 'loop_template', 'type' => 'string', 'label' => 'Loop Item', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'loop_template', 'pattern' => '/^[a-z0-9-]{0,64}$/'],
                 ['key' => 'empty_message', 'type' => 'string', 'label' => 'Empty Message', 'required' => false, 'default' => 'No posts found.', 'max_length' => 200],
             ]),
             allowsChildren: true,
@@ -469,6 +472,7 @@ final class BlockRegistry
             category: 'theme',
             icon: 'heading',
             schema: FieldSchema::define([
+                ['key' => 'link_to_post', 'type' => 'boolean', 'label' => 'Link to the item', 'required' => false, 'default' => false],
                 ['key' => 'level', 'type' => 'enum', 'label' => 'Heading Level', 'required' => false, 'allowed_values' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], 'default' => 'h1'],
                 ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['left', 'center', 'right'], 'default' => 'left'],
                 ['key' => 'text', 'type' => 'string', 'label' => 'Fallback Title', 'required' => false, 'default' => '', 'max_length' => 255],
@@ -526,8 +530,131 @@ final class BlockRegistry
                 ['key' => 'show_label', 'type' => 'boolean', 'label' => 'Show the field name', 'required' => false, 'default' => false],
                 ['key' => 'fallback', 'type' => 'string', 'label' => 'Text when empty', 'required' => false, 'default' => '', 'max_length' => 255],
                 ['key' => 'tag', 'type' => 'enum', 'label' => 'HTML tag', 'required' => false, 'allowed_values' => ['div', 'p', 'span', 'h2', 'h3', 'h4'], 'default' => 'div'],
+                ['key' => 'link_to_post', 'type' => 'boolean', 'label' => 'Link to the item', 'required' => false, 'default' => false],
+                ['key' => 'fit', 'type' => 'enum', 'label' => 'Image fit', 'required' => false, 'allowed_values' => ['auto', 'cover', 'contain'], 'default' => 'auto'],
             ]),
             allowsChildren: false,
+            allowedBindingProviders: [],
+        ));
+
+        // core.dual_heading — a coloured part between two plain parts
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.dual_heading',
+            version: 1,
+            label: 'Dual Color Heading',
+            title: 'Dual color heading',
+            description: 'A heading with a coloured part',
+            category: 'content',
+            icon: 'heading',
+            schema: FieldSchema::define([
+                ['key' => 'before', 'type' => 'text', 'label' => 'Before text', 'required' => false, 'default' => 'Heading with', 'max_length' => 300],
+                ['key' => 'colored', 'type' => 'text', 'label' => 'Colored text', 'required' => false, 'default' => 'colored', 'max_length' => 300],
+                ['key' => 'after', 'type' => 'text', 'label' => 'After text', 'required' => false, 'default' => 'words', 'max_length' => 300],
+                ['key' => 'url', 'type' => 'url', 'label' => 'Link', 'required' => false, 'default' => null],
+                ['key' => 'new_tab', 'type' => 'boolean', 'label' => 'Open in a new tab', 'required' => false, 'default' => false],
+                ['key' => 'level', 'type' => 'enum', 'label' => 'HTML Tag', 'required' => false, 'allowed_values' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'span', 'p'], 'default' => 'h2'],
+            ]),
+            allowsChildren: false,
+        ));
+
+        // core.icon_list — items with an icon and a link
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.icon_list',
+            version: 1,
+            label: 'Icon List',
+            title: 'Icon list',
+            description: 'A list with an icon and a link on each item',
+            category: 'content',
+            icon: 'list-check',
+            schema: FieldSchema::define([
+                ['key' => 'layout', 'type' => 'enum', 'label' => 'Layout', 'required' => false, 'allowed_values' => ['list', 'inline'], 'default' => 'list'],
+                [
+                    'key'        => 'items',
+                    'type'       => 'repeater',
+                    'label'      => 'Items',
+                    'required'   => false,
+                    'max_items'  => 100,
+                    'default'    => [['text' => 'List item', 'icon' => 'check'], ['text' => 'List item', 'icon' => 'x'], ['text' => 'List item', 'icon' => 'circle-dot']],
+                    'item_schema' => FieldSchema::define([
+                        ['key' => 'text', 'type' => 'string', 'label' => 'Text', 'required' => false, 'default' => '', 'max_length' => 300],
+                        ['key' => 'icon', 'type' => 'string', 'format' => 'icon', 'max_length' => 40, 'pattern' => '/^[a-z0-9-]{0,40}$/', 'label' => 'Icon', 'required' => false, 'default' => 'check'],
+                        ['key' => 'url', 'type' => 'url', 'label' => 'Link', 'required' => false, 'default' => null],
+                        ['key' => 'new_tab', 'type' => 'boolean', 'label' => 'Open in a new tab', 'required' => false, 'default' => false],
+                    ]),
+                ],
+                ['key' => 'apply_link', 'type' => 'enum', 'label' => 'Apply Link On', 'required' => false, 'allowed_values' => ['full', 'inline'], 'default' => 'full'],
+                ['key' => 'space_between', 'type' => 'number', 'label' => 'Space Between', 'required' => false, 'per_device' => true, 'min' => 0, 'max' => 100, 'integer_only' => true, 'default' => 0],
+                ['key' => 'list_align', 'type' => 'enum', 'label' => 'List Alignment', 'required' => false, 'per_device' => true, 'allowed_values' => ['left', 'center', 'right'], 'default' => 'left'],
+                ['key' => 'divider', 'type' => 'boolean', 'label' => 'Divider', 'required' => false, 'default' => false],
+                ['key' => 'icon_size', 'type' => 'number', 'label' => 'Icon Size', 'required' => false, 'per_device' => true, 'min' => 6, 'max' => 100, 'integer_only' => true, 'default' => 16],
+                ['key' => 'icon_gap', 'type' => 'number', 'label' => 'Icon Gap', 'required' => false, 'per_device' => true, 'min' => 0, 'max' => 50, 'integer_only' => true, 'default' => 8],
+                ['key' => 'icon_h_align', 'type' => 'enum', 'label' => 'Horizontal Alignment', 'required' => false, 'allowed_values' => ['left', 'center', 'right'], 'default' => 'left'],
+                ['key' => 'icon_v_align', 'type' => 'enum', 'label' => 'Vertical Alignment', 'required' => false, 'allowed_values' => ['top', 'center', 'bottom'], 'default' => 'center'],
+                ['key' => 'icon_offset', 'type' => 'number', 'label' => 'Adjust Vertical Position', 'required' => false, 'per_device' => true, 'min' => -15, 'max' => 15, 'integer_only' => true, 'default' => 0],
+            ]),
+            allowsChildren: false,
+            allowedBindingProviders: [],
+        ));
+
+        // theme.post_image, theme.post_excerpt, theme.post_link — the item a Loop Item is drawing
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'theme.post_image',
+            version: 1,
+            label: 'Post Image',
+            title: 'Post image',
+            description: 'The item\'s featured image, in a Loop Item',
+            category: 'theme',
+            icon: 'image',
+            schema: FieldSchema::define([
+                ['key' => 'link_to_post', 'type' => 'boolean', 'label' => 'Link to the item', 'required' => false, 'default' => true],
+            ]),
+            allowsChildren: false,
+            allowedBindingProviders: [],
+        ));
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'theme.post_excerpt',
+            version: 1,
+            label: 'Post Excerpt',
+            title: 'Post excerpt',
+            description: 'The item\'s short description, in a Loop Item',
+            category: 'theme',
+            icon: 'list-check',
+            schema: FieldSchema::define([]),
+            allowsChildren: false,
+            allowedBindingProviders: [],
+        ));
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'theme.post_link',
+            version: 1,
+            label: 'Post Link',
+            title: 'Post link',
+            description: 'A link to the item, in a Loop Item',
+            category: 'theme',
+            icon: 'list-check',
+            schema: FieldSchema::define([
+                ['key' => 'text', 'type' => 'string', 'label' => 'Link text', 'required' => false, 'default' => 'Read more', 'max_length' => 80],
+            ]),
+            allowsChildren: false,
+            allowedBindingProviders: [],
+        ));
+
+        // theme.repeater — the rows of one repeater field; children repeat once per row
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'theme.repeater',
+            version: 1,
+            label: 'Repeater',
+            title: 'Repeater',
+            description: 'The rows of a repeater field',
+            category: 'theme',
+            icon: 'list-check',
+            schema: FieldSchema::define([
+                ['key' => 'field', 'type' => 'string', 'label' => 'Field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
+                ['key' => 'display', 'type' => 'enum', 'label' => 'Show as', 'required' => false, 'allowed_values' => ['list', 'accordion'], 'default' => 'list'],
+                ['key' => 'title_field', 'type' => 'string', 'label' => 'Title sub-field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
+                ['key' => 'body_field', 'type' => 'string', 'label' => 'Text sub-field', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'meta_field', 'pattern' => '/^([a-z0-9_]{1,64})?$/'],
+                ['key' => 'allow_multiple', 'type' => 'boolean', 'label' => 'Allow several open', 'required' => false, 'default' => false],
+            ]),
+            allowsChildren: true,
             allowedBindingProviders: [],
         ));
 
@@ -598,7 +725,7 @@ final class BlockRegistry
                 ['key' => 'position', 'type' => 'enum', 'label' => 'Drawer Position', 'required' => false, 'allowed_values' => ['left', 'right', 'top', 'bottom'], 'default' => 'right'],
                 ['key' => 'trigger_text', 'type' => 'string', 'label' => 'Trigger Button Text', 'required' => false, 'default' => 'Open Menu', 'max_length' => 100],
                 ['key' => 'trigger_variant', 'type' => 'enum', 'label' => 'Trigger Variant', 'required' => false, 'allowed_values' => ['primary', 'secondary', 'outline', 'ghost', 'plain'], 'default' => 'outline'],
-                ['key' => 'trigger_icon', 'type' => 'enum', 'label' => 'Trigger Icon', 'required' => false, 'allowed_values' => ['none', ...IconLibrary::names()], 'default' => 'none'],
+                ['key' => 'trigger_icon', 'type' => 'string', 'format' => 'icon', 'max_length' => 40, 'pattern' => '/^[a-z0-9-]{0,40}$/', 'label' => 'Trigger Icon', 'required' => false, 'default' => 'none'],
                 ['key' => 'trigger_icon_size', 'type' => 'number', 'label' => 'Trigger Icon Size', 'required' => false, 'default' => 24, 'min' => 12, 'max' => 64, 'integer_only' => true],
                 ['key' => 'trigger_show_text', 'type' => 'boolean', 'label' => 'Show the trigger text', 'required' => false, 'default' => true],
             ]),
@@ -668,23 +795,40 @@ final class BlockRegistry
             category: 'media',
             icon: 'gallery',
             schema: FieldSchema::define([
-                ['key' => 'columns', 'type' => 'enum', 'label' => 'Columns', 'required' => false, 'per_device' => true, 'allowed_values' => ['2', '3', '4', '6'], 'default' => '3'],
-                ['key' => 'gap', 'type' => 'enum', 'label' => 'Gap', 'required' => false, 'allowed_values' => ['none', 'xs', 'sm', 'md', 'lg'], 'default' => 'md'],
-                ['key' => 'aspect_ratio', 'type' => 'enum', 'label' => 'Aspect Ratio', 'required' => false, 'allowed_values' => ['auto', '1:1', '4:3', '16:9'], 'default' => '1:1'],
-                ['key' => 'rounded', 'type' => 'boolean', 'label' => 'Rounded Corners', 'required' => false, 'default' => true],
                 [
                     'key'         => 'images',
                     'type'        => 'repeater',
                     'label'       => 'Gallery Images',
                     'required'    => false,
                     'default'     => [],
-                    'max_items'   => 50,
+                    'max_items'   => 300,
                     'item_schema' => FieldSchema::define([
                         ['key' => 'url', 'type' => 'url', 'label' => 'Image URL', 'required' => true, 'max_length' => 1000],
                         ['key' => 'alt', 'type' => 'string', 'label' => 'Alt Text', 'required' => false, 'default' => '', 'max_length' => 200],
                         ['key' => 'caption', 'type' => 'string', 'label' => 'Caption', 'required' => false, 'default' => '', 'max_length' => 255],
+                        ['key' => 'category', 'type' => 'string', 'label' => 'Category', 'required' => false, 'default' => '', 'max_length' => 60],
+                        ['key' => 'width', 'type' => 'number', 'label' => 'Width (px)', 'required' => false, 'min' => 0, 'max' => 20000, 'integer_only' => true],
+                        ['key' => 'height', 'type' => 'number', 'label' => 'Height (px)', 'required' => false, 'min' => 0, 'max' => 20000, 'integer_only' => true],
                     ]),
                 ],
+                ['key' => 'order', 'type' => 'enum', 'label' => 'Order By', 'required' => false, 'allowed_values' => ['default', 'random'], 'default' => 'default'],
+                ['key' => 'lazy_load', 'type' => 'boolean', 'label' => 'Lazy Load', 'required' => false, 'default' => true],
+                ['key' => 'layout', 'type' => 'enum', 'label' => 'Layout', 'required' => false, 'allowed_values' => ['grid', 'masonry', 'justified', 'mosaic', 'slider'], 'default' => 'grid'],
+                ['key' => 'columns', 'type' => 'enum', 'label' => 'Columns', 'required' => false, 'per_device' => true, 'allowed_values' => ['1', '2', '3', '4', '5', '6'], 'default' => '3'],
+                ['key' => 'spacing', 'type' => 'number', 'label' => 'Spacing', 'required' => false, 'per_device' => true, 'min' => 0, 'max' => 100, 'integer_only' => true],
+                ['key' => 'gap', 'type' => 'enum', 'label' => 'Gap', 'required' => false, 'allowed_values' => ['none', 'xs', 'sm', 'md', 'lg'], 'default' => 'md'],
+                ['key' => 'aspect_ratio', 'type' => 'enum', 'label' => 'Aspect Ratio', 'required' => false, 'allowed_values' => ['auto', '1:1', '4:3', '3:2', '16:9', '3:4', '4:5'], 'default' => '1:1'],
+                ['key' => 'row_height', 'type' => 'number', 'label' => 'Row Height (justified)', 'required' => false, 'default' => 240, 'min' => 120, 'max' => 480, 'integer_only' => true],
+                ['key' => 'rounded', 'type' => 'boolean', 'label' => 'Rounded Corners', 'required' => false, 'default' => true],
+                ['key' => 'hover', 'type' => 'enum', 'label' => 'Hover Effect', 'required' => false, 'allowed_values' => ['none', 'zoom', 'lift', 'dim', 'color'], 'default' => 'none'],
+                ['key' => 'captions', 'type' => 'enum', 'label' => 'Captions', 'required' => false, 'allowed_values' => ['below', 'hover', 'none'], 'default' => 'below'],
+                ['key' => 'link_to', 'type' => 'enum', 'label' => 'Link', 'required' => false, 'allowed_values' => ['lightbox', 'file', 'none'], 'default' => 'lightbox'],
+                ['key' => 'overlay_text', 'type' => 'enum', 'label' => 'Overlay Text', 'required' => false, 'allowed_values' => ['caption', 'alt'], 'default' => 'caption'],
+                ['key' => 'pagination', 'type' => 'enum', 'label' => 'Pagination', 'required' => false, 'allowed_values' => ['none', 'load_more', 'infinite'], 'default' => 'none'],
+                ['key' => 'per_page', 'type' => 'number', 'label' => 'Images per Page', 'required' => false, 'default' => 12, 'min' => 2, 'max' => 100, 'integer_only' => true],
+                ['key' => 'load_more_text', 'type' => 'string', 'label' => 'Load More Text', 'required' => false, 'default' => 'Load more', 'max_length' => 60],
+                ['key' => 'show_filters', 'type' => 'boolean', 'label' => 'Show Category Filters', 'required' => false, 'default' => false],
+                ['key' => 'all_label', 'type' => 'string', 'label' => 'All Filter Label', 'required' => false, 'default' => 'All', 'max_length' => 40],
             ]),
             allowsChildren: false,
         ));
@@ -922,7 +1066,7 @@ final class BlockRegistry
             category: 'media',
             icon: 'star',
             schema: FieldSchema::define([
-                ['key' => 'name', 'type' => 'enum', 'label' => 'Icon', 'required' => false, 'allowed_values' => IconLibrary::names(), 'default' => 'star'],
+                ['key' => 'name', 'type' => 'string', 'format' => 'icon', 'max_length' => 40, 'pattern' => '/^[a-z0-9-]{0,40}$/', 'label' => 'Icon', 'required' => false, 'default' => 'star'],
                 ['key' => 'view', 'type' => 'enum', 'label' => 'View', 'required' => false, 'allowed_values' => ['default', 'stacked', 'framed'], 'default' => 'default'],
                 ['key' => 'shape', 'type' => 'enum', 'label' => 'Shape', 'required' => false, 'allowed_values' => ['circle', 'square'], 'default' => 'circle'],
                 ['key' => 'url', 'type' => 'url', 'label' => 'Link', 'required' => false],
@@ -964,6 +1108,7 @@ final class BlockRegistry
                     'max_items'   => 30,
                     'item_schema' => FieldSchema::define([
                         ['key' => 'text', 'type' => 'string', 'label' => 'Text', 'required' => true, 'max_length' => 300],
+                        ['key' => 'url', 'type' => 'url', 'label' => 'Link', 'required' => false, 'default' => null],
                     ]),
                 ],
             ]),

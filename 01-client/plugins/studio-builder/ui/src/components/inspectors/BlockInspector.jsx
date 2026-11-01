@@ -11,6 +11,8 @@
 import { useEffect, useState } from 'react';
 import { useEditor, useEngineState } from '../EditorContext.jsx';
 import { FieldControl, ObjectFields, TokenSelect } from '../fields/FieldControl.jsx';
+import { DynamicContext } from '../fields/DynamicControl.jsx';
+import { moveRowTags, withTag } from '../../core/dynamicTags.mjs';
 import { presentersFor, layoutOwnedProps } from '../../core/propPresenters.mjs';
 import { ResponsiveSelect, VisibilityControls } from './controls.jsx';
 import { StyleControls } from './StyleControls.jsx';
@@ -109,6 +111,10 @@ export function BlockInspector({ info }) {
     if (hasAlignProp && alignPropBlocks(props)) save(ops.updateBlockProps(block.id, { ...props, align: 'left' }));
     saveStyle({ ...style, align: Object.keys(align).length ? align : null });
   };
+
+  const dynamicMap = asObject(block.dynamic);
+  const saveDynamic = (next) => save(ops.updateBlockDynamic(block.id, next));
+  const dynamic = { map: dynamicMap, set: (path, config) => saveDynamic(withTag(dynamicMap, path, config)), moveRows: (path, order) => { const next = moveRowTags(dynamicMap, path, order); if (JSON.stringify(next) !== JSON.stringify(dynamicMap)) saveDynamic(next); } };
 
   const sections = {
     content: () => (
@@ -324,6 +330,17 @@ export function BlockInspector({ info }) {
         {sections.shadow()}
       </>
     ),
+    // An Icon List's sizes and spacing, in the order of the reference; its colours, type and hover are under Parts.
+    icon_list_style: () => (
+      <ObjectFields
+        schema={asList(def.field_schema).filter((f) => ['space_between', 'list_align', 'divider', 'icon_size', 'icon_gap', 'icon_h_align', 'icon_v_align', 'icon_offset'].includes(f.key))}
+        value={props}
+        onChange={(next) => save(ops.updateBlockProps(block.id, next))}
+        manifest={manifest}
+        blockType={block.type}
+        device={deviceScope}
+      />
+    ),
     // An Icon's one Style section: its primary colour per state, then the frame's secondary colour, size, padding, rotation and border.
     icon_style: () => (
       <>
@@ -446,6 +463,7 @@ export function BlockInspector({ info }) {
   }
 
   return (
+    <DynamicContext.Provider value={dynamic}>
     <InspectorShell
       idPrefix={idPrefix}
       node={block}
@@ -455,6 +473,7 @@ export function BlockInspector({ info }) {
       footer={<InspectorBar block={block} label={def.label} />}
       renderSection={(id) => (sections[id] ? sections[id]() : null)}
     />
+    </DynamicContext.Provider>
   );
 }
 

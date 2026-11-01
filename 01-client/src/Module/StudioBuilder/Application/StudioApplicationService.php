@@ -87,7 +87,9 @@ use Slate\Module\StudioBuilder\Document\DocumentValidator;
 use Slate\Module\StudioBuilder\Document\ElementCss;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
+use Slate\Module\StudioBuilder\Meta\LoopTemplates;
 use Slate\Module\StudioBuilder\Meta\PageMeta;
+use Slate\Module\StudioBuilder\Provider\PostsProvider;
 use Slate\Module\StudioBuilder\Domain\StudioTemplate;
 use Slate\Module\StudioBuilder\Exception\StudioAuthenticationException;
 use Slate\Module\StudioBuilder\Exception\StudioAuthorizationException;
@@ -962,6 +964,21 @@ final class StudioApplicationService
         ];
     }
 
+    /**
+     * The Single template to open for an item with no blocks of its own, whose content is all in its fields, or 0. There
+     * is nothing to edit on the item's own canvas, so the builder opens the template, showing that item.
+     */
+    public function fieldsOnlyTemplateId(StudioActor $actor, int $pageId): int
+    {
+        $tenantId = $this->authorize($actor, StudioPermissions::VIEW);
+        $template = $this->layoutTemplate($actor, $pageId);
+        if ($template === null) {
+            return 0;
+        }
+        [, $document] = $this->currentDocument($pageId);
+        return ($document['containers'] ?? []) === [] && PageMeta::read($tenantId, $pageId)['type'] !== '' ? $template['id'] : 0;
+    }
+
     // ── Design tokens ───────────────────────────────────────────────────────
 
     /**
@@ -1578,12 +1595,27 @@ final class StudioApplicationService
      * Render the working draft for the (Phase 5) builder canvas: editor node
      * metadata included, never cached or indexed. Requires studio-builder.edit.
      */
-    public function renderForEditor(StudioActor $actor, int $pageId): RenderResult
+    public function renderForEditor(StudioActor $actor, int $pageId, int $previewItem = 0): RenderResult
     {
         $tenantId = $this->authorize($actor, StudioPermissions::EDIT);
         $renderer = $this->requireRenderer();
         [$page, $revision] = $this->loadPageRevision($pageId, null);
-        return $renderer->renderRevision($page, $revision, RenderContext::forEditor($tenantId, $renderer->siteContext(), $actor));
+        return $renderer->renderRevision($page, $revision, $this->withPreviewItem(RenderContext::forEditor($tenantId, $renderer->siteContext(), $actor), $revision, $previewItem));
+    }
+
+    /** A Single template on the canvas shows a real item of its content type, not empty fields. */
+    private function withPreviewItem(RenderContext $context, array $revision, int $previewItem): RenderContext
+    {
+        $type = PageMeta::singleTemplateType(CanonicalJson::decode((string) $revision['document_json']));
+        $item = $type === '' ? null : PageMeta::previewItem($context->tenantId, $type, $previewItem);
+        if ($item === null) {
+            return $context;
+        }
+        // The card blocks read the item's link, image and excerpt, which the posts provider works out.
+        $tenants = new TenantContext();
+        $rows = $tenants->runAs($context->tenantId, static fn(): array => (new PostsProvider())->execute($tenants, ['source' => 'posts', 'content_type' => $type, 'limit' => 100]));
+        $row = array_values(array_filter($rows, static fn(array $r): bool => (int) $r['id'] === $item['id']))[0] ?? ['title' => $item['title']];
+        return $context->withAttributes(LoopTemplates::attributes($row) + ['meta_page_id' => $item['id']]);
     }
 
     /**
@@ -1615,8 +1647,9 @@ final class StudioApplicationService
         [$page, $revision] = $this->loadPageRevision($pageId, null);
         $document = DocumentUpgrader::structure(CanonicalJson::decode((string) $revision['document_json']));
         $document['containers'] = $containers;
+        $context = $this->withPreviewItem(RenderContext::forEditor($tenantId, $renderer->siteContext(), $actor), $revision, 0);
         $revision['document_json'] = CanonicalJson::encode($document);
-        return $renderer->renderRevision($page, $revision, RenderContext::forEditor($tenantId, $renderer->siteContext(), $actor));
+        return $renderer->renderRevision($page, $revision, $context);
     }
 
     /**

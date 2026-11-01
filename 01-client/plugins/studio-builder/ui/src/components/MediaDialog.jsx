@@ -12,7 +12,8 @@ import { registerMediaHost } from '../core/mediaPicker.mjs';
 /** The message for `key` in this picker's wording (`media_use` → `media_use_video` for videos). */
 const wording = (type) => (key) => (type === 'video' ? `${key}_video` : key);
 
-export function MediaDialog({ api, type: rawType = 'image', selectedId = null, onPick, onClose }) {
+/** `multiple`: choose several; onPick then gets a list of records, in the order they were chosen. */
+export function MediaDialog({ api, type: rawType = 'image', selectedId = null, multiple = false, onPick, onClose }) {
   const type = mediaType(rawType);
   const k = wording(type);
   const [query, setQuery] = useState('');
@@ -25,6 +26,7 @@ export function MediaDialog({ api, type: rawType = 'image', selectedId = null, o
   const [uploading, setUploading] = useState(false);
   const [over, setOver] = useState(false);
   const [chosen, setChosen] = useState(selectedId);
+  const [several, setSeveral] = useState([]);
   const fileRef = useRef(null);
   const seq = useRef(0);
 
@@ -56,11 +58,17 @@ export function MediaDialog({ api, type: rawType = 'image', selectedId = null, o
     if (!r.ok) { setUploadError(r.message ? `!${r.message}` : k('media_err_upload')); return; }
     setItems((cur) => [r.item, ...cur.filter((c) => c.id !== r.item.id)]);
     setChosen(r.item.id);
+    if (multiple) setSeveral((cur) => [...cur, r.item]);
   };
 
   const error = uploadError || loadError;
   const picked = items.find((i) => i.id === chosen) || null;
   const use = (item) => { if (item) onPick(toPickRecord(item)); };
+  const isChosen = (i) => (multiple ? several.some((s) => s.id === i.id) : chosen === i.id);
+  const choose = (i) => {
+    if (!multiple) { setChosen(i.id); return; }
+    setSeveral((cur) => (cur.some((s) => s.id === i.id) ? cur.filter((s) => s.id !== i.id) : [...cur, i]));
+  };
 
   return (
     <Dialog
@@ -69,7 +77,9 @@ export function MediaDialog({ api, type: rawType = 'image', selectedId = null, o
       footer={(
         <>
           <button type="button" className="sbx-btn" onClick={onClose}>{t('cancel')}</button>
-          <button type="button" className="sbx-btn sbx-btn--primary" disabled={!picked} onClick={() => use(picked)} data-testid="media-use">{t(k('media_use'))}</button>
+          {multiple
+            ? <button type="button" className="sbx-btn sbx-btn--primary" disabled={several.length === 0} onClick={() => onPick(several.map(toPickRecord))} data-testid="media-use">{t('media_use_several').replace('{n}', String(several.length))}</button>
+            : <button type="button" className="sbx-btn sbx-btn--primary" disabled={!picked} onClick={() => use(picked)} data-testid="media-use">{t(k('media_use'))}</button>}
         </>
       )}
     >
@@ -98,12 +108,12 @@ export function MediaDialog({ api, type: rawType = 'image', selectedId = null, o
               <li key={i.id}>
                 <button
                   type="button"
-                  className={`sbx-media-dialog__item${chosen === i.id ? ' is-chosen' : ''}`}
-                  aria-pressed={chosen === i.id}
+                  className={`sbx-media-dialog__item${isChosen(i) ? ' is-chosen' : ''}`}
+                  aria-pressed={isChosen(i)}
                   data-media-id={i.id}
                   title={i.original_name}
-                  onClick={() => setChosen(i.id)}
-                  onDoubleClick={() => use(i)}
+                  onClick={() => choose(i)}
+                  onDoubleClick={() => { if (!multiple) use(i); }}
                 >
                   {type === 'video'
                     ? <video src={i.url} preload="metadata" muted playsInline aria-hidden="true" />
@@ -135,6 +145,7 @@ export function MediaHost({ api }) {
       api={api}
       type={req.types === 'video' ? 'video' : 'image'}
       selectedId={req.selectedId || null}
+      multiple={!!req.multiple}
       onClose={() => setReq(null)}
       onPick={(rec) => { const cb = req.onPick; setReq(null); if (cb) cb(rec); }}
     />

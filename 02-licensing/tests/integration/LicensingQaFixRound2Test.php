@@ -176,3 +176,22 @@ unit('QA fix round 2 (P2 Blocker 2): a parameter-tampered admin/plans.php save (
         qafix2_teardown();
     }
 });
+
+unit('verifiedInstallation(): a commercial licence passes on its bound domain only, and stops when suspended', function () {
+    qafix2_ensure_schema();
+    try {
+        $f = qafix2_fixture();
+        $license = LicenseService::issue(['client_id' => $f['client_id'], 'product_id' => $f['product_id']], 'kohevo');
+        $id = str_repeat('d', 32);
+        $input = ['product' => 'kohevo', 'license_key' => $license['license_key'], 'install_id' => $id, 'domain' => 'broker.example'];
+        assert_eq(null, LicensingAPI::verifiedInstallation($input), 'no installation yet, and this check binds none');
+        InstallationService::activate($license['id'], ['installation_id' => $id, 'domain' => 'broker.example']);
+        assert_eq(['installation_id' => $id, 'domain' => 'broker.example'], LicensingAPI::verifiedInstallation($input));
+        assert_eq(null, LicensingAPI::verifiedInstallation(['domain' => 'evil.example'] + $input), 'wrong domain');
+        assert_eq(null, LicensingAPI::verifiedInstallation(['install_id' => str_repeat('e', 32)] + $input), 'another installation');
+        Database::query("UPDATE licensing_licenses SET status = 'suspended' WHERE id = ?", [$license['id']]);
+        assert_eq(null, LicensingAPI::verifiedInstallation($input), 'a suspended licence');
+    } finally {
+        qafix2_teardown();
+    }
+});

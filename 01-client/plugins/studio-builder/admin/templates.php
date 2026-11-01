@@ -83,6 +83,15 @@ $typeConfigs = [
         'role'          => 'archive',
         'label'         => 'Archive & Loop Grid',
     ],
+    // One card drawn by a Query Loop for each item of a content type; never a page of its own.
+    'loop' => [
+        'template_type' => 'page_template',
+        'page_type'     => 'system',
+        'doc_type'      => 'system',
+        'category'      => 'loop',
+        'role'          => 'loop',
+        'label'         => 'Loop Item',
+    ],
     'not_found' => [
         'template_type' => 'page_template',
         'page_type'     => 'system',
@@ -194,6 +203,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($uiType !== 'container_preset') {
                     $starterDoc['settings']['conditions'] = ['rules' => $conditionRules];
                     $starterDoc['settings']['template_type'] = $cfg['role'];
+                }
+                if ($uiType === 'loop') {
+                    $starterDoc['settings']['conditions'] = ['rules' => [['type' => 'include', 'action' => 'include', 'condition' => 'singular', 'value' => trim((string) ($_POST['loop_content_type'] ?? ''))]]];
                 }
 
                 $starterBlock = static fn(string $type, array $props): array => [
@@ -378,6 +390,7 @@ $counts = [
     'footer'    => 0,
     'single'    => 0,
     'archive'   => 0,
+    'loop'      => 0,
     'not_found' => 0,
     'containers' => 0,
 ];
@@ -393,6 +406,8 @@ foreach ($allTemplates as $t) {
         $counts['containers']++;
     } elseif ($cat === 'single' || $cat === 'single_page') {
         $counts['single']++;
+    } elseif ($cat === 'loop') {
+        $counts['loop']++;
     } elseif ($cat === 'archive' || $cat === 'loop_grid') {
         $counts['archive']++;
     } elseif ($cat === 'not_found' || $cat === '404') {
@@ -418,6 +433,9 @@ $templates = array_filter($allTemplates, static function(array $t) use ($typeFil
     }
     if ($typeFilter === 'single') {
         return $cat === 'single' || $cat === 'single_page';
+    }
+    if ($typeFilter === 'loop') {
+        return $cat === 'loop';
     }
     if ($typeFilter === 'archive') {
         return $cat === 'archive' || $cat === 'loop_grid';
@@ -511,6 +529,9 @@ require SLATE_ROOT . '/admin/partials/header.php';
             <a href="<?= e(plugin_url('studio-builder', 'admin/templates.php?type=archive')) ?>" class="sb-pill-item <?= $typeFilter === 'archive' ? 'active' : '' ?>">
                 <?= sb_svg('content', 14) ?> <?= e(__('studio_tpl_filter_archive', 'Archives & Loop Grids')) ?> (<?= $counts['archive'] ?>)
             </a>
+            <a href="<?= e(plugin_url('studio-builder', 'admin/templates.php?type=loop')) ?>" class="sb-pill-item <?= $typeFilter === 'loop' ? 'active' : '' ?>">
+                <?= sb_svg('content', 14) ?> <?= e(__('studio_tpl_filter_loop', 'Loop Items')) ?> (<?= $counts['loop'] ?>)
+            </a>
             <a href="<?= e(plugin_url('studio-builder', 'admin/templates.php?type=not_found')) ?>" class="sb-pill-item <?= $typeFilter === 'not_found' ? 'active' : '' ?>">
                 <?= sb_svg('alert-circle', 14) ?> <?= e(__('studio_tpl_filter_not_found', '404 Pages')) ?> (<?= $counts['not_found'] ?>)
             </a>
@@ -576,6 +597,7 @@ require SLATE_ROOT . '/admin/partials/header.php';
                         <option value="footer"><?= e(__('studio_tpl_type_footer', 'Footer (Site-wide footer & bottom chrome)')) ?></option>
                         <option value="single"><?= e(__('studio_tpl_type_single', 'Single Post / Page (Dynamic single item view)')) ?></option>
                         <option value="archive"><?= e(__('studio_tpl_type_archive', 'Archive & Loop Grid (Dynamic collection feed)')) ?></option>
+                        <option value="loop"><?= e(__('studio_tpl_type_loop', 'Loop Item (one card per item)')) ?></option>
                         <option value="not_found"><?= e(__('studio_tpl_type_not_found', '404 Error (Custom Not Found page)')) ?></option>
                         <option value="container_preset"><?= e(__('studio_tpl_type_container', 'Container & Component Preset (Reusable block layout)')) ?></option>
                     </select>
@@ -592,6 +614,14 @@ require SLATE_ROOT . '/admin/partials/header.php';
                     </select>
                 </div>
             </div>
+            <div class="sb-field" data-loop-only hidden>
+                <label class="sb-field__label" for="sb-loop-type"><?= e(__('studio_tpl_loop_type', 'Content type')) ?></label>
+                <select name="loop_content_type" id="sb-loop-type" class="form-control" style="background: #ffffff;">
+                    <?php foreach (\Slate\Module\StudioBuilder\Meta\PageMeta::postTypes($tenantId) as $loopKey => $loopType): ?>
+                        <option value="<?= e((string) $loopKey) ?>"><?= e((string) ($loopType['plural'] ?? $loopKey)) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
             <div class="sb-field" data-header-only>
                 <label class="sb-field__label" for="sb-header-design"><?= e(__('studio_tpl_header_design', 'Header design')) ?></label>
                 <select name="header_design" id="sb-header-design" class="form-control" style="background: #ffffff;">
@@ -607,7 +637,8 @@ require SLATE_ROOT . '/admin/partials/header.php';
                 var type = document.querySelector('select[name="template_type"]');
                 var only = document.querySelector('[data-header-only]');
                 if (!type || !only) return;
-                var sync = function () { only.hidden = type.value !== 'header'; };
+                var loop = document.querySelector('[data-loop-only]');
+                var sync = function () { only.hidden = type.value !== 'header'; if (loop) { loop.hidden = type.value !== 'loop'; } };
                 type.addEventListener('change', sync);
                 sync();
             }());

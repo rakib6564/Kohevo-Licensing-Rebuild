@@ -101,7 +101,7 @@ test('operations use the canonical {op, payload} vocabulary', () => {
     // B2-P3b: states, wrapper tag and single-property reset.
     'update_block_style_states', 'update_block_tag', 'reset_block_style_property',
     // A widget's part styles (BlockParts.php).
-    'update_block_style_parts'];
+    'update_block_style_parts', 'update_block_dynamic'];
   for (const name of Object.values(ops.OPS)) assert.ok(serverOps.includes(name), `${name} is a server DocumentOperation`);
   assert.ok(!Object.values(ops.OPS).some((name) => name.includes('section')), 'no section operation is left');
 });

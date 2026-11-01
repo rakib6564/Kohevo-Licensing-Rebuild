@@ -33,6 +33,7 @@ import { groupForPicker, sampleStyle, tokenLabel } from '../../core/tokenPicker.
 import { optionLabel } from '../../core/optionLabels.mjs';
 import { RESPONSIVE_SCOPES } from '../../core/responsiveStyle.mjs';
 import { DeviceStyle } from './DeviceStyle.jsx';
+import { DynamicField } from '../fields/DynamicControl.jsx';
 import { MediaControl } from '../fields/MediaControl.jsx';
 import { FocalPad, OverlayField } from './BackgroundWidgets.jsx';
 /** Where an inherited or part-held value comes from, in the author's words. */
@@ -403,6 +404,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
   const overlayPercent = overlayColor ? parseOverlay(overlayColor).percent : null;
   const hasImage = isMediaRef(bg.image);
   const bgMedia = (
+    <DynamicField field={{ key: 'bg-image', label: t('bg_image') }} path="@background" kind="image">
     <MediaControl
       field={{ key: 'bg-image', label: t('bg_image'), required: false }}
       value={isMediaRef(bg.image) ? bg.image : null}
@@ -411,6 +413,7 @@ export function StyleControls({ style, capabilities, onChange, mediaPicker, only
       tint={overlayColor}
       onChange={(ref) => patchBackground({ image: ref ?? undefined })}
     />
+    </DynamicField>
   );
   const bgColor = bg.color ?? (typeof style.background === 'string' ? style.background : undefined);
 

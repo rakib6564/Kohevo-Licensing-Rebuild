@@ -2,6 +2,8 @@
 // allowed values; this only picks a friendlier control for some of them: icon toggles (direction, wrap,
 // justify, align), text pills (width modes) or tiles (grid columns). A field with no entry stays a plain select.
 
+import { asList } from './doc.mjs';
+
 /** The Nav menu has a menu button. */
 const navToggled = (p) => !!p.toggle_breakpoint && p.toggle_breakpoint !== 'none';
 const navPresenter = {
@@ -46,7 +48,14 @@ export const PROP_PRESENTERS = Object.freeze({
     icon_position: { pills: true, showIf: (p) => !!p.icon && p.icon !== 'none' },
     icon_spacing: { showIf: (p) => !!p.icon && p.icon !== 'none' },
   },
+  // The highlight is the Dual Color Heading's job now; a heading that already has one keeps its controls.
   'core.heading': {
+    highlight: { showIf: (p) => !!p.highlight },
+    highlight_color_token: { showIf: (p) => !!p.highlight },
+    highlight_color: { showIf: (p) => !!p.highlight },
+    highlight_italic: { showIf: (p) => !!p.highlight },
+    highlight_weight: { showIf: (p) => !!p.highlight },
+    highlight_underline: { showIf: (p) => !!p.highlight },
     new_tab: { showIf: (p) => typeof p.url === 'string' && p.url.trim() !== '' },
   },
   // The Text Editor's columns gap matters only with more than one column.
@@ -55,10 +64,14 @@ export const PROP_PRESENTERS = Object.freeze({
   },
   // Size and alignment live in the Style section. The older colour token stays visible only while it holds a value.
   'core.text': {
+    new_tab: { showIf: (p) => typeof p.url === 'string' && p.url.trim() !== '' },
     size: { showIf: () => false },
     align: { showIf: () => false },
     color_token: { showIf: (p) => !!p.color_token },
     columns_gap: { showIf: (p) => typeof p.columns === 'number' && p.columns > 1 },
+  },
+  'core.dual_heading': {
+    new_tab: { showIf: (p) => typeof p.url === 'string' && p.url.trim() !== '' },
   },
   'core.quote': { align: { showIf: () => false } },
   'core.link': { align: { showIf: () => false } },
@@ -93,6 +106,39 @@ export const PROP_PRESENTERS = Object.freeze({
     done_text: { showIf: (p) => (p.expire_action || 'message') === 'message' },
     message_align: { pills: true, showIf: (p) => (p.expire_action || 'message') === 'message' },
     redirect_url: { showIf: (p) => p.expire_action === 'redirect' },
+  },
+  // The Gallery: a setting shows only where it does something.
+  'core.query_loop': {
+    card_variant: { showIf: (p) => p.loop_template === 'none' || !p.loop_template },
+    title_level: { showIf: (p) => p.loop_template === 'none' || !p.loop_template },
+    read_more_text: { showIf: (p) => p.loop_template === 'none' || !p.loop_template },
+  },
+  'core.icon_list': {
+    layout: { pills: true },
+    apply_link: { showIf: (p) => asList(p.items).some((i) => i && i.url) },
+    space_between: { showIf: () => false },
+    list_align: { showIf: () => false },
+    divider: { showIf: () => false },
+    icon_size: { showIf: () => false },
+    icon_gap: { showIf: () => false },
+    icon_h_align: { showIf: () => false },
+    icon_v_align: { showIf: () => false },
+    icon_offset: { showIf: () => false },
+  },
+  'theme.repeater': {
+    title_field: { showIf: (p) => p.display === 'accordion' },
+    body_field: { showIf: (p) => p.display === 'accordion' },
+    allow_multiple: { showIf: (p) => p.display === 'accordion' },
+  },
+  'core.gallery': {
+    gap: { showIf: (p) => !(p.spacing > 0) },
+    aspect_ratio: { showIf: (p) => !p.layout || p.layout === 'grid' || p.layout === 'slider' },
+    row_height: { showIf: (p) => p.layout === 'justified' },
+    overlay_text: { showIf: (p) => p.captions === 'hover' },
+    pagination: { showIf: (p) => p.layout !== 'slider' },
+    per_page: { showIf: (p) => p.layout !== 'slider' && !!p.pagination && p.pagination !== 'none' },
+    load_more_text: { showIf: (p) => p.layout !== 'slider' && !!p.pagination && p.pagination !== 'none' },
+    all_label: { showIf: (p) => p.show_filters === true },
   },
   'core.marquee': {
     direction: { pills: true },

@@ -18,6 +18,9 @@ final class MetaFieldTypes
     /** group => label */
     public const MAX_RATING = 10;
 
+    /** What a row of a repeater can hold. */
+    public const SUBFIELD_TYPES = ['text', 'textarea', 'richtext', 'image', 'url', 'number'];
+
     public const GROUPS = [
         'text'     => 'Text',
         'number'   => 'Numbers',
@@ -38,7 +41,7 @@ final class MetaFieldTypes
         return [
             'text'        => ['group' => 'text', 'label' => 'Text', 'hint' => 'Single-line string', 'options' => ['max_length']],
             'textarea'    => ['group' => 'text', 'label' => 'Textarea', 'hint' => 'Multi-line plain text', 'options' => ['max_length']],
-            'richtext'    => ['group' => 'text', 'label' => 'Rich text', 'hint' => 'Formatted text with headings, lists and links', 'options' => []],
+            'richtext'    => ['group' => 'text', 'label' => 'Rich text', 'hint' => 'Formatted text with headings, lists, links and images', 'options' => []],
             'email'       => ['group' => 'text', 'label' => 'Email', 'hint' => 'An email address', 'options' => []],
             'phone'       => ['group' => 'text', 'label' => 'Phone', 'hint' => 'A telephone number', 'options' => []],
             'url'         => ['group' => 'text', 'label' => 'URL', 'hint' => 'A web address link', 'options' => []],
@@ -71,6 +74,7 @@ final class MetaFieldTypes
             'location'    => ['group' => 'advanced', 'label' => 'Location', 'hint' => 'An address or map point', 'options' => []],
             'list'        => ['group' => 'advanced', 'label' => 'List', 'hint' => 'A repeatable list of short items', 'options' => ['max']],
             'keyvalue'    => ['group' => 'advanced', 'label' => 'Key–value pairs', 'hint' => 'Specifications such as "Budget: 20k"', 'options' => ['max']],
+            'repeater'    => ['group' => 'advanced', 'label' => 'Repeater', 'hint' => 'Rows of sub-fields, such as questions and answers', 'options' => ['subfields']],
         ];
     }
 
@@ -138,6 +142,12 @@ final class MetaFieldTypes
                 $out['target'] = $target;
             }
         }
+        if (in_array('subfields', $allowed, true)) {
+            $subs = self::parseSubfields((string) ($raw['subfields'] ?? ''));
+            if ($subs !== []) {
+                $out['subfields'] = $subs;
+            }
+        }
         if (in_array('extensions', $allowed, true)) {
             $exts = [];
             foreach (preg_split('/[\s,;]+/', strtolower((string) ($raw['extensions'] ?? ''))) ?: [] as $e) {
@@ -182,6 +192,40 @@ final class MetaFieldTypes
         return $out;
     }
 
+    /**
+     * "question : Question : text" lines into a repeater's sub-fields; the label and type are optional, at most 12.
+     *
+     * @return list<array{key: string, label: string, type: string}>
+     */
+    public static function parseSubfields(string $text): array
+    {
+        $out = [];
+        foreach (preg_split('/\R/', $text) ?: [] as $line) {
+            [$key, $label, $type] = array_pad(array_map('trim', explode(':', $line, 3)), 3, '');
+            $key = strtolower($key);
+            if (preg_match('/^[a-z0-9_]{1,64}$/', $key) !== 1 || isset($out[$key])) {
+                continue;
+            }
+            $out[$key] = ['key' => $key, 'label' => mb_substr($label !== '' ? $label : $key, 0, 120), 'type' => in_array($type, self::SUBFIELD_TYPES, true) ? $type : 'text'];
+            if (count($out) >= 12) {
+                break;
+            }
+        }
+        return array_values($out);
+    }
+
+    /**
+     * A repeater's sub-fields, ready for `PageMeta::clean` and the Field value block.
+     *
+     * @param array<string, mixed> $field
+     * @return list<array<string, mixed>>
+     */
+    public static function subfields(array $field): array
+    {
+        $subs = $field['options']['subfields'] ?? null;
+        return is_array($subs) ? array_values(array_filter($subs, 'is_array')) : [];
+    }
+
     /** One line saying what a field's options are, for the list ("3 choices", "0–100", "→ portfolio"). */
     public static function summary(array $field): string
     {
@@ -189,6 +233,9 @@ final class MetaFieldTypes
         $bits = [];
         if (!empty($o['choices'])) {
             $bits[] = count($o['choices']) . ' choices';
+        }
+        if (!empty($o['subfields'])) {
+            $bits[] = count($o['subfields']) . ' sub-fields';
         }
         if (isset($o['min']) || isset($o['max'])) {
             $bits[] = ($o['min'] ?? '…') . '–' . ($o['max'] ?? '…');

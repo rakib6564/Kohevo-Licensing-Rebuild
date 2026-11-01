@@ -284,6 +284,45 @@ class LicensingAPI {
     }
 
     /**
+     * The installation a request speaks for, or null: a read-only check for
+     * services beyond check-in (GoogleBroker). The same rules as check-in,
+     * but it binds nothing, and it needs a live licence and an installation
+     * already bound to this domain. Every refusal looks the same to a caller.
+     *
+     * @return array{installation_id: string, domain: string}|null
+     */
+    public static function verifiedInstallation(array $input): ?array {
+        $productSlug = trim((string) ($input['product'] ?? ''));
+        $licenseKey = (string) ($input['license_key'] ?? '');
+        $installationId = (string) ($input['install_id'] ?? '');
+        $domain = self::normalizeDomain((string) ($input['domain'] ?? ''));
+        if ($productSlug === '' || $licenseKey === '' || $domain === null || preg_match(self::INSTALLATION_ID_PATTERN, $installationId) !== 1) {
+            return null;
+        }
+        $product = Database::row('SELECT id FROM licensing_products WHERE slug = ?', [$productSlug]);
+        if (!$product) return null;
+        $keyHash = hash('sha256', $licenseKey);
+        $site = ['installation_id' => $installationId, 'domain' => $domain];
+
+        $license = Database::row('SELECT * FROM licensing_licenses WHERE product_id = ? AND license_key_hash = ?', [$product['id'], $keyHash]);
+        if ($license !== null) {
+            $license = LicenseService::syncExpiry((int) $license['id']);
+            $installation = InstallationService::findByInstallationId($installationId);
+            $live = in_array($license['status'], ['trial', 'active'], true) && $installation !== null
+                && (int) $installation['license_id'] === (int) $license['id']
+                && (string) $installation['status'] === 'active' && (string) $installation['domain_normalized'] === $domain;
+            return $live ? $site : null;
+        }
+
+        $install = Database::row('SELECT * FROM licensing_installs WHERE product_id = ? AND license_key_hash = ?', [$product['id'], $keyHash]);
+        if ($install === null || !in_array(self::effectiveInstallStatus($install), ['trial', 'active'], true) || self::normalizedInstallDomain($install) !== $domain) {
+            return null;
+        }
+        $bound = Database::value('SELECT install_id FROM licensing_installation_bindings WHERE installation_id = ?', [$installationId]);
+        return (int) $bound === (int) $install['id'] ? $site : null;
+    }
+
+    /**
      * QA Fix Round 1 (Phase 4, Fix 3): the Phase 2/3 commercial licensing
      * path -- `licensing_licenses` + `licensing_installations` +
      * `licensing_license_modules` are the ONLY tables this touches. Every

@@ -6,7 +6,7 @@
  *
  * Regression and verification unit tests for the Complete System Audit fixes:
  * 1. Secret handling: write-only inputs and preservation of existing secrets when left blank.
- * 2. Permalinks structure allow-list validation.
+ * 2. Permalinks left core Settings for Kohevo Studio.
  * 3. Date & Time bounds for start_of_week (0..6).
  * 4. Timezone canonical ownership (Date & Time tab vs System tab).
  * 5. Backups retention bounds (1..365).
@@ -39,22 +39,12 @@ function ssaf_settings_branch(string $action): string
     return substr($src, $pos, ($next !== false ? $next : $pos + 4000) - $pos);
 }
 
-unit('audit fixes: the permalink allow-list in save_permalinks matches the choices the form offers', function (): void {
-    $branch = ssaf_settings_branch('save_permalinks');
-    assert_true((bool) preg_match('/\$allowedStructs\s*=\s*\[(.*?)\];/s', $branch, $m), 'save_permalinks must declare $allowedStructs');
-    preg_match_all("/'([^']+)'/", $m[1], $allowed);
-    assert_true(str_contains($branch, 'in_array($struct, $allowedStructs, true)'), 'the posted structure must be checked strictly against the allow-list');
-    assert_true(str_contains($branch, "\$struct = '/p/%postname%';"), 'an unknown structure must fall back to the default');
-
-    // Every radio the Permalinks tab renders must be accepted, and nothing else.
+unit('permalinks moved: core Settings no longer offers them, old links reach Kohevo Studio, and the screen writes what routing reads', function (): void {
     $src = (string) file_get_contents(SLATE_ROOT . '/admin/settings.php');
-    preg_match_all('/name="permalink_structure" value="([^"]+)"/', $src, $radios);
-    $offered = $radios[1];
-    sort($offered);
-    $accepted = $allowed[1];
-    sort($accepted);
-    assert_true($offered !== [], 'the Permalinks tab must render structure choices');
-    assert_eq($offered, $accepted, 'allow-list and form choices must be the same set');
+    assert_true(!str_contains($src, 'permalink_structure') && !str_contains($src, 'save_permalinks'));
+    assert_true(str_contains($src, '/plugins/studio-builder/admin/permalinks.php'));
+    $screen = (string) file_get_contents(SLATE_ROOT . '/plugins/studio-builder/admin/permalinks.php');
+    assert_true(str_contains($screen, 'SETTING_TRAILING_SLASH') && str_contains($screen, 'PageMeta::savePostTypes') && str_contains($screen, 'csrf_verify()'));
 });
 
 unit('audit fixes: save_datetime bounds start_of_week to 0..6 before saving it', function (): void {

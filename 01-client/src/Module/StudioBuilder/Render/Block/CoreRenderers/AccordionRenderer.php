@@ -51,8 +51,19 @@ final class AccordionRenderer implements BlockRendererInterface
             return '';
         }
 
-        $multiple = ($scope->prop('allow_multiple', false)) === true;
+        foreach ($items as $i => $item) {
+            $items[$i]['body'] = Html::text($item['body']);
+        }
+        return self::markup($scope, $items, ($scope->prop('allow_multiple', false)) === true);
+    }
 
+    /**
+     * The accordion's markup, shared with a repeater field shown as an accordion.
+     *
+     * @param list<array{heading: string, body: string}> $items `body` is ready HTML
+     */
+    public static function markup(BlockRenderScope $scope, array $items, bool $multiple): string
+    {
         $rows = '';
         foreach ($items as $index => $item) {
             $key       = 'i' . ($index + 1);
@@ -90,7 +101,7 @@ final class AccordionRenderer implements BlockRendererInterface
                 // flash of the wrong panel.
                 . ($open ? '' : ' hidden')
                 . '>'
-                . Html::text($item['body'])
+                . $item['body']
                 . '</div>'
                 . '</div>';
         }

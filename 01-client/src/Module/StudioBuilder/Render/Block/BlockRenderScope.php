@@ -29,6 +29,7 @@ final class BlockRenderScope
         private readonly RenderCollector $collector,
         private readonly string $childrenHtml = '',
         private readonly array $bindingRows = [],
+        private readonly ?\Closure $documentRenderer = null,
     ) {}
 
     public function type(): string
@@ -153,6 +154,10 @@ final class BlockRenderScope
      */
     public function image(mixed $mediaRef): ?ResolvedMedia
     {
+        // A dynamic tag's image: an address that has passed the URL allowlist, not a library id.
+        if (is_array($mediaRef) && ($mediaRef['media_id'] ?? null) === 0 && is_string($mediaRef['url'] ?? null) && !empty($this->block['dynamic'])) {
+            return new ResolvedMedia(0, $mediaRef['url']);
+        }
         if (!is_array($mediaRef) || !isset($mediaRef['media_id']) || !is_int($mediaRef['media_id']) || $mediaRef['media_id'] <= 0) {
             return null;
         }
@@ -179,6 +184,12 @@ final class BlockRenderScope
     public function childrenHtml(): string
     {
         return $this->childrenHtml;
+    }
+
+    /** Another document's blocks, drawn in `$context` into this page: a Loop Item, once per item. */
+    public function renderDocument(string $documentJson, RenderContext $context): string
+    {
+        return $this->documentRenderer !== null ? ($this->documentRenderer)($documentJson, $context) : '';
     }
 
     public function hasBinding(string $slot): bool

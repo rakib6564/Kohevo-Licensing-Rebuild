@@ -177,6 +177,12 @@ final class Html
     }
 
     /** Escaped multi-line text with newlines as `<br>`. */
+    /** A heading's own text: escaped, with a typed `<br>` or a new line kept as a line break. */
+    public static function headingText(string $value): string
+    {
+        return nl2br((string) preg_replace('~&lt;br\s*/?&gt;\s*~i', '<br>', self::e($value)), false);
+    }
+
     public static function text(string $value): string
     {
         return nl2br(self::e($value), false);

@@ -9,7 +9,7 @@
  *   directly when self-healing or initializing baseline tables.
  * - `runMigrations(string $from)` applies only version-gated, idempotent additive
  *   upgrades (`ensureColumn`, `ensureIndex`) for versions > 1.0.0.
- * - `schemaIsCurrent()` verifies all 7 `studiobuilder_*` tables, all required columns,
+ * - `schemaIsCurrent()` verifies all `studiobuilder_*` tables, all required columns,
  *   and strict `tenant_id` non-null/no-default constraints via `INFORMATION_SCHEMA`.
  */
 
@@ -22,7 +22,7 @@ final class StudioSchemaManager
     public const TABLE_PREFIX = 'studiobuilder_';
 
     /**
-     * Authoritative column manifest for all 7 Studio tables (v1.0.0 baseline).
+     * Authoritative column manifest for all Studio tables.
      *
      * @var array<string, list<string>>
      */
@@ -119,6 +119,13 @@ final class StudioSchemaManager
             'lock_token',
             'acquired_at',
             'heartbeat_at',
+            'expires_at',
+        ],
+        'studiobuilder_google_cache' => [
+            'id',
+            'tenant_id',
+            'cache_key',
+            'payload',
             'expires_at',
         ],
     ];
@@ -240,7 +247,7 @@ final class StudioSchemaManager
     }
 
     /**
-     * Verify that all 7 `studiobuilder_*` tables exist, contain every required column,
+     * Verify that all `studiobuilder_*` tables exist, contain every required column,
      * and enforce `tenant_id INT UNSIGNED NOT NULL` without a default value.
      */
     public static function schemaIsCurrent(): bool

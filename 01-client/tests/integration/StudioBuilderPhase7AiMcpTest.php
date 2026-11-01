@@ -821,9 +821,9 @@ unit('phase7 integration: AI + MCP through the real gateway (real MySQL, tenants
             });
 
             // ── 10. Schema unchanged ──
-            unit('phase7 int 10: no schema change — the seven Studio tables and the two gateway tables keep their columns', function (): void {
+            unit('phase7 int 10: no schema change — the Studio tables and the two gateway tables keep their columns', function (): void {
                 $tables = array_column(Database::rows("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE 'studiobuilder\\_%' ORDER BY TABLE_NAME"), 'TABLE_NAME');
-                assert_eq(['studiobuilder_compilations', 'studiobuilder_dependencies', 'studiobuilder_locks', 'studiobuilder_pages', 'studiobuilder_revisions', 'studiobuilder_templates', 'studiobuilder_tokens'], $tables);
+                assert_eq(['studiobuilder_compilations', 'studiobuilder_dependencies', 'studiobuilder_google_cache', 'studiobuilder_locks', 'studiobuilder_pages', 'studiobuilder_revisions', 'studiobuilder_templates', 'studiobuilder_tokens'], $tables);
                 foreach (\Slate\Module\StudioBuilder\Infrastructure\StudioSchemaManager::REQUIRED_TABLES as $table => $cols) {
                     $actual = array_column(Database::rows("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION", [$table]), 'COLUMN_NAME');
                     assert_eq($cols, $actual, "{$table} columns unchanged");

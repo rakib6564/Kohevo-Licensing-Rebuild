@@ -88,7 +88,7 @@ test('the Inspector works on a phone: the search box is styled, and an edit save
     await expect(page.locator('[data-section="advanced"]')).toBeVisible(); // margin and padding live in the Advanced group
     await search.fill('');
 
-    const text = page.getByLabel('Heading Text', { exact: false }).first();
+    const text = page.locator('#sbx-leftpanel-inspector').getByRole('textbox', { name: 'Title', exact: true });
     await text.fill('Phone edit');
     await text.blur();
     await settled(page);

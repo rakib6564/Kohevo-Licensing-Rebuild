@@ -159,6 +159,10 @@ final class BlockParts
             'grid'  => ['label' => 'Gallery layout', 'selectors' => ['.sb-gallery']],
             'item'  => ['label' => 'Tiles', 'selectors' => ['.sb-gallery__item']],
             'image' => ['label' => 'Images', 'selectors' => ['.sb-gallery__item img']],
+            'caption' => ['label' => 'Captions', 'selectors' => ['.sb-gallery__item figcaption']],
+            'filter' => ['label' => 'Category filters', 'selectors' => ['.sb-gallery__filter']],
+            'filter_active' => ['label' => 'Selected filter', 'selectors' => ['.sb-gallery__filter[aria-pressed="true"]']],
+            'more' => ['label' => 'Load more button', 'selectors' => ['.sb-gallery__more-btn']],
         ],
         'core.rich_text' => [
             'paragraph' => ['label' => 'Paragraphs', 'selectors' => ['p']],
@@ -172,6 +176,10 @@ final class BlockParts
         'core.heading' => [
             'highlight' => ['label' => 'Highlighted words', 'selectors' => ['.sb-hl']],
             'link'      => ['label' => 'Link', 'selectors' => ['.sb-heading__link']],
+        ],
+        'core.dual_heading' => [
+            'highlight' => ['label' => 'Colored text', 'selectors' => ['.sb-dual-heading__highlight']],
+            'text'      => ['label' => 'Plain text', 'selectors' => ['.sb-dual-heading__text']],
         ],
         'core.icon' => [
             'link' => ['label' => 'Icon link', 'selectors' => ['.sb-icon__link']],
@@ -195,6 +203,22 @@ final class BlockParts
         'theme.post_meta' => [
             'meta' => ['label' => 'Meta line', 'selectors' => ['.sb-post-meta']],
             'item' => ['label' => 'Items', 'selectors' => ['.sb-post-meta > span']],
+        ],
+        'core.icon_list' => [
+            'item'    => ['label' => 'Item', 'selectors' => ['.sb-icon-list__item']],
+            'icon'    => ['label' => 'Icon', 'selectors' => ['.sb-icon-list__icon']],
+            'text'    => ['label' => 'Text', 'selectors' => ['.sb-icon-list__text']],
+            'divider' => ['label' => 'Divider', 'selectors' => ['.sb-icon-list--divided>.sb-icon-list__item+.sb-icon-list__item']],
+        ],
+        'theme.post_image' => [
+            'image' => ['label' => 'Image', 'selectors' => ['.sb-post-image img']],
+        ],
+        'theme.repeater' => [
+            'row'     => ['label' => 'Row', 'selectors' => ['.sb-repeater__list li']],
+            'item'    => ['label' => 'Accordion item', 'selectors' => ['.sb-accordion__item']],
+            'title'   => ['label' => 'Accordion title', 'selectors' => ['.sb-accordion__button']],
+            'icon'    => ['label' => 'Accordion icon', 'selectors' => ['.sb-accordion__icon']],
+            'content' => ['label' => 'Accordion content', 'selectors' => ['.sb-accordion__panel']],
         ],
         'theme.field_value' => [
             'value'     => ['label' => 'Value', 'selectors' => ['.sb-field-value']],

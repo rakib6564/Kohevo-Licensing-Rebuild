@@ -61,11 +61,16 @@ final class FieldValueRenderer implements BlockRendererInterface
         if ($scope->bool('show_label') && $field !== null && $body !== '') {
             $label = '<span class="sb-field-value__label">' . Html::e((string) ($field['label'] ?? $key)) . '</span> ';
         }
-        return '<' . $tag . ' class="sb-field-value sb-field-value--' . Html::e(MetaFieldTypes::normalize((string) ($field['type'] ?? 'text'))) . '">' . $label . $body . '</' . $tag . '>';
+        $postUrl = (string) $scope->context()->attribute('post_url', '');
+        if ($scope->bool('link_to_post') && $postUrl !== '') {
+            $body = '<a class="sb-field-value__link" href="' . Html::e($postUrl) . '">' . $body . '</a>';
+        }
+        $fit = in_array($scope->string('fit'), ['cover', 'contain'], true) ? ' sb-field-value--' . $scope->string('fit') : '';
+        return '<' . $tag . ' class="sb-field-value sb-field-value--' . Html::e(MetaFieldTypes::normalize((string) ($field['type'] ?? 'text'))) . $fit . '">' . $label . $body . '</' . $tag . '>';
     }
 
     /** @param array<string, mixed> $field */
-    private static function format(array $field, mixed $value): string
+    public static function format(array $field, mixed $value): string
     {
         $type = MetaFieldTypes::normalize((string) ($field['type'] ?? 'text'));
         $choices = [];
@@ -132,8 +137,13 @@ final class FieldValueRenderer implements BlockRendererInterface
             case 'price':
                 return $e(number_format((float) $value, ((float) $value) == floor((float) $value) ? 0 : 2));
             case 'textarea':
-            case 'richtext':
                 return nl2br($e($value), false);
+            case 'richtext':
+                return RepeaterRenderer::rich($value);
+            case 'repeater':
+                $subs = MetaFieldTypes::subfields($field);
+                $first = (string) ($subs[0]['key'] ?? '');
+                return $list(array_map(static fn(mixed $row): string => $e(is_array($row) ? ($row[$first] ?? '') : ''), is_array($value) ? $value : []));
             case 'relation':
             case 'relations':
                 return ''; // a link to another page needs its address, not yet resolved here
