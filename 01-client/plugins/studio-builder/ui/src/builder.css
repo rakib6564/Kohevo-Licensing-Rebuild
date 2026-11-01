@@ -3523,6 +3523,10 @@ html, body.sbx-body {
 .sbx-dyn { position: relative; display: flex; gap: 6px; align-items: flex-start; }
 .sbx-dyn__control { flex: 1 1 auto; min-width: 0; }
 .sbx-dyn__open { flex: none; margin-top: 2px; }
+.sbx-dyn--inline { display: block; }
+.sbx-dyn__input { position: relative; display: block; width: 100%; }
+.sbx-dyn__input input, .sbx-dyn__input textarea { width: 100%; box-sizing: border-box; padding-right: 34px; }
+.sbx-dyn__input .sbx-dyn__open { position: absolute; top: 3px; right: 3px; width: 26px; height: 26px; margin: 0; padding: 0; border-radius: var(--sbx-radius); }
 .sbx-dyn--set { display: block; }
 .sbx-dyn__chip { display: flex; align-items: center; gap: 2px; border: 1px solid var(--sbx-accent-border); border-radius: var(--sbx-radius); padding: 2px 4px; margin-top: 4px; }
 .sbx-dyn__name { flex: 1 1 auto; min-width: 0; display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; color: inherit; font: inherit; padding: 4px; cursor: pointer; text-align: left; }

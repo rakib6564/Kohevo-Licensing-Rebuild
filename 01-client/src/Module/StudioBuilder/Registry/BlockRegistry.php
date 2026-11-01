@@ -150,7 +150,7 @@ final class BlockRegistry
             category: 'content',
             icon: 'heading',
             schema: FieldSchema::define([
-                ['key' => 'text', 'type' => 'string', 'label' => 'Heading Text', 'required' => true, 'default' => 'Section Heading', 'max_length' => 300],
+                ['key' => 'text', 'type' => 'text', 'label' => 'Title', 'required' => true, 'default' => 'Section Heading', 'max_length' => 300],
                 // Title, Link, HTML Tag, then the highlight, in the order the reference editor shows them.
                 ['key' => 'url', 'type' => 'url', 'label' => 'Link', 'required' => false, 'default' => null],
                 ['key' => 'new_tab', 'type' => 'boolean', 'label' => 'Open in a new tab', 'required' => false, 'default' => false],
@@ -535,6 +535,26 @@ final class BlockRegistry
             ]),
             allowsChildren: false,
             allowedBindingProviders: [],
+        ));
+
+        // core.dual_heading — a coloured part between two plain parts
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'core.dual_heading',
+            version: 1,
+            label: 'Dual Color Heading',
+            title: 'Dual color heading',
+            description: 'A heading with a coloured part',
+            category: 'content',
+            icon: 'heading',
+            schema: FieldSchema::define([
+                ['key' => 'before', 'type' => 'text', 'label' => 'Before text', 'required' => false, 'default' => 'Heading with', 'max_length' => 300],
+                ['key' => 'colored', 'type' => 'text', 'label' => 'Colored text', 'required' => false, 'default' => 'colored', 'max_length' => 300],
+                ['key' => 'after', 'type' => 'text', 'label' => 'After text', 'required' => false, 'default' => 'words', 'max_length' => 300],
+                ['key' => 'url', 'type' => 'url', 'label' => 'Link', 'required' => false, 'default' => null],
+                ['key' => 'new_tab', 'type' => 'boolean', 'label' => 'Open in a new tab', 'required' => false, 'default' => false],
+                ['key' => 'level', 'type' => 'enum', 'label' => 'HTML Tag', 'required' => false, 'allowed_values' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'span', 'p'], 'default' => 'h2'],
+            ]),
+            allowsChildren: false,
         ));
 
         // core.icon_list — items with an icon and a link

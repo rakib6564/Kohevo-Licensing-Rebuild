@@ -18,7 +18,7 @@ const has = (ctx, key) => ctx.capabilities.includes(key);
 const count = (v) => (Array.isArray(v) ? v.length : Object.keys(asObject(v)).length);
 
 /** Text-led block types, where Typography is the section an author reaches for first. */
-const TEXT_TYPES = new Set(['core.heading', 'core.text', 'core.rich_text', 'core.button', 'core.quote', 'core.list', 'core.link']);
+const TEXT_TYPES = new Set(['core.heading', 'core.dual_heading', 'core.text', 'core.rich_text', 'core.button', 'core.quote', 'core.list', 'core.link']);
 
 /**
  * Pure media blocks: they have no text of their own, so Typography would be a dead section. Every block
@@ -85,6 +85,7 @@ const OWN_STYLE = {
   [CONTAINER_TYPE]: ['shadow'], // under Border, as in the reference
   [BUTTON_TYPE]: ['align', 'typography', 'background', 'border', 'shadow'],
   [HEADING_TYPE]: ['align', 'typography'],
+  'core.dual_heading': ['align', 'typography'],
   'core.rich_text': ['align', 'typography'],
   'core.text': ['align', 'typography'],
   [IMAGE_TYPE]: ['align', 'dimensions', 'border', 'shadow', 'opacity'],

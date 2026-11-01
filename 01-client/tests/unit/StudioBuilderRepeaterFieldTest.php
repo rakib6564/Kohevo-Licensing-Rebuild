@@ -205,6 +205,14 @@ unit('site mode: the prebuilt templates are valid documents, branded by tags and
     }
 });
 
+unit('heading: a line break in the title, escaped otherwise; the dual color heading colours its middle part', function (): void {
+    $html = sbrf_render(sbrf_block('core.heading', ['text' => "Where Fine Cuisine<br>Meets\nEvery <b>", 'level' => 'h2']), [], []);
+    assert_true(str_contains($html, 'Cuisine<br>Meets<br>') && str_contains($html, '&lt;b&gt;') && !str_contains($html, '<b>'));
+    $dual = sbrf_render(sbrf_block('core.dual_heading', ['before' => 'Fine', 'colored' => 'Cuisine <i>', 'after' => '', 'level' => 'h1', 'url' => '/x/']), [], []);
+    assert_true(str_contains($dual, '<h1 class="sb-heading sb-dual-heading">') && str_contains($dual, 'sb-dual-heading__highlight">Cuisine &lt;i&gt;') && str_contains($dual, 'href="/x/"'));
+    assert_eq('', sbrf_render(sbrf_block('core.dual_heading', ['before' => '', 'colored' => '', 'after' => '']), [], []));
+});
+
 unit('dynamic tags: the validator refuses a bad map, a required setting can be left to its tag, and older props become tags', function (): void {
     assert_eq([], DynamicTags::issues(['text' => ['tag' => 'post_title', 'before' => 'A'], '@background' => ['tag' => 'field', 'key' => 'hero']]));
     assert_true(DynamicTags::issues(['text' => ['tag' => 'nope']]) !== []);

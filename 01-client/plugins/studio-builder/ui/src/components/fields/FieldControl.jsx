@@ -24,7 +24,7 @@ import { sizedLabeller, tableFor } from '../../core/optionValues.mjs';
 import { Check, Field } from '../ui/index.js';
 import { DeviceProp } from './DeviceProp.jsx';
 import { IconControl } from './IconControl.jsx';
-import { DynamicContext, DynamicField } from './DynamicControl.jsx';
+import { DynamicContext, DynamicField, SlotInput } from './DynamicControl.jsx';
 
 const RichTextEditor = lazy(() => import('./RichTextEditor.jsx'));
 
@@ -89,13 +89,13 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
     case 'text':
       return (
         <FieldRow id={id} label={field.label} required={field.required} problem={problem}>
-          <input type="text" {...common} value={draft ?? ''} maxLength={field.max_length || undefined} onChange={(e) => update(coerce(field, e.target.value))} />
+          <SlotInput><input type="text" {...common} value={draft ?? ''} maxLength={field.max_length || undefined} onChange={(e) => update(coerce(field, e.target.value))} /></SlotInput>
         </FieldRow>
       );
     case 'textarea':
       return (
-        <FieldRow id={id} label={field.label} required={field.required} problem={problem}>
-          <textarea {...common} rows={4} value={draft ?? ''} maxLength={field.max_length || undefined} onChange={(e) => update(e.target.value)} />
+        <FieldRow id={id} label={field.label} required={field.required} problem={problem} wide>
+          <SlotInput><textarea {...common} rows={3} value={draft ?? ''} maxLength={field.max_length || undefined} onChange={(e) => update(e.target.value)} /></SlotInput>
         </FieldRow>
       );
     case 'number':
@@ -276,7 +276,7 @@ function objectField(f, value, onChange, manifest, mediaPicker, presenters, bloc
     />
   );
   if (f.type !== 'repeater' && f.type !== 'object' && f.type !== 'link') {
-    return <DynamicField key={f.key} field={f} path={`${pathPrefix}${f.key}`}>{control}</DynamicField>;
+    return <DynamicField key={f.key} field={f} path={`${pathPrefix}${f.key}`} inline={['string', 'text', 'url'].includes(f.type)}>{control}</DynamicField>;
   }
   if (f.key === 'highlight' && highlightMissing(value)) {
     return <Fragment key={f.key}>{control}<p className="sbx-hint sbx-hint--warn" role="status">{t('highlight_not_found')}</p></Fragment>;

@@ -10,8 +10,8 @@ test('only the blocks that declare inline text are editable in place, and each n
   assert.deepEqual(declared, ['core.button', 'core.feature_list', 'core.heading', 'core.hero', 'core.link', 'core.nav_menu', 'core.quote', 'core.text']);
   // A linked heading's text sits in its link, and a button with an icon has a label span: those come first, the element is the fallback.
   assert.deepEqual(inlineSpecsFor(manifest, node('core.heading')), [
-    { prop: 'text', selector: '.sb-heading__link', multiline: false },
-    { prop: 'text', selector: '.sb-heading', multiline: false },
+    { prop: 'text', selector: '.sb-heading__link', multiline: true },
+    { prop: 'text', selector: '.sb-heading', multiline: true },
   ]);
   assert.deepEqual(inlineSpecsFor(manifest, node('core.button')).map((s) => s.selector), ['.sb-button__label', '.sb-button']);
   assert.equal(inlineSpecsFor(manifest, node('core.text'))[0].multiline, true, 'a text field keeps its line breaks');

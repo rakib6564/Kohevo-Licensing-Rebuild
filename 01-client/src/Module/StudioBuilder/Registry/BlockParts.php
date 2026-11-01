@@ -177,6 +177,10 @@ final class BlockParts
             'highlight' => ['label' => 'Highlighted words', 'selectors' => ['.sb-hl']],
             'link'      => ['label' => 'Link', 'selectors' => ['.sb-heading__link']],
         ],
+        'core.dual_heading' => [
+            'highlight' => ['label' => 'Colored text', 'selectors' => ['.sb-dual-heading__highlight']],
+            'text'      => ['label' => 'Plain text', 'selectors' => ['.sb-dual-heading__text']],
+        ],
         'core.icon' => [
             'link' => ['label' => 'Icon link', 'selectors' => ['.sb-icon__link']],
             'svg'  => ['label' => 'Icon', 'selectors' => ['svg']],

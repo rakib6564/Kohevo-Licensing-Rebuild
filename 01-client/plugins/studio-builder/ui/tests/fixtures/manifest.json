@@ -1590,6 +1590,123 @@
             "binding_slots": [],
             "category": "content",
             "default_props": {
+                "after": "words",
+                "before": "Heading with",
+                "colored": "colored",
+                "level": "h2",
+                "new_tab": false,
+                "url": null
+            },
+            "description": "A heading with a coloured part",
+            "field_schema": [
+                {
+                    "key": "before",
+                    "type": "text",
+                    "label": "Before text",
+                    "required": false,
+                    "default": "Heading with",
+                    "max_length": 300
+                },
+                {
+                    "key": "colored",
+                    "type": "text",
+                    "label": "Colored text",
+                    "required": false,
+                    "default": "colored",
+                    "max_length": 300
+                },
+                {
+                    "key": "after",
+                    "type": "text",
+                    "label": "After text",
+                    "required": false,
+                    "default": "words",
+                    "max_length": 300
+                },
+                {
+                    "key": "url",
+                    "type": "url",
+                    "label": "Link",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "new_tab",
+                    "type": "boolean",
+                    "label": "Open in a new tab",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "level",
+                    "type": "enum",
+                    "label": "HTML Tag",
+                    "required": false,
+                    "default": "h2",
+                    "allowed_values": [
+                        "h1",
+                        "h2",
+                        "h3",
+                        "h4",
+                        "h5",
+                        "h6",
+                        "div",
+                        "span",
+                        "p"
+                    ]
+                }
+            ],
+            "icon": "heading",
+            "inline_text": [],
+            "label": "Dual Color Heading",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "highlight",
+                    "label": "Colored text"
+                },
+                {
+                    "key": "text",
+                    "label": "Plain text"
+                }
+            ],
+            "title": "Dual color heading",
+            "type": "core.dual_heading",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
                 "card_options": {
                     "bordered": true,
                     "surface_token": null
@@ -2475,8 +2592,8 @@
             "field_schema": [
                 {
                     "key": "text",
-                    "type": "string",
-                    "label": "Heading Text",
+                    "type": "text",
+                    "label": "Title",
                     "required": true,
                     "default": "Section Heading",
                     "max_length": 300
@@ -2570,12 +2687,12 @@
                 {
                     "prop": "text",
                     "selector": ".sb-heading__link",
-                    "multiline": false
+                    "multiline": true
                 },
                 {
                     "prop": "text",
                     "selector": ".sb-heading",
-                    "multiline": false
+                    "multiline": true
                 }
             ],
             "label": "Heading",

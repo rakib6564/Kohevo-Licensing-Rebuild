@@ -10,6 +10,15 @@ import { t } from '../../core/messages.mjs';
 /** { map, set(path, config|null), moveRows(path, order) } for the block being edited; null where tags do not apply. */
 export const DynamicContext = createContext(null);
 
+/** The database button, for a text input to draw inside itself as the reference editor does. */
+export const DynamicSlot = createContext(null);
+
+/** A text input with room for the database button. */
+export function SlotInput({ children }) {
+  const slot = useContext(DynamicSlot);
+  return slot ? <span className="sbx-dyn__input">{children}{slot}</span> : children;
+}
+
 const DATE_FORMATS = ['', 'F j, Y', 'M j, Y', 'j F Y', 'Y-m-d', 'm/d/Y', 'd/m/Y'];
 const TIME_FORMATS = ['', 'g:i a', 'H:i'];
 
@@ -105,7 +114,7 @@ function TagSettings({ kind, config, def, onChange }) {
 }
 
 /** Wraps one setting's control. `path` is the setting's full path; `kind` overrides the field's own (a Container's background). */
-export function DynamicField({ field, path, label = null, kind = null, children }) {
+export function DynamicField({ field, path, label = null, kind = null, inline = false, children }) {
   const ctx = useContext(DynamicContext);
   const [picking, setPicking] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -130,10 +139,11 @@ export function DynamicField({ field, path, label = null, kind = null, children 
       </div>
     );
   }
+  const button = <button type="button" className="sbx-iconbtn sbx-dyn__open" onClick={() => setPicking((v) => !v)} aria-expanded={picking} aria-label={t('dyn_tags')} title={t('dyn_tags')} data-testid="dyn-open"><DbIcon /></button>;
   return (
-    <div className="sbx-dyn" data-dyn-path={path}>
-      <div className="sbx-dyn__control">{children}</div>
-      <button type="button" className="sbx-iconbtn sbx-dyn__open" onClick={() => setPicking((v) => !v)} aria-expanded={picking} aria-label={t('dyn_tags')} title={t('dyn_tags')} data-testid="dyn-open"><DbIcon /></button>
+    <div className={`sbx-dyn${inline ? ' sbx-dyn--inline' : ''}`} data-dyn-path={path}>
+      <div className="sbx-dyn__control">{inline ? <DynamicSlot.Provider value={button}>{children}</DynamicSlot.Provider> : children}</div>
+      {inline ? null : button}
       {picking ? <TagPicker kind={k} onPick={pick} onClose={close} /> : null}
     </div>
   );

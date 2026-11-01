@@ -52,7 +52,7 @@ final class HeadingRenderer implements BlockRendererInterface
         if ($scope->string('text') === '') {
             return ''; // a tag with nothing to show
         }
-        $text = Html::highlighted($scope->string('text'), $scope->string('highlight'), Html::highlightLook($scope));
+        $text = $scope->string('highlight') === '' ? Html::headingText($scope->string('text')) : Html::highlighted($scope->string('text'), $scope->string('highlight'), Html::highlightLook($scope));
         // A linked heading: the link sits inside the heading (the element keeps its meaning), and only after the URL allowlist.
         $url = Html::safeUrl($scope->prop('url'));
         if ($url !== null) {

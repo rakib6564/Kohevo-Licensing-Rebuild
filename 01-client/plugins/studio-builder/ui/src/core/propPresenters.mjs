@@ -48,8 +48,14 @@ export const PROP_PRESENTERS = Object.freeze({
     icon_position: { pills: true, showIf: (p) => !!p.icon && p.icon !== 'none' },
     icon_spacing: { showIf: (p) => !!p.icon && p.icon !== 'none' },
   },
+  // The highlight is the Dual Color Heading's job now; a heading that already has one keeps its controls.
   'core.heading': {
-
+    highlight: { showIf: (p) => !!p.highlight },
+    highlight_color_token: { showIf: (p) => !!p.highlight },
+    highlight_color: { showIf: (p) => !!p.highlight },
+    highlight_italic: { showIf: (p) => !!p.highlight },
+    highlight_weight: { showIf: (p) => !!p.highlight },
+    highlight_underline: { showIf: (p) => !!p.highlight },
     new_tab: { showIf: (p) => typeof p.url === 'string' && p.url.trim() !== '' },
   },
   // The Text Editor's columns gap matters only with more than one column.
@@ -63,6 +69,9 @@ export const PROP_PRESENTERS = Object.freeze({
     align: { showIf: () => false },
     color_token: { showIf: (p) => !!p.color_token },
     columns_gap: { showIf: (p) => typeof p.columns === 'number' && p.columns > 1 },
+  },
+  'core.dual_heading': {
+    new_tab: { showIf: (p) => typeof p.url === 'string' && p.url.trim() !== '' },
   },
   'core.quote': { align: { showIf: () => false } },
   'core.link': { align: { showIf: () => false } },
