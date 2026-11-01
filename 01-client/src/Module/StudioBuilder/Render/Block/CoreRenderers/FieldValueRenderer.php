@@ -61,6 +61,10 @@ final class FieldValueRenderer implements BlockRendererInterface
         if ($scope->bool('show_label') && $field !== null && $body !== '') {
             $label = '<span class="sb-field-value__label">' . Html::e((string) ($field['label'] ?? $key)) . '</span> ';
         }
+        $postUrl = (string) $scope->context()->attribute('post_url', '');
+        if ($scope->bool('link_to_post') && $postUrl !== '') {
+            $body = '<a class="sb-field-value__link" href="' . Html::e($postUrl) . '">' . $body . '</a>';
+        }
         $fit = in_array($scope->string('fit'), ['cover', 'contain'], true) ? ' sb-field-value--' . $scope->string('fit') : '';
         return '<' . $tag . ' class="sb-field-value sb-field-value--' . Html::e(MetaFieldTypes::normalize((string) ($field['type'] ?? 'text'))) . $fit . '">' . $label . $body . '</' . $tag . '>';
     }

@@ -43,6 +43,7 @@ export function controlFor(field) {
   if (field && field.type === 'string' && field.format === 'meta_field') return 'metafield';
   if (field && field.type === 'string' && field.format === 'content_type') return 'posttype';
   if (field && field.type === 'string' && field.format === 'loop_template') return 'looptemplate';
+  if (field && field.type === 'string' && field.format === 'icon') return 'icon';
   if (field && field.type === 'string' && field.format === 'datetime') return 'datetime';
   return CONTROL[field && field.type] || null;
 }

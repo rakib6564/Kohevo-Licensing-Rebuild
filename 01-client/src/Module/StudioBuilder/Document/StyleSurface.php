@@ -47,7 +47,7 @@ final class StyleSurface
     private const POSITIONS = ['center' => 'center', 'top' => 'top', 'bottom' => 'bottom', 'left' => 'left', 'right' => 'right',
         'top-left' => 'top left', 'top-right' => 'top right', 'bottom-left' => 'bottom left', 'bottom-right' => 'bottom right'];
     private const EASINGS = ['ease' => 'ease', 'ease-in' => 'ease-in', 'ease-out' => 'ease-out', 'ease-in-out' => 'ease-in-out', 'linear' => 'linear'];
-    private const BLENDS  = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'];
+    private const BLENDS  = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'saturation', 'color', 'difference', 'exclusion', 'hue', 'luminosity'];
     private const CURSORS = ['auto', 'default', 'pointer', 'text', 'move', 'not-allowed', 'grab'];
 
     /**

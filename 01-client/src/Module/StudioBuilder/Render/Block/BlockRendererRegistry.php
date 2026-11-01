@@ -72,6 +72,7 @@ final class BlockRendererRegistry
         $registry->register(new CoreRenderers\PostMetaRenderer());
         $registry->register(new CoreRenderers\FieldValueRenderer());
         $registry->register(new CoreRenderers\RepeaterRenderer());
+        $registry->register(new CoreRenderers\IconListRenderer());
         $registry->register(new CoreRenderers\PostImageRenderer());
         $registry->register(new CoreRenderers\PostExcerptRenderer());
         $registry->register(new CoreRenderers\PostLinkRenderer());

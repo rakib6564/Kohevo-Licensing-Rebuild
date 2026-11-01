@@ -57,7 +57,7 @@ return [
             $text('link_label', 'Product link text (instead of the button)'),
             $text('options_label', 'Button label for products with options'),
             $bool('show_icon', 'Show an icon on the card', false),
-            ['key' => 'icon', 'type' => 'enum', 'label' => 'Card icon', 'required' => false, 'default' => 'heart', 'allowed_values' => IconLibrary::names()],
+            ['key' => 'icon', 'type' => 'string', 'format' => 'icon', 'max_length' => 40, 'pattern' => '/^[a-z0-9-]{0,40}$/', 'label' => 'Card icon', 'required' => false, 'default' => 'heart'],
             $text('empty_message', 'Message when empty', 200),
         ], ['providers' => ['shop.products'], 'slots' => ['items' => 'shop.products']]),
         $block('shop.product_image', 'Product Images', 'The product\'s image and its other images', 'gallery', [

@@ -13,6 +13,7 @@ use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
 use Slate\Module\StudioBuilder\Render\DocumentRenderer;
+use Slate\Module\StudioBuilder\Render\Icon\IconLibrary;
 use Slate\Module\StudioBuilder\Render\Media\CoreMediaResolver;
 use Slate\Module\StudioBuilder\Render\ProviderBindingResolver;
 use Slate\Module\StudioBuilder\Render\RenderCollector;
@@ -114,4 +115,38 @@ unit('loop item: a loop takes the chosen template, else the one for its content 
     assert_eq(null, LoopTemplates::pick([$a, $b], LoopTemplates::NONE, 'recipe'));
     assert_eq(null, LoopTemplates::pick([$a, $b], '', 'area'));
     assert_eq(null, LoopTemplates::pick([$a, $b], '', ''), 'a loop of everything has no type to go by');
+});
+
+unit('icon list: an icon comes only from the library, and a link only from a safe address', function (): void {
+    $html = sbrf_render(sbrf_block('core.icon_list', ['items' => [
+        ['text' => 'Call <us>', 'icon' => 'phone', 'url' => 'tel:8773572433'],
+        ['text' => 'Bad', 'icon' => '"><script>', 'url' => 'javascript:bad()'],
+    ], 'layout' => 'inline', 'divider' => true, 'icon_size' => 20]), [], []);
+    assert_true(str_contains($html, 'Call &lt;us&gt;') && str_contains($html, 'href="tel:8773572433"'));
+    assert_true(str_contains($html, 'sb-icon-list--inline') && str_contains($html, 'sb-icon-list--divided') && str_contains($html, '--sb-il-is-d:20px'));
+    assert_true(!str_contains($html, '<script') && !str_contains($html, 'javascript:'), 'a bad icon or link goes');
+    assert_eq(1, substr_count($html, '<svg'), 'only the known icon');
+});
+
+unit('icon library: every icon is plain shapes, and a stored name can only be a library name', function (): void {
+    assert_true(count(IconLibrary::names()) > 1500);
+    foreach (['check', 'x-social', 'leaf', 'chef-hat', 'utensils'] as $name) {
+        assert_true(IconLibrary::has($name), $name);
+    }
+    foreach (IconLibrary::names() as $name) {
+        assert_true(preg_match('/<(script|style|a|image|foreignObject)\b|\son[a-z]+=/i', IconLibrary::markup($name)) !== 1, $name);
+    }
+    assert_eq('', IconLibrary::svg('nope'));
+});
+
+unit('dynamic text: a Heading or Text can take the title, excerpt or a field, and link to the item', function (): void {
+    $context = RenderContext::forPublic(101, new SiteContext('https://example.test', 'Chef'))->withAttributes(LoopTemplates::attributes(['title' => 'Ribs', 'url' => '/recipe/ribs/', 'excerpt' => 'Slow']));
+    $field = ['key' => 'note', 'label' => 'Note', 'type' => 'text'];
+    $heading = sbrf_block('core.heading', ['text' => 'Mine', 'level' => 'h2', 'source' => 'post_title', 'link_source' => 'post_url']);
+    $html = sbrf_render($heading, [], [], $context);
+    assert_true(str_contains($html, '>Ribs<') && str_contains($html, 'href="/recipe/ribs/"') && !str_contains($html, 'Mine'));
+    assert_true(str_contains(sbrf_render(sbrf_block('core.text', ['content' => 'Mine', 'source' => 'field', 'source_field' => 'note']), ['note' => 'From a field'], [$field], $context), 'From a field'));
+    assert_true(str_contains(sbrf_render(sbrf_block('core.text', ['content' => 'Mine', 'source' => 'post_excerpt']), [], [], RenderContext::forPublic(101, new SiteContext('https://example.test', 'Chef'))), 'Mine'), 'nothing to show keeps the own text');
+    assert_true(str_contains(sbrf_render(sbrf_block('core.text', ['content' => 'Go', 'url' => '/contact/', 'new_tab' => true]), [], []), 'target="_blank"'));
+    assert_true(DocumentRenderer::isDynamicNode($heading, BlockRegistry::withAllCoreBlocks()->get('core.heading'), BlockRendererRegistry::withCoreRenderers()->get('core.heading')), 'never baked into a stored page');
 });

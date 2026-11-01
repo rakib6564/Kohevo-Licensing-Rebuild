@@ -36,7 +36,8 @@ final class ListRenderer implements BlockRendererInterface
         foreach ((array) $scope->prop('items', []) as $item) {
             $text = is_array($item) && is_string($item['text'] ?? null) ? trim($item['text']) : '';
             if ($text !== '') {
-                $items .= '<li class="sb-list__item">' . Html::text($text) . '</li>';
+                $url = Html::safeUrl($item['url'] ?? null);
+                $items .= '<li class="sb-list__item">' . ($url !== null ? '<a class="sb-list__link" href="' . Html::e($url) . '">' . Html::text($text) . '</a>' : Html::text($text)) . '</li>';
             }
         }
         if ($items === '') {

@@ -9,6 +9,7 @@ namespace Slate\Module\StudioBuilder\Render\Block\CoreRenderers;
 
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
+use Slate\Module\StudioBuilder\Render\Block\DynamicText;
 use Slate\Module\StudioBuilder\Render\Html;
 
 final class HeadingRenderer implements BlockRendererInterface
@@ -49,9 +50,9 @@ final class HeadingRenderer implements BlockRendererInterface
                 $classes[] = $colorClass;
             }
         }
-        $text = Html::highlighted($scope->string('text'), $scope->string('highlight'), Html::highlightLook($scope));
+        $text = Html::highlighted(DynamicText::text($scope, $scope->string('text')), $scope->string('highlight'), Html::highlightLook($scope));
         // A linked heading: the link sits inside the heading (the element keeps its meaning), and only after the URL allowlist.
-        $url = Html::safeUrl($scope->prop('url'));
+        $url = DynamicText::url($scope);
         if ($url !== null) {
             $text = '<a class="sb-heading__link" href="' . Html::e($url) . '"' . ($scope->bool('new_tab') ? ' target="_blank" rel="noopener noreferrer"' : '') . '>' . $text . '</a>';
         }

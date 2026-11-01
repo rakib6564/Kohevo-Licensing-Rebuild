@@ -2,6 +2,8 @@
 // allowed values; this only picks a friendlier control for some of them: icon toggles (direction, wrap,
 // justify, align), text pills (width modes) or tiles (grid columns). A field with no entry stays a plain select.
 
+import { asList } from './doc.mjs';
+
 /** The Nav menu has a menu button. */
 const navToggled = (p) => !!p.toggle_breakpoint && p.toggle_breakpoint !== 'none';
 const navPresenter = {
@@ -47,7 +49,12 @@ export const PROP_PRESENTERS = Object.freeze({
     icon_spacing: { showIf: (p) => !!p.icon && p.icon !== 'none' },
   },
   'core.heading': {
-    new_tab: { showIf: (p) => typeof p.url === 'string' && p.url.trim() !== '' },
+
+    text: { showIf: (p) => !p.source || p.source === 'static' },
+    source_field: { showIf: (p) => p.source === 'field' },
+    url: { showIf: (p) => !p.link_source || p.link_source === 'custom' },
+    link_field: { showIf: (p) => p.link_source === 'field' },
+    new_tab: { showIf: (p) => (typeof p.url === 'string' && p.url.trim() !== '') || p.link_source === 'post_url' || p.link_source === 'field' },
   },
   // The Text Editor's columns gap matters only with more than one column.
   'core.rich_text': {
@@ -55,6 +62,11 @@ export const PROP_PRESENTERS = Object.freeze({
   },
   // Size and alignment live in the Style section. The older colour token stays visible only while it holds a value.
   'core.text': {
+    content: { showIf: (p) => !p.source || p.source === 'static' },
+    source_field: { showIf: (p) => p.source === 'field' },
+    url: { showIf: (p) => !p.link_source || p.link_source === 'custom' },
+    link_field: { showIf: (p) => p.link_source === 'field' },
+    new_tab: { showIf: (p) => (typeof p.url === 'string' && p.url.trim() !== '') || p.link_source === 'post_url' || p.link_source === 'field' },
     size: { showIf: () => false },
     align: { showIf: () => false },
     color_token: { showIf: (p) => !!p.color_token },
@@ -99,6 +111,18 @@ export const PROP_PRESENTERS = Object.freeze({
     card_variant: { showIf: (p) => p.loop_template === 'none' || !p.loop_template },
     title_level: { showIf: (p) => p.loop_template === 'none' || !p.loop_template },
     read_more_text: { showIf: (p) => p.loop_template === 'none' || !p.loop_template },
+  },
+  'core.icon_list': {
+    layout: { pills: true },
+    apply_link: { showIf: (p) => asList(p.items).some((i) => i && i.url) },
+    space_between: { showIf: () => false },
+    list_align: { showIf: () => false },
+    divider: { showIf: () => false },
+    icon_size: { showIf: () => false },
+    icon_gap: { showIf: () => false },
+    icon_h_align: { showIf: () => false },
+    icon_v_align: { showIf: () => false },
+    icon_offset: { showIf: () => false },
   },
   'theme.repeater': {
     title_field: { showIf: (p) => p.display === 'accordion' },

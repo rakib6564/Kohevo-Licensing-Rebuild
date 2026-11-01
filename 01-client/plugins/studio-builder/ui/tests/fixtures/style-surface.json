@@ -292,7 +292,7 @@
   },
   {
    "path": "effects.blend",
-   "value": "hue",
+   "value": "plus-lighter",
    "ok": false
   },
   {

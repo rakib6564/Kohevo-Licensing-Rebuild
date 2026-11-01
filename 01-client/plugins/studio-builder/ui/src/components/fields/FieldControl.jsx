@@ -23,6 +23,7 @@ import { getLoopTemplates, getMetaFields, getPostTypes, isKnownMetaField, metaFi
 import { sizedLabeller, tableFor } from '../../core/optionValues.mjs';
 import { Check, Field } from '../ui/index.js';
 import { DeviceProp } from './DeviceProp.jsx';
+import { IconControl } from './IconControl.jsx';
 
 const RichTextEditor = lazy(() => import('./RichTextEditor.jsx'));
 
@@ -142,6 +143,12 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
         </FieldRow>
       );
     }
+    case 'icon':
+      return (
+        <FieldRow id={id} label={field.label} required={field.required} problem={problem}>
+          <IconControl value={draft} empty={field.default === 'none' ? 'none' : ''} onChange={update} />
+        </FieldRow>
+      );
     case 'looptemplate':
       return (
         <FieldRow id={id} label={field.label} required={field.required} problem={problem}>

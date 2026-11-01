@@ -413,6 +413,8 @@ final class StudioCompiler
         $published = $page->publishedAt !== null ? strtotime($page->publishedAt) : false;
         return [
             'post_title'  => $page->title,
+            'post_excerpt' => $settings['excerpt'] ?? '',
+            'post_date'   => $published !== false ? \Slate\Module\StudioBuilder\Render\Html::date($published) : '',
             'post_url'    => $context->site->absoluteUrl(\Slate\Module\StudioBuilder\Meta\PageRoutes::path($context->tenantId, (int) $page->id, $page->slug, $page->routeMode)),
             'category'    => $settings['category'] ?? '',
             'author_name' => mb_substr(trim($author), 0, 120),

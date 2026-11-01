@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '62';
+    public const VERSION = '63';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -273,6 +273,22 @@ final class StudioStylesheet
             . '.sb-field-value--cover img,.sb-field-value--contain img{display:block;width:100%;height:100%;object-fit:cover}'
             . '.sb-field-value--contain img{object-fit:contain}'
             . '.sb-repeater{display:contents}'
+            . '.sb-icon-list{--sb-il-sp:var(--sb-il-sp-d);--sb-il-is:var(--sb-il-is-d);--sb-il-ig:var(--sb-il-ig-d);--sb-il-io:var(--sb-il-io-d);--sb-il-al:var(--sb-il-al-d);display:flex;flex-direction:column;align-items:var(--sb-il-al);gap:var(--sb-il-sp);margin:0;padding:0;list-style:none}'
+            . '.sb-icon-list--inline{flex-direction:row;flex-wrap:wrap;justify-content:var(--sb-il-al);align-items:center}'
+            . '.sb-icon-list__item{margin:0}'
+            . '.sb-icon-list:not(.sb-icon-list--inline):not(.sb-icon-list--link-inline)>.sb-icon-list__item{width:100%}'
+            . '.sb-icon-list__link{display:flex;align-items:center;justify-content:var(--sb-il-al);gap:var(--sb-il-ig);color:inherit;text-decoration:none}'
+            . '.sb-icon-list--link-inline .sb-icon-list__link{display:inline-flex}'
+            . '.sb-icon-list--v-top .sb-icon-list__link{align-items:flex-start}'
+            . '.sb-icon-list--v-bottom .sb-icon-list__link{align-items:flex-end}'
+            . '.sb-icon-list__icon{display:inline-flex;flex:none;justify-content:flex-start;min-width:var(--sb-il-is);position:relative;top:var(--sb-il-io)}'
+            . '.sb-icon-list--i-center .sb-icon-list__icon{justify-content:center}'
+            . '.sb-icon-list--i-right .sb-icon-list__icon{justify-content:flex-end}'
+            . '.sb-icon-list__icon svg{display:block;width:var(--sb-il-is);height:var(--sb-il-is)}'
+            . '.sb-icon-list--divided>.sb-icon-list__item+.sb-icon-list__item{border-top:1px solid var(--sb-border-default,#e5e7eb);padding-top:var(--sb-il-sp)}'
+            . '.sb-icon-list--inline.sb-icon-list--divided>.sb-icon-list__item+.sb-icon-list__item{border-top:0;border-left:1px solid var(--sb-border-default,#e5e7eb);padding-top:0;padding-left:var(--sb-il-sp)}'
+            . '@media(max-width:1023.98px){.sb-icon-list{--sb-il-sp:var(--sb-il-sp-t);--sb-il-is:var(--sb-il-is-t);--sb-il-ig:var(--sb-il-ig-t);--sb-il-io:var(--sb-il-io-t);--sb-il-al:var(--sb-il-al-t)}}'
+            . '@media(max-width:767.98px){.sb-icon-list{--sb-il-sp:var(--sb-il-sp-m);--sb-il-is:var(--sb-il-is-m);--sb-il-ig:var(--sb-il-ig-m);--sb-il-io:var(--sb-il-io-m);--sb-il-al:var(--sb-il-al-m)}}'
             // A Loop Item on the canvas, at about the width of a card.
             . '.sb-main--loop{max-width:440px;margin-inline:auto}'
             . '.sb-post-image,.sb-post-image a{display:block;height:100%}'

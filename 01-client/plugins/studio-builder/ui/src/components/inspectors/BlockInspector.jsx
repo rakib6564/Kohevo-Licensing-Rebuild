@@ -324,6 +324,17 @@ export function BlockInspector({ info }) {
         {sections.shadow()}
       </>
     ),
+    // An Icon List's sizes and spacing, in the order of the reference; its colours, type and hover are under Parts.
+    icon_list_style: () => (
+      <ObjectFields
+        schema={asList(def.field_schema).filter((f) => ['space_between', 'list_align', 'divider', 'icon_size', 'icon_gap', 'icon_h_align', 'icon_v_align', 'icon_offset'].includes(f.key))}
+        value={props}
+        onChange={(next) => save(ops.updateBlockProps(block.id, next))}
+        manifest={manifest}
+        blockType={block.type}
+        device={deviceScope}
+      />
+    ),
     // An Icon's one Style section: its primary colour per state, then the frame's secondary colour, size, padding, rotation and border.
     icon_style: () => (
       <>

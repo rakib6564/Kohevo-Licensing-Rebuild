@@ -39,6 +39,7 @@ use Slate\Module\StudioBuilder\Document\StyleValueGuard;
 use Slate\Module\StudioBuilder\Registry\BlockDefinitionInterface;
 use Slate\Module\StudioBuilder\Registry\BlockRegistry;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
+use Slate\Module\StudioBuilder\Render\Block\DynamicText;
 use Slate\Module\StudioBuilder\Render\Block\RepeatingChildrenInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererRegistry;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
@@ -286,6 +287,7 @@ final class DocumentRenderer
     {
         return $renderer->isDynamic()
             || !empty($block['visibility']['when_field'])
+            || DynamicText::isDynamic($block)
             || $definition->requiredEntitlement() !== null
             || (is_array($block['bindings'] ?? null) && $block['bindings'] !== []);
     }

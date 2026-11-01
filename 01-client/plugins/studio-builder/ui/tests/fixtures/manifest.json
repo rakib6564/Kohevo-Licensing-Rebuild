@@ -587,49 +587,12 @@
                 },
                 {
                     "key": "icon",
-                    "type": "enum",
+                    "type": "string",
                     "label": "Icon",
                     "required": false,
                     "default": "none",
-                    "allowed_values": [
-                        "none",
-                        "check",
-                        "check-circle",
-                        "star",
-                        "heart",
-                        "arrow-right",
-                        "mail",
-                        "phone",
-                        "map-pin",
-                        "clock",
-                        "calendar",
-                        "user",
-                        "users",
-                        "shield",
-                        "zap",
-                        "globe",
-                        "message",
-                        "gift",
-                        "award",
-                        "camera",
-                        "home",
-                        "search",
-                        "sparkle",
-                        "play",
-                        "leaf",
-                        "dollar",
-                        "menu",
-                        "menu-short",
-                        "close",
-                        "facebook",
-                        "twitter",
-                        "x-social",
-                        "instagram",
-                        "youtube",
-                        "linkedin",
-                        "whatsapp",
-                        "tiktok"
-                    ]
+                    "max_length": 40,
+                    "format": "icon"
                 },
                 {
                     "key": "icon_position",
@@ -2504,12 +2467,40 @@
                 "highlight_underline": false,
                 "highlight_weight": "inherit",
                 "level": "h2",
+                "link_field": "",
+                "link_source": "custom",
                 "new_tab": false,
+                "source": "static",
+                "source_field": "",
                 "text": "Section Heading",
                 "url": null
             },
             "description": "Create hierarchy",
             "field_schema": [
+                {
+                    "key": "source",
+                    "type": "enum",
+                    "label": "Content from",
+                    "required": false,
+                    "default": "static",
+                    "allowed_values": [
+                        "static",
+                        "post_title",
+                        "post_excerpt",
+                        "post_date",
+                        "site_name",
+                        "field"
+                    ]
+                },
+                {
+                    "key": "source_field",
+                    "type": "string",
+                    "label": "Source field",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "meta_field"
+                },
                 {
                     "key": "text",
                     "type": "string",
@@ -2517,6 +2508,27 @@
                     "required": true,
                     "default": "Section Heading",
                     "max_length": 300
+                },
+                {
+                    "key": "link_source",
+                    "type": "enum",
+                    "label": "Link to",
+                    "required": false,
+                    "default": "custom",
+                    "allowed_values": [
+                        "custom",
+                        "post_url",
+                        "field"
+                    ]
+                },
+                {
+                    "key": "link_field",
+                    "type": "string",
+                    "label": "Link field",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "meta_field"
                 },
                 {
                     "key": "url",
@@ -2870,48 +2882,12 @@
             "field_schema": [
                 {
                     "key": "name",
-                    "type": "enum",
+                    "type": "string",
                     "label": "Icon",
                     "required": false,
                     "default": "star",
-                    "allowed_values": [
-                        "check",
-                        "check-circle",
-                        "star",
-                        "heart",
-                        "arrow-right",
-                        "mail",
-                        "phone",
-                        "map-pin",
-                        "clock",
-                        "calendar",
-                        "user",
-                        "users",
-                        "shield",
-                        "zap",
-                        "globe",
-                        "message",
-                        "gift",
-                        "award",
-                        "camera",
-                        "home",
-                        "search",
-                        "sparkle",
-                        "play",
-                        "leaf",
-                        "dollar",
-                        "menu",
-                        "menu-short",
-                        "close",
-                        "facebook",
-                        "twitter",
-                        "x-social",
-                        "instagram",
-                        "youtube",
-                        "linkedin",
-                        "whatsapp",
-                        "tiktok"
-                    ]
+                    "max_length": 40,
+                    "format": "icon"
                 },
                 {
                     "key": "view",
@@ -3080,6 +3056,257 @@
             ],
             "title": "Icon",
             "type": "core.icon",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "content",
+            "default_props": {
+                "apply_link": "full",
+                "divider": false,
+                "icon_gap": 8,
+                "icon_h_align": "left",
+                "icon_offset": 0,
+                "icon_size": 16,
+                "icon_v_align": "center",
+                "items": [
+                    {
+                        "icon": "check",
+                        "text": "List item"
+                    },
+                    {
+                        "icon": "x",
+                        "text": "List item"
+                    },
+                    {
+                        "icon": "circle-dot",
+                        "text": "List item"
+                    }
+                ],
+                "layout": "list",
+                "list_align": "left",
+                "space_between": 0
+            },
+            "description": "A list with an icon and a link on each item",
+            "field_schema": [
+                {
+                    "key": "layout",
+                    "type": "enum",
+                    "label": "Layout",
+                    "required": false,
+                    "default": "list",
+                    "allowed_values": [
+                        "list",
+                        "inline"
+                    ]
+                },
+                {
+                    "key": "items",
+                    "type": "repeater",
+                    "label": "Items",
+                    "required": false,
+                    "default": [
+                        {
+                            "text": "List item",
+                            "icon": "check"
+                        },
+                        {
+                            "text": "List item",
+                            "icon": "x"
+                        },
+                        {
+                            "text": "List item",
+                            "icon": "circle-dot"
+                        }
+                    ],
+                    "max_items": 100,
+                    "item_schema": [
+                        {
+                            "key": "text",
+                            "type": "string",
+                            "label": "Text",
+                            "required": false,
+                            "default": "",
+                            "max_length": 300
+                        },
+                        {
+                            "key": "icon",
+                            "type": "string",
+                            "label": "Icon",
+                            "required": false,
+                            "default": "check",
+                            "max_length": 40,
+                            "format": "icon"
+                        },
+                        {
+                            "key": "url",
+                            "type": "url",
+                            "label": "Link",
+                            "required": false,
+                            "default": null
+                        },
+                        {
+                            "key": "new_tab",
+                            "type": "boolean",
+                            "label": "Open in a new tab",
+                            "required": false,
+                            "default": false
+                        }
+                    ]
+                },
+                {
+                    "key": "apply_link",
+                    "type": "enum",
+                    "label": "Apply Link On",
+                    "required": false,
+                    "default": "full",
+                    "allowed_values": [
+                        "full",
+                        "inline"
+                    ]
+                },
+                {
+                    "key": "space_between",
+                    "type": "number",
+                    "label": "Space Between",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 100,
+                    "integer_only": true,
+                    "per_device": true
+                },
+                {
+                    "key": "list_align",
+                    "type": "enum",
+                    "label": "List Alignment",
+                    "required": false,
+                    "default": "left",
+                    "allowed_values": [
+                        "left",
+                        "center",
+                        "right"
+                    ],
+                    "per_device": true
+                },
+                {
+                    "key": "divider",
+                    "type": "boolean",
+                    "label": "Divider",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "icon_size",
+                    "type": "number",
+                    "label": "Icon Size",
+                    "required": false,
+                    "default": 16,
+                    "min": 6,
+                    "max": 100,
+                    "integer_only": true,
+                    "per_device": true
+                },
+                {
+                    "key": "icon_gap",
+                    "type": "number",
+                    "label": "Icon Gap",
+                    "required": false,
+                    "default": 8,
+                    "min": 0,
+                    "max": 50,
+                    "integer_only": true,
+                    "per_device": true
+                },
+                {
+                    "key": "icon_h_align",
+                    "type": "enum",
+                    "label": "Horizontal Alignment",
+                    "required": false,
+                    "default": "left",
+                    "allowed_values": [
+                        "left",
+                        "center",
+                        "right"
+                    ]
+                },
+                {
+                    "key": "icon_v_align",
+                    "type": "enum",
+                    "label": "Vertical Alignment",
+                    "required": false,
+                    "default": "center",
+                    "allowed_values": [
+                        "top",
+                        "center",
+                        "bottom"
+                    ]
+                },
+                {
+                    "key": "icon_offset",
+                    "type": "number",
+                    "label": "Adjust Vertical Position",
+                    "required": false,
+                    "default": 0,
+                    "min": -15,
+                    "max": 15,
+                    "integer_only": true,
+                    "per_device": true
+                }
+            ],
+            "icon": "list-check",
+            "inline_text": [],
+            "label": "Icon List",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "item",
+                    "label": "Item"
+                },
+                {
+                    "key": "icon",
+                    "label": "Icon"
+                },
+                {
+                    "key": "text",
+                    "label": "Text"
+                },
+                {
+                    "key": "divider",
+                    "label": "Divider"
+                }
+            ],
+            "title": "Icon list",
+            "type": "core.icon_list",
             "version": 1
         },
         {
@@ -3378,6 +3605,13 @@
                             "required": true,
                             "default": "",
                             "max_length": 300
+                        },
+                        {
+                            "key": "url",
+                            "type": "url",
+                            "label": "Link",
+                            "required": false,
+                            "default": null
                         }
                     ]
                 }
@@ -5157,10 +5391,40 @@
                 "columns_gap": 20,
                 "content": "",
                 "drop_cap": false,
-                "size": "base"
+                "link_field": "",
+                "link_source": "custom",
+                "new_tab": false,
+                "size": "base",
+                "source": "static",
+                "source_field": "",
+                "url": null
             },
             "description": "Plain-text body copy",
             "field_schema": [
+                {
+                    "key": "source",
+                    "type": "enum",
+                    "label": "Content from",
+                    "required": false,
+                    "default": "static",
+                    "allowed_values": [
+                        "static",
+                        "post_title",
+                        "post_excerpt",
+                        "post_date",
+                        "site_name",
+                        "field"
+                    ]
+                },
+                {
+                    "key": "source_field",
+                    "type": "string",
+                    "label": "Source field",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "meta_field"
+                },
                 {
                     "key": "content",
                     "type": "text",
@@ -5168,6 +5432,41 @@
                     "required": false,
                     "default": "",
                     "max_length": 5000
+                },
+                {
+                    "key": "link_source",
+                    "type": "enum",
+                    "label": "Link to",
+                    "required": false,
+                    "default": "custom",
+                    "allowed_values": [
+                        "custom",
+                        "post_url",
+                        "field"
+                    ]
+                },
+                {
+                    "key": "link_field",
+                    "type": "string",
+                    "label": "Link field",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "meta_field"
+                },
+                {
+                    "key": "url",
+                    "type": "url",
+                    "label": "Link",
+                    "required": false,
+                    "default": null
+                },
+                {
+                    "key": "new_tab",
+                    "type": "boolean",
+                    "label": "Open in a new tab",
+                    "required": false,
+                    "default": false
                 },
                 {
                     "key": "size",
@@ -6365,49 +6664,12 @@
                 },
                 {
                     "key": "trigger_icon",
-                    "type": "enum",
+                    "type": "string",
                     "label": "Trigger Icon",
                     "required": false,
                     "default": "none",
-                    "allowed_values": [
-                        "none",
-                        "check",
-                        "check-circle",
-                        "star",
-                        "heart",
-                        "arrow-right",
-                        "mail",
-                        "phone",
-                        "map-pin",
-                        "clock",
-                        "calendar",
-                        "user",
-                        "users",
-                        "shield",
-                        "zap",
-                        "globe",
-                        "message",
-                        "gift",
-                        "award",
-                        "camera",
-                        "home",
-                        "search",
-                        "sparkle",
-                        "play",
-                        "leaf",
-                        "dollar",
-                        "menu",
-                        "menu-short",
-                        "close",
-                        "facebook",
-                        "twitter",
-                        "x-social",
-                        "instagram",
-                        "youtube",
-                        "linkedin",
-                        "whatsapp",
-                        "tiktok"
-                    ]
+                    "max_length": 40,
+                    "format": "icon"
                 },
                 {
                     "key": "trigger_icon_size",
@@ -7865,48 +8127,12 @@
                 },
                 {
                     "key": "icon",
-                    "type": "enum",
+                    "type": "string",
                     "label": "Card icon",
                     "required": false,
                     "default": "heart",
-                    "allowed_values": [
-                        "check",
-                        "check-circle",
-                        "star",
-                        "heart",
-                        "arrow-right",
-                        "mail",
-                        "phone",
-                        "map-pin",
-                        "clock",
-                        "calendar",
-                        "user",
-                        "users",
-                        "shield",
-                        "zap",
-                        "globe",
-                        "message",
-                        "gift",
-                        "award",
-                        "camera",
-                        "home",
-                        "search",
-                        "sparkle",
-                        "play",
-                        "leaf",
-                        "dollar",
-                        "menu",
-                        "menu-short",
-                        "close",
-                        "facebook",
-                        "twitter",
-                        "x-social",
-                        "instagram",
-                        "youtube",
-                        "linkedin",
-                        "whatsapp",
-                        "tiktok"
-                    ]
+                    "max_length": 40,
+                    "format": "icon"
                 },
                 {
                     "key": "empty_message",
@@ -8081,6 +8307,7 @@
                 "fallback": "",
                 "field": "",
                 "fit": "auto",
+                "link_to_post": false,
                 "show_label": false,
                 "tag": "div"
             },
@@ -8124,6 +8351,13 @@
                         "h3",
                         "h4"
                     ]
+                },
+                {
+                    "key": "link_to_post",
+                    "type": "boolean",
+                    "label": "Link to the item",
+                    "required": false,
+                    "default": false
                 },
                 {
                     "key": "fit",

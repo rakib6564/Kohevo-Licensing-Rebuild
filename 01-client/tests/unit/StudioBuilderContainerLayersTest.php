@@ -72,7 +72,7 @@ unit('overlay: a colour or a gradient, not both and not neither; only known blen
     assert_true($ok(['gradient' => 'linear-gradient(90deg, #000000, #ffffff)', 'blend' => 'screen']));
     assert_false($ok(['opacity' => 0.4]), 'needs a paint');
     assert_false($ok(['color' => '#000', 'gradient' => 'linear-gradient(90deg, #000000, #ffffff)']), 'one paint at a time');
-    assert_false($ok(['color' => '#000', 'blend' => 'difference']), 'a closed list of blends');
+    assert_false($ok(['color' => '#000', 'blend' => 'plus-lighter']), 'a closed list of blends');
     assert_false($ok(['color' => '#000', 'opacity' => 2]), 'opacity within 0-1');
     assert_false($ok(['color' => 'red;}body{display:none']), 'no CSS smuggled in');
     assert_false($ok(['color' => '#000', 'image' => 'x']), 'nothing else');

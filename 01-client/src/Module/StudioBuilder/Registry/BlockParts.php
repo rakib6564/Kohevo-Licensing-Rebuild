@@ -200,6 +200,12 @@ final class BlockParts
             'meta' => ['label' => 'Meta line', 'selectors' => ['.sb-post-meta']],
             'item' => ['label' => 'Items', 'selectors' => ['.sb-post-meta > span']],
         ],
+        'core.icon_list' => [
+            'item'    => ['label' => 'Item', 'selectors' => ['.sb-icon-list__item']],
+            'icon'    => ['label' => 'Icon', 'selectors' => ['.sb-icon-list__icon']],
+            'text'    => ['label' => 'Text', 'selectors' => ['.sb-icon-list__text']],
+            'divider' => ['label' => 'Divider', 'selectors' => ['.sb-icon-list--divided>.sb-icon-list__item+.sb-icon-list__item']],
+        ],
         'theme.post_image' => [
             'image' => ['label' => 'Image', 'selectors' => ['.sb-post-image img']],
         ],
