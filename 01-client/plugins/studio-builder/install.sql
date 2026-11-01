@@ -123,3 +123,14 @@ CREATE TABLE IF NOT EXISTS `studiobuilder_locks` (
     UNIQUE KEY `uq_studiobuilder_locks_tenant_page` (`tenant_id`, `page_id`),
     KEY `idx_studiobuilder_locks_expires` (`expires_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `studiobuilder_google_cache` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id` INT UNSIGNED NOT NULL,
+    `cache_key` CHAR(64) NOT NULL,
+    `payload` MEDIUMTEXT NOT NULL,
+    `expires_at` DATETIME NOT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_studiobuilder_google_cache_tenant_key` (`tenant_id`, `cache_key`),
+    KEY `idx_studiobuilder_google_cache_expires` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,4 +1,5 @@
 -- Kohevo Studio (studio-builder) Uninstallation DDL
+DROP TABLE IF EXISTS `studiobuilder_google_cache`;
 DROP TABLE IF EXISTS `studiobuilder_locks`;
 DROP TABLE IF EXISTS `studiobuilder_tokens`;
 DROP TABLE IF EXISTS `studiobuilder_templates`;

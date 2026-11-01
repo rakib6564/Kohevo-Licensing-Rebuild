@@ -768,7 +768,7 @@ unit('phase6 integration: templates, global components, chrome bindings, design 
             // ── 9. Schema unchanged ──
             unit('phase6 int 9: no new Studio tables or columns', function (): void {
                 $tables = array_column(Database::rows("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE 'studiobuilder\\_%' ORDER BY TABLE_NAME"), 'TABLE_NAME');
-                assert_eq(['studiobuilder_compilations', 'studiobuilder_dependencies', 'studiobuilder_locks', 'studiobuilder_pages', 'studiobuilder_revisions', 'studiobuilder_templates', 'studiobuilder_tokens'], $tables);
+                assert_eq(['studiobuilder_compilations', 'studiobuilder_dependencies', 'studiobuilder_google_cache', 'studiobuilder_locks', 'studiobuilder_pages', 'studiobuilder_revisions', 'studiobuilder_templates', 'studiobuilder_tokens'], $tables);
                 foreach (\Slate\Module\StudioBuilder\Infrastructure\StudioSchemaManager::REQUIRED_TABLES as $table => $cols) {
                     $actual = array_column(Database::rows("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION", [$table]), 'COLUMN_NAME');
                     assert_eq($cols, $actual, "{$table} columns unchanged");
