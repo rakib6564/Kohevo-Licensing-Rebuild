@@ -9,6 +9,8 @@ const EN = {
   back_to_pages: 'Studio pages',
   meta_field_none: 'Choose a field…',
   preview_item: 'Preview with',
+  loop_template_auto: 'Automatic (by content type)',
+  loop_template_none: 'Built-in cards',
   preview_item_note: 'Design changes here apply to every item.',
   preview_item_fields: 'Edit this item’s content',
   when_field: 'Show only if this field has a value',

@@ -4128,6 +4128,7 @@
                 "empty_message": "No posts found.",
                 "enable_pagination": true,
                 "gap": "md",
+                "loop_template": "",
                 "order": "desc",
                 "order_by": "published_at",
                 "per_page": 6,
@@ -4323,6 +4324,15 @@
                     "label": "Pagination",
                     "required": false,
                     "default": true
+                },
+                {
+                    "key": "loop_template",
+                    "type": "string",
+                    "label": "Loop Item",
+                    "required": false,
+                    "default": "",
+                    "max_length": 64,
+                    "format": "loop_template"
                 },
                 {
                     "key": "empty_message",
@@ -8238,6 +8248,164 @@
             "version": 1
         },
         {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "theme",
+            "default_props": [],
+            "description": "The item's short description, in a Loop Item",
+            "field_schema": [],
+            "icon": "list-check",
+            "inline_text": [],
+            "label": "Post Excerpt",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Post excerpt",
+            "type": "theme.post_excerpt",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "theme",
+            "default_props": {
+                "link_to_post": true
+            },
+            "description": "The item's featured image, in a Loop Item",
+            "field_schema": [
+                {
+                    "key": "link_to_post",
+                    "type": "boolean",
+                    "label": "Link to the item",
+                    "required": false,
+                    "default": true
+                }
+            ],
+            "icon": "image",
+            "inline_text": [],
+            "label": "Post Image",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [
+                {
+                    "key": "image",
+                    "label": "Image"
+                }
+            ],
+            "title": "Post image",
+            "type": "theme.post_image",
+            "version": 1
+        },
+        {
+            "allowed_binding_providers": [],
+            "allowed_child_types": [],
+            "allows_children": false,
+            "binding_slots": [],
+            "category": "theme",
+            "default_props": {
+                "text": "Read more"
+            },
+            "description": "A link to the item, in a Loop Item",
+            "field_schema": [
+                {
+                    "key": "text",
+                    "type": "string",
+                    "label": "Link text",
+                    "required": false,
+                    "default": "Read more",
+                    "max_length": 80
+                }
+            ],
+            "icon": "list-check",
+            "inline_text": [],
+            "label": "Post Link",
+            "required_entitlement": null,
+            "required_permission": "studio-builder.edit",
+            "style_capabilities": [
+                "align",
+                "surface_token",
+                "text_token",
+                "spacing_token",
+                "radius_token",
+                "shadow_token",
+                "font_token",
+                "border_token",
+                "typography",
+                "color",
+                "background",
+                "border",
+                "shadow",
+                "dimensions",
+                "opacity",
+                "z_index",
+                "layout",
+                "position",
+                "effects",
+                "margin",
+                "padding",
+                "text_shadow",
+                "overlay"
+            ],
+            "style_parts": [],
+            "title": "Post link",
+            "type": "theme.post_link",
+            "version": 1
+        },
+        {
             "allowed_binding_providers": [
                 "content.posts",
                 "content.authors"
@@ -8339,10 +8507,18 @@
             "default_props": {
                 "align": "left",
                 "level": "h1",
+                "link_to_post": false,
                 "text": ""
             },
             "description": "Dynamic article heading",
             "field_schema": [
+                {
+                    "key": "link_to_post",
+                    "type": "boolean",
+                    "label": "Link to the item",
+                    "required": false,
+                    "default": false
+                },
                 {
                     "key": "level",
                     "type": "enum",

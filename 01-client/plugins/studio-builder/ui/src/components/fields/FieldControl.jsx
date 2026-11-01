@@ -19,7 +19,7 @@ import { UrlControl } from './UrlControl.jsx';
 import { PropChoice, PropTiles } from './PropPresenters.jsx';
 import { TokenPicker } from './TokenPicker.jsx';
 import { optionLabel } from '../../core/optionLabels.mjs';
-import { getMetaFields, getPostTypes, isKnownMetaField, metaFieldGroups } from '../../core/metaFields.mjs';
+import { getLoopTemplates, getMetaFields, getPostTypes, isKnownMetaField, metaFieldGroups } from '../../core/metaFields.mjs';
 import { sizedLabeller, tableFor } from '../../core/optionValues.mjs';
 import { Check, Field } from '../ui/index.js';
 import { DeviceProp } from './DeviceProp.jsx';
@@ -142,6 +142,16 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
         </FieldRow>
       );
     }
+    case 'looptemplate':
+      return (
+        <FieldRow id={id} label={field.label} required={field.required} problem={problem}>
+          <select {...common} value={draft ?? ''} onChange={(e) => update(e.target.value)}>
+            <option value="">{t('loop_template_auto')}</option>
+            <option value="none">{t('loop_template_none')}</option>
+            {getLoopTemplates().map((l) => <option key={l.uuid} value={l.uuid}>{l.title}</option>)}
+          </select>
+        </FieldRow>
+      );
     case 'checkbox':
       return (
         <div className="sbx-field sbx-field--check">

@@ -14,11 +14,14 @@ declare(strict_types=1);
 
 namespace Slate\Module\StudioBuilder\Render\Block\CoreRenderers;
 
+use Slate\Module\StudioBuilder\Meta\LoopTemplates;
+use Slate\Module\StudioBuilder\Meta\PageMeta;
 use Slate\Module\StudioBuilder\Provider\PostsProvider;
 use Slate\Module\StudioBuilder\Render\Block\BlockRendererInterface;
 use Slate\Module\StudioBuilder\Render\Block\BlockRenderScope;
 use Slate\Module\StudioBuilder\Render\Block\DeviceColumns;
 use Slate\Module\StudioBuilder\Render\Html;
+use Slate\Module\StudioBuilder\Render\RenderContext;
 
 final class QueryLoopRenderer implements BlockRendererInterface
 {
@@ -113,6 +116,12 @@ final class QueryLoopRenderer implements BlockRendererInterface
                 $cardItem = self::uniqueIds(strtr($childrenHtml, $tokens), $copy);
                 $itemsHtml .= '<div class="sb-query-loop__item">' . $cardItem . '</div>';
             }
+        } elseif (($template = self::loopTemplate($scope)) !== null) {
+            $copy = 0;
+            foreach ($rows as $row) {
+                $copy++;
+                $itemsHtml .= '<div class="sb-query-loop__item">' . self::uniqueIds($scope->renderDocument($template['document_json'], self::itemContext($scope, $row)), $copy) . '</div>';
+            }
         } else {
             // Render standard responsive post cards
             foreach ($rows as $row) {
@@ -190,6 +199,36 @@ final class QueryLoopRenderer implements BlockRendererInterface
     }
 
     /**
+     * The Loop Item template for this loop. A card holding a loop of its own draws that one with built-in cards, so a
+     * template can never draw itself forever.
+     *
+     * @return ?array{uuid: string, id: int, title: string, content_type: string, document_json: string}
+     */
+    private static function loopTemplate(BlockRenderScope $scope): ?array
+    {
+        if ($scope->context()->attribute('in_loop_item') === true) {
+            return null;
+        }
+        try {
+            return LoopTemplates::pick(LoopTemplates::published($scope->context()->tenantId), $scope->string('loop_template'), $scope->string('content_type') ?: self::listing($scope)['content_type']);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /** The context a card is drawn in: that item's title, link, image and custom fields. It cannot be picked on the canvas.
+     *
+     * @param array<string, mixed> $row
+     */
+    private static function itemContext(BlockRenderScope $scope, array $row): RenderContext
+    {
+        $tenantId = $scope->context()->tenantId;
+        $meta = PageMeta::read($tenantId, (int) ($row['id'] ?? 0));
+        $fields = $meta['type'] === '' ? [] : PageMeta::fieldsFor($tenantId, $meta['type']);
+        return $scope->context()->framing()->withAttributes(LoopTemplates::attributes($row) + ['in_loop_item' => true, 'page_meta' => $meta + ['fields' => $fields]]);
+    }
+
+    /**
      * What the page being shown is a listing of, when it is an archive or search template: its category, tag or author
      * term and its search query (render attributes set by the public runtime). A loop with its own filter keeps it;
      * one without lists the archive's or the search's posts instead of every post.
@@ -260,7 +299,9 @@ final class QueryLoopRenderer implements BlockRendererInterface
      */
     private static function currentPage(BlockRenderScope $scope): int
     {
-        $raw = $scope->prop('page') ?? $scope->context()->attribute('page') ?? ($_GET['page'] ?? null);
+        // The builder's own `?page=` names the page being edited, not a page of results.
+        $link = $scope->context()->mode->isPublic() ? ($_GET['page'] ?? null) : null;
+        $raw = $scope->prop('page') ?? $scope->context()->attribute('page') ?? $link;
         $page = filter_var(is_scalar($raw) ? (string) $raw : '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 1000]]);
         return $page === false ? 1 : $page;
     }

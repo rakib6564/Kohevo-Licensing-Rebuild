@@ -29,6 +29,7 @@ final class BlockRenderScope
         private readonly RenderCollector $collector,
         private readonly string $childrenHtml = '',
         private readonly array $bindingRows = [],
+        private readonly ?\Closure $documentRenderer = null,
     ) {}
 
     public function type(): string
@@ -179,6 +180,12 @@ final class BlockRenderScope
     public function childrenHtml(): string
     {
         return $this->childrenHtml;
+    }
+
+    /** Another document's blocks, drawn in `$context` into this page: a Loop Item, once per item. */
+    public function renderDocument(string $documentJson, RenderContext $context): string
+    {
+        return $this->documentRenderer !== null ? ($this->documentRenderer)($documentJson, $context) : '';
     }
 
     public function hasBinding(string $slot): bool

@@ -219,11 +219,11 @@ final class PageMeta
     public static function singleTemplateType(array $document): string
     {
         $settings = is_array($document['settings'] ?? null) ? $document['settings'] : [];
-        if (($settings['template_type'] ?? '') !== 'single') {
+        if (!in_array($settings['template_type'] ?? '', ['single', 'loop'], true)) {
             return '';
         }
         foreach (is_array($settings['conditions']['rules'] ?? null) ? $settings['conditions']['rules'] : [] as $rule) {
-            if (is_array($rule) && ($rule['action'] ?? '') === 'include' && ($rule['condition'] ?? '') === 'singular' && is_string($rule['value'] ?? null)) {
+            if (is_array($rule) && ($rule['action'] ?? $rule['type'] ?? '') === 'include' && ($rule['condition'] ?? '') === 'singular' && is_string($rule['value'] ?? null)) {
                 return $rule['value'];
             }
         }

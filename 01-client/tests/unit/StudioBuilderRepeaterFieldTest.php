@@ -6,6 +6,7 @@
 declare(strict_types=1);
 
 use Slate\Module\StudioBuilder\Document\CanonicalDocumentSchema;
+use Slate\Module\StudioBuilder\Meta\LoopTemplates;
 use Slate\Module\StudioBuilder\Meta\MetaFieldTypes;
 use Slate\Module\StudioBuilder\Meta\PageMeta;
 use Slate\Module\StudioBuilder\Provider\DataProviderRegistry;
@@ -93,4 +94,24 @@ unit('visibility: a block tied to a field goes when the field is empty, is defer
     assert_eq('', sbrf_render($block, ['note' => ''], [$field]));
     assert_eq('', sbrf_render($block, ['note' => []], [$field]), 'an empty repeater counts as empty');
     assert_true(DocumentRenderer::isDynamicNode($block, BlockRegistry::withAllCoreBlocks()->get('core.text'), BlockRendererRegistry::withCoreRenderers()->get('core.text')), 'never baked into a stored page');
+});
+
+unit('loop item: a card blocks read the item in the render context, and go quietly without one', function (): void {
+    $attrs = LoopTemplates::attributes(['title' => 'Ribs', 'url' => '/recipe/ribs/', 'excerpt' => 'Slow <b>', 'featured_image' => '/uploads/r.jpg']);
+    $context = RenderContext::forPublic(101, new SiteContext('https://example.test', 'Test Site'))->withAttributes($attrs);
+    $image = sbrf_render(sbrf_block('theme.post_image', []), [], [], $context);
+    assert_true(str_contains($image, 'src="/uploads/r.jpg"') && str_contains($image, 'href="/recipe/ribs/"'));
+    assert_true(str_contains(sbrf_render(sbrf_block('theme.post_excerpt', []), [], [], $context), 'Slow &lt;b&gt;'));
+    assert_true(str_contains(sbrf_render(sbrf_block('theme.post_link', ['text' => 'Go']), [], [], $context), '>Go</a>'));
+    assert_eq('', sbrf_render(sbrf_block('theme.post_excerpt', []), [], []), 'no item, no box');
+});
+
+unit('loop item: a loop takes the chosen template, else the one for its content type, and none means built-in cards', function (): void {
+    $a = ['uuid' => 'a', 'id' => 1, 'title' => 'A', 'content_type' => 'service', 'document_json' => ''];
+    $b = ['uuid' => 'b', 'id' => 2, 'title' => 'B', 'content_type' => 'recipe', 'document_json' => ''];
+    assert_eq('b', LoopTemplates::pick([$a, $b], '', 'recipe')['uuid']);
+    assert_eq('a', LoopTemplates::pick([$a, $b], 'a', 'recipe')['uuid'], 'the chosen one wins');
+    assert_eq(null, LoopTemplates::pick([$a, $b], LoopTemplates::NONE, 'recipe'));
+    assert_eq(null, LoopTemplates::pick([$a, $b], '', 'area'));
+    assert_eq(null, LoopTemplates::pick([$a, $b], '', ''), 'a loop of everything has no type to go by');
 });

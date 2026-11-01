@@ -108,7 +108,7 @@ final class StudioCompiler
             $region = ['header_partial' => 'header', 'footer_partial' => 'footer'][$page->pageType] ?? null;
             $html = $region !== null && $single === null
                 ? $header . '<' . $region . ' class="sb-site-' . $region . ' sb-site-' . $region . '--partial" id="main">' . $main . '</' . $region . '>' . $footer
-                : $header . '<main class="sb-main sb-main--' . $width . '" id="main">' . $main . '</main>' . $footer;
+                : $header . '<main class="sb-main sb-main--' . $width . (($document['settings']['template_type'] ?? '') === 'loop' ? ' sb-main--loop' : '') . '" id="main">' . $main . '</main>' . $footer;
             $css  = StudioStylesheet::css() . $theme->rootCss() . $collector->css();
             $seo  = SeoHead::build(is_array($document['seo'] ?? null) ? $document['seo'] : [], $page, $context->site, $context->mode, $this->media, $context->tenantId);
         } catch (StudioRenderException $e) {

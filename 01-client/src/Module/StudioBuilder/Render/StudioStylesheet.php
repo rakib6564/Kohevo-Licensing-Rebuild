@@ -19,7 +19,7 @@ use Slate\Module\StudioBuilder\Document\StyleSurface;
 
 final class StudioStylesheet
 {
-    public const VERSION = '61';
+    public const VERSION = '62';
 
     private const MIN_WIDTH = ['sm' => 640, 'md' => 768, 'lg' => 1024];
 
@@ -273,6 +273,13 @@ final class StudioStylesheet
             . '.sb-field-value--cover img,.sb-field-value--contain img{display:block;width:100%;height:100%;object-fit:cover}'
             . '.sb-field-value--contain img{object-fit:contain}'
             . '.sb-repeater{display:contents}'
+            // A Loop Item on the canvas, at about the width of a card.
+            . '.sb-main--loop{max-width:440px;margin-inline:auto}'
+            . '.sb-post-image,.sb-post-image a{display:block;height:100%}'
+            . '.sb-post-image img{display:block;width:100%;height:100%;object-fit:cover}'
+            . '.sb-post-excerpt{margin:0}'
+            . '.sb-post-title a,.sb-post-link{color:inherit;text-decoration:none}'
+            . '.sb-post-title a:hover,.sb-post-link:hover{text-decoration:underline}'
             . '.sb-repeater__list{margin:0;padding:0;list-style:none}'
             . '.sb-unavailable{padding:.75rem 1rem;border:1px dashed #b45309;color:#92400e;background:#fffbeb;border-radius:6px;font-size:.875rem}'
             . '.sb-preview-banner{position:sticky;top:0;z-index:10;padding:.5rem 1rem;background:#1e293b;color:#fff;font:600 .8rem/1.4 system-ui,sans-serif;text-align:center}'

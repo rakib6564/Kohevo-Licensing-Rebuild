@@ -29,6 +29,15 @@ export function setPostTypes(list) {
 
 export const getPostTypes = () => postTypes;
 
+let loopTemplates = [];
+
+/** `list` is boot.loopTemplates: the published Loop Items [{uuid, title, postType}], for the Query Loop's dropdown. */
+export function setLoopTemplates(list) {
+  loopTemplates = (Array.isArray(list) ? list : []).filter((l) => l && typeof l.uuid === 'string');
+}
+
+export const getLoopTemplates = () => loopTemplates;
+
 /** The options grouped by content type, in the order the types first appear: [{label, fields: [...]}]. */
 export function metaFieldGroups(list = fields) {
   const groups = new Map();

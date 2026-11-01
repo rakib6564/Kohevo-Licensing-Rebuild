@@ -162,6 +162,16 @@ try {
     // The dialog keeps its built-in types.
 }
 
+// The published Loop Items, for the Query Loop's dropdown.
+$sbLoopTemplates = [];
+try {
+    foreach (\Slate\Module\StudioBuilder\Meta\LoopTemplates::published(current_tenant_id()) as $sbLoop) {
+        $sbLoopTemplates[] = ['uuid' => $sbLoop['uuid'], 'title' => $sbLoop['title'], 'postType' => $sbLoop['content_type']];
+    }
+} catch (\Throwable $e) {
+    // The dropdown offers Automatic and the built-in cards.
+}
+
 // A Single template's canvas shows one of its items; these are the ones it can be switched to.
 $sbPreviewItems = [];
 try {
@@ -175,6 +185,7 @@ try {
 $sbBoot = [
     'pageId'     => $sbPageId,
     'previewItems' => $sbPreviewItems,
+    'loopTemplates' => $sbLoopTemplates,
     'previewItem'  => (int) ($_GET['item'] ?? 0),
     'allPages'   => $sbAllPages,
     'apiUrl'     => plugin_url('studio-builder', 'admin/api.php'),
@@ -785,6 +796,8 @@ $sbBoot = [
         'theme_source_studio' => __('studio_ui_theme_source_studio', 'Studio override'),
         'theme_reset' => __('studio_ui_theme_reset', 'Use inherited'),
         'preview_item' => __('studio_ui_preview_item', 'Preview with'),
+        'loop_template_auto' => __('studio_ui_loop_template_auto', 'Automatic (by content type)'),
+        'loop_template_none' => __('studio_ui_loop_template_none', 'Built-in cards'),
         'preview_item_note' => __('studio_ui_preview_item_note', 'Design changes here apply to every item.'),
         'preview_item_fields' => __('studio_ui_preview_item_fields', 'Edit this item’s content'),
         'when_field' => __('studio_ui_when_field', 'Show only if this field has a value'),

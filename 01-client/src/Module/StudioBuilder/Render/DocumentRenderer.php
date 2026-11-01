@@ -159,7 +159,13 @@ final class DocumentRenderer
                 ? $this->bindings->resolve($block, $definition, $context)
                 : [];
 
-            $scope = new BlockRenderScope($block, $context, $this->media, $theme, $collector, $children, $rows);
+            $scope = new BlockRenderScope($block, $context, $this->media, $theme, $collector, $children, $rows, function (string $json, RenderContext $inner) use ($theme, $collector): string {
+                $html = '';
+                foreach (RenderDocumentPreparer::prepare($json, $this->registry)['document']['containers'] ?? [] as $container) {
+                    $html .= is_array($container) ? $this->renderTop($container, $inner, $theme, $collector, false, []) : '';
+                }
+                return $html;
+            });
             $inner = $renderer->render($scope);
             $wrapperClasses = $renderer instanceof WrapperClassesInterface ? $renderer->wrapperClasses($scope) : [];
             $wrapperStyle = $renderer instanceof WrapperStyleInterface ? $renderer->wrapperStyle($scope) : '';

@@ -452,6 +452,7 @@ final class BlockRegistry
                 ['key' => 'show_excerpt', 'type' => 'boolean', 'label' => 'Show Excerpt', 'required' => false, 'default' => true],
                 ['key' => 'read_more_text', 'type' => 'string', 'label' => 'Button Text', 'required' => false, 'default' => 'Read More', 'max_length' => 80],
                 ['key' => 'enable_pagination', 'type' => 'boolean', 'label' => 'Pagination', 'required' => false, 'default' => true],
+                ['key' => 'loop_template', 'type' => 'string', 'label' => 'Loop Item', 'required' => false, 'default' => '', 'max_length' => 64, 'format' => 'loop_template', 'pattern' => '/^[a-z0-9-]{0,64}$/'],
                 ['key' => 'empty_message', 'type' => 'string', 'label' => 'Empty Message', 'required' => false, 'default' => 'No posts found.', 'max_length' => 200],
             ]),
             allowsChildren: true,
@@ -469,6 +470,7 @@ final class BlockRegistry
             category: 'theme',
             icon: 'heading',
             schema: FieldSchema::define([
+                ['key' => 'link_to_post', 'type' => 'boolean', 'label' => 'Link to the item', 'required' => false, 'default' => false],
                 ['key' => 'level', 'type' => 'enum', 'label' => 'Heading Level', 'required' => false, 'allowed_values' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], 'default' => 'h1'],
                 ['key' => 'align', 'type' => 'enum', 'label' => 'Alignment', 'required' => false, 'allowed_values' => ['left', 'center', 'right'], 'default' => 'left'],
                 ['key' => 'text', 'type' => 'string', 'label' => 'Fallback Title', 'required' => false, 'default' => '', 'max_length' => 255],
@@ -527,6 +529,48 @@ final class BlockRegistry
                 ['key' => 'fallback', 'type' => 'string', 'label' => 'Text when empty', 'required' => false, 'default' => '', 'max_length' => 255],
                 ['key' => 'tag', 'type' => 'enum', 'label' => 'HTML tag', 'required' => false, 'allowed_values' => ['div', 'p', 'span', 'h2', 'h3', 'h4'], 'default' => 'div'],
                 ['key' => 'fit', 'type' => 'enum', 'label' => 'Image fit', 'required' => false, 'allowed_values' => ['auto', 'cover', 'contain'], 'default' => 'auto'],
+            ]),
+            allowsChildren: false,
+            allowedBindingProviders: [],
+        ));
+
+        // theme.post_image, theme.post_excerpt, theme.post_link — the item a Loop Item is drawing
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'theme.post_image',
+            version: 1,
+            label: 'Post Image',
+            title: 'Post image',
+            description: 'The item\'s featured image, in a Loop Item',
+            category: 'theme',
+            icon: 'image',
+            schema: FieldSchema::define([
+                ['key' => 'link_to_post', 'type' => 'boolean', 'label' => 'Link to the item', 'required' => false, 'default' => true],
+            ]),
+            allowsChildren: false,
+            allowedBindingProviders: [],
+        ));
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'theme.post_excerpt',
+            version: 1,
+            label: 'Post Excerpt',
+            title: 'Post excerpt',
+            description: 'The item\'s short description, in a Loop Item',
+            category: 'theme',
+            icon: 'list-check',
+            schema: FieldSchema::define([]),
+            allowsChildren: false,
+            allowedBindingProviders: [],
+        ));
+        $registry->register(new DeclarativeBlockDefinition(
+            type: 'theme.post_link',
+            version: 1,
+            label: 'Post Link',
+            title: 'Post link',
+            description: 'A link to the item, in a Loop Item',
+            category: 'theme',
+            icon: 'list-check',
+            schema: FieldSchema::define([
+                ['key' => 'text', 'type' => 'string', 'label' => 'Link text', 'required' => false, 'default' => 'Read more', 'max_length' => 80],
             ]),
             allowsChildren: false,
             allowedBindingProviders: [],

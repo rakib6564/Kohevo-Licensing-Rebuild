@@ -95,6 +95,11 @@ export const PROP_PRESENTERS = Object.freeze({
     redirect_url: { showIf: (p) => p.expire_action === 'redirect' },
   },
   // The Gallery: a setting shows only where it does something.
+  'core.query_loop': {
+    card_variant: { showIf: (p) => p.loop_template === 'none' || !p.loop_template },
+    title_level: { showIf: (p) => p.loop_template === 'none' || !p.loop_template },
+    read_more_text: { showIf: (p) => p.loop_template === 'none' || !p.loop_template },
+  },
   'theme.repeater': {
     title_field: { showIf: (p) => p.display === 'accordion' },
     body_field: { showIf: (p) => p.display === 'accordion' },

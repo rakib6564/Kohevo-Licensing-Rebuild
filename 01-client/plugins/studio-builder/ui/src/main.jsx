@@ -8,7 +8,7 @@
 import { createRoot } from 'react-dom/client';
 import { StudioShell } from './components/StudioShell.jsx';
 import { setMessages } from './core/messages.mjs';
-import { setMetaFields, setPostTypes } from './core/metaFields.mjs';
+import { setLoopTemplates, setMetaFields, setPostTypes } from './core/metaFields.mjs';
 import { setContentTypes } from './core/conditions.mjs';
 
 function readBoot() {
@@ -28,6 +28,7 @@ if (boot && root) {
   if (boot.messages) setMessages(boot.messages);
   setMetaFields(boot.metaFields);
   setPostTypes(boot.postTypes);
+  setLoopTemplates(boot.loopTemplates);
   setContentTypes(boot.contentTypes);
   createRoot(root).render(<StudioShell boot={boot} />);
 }

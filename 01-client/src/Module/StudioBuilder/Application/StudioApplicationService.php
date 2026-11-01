@@ -87,7 +87,9 @@ use Slate\Module\StudioBuilder\Document\DocumentValidator;
 use Slate\Module\StudioBuilder\Document\ElementCss;
 use Slate\Module\StudioBuilder\Document\ValidatedDocument;
 use Slate\Module\StudioBuilder\Domain\PageAddress;
+use Slate\Module\StudioBuilder\Meta\LoopTemplates;
 use Slate\Module\StudioBuilder\Meta\PageMeta;
+use Slate\Module\StudioBuilder\Provider\PostsProvider;
 use Slate\Module\StudioBuilder\Domain\StudioTemplate;
 use Slate\Module\StudioBuilder\Exception\StudioAuthenticationException;
 use Slate\Module\StudioBuilder\Exception\StudioAuthorizationException;
@@ -1606,7 +1608,14 @@ final class StudioApplicationService
     {
         $type = PageMeta::singleTemplateType(CanonicalJson::decode((string) $revision['document_json']));
         $item = $type === '' ? null : PageMeta::previewItem($context->tenantId, $type, $previewItem);
-        return $item === null ? $context : $context->withAttributes(['meta_page_id' => $item['id'], 'post_title' => $item['title'], 'title' => $item['title']]);
+        if ($item === null) {
+            return $context;
+        }
+        // The card blocks read the item's link, image and excerpt, which the posts provider works out.
+        $tenants = new TenantContext();
+        $rows = $tenants->runAs($context->tenantId, static fn(): array => (new PostsProvider())->execute($tenants, ['source' => 'posts', 'content_type' => $type, 'limit' => 100]));
+        $row = array_values(array_filter($rows, static fn(array $r): bool => (int) $r['id'] === $item['id']))[0] ?? ['title' => $item['title']];
+        return $context->withAttributes(LoopTemplates::attributes($row) + ['meta_page_id' => $item['id']]);
     }
 
     /**

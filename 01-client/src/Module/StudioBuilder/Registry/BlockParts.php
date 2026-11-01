@@ -200,6 +200,9 @@ final class BlockParts
             'meta' => ['label' => 'Meta line', 'selectors' => ['.sb-post-meta']],
             'item' => ['label' => 'Items', 'selectors' => ['.sb-post-meta > span']],
         ],
+        'theme.post_image' => [
+            'image' => ['label' => 'Image', 'selectors' => ['.sb-post-image img']],
+        ],
         'theme.repeater' => [
             'row'     => ['label' => 'Row', 'selectors' => ['.sb-repeater__list li']],
             'item'    => ['label' => 'Accordion item', 'selectors' => ['.sb-accordion__item']],
