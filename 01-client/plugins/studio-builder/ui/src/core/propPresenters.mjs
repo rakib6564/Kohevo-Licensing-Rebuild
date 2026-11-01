@@ -94,6 +94,17 @@ export const PROP_PRESENTERS = Object.freeze({
     message_align: { pills: true, showIf: (p) => (p.expire_action || 'message') === 'message' },
     redirect_url: { showIf: (p) => p.expire_action === 'redirect' },
   },
+  // The Gallery: a setting shows only where it does something.
+  'core.gallery': {
+    gap: { showIf: (p) => !(p.spacing > 0) },
+    aspect_ratio: { showIf: (p) => !p.layout || p.layout === 'grid' || p.layout === 'slider' },
+    row_height: { showIf: (p) => p.layout === 'justified' },
+    overlay_text: { showIf: (p) => p.captions === 'hover' },
+    pagination: { showIf: (p) => p.layout !== 'slider' },
+    per_page: { showIf: (p) => p.layout !== 'slider' && !!p.pagination && p.pagination !== 'none' },
+    load_more_text: { showIf: (p) => p.layout !== 'slider' && !!p.pagination && p.pagination !== 'none' },
+    all_label: { showIf: (p) => p.show_filters === true },
+  },
   'core.marquee': {
     direction: { pills: true },
   },

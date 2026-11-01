@@ -12,6 +12,9 @@ import { coerce, controlFor, datetimeFromLocal, datetimeToLocal, highlightMissin
 import { asList, asObject } from '../../core/doc.mjs';
 import { t } from '../../core/messages.mjs';
 import { MediaControl } from './MediaControl.jsx';
+import { GalleryControl } from './GalleryControl.jsx';
+import { isGalleryImages } from '../../core/galleryImages.mjs';
+import { mediaPickerAvailable } from '../../core/mediaPicker.mjs';
 import { UrlControl } from './UrlControl.jsx';
 import { PropChoice, PropTiles } from './PropPresenters.jsx';
 import { TokenPicker } from './TokenPicker.jsx';
@@ -195,6 +198,9 @@ export const FieldControl = memo(function FieldControl({ field, value, onChange,
         </FieldRow>
       );
     case 'repeater':
+      if (isGalleryImages(field) && mediaPickerAvailable(mediaPicker)) {
+        return <GalleryControl field={field} value={asList(value)} onChange={onChange} renderFields={(schema, v, change) => <ObjectFields schema={schema} value={v} onChange={change} manifest={manifest} mediaPicker={mediaPicker} />} />;
+      }
       return <RepeaterControl field={field} value={asList(value)} onChange={onChange} manifest={manifest} mediaPicker={mediaPicker} />;
     case 'object':
       return (

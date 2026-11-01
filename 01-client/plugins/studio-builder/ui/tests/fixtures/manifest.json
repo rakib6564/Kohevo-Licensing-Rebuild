@@ -2134,14 +2134,122 @@
             "binding_slots": [],
             "category": "media",
             "default_props": {
+                "all_label": "All",
                 "aspect_ratio": "1:1",
+                "captions": "below",
                 "columns": "3",
                 "gap": "md",
+                "hover": "none",
                 "images": [],
-                "rounded": true
+                "layout": "grid",
+                "lazy_load": true,
+                "link_to": "lightbox",
+                "load_more_text": "Load more",
+                "order": "default",
+                "overlay_text": "caption",
+                "pagination": "none",
+                "per_page": 12,
+                "rounded": true,
+                "row_height": 240,
+                "show_filters": false,
+                "spacing": 0
             },
             "description": "Media image gallery",
             "field_schema": [
+                {
+                    "key": "images",
+                    "type": "repeater",
+                    "label": "Gallery Images",
+                    "required": false,
+                    "default": [],
+                    "max_items": 300,
+                    "item_schema": [
+                        {
+                            "key": "url",
+                            "type": "url",
+                            "label": "Image URL",
+                            "required": true,
+                            "default": null,
+                            "max_length": 1000
+                        },
+                        {
+                            "key": "alt",
+                            "type": "string",
+                            "label": "Alt Text",
+                            "required": false,
+                            "default": "",
+                            "max_length": 200
+                        },
+                        {
+                            "key": "caption",
+                            "type": "string",
+                            "label": "Caption",
+                            "required": false,
+                            "default": "",
+                            "max_length": 255
+                        },
+                        {
+                            "key": "category",
+                            "type": "string",
+                            "label": "Category",
+                            "required": false,
+                            "default": "",
+                            "max_length": 60
+                        },
+                        {
+                            "key": "width",
+                            "type": "number",
+                            "label": "Width (px)",
+                            "required": false,
+                            "default": 0,
+                            "min": 0,
+                            "max": 20000,
+                            "integer_only": true
+                        },
+                        {
+                            "key": "height",
+                            "type": "number",
+                            "label": "Height (px)",
+                            "required": false,
+                            "default": 0,
+                            "min": 0,
+                            "max": 20000,
+                            "integer_only": true
+                        }
+                    ]
+                },
+                {
+                    "key": "order",
+                    "type": "enum",
+                    "label": "Order By",
+                    "required": false,
+                    "default": "default",
+                    "allowed_values": [
+                        "default",
+                        "random"
+                    ]
+                },
+                {
+                    "key": "lazy_load",
+                    "type": "boolean",
+                    "label": "Lazy Load",
+                    "required": false,
+                    "default": true
+                },
+                {
+                    "key": "layout",
+                    "type": "enum",
+                    "label": "Layout",
+                    "required": false,
+                    "default": "grid",
+                    "allowed_values": [
+                        "grid",
+                        "masonry",
+                        "justified",
+                        "mosaic",
+                        "slider"
+                    ]
+                },
                 {
                     "key": "columns",
                     "type": "enum",
@@ -2149,11 +2257,24 @@
                     "required": false,
                     "default": "3",
                     "allowed_values": [
+                        "1",
                         "2",
                         "3",
                         "4",
+                        "5",
                         "6"
                     ],
+                    "per_device": true
+                },
+                {
+                    "key": "spacing",
+                    "type": "number",
+                    "label": "Spacing",
+                    "required": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 100,
+                    "integer_only": true,
                     "per_device": true
                 },
                 {
@@ -2180,8 +2301,21 @@
                         "auto",
                         "1:1",
                         "4:3",
-                        "16:9"
+                        "3:2",
+                        "16:9",
+                        "3:4",
+                        "4:5"
                     ]
+                },
+                {
+                    "key": "row_height",
+                    "type": "number",
+                    "label": "Row Height (justified)",
+                    "required": false,
+                    "default": 240,
+                    "min": 120,
+                    "max": 480,
+                    "integer_only": true
                 },
                 {
                     "key": "rounded",
@@ -2191,38 +2325,98 @@
                     "default": true
                 },
                 {
-                    "key": "images",
-                    "type": "repeater",
-                    "label": "Gallery Images",
+                    "key": "hover",
+                    "type": "enum",
+                    "label": "Hover Effect",
                     "required": false,
-                    "default": [],
-                    "max_items": 50,
-                    "item_schema": [
-                        {
-                            "key": "url",
-                            "type": "url",
-                            "label": "Image URL",
-                            "required": true,
-                            "default": null,
-                            "max_length": 1000
-                        },
-                        {
-                            "key": "alt",
-                            "type": "string",
-                            "label": "Alt Text",
-                            "required": false,
-                            "default": "",
-                            "max_length": 200
-                        },
-                        {
-                            "key": "caption",
-                            "type": "string",
-                            "label": "Caption",
-                            "required": false,
-                            "default": "",
-                            "max_length": 255
-                        }
+                    "default": "none",
+                    "allowed_values": [
+                        "none",
+                        "zoom",
+                        "lift",
+                        "dim",
+                        "color"
                     ]
+                },
+                {
+                    "key": "captions",
+                    "type": "enum",
+                    "label": "Captions",
+                    "required": false,
+                    "default": "below",
+                    "allowed_values": [
+                        "below",
+                        "hover",
+                        "none"
+                    ]
+                },
+                {
+                    "key": "link_to",
+                    "type": "enum",
+                    "label": "Link",
+                    "required": false,
+                    "default": "lightbox",
+                    "allowed_values": [
+                        "lightbox",
+                        "file",
+                        "none"
+                    ]
+                },
+                {
+                    "key": "overlay_text",
+                    "type": "enum",
+                    "label": "Overlay Text",
+                    "required": false,
+                    "default": "caption",
+                    "allowed_values": [
+                        "caption",
+                        "alt"
+                    ]
+                },
+                {
+                    "key": "pagination",
+                    "type": "enum",
+                    "label": "Pagination",
+                    "required": false,
+                    "default": "none",
+                    "allowed_values": [
+                        "none",
+                        "load_more",
+                        "infinite"
+                    ]
+                },
+                {
+                    "key": "per_page",
+                    "type": "number",
+                    "label": "Images per Page",
+                    "required": false,
+                    "default": 12,
+                    "min": 2,
+                    "max": 100,
+                    "integer_only": true
+                },
+                {
+                    "key": "load_more_text",
+                    "type": "string",
+                    "label": "Load More Text",
+                    "required": false,
+                    "default": "Load more",
+                    "max_length": 60
+                },
+                {
+                    "key": "show_filters",
+                    "type": "boolean",
+                    "label": "Show Category Filters",
+                    "required": false,
+                    "default": false
+                },
+                {
+                    "key": "all_label",
+                    "type": "string",
+                    "label": "All Filter Label",
+                    "required": false,
+                    "default": "All",
+                    "max_length": 40
                 }
             ],
             "icon": "gallery",
@@ -2267,6 +2461,22 @@
                 {
                     "key": "image",
                     "label": "Images"
+                },
+                {
+                    "key": "caption",
+                    "label": "Captions"
+                },
+                {
+                    "key": "filter",
+                    "label": "Category filters"
+                },
+                {
+                    "key": "filter_active",
+                    "label": "Selected filter"
+                },
+                {
+                    "key": "more",
+                    "label": "Load more button"
                 }
             ],
             "title": "Gallery",

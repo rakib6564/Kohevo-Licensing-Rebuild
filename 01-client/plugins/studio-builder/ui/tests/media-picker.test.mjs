@@ -106,3 +106,27 @@ test('a URL field holding a video opens the video picker', () => {
   assert.equal(isVideoTarget({ key: 'url', label: 'Link URL' }, '/about'), false);
   assert.equal(isVideoTarget({ key: 'image', label: 'Image' }, '/a.png'), false);
 });
+
+import { addImages, editableSchema, isGalleryImages, moveImage, toGalleryItem } from '../src/core/galleryImages.mjs';
+
+test('gallery images: picked records become items once each, within the limit', () => {
+  const list = [{ url: '/a.jpg', alt: 'A' }];
+  const next = addImages(list, [{ url: '/a.jpg' }, { url: '/b.jpg', alt_text: 'B', width: 300, height: 200 }, { url: '/c.jpg' }], 2);
+  assert.deepEqual(next.map((i) => i.url), ['/a.jpg', '/b.jpg']);
+  assert.deepEqual(next[1], { url: '/b.jpg', alt: 'B', caption: '', category: '', width: 300, height: 200 });
+  assert.equal(toGalleryItem({ url: '/d.jpg', width: null }).width, undefined);
+});
+
+test('gallery images: moving reorders, and an out-of-range move changes nothing', () => {
+  const list = ['a', 'b', 'c'];
+  assert.deepEqual(moveImage(list, 0, 2), ['b', 'c', 'a']);
+  assert.equal(moveImage(list, 0, 3), list);
+  assert.equal(moveImage(list, 1, 1), list);
+});
+
+test('gallery images: only the Gallery repeater gets the grid, and size is not edited by hand', () => {
+  const schema = [{ key: 'url' }, { key: 'alt' }, { key: 'caption' }, { key: 'category' }, { key: 'width' }];
+  assert.equal(isGalleryImages({ type: 'repeater', key: 'images', item_schema: schema }), true);
+  assert.equal(isGalleryImages({ type: 'repeater', key: 'images', item_schema: [{ key: 'url' }] }), false);
+  assert.deepEqual(editableSchema(schema).map((f) => f.key), ['alt', 'caption', 'category']);
+});

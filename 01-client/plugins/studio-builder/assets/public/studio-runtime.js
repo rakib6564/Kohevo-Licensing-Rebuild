@@ -747,6 +747,135 @@
     });
   }
 
+  /* ── Feature: gallery layouts and paging ──────────────────────────────────
+   * `GalleryRenderer` prints every image with the first page showing, so a page without
+   * this feature still shows the first page; a <noscript> rule in the block shows the rest.
+   * Masonry places each image in the shortest column, then stretches every column a little so
+   * they all end level. Justified only needs each image's shape, which CSS turns into rows.
+   */
+  function initGalleries(root) {
+    qsa(root, '.sb-gallery[data-sb-gallery]').forEach(function (grid) {
+      var layout = grid.getAttribute('data-sb-gallery');
+      var box = grid.parentNode;
+      var all = qsa(grid, '.sb-gallery__item');
+      if (grid.getAttribute('data-sb-order') === 'random') {
+        for (var s = all.length - 1; s > 0; s--) {
+          var pick = Math.floor(Math.random() * (s + 1));
+          var held = all[s]; all[s] = all[pick]; all[pick] = held;
+        }
+        all.forEach(function (fig) { grid.appendChild(fig); });
+      }
+      var perPage = parseInt(grid.getAttribute('data-sb-per-page') || '0', 10) || all.length;
+      if (layout === 'mosaic') perPage = Math.max(5, Math.round(perPage / 5) * 5);
+      var more = qs(box, '.sb-gallery__more');
+      var button = more ? qs(more, '.sb-gallery__more-btn') : null;
+      var count = more ? qs(more, '.sb-gallery__count') : null;
+      var filters = qsa(box, '.sb-gallery__filter');
+      var shown = perPage;
+      var filter = '';
+      var off = [];
+      var frame = 0;
+
+      function matching() {
+        return all.filter(function (f) { return filter === '' || f.getAttribute('data-sb-cat') === filter; });
+      }
+      function ratio(fig) {
+        var img = qs(fig, 'img');
+        return img && img.naturalWidth > 0 ? img.naturalWidth / img.naturalHeight : 0;
+      }
+      function placeMasonry(items) {
+        var style = global.getComputedStyle(grid);
+        var cols = style.gridTemplateColumns.split(' ').filter(Boolean).length || 1;
+        var gap = parseFloat(style.columnGap) || 0;
+        if (grid.clientWidth <= 0) return;
+        var width = (grid.clientWidth - gap * (cols - 1)) / cols;
+        var columns = [];
+        for (var c = 0; c < cols; c++) columns.push({ h: 0, items: [] });
+        items.forEach(function (fig) {
+          var r = ratio(fig) || parseFloat(fig.style.getPropertyValue('--sb-gal-r')) || 1.5;
+          var h = width / r;
+          var shortest = columns.reduce(function (a, b) { return b.h < a.h ? b : a; });
+          shortest.items.push({ fig: fig, h: h });
+          shortest.h += h + gap;
+        });
+        var tallest = columns.reduce(function (a, b) { return b.h > a.h ? b : a; }).h;
+        grid.classList.add('is-placed');
+        columns.forEach(function (col, i) {
+          var used = col.h - gap * col.items.length;
+          var stretch = used > 0 ? (tallest - gap * col.items.length) / used : 1;
+          var top = 1;
+          col.items.forEach(function (entry) {
+            var span = Math.round(entry.h * stretch);
+            entry.fig.style.gridColumn = String(i + 1);
+            entry.fig.style.gridRow = top + ' / span ' + span;
+            top += span + Math.round(gap);
+          });
+        });
+      }
+      function arrange() {
+        frame = 0;
+        var list = matching();
+        var visible = list.slice(0, shown);
+        all.forEach(function (f) {
+          var inFilter = list.indexOf(f) >= 0;
+          f.classList.toggle('is-filtered', !inFilter);
+          f.classList.toggle('is-more', inFilter && visible.indexOf(f) < 0);
+        });
+        visible.forEach(function (f, i) {
+          var img = qs(f, 'img');
+          if (img) img.loading = 'eager';
+          var r = ratio(f);
+          if (layout === 'justified' && r > 0) f.style.setProperty('--sb-gal-r', r.toFixed(3));
+          if (layout === 'mosaic') f.classList.toggle('is-big', i % 10 === 0 || i % 10 === 6);
+        });
+        if (layout === 'masonry') placeMasonry(visible);
+        if (layout === 'justified') {
+          grid.classList.remove('is-ragged');
+          var last = visible[visible.length - 1];
+          var limit = parseFloat(global.getComputedStyle(grid).getPropertyValue('--sb-gal-h')) || 240;
+          if (last && last.offsetHeight > limit * 1.7) grid.classList.add('is-ragged');
+        }
+        if (more) {
+          more.hidden = list.length <= shown;
+          if (count) count.textContent = 'Showing ' + visible.length + ' of ' + list.length;
+        }
+      }
+      function schedule() {
+        if (!frame) frame = global.requestAnimationFrame(arrange);
+      }
+      function nextPage() {
+        shown += perPage;
+        arrange();
+      }
+
+      off.push(on(grid, 'load', schedule, true));
+      off.push(on(global, 'resize', schedule, { passive: true }));
+      if (button) off.push(on(button, 'click', nextPage));
+      filters.forEach(function (b) {
+        off.push(on(b, 'click', function () {
+          filter = b.getAttribute('data-sb-filter') || '';
+          shown = perPage;
+          filters.forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+          arrange();
+        }));
+      });
+      var observer = null;
+      if (more && grid.getAttribute('data-sb-pagination') === 'infinite' && 'IntersectionObserver' in global) {
+        observer = new global.IntersectionObserver(function (entries) {
+          if (entries.some(function (e) { return e.isIntersecting; })) nextPage();
+        }, { rootMargin: '300px 0px' });
+        observer.observe(more);
+      }
+      arrange();
+
+      mount(function () {
+        off.forEach(function (fn) { if (typeof fn === 'function') fn(); });
+        if (observer) observer.disconnect();
+        if (frame) global.cancelAnimationFrame(frame);
+      });
+    });
+  }
+
   /* ── Feature: gallery lightbox ────────────────────────────────────────────
    * `GalleryRenderer` emits plain `<figure class="sb-gallery__item"><img …></figure>`
    * markup and no lightbox container, so this feature BUILDS one at runtime
@@ -759,7 +888,7 @@
    * still shows a perfectly good static grid.
    */
   function initGalleryLightbox(root) {
-    var figures = qsa(root, '.sb-gallery__item').filter(function (f) { return !!qs(f, 'img'); });
+    var figures = qsa(root, '.sb-gallery:not([data-sb-no-lightbox]) .sb-gallery__item').filter(function (f) { return !!qs(f, 'img'); });
     if (figures.length < 1) return;
 
     // A gallery small enough to see at once is not a gallery.
@@ -2117,6 +2246,7 @@
     ['interactions', initInteractions],
     ['sticky', initSticky],
     ['overlays', initOverlays],
+    ['galleries', initGalleries],
     ['galleryLightbox', initGalleryLightbox],
     ['lightbox', initLightbox],
     ['videos', initVideos],

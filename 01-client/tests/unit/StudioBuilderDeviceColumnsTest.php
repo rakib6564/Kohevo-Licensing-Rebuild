@@ -66,7 +66,7 @@ unit('device columns: only a per-device field takes a tablet or mobile value, an
     assert_true($valid(sbdc_block('core.carousel', ['slides' => []], ['mobile' => ['props' => ['options.per_view' => 1]]])), 'a nested field by its path');
     assert_true($valid(sbdc_block('layout.grid', ['columns' => 4], ['mobile' => ['props' => ['columns' => 2]], 'tablet' => ['style' => ['padding' => ['top' => '8px']]]])), 'next to a device style');
     foreach ([
-        'a value the field refuses' => sbdc_block('core.gallery', ['columns' => '3'], ['mobile' => ['props' => ['columns' => '5']]]),
+        'a value the field refuses' => sbdc_block('core.gallery', ['columns' => '3'], ['mobile' => ['props' => ['columns' => '7']]]),
         'out of range'              => sbdc_block('layout.grid', ['columns' => 3], ['mobile' => ['props' => ['columns' => 13]]]),
         'not a whole number'        => sbdc_block('layout.grid', ['columns' => 3], ['mobile' => ['props' => ['columns' => 1.5]]]),
         'a field not per device'    => sbdc_block('core.gallery', ['columns' => '3'], ['mobile' => ['props' => ['gap' => 'lg']]]),
@@ -75,7 +75,7 @@ unit('device columns: only a per-device field takes a tablet or mobile value, an
     ] as $why => $b) {
         assert_false($valid($b), "refused: {$why}");
     }
-    assert_eq(['columns'], array_keys(DeviceProps::fields($registry->get('core.gallery')->schema())));
+    assert_eq(['columns', 'spacing'], array_keys(DeviceProps::fields($registry->get('core.gallery')->schema())));
     assert_eq(['options.per_view'], array_keys(DeviceProps::fields($registry->get('core.carousel')->schema())));
 });
 

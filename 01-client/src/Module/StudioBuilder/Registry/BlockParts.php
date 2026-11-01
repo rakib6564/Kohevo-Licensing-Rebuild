@@ -159,6 +159,10 @@ final class BlockParts
             'grid'  => ['label' => 'Gallery layout', 'selectors' => ['.sb-gallery']],
             'item'  => ['label' => 'Tiles', 'selectors' => ['.sb-gallery__item']],
             'image' => ['label' => 'Images', 'selectors' => ['.sb-gallery__item img']],
+            'caption' => ['label' => 'Captions', 'selectors' => ['.sb-gallery__item figcaption']],
+            'filter' => ['label' => 'Category filters', 'selectors' => ['.sb-gallery__filter']],
+            'filter_active' => ['label' => 'Selected filter', 'selectors' => ['.sb-gallery__filter[aria-pressed="true"]']],
+            'more' => ['label' => 'Load more button', 'selectors' => ['.sb-gallery__more-btn']],
         ],
         'core.rich_text' => [
             'paragraph' => ['label' => 'Paragraphs', 'selectors' => ['p']],
